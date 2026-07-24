@@ -259,9 +259,9 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   );
   const useCleanupModel = useSettingsStore((s) => s.useCleanupModel);
 
-  // There is no OpenWhispr-hosted cloud transcription path anymore — cloud
+  // There is no hosted cloud transcription path anymore — cloud
   // transcription is BYOK-only.
-  const isOpenWhisprCloud = false;
+  const isLegacyCloud = false;
 
   // Mode detection
   const isSelfHosted = transcriptionMode === "self-hosted" && !useLocalWhisper;
@@ -309,7 +309,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   useEffect(() => {
     let cancelled = false;
     const checkProviderReady = async () => {
-      if (isOpenWhisprCloud) {
+      if (isLegacyCloud) {
         setProviderReady(true);
         return;
       }
@@ -357,7 +357,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       cancelled = true;
     };
   }, [
-    isOpenWhisprCloud,
+    isLegacyCloud,
     isSelfHosted,
     remoteTranscriptionUrl,
     useLocalWhisper,
@@ -375,7 +375,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   ]);
 
   const getActiveModelLabel = (): string => {
-    if (isOpenWhisprCloud) return t("notes.upload.openwhisprCloud");
+    if (isLegacyCloud) return t("notes.upload.legacyCloud");
     if (useLocalWhisper) {
       if (localTranscriptionProvider === "nvidia")
         return `Parakeet · ${parakeetModel || "default"}`;
@@ -417,7 +417,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     localTranscriptionProvider: localTranscriptionProvider as string,
     whisperModel,
     parakeetModel,
-    isOpenWhisprCloud,
+    isLegacyCloud,
     getApiKey: getActiveApiKey,
     cloudTranscriptionProvider: cloudTranscriptionProvider as string,
     cloudTranscriptionBaseUrl: cloudTranscriptionBaseUrl || "",
@@ -1127,7 +1127,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
             {diarizationEnabled &&
               !useLocalWhisper &&
-              !isOpenWhisprCloud &&
+              !isLegacyCloud &&
               !isSelfHosted &&
               cloudTranscriptionProvider === "openai" && (
                 <p className="text-[10px] text-foreground/25 mt-1.5">
@@ -1136,7 +1136,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
               )}
             {diarizationEnabled &&
               !useLocalWhisper &&
-              !isOpenWhisprCloud &&
+              !isLegacyCloud &&
               !isSelfHosted &&
               cloudTranscriptionProvider === "mistral" && (
                 <p className="text-[10px] text-foreground/25 mt-1.5">
@@ -1145,7 +1145,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
               )}
             {diarizationEnabled &&
               !useLocalWhisper &&
-              !isOpenWhisprCloud &&
+              !isLegacyCloud &&
               !isSelfHosted &&
               cloudTranscriptionProvider === "groq" && (
                 <p className="text-[10px] text-amber-500/60 mt-1.5">
@@ -1159,7 +1159,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
               </p>
             )}
 
-            {diarizationEnabled && isOpenWhisprCloud && (
+            {diarizationEnabled && isLegacyCloud && (
               <p className="text-[10px] text-foreground/25 mt-1.5">
                 {t("notes.upload.diarizationRunsLocally")}
               </p>

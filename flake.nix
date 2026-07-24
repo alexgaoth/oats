@@ -1,5 +1,5 @@
 {
-  description = "OpenWhispr – privacy-first voice dictation, meeting transcription & notes";
+  description = "Oats – privacy-first voice dictation, meeting transcription & notes";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -16,16 +16,16 @@
         system:
         let
           pkgs = import nixpkgs { inherit system; };
-          openwhispr = pkgs.callPackage ./nix/package.nix { };
+          oats = pkgs.callPackage ./nix/package.nix { };
         in
         {
-          default = openwhispr;
-          openwhispr = openwhispr;
+          default = oats;
+          oats = oats;
         }
       );
 
       overlays.default = _final: _prev: {
-        openwhispr = self.packages.x86_64-linux.openwhispr;
+        oats = self.packages.x86_64-linux.oats;
       };
 
       nixosModules.default = import ./nix/module.nix self;

@@ -125,7 +125,7 @@ function resolveReasoningRoute(
   }
   if (kind === "translation") {
     const provider = isCloudTranslation
-      ? "openwhispr"
+      ? "legacy" // TODO(stage4): dead hosted-cloud reference
       : settings.translationProvider?.trim() || undefined;
     const isCustomTranslation = settings.translationMode === "providers" && provider === "custom";
     return {
@@ -154,7 +154,7 @@ function resolveReasoningRoute(
   }
   if (kind === "agent") {
     const provider = isCloudAgent
-      ? "openwhispr"
+      ? "legacy" // TODO(stage4): dead hosted-cloud reference
       : settings.dictationAgentProvider?.trim() || undefined;
     const isCustomAgent = settings.dictationAgentMode === "providers" && provider === "custom";
     return {
@@ -2151,7 +2151,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         const err = new Error(`API Error: ${response.status} ${errorText}`);
         if (response.status === 401) err.code = "INVALID_KEY";
         else if (response.status === 429) {
-          // The user's own provider rate-limited the request — not an OpenWhispr plan limit
+          // The user's own provider rate-limited the request — not an Oats plan limit
           err.code = "PROVIDER_RATE_LIMITED";
           err.messageKey = "hooks.audioRecording.errorDescriptions.providerRateLimited";
         } else if (response.status >= 500) err.code = "SERVER_ERROR";
@@ -3064,7 +3064,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       } else if (error.code === "AUTH_EXPIRED" || error.code === "AUTH_REQUIRED") {
         errorTitle = "Sign-in Required";
         errorDescription =
-          "Your OpenWhispr Cloud session is unavailable. Please sign in again from Settings.";
+          "Your Oats Cloud session is unavailable. Please sign in again from Settings.";
       } else if (error.code === "NETWORK_ERROR") {
         errorTitle = "streaming.errors.cloudUnreachable.title";
         errorDescription = error.messageKey || "streaming.errors.cloudUnreachable.generic";

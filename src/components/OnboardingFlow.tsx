@@ -126,7 +126,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [hotkey, setHotkey] = useState(
     () => parseHotkeyList(dictationKey)[0] || getDefaultHotkey()
   );
-  const [agentName, setAgentName] = useState("OpenWhispr");
+  const [agentName, setAgentName] = useState("Oats");
   const [isModelDownloaded, setIsModelDownloaded] = useState(false);
   const { isUsingNativeShortcut, isUsingHyprland, hyprlandConfigStatus, supportsPushToTalk } =
     useHotkeyModeInfo("onboarding");
@@ -354,7 +354,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     // via productName-keyed userData), so they never reach this code.
     void window.electronAPI?.markBundleMigrated?.();
 
-    // Cloud mode defaults to BYOK — there is no OpenWhispr-hosted cloud path.
+    // Cloud mode defaults to BYOK — there is no hosted cloud path.
     if (!useLocalWhisper) {
       updateTranscriptionSettings({ cloudTranscriptionMode: "byok" });
     }

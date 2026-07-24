@@ -209,7 +209,7 @@ class WhisperManager {
       }
     }
 
-    debugLogger.info("OpenWhispr dependency check", status);
+    debugLogger.info("Oats dependency check", status);
 
     // Log a summary for easy scanning
     const serverStatus = status.whisperServer.available

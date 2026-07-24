@@ -774,8 +774,8 @@ export default function SettingsPage({
   const [isRemovingModels, setIsRemovingModels] = useState(false);
   const cachePathHint =
     typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent)
-      ? "%USERPROFILE%\\.cache\\openwhispr"
-      : "~/.cache/openwhispr";
+      ? "%USERPROFILE%\\.cache\\oats"
+      : "~/.cache/oats";
 
   const {
     status: updateStatus,
@@ -1217,7 +1217,7 @@ export default function SettingsPage({
               description: t("settingsPage.developer.removeModels.failedDescription"),
             });
           } else {
-            window.dispatchEvent(new Event("openwhispr-models-cleared"));
+            window.dispatchEvent(new Event("oats-models-cleared"));
             showAlertDialog({
               title: t("settingsPage.developer.removeModels.successTitle"),
               description: t("settingsPage.developer.removeModels.successDescription"),
@@ -1940,7 +1940,7 @@ export default function SettingsPage({
                           }),
                           desc: t("settingsPage.general.waylandPaste.guide.group.step2Desc", {
                             defaultValue:
-                              "Group changes only take effect after a new login session. Log out of your desktop and log back in, then reopen OpenWhispr.",
+                              "Group changes only take effect after a new login session. Log out of your desktop and log back in, then reopen Oats.",
                           }),
                         },
                       ],

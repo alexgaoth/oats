@@ -97,7 +97,7 @@ function LocalModelCard({
             <div
               className={`w-1.5 h-1.5 rounded-full ${
                 isSelected
-                  ? "bg-primary shadow-[0_0_6px_oklch(0.62_0.22_260/0.6)] animate-[pulse-glow_2s_ease-in-out_infinite]"
+                  ? "bg-primary shadow-[0_0_6px_color-mix(in_oklch,var(--color-primary)_60%,transparent)] animate-[pulse-glow_2s_ease-in-out_infinite]"
                   : "bg-success shadow-[0_0_4px_rgba(34,197,94,0.5)]"
               }`}
             />
@@ -247,7 +247,7 @@ const PROVIDER_CREDENTIALS: Record<
     fields: [{ key: "mistralApiKey", input: "secret" }],
   },
   corti: {
-    consoleUrl: "https://www.corti.ai/?utm_source=referral&utm_content=&utm_campaign=openwhispr",
+    consoleUrl: "https://www.corti.ai/?utm_source=referral&utm_content=&utm_campaign=oats",
     fields: [
       { key: "cortiClientId", input: "secret", labelKey: "transcription.corti.clientId" },
       { key: "cortiClientSecret", input: "secret", labelKey: "transcription.corti.clientSecret" },
@@ -269,7 +269,7 @@ const PROVIDER_CREDENTIALS: Record<
     ],
   },
   tinfoil: {
-    consoleUrl: "https://tinfoil.sh/inference?utm_source=referral&utm_campaign=openwhispr",
+    consoleUrl: "https://tinfoil.sh/inference?utm_source=referral&utm_campaign=oats",
     fields: [{ key: "tinfoilApiKey", input: "secret" }],
   },
 };
@@ -530,8 +530,8 @@ export default function TranscriptionModelPicker({
       loadLocalModels();
       loadParakeetModels();
     };
-    window.addEventListener("openwhispr-models-cleared", handleModelsCleared);
-    return () => window.removeEventListener("openwhispr-models-cleared", handleModelsCleared);
+    window.addEventListener("oats-models-cleared", handleModelsCleared);
+    return () => window.removeEventListener("oats-models-cleared", handleModelsCleared);
   }, [loadLocalModels, loadParakeetModels]);
 
   useEffect(() => {

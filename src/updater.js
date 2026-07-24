@@ -28,8 +28,8 @@ class UpdateManager {
 
     autoUpdater.setFeedURL({
       provider: "github",
-      owner: "OpenWhispr",
-      repo: "openwhispr",
+      owner: "arum",
+      repo: "oats-arum",
       private: false,
     });
 

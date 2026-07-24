@@ -1,6 +1,7 @@
 const GpuBinaryManager = require("./gpuBinaryManager");
+// TODO(stage6): arum GPU-whisper binary release not yet stood up; source repo is a placeholder.
 
-const GITHUB_RELEASE_URL = "https://api.github.com/repos/OpenWhispr/whisper.cpp/releases/latest";
+const GITHUB_RELEASE_URL = "https://api.github.com/repos/arum/whisper.cpp/releases/latest";
 
 class WhisperCudaManager extends GpuBinaryManager {
   constructor() {

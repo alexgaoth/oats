@@ -333,7 +333,7 @@ export function getProviderDisplayName(provider: string): string {
 
 export function getModelProvider(modelId: string): string {
   if (isCloudCleanupMode()) {
-    return "openwhispr";
+    return "legacy"; // TODO(stage4): dead hosted-cloud reference
   }
 
   const storedProvider = getSettings().cleanupProvider;

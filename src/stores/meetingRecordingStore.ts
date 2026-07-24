@@ -148,8 +148,7 @@ const getMeetingTranscriptionOptions = () => {
   const provider =
     catalog?.find((p) => p.id === resolved.cloudTranscriptionProvider) ?? catalog?.[0];
   const byokKeyAvailable = provider?.id === "openai" ? !!state.openaiApiKey : true;
-  const mode =
-    resolved.cloudTranscriptionMode === "byok" && byokKeyAvailable ? "byok" : "openwhispr";
+  const mode = resolved.cloudTranscriptionMode === "byok" && byokKeyAvailable ? "byok" : "legacy"; // TODO(stage4): dead hosted-cloud reference
   if (!provider) {
     logger.debug(
       "Streaming providers catalog not loaded, falling back to OpenAI default",

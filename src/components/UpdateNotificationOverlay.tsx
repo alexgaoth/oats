@@ -91,12 +91,9 @@ export default function UpdateNotificationOverlay() {
 
         <div className="flex items-center gap-2.5">
           <div className="shrink-0 bg-primary/10 rounded-md p-1">
-            <svg viewBox="0 0 1024 1024" className="w-4.5 h-4.5">
-              <rect width="1024" height="1024" rx="241" fill="#2056DF" />
-              <circle cx="512" cy="512" r="314" fill="#2056DF" stroke="white" strokeWidth="74" />
-              <path d="M512 383V641" stroke="white" strokeWidth="74" strokeLinecap="round" />
-              <path d="M627 457V568" stroke="white" strokeWidth="74" strokeLinecap="round" />
-              <path d="M397 457V568" stroke="white" strokeWidth="74" strokeLinecap="round" />
+            <svg viewBox="0 0 1024 1024" className="w-4.5 h-4.5 text-primary" fill="currentColor">
+              {/* husked oat seed — collapses to a solid gold seed at small sizes (DESIGN.md §2) */}
+              <path d="M512 176C626 316 704 410 704 512C704 626 622 730 512 848C402 730 320 626 320 512C320 410 398 316 512 176Z" />
             </svg>
           </div>
 

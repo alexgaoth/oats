@@ -6,7 +6,7 @@ const debugLogger = require("./debugLogger");
 const { buildNoteSearchQuery } = require("./noteSearch");
 const { app } = require("electron");
 
-// Server-enforced trigger cap (openwhispr-api); enforced here so one oversized
+// Server-enforced trigger cap (oats-api); enforced here so one oversized
 // trigger can't 400 the whole sync batch.
 const MAX_SNIPPET_TRIGGER_LENGTH = 100;
 

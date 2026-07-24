@@ -1,31 +1,31 @@
 const { execFileSync } = require("child_process");
 const debugLogger = require("./debugLogger");
 
-const DBUS_SERVICE_NAME = "com.openwhispr.App";
-const DBUS_OBJECT_PATH = "/com/openwhispr/App";
-const DBUS_INTERFACE = "com.openwhispr.App";
+const DBUS_SERVICE_NAME = "com.arum.oats.App";
+const DBUS_OBJECT_PATH = "/com/arum/oats/App";
+const DBUS_INTERFACE = "com.arum.oats.App";
 
 // Per-slot gsettings paths and display names
 const SLOT_CONFIG = {
   dictation: {
-    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/openwhispr/",
-    name: "OpenWhispr Toggle",
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats/",
+    name: "Oats Toggle",
   },
   agent: {
-    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/openwhispr-agent/",
-    name: "OpenWhispr Agent",
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-agent/",
+    name: "Oats Agent",
   },
   meeting: {
-    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/openwhispr-meeting/",
-    name: "OpenWhispr Meeting",
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-meeting/",
+    name: "Oats Meeting",
   },
   voiceAgent: {
-    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/openwhispr-voice-agent/",
-    name: "OpenWhispr Voice Agent",
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-voice-agent/",
+    name: "Oats Voice Agent",
   },
   translation: {
-    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/openwhispr-translation/",
-    name: "OpenWhispr Translation",
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-translation/",
+    name: "Oats Translation",
   },
 };
 

@@ -8,10 +8,10 @@ import { LogoTile } from "./ui/LogoTile";
 import { useToast } from "./ui/useToast";
 import logo from "../assets/logo.svg";
 
-const CLI_DOCS_URL = "https://docs.openwhispr.com/cli/install";
-const INSTALL_CMD = "npm install -g @openwhispr/cli";
-const LOCAL_EXAMPLE = "openwhispr --local notes list";
-const CLOUD_LOGIN_CMD = "openwhispr auth login";
+const CLI_DOCS_URL = "https://github.com/arum/oats-arum";
+const INSTALL_CMD = "npm install -g @oats/cli";
+const LOCAL_EXAMPLE = "oats --local notes list";
+const CLOUD_LOGIN_CMD = "oats auth login";
 
 interface CliIntegrationCardProps {
   isPaid: boolean;
@@ -41,7 +41,7 @@ export default function CliIntegrationCard({ isPaid, onUpgrade }: CliIntegration
   return (
     <div className="rounded-lg border border-border/50 dark:border-border-subtle/70 bg-card/50 dark:bg-surface-2/50 backdrop-blur-sm p-4">
       <div className="flex items-center gap-2 mb-4">
-        <LogoTile src={logo} alt="OpenWhispr" />
+        <LogoTile src={logo} alt="Oats" />
         <div className="w-9 h-9 rounded-lg bg-white dark:bg-surface-raised shadow-[0_0_0_1px_rgba(0,0,0,0.04)] dark:shadow-none dark:border dark:border-white/5 flex items-center justify-center shrink-0">
           <Terminal className="w-4 h-4 text-foreground/70" strokeWidth={2} />
         </div>

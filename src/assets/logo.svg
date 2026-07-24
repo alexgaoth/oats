@@ -1,7 +1,20 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="1024" height="1024" rx="241" fill="#2056DF"/>
-<circle cx="512" cy="512" r="314" fill="#2056DF" stroke="white" stroke-width="74"/>
-<path d="M512 383V641" stroke="white" stroke-width="74" stroke-linecap="round"/>
-<path d="M627 457V568" stroke="white" stroke-width="74" stroke-linecap="round"/>
-<path d="M397 457V568" stroke="white" stroke-width="74" stroke-linecap="round"/>
+  <!-- Oats app icon — husked oat grain (DESIGN.md §2). Almond-form seed with one
+       seam, toasted gold on oat-milk paper. Collapses to a solid gold seed at
+       small sizes. Palette: paper #F6F1E7, surface #FBF7EF, gold #C67B27,
+       deep-gold seam #8B5A1F (DESIGN.md §3). -->
+  <rect width="1024" height="1024" rx="241" fill="#F6F1E7"/>
+  <rect x="40" y="40" width="944" height="944" rx="205" fill="#FBF7EF"/>
+  <!-- The husked oat grain -->
+  <g>
+    <path d="M512 176
+             C 626 316, 704 410, 704 512
+             C 704 626, 622 730, 512 848
+             C 402 730, 320 626, 320 512
+             C 320 410, 398 316, 512 176 Z"
+          fill="#C67B27"/>
+    <!-- husk seam: a single off-centre groove down the long axis -->
+    <path d="M512 268 C 470 410, 470 620, 512 756"
+          stroke="#8B5A1F" stroke-width="26" stroke-linecap="round" fill="none"/>
+  </g>
 </svg>

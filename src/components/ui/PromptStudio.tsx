@@ -46,7 +46,7 @@ const PROVIDER_CONFIG: Record<string, ProviderConfig> = {
   groq: { label: "Groq", apiKeyStorageKey: "groqApiKey" },
   openrouter: { label: "OpenRouter", apiKeyStorageKey: "openrouterApiKey" },
   tinfoil: { label: "Tinfoil", apiKeyStorageKey: "tinfoilApiKey" },
-  openwhispr: { label: "OpenWhispr Cloud" },
+  legacy: { label: "Oats Cloud" }, // TODO(stage4): dead hosted-cloud reference
   custom: {
     label: "Custom endpoint",
     apiKeyStorageKey: "openaiApiKey",
@@ -143,9 +143,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
           return;
         }
 
-        const provider = isCloudTranslation
-          ? "openwhispr"
-          : translationProvider.trim() || undefined;
+        const provider = isCloudTranslation ? "legacy" : translationProvider.trim() || undefined;
         const modelToUse = isCloudTranslation ? translationModel || "auto" : translationModel;
 
         const previous = customPrompt;
@@ -174,7 +172,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
       }
 
       const cleanupProvider = isCloudMode
-        ? "openwhispr"
+        ? "legacy"
         : cleanupModel
           ? getModelProvider(cleanupModel)
           : "openai";
@@ -387,7 +385,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
             const testIsCloud = isTranslate ? isCloudTranslation : isCloudMode;
             const testModel = isTranslate ? translationModel : cleanupModel;
             const testProvider = testIsCloud
-              ? "openwhispr"
+              ? "legacy"
               : isTranslate && translationProvider.trim()
                 ? translationProvider.trim()
                 : testModel
@@ -398,7 +396,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
             };
 
             const displayModel = testIsCloud
-              ? t("promptStudio.test.openwhisprCloud")
+              ? t("promptStudio.test.legacyCloud")
               : testModel || t("promptStudio.test.none");
             const displayProvider =
               testProvider === "custom"

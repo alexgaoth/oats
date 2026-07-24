@@ -22,7 +22,7 @@ export const webSearchTool: ToolDefinition = {
   readOnly: true,
 
   async execute(): Promise<ToolResult> {
-    // There is no OpenWhispr-hosted web search backend anymore, and no BYOK
+    // There is no Oats-hosted web search backend anymore, and no BYOK
     // web search provider is configured yet — the agent should fall back to
     // the same explicit-click Google search the core conversation aide uses.
     return {

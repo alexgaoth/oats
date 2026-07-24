@@ -119,14 +119,19 @@ function LoadingFallback({ message }) {
       <div className="flex flex-col items-center gap-4 animate-[scale-in_300ms_ease-out]">
         <svg
           viewBox="0 0 1024 1024"
-          className="w-12 h-12 drop-shadow-[0_2px_8px_rgba(37,99,235,0.18)] dark:drop-shadow-[0_2px_12px_rgba(100,149,237,0.25)]"
-          aria-label="OpenWhispr"
+          className="w-12 h-12 text-primary drop-shadow-[0_2px_10px_color-mix(in_oklch,var(--color-primary)_22%,transparent)]"
+          aria-label="Oats"
+          fill="currentColor"
         >
-          <rect width="1024" height="1024" rx="241" fill="#2056DF" />
-          <circle cx="512" cy="512" r="314" fill="#2056DF" stroke="white" strokeWidth="74" />
-          <path d="M512 383V641" stroke="white" strokeWidth="74" strokeLinecap="round" />
-          <path d="M627 457V568" stroke="white" strokeWidth="74" strokeLinecap="round" />
-          <path d="M397 457V568" stroke="white" strokeWidth="74" strokeLinecap="round" />
+          {/* husked oat seed with husk seam (DESIGN.md §2) */}
+          <path d="M512 176C626 316 704 410 704 512C704 626 622 730 512 848C402 730 320 626 320 512C320 410 398 316 512 176Z" />
+          <path
+            d="M512 268C470 410 470 620 512 756"
+            stroke="var(--color-background)"
+            strokeWidth="26"
+            strokeLinecap="round"
+            fill="none"
+          />
         </svg>
         <div className="w-7 h-7 rounded-full border-[2.5px] border-transparent border-t-primary animate-[spinner-rotate_0.8s_cubic-bezier(0.4,0,0.2,1)_infinite] motion-reduce:animate-none motion-reduce:border-t-muted-foreground motion-reduce:opacity-50" />
         {fallbackMessage && (

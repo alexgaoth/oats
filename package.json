@@ -1,7 +1,7 @@
 {
-  "name": "open-whispr",
+  "name": "oats",
   "version": "1.7.6",
-  "description": "A desktop dictation application using whisper.cpp for speech-to-text transcription",
+  "description": "A private, local-first conversation aide for dictation, meeting notes, and timely research prompts",
   "main": "main.js",
   "private": true,
   "engines": {
@@ -89,15 +89,16 @@
   },
   "keywords": [
     "dictation",
+    "conversation-aide",
     "speech-to-text",
     "whisper",
     "whisper.cpp",
+    "local-first",
     "electron",
     "desktop-app"
   ],
   "author": {
-    "name": "OpenWhispr Team",
-    "email": "support@openwhispr.com"
+    "name": "arum"
   },
   "license": "MIT",
   "devDependencies": {

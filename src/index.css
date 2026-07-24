@@ -3,124 +3,125 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* OpenWhispr Theme — registers color tokens with Tailwind v4.
-     These are the light-mode defaults; .dark overrides them below. */
-  --color-primary: #2563eb;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f5f5f5;
-  --color-secondary-foreground: #171717;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #525252;
-  --color-accent: oklch(0.55 0.22 285);
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-border: #e5e5e5;
-  --color-input: #f9f6f1;
-  --color-ring: #2563eb;
-  --color-background: #ffffff;
-  --color-foreground: #171717;
-  --color-card: #ffffff;
-  --color-card-foreground: #171717;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #171717;
-  --color-link: #2563eb;
-  --color-success: #16a34a;
-  --color-success-foreground: #ffffff;
-  --color-warning: #d97706;
-  --color-warning-foreground: #ffffff;
-  --color-info: #2563eb;
-  --color-info-foreground: #ffffff;
+  /* Oats Theme — registers color tokens with Tailwind v4. Oat milk (light) palette
+     per DESIGN.md §3; these are the defaults, .dark overrides them below with the
+     Steel-cut palette. One accent (toasted gold) — see DESIGN.md §3 rules. */
+  --color-primary: #c67b27;
+  --color-primary-foreground: #fbf7ef;
+  --color-secondary: #f1ebdd;
+  --color-secondary-foreground: #2b2620;
+  --color-muted: #f1ebdd;
+  --color-muted-foreground: #6b6459;
+  --color-accent: #c67b27;
+  --color-accent-foreground: #fbf7ef;
+  --color-destructive: #c05b3c;
+  --color-destructive-foreground: #fbf7ef;
+  --color-border: #e3d9c6;
+  --color-input: #f1ebdd;
+  --color-ring: #c67b27;
+  --color-background: #f6f1e7;
+  --color-foreground: #2b2620;
+  --color-card: #fbf7ef;
+  --color-card-foreground: #2b2620;
+  --color-popover: #fffdf8;
+  --color-popover-foreground: #2b2620;
+  --color-link: #8b5a1f;
+  --color-success: #7c8b6f;
+  --color-success-foreground: #fbf7ef;
+  --color-warning: #c67b27;
+  --color-warning-foreground: #fbf7ef;
+  --color-info: #6b6459;
+  --color-info-foreground: #fbf7ef;
 
-  /* Surface hierarchy — light mode equivalents */
-  --color-surface-0: #ffffff;
-  --color-surface-1: #fafafa;
-  --color-surface-2: #ffffff;
-  --color-surface-3: #f5f5f5;
-  --color-surface-raised: #f0f0f0;
+  /* Surface hierarchy — oat-milk elevation ladder */
+  --color-surface-0: #fbf7ef;
+  --color-surface-1: #f1ebdd;
+  --color-surface-2: #ebe3d0;
+  --color-surface-3: #e5dbc4;
+  --color-surface-raised: #fffdf8;
 
-  /* Border states — light mode equivalents */
-  --color-border-subtle: #e5e5e5;
-  --color-border-hover: #d4d4d4;
-  --color-border-active: #2563eb;
+  /* Border states */
+  --color-border-subtle: #e3d9c6;
+  --color-border-hover: #d3c6ac;
+  --color-border-active: #c67b27;
 }
 
 :root {
-  /* Typography */
+  /* Typography — DESIGN.md §5. Sans stays the existing humanist stack; mono is
+     the "machine heard this" voice (transcripts, timestamps, question text). */
   --font-family-sans:
     "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
+  --font-family-mono: ui-monospace, "SF Mono", "Commit Mono", monospace;
 
   /* Opacities */
   --opacity-subtle: 0.1;
   --opacity-medium: 0.5;
   --opacity-high: 0.9;
 
-  /* Border Radius — ultra-tight, premium macOS-style rounding */
-  --radius: 0.375rem; /* 6px - default for buttons, inputs */
+  /* Border Radius — DESIGN.md §6: tight and physical, not bubbly. */
+  --radius: 0.5rem; /* 8px - default for buttons, inputs */
   --radius-sm: 0.25rem; /* 4px - minimal rounding */
-  --radius-md: 0.375rem; /* 6px - standard */
-  --radius-lg: 0.5rem; /* 8px - cards, panels */
-  --radius-xl: 0.625rem; /* 10px - large cards */
+  --radius-md: 0.5rem; /* 8px - standard */
+  --radius-lg: 0.75rem; /* 12px - cards, panels */
+  --radius-xl: 0.875rem; /* 14px - the aide card */
 
-  /* Custom Light Mode Brand Colors (Parchment Theme) */
-  --color-parchment-bg: #f9f6f1;
-  --color-parchment-border: #ddd4c7;
-  --color-parchment-text: #2b1f14;
-  --color-parchment-accent: #c0a77d;
-  --color-brand-primary: #2b1f14;
-  --color-brand-accent: #4b2e2b;
-  --color-brand-highlight: #c0a77d;
-  --color-brand-link: #2e3659;
-  --color-pattern: #e7e5e4;
+  /* Motion — DESIGN.md §8: smooth, slow, decelerating; never a bounce or spring. */
+  --motion-instant: 120ms cubic-bezier(0.2, 0, 0, 1); /* hover, focus, press */
+  --motion-base: 220ms cubic-bezier(0.2, 0, 0, 1); /* cards in/out, view swaps */
+  --motion-slow: 380ms cubic-bezier(0.2, 0, 0, 1); /* onboarding steps, Graph reveal */
+  --motion-ambient: 2400ms; /* the listening pulse breath — pair with ease-in-out infinite */
 
-  /* Model picker premium effects (light mode) */
-  --shadow-metallic-light: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-card-hover-subtle: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
+  /* Model picker premium effects (light mode) — warm, low shadow per DESIGN.md §6:
+     "0 1px 2px rgba(43,38,32,.06), 0 8px 24px rgba(43,38,32,.08)" (roasted-ink base,
+     never blue-gray). */
+  --shadow-metallic-light: inset 0 1px 0 rgba(255, 253, 248, 0.5), 0 1px 3px rgba(43, 38, 32, 0.08);
+  --shadow-card-hover-subtle: 0 2px 8px -2px rgba(43, 38, 32, 0.1);
 }
 
 .dark {
-  /* Dark mode — charcoal surfaces with clear elevation hierarchy
-     Base L=0.22 (charcoal) with 0.05 steps between layers.
-     Hue 260 (neutral blue) with minimal chroma for sophistication. */
-  --color-background: oklch(0.22 0.006 260);
-  --color-foreground: oklch(0.93 0 0);
-  --color-card: oklch(0.27 0.008 260);
-  --color-card-foreground: oklch(0.93 0 0);
-  --color-popover: oklch(0.29 0.009 260);
-  --color-popover-foreground: oklch(0.93 0 0);
-  --color-primary: oklch(0.65 0.2 260);
-  --color-primary-foreground: oklch(0.99 0 0);
-  --color-secondary: oklch(0.28 0.007 260);
-  --color-secondary-foreground: oklch(0.9 0 0);
-  --color-muted: oklch(0.24 0.006 260);
-  --color-muted-foreground: oklch(0.65 0 0);
-  --color-accent: oklch(0.68 0.18 285);
-  --color-accent-foreground: oklch(0.99 0 0);
-  --color-destructive: oklch(0.62 0.22 25);
-  --color-destructive-foreground: oklch(0.99 0 0);
-  --color-border: oklch(0.35 0.007 260);
-  --color-input: oklch(0.19 0.005 260);
-  --color-ring: oklch(0.65 0.2 260);
-  --color-success: oklch(0.7 0.18 145);
-  --color-success-foreground: oklch(0.99 0 0);
-  --color-warning: oklch(0.75 0.15 70);
-  --color-warning-foreground: oklch(0.15 0 0);
-  --color-info: oklch(0.68 0.18 240);
-  --color-info-foreground: oklch(0.99 0 0);
+  /* Steel-cut (dark) — DESIGN.md §3. Roasted charcoal surfaces, brighter toasted
+     gold accent for contrast. Elevation ladder anchored on the two values DESIGN.md
+     gives explicitly (surface-0 #2A261F, surface-raised #322D24); surface-2 is
+     interpolated between them. */
+  --color-background: #201d18;
+  --color-foreground: #ede6d6;
+  --color-card: #2a261f;
+  --color-card-foreground: #ede6d6;
+  --color-popover: #322d24;
+  --color-popover-foreground: #ede6d6;
+  --color-primary: #e0a34a;
+  --color-primary-foreground: #201d18;
+  --color-secondary: #2a261f;
+  --color-secondary-foreground: #ede6d6;
+  --color-muted: #2a261f;
+  --color-muted-foreground: #a79e8c;
+  --color-accent: #e0a34a;
+  --color-accent-foreground: #201d18;
+  --color-destructive: #d07350;
+  --color-destructive-foreground: #201d18;
+  --color-border: #3b352b;
+  --color-input: #2a261f;
+  --color-ring: #e0a34a;
+  --color-success: #9fb08c;
+  --color-success-foreground: #201d18;
+  --color-warning: #e0a34a;
+  --color-warning-foreground: #201d18;
+  --color-info: #a79e8c;
+  --color-info-foreground: #201d18;
 
-  /* Surface hierarchy — charcoal depth system (0.22 → 0.33) */
-  --color-surface-0: oklch(0.22 0.006 260);
-  --color-surface-1: oklch(0.25 0.007 260);
-  --color-surface-2: oklch(0.27 0.008 260);
-  --color-surface-3: oklch(0.3 0.009 260);
-  --color-surface-raised: oklch(0.33 0.01 260);
+  /* Surface hierarchy — charcoal elevation ladder */
+  --color-surface-0: #201d18;
+  --color-surface-1: #2a261f;
+  --color-surface-2: #2e2921;
+  --color-surface-3: #322d24;
+  --color-surface-raised: #322d24;
 
   /* Border states */
-  --color-border-subtle: oklch(0.33 0.006 260);
-  --color-border-hover: oklch(0.42 0.01 260);
-  --color-border-active: oklch(0.5 0.15 260);
-  --color-link: oklch(0.67 0.1 250);
+  --color-border-subtle: #3b352b;
+  --color-border-hover: #4a4335;
+  --color-border-active: #e0a34a;
+  --color-link: #e0a34a;
 
   /* Card depth shadows — softer for charcoal, with top highlight for premium depth */
   --shadow-card: 0 1px 3px oklch(0 0 0 / 0.2), inset 0 1px 0 oklch(1 0 0 / 0.03);
@@ -131,7 +132,7 @@
   /* Premium effects */
   --shadow-metallic-dark: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0, 0, 0, 0.2);
   --shadow-selected-glow:
-    inset 0 0 0 1px oklch(0.65 0.2 260 / 0.2), 0 0 16px -4px oklch(0.65 0.2 260 / 0.2);
+    inset 0 0 0 1px oklch(0.75 0.15 75 / 0.2), 0 0 16px -4px oklch(0.75 0.15 75 / 0.2);
   --shadow-card-hover-subtle: 0 2px 8px -2px rgba(0, 0, 0, 0.12);
 }
 
@@ -188,7 +189,7 @@
   }
 }
 
-/* OpenWhispr Brand Typography */
+/* Oats Brand Typography */
 .brand-heading {
   font-family: var(--font-family-sans);
   font-weight: 600;
@@ -356,28 +357,6 @@ a:hover {
   border-radius: var(--radius-xl);
 }
 
-/* Gradient accent bar — top border highlight for panels */
-.accent-bar {
-  position: relative;
-}
-
-.dark .accent-bar::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    oklch(0.65 0.2 260 / 0.5),
-    oklch(0.7 0.18 280 / 0.3),
-    transparent 80%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
 /* Monochrome icon theming - explicit light/dark handling */
 .icon-monochrome {
   filter: none;
@@ -390,8 +369,8 @@ a:hover {
 
 /* Toast — opaque dark HUD surface, same in light & dark mode */
 .toast-surface {
-  background: oklch(0.15 0.006 260);
-  border: 1px solid oklch(0.25 0.006 260);
+  background: oklch(0.15 0.006 75);
+  border: 1px solid oklch(0.25 0.006 75);
   box-shadow:
     inset 0 1px 0 oklch(1 0 0 / 0.04),
     0 8px 24px -4px oklch(0 0 0 / 0.5),
@@ -411,11 +390,11 @@ a:hover {
 @keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 6px oklch(0.65 0.2 260 / 0.4);
+    box-shadow: 0 0 6px oklch(0.75 0.15 75 / 0.4);
     opacity: 0.8;
   }
   50% {
-    box-shadow: 0 0 8px oklch(0.65 0.2 260 / 0.6);
+    box-shadow: 0 0 8px oklch(0.75 0.15 75 / 0.6);
     opacity: 1;
   }
 }
@@ -579,183 +558,8 @@ a:hover {
   }
 }
 
-/* ---- Referral Modal v2 ---- */
-
-/* Animated mesh gradient — slow-drifting color blobs */
-.referral-mesh-bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.referral-mesh-bg::before,
-.referral-mesh-bg::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  animation: mesh-drift 25s ease-in-out infinite alternate;
-}
-
-.referral-mesh-bg::before {
-  width: 300px;
-  height: 300px;
-  background: oklch(0.65 0.2 260);
-  opacity: 0.04;
-  top: -80px;
-  right: -60px;
-}
-
-.referral-mesh-bg::after {
-  width: 250px;
-  height: 250px;
-  background: oklch(0.6 0.18 180);
-  opacity: 0.04;
-  bottom: -60px;
-  left: -40px;
-  animation-delay: -12s;
-  animation-direction: alternate-reverse;
-}
-
-@keyframes mesh-drift {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -20px) scale(1.05);
-  }
-  66% {
-    transform: translate(-20px, 15px) scale(0.95);
-  }
-  100% {
-    transform: translate(10px, -10px) scale(1.02);
-  }
-}
-
-/* 3D perspective-tilt card */
-.tilt-card {
-  --tilt-x: 0deg;
-  --tilt-y: 0deg;
-  --highlight-x: 50%;
-  --highlight-y: 50%;
-  --highlight-opacity: 0;
-  transform-style: preserve-3d;
-  transform: perspective(800px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
-  transition: transform 0.6s cubic-bezier(0.03, 0.98, 0.52, 0.99);
-  position: relative;
-  isolation: isolate;
-  will-change: transform;
-}
-
-.tilt-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    circle at var(--highlight-x) var(--highlight-y),
-    oklch(1 0 0 / 0.07),
-    transparent 60%
-  );
-  opacity: var(--highlight-opacity);
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.tilt-card::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    oklch(0.65 0.2 260 / 0.2),
-    oklch(0.55 0.2 320 / 0.1),
-    oklch(0.6 0.18 180 / 0.15),
-    oklch(0.55 0.2 100 / 0.1),
-    oklch(0.65 0.2 260 / 0.2)
-  );
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.tilt-card:hover::after {
-  opacity: 1;
-}
-
-/* Stat gauge — accent bottom bar */
-.stat-gauge {
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-gauge::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: oklch(0.65 0.2 260 / 0.4);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s;
-}
-
-.stat-gauge[data-active="true"]::after {
-  transform: scaleX(1);
-}
-
-/* Spectrogram playback scan line — synced to audio */
-@keyframes spectrogram-play {
-  0% {
-    left: 0%;
-    opacity: 1;
-  }
-  95% {
-    opacity: 1;
-  }
-  100% {
-    left: 100%;
-    opacity: 0;
-  }
-}
-
-.spectrogram-play {
-  animation: spectrogram-play linear both;
-}
-
-/* Reduced motion: disable all referral effects */
+/* Reduced motion: disable the action-processing scanner sweep */
 @media (prefers-reduced-motion: reduce) {
-  .referral-mesh-bg::before,
-  .referral-mesh-bg::after {
-    animation: none;
-  }
-
-  .tilt-card {
-    transform: none !important;
-    transition: none;
-  }
-
-  .tilt-card::before,
-  .tilt-card::after {
-    display: none;
-  }
-
-  .stat-gauge::after {
-    transition: none;
-    transform: scaleX(1);
-  }
-
-  .spectrogram-play {
-    animation: none;
-    opacity: 0;
-  }
-
   .scanner-sweep-line {
     animation: none !important;
     top: 50% !important;
@@ -830,7 +634,7 @@ body:has(.agent-overlay-window) #root {
     background: linear-gradient(
       90deg,
       transparent 0%,
-      oklch(0.65 0.2 260 / 0.04) 50%,
+      oklch(0.75 0.15 75 / 0.04) 50%,
       transparent 100%
     );
     background-position: -100% 0;
@@ -877,10 +681,10 @@ body:has(.agent-overlay-window) #root {
 .thinking-shimmer-text {
   background: linear-gradient(
     90deg,
-    oklch(0.65 0.01 260) 0%,
-    oklch(0.85 0.02 240) 40%,
-    oklch(0.65 0.01 260) 60%,
-    oklch(0.78 0.015 250) 100%
+    oklch(0.65 0.01 75) 0%,
+    oklch(0.85 0.02 75) 40%,
+    oklch(0.65 0.01 75) 60%,
+    oklch(0.78 0.015 75) 100%
   );
   background-size: 200% 100%;
   animation: thinking-shimmer 2s ease-in-out infinite;
@@ -1008,7 +812,7 @@ body:has(.agent-overlay-window) #root {
 }
 
 .rich-text-editor-content ::selection {
-  background: oklch(0.62 0.22 260 / 0.15);
+  background: oklch(0.75 0.15 75 / 0.2);
 }
 
 /* Task list (checkboxes) */

@@ -4,7 +4,7 @@
 export function buildNoteFormattingOverrides(noteFormatting, isCloudMode, customApiKey) {
   if (isCloudMode) {
     return {
-      provider: "openwhispr",
+      provider: "legacy", // TODO(stage4): dead hosted-cloud reference
       baseUrl: undefined,
       customApiKey: undefined,
       lanUrl: undefined,
