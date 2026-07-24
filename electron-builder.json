@@ -104,7 +104,6 @@
         "whisper-server-*",
         "llama-server-*",
         "sherpa-onnx-*",
-        "yt-dlp-*",
         "qdrant-*",
         "macos-audio-tap",
         "macos-globe-listener",
@@ -118,11 +117,6 @@
         "linux-text-monitor",
         "linux-key-listener*",
         "meeting-aec-helper-*",
-        "windows-key-listener*",
-        "windows-mic-listener*",
-        "windows-system-audio-helper*",
-        "windows-text-monitor*",
-        "windows-fast-paste*",
         "all-MiniLM-L6-v2/**/*",
         "diarization-models/**/*",
         "whisper-vad/**/*",
@@ -165,13 +159,7 @@
   },
   "win": {
     "target": ["nsis", "portable"],
-    "icon": "src/assets/icon.ico",
-    "extraResources": [
-      {
-        "from": "resources/bin/nircmd.exe",
-        "to": "bin/nircmd.exe"
-      }
-    ]
+    "icon": "src/assets/icon.ico"
   },
   "linux": {
     "target": ["AppImage", "deb", "rpm", "tar.gz"],

@@ -4,8 +4,6 @@ import {
   MessageSquare,
   NotebookPen,
   BookOpen,
-  Upload,
-  Blocks,
   Settings,
   HelpCircle,
   Search,
@@ -24,8 +22,7 @@ const rowLabelClass =
 const rowButtonClass =
   "group flex items-center gap-2.5 w-full h-8 px-2.5 rounded-md text-left outline-none hover:bg-foreground/4 dark:hover:bg-white/4 focus-visible:ring-1 focus-visible:ring-primary/30 transition-colors duration-150";
 
-export type ControlPanelView =
-  "home" | "chat" | "personal-notes" | "dictionary" | "upload" | "integrations";
+export type ControlPanelView = "home" | "chat" | "personal-notes" | "dictionary";
 
 interface ControlPanelSidebarProps {
   activeView: ControlPanelView;
@@ -52,9 +49,7 @@ export default function ControlPanelSidebar({
     { id: "home", label: t("sidebar.home"), icon: Home },
     { id: "chat", label: t("sidebar.chat"), icon: MessageSquare },
     { id: "personal-notes", label: t("sidebar.notes"), icon: NotebookPen },
-    { id: "upload", label: t("sidebar.upload"), icon: Upload },
     { id: "dictionary", label: t("sidebar.dictionary"), icon: BookOpen },
-    { id: "integrations", label: t("sidebar.integrations"), icon: Blocks },
   ];
 
   return (

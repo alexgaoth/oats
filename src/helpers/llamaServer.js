@@ -9,7 +9,7 @@ const { getSafeTempDir } = require("./safeTempDir");
 const { app } = require("electron");
 const sidecarPidFile = require("./sidecarPidFile");
 
-// Range kept clear of cliBridge (8200-8219) to avoid port-bind collisions.
+// Range starts at 8221, clear of the 8200-8219 band, to avoid port-bind collisions.
 const PORT_RANGE_START = 8221;
 const PORT_RANGE_END = 8240;
 const STARTUP_TIMEOUT_MS = 120000;

@@ -164,7 +164,6 @@ const DiarizationManager = require("./src/helpers/diarization");
 const TrayManager = require("./src/helpers/tray");
 const dockManager = require("./src/helpers/dockManager");
 const IPCHandlers = require("./src/helpers/ipcHandlers");
-const CliBridge = require("./src/helpers/cliBridge");
 const UpdateManager = require("./src/updater");
 const GlobeKeyManager = require("./src/helpers/globeKeyManager");
 const WindowsKeyManager = require("./src/helpers/windowsKeyManager");
@@ -211,7 +210,6 @@ let windowsLoopbackAudioManager = null;
 let meetingAecManager = null;
 let qdrantManager = null;
 let ipcHandlers = null;
-let cliBridge = null;
 let globeKeyAlertShown = false;
 const WHISPER_WAKE_REWARM_DELAY_MS = 3000;
 let wakeRewarmTimer = null;
@@ -388,12 +386,6 @@ async function startApp() {
   initializeCoreManagers();
   await environmentManager.init();
   registerSidecars();
-
-  cliBridge = new CliBridge(ipcHandlers);
-  cliBridge.start().catch((err) => {
-    debugLogger.error("CLI bridge failed to start", { error: err.message });
-    cliBridge = null;
-  });
 
   windowManager.setActivationModeCache(environmentManager.getActivationMode());
   windowManager.setFloatingIconAutoHide(environmentManager.getFloatingIconAutoHide());
@@ -1232,10 +1224,6 @@ function performSyncTeardown() {
   if (wakeRewarmTimer) {
     clearTimeout(wakeRewarmTimer);
     wakeRewarmTimer = null;
-  }
-  if (cliBridge) {
-    cliBridge.stop().catch(() => {});
-    cliBridge = null;
   }
   if (windowManager && isLiveWindow(windowManager.agentWindow)) {
     windowManager.agentWindow.destroy();

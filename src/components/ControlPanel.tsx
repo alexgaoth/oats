@@ -61,8 +61,6 @@ const toggleIconClass =
 const SettingsModal = React.lazy(() => import("./SettingsModal"));
 const PersonalNotesView = React.lazy(() => import("./notes/PersonalNotesView"));
 const DictionaryView = React.lazy(() => import("./DictionaryView"));
-const UploadAudioView = React.lazy(() => import("./notes/UploadAudioView"));
-const IntegrationsView = React.lazy(() => import("./IntegrationsView"));
 const ChatView = React.lazy(() => import("./chat/ChatView"));
 const CommandSearch = React.lazy(() => import("./CommandSearch"));
 
@@ -876,26 +874,6 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
             {activeView === "dictionary" && (
               <Suspense fallback={null}>
                 <DictionaryView />
-              </Suspense>
-            )}
-            {activeView === "upload" && (
-              <Suspense fallback={null}>
-                <UploadAudioView
-                  onNoteCreated={(noteId, folderId) => {
-                    setActiveNoteId(noteId);
-                    if (folderId) setActiveFolderId(folderId);
-                    setActiveView("personal-notes");
-                  }}
-                  onOpenSettings={(section) => {
-                    setSettingsSection(section);
-                    setShowSettings(true);
-                  }}
-                />
-              </Suspense>
-            )}
-            {activeView === "integrations" && (
-              <Suspense fallback={null}>
-                <IntegrationsView isPaid={true} onUpgrade={() => {}} />
               </Suspense>
             )}
           </div>
