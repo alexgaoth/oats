@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useSettingsStore, selectIsCloudCleanupMode } from "../stores/settingsStore";
-import { useUsage } from "./useUsage";
 
 interface UseNotesOnboardingReturn {
   isComplete: boolean;
@@ -11,9 +10,9 @@ interface UseNotesOnboardingReturn {
 }
 
 export function useNotesOnboarding(): UseNotesOnboardingReturn {
-  const usage = useUsage();
-  const isProUser = !!(usage?.isSubscribed || usage?.isTrial);
-  const isProLoading = usage !== null && !usage.hasLoaded;
+  // There is no paid tier anymore — cloud access is BYOK-only.
+  const isProUser = false;
+  const isProLoading = false;
   const useCleanupModel = useSettingsStore((s) => s.useCleanupModel);
   const effectiveModel = useSettingsStore((s) => s.cleanupModel);
   const isCloudCleanup = useSettingsStore(selectIsCloudCleanupMode);

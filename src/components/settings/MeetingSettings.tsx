@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Cloud, Key, Cpu, Network } from "lucide-react";
+import { Key, Cpu, Network } from "lucide-react";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { InferenceModeSelector, SettingsRow } from "../ui/SettingsSection";
 import type { InferenceModeOption } from "../ui/SettingsSection";
@@ -8,7 +8,6 @@ import { Toggle } from "../ui/toggle";
 import TranscriptionModelPicker from "../TranscriptionModelPicker";
 import SelfHostedPanel from "../SelfHostedPanel";
 import type { InferenceMode } from "../../types/electron";
-import { useStartOnboarding } from "../../hooks/useStartOnboarding";
 
 export function MeetingSpeakerDetectionRow() {
   const { t } = useTranslation();
@@ -180,10 +179,8 @@ function ConversationAidePanel() {
 
 export function MeetingTranscriptionPanel() {
   const { t } = useTranslation();
-  const startOnboarding = useStartOnboarding();
 
   const {
-    isSignedIn,
     meetingTranscriptionMode,
     setMeetingTranscriptionMode,
     setMeetingUseLocalWhisper,
@@ -206,14 +203,6 @@ export function MeetingTranscriptionPanel() {
 
   const transcriptionModes: InferenceModeOption[] = [
     {
-      id: "openwhispr",
-      label: t("settingsPage.transcription.modes.openwhispr"),
-      description: t("settingsPage.transcription.modes.openwhisprDesc"),
-      icon: <Cloud className="w-4 h-4" />,
-      disabled: !isSignedIn,
-      badge: !isSignedIn ? t("common.freeAccountRequired") : undefined,
-    },
-    {
       id: "providers",
       label: t("settingsPage.transcription.modes.providers"),
       description: t("settingsPage.transcription.modes.providersDesc"),
@@ -234,14 +223,10 @@ export function MeetingTranscriptionPanel() {
   ];
 
   const handleTranscriptionModeSelect = (mode: InferenceMode) => {
-    if (mode === "openwhispr" && !isSignedIn) {
-      startOnboarding();
-      return;
-    }
     if (mode === meetingTranscriptionMode) return;
     setMeetingTranscriptionMode(mode);
     setMeetingUseLocalWhisper(mode === "local");
-    setMeetingCloudTranscriptionMode(mode === "openwhispr" ? "openwhispr" : "byok");
+    setMeetingCloudTranscriptionMode("byok");
   };
 
   const handleLocalTranscriptionModelSelect = useCallback(

@@ -4,7 +4,7 @@ export function deriveReasoningMode(cloudMode, provider) {
   if (cloudMode === "byok") {
     return provider === "custom" ? "self-hosted" : "providers";
   }
-  return "openwhispr";
+  return "local";
 }
 
 // Fan a cleanup config out to all five LLM scopes; the four non-cleanup scopes
@@ -28,9 +28,8 @@ export function buildReasoningScopePatches(settings, mode) {
 
 // Onboarding "use Corti everywhere" payloads. Transcription always routes to
 // Corti. Reasoning routes to Corti only in the EU region with an API key, since
-// Corti Models is EU-only and needs its own key; otherwise it routes to the
-// HIPAA-compliant OpenWhispr Cloud so clinical text never reaches a third party.
-// useCleanupModel is forced true either way so the routing sticks.
+// Corti Models is EU-only and needs its own key; otherwise it stays local so
+// clinical text never leaves the device.
 export function buildCortiOnboardingPayloads(
   transcriptionProvider,
   reasoningProvider,
@@ -52,6 +51,6 @@ export function buildCortiOnboardingPayloads(
           cleanupModel: cortiModel,
           cleanupCloudMode: "byok",
         }
-      : { useCleanupModel: true, cleanupCloudMode: "openwhispr" };
+      : { useCleanupModel: false, cleanupCloudMode: "local" };
   return { transcription, reasoning };
 }
