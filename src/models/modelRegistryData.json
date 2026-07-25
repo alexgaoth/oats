@@ -246,20 +246,6 @@
       ]
     },
     {
-      "id": "corti",
-      "name": "Corti",
-      "baseUrl": "https://api.us.corti.app/v2",
-      "models": [
-        {
-          "id": "corti-transcribe",
-          "name": "Corti Transcribe",
-          "description": "Clinical-grade medical transcription",
-          "descriptionKey": "models.descriptions.transcription.corti_transcribe",
-          "streaming": true
-        }
-      ]
-    },
-    {
       "id": "tinfoil",
       "name": "Tinfoil",
       "baseUrl": "https://inference.tinfoil.sh/v1",
@@ -568,44 +554,6 @@
           "supportsTemperature": true,
           "descriptionKey": "models.descriptions.cloud.tinfoil_gemma4_31b",
           "supportsThinking": true
-        }
-      ]
-    },
-    {
-      "id": "corti",
-      "name": "Corti",
-      "models": [
-        {
-          "id": "corti-s1-instant",
-          "name": "Corti S1 Instant",
-          "description": "Fast healthcare model, no reasoning trace",
-          "descriptionKey": "models.descriptions.cloud.corti_corti_s1_instant",
-          "tokenParam": "max_tokens",
-          "supportsTemperature": true
-        },
-        {
-          "id": "corti-s1",
-          "name": "Corti S1",
-          "description": "Most capable clinical model with reasoning",
-          "descriptionKey": "models.descriptions.cloud.corti_corti_s1",
-          "tokenParam": "max_tokens",
-          "supportsTemperature": true
-        },
-        {
-          "id": "corti-s1-mini-instant",
-          "name": "Corti S1 Mini Instant",
-          "description": "Compact healthcare model, fastest and lowest cost",
-          "descriptionKey": "models.descriptions.cloud.corti_corti_s1_mini_instant",
-          "tokenParam": "max_tokens",
-          "supportsTemperature": true
-        },
-        {
-          "id": "corti-s1-mini",
-          "name": "Corti S1 Mini",
-          "description": "Compact clinical model with reasoning at half the price",
-          "descriptionKey": "models.descriptions.cloud.corti_corti_s1_mini",
-          "tokenParam": "max_tokens",
-          "supportsTemperature": true
         }
       ]
     }

@@ -54,14 +54,14 @@ test("self-hosted Chat preserves an empty optional API key", async () => {
   assert.equal(route.apiKey, "");
 });
 
-test("enterprise Chat stays enterprise without a Chat LAN URL", async () => {
+test("unsupported Chat providers stay local without a LAN URL", async () => {
   const { resolveChatRoute } = await load();
   const route = resolveChatRoute({
     provider: "vertex",
     isEnterpriseProvider: true,
   });
 
-  assert.equal(route.kind, "enterprise");
+  assert.equal(route.kind, "local");
 });
 
 test("blank Chat LAN URL does not activate self-hosted routing", async () => {

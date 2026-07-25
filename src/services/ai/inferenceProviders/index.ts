@@ -6,7 +6,6 @@ import { localProvider } from "./local";
 import { lanProvider } from "./lan";
 import { openaiProvider } from "./openai";
 import { tinfoilProvider } from "./tinfoil";
-import { cortiProvider } from "./corti";
 
 export const PROVIDER_REGISTRY: Readonly<Record<string, InferenceProvider>> = Object.freeze({
   openai: openaiProvider,
@@ -16,7 +15,6 @@ export const PROVIDER_REGISTRY: Readonly<Record<string, InferenceProvider>> = Ob
   gemini: geminiProvider,
   groq: groqProvider,
   tinfoil: tinfoilProvider,
-  corti: cortiProvider,
   local: localProvider,
   lan: lanProvider,
 });

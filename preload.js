@@ -13,7 +13,6 @@ const BYOK_KEY_BRIDGES = [
   { base: "mistral", get: "getMistralKey", save: "saveMistralKey" },
   { base: "openrouter", get: "getOpenrouterKey", save: "saveOpenrouterKey" },
   { base: "tinfoil", get: "getTinfoilKey", save: "saveTinfoilKey" },
-  { base: "corti", get: "getCortiKey", save: "saveCortiKey" },
 ];
 const secretKeyApi = {};
 for (const k of BYOK_KEY_BRIDGES) {
@@ -411,12 +410,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   proxyXaiTranscription: (data) => ipcRenderer.invoke("proxy-xai-transcription", data),
   proxyMistralTranscription: (data) => ipcRenderer.invoke("proxy-mistral-transcription", data),
 
-  // Corti API
-  getCortiClientId: () => ipcRenderer.invoke("get-corti-client-id"),
-  saveCortiClientId: (key) => ipcRenderer.invoke("save-corti-client-id", key),
-  getCortiClientSecret: () => ipcRenderer.invoke("get-corti-client-secret"),
-  saveCortiClientSecret: (key) => ipcRenderer.invoke("save-corti-client-secret", key),
-  proxyCortiTranscription: (data) => ipcRenderer.invoke("proxy-corti-transcription", data),
   getTinfoilChatModels: () => ipcRenderer.invoke("get-tinfoil-chat-models"),
   proxyTinfoilTranscription: (data) => ipcRenderer.invoke("proxy-tinfoil-transcription", data),
 
@@ -539,27 +532,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   transcribeAudioFileByok: (options) => ipcRenderer.invoke("transcribe-audio-file-byok", options),
   onUploadTranscriptionProgress: registerListener(
     "upload-transcription-progress",
-    (callback) => (_event, data) => callback(data)
-  ),
-
-  // Corti streaming (BYOK)
-  cortiStreamingWarmup: (options) => ipcRenderer.invoke("corti-streaming-warmup", options),
-  cortiStreamingStart: (options) => ipcRenderer.invoke("corti-streaming-start", options),
-  cortiStreamingSend: (audioBuffer) => ipcRenderer.send("corti-streaming-send", audioBuffer),
-  cortiStreamingFinalize: () => ipcRenderer.send("corti-streaming-finalize"),
-  cortiStreamingStop: () => ipcRenderer.invoke("corti-streaming-stop"),
-  cortiStreamingStatus: () => ipcRenderer.invoke("corti-streaming-status"),
-  onCortiPartialTranscript: registerListener(
-    "corti-partial-transcript",
-    (callback) => (_event, text) => callback(text)
-  ),
-  onCortiFinalTranscript: registerListener(
-    "corti-final-transcript",
-    (callback) => (_event, text) => callback(text)
-  ),
-  onCortiError: registerListener("corti-error", (callback) => (_event, error) => callback(error)),
-  onCortiSessionEnd: registerListener(
-    "corti-session-end",
     (callback) => (_event, data) => callback(data)
   ),
 

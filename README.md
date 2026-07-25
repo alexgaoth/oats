@@ -59,13 +59,14 @@ A **Graph** view on each recorded note reads the persisted conversation events a
 
 ## Status
 
-Both objectives are implemented and pass the local verification suite (setup check, unit tests, formatting, lint, TypeScript, and the production renderer build). The end-to-end in-person flow has been validated on Fedora 44 GNOME/Wayland.
+Both objectives are implemented and pass the local verification suite (setup check, unit tests, formatting, lint, TypeScript, and the production renderer build). The default Whisper `base` model is bundled into release builds and installed locally on first run, so a fresh offline install needs only the operating-system permissions.
 
 Remaining verification, which requires packaging and hardware rather than further code:
 
 - Build and smoke-test an RPM on Fedora 44 GNOME/Wayland.
-- Build and smoke-test a DMG on Apple Silicon.
+- Build and smoke-test a notarized DMG on Apple Silicon.
 - Measure idle and active CPU/memory to confirm question detection stays cheap when idle.
+- Capture the release network trace described in [the allowlist](./docs/network-allowlist.md).
 
 The following are intentionally **not** built: persistent voice identity or in-room speaker recognition, ambient always-on listening outside explicit recordings, automatic or background searches, search-result scraping or answer generation, and cross-meeting entity/topic graphs.
 
@@ -92,7 +93,7 @@ Local Whisper also requires a platform-specific `whisper-server` helper. It is d
 npm run setup:local-whisper
 ```
 
-This downloads the helper for the current supported platform. Whisper speech models are selected and downloaded separately in the application. On a constrained network it is safe to stop and retry later; the source checkout does not need to be recreated. Cloud transcription and other development features remain available without the local helper.
+This downloads the helper for the current supported platform. Development speech models are selected and downloaded separately in the application. Release builds bundle Whisper `base`, so installed Oats works offline on first run. On a constrained network it is safe to stop and retry later; the source checkout does not need to be recreated.
 
 A healthy setup report ends with:
 

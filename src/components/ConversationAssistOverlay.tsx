@@ -47,7 +47,7 @@ export default function ConversationAssistOverlay() {
       onMouseLeave={() => window.electronAPI?.setConversationAssistInteractivity?.(false)}
     >
       <div
-        className={`h-full rounded-xl border border-border/60 bg-background/95 backdrop-blur-xl shadow-xl p-3 transition-all duration-200 ${
+        className={`h-full rounded-xl border border-border bg-surface-raised p-3 shadow-lg transition-all [transition-duration:var(--motion-base)] ${
           visible ? "translate-x-0 opacity-100" : "translate-x-[110%] opacity-0"
         }`}
       >
@@ -56,16 +56,16 @@ export default function ConversationAssistOverlay() {
             <Search size={15} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground">Unanswered question</p>
-            <p className="mt-0.5 line-clamp-2 text-sm font-medium text-foreground">
+            <p className="text-xs text-muted-foreground">A question is still open</p>
+            <p className="mt-0.5 line-clamp-2 font-mono text-sm text-foreground">
               {data?.question}
             </p>
             <button
               type="button"
               onClick={() => act("open")}
-              className="mt-2 text-xs font-medium text-primary hover:underline"
+              className="mt-2 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Search Google
+              Search
             </button>
           </div>
           <button

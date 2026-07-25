@@ -62,6 +62,25 @@ class WhisperManager {
     return getModelsDirForService("whisper");
   }
 
+  async ensureBundledDefaultModel() {
+    const fileName = "ggml-base.bin";
+    const modelsDir = this.getModelsDir();
+    const destination = path.join(modelsDir, fileName);
+    if (fs.existsSync(destination)) return destination;
+
+    const candidates = [
+      process.resourcesPath && path.join(process.resourcesPath, "bin", "whisper-models", fileName),
+      path.join(__dirname, "..", "..", "resources", "bin", "whisper-models", fileName),
+    ].filter(Boolean);
+    const source = candidates.find((candidate) => fs.existsSync(candidate));
+    if (!source) return null;
+
+    await fsPromises.mkdir(modelsDir, { recursive: true });
+    await fsPromises.copyFile(source, destination);
+    debugLogger.info("Installed bundled default Whisper model", { model: "base" });
+    return destination;
+  }
+
   validateModelName(modelName) {
     // Only allow known model names to prevent path traversal attacks
     const validModels = getValidModelNames();
@@ -100,6 +119,7 @@ class WhisperManager {
       this.isInitialized = true;
 
       await cleanupStaleDownloads(this.getModelsDir());
+      await this.ensureBundledDefaultModel();
 
       // Pre-warm whisper-server if local mode enabled (eliminates 2-5s cold-start delay)
       const { localTranscriptionProvider, whisperModel, useCuda, useVulkan } = settings;

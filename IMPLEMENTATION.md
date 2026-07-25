@@ -1,6 +1,6 @@
 # Oats — Implementation Plan
 
-**Product:** Oats · **Company:** arum · **Status:** building (Stages 0–3 done, Stage 4 ~90%) · **Doc owner:** (you)
+**Product:** Oats · **Company:** arum · **Status:** implementation complete; release proof pending host credentials/hardware · **Doc owner:** (you)
 
 > This is the build plan for `oats-arum` — a fresh repository that realizes the
 > vision in `../oats/PRODUCT.md`. It is a working document; each stage has an
@@ -10,42 +10,26 @@
 
 ## 0. Build status & handoff (updated 2026-07-24)
 
-Progress so far, all committed to `main` and each verified `verify:oats`-green
-at its commit:
+Progress so far; the current worktree is `verify:oats`-green:
 
-| Stage | Commit | State |
-| --- | --- | --- |
-| 0 Bootstrap | `3a798a0` | ✅ done |
-| 1 Import + green baseline | `8fd2b97` | ✅ done (full manual conversation-aide smoke test still needs a human) |
-| 2 Cut SaaS umbilical | `dfc4808` | ✅ done — accounts/sync/workspaces/referrals/usage/OpenWhispr-cloud gone; local + BYOK only. Trace in `docs/deletion-checklist.md`. Live network-trace confirmation deferred to Stage 7. |
-| 3 Rebrand → Oats/arum | `b61f53d` | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components. |
-| 4 Strip to scope | `de4f92a`, `68ea388`, `d19f394` | 🟨 ~90% — see below |
+| Stage                     | Commit                                             | State                                                                                                                                                                                                    |
+| ------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 Bootstrap               | `3a798a0`                                          | ✅ done                                                                                                                                                                                                  |
+| 1 Import + green baseline | `8fd2b97`                                          | ✅ done (full manual conversation-aide smoke test still needs a human)                                                                                                                                   |
+| 2 Cut SaaS umbilical      | `dfc4808`                                          | ✅ done — accounts/sync/workspaces/referrals/usage/OpenWhispr-cloud gone; local + BYOK only. Trace in `docs/deletion-checklist.md`. Live network-trace confirmation deferred to Stage 7.                 |
+| 3 Rebrand → Oats/arum     | `b61f53d`                                          | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components.                            |
+| 4 Strip to scope          | `de4f92a`, `68ea388`, `d19f394` + current worktree | ✅ done — Corti and its secrets, IPC, streaming, registry, picker, routing, and tests are removed.                                                                                                       |
+| 5 Refurbish UI            | current worktree                                   | ✅ done — three-step local-first onboarding, oat listening pulse, quiet aide card, and outcome-encoded Graph surface.                                                                                    |
+| 6 Model bundling          | current worktree                                   | ✅ done — release builds download and bundle Whisper `base`; first run copies it into the local model cache before startup.                                                                              |
+| 7 Trust proof & packaging | current worktree + release host                    | 🟨 release-host gate remains — manual signed releases are selected for v1; notarization, Fedora RPM smoke test, live network capture, and idle-resource measurement require the target host/credentials. |
 
-**Stage 4 — done:** MCP/CLI bridges, Windows native `.c` helpers + their
-download/compile chains, URL/YouTube import (yt-dlp), and Google Calendar
-(backend/OAuth/agent-tool/detection-source/upcoming-UI) are all cut and green.
-Diarization **model download** removed from the build chain (the optional
-speaker-ID feature code is retained but inert without bundled models — graceful
-degradation).
-
-**Stage 4 — remaining (the one deliberate deferral):**
-
-- **Corti (BYOK clinical STT/LLM provider) — not yet cut.** It is flagged CUT
-  in §3, but a clean removal spans ~15 tightly-coupled files: the encrypted
-  secret-key plumbing (`CORTI_CLIENT_ID`/`CORTI_CLIENT_SECRET` in
-  `environment.js` `SECRET_KEYS`; `getCortiKey`/`saveCortiKey` in
-  `config/secretKeys.js` + their IPC), the provider registry
-  (`services/ai/inferenceProviders/{index,corti}.ts`, `providers.ts`), the
-  model registry (`models/modelRegistryData.json`, 13 refs), reasoning/chat
-  routing, `corti-streaming-*` IPC + `_mintStoredCortiToken`, `audioManager.js`,
-  the transcription/reasoning model-picker UIs, onboarding, and all 10 locale
-  files. It was **deferred, not forgotten**, because Corti is an inert BYOK
-  provider (never contacts the network unless a user supplies clinical
-  credentials), so unlike Calendar/URL-import it carries no background-network
-  or privacy risk while unconfigured — safe to leave for a focused follow-up.
-  Delete leaf-first: UI/selectors → registry+model-registry → routing →
-  streaming IPC/audioManager → secret-key plumbing (mind the `SECRET_KEYS`
-  count and its IPC key handlers/preload) → locales.
+**Stage 4 — completed in the current worktree:** MCP/CLI bridges, Windows native
+`.c` helpers + their download/compile chains, URL/YouTube import (yt-dlp), Google
+Calendar, and Corti are cut. Corti's secret keys, renderer/main-process API,
+streaming transport, provider/model registries, selectors, onboarding route, and
+routing tests were all removed together. Diarization **model download** remains
+out of the build chain; its optional speaker-ID code degrades gracefully when no
+models are installed.
 
 **Residual inert state to prune (cosmetic, non-blocking):**
 
@@ -54,18 +38,16 @@ degradation).
   `notifyCalendarReminders` and the `gcal*` electron API type decls). They are
   localStorage-backed no-ops now (the backend + preload methods are gone) — safe
   to leave, tidy when convenient.
-- Windows `electron-builder` `win`/`nsis` target + `build:win`/`prebuild:win`
-  scripts remain as dead config (v1 platforms are macOS + Fedora only). Harmless;
-  remove during Stage 7 packaging if desired.
+- Windows `electron-builder`/NSIS target and Windows build scripts are removed;
+  v1 packaging targets macOS and Fedora only.
 - Diarization feature code (`diarization.js`, `speakerEmbeddings.js`,
   `liveSpeakerIdentifier.js`) + its settings UI remain but are inert without
   bundled models.
 
-**Environment note for the next owner:** subagents are currently unavailable
-(monthly spend limit was hit mid-Stage-4). Stages 5–7 below are untouched and
-several Stage-7 items (Apple notarization, Fedora RPM build, live network trace,
-idle-CPU measurement) require hardware/credentials not available in this
-sandbox — they need a human or a provisioned CI/build host.
+**Release-host note:** Apple notarization, Fedora RPM build/smoke testing, a live
+network trace, and idle CPU/memory measurements are physical release gates. They
+cannot be truthfully completed in this sandbox; follow `docs/network-allowlist.md`
+on a provisioned target host and record the evidence with the release.
 
 ---
 
@@ -74,22 +56,22 @@ sandbox — they need a human or a provisioned CI/build host.
 `../oats` is already a working **OpenWhispr 1.7.6** Electron fork that carries the
 **first wave** of Oats work (the `conversationAide` / `conversationGraph` core,
 `oats-setup-check`, the `test:oats` suite, and rebranded prose docs). What it does
-**not** yet have is the *subtraction*: it still ships OpenWhispr's SaaS umbilical
+**not** yet have is the _subtraction_: it still ships OpenWhispr's SaaS umbilical
 (accounts, cloud API, sync, workspaces, referrals, usage meters, upgrade prompts)
 and OpenWhispr's identity (`appId`, `openwhispr://` scheme, icons, update feed).
 This repo is where that subtraction happens. **The governing principle is
 subtract, don't rewrite:** move working code over verbatim, and only touch a file
 to (a) remove non-local / SaaS behavior, or (b) rebrand identity. Every feature
-must survive PRODUCT.md's two wedges — *trivial setup* and *a genuinely human
-touch* — or it goes.
+must survive PRODUCT.md's two wedges — _trivial setup_ and _a genuinely human
+touch_ — or it goes.
 
 ### Locked decisions (2026-07-23)
 
-| Decision | Choice |
-| --- | --- |
-| **Platforms (v1)** | macOS Apple Silicon (DMG) + Fedora 44 GNOME/Wayland (RPM). Windows native helpers cut. |
-| **Scope** | Core loop **+** local agent chat & local note tools. Cut cloud sync, workspaces/teams, MCP/CLI bridges, Google Calendar. |
-| **BYOK** | Keep bring-your-own-key cloud escape hatches (OpenAI, Anthropic, Gemini, Groq, Mistral, Tinfoil). Cut only OpenWhispr's *own* cloud (`api`/`auth.openwhispr.com`) + usage/billing. |
+| Decision           | Choice                                                                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Platforms (v1)** | macOS Apple Silicon (DMG) + Fedora 44 GNOME/Wayland (RPM). Windows native helpers cut.                                                                                             |
+| **Scope**          | Core loop **+** local agent chat & local note tools. Cut cloud sync, workspaces/teams, MCP/CLI bridges, Google Calendar.                                                           |
+| **BYOK**           | Keep bring-your-own-key cloud escape hatches (OpenAI, Anthropic, Gemini, Groq, Mistral, Tinfoil). Cut only OpenWhispr's _own_ cloud (`api`/`auth.openwhispr.com`) + usage/billing. |
 
 The **core loop** (never cut): one-hotkey local listening session → on-device
 real-time transcription → unanswered-question detection → small dismissible
@@ -109,7 +91,7 @@ is a **gate**, not a polish pass:
   Stage 3 — the reskin is a token swap, not a per-component edit.
 - **Reskin, don't rebuild** (shadcn/Tailwind v4) — mirrors Stage 5.
 - **The three signature surfaces** — the listening pulse, the aide card, and the
-  Graph view (DESIGN.md §9) — are held to spec exactly; they *are* the brand.
+  Graph view (DESIGN.md §9) — are held to spec exactly; they _are_ the brand.
 - **Both `prefers-color-scheme` modes and `prefers-reduced-motion`** are verified
   at every UI step; neither mode is an afterthought.
 - **Dither is seasoning** (DESIGN.md §7): allowed only in the sanctioned moments,
@@ -122,22 +104,22 @@ wins; raise the conflict rather than silently diverging.
 
 ## 2. Source topology — what we're importing from `../oats`
 
-| Asset | Size / shape | Disposition |
-| --- | --- | --- |
-| `main.js` | ~1,711 lines — Electron main process | **Rebrand + prune** (SaaS IPC, auth, update feed) |
-| `preload.js` | ~1,009 lines — IPC bridge | **Rebrand + prune** |
-| `src/` renderer | React 19 + Vite 8 + Tailwind v4 + shadcn/ui; entry `src/main.jsx` → `App.jsx`/`AppRouter.jsx` | **Selective** — see ledger |
-| `src/helpers/conversation*.mjs` | The Oats core (aide + graph) | **Move verbatim** (crown jewels) |
-| `src/helpers/` | 120 files — audio, meeting detection, IPC handlers, model mgmt | **Mostly keep**, prune SaaS members |
-| `scripts/` | 39 build/download scripts | **Keep mac+linux**, cut Windows/`nircmd` |
-| `resources/`, `native/`, `nix/`, `flake.nix` | binaries, native helpers, Nix env | **Keep** (mac+linux subset) |
-| `electron-builder.json` | packaging + branding + update feed | **Rebrand** |
-| `test/` | inherited + `test:oats` suites | **Keep**, extend |
-| `src/dist/` | 66 committed build artifacts | **DO NOT import** — generated output |
-| `node_modules/`, `package-lock.json` regen | deps | Reinstall clean via `npm ci` |
-| `CHANGELOG.md` (169KB, OpenWhispr's) | upstream history | **Do not import** — start fresh `CHANGELOG.md` |
-| `PRODUCT.md`, `README.md`, `UPSTREAM.md`, `LICENSE` | docs + MIT | **Import** (README already Oats-branded; keep MIT + upstream credit) |
-| `DESIGN.md` | visual language / token spec (this repo) | **Authoritative** for Stages 3 & 5 |
+| Asset                                               | Size / shape                                                                                  | Disposition                                                          |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `main.js`                                           | ~1,711 lines — Electron main process                                                          | **Rebrand + prune** (SaaS IPC, auth, update feed)                    |
+| `preload.js`                                        | ~1,009 lines — IPC bridge                                                                     | **Rebrand + prune**                                                  |
+| `src/` renderer                                     | React 19 + Vite 8 + Tailwind v4 + shadcn/ui; entry `src/main.jsx` → `App.jsx`/`AppRouter.jsx` | **Selective** — see ledger                                           |
+| `src/helpers/conversation*.mjs`                     | The Oats core (aide + graph)                                                                  | **Move verbatim** (crown jewels)                                     |
+| `src/helpers/`                                      | 120 files — audio, meeting detection, IPC handlers, model mgmt                                | **Mostly keep**, prune SaaS members                                  |
+| `scripts/`                                          | 39 build/download scripts                                                                     | **Keep mac+linux**, cut Windows/`nircmd`                             |
+| `resources/`, `native/`, `nix/`, `flake.nix`        | binaries, native helpers, Nix env                                                             | **Keep** (mac+linux subset)                                          |
+| `electron-builder.json`                             | packaging + branding + update feed                                                            | **Rebrand**                                                          |
+| `test/`                                             | inherited + `test:oats` suites                                                                | **Keep**, extend                                                     |
+| `src/dist/`                                         | 66 committed build artifacts                                                                  | **DO NOT import** — generated output                                 |
+| `node_modules/`, `package-lock.json` regen          | deps                                                                                          | Reinstall clean via `npm ci`                                         |
+| `CHANGELOG.md` (169KB, OpenWhispr's)                | upstream history                                                                              | **Do not import** — start fresh `CHANGELOG.md`                       |
+| `PRODUCT.md`, `README.md`, `UPSTREAM.md`, `LICENSE` | docs + MIT                                                                                    | **Import** (README already Oats-branded; keep MIT + upstream credit) |
+| `DESIGN.md`                                         | visual language / token spec (this repo)                                                      | **Authoritative** for Stages 3 & 5                                   |
 
 ---
 
@@ -158,7 +140,7 @@ The master classification. Everything in `../oats` lands in exactly one column.
   `meetingDetectionEngine.js`, `meetingProcessDetector.js` (prune any telemetry).
 - **Notes + editor:** TipTap editor, `NotesService`, `FoldersService`,
   `ConversationsService`, `conversationEventsDatabase` (better-sqlite3), notes UI.
-- **Local agent chat + note tools** *(kept per scope):* `src/components/chat/`,
+- **Local agent chat + note tools** _(kept per scope):_ `src/components/chat/`,
   `src/components/agent/`, `services/tools/{searchNotes,createNote,getNote,updateNote,listFolders,clipboard,webSearch}Tool.ts`, `ToolRegistry`, `ReasoningService` (local path).
 - **BYOK providers:** `src/services/ai/inferenceProviders/*` (openai, anthropic,
   gemini, groq, mistral, tinfoil), `providers.ts`, `apiKeys` constants, key storage
@@ -193,6 +175,7 @@ Components: `AuthenticationStep`, `EmailVerificationStep`, `UsageDisplay`,
 Env: `VITE_AUTH_URL`, `VITE_OPENWHISPR_API_URL`. Hosts: `api`/`auth.openwhispr.com`.
 
 **Out-of-scope subsystems:**
+
 - MCP/CLI bridges: `helpers/cliBridge.js`, `McpIntegrationCard`, `CliIntegrationCard`, `IntegrationsView`.
 - Google Calendar: `helpers/googleCalendarManager.js`, `googleCalendarOAuth.js`, `services/tools/calendarTool.ts` (removes the `openwhispr.com/auth/desktop-callback` dependency too).
 - Windows native helpers + downloads: `nircmd`, `windows-fast-paste`, `windows-key-listener`, `windows-mic-listener`, `windows-system-audio-helper`, `build-windows-*`, `compile:winkeys/winpaste`.
@@ -200,7 +183,7 @@ Env: `VITE_AUTH_URL`, `VITE_OPENWHISPR_API_URL`. Hosts: `api`/`auth.openwhispr.c
 **Decide during Stage 4 (flagged, not yet cut):** URL/YouTube audio import
 (`UploadAudioView`, `download-yt-dlp`) — a real network surface; keep only if it
 earns the "human, high-signal" bar. Diarization models (`download-diarization-models`)
-— README says speaker ID is explicitly *not required* for v1; likely cut to shrink
+— README says speaker ID is explicitly _not required_ for v1; likely cut to shrink
 the DMG. Corti streaming (`cortiAuth.js`, `cortiStreaming.js`) — appears cloud;
 verify and likely cut.
 
@@ -214,7 +197,9 @@ baseline, cut the umbilical (highest priority per PRODUCT.md §127), then rebran
 strip, reskin, bundle, and prove.
 
 ### Stage 0 — Repo bootstrap
+
 **Goal:** an empty, well-formed repo ready to receive code.
+
 - `git init`; set `main` as default branch.
 - Author identity, MIT `LICENSE` (retain OpenWhispr copyright line + add arum), fresh `CHANGELOG.md`.
 - `.gitignore` (node_modules, `src/dist`, build output, `.env`), `.nvmrc` (24), `.npmrc`.
@@ -224,8 +209,10 @@ strip, reskin, bundle, and prove.
 **Gate:** repo initialized, docs present (incl. `DESIGN.md`), `git status` clean.
 
 ### Stage 1 — Import the engine + green baseline
+
 **Goal:** a byte-for-byte working Oats-as-it-stands, building and testing green,
-*before* any subtraction — so every later deletion is bisectable.
+_before_ any subtraction — so every later deletion is bisectable.
+
 - Copy the full `../oats` tree **excluding** `node_modules/`, `src/dist/`, `.git/`, `CHANGELOG.md`, Windows-only scripts.
 - `npm ci` (Node 24), `npm run setup:check`, `npm run setup:local-whisper`.
 - Run `npm run verify:oats` and `npm run test:oats`; record the baseline result.
@@ -233,9 +220,11 @@ strip, reskin, bundle, and prove.
 **Gate:** `verify:oats` green; app launches via `npm run dev`; a manual
 conversation-aide smoke test (README §"Manual conversation-aide test") passes.
 
-### Stage 2 — Cut the SaaS umbilical  ⭐ highest priority
+### Stage 2 — Cut the SaaS umbilical ⭐ highest priority
+
 **Goal:** nothing contacts `api`/`auth.openwhispr.com`; no accounts, sync,
 workspaces, referrals, usage, or upgrade paths remain. PRODUCT.md §140's "Next step".
+
 1. **Trace → checklist.** Produce `docs/deletion-checklist.md`: every backend/auth
    call site + the SaaS component/IPC graph (`lib/auth` ×9, `SyncService` ×11,
    `WorkspacesService` ×5, `useUsage` ×7, `Referral` ×5). This is the actionable diff.
@@ -249,7 +238,9 @@ workspaces, referrals, usage, or upgrade paths remain. PRODUCT.md §140's "Next 
 **Gate:** `verify:oats` green after deletions; `grep -ri "openwhispr.com\|better-auth\|SyncService\|useUsage" src main.js preload.js` returns nothing (except intentional upstream credit); a live network trace of a full session shows zero traffic to OpenWhispr hosts.
 
 ### Stage 3 — Rebrand to Oats / arum
+
 **Goal:** no OpenWhispr identity remains except the MIT upstream credit.
+
 - `appId: com.arum.oats`, `productName: Oats`, protocol `oats://`, `OATS_LOG_LEVEL`.
 - **Land the design tokens (DESIGN.md §3, §6, §8, §13):** overwrite the `@theme`
   block in `src/index.css` with the oat palette (retire the blue `--color-primary`
@@ -267,7 +258,9 @@ the LICENSE/UPSTREAM credit lines; app launches branded as Oats; the `@theme` bl
 carries the oat palette in both modes and no component references a raw color literal.
 
 ### Stage 4 — Strip to scope
+
 **Goal:** only the core loop + local agent chat + note tools remain.
+
 - Cut MCP/CLI bridges, Google Calendar, Windows helpers (§3 CUT).
 - Rule on the flagged subsystems (URL import, diarization, Corti) and cut accordingly.
 - Prune `prestart`/`prebuild`/`predev:main` download chains for removed models/helpers.
@@ -276,8 +269,10 @@ carries the oat palette in both modes and no component references a raw color li
 **Gate:** `verify:oats` green; `npm run dev` shows no dead nav entries; dependency tree has no orphaned SaaS/OOS packages (`depcheck`).
 
 ### Stage 5 — Refurbish UI around the loop
+
 **Goal:** the loop is the product surface. **`DESIGN.md` is the spec for this entire
 stage.** Reskin against the Stage-3 tokens — do not rebuild (Tailwind v4 + shadcn).
+
 - **3-step onboarding:** drag→Applications (implicit) → allow microphone →
   (macOS) allow accessibility → talk. Remove the auth/email/workspace steps. Use the
   dithered oat-field hero + quiet mono copy from DESIGN.md §9 (empty/hero states).
@@ -285,7 +280,7 @@ stage.** Reskin against the Stage-3 tokens — do not rebuild (Tailwind v4 + sha
   - **Listening pulse** — breathing dithered gold seed; never a red REC dot/banner.
   - **Aide card** — `surface-raised`, 14px, question in mono, single gold action,
     non-modal, quiet auto-expire; nothing leaves the device until the click.
-  - **Graph view** — elevated as *the* signature surface; nodes colored **and
+  - **Graph view** — elevated as _the_ signature surface; nodes colored **and
     dithered by outcome** per DESIGN.md §4 (density encodes uncertainty).
 - **Collapse settings to essentials:** transcription model, aide toggle + classifier
   model, hotkey, optional BYOK keys. Remove enterprise/team/referral/integration panels.
@@ -299,7 +294,9 @@ color/motion literals in components, dither confined to sanctioned surfaces (§7
 and the three signature surfaces match DESIGN.md §9.
 
 ### Stage 6 — Model bundling & first-run
+
 **Goal:** first conversation works offline with zero clicks (PRODUCT.md §98).
+
 - Bake the engine at build time: whisper.cpp/Parakeet, llama.cpp, ffmpeg/VAD/AEC,
   Qdrant + MiniLM embedding model (already in the download/build chain).
 - **Bundle a small default speech model** in the DMG/RPM so first run is offline-capable.
@@ -310,7 +307,9 @@ and the three signature surfaces match DESIGN.md §9.
 question-card→Graph flow completes with no clicks beyond permissions.
 
 ### Stage 7 — Trust proof & packaging (the honest gate)
-**Goal:** *prove* the privacy claim and ship installers. PRODUCT.md §135.
+
+**Goal:** _prove_ the privacy claim and ship installers. PRODUCT.md §135.
+
 - **Notarize** the macOS DMG (Apple Developer ID); staple.
 - Build + smoke-test the **Fedora 44 RPM** (GNOME/Wayland).
 - **Measure idle CPU/memory** of the always-listening detector; confirm it's cheap when idle.
@@ -357,7 +356,7 @@ card, and Graph view match DESIGN.md §9; text contrast meets §12.
   explicit user-added key.
 - **Diarization / URL-import / Corti** are unresolved keep/cut calls parked in Stage 4.
 - **Auto-update feed** ownership (arum GitHub org, signing certs) — parked to Stage 7.
-- **DMG size** — heavy inherited deps are *not* an immediate optimization target
+- **DMG size** — heavy inherited deps are _not_ an immediate optimization target
   (README §40), but bundling a default model + full engine may push size; revisit post-v1.
 
 ---

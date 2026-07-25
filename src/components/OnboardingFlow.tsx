@@ -52,11 +52,7 @@ import MeetingSetupStep from "./onboarding/MeetingSetupStep";
 import FinishStep from "./onboarding/FinishStep";
 import { USE_CASE_IDS } from "./onboarding/useCases";
 
-// Highest possible step index across flow variants (with meeting step).
-const MAX_STEP_INDEX = 6;
-
-// Steps whose primary action is optional — the user can advance without it.
-const SKIPPABLE_STEPS = new Set(["usecase", "voiceAgent", "meeting"]);
+const MAX_STEP_INDEX = 2;
 
 interface OnboardingFlowProps {
   onComplete: (options?: { openSettings?: boolean }) => void;
@@ -117,9 +113,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     onboardingUseCaseNote,
     setOnboardingUseCaseNote,
   } = useSettings();
-
-  const cortiClientId = useSettingsStore((s) => s.cortiClientId);
-  const cortiClientSecret = useSettingsStore((s) => s.cortiClientSecret);
 
   // Onboarding edits only the primary dictation hotkey; extra bindings are
   // preserved via withExtraDictationHotkeys.
@@ -183,26 +176,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setAccessibilitySkipped,
   ]);
 
-  // Dynamic flow: signed-in users get permissions folded into "setup".
-  // The meeting step is temporarily hidden for all users while it gets more
-  // design polish — the step's render code and MeetingSetupStep stay in place.
-  // Restore by reinstating the relevance check:
-  //   systemAudio.granted || onboardingUseCases.includes(USE_CASE_IDS.meetings)
-  const showMeetingStep = false;
-
   const steps = useMemo(() => {
-    const list = [
-      { id: "usecase", title: t("onboarding.steps.useCase"), icon: Sparkles },
-      { id: "setup", title: t("onboarding.steps.setup"), icon: Settings },
+    return [
       { id: "permissions", title: t("onboarding.steps.permissions"), icon: Shield },
       { id: "activation", title: t("onboarding.steps.activation"), icon: Command },
+      { id: "finish", title: t("onboarding.steps.finish"), icon: Flag },
     ];
-    if (showMeetingStep) {
-      list.push({ id: "meeting", title: t("onboarding.steps.meeting"), icon: Users });
-    }
-    list.push({ id: "finish", title: t("onboarding.steps.finish"), icon: Flag });
-    return list;
-  }, [showMeetingStep, t]);
+  }, [t]);
 
   const currentStepId = steps[currentStep]?.id;
 
@@ -214,8 +194,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   }, [currentStep, steps.length, setCurrentStep]);
 
-  // Only show progress for signed-up users after account creation step
-  const showProgress = currentStep > 0;
+  const showProgress = true;
 
   useEffect(() => {
     if (isUsingNativeShortcut && !supportsPushToTalk) {
@@ -563,7 +542,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return (
           <FinishStep
             isCloudUser={false}
-            useCases={onboardingUseCases}
             onFinish={(openSettings) => void finishOnboarding(openSettings)}
             isFinishing={isFinishing}
           />
@@ -761,8 +739,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             return xaiApiKey.trim().length > 0;
           } else if (cloudTranscriptionProvider === "mistral") {
             return mistralApiKey.trim().length > 0;
-          } else if (cloudTranscriptionProvider === "corti") {
-            return cortiClientId.trim().length > 0 && cortiClientSecret.trim().length > 0;
           } else if (cloudTranscriptionProvider === "tinfoil") {
             return tinfoilApiKey.trim().length > 0;
           } else if (cloudTranscriptionProvider === "custom") {
@@ -785,18 +761,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return false;
     }
   };
-
-  // Load Google Font only in the browser
-  React.useEffect(() => {
-    const link = document.createElement("link");
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
 
   const onboardingPlatform =
     typeof window !== "undefined" && window.electronAPI?.getPlatform
@@ -826,58 +790,40 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         onOk={() => {}}
       />
 
-      {/* Title Bar / drag region */}
-      {currentStep === 0 ? (
-        <div
-          className="flex items-center justify-end w-full h-10 shrink-0"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-        >
-          {onboardingPlatform !== "darwin" && (
-            <div className="pr-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-              <WindowControls />
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="shrink-0 z-10">
-          <TitleBar
-            showTitle={true}
-            className="bg-background backdrop-blur-xl border-b border-border shadow-sm"
-            actions={<SupportDropdown />}
-            center={
-              onboardingPlatform === "darwin" ? (
-                <StepProgress steps={steps.slice(1)} currentStep={currentStep - 1} />
-              ) : undefined
-            }
-          ></TitleBar>
-        </div>
-      )}
+      <div className="shrink-0 z-10">
+        <TitleBar
+          showTitle={true}
+          className="border-b border-border bg-background"
+          actions={<SupportDropdown />}
+          center={
+            onboardingPlatform === "darwin" ? (
+              <StepProgress steps={steps} currentStep={currentStep} />
+            ) : undefined
+          }
+        />
+      </div>
 
       {/* Progress bar — on macOS it lives centered in the title bar instead */}
       {showProgress && onboardingPlatform !== "darwin" && (
-        <div className="shrink-0 bg-background/80 backdrop-blur-2xl border-b border-white/5 px-6 md:px-12 py-3 z-10">
+        <div className="z-10 shrink-0 border-b border-border bg-background px-6 py-3 md:px-12">
           <div className="max-w-3xl mx-auto">
-            <StepProgress steps={steps.slice(1)} currentStep={currentStep - 1} />
+            <StepProgress steps={steps} currentStep={currentStep} />
           </div>
         </div>
       )}
 
       {/* Content - This will grow to fill available space */}
-      <div
-        className={`flex-1 px-6 md:px-12 overflow-y-auto ${currentStep === 0 ? "flex items-center" : "py-6"}`}
-      >
-        <div className={`w-full ${currentStep === 0 ? "max-w-sm" : "max-w-3xl"} mx-auto`}>
-          <Card className="bg-card/90 backdrop-blur-2xl border border-border/50 dark:border-white/5 shadow-lg rounded-xl overflow-hidden">
-            <CardContent className={currentStep === 0 ? "p-6" : "p-6 md:p-8"}>
-              {renderStep()}
-            </CardContent>
+      <div className="flex flex-1 items-center overflow-y-auto px-6 md:px-12">
+        <div className="mx-auto w-full max-w-3xl">
+          <Card className="overflow-hidden rounded-xl border border-border bg-card">
+            <CardContent className="p-6 md:p-8">{renderStep()}</CardContent>
           </Card>
         </div>
       </div>
 
       {/* Footer Navigation - hidden on the first step */}
       {showProgress && (
-        <div className="shrink-0 bg-background/80 backdrop-blur-2xl border-t border-white/5 px-6 md:px-12 py-3 z-10">
+        <div className="z-10 shrink-0 border-t border-border bg-background px-6 py-3 md:px-12">
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <Button
               onClick={prevStep}
@@ -892,15 +838,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <div className="flex items-center gap-2">
               {currentStepId !== "finish" && (
                 <>
-                  {SKIPPABLE_STEPS.has(currentStepId ?? "") && (
-                    <Button
-                      onClick={nextStep}
-                      variant="ghost"
-                      className="h-8 px-4 rounded-full text-xs text-muted-foreground"
-                    >
-                      {t("common.skip")}
-                    </Button>
-                  )}
                   <Button
                     onClick={nextStep}
                     disabled={!canProceed()}

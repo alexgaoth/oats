@@ -45,7 +45,6 @@ const CLOUD_PROVIDER_IDS = [
   "groq",
   OPENROUTER_TAB,
   "tinfoil",
-  "corti",
   "custom",
 ];
 
@@ -338,8 +337,6 @@ export default function ReasoningModelSelector({
   const setOpenrouterApiKey = useSettingsStore((s) => s.setOpenrouterApiKey);
   const tinfoilApiKey = useSettingsStore((s) => s.tinfoilApiKey);
   const setTinfoilApiKey = useSettingsStore((s) => s.setTinfoilApiKey);
-  const cortiApiKey = useSettingsStore((s) => s.cortiApiKey);
-  const setCortiApiKey = useSettingsStore((s) => s.setCortiApiKey);
   const [selectedMode, setSelectedMode] = useState<"cloud" | "local">(mode || "cloud");
   const [selectedCloudProvider, setSelectedCloudProvider] = useState("openai");
   const [selectedLocalProvider, setSelectedLocalProvider] = useState("qwen");
@@ -649,22 +646,6 @@ export default function ReasoningModelSelector({
                     <ApiKeyInput
                       apiKey={tinfoilApiKey}
                       setApiKey={setTinfoilApiKey}
-                      label=""
-                      helpText=""
-                    />
-                  </div>
-                )}
-
-                {selectedCloudProvider === "corti" && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">{t("reasoning.corti.euOnly")}</p>
-                    <div className="flex items-baseline justify-between">
-                      <h4 className="font-medium text-foreground">{t("common.apiKey")}</h4>
-                      <GetApiKeyLink url="https://www.corti.ai/?utm_source=referral&utm_campaign=oats" />
-                    </div>
-                    <ApiKeyInput
-                      apiKey={cortiApiKey}
-                      setApiKey={setCortiApiKey}
                       label=""
                       helpText=""
                     />

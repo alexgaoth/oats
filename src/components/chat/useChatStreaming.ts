@@ -101,16 +101,9 @@ export function useChatStreaming({
         chatAgentMode === "providers" && settings.chatAgentProvider === "custom";
       const isLocalProvider =
         !isEnterpriseProvider(settings.chatAgentProvider) &&
-        ![
-          "openai",
-          "groq",
-          "custom",
-          "anthropic",
-          "gemini",
-          "tinfoil",
-          "openrouter",
-          "corti",
-        ].includes(settings.chatAgentProvider);
+        !["openai", "groq", "custom", "anthropic", "gemini", "tinfoil", "openrouter"].includes(
+          settings.chatAgentProvider
+        );
       const localModelCanUseTool =
         isLocalProvider && estimateModelSizeB(settings.chatAgentModel) >= LOCAL_TOOL_MIN_PARAMS_B;
       const supportsTools = !isLocalProvider || localModelCanUseTool;

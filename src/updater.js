@@ -13,6 +13,10 @@ class UpdateManager {
     this.updateCheckInterval = null;
     this.windowManager = null;
     this._suppressNotification = false;
+    // v1 ships through signed manual releases. An updater can be explicitly
+    // enabled by a future release channel without changing the local-default
+    // network boundary.
+    this.enabled = process.env.OATS_ENABLE_AUTO_UPDATES === "true";
 
     this.setupAutoUpdater();
   }
@@ -22,7 +26,7 @@ class UpdateManager {
   }
 
   setupAutoUpdater() {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" || !this.enabled) {
       return;
     }
 
@@ -163,10 +167,10 @@ class UpdateManager {
 
   async checkForUpdates() {
     try {
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === "development" || !this.enabled) {
         return {
           updateAvailable: false,
-          message: "Update checks are disabled in development mode",
+          message: "Automatic updates are disabled; install a new signed release manually.",
         };
       }
 
@@ -198,7 +202,7 @@ class UpdateManager {
 
   async downloadUpdate() {
     try {
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === "development" || !this.enabled) {
         return {
           success: false,
           message: "Update downloads are disabled in development mode",
@@ -234,7 +238,7 @@ class UpdateManager {
 
   async installUpdate() {
     try {
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === "development" || !this.enabled) {
         return {
           success: false,
           message: "Update installation is disabled in development mode",
@@ -302,6 +306,7 @@ class UpdateManager {
   }
 
   checkForUpdatesOnStartup() {
+    if (!this.enabled) return;
     if (process.env.NODE_ENV !== "development") {
       setTimeout(() => {
         console.log("🔄 Checking for updates on startup...");

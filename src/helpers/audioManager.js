@@ -235,18 +235,6 @@ const STREAMING_PROVIDERS = {
     onError: (cb) => window.electronAPI.onDictationRealtimeError(cb),
     onSessionEnd: (cb) => window.electronAPI.onDictationRealtimeSessionEnd(cb),
   },
-  corti: {
-    warmup: (opts) => window.electronAPI.cortiStreamingWarmup(opts),
-    start: (opts) => window.electronAPI.cortiStreamingStart(opts),
-    send: (buf) => window.electronAPI.cortiStreamingSend(buf),
-    finalize: () => window.electronAPI.cortiStreamingFinalize(),
-    stop: () => window.electronAPI.cortiStreamingStop(),
-    status: () => window.electronAPI.cortiStreamingStatus(),
-    onPartial: (cb) => window.electronAPI.onCortiPartialTranscript(cb),
-    onFinal: (cb) => window.electronAPI.onCortiFinalTranscript(cb),
-    onError: (cb) => window.electronAPI.onCortiError(cb),
-    onSessionEnd: (cb) => window.electronAPI.onCortiSessionEnd(cb),
-  },
   "tinfoil-realtime": {
     warmup: (opts) =>
       window.electronAPI.dictationRealtimeWarmup({
@@ -448,9 +436,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const s = getSettings();
     if (s.cloudTranscriptionProvider === "tinfoil") {
       return "tinfoil-realtime";
-    }
-    if (s.cloudTranscriptionProvider === "corti" && s.cloudTranscriptionMode === "byok") {
-      return "corti";
     }
     if (REALTIME_MODELS.has(s.cloudTranscriptionModel)) {
       return "openai-realtime";
@@ -1303,24 +1288,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         err.code = "API_KEY_MISSING";
         throw err;
       }
-    } else if (provider === "corti") {
-      // Tokens are minted in the main process; only verify credentials exist here
-      let clientId = s.cortiClientId;
-      let clientSecret = s.cortiClientSecret;
-      if (!clientId?.trim() || !clientSecret?.trim()) {
-        [clientId, clientSecret] = await Promise.all([
-          window.electronAPI.getCortiClientId?.(),
-          window.electronAPI.getCortiClientSecret?.(),
-        ]);
-      }
-      if (!clientId?.trim() || !clientSecret?.trim()) {
-        const err = new Error(
-          "Corti credentials not found. Please set your Client ID and Client Secret in the Control Panel."
-        );
-        err.code = "API_KEY_MISSING";
-        throw err;
-      }
-      apiKey = null;
     } else if (provider === "tinfoil") {
       apiKey = s.tinfoilApiKey;
       if (!apiKey?.trim()) {
@@ -2047,37 +2014,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw new Error("No text transcribed - xAI response was empty");
       }
 
-      // Corti uses OAuth client credentials and an interaction-based REST flow — proxy through main process
-      if (provider === "corti" && window.electronAPI?.proxyCortiTranscription) {
-        const audioBuffer = await optimizedAudio.arrayBuffer();
-        const proxyData = {
-          audioBuffer,
-          // Corti requires a concrete primaryLanguage; default to English when auto-detecting
-          language: language || "en",
-          environment: apiSettings.cortiEnvironment || "us",
-          tenant: (apiSettings.cortiTenant || "").trim() || "base",
-        };
-
-        const result = await window.electronAPI.proxyCortiTranscription(proxyData);
-        const proxyText = result?.text;
-
-        if (proxyText && proxyText.trim().length > 0) {
-          if (this.isDictionaryEcho(proxyText)) {
-            throw new Error("No audio detected");
-          }
-          timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
-          const rawText = proxyText;
-          const reasoningStart = performance.now();
-          const text = await this.processTranscription(proxyText, "corti");
-          timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
-
-          const source = (await this.isReasoningAvailable()) ? "corti-reasoned" : "corti";
-          return { success: true, text, rawText, source, timings };
-        }
-
-        throw new Error("No text transcribed - Corti response was empty");
-      }
-
       logger.debug(
         "Making transcription API request",
         {
@@ -2321,7 +2257,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         const isGroqModel = trimmedModel.startsWith("whisper-large-v3");
         const isOpenAIModel = trimmedModel.startsWith("gpt-4o") || trimmedModel === "whisper-1";
         const isMistralModel = trimmedModel.startsWith("voxtral-");
-        const isCortiModel = trimmedModel.startsWith("corti-");
 
         if (provider === "groq" && isGroqModel) {
           return trimmedModel;
@@ -2332,9 +2267,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         if (provider === "mistral" && isMistralModel) {
           return trimmedModel;
         }
-        if (provider === "corti" && isCortiModel) {
-          return trimmedModel;
-        }
         // Model doesn't match provider - fall through to default
       }
 
@@ -2342,7 +2274,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       if (provider === "groq") return "whisper-large-v3-turbo";
       if (provider === "xai") return "grok-stt";
       if (provider === "mistral") return "voxtral-mini-latest";
-      if (provider === "corti") return "corti-transcribe";
       return "gpt-4o-mini-transcribe";
     } catch (error) {
       return "gpt-4o-mini-transcribe";
@@ -2691,11 +2622,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     // Self-hosted transcription is batch HTTP to the user's server, never cloud realtime WS.
     if (isSelfHostedTranscription(s)) return false;
 
-    // Corti (BYOK) streams over its own WSS — independent of any cloud account.
-    if (s.cloudTranscriptionProvider === "corti" && s.cloudTranscriptionMode === "byok") {
-      return !!(s.cortiClientId && s.cortiClientSecret);
-    }
-
     // Tinfoil realtime streams without an account.
     if (s.cloudTranscriptionProvider === "tinfoil") {
       const provider = getTranscriptionProvider("tinfoil");
@@ -2730,20 +2656,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const [, wsResult] = await Promise.all([
         this.cacheMicrophoneDeviceId(),
         (async () => {
-          const {
-            preferredLanguage: warmupLang,
-            cloudTranscriptionModel,
-            cortiEnvironment,
-            cortiTenant,
-          } = getSettings();
+          const { preferredLanguage: warmupLang, cloudTranscriptionModel } = getSettings();
           const res = await provider.warmup({
             sampleRate: 16000,
             language: warmupLang && warmupLang !== "auto" ? warmupLang : undefined,
             keyterms: this.getKeyterms(),
             model: cloudTranscriptionModel,
             mode: "byok",
-            environment: cortiEnvironment,
-            tenant: cortiTenant,
           });
           if (!res.success && res.code) {
             const err = new Error(res.error || "Warmup failed");
@@ -2960,8 +2879,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       //    so Deepgram receives data immediately (no idle timeout).
       const result = await (async () => {
         const streamingSettings = getSettings();
-        const { cloudTranscriptionModel, cortiEnvironment, cortiTenant, useLocalWhisper } =
-          streamingSettings;
+        const { cloudTranscriptionModel, useLocalWhisper } = streamingSettings;
         const sttLanguage = this.getEffectiveSttLanguage(streamingSettings);
         const res = await provider.start({
           sampleRate: 16000,
@@ -2969,8 +2887,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           keyterms: this.getKeyterms(),
           model: cloudTranscriptionModel,
           mode: "byok",
-          environment: cortiEnvironment,
-          tenant: cortiTenant,
         });
 
         if (!res.success) {

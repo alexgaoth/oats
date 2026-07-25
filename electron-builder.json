@@ -102,6 +102,7 @@
       "filter": [
         "whisper-cpp-*",
         "whisper-server-*",
+        "whisper-models/**/*",
         "llama-server-*",
         "sherpa-onnx-*",
         "qdrant-*",
@@ -155,10 +156,6 @@
       "NSAudioCaptureUsageDescription": "Oats uses system audio to capture other participants' audio from calls and meetings.",
       "NSAccessibilityUsageDescription": "Oats needs accessibility permissions to paste transcribed text into other applications."
     }
-  },
-  "win": {
-    "target": ["nsis", "portable"],
-    "icon": "src/assets/icon.ico"
   },
   "linux": {
     "target": ["AppImage", "deb", "rpm", "tar.gz"],
@@ -226,13 +223,6 @@
       "Suggests: xsel"
     ]
   },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true,
-    "include": "resources/nsis/installer.nsh"
-  },
   "dmg": {
     "title": "Oats",
     "icon": "src/assets/icon.icns",
@@ -240,12 +230,5 @@
       "width": 540,
       "height": 380
     }
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "arum",
-    "repo": "oats-arum",
-    "private": false,
-    "releaseType": "draft"
   }
 }

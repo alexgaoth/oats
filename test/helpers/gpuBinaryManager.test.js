@@ -125,7 +125,7 @@ test("CUDA: resolves its exact asset from releases/latest and installs binary + 
   const manager = new WhisperCudaManager();
   await manager.download();
 
-  assert.match(state.fetchedUrls[0], /OpenWhispr\/whisper\.cpp\/releases\/latest$/);
+  assert.match(state.fetchedUrls[0], /arum\/whisper\.cpp\/releases\/latest$/);
   assert.equal(state.downloads[0].url, "https://dl/whisper-server-linux-x64-cuda.zip");
 
   const binDir = path.join(userDataDir, "bin");

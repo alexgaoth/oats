@@ -19,14 +19,21 @@ import { buildSearchUrl, validateSearchUrl } from "../../helpers/conversationAid
 function stateBadgeClass(state: SuggestionState): string {
   switch (state) {
     case "opened":
-      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+      return "border-b border-primary text-foreground";
     case "dismissed":
       return "bg-foreground/8 text-foreground/40";
     case "expired":
-      return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
+      return "text-muted-foreground/50 line-through";
     default:
-      return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+      return "text-foreground/70";
   }
+}
+
+function graphOutcome(reason: string | null): "answered" | "uncertain" | "silence" | "open" {
+  if (reason === "answered") return "answered";
+  if (reason === "uncertain_response") return "uncertain";
+  if (reason === "silence") return "silence";
+  return "open";
 }
 
 interface ConversationGraphProps {
@@ -114,6 +121,7 @@ function ConversationGraphNodeCard({
   const state: SuggestionState | null = suggestionState(node.suggestion);
   const query: string | null = suggestionQuery(node.suggestion);
   const responseText = node.response?.text?.trim();
+  const outcome = graphOutcome(reason);
 
   let searchable = false;
   if (query) {
@@ -126,11 +134,21 @@ function ConversationGraphNodeCard({
   }
 
   return (
-    <li className="rounded-lg border border-foreground/8 bg-foreground/2 dark:bg-white/2">
+    <li
+      className={cn(
+        "graph-node rounded-lg border border-border bg-surface-0",
+        `graph-node--${outcome}`
+      )}
+    >
       <div className="flex items-start gap-2 px-3 py-2.5">
-        <HelpCircle size={14} className="mt-0.5 shrink-0 text-blue-500/70" />
+        <span
+          className="graph-node__mark oats-dither mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[var(--graph-state)]"
+          aria-hidden="true"
+        >
+          <HelpCircle size={12} />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug text-foreground/85">
+          <p className="font-mono text-sm leading-snug text-foreground">
             {node.question?.text?.trim() || t("notes.conversationGraph.unknownQuestion")}
           </p>
           {confidence != null && (
@@ -151,7 +169,7 @@ function ConversationGraphNodeCard({
             <CircleSlash size={13} className="mt-0.5 shrink-0 text-foreground/30" />
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] leading-snug text-foreground/60">
+            <p className="text-[13px] leading-snug text-muted-foreground">
               {responseText || t("notes.conversationGraph.noResponse")}
             </p>
             {reason && (
@@ -186,7 +204,7 @@ function ConversationGraphNodeCard({
               <button
                 type="button"
                 onClick={() => node.suggestion && onSearch(node.suggestion)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-[11px] font-medium text-foreground/60 transition-colors hover:bg-foreground/10 hover:text-foreground/80 dark:bg-white/5 dark:hover:bg-white/10"
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ExternalLink size={11} />
                 {t("notes.conversationGraph.search")}

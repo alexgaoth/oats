@@ -25,8 +25,6 @@ export interface FileTranscriptionConfig {
   cloudTranscriptionBaseUrl: string;
   cloudTranscriptionModel: string;
   language: string;
-  cortiEnvironment?: string;
-  cortiTenant?: string;
   transcriptionMode?: string;
   remoteTranscriptionUrl?: string;
   remoteTranscriptionModel?: string;
@@ -56,8 +54,6 @@ export async function transcribeFile(
     diarize: diarize || undefined,
     provider: cfg.cloudTranscriptionProvider,
     language: cfg.language,
-    environment: cfg.cortiEnvironment,
-    tenant: cfg.cortiTenant,
     transcriptionMode: cfg.transcriptionMode,
     remoteTranscriptionUrl: cfg.remoteTranscriptionUrl,
     remoteTranscriptionModel: cfg.remoteTranscriptionModel,

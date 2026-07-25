@@ -11,9 +11,7 @@ const HyprlandShortcutManager = require("./hyprlandShortcut");
 const AssemblyAiStreaming = require("./assemblyAiStreaming");
 const { i18nMain, changeLanguage } = require("./i18nMain");
 const DeepgramStreaming = require("./deepgramStreaming");
-const CortiStreaming = require("./cortiStreaming");
 const OpenAIRealtimeStreaming = require("./openaiRealtimeStreaming");
-const { getCortiToken } = require("./cortiAuth");
 const { createTinfoilRealtimeSocket } = require("./tinfoilSecureClient");
 const { getTinfoilChatModels } = require("./tinfoilCatalog");
 const { transcribeWithTinfoil } = require("./tinfoilTranscription");
@@ -53,14 +51,12 @@ const STREAMING_CLIENT_BY_PROVIDER = {
   "openai-realtime": OpenAIRealtimeStreaming,
   "assemblyai-realtime": AssemblyAiStreaming,
   "deepgram-realtime": DeepgramStreaming,
-  "corti-realtime": CortiStreaming,
 };
 const ALLOWED_MEETING_PROVIDERS = new Set([
   "local",
   "openai-realtime",
   "assemblyai-realtime",
   "deepgram-realtime",
-  "corti-realtime",
 ]);
 
 // Meeting capture runs at 24 kHz (see meetingRecordingStore AudioContext); cloud
@@ -246,7 +242,6 @@ class IPCHandlers {
     this.windowsLoopbackAudioManager = managers.windowsLoopbackAudioManager;
     this.meetingAecManager = managers.meetingAecManager;
     this.sessionId = crypto.randomUUID();
-    this.cortiStreaming = null;
     this._dictationStreaming = null;
     this._dictationConnectPromise = null;
     this._dictationIdleTimer = null;
@@ -654,22 +649,6 @@ class IPCHandlers {
       });
       this.environmentManager.saveAllKeysToEnvFile().catch(() => {});
     }
-  }
-
-  // Mints a Corti access token from stored BYOK credentials. Shared by the
-  // dictation streaming handlers and the meeting realtime-token resolver.
-  async _mintStoredCortiToken(options = {}) {
-    const clientId = this.environmentManager.getCortiClientId();
-    const clientSecret = this.environmentManager.getCortiClientSecret();
-    if (!clientId || !clientSecret) {
-      const err = new Error("No Corti credentials configured. Add them in Settings.");
-      err.code = "NO_API";
-      throw err;
-    }
-    const environment = options.environment || "us";
-    const tenant = (options.tenant || "").trim() || "base";
-    const token = await getCortiToken({ environment, tenant, clientId, clientSecret });
-    return { token, environment, tenant };
   }
 
   setupHandlers() {
@@ -2690,43 +2669,6 @@ class IPCHandlers {
       }
     );
 
-    ipcMain.handle("get-corti-client-id", async () => {
-      return this.environmentManager.getCortiClientId();
-    });
-
-    ipcMain.handle("save-corti-client-id", async (event, key) => {
-      return this.environmentManager.saveCortiClientId(key);
-    });
-
-    ipcMain.handle("get-corti-client-secret", async () => {
-      return this.environmentManager.getCortiClientSecret();
-    });
-
-    ipcMain.handle("save-corti-client-secret", async (event, key) => {
-      return this.environmentManager.saveCortiClientSecret(key);
-    });
-
-    ipcMain.handle(
-      "proxy-corti-transcription",
-      async (event, { audioBuffer, language, environment, tenant }) => {
-        const clientId = this.environmentManager.getCortiClientId();
-        const clientSecret = this.environmentManager.getCortiClientSecret();
-        if (!clientId || !clientSecret) {
-          throw new Error("Corti credentials not configured");
-        }
-
-        const { transcribeAudio } = require("./cortiTranscription");
-        return transcribeAudio({
-          environment,
-          tenant,
-          clientId,
-          clientSecret,
-          audioBuffer,
-          language,
-        });
-      }
-    );
-
     ipcMain.handle("get-tinfoil-chat-models", async () => {
       return getTinfoilChatModels();
     });
@@ -4407,11 +4349,6 @@ class IPCHandlers {
         throw new Error("Deepgram realtime requires a bring-your-own-key API key.");
       }
 
-      if (options.provider === "corti-realtime") {
-        // One token covers both meeting streams; it's only used at the WSS handshake.
-        const { token } = await this._mintStoredCortiToken(options);
-        return streams === 2 ? [token, token] : token;
-      }
       if (options.provider === "tinfoil-realtime") {
         const apiKey = this.environmentManager.getTinfoilKey();
         if (!apiKey) {
@@ -6142,24 +6079,6 @@ class IPCHandlers {
             };
           }
 
-          if (provider === "corti") {
-            const clientId = this.environmentManager.getCortiClientId();
-            const clientSecret = this.environmentManager.getCortiClientSecret();
-            if (!clientId || !clientSecret) {
-              throw new Error("Corti credentials not configured. Add them in Settings.");
-            }
-            const { transcribeAudio } = require("./cortiTranscription");
-            const { text } = await transcribeAudio({
-              environment,
-              tenant,
-              clientId,
-              clientSecret,
-              audioBuffer: fs.readFileSync(realByok),
-              language: language || "en",
-            });
-            return { success: true, text };
-          }
-
           if (provider === "tinfoil") {
             const ext = path.extname(realByok).toLowerCase().replace(".", "");
             const { text } = await transcribeWithTinfoil({
@@ -6438,97 +6357,6 @@ class IPCHandlers {
 
     ipcMain.handle("get-update-info", async () => {
       return this.updateManager.getUpdateInfo();
-    });
-
-    ipcMain.handle("corti-streaming-warmup", async (_event, options = {}) => {
-      try {
-        if (!this.cortiStreaming) {
-          this.cortiStreaming = new CortiStreaming();
-        }
-        if (this.cortiStreaming.hasWarmConnection() || this.cortiStreaming.isConnected) {
-          return { success: true, alreadyWarm: true };
-        }
-        const { token, environment, tenant } = await this._mintStoredCortiToken(options);
-        await this.cortiStreaming.warmup({
-          token,
-          environment,
-          tenant,
-          language: options.language,
-          keyterms: options.keyterms,
-        });
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message, code: error.code };
-      }
-    });
-
-    ipcMain.handle("corti-streaming-start", async (event, options = {}) => {
-      try {
-        if (!this.cortiStreaming) {
-          this.cortiStreaming = new CortiStreaming();
-        }
-        if (this.cortiStreaming.isConnected) {
-          await this.cortiStreaming.disconnect(false);
-        }
-
-        const { token, environment, tenant } = await this._mintStoredCortiToken(options);
-        const win = BrowserWindow.fromWebContents(event.sender);
-
-        this.cortiStreaming.onPartialTranscript = (text) => {
-          if (win && !win.isDestroyed()) win.webContents.send("corti-partial-transcript", text);
-        };
-        this.cortiStreaming.onFinalTranscript = (text) => {
-          if (win && !win.isDestroyed()) win.webContents.send("corti-final-transcript", text);
-        };
-        this.cortiStreaming.onError = (error) => {
-          if (win && !win.isDestroyed()) win.webContents.send("corti-error", error.message);
-        };
-        this.cortiStreaming.onSessionEnd = (data) => {
-          if (win && !win.isDestroyed()) win.webContents.send("corti-session-end", data);
-        };
-
-        await this.cortiStreaming.connect({
-          token,
-          environment,
-          tenant,
-          language: options.language,
-          keyterms: options.keyterms,
-        });
-        return { success: true };
-      } catch (error) {
-        debugLogger.error("Corti streaming start error", { error: error.message }, "streaming");
-        return { success: false, error: error.message, code: error.code };
-      }
-    });
-
-    ipcMain.on("corti-streaming-send", (_event, audioBuffer) => {
-      this.cortiStreaming?.sendAudio(Buffer.from(audioBuffer));
-    });
-
-    ipcMain.on("corti-streaming-finalize", () => {
-      this.cortiStreaming?.finalize();
-    });
-
-    ipcMain.handle("corti-streaming-stop", async () => {
-      try {
-        const model = this.cortiStreaming?.currentModel || "corti-transcribe";
-        const audioBytesSent = this.cortiStreaming?.audioBytesSent || 0;
-        let result = { text: "" };
-        if (this.cortiStreaming) {
-          result = await this.cortiStreaming.disconnect(true);
-        }
-        return { success: true, text: result?.text || "", model, audioBytesSent };
-      } catch (error) {
-        debugLogger.error("Corti streaming stop error", { error: error.message }, "streaming");
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("corti-streaming-status", async () => {
-      if (!this.cortiStreaming) {
-        return { isConnected: false, sessionId: null };
-      }
-      return this.cortiStreaming.getStatus();
     });
 
     // Agent mode handlers

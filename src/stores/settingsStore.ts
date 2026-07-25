@@ -604,18 +604,9 @@ export interface SettingsState
   setXaiApiKey: (key: string) => void;
   setMistralApiKey: (key: string) => void;
   setOpenrouterApiKey: (key: string) => void;
-  setCortiClientId: (key: string) => void;
-  setCortiClientSecret: (key: string) => void;
-  setCortiApiKey: (key: string) => void;
   setTinfoilApiKey: (key: string) => void;
   setCustomTranscriptionApiKey: (key: string) => void;
   setCleanupCustomApiKey: (key: string) => void;
-
-  // Corti (BYOK)
-  cortiEnvironment: string;
-  cortiTenant: string;
-  setCortiEnvironment: (value: string) => void;
-  setCortiTenant: (value: string) => void;
 
   // Enterprise providers
   bedrockAuthMode: string;
@@ -811,9 +802,6 @@ const SECRET_IPC_SAVERS = {
   xai: "saveXaiKey",
   mistral: "saveMistralKey",
   openrouter: "saveOpenrouterKey",
-  cortiClientId: "saveCortiClientId",
-  cortiClientSecret: "saveCortiClientSecret",
-  cortiApiKey: "saveCortiKey",
   tinfoil: "saveTinfoilKey",
   customTranscription: "saveCustomTranscriptionKey",
   cleanupCustom: "saveCleanupCustomKey",
@@ -853,9 +841,6 @@ const STALE_SECRET_LOCALSTORAGE_KEYS = [
   "xaiApiKey",
   "mistralApiKey",
   "openrouterApiKey",
-  "cortiClientId",
-  "cortiClientSecret",
-  "cortiApiKey",
   "tinfoilApiKey",
   "customTranscriptionApiKey",
   "customReasoningApiKey",
@@ -869,15 +854,7 @@ const STALE_SECRET_LOCALSTORAGE_KEYS = [
 
 function invalidateApiKeyCaches(
   provider?:
-    | "openai"
-    | "anthropic"
-    | "gemini"
-    | "groq"
-    | "mistral"
-    | "tinfoil"
-    | "custom"
-    | "openrouter"
-    | "corti"
+    "openai" | "anthropic" | "gemini" | "groq" | "mistral" | "tinfoil" | "custom" | "openrouter"
 ) {
   if (provider) {
     if (_ReasoningService) {
@@ -935,8 +912,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   cloudTranscriptionMode: readString("cloudTranscriptionMode", "local"),
   cleanupCloudMode: readString("cleanupCloudMode", "local"),
   cleanupCloudBaseUrl: readString("cleanupCloudBaseUrl", API_ENDPOINTS.OPENAI_BASE),
-  cortiEnvironment: readString("cortiEnvironment", "us"),
-  cortiTenant: readString("cortiTenant", "base"),
   customDictionary: readStringArray("customDictionary", []),
   snippets: (() => {
     try {
@@ -962,9 +937,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   xaiApiKey: "",
   mistralApiKey: "",
   openrouterApiKey: "",
-  cortiClientId: "",
-  cortiClientSecret: "",
-  cortiApiKey: "",
   tinfoilApiKey: "",
   customTranscriptionApiKey: "",
   cleanupCustomApiKey: "",
@@ -1394,19 +1366,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setXaiApiKey: createSecretSetter("xaiApiKey", "xai"),
   setMistralApiKey: createSecretSetter("mistralApiKey", "mistral", "mistral"),
   setOpenrouterApiKey: createSecretSetter("openrouterApiKey", "openrouter", "openrouter"),
-  setCortiClientId: (key: string) => {
-    set({ cortiClientId: key });
-    debouncedSaveSecret("cortiClientId", key);
-    invalidateApiKeyCaches("corti");
-  },
-  setCortiClientSecret: (key: string) => {
-    set({ cortiClientSecret: key });
-    debouncedSaveSecret("cortiClientSecret", key);
-    invalidateApiKeyCaches("corti");
-  },
-  setCortiApiKey: createSecretSetter("cortiApiKey", "cortiApiKey", "corti"),
-  setCortiEnvironment: createStringSetter("cortiEnvironment"),
-  setCortiTenant: createStringSetter("cortiTenant"),
   setTinfoilApiKey: createSecretSetter("tinfoilApiKey", "tinfoil", "tinfoil"),
   setCustomTranscriptionApiKey: (key: string) => {
     set({ customTranscriptionApiKey: key });
@@ -1753,8 +1712,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   // Apply a transcription config to dictation, then mirror its cloud routing to
-  // note recording and audio upload — used when onboarding picks one provider
-  // for everything (e.g. Corti for medical providers).
+  // note recording and audio upload when onboarding picks one provider for everything.
   setCloudTranscriptionForAllScopes: (settings: Partial<TranscriptionSettings>) => {
     const s = useSettingsStore.getState();
     s.updateTranscriptionSettings(settings);
@@ -1798,8 +1756,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   // Apply a cleanup config to dictation, then mirror its cloud routing to the
-  // other three LLM scopes — used when onboarding routes every reasoning scope to
-  // one provider so PHI never reaches a second LLM (e.g. Corti for medical providers).
+  // other three LLM scopes when onboarding routes every reasoning scope to one provider.
   setCloudReasoningForAllScopes: (settings: Partial<CleanupSettings>) => {
     const s = useSettingsStore.getState();
     // Derive the mode from the incoming patch (falling back to current state) so
@@ -1852,9 +1809,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (keys.xaiApiKey !== undefined) s.setXaiApiKey(keys.xaiApiKey);
     if (keys.mistralApiKey !== undefined) s.setMistralApiKey(keys.mistralApiKey);
     if (keys.openrouterApiKey !== undefined) s.setOpenrouterApiKey(keys.openrouterApiKey);
-    if (keys.cortiClientId !== undefined) s.setCortiClientId(keys.cortiClientId);
-    if (keys.cortiClientSecret !== undefined) s.setCortiClientSecret(keys.cortiClientSecret);
-    if (keys.cortiApiKey !== undefined) s.setCortiApiKey(keys.cortiApiKey);
     if (keys.tinfoilApiKey !== undefined) s.setTinfoilApiKey(keys.tinfoilApiKey);
     if (keys.customTranscriptionApiKey !== undefined)
       s.setCustomTranscriptionApiKey(keys.customTranscriptionApiKey);
@@ -2102,9 +2056,6 @@ export async function initializeSettings(): Promise<void> {
         xai,
         mistral,
         openrouter,
-        cortiClientId,
-        cortiClientSecret,
-        cortiApiKey,
         tinfoil,
         customTx,
         customRx,
@@ -2121,9 +2072,6 @@ export async function initializeSettings(): Promise<void> {
         window.electronAPI.getXaiKey?.(),
         window.electronAPI.getMistralKey?.(),
         window.electronAPI.getOpenrouterKey?.(),
-        window.electronAPI.getCortiClientId?.(),
-        window.electronAPI.getCortiClientSecret?.(),
-        window.electronAPI.getCortiKey?.(),
         window.electronAPI.getTinfoilKey?.(),
         window.electronAPI.getCustomTranscriptionKey?.(),
         window.electronAPI.getCleanupCustomKey?.(),
@@ -2142,9 +2090,6 @@ export async function initializeSettings(): Promise<void> {
         xaiApiKey: xai || "",
         mistralApiKey: mistral || "",
         openrouterApiKey: openrouter || "",
-        cortiClientId: cortiClientId || "",
-        cortiClientSecret: cortiClientSecret || "",
-        cortiApiKey: cortiApiKey || "",
         tinfoilApiKey: tinfoil || "",
         customTranscriptionApiKey: customTx || "",
         cleanupCustomApiKey: customRx || "",

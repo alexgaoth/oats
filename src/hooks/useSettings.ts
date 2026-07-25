@@ -71,9 +71,6 @@ export interface ApiKeySettings {
   xaiApiKey: string;
   mistralApiKey: string;
   openrouterApiKey: string;
-  cortiClientId: string;
-  cortiClientSecret: string;
-  cortiApiKey: string;
   tinfoilApiKey: string;
   customTranscriptionApiKey: string;
   cleanupCustomApiKey: string;

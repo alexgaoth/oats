@@ -204,22 +204,12 @@ const CLOUD_PROVIDER_TABS = [
   { id: "groq", name: "Groq" },
   { id: "xai", name: "xAI" },
   { id: "mistral", name: "Mistral" },
-  { id: "corti", name: "Corti" },
   { id: "tinfoil", name: "Tinfoil" },
   { id: "custom", name: "Custom" },
 ];
 
 interface ProviderCredentialField {
-  key:
-    | "openaiApiKey"
-    | "groqApiKey"
-    | "xaiApiKey"
-    | "mistralApiKey"
-    | "cortiClientId"
-    | "cortiClientSecret"
-    | "cortiEnvironment"
-    | "cortiTenant"
-    | "tinfoilApiKey";
+  key: "openaiApiKey" | "groqApiKey" | "xaiApiKey" | "mistralApiKey" | "tinfoilApiKey";
   input: "secret" | "text" | "select";
   labelKey?: string;
   placeholder?: string;
@@ -245,28 +235,6 @@ const PROVIDER_CREDENTIALS: Record<
   mistral: {
     consoleUrl: "https://console.mistral.ai/api-keys",
     fields: [{ key: "mistralApiKey", input: "secret" }],
-  },
-  corti: {
-    consoleUrl: "https://www.corti.ai/?utm_source=referral&utm_content=&utm_campaign=oats",
-    fields: [
-      { key: "cortiClientId", input: "secret", labelKey: "transcription.corti.clientId" },
-      { key: "cortiClientSecret", input: "secret", labelKey: "transcription.corti.clientSecret" },
-      {
-        key: "cortiEnvironment",
-        input: "select",
-        labelKey: "transcription.corti.environment",
-        options: [
-          { value: "us", label: "US" },
-          { value: "eu", label: "EU" },
-        ],
-      },
-      {
-        key: "cortiTenant",
-        input: "text",
-        labelKey: "transcription.corti.tenant",
-        placeholder: "base",
-      },
-    ],
   },
   tinfoil: {
     consoleUrl: "https://tinfoil.sh/inference?utm_source=referral&utm_campaign=oats",
@@ -346,14 +314,6 @@ export default function TranscriptionModelPicker({
   const setXaiApiKey = useSettingsStore((s) => s.setXaiApiKey);
   const mistralApiKey = useSettingsStore((s) => s.mistralApiKey);
   const setMistralApiKey = useSettingsStore((s) => s.setMistralApiKey);
-  const cortiClientId = useSettingsStore((s) => s.cortiClientId);
-  const setCortiClientId = useSettingsStore((s) => s.setCortiClientId);
-  const cortiClientSecret = useSettingsStore((s) => s.cortiClientSecret);
-  const setCortiClientSecret = useSettingsStore((s) => s.setCortiClientSecret);
-  const cortiEnvironment = useSettingsStore((s) => s.cortiEnvironment);
-  const setCortiEnvironment = useSettingsStore((s) => s.setCortiEnvironment);
-  const cortiTenant = useSettingsStore((s) => s.cortiTenant);
-  const setCortiTenant = useSettingsStore((s) => s.setCortiTenant);
   const tinfoilApiKey = useSettingsStore((s) => s.tinfoilApiKey);
   const setTinfoilApiKey = useSettingsStore((s) => s.setTinfoilApiKey);
   const customTranscriptionApiKey = useSettingsStore((s) => s.customTranscriptionApiKey);
@@ -737,10 +697,6 @@ export default function TranscriptionModelPicker({
     groqApiKey,
     xaiApiKey,
     mistralApiKey,
-    cortiClientId,
-    cortiClientSecret,
-    cortiEnvironment,
-    cortiTenant,
     tinfoilApiKey,
   };
   const credentialSetters: Record<ProviderCredentialField["key"], (value: string) => void> = {
@@ -748,10 +704,6 @@ export default function TranscriptionModelPicker({
     groqApiKey: setGroqApiKey,
     xaiApiKey: setXaiApiKey,
     mistralApiKey: setMistralApiKey,
-    cortiClientId: setCortiClientId,
-    cortiClientSecret: setCortiClientSecret,
-    cortiEnvironment: setCortiEnvironment,
-    cortiTenant: setCortiTenant,
     tinfoilApiKey: setTinfoilApiKey,
   };
 

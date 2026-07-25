@@ -983,19 +983,6 @@ declare global {
         contextBias?: string[];
       }) => Promise<{ text: string }>;
 
-      // Corti credential management
-      getCortiClientId?: () => Promise<string | null>;
-      saveCortiClientId?: (key: string) => Promise<void>;
-      getCortiClientSecret?: () => Promise<string | null>;
-      saveCortiClientSecret?: (key: string) => Promise<void>;
-      getCortiKey?: () => Promise<string | null>;
-      saveCortiKey?: (key: string) => Promise<void>;
-      proxyCortiTranscription?: (data: {
-        audioBuffer: ArrayBuffer;
-        language: string;
-        environment: string;
-        tenant: string;
-      }) => Promise<{ text: string }>;
       getTinfoilKey?: () => Promise<string | null>;
       saveTinfoilKey?: (key: string) => Promise<void>;
       getTinfoilChatModels?: () => Promise<TinfoilCatalogModel[]>;
@@ -1225,34 +1212,6 @@ declare global {
         query: string,
         limit?: number
       ) => Promise<ConversationPreview[]>;
-
-      // Corti streaming (BYOK)
-      cortiStreamingWarmup?: (options?: {
-        environment?: string;
-        tenant?: string;
-        language?: string;
-        keyterms?: string[];
-      }) => Promise<{ success: boolean; error?: string; code?: string }>;
-      cortiStreamingStart?: (options?: {
-        environment?: string;
-        tenant?: string;
-        language?: string;
-        keyterms?: string[];
-      }) => Promise<{ success: boolean; error?: string; code?: string }>;
-      cortiStreamingSend?: (audioBuffer: ArrayBuffer) => void;
-      cortiStreamingFinalize?: () => void;
-      cortiStreamingStop?: () => Promise<{
-        success: boolean;
-        text?: string;
-        model?: string;
-        audioBytesSent?: number;
-        error?: string;
-      }>;
-      cortiStreamingStatus?: () => Promise<{ isConnected: boolean; sessionId: string | null }>;
-      onCortiPartialTranscript?: (callback: (text: string) => void) => () => void;
-      onCortiFinalTranscript?: (callback: (text: string) => void) => () => void;
-      onCortiError?: (callback: (error: string) => void) => () => void;
-      onCortiSessionEnd?: (callback: (data: { text?: string }) => void) => () => void;
 
       // Agent overlay
       resizeAgentWindow?: (width: number, height: number) => Promise<void>;

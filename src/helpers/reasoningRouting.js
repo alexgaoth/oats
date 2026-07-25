@@ -25,32 +25,3 @@ export function buildReasoningScopePatches(settings, mode) {
     dictationTranslation: { mode, ...routing },
   };
 }
-
-// Onboarding "use Corti everywhere" payloads. Transcription always routes to
-// Corti. Reasoning routes to Corti only in the EU region with an API key, since
-// Corti Models is EU-only and needs its own key; otherwise it stays local so
-// clinical text never leaves the device.
-export function buildCortiOnboardingPayloads(
-  transcriptionProvider,
-  reasoningProvider,
-  environment,
-  hasApiKey
-) {
-  const transcription = {
-    useLocalWhisper: false,
-    cloudTranscriptionMode: "byok",
-    cloudTranscriptionProvider: "corti",
-    cloudTranscriptionModel: transcriptionProvider?.models?.[0]?.id,
-  };
-  const cortiModel = reasoningProvider?.models?.[0]?.id;
-  const reasoning =
-    environment === "eu" && hasApiKey && cortiModel
-      ? {
-          useCleanupModel: true,
-          cleanupProvider: "corti",
-          cleanupModel: cortiModel,
-          cleanupCloudMode: "byok",
-        }
-      : { useCleanupModel: false, cleanupCloudMode: "local" };
-  return { transcription, reasoning };
-}
