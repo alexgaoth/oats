@@ -287,20 +287,7 @@
       "localDescription": "你已設定本機處理或自備金鑰。可隨時在「設定」中調整音訊處理方式。",
       "cleanupNote": "AI 文字清理使用合理的預設值，可隨時在「設定」中調整。",
       "openSettings": "開啟設定",
-      "skipForNow": "暫時略過",
-      "corti": {
-        "title": "你告訴我們你是為臨床轉寫而來",
-        "description": "我們與 Corti 合作 — 臨床級語音轉文字，準確率最高，並符合 HIPAA。",
-        "createAccount": "建立你的 Corti 帳戶",
-        "creditBadge": "50 美元免費額度",
-        "regionHint": "選擇音訊處理地區 — 美國或歐盟。",
-        "llmHint": "語言模型功能也會在 Corti 模型上執行。",
-        "useCorti": "使用 Corti",
-        "skip": "暫時不用",
-        "step1": "在 corti.ai 註冊",
-        "step2": "開啟 Corti 控制台並建立 API 憑證",
-        "step3": "在下方貼上 Client ID 和 Secret"
-      }
+      "skipForNow": "暫時略過"
     }
   },
   "streaming": {
@@ -513,9 +500,6 @@
       "modelRetiredTitle": "模型已無法使用",
       "modelRetired": "Tinfoil 已停用 {{from}}，已切換至 {{to}}。",
       "refreshingModels": "正在重新整理模型…"
-    },
-    "corti": {
-      "euOnly": "Corti 模型僅在歐盟地區可用。"
     }
   },
   "transcription": {
@@ -537,13 +521,6 @@
       "parakeetModelDescription": "NVIDIA Parakeet 模型"
     },
     "whisperModels": "Whisper 模型",
-    "corti": {
-      "clientId": "用戶端 ID",
-      "clientSecret": "用戶端密鑰",
-      "apiKey": "API Key",
-      "environment": "資料區域",
-      "tenant": "租戶"
-    },
     "tinfoil": {
       "transportNote": "Tinfoil 串流轉錄使用 Voxtral Mini 4B，批次轉錄使用 Voxtral Small 24B。",
       "docsLink": "查看文件"
@@ -1898,7 +1875,6 @@
         "groq_whisper_large_v3_turbo": "216 倍即時速度",
         "groq_whisper_large_v3": "Large v3 模型，快速且精準",
         "mistral_voxtral_mini_latest": "快速多語言轉錄",
-        "corti_transcribe": "臨床級醫療轉錄",
         "xai_grok_stt": "xAI 高精度語音辨識",
         "tinfoil_voxtral": "可驗證的私密轉錄"
       },
@@ -1942,11 +1918,7 @@
         "tinfoil_kimi_k2_6": "私密長程編碼與多模態模型，256K 上下文",
         "tinfoil_gemma4_31b": "支援工具呼叫的私密多語言推理模型，256K 上下文",
         "tinfoil_gpt_oss_120b": "支援工具使用的私密開放權重推理模型，131K 上下文",
-        "tinfoil_llama3_3_70b": "支援工具呼叫的私密對話模型，128K 上下文",
-        "corti_corti_s1_instant": "快速醫療模型，無推理過程",
-        "corti_corti_s1": "功能最強的臨床模型，帶推理",
-        "corti_corti_s1_mini_instant": "精簡型醫療模型，最快且成本最低",
-        "corti_corti_s1_mini": "精簡型臨床模型，半價提供推理"
+        "tinfoil_llama3_3_70b": "支援工具呼叫的私密對話模型，128K 上下文"
       },
       "enterprise": {
         "bedrock_claude_fable_5": "最強大的 Claude 模型。最適合最具挑戰性的智慧助手模式任務。",

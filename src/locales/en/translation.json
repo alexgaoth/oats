@@ -287,20 +287,7 @@
       "localDescription": "You're set up with local processing or your own key. Adjust how your audio is processed anytime in Settings.",
       "cleanupNote": "AI text cleanup runs with sensible defaults. You can adjust it anytime in Settings.",
       "openSettings": "Open Settings",
-      "skipForNow": "Skip for now",
-      "corti": {
-        "title": "You told us you're here for clinical transcription",
-        "description": "We've partnered with Corti — clinical-grade speech-to-text with the highest accuracy, and it's HIPAA compliant.",
-        "createAccount": "Create your Corti account",
-        "creditBadge": "$50 free credit",
-        "regionHint": "Choose where your audio is processed — US or EU.",
-        "llmHint": "Language model features will also run on Corti models.",
-        "useCorti": "Use Corti",
-        "skip": "Not now",
-        "step1": "Sign up on corti.ai",
-        "step2": "Open the Corti console and create API credentials",
-        "step3": "Paste your Client ID and Secret below"
-      }
+      "skipForNow": "Skip for now"
     }
   },
   "streaming": {
@@ -513,9 +500,6 @@
       "modelRetiredTitle": "Model no longer available",
       "modelRetired": "Tinfoil retired {{from}}. Switched to {{to}}.",
       "refreshingModels": "Refreshing models…"
-    },
-    "corti": {
-      "euOnly": "Corti's models are only available in the EU region."
     }
   },
   "transcription": {
@@ -537,13 +521,6 @@
       "parakeetModelDescription": "NVIDIA Parakeet Model"
     },
     "whisperModels": "Whisper Models",
-    "corti": {
-      "clientId": "Client ID",
-      "clientSecret": "Client Secret",
-      "apiKey": "API Key",
-      "environment": "Data Region",
-      "tenant": "Tenant"
-    },
     "tinfoil": {
       "transportNote": "Tinfoil streams using Voxtral Mini 4B, and batches with Voxtral Small 24B.",
       "docsLink": "Read the docs"
@@ -1995,7 +1972,6 @@
         "groq_whisper_large_v3": "High accuracy speech recognition",
         "groq_whisper_large_v3_turbo": "216x real-time speed",
         "mistral_voxtral_mini_latest": "Fast multilingual transcription",
-        "corti_transcribe": "Clinical-grade medical transcription",
         "xai_grok_stt": "High-accuracy speech recognition by xAI",
         "tinfoil_voxtral": "Verifiably private transcription"
       },
@@ -2039,11 +2015,7 @@
         "tinfoil_kimi_k2_6": "Private long-horizon coding and multimodal model, 256K context",
         "tinfoil_gemma4_31b": "Private multilingual reasoning model with tool calling, 256K context",
         "tinfoil_gpt_oss_120b": "Private open-weight reasoning model with tool use, 131K context",
-        "tinfoil_llama3_3_70b": "Private conversational model with tool calling, 128K context",
-        "corti_corti_s1_instant": "Fast healthcare model, no reasoning trace",
-        "corti_corti_s1": "Most capable clinical model with reasoning",
-        "corti_corti_s1_mini_instant": "Compact healthcare model, fastest and lowest cost",
-        "corti_corti_s1_mini": "Compact clinical model with reasoning at half the price"
+        "tinfoil_llama3_3_70b": "Private conversational model with tool calling, 128K context"
       },
       "enterprise": {
         "bedrock_claude_fable_5": "Most capable Claude model. Best for the hardest Agent Mode tasks.",

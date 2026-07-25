@@ -70,7 +70,8 @@ function SkeletonRows() {
               width: `${60 + i * 10}%`,
               animation: `tool-status-sweep 1.5s ease-in-out ${i * 0.15}s infinite`,
               backgroundSize: "200% 100%",
-              background: "linear-gradient(90deg, transparent, oklch(0.5 0 0 / 0.06), transparent)",
+              background:
+                "linear-gradient(90deg, transparent, color-mix(in oklch, var(--color-foreground) 6%, transparent), transparent)",
             }}
           />
           <div
@@ -79,7 +80,8 @@ function SkeletonRows() {
               width: `${80 + (i % 2) * 10}%`,
               animation: `tool-status-sweep 1.5s ease-in-out ${i * 0.15 + 0.08}s infinite`,
               backgroundSize: "200% 100%",
-              background: "linear-gradient(90deg, transparent, oklch(0.5 0 0 / 0.04), transparent)",
+              background:
+                "linear-gradient(90deg, transparent, color-mix(in oklch, var(--color-foreground) 4%, transparent), transparent)",
             }}
           />
         </div>

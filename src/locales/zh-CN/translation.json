@@ -287,20 +287,7 @@
       "localDescription": "你已配置本地处理或自带密钥。可随时在“设置”中调整音频处理方式。",
       "cleanupNote": "AI 文本清理使用合理的默认设置，可随时在“设置”中调整。",
       "openSettings": "打开设置",
-      "skipForNow": "暂时跳过",
-      "corti": {
-        "title": "你告诉我们你是为临床转写而来",
-        "description": "我们与 Corti 合作 — 临床级语音转文字，准确率最高，并符合 HIPAA。",
-        "createAccount": "创建你的 Corti 账户",
-        "creditBadge": "50 美元免费额度",
-        "regionHint": "选择音频处理地区 — 美国或欧盟。",
-        "llmHint": "语言模型功能也将在 Corti 模型上运行。",
-        "useCorti": "使用 Corti",
-        "skip": "暂不需要",
-        "step1": "在 corti.ai 注册",
-        "step2": "打开 Corti 控制台并创建 API 凭据",
-        "step3": "在下方粘贴 Client ID 和 Secret"
-      }
+      "skipForNow": "暂时跳过"
     }
   },
   "streaming": {
@@ -513,9 +500,6 @@
       "modelRetiredTitle": "模型已不可用",
       "modelRetired": "Tinfoil 已停用 {{from}}，已切换至 {{to}}。",
       "refreshingModels": "正在刷新模型…"
-    },
-    "corti": {
-      "euOnly": "Corti 模型仅在欧盟地区可用。"
     }
   },
   "transcription": {
@@ -537,13 +521,6 @@
       "parakeetModelDescription": "NVIDIA Parakeet 模型"
     },
     "whisperModels": "Whisper 模型",
-    "corti": {
-      "clientId": "客户端 ID",
-      "clientSecret": "客户端密钥",
-      "apiKey": "API Key",
-      "environment": "数据区域",
-      "tenant": "租户"
-    },
     "tinfoil": {
       "transportNote": "Tinfoil 流式转录使用 Voxtral Mini 4B，批量转录使用 Voxtral Small 24B。",
       "docsLink": "查看文档"
@@ -1898,7 +1875,6 @@
         "groq_whisper_large_v3_turbo": "216 倍实时速度",
         "groq_whisper_large_v3": "Large v3 模型，快速且精准",
         "mistral_voxtral_mini_latest": "快速多语言转录",
-        "corti_transcribe": "临床级医疗转录",
         "xai_grok_stt": "xAI 高精度语音识别",
         "tinfoil_voxtral": "可验证的私密转录"
       },
@@ -1942,11 +1918,7 @@
         "tinfoil_kimi_k2_6": "私密长程编码与多模态模型，256K 上下文",
         "tinfoil_gemma4_31b": "支持工具调用的私密多语言推理模型，256K 上下文",
         "tinfoil_gpt_oss_120b": "支持工具使用的私密开源权重推理模型，131K 上下文",
-        "tinfoil_llama3_3_70b": "支持工具调用的私密对话模型，128K 上下文",
-        "corti_corti_s1_instant": "快速医疗模型，无推理过程",
-        "corti_corti_s1": "功能最强的临床模型，带推理",
-        "corti_corti_s1_mini_instant": "紧凑型医疗模型，最快且成本最低",
-        "corti_corti_s1_mini": "紧凑型临床模型，半价提供推理"
+        "tinfoil_llama3_3_70b": "支持工具调用的私密对话模型，128K 上下文"
       },
       "enterprise": {
         "bedrock_claude_fable_5": "最强大的 Claude 模型。最适合最具挑战性的智能助手模式任务。",

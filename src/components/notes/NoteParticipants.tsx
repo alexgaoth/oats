@@ -9,6 +9,9 @@ function getInitials(displayName: string | null, email: string): string {
   return email.charAt(0).toUpperCase();
 }
 
+// Procedural per-participant avatar hue derived from the email hash — an identity
+// color, not a theme/brand color, so it is intentionally generated rather than a
+// design token (saturation/lightness are held constant to sit calmly on paper).
 function getInitialColor(email: string): string {
   let hash = 0;
   for (let i = 0; i < email.length; i++) {
