@@ -118,7 +118,6 @@
         "linux-key-listener*",
         "meeting-aec-helper-*",
         "all-MiniLM-L6-v2/**/*",
-        "diarization-models/**/*",
         "whisper-vad/**/*",
         "*.dylib",
         "*.dll",
