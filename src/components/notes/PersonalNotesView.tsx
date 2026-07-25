@@ -207,16 +207,8 @@ export default function PersonalNotesView({
     return folders.find((f) => f.id === activeNote.folder_id)?.name ?? null;
   }, [activeNote?.folder_id, folders]);
 
-  const [calendarEventName, setCalendarEventName] = useState<string | null>(null);
-  useEffect(() => {
-    if (!activeNote?.calendar_event_id) {
-      setCalendarEventName(null);
-      return;
-    }
-    window.electronAPI.gcalGetEvent?.(activeNote.calendar_event_id).then((result) => {
-      setCalendarEventName(result?.success && result.event?.summary ? result.event.summary : null);
-    });
-  }, [activeNote?.calendar_event_id]);
+  // Calendar linking was removed in Stage 4; notes are no longer tied to calendar events.
+  const calendarEventName: string | null = null;
 
   const startRecording = useCallback(
     async (mode: "online" | "in_room" = "online") => {

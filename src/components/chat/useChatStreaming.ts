@@ -117,13 +117,11 @@ export function useChatStreaming({
 
       let registry: ToolRegistry | null = null;
       if (supportsTools) {
-        const cacheKey = `${settings.gcalConnected}`;
+        const cacheKey = "default";
         if (toolRegistryRef.current?.key === cacheKey) {
           registry = toolRegistryRef.current.registry;
         } else {
-          registry = createToolRegistry({
-            gcalConnected: settings.gcalConnected,
-          });
+          registry = createToolRegistry();
           toolRegistryRef.current = { key: cacheKey, registry };
         }
       }

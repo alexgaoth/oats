@@ -240,7 +240,6 @@ class IPCHandlers {
     this.getTrayManager = managers.getTrayManager;
     this.whisperCudaManager = managers.whisperCudaManager;
     this.whisperVulkanManager = managers.whisperVulkanManager;
-    this.googleCalendarManager = managers.googleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
     this.linuxPortalAudioManager = managers.linuxPortalAudioManager;
@@ -2190,18 +2189,6 @@ class IPCHandlers {
         this.whisperManager?.stopServer();
       } catch (e) {
         errors.push(`Whisper stop: ${e.message}`);
-      }
-      try {
-        this.googleCalendarManager?.stop();
-      } catch (e) {
-        errors.push(`GCal stop: ${e.message}`);
-      }
-
-      // Revoke Google OAuth tokens before DB is closed
-      try {
-        await this.googleCalendarManager?.revokeAllTokens();
-      } catch (e) {
-        errors.push(`GCal revoke: ${e.message}`);
       }
 
       // Close DB connection before deleting the file
@@ -6687,93 +6674,6 @@ class IPCHandlers {
       return { success: true };
     });
 
-    // Google Calendar
-    ipcMain.handle("gcal-start-oauth", async () => {
-      try {
-        return await this.googleCalendarManager.startOAuth();
-      } catch (error) {
-        debugLogger.error("Google Calendar OAuth failed", { error: error.message }, "calendar");
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-disconnect", async () => {
-      try {
-        this.googleCalendarManager.disconnect();
-        return { success: true };
-      } catch (error) {
-        debugLogger.error(
-          "Google Calendar disconnect failed",
-          { error: error.message },
-          "calendar"
-        );
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-get-connection-status", async () => {
-      try {
-        return this.googleCalendarManager.getConnectionStatus();
-      } catch (error) {
-        return { connected: false, email: null };
-      }
-    });
-
-    ipcMain.handle("gcal-get-calendars", async () => {
-      try {
-        return { success: true, calendars: this.googleCalendarManager.getCalendars() };
-      } catch (error) {
-        return { success: false, calendars: [] };
-      }
-    });
-
-    ipcMain.handle("gcal-set-calendar-selection", async (_event, calendarId, isSelected) => {
-      try {
-        await this.googleCalendarManager.setCalendarSelection(calendarId, isSelected);
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-set-primary-only", async (_event, value) => {
-      try {
-        await this.googleCalendarManager.setPrimaryOnly(value);
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-sync-events", async () => {
-      try {
-        await this.googleCalendarManager.syncEvents();
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-get-upcoming-events", async (_event, windowMinutes) => {
-      try {
-        return {
-          success: true,
-          events: await this.googleCalendarManager.getUpcomingEvents(windowMinutes),
-        };
-      } catch (error) {
-        return { success: false, events: [] };
-      }
-    });
-
-    ipcMain.handle("gcal-get-event", async (_event, eventId) => {
-      try {
-        const event = this.databaseManager.getCalendarEventById(eventId);
-        return { success: true, event };
-      } catch (error) {
-        return { success: false, event: null };
-      }
-    });
-
     ipcMain.handle("search-contacts", async (_event, query) => {
       try {
         const contacts = this.databaseManager.searchContacts(query);
@@ -6892,15 +6792,6 @@ class IPCHandlers {
     ipcMain.handle("meeting-notification-respond", async (_event, detectionId, action) => {
       try {
         await this.meetingDetectionEngine.handleNotificationResponse(detectionId, action);
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("join-calendar-meeting", async (_event, eventId) => {
-      try {
-        await this.meetingDetectionEngine.joinCalendarMeeting(eventId);
         return { success: true };
       } catch (error) {
         return { success: false, error: error.message };

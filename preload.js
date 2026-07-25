@@ -758,33 +758,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   broadcastDictionaryUpdated: () => ipcRenderer.invoke("db-broadcast-dictionary-updated"),
   broadcastSnippetsUpdated: () => ipcRenderer.invoke("db-broadcast-snippets-updated"),
 
-  // Google Calendar
-  gcalStartOAuth: () => ipcRenderer.invoke("gcal-start-oauth"),
-  gcalDisconnect: () => ipcRenderer.invoke("gcal-disconnect"),
-  gcalGetConnectionStatus: () => ipcRenderer.invoke("gcal-get-connection-status"),
-  gcalGetCalendars: () => ipcRenderer.invoke("gcal-get-calendars"),
-  gcalSetCalendarSelection: (calendarId, isSelected) =>
-    ipcRenderer.invoke("gcal-set-calendar-selection", calendarId, isSelected),
-  gcalSetPrimaryOnly: (value) => ipcRenderer.invoke("gcal-set-primary-only", value),
-  gcalSyncEvents: () => ipcRenderer.invoke("gcal-sync-events"),
-  gcalGetUpcomingEvents: (windowMinutes) =>
-    ipcRenderer.invoke("gcal-get-upcoming-events", windowMinutes),
-  gcalGetEvent: (eventId) => ipcRenderer.invoke("gcal-get-event", eventId),
-
   // Contacts
   searchContacts: (query) => ipcRenderer.invoke("search-contacts", query),
   upsertContact: (contact) => ipcRenderer.invoke("upsert-contact", contact),
   getMD5Hash: (text) => ipcRenderer.invoke("get-md5-hash", text),
-
-  // Google Calendar event listeners
-  onGcalConnectionChanged: registerListener(
-    "gcal-connection-changed",
-    (callback) => (_event, data) => callback(data)
-  ),
-  onGcalEventsSynced: registerListener(
-    "gcal-events-synced",
-    (callback) => (_event, data) => callback(data)
-  ),
 
   // Meeting detection
   meetingDetectionGetPreferences: () => ipcRenderer.invoke("meeting-detection-get-preferences"),
@@ -806,7 +783,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   meetingNotificationReady: () => ipcRenderer.invoke("meeting-notification-ready"),
   meetingNotificationRespond: (detectionId, action) =>
     ipcRenderer.invoke("meeting-notification-respond", detectionId, action),
-  joinCalendarMeeting: (eventId) => ipcRenderer.invoke("join-calendar-meeting", eventId),
   getPendingMeetingNoteNavigation: () => ipcRenderer.invoke("get-pending-meeting-note-navigation"),
   onMeetingNoteNavigationPending: registerListener(
     "meeting-note-navigation-pending",

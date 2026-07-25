@@ -1,8 +1,5 @@
-const { BrowserWindow, shell } = require("electron");
+const { BrowserWindow } = require("electron");
 const debugLogger = require("./debugLogger");
-const { getMeetingJoinUrl } = require("./meetingJoinUrl");
-
-const IMMINENT_THRESHOLD_MS = 5 * 60 * 1000;
 
 const PLACEHOLDER_PREFIX = { __detected__: "detected", __manual__: "manual" };
 
@@ -24,14 +21,7 @@ function placeholderEvent(calendarId) {
 }
 
 class MeetingDetectionEngine {
-  constructor(
-    googleCalendarManager,
-    meetingProcessDetector,
-    audioActivityDetector,
-    windowManager,
-    databaseManager
-  ) {
-    this.googleCalendarManager = googleCalendarManager;
+  constructor(meetingProcessDetector, audioActivityDetector, windowManager, databaseManager) {
     this.meetingProcessDetector = meetingProcessDetector;
     this.audioActivityDetector = audioActivityDetector;
     this.windowManager = windowManager;
@@ -63,12 +53,6 @@ class MeetingDetectionEngine {
     this.audioActivityDetector.on("sustained-audio-detected", (data) => {
       this._handleDetection("audio", "sustained-audio", data);
     });
-  }
-
-  // Calendar reminders enter the same pipeline as mic detections, so they share
-  // the recording gates, queueing, cooldowns, and the overlay window.
-  handleCalendarReminder(event) {
-    this._handleDetection("calendar", event.id, { event, detectedAt: Date.now() });
   }
 
   _handleDetection(source, key, data) {
@@ -114,49 +98,18 @@ class MeetingDetectionEngine {
     this._showPrompt(detectionId, source, key, data);
   }
 
-  _notificationsEnabledFor(source) {
+  _notificationsEnabledFor() {
     const nPrefs = this.windowManager.notificationPrefs || {};
     if (nPrefs.notificationsEnabled === false) return false;
-    const prefKey = source === "calendar" ? "notifyCalendarReminders" : "notifyMeetingDetection";
-    return nPrefs[prefKey] !== false;
-  }
-
-  // activeMeeting only means the event's scheduled window is open — actual meeting
-  // recordings are tracked by _meetingModeActive.
-  _findCalendarEvent() {
-    const calendarState = this.googleCalendarManager?.getActiveMeetingState?.();
-    if (!calendarState) return null;
-    if (calendarState.activeMeeting) return calendarState.activeMeeting;
-
-    const now = Date.now();
-    return (
-      calendarState.upcomingEvents?.find((evt) => {
-        const start = new Date(evt.start_time).getTime();
-        return start - now <= IMMINENT_THRESHOLD_MS && start > now;
-      }) ?? null
-    );
+    return nPrefs.notifyMeetingDetection !== false;
   }
 
   _showPrompt(detectionId, source, key, data) {
-    const calendarEvent = data?.event ?? this._findCalendarEvent();
-    const event = calendarEvent ?? placeholderEvent("__detected__");
-
-    let variant = "detected";
-    if (calendarEvent) {
-      const started = new Date(calendarEvent.start_time).getTime() <= Date.now();
-      variant = started ? "underway" : "starting";
-    }
-    const joinUrl = source === "calendar" ? getMeetingJoinUrl(calendarEvent) : null;
+    const event = data?.event ?? placeholderEvent("__detected__");
 
     debugLogger.info(
       "Showing notification",
-      {
-        detectionId,
-        source,
-        variant,
-        title: calendarEvent?.summary ?? null,
-        hasJoinUrl: !!joinUrl,
-      },
+      { detectionId, source, variant: "detected" },
       "meeting"
     );
 
@@ -170,8 +123,8 @@ class MeetingDetectionEngine {
       source,
       key,
       event,
-      variant,
-      joinUrl,
+      variant: "detected",
+      joinUrl: null,
     });
   }
 
@@ -180,22 +133,7 @@ class MeetingDetectionEngine {
     try {
       const detection = this.activeDetections.get(detectionId);
 
-      if ((action === "start" || action === "join") && detection) {
-        if (action === "join") {
-          const joinUrl = getMeetingJoinUrl(detection.event);
-          if (joinUrl) {
-            shell
-              .openExternal(joinUrl)
-              .catch((error) =>
-                debugLogger.error(
-                  "Failed to open meeting link",
-                  { error: error.message, joinUrl },
-                  "meeting"
-                )
-              );
-          }
-        }
-
+      if (action === "start" && detection) {
         const eventSummary = detection.event?.summary || "New note";
 
         const noteResult = this.databaseManager.saveNote(eventSummary, "", "meeting");
@@ -214,28 +152,11 @@ class MeetingDetectionEngine {
 
         this.broadcastToWindows("note-added", noteResult.note);
 
-        const isRealEvent =
-          detection.event?.calendar_id &&
-          detection.event.calendar_id !== "__detected__" &&
-          detection.event.calendar_id !== "__manual__";
-
-        if (isRealEvent) {
-          const calEvent = this.databaseManager.getCalendarEventById(detection.event.id);
-          const updates = { calendar_event_id: detection.event.id };
-          if (calEvent?.attendees) {
-            updates.participants = calEvent.attendees;
-          }
-          const updateResult = this.databaseManager.updateNote(noteResult.note.id, updates);
-          if (updateResult?.success && updateResult?.note) {
-            this.broadcastToWindows("note-updated", updateResult.note);
-          }
-        }
-
         await this.windowManager.queueMeetingNoteNavigation({
           noteId: noteResult.note.id,
           folderId: meetingsFolder.id,
           event: detection.event,
-          trigger: "calendar-join",
+          trigger: "detected",
         });
 
         this.audioActivityDetector.resetPrompt();
@@ -262,11 +183,6 @@ class MeetingDetectionEngine {
   async startManualMeeting() {
     debugLogger.info("Starting manual meeting", {}, "meeting");
 
-    const activeEvents = this.databaseManager.getActiveEvents();
-    if (activeEvents?.length > 0) {
-      return this.joinCalendarMeeting(activeEvents[0].id, "hotkey");
-    }
-
     this._meetingModeActive = true;
 
     const event = placeholderEvent("__manual__");
@@ -291,46 +207,6 @@ class MeetingDetectionEngine {
       folderId: meetingsFolder.id,
       event,
       trigger: "hotkey",
-    });
-  }
-
-  async joinCalendarMeeting(eventId, trigger = "calendar-join") {
-    this._meetingModeActive = true;
-    debugLogger.info("Joining calendar meeting", { eventId, trigger }, "meeting");
-
-    const calEvent = this.databaseManager.getCalendarEventById(eventId);
-    if (!calEvent) {
-      debugLogger.error("Calendar event not found", { eventId }, "meeting");
-      this._meetingModeActive = false;
-      return;
-    }
-
-    const noteResult = this.databaseManager.saveNote(calEvent.summary || "New note", "", "meeting");
-    const meetingsFolder = this.databaseManager.getMeetingsFolder();
-
-    if (!noteResult?.note?.id || !meetingsFolder?.id) {
-      debugLogger.error(
-        "Join calendar meeting failed — missing note or folder",
-        { noteId: noteResult?.note?.id, folderId: meetingsFolder?.id },
-        "meeting"
-      );
-      this._meetingModeActive = false;
-      return;
-    }
-
-    const updates = { calendar_event_id: calEvent.id };
-    if (calEvent.attendees) {
-      updates.participants = calEvent.attendees;
-    }
-    const updateResult = this.databaseManager.updateNote(noteResult.note.id, updates);
-
-    this.broadcastToWindows("note-added", updateResult?.note || noteResult.note);
-
-    await this.windowManager.queueMeetingNoteNavigation({
-      noteId: noteResult.note.id,
-      folderId: meetingsFolder.id,
-      event: calEvent,
-      trigger,
     });
   }
 

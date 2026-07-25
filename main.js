@@ -171,7 +171,6 @@ const LinuxKeyManager = require("./src/helpers/linuxKeyManager");
 const TextEditMonitor = require("./src/helpers/textEditMonitor");
 const WhisperCudaManager = require("./src/helpers/whisperCudaManager");
 const WhisperVulkanManager = require("./src/helpers/whisperVulkanManager");
-const GoogleCalendarManager = require("./src/helpers/googleCalendarManager");
 const MeetingProcessDetector = require("./src/helpers/meetingProcessDetector");
 const AudioActivityDetector = require("./src/helpers/audioActivityDetector");
 const AudioTapManager = require("./src/helpers/audioTapManager");
@@ -202,7 +201,6 @@ let linuxKeyManager = null;
 let textEditMonitor = null;
 let whisperCudaManager = null;
 let whisperVulkanManager = null;
-let googleCalendarManager = null;
 let meetingDetectionEngine = null;
 let audioTapManager = null;
 let linuxPortalAudioManager = null;
@@ -270,16 +268,13 @@ function initializeCoreManagers() {
   }
   parakeetManager = new ParakeetManager();
   diarizationManager = new DiarizationManager();
-  googleCalendarManager = new GoogleCalendarManager(databaseManager, windowManager);
   meetingDetectionEngine = new MeetingDetectionEngine(
-    googleCalendarManager,
     new MeetingProcessDetector(),
     new AudioActivityDetector(),
     windowManager,
     databaseManager
   );
   windowManager.meetingDetectionEngine = meetingDetectionEngine;
-  googleCalendarManager.meetingDetectionEngine = meetingDetectionEngine;
   updateManager = new UpdateManager();
   updateManager.setWindowManager(windowManager);
   windowsKeyManager = new WindowsKeyManager();
@@ -312,7 +307,6 @@ function initializeCoreManagers() {
     textEditMonitor,
     whisperCudaManager,
     whisperVulkanManager,
-    googleCalendarManager,
     meetingDetectionEngine,
     audioTapManager,
     linuxPortalAudioManager,
@@ -374,7 +368,6 @@ function initializeDeferredManagers() {
     });
   }
 
-  googleCalendarManager.start();
   meetingDetectionEngine.start();
 }
 
@@ -536,15 +529,8 @@ async function startApp() {
   // Phase 2: Initialize remaining managers after windows are visible
   initializeDeferredManagers();
 
-  app.on("browser-window-focus", () => {
-    if (googleCalendarManager) googleCalendarManager.syncOnFocus();
-  });
-
   const { powerMonitor } = require("electron");
   powerMonitor.on("resume", () => {
-    if (googleCalendarManager) {
-      googleCalendarManager.onWakeFromSleep();
-    }
     // Sleep evicts the local GPU model from VRAM; reload it once the driver settles. See #766.
     if (wakeRewarmTimer) clearTimeout(wakeRewarmTimer);
     wakeRewarmTimer = setTimeout(() => {
@@ -1240,7 +1226,6 @@ function performSyncTeardown() {
   if (windowsKeyManager) windowsKeyManager.stop();
   if (linuxKeyManager) linuxKeyManager.stop();
   if (meetingDetectionEngine) meetingDetectionEngine.stop();
-  if (googleCalendarManager) googleCalendarManager.stop();
   if (audioTapManager) audioTapManager.stop().catch(() => {});
   if (linuxPortalAudioManager) linuxPortalAudioManager.stop().catch(() => {});
   if (windowsLoopbackAudioManager) windowsLoopbackAudioManager.stop().catch(() => {});

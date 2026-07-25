@@ -1479,20 +1479,6 @@ export default function SettingsPage({
                 </SettingsPanelRow>
                 <SettingsPanelRow>
                   <SettingsRow
-                    label={t("settingsPage.general.notifications.calendarReminders")}
-                    description={t(
-                      "settingsPage.general.notifications.calendarRemindersDescription"
-                    )}
-                  >
-                    <Toggle
-                      checked={notifyCalendarReminders}
-                      onChange={setNotifyCalendarReminders}
-                      disabled={!notificationsEnabled}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
                     label={t("settingsPage.general.notifications.updates")}
                     description={t("settingsPage.general.notifications.updatesDescription")}
                   >
