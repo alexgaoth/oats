@@ -1,10 +1,71 @@
 # Oats — Implementation Plan
 
-**Product:** Oats · **Company:** arum · **Status:** planning · **Doc owner:** (you)
+**Product:** Oats · **Company:** arum · **Status:** building (Stages 0–3 done, Stage 4 ~90%) · **Doc owner:** (you)
 
 > This is the build plan for `oats-arum` — a fresh repository that realizes the
 > vision in `../oats/PRODUCT.md`. It is a working document; each stage has an
 > exit gate. Update it as reality diverges from the plan.
+
+---
+
+## 0. Build status & handoff (updated 2026-07-24)
+
+Progress so far, all committed to `main` and each verified `verify:oats`-green
+at its commit:
+
+| Stage | Commit | State |
+| --- | --- | --- |
+| 0 Bootstrap | `3a798a0` | ✅ done |
+| 1 Import + green baseline | `8fd2b97` | ✅ done (full manual conversation-aide smoke test still needs a human) |
+| 2 Cut SaaS umbilical | `dfc4808` | ✅ done — accounts/sync/workspaces/referrals/usage/OpenWhispr-cloud gone; local + BYOK only. Trace in `docs/deletion-checklist.md`. Live network-trace confirmation deferred to Stage 7. |
+| 3 Rebrand → Oats/arum | `b61f53d` | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components. |
+| 4 Strip to scope | `de4f92a`, `68ea388`, `d19f394` | 🟨 ~90% — see below |
+
+**Stage 4 — done:** MCP/CLI bridges, Windows native `.c` helpers + their
+download/compile chains, URL/YouTube import (yt-dlp), and Google Calendar
+(backend/OAuth/agent-tool/detection-source/upcoming-UI) are all cut and green.
+Diarization **model download** removed from the build chain (the optional
+speaker-ID feature code is retained but inert without bundled models — graceful
+degradation).
+
+**Stage 4 — remaining (the one deliberate deferral):**
+
+- **Corti (BYOK clinical STT/LLM provider) — not yet cut.** It is flagged CUT
+  in §3, but a clean removal spans ~15 tightly-coupled files: the encrypted
+  secret-key plumbing (`CORTI_CLIENT_ID`/`CORTI_CLIENT_SECRET` in
+  `environment.js` `SECRET_KEYS`; `getCortiKey`/`saveCortiKey` in
+  `config/secretKeys.js` + their IPC), the provider registry
+  (`services/ai/inferenceProviders/{index,corti}.ts`, `providers.ts`), the
+  model registry (`models/modelRegistryData.json`, 13 refs), reasoning/chat
+  routing, `corti-streaming-*` IPC + `_mintStoredCortiToken`, `audioManager.js`,
+  the transcription/reasoning model-picker UIs, onboarding, and all 10 locale
+  files. It was **deferred, not forgotten**, because Corti is an inert BYOK
+  provider (never contacts the network unless a user supplies clinical
+  credentials), so unlike Calendar/URL-import it carries no background-network
+  or privacy risk while unconfigured — safe to leave for a focused follow-up.
+  Delete leaf-first: UI/selectors → registry+model-registry → routing →
+  streaming IPC/audioManager → secret-key plumbing (mind the `SECRET_KEYS`
+  count and its IPC key handlers/preload) → locales.
+
+**Residual inert state to prune (cosmetic, non-blocking):**
+
+- Calendar settings keys still exist in `stores/settingsStore.ts` and
+  `types/electron.ts` (`gcalAccounts`/`gcalConnected`/`gcalPrimaryOnly`/
+  `notifyCalendarReminders` and the `gcal*` electron API type decls). They are
+  localStorage-backed no-ops now (the backend + preload methods are gone) — safe
+  to leave, tidy when convenient.
+- Windows `electron-builder` `win`/`nsis` target + `build:win`/`prebuild:win`
+  scripts remain as dead config (v1 platforms are macOS + Fedora only). Harmless;
+  remove during Stage 7 packaging if desired.
+- Diarization feature code (`diarization.js`, `speakerEmbeddings.js`,
+  `liveSpeakerIdentifier.js`) + its settings UI remain but are inert without
+  bundled models.
+
+**Environment note for the next owner:** subagents are currently unavailable
+(monthly spend limit was hit mid-Stage-4). Stages 5–7 below are untouched and
+several Stage-7 items (Apple notarization, Fedora RPM build, live network trace,
+idle-CPU measurement) require hardware/credentials not available in this
+sandbox — they need a human or a provisioned CI/build host.
 
 ---
 
