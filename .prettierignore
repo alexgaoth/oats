@@ -4,3 +4,5 @@ build
 src/dist
 *.min.js
 package-lock.json
+.eb-cache/
+dist/

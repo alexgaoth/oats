@@ -183,3 +183,6 @@ src/assets/Assets.car
 .macos-fast-paste.*.hash
 .linux-fast-paste.hash
 .qdrant-initialized
+
+# electron-builder tool cache
+.eb-cache/

@@ -9,6 +9,7 @@ module.exports = [
       "src/dist/**",
       "*.min.js",
       "build/**",
+      ".eb-cache/**", // electron-builder tool cache (fpm/ruby, etc.)
       "src/**", // src has its own config
     ],
   },
