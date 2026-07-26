@@ -161,6 +161,7 @@
     "target": ["AppImage", "deb", "rpm", "tar.gz"],
     "icon": "src/assets/icon.png",
     "category": "Utility",
+    "maintainer": "arum <oats@arum.dev>",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
   },
   "flatpak": {

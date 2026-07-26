@@ -87,8 +87,10 @@
     "desktop-app"
   ],
   "author": {
-    "name": "arum"
+    "name": "arum",
+    "email": "oats@arum.dev"
   },
+  "homepage": "https://github.com/arum/oats-arum",
   "license": "MIT",
   "devDependencies": {
     "@electron/notarize": "^3.0.1",
