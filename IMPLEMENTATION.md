@@ -8,9 +8,11 @@
 
 ---
 
-## 0. Build status & handoff (updated 2026-07-24)
+## 0. Build status & handoff (updated 2026-07-25)
 
-Progress so far; the current worktree is `verify:oats`-green:
+Progress so far; everything through Stage 6 is committed and `verify:oats`-green.
+Stage 7 is partly done: the Fedora RPM pipeline is validated on a Fedora 44 host
+and blocked only by one missing system library (details below).
 
 | Stage                     | Commit                                             | State                                                                                                                                                                                                    |
 | ------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,7 +23,7 @@ Progress so far; the current worktree is `verify:oats`-green:
 | 4 Strip to scope          | `de4f92a`, `68ea388`, `d19f394` + current worktree | ✅ done — Corti and its secrets, IPC, streaming, registry, picker, routing, and tests are removed.                                                                                                       |
 | 5 Refurbish UI            | current worktree                                   | ✅ done — three-step local-first onboarding, oat listening pulse, quiet aide card, and outcome-encoded Graph surface.                                                                                    |
 | 6 Model bundling          | current worktree                                   | ✅ done — release builds download and bundle Whisper `base`; first run copies it into the local model cache before startup.                                                                              |
-| 7 Trust proof & packaging | current worktree + release host                    | 🟨 release-host gate remains — manual signed releases are selected for v1; notarization, Fedora RPM smoke test, live network capture, and idle-resource measurement require the target host/credentials. |
+| 7 Trust proof & packaging | `c04f158`, `71cde3d` + release host                | 🟨 in progress — RPM pipeline validated (blocked on `libxcrypt-compat`); SaaS `better-auth` residue pruned; packaging metadata added. macOS notarization, idle-CPU, and live network trace still need the target host. |
 
 **Stage 4 — completed in the current worktree:** MCP/CLI bridges, Windows native
 `.c` helpers + their download/compile chains, URL/YouTube import (yt-dlp), Google
@@ -44,10 +46,31 @@ models are installed.
   `liveSpeakerIdentifier.js`) + its settings UI remain but are inert without
   bundled models.
 
-**Release-host note:** Apple notarization, Fedora RPM build/smoke testing, a live
-network trace, and idle CPU/memory measurements are physical release gates. They
-cannot be truthfully completed in this sandbox; follow `docs/network-allowlist.md`
-on a provisioned target host and record the evidence with the release.
+**Stage 7 — what was validated (2026-07-25, on this Fedora 44 host):**
+
+- **Fedora RPM pipeline works end to end** via `electron-builder --linux rpm`:
+  electron download, app packaging into `dist/linux-unpacked/`, `afterPack`
+  binary stripping/verification, and `fpm` download all succeed, and the `fpm`
+  command is correctly formed (maps the app to `/opt/Oats`, installs
+  `oats.desktop` + icon, declares the right runtime deps). The build stops at the
+  **final `fpm` invocation only** because electron-builder's bundled Ruby needs
+  **`libcrypt.so.1`**, which Fedora 44 does not ship by default (it moved to
+  `libcrypt.so.2`). Fix: `sudo dnf install libxcrypt-compat`, then re-run
+  `npm run build:linux:rpm` — no code change required. (Bundling the default
+  Whisper model, `ggml-base.bin`, was fetched and staged for this build.)
+- **`better-auth` / `@better-auth/sso` pruned** from `node_modules` — they were
+  orphaned since Stage 2 removed them from `package.json` but were still being
+  packaged. `package-lock.json` updated with Node 24.
+- **Packaging metadata added** (`homepage`, author email, `linux.maintainer`) —
+  these were missing after the rebrand and are required by rpm/deb.
+
+**Still needs the target host / a human (cannot be truthfully done in this
+sandbox):** `sudo dnf install libxcrypt-compat` + the final RPM smoke test;
+**Apple notarization** (needs a Mac + Developer ID); the **live network trace**
+(needs a running packaged app + a capture tool, ideally root for `tcpdump`); and
+**idle/active CPU-memory measurement** (needs launching the GUI in a real
+session). Follow `docs/network-allowlist.md` and record the evidence with the
+release.
 
 ---
 
