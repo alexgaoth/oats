@@ -28,7 +28,8 @@ const DatabaseManager = require("../../src/helpers/database.js");
 function isNativeBindingUnavailable(error) {
   const message = String(error?.message || error);
   return (
-    message.includes("NODE_MODULE_VERSION") || message.includes("Could not locate the bindings file")
+    message.includes("NODE_MODULE_VERSION") ||
+    message.includes("Could not locate the bindings file")
   );
 }
 

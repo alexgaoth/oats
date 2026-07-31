@@ -1,42 +1,14 @@
 const fs = require("fs");
 const os = require("os");
-const { spawnSync } = require("child_process");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
 const { dialog } = require("electron");
+
+const execFileAsync = promisify(execFile);
+const STATUS_COMMAND_TIMEOUT_MS = 750;
 
 function getLogger() {
   return require("./debugLogger");
-}
-
-function commandExists(name) {
-  try {
-    return spawnSync("which", [name], { stdio: "pipe", timeout: 5000 }).status === 0;
-  } catch {
-    return false;
-  }
-}
-
-function isYdotooldRunning() {
-  try {
-    const result = spawnSync("systemctl", ["--user", "is-active", "ydotoold"], {
-      stdio: "pipe",
-      timeout: 5000,
-    });
-    if (result.stdout?.toString().trim() === "active") return true;
-  } catch {}
-
-  try {
-    const result = spawnSync("systemctl", ["--user", "is-active", "ydotool"], {
-      stdio: "pipe",
-      timeout: 5000,
-    });
-    if (result.stdout?.toString().trim() === "active") return true;
-  } catch {}
-
-  try {
-    return spawnSync("pgrep", ["-x", "ydotoold"], { stdio: "pipe", timeout: 5000 }).status === 0;
-  } catch {}
-
-  return false;
 }
 
 function serviceFileExists() {
@@ -57,27 +29,76 @@ function isUinputAccessible() {
   }
 }
 
-function udevRuleExists() {
+async function commandExistsAsync(name) {
+  try {
+    await execFileAsync("which", [name], { timeout: STATUS_COMMAND_TIMEOUT_MS });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isYdotooldRunningAsync() {
+  for (const service of ["ydotoold", "ydotool"]) {
+    try {
+      const { stdout } = await execFileAsync("systemctl", ["--user", "is-active", service], {
+        timeout: STATUS_COMMAND_TIMEOUT_MS,
+      });
+      if (stdout.trim() === "active") return true;
+    } catch {}
+  }
+
+  try {
+    await execFileAsync("pgrep", ["-x", "ydotoold"], { timeout: STATUS_COMMAND_TIMEOUT_MS });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function udevRuleExistsAsync() {
   const ruleDirs = ["/etc/udev/rules.d", "/usr/lib/udev/rules.d", "/lib/udev/rules.d"];
   for (const dir of ruleDirs) {
     try {
-      const files = fs.readdirSync(dir);
-      for (const file of files) {
-        if (!file.endsWith(".rules")) continue;
-        try {
-          const content = fs.readFileSync(`${dir}/${file}`, "utf-8");
-          if (content.includes("uinput")) return true;
-        } catch {}
-      }
+      const files = await fs.promises.readdir(dir);
+      const rules = await Promise.all(
+        files
+          .filter((file) => file.endsWith(".rules"))
+          .map(async (file) => {
+            try {
+              return await fs.promises.readFile(`${dir}/${file}`, "utf-8");
+            } catch {
+              return "";
+            }
+          })
+      );
+      if (rules.some((content) => content.includes("uinput"))) return true;
     } catch {}
   }
   return false;
 }
 
-function userInInputGroup() {
+async function userInInputGroupAsync() {
   try {
-    const result = spawnSync("groups", [], { stdio: "pipe", timeout: 5000 });
-    return result.stdout?.toString().includes("input") ?? false;
+    const { stdout } = await execFileAsync("groups", [], { timeout: STATUS_COMMAND_TIMEOUT_MS });
+    return stdout.includes("input");
+  } catch {
+    return false;
+  }
+}
+
+async function isNixOSAsync() {
+  try {
+    if (
+      await fs.promises
+        .access("/etc/NIXOS")
+        .then(() => true)
+        .catch(() => false)
+    ) {
+      return true;
+    }
+    const osRelease = await fs.promises.readFile("/etc/os-release", "utf8");
+    return /^ID=("?)nixos\1$/m.test(osRelease);
   } catch {
     return false;
   }
@@ -91,12 +112,8 @@ async function ensureYdotool() {
 
   const log = getLogger();
 
-  const hasYdotool = commandExists("ydotool");
-  const hasYdotoold = commandExists("ydotoold");
-  const daemonRunning = isYdotooldRunning();
-  const hasService = serviceFileExists();
-  const hasUinput = isUinputAccessible();
-  const hasGroup = userInInputGroup();
+  const { hasYdotool, hasYdotoold, daemonRunning, hasService, hasUinput, hasGroup } =
+    await getYdotoolStatus();
 
   log.debug(
     "ydotool check",
@@ -113,15 +130,15 @@ async function ensureYdotool() {
   // If the service exists and daemon is just not running, try to start it
   if (hasYdotoold && hasService && !daemonRunning) {
     try {
-      spawnSync("systemctl", ["--user", "start", "ydotoold"], { stdio: "pipe", timeout: 10000 });
-      if (isYdotooldRunning()) {
+      await execFileAsync("systemctl", ["--user", "start", "ydotoold"], { timeout: 10000 });
+      if (await isYdotooldRunningAsync()) {
         log.info("ydotoold daemon started", {}, "clipboard");
         return;
       }
     } catch {}
     try {
-      spawnSync("systemctl", ["--user", "start", "ydotool"], { stdio: "pipe", timeout: 10000 });
-      if (isYdotooldRunning()) {
+      await execFileAsync("systemctl", ["--user", "start", "ydotool"], { timeout: 10000 });
+      if (await isYdotooldRunningAsync()) {
         log.info("ydotool daemon started", {}, "clipboard");
         return;
       }
@@ -173,24 +190,18 @@ async function ensureYdotool() {
   }
 }
 
-function isNixOS() {
-  try {
-    if (fs.existsSync("/etc/NIXOS")) return true;
-    const osRelease = fs.readFileSync("/etc/os-release", "utf8");
-    return /^ID=("?)nixos\1$/m.test(osRelease);
-  } catch {
-    return false;
-  }
-}
-
-function getYdotoolStatus() {
-  const hasYdotool = commandExists("ydotool");
-  const hasYdotoold = commandExists("ydotoold");
-  const daemonRunning = isYdotooldRunning();
+async function getYdotoolStatus() {
+  const [hasYdotool, hasYdotoold, daemonRunning, hasUdevRule, hasGroup, isNixOSStatus] =
+    await Promise.all([
+      commandExistsAsync("ydotool"),
+      commandExistsAsync("ydotoold"),
+      isYdotooldRunningAsync(),
+      udevRuleExistsAsync(),
+      userInInputGroupAsync(),
+      isNixOSAsync(),
+    ]);
   const hasService = serviceFileExists();
   const hasUinput = isUinputAccessible();
-  const hasUdevRule = udevRuleExists();
-  const hasGroup = userInInputGroup();
   const isWayland =
     (process.env.XDG_SESSION_TYPE || "").toLowerCase() === "wayland" ||
     !!process.env.WAYLAND_DISPLAY;
@@ -205,7 +216,7 @@ function getYdotoolStatus() {
     hasUinput,
     hasUdevRule,
     hasGroup,
-    isNixOS: isNixOS(),
+    isNixOS: isNixOSStatus,
     allGood: hasYdotool && hasYdotoold && daemonRunning && hasUinput && hasGroup,
   };
 }

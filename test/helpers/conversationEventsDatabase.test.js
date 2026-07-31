@@ -94,4 +94,20 @@ test("conversation events preserve parent links, order, JSON fields, and suggest
     ["question", "response", "search_suggestion"]
   );
   assert.throws(() => db.updateConversationSuggestionState(suggestion.id, "clicked"));
+
+  // A question is written the moment it is heard and resolved once the verdict
+  // lands, so its metadata must merge rather than replace — the detection-time
+  // fields have to survive the update.
+  const resolved = db.updateConversationEventMetadata(question.id, {
+    state: "open",
+    groupKey: "kubernetes",
+  });
+  assert.deepEqual(resolved.metadata, {
+    confidence: 0.9,
+    state: "open",
+    groupKey: "kubernetes",
+  });
+  assert.equal(db.updateConversationEventMetadata(999999, { state: "open" }), null);
+  assert.throws(() => db.updateConversationEventMetadata(question.id, null));
+  assert.throws(() => db.updateConversationEventMetadata("1", { state: "open" }));
 });

@@ -40,8 +40,6 @@ function ConversationAidePanel() {
     setConversationAideConfidence,
     conversationAideSilenceSeconds,
     setConversationAideSilenceSeconds,
-    conversationAideCooldownSeconds,
-    setConversationAideCooldownSeconds,
     conversationAideSearchBaseUrl,
     setConversationAideSearchBaseUrl,
   } = useSettingsStore();
@@ -149,17 +147,6 @@ function ConversationAidePanel() {
             max="60"
             value={conversationAideSilenceSeconds}
             onChange={(event) => setConversationAideSilenceSeconds(Number(event.target.value))}
-            className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5"
-          />
-        </label>
-        <label className="text-xs text-muted-foreground">
-          Cooldown (seconds)
-          <input
-            type="number"
-            min="0"
-            max="600"
-            value={conversationAideCooldownSeconds}
-            onChange={(event) => setConversationAideCooldownSeconds(Number(event.target.value))}
             className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5"
           />
         </label>

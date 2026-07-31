@@ -459,6 +459,16 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // The topic snapshot written when a recording stops: nodes (topics with the
+      // time each held) and edges (the transitions between them, including the
+      // return-to-an-earlier-thread edges). Read back by the Intelligence topic
+      // graph. Stored as JSON on the note rather than as conversation_events
+      // because those are per-question and CHECK-constrained to three kinds.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN conversation_topics TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS contacts (
@@ -766,6 +776,27 @@ class DatabaseManager {
     this.db
       .prepare("UPDATE conversation_events SET metadata_json = ? WHERE id = ?")
       .run(JSON.stringify({ ...metadata, state }), id);
+    return this.getConversationEventById(id);
+  }
+
+  // Merges keys into an event's metadata. Question events are written the moment
+  // a question is detected and resolved later, so their metadata is updated in
+  // place rather than replaced — the card's whole lifecycle has to stay
+  // reconstructable from the event log alone.
+  updateConversationEventMetadata(id, patch) {
+    if (!Number.isInteger(id)) throw new Error("Invalid conversation event id");
+    if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+      throw new Error("Invalid conversation event metadata");
+    }
+    const row = this.db.prepare("SELECT * FROM conversation_events WHERE id = ?").get(id);
+    if (!row) return null;
+    let metadata = {};
+    try {
+      metadata = JSON.parse(row.metadata_json);
+    } catch {}
+    this.db
+      .prepare("UPDATE conversation_events SET metadata_json = ? WHERE id = ?")
+      .run(JSON.stringify({ ...metadata, ...patch }), id);
     return this.getConversationEventById(id);
   }
 
@@ -1607,6 +1638,7 @@ class DatabaseManager {
         "participants",
         "diarization_enabled",
         "expected_speaker_count",
+        "conversation_topics",
         "sync_status",
         "deleted_at",
         "client_note_id",

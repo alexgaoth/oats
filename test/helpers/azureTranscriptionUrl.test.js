@@ -7,10 +7,7 @@ const assert = require("node:assert/strict");
 test("isAzureOpenAIEndpoint detects Azure resource hosts", async () => {
   const { isAzureOpenAIEndpoint } = await import("../../src/utils/urlUtils.ts");
 
-  assert.equal(
-    isAzureOpenAIEndpoint("https://r.cognitiveservices.azure.com/openai/v1"),
-    true
-  );
+  assert.equal(isAzureOpenAIEndpoint("https://r.cognitiveservices.azure.com/openai/v1"), true);
   assert.equal(isAzureOpenAIEndpoint("https://r.openai.azure.com"), true);
   assert.equal(isAzureOpenAIEndpoint("https://r.services.ai.azure.com/openai/v1"), true);
   assert.equal(isAzureOpenAIEndpoint("https://api.openai.com/v1"), false);

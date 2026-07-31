@@ -120,11 +120,17 @@ const NOTIFICATION_WINDOW_CONFIG = {
   type: FLOATING_OVERLAY_TYPE,
 };
 
+// The question-card rail (DESIGN.md §9.2). Unlike the old single-card overlay this
+// window lives for the whole recording and holds a stack, so its height is derived
+// from the display at open time and capped at half the work area — a rail that
+// grows past that would start covering the person you are talking to.
 const CONVERSATION_ASSIST_WINDOW_CONFIG = {
   ...NOTIFICATION_WINDOW_CONFIG,
-  width: 420,
-  height: 128,
+  width: 400,
+  height: 520,
 };
+
+const CONVERSATION_CARDS_MAX_HEIGHT_RATIO = 0.5;
 
 const TRANSCRIPTION_PREVIEW_SIZE_LIMITS = {
   minWidth: 400,
@@ -270,6 +276,7 @@ module.exports = {
   AGENT_OVERLAY_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   CONVERSATION_ASSIST_WINDOW_CONFIG,
+  CONVERSATION_CARDS_MAX_HEIGHT_RATIO,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,
   WINDOW_SIZES,

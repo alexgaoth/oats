@@ -495,7 +495,19 @@ static int paste_via_uinput(paste_mode_t mode) {
         return 4;
     }
 
-    usleep(50000);
+    /* A freshly created uinput device is not usable the instant UI_DEV_CREATE
+     * returns. The kernel emits a udev event, udev processes it, libinput opens
+     * the device, and only then does the compositor start reading from it. On
+     * GNOME/mutter that chain routinely takes longer than 200ms.
+     *
+     * At the old 50ms this raced and lost: every write below succeeded (the
+     * kernel accepts them) so the tool exited 0 and reported "paste successful",
+     * while the compositor was not yet listening and the keystrokes went
+     * nowhere. Silent, and indistinguishable from a working paste in the logs.
+     *
+     * 300ms is imperceptible next to the transcription that just ran, and it is
+     * the difference between the feature working and not. */
+    usleep(300000);
 
     if (mode == PASTE_MODE_SHIFT_INSERT) {
         emit_key(fd, KEY_LEFTSHIFT, 1);

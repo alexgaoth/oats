@@ -29,9 +29,7 @@ test("falls back to the public GitHub release page when the API returns 403", as
       });
     } else if (url === "https://github.com/qdrant/qdrant/releases/tag/v1.18.3") {
       response = mockResponse(200, {}, "<html></html>");
-    } else if (
-      url === "https://github.com/qdrant/qdrant/releases/expanded_assets/v1.18.3"
-    ) {
+    } else if (url === "https://github.com/qdrant/qdrant/releases/expanded_assets/v1.18.3") {
       response = mockResponse(
         200,
         {},

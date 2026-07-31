@@ -174,6 +174,27 @@ export default function App() {
       onToggle: handleDictationToggle,
     });
 
+  // The dragged position round-trips through the renderer: main reports where the
+  // oat landed, we persist it, and we replay it on startup so the oat reopens
+  // where the user left it rather than snapping back to a corner preset.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("floatingOatPosition");
+      if (stored) window.electronAPI?.notifyFloatingOatPositionRestored?.(JSON.parse(stored));
+    } catch {
+      // A corrupt value just means the corner preset wins this launch.
+    }
+    const unsubscribe = window.electronAPI?.onFloatingOatPositionChanged?.((position) => {
+      try {
+        localStorage.setItem("floatingOatPosition", JSON.stringify(position));
+      } catch {
+        // Storage full or unavailable — the oat still moved, it just will not
+        // remember across restarts. Never worth breaking the drag over.
+      }
+    });
+    return () => unsubscribe?.();
+  }, []);
+
   // Sync auto-hide from main process — setState directly to avoid IPC echo
   useEffect(() => {
     const unsubscribe = window.electronAPI?.onFloatingIconAutoHideChanged?.((enabled) => {
@@ -319,6 +340,24 @@ export default function App() {
             }
           }}
         >
+          {/* Hide is only offered when idle: during a recording the same corner
+              belongs to cancel, and two X buttons side by side is a trap. */}
+          {!isRecording && !isProcessing && isHovered && (
+            <Tooltip content={t("app.buttons.hideOatHint")} align="left">
+              <button
+                aria-label={t("app.buttons.hideOat")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsHovered(false);
+                  setIsCommandMenuOpen(false);
+                  window.electronAPI?.hideFloatingOat?.();
+                }}
+                className="group/hide w-5 h-5 rounded-full bg-surface-2/90 hover:bg-muted border border-border flex items-center justify-center transition-colors duration-150 shadow-sm backdrop-blur-sm"
+              >
+                <X size={10} strokeWidth={2.5} className="text-muted-foreground" />
+              </button>
+            </Tooltip>
+          )}
           {(isRecording || isProcessing) && isHovered && (
             <button
               aria-label={

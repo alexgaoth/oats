@@ -475,7 +475,7 @@ function VADLabelWithInfo({ label, description }: { label: string; description: 
 }
 
 function TabPanel({ active, children }: { active: boolean; children: React.ReactNode }) {
-  return <div className={active ? undefined : "hidden"}>{children}</div>;
+  return active ? <>{children}</> : null;
 }
 
 function SpeechToTextTabs({
@@ -814,21 +814,6 @@ export default function SettingsPage({
       .catch(() => {});
   }, [activeSection]);
 
-  // Lazy keep-alive: mount AI sections only after the user has visited them once,
-  // then keep them mounted so model-download progress and IPC listeners survive
-  // section switches. The setState-during-render pattern flips the flag in the
-  // same commit as the section change, so there's no blank frame on first visit.
-  const [hasMountedSpeechToText, setHasMountedSpeechToText] = useState(
-    activeSection === "speechToText"
-  );
-  const [hasMountedLlms, setHasMountedLlms] = useState(activeSection === "llms");
-  if (activeSection === "speechToText" && !hasMountedSpeechToText) {
-    setHasMountedSpeechToText(true);
-  }
-  if (activeSection === "llms" && !hasMountedLlms) {
-    setHasMountedLlms(true);
-  }
-
   const handleClearAllAudio = async () => {
     if (!window.electronAPI?.deleteAllAudio) return;
     try {
@@ -867,8 +852,9 @@ export default function SettingsPage({
   }, []);
 
   useEffect(() => {
+    if (activeSection !== "privacyData") return;
     refreshYdotoolStatus();
-  }, [refreshYdotoolStatus]);
+  }, [activeSection, refreshYdotoolStatus]);
 
   const { theme, setTheme } = useTheme();
 
@@ -2887,9 +2873,8 @@ EOF`,
         onOk={() => {}}
       />
 
-      {/* Mounted on first visit and kept alive so model-download progress and IPC listeners survive section switches. */}
-      {hasMountedSpeechToText && (
-        <TabPanel active={activeSection === "speechToText"}>
+      {activeSection === "speechToText" && (
+        <>
           <SpeechToTextTabs
             initialTab={
               activeSection === "speechToText"
@@ -2945,10 +2930,10 @@ EOF`,
               </div>
             )}
           />
-        </TabPanel>
+        </>
       )}
-      {hasMountedLlms && (
-        <TabPanel active={activeSection === "llms"}>
+      {activeSection === "llms" && (
+        <>
           <LlmsTabs
             initialTab={
               activeSection === "llms" ? (initialSubTab as LlmTab | undefined) : undefined
@@ -2976,7 +2961,7 @@ EOF`,
             renderDictationTranslation={() => <DictationTranslationSettings />}
             renderNoteFormatting={() => <NoteFormattingSettings />}
           />
-        </TabPanel>
+        </>
       )}
       {renderSectionContent()}
     </>

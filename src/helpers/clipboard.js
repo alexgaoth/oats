@@ -42,7 +42,22 @@ const getLinuxSessionInfo = () => {
   const isWlroots = isWayland && isWlrootsCompositor(desktopEnv);
   const isHyprland = isWayland && !!process.env.HYPRLAND_INSTANCE_SIGNATURE;
 
-  return { isWayland, xwaylandAvailable, desktopEnv, isGnome, isKde, isWlroots, isHyprland };
+  // main.js self-relaunches with --ozone-platform=x11 on GNOME/KDE, so the app is
+  // very often an X11 client inside a Wayland session. That distinction decides
+  // which selection `clipboard.writeText` actually touches, and therefore which
+  // selection is worth reading back to confirm a write.
+  const appRunsOnX11 = process.argv.includes("--ozone-platform=x11");
+
+  return {
+    isWayland,
+    appRunsOnX11,
+    xwaylandAvailable,
+    desktopEnv,
+    isGnome,
+    isKde,
+    isWlroots,
+    isHyprland,
+  };
 };
 
 const PASTE_DELAYS = {
@@ -84,6 +99,10 @@ class ClipboardManager {
     this.portalDenied = false;
     this._kwinScriptPath = null;
     this.pasteQueue = Promise.resolve();
+    // Set once wl-paste proves unresponsive; see _verifyClipboard.
+    this._wlPasteUnavailable = false;
+    // The single live wl-copy serving the Wayland selection; see _ownWaylandClipboard.
+    this._waylandClipboardOwner = null;
 
     process.on("exit", () => {
       if (this._kwinScriptPath) {
@@ -100,8 +119,8 @@ class ClipboardManager {
     return isWayland;
   }
 
-  _writeClipboardWayland(text, webContents) {
-    const { isKde } = getLinuxSessionInfo();
+  async _writeClipboardWayland(text, webContents) {
+    const { isKde, appRunsOnX11 } = getLinuxSessionInfo();
 
     // On KDE with XWayland, write to X11 clipboard directly because
     // wl-copy targets the Wayland clipboard which is desynced from X11
@@ -114,7 +133,7 @@ class ClipboardManager {
           });
           if (result.status === 0) {
             clipboard.writeText(text);
-            return;
+            return true;
           }
         } catch {}
       }
@@ -126,30 +145,169 @@ class ClipboardManager {
           });
           if (result.status === 0) {
             clipboard.writeText(text);
-            return;
+            return true;
           }
         } catch {}
       }
       // Last resort: Electron's clipboard.writeText should work on XWayland
       clipboard.writeText(text);
-      return;
+      return true;
     }
 
+    // Write **both** selections, always.
+    //
+    // On GNOME/KDE the app self-relaunches under XWayland (main.js), so
+    // `clipboard.writeText` owns the *X11* selection while native Wayland apps —
+    // most of GNOME, Firefox on Wayland — read the *Wayland* one. The compositor
+    // is supposed to bridge them and in practice does not do so dependably here.
+    //
+    // An earlier version wrote Electron's clipboard, verified it by reading
+    // Electron's clipboard back, and returned success without ever running
+    // wl-copy. That check could only ever confirm the write we already knew
+    // about, so the Wayland selection stayed empty and the paste keystroke landed
+    // on nothing. Populate both and let the target read whichever it prefers.
+    clipboard.writeText(text);
+    const ownWrite = await this._verifyClipboard(text, 250);
+
+    let waylandWrite = false;
     if (this.commandExists("wl-copy")) {
       try {
-        const result = spawnSync("wl-copy", ["--", text], { timeout: 50 });
-        if (result.status === 0) {
-          clipboard.writeText(text);
-          return;
-        }
+        this._ownWaylandClipboard(text);
+        waylandWrite = true;
+      } catch (error) {
+        debugLogger.warn("wl-copy failed to spawn", { error: error.message }, "clipboard");
+      }
+    } else {
+      debugLogger.warn(
+        "wl-copy is missing, so the Wayland selection cannot be set",
+        { hint: "install wl-clipboard" },
+        "clipboard"
+      );
+    }
+
+    debugLogger.info(
+      "Clipboard written",
+      { x11: ownWrite, wayland: waylandWrite, appRunsOnX11 },
+      "clipboard"
+    );
+
+    // Success means at least one selection holds the text. Requiring both would
+    // block paste on machines without wl-clipboard for no benefit.
+    if (ownWrite || waylandWrite) return true;
+
+    // Last resort: have the renderer write it through the DOM clipboard API.
+    if (webContents && !webContents.isDestroyed()) {
+      try {
+        await writeClipboardInRenderer(webContents, text);
+        if (await this._verifyClipboard(text, 250)) return true;
       } catch {}
     }
 
-    if (webContents && !webContents.isDestroyed()) {
-      writeClipboardInRenderer(webContents, text).catch(() => {});
-    }
+    return false;
+  }
 
-    clipboard.writeText(text);
+  // Takes ownership of the Wayland selection, keeping exactly one wl-copy alive.
+  //
+  // A Wayland clipboard offer is served by a live process, so wl-copy has to
+  // outlive the call that started it — which means every dictation used to leave
+  // one behind, and the clipboard *restore* after each paste left a second.
+  // They accumulated for the whole session.
+  //
+  // Only the newest owner is useful: taking the selection makes every earlier
+  // wl-copy redundant. The previous one is retired shortly after the replacement
+  // is up, so ownership never has a gap. The last one is deliberately left
+  // running at quit — killing it would wipe the user's clipboard on exit.
+  _ownWaylandClipboard(text) {
+    const previous = this._waylandClipboardOwner;
+    // Detached with no inherited pipes so it survives this process's call stack;
+    // spawnSync would kill it on timeout and tear the offer down with it.
+    const child = spawn("wl-copy", ["--", text], { detached: true, stdio: "ignore" });
+    child.unref();
+    child.on("error", () => {});
+    this._waylandClipboardOwner = child;
+
+    if (previous) {
+      // Retire the old owner only once the new one has had a moment to take the
+      // selection, so there is never an instant with no offer at all.
+      setTimeout(() => {
+        try {
+          killProcess(previous);
+        } catch {}
+      }, 250).unref?.();
+    }
+    return child;
+  }
+
+  // Confirms the clipboard actually holds what we are about to paste. Returning
+  // false is fatal for the caller, because sending a paste chord over an
+  // unchanged clipboard inserts the user's previous copy into whatever they were
+  // typing into.
+  //
+  // The oracle has to match the selection the write went to. When Electron runs
+  // under XWayland (the default on GNOME/KDE — see main.js) `clipboard.writeText`
+  // owns the **X11** selection, while `wl-paste` reads the **Wayland** one. An
+  // earlier version of this checked wl-paste unconditionally and so reported
+  // every single X11 write as a failure, which blocked dictation entirely.
+  //
+  // Budgets are per-attempt and small: this sits on the paste hot path.
+  async _verifyClipboard(expected, timeoutMs = 300) {
+    const { isWayland, appRunsOnX11 } = getLinuxSessionInfo();
+    // Electron reading back its own clipboard needs no subprocess and no window
+    // focus, and it is authoritative for the selection Electron owns.
+    const deadline = Date.now() + timeoutMs;
+    let last = null;
+    while (Date.now() < deadline) {
+      try {
+        const own = clipboard.readText();
+        if (own === expected) return true;
+        last = own;
+      } catch {}
+
+      // Only consult the Wayland selection when Electron is a real Wayland
+      // client; under XWayland it is simply the wrong selection to read.
+      //
+      // `wl-paste` can block indefinitely — it has been observed hanging even on
+      // `--list-types` when the compositor will not serve this process. It is on
+      // the paste hot path, so one hang retires it for the rest of the session
+      // rather than costing every future dictation another timeout.
+      if (
+        isWayland &&
+        !appRunsOnX11 &&
+        !this._wlPasteUnavailable &&
+        this.commandExists("wl-paste")
+      ) {
+        try {
+          const result = spawnSync("wl-paste", ["--no-newline"], {
+            encoding: "utf8",
+            timeout: 200,
+          });
+          if (result.status === 0) {
+            last = result.stdout ?? "";
+            if (last === expected) return true;
+          } else if (result.status === null) {
+            this._wlPasteUnavailable = true;
+            debugLogger.warn(
+              "wl-paste timed out; not consulting the Wayland selection again",
+              {},
+              "clipboard"
+            );
+          }
+        } catch {
+          this._wlPasteUnavailable = true;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    debugLogger.warn(
+      "Clipboard verification failed",
+      {
+        expectedLength: expected.length,
+        actualLength: last?.length ?? null,
+        appRunsOnX11,
+      },
+      "clipboard"
+    );
+    return false;
   }
 
   // PRIMARY selection (X11's "highlight to copy") is what terminals like alacritty,
@@ -761,7 +919,16 @@ class ClipboardManager {
 
       if (platform === "linux") {
         if (this._isWayland()) {
-          this._writeClipboardWayland(text, webContents);
+          // Verified, because a paste chord fired over an unchanged clipboard
+          // silently inserts the user's previous copy instead of what they just
+          // dictated — the worst possible failure for this feature.
+          const written = await this._writeClipboardWayland(text, webContents);
+          if (!written) {
+            throw new Error(
+              "Could not put the transcription on the clipboard, so nothing was pasted. " +
+                "Check that wl-clipboard is installed and working."
+            );
+          }
         } else {
           clipboard.writeText(text);
         }
@@ -1288,7 +1455,7 @@ class ClipboardManager {
           expectedText,
           restore: () => {
             if (isWayland && originalClipboard.type === "text") {
-              this._writeClipboardWayland(originalClipboard.data, webContents);
+              void this._writeClipboardWayland(originalClipboard.data, webContents);
             } else {
               this._restoreClipboard(originalClipboard);
             }
@@ -1566,8 +1733,15 @@ class ClipboardManager {
 
         // KDE with XWayland: portal first because clipboard and input are both
         // on X11. uinput causes clipboard desync (X11 clipboard vs Wayland input).
-        // GNOME: uinput first because the portal often times out or shows a
-        // confusing permission dialog, causing a 10s+ delay (issue #494).
+        //
+        // GNOME: uinput before the portal, because the portal shows a screen-share
+        // consent dialog and often times out (issue #494). But only when ydotoold
+        // is *not* running — ydotool owns a long-lived uinput device the
+        // compositor has already enumerated, whereas the one-shot device created
+        // per paste has to win a race against udev and libinput every single
+        // time. When both are available the daemon is strictly more reliable, and
+        // the one-shot path exits 0 whether or not the keys were actually
+        // delivered, so its failures are invisible.
         if (isKde && linuxFastPaste && !this.portalDenied) {
           const portalPaste = await tryPortalPaste();
           if (portalPaste) return { method: "portal", ...portalPaste };
@@ -1577,7 +1751,7 @@ class ClipboardManager {
           } catch (uinputError) {
             debugLogger.warn("uinput paste failed", { error: uinputError?.message }, "clipboard");
           }
-        } else if (isGnome && linuxFastPaste) {
+        } else if (isGnome && linuxFastPaste && !ydotoolDaemonRunning) {
           try {
             const uinputPaste = await tryUinputPaste();
             return { method: "uinput", ...uinputPaste };
@@ -2078,10 +2252,10 @@ Would you like to open System Settings now?`;
 
   async writeClipboard(text, webContents = null) {
     if (process.platform === "linux" && this._isWayland()) {
-      this._writeClipboardWayland(text, webContents);
-    } else {
-      clipboard.writeText(text);
+      const written = await this._writeClipboardWayland(text, webContents);
+      return { success: written };
     }
+    clipboard.writeText(text);
     return { success: true };
   }
 
