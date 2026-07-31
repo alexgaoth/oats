@@ -162,7 +162,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "done": "Done",
-    "skip": "Skip"
+    "skip": "Skip",
+    "on": "On",
+    "off": "Off"
   },
   "onboarding": {
     "steps": {
@@ -2671,7 +2673,9 @@
     },
     "buttons": {
       "cancelRecording": "Cancel recording",
-      "cancelProcessing": "Cancel processing"
+      "cancelProcessing": "Cancel processing",
+      "hideOat": "Hide Oats",
+      "hideOatHint": "Hide · bring it back from the tray"
     },
     "commandMenu": {
       "stopListening": "Stop listening",
@@ -2991,5 +2995,131 @@
     },
     "start": "Take notes",
     "join": "Join & transcribe"
+  },
+  "oats": {
+    "untitled": "Untitled conversation",
+    "nav": {
+      "conversation": "Conversation",
+      "intelligence": "Intelligence",
+      "settings": "Settings",
+      "label": "Surfaces"
+    },
+    "conversation": {
+      "title": "Make room for the conversation.",
+      "subtitle": "Oats records the room, then gives you the title, summary, and threads automatically.",
+      "listening": "Listening.",
+      "listeningHint": "audio and transcripts stay on this device.",
+      "record": "Record conversation",
+      "finish": "Finish conversation",
+      "preparing": "Preparing…",
+      "micOnly": "In-person microphone recording only.",
+      "micSilent": "The microphone has been silent for a while. Check it is not muted or in use by another app.",
+      "nothingHeard": "Nothing was heard, so no conversation was saved. Check the microphone in Settings.",
+      "continuing": "continuing {{title}}"
+    },
+    "intelligence": {
+      "listTitle": "conversations",
+      "empty": "no conversations yet",
+      "preparing": "Intelligence is being prepared for this conversation.",
+      "noTranscript": "No transcript yet.",
+      "tabs": {
+        "summary": "Summary",
+        "transcript": "Transcript",
+        "threads": "Threads"
+      },
+      "processing": "Processing conversation…",
+      "searchPlaceholder": "Search conversations",
+      "renameHint": "Click to rename",
+      "carriedOver": "Left open last time:",
+      "openPrevious": "Open that one",
+      "noMatches": "nothing matches that",
+      "emptyHint": "press {{shortcut}} anywhere to start one",
+      "backToList": "back"
+    },
+    "settings": {
+      "title": "Keep the choices small.",
+      "subtitle": "Oats creates the title, summary, and threads after every conversation. Nothing below needs changing to start.",
+      "processing": "Processing",
+      "processingHint": "One choice covers transcription and intelligence.",
+      "localProcessing": "On this computer",
+      "apiProcessing": "Use API key",
+      "apiKeyPlaceholder": "OpenAI API key",
+      "microphone": "Microphone",
+      "microphoneHint": "The one microphone in the room.",
+      "language": "Conversation language",
+      "autoDetect": "Auto-detect",
+      "shortcut": "Start a conversation with",
+      "noShortcut": "No shortcut set",
+      "autoSearch": "Search unanswered questions",
+      "autoSearchHint": "When a question goes unanswered, Oats opens a Google search in the background. Only the question text is sent — never audio or transcript. Turn this off and questions are still caught and recorded.",
+      "data": "Your data",
+      "dataHint": "Recordings, transcripts, and summaries stay on this computer.",
+      "openDataFolder": "Open data folder",
+      "advanced": "Advanced",
+      "advancedHint": "Advanced — per-feature models, providers, and diagnostics.",
+      "dictationShortcut": "Dictate with",
+      "dictationHint": "Hold or tap to dictate into whatever you are typing in.",
+      "hotkeyRejected": "“{{hotkey}}” could not be registered, so the previous shortcut is still in use.",
+      "conversationHotkey": "Conversation shortcut",
+      "conversationHotkeyHint": "Starts or stops a conversation from any application."
+    },
+    "errors": {
+      "noModel": "Configure Oats processing before recording a conversation.",
+      "noEndpoint": "Configure the Oats API endpoint before recording a conversation.",
+      "actionFailed": "Oats could not generate intelligence for this conversation."
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "asked",
+      "answered": "answered",
+      "uncertain": "uncertain",
+      "silence": "no answer",
+      "denied": "unanswered"
+    },
+    "searched": "searched",
+    "dismiss": "Dismiss question",
+    "askedTimes": "asked {{count}}×",
+    "earlier": "{{count}} earlier",
+    "undo": "Undo dismiss"
+  },
+  "openThreads": {
+    "count_one": "{{count}} open thread",
+    "count_other": "{{count}} open threads",
+    "state": {
+      "open": "open",
+      "dropped": "cold"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}, {{seconds}} seconds",
+    "seconds_one": "{{count}}s",
+    "seconds_other": "{{count}}s",
+    "returned_one": "returned {{count}}×",
+    "returned_other": "returned {{count}}×",
+    "search": "Search",
+    "noQuestions": "No questions in this thread.",
+    "selectPrompt": "Select a topic to see the questions asked inside it."
+  },
+  "suggestions": {
+    "title": "Worth raising",
+    "unfinished": "left open",
+    "shallow": "barely touched",
+    "adjacent_one": "usually comes up",
+    "adjacent_other": "usually comes up"
+  },
+  "lifetime": {
+    "title": "What you keep coming back to",
+    "viewMap": "Map",
+    "backToList": "Back to conversations",
+    "recurring": "Recurring:",
+    "inCount_one": "{{count}} conversation",
+    "inCount_other": "{{count}} conversations",
+    "node": "{{label}}, {{count}} topics",
+    "topicCount_one": "{{count}} topic",
+    "topicCount_other": "{{count}} topics",
+    "open": "Open this conversation",
+    "selectPrompt": "Select a conversation to see what it covered.",
+    "empty": "The map appears once you have {{count}} recorded conversations to connect."
   }
 }

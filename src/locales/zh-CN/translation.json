@@ -162,7 +162,9 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "done": "Listo",
-    "skip": "跳过"
+    "skip": "跳过",
+    "on": "开",
+    "off": "关"
   },
   "onboarding": {
     "steps": {
@@ -2530,7 +2532,9 @@
     },
     "buttons": {
       "cancelRecording": "取消录音",
-      "cancelProcessing": "取消处理"
+      "cancelProcessing": "取消处理",
+      "hideOat": "隐藏 Oats",
+      "hideOatHint": "隐藏 · 可从托盘恢复"
     },
     "commandMenu": {
       "stopListening": "停止录音",
@@ -2986,5 +2990,131 @@
     },
     "start": "开始记录",
     "join": "加入并转录"
+  },
+  "oats": {
+    "untitled": "未命名对话",
+    "nav": {
+      "conversation": "对话",
+      "intelligence": "智能",
+      "settings": "设置",
+      "label": "页面"
+    },
+    "conversation": {
+      "title": "为对话腾出空间。",
+      "subtitle": "Oats 记录现场，然后自动给出标题、摘要和话题线索。",
+      "listening": "正在聆听。",
+      "listeningHint": "音频和转录内容保留在本设备上。",
+      "record": "录制对话",
+      "finish": "结束对话",
+      "preparing": "准备中…",
+      "micOnly": "仅限面对面的麦克风录音。",
+      "micSilent": "麦克风已经安静了一段时间。请检查是否被静音或被其他应用占用。",
+      "nothingHeard": "没有听到任何声音，因此未保存对话。请在设置中检查麦克风。",
+      "continuing": "继续 {{title}}"
+    },
+    "intelligence": {
+      "listTitle": "对话",
+      "empty": "还没有对话",
+      "preparing": "正在为这场对话准备智能内容。",
+      "noTranscript": "暂无转录。",
+      "tabs": {
+        "summary": "摘要",
+        "transcript": "转录",
+        "threads": "线索"
+      },
+      "processing": "正在处理对话…",
+      "searchPlaceholder": "搜索对话",
+      "renameHint": "点击重命名",
+      "carriedOver": "上次未收尾的：",
+      "openPrevious": "打开那一场",
+      "noMatches": "没有匹配项",
+      "emptyHint": "在任何地方按 {{shortcut}} 开始",
+      "backToList": "返回"
+    },
+    "settings": {
+      "title": "把选择降到最少。",
+      "subtitle": "Oats 会在每场对话后创建标题、摘要和线索。开始使用无需更改下面任何设置。",
+      "processing": "处理方式",
+      "processingHint": "一个选择同时覆盖转录与智能。",
+      "localProcessing": "在本机上",
+      "apiProcessing": "使用 API 密钥",
+      "apiKeyPlaceholder": "OpenAI API 密钥",
+      "microphone": "麦克风",
+      "microphoneHint": "房间里唯一的那支麦克风。",
+      "language": "对话语言",
+      "autoDetect": "自动检测",
+      "shortcut": "开始对话的快捷键",
+      "noShortcut": "未设置快捷键",
+      "autoSearch": "搜索未获解答的问题",
+      "autoSearchHint": "当一个问题无人解答时，Oats 会在后台打开 Google 搜索。只发送问题文本，绝不发送音频或转录。关闭后，问题仍会被捕捉和记录。",
+      "data": "你的数据",
+      "dataHint": "录音、转录和摘要都留在这台电脑上。",
+      "openDataFolder": "打开数据文件夹",
+      "advanced": "高级",
+      "advancedHint": "高级 — 各功能的模型、提供方与诊断。",
+      "dictationShortcut": "听写快捷键",
+      "dictationHint": "按住或轻按，即可在正在输入的位置听写。",
+      "hotkeyRejected": "无法注册「{{hotkey}}」，因此仍在使用之前的快捷键。",
+      "conversationHotkey": "对话快捷键",
+      "conversationHotkeyHint": "可在任何应用中开始或停止对话。"
+    },
+    "errors": {
+      "noModel": "录制对话前请先配置 Oats 的处理方式。",
+      "noEndpoint": "录制对话前请先配置 Oats 的 API 端点。",
+      "actionFailed": "Oats 无法为这场对话生成智能内容。"
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "已提出",
+      "answered": "已解答",
+      "uncertain": "不确定",
+      "silence": "无人应答",
+      "denied": "无人知晓"
+    },
+    "searched": "已搜索",
+    "dismiss": "忽略该问题",
+    "askedTimes": "提问 {{count}} 次",
+    "earlier": "另有 {{count}} 条",
+    "undo": "撤销"
+  },
+  "openThreads": {
+    "count_one": "{{count}} 条未完线索",
+    "count_other": "{{count}} 条未完线索",
+    "state": {
+      "open": "未完",
+      "dropped": "已冷"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}，{{seconds}} 秒",
+    "seconds_one": "{{count}} 秒",
+    "seconds_other": "{{count}} 秒",
+    "returned_one": "回到 {{count}} 次",
+    "returned_other": "回到 {{count}} 次",
+    "search": "搜索",
+    "noQuestions": "这条线索中没有问题。",
+    "selectPrompt": "选择一个话题，查看其中提出的问题。"
+  },
+  "suggestions": {
+    "title": "值得提起",
+    "unfinished": "尚未收尾",
+    "shallow": "几乎未展开",
+    "adjacent_one": "常常一起出现",
+    "adjacent_other": "常常一起出现"
+  },
+  "lifetime": {
+    "title": "你反复回到的主题",
+    "viewMap": "图谱",
+    "backToList": "返回对话列表",
+    "recurring": "反复出现：",
+    "inCount_one": "{{count}} 场对话",
+    "inCount_other": "{{count}} 场对话",
+    "node": "{{label}}，{{count}} 个话题",
+    "topicCount_one": "{{count}} 个话题",
+    "topicCount_other": "{{count}} 个话题",
+    "open": "打开这场对话",
+    "selectPrompt": "选择一场对话，查看它谈了什么。",
+    "empty": "当你有 {{count}} 场录制的对话可以连接时，图谱就会出现。"
   }
 }

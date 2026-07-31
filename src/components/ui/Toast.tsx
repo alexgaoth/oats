@@ -138,16 +138,16 @@ const ToastViewport: React.FC<{
 
 const variantConfig = {
   default: {
-    accentClass: "bg-white/20",
-    progressClass: "bg-white/15",
+    accentClass: "bg-muted-foreground/40",
+    progressClass: "bg-muted-foreground/25",
   },
   destructive: {
-    accentClass: "bg-red-400",
-    progressClass: "bg-red-400/30",
+    accentClass: "bg-destructive",
+    progressClass: "bg-destructive/30",
   },
   success: {
-    accentClass: "bg-emerald-400",
-    progressClass: "bg-emerald-400/30",
+    accentClass: "bg-success",
+    progressClass: "bg-success/30",
   },
 };
 
@@ -207,8 +207,8 @@ const Toast: React.FC<
         "rounded-[5px]",
         "transition-[opacity,transform] duration-200 ease-out",
         isExiting
-          ? "opacity-0 translate-x-2 scale-[0.98]"
-          : "opacity-100 translate-x-0 scale-100 animate-in slide-in-from-right-4 fade-in-0 duration-300"
+          ? "opacity-0 translate-y-1 scale-[0.98]"
+          : "opacity-100 translate-x-0 scale-100 animate-in slide-in-from-bottom-2 fade-in-0 duration-300"
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -218,15 +218,17 @@ const Toast: React.FC<
       <div className="flex items-start gap-2 flex-1 min-w-0 px-2.5 py-2">
         <div className="flex-1 min-w-0">
           {message && (
-            <div className="text-xs font-medium leading-tight text-white/90">{message}</div>
+            <div className="text-xs font-medium leading-tight text-popover-foreground">
+              {message}
+            </div>
           )}
           {detail &&
             (isDestructive ? (
               <div
                 className={cn(
                   "text-xs leading-snug mt-1 px-1.5 py-1 rounded-[3px] font-mono",
-                  "bg-white/4 border border-white/6",
-                  "text-red-300/80"
+                  "border border-border/60 bg-surface-1",
+                  "text-destructive"
                 )}
               >
                 <div className="flex items-start justify-between gap-1.5">
@@ -235,8 +237,8 @@ const Toast: React.FC<
                     onClick={handleCopyError}
                     className={cn(
                       "shrink-0 p-0.5 rounded-xs mt-px",
-                      "text-white/30 hover:text-white/70",
-                      "hover:bg-white/6",
+                      "text-muted-foreground hover:text-foreground",
+                      "hover:bg-surface-2",
                       "transition-colors duration-150"
                     )}
                     aria-label="Copy error"
@@ -246,7 +248,7 @@ const Toast: React.FC<
                 </div>
               </div>
             ) : (
-              <div className="text-xs leading-snug mt-0.5 text-white/45">{detail}</div>
+              <div className="mt-0.5 text-xs leading-snug text-muted-foreground">{detail}</div>
             ))}
         </div>
 
@@ -259,11 +261,11 @@ const Toast: React.FC<
           className={cn(
             "absolute -left-2 -top-2 size-6 rounded-full",
             "flex items-center justify-center",
-            "bg-white/10 backdrop-blur-sm border border-white/10",
-            "text-white/70 hover:text-white hover:bg-white/20",
+            "border border-border bg-surface-2 backdrop-blur-sm",
+            "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
             "opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100",
             "transition-all duration-150",
-            "focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
+            "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           )}
         >
           <X className="size-3" />

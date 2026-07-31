@@ -162,7 +162,9 @@
     "copy": "Kopieren",
     "copied": "Kopiert",
     "done": "Fertig",
-    "skip": "Пропустить"
+    "skip": "Пропустить",
+    "on": "Вкл.",
+    "off": "Выкл."
   },
   "onboarding": {
     "steps": {
@@ -2539,7 +2541,9 @@
     },
     "buttons": {
       "cancelRecording": "Отменить запись",
-      "cancelProcessing": "Отменить обработку"
+      "cancelProcessing": "Отменить обработку",
+      "hideOat": "Скрыть Oats",
+      "hideOatHint": "Скрыть · вернуть можно из трея"
     },
     "commandMenu": {
       "stopListening": "Остановить запись",
@@ -2995,5 +2999,143 @@
     },
     "start": "Вести заметки",
     "join": "Присоединиться и вести заметки"
+  },
+  "oats": {
+    "untitled": "Разговор без названия",
+    "nav": {
+      "conversation": "Разговор",
+      "intelligence": "Аналитика",
+      "settings": "Настройки",
+      "label": "Разделы"
+    },
+    "conversation": {
+      "title": "Освободите место для разговора.",
+      "subtitle": "Oats записывает комнату, а затем сам даёт название, резюме и линии обсуждения.",
+      "listening": "Слушаю.",
+      "listeningHint": "аудио и расшифровки остаются на этом устройстве.",
+      "record": "Записать разговор",
+      "finish": "Завершить разговор",
+      "preparing": "Подготовка…",
+      "micOnly": "Только запись с микрофона при личной встрече.",
+      "micSilent": "Микрофон уже некоторое время молчит. Проверьте, не выключен ли он и не занят ли другим приложением.",
+      "nothingHeard": "Ничего не было услышано, поэтому разговор не сохранён. Проверьте микрофон в настройках.",
+      "continuing": "продолжение {{title}}"
+    },
+    "intelligence": {
+      "listTitle": "разговоры",
+      "empty": "разговоров пока нет",
+      "preparing": "Аналитика для этого разговора готовится.",
+      "noTranscript": "Расшифровки пока нет.",
+      "tabs": {
+        "summary": "Резюме",
+        "transcript": "Расшифровка",
+        "threads": "Линии"
+      },
+      "processing": "Обработка разговора…",
+      "searchPlaceholder": "Поиск по разговорам",
+      "renameHint": "Нажмите, чтобы переименовать",
+      "carriedOver": "В прошлый раз осталось открытым:",
+      "openPrevious": "Открыть тот",
+      "noMatches": "ничего не найдено",
+      "emptyHint": "нажмите {{shortcut}} где угодно, чтобы начать",
+      "backToList": "назад"
+    },
+    "settings": {
+      "title": "Минимум решений.",
+      "subtitle": "Oats создаёт название, резюме и линии после каждого разговора. Чтобы начать, ничего менять не нужно.",
+      "processing": "Обработка",
+      "processingHint": "Один выбор охватывает расшифровку и аналитику.",
+      "localProcessing": "На этом компьютере",
+      "apiProcessing": "Использовать ключ API",
+      "apiKeyPlaceholder": "Ключ API OpenAI",
+      "microphone": "Микрофон",
+      "microphoneHint": "Единственный микрофон в комнате.",
+      "language": "Язык разговора",
+      "autoDetect": "Определять автоматически",
+      "shortcut": "Начинать разговор по",
+      "noShortcut": "Сочетание не задано",
+      "autoSearch": "Искать вопросы без ответа",
+      "autoSearchHint": "Когда вопрос остаётся без ответа, Oats открывает поиск Google в фоне. Отправляется только текст вопроса — никогда аудио или расшифровка. Если выключить, вопросы всё равно распознаются и сохраняются.",
+      "data": "Ваши данные",
+      "dataHint": "Записи, расшифровки и резюме остаются на этом компьютере.",
+      "openDataFolder": "Открыть папку данных",
+      "advanced": "Дополнительно",
+      "advancedHint": "Дополнительно — модели, провайдеры и диагностика по функциям.",
+      "dictationShortcut": "Диктовать по",
+      "dictationHint": "Удерживайте или нажмите, чтобы диктовать туда, где вы печатаете.",
+      "hotkeyRejected": "Не удалось зарегистрировать «{{hotkey}}», поэтому используется прежнее сочетание.",
+      "conversationHotkey": "Сочетание клавиш для разговора",
+      "conversationHotkeyHint": "Начинает или останавливает разговор из любого приложения."
+    },
+    "errors": {
+      "noModel": "Настройте обработку Oats перед записью разговора.",
+      "noEndpoint": "Настройте конечную точку API Oats перед записью разговора.",
+      "actionFailed": "Oats не смог создать аналитику для этого разговора."
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "задан",
+      "answered": "отвечен",
+      "uncertain": "неуверенно",
+      "silence": "нет ответа",
+      "denied": "никто не знал"
+    },
+    "searched": "найдено",
+    "dismiss": "Скрыть вопрос",
+    "askedTimes": "задан {{count}}×",
+    "earlier": "ещё {{count}}",
+    "undo": "Отменить"
+  },
+  "openThreads": {
+    "count_one": "{{count}} открытая линия",
+    "count_few": "{{count}} открытые линии",
+    "count_many": "{{count}} открытых линий",
+    "count_other": "{{count}} открытых линий",
+    "state": {
+      "open": "открыта",
+      "dropped": "остыла"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}, {{seconds}} с",
+    "seconds_one": "{{count}} с",
+    "seconds_few": "{{count}} с",
+    "seconds_many": "{{count}} с",
+    "seconds_other": "{{count}} с",
+    "returned_one": "возврат {{count}}×",
+    "returned_few": "возврат {{count}}×",
+    "returned_many": "возврат {{count}}×",
+    "returned_other": "возврат {{count}}×",
+    "search": "Искать",
+    "noQuestions": "В этой линии нет вопросов.",
+    "selectPrompt": "Выберите тему, чтобы увидеть заданные в ней вопросы."
+  },
+  "suggestions": {
+    "title": "Стоит поднять",
+    "unfinished": "осталось открытым",
+    "shallow": "едва затронуто",
+    "adjacent_one": "обычно всплывает",
+    "adjacent_few": "обычно всплывает",
+    "adjacent_many": "обычно всплывает",
+    "adjacent_other": "обычно всплывает"
+  },
+  "lifetime": {
+    "title": "К чему вы возвращаетесь",
+    "viewMap": "Карта",
+    "backToList": "Назад к разговорам",
+    "recurring": "Повторяется:",
+    "inCount_one": "{{count}} разговор",
+    "inCount_few": "{{count}} разговора",
+    "inCount_many": "{{count}} разговоров",
+    "inCount_other": "{{count}} разговоров",
+    "node": "{{label}}, тем: {{count}}",
+    "topicCount_one": "{{count}} тема",
+    "topicCount_few": "{{count}} темы",
+    "topicCount_many": "{{count}} тем",
+    "topicCount_other": "{{count}} тем",
+    "open": "Открыть этот разговор",
+    "selectPrompt": "Выберите разговор, чтобы увидеть, о чём он был.",
+    "empty": "Карта появится, когда наберётся {{count}} записанных разговора для связи."
   }
 }

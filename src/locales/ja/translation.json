@@ -162,7 +162,9 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "done": "Listo",
-    "skip": "スキップ"
+    "skip": "スキップ",
+    "on": "オン",
+    "off": "オフ"
   },
   "onboarding": {
     "steps": {
@@ -2535,7 +2537,9 @@
     },
     "buttons": {
       "cancelRecording": "録音をキャンセル",
-      "cancelProcessing": "処理をキャンセル"
+      "cancelProcessing": "処理をキャンセル",
+      "hideOat": "Oats を隠す",
+      "hideOatHint": "隠す · トレイから戻せます"
     },
     "commandMenu": {
       "stopListening": "録音を停止",
@@ -2991,5 +2995,131 @@
     },
     "start": "メモを取る",
     "join": "参加して文字起こし"
+  },
+  "oats": {
+    "untitled": "無題の会話",
+    "nav": {
+      "conversation": "会話",
+      "intelligence": "インテリジェンス",
+      "settings": "設定",
+      "label": "画面"
+    },
+    "conversation": {
+      "title": "会話のための余白をつくる。",
+      "subtitle": "Oats が場を録音し、タイトル・要約・話の筋を自動でまとめます。",
+      "listening": "聞いています。",
+      "listeningHint": "音声と文字起こしはこの端末に残ります。",
+      "record": "会話を録音",
+      "finish": "会話を終了",
+      "preparing": "準備中…",
+      "micOnly": "対面のマイク録音のみ。",
+      "micSilent": "マイクがしばらく無音です。ミュートや他のアプリによる使用を確認してください。",
+      "nothingHeard": "何も聞こえなかったため、会話は保存されませんでした。設定でマイクを確認してください。",
+      "continuing": "{{title}} を継続中"
+    },
+    "intelligence": {
+      "listTitle": "会話",
+      "empty": "まだ会話がありません",
+      "preparing": "この会話のインテリジェンスを準備しています。",
+      "noTranscript": "文字起こしはまだありません。",
+      "tabs": {
+        "summary": "要約",
+        "transcript": "文字起こし",
+        "threads": "話の筋"
+      },
+      "processing": "会話を処理しています…",
+      "searchPlaceholder": "会話を検索",
+      "renameHint": "クリックで名前を変更",
+      "carriedOver": "前回そのままだったこと：",
+      "openPrevious": "その会話を開く",
+      "noMatches": "一致するものがありません",
+      "emptyHint": "どこでも {{shortcut}} を押して開始",
+      "backToList": "戻る"
+    },
+    "settings": {
+      "title": "選択は少なく。",
+      "subtitle": "Oats は会話のたびにタイトル・要約・話の筋を作成します。始めるのに以下を変更する必要はありません。",
+      "processing": "処理",
+      "processingHint": "ひとつの選択が文字起こしとインテリジェンスの両方をカバーします。",
+      "localProcessing": "このコンピューター上",
+      "apiProcessing": "API キーを使う",
+      "apiKeyPlaceholder": "OpenAI API キー",
+      "microphone": "マイク",
+      "microphoneHint": "その場にある唯一のマイク。",
+      "language": "会話の言語",
+      "autoDetect": "自動検出",
+      "shortcut": "会話を開始するキー",
+      "noShortcut": "ショートカット未設定",
+      "autoSearch": "未回答の質問を検索",
+      "autoSearchHint": "質問が未回答のままのとき、Oats はバックグラウンドで Google 検索を開きます。送信されるのは質問の文言のみで、音声や文字起こしは送信されません。オフにしても質問の検出と記録は続きます。",
+      "data": "あなたのデータ",
+      "dataHint": "録音・文字起こし・要約はこのコンピューターに留まります。",
+      "openDataFolder": "データフォルダーを開く",
+      "advanced": "詳細設定",
+      "advancedHint": "詳細設定 — 機能ごとのモデル・プロバイダー・診断。",
+      "dictationShortcut": "音声入力のキー",
+      "dictationHint": "押し続けるか一度押すと、入力中の場所に音声入力できます。",
+      "hotkeyRejected": "「{{hotkey}}」を登録できなかったため、以前のショートカットのままです。",
+      "conversationHotkey": "会話のショートカット",
+      "conversationHotkeyHint": "どのアプリからでも会話を開始・停止できます。"
+    },
+    "errors": {
+      "noModel": "会話を録音する前に Oats の処理を設定してください。",
+      "noEndpoint": "会話を録音する前に Oats の API エンドポイントを設定してください。",
+      "actionFailed": "Oats はこの会話のインテリジェンスを生成できませんでした。"
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "質問",
+      "answered": "回答済み",
+      "uncertain": "あいまい",
+      "silence": "応答なし",
+      "denied": "誰も知らなかった"
+    },
+    "searched": "検索済み",
+    "dismiss": "質問を閉じる",
+    "askedTimes": "{{count}} 回質問",
+    "earlier": "他 {{count}} 件",
+    "undo": "元に戻す"
+  },
+  "openThreads": {
+    "count_one": "未完の話 {{count}} 件",
+    "count_other": "未完の話 {{count}} 件",
+    "state": {
+      "open": "未完",
+      "dropped": "途切れ"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}、{{seconds}} 秒",
+    "seconds_one": "{{count}} 秒",
+    "seconds_other": "{{count}} 秒",
+    "returned_one": "{{count}} 回戻った",
+    "returned_other": "{{count}} 回戻った",
+    "search": "検索",
+    "noQuestions": "この話の筋に質問はありません。",
+    "selectPrompt": "トピックを選ぶと、その中で交わされた質問が表示されます。"
+  },
+  "suggestions": {
+    "title": "話す価値のあること",
+    "unfinished": "未決のまま",
+    "shallow": "ほとんど触れず",
+    "adjacent_one": "よく一緒に出る",
+    "adjacent_other": "よく一緒に出る"
+  },
+  "lifetime": {
+    "title": "繰り返し戻ってくるもの",
+    "viewMap": "マップ",
+    "backToList": "会話一覧に戻る",
+    "recurring": "繰り返し:",
+    "inCount_one": "{{count}} 件の会話",
+    "inCount_other": "{{count}} 件の会話",
+    "node": "{{label}}、トピック {{count}} 件",
+    "topicCount_one": "トピック {{count}} 件",
+    "topicCount_other": "トピック {{count}} 件",
+    "open": "この会話を開く",
+    "selectPrompt": "会話を選ぶと、その内容が表示されます。",
+    "empty": "録音した会話が {{count}} 件たまるとマップが表示されます。"
   }
 }

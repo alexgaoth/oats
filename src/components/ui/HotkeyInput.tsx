@@ -510,16 +510,21 @@ export function HotkeyInput({
         onMouseDown={handleMouseDown}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        // A line, like every other control on the settings page. The filled
+        // 112px-tall slab made a shortcut the heaviest object on a page whose
+        // rule is "keep the choices small", and the surface fill reads as a
+        // panel — chrome, in a design that spends its budget on air (§1, §6).
+        // The border goes gold only while capturing, which is the one moment
+        // the accent is carrying information.
         className={`
-          relative group flex flex-col items-center justify-center py-4 px-5 min-h-28
-          rounded-md border cursor-pointer select-none outline-none
-          transition-colors duration-150
+          relative group flex min-h-11 w-full cursor-pointer select-none items-center
+          justify-start border-b py-2 outline-none transition-colors duration-150
           ${
             disabled
-              ? "bg-muted/30 border-border cursor-not-allowed opacity-50"
+              ? "cursor-not-allowed border-border opacity-50"
               : isCapturing
-                ? "bg-primary/5 border-primary/30 shadow-[0_0_0_2px_color-mix(in_oklch,var(--color-primary)_12%,transparent)]"
-                : "bg-surface-1 border-border hover:border-border-hover hover:bg-surface-2"
+                ? "border-primary"
+                : "border-border hover:border-border-hover"
           }
         `}
       >
@@ -555,11 +560,9 @@ export function HotkeyInput({
               </span>
             )}
             {validationWarning && (
-              <div className="flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-md bg-warning/8 border border-warning/20 dark:bg-warning/12 dark:border-warning/25">
-                <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
-                <span className="text-xs text-warning dark:text-amber-400">
-                  {validationWarning}
-                </span>
+              <div className="flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-md border border-border bg-surface-1">
+                <AlertTriangle className="w-3 h-3 text-foreground shrink-0" />
+                <span className="text-xs text-foreground">{validationWarning}</span>
               </div>
             )}
           </div>
@@ -616,15 +619,17 @@ export function HotkeyInput({
       onMouseDown={handleMouseDown}
       onFocus={handleFocus}
       onBlur={handleBlur}
+      // Same treatment as the other variant and as every other settings control:
+      // a line, not a filled panel. This is the variant the Settings page uses.
       className={`
-        relative group overflow-hidden rounded-md border
+        relative group w-full overflow-hidden border-b
         transition-colors duration-150 cursor-pointer select-none focus:outline-none
         ${
           disabled
-            ? "bg-muted/30 border-border cursor-not-allowed opacity-50"
+            ? "border-border cursor-not-allowed opacity-50"
             : isCapturing
-              ? "bg-primary/5 border-primary/30 shadow-[0_0_0_2px_color-mix(in_oklch,var(--color-primary)_12%,transparent)]"
-              : "bg-surface-1 border-border hover:border-border-hover hover:bg-surface-2"
+              ? "border-primary"
+              : "border-border hover:border-border-hover"
         }
       `}
     >
@@ -632,7 +637,7 @@ export function HotkeyInput({
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary animate-pulse" />
       )}
 
-      <div className="px-4 py-3">
+      <div className="py-2">
         {isCapturing ? (
           <>
             <div className="flex items-center justify-center gap-3">
@@ -663,11 +668,9 @@ export function HotkeyInput({
               )}
             </div>
             {validationWarning && (
-              <div className="flex items-center gap-1.5 mt-1.5 px-3 py-1.5 rounded-md bg-warning/8 border border-warning/20 dark:bg-warning/12 dark:border-warning/25">
-                <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
-                <span className="text-xs text-warning dark:text-amber-400">
-                  {validationWarning}
-                </span>
+              <div className="flex items-center gap-1.5 mt-1.5 px-3 py-1.5 rounded-md border border-border bg-surface-1">
+                <AlertTriangle className="w-3 h-3 text-foreground shrink-0" />
+                <span className="text-xs text-foreground">{validationWarning}</span>
               </div>
             )}
           </>

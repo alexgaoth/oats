@@ -162,7 +162,9 @@
     "copy": "Copier",
     "copied": "Copié",
     "done": "Terminé",
-    "skip": "Passer"
+    "skip": "Passer",
+    "on": "Activé",
+    "off": "Désactivé"
   },
   "onboarding": {
     "steps": {
@@ -2583,7 +2585,9 @@
     },
     "buttons": {
       "cancelRecording": "Annuler l’enregistrement",
-      "cancelProcessing": "Annuler le traitement"
+      "cancelProcessing": "Annuler le traitement",
+      "hideOat": "Masquer Oats",
+      "hideOatHint": "Masquer · revenez-y depuis la barre d'état"
     },
     "commandMenu": {
       "stopListening": "Arrêter l’écoute",
@@ -2991,5 +2995,131 @@
     },
     "start": "Prendre des notes",
     "join": "Rejoindre et transcrire"
+  },
+  "oats": {
+    "untitled": "Conversation sans titre",
+    "nav": {
+      "conversation": "Conversation",
+      "intelligence": "Intelligence",
+      "settings": "Réglages",
+      "label": "Sections"
+    },
+    "conversation": {
+      "title": "Faites de la place à la conversation.",
+      "subtitle": "Oats enregistre la pièce, puis vous donne le titre, le résumé et les fils automatiquement.",
+      "listening": "À l'écoute.",
+      "listeningHint": "l'audio et les transcriptions restent sur cet appareil.",
+      "record": "Enregistrer la conversation",
+      "finish": "Terminer la conversation",
+      "preparing": "Préparation…",
+      "micOnly": "Enregistrement au micro en présentiel uniquement.",
+      "micSilent": "Le microphone est silencieux depuis un moment. Vérifiez qu'il n'est ni coupé ni utilisé par une autre application.",
+      "nothingHeard": "Rien n'a été entendu, aucune conversation n'a donc été enregistrée. Vérifiez le microphone dans les réglages.",
+      "continuing": "poursuite de {{title}}"
+    },
+    "intelligence": {
+      "listTitle": "conversations",
+      "empty": "aucune conversation",
+      "preparing": "L'intelligence de cette conversation est en cours de préparation.",
+      "noTranscript": "Pas encore de transcription.",
+      "tabs": {
+        "summary": "Résumé",
+        "transcript": "Transcription",
+        "threads": "Fils"
+      },
+      "processing": "Traitement de la conversation…",
+      "searchPlaceholder": "Rechercher des conversations",
+      "renameHint": "Cliquez pour renommer",
+      "carriedOver": "Resté ouvert la dernière fois :",
+      "openPrevious": "Ouvrir celle-là",
+      "noMatches": "aucun résultat",
+      "emptyHint": "appuyez sur {{shortcut}} n'importe où pour commencer",
+      "backToList": "retour"
+    },
+    "settings": {
+      "title": "Peu de choix.",
+      "subtitle": "Oats crée le titre, le résumé et les fils après chaque conversation. Rien à changer ci-dessous pour commencer.",
+      "processing": "Traitement",
+      "processingHint": "Un seul choix couvre la transcription et l'intelligence.",
+      "localProcessing": "Sur cet ordinateur",
+      "apiProcessing": "Utiliser une clé API",
+      "apiKeyPlaceholder": "Clé API OpenAI",
+      "microphone": "Microphone",
+      "microphoneHint": "L'unique micro de la pièce.",
+      "language": "Langue de la conversation",
+      "autoDetect": "Détection automatique",
+      "shortcut": "Démarrer une conversation avec",
+      "noShortcut": "Aucun raccourci défini",
+      "autoSearch": "Rechercher les questions sans réponse",
+      "autoSearchHint": "Lorsqu'une question reste sans réponse, Oats ouvre une recherche Google en arrière-plan. Seul le texte de la question est envoyé, jamais l'audio ni la transcription. Désactivez-la et les questions sont toujours détectées et enregistrées.",
+      "data": "Vos données",
+      "dataHint": "Les enregistrements, transcriptions et résumés restent sur cet ordinateur.",
+      "openDataFolder": "Ouvrir le dossier de données",
+      "advanced": "Avancé",
+      "advancedHint": "Avancé — modèles, fournisseurs et diagnostics par fonction.",
+      "dictationShortcut": "Dicter avec",
+      "dictationHint": "Maintenez ou appuyez pour dicter là où vous écrivez.",
+      "hotkeyRejected": "« {{hotkey}} » n'a pas pu être enregistré, le raccourci précédent reste actif.",
+      "conversationHotkey": "Raccourci de conversation",
+      "conversationHotkeyHint": "Démarre ou arrête une conversation depuis n'importe quelle application."
+    },
+    "errors": {
+      "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
+      "noEndpoint": "Configurez le point de terminaison de l'API Oats avant d'enregistrer une conversation.",
+      "actionFailed": "Oats n'a pas pu générer l'intelligence de cette conversation."
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "posée",
+      "answered": "répondue",
+      "uncertain": "incertaine",
+      "silence": "sans réponse",
+      "denied": "personne ne savait"
+    },
+    "searched": "recherchée",
+    "dismiss": "Ignorer la question",
+    "askedTimes": "posée {{count}}×",
+    "earlier": "{{count}} précédentes",
+    "undo": "Annuler"
+  },
+  "openThreads": {
+    "count_one": "{{count}} fil ouvert",
+    "count_other": "{{count}} fils ouverts",
+    "state": {
+      "open": "ouvert",
+      "dropped": "froid"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}, {{seconds}} secondes",
+    "seconds_one": "{{count}} s",
+    "seconds_other": "{{count}} s",
+    "returned_one": "repris {{count}}×",
+    "returned_other": "repris {{count}}×",
+    "search": "Rechercher",
+    "noQuestions": "Aucune question dans ce fil.",
+    "selectPrompt": "Sélectionnez un sujet pour voir les questions posées à l'intérieur."
+  },
+  "suggestions": {
+    "title": "À soulever",
+    "unfinished": "resté ouvert",
+    "shallow": "à peine abordé",
+    "adjacent_one": "revient souvent",
+    "adjacent_other": "revient souvent"
+  },
+  "lifetime": {
+    "title": "Ce sur quoi vous revenez",
+    "viewMap": "Carte",
+    "backToList": "Retour aux conversations",
+    "recurring": "Récurrent :",
+    "inCount_one": "{{count}} conversation",
+    "inCount_other": "{{count}} conversations",
+    "node": "{{label}}, {{count}} sujets",
+    "topicCount_one": "{{count}} sujet",
+    "topicCount_other": "{{count}} sujets",
+    "open": "Ouvrir cette conversation",
+    "selectPrompt": "Sélectionnez une conversation pour voir ce qu'elle a couvert.",
+    "empty": "La carte apparaît dès que vous avez {{count}} conversations enregistrées à relier."
   }
 }

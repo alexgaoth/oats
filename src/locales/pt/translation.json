@@ -141,7 +141,9 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "done": "Listo",
-    "skip": "Pular"
+    "skip": "Pular",
+    "on": "Ligado",
+    "off": "Desligado"
   },
   "onboarding": {
     "steps": {
@@ -2535,7 +2537,9 @@
     },
     "buttons": {
       "cancelRecording": "Cancelar gravação",
-      "cancelProcessing": "Cancelar processamento"
+      "cancelProcessing": "Cancelar processamento",
+      "hideOat": "Ocultar o Oats",
+      "hideOatHint": "Ocultar · recupere-o pela bandeja"
     },
     "commandMenu": {
       "stopListening": "Parar de ouvir",
@@ -2991,5 +2995,131 @@
     },
     "start": "Fazer anotações",
     "join": "Entrar e transcrever"
+  },
+  "oats": {
+    "untitled": "Conversa sem título",
+    "nav": {
+      "conversation": "Conversa",
+      "intelligence": "Inteligência",
+      "settings": "Definições",
+      "label": "Secções"
+    },
+    "conversation": {
+      "title": "Abra espaço para a conversa.",
+      "subtitle": "O Oats grava a sala e depois dá-lhe o título, o resumo e os fios automaticamente.",
+      "listening": "A ouvir.",
+      "listeningHint": "o áudio e as transcrições ficam neste dispositivo.",
+      "record": "Gravar conversa",
+      "finish": "Terminar conversa",
+      "preparing": "A preparar…",
+      "micOnly": "Apenas gravação com microfone presencial.",
+      "micSilent": "O microfone está em silêncio há algum tempo. Verifique se não está mudo ou a ser usado por outra aplicação.",
+      "nothingHeard": "Não se ouviu nada, por isso não foi guardada nenhuma conversa. Verifique o microfone nas Definições.",
+      "continuing": "continuando {{title}}"
+    },
+    "intelligence": {
+      "listTitle": "conversas",
+      "empty": "ainda sem conversas",
+      "preparing": "A inteligência desta conversa está a ser preparada.",
+      "noTranscript": "Ainda sem transcrição.",
+      "tabs": {
+        "summary": "Resumo",
+        "transcript": "Transcrição",
+        "threads": "Fios"
+      },
+      "processing": "A processar a conversa…",
+      "searchPlaceholder": "Pesquisar conversas",
+      "renameHint": "Clique para renomear",
+      "carriedOver": "Ficou em aberto da última vez:",
+      "openPrevious": "Abrir essa",
+      "noMatches": "nada corresponde",
+      "emptyHint": "prima {{shortcut}} em qualquer lugar para começar",
+      "backToList": "voltar"
+    },
+    "settings": {
+      "title": "Poucas escolhas.",
+      "subtitle": "O Oats cria o título, o resumo e os fios depois de cada conversa. Não é preciso mudar nada abaixo para começar.",
+      "processing": "Processamento",
+      "processingHint": "Uma escolha cobre a transcrição e a inteligência.",
+      "localProcessing": "Neste computador",
+      "apiProcessing": "Usar chave de API",
+      "apiKeyPlaceholder": "Chave de API da OpenAI",
+      "microphone": "Microfone",
+      "microphoneHint": "O único microfone da sala.",
+      "language": "Idioma da conversa",
+      "autoDetect": "Deteção automática",
+      "shortcut": "Iniciar uma conversa com",
+      "noShortcut": "Sem atalho definido",
+      "autoSearch": "Pesquisar perguntas sem resposta",
+      "autoSearchHint": "Quando uma pergunta fica sem resposta, o Oats abre uma pesquisa do Google em segundo plano. Só o texto da pergunta é enviado — nunca o áudio nem a transcrição. Se desativar, as perguntas continuam a ser detetadas e registadas.",
+      "data": "Os seus dados",
+      "dataHint": "Gravações, transcrições e resumos ficam neste computador.",
+      "openDataFolder": "Abrir pasta de dados",
+      "advanced": "Avançado",
+      "advancedHint": "Avançado — modelos, fornecedores e diagnósticos por funcionalidade.",
+      "dictationShortcut": "Ditar com",
+      "dictationHint": "Mantenha ou toque para ditar onde estiver a escrever.",
+      "hotkeyRejected": "Não foi possível registar “{{hotkey}}”, por isso o atalho anterior continua em uso.",
+      "conversationHotkey": "Atalho de conversa",
+      "conversationHotkeyHint": "Inicia ou para uma conversa a partir de qualquer aplicação."
+    },
+    "errors": {
+      "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",
+      "noEndpoint": "Configure o endpoint da API do Oats antes de gravar uma conversa.",
+      "actionFailed": "O Oats não conseguiu gerar inteligência para esta conversa."
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "perguntada",
+      "answered": "respondida",
+      "uncertain": "incerta",
+      "silence": "sem resposta",
+      "denied": "ninguém sabia"
+    },
+    "searched": "pesquisada",
+    "dismiss": "Dispensar pergunta",
+    "askedTimes": "perguntada {{count}}×",
+    "earlier": "{{count}} anteriores",
+    "undo": "Anular"
+  },
+  "openThreads": {
+    "count_one": "{{count}} fio aberto",
+    "count_other": "{{count}} fios abertos",
+    "state": {
+      "open": "aberto",
+      "dropped": "frio"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}, {{seconds}} segundos",
+    "seconds_one": "{{count}} s",
+    "seconds_other": "{{count}} s",
+    "returned_one": "retomado {{count}}×",
+    "returned_other": "retomado {{count}}×",
+    "search": "Pesquisar",
+    "noQuestions": "Sem perguntas neste fio.",
+    "selectPrompt": "Selecione um tópico para ver as perguntas feitas dentro dele."
+  },
+  "suggestions": {
+    "title": "Vale a pena levantar",
+    "unfinished": "ficou em aberto",
+    "shallow": "mal tocado",
+    "adjacent_one": "costuma surgir",
+    "adjacent_other": "costuma surgir"
+  },
+  "lifetime": {
+    "title": "Aquilo a que volta sempre",
+    "viewMap": "Mapa",
+    "backToList": "Voltar às conversas",
+    "recurring": "Recorrente:",
+    "inCount_one": "{{count}} conversa",
+    "inCount_other": "{{count}} conversas",
+    "node": "{{label}}, {{count}} tópicos",
+    "topicCount_one": "{{count}} tópico",
+    "topicCount_other": "{{count}} tópicos",
+    "open": "Abrir esta conversa",
+    "selectPrompt": "Selecione uma conversa para ver o que abordou.",
+    "empty": "O mapa aparece quando tiver {{count}} conversas gravadas para ligar."
   }
 }

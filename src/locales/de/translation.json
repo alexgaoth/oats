@@ -162,7 +162,9 @@
     "copy": "Kopieren",
     "copied": "Kopiert",
     "done": "Fertig",
-    "skip": "Überspringen"
+    "skip": "Überspringen",
+    "on": "Ein",
+    "off": "Aus"
   },
   "onboarding": {
     "steps": {
@@ -2535,7 +2537,9 @@
     },
     "buttons": {
       "cancelRecording": "Aufnahme abbrechen",
-      "cancelProcessing": "Verarbeitung abbrechen"
+      "cancelProcessing": "Verarbeitung abbrechen",
+      "hideOat": "Oats ausblenden",
+      "hideOatHint": "Ausblenden · über das Tray zurückholen"
     },
     "commandMenu": {
       "stopListening": "Aufnahme beenden",
@@ -2991,5 +2995,131 @@
     },
     "start": "Notizen aufnehmen",
     "join": "Beitreten & transkribieren"
+  },
+  "oats": {
+    "untitled": "Unbenanntes Gespräch",
+    "nav": {
+      "conversation": "Gespräch",
+      "intelligence": "Intelligenz",
+      "settings": "Einstellungen",
+      "label": "Bereiche"
+    },
+    "conversation": {
+      "title": "Mach Platz für das Gespräch.",
+      "subtitle": "Oats nimmt den Raum auf und liefert dann Titel, Zusammenfassung und Stränge automatisch.",
+      "listening": "Hört zu.",
+      "listeningHint": "audio und transkripte bleiben auf diesem gerät.",
+      "record": "Gespräch aufnehmen",
+      "finish": "Gespräch beenden",
+      "preparing": "Wird vorbereitet…",
+      "micOnly": "Nur Mikrofonaufnahme vor Ort.",
+      "micSilent": "Das Mikrofon ist seit einer Weile still. Prüfe, ob es stummgeschaltet ist oder von einer anderen App belegt wird.",
+      "nothingHeard": "Es wurde nichts gehört, daher wurde kein Gespräch gespeichert. Prüfe das Mikrofon in den Einstellungen.",
+      "continuing": "Fortsetzung von {{title}}"
+    },
+    "intelligence": {
+      "listTitle": "gespräche",
+      "empty": "noch keine gespräche",
+      "preparing": "Die Intelligenz für dieses Gespräch wird vorbereitet.",
+      "noTranscript": "Noch kein Transkript.",
+      "tabs": {
+        "summary": "Zusammenfassung",
+        "transcript": "Transkript",
+        "threads": "Stränge"
+      },
+      "processing": "Gespräch wird verarbeitet…",
+      "searchPlaceholder": "Gespräche durchsuchen",
+      "renameHint": "Zum Umbenennen klicken",
+      "carriedOver": "Beim letzten Mal offen geblieben:",
+      "openPrevious": "Das öffnen",
+      "noMatches": "nichts gefunden",
+      "emptyHint": "drücke {{shortcut}} überall, um zu starten",
+      "backToList": "zurück"
+    },
+    "settings": {
+      "title": "Wenige Entscheidungen.",
+      "subtitle": "Oats erstellt Titel, Zusammenfassung und Stränge nach jedem Gespräch. Zum Starten muss unten nichts geändert werden.",
+      "processing": "Verarbeitung",
+      "processingHint": "Eine Auswahl deckt Transkription und Intelligenz ab.",
+      "localProcessing": "Auf diesem Computer",
+      "apiProcessing": "API-Schlüssel verwenden",
+      "apiKeyPlaceholder": "OpenAI-API-Schlüssel",
+      "microphone": "Mikrofon",
+      "microphoneHint": "Das eine Mikrofon im Raum.",
+      "language": "Gesprächssprache",
+      "autoDetect": "Automatisch erkennen",
+      "shortcut": "Gespräch starten mit",
+      "noShortcut": "Kein Kürzel festgelegt",
+      "autoSearch": "Unbeantwortete Fragen suchen",
+      "autoSearchHint": "Bleibt eine Frage unbeantwortet, öffnet Oats im Hintergrund eine Google-Suche. Nur der Fragetext wird gesendet — niemals Audio oder Transkript. Deaktiviert werden Fragen weiterhin erkannt und aufgezeichnet.",
+      "data": "Deine Daten",
+      "dataHint": "Aufnahmen, Transkripte und Zusammenfassungen bleiben auf diesem Computer.",
+      "openDataFolder": "Datenordner öffnen",
+      "advanced": "Erweitert",
+      "advancedHint": "Erweitert — Modelle, Anbieter und Diagnose je Funktion.",
+      "dictationShortcut": "Diktieren mit",
+      "dictationHint": "Halten oder tippen, um dort zu diktieren, wo du schreibst.",
+      "hotkeyRejected": "„{{hotkey}}“ konnte nicht registriert werden, das vorherige Kürzel bleibt aktiv.",
+      "conversationHotkey": "Konversations-Kurzbefehl",
+      "conversationHotkeyHint": "Startet oder stoppt eine Konversation aus jeder Anwendung."
+    },
+    "errors": {
+      "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",
+      "noEndpoint": "Richte den Oats-API-Endpunkt ein, bevor du ein Gespräch aufnimmst.",
+      "actionFailed": "Oats konnte für dieses Gespräch keine Intelligenz erzeugen."
+    }
+  },
+  "questionCard": {
+    "state": {
+      "asked": "gefragt",
+      "answered": "beantwortet",
+      "uncertain": "unsicher",
+      "silence": "keine Antwort",
+      "denied": "niemand wusste es"
+    },
+    "searched": "gesucht",
+    "dismiss": "Frage verwerfen",
+    "askedTimes": "{{count}}× gefragt",
+    "earlier": "{{count}} frühere",
+    "undo": "Rückgängig"
+  },
+  "openThreads": {
+    "count_one": "{{count}} offener Strang",
+    "count_other": "{{count}} offene Stränge",
+    "state": {
+      "open": "offen",
+      "dropped": "kalt"
+    }
+  },
+  "topicGraph": {
+    "node": "{{label}}, {{seconds}} Sekunden",
+    "seconds_one": "{{count}} s",
+    "seconds_other": "{{count}} s",
+    "returned_one": "{{count}}× zurückgekehrt",
+    "returned_other": "{{count}}× zurückgekehrt",
+    "search": "Suchen",
+    "noQuestions": "Keine Fragen in diesem Strang.",
+    "selectPrompt": "Wähle ein Thema, um die darin gestellten Fragen zu sehen."
+  },
+  "suggestions": {
+    "title": "Wert anzusprechen",
+    "unfinished": "offen geblieben",
+    "shallow": "kaum berührt",
+    "adjacent_one": "kommt meist auf",
+    "adjacent_other": "kommt meist auf"
+  },
+  "lifetime": {
+    "title": "Worauf du immer zurückkommst",
+    "viewMap": "Karte",
+    "backToList": "Zurück zu den Gesprächen",
+    "recurring": "Wiederkehrend:",
+    "inCount_one": "{{count}} Gespräch",
+    "inCount_other": "{{count}} Gespräche",
+    "node": "{{label}}, {{count}} Themen",
+    "topicCount_one": "{{count}} Thema",
+    "topicCount_other": "{{count}} Themen",
+    "open": "Dieses Gespräch öffnen",
+    "selectPrompt": "Wähle ein Gespräch, um zu sehen, worum es ging.",
+    "empty": "Die Karte erscheint, sobald {{count}} aufgezeichnete Gespräche verbunden werden können."
   }
 }

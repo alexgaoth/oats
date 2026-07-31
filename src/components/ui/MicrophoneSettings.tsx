@@ -122,23 +122,25 @@ export const MicrophoneSettings: React.FC<MicrophoneSettingsProps> = ({
         <Toggle checked={preferBuiltInMic} onChange={onPreferBuiltInChange} />
       </SettingsRow>
 
+      {/* Which microphone is in use is a statement, not a status banner. Sage and
+          gold are *state marks* in the §4 vocabulary and are explicitly never
+          chrome, text, or emphasis — a green-tinted panel around a device name
+          spends a state colour on furniture. Plain husk text says the same
+          thing and stops the page looking like a dashboard. */}
       {preferBuiltInMic && builtInDevice && (
-        <div className="p-3 bg-success/10 dark:bg-success/20 border border-success/30 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Mic className="w-4 h-4 text-success dark:text-success" />
-            <span className="text-sm text-success dark:text-success">
-              {t("microphoneSettings.using", { device: builtInDevice.label })}
-            </span>
-          </div>
-        </div>
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Mic className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {t("microphoneSettings.using", { device: builtInDevice.label })}
+        </p>
       )}
 
+      {/* Ink, not terracotta. §4 allows no exception for "but this one matters":
+          state marks are never body text. A full-contrast sentence is already
+          the loudest thing in a page of husk hints. */}
       {preferBuiltInMic && !builtInDevice && devices.length > 0 && (
-        <div className="p-3 bg-warning/10 dark:bg-warning/20 border border-warning/30 rounded-lg">
-          <p className="text-sm text-warning dark:text-warning">
-            {t("microphoneSettings.noBuiltInDetected")}
-          </p>
-        </div>
+        <p className="text-sm leading-5 text-foreground">
+          {t("microphoneSettings.noBuiltInDetected")}
+        </p>
       )}
 
       {!preferBuiltInMic && (
