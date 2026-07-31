@@ -7,7 +7,7 @@ import TranscriptionPreviewOverlay from "./components/TranscriptionPreviewOverla
 import UpdateNotificationOverlay from "./components/UpdateNotificationOverlay.tsx";
 import { useTheme } from "./hooks/useTheme";
 
-const ControlPanel = React.lazy(() => import("./components/ControlPanel.tsx"));
+const OatsWorkspace = React.lazy(() => import("./components/OatsWorkspace.tsx"));
 const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"));
 const AgentOverlay = React.lazy(() => import("./components/AgentOverlay.tsx"));
 
@@ -37,7 +37,6 @@ export default function AppRouter() {
 function MainApp() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [postOnboardingSettingsSection, setPostOnboardingSettingsSection] = useState(undefined);
 
   const isAgentPanel = window.location.search.includes("agent=true");
   const isControlPanel =
@@ -49,7 +48,7 @@ function MainApp() {
     if (isAgentPanel) {
       import("./components/AgentOverlay.tsx").catch(() => {});
     } else if (isControlPanel) {
-      import("./components/ControlPanel.tsx").catch(() => {});
+      import("./components/OatsWorkspace.tsx").catch(() => {});
 
       if (!localStorage.getItem("onboardingCompleted")) {
         import("./components/OnboardingFlow.tsx").catch(() => {});
@@ -73,10 +72,7 @@ function MainApp() {
     setIsLoading(false);
   }, [isControlPanel, isDictationPanel]);
 
-  const handleOnboardingComplete = (options) => {
-    if (options?.openSettings) {
-      setPostOnboardingSettingsSection("transcription");
-    }
+  const handleOnboardingComplete = () => {
     setShowOnboarding(false);
     localStorage.setItem("onboardingCompleted", "true");
   };
@@ -103,7 +99,7 @@ function MainApp() {
 
   return isControlPanel ? (
     <Suspense fallback={<LoadingFallback />}>
-      <ControlPanel initialSettingsSection={postOnboardingSettingsSection} />
+      <OatsWorkspace />
     </Suspense>
   ) : (
     <App />
