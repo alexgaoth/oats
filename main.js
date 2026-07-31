@@ -45,6 +45,12 @@ try {
 }
 
 const VALID_CHANNELS = new Set(["development", "staging", "production"]);
+
+// The conversation hotkey ships with a working default, because the primary
+// action having no key is the same as it not existing. O for Oats; the
+// fallback is used when another application already owns the first choice.
+const DEFAULT_CONVERSATION_HOTKEY = "CommandOrControl+Shift+O";
+const CONVERSATION_HOTKEY_FALLBACK = "CommandOrControl+Shift+F9";
 const BASE_WINDOWS_APP_ID = "com.arum.oats";
 
 function isElectronBinaryExec() {
@@ -408,6 +414,12 @@ async function startApp() {
     environmentManager.savePanelStartPosition(position);
   });
 
+  // The renderer owns persistence for the dragged position (localStorage) and
+  // replays it here on startup, so the oat reopens where it was left.
+  ipcMain.on("floating-oat-position-restored", (_event, position) => {
+    windowManager.setFloatingOatPosition(position);
+  });
+
   dockManager.init();
 
   // In development, wait for Vite dev server to be ready
@@ -423,12 +435,12 @@ async function startApp() {
     await windowManager.createControlPanelWindow();
   }
 
-  // Create agent window (hidden) and set up agent hotkey
-  await windowManager.createAgentWindow();
+  // The agent window is created on first use, not at launch — see
+  // windowManager.toggleAgentOverlay().
 
   const agentHotkeyCallback = () => {
     if (hotkeyManager.isInListeningMode()) return;
-    windowManager.toggleAgentOverlay();
+    void windowManager.toggleAgentOverlay();
   };
   windowManager._agentHotkeyCallback = agentHotkeyCallback;
 
@@ -461,6 +473,51 @@ async function startApp() {
         "hotkey"
       );
     }
+  }
+
+  // Set up the conversation hotkey — the product's primary action.
+  //
+  // Unlike every other slot this one ships with a working default. Recording a
+  // conversation is the thing Oats exists to do, and a shortcut nobody has
+  // configured is a shortcut that does not exist; the user should be able to
+  // press one key from any application and have the room be remembered.
+  const conversationHotkeyCallback = () => {
+    void windowManager.sendToggleConversation();
+  };
+  windowManager._conversationHotkeyCallback = conversationHotkeyCallback;
+
+  const savedConversationKey =
+    environmentManager.getConversationKey?.() || DEFAULT_CONVERSATION_HOTKEY;
+  // Belt and braces around the primary shortcut. Unlike every other slot this
+  // one registers unconditionally, so any failure here would be on the startup
+  // path for every user.
+  try {
+    const result = await hotkeyManager.registerSlot(
+      "conversation",
+      savedConversationKey,
+      conversationHotkeyCallback
+    );
+    if (!result.success && savedConversationKey !== CONVERSATION_HOTKEY_FALLBACK) {
+      // Taken by another application. Fall back rather than silently leaving
+      // the primary action with no key at all.
+      const fallback = await hotkeyManager.registerSlot(
+        "conversation",
+        CONVERSATION_HOTKEY_FALLBACK,
+        conversationHotkeyCallback
+      );
+      debugLogger.warn(
+        "Conversation hotkey unavailable, used fallback",
+        { wanted: savedConversationKey, fallback, ok: fallback.success },
+        "hotkey"
+      );
+      if (fallback.success) environmentManager.saveConversationKey(CONVERSATION_HOTKEY_FALLBACK);
+    }
+  } catch (error) {
+    debugLogger.error(
+      "Conversation hotkey registration failed; continuing without it",
+      { error: error?.message || String(error) },
+      "hotkey"
+    );
   }
 
   // Set up translation hotkey (dictation cleaned up and translated into the
@@ -506,6 +563,27 @@ async function startApp() {
       "meeting"
     );
   }
+
+  ipcMain.handle("get-conversation-key", () => environmentManager.getConversationKey?.() || "");
+
+  ipcMain.handle("register-conversation-hotkey", async (_event, hotkey) => {
+    // An empty key is allowed for every other slot, but the conversation is
+    // the product's primary action: clearing it would leave no way to start
+    // one without opening a window, so it falls back to the default instead.
+    const wanted = hotkey || DEFAULT_CONVERSATION_HOTKEY;
+    const result = await hotkeyManager.registerSlot(
+      "conversation",
+      wanted,
+      conversationHotkeyCallback,
+      { atomic: true }
+    );
+    windowManager.reconcileNativeKeyListeners();
+    if (result.success) {
+      environmentManager.saveConversationKey(wanted);
+      return { success: true, message: "" };
+    }
+    return { success: false, message: result.error || "" };
+  });
 
   ipcMain.handle("register-meeting-hotkey", async (_event, hotkey) => {
     if (hotkey) {
@@ -701,7 +779,7 @@ async function startApp() {
         .getSlotHotkeys("translation")
         .some(isGlobeLikeHotkey);
       if (agentUsesGlobe) {
-        windowManager.toggleAgentOverlay();
+        void windowManager.toggleAgentOverlay();
       }
       if (voiceAgentUsesGlobe) {
         windowManager.sendToggleVoiceAgent();
@@ -775,13 +853,16 @@ async function startApp() {
     globeKeyManager.on("right-modifier-down", async (modifier) => {
       // Check agent and voice agent slots for right-modifier
       if (hotkeyManager.slotHasHotkey("agent", modifier)) {
-        windowManager.toggleAgentOverlay();
+        void windowManager.toggleAgentOverlay();
       }
       if (hotkeyManager.slotHasHotkey("voiceAgent", modifier)) {
         windowManager.sendToggleVoiceAgent();
       }
       if (hotkeyManager.slotHasHotkey("translation", modifier)) {
         windowManager.sendToggleTranslation();
+      }
+      if (hotkeyManager.slotHasHotkey("conversation", modifier)) {
+        void windowManager.sendToggleConversation();
       }
 
       if (!hotkeyManager.slotHasHotkey("dictation", modifier)) return;
@@ -841,7 +922,7 @@ async function startApp() {
 
     const syncSuppressedMouseButtons = () => {
       const buttons = [];
-      for (const slotName of ["dictation", "agent", "voiceAgent", "translation"]) {
+      for (const slotName of ["dictation", "agent", "voiceAgent", "translation", "conversation"]) {
         for (const hotkey of hotkeyManager.getSlotHotkeys(slotName)) {
           if (isMouseButtonHotkey(hotkey)) buttons.push(hotkey);
         }
@@ -860,13 +941,16 @@ async function startApp() {
       if (!isMouseButtonHotkey(button)) return;
 
       if (hotkeyManager.slotHasHotkey("agent", button)) {
-        windowManager.toggleAgentOverlay();
+        void windowManager.toggleAgentOverlay();
       }
       if (hotkeyManager.slotHasHotkey("voiceAgent", button)) {
         windowManager.sendToggleVoiceAgent();
       }
       if (hotkeyManager.slotHasHotkey("translation", button)) {
         windowManager.sendToggleTranslation();
+      }
+      if (hotkeyManager.slotHasHotkey("conversation", button)) {
+        void windowManager.sendToggleConversation();
       }
 
       if (!hotkeyManager.slotHasHotkey("dictation", button)) return;
@@ -996,7 +1080,7 @@ async function startApp() {
       } else if (hotkeyManager.slotHasHotkey("translation", key)) {
         windowManager.sendToggleTranslation();
       } else if (hotkeyManager.slotHasHotkey("agent", key)) {
-        if (!hotkeyManager.isInListeningMode()) windowManager.toggleAgentOverlay();
+        if (!hotkeyManager.isInListeningMode()) void windowManager.toggleAgentOverlay();
       } else if (hotkeyManager.slotHasHotkey("meeting", key)) {
         if (!hotkeyManager.isInListeningMode()) meetingDetectionEngine?.startManualMeeting();
       }

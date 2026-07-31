@@ -1,5 +1,5 @@
 import type { TinfoilCatalogModel } from "../models/tinfoilModels";
-import type { ConversationEvent, SuggestionState } from "./conversationEvents";
+import type { ConversationCard, ConversationEvent, SuggestionState } from "./conversationEvents";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia";
 
@@ -59,6 +59,9 @@ export interface NoteItem {
   participants: string | null;
   diarization_enabled: number | null;
   expected_speaker_count: number | null;
+  // JSON topic snapshot written when a recording stops — the topic graph's
+  // source (see database.js: notes.conversation_topics).
+  conversation_topics: string | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
@@ -393,6 +396,7 @@ declare global {
       showDictationPanel: () => Promise<void>;
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
+      onToggleConversation?: (callback: () => void) => () => void;
       onToggleTranslation?: (callback: () => void) => () => void;
       onStartDictation?: (callback: () => void) => () => void;
       onStopDictation?: (callback: () => void) => () => void;
@@ -444,6 +448,10 @@ declare global {
       updateConversationSuggestionState?: (
         id: number,
         state: SuggestionState
+      ) => Promise<ConversationEvent | null>;
+      updateConversationEventMetadata?: (
+        id: number,
+        patch: Record<string, unknown>
       ) => Promise<ConversationEvent | null>;
       listConversationEvents?: (noteId: number) => Promise<ConversationEvent[]>;
 
@@ -863,24 +871,29 @@ declare global {
       stopWindowDrag: () => Promise<void>;
       setMainWindowInteractivity: (interactive: boolean) => Promise<void>;
       setNotificationInteractivity: (interactive: boolean) => Promise<void>;
+      hideFloatingOat?: () => Promise<{ success: boolean }>;
+      notifyFloatingOatPositionRestored?: (position: { x: number; y: number }) => void;
+      onFloatingOatPositionChanged?: (
+        callback: (position: { x: number; y: number }) => void
+      ) => () => void;
       setConversationAssistInteractivity?: (interactive: boolean) => Promise<void>;
-      showConversationAssist?: (data: {
-        eventId: number;
-        question: string;
+      setConversationCards?: (
+        cards: ConversationCard[]
+      ) => Promise<{ success: boolean; error?: string }>;
+      closeConversationCards?: () => Promise<{ success: boolean }>;
+      openConversationSearch?: (request: {
+        eventId: number | null;
         query: string;
         searchBaseUrl: string;
       }) => Promise<{ success: boolean; error?: string }>;
-      getConversationAssistData?: () => Promise<{
-        eventId: number;
-        question: string;
-        query: string;
-      } | null>;
-      conversationAssistReady?: () => Promise<{ success: boolean }>;
-      conversationAssistAction?: (
-        action: "open" | "dismiss" | "expire"
+      dismissConversationCard?: (
+        suggestionId: number | null
       ) => Promise<{ success: boolean; error?: string }>;
+      searchConversationCard?: (cardId: string) => Promise<{ success: boolean; error?: string }>;
+      getConversationAssistData?: () => Promise<ConversationCard[] | null>;
+      conversationAssistReady?: () => Promise<{ success: boolean }>;
       onConversationAssistData?: (
-        callback: (data: { eventId: number; question: string; query: string } | null) => void
+        callback: (cards: ConversationCard[] | null) => void
       ) => () => void;
 
       // App management
@@ -1083,7 +1096,11 @@ declare global {
       // Windows Push-to-Talk notifications
       notifyActivationModeChanged?: (mode: "tap" | "push") => void;
       notifyHotkeyChanged?: (hotkey: string) => void;
-      registerMeetingHotkey?: (hotkey: string) => Promise<{ success: boolean; message?: string }>;
+      registerMeetingHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
+      registerConversationHotkey?: (
+        hotkey: string
+      ) => Promise<{ success: boolean; message: string }>;
+      getConversationKey?: () => Promise<string>;
       notifyFloatingIconAutoHideChanged?: (enabled: boolean) => void;
       onFloatingIconAutoHideChanged?: (callback: (enabled: boolean) => void) => () => void;
       notifyStartMinimizedChanged?: (enabled: boolean) => void;
@@ -1122,6 +1139,7 @@ declare global {
       updateAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       updateVoiceAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getVoiceAgentKey?: () => Promise<string>;
+      updateDictationHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       updateTranslationHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getTranslationKey?: () => Promise<string>;
       getAgentKey?: () => Promise<string>;

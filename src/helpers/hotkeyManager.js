@@ -18,7 +18,13 @@ const DEFAULT_HOTKEY = "Control+Super";
 
 // Slots routed through GNOME native gsettings (not globalShortcut).
 // Temporary slots like "cancel" stay on globalShortcut.
-const GNOME_NATIVE_SLOTS = new Set(["agent", "meeting", "voiceAgent", "translation"]);
+const GNOME_NATIVE_SLOTS = new Set([
+  "agent",
+  "meeting",
+  "voiceAgent",
+  "translation",
+  "conversation",
+]);
 
 // KDE registration failure reasons — reuse existing i18n keys
 const KDE_FAILURE_REASONS = {
@@ -228,9 +234,26 @@ class HotkeyManager extends EventEmitter {
         this.gnomeManager.setVoiceAgentCallback(callback);
       } else if (slotName === "translation") {
         this.gnomeManager.setTranslationCallback(callback);
+      } else if (slotName === "conversation") {
+        this.gnomeManager.setConversationCallback(callback);
       }
 
-      const success = await this.gnomeManager.registerKeybinding(gnomeHotkey, slotName);
+      // Never let a keybinding problem propagate: registerSlot is called during
+      // startup, so an exception here (an unconfigured slot, a gsettings failure,
+      // a D-Bus hiccup) would stop the whole application from launching. A
+      // shortcut that does not bind is a degraded app; one that throws is no app.
+      let success = false;
+      try {
+        success = await this.gnomeManager.registerKeybinding(gnomeHotkey, slotName);
+      } catch (error) {
+        debugLogger.log(
+          `[HotkeyManager] GNOME keybinding registration threw for slot "${slotName}" ("${hotkey}"): ${error?.message || error}`
+        );
+        return {
+          success: false,
+          error: i18nMain.t("hotkey.errors.registrationFailed", { hotkey }),
+        };
+      }
       if (!success) {
         debugLogger.log(
           `[HotkeyManager] GNOME keybinding registration failed for slot "${slotName}" ("${hotkey}")`
@@ -1340,3 +1363,4 @@ module.exports.isGlobeLikeHotkey = isGlobeLikeHotkey;
 module.exports.isModifierOnlyHotkey = isModifierOnlyHotkey;
 module.exports.isRightSideModifier = isRightSideModifier;
 module.exports.isMouseButtonHotkey = isMouseButtonHotkey;
+module.exports.GNOME_NATIVE_SLOTS = GNOME_NATIVE_SLOTS;

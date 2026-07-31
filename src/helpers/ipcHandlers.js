@@ -2,6 +2,7 @@ const { ipcMain, app, shell, BrowserWindow, systemPreferences, net } = require("
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const { spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const debugLogger = require("./debugLogger");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
@@ -19,6 +20,9 @@ const AudioStorageManager = require("./audioStorage");
 
 // Tinfoil's only realtime STT model — fallback when the renderer omits one.
 const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
+// Question-card outcomes (DESIGN.md §4). Anything else the renderer sends is
+// coerced to `asked` rather than trusted into the always-on-top rail.
+const CONVERSATION_CARD_STATES = new Set(["asked", "answered", "uncertain", "silence", "denied"]);
 const liveSpeakerIdentifier = require("./liveSpeakerIdentifier");
 const MeetingEchoLeakDetector = require("./meetingEchoLeakDetector");
 const { partitionPendingMicFinals, isWithinRetractWindow } = require("./meetingMicHoldback");
@@ -705,6 +709,14 @@ class IPCHandlers {
       return { success: true };
     });
 
+    // Hiding the oat from the oat itself. It comes back from the tray menu or the
+    // dictation hotkey, both of which already exist — so this is a one-way door
+    // the user can always reopen, not a setting they have to go hunting for.
+    ipcMain.handle("hide-floating-oat", () => {
+      this.windowManager.hideDictationPanel();
+      return { success: true };
+    });
+
     ipcMain.handle("set-main-window-interactivity", (event, shouldCapture) => {
       this.windowManager.setMainWindowInteractivity(Boolean(shouldCapture));
       return { success: true };
@@ -720,38 +732,41 @@ class IPCHandlers {
       return { success: true };
     });
 
-    ipcMain.handle("conversation-assist-show", async (_event, data) => {
-      if (
-        !data ||
-        !Number.isInteger(data.eventId) ||
-        typeof data.question !== "string" ||
-        typeof data.query !== "string"
-      ) {
-        return { success: false, error: "Invalid conversation suggestion" };
+    // Replaces the whole rail's contents. The renderer owns card state for the
+    // duration of a recording and pushes the full list on every change, so the
+    // main process never has to reconcile a partial update against stale cards.
+    ipcMain.handle("conversation-cards-set", async (_event, cards) => {
+      if (!Array.isArray(cards)) {
+        return { success: false, error: "Invalid conversation cards" };
       }
-      try {
-        const { buildSearchUrl } = await import("./conversationAide.mjs");
-        buildSearchUrl(data.query, data.searchBaseUrl);
-      } catch (error) {
-        debugLogger.error("Conversation aide rejected search configuration", {
-          error: error.message,
-        });
-        return { success: false, error: error.message };
-      }
-      await this.windowManager.showConversationAssist(data, (expired) => {
-        try {
-          this.databaseManager.updateConversationSuggestionState(expired.eventId, "expired");
-        } catch (error) {
-          debugLogger.error("Conversation aide expiry persistence failed", {
-            error: error.message,
-          });
-        }
-      });
+      const sanitized = cards
+        .filter((card) => card && typeof card.id === "string" && typeof card.question === "string")
+        .map((card) => ({
+          id: card.id,
+          question: card.question,
+          state: CONVERSATION_CARD_STATES.has(card.state) ? card.state : "asked",
+          groupKey: typeof card.groupKey === "string" ? card.groupKey : card.id,
+          occurrence: Number.isInteger(card.occurrence) ? card.occurrence : 1,
+          searched: Boolean(card.searched),
+          suggestionId: Number.isInteger(card.suggestionId) ? card.suggestionId : null,
+          createdAt: Number.isFinite(card.createdAt) ? card.createdAt : Date.now(),
+          // Carried so the rail's own Search button can act without the overlay
+          // ever holding a URL: it sends a card id, and the main process builds
+          // and validates the URL exactly as the automatic path does.
+          query: typeof card.query === "string" ? card.query : null,
+          searchBaseUrl: typeof card.searchBaseUrl === "string" ? card.searchBaseUrl : null,
+        }));
+      await this.windowManager.showConversationCards(sanitized);
+      return { success: true };
+    });
+
+    ipcMain.handle("conversation-cards-close", () => {
+      this.windowManager.dismissConversationAssist();
       return { success: true };
     });
 
     ipcMain.handle("get-conversation-assist-data", () => {
-      return this.windowManager._pendingConversationAssistData;
+      return this.windowManager.getConversationCards();
     });
 
     ipcMain.handle("conversation-assist-ready", () => {
@@ -759,27 +774,95 @@ class IPCHandlers {
       return { success: true };
     });
 
-    ipcMain.handle("conversation-assist-action", async (_event, action) => {
-      if (!new Set(["open", "dismiss", "expire"]).has(action)) {
-        return { success: false, error: "Invalid conversation assist action" };
-      }
-      const data = this.windowManager._pendingConversationAssistData;
-      if (!data) return { success: false, error: "No active conversation suggestion" };
-      try {
-        if (action === "open") {
-          const { buildSearchUrl, validateSearchUrl } = await import("./conversationAide.mjs");
-          const url = buildSearchUrl(data.query, data.searchBaseUrl);
-          if (!validateSearchUrl(url, data.searchBaseUrl)) throw new Error("Unsafe search URL");
-          await shell.openExternal(url);
+    // Opens a search URL in its own browser window when we can work out which
+    // browser that is, falling back to the desktop's default handler. See
+    // browserWindowOpen.mjs for why a window beats a tab here.
+    const openSearchUrl = async (url) => {
+      if (process.platform === "linux") {
+        try {
+          const { newWindowCommand } = await import("./browserWindowOpen.mjs");
+          const probe = spawnSync("xdg-settings", ["get", "default-web-browser"], {
+            encoding: "utf8",
+            timeout: 500,
+          });
+          const entry = probe.status === 0 ? probe.stdout.trim() : "";
+          const resolved = newWindowCommand(entry, url);
+          if (resolved) {
+            const child = spawn(resolved.command, resolved.args, {
+              detached: true,
+              stdio: "ignore",
+            });
+            child.unref();
+            return;
+          }
+        } catch (error) {
+          debugLogger.warn("New-window browser launch failed", { error: error.message }, "search");
         }
-        this.databaseManager.updateConversationSuggestionState(
-          data.eventId,
-          action === "open" ? "opened" : action === "dismiss" ? "dismissed" : "expired"
-        );
-        this.windowManager.dismissConversationAssist();
+      }
+      // `activate: false` keeps the browser in the background on macOS so an
+      // automatic search never pulls focus out of a live conversation.
+      await shell.openExternal(url, { activate: false });
+    };
+
+    // The single outbound path for a question search — used by both the automatic
+    // open and any manual re-search. Every caller goes through the same host
+    // validation, so there is exactly one place the product can reach the network
+    // during a conversation.
+    ipcMain.handle("conversation-search-open", async (_event, request) => {
+      if (!request || typeof request.query !== "string" || !request.query.trim()) {
+        return { success: false, error: "Invalid search request" };
+      }
+      try {
+        const { buildSearchUrl, validateSearchUrl } = await import("./conversationAide.mjs");
+        const url = buildSearchUrl(request.query, request.searchBaseUrl);
+        if (!validateSearchUrl(url, request.searchBaseUrl)) throw new Error("Unsafe search URL");
+        // `activate: false` keeps the browser in the background on macOS so an
+        // automatic search never pulls focus out of a live conversation. Other
+        // platforms ignore the option and will raise the browser window.
+        await openSearchUrl(url);
+        if (Number.isInteger(request.eventId)) {
+          this.databaseManager.updateConversationSuggestionState(request.eventId, "opened");
+        }
         return { success: true };
       } catch (error) {
-        debugLogger.error("Conversation assist action failed", { action, error: error.message });
+        debugLogger.error("Conversation search failed", { error: error.message });
+        return { success: false, error: error.message };
+      }
+    });
+
+    // Manual search from a question card. Deliberately takes a card id rather
+    // than a URL or even a query: the always-on-top overlay is the least
+    // trustworthy window in the app, so it gets to name a card and nothing else.
+    ipcMain.handle("conversation-card-search", async (_event, cardId) => {
+      const card = this.windowManager.getConversationCards().find((item) => item.id === cardId);
+      // A card that has no verdict yet has no derived search query, but the user
+      // asking to search it is reason enough — the question itself is the query.
+      const query = card?.query || card?.question;
+      if (!card || !query) return { success: false, error: "Unknown conversation card" };
+      try {
+        const { buildSearchUrl, validateSearchUrl } = await import("./conversationAide.mjs");
+        const url = buildSearchUrl(query, card.searchBaseUrl || undefined);
+        if (!validateSearchUrl(url, card.searchBaseUrl || undefined)) {
+          throw new Error("Unsafe search URL");
+        }
+        await openSearchUrl(url);
+        if (Number.isInteger(card.suggestionId)) {
+          this.databaseManager.updateConversationSuggestionState(card.suggestionId, "opened");
+        }
+        return { success: true };
+      } catch (error) {
+        debugLogger.error("Conversation card search failed", { error: error.message });
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle("conversation-card-dismiss", (_event, suggestionId) => {
+      if (!Number.isInteger(suggestionId)) return { success: true };
+      try {
+        this.databaseManager.updateConversationSuggestionState(suggestionId, "dismissed");
+        return { success: true };
+      } catch (error) {
+        debugLogger.error("Conversation card dismiss failed", { error: error.message });
         return { success: false, error: error.message };
       }
     });
@@ -813,6 +896,10 @@ class IPCHandlers {
 
     ipcMain.handle("db-update-conversation-suggestion-state", (_event, id, state) => {
       return this.databaseManager.updateConversationSuggestionState(id, state);
+    });
+
+    ipcMain.handle("db-update-conversation-event-metadata", (_event, id, patch) => {
+      return this.databaseManager.updateConversationEventMetadata(id, patch);
     });
 
     ipcMain.handle("db-list-conversation-events", (_event, noteId) => {
@@ -6224,20 +6311,22 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("get-ydotool-status", () => {
+    ipcMain.handle("get-ydotool-status", async () => {
       const { getYdotoolStatus } = require("./ensureYdotool");
-      const { execFileSync } = require("child_process");
-      const status = getYdotoolStatus();
+      const { execFile } = require("child_process");
+      const { promisify } = require("util");
+      const execFileAsync = promisify(execFile);
+      const status = await getYdotoolStatus();
       const isKde = (process.env.XDG_CURRENT_DESKTOP || "").toLowerCase().includes("kde");
       let hasXclip = false;
       let hasXsel = false;
       if (isKde) {
         try {
-          execFileSync("which", ["xclip"], { timeout: 1000 });
+          await execFileAsync("which", ["xclip"], { timeout: 750 });
           hasXclip = true;
         } catch {}
         try {
-          execFileSync("which", ["xsel"], { timeout: 1000 });
+          await execFileAsync("which", ["xsel"], { timeout: 750 });
           hasXsel = true;
         } catch {}
       }
@@ -6389,6 +6478,42 @@ class IPCHandlers {
       };
     });
 
+    // Re-registers the dictation shortcut live.
+    //
+    // Before this existed there was no such handler at all: changing the key
+    // wrote localStorage and .env and sent `hotkey-changed`, which only resets
+    // push-to-talk state (main.js). The global shortcut itself was bound once at
+    // startup, so the setting appeared to change, silently did nothing, and only
+    // took effect after a restart — if the key could be registered at all.
+    ipcMain.handle("update-dictation-hotkey", async (_event, hotkey) => {
+      const hotkeyManager = this.windowManager.hotkeyManager;
+      const dictationCallback = hotkeyManager.hotkeyCallback;
+      if (!dictationCallback) {
+        return { success: false, message: "Dictation hotkey callback not initialized" };
+      }
+
+      if (!hotkey) {
+        hotkeyManager.unregisterSlot("dictation");
+        this.environmentManager.saveDictationKey?.("");
+        this.windowManager.reconcileNativeKeyListeners();
+        return { success: true, message: "Dictation hotkey cleared" };
+      }
+
+      const result = await hotkeyManager.registerSlot("dictation", hotkey, dictationCallback, {
+        atomic: true,
+      });
+      this.windowManager.reconcileNativeKeyListeners();
+      if (result.success) {
+        this.environmentManager.saveDictationKey?.(hotkey);
+        return { success: true, message: `Dictation hotkey updated to: ${hotkey}` };
+      }
+
+      return {
+        success: false,
+        message: result.error || `Failed to update dictation hotkey to: ${hotkey}`,
+      };
+    });
+
     ipcMain.handle("update-voice-agent-hotkey", async (_event, hotkey) => {
       const hotkeyManager = this.windowManager.hotkeyManager;
       const voiceAgentCallback = this.windowManager._voiceAgentHotkeyCallback;
@@ -6464,7 +6589,7 @@ class IPCHandlers {
     });
 
     ipcMain.handle("toggle-agent-overlay", async () => {
-      this.windowManager.toggleAgentOverlay();
+      void this.windowManager.toggleAgentOverlay();
       return { success: true };
     });
 

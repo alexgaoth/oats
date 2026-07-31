@@ -19,6 +19,10 @@ const SLOT_CONFIG = {
     path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-meeting/",
     name: "Oats Meeting",
   },
+  conversation: {
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-conversation/",
+    name: "Oats Conversation",
+  },
   voiceAgent: {
     path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-voice-agent/",
     name: "Oats Voice Agent",
@@ -92,6 +96,7 @@ class GnomeShortcutManager {
     this.dictationCallback = null;
     this.agentCallback = null;
     this.meetingCallback = null;
+    this.conversationCallback = null;
     this.voiceAgentCallback = null;
     this.translationCallback = null;
     // Track which slots have been registered in gsettings
@@ -129,6 +134,11 @@ class GnomeShortcutManager {
   setVoiceAgentCallback(callback) {
     this.voiceAgentCallback = callback;
     debugLogger.log("[GnomeShortcut] Voice agent callback registered");
+  }
+
+  setConversationCallback(callback) {
+    this.conversationCallback = callback;
+    debugLogger.log("[GnomeShortcut] Conversation callback registered");
   }
 
   setTranslationCallback(callback) {
@@ -170,6 +180,11 @@ class GnomeShortcutManager {
               this.meetingCallback();
             }
           },
+          ToggleConversation: () => {
+            if (this.conversationCallback) {
+              this.conversationCallback();
+            }
+          },
           ToggleVoiceAgent: () => {
             if (this.voiceAgentCallback) {
               this.voiceAgentCallback();
@@ -188,6 +203,7 @@ class GnomeShortcutManager {
             Toggle: ["", ""],
             ToggleAgent: ["", ""],
             ToggleMeeting: ["", ""],
+            ToggleConversation: ["", ""],
             ToggleVoiceAgent: ["", ""],
             ToggleTranslation: ["", ""],
           },
@@ -233,6 +249,7 @@ class GnomeShortcutManager {
       agent: "ToggleAgent",
       meeting: "ToggleMeeting",
       voiceAgent: "ToggleVoiceAgent",
+      conversation: "ToggleConversation",
       translation: "ToggleTranslation",
     };
     const dbusMethod = SLOT_DBUS_METHOD[slotName] || "Toggle";
@@ -501,3 +518,9 @@ class GnomeShortcutManager {
 }
 
 module.exports = GnomeShortcutManager;
+// Every slot GNOME can bind natively. Exported so the hotkey manager's
+// GNOME_NATIVE_SLOTS can be checked against it — a slot listed there but missing
+// here throws out of registerSlot and, because that runs during startup, stops
+// the whole app from launching.
+module.exports.knownSlots = () => Object.keys(SLOT_CONFIG);
+module.exports.slotConfig = () => ({ ...SLOT_CONFIG });

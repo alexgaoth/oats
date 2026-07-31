@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   showDictationPanel: () => ipcRenderer.invoke("show-dictation-panel"),
   onToggleDictation: registerListener("toggle-dictation", (callback) => () => callback()),
   onToggleVoiceAgent: registerListener("toggle-voice-agent", (callback) => () => callback()),
+  onToggleConversation: registerListener("toggle-conversation", (callback) => () => callback()),
   onToggleTranslation: registerListener("toggle-translation", (callback) => () => callback()),
   onStartDictation: registerListener("start-dictation", (callback) => () => callback()),
   onStopDictation: registerListener("stop-dictation", (callback) => () => callback()),
@@ -62,6 +63,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   insertConversationEvent: (input) => ipcRenderer.invoke("db-insert-conversation-event", input),
   updateConversationSuggestionState: (id, state) =>
     ipcRenderer.invoke("db-update-conversation-suggestion-state", id, state),
+  updateConversationEventMetadata: (id, patch) =>
+    ipcRenderer.invoke("db-update-conversation-event-metadata", id, patch),
   listConversationEvents: (noteId) => ipcRenderer.invoke("db-list-conversation-events", noteId),
 
   // Audio storage functions
@@ -355,10 +358,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-notification-interactivity", interactive),
   setConversationAssistInteractivity: (interactive) =>
     ipcRenderer.invoke("set-conversation-assist-interactivity", interactive),
-  showConversationAssist: (data) => ipcRenderer.invoke("conversation-assist-show", data),
+  setConversationCards: (cards) => ipcRenderer.invoke("conversation-cards-set", cards),
+  closeConversationCards: () => ipcRenderer.invoke("conversation-cards-close"),
+  openConversationSearch: (request) => ipcRenderer.invoke("conversation-search-open", request),
+  dismissConversationCard: (suggestionId) =>
+    ipcRenderer.invoke("conversation-card-dismiss", suggestionId),
+  searchConversationCard: (cardId) => ipcRenderer.invoke("conversation-card-search", cardId),
   getConversationAssistData: () => ipcRenderer.invoke("get-conversation-assist-data"),
   conversationAssistReady: () => ipcRenderer.invoke("conversation-assist-ready"),
-  conversationAssistAction: (action) => ipcRenderer.invoke("conversation-assist-action", action),
   onConversationAssistData: registerListener(
     "conversation-assist-data",
     (callback) => (_event, data) => callback(data)
@@ -637,6 +644,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   notifyActivationModeChanged: (mode) => ipcRenderer.send("activation-mode-changed", mode),
   notifyHotkeyChanged: (hotkey) => ipcRenderer.send("hotkey-changed", hotkey),
   registerMeetingHotkey: (hotkey) => ipcRenderer.invoke("register-meeting-hotkey", hotkey),
+  registerConversationHotkey: (hotkey) =>
+    ipcRenderer.invoke("register-conversation-hotkey", hotkey),
+  getConversationKey: () => ipcRenderer.invoke("get-conversation-key"),
 
   // Floating icon auto-hide
   notifyFloatingIconAutoHideChanged: (enabled) =>
@@ -650,6 +660,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   notifyPanelStartPositionChanged: (position) =>
     ipcRenderer.send("panel-start-position-changed", position),
 
+  // Floating oat: the spot the user dragged it to, and hiding it entirely
+  notifyFloatingOatPositionRestored: (position) =>
+    ipcRenderer.send("floating-oat-position-restored", position),
+  onFloatingOatPositionChanged: registerListener(
+    "floating-oat-position-changed",
+    (callback) => (_event, position) => callback(position)
+  ),
+  hideFloatingOat: () => ipcRenderer.invoke("hide-floating-oat"),
+
   // Start minimized
   notifyStartMinimizedChanged: (enabled) => ipcRenderer.send("start-minimized-changed", enabled),
 
@@ -659,6 +678,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Agent mode
   updateAgentHotkey: (hotkey) => ipcRenderer.invoke("update-agent-hotkey", hotkey),
+  updateDictationHotkey: (hotkey) => ipcRenderer.invoke("update-dictation-hotkey", hotkey),
   updateVoiceAgentHotkey: (hotkey) => ipcRenderer.invoke("update-voice-agent-hotkey", hotkey),
   getVoiceAgentKey: () => ipcRenderer.invoke("get-voice-agent-key"),
   updateTranslationHotkey: (hotkey) => ipcRenderer.invoke("update-translation-hotkey", hotkey),

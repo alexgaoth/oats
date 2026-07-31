@@ -14,6 +14,7 @@ const {
   AGENT_OVERLAY_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   CONVERSATION_ASSIST_WINDOW_CONFIG,
+  CONVERSATION_CARDS_MAX_HEIGHT_RATIO,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,
   WINDOW_SIZES,
@@ -27,8 +28,7 @@ class WindowManager {
     this.agentWindow = null;
     this.notificationWindow = null;
     this.conversationAssistWindow = null;
-    this._conversationAssistTimeout = null;
-    this._pendingConversationAssistData = null;
+    this._conversationCards = [];
     this._notificationTimeout = null;
     this.transcriptionPreviewWindow = null;
     this.updateNotificationWindow = null;
@@ -50,6 +50,8 @@ class WindowManager {
     this._floatingIconAutoHide = false;
     this._agentAnimationState = null;
     this._panelStartPosition = "bottom-right";
+    // Set once the user drags the oat; until then the corner preset wins.
+    this._floatingOatPosition = null;
     this._isDictatingToggle = false;
     this._pendingMeetingNoteNavigation = null;
 
@@ -62,11 +64,13 @@ class WindowManager {
   async createMainWindow() {
     const cursorPos = screen.getCursorScreenPoint();
     const display = screen.getDisplayNearestPoint(cursorPos);
-    const position = WindowPositionUtil.getMainWindowPosition(
+    const preset = WindowPositionUtil.getMainWindowPosition(
       display,
       null,
       this._panelStartPosition
     );
+    // A spot the user chose outranks the corner preset.
+    const position = { ...preset, ...(this._storedFloatingOatBounds(display, preset) || {}) };
 
     this.mainWindow = new BrowserWindow({
       ...MAIN_WINDOW_CONFIG,
@@ -476,6 +480,30 @@ class WindowManager {
     this._sendDictationToggle("toggle-dictation");
   }
 
+  /**
+   * Start or stop an in-person conversation from the global hotkey.
+   *
+   * Deliberately does not use `_sendDictationToggle`: that path targets the
+   * dictation overlay and surfaces it. A conversation must be able to start
+   * with nothing on screen at all — the tray mark is the only feedback, so
+   * pressing the key never interrupts the room.
+   */
+  async sendToggleConversation() {
+    if (this.hotkeyManager?.isInListeningMode?.()) return;
+    await this.createControlPanelWindow({ silent: true });
+    const win = this.controlPanelWindow;
+    if (!win || win.isDestroyed()) return;
+    const send = () => {
+      if (win.isDestroyed()) return;
+      win.webContents.send("toggle-conversation");
+    };
+    if (win.webContents.isLoading()) {
+      win.webContents.once("did-finish-load", send);
+    } else {
+      send();
+    }
+  }
+
   sendToggleVoiceAgent() {
     // The voice-agent hotkeys, unlike the dictation paths, don't capture the
     // target PID at their call sites, so capture here or the paste can't
@@ -556,6 +584,11 @@ class WindowManager {
     this._floatingIconAutoHide = Boolean(enabled);
   }
 
+  setFloatingOatPosition(position) {
+    if (!position || typeof position.x !== "number" || typeof position.y !== "number") return;
+    this._floatingOatPosition = { x: position.x, y: position.y };
+  }
+
   setPanelStartPosition(position) {
     this._panelStartPosition = position || "bottom-right";
     // Reposition the window immediately
@@ -611,7 +644,52 @@ class WindowManager {
   }
 
   async stopWindowDrag() {
-    return await this.dragManager.stopWindowDrag();
+    const result = await this.dragManager.stopWindowDrag();
+    this.saveFloatingOatPosition();
+    return result;
+  }
+
+  // Where the user put the oat is a decision, not a transient. Persisted as a
+  // fraction of the display's work area so it lands in the same visual spot on a
+  // different screen or after a resolution change, instead of off-screen.
+  saveFloatingOatPosition() {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+    try {
+      const bounds = this.mainWindow.getBounds();
+      const display = screen.getDisplayNearestPoint({
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height / 2,
+      });
+      const area = display.workArea || display.bounds;
+      const spanX = Math.max(1, area.width - bounds.width);
+      const spanY = Math.max(1, area.height - bounds.height);
+      this._floatingOatPosition = {
+        x: Math.min(1, Math.max(0, (bounds.x - area.x) / spanX)),
+        y: Math.min(1, Math.max(0, (bounds.y - area.y) / spanY)),
+      };
+      // Persisted by the renderer (localStorage), mirroring how the auto-hide
+      // preference round-trips. Keeps main-process state free of its own store.
+      if (this.mainWindow?.webContents) {
+        this.mainWindow.webContents.send(
+          "floating-oat-position-changed",
+          this._floatingOatPosition
+        );
+      }
+    } catch (error) {
+      debugLogger.error("Could not save floating oat position", { error: error.message });
+    }
+  }
+
+  // Returns the stored spot on a given display, or null when the user has never
+  // moved the oat — in which case the corner preset still wins.
+  _storedFloatingOatBounds(display, size) {
+    const stored = this._floatingOatPosition;
+    if (!stored || typeof stored.x !== "number" || typeof stored.y !== "number") return null;
+    const area = display.workArea || display.bounds;
+    return {
+      x: Math.round(area.x + stored.x * Math.max(0, area.width - size.width)),
+      y: Math.round(area.y + stored.y * Math.max(0, area.height - size.height)),
+    };
   }
 
   openExternalUrl(url, showError = true) {
@@ -625,8 +703,16 @@ class WindowManager {
     });
   }
 
-  async createControlPanelWindow() {
+  /**
+   * @param {{ silent?: boolean }} [options] `silent` creates the window
+   *   without ever showing or focusing it. The recorder lives in this
+   *   renderer, so starting a conversation from a global hotkey needs the
+   *   window to exist — but surfacing it would steal focus at exactly the
+   *   moment somebody started talking, which is the failure this avoids.
+   */
+  async createControlPanelWindow({ silent = false } = {}) {
     if (this.controlPanelWindow && !this.controlPanelWindow.isDestroyed()) {
+      if (silent) return;
       if (this.controlPanelWindow.isMinimized()) {
         this.controlPanelWindow.restore();
       }
@@ -669,6 +755,7 @@ class WindowManager {
     });
 
     const visibilityTimer = setTimeout(() => {
+      if (silent) return;
       if (!this.controlPanelWindow || this.controlPanelWindow.isDestroyed()) {
         return;
       }
@@ -685,6 +772,7 @@ class WindowManager {
 
     this.controlPanelWindow.once("ready-to-show", () => {
       clearVisibilityTimer();
+      if (silent) return;
       this.controlPanelWindow.show();
       this.controlPanelWindow.focus();
       dockManager.setControlPanelVisible(true);
@@ -775,7 +863,17 @@ class WindowManager {
     await this.loadWindowContent(this.agentWindow, false, true);
   }
 
-  toggleAgentOverlay() {
+  /**
+   * Created on demand rather than at launch.
+   *
+   * The agent overlay is a whole hidden renderer process, and it is not one of
+   * Oats' three surfaces — most sessions never open it. Building it eagerly on
+   * every start cost a process and a React bundle for nothing.
+   */
+  async toggleAgentOverlay() {
+    if (!this.agentWindow || this.agentWindow.isDestroyed()) {
+      await this.createAgentWindow();
+    }
     if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
 
     if (this.agentWindow.isVisible()) {
@@ -1074,12 +1172,16 @@ class WindowManager {
 
     if (currentDisplay.id === cursorDisplay.id) return;
 
-    const newPos = WindowPositionUtil.getMainWindowPosition(
+    const size = { width: currentBounds.width, height: currentBounds.height };
+    const preset = WindowPositionUtil.getMainWindowPosition(
       cursorDisplay,
-      { width: currentBounds.width, height: currentBounds.height },
+      size,
       this._panelStartPosition
     );
-    this.mainWindow.setBounds(newPos);
+    this.mainWindow.setBounds({
+      ...preset,
+      ...(this._storedFloatingOatBounds(cursorDisplay, size) || {}),
+    });
   }
 
   showDictationPanel(options = {}) {
@@ -1275,26 +1377,43 @@ class WindowManager {
     this.notificationWindow = null;
   }
 
-  async showConversationAssist(data, onExpire) {
-    this.dismissConversationAssist();
+  // The question-card rail. One window for the whole recording, holding the whole
+  // stack, rather than one window per card: cards now appear for *every* question
+  // asked, so a window per card would mean a swarm of always-on-top surfaces
+  // fighting over the same corner of the screen.
+  async showConversationCards(cards) {
+    this._conversationCards = Array.isArray(cards) ? cards : [];
+    if (!this.conversationAssistWindow || this.conversationAssistWindow.isDestroyed()) {
+      if (!this._conversationCards.length) return;
+      await this._createConversationCardsWindow();
+    }
+    this._pushConversationCards();
+  }
+
+  async _createConversationCardsWindow() {
     const display = screen.getPrimaryDisplay();
     const basePosition = WindowPositionUtil.getNotificationPosition(display);
+    const workArea = display.workArea || display.bounds;
+    const height = Math.min(
+      CONVERSATION_ASSIST_WINDOW_CONFIG.height,
+      Math.round(workArea.height * CONVERSATION_CARDS_MAX_HEIGHT_RATIO)
+    );
+    const bottom = workArea.y + workArea.height;
     const position = {
-      ...basePosition,
+      x: basePosition.x,
+      // Bottom-anchored: the rail grows upward from the corner, so a new card
+      // never shifts the ones already being read.
+      y: bottom - height - 16,
       width: CONVERSATION_ASSIST_WINDOW_CONFIG.width,
-      height: CONVERSATION_ASSIST_WINDOW_CONFIG.height,
-      y: basePosition.y + NOTIFICATION_WINDOW_CONFIG.height + 12,
+      height,
     };
     this.conversationAssistWindow = new BrowserWindow({
       ...CONVERSATION_ASSIST_WINDOW_CONFIG,
       ...position,
     });
     this.conversationAssistWindow.setContentProtection(true);
-    if (process.platform === "darwin") {
-      this.conversationAssistWindow.setIgnoreMouseEvents(true, { forward: true });
-    }
+    this.conversationAssistWindow.setIgnoreMouseEvents(true, { forward: true });
     WindowPositionUtil.setupAlwaysOnTop(this.conversationAssistWindow);
-    this._pendingConversationAssistData = data;
 
     if (process.env.NODE_ENV === "development") {
       await DevServerManager.waitForDevServer();
@@ -1307,28 +1426,31 @@ class WindowManager {
         query: { ...fileInfo.query, "conversation-assist": "true" },
       });
     }
-    this._conversationAssistTimeout = setTimeout(() => {
-      if (this._pendingConversationAssistData) onExpire?.(this._pendingConversationAssistData);
-      this.dismissConversationAssist();
-    }, 30000);
     this.conversationAssistWindow.on("closed", () => {
       this.conversationAssistWindow = null;
-      if (this._conversationAssistTimeout) clearTimeout(this._conversationAssistTimeout);
-      this._conversationAssistTimeout = null;
     });
   }
 
+  _pushConversationCards() {
+    const win = this.conversationAssistWindow;
+    if (!win || win.isDestroyed()) return;
+    win.webContents.send("conversation-assist-data", this._conversationCards);
+  }
+
+  // Called once the overlay has mounted, so the rail is never shown empty.
   showConversationAssistWindow() {
     const win = this.conversationAssistWindow;
     if (!win || win.isDestroyed()) return;
-    win.webContents.send("conversation-assist-data", this._pendingConversationAssistData);
+    this._pushConversationCards();
     win.showInactive();
   }
 
+  getConversationCards() {
+    return this._conversationCards;
+  }
+
   dismissConversationAssist() {
-    if (this._conversationAssistTimeout) clearTimeout(this._conversationAssistTimeout);
-    this._conversationAssistTimeout = null;
-    this._pendingConversationAssistData = null;
+    this._conversationCards = [];
     if (this.conversationAssistWindow && !this.conversationAssistWindow.isDestroyed()) {
       this.conversationAssistWindow.close();
     }
