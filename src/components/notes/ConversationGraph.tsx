@@ -19,7 +19,7 @@ import { buildSearchUrl, validateSearchUrl } from "../../helpers/conversationAid
 function stateBadgeClass(state: SuggestionState): string {
   switch (state) {
     case "opened":
-      return "border-b border-primary text-foreground";
+      return "border-b border-border text-foreground";
     case "dismissed":
       return "bg-foreground/8 text-foreground/40";
     case "expired":
@@ -204,7 +204,7 @@ function ConversationGraphNodeCard({
               <button
                 type="button"
                 onClick={() => node.suggestion && onSearch(node.suggestion)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-foreground px-2 py-1 text-[11px] font-medium text-foreground-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ExternalLink size={11} />
                 {t("notes.conversationGraph.search")}

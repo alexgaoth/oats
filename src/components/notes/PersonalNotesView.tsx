@@ -46,6 +46,8 @@ import ActionPicker from "./ActionPicker";
 import ActionManagerDialog from "./ActionManagerDialog";
 import AddNotesToFolderDialog from "./AddNotesToFolderDialog";
 import { useActionProcessing } from "../../hooks/useActionProcessing";
+import { initializeActions } from "../../stores/actionStore";
+import { runBackgroundAction } from "../../stores/actionProcessingStore";
 import {
   useSettingsStore,
   selectIsCloudNoteFormattingMode,
@@ -522,6 +524,7 @@ export default function PersonalNotesView({
   }, [meetingRecordingRequest, activeNoteId, notes, onMeetingRecordingRequestHandled]);
 
   const prevTranscribingRef = useRef(false);
+  const automaticallyProcessedNotesRef = useRef(new Set<number>());
 
   useEffect(() => {
     if (prevTranscribingRef.current && !isTranscribing) {
@@ -533,11 +536,59 @@ export default function PersonalNotesView({
           : realtimeTranscript;
 
       if (recordingNoteId && transcript) {
-        window.electronAPI.updateNote(recordingNoteId, { transcript });
+        void (async () => {
+          await window.electronAPI.updateNote(recordingNoteId, { transcript });
+
+          // Oats is automatic by default: a completed conversation becomes an
+          // titled intelligence record without asking the user to choose an action.
+          if (automaticallyProcessedNotesRef.current.has(recordingNoteId)) return;
+          automaticallyProcessedNotesRef.current.add(recordingNoteId);
+
+          const actions = await initializeActions();
+          const action = actions.find((candidate) => candidate.is_builtin) ?? actions[0];
+          if (!action) return;
+
+          const segments = parseTranscriptSegments(transcript);
+          const formattedTranscript =
+            segments.length > 0
+              ? segments
+                  .map(
+                    (segment) =>
+                      `${segment.source === "mic" ? t("notes.speaker.you") : t("notes.speaker.them")}: ${segment.text}`
+                  )
+                  .join("\n")
+              : transcript;
+          const note = notes.find((candidate) => candidate.id === recordingNoteId);
+          const noteContent = note?.content?.trim() ?? "";
+          const intelligenceInput = [
+            noteContent,
+            formattedTranscript ? `## Conversation Transcript\n${formattedTranscript}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+
+          runBackgroundAction(
+            recordingNoteId,
+            intelligenceInput,
+            makeContentHash(`${noteContent}\n${transcript}`),
+            action,
+            {
+              isCloudMode,
+              modelId: effectiveModelId,
+              isMeetingNote: true,
+              allowTitleGeneration: true,
+            },
+            {
+              noModel: "Configure Oats processing before recording a conversation.",
+              noEndpoint: "Configure the Oats API endpoint before recording a conversation.",
+              actionFailed: "Oats could not generate intelligence for this conversation.",
+            }
+          );
+        })();
       }
     }
     prevTranscribingRef.current = isTranscribing;
-  }, [isTranscribing, recordingNoteId]);
+  }, [effectiveModelId, isCloudMode, isTranscribing, notes, recordingNoteId, t]);
 
   useEffect(() => {
     if (!isTranscribing) return;
