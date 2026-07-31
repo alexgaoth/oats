@@ -1,10 +1,53 @@
-# OpenWhispr Technical Reference for AI Assistants
+# Oats Technical Reference for AI Assistants
 
-This document provides comprehensive technical details about the OpenWhispr project architecture for AI assistants working on the codebase.
+## Active product direction (2026-07-28)
+
+The current UI is still far too visually similar to OpenWhispr. This is a product-level concern, not polish debt. Future UI work must move decisively toward a distinct Oats visual language and information architecture; do not preserve or merely reskin inherited OpenWhispr layouts, component patterns, or product feel.
+
+The intended product has exactly three primary surfaces:
+
+1. **Conversation** — the default: record an in-person conversation with one deliberate action. Carries the listening pulse, the live question cards, and the collapsed open-thread stack. Online recording is not part of the primary UI.
+2. **Intelligence** — a high-signal list of important conversations. Opening one shows its titled summary, transcript, and an Obsidian-style force-directed **topic graph** of how the conversation moved (linear thread list as the fallback under four topics). A `Map` link switches to the **lifetime graph**: nodes are conversations, edges are shared subjects. Cross-conversation graphs are now in scope; entity linking is not.
+3. **Settings** — a fast, simple page. Present one processing choice (local Oats models or one API key) plus only essential microphone, language, privacy, shortcut, and auto-search controls. Do not expose separate model/provider configuration for each feature; everything else lives behind one non-default **Advanced** path.
+
+The product is aimed at **academics, hackers, and founders** — high-signal, intellectually intensive users, in their daily conversations. Favor calm, sparse information architecture, strong defaults, and a small number of deliberate choices over feature breadth or configuration flexibility.
+
+The standard is a **pencil: reliable and intuitive.** Reliable means it works with no network, no model, and no account, never loses a conversation, and fails loudly at the start rather than quietly at the end. Intuitive means nothing needs explaining — no tours, no tips, no modes to be in, nothing to remember between uses. The `oats-design` skill (`.claude/skills/oats-design/`) turns this into checkable rules and lists the review-blocking defects; load it for any UI, UX, motion, or copy work.
+
+After an in-person recording stops, Oats automatically generates the conversation title, summary, and threads. This is a core default, not a user-initiated "generate intelligence" step.
+
+### Question handling — five rules that override older code and comments
+
+The `conversationAide` implementation still reflects a narrower earlier design. When touching it, these win:
+
+1. **Every question gets a card, instantly.** Not only unanswered ones, and with no wait for an answer. Detection is local pattern matching (no model round-trip); the classifier verdict updates the _same_ card in place rather than creating a second one.
+2. **A confirmed negative → the search opens automatically**, in the background, without stealing focus. “Confirmed negative” means `denied_knowledge` above the confidence threshold — somebody was asked and said they did not know. Silence, hedges, low-confidence denials, and answers all just record their outcome on the card; nothing opens. One Settings toggle, default on.
+3. **Repeats and rephrasings are never suppressed.** `suggested`, `cooldownMs`, and `candidateDedupeMs` are being removed. Each asking gets its own card, nested visually under the first. Density is a rendering problem, never a reason to drop a detection.
+4. **The reply is read locally first; the model only refines it.** `assessResponseLocally()` classifies denial / hedge / backchannel / substantive answer by pattern, and that is the _primary_ verdict. The classifier may override it only when confident, and a failed or malformed classifier resolves the card locally rather than stranding it at `asked`. Do not reintroduce a design where a card's outcome depends on the model succeeding — the default classifier is a 1.5B local model and it frequently does not. The patterns are English-only; other languages degrade to `uncertain`, which shows the card but does not search.
+5. **Only the question is quoted.** `extractQuestionSentence()` pulls the interrogative sentence out of a longer turn before it reaches the card, the event, or the search query.
+
+Because of rule 2, **never write "nothing leaves your device"** in UI copy, docs, or comments. The accurate claim: audio and transcripts stay on the device; the text of questions nobody could answer is sent to the configured search host. See `docs/network-allowlist.md`.
+
+`DESIGN.md` is the binding visual spec (six signature surfaces: pulse, question card, open-thread stack, topic graph, lifetime graph, wheat field).
+
+### Linux input and clipboard — hard-won facts
+
+Re-deriving these costs hours, so they are recorded here:
+
+- The app **self-relaunches under XWayland** (`main.js` top of file, `--ozone-platform=x11`). So `clipboard.writeText` owns the **X11** selection while native Wayland apps read the **Wayland** one. Verify a clipboard write against the selection it was written to — `clipboard.readText()`, not `wl-paste` — and write **both** selections, since the paste target may read either.
+- `wl-copy` **never exits**: a Wayland clipboard offer is served by a live process. Spawn it detached with no inherited pipes, never under `spawnSync`, and keep exactly one alive (`_ownWaylandClipboard`).
+- `wl-paste` has been observed **hanging indefinitely**, even on `--list-types`. It sits on the paste hot path and must be behind a circuit breaker.
+- A freshly created `uinput` device is **not usable for ~200ms+** — udev, then libinput, then the compositor. Writes before that succeed at the kernel and are silently dropped, so the paste tool exits 0 while nothing was typed. `resources/linux-fast-paste.c` waits 300ms.
+- **Fn cannot be a hotkey on Linux.** Most keyboards handle it in firmware and never emit `KEY_FN`, and `hotkeyManager.js` rejects `Fn`/`GLOBE` outside macOS. Right-side modifiers (`RightAlt` and friends) are the working single-key equivalent.
+
+`IMPLEMENTATION.md` tracks build stages; `TODO.md` is the live tracker for what is
+outstanding. Stages 8–10 are built but not yet exercised against real speech.
+
+This document provides comprehensive technical details about the Oats architecture for AI assistants working on the codebase. The repository contains inherited OpenWhispr-compatible components, but they are not the product authority.
 
 ## Project Overview
 
-OpenWhispr is an Electron-based desktop dictation application that uses whisper.cpp for speech-to-text transcription. It supports both local (privacy-focused) and cloud (OpenAI API) processing modes.
+Oats is an Electron-based, local-first conversation intelligence application that uses whisper.cpp and Parakeet for transcription. Its primary experience is an in-person conversation recorder plus automatic local or BYOK intelligence.
 
 ## Architecture Overview
 
@@ -69,7 +112,7 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
 - **dragManager.js**: Window dragging functionality
 - **environment.js**: Environment variable and OpenAI API management
 - **hotkeyManager.js**: Global hotkey registration and management
-  - Named hotkey slots: `dictation`, `agent` (chat agent overlay), `voiceAgent` (dictation routed straight to the dictation agent), `meeting`
+  - Named hotkey slots: `conversation` (**the primary action** — starts/stops an in-person conversation from anywhere; the only slot with a shipped default, `CommandOrControl+Shift+O`, with a fallback if that is taken), `dictation`, `agent` (chat agent overlay), `voiceAgent` (dictation routed straight to the dictation agent), `meeting`, `translation`
   - Handles platform-specific defaults (GLOBE on macOS, Control+Super on Windows/Linux)
   - Auto-fallback to F8/F9 if default hotkey is unavailable
   - Notifies renderer via IPC when hotkey registration fails
@@ -134,12 +177,26 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
 ### React Components (src/components/)
 
 - **App.jsx**: Main dictation interface with recording states
-- **ControlPanel.tsx**: Settings, history, model management UI
-- **OnboardingFlow.tsx**: 8-step first-time setup wizard
+- **OnboardingFlow.tsx**: A single step — microphone permission. That is the only thing that genuinely blocks a first conversation; the dictation-shortcut and congratulations steps were removed (2026-07-30). `ControlPanel.tsx` was deleted in the same pass: its render had become unreachable above a bare `return <OatsWorkspace />`.
 - **PostMigrationOnboarding.tsx**: One-time modal for users returning from the pre-Gizmo bundle ID; reuses `PermissionsSection` to walk through re-granting Microphone, Accessibility, and System Audio. Triggered by `postMigrationDetector.js` (see Helper Modules)
 - **SettingsPage.tsx**: Comprehensive settings interface
 - **WhisperModelPicker.tsx**: Model selection and download UI
+- **OatsWorkspace.tsx**: The three-surface Oats workspace (Conversation, Intelligence, Settings) — the live product shell, mounted directly by `AppRouter.jsx`. It also hosts two **headless** mounts that were previously stranded in unreachable `ControlPanel` markup and so did nothing: `MeetingRecordingMount` (mic level, the dead-microphone warning, audio-worklet pre-warm) and `BackgroundActionToastListener` (surfaces post-recording intelligence failures). If either is unmounted, those failures go silent.
+- **conversation/**: The signature surfaces that live during recording (DESIGN.md §9)
+  - **ListeningPulse.tsx**: The breathing husked-oat seed (§9.1). Idle = static gold seed, paused = husk-grey, live = `oats-breathe` in `index.css`
+  - **OpenThreadStack.tsx**: Collapsed-by-default rail of unfinished threads (§9.3)
+  - **WheatField.tsx**: The oat field behind the Conversation surface (§9.8). This file is only the **chooser** — it probes WebGL2 once per session, rejects software rasterisers, and honours `prefers-reduced-motion`
+  - **wheatField/fieldModel.ts**: Pure, DOM-free, deterministic field data and wind math. Unit-tested in `test/helpers/wheatFieldModel.test.js`. **Both renderers read this**, so they cannot drift
+  - **wheatField/shaders.ts**: GLSL, with the wind constants interpolated from `fieldModel`'s `WIND` object rather than retyped — the shader and the JS cannot disagree about the wind
+  - **wheatField/WheatFieldGL.tsx**: WebGL2 renderer. One instanced draw per depth band, far to near; growth, wind, gusts and cursor-parting all happen in the vertex shader; §7's ordered dither in the fragment shader. No meshes, no downloaded assets
+  - **wheatField/WheatFieldCanvas.tsx**: 2D fallback drawing the same field, sparser and without dither (§7 forbids faking the grain, so it is omitted rather than counterfeited)
 - **ui/**: Reusable UI components (buttons, cards, inputs, etc.)
+
+**Editing the wheat field — three things that will bite you:**
+
+1. **Opacity accumulates.** The ~50% ceiling is on what reaches the screen, not on one blade. An early version at 7,200 blades and individually "safe" alpha stacked into an opaque wall that swallowed the copy. It is 1,800 now. Fewer and fainter when in doubt.
+2. **Blades must be spread vertically within their band**, or the six bands render as visible horizontal seams.
+3. **Nothing may call `getComputedStyle` in the draw loop.** Palette is read on mount and on theme change via `MutationObserver`. The old implementation read it every frame, forcing a style recalculation 30×/second for the length of a conversation.
 
 ### React Hooks (src/hooks/)
 
@@ -305,6 +362,19 @@ Settings stored in localStorage with these keys:
 - `hotkey`: Custom hotkey configuration
 - `hasCompletedOnboarding`: Onboarding completion flag
 - `customDictionary`: JSON array of words/phrases for improved transcription accuracy
+
+**Transcription scopes — the trap that broke recording.** Transcription is
+configured per scope: dictation (`useLocalWhisper`), meeting
+(`meetingUseLocalWhisper`), and upload (`uploadUseLocalWhisper`). **Recording a
+conversation — the primary action — reads the _meeting_ scope**, via
+`selectResolvedMeetingTranscription`. The visible Settings page has one
+processing choice, so it must write every scope; when it wrote only the
+dictation scope, "On this computer" appeared selected while recording still went
+to OpenAI and failed for want of an API key. All three default to local, because
+Oats bundles a Whisper model and promises to work offline with no account. There
+is also a legacy `meetingFollows*` migration in `settingsStore.ts` that copies
+dictation values into meeting fields for pre-existing installs — it does not run
+for fresh ones, which is why the defaults themselves have to be right.
 
 Secret env vars (12 total: 7 BYOK API keys + 5 enterprise cloud creds — see `SECRET_KEYS` in `environment.js`) are encrypted at rest via Electron `safeStorage` and stored as per-key files under `userData/secure-keys/`. They are loaded into `process.env` at startup by `EnvironmentManager.init()`. Renderer reads them via IPC (`get-*-key`) and writes via debounced IPC (`save-*-key`). On Linux without a keyring, secrets fall back to plaintext.
 

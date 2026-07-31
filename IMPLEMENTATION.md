@@ -1,6 +1,6 @@
 # Oats — Implementation Plan
 
-**Product:** Oats · **Company:** arum · **Status:** implementation complete; release proof pending host credentials/hardware · **Doc owner:** (you)
+**Product:** Oats · **Company:** arum · **Status:** Stages 0–6 landed; Stages 8–10 built and unit-tested but not yet exercised against real speech; Stage 7 release proof outstanding. `TODO.md` is the live tracker · **Doc owner:** (you)
 
 > This is the build plan for `oats-arum` — a fresh repository that realizes the
 > vision in `../oats/PRODUCT.md`. It is a working document; each stage has an
@@ -8,22 +8,89 @@
 
 ---
 
-## 0. Build status & handoff (updated 2026-07-25)
+## 0. Build status & handoff (updated 2026-07-28)
 
-Progress so far; everything through Stage 6 is committed and `verify:oats`-green.
-Stage 7 is partly done: the Fedora RPM pipeline is validated on a Fedora 44 host
-and blocked only by one missing system library (details below).
+### Product-direction update (2026-07-28)
 
-| Stage                     | Commit                                             | State                                                                                                                                                                                                    |
-| ------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 Bootstrap               | `3a798a0`                                          | ✅ done                                                                                                                                                                                                  |
-| 1 Import + green baseline | `8fd2b97`                                          | ✅ done (full manual conversation-aide smoke test still needs a human)                                                                                                                                   |
-| 2 Cut SaaS umbilical      | `dfc4808`                                          | ✅ done — accounts/sync/workspaces/referrals/usage/OpenWhispr-cloud gone; local + BYOK only. Trace in `docs/deletion-checklist.md`. Live network-trace confirmation deferred to Stage 7.                 |
-| 3 Rebrand → Oats/arum     | `b61f53d`                                          | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components.                            |
-| 4 Strip to scope          | `de4f92a`, `68ea388`, `d19f394` + current worktree | ✅ done — Corti and its secrets, IPC, streaming, registry, picker, routing, and tests are removed.                                                                                                       |
-| 5 Refurbish UI            | current worktree                                   | ✅ done — three-step local-first onboarding, oat listening pulse, quiet aide card, and outcome-encoded Graph surface.                                                                                    |
-| 6 Model bundling          | current worktree                                   | ✅ done — release builds download and bundle Whisper `base`; first run copies it into the local model cache before startup.                                                                              |
-| 7 Trust proof & packaging | `c04f158`, `71cde3d` + release host                | 🟨 in progress — RPM pipeline validated (blocked on `libxcrypt-compat`); SaaS `better-auth` residue pruned; packaging metadata added. macOS notarization, idle-CPU, and live network trace still need the target host. |
+The previous Stage 5 UI handoff is superseded by a deliberate product reset. Oats
+must not resemble OpenWhispr in visual language or information architecture.
+The primary control-panel experience is now exactly **Conversation**,
+**Intelligence**, and **Settings** (`src/components/OatsWorkspace.tsx`).
+
+- Conversation is microphone-only, in-person recording, and it carries the
+  listening pulse, the live question cards, and the collapsed open-thread stack.
+  Stopping it automatically saves the transcript and starts intelligence generation.
+- Intelligence is the only primary browsing surface: titled summary, transcript,
+  and the **topic graph** (Obsidian-style, force-directed), with the linear thread
+  list as the fallback for short conversations.
+- Settings shows only the essentials and puts everything else behind one
+  non-default **Advanced** path (DESIGN.md §13).
+
+Legacy notes, chat, dictation, online-recording, and detailed model controls are
+temporarily retained behind the implementation for compatibility. Do not restore
+them to primary navigation. Future work should migrate their persistence paths to
+the unified conversation pipeline and delete their old product surfaces.
+
+### Resolved conflicts (2026-07-28) — these override anything earlier in this file
+
+Three earlier decisions are reversed. Where any doc, gate, or comment still
+reflects the old behavior, the new behavior wins:
+
+1. **Every question gets a card, not only unanswered ones.** The aide previously
+   returned early on `isAnswered` (`conversationAide.mjs`) and waited
+   `silenceDelayMs` (8s) before showing anything. Both are wrong now: the card
+   appears on local detection with zero latency and resolves in place when the
+   verdict lands.
+2. **Uncertain and unanswered questions auto-open the search.** The previous
+   click-only boundary — stated in README, this file's Stage 2/7 gates,
+   `docs/network-allowlist.md`, and DESIGN.md §9 — is replaced by background
+   auto-open, default on, with one Settings toggle. The privacy claim narrows
+   accordingly and precisely: _audio and transcripts_ never leave the device;
+   _question text_ does, for unanswered questions only. Overstating this is now
+   the review-blocking failure, not the search itself.
+3. **Repetition is preserved, not deduplicated.** `suggested`, `cooldownMs`, and
+   `candidateDedupeMs` exist to suppress repeats. Repeats and rephrasings are
+   signal; each gets its own card, nested under the first. Density is solved by
+   stacking in the UI, never by dropping detections.
+
+### Where things actually stand
+
+Everything through Stage 6 is committed and `verify:oats`-green, **but the
+2026-07-28 workspace reset regressed Stage 5's design conformance** — see the
+Stage 5 row. Stage 7 is partly done. Stages 8–10 carry the features this document
+previously did not describe at all, and they are the bulk of the remaining work.
+
+| Stage                     | Commit                                             | State                                                                                                                                                                                    |
+| ------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 Bootstrap               | `3a798a0`                                          | ✅ done                                                                                                                                                                                  |
+| 1 Import + green baseline | `8fd2b97`                                          | ✅ done (full manual conversation-aide smoke test still needs a human)                                                                                                                   |
+| 2 Cut SaaS umbilical      | `dfc4808`                                          | ✅ done — accounts/sync/workspaces/referrals/usage/OpenWhispr-cloud gone; local + BYOK only. Trace in `docs/deletion-checklist.md`. Live network-trace confirmation deferred to Stage 7. |
+| 3 Rebrand → Oats/arum     | `b61f53d`                                          | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components.            |
+| 4 Strip to scope          | `de4f92a`, `68ea388`, `d19f394` + current worktree | ✅ done — Corti and its secrets, IPC, streaming, registry, picker, routing, and tests are removed.                                                                                       |
+| 5 Refurbish UI            | current worktree                                   | ✅ regression repaired in Stage 10 — the pulse, the oat seed, and the token-only styling are back on the reset workspace.                                                                |
+| 6 Model bundling          | current worktree                                   | ✅ done — release builds download and bundle Whisper `base`; first run copies it into the local model cache before startup. Confirmed present in the built RPM.                          |
+| 7 Trust proof & packaging | `c04f158`, `71cde3d` + release host                | 🟨 in progress — **RPM now builds** (see below). macOS notarization, idle-CPU, the live network trace, and the RPM install smoke test still need the target host.                        |
+| 8 Catch every question    | current worktree                                   | ✅ built — instant cards, per-asking cards, confirmed-negative auto-search, card rail, question extraction, local-first verdicts. 26 unit tests.                                         |
+| 9 Stack & topic graph     | current worktree                                   | ✅ built — topic tracker, open-thread stack, suggestions, topic graph, lifetime graph. 22 unit tests.                                                                                    |
+| 10 Sleek pass             | current worktree                                   | ✅ built — pulse, oat seed, wheat field, Settings essentials + Advanced, dictation hotkey.                                                                                               |
+| 11 Reliability            | current worktree                                   | ✅ built — dictation paste on Wayland/XWayland, transcript checkpointing, empty-recording and dead-mic reporting, undo, rename, cross-conversation search.                               |
+| Post-v1 iPhone            | —                                                  | ⬜ deferred by decision — see §8.                                                                                                                                                        |
+
+**What "built" means here, precisely:** the code is written, typed, linted,
+formatted, and green under `npm run verify:oats` and the full inherited suite,
+with unit tests over the pure logic. Dictation paste has been confirmed working on
+the Fedora host. What remains unproven is behaviour against **real speech** —
+question detection quality, the topic-shift thresholds behind the stack and the
+graphs, and suggestion relevance are all tuned against scripted utterances only.
+Do not record those as validated in a release.
+
+**Stage 7 — RPM built 2026-07-28.** `dist/Oats-1.7.6-linux-x86_64.rpm`, 455 MB,
+after `libxcrypt-compat-4.5.2-3.fc44` cleared the `fpm` blocker. Read-only
+inspection: `oats 1.7.6-1 x86_64`, MIT, `/opt/Oats/oats`, `oats.desktop`, correct
+runtime deps, and `resources/bin/whisper-models/ggml-base.bin` present — Stage 6's
+offline first run genuinely ships. That build predates Stages 8–10; rebuild before
+using it as release evidence. Installing it and launching the GUI is left to a
+human.
 
 **Stage 4 — completed in the current worktree:** MCP/CLI bridges, Windows native
 `.c` helpers + their download/compile chains, URL/YouTube import (yt-dlp), Google
@@ -52,12 +119,14 @@ models are installed.
   electron download, app packaging into `dist/linux-unpacked/`, `afterPack`
   binary stripping/verification, and `fpm` download all succeed, and the `fpm`
   command is correctly formed (maps the app to `/opt/Oats`, installs
-  `oats.desktop` + icon, declares the right runtime deps). The build stops at the
+  `oats.desktop` + icon, declares the right runtime deps). The build stopped at the
   **final `fpm` invocation only** because electron-builder's bundled Ruby needs
   **`libcrypt.so.1`**, which Fedora 44 does not ship by default (it moved to
-  `libcrypt.so.2`). Fix: `sudo dnf install libxcrypt-compat`, then re-run
-  `npm run build:linux:rpm` — no code change required. (Bundling the default
-  Whisper model, `ggml-base.bin`, was fetched and staged for this build.)
+  `libcrypt.so.2`). (Bundling the default Whisper model, `ggml-base.bin`, was
+  fetched and staged for this build.)
+  **Update 2026-07-28:** `libxcrypt-compat-4.5.2-3.fc44` is now installed on this
+  host, so the blocker is cleared — but `npm run build:linux:rpm` has not been
+  re-run and `dist/` contains no `.rpm`. Re-running it is the next concrete step.
 - **`better-auth` / `@better-auth/sso` pruned** from `node_modules` — they were
   orphaned since Stage 2 removed them from `package.json` but were still being
   packaged. `package-lock.json` updated with Node 24.
@@ -65,12 +134,17 @@ models are installed.
   these were missing after the rebrand and are required by rpm/deb.
 
 **Still needs the target host / a human (cannot be truthfully done in this
-sandbox):** `sudo dnf install libxcrypt-compat` + the final RPM smoke test;
-**Apple notarization** (needs a Mac + Developer ID); the **live network trace**
-(needs a running packaged app + a capture tool, ideally root for `tcpdump`); and
-**idle/active CPU-memory measurement** (needs launching the GUI in a real
-session). Follow `docs/network-allowlist.md` and record the evidence with the
-release.
+sandbox):** the RPM install + smoke test; **Apple notarization**
+(needs a Mac + Developer ID); the **live network trace** (needs a running packaged
+app + a capture tool, ideally root for `tcpdump`) — and it must now cover the
+auto-search case described in `docs/network-allowlist.md`; and **idle/active
+CPU-memory measurement** (needs launching the GUI in a real session). Record the
+evidence with the release.
+
+**Can this document be deleted?** Not yet. Stage 7 has four unfinished items above,
+Stage 5 has regressed, and Stages 8–10 are unbuilt. Delete it when every stage row
+is ✅ and the release evidence is filed — at that point the README status section
+carries everything a reader needs.
 
 ---
 
@@ -92,14 +166,15 @@ touch_ — or it goes.
 
 | Decision           | Choice                                                                                                                                                                             |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Platforms (v1)** | macOS Apple Silicon (DMG) + Fedora 44 GNOME/Wayland (RPM). Windows native helpers cut.                                                                                             |
+| **Platforms (v1)** | macOS Apple Silicon (DMG) + Fedora 44 GNOME/Wayland (RPM). Windows native helpers cut. **iPhone is a post-v1 goal**, scoped in §8 — not a port.                                    |
 | **Scope**          | Core loop **+** local agent chat & local note tools. Cut cloud sync, workspaces/teams, MCP/CLI bridges, Google Calendar.                                                           |
 | **BYOK**           | Keep bring-your-own-key cloud escape hatches (OpenAI, Anthropic, Gemini, Groq, Mistral, Tinfoil). Cut only OpenWhispr's _own_ cloud (`api`/`auth.openwhispr.com`) + usage/billing. |
 
-The **core loop** (never cut): one-hotkey local listening session → on-device
-real-time transcription → unanswered-question detection → small dismissible
-click-to-search card → note + **Graph** view of the conversation. Plus local
-dictation into any app. See PRODUCT.md §59.
+The **core loop** (never cut): one-action local listening session → on-device
+real-time transcription → **every** question caught the instant it is asked →
+an instant card that resolves in place, auto-opening a background search when
+nobody answered → a live open-thread stack → note + **topic graph** of how the
+conversation moved.
 
 ### Design authority — `DESIGN.md`
 
@@ -113,8 +188,13 @@ is a **gate**, not a polish pass:
 - **The oat palette replaces OpenWhispr's blue/violet** at the token level in
   Stage 3 — the reskin is a token swap, not a per-component edit.
 - **Reskin, don't rebuild** (shadcn/Tailwind v4) — mirrors Stage 5.
-- **The three signature surfaces** — the listening pulse, the aide card, and the
-  Graph view (DESIGN.md §9) — are held to spec exactly; they _are_ the brand.
+- **The four signature surfaces** — the listening pulse, the question card, the
+  open-thread stack, and the topic graph (DESIGN.md §9) — are held to spec
+  exactly; they _are_ the brand.
+- **The sleekness budget and the Settings rule** (DESIGN.md §1, §13) are gates,
+  not taste: one heading, one primary action, one content region per surface; the
+  visible Settings page carries only the essentials, everything else behind one
+  non-default Advanced entry.
 - **Both `prefers-color-scheme` modes and `prefers-reduced-motion`** are verified
   at every UI step; neither mode is an afterthought.
 - **Dither is seasoning** (DESIGN.md §7): allowed only in the sanctioned moments,
@@ -299,22 +379,22 @@ stage.** Reskin against the Stage-3 tokens — do not rebuild (Tailwind v4 + sha
 - **3-step onboarding:** drag→Applications (implicit) → allow microphone →
   (macOS) allow accessibility → talk. Remove the auth/email/workspace steps. Use the
   dithered oat-field hero + quiet mono copy from DESIGN.md §9 (empty/hero states).
-- **Build the three signature surfaces to spec (DESIGN.md §9):**
-  - **Listening pulse** — breathing dithered gold seed; never a red REC dot/banner.
-  - **Aide card** — `surface-raised`, 14px, question in mono, single gold action,
-    non-modal, quiet auto-expire; nothing leaves the device until the click.
-  - **Graph view** — elevated as _the_ signature surface; nodes colored **and
-    dithered by outcome** per DESIGN.md §4 (density encodes uncertainty).
-- **Collapse settings to essentials:** transcription model, aide toggle + classifier
-  model, hotkey, optional BYOK keys. Remove enterprise/team/referral/integration panels.
+- **Build the signature surfaces to spec (DESIGN.md §9):** the listening pulse and
+  the question card. (The open-thread stack and topic graph are Stage 9; the
+  card's instant/auto-open behavior is Stage 8. This stage's job is the visual
+  foundation they all sit on.)
+- **Collapse settings to essentials** and remove enterprise/team/referral/integration
+  panels. The essentials list and the Advanced rule are finalized in Stage 10.
 - Apply the oat identity via tokens only (palette, mono/sans scale, spacing, motion);
   ship the 8×8 Bayer mask + `.dither` utility and the pulse canvas component (§13).
 
-**Gate:** onboarding is ≤3 real steps and needs no account; Graph view is reachable
-in one click from a recorded note; settings fits the "10-second non-event" claim;
-**design conformance passes** — both color modes and reduced-motion verified, no raw
-color/motion literals in components, dither confined to sanctioned surfaces (§7),
-and the three signature surfaces match DESIGN.md §9.
+**Gate:** onboarding is ≤3 real steps and needs no account; conversation structure
+is reachable in one click from a recorded note; **design conformance passes** —
+both color modes and reduced-motion verified, no raw color/motion literals in
+components, dither confined to sanctioned surfaces (§7).
+
+> **Status: regressed.** The 2026-07-28 workspace reset kept the tokens but
+> dropped the surfaces (see §0). Re-satisfying this gate is Stage 10's first task.
 
 ### Stage 6 — Model bundling & first-run
 
@@ -336,12 +416,118 @@ question-card→Graph flow completes with no clicks beyond permissions.
 - **Notarize** the macOS DMG (Apple Developer ID); staple.
 - Build + smoke-test the **Fedora 44 RPM** (GNOME/Wayland).
 - **Measure idle CPU/memory** of the always-listening detector; confirm it's cheap when idle.
-- **Network-trace a full session** end to end; update `docs/network-allowlist.md` to
-  the Oats reality (only explicit-click Google search + user-added keys + model downloads leave the device).
+- **Network-trace a full session** end to end and confirm it matches
+  `docs/network-allowlist.md`: the only in-conversation connection is one search
+  per unanswered question, carrying the question text and nothing else. Run the
+  auto-search-off case too and confirm zero connections.
 - Decide auto-update: arum feed vs. manual releases for v1.
 
 **Gate:** signed/notarized DMG + working RPM; published network allowlist matches the
-observed trace; idle-CPU number recorded in the README status section.
+observed trace, including the auto-search case; idle-CPU number recorded in the
+README status section.
+
+**Outstanding as of 2026-07-28:** RPM build + smoke test (unblocked, not run);
+notarization; the trace; the CPU measurement.
+
+### Stage 8 — Catch every question
+
+**Goal:** the differentiator. Zero-latency coverage of every question asked, and
+help that is already waiting when nobody could answer. Spec: DESIGN.md §9.2.
+
+1. **Split detection from judgement in `conversationAide.mjs`.** `isQuestionCandidate`
+   already runs locally with no model — promote it to an immediate `question_detected`
+   emission that shows a card in the `Asked` state. The classifier keeps running on
+   its own schedule and only ever _updates_ an existing card.
+2. **Remove the answered early-return.** `if (!assessment.isFactualQuestion) return;`
+   stays; the `assessment.isAnswered` suppression goes. Answered questions persist
+   as records.
+3. **Remove the suppression trio** — `this.suggested`, `cooldownMs`,
+   `candidateDedupeMs`. Replace with a **grouping key** so repeats and rephrasings
+   nest visually instead of vanishing. Grouping is a rendering concern; every
+   detection is still persisted.
+4. **Retraction has to work on live cards.** `onRetracted` currently unstages a
+   candidate; it must now also withdraw a card already on screen, since cards
+   appear before the transcript settles.
+5. **Auto-open**, background, non-focus-stealing, via the existing host-validated
+   `buildSearchUrl`/`validateSearchUrl` path. One Settings toggle, default on.
+   Never fires for `Answered`.
+6. **Event schema:** add a card-state field so a card's lifecycle (`asked` →
+   outcome → `searched`) is reconstructable from persisted events alone.
+
+**Gate:** the README manual question-card test passes end to end, including the
+answered case producing no browser; card appears within one transcript-finalization
+beat of the question; three phrasings of the same question produce three nested
+cards; auto-search off produces zero connections in a capture.
+
+### Stage 9 — The stack and the topic graph
+
+**Goal:** the two Intelligence/recording widgets. **This stage is blocked on a data
+model that does not exist yet** — persisted events are only `question`, `response`,
+and `search_suggestion`. There is no topic entity, no topic-shift detection, and no
+open/closed thread state. Build the data first; the UI is the easy half.
+
+1. **Topic & thread model.** Add topic and thread events, a topic-shift detector
+   over finalized utterances (local, cheap — it runs during recording), and
+   open/resolved/dropped state transitions. Persist transitions, not just topics:
+   the graph's edges _are_ the transitions, and the return-to-a-thread back-edge is
+   the most valuable mark on the canvas.
+2. **Open-thread stack** (DESIGN.md §9.3) on the Conversation surface: collapsed
+   rail by default, expands in place, auto-collapses on speech, no task semantics.
+3. **Topic graph** (DESIGN.md §9.4) in Intelligence: force-directed canvas, nodes
+   sized by time spent, dither-encoded state, capped simulation that comes to rest,
+   persisted per-conversation layout, node → questions side panel with re-search.
+4. **Keep the linear thread list** as the under-four-topics fallback and the
+   accessible equivalent view.
+
+**Gate:** a recorded conversation that wanders across four or more topics and
+returns to one produces a graph showing the return edge; the stack lists the
+threads that were dropped and nothing else; the graph simulation reaches rest and
+the process goes idle (verify with a CPU sample while the view is open);
+`prefers-reduced-motion` renders the solved layout without animating.
+
+### Stage 10 — The sleek pass
+
+**Goal:** close the gap between DESIGN.md and what actually renders.
+
+1. **Restore Stage 5 conformance** in `OatsWorkspace.tsx`: husked-oat seed instead
+   of `Sparkles`, the breathing pulse while recording (wire `oats-breathe`, which
+   currently has no consumer), warm empty states, motion tokens on view swaps.
+2. **Settings essentials** (DESIGN.md §13): processing choice, microphone, language,
+   hotkey, auto-search toggle, data controls. That is the whole visible page.
+3. **One `Advanced` entry** at the bottom holding per-feature models, providers,
+   endpoints, classifier tuning, diagnostics, and legacy configuration — never
+   expanded by default, never linked from onboarding or an error.
+4. **Retire `SettingsPage.tsx`** (2,969 lines) into that Advanced path rather than
+   leaving two settings implementations alive.
+5. **Apply the sleekness budget** (DESIGN.md §1) to all three surfaces.
+6. **The wheat field** (DESIGN.md §9.8), in `src/components/conversation/wheatField/`.
+   Rebuilt as pseudo-2D on the GPU after a measurement gate, which is the reason
+   §9.8's original "2D canvas, no WebGL" rule was amended rather than ignored:
+
+   - **The gate.** `main.js` appends `--disable-gpu-compositing` on all of Linux
+     and relaunches under XWayland, so WebGL was not safe to assume. Probed
+     inside a window configured like `CONTROL_PANEL_CONFIG`: WebGL reports
+     `enabled_readback` on real hardware (`ANGLE (Intel ARL)`), **not**
+     SwiftShader. 20k instances at 2400×1470 held 18.5ms against a 16.7ms
+     bare-rAF baseline, with ~0ms blocking cost on the main thread. Software
+     compositing readback therefore costs roughly 1.8ms/frame at 2x DPR.
+   - **Why GPU at all.** Not perspective — the field is a background whose camera
+     can never move. It is that instancing affords real density, and that the
+     fragment shader is the only place §7's animated ordered dither is
+     affordable. This is the first animated grain anywhere in the product.
+   - **Verification.** `test/helpers/wheatFieldModel.test.js` covers the pure
+     model (determinism, band coverage, the prefix-is-a-uniform-subsample
+     property that adaptive density depends on, growth monotonicity, gust
+     bounds, the §9.8 alpha ceiling). Rendering itself was checked by
+     screenshotting the real component in Electron in both colour modes and
+     through the growth intro — the seam and snap defects it caught would not
+     have shown up in any unit test.
+   - **Not yet verified:** Apple Silicon, and a human watching the gust cadence
+     for a full conversation.
+
+**Gate:** design conformance passes per §5 below; the visible Settings page fits on
+one screen without scrolling at 1280×800; no raw color/motion literals; both modes
+and reduced-motion verified on all four signature surfaces.
 
 ---
 
@@ -356,14 +542,23 @@ npm run verify:oats      # setup + oats tests + format + lint + tsc + renderer b
 npm run verify:all       # + inherited electron suite (before sharing)
 ```
 
-Privacy-specific gates (Stages 2 & 7): a repo grep for OpenWhispr hosts/auth, and a
-live network capture (e.g. `mitmproxy` / Little Snitch / `ss -tp`) over a full session.
+Privacy-specific gates (Stages 2, 7 & 8): a repo grep for OpenWhispr hosts/auth,
+and a live network capture (e.g. `mitmproxy` / Little Snitch / `ss -tp`) over a
+full session. From Stage 8 the capture must show **exactly one** search per
+unanswered question and nothing per answered question, and zero connections with
+auto-search off.
 
-Design-conformance gate (Stages 3 & 5, per `DESIGN.md`): every color/motion/radius
-value resolves to an `@theme` token — no raw literals in components; both Oat-milk
-and Steel-cut modes and `prefers-reduced-motion` render correctly; dither appears
-only in sanctioned surfaces (§7) and never behind text; the listening pulse, aide
-card, and Graph view match DESIGN.md §9; text contrast meets §12.
+Claim-accuracy gate (Stages 8 & 10): no user-facing string, doc, or marketing line
+may say "nothing leaves your device" while auto-search is on. Grep for absolute
+privacy phrasing before every release; the correct claim is that _audio and
+transcripts_ stay local and _question text_ is searched.
+
+Design-conformance gate (Stages 3, 5, 9 & 10, per `DESIGN.md`): every color, motion,
+and radius value resolves to an `@theme` token — no raw literals in components; both
+Oat-milk and Steel-cut modes and `prefers-reduced-motion` render correctly; dither
+appears only in sanctioned surfaces (§7) and never behind text; the four signature
+surfaces match DESIGN.md §9; animation touches only `transform`/`opacity` per §8;
+text contrast meets §12.
 
 ---
 
@@ -374,13 +569,27 @@ card, and Graph view match DESIGN.md §9; text contrast meets §12.
   before deleting, and lean on the green baseline (Stage 1) to bisect breakage.
 - **Local reasoning ↔ enterprise coupling.** `ReasoningService.ts` (34KB) serves both
   the local path (keep) and enterprise chat (cut). Separate carefully; don't drop local.
-- **BYOK vs. "nothing leaves the device."** Keeping BYOK means the network allowlist is
-  non-empty by design. Messaging must be exact: local by default, cloud only on an
-  explicit user-added key.
+- **BYOK and auto-search vs. absolute privacy claims.** The allowlist is non-empty
+  by design, and since the 2026-07-28 decision it is non-empty _by default_.
+  Messaging must be exact and repeated everywhere: audio and transcripts are local,
+  question text is searched, cloud models only on an explicit user-added key.
+- **Auto-search is a real-world exposure, not just a doc problem.** A question can
+  contain a name, a company, or an unannounced number, and it will land in someone's
+  browser history and in Google's logs. Mitigations already specified: question text
+  only, unanswered only, one visible toggle, and the `searched · google` marking on
+  the card. Watch for whether that is enough once it is used in real meetings — the
+  fallback is making it opt-in during onboarding rather than silently default-on.
+- **Instant cards vs. transcript instability.** Cards now appear before the
+  transcript settles, so a retracted segment can leave an orphaned card on screen
+  (Stage 8.4). This is the most likely source of visible flicker in the product.
+- **Topic detection quality gates two whole surfaces.** Both the stack and the graph
+  are only as good as the topic-shift detector; a bad one makes the graph look like
+  noise and the stack nag about threads that were never real. Prototype the detector
+  against recorded conversations before building either UI.
 - **Diarization / URL-import / Corti** are unresolved keep/cut calls parked in Stage 4.
 - **Auto-update feed** ownership (arum GitHub org, signing certs) — parked to Stage 7.
-- **DMG size** — heavy inherited deps are _not_ an immediate optimization target
-  (README §40), but bundling a default model + full engine may push size; revisit post-v1.
+- **DMG size** — heavy inherited deps are _not_ an immediate optimization target,
+  but bundling a default model + full engine may push size; revisit post-v1.
 
 ---
 
@@ -392,10 +601,39 @@ Stage 1  Import + baseline ─────► verify:oats GREEN (reference point
 Stage 2  Cut SaaS umbilical ⭐ ─► zero OpenWhispr-host traffic
 Stage 3  Rebrand → Oats/arum ──► no OpenWhispr identity (except credit)
 Stage 4  Strip to scope ───────► core loop + local chat only
-Stage 5  Refurbish UI ─────────► ≤3-step onboarding, Graph elevated
+Stage 5  Refurbish UI ─────────► ≤3-step onboarding (regressed by the reset)
 Stage 6  Bundle + first-run ───► offline zero-click first conversation
 Stage 7  Trust proof + package ► notarized DMG + RPM + published trace
+Stage 8  Catch every question ⭐► instant cards, no suppression, auto-search
+Stage 9  Stack + topic graph ──► topic data model, then the two widgets
+Stage 10 Sleek pass ───────────► DESIGN conformance + Settings essentials/Advanced
 ```
 
-The moat is subtraction done rigorously: trivial setup, genuinely local, provably
-private. Stages 2 and 7 are where that moat is actually earned.
+Stages 0–7 earn the right to exist: trivial setup, genuinely local, provably
+private. Stages 8–10 are the reason anyone would choose Oats over a recorder —
+catching what was asked, remembering what was left open, and showing where the
+conversation actually went.
+
+---
+
+## 8. Post-v1: iPhone
+
+iPhone is a goal, not a port. The desktop application is Electron with local
+whisper.cpp, a Qdrant sidecar, and better-sqlite3 — none of which run on iOS — so
+"Oats on iPhone" means a **second implementation**, which is exactly the cost that
+ruled out the Muesli path for Fedora.
+
+Two shapes, to be decided with real usage rather than now:
+
+- **Companion (favored).** iPhone captures audio and shows finished intelligence;
+  a paired Mac does transcription and reasoning. Keeps one intelligence
+  implementation, keeps processing local to hardware the user owns, and makes the
+  phone a microphone and a reading surface — which is what an in-person
+  conversation actually needs. Cost: a pairing/transport layer that does not exist,
+  and a new privacy boundary to specify and prove.
+- **Standalone.** On-device speech and reasoning via Core ML / Apple's on-device
+  models. No pairing, works alone, but it is a full second stack and a second set
+  of model-bundling and release problems.
+
+Not started, deliberately. Revisit once macOS and Fedora are shipped and Stages
+8–10 have been used in real conversations.

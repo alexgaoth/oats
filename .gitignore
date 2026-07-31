@@ -186,3 +186,4 @@ src/assets/Assets.car
 
 # electron-builder tool cache
 .eb-cache/
+.iterate/
