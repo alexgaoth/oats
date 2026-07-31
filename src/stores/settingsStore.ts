@@ -450,8 +450,11 @@ export interface SettingsState
   conversationAideModel: string;
   conversationAideConfidence: number;
   conversationAideSilenceSeconds: number;
-  conversationAideCooldownSeconds: number;
   conversationAideSearchBaseUrl: string;
+  conversationAutoSearchEnabled: boolean;
+  // The last hotkey the platform refused, with its reason. Cleared on the next
+  // successful registration. Read by Settings to explain a field that reverted.
+  hotkeyRejection: { key: string; hotkey: string; message: string } | null;
 
   uploadTranscriptionMode: InferenceMode;
   uploadUseLocalWhisper: boolean;
@@ -532,8 +535,8 @@ export interface SettingsState
   setConversationAideModel: (value: string) => void;
   setConversationAideConfidence: (value: number) => void;
   setConversationAideSilenceSeconds: (value: number) => void;
-  setConversationAideCooldownSeconds: (value: number) => void;
   setConversationAideSearchBaseUrl: (value: string) => void;
+  setConversationAutoSearchEnabled: (value: boolean) => void;
 
   setUploadTranscriptionMode: (mode: InferenceMode) => void;
   setUploadUseLocalWhisper: (value: boolean) => void;
@@ -638,8 +641,10 @@ export interface SettingsState
   setVertexLocation: (value: string) => void;
   setVertexApiKey: (key: string) => void;
 
-  setDictationKey: (key: string) => void;
-  setMeetingKey: (key: string) => void;
+  setDictationKey: (key: string) => Promise<boolean>;
+  setMeetingKey: (key: string) => Promise<boolean>;
+  conversationKey: string;
+  setConversationKey: (key: string) => Promise<boolean>;
   setVoiceAgentKey: (key: string) => Promise<boolean>;
   translationKey: string;
   setTranslationKey: (key: string) => Promise<boolean>;
@@ -734,7 +739,13 @@ function createNumberSetter(key: string) {
 // being persisted. Rolls back to the previous key if registration fails.
 // Resolves to false on failure so optimistic UIs (HotkeyListInput) can revert.
 function createRegisteredHotkeySetter(
-  key: "chatAgentKey" | "voiceAgentKey" | "translationKey",
+  key:
+    | "chatAgentKey"
+    | "voiceAgentKey"
+    | "translationKey"
+    | "dictationKey"
+    | "meetingKey"
+    | "conversationKey",
   label: string,
   getRegisterFn: () =>
     ((hotkey: string) => Promise<{ success: boolean; message: string }>) | undefined,
@@ -762,8 +773,15 @@ function createRegisteredHotkeySetter(
         localStorage.setItem(key, previousKey);
         useSettingsStore.setState({ [key]: previousKey });
         logger.warn(`Failed to update ${label}`, { hotkey, message: result?.message }, "settings");
+        // A field that silently snaps back is indistinguishable from a broken
+        // one. The reason ("GNOME can only register a regular key") is the whole
+        // difference between a dead end and an actionable one.
+        useSettingsStore.setState({
+          hotkeyRejection: { key, hotkey, message: result?.message || "" },
+        });
         return false;
       }
+      useSettingsStore.setState({ hotkeyRejection: null });
 
       localStorage.setItem(key, hotkey);
       useSettingsStore.setState({ [key]: hotkey });
@@ -891,7 +909,11 @@ export const MAX_TRANSLATION_TARGETS = 5;
 
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uiLanguage: normalizeUiLanguage(isBrowser ? localStorage.getItem("uiLanguage") : null),
-  useLocalWhisper: readBoolean("useLocalWhisper", false),
+  // Local by default. Oats bundles a Whisper model and promises it works the
+  // instant it is installed, offline, with no account — a cloud default
+  // contradicts that and fails on a fresh machine with "requires an API key".
+  // Existing installs keep whatever they stored; only new ones see this.
+  useLocalWhisper: readBoolean("useLocalWhisper", true),
   whisperModel: readString("whisperModel", "base"),
   localTranscriptionProvider: (readString("localTranscriptionProvider", "whisper") === "nvidia"
     ? "nvidia"
@@ -960,6 +982,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   dictationKey: readString("dictationKey", ""),
   activeDictationKey: null,
   meetingKey: readString("meetingKey", ""),
+  // The one shortcut that ships with a working default, so the idle screen
+  // can teach it before the main process has answered.
+  conversationKey: readString("conversationKey", "CommandOrControl+Shift+O"),
   voiceAgentKey: readString("voiceAgentKey", ""),
   translationKey: readString("translationKey", ""),
   onboardingUseCases: readStringArray("onboardingUseCases", []),
@@ -1071,7 +1096,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (v === "providers" || v === "local" || v === "self-hosted") return v;
     return "local" as InferenceMode;
   })(),
-  meetingUseLocalWhisper: readBoolean("meetingUseLocalWhisper", false),
+  // This is the one the *primary action* reads (selectResolvedMeetingTranscription).
+  // It used to default to false while meetingTranscriptionMode defaulted to
+  // "local", so the two meeting settings contradicted each other out of the box
+  // and recording a conversation failed on a fresh install.
+  meetingUseLocalWhisper: readBoolean("meetingUseLocalWhisper", true),
   meetingWhisperModel: readString("meetingWhisperModel", ""),
   meetingLocalTranscriptionProvider: (readString("meetingLocalTranscriptionProvider", "whisper") ===
   "nvidia"
@@ -1093,18 +1122,22 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   conversationAideModel: readString("conversationAideModel", "qwen2.5-1.5b-instruct-q5_k_m"),
   conversationAideConfidence: Number(readString("conversationAideConfidence", "0.75")),
   conversationAideSilenceSeconds: Number(readString("conversationAideSilenceSeconds", "8")),
-  conversationAideCooldownSeconds: Number(readString("conversationAideCooldownSeconds", "30")),
   conversationAideSearchBaseUrl: readString(
     "conversationAideSearchBaseUrl",
     "https://www.google.com/search"
   ),
+  // On by default: a question nobody could answer is exactly when help is worth
+  // having. This is the only default-on outbound action in the product, and it
+  // sends the question text and nothing else (docs/network-allowlist.md).
+  conversationAutoSearchEnabled: readBoolean("conversationAutoSearchEnabled", true),
+  hotkeyRejection: null,
 
   uploadTranscriptionMode: (() => {
     const v = readString("uploadTranscriptionMode", "local");
     if (v === "providers" || v === "local" || v === "self-hosted") return v;
     return "local" as InferenceMode;
   })(),
-  uploadUseLocalWhisper: readBoolean("uploadUseLocalWhisper", false),
+  uploadUseLocalWhisper: readBoolean("uploadUseLocalWhisper", true),
   uploadWhisperModel: readString("uploadWhisperModel", ""),
   uploadLocalTranscriptionProvider: (readString("uploadLocalTranscriptionProvider", "whisper") ===
   "nvidia"
@@ -1184,8 +1217,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setConversationAideModel: createStringSetter("conversationAideModel"),
   setConversationAideConfidence: createNumberSetter("conversationAideConfidence"),
   setConversationAideSilenceSeconds: createNumberSetter("conversationAideSilenceSeconds"),
-  setConversationAideCooldownSeconds: createNumberSetter("conversationAideCooldownSeconds"),
   setConversationAideSearchBaseUrl: createStringSetter("conversationAideSearchBaseUrl"),
+  setConversationAutoSearchEnabled: createBooleanSetter("conversationAutoSearchEnabled"),
 
   setUploadTranscriptionMode: createStringSetter("uploadTranscriptionMode") as (
     mode: InferenceMode
@@ -1455,18 +1488,25 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     debouncedPersistToEnv();
   },
 
-  setDictationKey: (key: string) => {
-    if (isBrowser) localStorage.setItem("dictationKey", key);
-    set({ dictationKey: key });
-    if (isBrowser) {
-      window.electronAPI?.notifyHotkeyChanged?.(key);
-      window.electronAPI?.saveDictationKey?.(key);
-    }
-  },
-  setMeetingKey: (key: string) => {
-    if (isBrowser) localStorage.setItem("meetingKey", key);
-    set({ meetingKey: key });
-  },
+  // Both of these used to write localStorage and stop there, so the shortcut kept
+  // whatever it was bound to at startup and the field lied about it. They now go
+  // through the registering setter, which reverts and explains on refusal.
+  setDictationKey: createRegisteredHotkeySetter(
+    "dictationKey",
+    "dictation hotkey",
+    () => window.electronAPI?.updateDictationHotkey,
+    (key) => window.electronAPI?.notifyHotkeyChanged?.(key)
+  ),
+  setMeetingKey: createRegisteredHotkeySetter(
+    "meetingKey",
+    "meeting hotkey",
+    () => window.electronAPI?.registerMeetingHotkey
+  ),
+  setConversationKey: createRegisteredHotkeySetter(
+    "conversationKey",
+    "conversation hotkey",
+    () => window.electronAPI?.registerConversationHotkey
+  ),
   setVoiceAgentKey: createRegisteredHotkeySetter(
     "voiceAgentKey",
     "voice agent hotkey",

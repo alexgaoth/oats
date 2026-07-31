@@ -19,10 +19,19 @@ import logger from "../utils/logger";
 import {
   lockTranscriptSpeaker,
   normalizeTranscriptSegment,
+  serializeTranscriptSegments,
   type TranscriptSpeakerLockSource,
   type TranscriptSpeakerStatus,
 } from "../utils/transcriptSpeakerState";
 import { ConversationAideSession } from "../helpers/conversationAide";
+import { ConversationTopicTracker } from "../helpers/conversationTopics";
+import { buildSuggestions } from "../helpers/conversationSuggestions";
+import type {
+  ConversationCard,
+  ConversationSuggestion,
+  ConversationTopicSnapshot,
+  OpenThread,
+} from "../types/conversationEvents";
 
 export type ConversationRecordingMode = "online" | "in_room";
 
@@ -77,6 +86,15 @@ interface MeetingRecordingState {
   currentMicLevel: number;
   windowWidth: number;
   recordingMode: ConversationRecordingMode;
+  // Unfinished threads, most recently dropped first. Drives the collapsed
+  // open-thread stack on the Conversation surface (DESIGN.md §9.3).
+  openThreads: OpenThread[];
+  // What else is worth raising (DESIGN.md §9.6). Recomputed as the conversation
+  // moves, shown only inside the expanded stack.
+  suggestions: ConversationSuggestion[];
+  // Set when the microphone has produced nothing but silence for long enough that
+  // it is more likely broken or muted than the room being quiet.
+  micSilentSince: number | null;
 }
 
 const MEETING_AUDIO_BUFFER_SIZE = 800;
@@ -190,7 +208,22 @@ const requestSystemAudioDisplayStream = async (mode: "loopback" | "portal") => {
   }
 };
 
-const prepareMeetingSystemAudioCapture = (initialSystemAudioAccess: SystemAudioAccessResult) => {
+const prepareMeetingSystemAudioCapture = (
+  initialSystemAudioAccess: SystemAudioAccessResult,
+  recordingMode: ConversationRecordingMode = "online"
+) => {
+  // An in-person conversation is microphone-only by definition. Screen capture is
+  // how system audio is obtained on Linux and Windows, so calling into it here
+  // would pop the compositor's "share your screen" consent dialog at the exact
+  // moment somebody sat down to talk to you. Refuse structurally rather than
+  // relying on the access probe happening to report "unsupported".
+  if (recordingMode === "in_room") {
+    return {
+      initialSystemAudioStrategy: "unsupported" as SystemAudioStrategy,
+      initialDisplayCaptureStrategy: null,
+      systemCapturePromise: Promise.resolve({ stream: null, error: null }),
+    };
+  }
   const initialSystemAudioStrategy = initialSystemAudioAccess.strategy ?? "unsupported";
   const initialDisplayCaptureStrategy = isRendererSystemAudioStrategy(initialSystemAudioStrategy)
     ? initialSystemAudioStrategy
@@ -424,6 +457,8 @@ let recentSystemSpeaker: RecentSystemSpeaker | null = null;
 let speakerLocks: Map<string, string> = new Map();
 let pushConfigTimeout: ReturnType<typeof setTimeout> | null = null;
 let conversationAideSession: InstanceType<typeof ConversationAideSession> | null = null;
+let conversationTopicTracker: InstanceType<typeof ConversationTopicTracker> | null = null;
+const conversationCards = new Map<string, ConversationCard>();
 
 export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   isRecording: false,
@@ -446,6 +481,9 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   currentMicLevel: 0,
   windowWidth: typeof window !== "undefined" ? window.innerWidth : SIDE_PANEL_BREAKPOINT_PX,
   recordingMode: "online",
+  openThreads: [],
+  suggestions: [],
+  micSilentSince: null,
 }));
 
 function startConversationAide(noteId: number | null, mode: ConversationRecordingMode) {
@@ -482,11 +520,12 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     { noteId, mode, model: settings.conversationAideModel },
     "conversation-aide"
   );
+  conversationCards.clear();
   conversationAideSession = new ConversationAideSession({
     noteId,
     confidenceThreshold: settings.conversationAideConfidence,
     silenceDelayMs: settings.conversationAideSilenceSeconds * 1000,
-    cooldownMs: settings.conversationAideCooldownSeconds * 1000,
+    autoSearch: settings.conversationAutoSearchEnabled,
     classify: async ({ prompt }: { prompt: string }) => {
       const inference = window.electronAPI?.processLocalReasoning?.(
         prompt,
@@ -511,24 +550,192 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
       return result.text;
     },
     insertEvent: (event: any) => window.electronAPI.insertConversationEvent?.(event),
-    showSuggestion: (suggestion: { eventId: number; question: string; query: string }) =>
-      window.electronAPI.showConversationAssist?.({
-        ...suggestion,
+    updateEvent: (id: number, patch: Record<string, unknown>) =>
+      window.electronAPI.updateConversationEventMetadata?.(id, patch),
+    onCard: (card: ConversationCard) => {
+      conversationCards.set(card.id, card);
+      pushConversationCards();
+      // An answered question closes the thread it was asked in. Keyed by the
+      // question's own utterance, because by the time the verdict lands the
+      // conversation has usually moved on to something else.
+      if (card.state === "answered") {
+        conversationTopicTracker?.resolveTopicForUtterance(card.id);
+        useMeetingRecordingStore.setState({
+          openThreads: (conversationTopicTracker?.openThreads(Date.now()) ?? []) as OpenThread[],
+        });
+      }
+    },
+    onCardRemoved: (cardId: string) => {
+      if (!conversationCards.delete(cardId)) return;
+      pushConversationCards();
+    },
+    // The one place a conversation reaches the network. Routed through the main
+    // process so the host validation and the URL construction stay in a single
+    // audited path (see docs/network-allowlist.md).
+    openSearch: async (suggestion: { eventId: number | null; query: string }) => {
+      const result = await window.electronAPI.openConversationSearch?.({
+        eventId: suggestion.eventId,
+        query: suggestion.query,
         searchBaseUrl: settings.conversationAideSearchBaseUrl,
-      }),
+      });
+      if (!result?.success) {
+        logger.info(
+          "Conversation search did not open",
+          { error: result?.error },
+          "conversation-aide"
+        );
+        return false;
+      }
+      return true;
+    },
     onDiagnostic: (code: string, error?: Error) =>
       logger.info(
-        "Conversation aide failed to produce a suggestion",
+        "Conversation aide diagnostic",
         { code, error: error?.message },
         "conversation-aide"
       ),
   });
 }
 
+// The rail always receives the complete card list, newest last. Pushing the whole
+// list (rather than diffs) keeps the always-on-top window from ever rendering a
+// state the renderer no longer believes in.
+function pushConversationCards() {
+  const searchBaseUrl = getSettings().conversationAideSearchBaseUrl;
+  const cards = [...conversationCards.values()]
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((card) => ({ ...card, searchBaseUrl }));
+  void window.electronAPI?.setConversationCards?.(cards);
+}
+
+// Topic tracking runs on every finalized utterance for the whole recording, so it
+// stays lexical and local — no model call, no network. It feeds the open-thread
+// stack live and is snapshotted onto the note when recording stops.
+function trackConversationTopic(segment: TranscriptSegment) {
+  if (!conversationTopicTracker) return;
+  conversationTopicTracker.onUtterance({
+    id: segment.id,
+    text: segment.text,
+    at: segment.timestamp ?? Date.now(),
+  });
+  // The tracker is dependency-free ESM (so node:test can import it without a
+  // TypeScript build), which is why its output is asserted at this boundary.
+  const snapshot = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
+  useMeetingRecordingStore.setState({
+    openThreads: conversationTopicTracker.openThreads(Date.now()) as OpenThread[],
+    suggestions: buildSuggestions({
+      snapshot,
+      history: conversationHistory,
+    }) as ConversationSuggestion[],
+  });
+}
+
+// Topic snapshots of past conversations, loaded once when a recording starts.
+// Suggestions of the `adjacent` kind are the only thing that reads them, and they
+// are read from what is already stored on each note — no extra pass over audio,
+// no model call.
+let conversationHistory: ConversationTopicSnapshot[] = [];
+
+async function loadConversationHistory(currentNoteId: number | null) {
+  conversationHistory = [];
+  try {
+    const notes = await window.electronAPI?.getNotes?.("meeting", 60);
+    if (!Array.isArray(notes)) return;
+    conversationHistory = notes
+      .filter((note) => note.id !== currentNoteId && note.conversation_topics)
+      .map((note) => {
+        try {
+          const parsed = JSON.parse(note.conversation_topics as string);
+          return parsed && Array.isArray(parsed.nodes) ? parsed : null;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as ConversationTopicSnapshot[];
+  } catch (error) {
+    logger.info(
+      "Could not load conversation history for suggestions",
+      { error: (error as Error)?.message },
+      "conversation-aide"
+    );
+  }
+}
+
+// Writes the transcript to the note mid-recording.
+//
+// Until this existed the transcript lived only in renderer memory until stop, so
+// a crash, an OOM kill, or a closed laptop lost the entire conversation — the one
+// failure in this product that cannot be retried, because the room has gone home.
+// Checkpoints are cheap (one UPDATE of text already in hand) and idempotent.
+//
+// This used to run on a blind 20-second interval, which meant a crash could take
+// twenty seconds of speech with it and, worse, that a conversation ending in a
+// long pause could lose its last utterance entirely. It is now driven by the
+// transcript itself: every finalized utterance schedules a write. The short
+// debounce keeps a fast back-and-forth from issuing one UPDATE per sentence
+// while still bounding the loss to a couple of seconds.
+const CHECKPOINT_DEBOUNCE_MS = 2_000;
+let checkpointTimer: ReturnType<typeof setTimeout> | null = null;
+let checkpointNoteId: number | null = null;
+let checkpointLastWritten = "";
+
+function startTranscriptCheckpoints(noteId: number | null) {
+  stopTranscriptCheckpoints();
+  checkpointNoteId = noteId;
+  checkpointLastWritten = "";
+}
+
+/** Write now, skipping the debounce. Used when recording stops. */
+function flushTranscriptCheckpoint() {
+  if (checkpointTimer) {
+    clearTimeout(checkpointTimer);
+    checkpointTimer = null;
+  }
+  const noteId = checkpointNoteId;
+  if (!noteId) return;
+  const state = useMeetingRecordingStore.getState();
+  if (!state.segments.length) return;
+  const serialized = serializeTranscriptSegments(state.segments);
+  if (serialized === checkpointLastWritten) return;
+  checkpointLastWritten = serialized;
+  const topics = conversationTopicTracker?.snapshot(Date.now());
+  void window.electronAPI?.updateNote?.(noteId, {
+    transcript: serialized,
+    ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
+  });
+}
+
+/** Called for each finalized utterance. */
+function scheduleTranscriptCheckpoint() {
+  if (!checkpointNoteId || checkpointTimer) return;
+  checkpointTimer = setTimeout(() => {
+    checkpointTimer = null;
+    flushTranscriptCheckpoint();
+  }, CHECKPOINT_DEBOUNCE_MS);
+}
+
+function stopTranscriptCheckpoints() {
+  if (checkpointTimer) clearTimeout(checkpointTimer);
+  checkpointTimer = null;
+  checkpointNoteId = null;
+  checkpointLastWritten = "";
+}
+
+export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null {
+  if (!conversationTopicTracker) return null;
+  return conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
+}
+
 async function stopConversationAide() {
+  // Write whatever is pending before dropping the note id, so a conversation
+  // that ends mid-debounce still lands its last utterance.
+  flushTranscriptCheckpoint();
+  stopTranscriptCheckpoints();
   const aide = conversationAideSession;
   conversationAideSession = null;
   await aide?.shutdown();
+  conversationCards.clear();
+  void window.electronAPI?.closeConversationCards?.();
 }
 
 export const getMicAnalyser = (): AnalyserNode | null => micAnalyser;
@@ -845,6 +1052,14 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   });
 
   startConversationAide(args.noteId, recordingMode);
+  // Topic tracking is not part of the aide and is not gated by its settings: the
+  // open-thread stack and the topic graph are core surfaces, and they cost one
+  // set intersection per utterance. The tracker deliberately outlives the stop so
+  // the final snapshot can still be read and saved onto the note.
+  conversationTopicTracker = new ConversationTopicTracker();
+  useMeetingRecordingStore.setState({ openThreads: [], suggestions: [] });
+  void loadConversationHistory(args.noteId);
+  startTranscriptCheckpoints(args.noteId);
 
   isRecordingFlag = true;
 
@@ -858,7 +1073,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     const initialSystemAudioAccess =
       (await systemAudioAccessPromise) ?? getFallbackSystemAudioAccess();
     const { initialSystemAudioStrategy, initialDisplayCaptureStrategy, systemCapturePromise } =
-      prepareMeetingSystemAudioCapture(initialSystemAudioAccess);
+      prepareMeetingSystemAudioCapture(initialSystemAudioAccess, recordingMode);
 
     const [startResult, micResult, initialSystemCaptureResult] = await Promise.all([
       window.electronAPI?.meetingTranscriptionStart?.({
@@ -1069,6 +1284,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
           ...partialPatch,
         });
         conversationAideSession?.onFinalized(seg);
+        trackConversationTopic(seg);
+        // The transcript just grew, so persist it. This is what bounds how much
+        // of a conversation a crash can take with it.
+        scheduleTranscriptCheckpoint();
         if (data.source === "system" && seg.speaker) {
           rememberSystemSpeaker(
             seg.speaker,
