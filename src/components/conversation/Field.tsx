@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import FieldCanvas from "./field/FieldCanvas";
 import FieldGL from "./field/FieldGL";
+import type { FieldScene } from "./field/fieldModel";
 
 // The field (DESIGN.md §9.8) — the world Oats lives in.
 //
@@ -47,6 +48,25 @@ function supportsGpuField(): boolean {
   return cachedSupport;
 }
 
+/**
+ * Which post-recording epilogue plays (exploration). Read once per mount: a
+ * URL param for harness pages, then localStorage for the running app. Until a
+ * variant is chosen the default is `off`, which is exactly the shipped
+ * behaviour — the wheat withdraws and nothing else arrives.
+ */
+function readFieldScene(): FieldScene {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get("fieldScene");
+    const stored = fromUrl ?? window.localStorage.getItem("oats.fieldScene");
+    if (stored === "off" || stored === "sky" || stored === "minka" || stored === "scene") {
+      return stored;
+    }
+  } catch {
+    // Storage access can throw in hardened contexts; the default is fine.
+  }
+  return "off";
+}
+
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
     () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
@@ -85,14 +105,21 @@ export default function Field({
   // and React 19's StrictMode deliberately double-invokes render to surface
   // exactly that. The module-level cache keeps the second call idempotent.
   const [gpuSupported] = useState(supportsGpuField);
+  const [scene] = useState(readFieldScene);
   const useGpu = !gpuFailed && gpuSupported;
 
   return (
     <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0", className)}>
       {useGpu ? (
-        <FieldGL live={live} intensity={intensity} reduced={reduced} onFailure={onFailure} />
+        <FieldGL
+          live={live}
+          intensity={intensity}
+          scene={scene}
+          reduced={reduced}
+          onFailure={onFailure}
+        />
       ) : (
-        <FieldCanvas live={live} intensity={intensity} reduced={reduced} />
+        <FieldCanvas live={live} intensity={intensity} scene={scene} reduced={reduced} />
       )}
     </div>
   );

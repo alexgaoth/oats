@@ -1,17 +1,22 @@
 import { useEffect, useRef } from "react";
 import {
   BANDS,
+  EPILOGUE,
   HORIZON,
   INTRO_MS,
   POINTER_RADIUS,
+  SKY_BLOOM_ALPHA,
+  SKY_BLUE,
   bandSpread,
   bandStyle,
   createField,
+  epilogueAt,
   growthAt,
   mixRgb,
   parseHexColor,
   rgbToCss,
   windAt,
+  type FieldScene,
   type Rgb,
 } from "./fieldModel";
 
@@ -43,10 +48,15 @@ function readBandColors(element: HTMLElement): string[] {
 export default function FieldCanvas({
   live,
   intensity,
+  scene,
   reduced,
 }: {
   live: boolean;
   intensity: number;
+  /** Which post-recording epilogue plays. Drawn smooth here — §7 forbids
+   *  counterfeiting the grain, so the fallback omits the dither, as it does
+   *  for the blades. */
+  scene: FieldScene;
   reduced: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -96,16 +106,34 @@ export default function FieldCanvas({
     let growFrom = grown;
     let growAt = 0;
     let wasLive = live;
+    // The epilogue mirrors FieldGL too: only after a conversation ended in
+    // this session, yielding quickly if a new one starts, skipped when reduced.
+    let stoppedAt = -1;
+    let epilogue = 0;
+    let epilogueFrom = 0;
     const liveProgress = (elapsed: number) => {
       if (live !== wasLive) {
         wasLive = live;
         growFrom = grown;
         growAt = elapsed;
+        if (live) {
+          epilogueFrom = epilogue;
+        } else {
+          stoppedAt = elapsed;
+        }
       }
       const span = live ? INTRO_MS : 2200;
       const p = Math.min(1, Math.max(0, (elapsed - growAt) / span));
       const eased = 1 - Math.pow(1 - p, 3);
       grown = growFrom + ((live ? 1 : 0) - growFrom) * eased;
+
+      if (scene === "off") {
+        epilogue = 0;
+      } else if (live) {
+        epilogue = epilogueFrom * (1 - Math.min(1, (elapsed - growAt) / EPILOGUE.interruptMs));
+      } else if (stoppedAt >= 0) {
+        epilogue = epilogueAt(elapsed - stoppedAt);
+      }
       return grown;
     };
 
@@ -137,6 +165,25 @@ export default function FieldCanvas({
       // explicit that faking the grain with noise looks cheap rather than
       // intentional. Better to omit the texture than to counterfeit it.
       const horizonY = HORIZON * height;
+
+      // The epilogue's cleared sky (scenes "sky" and "scene"): a slate-blue
+      // wash blooming from the top of the frame down toward the horizon,
+      // behind the warm light, which keeps the horizon.
+      if (epilogue > 0.001 && (scene === "sky" || scene === "scene")) {
+        const bloom = ctx.createLinearGradient(0, 0, 0, horizonY);
+        bloom.addColorStop(0, rgbToCss(SKY_BLUE));
+        // Fade to the *same* blue at zero alpha — "transparent" interpolates
+        // through transparent black and would grey the wash on paper.
+        const to255 = (v: number) => Math.round(v * 255);
+        bloom.addColorStop(
+          1,
+          `rgba(${to255(SKY_BLUE[0])}, ${to255(SKY_BLUE[1])}, ${to255(SKY_BLUE[2])}, 0)`
+        );
+        ctx.globalAlpha = SKY_BLOOM_ALPHA * epilogue * intensity;
+        ctx.fillStyle = bloom;
+        ctx.fillRect(0, 0, width, horizonY);
+      }
+
       const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
       sky.addColorStop(0, "transparent");
       sky.addColorStop(1, colors[BANDS - 1]);
@@ -237,7 +284,7 @@ export default function FieldCanvas({
       cancelAnimationFrame(raf);
       themeObserver.disconnect();
     };
-  }, [live, intensity, reduced]);
+  }, [live, intensity, scene, reduced]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

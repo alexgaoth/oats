@@ -1,4 +1,4 @@
-import { WIND, POINTER_RADIUS, HORIZON, SUN_X } from "./fieldModel";
+import { WIND, POINTER_RADIUS, HORIZON, SUN_X, SKY_BLUE, SKY_BLOOM_ALPHA } from "./fieldModel";
 
 // GLSL for the field. The wind constants are interpolated from `WIND` rather
 // than written out again, so the shader and `windAt()` in fieldModel.ts cannot
@@ -52,6 +52,9 @@ uniform vec3  uGold;
 uniform vec3  uInk;
 uniform float uWarmScale;    // gold is darker than paper and lighter than charcoal
 uniform float uSkyStrength;
+uniform float uTime;         // seconds — only the epilogue reads it
+uniform float uEpilogue;     // 0..1, the post-recording scene's presence
+uniform int   uScene;        // 0 off, 1 clear sky, 2 minka, 3 full dithered scene
 
 out vec4 fragColor;
 ${BAYER}
@@ -98,15 +101,30 @@ void main() {
   float inkAmount = line * edgeFade * 0.42 * mix(0.45, 1.0, uGrow) * uSkyStrength * uSkyStrength;
 
   float coverage = clamp(warmth + inkAmount, 0.0, 1.0);
-  if (coverage < 0.004) discard;
+  float threshold = bayerThreshold();
 
-  // Dither the whole backdrop as one field of grain. Banding becomes deliberate.
-  if (coverage < bayerThreshold()) discard;
+  // Dither the warm world as one field of grain. Banding becomes deliberate.
+  float warmAlpha =
+    coverage >= max(threshold, 0.004) ? clamp(coverage * 1.1, 0.0, 0.45) : 0.0;
+  vec3 warmColour = mix(uGold, uInk, clamp(inkAmount / max(coverage, 0.0001), 0.0, 1.0));
 
-  vec3 colour = mix(uGold, uInk, clamp(inkAmount / max(coverage, 0.0001), 0.0, 1.0));
+  // --- The epilogue: what arrives after a conversation ends ----------------
+  // Scene 1, "sky": the sky clears. A desaturated slate blue blooms from the
+  // top of the frame down toward the horizon, smooth rather than dithered, and
+  // the warm light keeps the horizon — a clear evening, not a new wallpaper.
+  vec3 epilogueRgb = vec3(0.0);
+  float epilogueAlpha = 0.0;
+  if (uScene == 1 && uEpilogue > 0.001) {
+    float bloom = pow(above, 0.85) * uEpilogue * uSkyStrength;
+    epilogueRgb = vec3(${f(SKY_BLUE[0])}, ${f(SKY_BLUE[1])}, ${f(SKY_BLUE[2])});
+    epilogueAlpha = bloom * ${f(SKY_BLOOM_ALPHA)};
+  }
 
-  float alpha = clamp(coverage * 1.1, 0.0, 0.45);
-  fragColor = vec4(colour * alpha, alpha);
+  // Composite: the warm atmosphere sits in front of the far sky.
+  float alpha = warmAlpha + epilogueAlpha * (1.0 - warmAlpha);
+  if (alpha < 0.004) discard;
+  vec3 colour = warmColour * warmAlpha + epilogueRgb * epilogueAlpha * (1.0 - warmAlpha);
+  fragColor = vec4(colour, alpha);
 }
 `;
 
