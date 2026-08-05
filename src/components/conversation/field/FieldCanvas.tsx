@@ -4,6 +4,7 @@ import {
   EPILOGUE,
   HORIZON,
   INTRO_MS,
+  MINKA,
   POINTER_RADIUS,
   SKY_BLOOM_ALPHA,
   SKY_BLUE,
@@ -197,6 +198,33 @@ export default function FieldCanvas({
       ctx.globalAlpha = (0.09 + 0.05 * grow) * intensity;
       ctx.fillStyle = earth;
       ctx.fillRect(0, horizonY, width, height - horizonY);
+
+      // The epilogue's distant minka (scenes "minka" and "scene"): a farmhouse
+      // silhouette on the horizon, drawn from the same geometry as the shader
+      // (minkaHalfWidthAt). Smooth fade here — the fallback never counterfeits
+      // the grain the GPU path condenses it from.
+      if (epilogue > 0.001 && (scene === "minka" || scene === "scene")) {
+        const cx = MINKA.x * width;
+        const eaveY = horizonY - MINKA.bodyH * height;
+        const ridgeY = horizonY - (MINKA.bodyH + MINKA.roofH) * height;
+        const bodyPx = MINKA.bodyHalf * height;
+        const eavePx = (MINKA.bodyHalf + MINKA.eave) * height;
+        const ridgePx = MINKA.ridgeHalf * height;
+
+        ctx.globalAlpha = 0.45 * epilogue * intensity;
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.moveTo(cx - bodyPx, horizonY);
+        ctx.lineTo(cx - bodyPx, eaveY);
+        ctx.lineTo(cx - eavePx, eaveY);
+        ctx.lineTo(cx - ridgePx, ridgeY);
+        ctx.lineTo(cx + ridgePx, ridgeY);
+        ctx.lineTo(cx + eavePx, eaveY);
+        ctx.lineTo(cx + bodyPx, eaveY);
+        ctx.lineTo(cx + bodyPx, horizonY);
+        ctx.closePath();
+        ctx.fill();
+      }
 
       // The horizon itself, fading out toward the edges.
       const line = ctx.createLinearGradient(0, 0, width, 0);

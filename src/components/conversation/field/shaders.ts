@@ -1,4 +1,12 @@
-import { WIND, POINTER_RADIUS, HORIZON, SUN_X, SKY_BLUE, SKY_BLOOM_ALPHA } from "./fieldModel";
+import {
+  WIND,
+  POINTER_RADIUS,
+  HORIZON,
+  SUN_X,
+  SKY_BLUE,
+  SKY_BLOOM_ALPHA,
+  MINKA,
+} from "./fieldModel";
 
 // GLSL for the field. The wind constants are interpolated from `WIND` rather
 // than written out again, so the shader and `windAt()` in fieldModel.ts cannot
@@ -122,8 +130,37 @@ void main() {
 
   // Composite: the warm atmosphere sits in front of the far sky.
   float alpha = warmAlpha + epilogueAlpha * (1.0 - warmAlpha);
-  if (alpha < 0.004) discard;
   vec3 colour = warmColour * warmAlpha + epilogueRgb * epilogueAlpha * (1.0 - warmAlpha);
+
+  // Scenes 2 and 3, "minka": a farmhouse in the far countryside, sitting on
+  // the horizon opposite the light. It condenses out of grain — dither density
+  // ramps with the epilogue, the same vocabulary the far blades use for
+  // distance — rather than fading or sliding in. Geometry mirrors
+  // minkaHalfWidthAt() in fieldModel.ts, from the same constants.
+  if (uScene >= 2 && uEpilogue > 0.001) {
+    float hy = y - horizon;                       // height units above the horizon
+    float hx = abs((vUv.x - ${f(MINKA.x)}) * aspect);
+    float bodyTop = ${f(MINKA.bodyH)};
+    float roofT = clamp((hy - bodyTop) / ${f(MINKA.roofH)}, 0.0, 1.0);
+    float roofHalf = ${f(MINKA.bodyHalf + MINKA.eave)}
+                   - ${f(MINKA.bodyHalf + MINKA.eave - MINKA.ridgeHalf)} * roofT;
+    float halfW = hy < 0.0 ? 0.0
+                : hy <= bodyTop ? ${f(MINKA.bodyHalf)}
+                : hy - bodyTop <= ${f(MINKA.roofH)} ? roofHalf
+                : 0.0;
+
+    float px = 1.5 / max(uResolution.y, 1.0);     // soften the edge by ~1.5 CSS px
+    float inside = halfW > 0.0 ? smoothstep(halfW, halfW - px, hx) : 0.0;
+
+    float density = inside * 0.68 * uEpilogue;
+    float minkaAlpha = density >= threshold ? 0.5 * uSkyStrength : 0.0;
+    vec3 minkaRgb = mix(uInk, uGold, 0.3);
+
+    colour = minkaRgb * minkaAlpha + colour * (1.0 - minkaAlpha);
+    alpha = minkaAlpha + alpha * (1.0 - minkaAlpha);
+  }
+
+  if (alpha < 0.004) discard;
   fragColor = vec4(colour, alpha);
 }
 `;
