@@ -204,3 +204,71 @@ test("colour mixing is clamped at both ends", async () => {
   assert.deepEqual(mixRgb(a, b, 5), [1, 1, 1]);
   assert.deepEqual(mixRgb(a, b, 0.5), [0.5, 0.5, 0.5]);
 });
+
+test("the epilogue blooms in, holds, and settles back to nothing", async () => {
+  const { epilogueAt, EPILOGUE } = await load();
+
+  assert.equal(epilogueAt(0), 0, "nothing before the stop");
+  assert.equal(epilogueAt(-100), 0, "nothing before the stop");
+
+  // Rising through the bloom-in, monotonically.
+  let previous = 0;
+  for (let ms = 0; ms <= EPILOGUE.inMs; ms += EPILOGUE.inMs / 16) {
+    const v = epilogueAt(ms);
+    assert.ok(v >= previous, "bloom-in must be monotonic");
+    assert.ok(v >= 0 && v <= 1, "strength stays in 0..1 — no overshoot (§8)");
+    previous = v;
+  }
+  assert.ok(Math.abs(epilogueAt(EPILOGUE.inMs) - 1) < 1e-9, "fully in at the end of the bloom");
+
+  // Held flat.
+  assert.equal(epilogueAt(EPILOGUE.inMs + EPILOGUE.holdMs / 2), 1);
+  assert.equal(epilogueAt(EPILOGUE.inMs + EPILOGUE.holdMs), 1);
+
+  // Settling out, monotonically, to exactly zero.
+  const outStart = EPILOGUE.inMs + EPILOGUE.holdMs;
+  previous = 1;
+  for (let ms = outStart; ms <= outStart + EPILOGUE.outMs; ms += EPILOGUE.outMs / 16) {
+    const v = epilogueAt(ms);
+    assert.ok(v <= previous, "settle-out must be monotonic");
+    assert.ok(v >= 0 && v <= 1);
+    previous = v;
+  }
+  assert.equal(epilogueAt(outStart + EPILOGUE.outMs), 0);
+  assert.equal(epilogueAt(outStart + EPILOGUE.outMs + 60_000), 0, "and it stays gone");
+});
+
+test("the minka silhouette is a low body under a wide tapering roof", async () => {
+  const { minkaHalfWidthAt, MINKA } = await load();
+
+  assert.equal(minkaHalfWidthAt(-0.01), 0, "nothing below the horizon");
+  assert.equal(minkaHalfWidthAt(MINKA.bodyH + MINKA.roofH + 0.001), 0, "nothing above the ridge");
+
+  // Body walls are straight.
+  assert.equal(minkaHalfWidthAt(0), MINKA.bodyHalf);
+  assert.equal(minkaHalfWidthAt(MINKA.bodyH), MINKA.bodyHalf);
+
+  // The eaves overhang the walls, and the roof tapers to the short ridge.
+  const eaveLine = minkaHalfWidthAt(MINKA.bodyH + 1e-9);
+  assert.ok(eaveLine > MINKA.bodyHalf, "eaves must overhang the body");
+  const ridge = minkaHalfWidthAt(MINKA.bodyH + MINKA.roofH);
+  assert.ok(Math.abs(ridge - MINKA.ridgeHalf) < 1e-9, "roof tapers to the ridge");
+  assert.ok(ridge < MINKA.bodyHalf, "the ridge is shorter than the body — a hip, not an A-frame");
+
+  // Monotonic taper: the roof never bulges outward on the way up. Sampled
+  // strictly inside the roof — y = bodyH itself is the body clause, below the
+  // eave overhang's deliberate step.
+  let previous = eaveLine;
+  for (let t = 1 / 16; t <= 1; t += 1 / 16) {
+    const v = minkaHalfWidthAt(MINKA.bodyH + t * MINKA.roofH);
+    assert.ok(v <= previous + 1e-9, "roof taper must be monotonic");
+    previous = v;
+  }
+});
+
+test("scene ids cover every scene exactly once, with off = 0", async () => {
+  const { SCENE_IDS } = await load();
+  assert.equal(SCENE_IDS.off, 0, "off must be the shader's no-op");
+  const ids = Object.values(SCENE_IDS);
+  assert.equal(new Set(ids).size, ids.length, "ids must be distinct");
+});

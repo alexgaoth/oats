@@ -306,6 +306,116 @@ export function bandSpread(band: number): number {
   return next - here;
 }
 
+// ---------------------------------------------------------------------------
+// The epilogue — what the field does after a conversation ends (exploration).
+//
+// Stopping a recording already lets the wheat withdraw. The epilogue brings
+// something else in as it goes: the sky clears, and on the horizon something
+// that was always too far away to notice comes forward. It is a transient
+// reward, not a new permanent state — it blooms in over the withdrawal, holds
+// for a while, then settles back to the idle world, so the world every other
+// surface stands on stays canonical.
+//
+// Like the wind, the timing lives here so the GL and 2D renderers cannot
+// disagree about it, and so it can be unit-tested without a DOM.
+
+/** Which post-recording scene plays. `off` preserves the previous behaviour. */
+export type FieldScene = "off" | "sky" | "minka" | "scene";
+
+/** Scene ids as the shader sees them. */
+export const SCENE_IDS: Record<FieldScene, number> = {
+  off: 0,
+  sky: 1,
+  minka: 2,
+  scene: 3,
+};
+
+export const EPILOGUE = {
+  /** Bloom-in. Slower than the wheat's own 2.2s withdrawal, so the scenery is
+   *  still arriving as the last blades settle — an exchange, not a cut. */
+  inMs: 3200,
+  /** How long the scene holds at full strength. */
+  holdMs: 9000,
+  /** The settle back to the idle world. Leaving is slower than arriving. */
+  outMs: 7000,
+  /** If a new recording starts mid-epilogue, the scene yields this fast. */
+  interruptMs: 600,
+} as const;
+
+/**
+ * Epilogue strength 0..1 at `ms` since the conversation stopped.
+ *
+ * Ease-out in, flat hold, smoothstep out — no overshoot anywhere (§8).
+ */
+export function epilogueAt(ms: number): number {
+  if (ms <= 0) return 0;
+  if (ms < EPILOGUE.inMs) return easeOutCubic(ms / EPILOGUE.inMs);
+  const held = ms - EPILOGUE.inMs;
+  if (held < EPILOGUE.holdMs) return 1;
+  const out = (held - EPILOGUE.holdMs) / EPILOGUE.outMs;
+  if (out >= 1) return 0;
+  return 1 - out * out * (3 - 2 * out);
+}
+
+/**
+ * A cleared sky, as a colour. There is no blue token — Oats is gold and ink —
+ * so this is deliberately a desaturated slate blue that reads as weather
+ * rather than as a new brand colour, and it is used only at low alpha.
+ */
+export const SKY_BLUE: Rgb = [0.42, 0.56, 0.68];
+
+/** Peak alpha of the sky bloom at the top of the frame. Opacity accumulates. */
+export const SKY_BLOOM_ALPHA = 0.2;
+
+/**
+ * A distant farmhouse in the Japanese countryside — a minka silhouette.
+ *
+ * All units are fractions of viewport *height* (horizontal distances are
+ * aspect-corrected, like the sun), measured from where it sits on the horizon.
+ * Wide overhanging eaves, a steep hipped roof tapering to a short ridge, and a
+ * low body: at silhouette scale those three proportions are the whole reading.
+ */
+export const MINKA = {
+  /** Horizontal position, fraction of width. Opposite thirds line from the
+   *  sun, so the light and the dwelling balance rather than stack. */
+  x: 0.72,
+  /** Half-width of the body walls. */
+  bodyHalf: 0.034,
+  /** Height of the body, horizon to eave line. */
+  bodyH: 0.022,
+  /** How far the eaves overhang past the walls. */
+  eave: 0.014,
+  /** Eave line to ridge. Steeper than tall — a minka roof is most of the house. */
+  roofH: 0.044,
+  /** Half-length of the ridge. Short: the roof is a hip, not an A-frame. */
+  ridgeHalf: 0.011,
+} as const;
+
+/**
+ * Half-width of the minka silhouette at height `y` above the horizon (same
+ * height units), or 0 outside it. Shared by the 2D fallback and the tests;
+ * the GLSL implements the same two clauses from the same constants.
+ */
+export function minkaHalfWidthAt(y: number): number {
+  if (y < 0) return 0;
+  if (y <= MINKA.bodyH) return MINKA.bodyHalf;
+  const roofY = y - MINKA.bodyH;
+  const t = roofY / MINKA.roofH;
+  if (t > 1 + 1e-6) return 0;
+  const clamped = Math.min(t, 1);
+  return MINKA.bodyHalf + MINKA.eave - (MINKA.bodyHalf + MINKA.eave - MINKA.ridgeHalf) * clamped;
+}
+
+/** Birds for the full scene: few, far, and gone again. */
+export const BIRDS = {
+  count: 4,
+  /** Crossing speed, screens per second. A crossing takes ~50s. */
+  speed: 0.02,
+  /** Vertical band they fly in, fractions of height from the top. */
+  yMin: 0.18,
+  yMax: 0.34,
+} as const;
+
 export type Rgb = [number, number, number];
 
 /** Parse `#rgb` / `#rrggbb` into 0..1 floats. Returns null on anything else so
