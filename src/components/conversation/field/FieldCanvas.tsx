@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
   BANDS,
+  BIRDS,
   EPILOGUE,
   HORIZON,
   INTRO_MS,
@@ -224,6 +225,28 @@ export default function FieldCanvas({
         ctx.lineTo(cx + bodyPx, horizonY);
         ctx.closePath();
         ctx.fill();
+      }
+
+      // The epilogue's birds (scene "scene" only): a few distant "v" strokes
+      // crossing the cleared sky right to left, wingbeat as a slow flex. Same
+      // positions as the shader's specks, from the same BIRDS constants.
+      if (epilogue > 0.001 && scene === "scene" && !reduced) {
+        ctx.strokeStyle = colors[0];
+        ctx.globalAlpha = 0.5 * epilogue * intensity;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < BIRDS.count; i += 1) {
+          const phase = (i * 0.618 + 0.21) % 1;
+          const bx = (1.1 - ((time * BIRDS.speed + phase) % 1) * 1.2) * width;
+          const byTop = BIRDS.yMin + ((phase * 7.31) % 1) * (BIRDS.yMax - BIRDS.yMin);
+          const by = byTop * height + Math.sin(time * 0.7 + i) * 0.006 * height;
+          const wing = 3.2;
+          const beat = 1.6 * Math.sin(time * 9 + i * 2.4);
+          ctx.beginPath();
+          ctx.moveTo(bx - wing, by - beat);
+          ctx.lineTo(bx, by);
+          ctx.lineTo(bx + wing, by - beat);
+          ctx.stroke();
+        }
       }
 
       // The horizon itself, fading out toward the edges.

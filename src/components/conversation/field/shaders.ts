@@ -6,6 +6,7 @@ import {
   SKY_BLUE,
   SKY_BLOOM_ALPHA,
   MINKA,
+  BIRDS,
 } from "./fieldModel";
 
 // GLSL for the field. The wind constants are interpolated from `WIND` rather
@@ -117,15 +118,21 @@ void main() {
   vec3 warmColour = mix(uGold, uInk, clamp(inkAmount / max(coverage, 0.0001), 0.0, 1.0));
 
   // --- The epilogue: what arrives after a conversation ends ----------------
-  // Scene 1, "sky": the sky clears. A desaturated slate blue blooms from the
-  // top of the frame down toward the horizon, smooth rather than dithered, and
-  // the warm light keeps the horizon — a clear evening, not a new wallpaper.
+  // Scenes 1 and 3, "sky": the sky clears. A desaturated slate blue blooms
+  // from the top of the frame down toward the horizon, and the warm light
+  // keeps the horizon — a clear evening, not a new wallpaper. Scene 1 is the
+  // smooth 'normal style'; scene 3 spells the same gradient in dither density,
+  // so the whole sky is grain.
   vec3 epilogueRgb = vec3(0.0);
   float epilogueAlpha = 0.0;
-  if (uScene == 1 && uEpilogue > 0.001) {
+  if ((uScene == 1 || uScene == 3) && uEpilogue > 0.001) {
     float bloom = pow(above, 0.85) * uEpilogue * uSkyStrength;
     epilogueRgb = vec3(${f(SKY_BLUE[0])}, ${f(SKY_BLUE[1])}, ${f(SKY_BLUE[2])});
-    epilogueAlpha = bloom * ${f(SKY_BLOOM_ALPHA)};
+    if (uScene == 3) {
+      epilogueAlpha = bloom * 0.9 >= threshold ? ${f(SKY_BLOOM_ALPHA)} * 1.4 : 0.0;
+    } else {
+      epilogueAlpha = bloom * ${f(SKY_BLOOM_ALPHA)};
+    }
   }
 
   // Composite: the warm atmosphere sits in front of the far sky.
@@ -158,6 +165,31 @@ void main() {
 
     colour = minkaRgb * minkaAlpha + colour * (1.0 - minkaAlpha);
     alpha = minkaAlpha + alpha * (1.0 - minkaAlpha);
+  }
+
+  // Scene 3 only: a few birds crossing the cleared sky, right to left. Specks
+  // of grain whose size breathes as a wingbeat — at this distance a flap is a
+  // shimmer, not an outline.
+  if (uScene == 3 && uEpilogue > 0.001) {
+    float birdCoverage = 0.0;
+    for (int i = 0; i < ${BIRDS.count}; i++) {
+      float fi = float(i);
+      float bphase = fract(fi * 0.618 + 0.21);
+      float bx = 1.1 - fract(uTime * ${f(BIRDS.speed)} + bphase) * 1.2;
+      float byTop = ${f(BIRDS.yMin)} + fract(bphase * 7.31) * ${f(BIRDS.yMax - BIRDS.yMin)};
+      float by = 1.0 - byTop + sin(uTime * 0.7 + fi) * 0.006;
+
+      vec2 d = vec2((vUv.x - bx) * aspect, vUv.y - by);
+      float r = length(d) * uResolution.y;
+      float size = 1.6 + 0.9 * sin(uTime * 9.0 + fi * 2.4);
+      birdCoverage = max(birdCoverage, smoothstep(size + 1.0, size - 0.5, r));
+    }
+    float birdDensity = birdCoverage * 0.8 * uEpilogue * uSkyStrength;
+    float birdAlpha = birdDensity >= threshold ? 0.55 : 0.0;
+    vec3 birdRgb = mix(uInk, uGold, 0.2);
+
+    colour = birdRgb * birdAlpha + colour * (1.0 - birdAlpha);
+    alpha = birdAlpha + alpha * (1.0 - birdAlpha);
   }
 
   if (alpha < 0.004) discard;
