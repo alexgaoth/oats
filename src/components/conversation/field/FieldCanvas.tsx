@@ -9,6 +9,7 @@ import {
   POINTER_RADIUS,
   SKY_BLOOM_ALPHA,
   SKY_BLUE,
+  SKY_LIGHT_BOOST,
   bandSpread,
   bandStyle,
   createField,
@@ -38,13 +39,28 @@ const FRAME_MS = 1000 / 30;
 const FALLBACK_GOLD: Rgb = [198 / 255, 123 / 255, 39 / 255];
 const FALLBACK_HAZE: Rgb = [107 / 255, 100 / 255, 89 / 255];
 
-function readBandColors(element: HTMLElement): string[] {
+interface CanvasPalette {
+  colors: string[];
+  /** SKY_LIGHT_BOOST on paper, 1 on charcoal — mirrors FieldGL's warmScale test. */
+  skyBoost: number;
+}
+
+function readCanvasPalette(element: HTMLElement): CanvasPalette {
   const styles = getComputedStyle(element);
   const gold = parseHexColor(styles.getPropertyValue("--color-primary")) ?? FALLBACK_GOLD;
   const haze = parseHexColor(styles.getPropertyValue("--color-muted-foreground")) ?? FALLBACK_HAZE;
-  return Array.from({ length: BANDS }, (_, band) =>
-    rgbToCss(mixRgb(haze, gold, bandStyle(band).goldMix))
-  );
+  const ink = parseHexColor(styles.getPropertyValue("--color-foreground")) ?? [0.17, 0.15, 0.13];
+  const surface =
+    parseHexColor(styles.getPropertyValue("--color-surface-raised")) ??
+    parseHexColor(styles.getPropertyValue("--color-background")) ??
+    ([1, 0.99, 0.97] as Rgb);
+  const luminance = (c: Rgb) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  return {
+    colors: Array.from({ length: BANDS }, (_, band) =>
+      rgbToCss(mixRgb(haze, gold, bandStyle(band).goldMix))
+    ),
+    skyBoost: luminance(surface) > luminance(ink) ? SKY_LIGHT_BOOST : 1,
+  };
 }
 
 export default function FieldCanvas({
@@ -63,7 +79,7 @@ export default function FieldCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  const colorsRef = useRef<string[] | null>(null);
+  const paletteRef = useRef<CanvasPalette | null>(null);
   // Growth and epilogue state lives in a ref, not the effect closure: `live`
   // is in the effect's deps, so the closure is torn down on every transition —
   // exactly the moment the recede and the epilogue need their history.
@@ -106,9 +122,9 @@ export default function FieldCanvas({
     const spreads = Array.from({ length: BANDS }, (_, b) => bandSpread(b));
 
     // Read once, and again only when the theme changes — never per frame.
-    colorsRef.current = readBandColors(canvas);
+    paletteRef.current = readCanvasPalette(canvas);
     const themeObserver = new MutationObserver(() => {
-      colorsRef.current = readBandColors(canvas);
+      paletteRef.current = readCanvasPalette(canvas);
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
@@ -150,8 +166,9 @@ export default function FieldCanvas({
 
     const draw = (elapsed: number) => {
       const ctx = canvas.getContext("2d");
-      const colors = colorsRef.current;
-      if (!ctx || !colors) return;
+      const palette = paletteRef.current;
+      if (!ctx || !palette) return;
+      const colors = palette.colors;
 
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -190,7 +207,8 @@ export default function FieldCanvas({
           1,
           `rgba(${to255(SKY_BLUE[0])}, ${to255(SKY_BLUE[1])}, ${to255(SKY_BLUE[2])}, 0)`
         );
-        ctx.globalAlpha = SKY_BLOOM_ALPHA * motion.epilogue * intensity;
+        ctx.globalAlpha =
+          Math.min(SKY_BLOOM_ALPHA * palette.skyBoost, 0.5) * motion.epilogue * intensity;
         ctx.fillStyle = bloom;
         ctx.fillRect(0, 0, width, horizonY);
       }

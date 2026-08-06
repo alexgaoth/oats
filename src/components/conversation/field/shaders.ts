@@ -5,6 +5,7 @@ import {
   SUN_X,
   SKY_BLUE,
   SKY_BLOOM_ALPHA,
+  SKY_LIGHT_BOOST,
   MINKA,
   BIRDS,
 } from "./fieldModel";
@@ -128,10 +129,13 @@ void main() {
   if ((uScene == 1 || uScene == 3) && uEpilogue > 0.001) {
     float bloom = pow(above, 0.85) * uEpilogue * uSkyStrength;
     epilogueRgb = vec3(${f(SKY_BLUE[0])}, ${f(SKY_BLUE[1])}, ${f(SKY_BLUE[2])});
+    // Blue over near-white paper washes out, so oat milk gets a deeper pour.
+    // warmScale < 0.75 is exactly the renderer's "this is paper" signal.
+    float skyAlpha = ${f(SKY_BLOOM_ALPHA)} * (uWarmScale < 0.75 ? ${f(SKY_LIGHT_BOOST)} : 1.0);
     if (uScene == 3) {
-      epilogueAlpha = bloom * 0.9 >= threshold ? ${f(SKY_BLOOM_ALPHA)} * 1.4 : 0.0;
+      epilogueAlpha = bloom * 0.9 >= threshold ? min(skyAlpha * 1.35, 0.5) : 0.0;
     } else {
-      epilogueAlpha = bloom * ${f(SKY_BLOOM_ALPHA)};
+      epilogueAlpha = bloom * skyAlpha;
     }
   }
 

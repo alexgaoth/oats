@@ -362,10 +362,19 @@ export function epilogueAt(ms: number): number {
  * so this is deliberately a desaturated slate blue that reads as weather
  * rather than as a new brand colour, and it is used only at low alpha.
  */
-export const SKY_BLUE: Rgb = [0.34, 0.55, 0.77];
+export const SKY_BLUE: Rgb = [0.27, 0.47, 0.72];
 
 /** Peak alpha of the sky bloom at the top of the frame. Opacity accumulates. */
-export const SKY_BLOOM_ALPHA = 0.26;
+export const SKY_BLOOM_ALPHA = 0.28;
+
+/**
+ * Extra sky strength on oat-milk paper. Blue over near-white washes out long
+ * before it breaks the §9.8 ceiling, so light mode gets a deeper pour; on
+ * charcoal the same alpha already reads as dusk. Applied wherever the
+ * renderer already distinguishes paper from charcoal (FieldGL's warmScale,
+ * FieldCanvas's palette read).
+ */
+export const SKY_LIGHT_BOOST = 1.45;
 
 /**
  * A distant farmhouse in the Japanese countryside — a minka silhouette.
