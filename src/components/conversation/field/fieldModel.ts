@@ -362,10 +362,10 @@ export function epilogueAt(ms: number): number {
  * so this is deliberately a desaturated slate blue that reads as weather
  * rather than as a new brand colour, and it is used only at low alpha.
  */
-export const SKY_BLUE: Rgb = [0.42, 0.56, 0.68];
+export const SKY_BLUE: Rgb = [0.34, 0.55, 0.77];
 
 /** Peak alpha of the sky bloom at the top of the frame. Opacity accumulates. */
-export const SKY_BLOOM_ALPHA = 0.2;
+export const SKY_BLOOM_ALPHA = 0.26;
 
 /**
  * A distant farmhouse in the Japanese countryside — a minka silhouette.
@@ -380,15 +380,16 @@ export const MINKA = {
    *  sun, so the light and the dwelling balance rather than stack. */
   x: 0.72,
   /** Half-width of the body walls. */
-  bodyHalf: 0.034,
+  bodyHalf: 0.04,
   /** Height of the body, horizon to eave line. */
-  bodyH: 0.022,
-  /** How far the eaves overhang past the walls. */
-  eave: 0.014,
-  /** Eave line to ridge. Steeper than tall — a minka roof is most of the house. */
-  roofH: 0.044,
+  bodyH: 0.02,
+  /** How far the eaves overhang past the walls. Generous — the overhang is
+   *  most of what says "minka" at silhouette scale. */
+  eave: 0.021,
+  /** Eave line to ridge. Broad rather than steep. */
+  roofH: 0.036,
   /** Half-length of the ridge. Short: the roof is a hip, not an A-frame. */
-  ridgeHalf: 0.011,
+  ridgeHalf: 0.015,
 } as const;
 
 /**
