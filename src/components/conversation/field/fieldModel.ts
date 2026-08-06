@@ -377,43 +377,120 @@ export const SKY_BLOOM_ALPHA = 0.28;
 export const SKY_LIGHT_BOOST = 1.45;
 
 /**
- * A distant farmhouse in the Japanese countryside — a minka silhouette.
+ * A dwelling in the far Japanese countryside. Three candidate silhouettes,
+ * each a real rural form rather than a generic house-glyph:
+ *
+ * - `irimoya` — hip-and-gable: a broad hip roof with a gently concave sweep,
+ *   a short gable tier above it, and a raised ridge cap. The classic minka
+ *   profile.
+ * - `gassho` — gasshō-zukuri: the steep, tall thatched triangle of
+ *   Shirakawa-gō, hands pressed in prayer. Almost no body; the roof is the
+ *   house.
+ * - `hamlet` — the irimoya house kept company by a small kura storehouse and
+ *   a lone tree. A settlement rather than a building.
  *
  * All units are fractions of viewport *height* (horizontal distances are
- * aspect-corrected, like the sun), measured from where it sits on the horizon.
- * Wide overhanging eaves, a steep hipped roof tapering to a short ridge, and a
- * low body: at silhouette scale those three proportions are the whole reading.
+ * aspect-corrected, like the sun), measured up from where it sits on the
+ * horizon. The concave roof curve is the load-bearing cultural cue: a
+ * straight-edged roof reads as a Western barn no matter its proportions.
  */
+export type MinkaStyle = "irimoya" | "gassho" | "hamlet";
+
+export const MINKA_STYLE_IDS: Record<MinkaStyle, number> = {
+  irimoya: 1,
+  gassho: 2,
+  hamlet: 3,
+};
+
 export const MINKA = {
   /** Horizontal position, fraction of width. Opposite thirds line from the
    *  sun, so the light and the dwelling balance rather than stack. */
   x: 0.72,
-  /** Half-width of the body walls. */
-  bodyHalf: 0.04,
-  /** Height of the body, horizon to eave line. */
-  bodyH: 0.02,
-  /** How far the eaves overhang past the walls. Generous — the overhang is
-   *  most of what says "minka" at silhouette scale. */
-  eave: 0.021,
-  /** Eave line to ridge. Broad rather than steep. */
-  roofH: 0.036,
-  /** Half-length of the ridge. Short: the roof is a hip, not an A-frame. */
-  ridgeHalf: 0.015,
+
+  // irimoya — also the hamlet's main house
+  bodyHalf: 0.042,
+  bodyH: 0.016,
+  /** Eave tips of the hip roof. Generous: the overhang carries the reading. */
+  hipEaveHalf: 0.066,
+  hipH: 0.03,
+  /** Concavity exponent of the hip sweep. >1 = the Japanese sag: near-vertical
+   *  at the ridge, flaring out toward the eave tips. <1 would bulge outward
+   *  and read as a thatched dome. */
+  hipCurve: 1.6,
+  /** Where the hip meets the gable tier. */
+  gableHalf: 0.03,
+  gableH: 0.015,
+  ridgeHalf: 0.017,
+  /** The raised ridge cap — a thin bar slightly wider than the ridge. */
+  capHalf: 0.022,
+  capH: 0.0045,
+
+  // gassho
+  gasshoBodyHalf: 0.034,
+  gasshoBodyH: 0.009,
+  gasshoEaveHalf: 0.05,
+  gasshoH: 0.078,
+  gasshoRidgeHalf: 0.005,
+  gasshoCurve: 0.86,
+
+  // hamlet companions
+  kuraDx: 0.078,
+  kuraHalf: 0.017,
+  kuraBodyH: 0.017,
+  kuraRoofHalf: 0.022,
+  kuraRoofH: 0.013,
+  treeDx: -0.064,
+  treeCy: 0.032,
+  treeRx: 0.021,
+  treeRy: 0.017,
+  trunkHalf: 0.0016,
+  trunkH: 0.022,
 } as const;
 
 /**
- * Half-width of the minka silhouette at height `y` above the horizon (same
- * height units), or 0 outside it. Shared by the 2D fallback and the tests;
- * the GLSL implements the same two clauses from the same constants.
+ * Half-width of the main house silhouette at height `y` above the horizon
+ * (same height units), or 0 outside it. Shared by the 2D fallback and the
+ * tests; the GLSL implements the same clauses from the same constants.
+ * `hamlet` uses the irimoya house; its kura is `kuraHalfWidthAt`, and its
+ * tree is an ellipse the renderers draw directly from the constants.
  */
-export function minkaHalfWidthAt(y: number): number {
+export function minkaHalfWidthAt(y: number, style: MinkaStyle = "irimoya"): number {
   if (y < 0) return 0;
+
+  if (style === "gassho") {
+    if (y <= MINKA.gasshoBodyH) return MINKA.gasshoBodyHalf;
+    const t = (y - MINKA.gasshoBodyH) / MINKA.gasshoH;
+    if (t > 1 + 1e-6) return 0;
+    const c = Math.min(t, 1);
+    return (
+      MINKA.gasshoRidgeHalf +
+      (MINKA.gasshoEaveHalf - MINKA.gasshoRidgeHalf) * Math.pow(1 - c, MINKA.gasshoCurve)
+    );
+  }
+
   if (y <= MINKA.bodyH) return MINKA.bodyHalf;
-  const roofY = y - MINKA.bodyH;
-  const t = roofY / MINKA.roofH;
+  const hipT = (y - MINKA.bodyH) / MINKA.hipH;
+  if (hipT <= 1) {
+    return (
+      MINKA.gableHalf + (MINKA.hipEaveHalf - MINKA.gableHalf) * Math.pow(1 - hipT, MINKA.hipCurve)
+    );
+  }
+  const gableT = (y - MINKA.bodyH - MINKA.hipH) / MINKA.gableH;
+  if (gableT <= 1) {
+    return MINKA.ridgeHalf + (MINKA.gableHalf - MINKA.ridgeHalf) * (1 - gableT);
+  }
+  const capY = y - MINKA.bodyH - MINKA.hipH - MINKA.gableH;
+  if (capY <= MINKA.capH + 1e-6) return MINKA.capHalf;
+  return 0;
+}
+
+/** Half-width of the hamlet's kura storehouse at height `y` above the horizon. */
+export function kuraHalfWidthAt(y: number): number {
+  if (y < 0) return 0;
+  if (y <= MINKA.kuraBodyH) return MINKA.kuraHalf;
+  const t = (y - MINKA.kuraBodyH) / MINKA.kuraRoofH;
   if (t > 1 + 1e-6) return 0;
-  const clamped = Math.min(t, 1);
-  return MINKA.bodyHalf + MINKA.eave - (MINKA.bodyHalf + MINKA.eave - MINKA.ridgeHalf) * clamped;
+  return MINKA.kuraRoofHalf + (0.002 - MINKA.kuraRoofHalf) * Math.min(t, 1);
 }
 
 /** Birds for the full scene: few, far, and gone again. */

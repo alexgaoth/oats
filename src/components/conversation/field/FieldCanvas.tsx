@@ -15,11 +15,14 @@ import {
   createField,
   epilogueAt,
   growthAt,
+  kuraHalfWidthAt,
+  minkaHalfWidthAt,
   mixRgb,
   parseHexColor,
   rgbToCss,
   windAt,
   type FieldScene,
+  type MinkaStyle,
   type Rgb,
 } from "./fieldModel";
 
@@ -67,6 +70,7 @@ export default function FieldCanvas({
   live,
   intensity,
   scene,
+  minkaStyle = "irimoya",
   reduced,
 }: {
   live: boolean;
@@ -75,6 +79,8 @@ export default function FieldCanvas({
    *  counterfeiting the grain, so the fallback omits the dither, as it does
    *  for the blades. */
   scene: FieldScene;
+  /** Which dwelling the minka/scene epilogues draw. */
+  minkaStyle?: MinkaStyle;
   reduced: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -227,31 +233,79 @@ export default function FieldCanvas({
       ctx.fillStyle = earth;
       ctx.fillRect(0, horizonY, width, height - horizonY);
 
-      // The epilogue's distant minka (scenes "minka" and "scene"): a farmhouse
-      // silhouette on the horizon, drawn from the same geometry as the shader
-      // (minkaHalfWidthAt). Smooth fade here — the fallback never counterfeits
-      // the grain the GPU path condenses it from.
+      // The epilogue's distant dwelling (scenes "minka" and "scene"): drawn
+      // from the same half-width functions as the shader, sampled into a
+      // path so every style — including the concave irimoya sweep — is the
+      // same shape in both renderers. Smooth fade here; never counterfeit
+      // grain.
       if (motion.epilogue > 0.001 && (scene === "minka" || scene === "scene")) {
         const cx = MINKA.x * width;
-        const eaveY = horizonY - MINKA.bodyH * height;
-        const ridgeY = horizonY - (MINKA.bodyH + MINKA.roofH) * height;
-        const bodyPx = MINKA.bodyHalf * height;
-        const eavePx = (MINKA.bodyHalf + MINKA.eave) * height;
-        const ridgePx = MINKA.ridgeHalf * height;
+        const top =
+          minkaStyle === "gassho"
+            ? MINKA.gasshoBodyH + MINKA.gasshoH
+            : MINKA.bodyH + MINKA.hipH + MINKA.gableH + MINKA.capH;
+        const steps = 36;
 
         ctx.globalAlpha = 0.45 * motion.epilogue * intensity;
         ctx.fillStyle = colors[0];
         ctx.beginPath();
-        ctx.moveTo(cx - bodyPx, horizonY);
-        ctx.lineTo(cx - bodyPx, eaveY);
-        ctx.lineTo(cx - eavePx, eaveY);
-        ctx.lineTo(cx - ridgePx, ridgeY);
-        ctx.lineTo(cx + ridgePx, ridgeY);
-        ctx.lineTo(cx + eavePx, eaveY);
-        ctx.lineTo(cx + bodyPx, eaveY);
-        ctx.lineTo(cx + bodyPx, horizonY);
+        // Up the right side, across the top, down the left.
+        for (let i = 0; i <= steps; i += 1) {
+          const yy = (i / steps) * top;
+          const hw = minkaHalfWidthAt(Math.min(yy, top - 1e-5), minkaStyle) * height;
+          const py = horizonY - yy * height;
+          if (i === 0) ctx.moveTo(cx + hw, py);
+          else ctx.lineTo(cx + hw, py);
+        }
+        for (let i = steps; i >= 0; i -= 1) {
+          const yy = (i / steps) * top;
+          const hw = minkaHalfWidthAt(Math.min(yy, top - 1e-5), minkaStyle) * height;
+          ctx.lineTo(cx - hw, horizonY - yy * height);
+        }
         ctx.closePath();
         ctx.fill();
+
+        if (minkaStyle === "hamlet") {
+          // The kura storehouse.
+          const kx = cx + MINKA.kuraDx * height;
+          const kTop = MINKA.kuraBodyH + MINKA.kuraRoofH;
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i += 1) {
+            const yy = (i / steps) * kTop;
+            const hw = kuraHalfWidthAt(Math.min(yy, kTop - 1e-5)) * height;
+            const py = horizonY - yy * height;
+            if (i === 0) ctx.moveTo(kx + hw, py);
+            else ctx.lineTo(kx + hw, py);
+          }
+          for (let i = steps; i >= 0; i -= 1) {
+            const yy = (i / steps) * kTop;
+            const hw = kuraHalfWidthAt(Math.min(yy, kTop - 1e-5)) * height;
+            ctx.lineTo(kx - hw, horizonY - yy * height);
+          }
+          ctx.closePath();
+          ctx.fill();
+
+          // The lone tree: canopy fainter than the buildings — grown, not built.
+          const tx = cx + MINKA.treeDx * height;
+          ctx.fillRect(
+            tx - MINKA.trunkHalf * height,
+            horizonY - MINKA.trunkH * height,
+            MINKA.trunkHalf * 2 * height,
+            MINKA.trunkH * height
+          );
+          ctx.globalAlpha = 0.34 * motion.epilogue * intensity;
+          ctx.beginPath();
+          ctx.ellipse(
+            tx,
+            horizonY - MINKA.treeCy * height,
+            MINKA.treeRx * height,
+            MINKA.treeRy * height,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
       }
 
       // The epilogue's birds (scene "scene" only): a few distant "v" strokes
@@ -366,7 +420,7 @@ export default function FieldCanvas({
       cancelAnimationFrame(raf);
       themeObserver.disconnect();
     };
-  }, [live, intensity, scene, reduced]);
+  }, [live, intensity, scene, minkaStyle, reduced]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

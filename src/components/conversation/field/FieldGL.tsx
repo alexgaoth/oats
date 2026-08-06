@@ -5,6 +5,7 @@ import {
   CHAFF_COUNT,
   EPILOGUE,
   INTRO_MS,
+  MINKA_STYLE_IDS,
   SCENE_IDS,
   bandSpread,
   bandStyle,
@@ -14,6 +15,7 @@ import {
   parseHexColor,
   type Field,
   type FieldScene,
+  type MinkaStyle,
   type Rgb,
 } from "./fieldModel";
 import {
@@ -191,6 +193,7 @@ export default function FieldGL({
   live,
   intensity,
   scene,
+  minkaStyle = "irimoya",
   reduced,
   onFailure,
 }: {
@@ -200,6 +203,8 @@ export default function FieldGL({
   intensity: number;
   /** Which post-recording epilogue plays. `off` is the shipped behaviour. */
   scene: FieldScene;
+  /** Which dwelling the minka/scene epilogues draw. */
+  minkaStyle?: MinkaStyle;
   reduced: boolean;
   onFailure: () => void;
 }) {
@@ -281,6 +286,7 @@ export default function FieldGL({
         time: u(backdrop, "uTime"),
         epilogue: u(backdrop, "uEpilogue"),
         scene: u(backdrop, "uScene"),
+        minkaStyle: u(backdrop, "uMinkaStyle"),
       };
       const bladeU = {
         resolution: u(blades, "uResolution"),
@@ -402,6 +408,7 @@ export default function FieldGL({
       // starts. Reduced motion skips it entirely: its still equivalent is the
       // idle world, not a frozen half-arrived scene.
       const sceneId = SCENE_IDS[scene];
+      const minkaStyleId = MINKA_STYLE_IDS[minkaStyle];
       let stoppedAt = -1;
       let epilogue = 0;
       let epilogueFrom = 0;
@@ -457,6 +464,7 @@ export default function FieldGL({
         gl.uniform1f(backdropU.time, time);
         gl.uniform1f(backdropU.epilogue, epilogue);
         gl.uniform1i(backdropU.scene, sceneId);
+        gl.uniform1i(backdropU.minkaStyle, minkaStyleId);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
         // 2. Blades — far to near, so nearer ones draw over the ones behind.
@@ -573,7 +581,7 @@ export default function FieldGL({
       fail(error instanceof Error ? error.message : String(error));
       return;
     }
-  }, [reduced, onFailure, scene]);
+  }, [reduced, onFailure, scene, minkaStyle]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

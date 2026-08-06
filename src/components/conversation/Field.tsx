@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import FieldCanvas from "./field/FieldCanvas";
 import FieldGL from "./field/FieldGL";
-import type { FieldScene } from "./field/fieldModel";
+import type { FieldScene, MinkaStyle } from "./field/fieldModel";
 
 // The field (DESIGN.md §9.8) — the world Oats lives in.
 //
@@ -67,6 +67,18 @@ function readFieldScene(): FieldScene {
   return "off";
 }
 
+/** Which dwelling the minka/scene epilogues draw, same override mechanism. */
+function readMinkaStyle(): MinkaStyle {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get("minkaStyle");
+    const stored = fromUrl ?? window.localStorage.getItem("oats.minkaStyle");
+    if (stored === "irimoya" || stored === "gassho" || stored === "hamlet") return stored;
+  } catch {
+    // As above.
+  }
+  return "irimoya";
+}
+
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
     () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
@@ -106,6 +118,7 @@ export default function Field({
   // exactly that. The module-level cache keeps the second call idempotent.
   const [gpuSupported] = useState(supportsGpuField);
   const [scene] = useState(readFieldScene);
+  const [minkaStyle] = useState(readMinkaStyle);
   const useGpu = !gpuFailed && gpuSupported;
 
   return (
@@ -115,11 +128,18 @@ export default function Field({
           live={live}
           intensity={intensity}
           scene={scene}
+          minkaStyle={minkaStyle}
           reduced={reduced}
           onFailure={onFailure}
         />
       ) : (
-        <FieldCanvas live={live} intensity={intensity} scene={scene} reduced={reduced} />
+        <FieldCanvas
+          live={live}
+          intensity={intensity}
+          scene={scene}
+          minkaStyle={minkaStyle}
+          reduced={reduced}
+        />
       )}
     </div>
   );

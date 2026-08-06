@@ -65,6 +65,7 @@ uniform float uSkyStrength;
 uniform float uTime;         // seconds — only the epilogue reads it
 uniform float uEpilogue;     // 0..1, the post-recording scene's presence
 uniform int   uScene;        // 0 off, 1 clear sky, 2 minka, 3 full dithered scene
+uniform int   uMinkaStyle;   // 1 irimoya, 2 gassho, 3 hamlet (irimoya + kura + tree)
 
 out vec4 fragColor;
 ${BAYER}
@@ -143,27 +144,75 @@ void main() {
   float alpha = warmAlpha + epilogueAlpha * (1.0 - warmAlpha);
   vec3 colour = warmColour * warmAlpha + epilogueRgb * epilogueAlpha * (1.0 - warmAlpha);
 
-  // Scenes 2 and 3, "minka": a farmhouse in the far countryside, sitting on
+  // Scenes 2 and 3, "minka": a dwelling in the far countryside, sitting on
   // the horizon opposite the light. It condenses out of grain — dither density
   // ramps with the epilogue, the same vocabulary the far blades use for
   // distance — rather than fading or sliding in. Geometry mirrors
-  // minkaHalfWidthAt() in fieldModel.ts, from the same constants.
+  // minkaHalfWidthAt()/kuraHalfWidthAt() in fieldModel.ts, same constants.
+  // The concave roof sweep is the cultural cue; straight edges read as a barn.
   if (uScene >= 2 && uEpilogue > 0.001) {
-    float hy = y - horizon;                       // height units above the horizon
-    float hx = abs((vUv.x - ${f(MINKA.x)}) * aspect);
-    float bodyTop = ${f(MINKA.bodyH)};
-    float roofT = clamp((hy - bodyTop) / ${f(MINKA.roofH)}, 0.0, 1.0);
-    float roofHalf = ${f(MINKA.bodyHalf + MINKA.eave)}
-                   - ${f(MINKA.bodyHalf + MINKA.eave - MINKA.ridgeHalf)} * roofT;
-    float halfW = hy < 0.0 ? 0.0
-                : hy <= bodyTop ? ${f(MINKA.bodyHalf)}
-                : hy - bodyTop <= ${f(MINKA.roofH)} ? roofHalf
-                : 0.0;
+    float hy = y - horizon;                        // height units above the horizon
+    float sx = (vUv.x - ${f(MINKA.x)}) * aspect;   // signed, for offset companions
+    float px = 1.5 / max(uResolution.y, 1.0);      // soften edges by ~1.5 CSS px
 
-    float px = 1.5 / max(uResolution.y, 1.0);     // soften the edge by ~1.5 CSS px
-    float inside = halfW > 0.0 ? smoothstep(halfW, halfW - px, hx) : 0.0;
+    // Main house half-width at this height.
+    float halfW = 0.0;
+    if (uMinkaStyle == 2) {
+      // gassho: steep thatched triangle, slight concave flare at the eaves.
+      if (hy <= ${f(MINKA.gasshoBodyH)}) {
+        halfW = ${f(MINKA.gasshoBodyHalf)};
+      } else {
+        float t = (hy - ${f(MINKA.gasshoBodyH)}) / ${f(MINKA.gasshoH)};
+        if (t <= 1.0) {
+          halfW = ${f(MINKA.gasshoRidgeHalf)}
+                + ${f(MINKA.gasshoEaveHalf - MINKA.gasshoRidgeHalf)} * pow(1.0 - t, ${f(MINKA.gasshoCurve)});
+        }
+      }
+    } else {
+      // irimoya: concave hip sweep, gable tier, raised ridge cap.
+      if (hy <= ${f(MINKA.bodyH)}) {
+        halfW = ${f(MINKA.bodyHalf)};
+      } else {
+        float hipT = (hy - ${f(MINKA.bodyH)}) / ${f(MINKA.hipH)};
+        if (hipT <= 1.0) {
+          halfW = ${f(MINKA.gableHalf)}
+                + ${f(MINKA.hipEaveHalf - MINKA.gableHalf)} * pow(1.0 - hipT, ${f(MINKA.hipCurve)});
+        } else {
+          float gableT = (hy - ${f(MINKA.bodyH + MINKA.hipH)}) / ${f(MINKA.gableH)};
+          if (gableT <= 1.0) {
+            halfW = ${f(MINKA.ridgeHalf)} + ${f(MINKA.gableHalf - MINKA.ridgeHalf)} * (1.0 - gableT);
+          } else if (hy - ${f(MINKA.bodyH + MINKA.hipH + MINKA.gableH)} <= ${f(MINKA.capH)}) {
+            halfW = ${f(MINKA.capHalf)};
+          }
+        }
+      }
+    }
+    float inside = (hy >= 0.0 && halfW > 0.0) ? smoothstep(halfW, halfW - px, abs(sx)) : 0.0;
 
-    float density = inside * 0.68 * uEpilogue;
+    // The hamlet keeps company: a kura storehouse and a lone tree. The tree's
+    // canopy dithers looser than the buildings — grown, not built.
+    float treeInside = 0.0;
+    if (uMinkaStyle == 3 && hy >= 0.0) {
+      float kx = abs(sx - ${f(MINKA.kuraDx)});
+      float kHalf = 0.0;
+      if (hy <= ${f(MINKA.kuraBodyH)}) {
+        kHalf = ${f(MINKA.kuraHalf)};
+      } else {
+        float kt = (hy - ${f(MINKA.kuraBodyH)}) / ${f(MINKA.kuraRoofH)};
+        if (kt <= 1.0) kHalf = mix(${f(MINKA.kuraRoofHalf)}, 0.002, kt);
+      }
+      if (kHalf > 0.0) inside = max(inside, smoothstep(kHalf, kHalf - px, kx));
+
+      vec2 td = vec2((sx - ${f(MINKA.treeDx)}) / ${f(MINKA.treeRx)},
+                     (hy - ${f(MINKA.treeCy)}) / ${f(MINKA.treeRy)});
+      treeInside = smoothstep(1.0, 0.9, length(td));
+      float trunk = smoothstep(${f(MINKA.trunkHalf)}, ${f(MINKA.trunkHalf)} * 0.4,
+                               abs(sx - ${f(MINKA.treeDx)}))
+                  * step(hy, ${f(MINKA.trunkH)});
+      inside = max(inside, trunk);
+    }
+
+    float density = max(inside * 0.68, treeInside * 0.5) * uEpilogue;
     float minkaAlpha = density >= threshold ? 0.5 * uSkyStrength : 0.0;
     vec3 minkaRgb = mix(uInk, uGold, 0.3);
 
