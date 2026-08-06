@@ -64,6 +64,19 @@ export default function FieldCanvas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const colorsRef = useRef<string[] | null>(null);
+  // Growth and epilogue state lives in a ref, not the effect closure: `live`
+  // is in the effect's deps, so the closure is torn down on every transition —
+  // exactly the moment the recede and the epilogue need their history.
+  const motionRef = useRef({
+    startedAt: -1,
+    grown: 0,
+    growFrom: 0,
+    growAt: 0,
+    wasLive: false,
+    stoppedAt: -1,
+    epilogue: 0,
+    epilogueFrom: 0,
+  });
 
   useEffect(() => {
     if (reduced) return;
@@ -104,39 +117,35 @@ export default function FieldCanvas({
 
     // Eases the wheat toward whether a conversation is live. Mirrors FieldGL:
     // arriving reads as weather, leaving as settling, so withdrawal is slower.
-    let grown = live ? 1 : 0;
-    let growFrom = grown;
-    let growAt = 0;
-    let wasLive = live;
     // The epilogue mirrors FieldGL too: only after a conversation ended in
     // this session, yielding quickly if a new one starts, skipped when reduced.
-    let stoppedAt = -1;
-    let epilogue = 0;
-    let epilogueFrom = 0;
+    // All of it reads and writes `motionRef`, which outlives this closure.
+    const motion = motionRef.current;
     const liveProgress = (elapsed: number) => {
-      if (live !== wasLive) {
-        wasLive = live;
-        growFrom = grown;
-        growAt = elapsed;
+      if (live !== motion.wasLive) {
+        motion.wasLive = live;
+        motion.growFrom = motion.grown;
+        motion.growAt = elapsed;
         if (live) {
-          epilogueFrom = epilogue;
+          motion.epilogueFrom = motion.epilogue;
         } else {
-          stoppedAt = elapsed;
+          motion.stoppedAt = elapsed;
         }
       }
       const span = live ? INTRO_MS : 2200;
-      const p = Math.min(1, Math.max(0, (elapsed - growAt) / span));
+      const p = Math.min(1, Math.max(0, (elapsed - motion.growAt) / span));
       const eased = 1 - Math.pow(1 - p, 3);
-      grown = growFrom + ((live ? 1 : 0) - growFrom) * eased;
+      motion.grown = motion.growFrom + ((live ? 1 : 0) - motion.growFrom) * eased;
 
       if (scene === "off") {
-        epilogue = 0;
+        motion.epilogue = 0;
       } else if (live) {
-        epilogue = epilogueFrom * (1 - Math.min(1, (elapsed - growAt) / EPILOGUE.interruptMs));
-      } else if (stoppedAt >= 0) {
-        epilogue = epilogueAt(elapsed - stoppedAt);
+        motion.epilogue =
+          motion.epilogueFrom * (1 - Math.min(1, (elapsed - motion.growAt) / EPILOGUE.interruptMs));
+      } else if (motion.stoppedAt >= 0) {
+        motion.epilogue = epilogueAt(elapsed - motion.stoppedAt);
       }
-      return grown;
+      return motion.grown;
     };
 
     const draw = (elapsed: number) => {
@@ -171,7 +180,7 @@ export default function FieldCanvas({
       // The epilogue's cleared sky (scenes "sky" and "scene"): a slate-blue
       // wash blooming from the top of the frame down toward the horizon,
       // behind the warm light, which keeps the horizon.
-      if (epilogue > 0.001 && (scene === "sky" || scene === "scene")) {
+      if (motion.epilogue > 0.001 && (scene === "sky" || scene === "scene")) {
         const bloom = ctx.createLinearGradient(0, 0, 0, horizonY);
         bloom.addColorStop(0, rgbToCss(SKY_BLUE));
         // Fade to the *same* blue at zero alpha — "transparent" interpolates
@@ -181,7 +190,7 @@ export default function FieldCanvas({
           1,
           `rgba(${to255(SKY_BLUE[0])}, ${to255(SKY_BLUE[1])}, ${to255(SKY_BLUE[2])}, 0)`
         );
-        ctx.globalAlpha = SKY_BLOOM_ALPHA * epilogue * intensity;
+        ctx.globalAlpha = SKY_BLOOM_ALPHA * motion.epilogue * intensity;
         ctx.fillStyle = bloom;
         ctx.fillRect(0, 0, width, horizonY);
       }
@@ -204,7 +213,7 @@ export default function FieldCanvas({
       // silhouette on the horizon, drawn from the same geometry as the shader
       // (minkaHalfWidthAt). Smooth fade here — the fallback never counterfeits
       // the grain the GPU path condenses it from.
-      if (epilogue > 0.001 && (scene === "minka" || scene === "scene")) {
+      if (motion.epilogue > 0.001 && (scene === "minka" || scene === "scene")) {
         const cx = MINKA.x * width;
         const eaveY = horizonY - MINKA.bodyH * height;
         const ridgeY = horizonY - (MINKA.bodyH + MINKA.roofH) * height;
@@ -212,7 +221,7 @@ export default function FieldCanvas({
         const eavePx = (MINKA.bodyHalf + MINKA.eave) * height;
         const ridgePx = MINKA.ridgeHalf * height;
 
-        ctx.globalAlpha = 0.45 * epilogue * intensity;
+        ctx.globalAlpha = 0.45 * motion.epilogue * intensity;
         ctx.fillStyle = colors[0];
         ctx.beginPath();
         ctx.moveTo(cx - bodyPx, horizonY);
@@ -230,9 +239,9 @@ export default function FieldCanvas({
       // The epilogue's birds (scene "scene" only): a few distant "v" strokes
       // crossing the cleared sky right to left, wingbeat as a slow flex. Same
       // positions as the shader's specks, from the same BIRDS constants.
-      if (epilogue > 0.001 && scene === "scene" && !reduced) {
+      if (motion.epilogue > 0.001 && scene === "scene" && !reduced) {
         ctx.strokeStyle = colors[0];
-        ctx.globalAlpha = 0.5 * epilogue * intensity;
+        ctx.globalAlpha = 0.5 * motion.epilogue * intensity;
         ctx.lineWidth = 1;
         for (let i = 0; i < BIRDS.count; i += 1) {
           const phase = (i * 0.618 + 0.21) % 1;
@@ -320,7 +329,11 @@ export default function FieldCanvas({
     }
 
     let raf = 0;
-    const startedAt = performance.now();
+    // One clock for the component's whole life: the effect re-runs on every
+    // `live` transition, and a clock that restarted at zero would invalidate
+    // the growAt/stoppedAt timestamps `motionRef` carries across runs.
+    if (motion.startedAt < 0) motion.startedAt = performance.now();
+    const startedAt = motion.startedAt;
     let lastFrame = 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
