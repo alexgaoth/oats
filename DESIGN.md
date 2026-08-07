@@ -487,33 +487,32 @@ Oats is allowed to be beautiful while giving the product a place to be.
 blade. Two thousand blades at an individually safe alpha still stack into an
 opaque wall that swallows the copy. When in doubt, fewer and fainter.
 
-### 9.9 The epilogue — the countryside after a conversation
+### 9.9 The countryside — the world while recording
 
-Stopping a recording lets the wheat withdraw; the epilogue is what arrives in
-exchange, and it is a **transient reward, not a new permanent state**. The idle
-world stays canonical: the scene blooms in over ~3.2s while the wheat settles,
-holds ~9s, then settles back over ~7s, ease-out in and smoothstep out, no
-overshoot anywhere. If a new recording starts mid-epilogue it yields within
-600ms. It plays only after a conversation actually ended this session — never
-on launch — and `prefers-reduced-motion` skips it entirely: its still
-equivalent is the idle world, not a frozen half-arrived scene.
+The scenery is **part of the recording gesture, not a sequel to it**. It rides
+the wheat's own grow/recede signal — one envelope, defined once in
+`fieldModel.ts` — so pressing record wakes the whole world together (~1.4s, with
+the wheat), it stands for as long as the conversation is live, and stopping
+settles all of it back together (~2.2s). There is no post-recording show, no
+timing of its own, and no state that can be out of sync with the wheat. The
+idle world stays canonical; `prefers-reduced-motion` renders live as a still
+frame of the awake world and idle without it.
 
-The scene is **the full dithered countryside** (chosen 2026-08-06; the timing
-and geometry live in `fieldModel.ts` and both renderers read them):
+The scene is **the dithered countryside** (revised 2026-08-06 after review;
+geometry lives in `fieldModel.ts` and both renderers read it):
 
 - **The sky clears, in grain.** A blue bloom (`SKY_BLUE`) descends from the
   top of the frame, spelled in dither density; the warm light keeps the
-  horizon, so it reads as evening after rain rather than a repaint. Oat milk
-  takes a 1.45× deeper pour than Steel-cut — blue over near-white washes out
-  long before it breaks the alpha ceiling — keyed off the same
-  paper-vs-charcoal signal as the warm wash.
-- **A hamlet condenses on the horizon**, opposite the light: an **irimoya**
-  farmhouse (concave hip sweep, gable tier, raised ridge cap), a small kura
-  storehouse, and a lone tree whose canopy dithers looser than the buildings —
-  grown, not built. **The concave roof sweep is load-bearing and unit-tested:**
-  a straight-edged roof reads as a Western barn at any proportions. Arrival is
-  by dither density ramping with the epilogue — the same vocabulary far blades
-  use for distance — never a fade or a slide.
+  horizon. Oat milk takes a 1.45× deeper pour than Steel-cut — blue over
+  near-white washes out long before it breaks the alpha ceiling — keyed off
+  the same paper-vs-charcoal signal as the warm wash.
+- **One irimoya farmhouse condenses on the horizon**, opposite the light:
+  concave hip sweep, short gable tier, raised ridge cap — and nothing else.
+  Companion buildings read as additional rather than belonging; the horizon
+  gets a single dwelling. **The concave roof sweep is load-bearing and
+  unit-tested:** a straight-edged roof reads as a Western barn at any
+  proportions. Arrival is by dither density ramping with growth — the same
+  vocabulary far blades use for distance — never a fade or a slide.
 - **A few birds cross**, right to left, ~50s per crossing: specks whose size
   breathes as a wingbeat, because at this distance a flap is a shimmer, not an
   outline.
@@ -521,7 +520,7 @@ and geometry live in `fieldModel.ts` and both renderers read them):
 Everything renders in the field's one canvas against the one shared Bayer
 matrix, so §7's "one animated dither layer, ever" holds. The 2D fallback draws
 the same scene smooth — same model, no counterfeit grain. Alpha stays within
-§9.8's ceiling: the sky never exceeds 0.5 anywhere, and the dwelling sits at
+§9.8's ceiling: the sky never exceeds 0.5 anywhere, and the farmhouse sits at
 0.5 on its lit pixels.
 
 ### 9.5 Empty states
