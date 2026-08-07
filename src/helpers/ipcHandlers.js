@@ -717,6 +717,26 @@ class IPCHandlers {
       return { success: true };
     });
 
+    // The workspace is the only place that knows a conversation is running, and
+    // it is the one window a user may never open. Fire-and-forget: a dropped
+    // update is corrected by the next one, and nothing should wait on it.
+    ipcMain.on("conversation-state", (_event, state) => {
+      const next = {
+        recording: Boolean(state?.recording),
+        startedAt: Number(state?.startedAt) || null,
+      };
+      this.windowManager?.setConversationState?.(next);
+      this.getTrayManager?.()?.setConversationState?.(next);
+    });
+
+    // Stopping from the oat or the tray goes through the same path as the global
+    // shortcut, so there is exactly one implementation of "toggle a conversation"
+    // and the three entry points cannot drift.
+    ipcMain.handle("toggle-conversation-request", () => {
+      void this.windowManager?.sendToggleConversation?.();
+      return { success: true };
+    });
+
     ipcMain.handle("set-main-window-interactivity", (event, shouldCapture) => {
       this.windowManager.setMainWindowInteractivity(Boolean(shouldCapture));
       return { success: true };

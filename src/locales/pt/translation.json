@@ -35,7 +35,12 @@
     "openControlPanel": "Abrir painel de controle",
     "hideControlPanel": "Ocultar painel de controle",
     "quit": "Sair do Oats",
-    "tooltip": "Oats - Ditado por voz"
+    "tooltip": "Oats - Ditado por voz",
+    "conversation": {
+      "start": "Iniciar conversa",
+      "stop": "Parar conversa"
+    },
+    "tooltipRecording": "Oats - Gravando uma conversa"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2533,7 +2538,8 @@
       "hotkeyToSpeak": "{{hotkey}} para falar",
       "recording": "Gravando...",
       "processing": "Processando...",
-      "clickToSpeak": "Clique para falar"
+      "clickToSpeak": "Clique para falar",
+      "conversation": "Gravando uma conversa — clique para terminar"
     },
     "buttons": {
       "cancelRecording": "Cancelar gravação",
@@ -3034,7 +3040,14 @@
       "openPrevious": "Abrir essa",
       "noMatches": "nada corresponde",
       "emptyHint": "prima {{shortcut}} em qualquer lugar para começar",
-      "backToList": "voltar"
+      "backToList": "voltar",
+      "copy": "copiar",
+      "copied": "copiado",
+      "save": "salvar",
+      "delete": "excluir",
+      "deleteConfirm": "excluir esta conversa?",
+      "deleteYes": "excluir",
+      "deleteCancel": "manter"
     },
     "settings": {
       "title": "Poucas escolhas.",
@@ -3067,6 +3080,13 @@
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",
       "noEndpoint": "Configure o endpoint da API do Oats antes de gravar uma conversa.",
       "actionFailed": "O Oats não conseguiu gerar inteligência para esta conversa."
+    },
+    "preflight": {
+      "no-microphone": "Nenhum microfone encontrado. Ligue um e pressione novamente.",
+      "microphone-permission": "O Oats precisa de permissão para usar o microfone. Conceda nas configurações do sistema.",
+      "no-speech-engine": "O motor de voz local ainda não está instalado — veja as Configurações.",
+      "no-model": "Nenhum modelo de voz foi baixado ainda — veja as Configurações.",
+      "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações."
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "Dispensar pergunta",
     "askedTimes": "perguntada {{count}}×",
     "earlier": "{{count}} anteriores",
-    "undo": "Anular"
+    "undo": "Anular",
+    "searchedHost": "pesquisado · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} fio aberto",

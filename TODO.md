@@ -360,6 +360,25 @@ writes in sequence leave one process, holding the newest value.
 - **Searches open in a new browser window** via `xdg-settings` + `--new-window`,
   so results land on the current workspace instead of a tab in a window elsewhere.
 
+## L. Undecided — the rolling pre-roll buffer
+
+**"Start recording" captures the last 60 seconds as well.** By far the most
+useful thing this product could do for the people it is for: you realise a
+conversation matters _after_ it has started, and the sentence that made you
+realise it is the one you have just lost. Every workaround (recording everything,
+recording pre-emptively) is worse than the feature.
+
+It is filed as undecided rather than as work because it **contradicts a stated
+boundary**: `README.md` lists "ambient always-on listening outside explicit
+recordings" among the things intentionally not built, and a pre-roll buffer is
+exactly that, however short and however local the ring buffer is.
+
+If it is ever built, the honest shape is: off by default, one Settings toggle
+that says plainly that the microphone is open whenever Oats is running, a fixed
+60-second ceiling, memory only (never written to disk), and discarded the moment
+the toggle is turned off. The decision belongs to the product, not to an
+implementation pass — do not build it silently as an optimisation.
+
 ## F. Post-v1
 
 - **iPhone** — a second implementation, not a port. Companion-to-Mac favored.

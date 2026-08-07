@@ -35,7 +35,12 @@
     "openControlPanel": "Abrir panel de control",
     "hideControlPanel": "Ocultar panel de control",
     "quit": "Salir de Oats",
-    "tooltip": "Oats - Dictado por voz"
+    "tooltip": "Oats - Dictado por voz",
+    "conversation": {
+      "start": "Iniciar conversación",
+      "stop": "Detener conversación"
+    },
+    "tooltipRecording": "Oats - Grabando una conversación"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2581,7 +2586,8 @@
       "hotkeyToSpeak": "{{hotkey}} para hablar",
       "recording": "Grabando...",
       "processing": "Procesando...",
-      "clickToSpeak": "Haz clic para hablar"
+      "clickToSpeak": "Haz clic para hablar",
+      "conversation": "Grabando una conversación: haz clic para terminar"
     },
     "buttons": {
       "cancelRecording": "Cancelar grabación",
@@ -3034,7 +3040,14 @@
       "openPrevious": "Abrir aquella",
       "noMatches": "nada coincide",
       "emptyHint": "pulsa {{shortcut}} en cualquier lugar para empezar",
-      "backToList": "volver"
+      "backToList": "volver",
+      "copy": "copiar",
+      "copied": "copiado",
+      "save": "guardar",
+      "delete": "eliminar",
+      "deleteConfirm": "¿eliminar esta conversación?",
+      "deleteYes": "eliminar",
+      "deleteCancel": "conservar"
     },
     "settings": {
       "title": "Pocas decisiones.",
@@ -3067,6 +3080,13 @@
       "noModel": "Configura el procesamiento de Oats antes de grabar una conversación.",
       "noEndpoint": "Configura el endpoint de la API de Oats antes de grabar una conversación.",
       "actionFailed": "Oats no pudo generar inteligencia para esta conversación."
+    },
+    "preflight": {
+      "no-microphone": "No se ha encontrado ningún micrófono. Conecta uno y vuelve a pulsar.",
+      "microphone-permission": "Oats necesita permiso para usar el micrófono. Concédelo en los ajustes del sistema.",
+      "no-speech-engine": "El motor de voz local aún no está instalado: revisa Ajustes.",
+      "no-model": "Todavía no se ha descargado ningún modelo de voz: revisa Ajustes.",
+      "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes."
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "Descartar pregunta",
     "askedTimes": "preguntado {{count}}×",
     "earlier": "{{count}} anteriores",
-    "undo": "Deshacer"
+    "undo": "Deshacer",
+    "searchedHost": "buscado · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} hilo abierto",

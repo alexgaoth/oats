@@ -28,6 +28,8 @@ The `conversationAide` implementation still reflects a narrower earlier design. 
 
 Because of rule 2, **never write "nothing leaves your device"** in UI copy, docs, or comments. The accurate claim: audio and transcripts stay on the device; the text of questions nobody could answer is sent to the configured search host. See `docs/network-allowlist.md`.
 
+**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the *renderer*, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, **default false as of 2026-08-07**, and the Settings toggle is disabled without a downloaded classifier model, both pending fix — a closed gate logs to the debug logger and shows nothing in the UI). Finalized segments arrive every ~5s in local mode (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards flow renderer → `conversation-cards-set` IPC → `windowManager.showConversationCards` → a separate always-on-top overlay window (`AppRouter` route `?conversation-assist=true` → `ConversationAssistOverlay`), shown only after the overlay's `conversation-assist-ready` handshake.
+
 `DESIGN.md` is the binding visual spec (six signature surfaces: pulse, question card, open-thread stack, topic graph, lifetime graph, wheat field).
 
 ### Linux input and clipboard — hard-won facts
@@ -38,6 +40,7 @@ Re-deriving these costs hours, so they are recorded here:
 - `wl-copy` **never exits**: a Wayland clipboard offer is served by a live process. Spawn it detached with no inherited pipes, never under `spawnSync`, and keep exactly one alive (`_ownWaylandClipboard`).
 - `wl-paste` has been observed **hanging indefinitely**, even on `--list-types`. It sits on the paste hot path and must be behind a circuit breaker.
 - A freshly created `uinput` device is **not usable for ~200ms+** — udev, then libinput, then the compositor. Writes before that succeed at the kernel and are silently dropped, so the paste tool exits 0 while nothing was typed. `resources/linux-fast-paste.c` waits 300ms.
+- **`setIgnoreMouseEvents(true, { forward: true })` does not forward on Linux.** `forward` is macOS and Windows only; on Linux Electron replaces the window's X11 _input shape_ with a 1×1 rectangle, so a click-through window receives **no** mouse events — including the `mouseenter` that would turn it back on. Any design where the renderer's own hover decides its click-through state deadlocks on the first `mouseleave`. The floating oat's state is therefore decided in the main process from three inputs (renderer hold, real cursor position, drag in progress) — `oatInteractivity.js`, applied by `windowManager`, with a 250ms cursor poll while the oat is on screen as the only way back.
 - **Fn cannot be a hotkey on Linux.** Most keyboards handle it in firmware and never emit `KEY_FN`, and `hotkeyManager.js` rejects `Fn`/`GLOBE` outside macOS. Right-side modifiers (`RightAlt` and friends) are the working single-key equivalent.
 
 `IMPLEMENTATION.md` tracks build stages; `TODO.md` is the live tracker for what is
@@ -185,18 +188,20 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **conversation/**: The signature surfaces that live during recording (DESIGN.md §9)
   - **ListeningPulse.tsx**: The breathing husked-oat seed (§9.1). Idle = static gold seed, paused = husk-grey, live = `oats-breathe` in `index.css`
   - **OpenThreadStack.tsx**: Collapsed-by-default rail of unfinished threads (§9.3)
-  - **WheatField.tsx**: The oat field behind the Conversation surface (§9.8). This file is only the **chooser** — it probes WebGL2 once per session, rejects software rasterisers, and honours `prefers-reduced-motion`
-  - **wheatField/fieldModel.ts**: Pure, DOM-free, deterministic field data and wind math. Unit-tested in `test/helpers/wheatFieldModel.test.js`. **Both renderers read this**, so they cannot drift
-  - **wheatField/shaders.ts**: GLSL, with the wind constants interpolated from `fieldModel`'s `WIND` object rather than retyped — the shader and the JS cannot disagree about the wind
-  - **wheatField/WheatFieldGL.tsx**: WebGL2 renderer. One instanced draw per depth band, far to near; growth, wind, gusts and cursor-parting all happen in the vertex shader; §7's ordered dither in the fragment shader. No meshes, no downloaded assets
-  - **wheatField/WheatFieldCanvas.tsx**: 2D fallback drawing the same field, sparser and without dither (§7 forbids faking the grain, so it is omitted rather than counterfeited)
+  - **Field.tsx**: The oat field behind the Conversation surface (§9.8). This file is only the **chooser** — it probes WebGL2 once per session, rejects software rasterisers, honours `prefers-reduced-motion`, and reads the recording scenery once per mount (`?fieldScene=`/`oats.fieldScene`: `sky` | `minka` | `scene` (default) | `off`). The scenery — DESIGN.md §9.9's countryside — rides the wheat's own grow/recede signal: it has **no timing of its own and no post-recording phase**
+  - **field/fieldModel.ts**: Pure, DOM-free, deterministic field data, wind math, and the recording scenery (sky colour, irimoya farmhouse geometry, birds). Unit-tested in `test/helpers/fieldModel.test.js`. **Both renderers read this**, so they cannot drift
+  - **field/shaders.ts**: GLSL, with the wind/scene constants interpolated from `fieldModel` rather than retyped — the shader and the JS cannot disagree
+  - **field/FieldGL.tsx**: WebGL2 renderer. One instanced draw per depth band, far to near; growth, wind, gusts and cursor-parting all happen in the vertex shader; §7's ordered dither in the fragment shader. No meshes, no downloaded assets
+  - **field/FieldCanvas.tsx**: 2D fallback drawing the same field, sparser and without dither (§7 forbids faking the grain, so it is omitted rather than counterfeited)
 - **ui/**: Reusable UI components (buttons, cards, inputs, etc.)
 
-**Editing the wheat field — three things that will bite you:**
+**Editing the wheat field — five things that will bite you:**
 
 1. **Opacity accumulates.** The ~50% ceiling is on what reaches the screen, not on one blade. An early version at 7,200 blades and individually "safe" alpha stacked into an opaque wall that swallowed the copy. It is 1,800 now. Fewer and fainter when in doubt.
 2. **Blades must be spread vertically within their band**, or the six bands render as visible horizontal seams.
 3. **Nothing may call `getComputedStyle` in the draw loop.** Palette is read on mount and on theme change via `MutationObserver`. The old implementation read it every frame, forcing a style recalculation 30×/second for the length of a conversation.
+4. **Props passed to `FieldGL` must be referentially stable.** Its GL effect re-runs when `onFailure` (or `scene`/`reduced`) changes identity, and the rebuild silently resets grow/recede state — the exact history a `live` transition needs. `Field.tsx` uses `useCallback` for this reason; an inline arrow reintroduces the bug. `FieldCanvas` keeps that state in a ref because its effect legitimately re-runs on `live`.
+5. **Screenshot verification has its own traps.** Both draw loops gate on `document.hidden`, so a backgrounded Chrome window shows a stale (or never-drawn) canvas — screenshots of it lie. Headless `google-chrome --screenshot`/`--virtual-time-budget` advances RAF only a frame or two; drive headless Chrome over CDP (Node 24's native WebSocket suffices) and wait wall-clock time instead. The browser-extension `javascript_tool` runs in an isolated world: it cannot read page globals or patch the page's `document.hidden`.
 
 ### React Hooks (src/hooks/)
 

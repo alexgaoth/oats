@@ -35,7 +35,12 @@
     "openControlPanel": "コントロールパネルを開く",
     "hideControlPanel": "コントロールパネルを非表示",
     "quit": "Oats を終了",
-    "tooltip": "Oats - 音声ディクテーション"
+    "tooltip": "Oats - 音声ディクテーション",
+    "conversation": {
+      "start": "会話を開始",
+      "stop": "会話を終了"
+    },
+    "tooltipRecording": "Oats - 会話を録音中"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2533,7 +2538,8 @@
       "hotkeyToSpeak": "{{hotkey}} で話す",
       "recording": "録音中...",
       "processing": "処理中...",
-      "clickToSpeak": "クリックして話す"
+      "clickToSpeak": "クリックして話す",
+      "conversation": "会話を録音中 — クリックで終了"
     },
     "buttons": {
       "cancelRecording": "録音をキャンセル",
@@ -3034,7 +3040,14 @@
       "openPrevious": "その会話を開く",
       "noMatches": "一致するものがありません",
       "emptyHint": "どこでも {{shortcut}} を押して開始",
-      "backToList": "戻る"
+      "backToList": "戻る",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "save": "保存",
+      "delete": "削除",
+      "deleteConfirm": "この会話を削除しますか？",
+      "deleteYes": "削除",
+      "deleteCancel": "残す"
     },
     "settings": {
       "title": "選択は少なく。",
@@ -3067,6 +3080,13 @@
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
       "noEndpoint": "会話を録音する前に Oats の API エンドポイントを設定してください。",
       "actionFailed": "Oats はこの会話のインテリジェンスを生成できませんでした。"
+    },
+    "preflight": {
+      "no-microphone": "マイクが見つかりません。接続してからもう一度押してください。",
+      "microphone-permission": "Oats にはマイクの使用許可が必要です。システム設定で許可してください。",
+      "no-speech-engine": "ローカル音声エンジンがまだインストールされていません — 設定を確認してください。",
+      "no-model": "音声モデルがまだダウンロードされていません — 設定を確認してください。",
+      "no-api-key": "処理は API キーを使う設定ですが、キーが保存されていません — 設定を確認してください。"
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "質問を閉じる",
     "askedTimes": "{{count}} 回質問",
     "earlier": "他 {{count}} 件",
-    "undo": "元に戻す"
+    "undo": "元に戻す",
+    "searchedHost": "検索済み · {{host}}"
   },
   "openThreads": {
     "count_one": "未完の話 {{count}} 件",

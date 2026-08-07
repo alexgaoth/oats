@@ -36,3 +36,19 @@ export function getCachedPlatform(): Platform {
   }
   return cachedPlatform;
 }
+
+/**
+ * Publish the platform to CSS as `<html data-platform="…">`.
+ *
+ * Some differences between platforms are not a component's business — whether
+ * macOS should keep its overlay scrollbars is a property of the OS, not of any
+ * one scrollable region — and expressing them as a stylesheet rule is both
+ * cheaper and less error-prone than threading a prop to every such place.
+ *
+ * Called once from the renderer entry point, before React mounts, so the first
+ * paint already has it. Safe to call again.
+ */
+export function applyPlatformAttribute(): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-platform", getCachedPlatform());
+}

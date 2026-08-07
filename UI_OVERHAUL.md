@@ -260,26 +260,254 @@ remounts and replays a fade + 8px rise on the `base` curve, with a
 reduced-motion still equivalent. `pulse-glow` no longer animates `box-shadow` in
 a loop (a §8 review-blocking defect), and Toast's horizontal slide is gone.
 
-### Not done — stated plainly
+### Not done at the time — now closed, see the pass below
 
-**§8's "the outgoing view dims to 0 as the incoming rises" is unmet.** It is an
+**§8's "the outgoing view dims to 0 as the incoming rises" was unmet.** It was an
 enter-only fade. Two attempts at a true cross-fade were both verifiably wrong:
 re-rendering the previous element _mounts a fresh copy_ (which replays the enter
 animation under a fading wrapper, and re-runs every mount effect of the view
 being left), and cloning the DOM in a `useLayoutEffect` captures the _incoming_
 view because React has already committed by then. Both looked worse than the
-plain fade. `CrossFade.tsx` was deleted rather than shipped broken. A correct
-implementation has to capture before commit — a render-phase clone guarded on a
-key ref, or holding the previous subtree in a portal.
+plain fade. `CrossFade.tsx` was deleted rather than shipped broken.
 
-### Open minors from the final round
+Both failures share a cause — they produce a **second instance** of the view being
+left. The answer turned out to be to stop creating one: see "the surfaces stopped
+unmounting" below.
 
-- `ForceGraph.draw()` calls `getComputedStyle` and reassigns canvas size every
-  frame, now ~73× per settle. `CLAUDE.md` records this exact mistake as a
-  hard-won wheat-field lesson; it should read the palette on mount and on theme
-  change.
-- The settle undoes ~74% of a drag's displacement, which reads as rubber-banding
-  rather than settling.
-- The running tick captures a stale `draw`, so hovering during a settle has its
-  highlight overwritten each frame.
-- `viewKey` uses `reading` while the branch requires `reading && selected`.
+### Open minors from the final round — all closed
+
+- ~~`ForceGraph.draw()` calls `getComputedStyle` and reassigns canvas size every
+  frame, now ~73× per settle.~~
+- ~~The settle undoes ~74% of a drag's displacement, which reads as
+  rubber-banding rather than settling.~~
+- ~~The running tick captures a stale `draw`, so hovering during a settle has its
+  highlight overwritten each frame.~~
+- ~~`viewKey` uses `reading` while the branch requires `reading && selected`.~~
+  Already resolved when it was written down: each Intelligence branch carries a
+  literal key on the element it returns, so the key cannot disagree with the
+  condition that produced it. The note was stale, not the code.
+
+---
+
+## Mac-first pass (2026-07-31)
+
+Two rounds, builder/critic; audit trail in
+`.iterate/20260731-mac-and-open-items/`. Closes every item above and audits the
+overhaul for defects that are conditional on the platform — the app is developed
+on Linux under software compositing and will mostly be run on macOS, so a thing
+can be correct here and wrong there.
+
+### The surfaces stopped unmounting
+
+All three surfaces are now mounted at once and stacked; the active one is
+`data-active="true"` and the others carry `inert` and `pointer-events: none`.
+Switching cross-fades them. Sampling opacity every 30ms across a switch:
+
+| t (ms) | outgoing | incoming |
+| ------ | -------- | -------- |
+| 60     | 1.000    | 0.000    |
+| 90     | 0.528    | 0.472    |
+| 150    | 0.183    | 0.817    |
+| 210    | 0.010    | 0.990    |
+| 240    | 0.000    | 1.000    |
+
+Four frames of genuine overlap. That is §8 met, for the first time.
+
+It also fixed a functional bug nobody had noticed. `ConversationSurface` is the
+only registrant of `onToggleConversation`, so while it was unmounted **the global
+conversation hotkey did nothing on Intelligence and Settings** — the primary
+action, documented as working "from anywhere", worked on one screen in three.
+
+Fixing that opened a second hole, which a review caught: the hotkey now worked from
+Settings, but you stayed on Settings. Recording began with no pulse, no timer and
+no stop control on screen, and the nav faded out (A7) half a second later and
+stopped taking clicks — so the only way to stop was a shortcut you could no longer
+see. **A conversation starting now brings the Conversation surface with it**,
+watching the store rather than the hotkey so every route in is covered.
+
+A surface's *contents* still wait for its first visit. Mounting Settings at launch
+meant `MicrophoneSettings` enumerating devices at startup, and on a machine whose
+mic permission has been reset that is an OS permission prompt plus a live
+`getUserMedia` on the Conversation screen, unexplained — and on macOS it pauses
+whatever is playing. The pane element mounts immediately (the cross-fade needs a
+committed `opacity: 0` to move away from); the subtree waits.
+
+### Every transition in the app was resolving to `0s`
+
+The worst thing found, and invisible in the source. The motion tokens carried
+their easing (`--motion-base: 220ms cubic-bezier(…)`), but are used almost
+entirely through Tailwind as `[transition-duration:var(--motion-base)]` — and
+`transition-duration: 220ms cubic-bezier(…)` is not a valid duration, so it fell
+back to `0s`. The nav underline slide, the nav fade while recording, every hover,
+the open-thread stack and the assist overlay had never animated. Only asking the
+running app for its computed `transition-duration` showed it.
+
+The tokens are durations now, `--ease-oats` carries the curve, and Tailwind's
+`--default-transition-timing-function` / `--default-transition-duration` point at
+them so a bare `transition-colors` is already on the Oats curve.
+
+### F2 was reported done and was not done
+
+`index.css` has an inherited `input:not(.input-inline)` rule giving every input a
+border, a radius and a filled background. It is an *element* selector, so it
+outranks the utilities a component sets on itself: `border-b bg-transparent` lost
+and the box came back. The Oats inputs now use that rule's own `.input-inline`
+opt-out. Measured before: 1px border, 8px radius, filled. After: bottom hairline,
+no radius, transparent.
+
+### The drag band was eating clicks
+
+H4's drag strip was absolutely positioned over the top of the composition, and
+`-webkit-app-region: drag` swallows clicks — so every Intelligence row that
+scrolled under it stopped being clickable. It is real layout now. That also gives
+the macOS traffic lights (y 20–34, per `windowConfig.js`) a band to themselves;
+they were sitting six pixels above the Intelligence heading.
+
+### The graph
+
+Palette read on mount and on theme change instead of per frame (measured: **0**
+`getComputedStyle` calls across a full drag and settle, down from ~73); backing
+store reallocated only on a real size change; DPR clamped to 2 like the field,
+which is a 4× difference on a Retina Mac. The dragged node stays pinned **through**
+the release settle, so a 227px drag now ends exactly where it was dropped
+(measured `undonePx: 0`) while neighbours still give way (18, 52, 36px).
+
+One correction to the record: the "~74%" above was not reproduced. On a synthetic
+five-node star, unpinning at let-go costs about 40px of a 233px drag — ~17%. The
+direction is right and the fix is exact either way, but the magnitude above should
+be read as measured on one real conversation, not as a constant. The
+simulation moved to `notes/graphPhysics.ts`, pure and DOM-free like
+`field/fieldModel.ts`, so those claims are unit-testable.
+
+### macOS-conditional, fixed but **not verified on a Mac**
+
+No Mac was available. These rest on documented platform behaviour plus tests that
+exercise both branches from Linux, and should be confirmed on real hardware:
+
+- **Overlay scrollbars.** Styling `::-webkit-scrollbar` with a width opts an
+  element out of macOS overlay scrollbars and gives it a classic gutter that takes
+  layout space. The rule was global, so on macOS it added a permanent 6px gutter,
+  and because the reading views are `mx-auto` inside a scroll container the gutter
+  appearing and disappearing shifted centred text 3px sideways. Now gated behind
+  `html:not([data-platform="darwin"])`.
+- **Traffic-light clearance** above.
+
+---
+
+## The question card (2026-07-31)
+
+§9.2 — "the help moment, and the thing the product is judged on" — had never been
+touched by any pass. It has now been rebuilt against the spec and looked at in
+both colour modes.
+
+### Repeats nest instead of collapsing into a tally
+
+The old card rendered **one** body per question with an "asked 3×" count, and
+argued for it in a comment: "a repeat does not get its own card body". Both
+DESIGN.md §9.2 and CLAUDE.md's third question rule say the opposite, in terms —
+each asking gets its own card, nested under the first, indented, hairline-linked,
+at 70% ink; density is a rendering problem and never a reason to drop a detection.
+
+The tally reads tidier and throws away the whole signal. A rephrasing — "have you
+used kubernetes?" then "are you familiar with k8s?" then "so you've never run a
+cluster?" — is three different sets of words with three different outcomes, and
+collapsing them to "asked 3×" erases exactly what Oats exists to catch. Every
+asking is now on screen, verbatim, with its own state mark, age and action.
+
+### The state marks were invisible
+
+`.oats-dither` paints dots in `currentColor`; the mark also set
+`background-color: currentColor`. Dots the same colour as the thing behind them —
+so every mark rendered solid and §4's uncertainty encoding did nothing at all.
+Dithered marks now paint dots over nothing, and use a 2px grid rather than 4px so
+an 8px dot reads as texture instead of as two stray pixels.
+
+### The search action stopped being gold
+
+§9.2 asks for "a single gold action". That is right for one card and wrong for the
+four the rail actually holds: stacked, it is four accents (§3) and it puts the
+rail's whole visual weight on a secondary action instead of on the questions.
+It is ink at rest and gold on hover/focus — still the one moment gold earns
+something, and the rail's only colour at rest is now the state marks.
+
+Deliberate deviation from the letter of §9.2, for the rule that outranks
+everything else: this panel floats over a live conversation and nothing on it may
+compete with the person in the room.
+
+### The card names where the search went
+
+`searched · google`, per §9.2, derived from the URL and never hard-coded — and
+from the **card's own** `searchBaseUrl` rather than the current setting, so
+changing engine later cannot rewrite the history of a question that already left.
+`searchHostLabel` lives in `src/utils/searchHost.ts` with tests.
+
+Also: the 24ms enter stagger, the 1px dithered edge, and a lowercase voice
+throughout.
+
+---
+
+## Verified: the primary action works on shipped defaults (2026-07-31)
+
+Never previously confirmed. Cleared this profile's transcription settings back to
+the defaults, reloaded, and pressed record:
+
+```
+Meeting transcription started   totalMs: 221
+Transcription mode: SERVER      model: base, language: auto
+whisper-server started          ggml-base.bin, cuda: false, vulkan: false
+Meeting transcription stopped
+```
+
+Recording reaches the bundled local model with no network, no API key and no
+download — the pencil test's reliability clause, demonstrated rather than assumed.
+The live subtitle reads "audio and transcripts stay on this device."
+
+The earlier "OpenAI realtime requires a bring-your-own-key API key" was this dev
+profile having been switched to cloud in an old session, not the defaults.
+
+### The classifier is no longer required (fixed)
+
+Starting the aide used to demand a downloaded 1.5B model, which contradicted the
+two rules the card is built on — detection is local pattern matching with no model
+round-trip, and the local reading of the reply is the *primary* verdict the model
+may only refine (CLAUDE.md, first and fourth question rules) — and failed the
+pencil test outright: the surface DESIGN.md calls "the thing the product is judged
+on" did nothing on a machine with no model, no network and no account.
+
+Almost none of the work was new. `_resolveLocally` already did the whole job, and
+`_evaluate` already fell back to it when the classifier threw or returned
+nonsense. Two changes: the gate stopped requiring a model, and `classify: null`
+now routes straight to the local path instead of through the failure path — which
+worked, but reported `classifier_failed` once per question for a model the user
+never asked for, a diagnostic that means the opposite of what it says.
+
+Four tests in `conversationAide.test.js` cover the no-classifier session
+end to end: a card appears from local detection, a denial opens the search, an
+answer does not, repeats are not suppressed, and no diagnostics are emitted (which
+is what distinguishes this path from the failure path, and stops the tests passing
+for the wrong reason).
+
+### One finding that is still a decision
+
+**The question card is off by default.** `conversationAideEnabled` defaults to
+`false`, and with the model requirement gone that switch is now the *only* thing
+between a user and the card.
+
+Left alone deliberately. Turning it on means putting an always-on-top window over
+every conversation, and its switch lives in the Advanced page — so a user who
+wanted it off would have no visible way to say so. If it is to be on by default it
+needs a control on the visible Settings page first, and that is a product call.
+
+Note the docs currently assume it runs: auto-search is specified as "one Settings
+toggle, default on", which is only meaningful if something is detecting questions.
+
+### Still open
+
+- The field runs a continuous rAF loop on every surface (~21fps here) including
+  the reading surfaces where it sits at `intensity` 0.3. By design (§9.8, B4), but
+  it is a permanent draw on a laptop battery, which matters more on macOS.
+- Graph labels: the radius threshold that suppressed them now lifts below nine
+  nodes, so a four-topic conversation no longer renders anonymous discs. Denser
+  graphs keep the old rule.
+- The resume offer now works on a fresh launch — the conversation list is loaded
+  in `useAppBootstrap` rather than by whichever surface happened to want it first.

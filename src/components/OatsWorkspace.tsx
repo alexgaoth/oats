@@ -31,11 +31,13 @@ import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
 import PostMigrationOnboarding from "./PostMigrationOnboarding";
 import { useAppBootstrap } from "../hooks/useAppBootstrap";
+import { useConversationPreflight } from "../hooks/useConversationPreflight";
 import { getCachedPlatform } from "../utils/platform";
 import { formatHotkey } from "../utils/hotkeyLabel";
 import { initializeActions } from "../stores/actionStore";
 import { runBackgroundAction } from "../stores/actionProcessingStore";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
+import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 import type {
   ConversationEvent,
@@ -52,6 +54,16 @@ const nav = [
   { id: "conversation" as const },
   { id: "intelligence" as const },
   { id: "settings" as const },
+];
+
+// Rendering order for the stacked, always-mounted surfaces. Declared once rather
+// than branched at the call site so the three panes are unambiguously siblings
+// with stable keys — a conditional would let React reconcile one surface's
+// subtree onto another's and carry state across.
+const SURFACES: { id: Surface; render: () => React.ReactNode }[] = [
+  { id: "conversation", render: () => <ConversationSurface /> },
+  { id: "intelligence", render: () => <IntelligenceSurface /> },
+  { id: "settings", render: () => <SettingsSurface /> },
 ];
 
 // The summary is markdown. A two-line preview is no place for "## Threads" or
@@ -149,6 +161,8 @@ function ConversationSurface() {
   );
   const micSilentSince = useMeetingRecordingStore((s) => s.micSilentSince);
   const wasRecording = useRef(false);
+  // Checked before the first word rather than discovered after the last one.
+  const preflight = useConversationPreflight();
 
   useEffect(() => {
     if (!wasRecording.current || recording) {
@@ -255,6 +269,11 @@ function ConversationSurface() {
   // the interface simply says that it did. A merged note can be split later; a
   // lost opening cannot be recovered.
   const begin = async () => {
+    // Re-checked on the press, not just on mount: a microphone can be plugged in
+    // while this window sits open, and a stale "no microphone" that refuses to
+    // record would be worse than the problem it reports.
+    const problem = await preflight.check();
+    if (problem === "no-microphone") return;
     const recent = findResumableConversation(notes);
     if (recent) {
       setContinuingFrom(recent.title || t("oats.untitled"));
@@ -367,6 +386,22 @@ function ConversationSurface() {
         </p>
       )}
 
+      {/* Said before the conversation, in the place the eye already is. One line,
+          and only the first problem: a list of three is a configuration report,
+          and somebody about to sit down with another person will read one line.
+          Ink rather than husk when it blocks — this is the app failing loudly at
+          the start, which is the whole point of checking here. */}
+      {!recording && !nothingHeard && preflight.problem && (
+        <p
+          className={cn(
+            "relative mt-6 max-w-sm text-center text-xs leading-5",
+            preflight.blocking ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {t(`oats.preflight.${preflight.problem}`)}
+        </p>
+      )}
+
       {recording && (
         <OpenThreadStack
           threads={openThreads}
@@ -377,6 +412,31 @@ function ConversationSurface() {
       )}
     </section>
   );
+}
+
+/**
+ * Tells the main process when a conversation is running.
+ *
+ * Headless, and mounted beside the other two headless mounts in the workspace
+ * shell rather than inside the Conversation surface: the report must keep
+ * flowing while the user is reading Intelligence or changing Settings, and the
+ * recording it describes outlives every one of those views.
+ */
+function ConversationStateBridge() {
+  const recording = useMeetingRecordingStore((s) => s.isRecording);
+  // Stamped here rather than in the store: the store sets `isRecording: false`
+  // from five different places, and a start time that four of them cleared would
+  // be a timer that occasionally lied. This component sees every transition.
+  const startedAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (recording && startedAt.current === null) startedAt.current = Date.now();
+    if (!recording) startedAt.current = null;
+    window.electronAPI?.reportConversationState?.({
+      recording,
+      startedAt: startedAt.current,
+    });
+  }, [recording]);
+  return null;
 }
 
 // Under four topics there is no graph worth drawing — a three-node graph looks
@@ -583,7 +643,7 @@ function IntelligenceViews({
   if (view === "map") {
     return (
       <section key="map" className="oats-enter relative flex min-h-0 flex-1 flex-col">
-        <header className="mx-auto flex w-full max-w-3xl shrink-0 items-baseline justify-between px-8 pt-10">
+        <header className="mx-auto flex w-full max-w-3xl shrink-0 items-baseline justify-between px-8 pt-4">
           <h1 className="text-2xl font-medium lowercase tracking-[-0.03em]">
             {t("lifetime.title")}
           </h1>
@@ -608,7 +668,7 @@ function IntelligenceViews({
   if (reading && selected) {
     return (
       <section key="reading" className="oats-enter relative min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-10">
+        <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
           <BackLink onClick={() => setReading(false)} label={t("oats.intelligence.backToList")} />
 
           <p className="mt-8 font-mono text-xs text-muted-foreground">
@@ -624,7 +684,7 @@ function IntelligenceViews({
                 if (event.key === "Enter") void commitRename();
                 if (event.key === "Escape") setRenaming(false);
               }}
-              className="mt-2 w-full border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none"
+              className="input-inline mt-2 w-full border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none"
             />
           ) : (
             <h1
@@ -664,25 +724,38 @@ function IntelligenceViews({
           )}
 
           {/* Text links, not tabs. A tab bar is a box drawn around a choice that
-              needs no box (DESIGN.md §1). */}
-          <div className="mt-8 flex gap-5">
-            {(["summary", "transcript", "threads"] as DetailTab[]).map((item) => (
-              <button
-                key={item}
-                onClick={() => setTab(item)}
-                aria-current={tab === item ? "true" : undefined}
-                className={cn(
-                  "rounded-sm text-sm lowercase transition-colors",
-                  "[transition-duration:var(--motion-instant)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  tab === item
-                    ? "text-foreground underline decoration-foreground underline-offset-[6px]"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {t(`oats.intelligence.tabs.${item}`)}
-              </button>
-            ))}
+              needs no box (DESIGN.md §1). The three actions sit on the same line,
+              pushed to the far side: they belong to what is being read, and a
+              second row for them would be a third region (§1). */}
+          <div className="mt-8 flex items-baseline justify-between gap-6">
+            <div className="flex gap-5">
+              {(["summary", "transcript", "threads"] as DetailTab[]).map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setTab(item)}
+                  aria-current={tab === item ? "true" : undefined}
+                  className={cn(
+                    "rounded-sm text-sm lowercase transition-colors",
+                    "[transition-duration:var(--motion-instant)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    tab === item
+                      ? "text-foreground underline decoration-foreground underline-offset-[6px]"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t(`oats.intelligence.tabs.${item}`)}
+                </button>
+              ))}
+            </div>
+            <ConversationActions
+              note={selected}
+              tab={tab}
+              onDeleted={async () => {
+                setReading(false);
+                setSelectedId(null);
+                await initializeNotes("meeting", 100);
+              }}
+            />
           </div>
 
           {/* The summary is markdown — the intelligence pipeline emits headings
@@ -696,7 +769,10 @@ function IntelligenceViews({
           )}
           {tab === "transcript" && (
             <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-7 text-muted-foreground">
-              {transcriptText(selected.transcript) || t("oats.intelligence.noTranscript")}
+              <Highlighted
+                text={transcriptText(selected.transcript) || t("oats.intelligence.noTranscript")}
+                query={query}
+              />
             </article>
           )}
           {tab === "threads" && (
@@ -709,7 +785,7 @@ function IntelligenceViews({
 
   return (
     <section key="list" className="oats-enter relative min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-10">
+      <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
         <div className="flex items-baseline justify-between">
           <h1 className="text-3xl font-medium lowercase tracking-[-0.03em]">
             {t("oats.intelligence.listTitle")}
@@ -727,7 +803,7 @@ function IntelligenceViews({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("oats.intelligence.searchPlaceholder")}
-            className="mt-6 w-full border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:outline-none"
+            className="input-inline mt-6 w-full border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:outline-none"
           />
         )}
 
@@ -738,7 +814,11 @@ function IntelligenceViews({
                 key={note.id}
                 onClick={() => {
                   setSelectedId(note.id);
-                  setTab("summary");
+                  // Land where the match is. Opening every result on the summary
+                  // meant that finding a conversation by something said in it
+                  // dropped you at the top of a different document, with the
+                  // sentence you searched for still to be hunted for by eye.
+                  setTab(matchedTab(note, query));
                   setReading(true);
                 }}
                 className={cn(
@@ -771,6 +851,157 @@ function IntelligenceViews({
         )}
       </div>
     </section>
+  );
+}
+
+/** Which tab to open a search result on. The rule itself is in `conversationSearch`. */
+function matchedTab(note: NoteItem, query: string): DetailTab {
+  return matchTarget(
+    {
+      title: note.title,
+      summary: note.enhanced_content,
+      transcript: transcriptText(note.transcript),
+    },
+    query
+  );
+}
+
+/** Plain text with the search term marked, scrolled so the first hit is on screen. */
+function Highlighted({ text, query }: { text: string; query: string }) {
+  const first = useRef<HTMLElement | null>(null);
+  const parts = useMemo(() => splitOnMatches(text, query), [text, query]);
+
+  useEffect(() => {
+    if (!first.current) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    first.current.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+  }, [parts]);
+
+  let seen = false;
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part.match) return <span key={index}>{part.text}</span>;
+        const isFirst = !seen;
+        seen = true;
+        return (
+          <mark
+            key={index}
+            ref={
+              isFirst
+                ? (node) => {
+                    first.current = node;
+                  }
+                : undefined
+            }
+            // Gold, used here as a mark colour rather than a reading colour
+            // (DESIGN.md §3) — which is precisely what a search hit is. The text
+            // itself stays ink so the highlight never costs legibility.
+            className="rounded-sm bg-primary/25 px-0.5 text-foreground"
+          >
+            {part.text}
+          </mark>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * Copy it, save it, or delete it.
+ *
+ * Until now a conversation could be recorded and read and nothing else: there
+ * was no way to get the text out of Oats and no way to remove one at all, which
+ * for a tool holding unannounced work is the more serious of the two.
+ */
+function ConversationActions({
+  note,
+  tab,
+  onDeleted,
+}: {
+  note: NoteItem;
+  tab: DetailTab;
+  onDeleted: () => void | Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  // Whatever is being read is what leaves — no menu of formats, no dialog asking
+  // which part. The transcript tab copies the transcript, the other two copy the
+  // summary, because that is what is on the screen.
+  const payload = () =>
+    tab === "transcript"
+      ? transcriptText(note.transcript)
+      : note.enhanced_content || note.content || "";
+
+  useEffect(() => setConfirming(false), [note.id, tab]);
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const copy = async () => {
+    const text = payload();
+    if (!text.trim()) return;
+    await window.electronAPI?.writeClipboard?.(text);
+    setCopied(true);
+  };
+
+  const save = () => {
+    if (tab === "transcript") void window.electronAPI?.exportTranscript?.(note.id, "txt");
+    else void window.electronAPI?.exportNote?.(note.id, "md");
+  };
+
+  if (confirming) {
+    return (
+      <div className="flex shrink-0 items-baseline gap-4">
+        <span className="font-mono text-xs lowercase text-foreground">
+          {t("oats.intelligence.deleteConfirm")}
+        </span>
+        <QuietAction
+          label={t("oats.intelligence.deleteYes")}
+          onClick={() => {
+            void (async () => {
+              await window.electronAPI?.deleteNote?.(note.id);
+              await onDeleted();
+            })();
+          }}
+        />
+        <QuietAction
+          label={t("oats.intelligence.deleteCancel")}
+          onClick={() => setConfirming(false)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex shrink-0 items-baseline gap-4">
+      <QuietAction
+        label={copied ? t("oats.intelligence.copied") : t("oats.intelligence.copy")}
+        onClick={() => void copy()}
+      />
+      <QuietAction label={t("oats.intelligence.save")} onClick={save} />
+      {/* Deleting a conversation is the one irreversible thing in the product, so
+          it asks — in place, on the same line, rather than in a modal. A dialog
+          would be the only modal in Oats; a second press is the same guarantee
+          with none of the chrome. */}
+      <QuietAction label={t("oats.intelligence.delete")} onClick={() => setConfirming(true)} />
+    </div>
+  );
+}
+
+function QuietAction({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-sm font-mono text-xs lowercase text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -868,7 +1099,9 @@ const selectClass =
   // A line rather than a box. A boxed control on a quiet page reads as a form
   // field in a SaaS dashboard; the hairline goes gold only while focused, which
   // is the one moment the accent is earning something (DESIGN.md §3, §6).
-  "h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none";
+  // `input-inline` opts out of the inherited global input chrome, which is an
+  // element selector and would otherwise beat these utilities and redraw the box.
+  "input-inline h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none";
 
 function SettingsSurface() {
   const transcriptionMode = useSettingsStore((s) => s.transcriptionMode);
@@ -957,7 +1190,7 @@ function SettingsSurface() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-10 pt-10">
+    <section className="mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-10 pt-4">
       <h1 className="text-3xl font-medium lowercase tracking-[-0.03em]">
         {t("oats.settings.title")}
       </h1>
@@ -1139,27 +1372,40 @@ export default function OatsWorkspace() {
   const { t } = useTranslation();
   const [surface, setSurface] = useState<Surface>("conversation");
 
+  // Which surfaces have been opened at least once. A surface is built on first
+  // visit and never torn down again — so the conversation lifecycle, once
+  // started, cannot be unmounted by navigating, which is the whole point of the
+  // stack below.
+  const [visited, setVisited] = useState<Set<Surface>>(() => new Set<Surface>(["conversation"]));
+  useEffect(() => {
+    setVisited((previous) => {
+      if (previous.has(surface)) return previous;
+      const next = new Set(previous);
+      next.add(surface);
+      return next;
+    });
+  }, [surface]);
+
   const showSettings = useCallback(() => {
-    // Same reasoning as the Cmd+, gate below.
+    // Same reasoning as the Cmd+, gate below. This is also the macOS app menu's
+    // "Settings" item (menuManager.js registers Command+, as its accelerator),
+    // which is why the guard has to live here and not only in the key handler.
     if (useMeetingRecordingStore.getState().isRecording) return;
     setSurface("settings");
   }, []);
   const { showPostMigration, dismissPostMigration } = useAppBootstrap(showSettings);
 
-  // Cmd/Ctrl+, is the platform convention for settings, and it used to open a
-  // modal that no longer renders.
+  // Cmd/Ctrl+, is the platform convention for settings.
   //
-  // It is refused while a conversation is live. `ConversationSurface` is the
-  // only registrant of `onToggleConversation` and the only holder of the effect
-  // that writes the transcript and runs the intelligence pipeline, so leaving
-  // that surface mid-recording strands the recording: the global hotkey can no
-  // longer stop it, there is no visible stop control, and the transcript is
-  // never finalised. That is the one unforgivable failure in this product.
+  // It is still refused while a conversation is live, but the reason has changed
+  // and is now much smaller. It used to be existential: `ConversationSurface` was
+  // unmounted on leaving, taking the recording lifecycle with it, so the keyboard
+  // could strand a conversation that nothing could then stop. The surfaces no
+  // longer unmount, so that failure mode is gone.
   //
-  // The nav is already hidden while recording (§9.8 — the tool gets out of the
-  // way), so refusing here just makes the keyboard agree with what is on screen.
-  // The deeper fix is to hoist the conversation lifecycle out of the surface so
-  // it cannot be unmounted at all; that is recorded in UI_OVERHAUL.md.
+  // What remains is that the nav is deliberately hidden while recording (A7 — the
+  // tool gets out of the way). A keyboard shortcut that moves you to a surface
+  // with no visible way back is a trap, so the shortcut agrees with the screen.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const mod = getCachedPlatform() === "darwin" ? event.metaKey : event.ctrlKey;
@@ -1173,18 +1419,24 @@ export default function OatsWorkspace() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const content = useMemo(
-    () =>
-      surface === "conversation" ? (
-        <ConversationSurface />
-      ) : surface === "intelligence" ? (
-        <IntelligenceSurface />
-      ) : (
-        <SettingsSurface />
-      ),
-    [surface]
-  );
   const recording = useMeetingRecordingStore((state) => state.isRecording);
+
+  // A conversation starting always brings the Conversation surface with it.
+  //
+  // The global hotkey works from anywhere — that is the point of it — but until
+  // this existed, pressing it on Settings started a recording and left you on
+  // Settings, where there is no pulse, no timer and no stop control, and where
+  // the nav has just faded out and stopped taking clicks (A7). Recording had
+  // begun and the only evidence was a shortcut you could no longer see, on a page
+  // whose own copy promises it "starts or stops a conversation from any
+  // application". The pencil standard is that it fails loudly at the start rather
+  // than quietly at the end; this is the same rule applied to succeeding.
+  //
+  // Watching the store rather than the hotkey covers every way a conversation can
+  // begin, including ones added later.
+  useEffect(() => {
+    if (recording) setSurface("conversation");
+  }, [recording]);
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -1198,6 +1450,9 @@ export default function OatsWorkspace() {
           action-processing store, so without this a conversation could finish,
           its summary could fail, and the user would never be told. */}
       <BackgroundActionToastListener />
+      {/* Headless too: reports the recording to the tray and the floating oat,
+          which are the only parts of Oats visible when this window is not. */}
+      <ConversationStateBridge />
       <PostMigrationOnboarding
         open={showPostMigration}
         onOpenChange={(open) => {
@@ -1206,33 +1461,70 @@ export default function OatsWorkspace() {
         onDone={dismissPostMigration}
       />
 
-      {/* The world, behind everything and present on every surface. The wheat
-          only grows while a conversation is live. */}
-      {/* The window is frameless (windowConfig.js) and nothing else provides a
-          drag handle, so on Linux and Windows it could not be moved at all. The
-          top of the composition is empty sky, which makes it the right place for
-          an invisible one. macOS gets its traffic lights from titleBarStyle. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 z-10 h-9"
-        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-      />
-
       {/* Full strength on Conversation, which is the surface the world is for.
           Intelligence and Settings are for reading, so the sky recedes to a
           suggestion rather than drawing a horizon through a paragraph. */}
       <Field live={recording} intensity={surface === "conversation" ? 1 : 0.3} />
 
-      {/* Keyed on the surface so switching remounts and replays the enter
-          animation; CrossFade holds the outgoing view underneath for the length
-          of the transition so the two overlap rather than leaving a blank frame
-          (DESIGN.md §8: "the outgoing view dims to 0 as the incoming rises"). */}
-      <main
-        key={surface}
-        className="oats-enter relative flex min-h-0 flex-1 flex-col overflow-hidden"
-      >
-        {content}
-      </main>
+      {/* The window is frameless on every platform (windowConfig.js) and nothing
+          else provides a drag handle, so without this it cannot be moved at all —
+          including on macOS, where `titleBarStyle: "hiddenInset"` supplies the
+          traffic lights but *not* a draggable title bar.
+
+          It occupies real layout rather than floating over the top of the
+          composition. An absolutely-positioned drag strip looks free, but
+          `-webkit-app-region: drag` swallows clicks: the surfaces below scroll,
+          so every list row that passed under the strip stopped being clickable.
+          Reserving the band also keeps content clear of the macOS traffic lights,
+          which sit at y 20–34 (windowConfig.js) — inside this band, and formerly
+          6px above the Intelligence heading. */}
+      <div
+        aria-hidden="true"
+        className="relative z-20 h-9 shrink-0"
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      />
+
+      {/* All three surfaces stay mounted and cross-fade in place.
+
+          This is DESIGN.md §8's "the outgoing view dims to 0 as the incoming
+          rises", which an enter-only fade on a keyed, remounting `<main>` could
+          not express — there was nothing left on screen to dim. Two earlier
+          attempts to hold the outgoing view (re-rendering it, and cloning its DOM
+          in a layout effect) were both wrong because both produced a *second*
+          instance of a view that was being left. Not unmounting is the version
+          with no copy in it.
+
+          It also fixes a functional bug. `ConversationSurface` is the only
+          registrant of `onToggleConversation`, so while it was unmounted the
+          global conversation hotkey — the product's primary action, documented in
+          CLAUDE.md as starting a conversation "from anywhere" — did nothing at
+          all on Intelligence and Settings. */}
+      <div className="oats-enter relative min-h-0 flex-1">
+        {SURFACES.map(({ id, render }) => (
+          <main
+            key={id}
+            data-active={surface === id}
+            inert={surface !== id}
+            aria-hidden={surface !== id}
+            className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-hidden"
+          >
+            {/* The pane element exists from the first render; its *contents* wait
+                until the surface has been opened once, and then stay.
+
+                Both halves matter. Mounting the element early is what makes the
+                first visit a cross-fade rather than a pop: the transition needs a
+                committed `opacity: 0` to move away from. Waiting to mount the
+                contents is because a surface is not free to build — `Settings`
+                reaches for the microphone device list, and on a machine whose mic
+                permission has been reset that means an OS permission prompt and a
+                live `getUserMedia` at launch, on the Conversation screen, with
+                nothing on screen to explain it (and on macOS it pauses whatever
+                is playing). A user who never opens Settings should never pay for
+                it. */}
+            {visited.has(id) ? render() : null}
+          </main>
+        ))}
+      </div>
 
       {/* Navigation stands on the ground rather than running down the side.
           Three destinations do not earn a permanent 208px rail, and a rail cuts

@@ -492,12 +492,20 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     mode === "online"
       ? settings.conversationAideOnlineEnabled
       : settings.conversationAideInRoomEnabled;
-  if (
-    !noteId ||
-    !settings.conversationAideEnabled ||
-    !enabledForMode ||
-    !settings.conversationAideModel
-  ) {
+  // The classifier is deliberately NOT in this condition.
+  //
+  // It used to be, and that made a downloaded 1.5B model the price of admission
+  // to the question card — which contradicts the two rules the card is built on:
+  // detection is local pattern matching with no model round-trip, and the local
+  // reading of the reply is the primary verdict that the model may only refine
+  // (CLAUDE.md, first and fourth question rules). It also failed the pencil test
+  // outright: the surface DESIGN.md calls "the thing the product is judged on"
+  // did nothing on a machine with no model, no network and no account.
+  //
+  // With no model the session runs on local detection alone: every question
+  // still gets a card, denials still open a search, and `_evaluate` goes
+  // straight to `_resolveLocally`.
+  if (!noteId || !settings.conversationAideEnabled || !enabledForMode) {
     logger.info(
       "Conversation aide not started",
       {
@@ -506,9 +514,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
           ? "no note id (start recording from inside a saved note)"
           : !settings.conversationAideEnabled
             ? "master switch off (Settings → Conversation aide)"
-            : !enabledForMode
-              ? `disabled for ${mode} conversations`
-              : "no classifier model selected/downloaded",
+            : `disabled for ${mode} conversations`,
       },
       "conversation-aide"
     );
@@ -526,29 +532,35 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     confidenceThreshold: settings.conversationAideConfidence,
     silenceDelayMs: settings.conversationAideSilenceSeconds * 1000,
     autoSearch: settings.conversationAutoSearchEnabled,
-    classify: async ({ prompt }: { prompt: string }) => {
-      const inference = window.electronAPI?.processLocalReasoning?.(
-        prompt,
-        settings.conversationAideModel,
-        "Oats",
-        {
-          temperature: 0,
-          topK: 1,
-          topP: 1,
-          maxTokens: 220,
-          disableThinking: true,
-          systemPrompt:
-            "You are a local conversation question classifier. Follow the JSON contract exactly.",
-        }
-      );
-      if (!inference) throw new Error("Local classifier is unavailable");
-      const timeout = new Promise<never>((_, reject) =>
-        window.setTimeout(() => reject(new Error("Local classifier timed out")), 12000)
-      );
-      const result = await Promise.race([inference, timeout]);
-      if (!result?.success || !result.text) throw new Error(result?.error || "Classifier failed");
-      return result.text;
-    },
+    // Null when no classifier is configured, which the session reads as "resolve
+    // locally" rather than as a failure. Refinement is the model's whole job; it
+    // is not required for the card to exist or for a denial to open a search.
+    classify: !settings.conversationAideModel
+      ? null
+      : async ({ prompt }: { prompt: string }) => {
+          const inference = window.electronAPI?.processLocalReasoning?.(
+            prompt,
+            settings.conversationAideModel,
+            "Oats",
+            {
+              temperature: 0,
+              topK: 1,
+              topP: 1,
+              maxTokens: 220,
+              disableThinking: true,
+              systemPrompt:
+                "You are a local conversation question classifier. Follow the JSON contract exactly.",
+            }
+          );
+          if (!inference) throw new Error("Local classifier is unavailable");
+          const timeout = new Promise<never>((_, reject) =>
+            window.setTimeout(() => reject(new Error("Local classifier timed out")), 12000)
+          );
+          const result = await Promise.race([inference, timeout]);
+          if (!result?.success || !result.text)
+            throw new Error(result?.error || "Classifier failed");
+          return result.text;
+        },
     insertEvent: (event: any) => window.electronAPI.insertConversationEvent?.(event),
     updateEvent: (id: number, patch: Record<string, unknown>) =>
       window.electronAPI.updateConversationEventMetadata?.(id, patch),

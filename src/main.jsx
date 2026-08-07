@@ -9,7 +9,12 @@ import { ToastProvider } from "./components/ui/Toast.tsx";
 import { SettingsProvider } from "./hooks/useSettings";
 
 import i18n from "./i18n";
+import { applyPlatformAttribute } from "./utils/platform";
 import "./index.css";
+
+// Before the first paint, so no rule that depends on the platform ever applies
+// to a frame and then stops.
+applyPlatformAttribute();
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

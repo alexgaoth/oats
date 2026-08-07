@@ -35,7 +35,12 @@
     "openControlPanel": "Apri pannello di controllo",
     "hideControlPanel": "Nascondi pannello di controllo",
     "quit": "Esci da Oats",
-    "tooltip": "Oats - Dettatura vocale"
+    "tooltip": "Oats - Dettatura vocale",
+    "conversation": {
+      "start": "Avvia conversazione",
+      "stop": "Termina conversazione"
+    },
+    "tooltipRecording": "Oats - Registrazione di una conversazione"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2533,7 +2538,8 @@
       "hotkeyToSpeak": "{{hotkey}} per parlare",
       "recording": "Registrazione...",
       "processing": "Elaborazione...",
-      "clickToSpeak": "Clicca per parlare"
+      "clickToSpeak": "Clicca per parlare",
+      "conversation": "Registrazione di una conversazione — clicca per terminare"
     },
     "buttons": {
       "cancelRecording": "Annulla registrazione",
@@ -3034,7 +3040,14 @@
       "openPrevious": "Apri quella",
       "noMatches": "nessun risultato",
       "emptyHint": "premi {{shortcut}} ovunque per iniziare",
-      "backToList": "indietro"
+      "backToList": "indietro",
+      "copy": "copia",
+      "copied": "copiato",
+      "save": "salva",
+      "delete": "elimina",
+      "deleteConfirm": "eliminare questa conversazione?",
+      "deleteYes": "elimina",
+      "deleteCancel": "mantieni"
     },
     "settings": {
       "title": "Poche scelte.",
@@ -3067,6 +3080,13 @@
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",
       "noEndpoint": "Configura l'endpoint API di Oats prima di registrare una conversazione.",
       "actionFailed": "Oats non è riuscito a generare l'intelligenza per questa conversazione."
+    },
+    "preflight": {
+      "no-microphone": "Nessun microfono trovato. Collegane uno e premi di nuovo.",
+      "microphone-permission": "Oats ha bisogno del permesso per usare il microfono. Concedilo nelle impostazioni di sistema.",
+      "no-speech-engine": "Il motore vocale locale non è ancora installato — vedi Impostazioni.",
+      "no-model": "Nessun modello vocale è ancora stato scaricato — vedi Impostazioni.",
+      "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni."
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "Ignora domanda",
     "askedTimes": "posta {{count}}×",
     "earlier": "{{count}} precedenti",
-    "undo": "Annulla"
+    "undo": "Annulla",
+    "searchedHost": "cercato · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} filo aperto",

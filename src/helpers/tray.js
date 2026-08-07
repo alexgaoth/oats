@@ -12,6 +12,7 @@ class TrayManager {
     this.controlPanelWindow = null;
     this.windowManager = null;
     this.attachedControlPanels = new WeakSet();
+    this.conversationRecording = false;
   }
 
   setWindows(mainWindow, controlPanelWindow) {
@@ -251,10 +252,42 @@ class TrayManager {
     }
   }
 
+  /**
+   * Mirror of whether a conversation is being recorded.
+   *
+   * The tray is the only part of Oats that is on screen whether or not any
+   * window is, so it is where "am I recording?" has to be answerable without
+   * opening anything. Set from the workspace via IPC; see `ipcHandlers`.
+   */
+  setConversationState(state) {
+    const recording = Boolean(state?.recording);
+    if (recording === this.conversationRecording) return;
+    this.conversationRecording = recording;
+    // The menu bar carries a mark on macOS, where a tray title is a first-class
+    // affordance. Elsewhere the menu and tooltip carry it — GNOME has no tray at
+    // all without an extension, which is why the floating oat says it too rather
+    // than this being the only signal.
+    if (process.platform === "darwin" && this.tray && !this.tray.isDestroyed?.()) {
+      this.tray.setTitle(recording ? "●" : "");
+    }
+    this.updateTrayMenu();
+  }
+
   buildContextMenuTemplate() {
     const dictationVisible = this.windowManager?.isDictationPanelVisible?.() ?? false;
 
     return [
+      {
+        // First, and first for a reason: it is the product's primary action, and
+        // the tray is where somebody goes who cannot remember the shortcut.
+        label: this.conversationRecording
+          ? i18nMain.t("tray.conversation.stop")
+          : i18nMain.t("tray.conversation.start"),
+        click: () => {
+          void this.windowManager?.sendToggleConversation?.();
+        },
+      },
+      { type: "separator" },
       {
         label: dictationVisible
           ? i18nMain.t("tray.toggleDictation.hide")
@@ -292,7 +325,9 @@ class TrayManager {
     if (!this.tray) return;
 
     const contextMenu = Menu.buildFromTemplate(this.buildContextMenuTemplate());
-    this.tray.setToolTip(i18nMain.t("tray.tooltip"));
+    this.tray.setToolTip(
+      this.conversationRecording ? i18nMain.t("tray.tooltipRecording") : i18nMain.t("tray.tooltip")
+    );
     this.tray.setContextMenu(contextMenu);
   }
 

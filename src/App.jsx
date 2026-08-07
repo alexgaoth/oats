@@ -48,10 +48,15 @@ export default function App() {
   const { toast, dismiss, toastCount } = useToast();
   const { t } = useTranslation();
   const { hotkey } = useHotkey();
-  const { isDragging, handleMouseDown, handleMouseUp } = useWindowDrag();
+  const { isDragging, handlePointerDown, handlePointerUp } = useWindowDrag();
 
   const [dragStartPos, setDragStartPos] = useState(null);
   const [hasDragged, setHasDragged] = useState(false);
+  // A conversation can be started from any application with nothing on screen.
+  // The oat is then the only thing that can say it is running — on GNOME often
+  // the only thing at all, since there is no tray without an extension.
+  const [conversation, setConversation] = useState({ recording: false, startedAt: null });
+  const [conversationElapsed, setConversationElapsed] = useState("");
 
   // Floating icon auto-hide setting (read from store, synced via IPC)
   const floatingIconAutoHide = useSettingsStore((s) => s.floatingIconAutoHide);
@@ -195,6 +200,34 @@ export default function App() {
     return () => unsubscribe?.();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = window.electronAPI?.onConversationState?.((state) => {
+      setConversation({
+        recording: Boolean(state?.recording),
+        startedAt: state?.startedAt ?? null,
+      });
+    });
+    return () => unsubscribe?.();
+  }, []);
+
+  // Elapsed time, ticking once a second and only while there is something to
+  // count. Minutes and seconds, in mono — machine state speaks in mono
+  // (DESIGN.md §C3), and hours would be a width the 96px window does not have.
+  useEffect(() => {
+    if (!conversation.recording || !conversation.startedAt) {
+      setConversationElapsed("");
+      return undefined;
+    }
+    const tick = () => {
+      const seconds = Math.max(0, Math.floor((Date.now() - conversation.startedAt) / 1000));
+      const minutes = Math.floor(seconds / 60);
+      setConversationElapsed(`${minutes}:${String(seconds % 60).padStart(2, "0")}`);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [conversation.recording, conversation.startedAt]);
+
   // Sync auto-hide from main process — setState directly to avoid IPC echo
   useEffect(() => {
     const unsubscribe = window.electronAPI?.onFloatingIconAutoHideChanged?.((enabled) => {
@@ -221,7 +254,15 @@ export default function App() {
   useEffect(() => {
     let hideTimeout;
 
-    if (floatingIconAutoHide && !isRecording && !isProcessing && toastCount === 0) {
+    // Never while a conversation is running: hiding the only indicator that a
+    // microphone is open is the one thing auto-hide must not do.
+    if (
+      floatingIconAutoHide &&
+      !conversation.recording &&
+      !isRecording &&
+      !isProcessing &&
+      toastCount === 0
+    ) {
       // Delay briefly so processing can start after recording stops without a flash
       hideTimeout = setTimeout(() => {
         window.electronAPI?.hideWindow?.();
@@ -232,7 +273,7 @@ export default function App() {
 
     prevAutoHideRef.current = floatingIconAutoHide;
     return () => clearTimeout(hideTimeout);
-  }, [isRecording, isProcessing, floatingIconAutoHide, toastCount]);
+  }, [isRecording, isProcessing, floatingIconAutoHide, toastCount, conversation.recording]);
 
   const handleClose = () => {
     window.electronAPI.hideWindow();
@@ -275,6 +316,10 @@ export default function App() {
 
   // Determine current mic state
   const getMicState = () => {
+    // A conversation outranks dictation here because it is the longer-lived and
+    // less recoverable of the two: a dictation you forget costs a paste, a
+    // conversation you forget costs a room's worth of privacy.
+    if (conversation.recording) return "conversation";
     if (isRecording) return "recording";
     if (isProcessing) return "processing";
     if (isHovered && !isRecording && !isProcessing) return "hover";
@@ -293,6 +338,14 @@ export default function App() {
         return {
           className: baseClasses,
           tooltip: formatHotkeyListLabel(hotkey),
+        };
+      case "conversation":
+        return {
+          // A full-strength gold rim, which nothing else on this window uses:
+          // the difference between "listening" and "not listening" has to be
+          // legible at 40px from across a desk.
+          className: `${baseClasses} border-2 border-primary`,
+          tooltip: t("app.mic.conversation"),
         };
       case "recording":
         return {
@@ -340,9 +393,19 @@ export default function App() {
             }
           }}
         >
+          {/* The running clock. It is the difference between "Oats is open" and
+              "Oats is listening right now", and it is the reason this window
+              refuses to auto-hide while a conversation is running. */}
+          {conversation.recording && conversationElapsed && (
+            <span className="rounded-full border border-primary/40 bg-surface-2/90 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-foreground shadow-sm backdrop-blur-sm">
+              {conversationElapsed}
+            </span>
+          )}
           {/* Hide is only offered when idle: during a recording the same corner
-              belongs to cancel, and two X buttons side by side is a trap. */}
-          {!isRecording && !isProcessing && isHovered && (
+              belongs to cancel, and two X buttons side by side is a trap. Also
+              withheld while a conversation runs — hiding the only sign that the
+              microphone is open is not a thing to offer in one click. */}
+          {!conversation.recording && !isRecording && !isProcessing && isHovered && (
             <Tooltip content={t("app.buttons.hideOatHint")} align="left">
               <button
                 aria-label={t("app.buttons.hideOat")}
@@ -388,17 +451,22 @@ export default function App() {
           >
             <button
               ref={buttonRef}
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 setIsCommandMenuOpen(false);
-                setDragStartPos({ x: e.clientX, y: e.clientY });
+                // Screen coordinates, not client ones. The window is being moved
+                // to follow the cursor, so the pointer's position *inside* the
+                // window barely changes during a drag — measured that way, a
+                // drag across the whole desktop registered as a click and
+                // started a dictation on let-go.
+                setDragStartPos({ x: e.screenX, y: e.screenY });
                 setHasDragged(false);
-                handleMouseDown(e);
+                handlePointerDown(e);
               }}
-              onMouseMove={(e) => {
+              onPointerMove={(e) => {
                 if (dragStartPos && !hasDragged) {
-                  const distance = Math.sqrt(
-                    Math.pow(e.clientX - dragStartPos.x, 2) +
-                      Math.pow(e.clientY - dragStartPos.y, 2)
+                  const distance = Math.hypot(
+                    e.screenX - dragStartPos.x,
+                    e.screenY - dragStartPos.y
                   );
                   if (distance > 5) {
                     // 5px threshold for drag
@@ -406,14 +474,29 @@ export default function App() {
                   }
                 }
               }}
-              onMouseUp={(e) => {
-                handleMouseUp(e);
+              onPointerUp={() => {
+                handlePointerUp();
+                setDragStartPos(null);
+              }}
+              // Capture is released implicitly on cancel; the drag must end with
+              // it or the window keeps following a pointer nobody is holding.
+              onPointerCancel={() => {
+                handlePointerUp();
                 setDragStartPos(null);
               }}
               onClick={(e) => {
                 if (!hasDragged) {
                   setIsCommandMenuOpen(false);
-                  toggleListening();
+                  // While a conversation is running the seed is that
+                  // conversation, so pressing it finishes it. Not a hidden mode:
+                  // the gold rim and the running clock say which of the two
+                  // things this press does before it is pressed, and it goes
+                  // through the same toggle as the global shortcut.
+                  if (conversation.recording) {
+                    void window.electronAPI?.requestToggleConversation?.();
+                  } else {
+                    toggleListening();
+                  }
                 }
                 e.preventDefault();
               }}

@@ -66,11 +66,31 @@
   --radius-lg: 0.75rem; /* 12px - cards, panels */
   --radius-xl: 0.875rem; /* 14px - the aide card */
 
-  /* Motion — DESIGN.md §8: smooth, slow, decelerating; never a bounce or spring. */
-  --motion-instant: 120ms cubic-bezier(0.2, 0, 0, 1); /* hover, focus, press */
-  --motion-base: 220ms cubic-bezier(0.2, 0, 0, 1); /* cards in/out, view swaps */
-  --motion-slow: 380ms cubic-bezier(0.2, 0, 0, 1); /* onboarding steps, Graph reveal */
+  /* Motion — DESIGN.md §8: smooth, slow, decelerating; never a bounce or spring.
+   *
+   * These are **durations only**. They used to carry the easing as well
+   * (`220ms cubic-bezier(…)`), which quietly disabled every transition in the
+   * app: the tokens are overwhelmingly used through Tailwind as
+   * `[transition-duration:var(--motion-base)]`, and `transition-duration:
+   * 220ms cubic-bezier(…)` is not a valid duration, so it fell back to `0s`.
+   * Nav underline, nav fade, every hover, the thread stack and the surface
+   * cross-fade were all snapping instantly, and reading the CSS did not show it
+   * — only asking the running app for its computed `transition-duration` did.
+   *
+   * The easing is a separate token, and is also wired into Tailwind's default
+   * below so `transition-*` utilities decelerate on the Oats curve rather than
+   * on Tailwind's stock one. */
+  --ease-oats: cubic-bezier(0.2, 0, 0, 1);
+  --motion-instant: 120ms; /* hover, focus, press */
+  --motion-base: 220ms; /* cards in/out, view swaps */
+  --motion-slow: 380ms; /* onboarding steps, Graph reveal */
   --motion-ambient: 2400ms; /* the listening pulse breath — pair with ease-in-out infinite */
+
+  /* So a bare `transition-colors` or `transition-opacity` is already on the Oats
+     curve at the base duration; the `[transition-duration:…]` overrides in
+     components then only have to say how long. */
+  --default-transition-timing-function: var(--ease-oats);
+  --default-transition-duration: var(--motion-base);
 
   /* Model picker premium effects (light mode) — warm, low shadow per DESIGN.md §6:
      "0 1px 2px rgba(43,38,32,.06), 0 8px 24px rgba(43,38,32,.08)" (roasted-ink base,
@@ -146,6 +166,40 @@
   background-size: 4px 4px;
 }
 
+/* For marks small enough that a 4px grid would fit two dots across and read as a
+   rendering artefact rather than as texture — the §4 question-outcome dot is 8px. */
+.oats-dither--fine {
+  background-image: radial-gradient(circle at 0.5px 0.5px, currentcolor 0.75px, transparent 0.75px);
+  background-size: 2px 2px;
+}
+
+/* §9.2's "hairline + 1px dithered edge". The hairline is a normal border; this
+   adds the stippled ring over it, drawn as a 1px padding box masked to leave only
+   its own border area — the standard way to get a patterned border in CSS, since
+   `border-image` cannot take a repeating gradient at sub-pixel sizes.
+
+   Static, so it does not count against §7's one-animated-dither-layer rule. */
+.oats-dithered-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background-image: radial-gradient(circle at 0.5px 0.5px, currentcolor 0.5px, transparent 0.5px);
+  background-size: 2px 2px;
+  color: var(--color-border-hover);
+  opacity: 0.7;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
 .graph-node {
   border-inline-start: 3px solid var(--graph-state);
 }
@@ -199,7 +253,7 @@
   border-radius: 50%;
   background: var(--color-primary);
   opacity: 0.07;
-  transition: opacity var(--motion-base);
+  transition: opacity var(--motion-base) var(--ease-oats);
 }
 
 .group:hover .oats-listening-pulse--lg::after {
@@ -258,7 +312,7 @@
      long as the surface is displayed rather than for the 220ms it animates —
      a permanent compositing layer on a full-window element. transform and
      opacity composite anyway. */
-  animation: oats-enter 220ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: oats-enter var(--motion-base) var(--ease-oats) both;
 }
 
 /* Reduced motion lands on the destination immediately: a still frame, not a
@@ -266,6 +320,40 @@
 @media (prefers-reduced-motion: reduce) {
   .oats-enter {
     animation: none;
+  }
+}
+
+/* One of the three stacked surfaces (§8: "the outgoing view dims to 0 as the
+   incoming rises"). All three stay mounted, so the crossing is a genuine overlap
+   of two live views rather than a copy of one of them — see OatsWorkspace.tsx.
+   Only transform and opacity animate, which §8 requires of anything in a loop. */
+.oats-pane {
+  transition:
+    opacity var(--motion-base) var(--ease-oats),
+    transform var(--motion-base) var(--ease-oats);
+}
+
+.oats-pane[data-active="false"] {
+  opacity: 0;
+  /* Same 8px rise as `oats-enter`, so a surface arrives the way everything else
+     in the app arrives. */
+  transform: translate3d(0, 8px, 0);
+  /* `inert` already removes it from the tab order and the accessibility tree;
+     this stops an invisible pane from eating a click during the crossing. */
+  pointer-events: none;
+}
+
+.oats-pane[data-active="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  /* The arriving surface is on top, so the crossing reads as one replacing the
+     other rather than the two mixing. */
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-pane {
+    transition: none;
   }
 }
 
@@ -386,7 +474,14 @@ a svg:hover,
   cursor: pointer;
 }
 
-/* Premium input styling with subtle depth */
+/* Premium input styling with subtle depth.
+ *
+ * Inherited OpenWhispr chrome. It is an *element* selector, so it outranks the
+ * Tailwind utility classes a component sets on itself — `border-b bg-transparent`
+ * on an Oats input lost to this rule and the box came back, which is why F2
+ * ("inputs lose their boxes → bottom hairline, gold on focus") was reported as
+ * done and was not visibly done. `.input-inline` is the opt-out; the three Oats
+ * surfaces use it. */
 input:not(.input-inline),
 textarea:not(.input-inline) {
   border-radius: var(--radius);
@@ -719,29 +814,45 @@ a:hover {
   }
 }
 
-::-webkit-scrollbar {
+/* Scrollbars are styled everywhere *except* macOS.
+ *
+ * Chromium's default scrollbar on Linux and Windows is an opaque widget that
+ * takes layout width, so narrowing it to a hairline is a real improvement. On
+ * macOS the default is already an overlay scrollbar: it floats over the content,
+ * takes no layout width, and fades away on its own. Defining `::-webkit-scrollbar`
+ * with a width *opts that element out of overlay scrollbars* and gives it a
+ * classic gutter instead — so this rule made macOS worse in two ways at once. It
+ * put back a permanent 6px gutter, and because the reading views are `mx-auto`
+ * inside a scroll container, the gutter appearing and disappearing shifted
+ * centred text 3px sideways between a short and a long conversation.
+ *
+ * `[data-platform]` is set on <html> by `applyPlatformAttribute()` in
+ * src/main.jsx, before `createRoot`. If it is missing —
+ * a bare browser, a test harness — the rules apply, which is the right default
+ * for every platform that is not macOS. */
+html:not([data-platform="darwin"]) ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
+html:not([data-platform="darwin"]) ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
+html:not([data-platform="darwin"]) ::-webkit-scrollbar-thumb {
   background: transparent;
   border-radius: 3px;
 }
 
-:hover::-webkit-scrollbar-thumb {
+html:not([data-platform="darwin"]) :hover::-webkit-scrollbar-thumb {
   background: var(--color-border);
 }
 
-:hover::-webkit-scrollbar-thumb:hover {
+html:not([data-platform="darwin"]) :hover::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
 }
 
-::-webkit-scrollbar-corner {
+html:not([data-platform="darwin"]) ::-webkit-scrollbar-corner {
   background: transparent;
 }
 

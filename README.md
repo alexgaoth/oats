@@ -63,8 +63,13 @@ Details that only matter when something goes wrong, which is exactly when they m
 - **Nothing is silently lost.** The transcript is written to the note as each utterance is finalised (debounced a couple of seconds), so a crash, a closed laptop, or an OOM kill costs at most the sentence in progress rather than the whole conversation. It used to be a blind 20-second timer, which could also lose the last thing said before a long pause.
 - **A conversation that captured nothing is not saved.** Instead of leaving a blank note behind, Oats deletes it and says the microphone heard nothing.
 - **A dead microphone is reported while it still matters.** If the input level stays at the noise floor for 30 seconds during a recording, Oats says so — rather than letting you discover it at the end.
+- **What is missing is said before the conversation, not after it.** No microphone, no permission, no speech model, or a cloud key that was never saved — each is one line under the record button, checked again on the press. Only a missing microphone stops the press; the rest warn and let you record anyway.
+- **A running conversation is visible without opening anything.** The floating oat comes back with a gold rim and a running clock for as long as one is being recorded, refuses to auto-hide, and finishes the conversation when clicked. The tray says the same thing and offers the same action.
 - **Dismissing a question card can be undone** for six seconds.
 - **Titles are editable.** Click the title in Intelligence to rename a conversation.
+- **A conversation can be deleted**, from the conversation itself, with a second press to confirm.
+- **The text leaves.** `copy` puts whatever you are reading — summary or transcript — on the clipboard; `save` writes it to a file.
+- **Search lands on the sentence.** A conversation found by something said in it opens on its transcript, at the match, with every occurrence marked.
 - **Searches open in their own browser window**, so a result never lands as a tab in some window on another workspace. Only the question text is sent, and any card can be searched by hand whether or not it was searched automatically.
 
 ## Principles

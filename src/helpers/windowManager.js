@@ -8,6 +8,7 @@ const DevServerManager = require("./devServerManager");
 const dockManager = require("./dockManager");
 const { i18nMain } = require("./i18nMain");
 const { DEV_SERVER_PORT } = DevServerManager;
+const { isPointInsideBounds, shouldIgnoreMouseEvents } = require("./oatInteractivity");
 const {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
@@ -20,6 +21,11 @@ const {
   WINDOW_SIZES,
   WindowPositionUtil,
 } = require("./windowConfig");
+
+// How often the main process checks whether the cursor is over the oat. Four
+// times a second is below the threshold where a hover feels late and far above
+// what the query costs; it only runs while the oat is on screen.
+const OAT_CURSOR_POLL_MS = 250;
 
 class WindowManager {
   constructor() {
@@ -52,6 +58,14 @@ class WindowManager {
     this._panelStartPosition = "bottom-right";
     // Set once the user drags the oat; until then the corner preset wins.
     this._floatingOatPosition = null;
+    // The three inputs to whether the oat swallows the mouse, plus the last value
+    // actually pushed to Electron. See `oatInteractivity.js`.
+    // Mirrored from the workspace so the tray and the oat can show it.
+    this._conversationState = { recording: false, startedAt: null };
+    this._interactivityHold = false;
+    this._cursorOverOat = false;
+    this._ignoringMouseEvents = null;
+    this._oatCursorWatch = null;
     this._isDictatingToggle = false;
     this._pendingMeetingNoteNavigation = null;
 
@@ -115,23 +129,65 @@ class WindowManager {
     MenuManager.setupMainMenu(() => this.openSettings());
   }
 
+  // The renderer asking to stay interactive past the pointer leaving the seed —
+  // an open command menu, a toast. One of three inputs; see `oatInteractivity.js`
+  // for why it stopped being the only one.
   setMainWindowInteractivity(shouldCapture) {
-    if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-      return;
-    }
+    this._interactivityHold = Boolean(shouldCapture);
+    this._applyMainWindowInteractivity();
+  }
 
-    if (process.platform === "win32") {
-      // Windows click-through forwarding is unreliable for this floating panel.
-      // Keep the panel interactive so the mic button and cancel button are always clickable.
-      this.mainWindow.setIgnoreMouseEvents(false);
-      return;
-    }
+  _applyMainWindowInteractivity() {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+    const ignore = shouldIgnoreMouseEvents({
+      platform: process.platform,
+      hold: this._interactivityHold,
+      cursorInside: this._cursorOverOat,
+      dragging: this.dragManager.isDragActive(),
+    });
+    // Electron re-applies the X11 input shape on every call, so only touch it
+    // when the answer has actually changed — the cursor watcher asks four times a
+    // second.
+    if (ignore === this._ignoringMouseEvents) return;
+    this._ignoringMouseEvents = ignore;
+    if (ignore) this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    else this.mainWindow.setIgnoreMouseEvents(false);
+  }
 
-    if (shouldCapture) {
-      this.mainWindow.setIgnoreMouseEvents(false);
-    } else {
-      this.mainWindow.setIgnoreMouseEvents(true, { forward: true });
-    }
+  /**
+   * Watch where the cursor is relative to the oat.
+   *
+   * This is the recovery path: on Linux a click-through window receives no mouse
+   * events at all, so nothing inside the page can ever report that the pointer
+   * has come back. Reading the cursor from the main process can, and it costs one
+   * `getCursorScreenPoint()` — a single synchronous query, no allocation — four
+   * times a second, only while the oat is actually on screen.
+   */
+  _startOatCursorWatch() {
+    if (this._oatCursorWatch || process.platform === "win32") return;
+    const check = () => {
+      if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+      let inside = false;
+      try {
+        inside = isPointInsideBounds(screen.getCursorScreenPoint(), this.mainWindow.getBounds());
+      } catch {
+        // A display being reconfigured under us is not a reason to strand the
+        // oat: treat it as "not over it" and try again next tick.
+        inside = false;
+      }
+      if (inside === this._cursorOverOat) return;
+      this._cursorOverOat = inside;
+      this._applyMainWindowInteractivity();
+    };
+    this._oatCursorWatch = setInterval(check, OAT_CURSOR_POLL_MS);
+    check();
+  }
+
+  _stopOatCursorWatch() {
+    if (!this._oatCursorWatch) return;
+    clearInterval(this._oatCursorWatch);
+    this._oatCursorWatch = null;
+    this._cursorOverOat = false;
   }
 
   setNotificationInteractivity(interactive) {
@@ -640,11 +696,23 @@ class WindowManager {
   }
 
   async startWindowDrag() {
-    return await this.dragManager.startWindowDrag();
+    const result = await this.dragManager.startWindowDrag();
+    // Interactive for the whole drag, whatever the renderer thinks. The window
+    // trails the cursor by a frame, so the pointer leaves the seed constantly
+    // while dragging; letting that turn the window to glass mid-drag is what
+    // ended the drag early and, on Linux, permanently.
+    this._applyMainWindowInteractivity();
+    return result;
   }
 
   async stopWindowDrag() {
     const result = await this.dragManager.stopWindowDrag();
+    // Recompute from where the cursor actually finished rather than waiting for a
+    // `mouseenter` that may never come.
+    this._cursorOverOat = this.mainWindow?.isDestroyed?.()
+      ? false
+      : isPointInsideBounds(screen.getCursorScreenPoint(), this.mainWindow?.getBounds?.());
+    this._applyMainWindowInteractivity();
     this.saveFloatingOatPosition();
     return result;
   }
@@ -1202,7 +1270,38 @@ class WindowManager {
       if (focus) {
         this.mainWindow.focus();
       }
+      this._startOatCursorWatch();
     }
+  }
+
+  /**
+   * A conversation started or stopped somewhere the user may not be looking.
+   *
+   * The primary action can be pressed from any application with the window
+   * hidden, which is what makes it good and also what makes it easy to forget
+   * that it is running. The oat is the one thing on screen that can say so, so it
+   * is brought back for the duration — on GNOME it is often the *only* one, since
+   * there is no tray without an extension.
+   */
+  setConversationState(state) {
+    const next = {
+      recording: Boolean(state?.recording),
+      startedAt: Number(state?.startedAt) || null,
+    };
+    const wasRecording = this._conversationState?.recording ?? false;
+    this._conversationState = next;
+    // Only on the transition into recording: re-showing it on every update would
+    // undo the user hiding it mid-conversation, which is their call to make.
+    if (next.recording && !wasRecording && !this.isDictationPanelVisible()) {
+      this.showDictationPanel();
+    }
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.webContents.send("conversation-state-changed", next);
+    }
+  }
+
+  isConversationRecording() {
+    return Boolean(this._conversationState?.recording);
   }
 
   hideControlPanelToTray() {
@@ -1218,6 +1317,8 @@ class WindowManager {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.hide();
     }
+    // Nothing to watch for while the oat is off screen.
+    this._stopOatCursorWatch();
   }
 
   isDictationPanelVisible() {
@@ -1259,6 +1360,11 @@ class WindowManager {
           this.mainWindow.show();
         }
       }
+      // Deliberately not driven by the window's `show`/`hide` events: on macOS
+      // those are occlusion events (see `dockManager`), so another window
+      // covering the oat would stop the watcher while the oat is still there and
+      // strand it click-through.
+      if (this.mainWindow.isVisible()) this._startOatCursorWatch();
     });
 
     this.mainWindow.on("show", () => {
@@ -1271,6 +1377,7 @@ class WindowManager {
 
     this.mainWindow.on("closed", () => {
       this.dragManager.cleanup();
+      this._stopOatCursorWatch();
       this.mainWindow = null;
     });
   }

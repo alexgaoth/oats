@@ -397,6 +397,13 @@ declare global {
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
       onToggleConversation?: (callback: () => void) => () => void;
+      // Whether a conversation is being recorded, reported by the workspace and
+      // listened for by the tray and the floating oat.
+      reportConversationState?: (state: { recording: boolean; startedAt: number | null }) => void;
+      onConversationState?: (
+        callback: (state: { recording: boolean; startedAt: number | null }) => void
+      ) => () => void;
+      requestToggleConversation?: () => Promise<{ success: boolean }>;
       onToggleTranslation?: (callback: () => void) => () => void;
       onStartDictation?: (callback: () => void) => () => void;
       onStopDictation?: (callback: () => void) => () => void;

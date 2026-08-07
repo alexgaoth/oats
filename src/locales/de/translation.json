@@ -35,7 +35,12 @@
     "openControlPanel": "Kontrollzentrum öffnen",
     "hideControlPanel": "Kontrollzentrum ausblenden",
     "quit": "Oats beenden",
-    "tooltip": "Oats – Sprachdiktat"
+    "tooltip": "Oats – Sprachdiktat",
+    "conversation": {
+      "start": "Unterhaltung starten",
+      "stop": "Unterhaltung beenden"
+    },
+    "tooltipRecording": "Oats - Unterhaltung wird aufgezeichnet"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2533,7 +2538,8 @@
       "hotkeyToSpeak": "{{hotkey}} zum Sprechen",
       "recording": "Aufnahme...",
       "processing": "Verarbeitung...",
-      "clickToSpeak": "Klicken zum Sprechen"
+      "clickToSpeak": "Klicken zum Sprechen",
+      "conversation": "Unterhaltung wird aufgezeichnet – zum Beenden klicken"
     },
     "buttons": {
       "cancelRecording": "Aufnahme abbrechen",
@@ -3034,7 +3040,14 @@
       "openPrevious": "Das öffnen",
       "noMatches": "nichts gefunden",
       "emptyHint": "drücke {{shortcut}} überall, um zu starten",
-      "backToList": "zurück"
+      "backToList": "zurück",
+      "copy": "kopieren",
+      "copied": "kopiert",
+      "save": "speichern",
+      "delete": "löschen",
+      "deleteConfirm": "diese Unterhaltung löschen?",
+      "deleteYes": "löschen",
+      "deleteCancel": "behalten"
     },
     "settings": {
       "title": "Wenige Entscheidungen.",
@@ -3067,6 +3080,13 @@
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",
       "noEndpoint": "Richte den Oats-API-Endpunkt ein, bevor du ein Gespräch aufnimmst.",
       "actionFailed": "Oats konnte für dieses Gespräch keine Intelligenz erzeugen."
+    },
+    "preflight": {
+      "no-microphone": "Kein Mikrofon gefunden. Schließe eines an und drücke erneut.",
+      "microphone-permission": "Oats braucht die Erlaubnis, das Mikrofon zu verwenden. Erteile sie in den Systemeinstellungen.",
+      "no-speech-engine": "Die lokale Sprach-Engine ist noch nicht installiert – siehe Einstellungen.",
+      "no-model": "Es wurde noch kein Sprachmodell heruntergeladen – siehe Einstellungen.",
+      "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen."
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "Frage verwerfen",
     "askedTimes": "{{count}}× gefragt",
     "earlier": "{{count}} frühere",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "searchedHost": "gesucht · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} offener Strang",

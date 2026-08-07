@@ -4,6 +4,7 @@ import { useToast } from "../components/ui/useToast";
 import { useUpdater } from "./useUpdater";
 import { useSettingsStore } from "../stores/settingsStore";
 import { fetchProviders as fetchStreamingProviders } from "../stores/streamingProvidersStore";
+import { initializeNotes } from "../stores/noteStore";
 import { getCachedPlatform } from "../utils/platform";
 import { isAccessibilitySkipped } from "../utils/permissions";
 
@@ -60,6 +61,18 @@ export function useAppBootstrap(onShowSettings: () => void): AppBootstrap {
 
   useEffect(() => {
     fetchStreamingProviders();
+  }, []);
+
+  // The conversation list is app state, not Intelligence's state.
+  //
+  // It used to be loaded only by `IntelligenceViews` on mount, which meant the
+  // Conversation surface — which reads the same list to decide whether pressing
+  // record should *resume* the conversation you were just having rather than
+  // start a new one — saw an empty list on every fresh launch. Resuming silently
+  // never happened until you had visited Intelligence at least once, which is
+  // exactly the sort of invisible mode the product is supposed to not have.
+  useEffect(() => {
+    void initializeNotes("meeting", 100);
   }, []);
 
   // The conversation hotkey is the one slot with a default, so the main

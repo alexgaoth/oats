@@ -35,7 +35,12 @@
     "openControlPanel": "開啟控制面板",
     "hideControlPanel": "隱藏控制面板",
     "quit": "結束 Oats",
-    "tooltip": "Oats - 語音輸入"
+    "tooltip": "Oats - 語音輸入",
+    "conversation": {
+      "start": "開始對話",
+      "stop": "結束對話"
+    },
+    "tooltipRecording": "Oats - 正在錄製對話"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2528,7 +2533,8 @@
       "hotkeyToSpeak": "{{hotkey}} 說話",
       "recording": "錄音中...",
       "processing": "處理中...",
-      "clickToSpeak": "點擊開始說話"
+      "clickToSpeak": "點擊開始說話",
+      "conversation": "正在錄製對話 — 點擊結束"
     },
     "buttons": {
       "cancelRecording": "取消錄音",
@@ -3029,7 +3035,14 @@
       "openPrevious": "開啟那一場",
       "noMatches": "沒有相符項目",
       "emptyHint": "在任何地方按 {{shortcut}} 開始",
-      "backToList": "返回"
+      "backToList": "返回",
+      "copy": "複製",
+      "copied": "已複製",
+      "save": "儲存",
+      "delete": "刪除",
+      "deleteConfirm": "刪除這次對話？",
+      "deleteYes": "刪除",
+      "deleteCancel": "保留"
     },
     "settings": {
       "title": "把選擇降到最少。",
@@ -3062,6 +3075,13 @@
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",
       "noEndpoint": "錄製對話前請先設定 Oats 的 API 端點。",
       "actionFailed": "Oats 無法為這場對話產生智慧內容。"
+    },
+    "preflight": {
+      "no-microphone": "找不到麥克風。請接上一個後再按一次。",
+      "microphone-permission": "Oats 需要麥克風權限。請在系統設定中授予。",
+      "no-speech-engine": "本機語音引擎尚未安裝 — 請查看設定。",
+      "no-model": "尚未下載語音模型 — 請查看設定。",
+      "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。"
     }
   },
   "questionCard": {
@@ -3076,7 +3096,8 @@
     "dismiss": "忽略此問題",
     "askedTimes": "提問 {{count}} 次",
     "earlier": "另有 {{count}} 筆",
-    "undo": "復原"
+    "undo": "復原",
+    "searchedHost": "已搜尋 · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} 條未完脈絡",

@@ -554,6 +554,21 @@ class ConversationAideSession {
   // screen. A verdict that arrives after the card was retracted is dropped.
   async _evaluate(candidate, followingContext, trigger) {
     if (this.closed || !this.cards.has(candidate.id)) return;
+
+    // No classifier configured at all: resolve locally and say nothing about it.
+    //
+    // This is the ordinary case, not a degraded one. Detection is local pattern
+    // matching by design (CLAUDE.md, first question rule) and the local reading
+    // of the reply is the *primary* verdict (fourth rule) — the model only
+    // refines. Routing this through the failure path instead would work, but it
+    // would report `classifier_failed` once per question for a model the user
+    // never asked for, which is a diagnostic that means the opposite of what it
+    // says.
+    if (!this.classify) {
+      await this._resolveLocally(candidate, followingContext, trigger);
+      return;
+    }
+
     let assessment;
     try {
       const raw = await this.classify({

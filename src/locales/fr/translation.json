@@ -35,7 +35,12 @@
     "openControlPanel": "Ouvrir le panneau de contrôle",
     "hideControlPanel": "Masquer le panneau de contrôle",
     "quit": "Quitter Oats",
-    "tooltip": "Oats - Dictée vocale"
+    "tooltip": "Oats - Dictée vocale",
+    "conversation": {
+      "start": "Démarrer une conversation",
+      "stop": "Arrêter la conversation"
+    },
+    "tooltipRecording": "Oats - Enregistrement d'une conversation"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2581,7 +2586,8 @@
       "hotkeyToSpeak": "{{hotkey}} pour parler",
       "recording": "Enregistrement...",
       "processing": "Traitement...",
-      "clickToSpeak": "Cliquez pour parler"
+      "clickToSpeak": "Cliquez pour parler",
+      "conversation": "Enregistrement d'une conversation — cliquez pour terminer"
     },
     "buttons": {
       "cancelRecording": "Annuler l’enregistrement",
@@ -3034,7 +3040,14 @@
       "openPrevious": "Ouvrir celle-là",
       "noMatches": "aucun résultat",
       "emptyHint": "appuyez sur {{shortcut}} n'importe où pour commencer",
-      "backToList": "retour"
+      "backToList": "retour",
+      "copy": "copier",
+      "copied": "copié",
+      "save": "enregistrer",
+      "delete": "supprimer",
+      "deleteConfirm": "supprimer cette conversation ?",
+      "deleteYes": "supprimer",
+      "deleteCancel": "conserver"
     },
     "settings": {
       "title": "Peu de choix.",
@@ -3067,6 +3080,13 @@
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
       "noEndpoint": "Configurez le point de terminaison de l'API Oats avant d'enregistrer une conversation.",
       "actionFailed": "Oats n'a pas pu générer l'intelligence de cette conversation."
+    },
+    "preflight": {
+      "no-microphone": "Aucun microphone détecté. Branchez-en un, puis appuyez à nouveau.",
+      "microphone-permission": "Oats a besoin de l'autorisation d'utiliser le microphone. Accordez-la dans les réglages du système.",
+      "no-speech-engine": "Le moteur vocal local n'est pas encore installé — voir les Réglages.",
+      "no-model": "Aucun modèle vocal n'a encore été téléchargé — voir les Réglages.",
+      "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages."
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "Ignorer la question",
     "askedTimes": "posée {{count}}×",
     "earlier": "{{count}} précédentes",
-    "undo": "Annuler"
+    "undo": "Annuler",
+    "searchedHost": "recherché · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} fil ouvert",

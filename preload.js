@@ -49,6 +49,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onToggleDictation: registerListener("toggle-dictation", (callback) => () => callback()),
   onToggleVoiceAgent: registerListener("toggle-voice-agent", (callback) => () => callback()),
   onToggleConversation: registerListener("toggle-conversation", (callback) => () => callback()),
+  // A conversation can be started from anywhere and recorded with nothing on
+  // screen, so the state has to reach the two things that are always there: the
+  // tray and the floating oat. The workspace reports it; they listen for it.
+  reportConversationState: (state) => ipcRenderer.send("conversation-state", state),
+  onConversationState: registerListener(
+    "conversation-state-changed",
+    (callback) => (_event, state) => callback(state)
+  ),
+  requestToggleConversation: () => ipcRenderer.invoke("toggle-conversation-request"),
   onToggleTranslation: registerListener("toggle-translation", (callback) => () => callback()),
   onStartDictation: registerListener("start-dictation", (callback) => () => callback()),
   onStopDictation: registerListener("stop-dictation", (callback) => () => callback()),

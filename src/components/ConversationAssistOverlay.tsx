@@ -2,19 +2,36 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronUp, Search, Undo2, X } from "lucide-react";
 import { cn } from "./lib/utils";
+import { useSettingsStore } from "../stores/settingsStore";
+import { searchHostLabel } from "../utils/searchHost";
 import type { ConversationCard, QuestionOutcome } from "../types/conversationEvents";
 
-// The question-card rail (DESIGN.md §9.2). One always-on-top window holding the
-// whole stack for a recording — newest at the bottom, repeats gathered under the
-// question they repeat, older groups collapsed behind a count chip.
+// The question-card rail (DESIGN.md §9.2) — the help moment, and the surface the
+// spec says the product is judged on. One always-on-top window holding the whole
+// stack for a recording: newest at the bottom, every re-asking nested under the
+// question it repeats, older groups collapsed behind a count chip.
 //
 // Every card here already exists in the note. Dismissing one removes it from the
 // rail, never from the record.
+//
+// This sits over a live conversation, so the governing constraint is not
+// prettiness — it is that nothing here may compete with the person in the room.
+// Small, quiet, non-modal, never steals focus.
 
 const VISIBLE_GROUPS = 4;
 
+// Each card enters on `base` with a 24ms stagger, so a burst of questions arrives
+// as a sequence rather than a slab (§9.2).
+const STAGGER_MS = 24;
+
 // Ink-only state marks. Colour comes from the `--graph-*` tokens so the rail, the
 // thread list, and the topic graph cannot drift apart (DESIGN.md §4).
+//
+// `dither` is §4's uncertainty encoding: a resolved outcome is solid, an unsure
+// one is a stipple. It has to be drawn as *gaps in* the colour — the previous
+// version set the dot's background-color to the same `currentColor` the dither
+// dots are painted in, so every mark rendered solid and the whole vocabulary was
+// invisible.
 const STATE_STYLE: Record<QuestionOutcome, { token: string; dither: boolean }> = {
   asked: { token: "var(--graph-silence)", dither: true },
   answered: { token: "var(--graph-answered)", dither: false },
@@ -51,97 +68,174 @@ function elapsedLabel(from: number, now: number): string {
   return `${Math.round(seconds / 60)}m`;
 }
 
-// One group: the question, its outcome, and how many times it was asked.
-//
-// A repeat does not get its own card body — repeating a question does not make it
-// a different question, it makes it a more insistent one, and a count says that
-// far more calmly than three identical cards stacked in a corner.
+/** The §4 state mark: solid when the outcome is settled, stippled when it is not. */
+function StateMark({ state }: { state: QuestionOutcome }) {
+  const style = STATE_STYLE[state] ?? STATE_STYLE.asked;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "mt-[5px] h-2 w-2 shrink-0 rounded-full",
+        style.dither && "oats-dither oats-dither--fine"
+      )}
+      // Dithered marks paint dots in `color` over nothing; solid marks fill.
+      style={style.dither ? { color: style.token } : { backgroundColor: style.token }}
+    />
+  );
+}
+
+/**
+ * One asking: the question verbatim, its outcome, and its one action.
+ *
+ * Used for the first asking and for every repeat, because they are the same
+ * thing — that is the point of §9.2's "a question asked twice gets two cards".
+ */
+function Asking({
+  card,
+  now,
+  nested,
+  searchHost,
+  onSearch,
+}: {
+  card: ConversationCard;
+  now: number;
+  nested: boolean;
+  searchHost: string;
+  onSearch: (card: ConversationCard) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-start gap-2.5">
+      <StateMark state={card.state} />
+      <div className="min-w-0 flex-1">
+        {/* Mono, and verbatim. Quoting exactly what was said is what earns the
+            trust to put a card over somebody's conversation at all. */}
+        <p
+          className={cn(
+            "font-mono leading-snug text-foreground",
+            nested ? "text-[12px]" : "text-[13px]"
+          )}
+        >
+          {card.question}
+        </p>
+        <div className="mt-1 flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground">{t(`questionCard.state.${card.state}`)}</span>
+          <span aria-hidden="true" className="text-muted-foreground/40">
+            ·
+          </span>
+          <span className="tabular-nums text-muted-foreground/70">
+            {elapsedLabel(card.createdAt, now)}
+          </span>
+          <span className="flex-1" />
+          {card.searched ? (
+            // Naming the host is the honesty requirement, not decoration. The
+            // card's own `searchBaseUrl` wins over the current setting: this says
+            // where this question actually went, and changing the engine later
+            // must not rewrite the history of one that already left.
+            <span className="lowercase text-muted-foreground/70">
+              {(() => {
+                const host = searchHostLabel(card.searchBaseUrl || "") || searchHost;
+                return host ? t("questionCard.searchedHost", { host }) : t("questionCard.searched");
+              })()}
+            </span>
+          ) : (
+            // The card's one action, offered for every outcome that did not
+            // auto-search, so "the search is one click away" is true rather than
+            // aspirational.
+            //
+            // Ink at rest, gold only once you reach for it. §9.2 calls this "a
+            // single gold action", which is right for one card and wrong for the
+            // four the rail actually holds: four gold buttons stacked in the
+            // corner is four accents (§3), and it puts the rail's whole visual
+            // weight on a secondary action instead of on the questions. Reaching
+            // for it is still the one moment gold is earning something — and this
+            // panel floats over a live conversation, where the rule that beats
+            // every other is that nothing may compete with the person in the room.
+            <button
+              type="button"
+              onClick={() => onSearch(card)}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 lowercase text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 hover:text-primary focus-visible:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Search size={10} />
+              {t("topicGraph.search")}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One question and every re-asking of it.
+ *
+ * Repeats **nest** rather than collapsing into a count. The previous version
+ * rendered one body and a "asked 3×" tally, which reads tidier and throws away
+ * the signal: re-asking is how people mark what actually matters, and a
+ * rephrasing ("do you know…" then "are you aware of…") is different words with a
+ * different outcome. Both DESIGN.md §9.2 and CLAUDE.md's third question rule are
+ * explicit that density is a rendering problem and never a reason to drop a
+ * detection — so the repeats are indented, hairline-linked and dimmed, and every
+ * word of every asking is still on screen.
+ */
 function QuestionGroup({
   group,
   now,
+  index,
+  searchHost,
   onDismiss,
   onSearch,
 }: {
   group: CardGroup;
   now: number;
+  index: number;
+  searchHost: string;
   onDismiss: (cards: ConversationCard[]) => void;
   onSearch: (card: ConversationCard) => void;
 }) {
   const { t } = useTranslation();
-  // The latest asking carries the outcome: it is the one that was actually
-  // answered or not.
-  const latest = group.cards[group.cards.length - 1];
-  const style = STATE_STYLE[latest.state] ?? STATE_STYLE.asked;
-  const repeats = group.cards.length;
-  const canSearch = !latest.searched;
+  const [first, ...repeats] = group.cards;
 
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-surface-raised px-3 py-2.5",
-        "shadow-[0_1px_2px_color-mix(in_oklch,var(--color-foreground)_6%,transparent),0_8px_24px_color-mix(in_oklch,var(--color-foreground)_8%,transparent)]",
-        "transition-all [transition-duration:var(--motion-base)]"
+        "oats-enter oats-dithered-edge relative rounded-xl border border-border bg-surface-raised px-3 py-2.5",
+        "shadow-[0_1px_2px_color-mix(in_oklch,var(--color-foreground)_6%,transparent),0_8px_24px_color-mix(in_oklch,var(--color-foreground)_8%,transparent)]"
       )}
+      style={{ animationDelay: `${index * STAGGER_MS}ms` }}
     >
-      <div className="flex items-start gap-2.5">
-        <span
-          aria-hidden="true"
-          className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", style.dither && "oats-dither")}
-          style={{ color: style.token, backgroundColor: "currentColor" }}
-        />
-        <p className="min-w-0 flex-1 font-mono text-[13px] leading-snug text-foreground">
-          {latest.question}
-        </p>
-        <button
-          type="button"
-          aria-label={t("questionCard.dismiss")}
-          onClick={() => onDismiss(group.cards)}
-          className="-mr-1 -mt-1 shrink-0 rounded-md p-1 text-muted-foreground/60 transition-colors [transition-duration:var(--motion-instant)] hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <X size={13} />
-        </button>
+      {/* One dismiss for the whole group: the repeats are the same question, so
+          dropping it one asking at a time would be busywork. A low-contrast
+          ghost, per §9.2 — it must never look like the point of the card. */}
+      <button
+        type="button"
+        aria-label={t("questionCard.dismiss")}
+        onClick={() => onDismiss(group.cards)}
+        className="absolute right-1.5 top-1.5 rounded-md p-1 text-muted-foreground/35 transition-colors [transition-duration:var(--motion-instant)] hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <X size={13} />
+      </button>
+
+      <div className="pr-5">
+        <Asking card={first} now={now} nested={false} searchHost={searchHost} onSearch={onSearch} />
       </div>
 
-      <div className="mt-1.5 flex items-center gap-2 pl-[1.125rem] text-[11px]">
-        <span className="text-muted-foreground">{t(`questionCard.state.${latest.state}`)}</span>
-        <span aria-hidden="true" className="text-muted-foreground/40">
-          ·
-        </span>
-        <span className="tabular-nums text-muted-foreground/70">
-          {elapsedLabel(group.cards[0].createdAt, now)}
-        </span>
-        {repeats > 1 && (
-          <>
-            <span aria-hidden="true" className="text-muted-foreground/40">
-              ·
-            </span>
-            <span className="text-muted-foreground">
-              {t("questionCard.askedTimes", { count: repeats })}
-            </span>
-          </>
-        )}
-        <span className="flex-1" />
-        {latest.searched ? (
-          <span className="inline-flex items-center gap-1 text-muted-foreground/70">
-            <Search size={10} />
-            {t("questionCard.searched")}
-          </span>
-        ) : (
-          canSearch && (
-            // The one action on the card. Present for every outcome that did not
-            // auto-search, so that "the search is one click away" is actually
-            // true rather than aspirational.
-            <button
-              type="button"
-              onClick={() => onSearch(latest)}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-primary transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Search size={10} />
-              {t("topicGraph.search")}
-            </button>
-          )
-        )}
-      </div>
+      {repeats.length > 0 && (
+        // Indented and hairline-linked to the question they repeat, at 70% ink.
+        <div className="ml-[3px] mt-2.5 space-y-2.5 border-l border-border pl-3 opacity-70">
+          {repeats.map((card) => (
+            <Asking
+              key={card.id}
+              card={card}
+              now={now}
+              nested
+              searchHost={searchHost}
+              onSearch={onSearch}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -156,6 +250,8 @@ export default function ConversationAssistOverlay() {
   const [undoable, setUndoable] = useState<ConversationCard[] | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const searchBaseUrl = useSettingsStore((state) => state.conversationAideSearchBaseUrl);
+  const searchHost = useMemo(() => searchHostLabel(searchBaseUrl), [searchBaseUrl]);
 
   useEffect(() => {
     const receive = (value: ConversationCard[] | null) => setCards(value ?? []);
@@ -240,11 +336,13 @@ export default function ConversationAssistOverlay() {
         </button>
       )}
       <div className="flex min-h-0 flex-col justify-end gap-2 overflow-y-auto">
-        {shown.map((group) => (
+        {shown.map((group, index) => (
           <QuestionGroup
             key={group.key}
             group={group}
             now={now}
+            index={index}
+            searchHost={searchHost}
             onDismiss={onDismiss}
             onSearch={onSearch}
           />

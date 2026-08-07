@@ -35,7 +35,12 @@
     "openControlPanel": "Open Control Panel",
     "hideControlPanel": "Hide Control Panel",
     "quit": "Quit Oats",
-    "tooltip": "Oats - Voice Dictation"
+    "tooltip": "Oats - Voice Dictation",
+    "conversation": {
+      "start": "Start Conversation",
+      "stop": "Stop Conversation"
+    },
+    "tooltipRecording": "Oats - Recording a conversation"
   },
   "menu": {
     "appLabel": "Oats",
@@ -2669,7 +2674,8 @@
       "hotkeyToSpeak": "{{hotkey}} to talk",
       "recording": "Recording...",
       "processing": "Processing...",
-      "clickToSpeak": "Click to speak"
+      "clickToSpeak": "Click to speak",
+      "conversation": "Recording a conversation — click to finish"
     },
     "buttons": {
       "cancelRecording": "Cancel recording",
@@ -3034,7 +3040,14 @@
       "openPrevious": "Open that one",
       "noMatches": "nothing matches that",
       "emptyHint": "press {{shortcut}} anywhere to start one",
-      "backToList": "back"
+      "backToList": "back",
+      "copy": "copy",
+      "copied": "copied",
+      "save": "save",
+      "delete": "delete",
+      "deleteConfirm": "delete this conversation?",
+      "deleteYes": "delete",
+      "deleteCancel": "keep"
     },
     "settings": {
       "title": "Keep the choices small.",
@@ -3067,6 +3080,13 @@
       "noModel": "Configure Oats processing before recording a conversation.",
       "noEndpoint": "Configure the Oats API endpoint before recording a conversation.",
       "actionFailed": "Oats could not generate intelligence for this conversation."
+    },
+    "preflight": {
+      "no-microphone": "No microphone found. Plug one in, then press again.",
+      "microphone-permission": "Oats needs permission to use the microphone. Grant it in your system settings.",
+      "no-speech-engine": "The local speech engine is not installed yet — see Settings.",
+      "no-model": "No speech model has been downloaded yet — see Settings.",
+      "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings."
     }
   },
   "questionCard": {
@@ -3081,7 +3101,8 @@
     "dismiss": "Dismiss question",
     "askedTimes": "asked {{count}}×",
     "earlier": "{{count}} earlier",
-    "undo": "Undo dismiss"
+    "undo": "Undo dismiss",
+    "searchedHost": "searched · {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} open thread",

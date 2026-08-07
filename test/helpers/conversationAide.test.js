@@ -586,3 +586,68 @@ test("shutdown suppresses an inference result that was already in flight", async
   );
   assert.deepEqual(searches, []);
 });
+
+// With no classifier at all.
+//
+// This is the shape the product actually ships in: the master switch is the only
+// thing standing between a user and the question card, and requiring a downloaded
+// 1.5B model to see a single card contradicted the two rules the card is built on
+// — detection is local pattern matching with no model round-trip, and the local
+// reading of the reply is the primary verdict the model may only refine.
+
+test("every question still gets a card with no classifier configured", async () => {
+  const { session, cards, diagnostics } = harness({ classify: null });
+
+  session.onFinalized({ id: "q1", text: "Do you know what Kubernetes is?" });
+  await session.evaluation;
+
+  assert.equal(cards.length >= 1, true, "a card must appear from local detection alone");
+  assert.equal(latestCard(cards, "q1").question, "Do you know what Kubernetes is?");
+  // Not having a model is the ordinary case, not a failure to report.
+  assert.deepEqual(diagnostics, []);
+});
+
+test("a denial opens the search with no classifier configured", async () => {
+  const { session, cards, events, searches, diagnostics } = harness({ classify: null });
+
+  session.onFinalized({ id: "q1", text: "Do you know what Kubernetes is?" });
+  session.onFinalized({ id: "r1", text: "No, I have no idea." });
+  await session.evaluation;
+
+  assert.equal(latestCard(cards, "q1").state, "denied");
+  assert.equal(searches.length, 1, "a confirmed negative must still open a search");
+  assert.equal(latestCard(cards, "q1").searched, true);
+  assert.deepEqual(
+    events.map((event) => event.kind),
+    ["question", "response", "search_suggestion"]
+  );
+  // Distinguishes this from the classifier-failure path, which reports
+  // `classifier_failed` and would otherwise make this test pass for the wrong
+  // reason.
+  assert.deepEqual(diagnostics, []);
+});
+
+test("an answered question is recorded and does not search, with no classifier", async () => {
+  const { session, cards, searches } = harness({ classify: null });
+
+  session.onFinalized({ id: "q1", text: "Do you know what Kubernetes is?" });
+  session.onFinalized({
+    id: "r1",
+    text: "Yes, it is a container orchestrator that Google open sourced.",
+  });
+  await session.evaluation;
+
+  assert.equal(latestCard(cards, "q1").state, "answered");
+  assert.deepEqual(searches, [], "an answered question must never open a search");
+});
+
+test("repeats each get their own card with no classifier", async () => {
+  const { session, cards } = harness({ classify: null });
+
+  session.onFinalized({ id: "q1", text: "Do you know what Kubernetes is?" });
+  session.onFinalized({ id: "q2", text: "Are you familiar with Kubernetes at all?" });
+  await session.evaluation;
+
+  const ids = new Set(cards.map((card) => card.id));
+  assert.equal(ids.has("q1") && ids.has("q2"), true, "re-asking must never be suppressed");
+});

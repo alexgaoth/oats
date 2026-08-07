@@ -77,7 +77,12 @@ export default function LifetimeGraph({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {recurring.length > 0 && (
-        <p className="shrink-0 px-1 pb-4 text-sm text-muted-foreground">
+        // The same column the map's heading uses (`OatsWorkspace`), because the
+        // graph beneath is full-bleed and this caption is not: at `px-1` it sat
+        // hard against the window's left edge, a line of text with no relation
+        // to the heading above it or the graph below — it read as debris rather
+        // than as the caption for what is on screen.
+        <p className="mx-auto w-full max-w-3xl shrink-0 px-8 pb-4 text-sm text-muted-foreground">
           {t("lifetime.recurring")}{" "}
           {recurring.map((item, index) => (
             <span key={item.label}>
@@ -108,8 +113,12 @@ export default function LifetimeGraph({
           />
         </div>
         {selected && (
-          <aside className="mt-6 shrink-0 border-t border-border/40 pt-5">
-            <>
+          // Same column as the caption and the heading. Full-bleed is right for
+          // the graph and wrong for prose: unpadded, a selected conversation's
+          // title, date and topic list appeared jammed into the window's
+          // bottom-left corner, lined up with nothing on the screen.
+          <aside className="shrink-0 border-t border-border/40">
+            <div className="mx-auto w-full max-w-3xl px-8 pb-6 pt-5">
               <p className="text-sm font-medium leading-snug text-foreground">{selected.label}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {new Date(selected.createdAt).toLocaleDateString()} ·{" "}
@@ -133,7 +142,7 @@ export default function LifetimeGraph({
               >
                 {t("lifetime.open")}
               </button>
-            </>
+            </div>
           </aside>
         )}
       </div>
