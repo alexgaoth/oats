@@ -193,7 +193,7 @@ export default function FieldGL({
   live,
   intensity,
   scene,
-  minkaStyle = "irimoya",
+  minkaStyle = "hamlet",
   reduced,
   onFailure,
 }: {

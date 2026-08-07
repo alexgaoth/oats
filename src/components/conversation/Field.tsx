@@ -49,10 +49,11 @@ function supportsGpuField(): boolean {
 }
 
 /**
- * Which post-recording epilogue plays (exploration). Read once per mount: a
- * URL param for harness pages, then localStorage for the running app. Until a
- * variant is chosen the default is `off`, which is exactly the shipped
- * behaviour — the wheat withdraws and nothing else arrives.
+ * Which post-recording epilogue plays. Read once per mount: a URL param for
+ * harness pages, then localStorage as an override for trying alternatives.
+ * The shipped default is `scene` — the full dithered countryside (DESIGN.md
+ * §9.9): the sky clears in grain, the hamlet condenses on the horizon, birds
+ * cross. Chosen 2026-08-06.
  */
 function readFieldScene(): FieldScene {
   try {
@@ -64,10 +65,11 @@ function readFieldScene(): FieldScene {
   } catch {
     // Storage access can throw in hardened contexts; the default is fine.
   }
-  return "off";
+  return "scene";
 }
 
-/** Which dwelling the minka/scene epilogues draw, same override mechanism. */
+/** Which dwelling the epilogue draws, same override mechanism. The shipped
+ *  default is the hamlet — house, kura, and tree; a settlement, not an object. */
 function readMinkaStyle(): MinkaStyle {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get("minkaStyle");
@@ -76,7 +78,7 @@ function readMinkaStyle(): MinkaStyle {
   } catch {
     // As above.
   }
-  return "irimoya";
+  return "hamlet";
 }
 
 function usePrefersReducedMotion(): boolean {

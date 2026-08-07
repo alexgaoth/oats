@@ -70,7 +70,7 @@ export default function FieldCanvas({
   live,
   intensity,
   scene,
-  minkaStyle = "irimoya",
+  minkaStyle = "hamlet",
   reduced,
 }: {
   live: boolean;
