@@ -1425,7 +1425,12 @@ class IPCHandlers {
             .replace(/^>\s+/gm, "")
             .trim();
         } else {
-          exportContent = note.enhanced_content || note.content;
+          const body = note.enhanced_content || note.content || "";
+          // The file carries its own name: the conversation title as the H1,
+          // then the summary and threads exactly as read in Intelligence. The
+          // guard keeps a body that already opens with an H1 from getting two.
+          exportContent =
+            note.title && !body.startsWith("# ") ? `# ${note.title}\n\n${body}` : body;
         }
 
         fs.writeFileSync(result.filePath, exportContent, "utf-8");
