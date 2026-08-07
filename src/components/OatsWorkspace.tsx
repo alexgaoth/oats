@@ -134,6 +134,35 @@ function topicOverlap(a: string[] = [], b: string[] = []): number {
   return shared / Math.min(left.size, right.size);
 }
 
+/** How long the last-heard echo stays before the line returns to the hint. */
+const LAST_HEARD_MS = 6000;
+const LAST_HEARD_MAX_CHARS = 110;
+
+/**
+ * The tail of the last finalised utterance, held for a few seconds.
+ *
+ * Positive proof of hearing: the dead-microphone warning says when nothing has
+ * arrived for thirty seconds; this says — quietly, in the machine's own mono
+ * voice — that something just did. It is an echo, not a transcript: one line,
+ * replaced in place with no animation (motion in the corner of an eye is the
+ * exact thing §9.8 forbids), gone six seconds after the room goes quiet.
+ */
+function useLastHeard(recording: boolean): string | null {
+  const lastSegment = useMeetingRecordingStore((s) => s.segments[s.segments.length - 1] ?? null);
+  const [echo, setEcho] = useState<string | null>(null);
+  useEffect(() => {
+    if (!recording || !lastSegment?.text?.trim()) {
+      setEcho(null);
+      return undefined;
+    }
+    const text = lastSegment.text.trim();
+    setEcho(text.length > LAST_HEARD_MAX_CHARS ? `…${text.slice(-LAST_HEARD_MAX_CHARS)}` : text);
+    const timer = window.setTimeout(() => setEcho(null), LAST_HEARD_MS);
+    return () => window.clearTimeout(timer);
+  }, [recording, lastSegment]);
+  return echo;
+}
+
 function ConversationSurface() {
   const recording = useMeetingRecordingStore((s) => s.isRecording);
   const recordingNoteId = useMeetingRecordingStore((s) => s.recordingNoteId);
@@ -160,6 +189,7 @@ function ConversationSurface() {
     [conversationKey]
   );
   const micSilentSince = useMeetingRecordingStore((s) => s.micSilentSince);
+  const lastHeard = useLastHeard(recording);
   const wasRecording = useRef(false);
   // Checked before the first word rather than discovered after the last one.
   const preflight = useConversationPreflight();
@@ -343,9 +373,11 @@ function ConversationSurface() {
 
       {recording ? (
         <>
-          {/* Machine state speaks in mono — the "this is what was heard" voice. */}
-          <p className="relative mt-4 text-center font-mono text-xs lowercase text-muted-foreground">
-            {t("oats.conversation.listeningHint")}
+          {/* Machine state speaks in mono — the "this is what was heard" voice.
+              While an utterance is fresh the line IS what was heard; when the
+              room has been quiet for a moment it returns to the hint. */}
+          <p className="relative mt-4 w-full max-w-md truncate text-center font-mono text-xs lowercase text-muted-foreground">
+            {lastHeard ?? t("oats.conversation.listeningHint")}
           </p>
           {/* Said plainly rather than asked. Oats resumed a recent conversation
               instead of stopping to check, because the check would have cost
