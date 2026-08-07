@@ -6,7 +6,12 @@
 // decides what they mean.
 
 export type PreflightProblem =
-  "no-microphone" | "microphone-permission" | "no-speech-engine" | "no-model" | "no-api-key";
+  | "no-microphone"
+  | "microphone-permission"
+  | "no-speech-engine"
+  | "no-model"
+  | "no-api-key"
+  | "question-cards-off";
 
 export interface PreflightFacts {
   /** How many audio input devices the browser can see. */
@@ -20,6 +25,10 @@ export interface PreflightFacts {
   speechEngineReady: boolean | null;
   anyModelDownloaded: boolean | null;
   hasApiKey: boolean | null;
+  /** Whether question cards will fire for this conversation. The aide fails
+   *  silently when its gate is closed — this is the one place that says so
+   *  while there is still time to change it. */
+  questionCardsOn: boolean | null;
 }
 
 /**
@@ -38,16 +47,19 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
   if (facts.micPermission === "denied") return "microphone-permission";
 
   if (!facts.useLocalWhisper) {
-    return facts.hasApiKey === false ? "no-api-key" : null;
+    if (facts.hasApiKey === false) return "no-api-key";
+  } else if (facts.localProvider === "whisper") {
+    // Parakeet keeps its models elsewhere and has its own readiness path.
+    // Claiming a Whisper model is missing when the engine is not Whisper would
+    // be a lie in the one place that must not tell one.
+    if (facts.speechEngineReady === false) return "no-speech-engine";
+    // Only "nothing at all" is worth saying: a *named* model that is missing
+    // while another is present still records, because the resolver falls back.
+    if (facts.anyModelDownloaded === false) return "no-model";
   }
-  // Parakeet keeps its models elsewhere and has its own readiness path. Claiming
-  // a Whisper model is missing when the engine is not Whisper would be a lie in
-  // the one place that must not tell one.
-  if (facts.localProvider !== "whisper") return null;
-  if (facts.speechEngineReady === false) return "no-speech-engine";
-  // Only "nothing at all" is worth saying: a *named* model that is missing while
-  // another is present still records, because the resolver falls back.
-  if (facts.anyModelDownloaded === false) return "no-model";
+  // Last, because recording still works fully — but the flagship surface will
+  // not, and its own failure mode is silence.
+  if (facts.questionCardsOn === false) return "question-cards-off";
   return null;
 }
 

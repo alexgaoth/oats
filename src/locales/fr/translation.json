@@ -3086,7 +3086,8 @@
       "microphone-permission": "Oats a besoin de l'autorisation d'utiliser le microphone. Accordez-la dans les réglages du système.",
       "no-speech-engine": "Le moteur vocal local n'est pas encore installé — voir les Réglages.",
       "no-model": "Aucun modèle vocal n'a encore été téléchargé — voir les Réglages.",
-      "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages."
+      "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
+      "question-cards-off": "Les cartes de questions sont désactivées — les questions passeront en silence. Voir Réglages."
     }
   },
   "questionCard": {

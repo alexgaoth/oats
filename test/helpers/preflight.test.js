@@ -13,6 +13,7 @@ const READY = {
   speechEngineReady: true,
   anyModelDownloaded: true,
   hasApiKey: null,
+  questionCardsOn: true,
 };
 
 test("a machine that can record is not warned about anything", async () => {
@@ -94,5 +95,36 @@ test("a check that could not run is never reported as a failure", async () => {
     resolvePreflight({ ...READY, useLocalWhisper: false, hasApiKey: null }),
     null,
     "an unreadable key store must not block the cloud path"
+  );
+});
+
+test("closed question-card gate warns without blocking — its failure mode is silence", async () => {
+  const { resolvePreflight, blocksRecording } = await load();
+
+  const problem = resolvePreflight({ ...READY, questionCardsOn: false });
+  assert.equal(problem, "question-cards-off");
+  assert.equal(blocksRecording(problem), false, "recording itself still works");
+
+  // It also warns for API-key users — the aide is transcription-independent.
+  assert.equal(
+    resolvePreflight({
+      ...READY,
+      useLocalWhisper: false,
+      hasApiKey: true,
+      questionCardsOn: false,
+    }),
+    "question-cards-off"
+  );
+
+  // Unknown is not a problem, and any recording problem outranks it: the person
+  // reads one line, and the line that saves the conversation wins.
+  assert.equal(resolvePreflight({ ...READY, questionCardsOn: null }), null);
+  assert.equal(
+    resolvePreflight({ ...READY, audioInputs: 0, questionCardsOn: false }),
+    "no-microphone"
+  );
+  assert.equal(
+    resolvePreflight({ ...READY, anyModelDownloaded: false, questionCardsOn: false }),
+    "no-model"
   );
 });

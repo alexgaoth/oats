@@ -3086,7 +3086,8 @@
       "microphone-permission": "Oats needs permission to use the microphone. Grant it in your system settings.",
       "no-speech-engine": "The local speech engine is not installed yet — see Settings.",
       "no-model": "No speech model has been downloaded yet — see Settings.",
-      "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings."
+      "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings.",
+      "question-cards-off": "Question cards are switched off — questions will pass silently. See Settings."
     }
   },
   "questionCard": {

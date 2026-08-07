@@ -84,6 +84,11 @@ export function useConversationPreflight(): Preflight {
   // action fails, which is the original bug wearing a hat.
   const useLocalWhisper = useSettingsStore((state) => state.meetingUseLocalWhisper);
   const localProvider = useSettingsStore((state) => state.meetingLocalTranscriptionProvider);
+  // Both gates the aide checks for an in-room conversation
+  // (meetingRecordingStore.startConversationAide) — subscribed so flipping
+  // either in Settings clears or raises the line without a restart.
+  const aideEnabled = useSettingsStore((state) => state.conversationAideEnabled);
+  const aideInRoom = useSettingsStore((state) => state.conversationAideInRoomEnabled);
 
   const check = useCallback(async (): Promise<PreflightProblem | null> => {
     const found = resolvePreflight({
@@ -91,10 +96,11 @@ export function useConversationPreflight(): Preflight {
       useLocalWhisper,
       localProvider,
       ...(await transcriptionFacts(useLocalWhisper, localProvider)),
+      questionCardsOn: aideEnabled && aideInRoom,
     });
     setProblem(found);
     return found;
-  }, [useLocalWhisper, localProvider]);
+  }, [useLocalWhisper, localProvider, aideEnabled, aideInRoom]);
 
   useEffect(() => {
     void check();

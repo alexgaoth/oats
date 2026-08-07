@@ -1194,7 +1194,12 @@
           "annualEquivalent": "$16.67",
           "includesPrefix": "所有 Pro 功能 +",
           "badge": "最熱門",
-          "features": ["無限會議錄製", "代理模式", "與您的資料對話", "優先支援"],
+          "features": [
+            "無限會議錄製",
+            "代理模式",
+            "與您的資料對話",
+            "優先支援"
+          ],
           "cta": "開始使用",
           "switchToAnnual": "切換為年付"
         },
@@ -3081,7 +3086,8 @@
       "microphone-permission": "Oats 需要麥克風權限。請在系統設定中授予。",
       "no-speech-engine": "本機語音引擎尚未安裝 — 請查看設定。",
       "no-model": "尚未下載語音模型 — 請查看設定。",
-      "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。"
+      "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
+      "question-cards-off": "問題卡片已關閉——提問將不會被捕捉。請查看設定。"
     }
   },
   "questionCard": {

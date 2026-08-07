@@ -69,15 +69,14 @@ function ConversationAidePanel() {
         label="Enable conversation aide"
         description={
           selectedDownloaded
-            ? "Uses only the selected local model."
-            : "Download the selected local model before enabling."
+            ? "Question detection is local; the downloaded model refines the verdicts."
+            : "Works without a model — detection and verdicts are local pattern matching."
         }
       >
-        <Toggle
-          checked={conversationAideEnabled && selectedDownloaded}
-          disabled={!selectedDownloaded}
-          onChange={setConversationAideEnabled}
-        />
+        {/* Never gated on a downloaded classifier: detection is local pattern
+            matching and the local reading is the primary verdict (CLAUDE.md
+            question rules 1 and 4). A model is a refinement, not admission. */}
+        <Toggle checked={conversationAideEnabled} onChange={setConversationAideEnabled} />
       </SettingsRow>
       <SettingsRow label="Online meetings" description="Analyze finalized online meeting turns.">
         <Toggle

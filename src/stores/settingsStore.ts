@@ -1116,7 +1116,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return v === "openai-compatible" ? "openai-compatible" : ("lan" as SelfHostedType);
   })(),
   meetingRemoteTranscriptionUrl: readString("meetingRemoteTranscriptionUrl", ""),
-  conversationAideEnabled: readBoolean("conversationAideEnabled", false),
+  // Default ON: catching every question is the product's core promise
+  // (CLAUDE.md question rules), it runs on local pattern matching with no
+  // model, and the only thing that leaves the device — auto-search — has its
+  // own toggle. An install where this is off has a flagship that never fires.
+  conversationAideEnabled: readBoolean("conversationAideEnabled", true),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
   conversationAideInRoomEnabled: readBoolean("conversationAideInRoomEnabled", true),
   conversationAideModel: readString("conversationAideModel", "qwen2.5-1.5b-instruct-q5_k_m"),

@@ -3086,7 +3086,8 @@
       "microphone-permission": "Oats necesita permiso para usar el micrófono. Concédelo en los ajustes del sistema.",
       "no-speech-engine": "El motor de voz local aún no está instalado: revisa Ajustes.",
       "no-model": "Todavía no se ha descargado ningún modelo de voz: revisa Ajustes.",
-      "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes."
+      "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
+      "question-cards-off": "Las tarjetas de preguntas están desactivadas: las preguntas pasarán en silencio. Ver Ajustes."
     }
   },
   "questionCard": {
