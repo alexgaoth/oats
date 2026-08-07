@@ -651,3 +651,66 @@ test("repeats each get their own card with no classifier", async () => {
   const ids = new Set(cards.map((card) => card.id));
   assert.equal(ids.has("q1") && ids.has("q2"), true, "re-asking must never be suppressed");
 });
+
+test("questions are detected in every shipped locale, even without a question mark", () => {
+  const questions = [
+    "¿Sabes qué es Kubernetes", // es — inverted mark alone suffices
+    "Sabes qué es Kubernetes", // es — knowledge-verb opener
+    "Est-ce que tu connais Kubernetes", // fr
+    "Pourquoi le déploiement a échoué", // fr
+    "Weißt du was Kubernetes ist", // de
+    "Sai cosa è Kubernetes", // it
+    "Você sabe o que é Kubernetes", // pt
+    "Знаешь что такое Кубернетес", // ru
+    "Сколько это стоит", // ru
+    "クバネティスを知っていますか", // ja — sentence-final か
+    "これはいくらですか", // ja
+    "你知道Kubernetes是什么", // zh-CN
+    "你知道Kubernetes是什麼", // zh-TW
+    "誰？", // CJK questions can be two characters
+  ];
+  for (const q of questions) {
+    assert.equal(isQuestionCandidate(q), true, `should detect: ${q}`);
+  }
+
+  const statements = [
+    "El tiempo está muy bien hoy.",
+    "Das Wetter ist heute schön.",
+    "Мы закончили вчера вечером.",
+    "昨日の会議は長かったです。",
+  ];
+  for (const s of statements) {
+    assert.equal(isQuestionCandidate(s), false, `should not detect: ${s}`);
+  }
+});
+
+test("denials, hedges, and backchannels are read locally in every shipped locale", () => {
+  const denial = (text) => assert.equal(assessResponseLocally([{ text }]).outcome, "denied", text);
+  denial("No lo sé");
+  denial("Je ne sais pas");
+  denial("Keine Ahnung");
+  denial("Non lo so");
+  denial("Não sei");
+  denial("Понятия не имею");
+  denial("わかりません");
+  denial("不知道");
+
+  const hedge = (text) =>
+    assert.equal(assessResponseLocally([{ text }]).outcome, "uncertain", text);
+  hedge("Puede ser, probablemente");
+  hedge("Vielleicht war es 2018");
+  hedge("Наверное, да");
+  hedge("たぶんそうだと思います");
+  hedge("可能是2018年吧");
+
+  // Backchannels alone are not replies — the room acknowledged, nobody answered.
+  for (const text of ["はい", "ага", "d'accord", "genau", "嗯"]) {
+    assert.equal(assessResponseLocally([{ text }]).outcome, "silence", text);
+  }
+
+  // A substantive CJK answer is counted in characters, not space-split words.
+  assert.equal(
+    assessResponseLocally([{ text: "コンテナを自動で管理するシステムです" }]).outcome,
+    "answered"
+  );
+});

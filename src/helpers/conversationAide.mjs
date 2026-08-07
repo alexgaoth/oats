@@ -7,6 +7,275 @@ const COMMAND_PREFIX =
 const CASUAL_OR_RHETORICAL =
   /^(?:how are you|what's up|whats up|how's it going|how is it going|who cares|why bother|what can you do)[?.!\s]*$/i;
 
+// ---------------------------------------------------------------------------
+// Beyond English — the nine other locales Oats ships in (es fr de it pt ru
+// ja zh-CN zh-TW). Two hard-won constraints shape everything below:
+//
+// 1. `\b` is ASCII-only in JavaScript. Around Cyrillic, accented, or CJK
+//    letters it either never matches (`/\bне\b/` on "я не знаю") or matches in
+//    the wrong place (`/perché\b/` fails because é is a non-word character).
+//    So spaced scripts (Latin, Cyrillic) use explicit boundary classes, and
+//    CJK phrases — written without spaces — use none.
+// 2. Bare negation particles are NOT denials. English's `\bno\b` rule predates
+//    this block and keeps its behaviour, but "no"/"non"/"не" negate half of
+//    all ordinary answers in these languages, and a false denial does not just
+//    mislabel a card — it opens a browser. Only explicit denial phrases
+//    ("no lo sé", "keine Ahnung", "не знаю", "わかりません") count.
+//
+// Detection stays generous, exactly like the English patterns: an extra card
+// costs a glance (CLAUDE.md question rule 3). Verdicts stay conservative.
+
+const SP_START = String.raw`(?:^|[\s("'«¿¡,;:–—])`;
+const SP_END = String.raw`(?=$|[\s)"'»,;:!?.…¡¿–—])`;
+const spaced = (words) => `${SP_START}(?:${words.join("|")})${SP_END}`;
+
+// Interrogative openers, checked at the start of the utterance (mirrors
+// QUESTION_PREFIX). Loose single words are safe here because position carries
+// most of the signal.
+const INTL_QUESTION_PREFIX = new RegExp(
+  `^[¿¡]|^(?:${[
+    // es
+    "qué",
+    "por qué",
+    "cómo",
+    "cuál(?:es)?",
+    "quién(?:es)?",
+    "dónde",
+    "cuándo",
+    "cuánt[oa]s?",
+    "sabes?",
+    "saben",
+    // fr
+    "est-ce qu[e']",
+    "pourquoi",
+    "comment",
+    "quel(?:le)?s?",
+    "qui",
+    "où",
+    "quand",
+    "combien",
+    "sais-tu",
+    "savez-vous",
+    // de
+    "was",
+    "warum",
+    "wieso",
+    "weshalb",
+    "wie",
+    "welche[rns]?",
+    "wer",
+    "wo",
+    "wann",
+    "weißt du",
+    "wisst ihr",
+    "wissen sie",
+    "kennst du",
+    // it
+    "(?:che )?cosa",
+    "perché",
+    "come",
+    "qual[ie]",
+    "chi",
+    "dove",
+    "quando",
+    "quant[oaie]",
+    "sai",
+    "sapete",
+    // pt
+    "o que",
+    "por que",
+    "porquê",
+    "como",
+    "qua(?:l|is)",
+    "quem",
+    "onde",
+    "sabem",
+    "você sabe",
+    // ru
+    "что",
+    "почему",
+    "зачем",
+    "как(?:ой|ая|ое|ие)?",
+    "кто",
+    "где",
+    "когда",
+    "сколько",
+    "знаешь",
+    "знаете",
+  ].join("|")})${SP_END}`,
+  "i"
+);
+
+// Strong markers that carry question-ness anywhere in the utterance. Kept
+// small: mid-sentence looseness is how statements become cards.
+const INTL_QUESTION_ANYWHERE = new RegExp(
+  [
+    spaced(["est-ce que", "sabes si", "savez-vous", "weißt du", "знаешь ли", "не знаешь"]),
+    // CJK interrogatives are unambiguous enough to match anywhere.
+    "(?:なぜ|どうして|なんで|どこに|どこで|いつから|いつまで|どちら|どっち|いくら|どうやって)",
+    "(?:什么|为什么|怎么|哪里|哪个|多少|什麼|甚麼|為什麼|怎麼|哪裡|哪個|谁|誰)",
+  ].join("|"),
+  "i"
+);
+
+// Sentence-final question particles (ja/zh). The particle *is* the question
+// mark, so it is checked against the end, tolerating trailing punctuation.
+const CJK_QUESTION_ENDING = /(?:ですか|ますか|のか|かな|か|吗|嗎)\s*[?？。.!！]*\s*$/;
+
+/** CJK scripts have no spaces, so length and word-count heuristics lie. */
+const HAS_CJK = /[぀-ヿ㐀-䶿一-鿿豈-﫿]/;
+
+const DENIAL_INTL = new RegExp(
+  [
+    spaced([
+      // es
+      "no (?:lo )?sé",
+      "ni idea",
+      "no tengo (?:ni )?idea",
+      "no (?:me acuerdo|recuerdo)",
+      // fr
+      "je (?:ne )?sais pas",
+      "j'en sais rien",
+      "aucune idée",
+      "je (?:ne )?me souviens (?:pas|plus)",
+      // de
+      "keine ahnung",
+      "ich weiß (?:es )?nicht",
+      "weiß ich nicht",
+      "kann mich nicht erinnern",
+      // it
+      "non (?:lo )?so",
+      "nessuna idea",
+      "non (?:mi )?ricordo",
+      // pt
+      "não sei",
+      "não faço ideia",
+      "sem ideia",
+      "não (?:me )?lembro",
+      // ru
+      "не знаю",
+      "понятия не имею",
+      "без понятия",
+      "не помню",
+      "не в курсе",
+    ]),
+    "(?:わからない|わかりません|分からない|分かりません|知らない|知りません|覚えていない|覚えてない)",
+    "(?:不知道|不清楚|不记得|不記得|没听说过|沒聽說過)",
+  ].join("|"),
+  "i"
+);
+
+const HEDGE_INTL = new RegExp(
+  [
+    spaced([
+      // es
+      "creo que",
+      "quizás?",
+      "tal vez",
+      "a lo mejor",
+      "puede ser",
+      "no estoy segur[oa]",
+      "probablemente",
+      // fr
+      "je crois",
+      "je pense",
+      "peut-être",
+      "sans doute",
+      "il me semble",
+      "pas sûre?",
+      "pas certaine?",
+      // de
+      "ich glaube",
+      "ich denke",
+      "vielleicht",
+      "wahrscheinlich",
+      "möglicherweise",
+      "nicht sicher",
+      "könnte sein",
+      // it
+      "credo",
+      "penso",
+      "forse",
+      "magari",
+      "può darsi",
+      "non sono sicur[oa]",
+      // pt
+      "acho que",
+      "talvez",
+      "provavelmente",
+      "pode ser",
+      "não tenho certeza",
+      // ru
+      "наверное",
+      "возможно",
+      "может быть",
+      "кажется",
+      "вроде",
+      "не уверена?",
+      "по-моему",
+    ]),
+    "(?:たぶん|多分|かもしれない|かもしれません|おそらく|と思う|と思います|気がする)",
+    "(?:可能|大概|也许|也許|应该|應該|好像|我觉得|我覺得|我想|不太确定|不太確定)",
+  ].join("|"),
+  "i"
+);
+
+// Whole-utterance acknowledgements, anchored like BACKCHANNEL.
+const BACKCHANNEL_INTL = new RegExp(
+  `^(?:${[
+    // es / it / pt
+    "sí",
+    "sì",
+    "sim",
+    "vale",
+    "claro",
+    "ajá",
+    "entiendo",
+    "certo",
+    "va bene",
+    "capisco",
+    "tá(?: bom)?",
+    "entendi",
+    // fr
+    "oui",
+    "ouais",
+    "d'accord",
+    "je vois",
+    "ah bon",
+    // de
+    "ja",
+    "genau",
+    "klar",
+    "verstehe",
+    "alles klar",
+    "ach ?so",
+    // ru
+    "да",
+    "ага",
+    "угу",
+    "ясно",
+    "понятно",
+    "хорошо",
+    "точно",
+    // ja / zh
+    "はい",
+    "ええ",
+    "うん",
+    "なるほど",
+    "そうですね",
+    "そう(?:か|っか)",
+    "嗯",
+    "对",
+    "對",
+    "好(?:的)?",
+    "是的",
+    "明白",
+    "原来如此",
+    "原來如此",
+  ].join("|")})[\\s.!?。！？、，,]*$`,
+  "i"
+);
+
 const REASONS = new Set([
   "denied_knowledge",
   "uncertain_response",
@@ -158,17 +427,25 @@ const BACKCHANNEL =
 function assessResponseLocally(followingContext) {
   const replies = (Array.isArray(followingContext) ? followingContext : [])
     .map((item) => String(item?.text || "").trim())
-    .filter((text) => text && !BACKCHANNEL.test(text));
+    .filter((text) => text && !BACKCHANNEL.test(text) && !BACKCHANNEL_INTL.test(text));
 
   if (!replies.length) return { outcome: "silence", confidence: 0.8 };
 
   const joined = replies.join(" ");
   // Denial wins over hedging: "No, I'm not sure" is a denial with a hedge in it.
-  if (DENIAL.test(joined)) return { outcome: "denied", confidence: 0.85 };
-  if (HEDGE.test(joined)) return { outcome: "uncertain", confidence: 0.8 };
+  if (DENIAL.test(joined) || DENIAL_INTL.test(joined)) {
+    return { outcome: "denied", confidence: 0.85 };
+  }
+  if (HEDGE.test(joined) || HEDGE_INTL.test(joined)) {
+    return { outcome: "uncertain", confidence: 0.8 };
+  }
   // Something substantive was said. Short replies are weaker evidence of a real
-  // answer than long ones, so they land as uncertain rather than answered.
-  if (joined.split(/\s+/).length < 4) return { outcome: "uncertain", confidence: 0.6 };
+  // answer than long ones, so they land as uncertain rather than answered —
+  // counted in characters for CJK, where a full sentence is one "word".
+  const substantive = HAS_CJK.test(joined)
+    ? joined.replace(/\s+/g, "").length >= 8
+    : joined.split(/\s+/).length >= 4;
+  if (!substantive) return { outcome: "uncertain", confidence: 0.6 };
   return { outcome: "answered", confidence: 0.75 };
 }
 
@@ -208,16 +485,24 @@ function extractQuestionSentence(text) {
     .trim()
     .replace(/\s+/g, " ");
   if (!value) return "";
-  // Keep the delimiters so "?" survives to mark which sentence was the question.
+  // Keep the delimiters so "?" survives to mark which sentence was the
+  // question. CJK sentence enders take no following space, hence the second
+  // alternative.
   const sentences = value
-    .split(/(?<=[.!?])\s+/)
+    .split(/(?<=[.!?])\s+|(?<=[。！？])\s*/)
     .map((part) => part.trim())
     .filter(Boolean);
   if (sentences.length < 2) return value;
 
   for (let i = sentences.length - 1; i >= 0; i -= 1) {
     const sentence = sentences[i];
-    if (sentence.includes("?") || QUESTION_PREFIX.test(sentence)) {
+    if (
+      sentence.includes("?") ||
+      sentence.includes("？") ||
+      QUESTION_PREFIX.test(sentence) ||
+      INTL_QUESTION_PREFIX.test(sentence) ||
+      CJK_QUESTION_ENDING.test(sentence)
+    ) {
       // A trailing "right?" or "you know?" is a tag, not the question — fold the
       // preceding sentence back in so the card still says something.
       if (sentence.split(" ").length <= 2 && i > 0) {
@@ -233,10 +518,20 @@ function isQuestionCandidate(text) {
   const value = String(text || "")
     .trim()
     .replace(/\s+/g, " ");
-  if (value.length < 4 || value.length > 600) return false;
+  // Two CJK characters can be a whole question ("誰？"); four Latin ones cannot.
+  const minLength = HAS_CJK.test(value) ? 2 : 4;
+  if (value.length < minLength || value.length > 600) return false;
   if (CASUAL_OR_RHETORICAL.test(value) || COMMAND_PREFIX.test(value)) return false;
   if (/^(?:uh+|um+|hmm+|okay|ok|yes|no)[?.!\s]*$/i.test(value)) return false;
-  return value.includes("?") || QUESTION_PREFIX.test(value) || QUESTION_ANYWHERE.test(value);
+  return (
+    value.includes("?") ||
+    value.includes("？") ||
+    QUESTION_PREFIX.test(value) ||
+    QUESTION_ANYWHERE.test(value) ||
+    INTL_QUESTION_PREFIX.test(value) ||
+    INTL_QUESTION_ANYWHERE.test(value) ||
+    CJK_QUESTION_ENDING.test(value)
+  );
 }
 
 function parseQuestionAssessment(raw) {
