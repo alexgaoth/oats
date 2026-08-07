@@ -3039,7 +3039,7 @@
       "carriedOver": "Beim letzten Mal offen geblieben:",
       "openPrevious": "Das öffnen",
       "noMatches": "nichts gefunden",
-      "emptyHint": "drücke {{shortcut}} überall, um zu starten",
+      "emptyHint": "drücke überall {{shortcut}} und stelle eine Frage, die niemand im Raum beantworten kann",
       "backToList": "zurück",
       "copy": "kopieren",
       "copied": "kopiert",

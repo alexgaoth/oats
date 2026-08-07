@@ -3039,7 +3039,7 @@
       "carriedOver": "前回そのままだったこと：",
       "openPrevious": "その会話を開く",
       "noMatches": "一致するものがありません",
-      "emptyHint": "どこでも {{shortcut}} を押して開始",
+      "emptyHint": "どこからでも {{shortcut}} を押して、誰も答えを知らない質問をしてみてください",
       "backToList": "戻る",
       "copy": "コピー",
       "copied": "コピーしました",

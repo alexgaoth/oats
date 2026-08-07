@@ -3039,7 +3039,7 @@
       "carriedOver": "上次未收尾的：",
       "openPrevious": "開啟那一場",
       "noMatches": "沒有相符項目",
-      "emptyHint": "在任何地方按 {{shortcut}} 開始",
+      "emptyHint": "在任意位置按 {{shortcut}}，然後問一個沒人知道答案的問題",
       "backToList": "返回",
       "copy": "複製",
       "copied": "已複製",
