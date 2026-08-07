@@ -648,6 +648,8 @@ export interface SettingsState
   setVoiceAgentKey: (key: string) => Promise<boolean>;
   translationKey: string;
   setTranslationKey: (key: string) => Promise<boolean>;
+  searchKey: string;
+  setSearchKey: (key: string) => Promise<boolean>;
   setMeetingHotkeyLayoutMode: (mode: "side-panel" | "full-width") => void;
   setOnboardingUseCases: (useCases: string[]) => void;
   setOnboardingUseCaseNote: (note: string) => void;
@@ -745,7 +747,8 @@ function createRegisteredHotkeySetter(
     | "translationKey"
     | "dictationKey"
     | "meetingKey"
-    | "conversationKey",
+    | "conversationKey"
+    | "searchKey",
   label: string,
   getRegisterFn: () =>
     ((hotkey: string) => Promise<{ success: boolean; message: string }>) | undefined,
@@ -987,6 +990,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   conversationKey: readString("conversationKey", "CommandOrControl+Shift+O"),
   voiceAgentKey: readString("voiceAgentKey", ""),
   translationKey: readString("translationKey", ""),
+  searchKey: readString("searchKey", ""),
   onboardingUseCases: readStringArray("onboardingUseCases", []),
   onboardingUseCaseNote: readString("onboardingUseCaseNote", ""),
   meetingHotkeyLayoutMode: (readString("meetingHotkeyLayoutMode", "full-width") === "side-panel"
@@ -1520,6 +1524,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     "translationKey",
     "translation hotkey",
     () => window.electronAPI?.updateTranslationHotkey
+  ),
+  setSearchKey: createRegisteredHotkeySetter(
+    "searchKey",
+    "search hotkey",
+    () => window.electronAPI?.updateSearchHotkey
   ),
 
   setMeetingHotkeyLayoutMode: (mode: "side-panel" | "full-width") => {
@@ -2227,6 +2236,20 @@ export async function initializeSettings(): Promise<void> {
     } catch (err) {
       logger.warn(
         "Failed to sync voice agent hotkey on startup",
+        { error: (err as Error).message },
+        "settings"
+      );
+    }
+
+    // Sync search hotkey from main process
+    try {
+      const envSearchKey = await window.electronAPI.getSearchKey?.();
+      if (envSearchKey && envSearchKey !== state.searchKey) {
+        createStringSetter("searchKey")(envSearchKey);
+      }
+    } catch (err) {
+      logger.warn(
+        "Failed to sync search hotkey on startup",
         { error: (err as Error).message },
         "settings"
       );

@@ -40,7 +40,8 @@
       "start": "Начать разговор",
       "stop": "Завершить разговор"
     },
-    "tooltipRecording": "Oats - Идёт запись разговора"
+    "tooltipRecording": "Oats - Идёт запись разговора",
+    "searchConversations": "Поиск по разговорам…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1588,6 +1589,10 @@
         "title": "Обновления",
         "versionPlaceholder": "—",
         "whatsNew": "Что нового в v{{version}}"
+      },
+      "searchHotkey": {
+        "title": "Горячая клавиша поиска",
+        "description": "Открывает Intelligence с фокусом на поиске по разговорам из любого приложения."
       }
     },
     "permissions": {

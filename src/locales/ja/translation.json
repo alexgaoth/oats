@@ -40,7 +40,8 @@
       "start": "会話を開始",
       "stop": "会話を終了"
     },
-    "tooltipRecording": "Oats - 会話を録音中"
+    "tooltipRecording": "Oats - 会話を録音中",
+    "searchConversations": "会話を検索…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1588,6 +1589,10 @@
         "title": "アップデート",
         "versionPlaceholder": "—",
         "whatsNew": "v{{version}} の新機能"
+      },
+      "searchHotkey": {
+        "title": "検索ホットキー",
+        "description": "どのアプリからでも、会話検索にフォーカスした状態で Intelligence を開きます。"
       }
     },
     "permissions": {

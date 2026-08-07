@@ -40,7 +40,8 @@
       "start": "Unterhaltung starten",
       "stop": "Unterhaltung beenden"
     },
-    "tooltipRecording": "Oats - Unterhaltung wird aufgezeichnet"
+    "tooltipRecording": "Oats - Unterhaltung wird aufgezeichnet",
+    "searchConversations": "Gespräche durchsuchen…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1588,6 +1589,10 @@
         "title": "Updates",
         "versionPlaceholder": "—",
         "whatsNew": "Neu in v{{version}}"
+      },
+      "searchHotkey": {
+        "title": "Such-Tastenkürzel",
+        "description": "Öffnet Intelligence mit fokussierter Gesprächssuche, aus jeder Anwendung."
       }
     },
     "permissions": {

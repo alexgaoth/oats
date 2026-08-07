@@ -40,7 +40,8 @@
       "start": "开始对话",
       "stop": "结束对话"
     },
-    "tooltipRecording": "Oats - 正在录制对话"
+    "tooltipRecording": "Oats - 正在录制对话",
+    "searchConversations": "搜索对话…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1588,6 +1589,10 @@
         "title": "更新",
         "versionPlaceholder": "—",
         "whatsNew": "v{{version}} 更新内容"
+      },
+      "searchHotkey": {
+        "title": "搜索快捷键",
+        "description": "从任何应用打开 Intelligence 并聚焦对话搜索。"
       }
     },
     "permissions": {

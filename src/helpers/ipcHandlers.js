@@ -6572,6 +6572,39 @@ class IPCHandlers {
       return this.environmentManager.getVoiceAgentKey?.() || "";
     });
 
+    ipcMain.handle("update-search-hotkey", async (_event, hotkey) => {
+      const hotkeyManager = this.windowManager.hotkeyManager;
+      const searchCallback = this.windowManager._searchHotkeyCallback;
+      if (!searchCallback) {
+        return { success: false, message: "Search hotkey callback not initialized" };
+      }
+
+      if (!hotkey) {
+        hotkeyManager.unregisterSlot("search");
+        this.environmentManager.saveSearchKey?.("");
+        this.windowManager.reconcileNativeKeyListeners();
+        return { success: true, message: "Search hotkey cleared" };
+      }
+
+      const result = await hotkeyManager.registerSlot("search", hotkey, searchCallback, {
+        atomic: true,
+      });
+      this.windowManager.reconcileNativeKeyListeners();
+      if (result.success) {
+        this.environmentManager.saveSearchKey?.(hotkey);
+        return { success: true, message: `Search hotkey updated to: ${hotkey}` };
+      }
+
+      return {
+        success: false,
+        message: result.error || `Failed to update search hotkey to: ${hotkey}`,
+      };
+    });
+
+    ipcMain.handle("get-search-key", async () => {
+      return this.environmentManager.getSearchKey?.() || "";
+    });
+
     ipcMain.handle("update-translation-hotkey", async (_event, hotkey) => {
       const hotkeyManager = this.windowManager.hotkeyManager;
       const translationCallback = this.windowManager._translationHotkeyCallback;

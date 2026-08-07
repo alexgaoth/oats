@@ -287,6 +287,13 @@ class TrayManager {
           void this.windowManager?.sendToggleConversation?.();
         },
       },
+      {
+        // Recall lives beside record: the two halves of "the room is remembered".
+        label: i18nMain.t("tray.searchConversations"),
+        click: () => {
+          void this.windowManager?.openConversationSearch?.();
+        },
+      },
       { type: "separator" },
       {
         label: dictationVisible

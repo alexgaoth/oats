@@ -475,6 +475,21 @@ async function startApp() {
     }
   }
 
+  // Set up the search hotkey — recall from anywhere. Opt-in like the other
+  // secondary slots: no shipped default, registered only once the user sets one.
+  const searchHotkeyCallback = () => {
+    void windowManager.openConversationSearch();
+  };
+  windowManager._searchHotkeyCallback = searchHotkeyCallback;
+
+  const savedSearchKey = environmentManager.getSearchKey?.() || "";
+  if (savedSearchKey) {
+    const result = await hotkeyManager.registerSlot("search", savedSearchKey, searchHotkeyCallback);
+    if (!result.success) {
+      debugLogger.warn("Failed to restore search hotkey", { hotkey: savedSearchKey }, "hotkey");
+    }
+  }
+
   // Set up the conversation hotkey — the product's primary action.
   //
   // Unlike every other slot this one ships with a working default. Recording a

@@ -31,6 +31,10 @@ const SLOT_CONFIG = {
     path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-translation/",
     name: "Oats Translation",
   },
+  search: {
+    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-search/",
+    name: "Oats Search",
+  },
 };
 
 const KEYBINDING_SCHEMA = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding";
@@ -99,6 +103,7 @@ class GnomeShortcutManager {
     this.conversationCallback = null;
     this.voiceAgentCallback = null;
     this.translationCallback = null;
+    this.searchCallback = null;
     // Track which slots have been registered in gsettings
     this.registeredSlots = new Set();
   }
@@ -195,6 +200,11 @@ class GnomeShortcutManager {
               this.translationCallback();
             }
           },
+          ToggleSearch: () => {
+            if (this.searchCallback) {
+              this.searchCallback();
+            }
+          },
         },
         DBUS_OBJECT_PATH,
         {
@@ -206,6 +216,7 @@ class GnomeShortcutManager {
             ToggleConversation: ["", ""],
             ToggleVoiceAgent: ["", ""],
             ToggleTranslation: ["", ""],
+            ToggleSearch: ["", ""],
           },
         }
       );
@@ -251,6 +262,7 @@ class GnomeShortcutManager {
       voiceAgent: "ToggleVoiceAgent",
       conversation: "ToggleConversation",
       translation: "ToggleTranslation",
+      search: "ToggleSearch",
     };
     const dbusMethod = SLOT_DBUS_METHOD[slotName] || "Toggle";
     const command = `dbus-send --session --type=method_call --dest=${DBUS_SERVICE_NAME} ${DBUS_OBJECT_PATH} ${DBUS_INTERFACE}.${dbusMethod}`;

@@ -40,7 +40,8 @@
       "start": "Start Conversation",
       "stop": "Stop Conversation"
     },
-    "tooltipRecording": "Oats - Recording a conversation"
+    "tooltipRecording": "Oats - Recording a conversation",
+    "searchConversations": "Search conversations…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1761,6 +1762,10 @@
         "title": "Updates",
         "versionPlaceholder": "—",
         "whatsNew": "What's new in v{{version}}"
+      },
+      "searchHotkey": {
+        "title": "Search Hotkey",
+        "description": "Opens Intelligence with the conversation search focused, from any application."
       }
     },
     "permissions": {

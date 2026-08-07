@@ -689,6 +689,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateAgentHotkey: (hotkey) => ipcRenderer.invoke("update-agent-hotkey", hotkey),
   updateDictationHotkey: (hotkey) => ipcRenderer.invoke("update-dictation-hotkey", hotkey),
   updateVoiceAgentHotkey: (hotkey) => ipcRenderer.invoke("update-voice-agent-hotkey", hotkey),
+  updateSearchHotkey: (hotkey) => ipcRenderer.invoke("update-search-hotkey", hotkey),
+  getSearchKey: () => ipcRenderer.invoke("get-search-key"),
+  onFocusConversationSearch: registerListener(
+    "focus-conversation-search",
+    (callback) => () => callback()
+  ),
   getVoiceAgentKey: () => ipcRenderer.invoke("get-voice-agent-key"),
   updateTranslationHotkey: (hotkey) => ipcRenderer.invoke("update-translation-hotkey", hotkey),
   getTranslationKey: () => ipcRenderer.invoke("get-translation-key"),

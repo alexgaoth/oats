@@ -763,6 +763,8 @@ export default function SettingsPage({
   const chatAgentKey = useSettingsStore((s) => s.chatAgentKey);
   const setChatAgentKey = useSettingsStore((s) => s.setChatAgentKey);
   const voiceAgentKey = useSettingsStore((s) => s.voiceAgentKey);
+  const searchKey = useSettingsStore((s) => s.searchKey);
+  const setSearchKey = useSettingsStore((s) => s.setSearchKey);
   const setVoiceAgentKey = useSettingsStore((s) => s.setVoiceAgentKey);
   const translationKey = useSettingsStore((s) => s.translationKey);
   const setTranslationKey = useSettingsStore((s) => s.setTranslationKey);
@@ -916,10 +918,11 @@ export default function SettingsPage({
           "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
           "settingsPage.general.translationHotkey.title": translationKey,
+          "settingsPage.general.searchHotkey.title": searchKey,
         },
         t
       ),
-    [meetingKey, chatAgentKey, voiceAgentKey, translationKey, t]
+    [meetingKey, chatAgentKey, voiceAgentKey, translationKey, searchKey, t]
   );
 
   const validateMeetingHotkey = useCallback(
@@ -931,10 +934,11 @@ export default function SettingsPage({
           "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
           "settingsPage.general.translationHotkey.title": translationKey,
+          "settingsPage.general.searchHotkey.title": searchKey,
         },
         t
       ),
-    [dictationKey, chatAgentKey, voiceAgentKey, translationKey, t]
+    [dictationKey, chatAgentKey, voiceAgentKey, translationKey, searchKey, t]
   );
 
   const validateChatAgentHotkey = useCallback(
@@ -946,10 +950,11 @@ export default function SettingsPage({
           "settingsPage.general.meetingHotkey.title": meetingKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
           "settingsPage.general.translationHotkey.title": translationKey,
+          "settingsPage.general.searchHotkey.title": searchKey,
         },
         t
       ),
-    [dictationKey, meetingKey, voiceAgentKey, translationKey, t]
+    [dictationKey, meetingKey, voiceAgentKey, translationKey, searchKey, t]
   );
 
   const validateVoiceAgentHotkey = useCallback(
@@ -961,10 +966,11 @@ export default function SettingsPage({
           "settingsPage.general.meetingHotkey.title": meetingKey,
           "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.translationHotkey.title": translationKey,
+          "settingsPage.general.searchHotkey.title": searchKey,
         },
         t
       ),
-    [dictationKey, meetingKey, chatAgentKey, translationKey, t]
+    [dictationKey, meetingKey, chatAgentKey, translationKey, searchKey, t]
   );
 
   const validateTranslationHotkey = useCallback(
@@ -976,10 +982,27 @@ export default function SettingsPage({
           "settingsPage.general.meetingHotkey.title": meetingKey,
           "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
+          "settingsPage.general.searchHotkey.title": searchKey,
         },
         t
       ),
-    [dictationKey, meetingKey, chatAgentKey, voiceAgentKey, t]
+    [dictationKey, meetingKey, chatAgentKey, voiceAgentKey, searchKey, t]
+  );
+
+  const validateSearchHotkey = useCallback(
+    (hotkey: string) =>
+      validateHotkeyForSlot(
+        hotkey,
+        {
+          "settingsPage.general.hotkey.title": dictationKey,
+          "settingsPage.general.meetingHotkey.title": meetingKey,
+          "agentMode.settings.hotkey": chatAgentKey,
+          "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
+          "settingsPage.general.translationHotkey.title": translationKey,
+        },
+        t
+      ),
+    [dictationKey, meetingKey, chatAgentKey, voiceAgentKey, translationKey, t]
   );
 
   const { isUsingNativeShortcut, isUsingHyprland, hyprlandConfigStatus, supportsPushToTalk } =
@@ -2289,6 +2312,26 @@ EOF`,
                     onChange={(list) => commitAgentHotkey(setTranslationKey, list)}
                     onClear={() => commitAgentHotkey(setTranslationKey, "")}
                     validate={validateTranslationHotkey}
+                    disabled={isAgentHotkeyCommitting}
+                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                  />
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Search Hotkey — recall from anywhere */}
+            <div>
+              <SectionHeader
+                title={t("settingsPage.general.searchHotkey.title")}
+                description={t("settingsPage.general.searchHotkey.description")}
+              />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <HotkeyListInput
+                    value={searchKey}
+                    onChange={(list) => commitAgentHotkey(setSearchKey, list)}
+                    onClear={() => commitAgentHotkey(setSearchKey, "")}
+                    validate={validateSearchHotkey}
                     disabled={isAgentHotkeyCommitting}
                     maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
                   />

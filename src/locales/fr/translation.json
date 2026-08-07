@@ -40,7 +40,8 @@
       "start": "Démarrer une conversation",
       "stop": "Arrêter la conversation"
     },
-    "tooltipRecording": "Oats - Enregistrement d'une conversation"
+    "tooltipRecording": "Oats - Enregistrement d'une conversation",
+    "searchConversations": "Rechercher des conversations…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1636,6 +1637,10 @@
         "title": "Mises à jour",
         "versionPlaceholder": "—",
         "whatsNew": "Nouveautés de la v{{version}}"
+      },
+      "searchHotkey": {
+        "title": "Raccourci de recherche",
+        "description": "Ouvre Intelligence avec la recherche de conversations active, depuis n'importe quelle application."
       }
     },
     "permissions": {

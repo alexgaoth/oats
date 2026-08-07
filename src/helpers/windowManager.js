@@ -560,6 +560,17 @@ class WindowManager {
     }
   }
 
+  // Recall from anywhere: surface the control panel on Intelligence with the
+  // cross-conversation search focused. "What did we decide about X?" should
+  // cost one press, which is what makes remembering a habit.
+  async openConversationSearch() {
+    await this.createControlPanelWindow();
+    const win = this.controlPanelWindow;
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("focus-conversation-search");
+    }
+  }
+
   sendToggleVoiceAgent() {
     // The voice-agent hotkeys, unlike the dictation paths, don't capture the
     // target PID at their call sites, so capture here or the paste can't

@@ -24,6 +24,7 @@ const GNOME_NATIVE_SLOTS = new Set([
   "voiceAgent",
   "translation",
   "conversation",
+  "search",
 ]);
 
 // KDE registration failure reasons — reuse existing i18n keys
@@ -236,6 +237,8 @@ class HotkeyManager extends EventEmitter {
         this.gnomeManager.setTranslationCallback(callback);
       } else if (slotName === "conversation") {
         this.gnomeManager.setConversationCallback(callback);
+      } else if (slotName === "search") {
+        this.gnomeManager.setSearchCallback(callback);
       }
 
       // Never let a keybinding problem propagate: registerSlot is called during

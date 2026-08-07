@@ -40,7 +40,8 @@
       "start": "Iniciar conversación",
       "stop": "Detener conversación"
     },
-    "tooltipRecording": "Oats - Grabando una conversación"
+    "tooltipRecording": "Oats - Grabando una conversación",
+    "searchConversations": "Buscar conversaciones…"
   },
   "menu": {
     "appLabel": "Oats",
@@ -1636,6 +1637,10 @@
         "title": "Actualizaciones",
         "versionPlaceholder": "—",
         "whatsNew": "Novedades en v{{version}}"
+      },
+      "searchHotkey": {
+        "title": "Atajo de búsqueda",
+        "description": "Abre Inteligencia con la búsqueda de conversaciones enfocada, desde cualquier aplicación."
       }
     },
     "permissions": {

@@ -1146,6 +1146,9 @@ declare global {
       updateAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       updateVoiceAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getVoiceAgentKey?: () => Promise<string>;
+      updateSearchHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
+      getSearchKey?: () => Promise<string>;
+      onFocusConversationSearch?: (callback: () => void) => () => void;
       updateDictationHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       updateTranslationHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getTranslationKey?: () => Promise<string>;

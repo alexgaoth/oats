@@ -614,6 +614,20 @@ function IntelligenceViews({
   useEffect(() => {
     void initializeNotes("meeting", 100);
   }, []);
+
+  // The recall hotkey's landing: back to the list with the filter focused.
+  // The input only renders past four conversations; with fewer, landing on
+  // the short list is already the answer.
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    const focusSearch = () => {
+      setReading(false);
+      setView("list");
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    };
+    window.addEventListener("oats-focus-search", focusSearch);
+    return () => window.removeEventListener("oats-focus-search", focusSearch);
+  }, [setReading, setView]);
   useEffect(() => {
     if (notes.length && selectedId == null) setSelectedId(notes[0].id);
   }, [notes, selectedId]);
@@ -832,6 +846,7 @@ function IntelligenceViews({
             capability most sessions never reach for. */}
         {notes.length > 4 && (
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("oats.intelligence.searchPlaceholder")}
@@ -1417,6 +1432,21 @@ export default function OatsWorkspace() {
       return next;
     });
   }, [surface]);
+
+  // The recall hotkey: from any application into cross-conversation search.
+  // Refused while recording for the same reason as Cmd+, — and the focus step
+  // is delegated via a DOM event so it works whether Intelligence is already
+  // mounted or is mounting right now.
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onFocusConversationSearch?.(() => {
+      if (useMeetingRecordingStore.getState().isRecording) return;
+      setSurface("intelligence");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
+      });
+    });
+    return () => cleanup?.();
+  }, []);
 
   const showSettings = useCallback(() => {
     // Same reasoning as the Cmd+, gate below. This is also the macOS app menu's
