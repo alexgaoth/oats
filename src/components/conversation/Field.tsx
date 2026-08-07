@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import FieldCanvas from "./field/FieldCanvas";
 import FieldGL from "./field/FieldGL";
-import type { FieldScene, MinkaStyle } from "./field/fieldModel";
+import type { FieldScene } from "./field/fieldModel";
 
 // The field (DESIGN.md §9.8) — the world Oats lives in.
 //
@@ -49,11 +49,11 @@ function supportsGpuField(): boolean {
 }
 
 /**
- * Which post-recording epilogue plays. Read once per mount: a URL param for
+ * Which scenery accompanies recording. Read once per mount: a URL param for
  * harness pages, then localStorage as an override for trying alternatives.
  * The shipped default is `scene` — the full dithered countryside (DESIGN.md
- * §9.9): the sky clears in grain, the hamlet condenses on the horizon, birds
- * cross. Chosen 2026-08-06.
+ * §9.9): the sky clears in grain, the irimoya farmhouse condenses on the
+ * horizon, birds cross — all in sync with the wheat's own grow/recede.
  */
 function readFieldScene(): FieldScene {
   try {
@@ -66,19 +66,6 @@ function readFieldScene(): FieldScene {
     // Storage access can throw in hardened contexts; the default is fine.
   }
   return "scene";
-}
-
-/** Which dwelling the epilogue draws, same override mechanism. The shipped
- *  default is the hamlet — house, kura, and tree; a settlement, not an object. */
-function readMinkaStyle(): MinkaStyle {
-  try {
-    const fromUrl = new URLSearchParams(window.location.search).get("minkaStyle");
-    const stored = fromUrl ?? window.localStorage.getItem("oats.minkaStyle");
-    if (stored === "irimoya" || stored === "gassho" || stored === "hamlet") return stored;
-  } catch {
-    // As above.
-  }
-  return "hamlet";
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -120,7 +107,6 @@ export default function Field({
   // exactly that. The module-level cache keeps the second call idempotent.
   const [gpuSupported] = useState(supportsGpuField);
   const [scene] = useState(readFieldScene);
-  const [minkaStyle] = useState(readMinkaStyle);
   const useGpu = !gpuFailed && gpuSupported;
 
   return (
@@ -130,18 +116,11 @@ export default function Field({
           live={live}
           intensity={intensity}
           scene={scene}
-          minkaStyle={minkaStyle}
           reduced={reduced}
           onFailure={onFailure}
         />
       ) : (
-        <FieldCanvas
-          live={live}
-          intensity={intensity}
-          scene={scene}
-          minkaStyle={minkaStyle}
-          reduced={reduced}
-        />
+        <FieldCanvas live={live} intensity={intensity} scene={scene} reduced={reduced} />
       )}
     </div>
   );

@@ -3,19 +3,15 @@ import {
   BANDS,
   BLADE_SEGMENTS,
   CHAFF_COUNT,
-  EPILOGUE,
   INTRO_MS,
-  MINKA_STYLE_IDS,
   SCENE_IDS,
   bandSpread,
   bandStyle,
   createField,
-  epilogueAt,
   mixRgb,
   parseHexColor,
   type Field,
   type FieldScene,
-  type MinkaStyle,
   type Rgb,
 } from "./fieldModel";
 import {
@@ -193,7 +189,6 @@ export default function FieldGL({
   live,
   intensity,
   scene,
-  minkaStyle = "hamlet",
   reduced,
   onFailure,
 }: {
@@ -201,10 +196,8 @@ export default function FieldGL({
   live: boolean;
   /** How present the world is on this surface, 0..1. */
   intensity: number;
-  /** Which post-recording epilogue plays. `off` is the shipped behaviour. */
+  /** Which scenery accompanies recording (DESIGN.md §9.9). */
   scene: FieldScene;
-  /** Which dwelling the minka/scene epilogues draw. */
-  minkaStyle?: MinkaStyle;
   reduced: boolean;
   onFailure: () => void;
 }) {
@@ -284,9 +277,7 @@ export default function FieldGL({
         warmScale: u(backdrop, "uWarmScale"),
         skyStrength: u(backdrop, "uSkyStrength"),
         time: u(backdrop, "uTime"),
-        epilogue: u(backdrop, "uEpilogue"),
         scene: u(backdrop, "uScene"),
-        minkaStyle: u(backdrop, "uMinkaStyle"),
       };
       const bladeU = {
         resolution: u(blades, "uResolution"),
@@ -403,15 +394,8 @@ export default function FieldGL({
       let growFrom = grow;
       let lastLive = live;
 
-      // The epilogue plays only after a conversation actually ended in this
-      // session — never on a fresh mount — and yields quickly if a new one
-      // starts. Reduced motion skips it entirely: its still equivalent is the
-      // idle world, not a frozen half-arrived scene.
+      // The countryside rides `grow` itself — no timing of its own.
       const sceneId = SCENE_IDS[scene];
-      const minkaStyleId = MINKA_STYLE_IDS[minkaStyle];
-      let stoppedAt = -1;
-      let epilogue = 0;
-      let epilogueFrom = 0;
 
       const drawFrame = (elapsedMs: number) => {
         if (!resize()) return;
@@ -423,11 +407,6 @@ export default function FieldGL({
           lastLive = isLive;
           growFrom = grow;
           growStartedAt = elapsedMs;
-          if (isLive) {
-            epilogueFrom = epilogue;
-          } else {
-            stoppedAt = elapsedMs;
-          }
         }
         if (reduced) {
           grow = isLive ? 1 : 0;
@@ -436,15 +415,6 @@ export default function FieldGL({
           const p = Math.min(1, Math.max(0, (elapsedMs - growStartedAt) / span));
           const eased = 1 - Math.pow(1 - p, 3);
           grow = growFrom + ((isLive ? 1 : 0) - growFrom) * eased;
-        }
-
-        if (sceneId === 0 || reduced) {
-          epilogue = 0;
-        } else if (isLive) {
-          const yield_ = Math.min(1, (elapsedMs - growStartedAt) / EPILOGUE.interruptMs);
-          epilogue = epilogueFrom * (1 - yield_);
-        } else if (stoppedAt >= 0) {
-          epilogue = epilogueAt(elapsedMs - stoppedAt);
         }
 
         const time = reduced ? 0 : elapsedMs / 1000;
@@ -462,9 +432,7 @@ export default function FieldGL({
         gl.uniform1f(backdropU.warmScale, palette.warmScale);
         gl.uniform1f(backdropU.skyStrength, intensityRef.current);
         gl.uniform1f(backdropU.time, time);
-        gl.uniform1f(backdropU.epilogue, epilogue);
         gl.uniform1i(backdropU.scene, sceneId);
-        gl.uniform1i(backdropU.minkaStyle, minkaStyleId);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
         // 2. Blades — far to near, so nearer ones draw over the ones behind.
@@ -581,7 +549,7 @@ export default function FieldGL({
       fail(error instanceof Error ? error.message : String(error));
       return;
     }
-  }, [reduced, onFailure, scene, minkaStyle]);
+  }, [reduced, onFailure, scene]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

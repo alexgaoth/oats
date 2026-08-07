@@ -205,59 +205,21 @@ test("colour mixing is clamped at both ends", async () => {
   assert.deepEqual(mixRgb(a, b, 0.5), [0.5, 0.5, 0.5]);
 });
 
-test("the epilogue blooms in, holds, and settles back to nothing", async () => {
-  const { epilogueAt, EPILOGUE } = await load();
+test("the farmhouse is grounded, concave-roofed, and capped", async () => {
+  const { minkaHalfWidthAt, MINKA } = await load();
 
-  assert.equal(epilogueAt(0), 0, "nothing before the stop");
-  assert.equal(epilogueAt(-100), 0, "nothing before the stop");
+  assert.equal(minkaHalfWidthAt(-0.01), 0, "nothing below the horizon");
+  assert.ok(minkaHalfWidthAt(0.001) > 0, "rooted on the horizon");
+  assert.equal(minkaHalfWidthAt(0.5), 0, "nothing far above the roof");
 
-  // Rising through the bloom-in, monotonically.
-  let previous = 0;
-  for (let ms = 0; ms <= EPILOGUE.inMs; ms += EPILOGUE.inMs / 16) {
-    const v = epilogueAt(ms);
-    assert.ok(v >= previous, "bloom-in must be monotonic");
-    assert.ok(v >= 0 && v <= 1, "strength stays in 0..1 — no overshoot (§8)");
-    previous = v;
-  }
-  assert.ok(Math.abs(epilogueAt(EPILOGUE.inMs) - 1) < 1e-9, "fully in at the end of the bloom");
-
-  // Held flat.
-  assert.equal(epilogueAt(EPILOGUE.inMs + EPILOGUE.holdMs / 2), 1);
-  assert.equal(epilogueAt(EPILOGUE.inMs + EPILOGUE.holdMs), 1);
-
-  // Settling out, monotonically, to exactly zero.
-  const outStart = EPILOGUE.inMs + EPILOGUE.holdMs;
-  previous = 1;
-  for (let ms = outStart; ms <= outStart + EPILOGUE.outMs; ms += EPILOGUE.outMs / 16) {
-    const v = epilogueAt(ms);
-    assert.ok(v <= previous, "settle-out must be monotonic");
-    assert.ok(v >= 0 && v <= 1);
-    previous = v;
-  }
-  assert.equal(epilogueAt(outStart + EPILOGUE.outMs), 0);
-  assert.equal(epilogueAt(outStart + EPILOGUE.outMs + 60_000), 0, "and it stays gone");
-});
-
-test("every dwelling silhouette is grounded, tapered, and culturally shaped", async () => {
-  const { minkaHalfWidthAt, kuraHalfWidthAt, MINKA, MINKA_STYLE_IDS } = await load();
-
-  const ids = Object.values(MINKA_STYLE_IDS);
-  assert.equal(new Set(ids).size, ids.length, "style ids must be distinct");
-
-  for (const style of Object.keys(MINKA_STYLE_IDS)) {
-    assert.equal(minkaHalfWidthAt(-0.01, style), 0, `${style}: nothing below the horizon`);
-    assert.ok(minkaHalfWidthAt(0.001, style) > 0, `${style}: rooted on the horizon`);
-    assert.equal(minkaHalfWidthAt(0.5, style), 0, `${style}: nothing far above the roof`);
-  }
-
-  // irimoya (and the hamlet's house): eaves overhang the walls, the hip sweep
-  // is concave and monotonic, and the ridge cap juts past the gable top.
-  const eaveTip = minkaHalfWidthAt(MINKA.bodyH + 1e-6, "irimoya");
-  assert.ok(eaveTip > MINKA.bodyHalf, "irimoya eaves must overhang the body");
+  // Eaves overhang the walls, the hip sweep is concave and monotonic, and
+  // the ridge cap juts past the gable top.
+  const eaveTip = minkaHalfWidthAt(MINKA.bodyH + 1e-6);
+  assert.ok(eaveTip > MINKA.bodyHalf, "eaves must overhang the body");
   let previous = eaveTip;
   let sawConcave = false;
   for (let t = 1 / 16; t <= 1; t += 1 / 16) {
-    const v = minkaHalfWidthAt(MINKA.bodyH + t * MINKA.hipH, "irimoya");
+    const v = minkaHalfWidthAt(MINKA.bodyH + t * MINKA.hipH);
     assert.ok(v <= previous + 1e-9, "hip sweep must taper monotonically");
     const straight = MINKA.gableHalf + (eaveTip - MINKA.gableHalf) * (1 - t);
     if (v < straight - 1e-4) sawConcave = true;
@@ -266,24 +228,9 @@ test("every dwelling silhouette is grounded, tapered, and culturally shaped", as
   assert.ok(sawConcave, "the hip sweep must be concave — straight edges read as a barn");
   const capY = MINKA.bodyH + MINKA.hipH + MINKA.gableH + MINKA.capH / 2;
   assert.ok(
-    minkaHalfWidthAt(capY, "irimoya") > MINKA.ridgeHalf,
+    minkaHalfWidthAt(capY) > MINKA.ridgeHalf,
     "the raised ridge cap must jut past the ridge"
   );
-
-  // gassho: the roof is the house — taller than wide, near-nothing at the top.
-  const gasshoTop = MINKA.gasshoBodyH + MINKA.gasshoH;
-  assert.ok(gasshoTop > MINKA.gasshoEaveHalf, "gassho is taller than its half-width");
-  assert.ok(
-    minkaHalfWidthAt(gasshoTop - 1e-6, "gassho") < MINKA.gasshoBodyHalf / 3,
-    "gassho narrows to almost nothing at the ridge"
-  );
-
-  // hamlet companions: the kura is small, roofed, and grounded.
-  assert.equal(kuraHalfWidthAt(-0.01), 0);
-  assert.equal(kuraHalfWidthAt(0), MINKA.kuraHalf);
-  assert.ok(kuraHalfWidthAt(MINKA.kuraBodyH + 1e-6) > MINKA.kuraHalf, "kura eaves overhang");
-  assert.ok(kuraHalfWidthAt(MINKA.kuraBodyH + MINKA.kuraRoofH) < 0.003, "kura roof closes");
-  assert.ok(MINKA.kuraHalf < MINKA.bodyHalf / 2, "the kura reads as the smaller companion");
 });
 
 test("scene ids cover every scene exactly once, with off = 0", async () => {

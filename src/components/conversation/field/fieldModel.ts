@@ -307,19 +307,15 @@ export function bandSpread(band: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// The epilogue — what the field does after a conversation ends (exploration).
+// The countryside — what recording brings into the world (DESIGN.md §9.9).
 //
-// Stopping a recording already lets the wheat withdraw. The epilogue brings
-// something else in as it goes: the sky clears, and on the horizon something
-// that was always too far away to notice comes forward. It is a transient
-// reward, not a new permanent state — it blooms in over the withdrawal, holds
-// for a while, then settles back to the idle world, so the world every other
-// surface stands on stays canonical.
-//
-// Like the wind, the timing lives here so the GL and 2D renderers cannot
-// disagree about it, and so it can be unit-tested without a DOM.
+// Pressing record grows the wheat, and the countryside comes with it: the sky
+// clears and a farmhouse condenses on the horizon, **in sync with the wheat's
+// own grow/recede signal** — one gesture, not a sequence. There is no timing
+// of its own here and no post-recording show: while a conversation is live
+// the world is awake, and stopping lets all of it settle back together.
 
-/** Which post-recording scene plays. `off` preserves the previous behaviour. */
+/** Which scenery accompanies recording. `off` is bare wheat. */
 export type FieldScene = "off" | "sky" | "minka" | "scene";
 
 /** Scene ids as the shader sees them. */
@@ -329,33 +325,6 @@ export const SCENE_IDS: Record<FieldScene, number> = {
   minka: 2,
   scene: 3,
 };
-
-export const EPILOGUE = {
-  /** Bloom-in. Slower than the wheat's own 2.2s withdrawal, so the scenery is
-   *  still arriving as the last blades settle — an exchange, not a cut. */
-  inMs: 3200,
-  /** How long the scene holds at full strength. */
-  holdMs: 9000,
-  /** The settle back to the idle world. Leaving is slower than arriving. */
-  outMs: 7000,
-  /** If a new recording starts mid-epilogue, the scene yields this fast. */
-  interruptMs: 600,
-} as const;
-
-/**
- * Epilogue strength 0..1 at `ms` since the conversation stopped.
- *
- * Ease-out in, flat hold, smoothstep out — no overshoot anywhere (§8).
- */
-export function epilogueAt(ms: number): number {
-  if (ms <= 0) return 0;
-  if (ms < EPILOGUE.inMs) return easeOutCubic(ms / EPILOGUE.inMs);
-  const held = ms - EPILOGUE.inMs;
-  if (held < EPILOGUE.holdMs) return 1;
-  const out = (held - EPILOGUE.holdMs) / EPILOGUE.outMs;
-  if (out >= 1) return 0;
-  return 1 - out * out * (3 - 2 * out);
-}
 
 /**
  * A cleared sky, as a colour. There is no blue token — Oats is gold and ink —
@@ -377,37 +346,19 @@ export const SKY_BLOOM_ALPHA = 0.28;
 export const SKY_LIGHT_BOOST = 1.45;
 
 /**
- * A dwelling in the far Japanese countryside. Three candidate silhouettes,
- * each a real rural form rather than a generic house-glyph:
- *
- * - `irimoya` — hip-and-gable: a broad hip roof with a gently concave sweep,
- *   a short gable tier above it, and a raised ridge cap. The classic minka
- *   profile.
- * - `gassho` — gasshō-zukuri: the steep, tall thatched triangle of
- *   Shirakawa-gō, hands pressed in prayer. Almost no body; the roof is the
- *   house.
- * - `hamlet` — the irimoya house kept company by a small kura storehouse and
- *   a lone tree. A settlement rather than a building.
+ * The farmhouse on the horizon: an irimoya (hip-and-gable) minka — a broad
+ * hip roof with a gently concave sweep, a short gable tier above it, and a
+ * raised ridge cap. One clean building, nothing additional.
  *
  * All units are fractions of viewport *height* (horizontal distances are
  * aspect-corrected, like the sun), measured up from where it sits on the
  * horizon. The concave roof curve is the load-bearing cultural cue: a
  * straight-edged roof reads as a Western barn no matter its proportions.
  */
-export type MinkaStyle = "irimoya" | "gassho" | "hamlet";
-
-export const MINKA_STYLE_IDS: Record<MinkaStyle, number> = {
-  irimoya: 1,
-  gassho: 2,
-  hamlet: 3,
-};
-
 export const MINKA = {
   /** Horizontal position, fraction of width. Opposite thirds line from the
    *  sun, so the light and the dwelling balance rather than stack. */
   x: 0.72,
-
-  // irimoya — also the hamlet's main house
   bodyHalf: 0.042,
   bodyH: 0.016,
   /** Eave tips of the hip roof. Generous: the overhang carries the reading. */
@@ -424,50 +375,15 @@ export const MINKA = {
   /** The raised ridge cap — a thin bar slightly wider than the ridge. */
   capHalf: 0.022,
   capH: 0.0045,
-
-  // gassho
-  gasshoBodyHalf: 0.034,
-  gasshoBodyH: 0.009,
-  gasshoEaveHalf: 0.05,
-  gasshoH: 0.078,
-  gasshoRidgeHalf: 0.005,
-  gasshoCurve: 0.86,
-
-  // hamlet companions
-  kuraDx: 0.078,
-  kuraHalf: 0.017,
-  kuraBodyH: 0.017,
-  kuraRoofHalf: 0.022,
-  kuraRoofH: 0.013,
-  treeDx: -0.064,
-  treeCy: 0.032,
-  treeRx: 0.021,
-  treeRy: 0.017,
-  trunkHalf: 0.0016,
-  trunkH: 0.022,
 } as const;
 
 /**
- * Half-width of the main house silhouette at height `y` above the horizon
+ * Half-width of the farmhouse silhouette at height `y` above the horizon
  * (same height units), or 0 outside it. Shared by the 2D fallback and the
  * tests; the GLSL implements the same clauses from the same constants.
- * `hamlet` uses the irimoya house; its kura is `kuraHalfWidthAt`, and its
- * tree is an ellipse the renderers draw directly from the constants.
  */
-export function minkaHalfWidthAt(y: number, style: MinkaStyle = "irimoya"): number {
+export function minkaHalfWidthAt(y: number): number {
   if (y < 0) return 0;
-
-  if (style === "gassho") {
-    if (y <= MINKA.gasshoBodyH) return MINKA.gasshoBodyHalf;
-    const t = (y - MINKA.gasshoBodyH) / MINKA.gasshoH;
-    if (t > 1 + 1e-6) return 0;
-    const c = Math.min(t, 1);
-    return (
-      MINKA.gasshoRidgeHalf +
-      (MINKA.gasshoEaveHalf - MINKA.gasshoRidgeHalf) * Math.pow(1 - c, MINKA.gasshoCurve)
-    );
-  }
-
   if (y <= MINKA.bodyH) return MINKA.bodyHalf;
   const hipT = (y - MINKA.bodyH) / MINKA.hipH;
   if (hipT <= 1) {
@@ -482,15 +398,6 @@ export function minkaHalfWidthAt(y: number, style: MinkaStyle = "irimoya"): numb
   const capY = y - MINKA.bodyH - MINKA.hipH - MINKA.gableH;
   if (capY <= MINKA.capH + 1e-6) return MINKA.capHalf;
   return 0;
-}
-
-/** Half-width of the hamlet's kura storehouse at height `y` above the horizon. */
-export function kuraHalfWidthAt(y: number): number {
-  if (y < 0) return 0;
-  if (y <= MINKA.kuraBodyH) return MINKA.kuraHalf;
-  const t = (y - MINKA.kuraBodyH) / MINKA.kuraRoofH;
-  if (t > 1 + 1e-6) return 0;
-  return MINKA.kuraRoofHalf + (0.002 - MINKA.kuraRoofHalf) * Math.min(t, 1);
 }
 
 /** Birds for the full scene: few, far, and gone again. */

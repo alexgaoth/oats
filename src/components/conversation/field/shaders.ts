@@ -62,10 +62,8 @@ uniform vec3  uGold;
 uniform vec3  uInk;
 uniform float uWarmScale;    // gold is darker than paper and lighter than charcoal
 uniform float uSkyStrength;
-uniform float uTime;         // seconds — only the epilogue reads it
-uniform float uEpilogue;     // 0..1, the post-recording scene's presence
+uniform float uTime;         // seconds — only the scenery's birds read it
 uniform int   uScene;        // 0 off, 1 clear sky, 2 minka, 3 full dithered scene
-uniform int   uMinkaStyle;   // 1 irimoya, 2 gassho, 3 hamlet (irimoya + kura + tree)
 
 out vec4 fragColor;
 ${BAYER}
@@ -119,57 +117,46 @@ void main() {
     coverage >= max(threshold, 0.004) ? clamp(coverage * 1.1, 0.0, 0.45) : 0.0;
   vec3 warmColour = mix(uGold, uInk, clamp(inkAmount / max(coverage, 0.0001), 0.0, 1.0));
 
-  // --- The epilogue: what arrives after a conversation ends ----------------
+  // --- The countryside: what recording brings into the world ---------------
+  // It rides uGrow — the wheat's own grow/recede signal — so the world wakes
+  // with the conversation and settles with it, one gesture, no sequel.
   // Scenes 1 and 3, "sky": the sky clears. A desaturated slate blue blooms
   // from the top of the frame down toward the horizon, and the warm light
   // keeps the horizon — a clear evening, not a new wallpaper. Scene 1 is the
   // smooth 'normal style'; scene 3 spells the same gradient in dither density,
   // so the whole sky is grain.
-  vec3 epilogueRgb = vec3(0.0);
-  float epilogueAlpha = 0.0;
-  if ((uScene == 1 || uScene == 3) && uEpilogue > 0.001) {
-    float bloom = pow(above, 0.85) * uEpilogue * uSkyStrength;
-    epilogueRgb = vec3(${f(SKY_BLUE[0])}, ${f(SKY_BLUE[1])}, ${f(SKY_BLUE[2])});
+  vec3 sceneryRgb = vec3(0.0);
+  float sceneryAlpha = 0.0;
+  if ((uScene == 1 || uScene == 3) && uGrow > 0.001) {
+    float bloom = pow(above, 0.85) * uGrow * uSkyStrength;
+    sceneryRgb = vec3(${f(SKY_BLUE[0])}, ${f(SKY_BLUE[1])}, ${f(SKY_BLUE[2])});
     // Blue over near-white paper washes out, so oat milk gets a deeper pour.
     // warmScale < 0.75 is exactly the renderer's "this is paper" signal.
     float skyAlpha = ${f(SKY_BLOOM_ALPHA)} * (uWarmScale < 0.75 ? ${f(SKY_LIGHT_BOOST)} : 1.0);
     if (uScene == 3) {
-      epilogueAlpha = bloom * 0.9 >= threshold ? min(skyAlpha * 1.35, 0.5) : 0.0;
+      sceneryAlpha = bloom * 0.9 >= threshold ? min(skyAlpha * 1.35, 0.5) : 0.0;
     } else {
-      epilogueAlpha = bloom * skyAlpha;
+      sceneryAlpha = bloom * skyAlpha;
     }
   }
 
   // Composite: the warm atmosphere sits in front of the far sky.
-  float alpha = warmAlpha + epilogueAlpha * (1.0 - warmAlpha);
-  vec3 colour = warmColour * warmAlpha + epilogueRgb * epilogueAlpha * (1.0 - warmAlpha);
+  float alpha = warmAlpha + sceneryAlpha * (1.0 - warmAlpha);
+  vec3 colour = warmColour * warmAlpha + sceneryRgb * sceneryAlpha * (1.0 - warmAlpha);
 
-  // Scenes 2 and 3, "minka": a dwelling in the far countryside, sitting on
-  // the horizon opposite the light. It condenses out of grain — dither density
-  // ramps with the epilogue, the same vocabulary the far blades use for
-  // distance — rather than fading or sliding in. Geometry mirrors
-  // minkaHalfWidthAt()/kuraHalfWidthAt() in fieldModel.ts, same constants.
-  // The concave roof sweep is the cultural cue; straight edges read as a barn.
-  if (uScene >= 2 && uEpilogue > 0.001) {
+  // Scenes 2 and 3, "minka": the irimoya farmhouse on the horizon, opposite
+  // the light. It condenses out of grain — dither density rides uGrow, the
+  // same vocabulary the far blades use for distance — rather than fading or
+  // sliding in. Geometry mirrors minkaHalfWidthAt() in fieldModel.ts, same
+  // constants. The concave roof sweep is the cultural cue; straight edges
+  // read as a barn.
+  if (uScene >= 2 && uGrow > 0.001) {
     float hy = y - horizon;                        // height units above the horizon
-    float sx = (vUv.x - ${f(MINKA.x)}) * aspect;   // signed, for offset companions
+    float hx = abs((vUv.x - ${f(MINKA.x)}) * aspect);
     float px = 1.5 / max(uResolution.y, 1.0);      // soften edges by ~1.5 CSS px
 
-    // Main house half-width at this height.
     float halfW = 0.0;
-    if (uMinkaStyle == 2) {
-      // gassho: steep thatched triangle, slight concave flare at the eaves.
-      if (hy <= ${f(MINKA.gasshoBodyH)}) {
-        halfW = ${f(MINKA.gasshoBodyHalf)};
-      } else {
-        float t = (hy - ${f(MINKA.gasshoBodyH)}) / ${f(MINKA.gasshoH)};
-        if (t <= 1.0) {
-          halfW = ${f(MINKA.gasshoRidgeHalf)}
-                + ${f(MINKA.gasshoEaveHalf - MINKA.gasshoRidgeHalf)} * pow(1.0 - t, ${f(MINKA.gasshoCurve)});
-        }
-      }
-    } else {
-      // irimoya: concave hip sweep, gable tier, raised ridge cap.
+    if (hy >= 0.0) {
       if (hy <= ${f(MINKA.bodyH)}) {
         halfW = ${f(MINKA.bodyHalf)};
       } else {
@@ -187,32 +174,9 @@ void main() {
         }
       }
     }
-    float inside = (hy >= 0.0 && halfW > 0.0) ? smoothstep(halfW, halfW - px, abs(sx)) : 0.0;
+    float inside = halfW > 0.0 ? smoothstep(halfW, halfW - px, hx) : 0.0;
 
-    // The hamlet keeps company: a kura storehouse and a lone tree. The tree's
-    // canopy dithers looser than the buildings — grown, not built.
-    float treeInside = 0.0;
-    if (uMinkaStyle == 3 && hy >= 0.0) {
-      float kx = abs(sx - ${f(MINKA.kuraDx)});
-      float kHalf = 0.0;
-      if (hy <= ${f(MINKA.kuraBodyH)}) {
-        kHalf = ${f(MINKA.kuraHalf)};
-      } else {
-        float kt = (hy - ${f(MINKA.kuraBodyH)}) / ${f(MINKA.kuraRoofH)};
-        if (kt <= 1.0) kHalf = mix(${f(MINKA.kuraRoofHalf)}, 0.002, kt);
-      }
-      if (kHalf > 0.0) inside = max(inside, smoothstep(kHalf, kHalf - px, kx));
-
-      vec2 td = vec2((sx - ${f(MINKA.treeDx)}) / ${f(MINKA.treeRx)},
-                     (hy - ${f(MINKA.treeCy)}) / ${f(MINKA.treeRy)});
-      treeInside = smoothstep(1.0, 0.9, length(td));
-      float trunk = smoothstep(${f(MINKA.trunkHalf)}, ${f(MINKA.trunkHalf)} * 0.4,
-                               abs(sx - ${f(MINKA.treeDx)}))
-                  * step(hy, ${f(MINKA.trunkH)});
-      inside = max(inside, trunk);
-    }
-
-    float density = max(inside * 0.68, treeInside * 0.5) * uEpilogue;
+    float density = inside * 0.68 * uGrow;
     float minkaAlpha = density >= threshold ? 0.5 * uSkyStrength : 0.0;
     vec3 minkaRgb = mix(uInk, uGold, 0.3);
 
@@ -223,7 +187,7 @@ void main() {
   // Scene 3 only: a few birds crossing the cleared sky, right to left. Specks
   // of grain whose size breathes as a wingbeat — at this distance a flap is a
   // shimmer, not an outline.
-  if (uScene == 3 && uEpilogue > 0.001) {
+  if (uScene == 3 && uGrow > 0.001) {
     float birdCoverage = 0.0;
     for (int i = 0; i < ${BIRDS.count}; i++) {
       float fi = float(i);
@@ -237,7 +201,7 @@ void main() {
       float size = 1.6 + 0.9 * sin(uTime * 9.0 + fi * 2.4);
       birdCoverage = max(birdCoverage, smoothstep(size + 1.0, size - 0.5, r));
     }
-    float birdDensity = birdCoverage * 0.8 * uEpilogue * uSkyStrength;
+    float birdDensity = birdCoverage * 0.8 * uGrow * uSkyStrength;
     float birdAlpha = birdDensity >= threshold ? 0.55 : 0.0;
     vec3 birdRgb = mix(uInk, uGold, 0.2);
 
