@@ -9,32 +9,44 @@ const CASUAL_OR_RHETORICAL =
 
 // ---------------------------------------------------------------------------
 // Beyond English — the nine other locales Oats ships in (es fr de it pt ru
-// ja zh-CN zh-TW). Two hard-won constraints shape everything below:
+// ja zh-CN zh-TW). Three hard-won constraints shape everything below:
 //
 // 1. `\b` is ASCII-only in JavaScript. Around Cyrillic, accented, or CJK
 //    letters it either never matches (`/\bне\b/` on "я не знаю") or matches in
 //    the wrong place (`/perché\b/` fails because é is a non-word character).
 //    So spaced scripts (Latin, Cyrillic) use explicit boundary classes, and
-//    CJK phrases — written without spaces — use none.
-// 2. Bare negation particles are NOT denials. English's `\bno\b` rule predates
-//    this block and keeps its behaviour, but "no"/"non"/"не" negate half of
-//    all ordinary answers in these languages, and a false denial does not just
-//    mislabel a card — it opens a browser. Only explicit denial phrases
-//    ("no lo sé", "keine Ahnung", "не знаю", "わかりません") count.
+//    CJK phrases use punctuation/edge boundaries instead of spaces.
+// 2. Bare negation particles are NOT denials. "no"/"non"/"не"/"nicht" negate
+//    half of all ordinary answers, and a false denial does not just mislabel
+//    a card — it opens a browser. Only explicit denial phrases count, they
+//    must be first-person (third-person "er weiß nicht…" is a redirect, not
+//    a denial), and impersonal forms ("weiß nicht", "sais pas", "не в курсе",
+//    わからない…) only count at the start of a reply clause, where the
+//    dropped subject can only be the speaker.
+// 3. Transcribers emit straight AND typographic apostrophes, so every
+//    apostrophe in a phrase — and the boundary classes — accepts both.
 //
 // Detection stays generous, exactly like the English patterns: an extra card
 // costs a glance (CLAUDE.md question rule 3). Verdicts stay conservative.
 
-const SP_START = String.raw`(?:^|[\s("'«¿¡,;:–—])`;
-const SP_END = String.raw`(?=$|[\s)"'»,;:!?.…¡¿–—])`;
+const SP_START = String.raw`(?:^|[\s("'«¿¡,;:–—‘’“”])`;
+const SP_END = String.raw`(?=$|[\s)"'»,;:!?.…¡¿–—‘’“”])`;
 const spaced = (words) => `${SP_START}(?:${words.join("|")})${SP_END}`;
+/** Matches only at the start of the reply or of a clause inside it — where a
+ *  subject-dropped phrase can only be first person. */
+const CLAUSE_START = String.raw`(?:^|[.!?¡¿;:…]\s*)`;
+const APO = String.raw`['’]`;
 
 // Interrogative openers, checked at the start of the utterance (mirrors
 // QUESTION_PREFIX). Loose single words are safe here because position carries
 // most of the signal.
+// One or two words of conjunction lead-in ("pero dónde…", "ну и сколько…")
+// must not defeat an opener when the transcriber drops the question mark.
+const LEAD_IN = String.raw`(?:y|pero|e|ma|und|aber|et|mais|а|ну|и|o|ou|oder|или|entonces|alors|dann)\s+`;
+
 const INTL_QUESTION_PREFIX = new RegExp(
-  `^[¿¡]|^(?:${[
-    // es
+  `^[¿¡]|^(?:${LEAD_IN}){0,2}(?:${[
+    // es — including the preposition-fronted forms Spanish requires
     "qué",
     "por qué",
     "cómo",
@@ -43,10 +55,20 @@ const INTL_QUESTION_PREFIX = new RegExp(
     "dónde",
     "cuándo",
     "cuánt[oa]s?",
+    "a ?dónde",
+    "de dónde",
+    "a qué",
+    "en qué",
+    "por dónde",
+    "desde cuándo",
+    "con quién",
+    "para qué",
     "sabes?",
     "saben",
     // fr
-    "est-ce qu[e']",
+    `est-ce que`,
+    `est-ce qu${APO}\\S+`,
+    `qu${APO}est-ce`,
     "pourquoi",
     "comment",
     "quel(?:le)?s?",
@@ -66,10 +88,16 @@ const INTL_QUESTION_PREFIX = new RegExp(
     "wer",
     "wo",
     "wann",
+    "wohin",
+    "woher",
     "weißt du",
     "wisst ihr",
     "wissen sie",
     "kennst du",
+    "hast du",
+    "habt ihr",
+    "haben sie",
+    `gibt(?: es|${APO}s)`,
     // it
     "(?:che )?cosa",
     "perché",
@@ -91,6 +119,9 @@ const INTL_QUESTION_PREFIX = new RegExp(
     "onde",
     "sabem",
     "você sabe",
+    "vocês sabem",
+    "será que",
+    "cadê",
     // ru
     "что",
     "почему",
@@ -98,6 +129,8 @@ const INTL_QUESTION_PREFIX = new RegExp(
     "как(?:ой|ая|ое|ие)?",
     "кто",
     "где",
+    "куда",
+    "откуда",
     "когда",
     "сколько",
     "знаешь",
@@ -106,61 +139,111 @@ const INTL_QUESTION_PREFIX = new RegExp(
   "i"
 );
 
-// Strong markers that carry question-ness anywhere in the utterance. Kept
-// small: mid-sentence looseness is how statements become cards.
+// Strong markers that carry question-ness anywhere in the utterance —
+// including French in-situ interrogation ("c'est quoi…", "il est où…"),
+// which is the dominant spoken register, and Mandarin A-not-A forms, the
+// standard yes/no question that carries no 吗.
 const INTL_QUESTION_ANYWHERE = new RegExp(
   [
-    spaced(["est-ce que", "sabes si", "savez-vous", "weißt du", "знаешь ли", "не знаешь"]),
+    spaced([
+      "est-ce que",
+      "sabes si",
+      "savez-vous",
+      "weißt du",
+      "знаешь ли",
+      "не знаешь",
+      "quoi",
+      "est où",
+      "fait comment",
+      "coûte combien",
+      "tu sais",
+      "vous savez",
+    ]),
+    `${SP_START}est-ce qu${APO}`,
     // CJK interrogatives are unambiguous enough to match anywhere.
-    "(?:なぜ|どうして|なんで|どこに|どこで|いつから|いつまで|どちら|どっち|いくら|どうやって)",
-    "(?:什么|为什么|怎么|哪里|哪个|多少|什麼|甚麼|為什麼|怎麼|哪裡|哪個|谁|誰)",
+    "(?:なぜ|どうして|なんで|どこに|どこで|いつから|いつまで|どちら|どっち|いくら|どうやって|どう思)",
+    "(?:什么|为什么|怎么|哪里|哪个|哪儿|多少|几点|什麼|甚麼|為什麼|怎麼|哪裡|哪個|哪兒|幾點|谁|誰)",
+    "(?:有没有|有沒有|是不是|能不能|会不会|會不會|要不要|好不好|行不行|对不对|對不對)",
   ].join("|"),
   "i"
 );
 
-// Sentence-final question particles (ja/zh). The particle *is* the question
-// mark, so it is checked against the end, tolerating trailing punctuation.
-const CJK_QUESTION_ENDING = /(?:ですか|ますか|のか|かな|か|吗|嗎)\s*[?？。.!！]*\s*$/;
+// Sentence-final question particles and bare interrogatives (ja/zh). The
+// particle *is* the question mark, so it is checked at the end of a *clause*
+// (before punctuation or end of segment). A glued next sentence is still
+// found when any punctuation survives; punctuation-free run-ons are the
+// accepted residual — matching at bare whitespace would revive the
+// false-positive class this anchoring exists to block.
+const CJK_QUESTION_ENDING =
+  /(?:ですか|ますか|のか|かな|か|の|何|どこ|いつ|どう|吗|嗎|呢|几点?|幾點?|哪)(?=\s*(?:[?？。.!！]|$))/;
 
 /** CJK scripts have no spaces, so length and word-count heuristics lie. */
-const HAS_CJK = /[぀-ヿ㐀-䶿一-鿿豈-﫿]/;
+const HAS_CJK = /[぀-ヿ㐀-䶿一-鿿豈-﫿]/;
+
+/** Boundary classes for CJK denial phrases: a phrase only counts when it is
+ *  not embedded in a larger construction ("知らない人" = "a stranger",
+ *  "他不知道" = "HE doesn't know" — neither is the speaker denying). */
+const CJK_DENIAL_BEFORE = String.raw`(?:^|[\s。、！？!?,，.…])`;
+const CJK_DENIAL_AFTER = String.raw`(?=$|[\s。、！？!?,，.…]|です|ね|よ|啊|耶|啦|欸|喔|嘛)`;
+
+const CJK_DENIAL_PHRASES =
+  "(?:わからない|わかりません|わかんない|わからん|分からない|分かりません|知らない|知らん|知りません|覚えていない|覚えてない|不知道|不晓得|不曉得|不清楚|不记得|不記得|没听说过|沒聽說過)";
 
 const DENIAL_INTL = new RegExp(
   [
     spaced([
-      // es
+      // es — "si no recuerdo mal" (= IIRC) asserts an answer, hence the
+      // lookahead; same for Italian below.
       "no (?:lo )?sé",
       "ni idea",
       "no tengo (?:ni )?idea",
-      "no (?:me acuerdo|recuerdo)",
+      String.raw`(?<!mal\s)no (?:me acuerdo(?!\s+mal)|recuerdo(?!\s+mal))`,
       // fr
-      "je (?:ne )?sais pas",
-      "j'en sais rien",
+      `j${APO}en sais rien`,
+      `je n${APO}en sais rien`,
+      String.raw`je (?:ne )?sais pas(?!\s+mal)`,
       "aucune idée",
       "je (?:ne )?me souviens (?:pas|plus)",
-      // de
+      // de — first-person forms; "weiß" alone is also third person, so the
+      // subjectless form is clause-start-only (below).
       "keine ahnung",
-      "ich weiß (?:es )?nicht",
-      "weiß ich nicht",
+      "ich wei(?:ß|ss) (?:es |auch )*nicht",
+      "wei(?:ß|ss) ich (?:auch )?nicht",
       "kann mich nicht erinnern",
       // it
       "non (?:lo )?so",
+      "non saprei",
       "nessuna idea",
-      "non (?:mi )?ricordo",
+      String.raw`non (?:mi )?ricordo(?!\s+male)`,
       // pt
       "não sei",
       "não faço ideia",
       "sem ideia",
       "não (?:me )?lembro",
-      // ru
+      // ru — "не в курсе" is person-unmarked, so it is clause-start-only
+      // (below); "я не в курсе" is explicit.
       "не знаю",
       "понятия не имею",
       "без понятия",
       "не помню",
-      "не в курсе",
+      "я не в курсе",
+      "нет,? не в курсе",
     ]),
-    "(?:わからない|わかりません|分からない|分かりません|知らない|知りません|覚えていない|覚えてない)",
-    "(?:不知道|不清楚|不记得|不記得|没听说过|沒聽說過)",
+    // Subject-dropped forms: only where the dropped subject must be the
+    // speaker — at the start of the reply or of a clause.
+    `${CLAUSE_START}(?:sais pas(?!\\s+mal)|chais pas(?!\\s+mal)|j${APO}sais pas(?!\\s+mal)|wei(?:ß|ss) (?:es |auch )*nicht|не в курсе|boh|sei lá)${SP_END}`,
+    // CJK denials, bounded so attributive/third-person uses do not count.
+    // A first-person subject (我/私は…) anchors the person explicitly, so it
+    // may precede the phrase — and then no right boundary is needed, because
+    // "我不知道他在哪" is still the speaker denying. Subjectless forms stay
+    // clause-bounded so 知らない人 ("a stranger") cannot deny.
+    // Chinese is SVO, so "我不知道他在哪" continues after the verb — the 我-
+    // forms are boundary-free. Japanese is verb-final: a genuine pronoun-marked
+    // denial ends with the verb, so 私/僕/俺 keep the right boundary (otherwise
+    // 私は知らない人… "I thought he was a stranger" would open a browser).
+    `${CJK_DENIAL_BEFORE}我(?:们|們|也|都)?(?:真的)?${CJK_DENIAL_PHRASES}`,
+    `${CJK_DENIAL_BEFORE}(?:私|僕|俺)[はも]?(?:ちょっと|全然|まったく|本当に)?${CJK_DENIAL_PHRASES}${CJK_DENIAL_AFTER}`,
+    `${CJK_DENIAL_BEFORE}(?:ちょっと|全然|まったく)?${CJK_DENIAL_PHRASES}${CJK_DENIAL_AFTER}`,
   ].join("|"),
   "i"
 );
@@ -170,6 +253,7 @@ const HEDGE_INTL = new RegExp(
     spaced([
       // es
       "creo que",
+      "me parece que",
       "quizás?",
       "tal vez",
       "a lo mejor",
@@ -189,6 +273,7 @@ const HEDGE_INTL = new RegExp(
       "ich denke",
       "vielleicht",
       "wahrscheinlich",
+      "vermutlich",
       "möglicherweise",
       "nicht sicher",
       "könnte sein",
@@ -206,7 +291,7 @@ const HEDGE_INTL = new RegExp(
       "pode ser",
       "não tenho certeza",
       // ru
-      "наверное",
+      "наверн(?:о|ое)",
       "возможно",
       "может быть",
       "кажется",
@@ -220,12 +305,16 @@ const HEDGE_INTL = new RegExp(
   "i"
 );
 
-// Whole-utterance acknowledgements, anchored like BACKCHANNEL.
-const BACKCHANNEL_INTL = new RegExp(
-  `^(?:${[
-    // es / it / pt
+// Whole-utterance acknowledgements, anchored like BACKCHANNEL — and, unlike
+// round 1, tolerant of the doubling people actually do ("sí sí", "да да",
+// "对对对").
+const BACKCHANNEL_INTL = (() => {
+  const tokens = [
+    // es / it / pt — "si" unaccented too: transcribers drop the accent, and a
+    // whole-utterance "si" is an acknowledgement in both languages.
     "sí",
     "sì",
+    "si",
     "sim",
     "vale",
     "claro",
@@ -234,12 +323,13 @@ const BACKCHANNEL_INTL = new RegExp(
     "certo",
     "va bene",
     "capisco",
+    "capito",
     "tá(?: bom)?",
     "entendi",
     // fr
     "oui",
     "ouais",
-    "d'accord",
+    `d${APO}accord`,
     "je vois",
     "ah bon",
     // de
@@ -256,25 +346,37 @@ const BACKCHANNEL_INTL = new RegExp(
     "ясно",
     "понятно",
     "хорошо",
+    "ладно",
     "точно",
     // ja / zh
-    "はい",
-    "ええ",
-    "うん",
+    "(?:はい){1,3}",
+    "(?:ええ){1,2}",
+    "(?:うん){1,4}",
     "なるほど",
     "そうですね",
-    "そう(?:か|っか)",
-    "嗯",
-    "对",
-    "對",
-    "好(?:的)?",
+    "そ(?:う|っ)か",
+    "(?:そう){2,4}",
+    "嗯+",
+    "对+",
+    "對+",
+    "(?:好的?){1,3}",
+    "[是对對好]啊",
     "是的",
     "明白",
     "原来如此",
     "原來如此",
-  ].join("|")})[\\s.!?。！？、，,]*$`,
-  "i"
-);
+  ];
+  const one = `(?:${tokens.join("|")})`;
+  return new RegExp(`^${one}(?:[\\s,、，.。！？!?]+${one})*[\\s.!?。！？、，,]*$`, "i");
+})();
+
+// DENIAL minus its bare-particle branch — never edited there (the English
+// rule is fenced), but consulted here so a lone "no" can be scoped: kept for
+// short standalone negations and English replies, ignored when "no" is just
+// the negator inside another language's ordinary sentence. Keep in sync with
+// DENIAL above.
+const DENIAL_EXPLICIT_EN =
+  /\b(?:i|we)\s+(?:really\s+)?(?:do\s?n[o']?t|don't|never)\s+(?:know|recall|remember)\b|\bno\s+(?:idea|clue)\b|\bnever\s+(?:heard|looked|checked)\b|\bnot\s+sure\s+(?:at\s+all|honestly)\b|\bcan'?t\s+remember\b|\bnobody\s+(?:knows|has)\b/i;
 
 const REASONS = new Set([
   "denied_knowledge",
@@ -433,7 +535,22 @@ function assessResponseLocally(followingContext) {
 
   const joined = replies.join(" ");
   // Denial wins over hedging: "No, I'm not sure" is a denial with a hedge in it.
-  if (DENIAL.test(joined) || DENIAL_INTL.test(joined)) {
+  // The fenced English DENIAL is scoped, not edited: a match that rests only on
+  // the bare-particle branch counts for a standalone negation ("No.") or an
+  // English reply ("No, I'm not sure"), never for "no" as the pre-verbal
+  // negator of an ordinary Spanish sentence — that false denial would open a
+  // browser over a substantive answer.
+  const bareNoOnly = DENIAL.test(joined) && !DENIAL_EXPLICIT_EN.test(joined);
+  // The rescue must identify an *English* reply. A lone /\bi\b/ would match
+  // the Italian plural article ("No, i risultati…"), so "i" only counts
+  // followed by an English auxiliary — and the short-reply branch demands the
+  // reply be negation-only: "No funciona" is an answer, "No." is not.
+  const englishSignal =
+    /\bi'?m\b|\bwe\b|\bi\s+(?:do|did|don't|never|have|haven't|can't|really|am|was|think|know)\b/i;
+  const negationOnly = /^\s*(?:(?:no|nope|nah)[\s,.!…]*)+(?:sorry[\s,.!…]*)?$/i;
+  const englishDenied =
+    DENIAL.test(joined) && (!bareNoOnly || negationOnly.test(joined) || englishSignal.test(joined));
+  if (englishDenied || DENIAL_INTL.test(joined)) {
     return { outcome: "denied", confidence: 0.85 };
   }
   if (HEDGE.test(joined) || HEDGE_INTL.test(joined)) {
@@ -504,8 +621,12 @@ function extractQuestionSentence(text) {
       CJK_QUESTION_ENDING.test(sentence)
     ) {
       // A trailing "right?" or "you know?" is a tag, not the question — fold the
-      // preceding sentence back in so the card still says something.
-      if (sentence.split(" ").length <= 2 && i > 0) {
+      // preceding sentence back in so the card still says something. Tag-ness
+      // is measured in characters for CJK, where space-splitting always says 1.
+      const isTag = HAS_CJK.test(sentence)
+        ? sentence.replace(/[\s?？。！!.]/g, "").length <= 3
+        : sentence.split(" ").length <= 2;
+      if (isTag && i > 0) {
         return `${sentences[i - 1]} ${sentence}`.trim();
       }
       return sentence;
@@ -523,6 +644,9 @@ function isQuestionCandidate(text) {
   if (value.length < minLength || value.length > 600) return false;
   if (CASUAL_OR_RHETORICAL.test(value) || COMMAND_PREFIX.test(value)) return false;
   if (/^(?:uh+|um+|hmm+|okay|ok|yes|no)[?.!\s]*$/i.test(value)) return false;
+  // A bare acknowledgement is noise in any language — "そうか" ends in か but
+  // is somebody agreeing, not asking.
+  if (BACKCHANNEL_INTL.test(value)) return false;
   return (
     value.includes("?") ||
     value.includes("？") ||

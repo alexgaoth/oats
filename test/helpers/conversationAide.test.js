@@ -714,3 +714,278 @@ test("denials, hedges, and backchannels are read locally in every shipped locale
     "answered"
   );
 });
+
+test("iterate round 1: everyday denials, openers, and acknowledgement noise", () => {
+  // de: bare "weiß nicht" is the everyday denial, with its inflections.
+  assert.equal(assessResponseLocally([{ text: "Weiß nicht." }]).outcome, "denied");
+  assert.equal(assessResponseLocally([{ text: "Ich weiß es auch nicht" }]).outcome, "denied");
+  // it: "non saprei" is a denial ("I wouldn't know"), not a hedge.
+  assert.equal(assessResponseLocally([{ text: "Non saprei" }]).outcome, "denied");
+  // de: "vermutlich" hedges.
+  assert.equal(assessResponseLocally([{ text: "Vermutlich war das 2019" }]).outcome, "uncertain");
+
+  // fr: qu'est-ce openers, straight and typographic apostrophe.
+  assert.equal(isQuestionCandidate("Qu'est-ce que Kubernetes"), true);
+  assert.equal(isQuestionCandidate("Qu’est-ce que c’est"), true);
+  // de: direction interrogatives.
+  assert.equal(isQuestionCandidate("Wohin geht dieser Export"), true);
+
+  // ja: a bare acknowledgement ends in か but is not a question.
+  assert.equal(isQuestionCandidate("そうか"), false);
+  assert.equal(isQuestionCandidate("そっか。"), false);
+  // …while a real か question stays detected.
+  assert.equal(isQuestionCandidate("これで動きますか"), true);
+});
+
+test("iterate round 2: denial precision — the expensive direction stays shut", () => {
+  const outcome = (text) => assessResponseLocally([{ text }]).outcome;
+
+  // The English bare-"no" branch is scoped, not applied to other languages:
+  // Spanish's pre-verbal negator no longer opens browsers over real answers.
+  assert.equal(outcome("El servidor no está caído, es un problema de DNS"), "answered");
+  assert.equal(outcome("Marta no vino ayer, llegó el lunes"), "answered");
+  // …while canonical English negations keep their documented behaviour.
+  assert.equal(outcome("No."), "denied");
+  assert.equal(outcome("No, I'm not sure"), "denied");
+
+  // Third-person redirects are not the speaker denying.
+  assert.equal(outcome("Er weiß nicht, wie das geht, aber Anna kann dir helfen"), "answered");
+  assert.equal(outcome("他不知道，但是小王知道，你去问他吧"), "answered");
+  assert.equal(outcome("知らない人から電話がかかってきて、それで遅れたんです"), "answered");
+  assert.notEqual(outcome("彼は知らないけど、田中さんなら知っていると思いますよ"), "denied");
+  assert.equal(outcome("Он не в курсе, спроси лучше у Оли, она знает"), "answered");
+  // A discourse-opener 不知道 ("not sure whether you…") is not a denial either.
+  assert.equal(outcome("不知道你收到没有，我昨天把文件发到共享盘了"), "answered");
+
+  // "If I remember correctly" asserts an answer; it must not read as a denial.
+  assert.equal(outcome("Si no recuerdo mal, la reunión es el martes a las diez"), "answered");
+  assert.equal(outcome("Se non ricordo male, la riunione è martedì alle dieci"), "answered");
+  assert.equal(outcome("No recuerdo"), "denied");
+  assert.equal(outcome("Non ricordo"), "denied");
+
+  // Plain negative answers are answers.
+  assert.equal(outcome("Nein, das Meeting ist am Dienstag"), "answered");
+  assert.equal(outcome("Non, la réunion est mardi"), "answered");
+  assert.equal(outcome("いいえ、火曜日の十時からです"), "answered");
+
+  // And the true denials these guards must never weaken.
+  for (const text of [
+    "Weiß nicht.",
+    "Ich weiß es auch nicht",
+    "Je n'en sais rien",
+    "Je n’en sais rien",
+    "Sais pas",
+    "Chais pas",
+    "Sei lá",
+    "Boh",
+    "わかんない",
+    "わからん",
+    "知らん",
+    "不晓得",
+    "不曉得",
+    "Я не в курсе",
+    "Не в курсе.",
+    "Weiss nicht.",
+  ]) {
+    assert.equal(outcome(text), "denied", text);
+  }
+});
+
+test("iterate round 2: the spoken registers each locale actually uses", () => {
+  // fr in-situ interrogation — the dominant spoken register.
+  for (const text of [
+    "C'est quoi le problème",
+    "Il est où le fichier",
+    "On fait comment pour déployer",
+    "Ça coûte combien",
+    "Tu sais comment on fait",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+  // zh A-not-A — the standard yes/no form with no 吗.
+  for (const text of [
+    "你有没有看过这个项目",
+    "这个方案是不是有问题",
+    "他能不能来",
+    "你會不會用這個工具",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+  // ja sentence-final の and bare interrogatives.
+  for (const text of ["どこ行くの", "いつ帰るの", "これは何", "どう思う"]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+  // es preposition-fronted; ru куда/откуда; de/pt verb-first openers.
+  for (const text of [
+    "De dónde es ella",
+    "A qué hora empieza la reunión",
+    "En qué año fue eso",
+    "Куда он пошёл",
+    "Откуда ты это знаешь",
+    "Hast du eine Ahnung wo das liegt",
+    "Gibt es dafür schon eine Lösung",
+    "Será que isso funciona em produção",
+    "Cadê o arquivo de configuração",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+  // A か/吗 question glued to a following statement is still found.
+  assert.equal(isQuestionCandidate("これは何ですか。まあいいや"), true);
+  assert.equal(isQuestionCandidate("彼も来ますか。たぶん大丈夫だと思う"), true);
+  // …and word-internal か still does not fire.
+  assert.equal(isQuestionCandidate("確かに2018年です"), false);
+  assert.equal(isQuestionCandidate("昨日の会議は長かったです。"), false);
+});
+
+test("iterate round 2: hedges, backchannels, and CJK question extraction", () => {
+  const outcome = (text) => assessResponseLocally([{ text }]).outcome;
+  assert.equal(outcome("Me parece que fue en 2019"), "uncertain");
+
+  // Doubled acknowledgements and round-1 gaps are backchannels, not replies.
+  for (const text of [
+    "Capito",
+    "Ладно",
+    "そうそう",
+    "对对对",
+    "sí sí",
+    "да да",
+    "D’accord.",
+    "Si",
+  ]) {
+    assert.equal(outcome(text), "silence", text);
+  }
+  // Typographic apostrophes work wherever their ASCII twins do.
+  assert.equal(outcome("J’en sais rien."), "denied");
+
+  // Only the question is quoted — in character-counted CJK too.
+  assert.equal(
+    extractQuestionSentence("会議は月曜です。予算はいくらですか？"),
+    "予算はいくらですか？"
+  );
+  assert.equal(extractQuestionSentence("那个项目结束了。谁负责这个？"), "谁负责这个？");
+  // The English tag fold is untouched.
+  assert.equal(
+    extractQuestionSentence("We should check the pricing later. You know?"),
+    "We should check the pricing later. You know?"
+  );
+});
+
+test("iterate round 3: the scoping holds against its own edge cases", () => {
+  const outcome = (text) => assessResponseLocally([{ text }]).outcome;
+
+  // The English-reply signal must not read Italian's plural article as English.
+  assert.equal(outcome("No, i risultati non sono ancora usciti"), "answered");
+  assert.equal(outcome("No, i dati sono già sul server centrale"), "answered");
+  // …while canonical English negations keep denying.
+  assert.equal(outcome("No."), "denied");
+  assert.equal(outcome("No, I'm not sure"), "denied");
+  assert.equal(outcome("Nope, sorry"), "denied");
+  // Short non-English negative answers are answers.
+  assert.equal(outcome("No funciona"), "uncertain");
+
+  // Both orders of the es IIRC idiom assert an answer.
+  assert.equal(outcome("Si mal no recuerdo, fue en marzo de 2019"), "answered");
+  assert.equal(outcome("Si mal no me acuerdo, era marzo"), "answered");
+  assert.equal(outcome("No recuerdo"), "denied");
+
+  // Mid-utterance fillers are approximations, not denials.
+  assert.equal(outcome("Tinha, sei lá, umas trinta pessoas na sala"), "answered");
+  assert.equal(outcome("Saranno state, boh, una trentina di persone"), "answered");
+  assert.equal(outcome("Boh."), "denied");
+  assert.equal(outcome("Sei lá."), "denied");
+
+  // A first-person subject anchors a CJK denial; third person still cannot.
+  assert.equal(outcome("我不知道"), "denied");
+  assert.equal(outcome("我也不知道"), "denied");
+  assert.equal(outcome("我不清楚这个事情"), "denied");
+  assert.equal(outcome("私は分かりません"), "denied");
+  assert.equal(outcome("ちょっとわからない"), "denied");
+  assert.equal(outcome("他不知道，但是小王知道，你去问他吧"), "answered");
+  assert.equal(outcome("知らない人から電話がかかってきて、それで遅れたんです"), "answered");
+
+  // "pas mal" asserts knowledge; plain "sais pas" denies it.
+  assert.equal(outcome("Je sais pas mal de choses sur ce sujet"), "answered");
+  assert.equal(outcome("Je sais pas"), "denied");
+  // ru: the standard "Нет, не в курсе" compound.
+  assert.equal(outcome("Нет, не в курсе"), "denied");
+});
+
+test("iterate round 3: spoken openers survive elision, lead-ins, and particles", () => {
+  // fr elided est-ce qu'… — the most common spoken form of the opener.
+  assert.equal(isQuestionCandidate("Est-ce qu'il y a un moyen de faire ça"), true);
+  assert.equal(isQuestionCandidate("Est-ce qu’on peut encore changer la date"), true);
+
+  // A word or two of conjunction lead-in does not defeat the opener.
+  for (const text of [
+    "pero dónde está el archivo",
+    "und wann ist das meeting",
+    "ma perché non funziona",
+    "e onde fica o escritório",
+    "а где сервер",
+    "ну и сколько это стоит",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+  // …without turning conjunction-led statements into cards.
+  for (const text of [
+    "E poi siamo andati a casa.",
+    "И мы пошли домой.",
+    "Und dann sind wir gegangen.",
+  ]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+
+  // zh sentence-final 呢 and the erhua 哪儿.
+  assert.equal(isQuestionCandidate("你觉得呢"), true);
+  assert.equal(isQuestionCandidate("那你呢"), true);
+  assert.equal(isQuestionCandidate("在哪儿开会"), true);
+
+  // Glued CJK doublings and particle acknowledgements are backchannels.
+  const outcome = (text) => assessResponseLocally([{ text }]).outcome;
+  for (const text of ["うんうん", "はいはい", "好的好的", "是啊", "对啊"]) {
+    assert.equal(outcome(text), "silence", text);
+  }
+  // ru colloquial hedge, pt plural opener, fr elided denial.
+  assert.equal(outcome("наверно это было в марте"), "uncertain");
+  assert.equal(isQuestionCandidate("vocês sabem onde fica"), true);
+  assert.equal(outcome("J'sais pas"), "denied");
+});
+
+test("post-loop: the final round's remaining findings, pinned", () => {
+  const outcome = (text) => assessResponseLocally([{ text }]).outcome;
+
+  // ja pronouns are verb-final: attributive 知らない after 私は cannot deny…
+  assert.equal(outcome("私は知らない人だと思ってた"), "answered");
+  assert.equal(outcome("私も知らない人ばかりだったよ"), "answered");
+  assert.equal(outcome("俺も知らないうちに終わってた"), "answered");
+  // …while genuine pronoun-marked denials still do.
+  assert.equal(outcome("私は分かりません"), "denied");
+  assert.equal(outcome("私はちょっとわからない"), "denied");
+  // Chinese keeps the boundary-free first-person branch.
+  assert.equal(outcome("我不知道他在哪"), "denied");
+
+  // Mandarin particle-suffixed subjectless denials.
+  assert.equal(outcome("不知道啊"), "denied");
+  assert.equal(outcome("不知道耶"), "denied");
+
+  // Bare clause-final interrogatives and mid-sentence 几点.
+  for (const text of [
+    "会议几点开始",
+    "现在几点",
+    "你办公室在哪",
+    "締め切りはいつ",
+    "トイレはどこ",
+    "この案はどう",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+  // Negative guards: とう≠どう, statements stay statements.
+  assert.equal(isQuestionCandidate("ありがとう"), false);
+  assert.equal(isQuestionCandidate("三点开会，别迟到"), false);
+
+  // Elided pas-mal forms assert knowledge.
+  assert.equal(outcome("J'sais pas mal de trucs là-dessus"), "answered");
+  assert.equal(outcome("Chais pas"), "denied");
+  // CJK-punctuated backchannel chains are still silence.
+  assert.equal(outcome("はい。なるほど"), "silence");
+});
