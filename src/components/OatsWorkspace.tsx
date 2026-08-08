@@ -155,6 +155,13 @@ function useLastHeard(recording: boolean): string | null {
       setEcho(null);
       return undefined;
     }
+    // A resumed conversation seeds the previous session's segments; echoing a
+    // half-hour-old line as proof of hearing would be a small lie. Segments
+    // without a timestamp fail open — better a rare stale echo than a mute one.
+    if (lastSegment.timestamp && Date.now() - lastSegment.timestamp > 15_000) {
+      setEcho(null);
+      return undefined;
+    }
     const text = lastSegment.text.trim();
     setEcho(text.length > LAST_HEARD_MAX_CHARS ? `…${text.slice(-LAST_HEARD_MAX_CHARS)}` : text);
     const timer = window.setTimeout(() => setEcho(null), LAST_HEARD_MS);
@@ -1436,14 +1443,23 @@ export default function OatsWorkspace() {
   // The recall hotkey: from any application into cross-conversation search.
   // Refused while recording for the same reason as Cmd+, — and the focus step
   // is delegated via a DOM event so it works whether Intelligence is already
-  // mounted or is mounting right now.
+  // mounted or is mounting right now. Push covers a running panel; the consume
+  // call covers a cold start, where the press created this window and the
+  // pushed event predates any listener.
   useEffect(() => {
-    const cleanup = window.electronAPI?.onFocusConversationSearch?.(() => {
+    const goToSearch = () => {
       if (useMeetingRecordingStore.getState().isRecording) return;
       setSurface("intelligence");
       requestAnimationFrame(() => {
         requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
       });
+    };
+    const cleanup = window.electronAPI?.onFocusConversationSearch?.(() => {
+      void window.electronAPI?.consumePendingFocusSearch?.();
+      goToSearch();
+    });
+    void window.electronAPI?.consumePendingFocusSearch?.().then((pending) => {
+      if (pending) goToSearch();
     });
     return () => cleanup?.();
   }, []);

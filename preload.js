@@ -695,6 +695,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     "focus-conversation-search",
     (callback) => () => callback()
   ),
+  consumePendingFocusSearch: () => ipcRenderer.invoke("consume-pending-focus-search"),
   getVoiceAgentKey: () => ipcRenderer.invoke("get-voice-agent-key"),
   updateTranslationHotkey: (hotkey) => ipcRenderer.invoke("update-translation-hotkey", hotkey),
   getTranslationKey: () => ipcRenderer.invoke("get-translation-key"),

@@ -563,12 +563,24 @@ class WindowManager {
   // Recall from anywhere: surface the control panel on Intelligence with the
   // cross-conversation search focused. "What did we decide about X?" should
   // cost one press, which is what makes remembering a habit.
+  //
+  // Push AND pull: on a cold start the panel resolves before React has
+  // registered any listener, so a pushed event would vanish. The flag stays
+  // set until the renderer consumes it on mount (consume-pending-focus-search),
+  // which makes the cold path deterministic instead of timed.
   async openConversationSearch() {
+    this._pendingFocusSearch = true;
     await this.createControlPanelWindow();
     const win = this.controlPanelWindow;
-    if (win && !win.isDestroyed()) {
+    if (win && !win.isDestroyed() && !win.webContents.isLoading()) {
       win.webContents.send("focus-conversation-search");
     }
+  }
+
+  consumePendingFocusSearch() {
+    const pending = Boolean(this._pendingFocusSearch);
+    this._pendingFocusSearch = false;
+    return pending;
   }
 
   sendToggleVoiceAgent() {

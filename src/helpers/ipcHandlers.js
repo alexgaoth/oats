@@ -6605,6 +6605,10 @@ class IPCHandlers {
       return this.environmentManager.getSearchKey?.() || "";
     });
 
+    ipcMain.handle("consume-pending-focus-search", () => {
+      return this.windowManager.consumePendingFocusSearch?.() ?? false;
+    });
+
     ipcMain.handle("update-translation-hotkey", async (_event, hotkey) => {
       const hotkeyManager = this.windowManager.hotkeyManager;
       const translationCallback = this.windowManager._translationHotkeyCallback;
