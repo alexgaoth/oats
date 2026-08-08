@@ -22,7 +22,7 @@ The `conversationAide` implementation still reflects a narrower earlier design. 
 
 1. **Every question gets a card, instantly.** Not only unanswered ones, and with no wait for an answer. Detection is local pattern matching (no model round-trip); the classifier verdict updates the _same_ card in place rather than creating a second one.
 2. **A confirmed negative → the search opens automatically**, in the background, without stealing focus. “Confirmed negative” means `denied_knowledge` above the confidence threshold — somebody was asked and said they did not know. Silence, hedges, low-confidence denials, and answers all just record their outcome on the card; nothing opens. One Settings toggle, default on.
-3. **Repeats and rephrasings are never suppressed.** `suggested`, `cooldownMs`, and `candidateDedupeMs` are being removed. Each asking gets its own card, nested visually under the first. Density is a rendering problem, never a reason to drop a detection.
+3. **Repeats and rephrasings are never suppressed.** `suggested`, `cooldownMs`, and `candidateDedupeMs` were removed for this reason. Each asking gets its own card, nested visually under the first. Density is a rendering problem, never a reason to drop a detection.
 4. **The reply is read locally first; the model only refines it.** `assessResponseLocally()` classifies denial / hedge / backchannel / substantive answer by pattern, and that is the _primary_ verdict. The classifier may override it only when confident, and a failed or malformed classifier resolves the card locally rather than stranding it at `asked`. Do not reintroduce a design where a card's outcome depends on the model succeeding — the default classifier is a 1.5B local model and it frequently does not. The patterns cover all ten shipped locales (since 2026-08-07); an unrecognised language still degrades to `uncertain`, which shows the card but does not search.
 5. **Only the question is quoted.** `extractQuestionSentence()` pulls the interrogative sentence out of a longer turn before it reaches the card, the event, or the search query.
 
@@ -709,7 +709,7 @@ All user-facing strings **must** use the i18n system. Never hardcode UI text in 
 
 **Setup**: react-i18next (v15) with i18next (v25). Translation files in `src/locales/{lang}/translation.json`.
 
-**Supported languages**: en, es, fr, de, pt, it, ru, zh-CN, zh-TW
+**Supported languages**: en, es, fr, de, pt, it, ru, ja, zh-CN, zh-TW
 
 **How to use**:
 
@@ -890,7 +890,7 @@ const { t } = useTranslation();
 
 - Streaming transcription support
 - Custom wake word detection
-- ~~Multi-language UI~~ (implemented — 9 languages via react-i18next)
+- ~~Multi-language UI~~ (implemented — 10 languages via react-i18next)
 - Cloud model selection
 - Batch transcription
 - Export formats beyond clipboard
