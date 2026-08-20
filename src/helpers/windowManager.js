@@ -14,8 +14,6 @@ const {
   CONTROL_PANEL_CONFIG,
   AGENT_OVERLAY_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
-  CONVERSATION_ASSIST_WINDOW_CONFIG,
-  CONVERSATION_CARDS_MAX_HEIGHT_RATIO,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,
   WINDOW_SIZES,
@@ -33,8 +31,6 @@ class WindowManager {
     this.controlPanelWindow = null;
     this.agentWindow = null;
     this.notificationWindow = null;
-    this.conversationAssistWindow = null;
-    this._conversationCards = [];
     this._notificationTimeout = null;
     this.transcriptionPreviewWindow = null;
     this.updateNotificationWindow = null;
@@ -199,13 +195,6 @@ class WindowManager {
     } else {
       this.notificationWindow.setIgnoreMouseEvents(true, { forward: true });
     }
-  }
-
-  setConversationAssistInteractivity(interactive) {
-    const win = this.conversationAssistWindow;
-    if (!win || win.isDestroyed()) return;
-    if (interactive) win.setIgnoreMouseEvents(false);
-    else win.setIgnoreMouseEvents(true, { forward: true });
   }
 
   resizeMainWindow(sizeKey) {
@@ -1505,86 +1494,6 @@ class WindowManager {
       this.notificationWindow.close();
     }
     this.notificationWindow = null;
-  }
-
-  // The question-card rail. One window for the whole recording, holding the whole
-  // stack, rather than one window per card: cards now appear for *every* question
-  // asked, so a window per card would mean a swarm of always-on-top surfaces
-  // fighting over the same corner of the screen.
-  async showConversationCards(cards) {
-    this._conversationCards = Array.isArray(cards) ? cards : [];
-    if (!this.conversationAssistWindow || this.conversationAssistWindow.isDestroyed()) {
-      if (!this._conversationCards.length) return;
-      await this._createConversationCardsWindow();
-    }
-    this._pushConversationCards();
-  }
-
-  async _createConversationCardsWindow() {
-    const display = screen.getPrimaryDisplay();
-    const basePosition = WindowPositionUtil.getNotificationPosition(display);
-    const workArea = display.workArea || display.bounds;
-    const height = Math.min(
-      CONVERSATION_ASSIST_WINDOW_CONFIG.height,
-      Math.round(workArea.height * CONVERSATION_CARDS_MAX_HEIGHT_RATIO)
-    );
-    const bottom = workArea.y + workArea.height;
-    const position = {
-      x: basePosition.x,
-      // Bottom-anchored: the rail grows upward from the corner, so a new card
-      // never shifts the ones already being read.
-      y: bottom - height - 16,
-      width: CONVERSATION_ASSIST_WINDOW_CONFIG.width,
-      height,
-    };
-    this.conversationAssistWindow = new BrowserWindow({
-      ...CONVERSATION_ASSIST_WINDOW_CONFIG,
-      ...position,
-    });
-    this.conversationAssistWindow.setContentProtection(true);
-    this.conversationAssistWindow.setIgnoreMouseEvents(true, { forward: true });
-    WindowPositionUtil.setupAlwaysOnTop(this.conversationAssistWindow);
-
-    if (process.env.NODE_ENV === "development") {
-      await DevServerManager.waitForDevServer();
-      await this.conversationAssistWindow.loadURL(
-        `${DevServerManager.DEV_SERVER_URL}?conversation-assist=true`
-      );
-    } else {
-      const fileInfo = DevServerManager.getAppFilePath(false);
-      await this.conversationAssistWindow.loadFile(fileInfo.path, {
-        query: { ...fileInfo.query, "conversation-assist": "true" },
-      });
-    }
-    this.conversationAssistWindow.on("closed", () => {
-      this.conversationAssistWindow = null;
-    });
-  }
-
-  _pushConversationCards() {
-    const win = this.conversationAssistWindow;
-    if (!win || win.isDestroyed()) return;
-    win.webContents.send("conversation-assist-data", this._conversationCards);
-  }
-
-  // Called once the overlay has mounted, so the rail is never shown empty.
-  showConversationAssistWindow() {
-    const win = this.conversationAssistWindow;
-    if (!win || win.isDestroyed()) return;
-    this._pushConversationCards();
-    win.showInactive();
-  }
-
-  getConversationCards() {
-    return this._conversationCards;
-  }
-
-  dismissConversationAssist() {
-    this._conversationCards = [];
-    if (this.conversationAssistWindow && !this.conversationAssistWindow.isDestroyed()) {
-      this.conversationAssistWindow.close();
-    }
-    this.conversationAssistWindow = null;
   }
 
   async showUpdateNotification(info) {

@@ -95,6 +95,15 @@ interface MeetingRecordingState {
   // Set when the microphone has produced nothing but silence for long enough that
   // it is more likely broken or muted than the room being quiet.
   micSilentSince: number | null;
+  /**
+   * The question cards for the running conversation, oldest first.
+   *
+   * They live in the store because the rail that draws them lives in the
+   * Conversation surface. Until 2026-08-20 they were pushed over IPC to a
+   * separate always-on-top window, which is why this list used to be somewhere
+   * else entirely.
+   */
+  questionCards: ConversationCard[];
 }
 
 const MEETING_AUDIO_BUFFER_SIZE = 800;
@@ -484,6 +493,7 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   openThreads: [],
   suggestions: [],
   micSilentSince: null,
+  questionCards: [],
 }));
 
 function startConversationAide(noteId: number | null, mode: ConversationRecordingMode) {
@@ -527,6 +537,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     "conversation-aide"
   );
   conversationCards.clear();
+  useMeetingRecordingStore.setState({ questionCards: [] });
   conversationAideSession = new ConversationAideSession({
     noteId,
     confidenceThreshold: settings.conversationAideConfidence,
@@ -609,15 +620,21 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
   });
 }
 
-// The rail always receives the complete card list, newest last. Pushing the whole
-// list (rather than diffs) keeps the always-on-top window from ever rendering a
-// state the renderer no longer believes in.
+// The rail always gets the complete card list, oldest first. The working set is
+// the Map above; this publishes a sorted copy so the rail never has to reconcile
+// a partial update against cards it has already drawn.
+//
+// `searchBaseUrl` is stamped on at publish time so a card records where its
+// question would go *now*; once it has actually been searched the card carries
+// its own host and that one wins, because changing the engine later must not
+// rewrite the history of a question that already left.
 function pushConversationCards() {
   const searchBaseUrl = getSettings().conversationAideSearchBaseUrl;
-  const cards = [...conversationCards.values()]
-    .sort((a, b) => a.createdAt - b.createdAt)
-    .map((card) => ({ ...card, searchBaseUrl }));
-  void window.electronAPI?.setConversationCards?.(cards);
+  useMeetingRecordingStore.setState({
+    questionCards: [...conversationCards.values()]
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((card) => ({ ...card, searchBaseUrl })),
+  });
 }
 
 // Topic tracking runs on every finalized utterance for the whole recording, so it
@@ -747,7 +764,7 @@ async function stopConversationAide() {
   conversationAideSession = null;
   await aide?.shutdown();
   conversationCards.clear();
-  void window.electronAPI?.closeConversationCards?.();
+  useMeetingRecordingStore.setState({ questionCards: [] });
 }
 
 export const getMicAnalyser = (): AnalyserNode | null => micAnalyser;

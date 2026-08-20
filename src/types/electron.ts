@@ -1,5 +1,5 @@
 import type { TinfoilCatalogModel } from "../models/tinfoilModels";
-import type { ConversationCard, ConversationEvent, SuggestionState } from "./conversationEvents";
+import type { ConversationEvent, SuggestionState } from "./conversationEvents";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia";
 
@@ -883,11 +883,6 @@ declare global {
       onFloatingOatPositionChanged?: (
         callback: (position: { x: number; y: number }) => void
       ) => () => void;
-      setConversationAssistInteractivity?: (interactive: boolean) => Promise<void>;
-      setConversationCards?: (
-        cards: ConversationCard[]
-      ) => Promise<{ success: boolean; error?: string }>;
-      closeConversationCards?: () => Promise<{ success: boolean }>;
       openConversationSearch?: (request: {
         eventId: number | null;
         query: string;
@@ -896,12 +891,6 @@ declare global {
       dismissConversationCard?: (
         suggestionId: number | null
       ) => Promise<{ success: boolean; error?: string }>;
-      searchConversationCard?: (cardId: string) => Promise<{ success: boolean; error?: string }>;
-      getConversationAssistData?: () => Promise<ConversationCard[] | null>;
-      conversationAssistReady?: () => Promise<{ success: boolean }>;
-      onConversationAssistData?: (
-        callback: (cards: ConversationCard[] | null) => void
-      ) => () => void;
 
       // App management
       cleanupApp: () => Promise<{ success: boolean; message: string; errors?: string[] }>;

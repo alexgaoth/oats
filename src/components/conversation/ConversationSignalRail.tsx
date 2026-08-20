@@ -1,22 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronUp, Search, Undo2, X } from "lucide-react";
-import { cn } from "./lib/utils";
-import { useSettingsStore } from "../stores/settingsStore";
-import { searchHostLabel } from "../utils/searchHost";
-import type { ConversationCard, QuestionOutcome } from "../types/conversationEvents";
+import { cn } from "../lib/utils";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
+import { searchHostLabel } from "../../utils/searchHost";
+import type { ConversationCard, QuestionOutcome } from "../../types/conversationEvents";
 
 // The question-card rail (DESIGN.md §9.2) — the help moment, and the surface the
-// spec says the product is judged on. One always-on-top window holding the whole
-// stack for a recording: newest at the bottom, every re-asking nested under the
-// question it repeats, older groups collapsed behind a count chip.
+// spec says the product is judged on. The whole stack for a recording: newest at
+// the bottom, every re-asking nested under the question it repeats, older groups
+// behind a count chip.
 //
-// Every card here already exists in the note. Dismissing one removes it from the
+// It is **docked in the Conversation surface**, and that is the whole design of
+// it. Until 2026-08-20 it was a separate always-on-top `BrowserWindow` with its
+// own renderer route, its own IPC contract and a cold-start handshake, and the
+// signature feature consequently read as an overlay widget bolted to the side of
+// the product rather than as part of it. Living here, it shares the store the
+// cards are already in, so there is no wire, no sanitiser, no window to show at
+// the right moment, and no second copy of card state to disagree with the first.
+//
+// What that costs, and it was chosen deliberately: a conversation recorded with
+// the panel hidden — which the global shortcut makes the normal case — shows no
+// cards until Oats is opened. Nothing is lost, because every card here already
+// exists in the note; they are simply waiting. Dismissing one removes it from the
 // rail, never from the record.
 //
-// This sits over a live conversation, so the governing constraint is not
-// prettiness — it is that nothing here may compete with the person in the room.
-// Small, quiet, non-modal, never steals focus.
+// The governing constraint is unchanged: nothing here may compete with the
+// person in the room. Small, quiet, non-modal, never takes focus.
 
 const VISIBLE_GROUPS = 4;
 
@@ -240,9 +251,9 @@ function QuestionGroup({
   );
 }
 
-export default function ConversationAssistOverlay() {
+export default function ConversationSignalRail() {
   const { t } = useTranslation();
-  const [cards, setCards] = useState<ConversationCard[]>([]);
+  const cards = useMeetingRecordingStore((state) => state.questionCards);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // Dismiss is the only destructive action in the rail and it is one small button
   // beside a moving list. A short undo window costs nothing and removes the whole
@@ -253,15 +264,7 @@ export default function ConversationAssistOverlay() {
   const searchBaseUrl = useSettingsStore((state) => state.conversationAideSearchBaseUrl);
   const searchHost = useMemo(() => searchHostLabel(searchBaseUrl), [searchBaseUrl]);
 
-  useEffect(() => {
-    const receive = (value: ConversationCard[] | null) => setCards(value ?? []);
-    const cleanup = window.electronAPI?.onConversationAssistData?.(receive);
-    void window.electronAPI?.getConversationAssistData?.().then(receive);
-    void window.electronAPI?.conversationAssistReady?.();
-    return () => cleanup?.();
-  }, []);
-
-  // Ages tick once every 15s, not every second: this window sits over a live
+  // Ages tick once every 15s, not every second: this sits beside a live
   // conversation and must not be the thing moving in the corner of an eye.
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 15000);
@@ -302,18 +305,47 @@ export default function ConversationAssistOverlay() {
     return () => window.clearTimeout(timer);
   }, [undoable]);
 
-  const onSearch = useCallback((card: ConversationCard) => {
-    void window.electronAPI?.searchConversationCard?.(card.id);
-  }, []);
+  // The one audited outbound path (`docs/network-allowlist.md`), the same one
+  // the automatic search and the topic graph's re-search already use.
+  //
+  // The old `conversation-card-search` channel existed because the rail was the
+  // least trustworthy window in the app and was allowed to name a card and
+  // nothing else. The rail is the control panel's own renderer now — the one
+  // that already calls this directly — so that indirection bought nothing and
+  // was removed with the window it protected against.
+  //
+  // A card with no verdict yet has no derived query, but asking to search it is
+  // reason enough: the question itself is the query.
+  const onSearch = useCallback(
+    (card: ConversationCard) => {
+      void window.electronAPI?.openConversationSearch?.({
+        eventId: card.suggestionId,
+        query: card.query || card.question,
+        searchBaseUrl: card.searchBaseUrl || searchBaseUrl,
+      });
+    },
+    [searchBaseUrl]
+  );
 
   const hidden = Math.max(0, groups.length - VISIBLE_GROUPS);
   const shown = expanded ? groups : groups.slice(hidden);
 
+  if (!groups.length && !undoable) return null;
+
   return (
+    // Anchored to the bottom-right of the pane, over the ground the field leaves
+    // empty (`justify-center pb-[34vh]` on the composition), rather than beside
+    // the pulse. Cards arrive unpredictably and in bursts; putting them in the
+    // centre column would make the composition jump every time somebody asked a
+    // question, and §8 is explicit that a card entering must not shift the
+    // layout anywhere else on screen.
+    //
+    // `absolute` resolves against the surface pane, which is `absolute inset-0`
+    // and clips its overflow — so the rail sits inside the window's content area
+    // without reaching past the drag band or under the nav.
     <div
-      className="flex h-full w-full flex-col justify-end gap-2 bg-transparent p-3"
-      onMouseEnter={() => window.electronAPI?.setConversationAssistInteractivity?.(true)}
-      onMouseLeave={() => window.electronAPI?.setConversationAssistInteractivity?.(false)}
+      aria-live="polite"
+      className="absolute bottom-5 right-5 z-10 flex max-h-[70%] w-[19rem] flex-col justify-end gap-2"
     >
       {undoable && (
         <button

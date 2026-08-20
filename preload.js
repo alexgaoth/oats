@@ -365,20 +365,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-main-window-interactivity", interactive),
   setNotificationInteractivity: (interactive) =>
     ipcRenderer.invoke("set-notification-interactivity", interactive),
-  setConversationAssistInteractivity: (interactive) =>
-    ipcRenderer.invoke("set-conversation-assist-interactivity", interactive),
-  setConversationCards: (cards) => ipcRenderer.invoke("conversation-cards-set", cards),
-  closeConversationCards: () => ipcRenderer.invoke("conversation-cards-close"),
   openConversationSearch: (request) => ipcRenderer.invoke("conversation-search-open", request),
   dismissConversationCard: (suggestionId) =>
     ipcRenderer.invoke("conversation-card-dismiss", suggestionId),
-  searchConversationCard: (cardId) => ipcRenderer.invoke("conversation-card-search", cardId),
-  getConversationAssistData: () => ipcRenderer.invoke("get-conversation-assist-data"),
-  conversationAssistReady: () => ipcRenderer.invoke("conversation-assist-ready"),
-  onConversationAssistData: registerListener(
-    "conversation-assist-data",
-    (callback) => (_event, data) => callback(data)
-  ),
   resizeMainWindow: (sizeKey) => ipcRenderer.invoke("resize-main-window", sizeKey),
 
   // Update functions

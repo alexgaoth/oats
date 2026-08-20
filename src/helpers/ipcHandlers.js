@@ -22,7 +22,6 @@ const AudioStorageManager = require("./audioStorage");
 const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
 // Question-card outcomes (DESIGN.md §4). Anything else the renderer sends is
 // coerced to `asked` rather than trusted into the always-on-top rail.
-const CONVERSATION_CARD_STATES = new Set(["asked", "answered", "uncertain", "silence", "denied"]);
 const liveSpeakerIdentifier = require("./liveSpeakerIdentifier");
 const MeetingEchoLeakDetector = require("./meetingEchoLeakDetector");
 const { partitionPendingMicFinals, isWithinRetractWindow } = require("./meetingMicHoldback");
@@ -747,53 +746,6 @@ class IPCHandlers {
       return { success: true };
     });
 
-    ipcMain.handle("set-conversation-assist-interactivity", (_event, interactive) => {
-      this.windowManager.setConversationAssistInteractivity(Boolean(interactive));
-      return { success: true };
-    });
-
-    // Replaces the whole rail's contents. The renderer owns card state for the
-    // duration of a recording and pushes the full list on every change, so the
-    // main process never has to reconcile a partial update against stale cards.
-    ipcMain.handle("conversation-cards-set", async (_event, cards) => {
-      if (!Array.isArray(cards)) {
-        return { success: false, error: "Invalid conversation cards" };
-      }
-      const sanitized = cards
-        .filter((card) => card && typeof card.id === "string" && typeof card.question === "string")
-        .map((card) => ({
-          id: card.id,
-          question: card.question,
-          state: CONVERSATION_CARD_STATES.has(card.state) ? card.state : "asked",
-          groupKey: typeof card.groupKey === "string" ? card.groupKey : card.id,
-          occurrence: Number.isInteger(card.occurrence) ? card.occurrence : 1,
-          searched: Boolean(card.searched),
-          suggestionId: Number.isInteger(card.suggestionId) ? card.suggestionId : null,
-          createdAt: Number.isFinite(card.createdAt) ? card.createdAt : Date.now(),
-          // Carried so the rail's own Search button can act without the overlay
-          // ever holding a URL: it sends a card id, and the main process builds
-          // and validates the URL exactly as the automatic path does.
-          query: typeof card.query === "string" ? card.query : null,
-          searchBaseUrl: typeof card.searchBaseUrl === "string" ? card.searchBaseUrl : null,
-        }));
-      await this.windowManager.showConversationCards(sanitized);
-      return { success: true };
-    });
-
-    ipcMain.handle("conversation-cards-close", () => {
-      this.windowManager.dismissConversationAssist();
-      return { success: true };
-    });
-
-    ipcMain.handle("get-conversation-assist-data", () => {
-      return this.windowManager.getConversationCards();
-    });
-
-    ipcMain.handle("conversation-assist-ready", () => {
-      this.windowManager.showConversationAssistWindow();
-      return { success: true };
-    });
-
     // Opens a search URL in its own browser window when we can work out which
     // browser that is, falling back to the desktop's default handler. See
     // browserWindowOpen.mjs for why a window beats a tab here.
@@ -846,32 +798,6 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         debugLogger.error("Conversation search failed", { error: error.message });
-        return { success: false, error: error.message };
-      }
-    });
-
-    // Manual search from a question card. Deliberately takes a card id rather
-    // than a URL or even a query: the always-on-top overlay is the least
-    // trustworthy window in the app, so it gets to name a card and nothing else.
-    ipcMain.handle("conversation-card-search", async (_event, cardId) => {
-      const card = this.windowManager.getConversationCards().find((item) => item.id === cardId);
-      // A card that has no verdict yet has no derived search query, but the user
-      // asking to search it is reason enough — the question itself is the query.
-      const query = card?.query || card?.question;
-      if (!card || !query) return { success: false, error: "Unknown conversation card" };
-      try {
-        const { buildSearchUrl, validateSearchUrl } = await import("./conversationAide.mjs");
-        const url = buildSearchUrl(query, card.searchBaseUrl || undefined);
-        if (!validateSearchUrl(url, card.searchBaseUrl || undefined)) {
-          throw new Error("Unsafe search URL");
-        }
-        await openSearchUrl(url);
-        if (Number.isInteger(card.suggestionId)) {
-          this.databaseManager.updateConversationSuggestionState(card.suggestionId, "opened");
-        }
-        return { success: true };
-      } catch (error) {
-        debugLogger.error("Conversation card search failed", { error: error.message });
         return { success: false, error: error.message };
       }
     });

@@ -22,6 +22,7 @@ import TopicGraph from "./notes/TopicGraph";
 import LifetimeGraph from "./notes/LifetimeGraph";
 import ListeningPulse from "./conversation/ListeningPulse";
 import OpenThreadStack from "./conversation/OpenThreadStack";
+import ConversationSignalRail from "./conversation/ConversationSignalRail";
 import Field from "./conversation/Field";
 import HotkeyInput from "./ui/HotkeyInput";
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
@@ -347,115 +348,126 @@ function ConversationSurface() {
   }, []);
 
   return (
-    <section
-      className={cn(
-        "oats-surface relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-8",
-        // The composition sits in the sky, above the horizon, rather than dead
-        // centre — dead centre reads as an error page, and the ground below
-        // belongs to the field.
-        "justify-center pb-[34vh]"
-      )}
-    >
-      {/* The seed is the button, and the button becomes the pulse. One object in
+    <>
+      <section
+        className={cn(
+          "oats-surface relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-8",
+          // The composition sits in the sky, above the horizon, rather than dead
+          // centre — dead centre reads as an error page, and the ground below
+          // belongs to the field.
+          "justify-center pb-[34vh]"
+        )}
+      >
+        {/* The seed is the button, and the button becomes the pulse. One object in
           two states rather than a control and an unrelated indicator: press the
           husked oat and it starts breathing (DESIGN.md §9.1, §9.2). */}
-      <button
-        type="button"
-        disabled={starting}
-        onClick={recording ? () => void stopRecording() : begin}
-        aria-label={recording ? t("oats.conversation.finish") : t("oats.conversation.record")}
-        className={cn(
-          "group relative flex h-28 w-28 items-center justify-center rounded-full",
-          "transition-transform [transition-duration:var(--motion-base)]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          "disabled:cursor-not-allowed disabled:opacity-60",
-          !recording && "hover:scale-[1.04] active:scale-[0.98]"
-        )}
-      >
-        <ListeningPulse state={recording ? "live" : "idle"} size="lg" />
-      </button>
+        <button
+          type="button"
+          disabled={starting}
+          onClick={recording ? () => void stopRecording() : begin}
+          aria-label={recording ? t("oats.conversation.finish") : t("oats.conversation.record")}
+          className={cn(
+            "group relative flex h-28 w-28 items-center justify-center rounded-full",
+            "transition-transform [transition-duration:var(--motion-base)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+            !recording && "hover:scale-[1.04] active:scale-[0.98]"
+          )}
+        >
+          <ListeningPulse state={recording ? "live" : "idle"} size="lg" />
+        </button>
 
-      <h1
-        className={cn(
-          "relative mt-9 max-w-lg text-center lowercase text-foreground",
-          "text-[2.5rem] font-medium leading-[1.1] tracking-[-0.03em]"
-        )}
-      >
-        {recording ? t("oats.conversation.listening") : t("oats.conversation.title")}
-      </h1>
+        <h1
+          className={cn(
+            "relative mt-9 max-w-lg text-center lowercase text-foreground",
+            "text-[2.5rem] font-medium leading-[1.1] tracking-[-0.03em]"
+          )}
+        >
+          {recording ? t("oats.conversation.listening") : t("oats.conversation.title")}
+        </h1>
 
-      {recording ? (
-        <>
-          {/* Machine state speaks in mono — the "this is what was heard" voice.
+        {recording ? (
+          <>
+            {/* Machine state speaks in mono — the "this is what was heard" voice.
               While an utterance is fresh the line IS what was heard; when the
               room has been quiet for a moment it returns to the hint. */}
-          <p className="relative mt-4 w-full max-w-md truncate text-center font-mono text-xs lowercase text-muted-foreground">
-            {lastHeard ?? t("oats.conversation.listeningHint")}
-          </p>
-          {/* Said plainly rather than asked. Oats resumed a recent conversation
+            <p className="relative mt-4 w-full max-w-md truncate text-center font-mono text-xs lowercase text-muted-foreground">
+              {lastHeard ?? t("oats.conversation.listeningHint")}
+            </p>
+            {/* Said plainly rather than asked. Oats resumed a recent conversation
               instead of stopping to check, because the check would have cost
               the first thing anybody said. */}
-          {continuingFrom && (
-            <p className="relative mt-2 text-center font-mono text-xs text-muted-foreground">
-              {t("oats.conversation.continuing", { title: continuingFrom })}
+            {continuingFrom && (
+              <p className="relative mt-2 text-center font-mono text-xs text-muted-foreground">
+                {t("oats.conversation.continuing", { title: continuingFrom })}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="relative mt-4 max-w-md text-center text-sm leading-6 text-muted-foreground">
+              {starting ? t("oats.conversation.preparing") : t("oats.conversation.subtitle")}
             </p>
-          )}
-        </>
-      ) : (
-        <>
-          <p className="relative mt-4 max-w-md text-center text-sm leading-6 text-muted-foreground">
-            {starting ? t("oats.conversation.preparing") : t("oats.conversation.subtitle")}
-          </p>
-          {/* The app teaches its own shortcut. This is the highest-value line on
+            {/* The app teaches its own shortcut. This is the highest-value line on
               the screen for somebody who has not learned it yet, because after
               they have, they will never open this window to record again. */}
-          {shortcut && (
-            <p className="relative mt-7 text-center font-mono text-xs text-muted-foreground/80">
-              {shortcut}
-            </p>
-          )}
-        </>
-      )}
+            {shortcut && (
+              <p className="relative mt-7 text-center font-mono text-xs text-muted-foreground/80">
+                {shortcut}
+              </p>
+            )}
+          </>
+        )}
 
-      {/* The microphone went flat for long enough that the room being quiet is the
+        {/* The microphone went flat for long enough that the room being quiet is the
           less likely explanation. Said once, quietly, while there is still time
           to fix it — not discovered at the end when the recording is already gone. */}
-      {recording && micSilentSince !== null && (
-        <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-foreground">
-          {t("oats.conversation.micSilent")}
-        </p>
-      )}
-      {!recording && nothingHeard && (
-        <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-muted-foreground">
-          {t("oats.conversation.nothingHeard")}
-        </p>
-      )}
+        {recording && micSilentSince !== null && (
+          <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-foreground">
+            {t("oats.conversation.micSilent")}
+          </p>
+        )}
+        {!recording && nothingHeard && (
+          <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-muted-foreground">
+            {t("oats.conversation.nothingHeard")}
+          </p>
+        )}
 
-      {/* Said before the conversation, in the place the eye already is. One line,
+        {/* Said before the conversation, in the place the eye already is. One line,
           and only the first problem: a list of three is a configuration report,
           and somebody about to sit down with another person will read one line.
           Ink rather than husk when it blocks — this is the app failing loudly at
           the start, which is the whole point of checking here. */}
-      {!recording && !nothingHeard && preflight.problem && (
-        <p
-          className={cn(
-            "relative mt-6 max-w-sm text-center text-xs leading-5",
-            preflight.blocking ? "text-foreground" : "text-muted-foreground"
-          )}
-        >
-          {t(`oats.preflight.${preflight.problem}`)}
-        </p>
-      )}
+        {!recording && !nothingHeard && preflight.problem && (
+          <p
+            className={cn(
+              "relative mt-6 max-w-sm text-center text-xs leading-5",
+              preflight.blocking ? "text-foreground" : "text-muted-foreground"
+            )}
+          >
+            {t(`oats.preflight.${preflight.problem}`)}
+          </p>
+        )}
 
-      {recording && (
-        <OpenThreadStack
-          threads={openThreads}
-          suggestions={suggestions}
-          speaking={speaking}
-          className="relative mt-10"
-        />
-      )}
-    </section>
+        {recording && (
+          <OpenThreadStack
+            threads={openThreads}
+            suggestions={suggestions}
+            speaking={speaking}
+            className="relative mt-10"
+          />
+        )}
+      </section>
+
+      {/* Outside the composition, deliberately. The section is the centred
+        `max-w-2xl` reading column; the rail belongs to the *pane*, so it
+        anchors to the window's corner rather than floating a third of the way
+        in. Being a sibling also means a card arriving cannot push the pulse,
+        the heading or the echo line around — §8 forbids a card entering from
+        shifting the layout anywhere else on screen. It renders nothing when
+        there is nothing to say. */}
+      {recording && <ConversationSignalRail />}
+    </>
   );
 }
 

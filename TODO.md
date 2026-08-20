@@ -152,21 +152,36 @@ size (1200×800, `windowConfig.js`): content **686 px** in a **694 px** pane —
 
 ## P1 — integrate the signature question cards
 
-### P1.5 Create one shared Conversation Signal Rail — NOT DONE, needs a decision
+### P1.5 One docked Conversation Signal Rail — done
 
-Question cards are still a separate always-on-top `BrowserWindow` with their own
-renderer route and IPC synchronisation, so the signature feature still reads as
-an overlay widget rather than part of the Conversation surface.
+**The decision was "always docked", taken 2026-08-20 with the trade-off stated.**
+The separate always-on-top `BrowserWindow` is deleted, not demoted: cards live in
+the Conversation surface and nowhere else.
 
-This is the largest remaining item and the only one that changes main-process
-window management. It should not be landed without a live session with real
-speech, because getting it wrong breaks the product's signature feature. The
-open design questions are: what the docked rail looks like collapsed, whether
-the overlay and the dock can ever be on screen simultaneously, and what happens
-to a card's dismissal/undo timer when the host swaps mid-conversation.
+What went with it — a whole contract, not just a window: the
+`?conversation-assist=true` renderer route, `CONVERSATION_ASSIST_WINDOW_CONFIG`,
+five IPC channels (`conversation-cards-set`, `conversation-cards-close`,
+`get-conversation-assist-data`, `conversation-assist-ready`,
+`set-conversation-assist-interactivity`), their preload and type entries, the
+main-process card cache, the sanitiser that existed to police the wire, and the
+cold-start `conversation-assist-ready` handshake. `conversation-card-search` went
+too: it took a card id rather than a URL because the overlay was the least
+trustworthy window in the app, and the rail is now the control panel's own
+renderer, which already calls `conversation-search-open` directly.
 
-**Evidence:** `src/helpers/windowManager.js:1523-1575`,
-`src/components/ConversationAssistOverlay.tsx:243-352`, `CLAUDE.md:31`.
+Cards are published into `useMeetingRecordingStore.questionCards`, so there is
+one copy of card state and nothing to keep in sync.
+
+**The accepted cost:** a conversation recorded with the panel hidden — which the
+global shortcut makes the normal case — shows no cards until Oats is opened.
+Nothing is lost; every card already exists in the note, and the floating oat and
+the tray still show that a conversation is running.
+
+Verified in the running app: the rail is absent when idle, renders four groups
+with the fifth behind an "earlier" chip, nests a re-asking under the question it
+repeats, anchors 20px off the pane's bottom-right corner, and reads in both
+colour modes. Every removed bridge method is gone from `window.electronAPI`;
+`openConversationSearch` and `dismissConversationCard` remain. No console errors.
 
 ## P1 — remove the OpenWhispr seam
 
@@ -247,6 +262,114 @@ leaves the device. `docs/network-allowlist.md` was already accurate.
 - `MicrophoneSettings` refresh — the icon-only button has an accessible name
   (`microphoneSettings.refresh`, added to all 10 locales) and the icon is
   `aria-hidden`.
+
+## P1 — art-direction reset: private conversation ledger
+
+The visual problem is not a missing polish pass. Oats currently carries two
+brands at once: a high-signal, private conversation tool and a literal pastoral
+world. The field system is a complete second identity — slate-blue sky, warm
+horizon, wheat, birds, chaff, and a Japanese farmhouse — behind a product that
+claims to be a quiet, pencil-like instrument for consequential conversations.
+
+### The decision
+
+**Retire the literal field world.** Keep the husked-oat seed and ordered dither;
+remove the sky, birds, farmhouse, wheat blades, chaff, and the rule that a
+scenery backdrop must always be present.
+
+Blue and toasted yellow can work together in a landscape, but that is precisely
+the problem: together they say pleasant summer landscape, wellness app, or
+artisanal farm brand rather than private local intelligence. The slate blue is
+not incidental: it is deliberately boosted on light paper even though the
+design language says “no cold blues”. A code comment that calls it weather rather
+than a brand colour cannot change the image a user sees.
+
+The minka is visually specific but unearned by the product, audience, or story.
+It should not survive merely because it is beautiful.
+
+**Evidence:** `DESIGN.md` §1 and §3; `src/components/conversation/field/fieldModel.ts`
+(`SKY_BLUE`, `SKY_LIGHT_BOOST`, and minka geometry);
+`src/components/conversation/field/FieldGL.tsx`.
+
+### Replacement thesis
+
+Build Oats as a **private conversation ledger**, not a field:
+
+> A living local record of thought, with the evidence of a conversation made
+> visible but never made theatrical.
+
+Its signature becomes a **conversation contour**: a thin dithered trace built
+from actual speech density, topic shifts, questions, unanswered moments, and
+returns to earlier threads. Dither must carry information — time, confidence,
+or unresolvedness — rather than functioning as decorative wallpaper.
+
+The oat is a grain in the margin, not a countryside behind the document.
+
+### Conversation surface
+
+- Keep the oat seed as the record/stop control and the sole recording signal.
+- Replace the centred hero over scenery with a purposeful live composition:
+  running time, a calm last-heard line, and a growing conversation contour.
+- Render questions as margin annotations connected to their place in the live
+  trace, rather than floating rounded cards from a separate application window.
+- ~~Dock the shared Conversation Signal Rail in the control panel when it is
+  open; use a detached overlay only when Oats is hidden or minimized.~~
+  **Superseded 2026-08-20:** the detached overlay is deleted, not kept as a
+  fallback — see P1.5 above. The rail is docked, always. What survives from this
+  bullet is the part the reset actually cares about: cards must stop reading as
+  "floating rounded cards from a separate application window", which is now a
+  rendering question inside one surface rather than a windowing question.
+- The live screen must foreground evidence, not atmosphere.
+
+### Intelligence surface
+
+- Make source-linked local recall the first visual action, available regardless
+  of conversation count.
+- Treat the opened conversation as an evidence reader: summary, decisions,
+  questions, and exact transcript support in one flowing document.
+- Use topic/thread marks in the transcript margin. Keep force graphs as a
+  secondary **Connections** lens for a question that genuinely requires one,
+  rather than making an Obsidian-shaped graph the default payoff.
+- Show a small contour/marker strip beside conversations in the list so personal
+  history has a recognizable visual grammar without scenery.
+
+### Settings and onboarding
+
+- Remove all scenery from Settings. It is a maintenance surface for hardware,
+  privacy, and local processing; paper/charcoal, disciplined layout, and exact
+  copy are enough.
+- Redesign onboarding in the same system. The inherited card/wizard form,
+  progress/footer controls, rounded pills, and Lucide icon furniture currently
+  make first run look like a different product from the Oats workspace.
+- Do not retain legacy rounded-card/pill language as the visual default just
+  because it is already available in shadcn/OpenWhispr components.
+
+### Palette, type, and hierarchy
+
+- Use materials, not scenery: paper, graphite, flax signal, fog structure, moss
+  for resolved state, and oxide for confirmed unknown/denial. Remove blue as a
+  visual-world colour.
+- Restrict flax/gold to a momentary recording/selection mark. It is not a general
+  premium accent or body-text colour.
+- Keep `oats` lowercase as the wordmark, but restore sentence case for interface
+  labels, commands, and conversation titles. Persistent lowercase makes the
+  product feel softer and more lifestyle-coded than the intended audience.
+- Do not solve this by adding a fashionable display serif. Earn personality from
+  the conversation contour, evidence hierarchy, and precise spacing first.
+
+### Navigation and screen structure
+
+- Reconsider bottom-centred navigation as the main desktop navigation model. It
+  makes the app read like a consumer media experience and disappears during the
+  moment the user most needs orientation.
+- Preserve the three primary surfaces, but give each a stable, restrained
+  orientation cue rather than relying on a shared horizon.
+- The “one accent / one idea” rule is useful discipline, not an excuse for every
+  screen to be empty or for meaningful state to become visually timid.
+
+**Done when:** a real visual review can describe Oats as a private evidence tool
+without mentioning a field, sky, rural scene, or meditation app; the signature
+element is visibly derived from what was said in the conversation.
 
 ## Verification gates
 
