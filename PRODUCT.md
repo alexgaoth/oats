@@ -63,8 +63,12 @@ sharp, quiet person sitting next to you:
 - **It hands you structure, not a wall of text.** The Graph view lays out the
   actual shape of a conversation — every question, whether it was answered, and
   what to follow up on.
-- **It never acts behind your back.** Nothing is searched, sent, or shared until
-  you touch it. Quiet by default, helpful on demand.
+- **It acts in exactly one place, and says so.** Audio, transcripts, summaries
+  and reasoning never leave the machine. The single exception is a question
+  somebody was asked and answered "I don't know" to: Oats opens that search in a
+  background browser window so the answer is already waiting. Only the question
+  text is sent, it is stated on the surface that does it, and it is one toggle
+  in Settings to turn off. Nothing else is ever searched, sent, or shared.
 
 The bet: founders don't want _more transcription_. They want a tool that feels
 human, keeps their secrets, and is there instantly. That's the whole game.
@@ -77,8 +81,11 @@ The product is one motion, repeated all day:
    **local listening session.**
 2. Oats transcribes on-device, in real time, and watches for the human moments
    worth surfacing (unanswered questions today; more signals to come).
-3. A small, dismissible card offers help exactly when it's useful — never
-   automatically, never noisily.
+3. A card appears the instant a question is asked — every question, not only
+   the unanswered ones — and resolves in place once the reply is read. A
+   confirmed "I don't know" opens the search in the background; silence, a
+   hedge, or an answer just records the outcome. Never noisily, never stealing
+   focus, always one click to dismiss.
 4. Afterward, the note + Graph view give the founder the structured memory of
    what happened, searchable by meaning, entirely locally.
 
@@ -150,8 +157,10 @@ mostly subtraction, not building:
    preserved or reskinned, and a large overhaul is sanctioned where a surface
    fails the pencil test structurally rather than cosmetically.)
 5. **Earn the trust claim.** Notarize the DMG, measure idle CPU of the
-   always-listening detector, and network-trace a full session to _prove_
-   nothing leaves the device except an explicit click or a user-added key.
+   always-listening detector, and network-trace a full session to _prove_ the
+   boundary is where the interface says it is: model downloads, a user-added
+   key, and the text of a question met with a confirmed "I don't know" — and
+   nothing else, ever, in either direction.
 
 ## Next step
 

@@ -28,7 +28,7 @@ The `conversationAide` implementation still reflects a narrower earlier design. 
 
 Because of rule 2, **never write "nothing leaves your device"** in UI copy, docs, or comments. The accurate claim: audio and transcripts stay on the device; the text of questions nobody could answer is sent to the configured search host. See `docs/network-allowlist.md`.
 
-**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the *renderer*, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, default **true** since 2026-08-07; a closed gate logs to the debug logger and surfaces as the `question-cards-off` preflight line under the record button). The detection and verdict patterns cover all ten shipped locales — JS `\b` is ASCII-only, so the non-English patterns use explicit boundary classes (spaced scripts) or none (CJK); see the comment block in `conversationAide.mjs` before touching them, and change verdict patterns only with both-direction test pins (a false `denied` auto-opens a browser; `test/helpers/conversationAide.test.js` pins ~250 assertions from a 3-round critic loop, including deliberately-declined patterns — do not re-add unaccented es "no se" or whitespace-terminated CJK question endings without new evidence). Finalized segments arrive every ~5s in local mode (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards flow renderer → `conversation-cards-set` IPC → `windowManager.showConversationCards` → a separate always-on-top overlay window (`AppRouter` route `?conversation-assist=true` → `ConversationAssistOverlay`), shown only after the overlay's `conversation-assist-ready` handshake. That handshake is the house pattern: a `webContents.send` fired right after window creation dies before any renderer listener exists, so cold-start events need push-plus-pull (see `consume-pending-focus-search` for the recall hotkey).
+**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the _renderer_, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, default **true** since 2026-08-07; a closed gate logs to the debug logger and surfaces as the `question-cards-off` preflight line under the record button). The detection and verdict patterns cover all ten shipped locales — JS `\b` is ASCII-only, so the non-English patterns use explicit boundary classes (spaced scripts) or none (CJK); see the comment block in `conversationAide.mjs` before touching them, and change verdict patterns only with both-direction test pins (a false `denied` auto-opens a browser; `test/helpers/conversationAide.test.js` pins ~250 assertions from a 3-round critic loop, including deliberately-declined patterns — do not re-add unaccented es "no se" or whitespace-terminated CJK question endings without new evidence). Finalized segments arrive every ~5s in local mode (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards flow renderer → `conversation-cards-set` IPC → `windowManager.showConversationCards` → a separate always-on-top overlay window (`AppRouter` route `?conversation-assist=true` → `ConversationAssistOverlay`), shown only after the overlay's `conversation-assist-ready` handshake. That handshake is the house pattern: a `webContents.send` fired right after window creation dies before any renderer listener exists, so cold-start events need push-plus-pull (see `consume-pending-focus-search` for the recall hotkey).
 
 `DESIGN.md` is the binding visual spec (six signature surfaces: pulse, question card, open-thread stack, topic graph, lifetime graph, wheat field).
 
@@ -42,6 +42,28 @@ Re-deriving these costs hours, so they are recorded here:
 - A freshly created `uinput` device is **not usable for ~200ms+** — udev, then libinput, then the compositor. Writes before that succeed at the kernel and are silently dropped, so the paste tool exits 0 while nothing was typed. `resources/linux-fast-paste.c` waits 300ms.
 - **`setIgnoreMouseEvents(true, { forward: true })` does not forward on Linux.** `forward` is macOS and Windows only; on Linux Electron replaces the window's X11 _input shape_ with a 1×1 rectangle, so a click-through window receives **no** mouse events — including the `mouseenter` that would turn it back on. Any design where the renderer's own hover decides its click-through state deadlocks on the first `mouseleave`. The floating oat's state is therefore decided in the main process from three inputs (renderer hold, real cursor position, drag in progress) — `oatInteractivity.js`, applied by `windowManager`, with a 250ms cursor poll while the oat is on screen as the only way back.
 - **Fn cannot be a hotkey on Linux.** Most keyboards handle it in firmware and never emit `KEY_FN`, and `hotkeyManager.js` rejects `Fn`/`GLOBE` outside macOS. Right-side modifiers (`RightAlt` and friends) are the working single-key equivalent.
+
+### Running a second Oats to check a claim (2026-08-19)
+
+`OATS_CHANNEL=staging npx electron . --remote-debugging-port=PORT --ozone-platform=x11`
+drives the real app without disturbing one the user has open. Three traps:
+`OATS_CHANNEL` is what isolates userData, **not** `--user-data-dir` (`main.js`
+calls `app.setPath` and overrides it); pass `--ozone-platform=x11` yourself or
+the XWayland re-exec loses the race to rebind the debug port and Chromium
+disables remote debugging silently; and a killed instance can leave a `pactl
+subscribe` child holding the inherited listening socket, so the port accepts TCP
+and never answers (`ss -ltnp` names the holder). `npm run perf:baseline` does all
+of this — procedure and numbers in `docs/performance-baseline.md`.
+
+### The Oats/OpenWhispr style boundary is `.oats-surface` (2026-08-19)
+
+Inherited `input`/`textarea` and `.card` rules in `index.css` are element and
+class selectors, so they outrank the utilities an Oats component sets on itself.
+They are scoped **out of any `.oats-surface` subtree** — the class is on each Oats
+surface root in `OatsWorkspace.tsx`, and deliberately _not_ on the Advanced
+Settings branch, which is the inherited app and should keep looking like itself.
+Never reach for `.input-inline` inside an Oats surface; it is the per-element
+opt-out for legacy components only.
 
 `IMPLEMENTATION.md` tracks build stages; `TODO.md` is the live tracker for what is
 outstanding. Stages 8–10 are built but not yet exercised against real speech.
@@ -182,7 +204,7 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **App.jsx**: Main dictation interface with recording states
 - **OnboardingFlow.tsx**: A single step — microphone permission. That is the only thing that genuinely blocks a first conversation; the dictation-shortcut and congratulations steps were removed (2026-07-30). `ControlPanel.tsx` was deleted in the same pass: its render had become unreachable above a bare `return <OatsWorkspace />`.
 - **PostMigrationOnboarding.tsx**: One-time modal for users returning from the pre-Gizmo bundle ID; reuses `PermissionsSection` to walk through re-granting Microphone, Accessibility, and System Audio. Triggered by `postMigrationDetector.js` (see Helper Modules)
-- **SettingsPage.tsx**: Comprehensive settings interface
+- **SettingsPage.tsx**: The inherited settings application. Reached **only** from Advanced, as a `React.lazy` chunk — never static-import it, or the Oats path pays 230 kB for a room it does not walk into.
 - **WhisperModelPicker.tsx**: Model selection and download UI
 - **OatsWorkspace.tsx**: The three-surface Oats workspace (Conversation, Intelligence, Settings) — the live product shell, mounted directly by `AppRouter.jsx`. It also hosts two **headless** mounts that were previously stranded in unreachable `ControlPanel` markup and so did nothing: `MeetingRecordingMount` (mic level, the dead-microphone warning, audio-worklet pre-warm) and `BackgroundActionToastListener` (surfaces post-recording intelligence failures). If either is unmounted, those failures go silent.
 - **conversation/**: The signature surfaces that live during recording (DESIGN.md §9)
@@ -195,13 +217,14 @@ Oats is an Electron-based, local-first conversation intelligence application tha
   - **field/FieldCanvas.tsx**: 2D fallback drawing the same field, sparser and without dither (§7 forbids faking the grain, so it is omitted rather than counterfeited)
 - **ui/**: Reusable UI components (buttons, cards, inputs, etc.)
 
-**Editing the wheat field — five things that will bite you:**
+**Editing the wheat field — six things that will bite you:**
 
 1. **Opacity accumulates.** The ~50% ceiling is on what reaches the screen, not on one blade. An early version at 7,200 blades and individually "safe" alpha stacked into an opaque wall that swallowed the copy. It is 1,800 now. Fewer and fainter when in doubt.
 2. **Blades must be spread vertically within their band**, or the six bands render as visible horizontal seams.
 3. **Nothing may call `getComputedStyle` in the draw loop.** Palette is read on mount and on theme change via `MutationObserver`. The old implementation read it every frame, forcing a style recalculation 30×/second for the length of a conversation.
 4. **Props passed to `FieldGL` must be referentially stable.** Its GL effect re-runs when `onFailure` (or `scene`/`reduced`) changes identity, and the rebuild silently resets grow/recede state — the exact history a `live` transition needs. `Field.tsx` uses `useCallback` for this reason; an inline arrow reintroduces the bug. `FieldCanvas` keeps that state in a ref because its effect legitimately re-runs on `live`.
 5. **Screenshot verification has its own traps.** Both draw loops gate on `document.hidden`, so a backgrounded Chrome window shows a stale (or never-drawn) canvas — screenshots of it lie. Headless `google-chrome --screenshot`/`--virtual-time-budget` advances RAF only a frame or two; drive headless Chrome over CDP (Node 24's native WebSocket suffices) and wait wall-clock time instead. The browser-extension `javascript_tool` runs in an isolated world: it cannot read page globals or patch the page's `document.hidden`.
+6. **The loop must stop, not idle.** `Field` takes `animate`, and both renderers cancel their rAF entirely — not just skip the draw — off the Conversation surface, under `prefers-reduced-motion`, and on Conversation once the wheat has withdrawn with nothing recording. In that last state blades and chaff are gated on `grow` and the backdrop reads `uTime` only inside `uGrow > 0`, so every frame is byte-identical; redrawing it at 60fps cost **113% of a core** on Linux (software compositing reads the canvas back every frame), and 17% after. A stopped loop only redraws when something calls `wake()`, so any new input to a settled frame — theme, size, `live`, `intensity`, `animate` — must wake it. The theme switch lives in Advanced Settings, where the field is frozen.
 
 ### React Hooks (src/hooks/)
 

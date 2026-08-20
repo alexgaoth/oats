@@ -65,11 +65,15 @@ function readCanvasPalette(element: HTMLElement): CanvasPalette {
 export default function FieldCanvas({
   live,
   intensity,
+  animate,
   scene,
   reduced,
 }: {
   live: boolean;
   intensity: number;
+  /** Whether the world moves. False on the reading surfaces: one settled frame
+   *  and no loop at all. */
+  animate: boolean;
   /** Which scenery accompanies recording. Drawn smooth here — §7 forbids
    *  counterfeiting the grain, so the fallback omits the dither, as it does
    *  for the blades. */
@@ -113,6 +117,10 @@ export default function FieldCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // See FieldGL: the world only moves on Conversation, for a user who wants
+    // motion. Everywhere else it is a photograph of itself.
+    const still = reduced || !animate;
+
     const field = createField(BLADE_COUNT);
     const styles = Array.from({ length: BANDS }, (_, b) => bandStyle(b));
     const spreads = Array.from({ length: BANDS }, (_, b) => bandSpread(b));
@@ -121,6 +129,9 @@ export default function FieldCanvas({
     paletteRef.current = readCanvasPalette(canvas);
     const themeObserver = new MutationObserver(() => {
       paletteRef.current = readCanvasPalette(canvas);
+      // Nothing is looping to pick the new palette up on a still surface, and
+      // the theme switch lives on one of them (Advanced Settings).
+      if (still) draw(INTRO_MS);
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
@@ -164,9 +175,9 @@ export default function FieldCanvas({
       ctx.clearRect(0, 0, width, height);
 
       // The wheat follows `live`; the world below does not.
-      const grow = reduced ? (live ? 1 : 0) : liveProgress(elapsed);
-      const time = reduced ? 0 : elapsed / 1000;
-      const pointer = reduced ? null : pointerRef.current;
+      const grow = still ? (live ? 1 : 0) : liveProgress(elapsed);
+      const time = still ? 0 : elapsed / 1000;
+      const pointer = still ? null : pointerRef.current;
       const parallax = pointer ? (pointer.x / width - 0.5) * 2 : 0;
 
       // The world: sky warming toward the horizon, and earth below it. No
@@ -239,7 +250,7 @@ export default function FieldCanvas({
       // The recording's birds (scene "scene" only): a few distant "v" strokes
       // crossing the cleared sky right to left, wingbeat as a slow flex. Same
       // positions as the shader's specks, from the same BIRDS constants.
-      if (grow > 0.001 && scene === "scene" && !reduced) {
+      if (grow > 0.001 && scene === "scene" && !still) {
         ctx.strokeStyle = colors[0];
         ctx.globalAlpha = 0.5 * grow * intensity;
         ctx.lineWidth = 1;
@@ -323,7 +334,7 @@ export default function FieldCanvas({
       ctx.globalAlpha = 1;
     };
 
-    if (reduced) {
+    if (still) {
       draw(INTRO_MS);
       return () => themeObserver.disconnect();
     }
@@ -341,6 +352,11 @@ export default function FieldCanvas({
       if (now - lastFrame < FRAME_MS) return;
       lastFrame = now;
       draw(now - startedAt);
+
+      // Mirrors FieldGL: with no conversation running and the wheat withdrawn,
+      // every remaining draw paints the identical picture. The effect re-runs
+      // on the next `live` transition, which is what starts it again.
+      if (!live && motion.grown <= 0.001) cancelAnimationFrame(raf);
     };
     raf = requestAnimationFrame(tick);
 
@@ -348,7 +364,7 @@ export default function FieldCanvas({
       cancelAnimationFrame(raf);
       themeObserver.disconnect();
     };
-  }, [live, intensity, scene, reduced]);
+  }, [live, intensity, animate, scene, reduced]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

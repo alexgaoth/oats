@@ -372,10 +372,30 @@
 @layer base {
   * {
     border-color: var(--color-border);
+  }
+
+  /* Colour transitions belong to the things that answer you.
+     Declaring them on `*` put every node in the document on Chromium's
+     transition list — every row of a legacy Advanced panel, every graph label,
+     every list item — so a theme switch or any class change became a
+     document-wide animation, and no element could be instant without opting
+     out. Interactive elements are the ones that hover, focus and press, which
+     is exactly what DESIGN.md §8 gives `--motion-instant` to. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="option"],
+  [role="switch"],
+  .card {
     transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
+      background-color var(--motion-instant) var(--ease-oats),
+      border-color var(--motion-instant) var(--ease-oats),
+      color var(--motion-instant) var(--ease-oats);
   }
 
   body {
@@ -476,14 +496,26 @@ a svg:hover,
 
 /* Premium input styling with subtle depth.
  *
- * Inherited OpenWhispr chrome. It is an *element* selector, so it outranks the
- * Tailwind utility classes a component sets on itself — `border-b bg-transparent`
- * on an Oats input lost to this rule and the box came back, which is why F2
- * ("inputs lose their boxes → bottom hairline, gold on focus") was reported as
- * done and was not visibly done. `.input-inline` is the opt-out; the three Oats
- * surfaces use it. */
-input:not(.input-inline),
-textarea:not(.input-inline) {
+ * Inherited OpenWhispr chrome, and the seam between the two design systems.
+ * It is an *element* selector, so it outranks the Tailwind utility classes a
+ * component sets on itself — `border-b bg-transparent` on an Oats input lost
+ * to this rule and the box came back, which is why F2 ("inputs lose their
+ * boxes → bottom hairline, gold on focus") was reported as done and was not
+ * visibly done.
+ *
+ * Two exclusions, and they are not the same thing.
+ *
+ *   `.oats-surface` is the **boundary**: nothing inherited reaches inside an
+ *   Oats surface, so an Oats control is styled by what its own component says
+ *   and nothing else. New Oats markup needs no opt-out and cannot forget one.
+ *   Advanced Settings is deliberately outside it — it *is* the inherited
+ *   application, and it should keep looking like itself.
+ *
+ *   `.input-inline` stays as the per-element opt-out for legacy components
+ *   (the note editor, the chat input) that want a bare field inside the
+ *   inherited world. */
+input:not(.input-inline):not(:where(.oats-surface *)),
+textarea:not(.input-inline):not(:where(.oats-surface *)) {
   border-radius: var(--radius);
   transition:
     background-color 0.2s ease,
@@ -495,37 +527,39 @@ textarea:not(.input-inline) {
 }
 
 /* Light mode inputs */
-:root input:not(.input-inline),
-:root textarea:not(.input-inline) {
+:root input:not(.input-inline):not(:where(.oats-surface *)),
+:root textarea:not(.input-inline):not(:where(.oats-surface *)) {
   background-color: var(--color-background);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
 }
 
-:root input:not(.input-inline):focus,
-:root textarea:not(.input-inline):focus {
+:root input:not(.input-inline):not(:where(.oats-surface *)):focus,
+:root textarea:not(.input-inline):not(:where(.oats-surface *)):focus {
   border-color: var(--color-border-active);
   box-shadow: 0 0 0 2px oklch(from var(--color-ring) l c h / 0.15);
   background-color: var(--color-background);
 }
 
 /* Dark mode inputs — flat, no embossed shadow */
-.dark input:not(.input-inline),
-.dark textarea:not(.input-inline) {
+.dark input:not(.input-inline):not(:where(.oats-surface *)),
+.dark textarea:not(.input-inline):not(:where(.oats-surface *)) {
   background-color: var(--color-input);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   box-shadow: none;
 }
 
-.dark input:not(.input-inline):focus,
-.dark textarea:not(.input-inline):focus {
+.dark input:not(.input-inline):not(:where(.oats-surface *)):focus,
+.dark textarea:not(.input-inline):not(:where(.oats-surface *)):focus {
   border-color: var(--color-border-active);
   box-shadow: 0 0 0 2px oklch(from var(--color-ring) l c h / 0.15);
 }
 
-/* Card styling - elevated parchment */
-.card {
+/* Card styling - elevated parchment. Inherited, and kept out of Oats surfaces
+   for the same reason as the input chrome above: a lifting, shadowed panel is
+   the SaaS-dashboard language DESIGN.md §1 and §6 exist to refuse. */
+.card:not(:where(.oats-surface *)) {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -535,18 +569,18 @@ textarea:not(.input-inline) {
     transform 0.2s ease;
 }
 
-.card:hover {
+.card:not(:where(.oats-surface *)):hover {
   box-shadow: var(--shadow-card-hover, 0 4px 12px oklch(from var(--color-foreground) l c h / 0.1));
   transform: translateY(-1px);
 }
 
 /* Dark mode cards — grounded, no lift, subtle border glow */
-.dark .card {
+.dark .card:not(:where(.oats-surface *)) {
   border-color: var(--color-border-subtle);
   box-shadow: var(--shadow-card);
 }
 
-.dark .card:hover {
+.dark .card:not(:where(.oats-surface *)):hover {
   box-shadow: var(--shadow-card-hover);
   transform: none;
   border-color: var(--color-border-hover);

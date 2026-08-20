@@ -48,61 +48,69 @@ export const MicrophoneSettings: React.FC<MicrophoneSettingsProps> = ({
     onDeviceSelectRef.current = onDeviceSelect;
   }, [preferBuiltInMic, selectedMicDeviceId, selectedMicDeviceLabel, onDeviceSelect]);
 
-  const loadDevices = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  // `mayOpenMic` is false for anything the user did not ask for. Unlocking the
+  // labels means opening the microphone, and this panel stays mounted behind
+  // the other surfaces once Advanced has been visited — so a `devicechange`
+  // from plugging in a headset could otherwise open the microphone on a screen
+  // nobody is looking at.
+  const loadDevices = useCallback(
+    async (mayOpenMic = true) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      // Acquiring the mic just to read labels interrupts other audio (pauses
-      // music on macOS), so only do it when labels are missing (no permission yet).
-      let allDevices = await navigator.mediaDevices.enumerateDevices();
-      const hasLabels = allDevices.some((d) => d.kind === "audioinput" && d.label);
-      if (!hasLabels) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-        allDevices = await navigator.mediaDevices.enumerateDevices();
-      }
+      try {
+        // Acquiring the mic just to read labels interrupts other audio (pauses
+        // music on macOS), so only do it when labels are missing (no permission yet).
+        let allDevices = await navigator.mediaDevices.enumerateDevices();
+        const hasLabels = allDevices.some((d) => d.kind === "audioinput" && d.label);
+        if (!hasLabels && mayOpenMic) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+          allDevices = await navigator.mediaDevices.enumerateDevices();
+        }
 
-      const audioInputs = allDevices
-        .filter((d) => d.kind === "audioinput")
-        .map((d) => ({
-          deviceId: d.deviceId,
-          label: d.label || `Microphone ${d.deviceId.slice(0, 8)}`,
-          isBuiltIn: isBuiltInMicrophone(d.label),
-        }));
+        const audioInputs = allDevices
+          .filter((d) => d.kind === "audioinput")
+          .map((d) => ({
+            deviceId: d.deviceId,
+            label: d.label || `Microphone ${d.deviceId.slice(0, 8)}`,
+            isBuiltIn: isBuiltInMicrophone(d.label),
+          }));
 
-      setDevices(audioInputs);
+        setDevices(audioInputs);
 
-      const resolvedSelection = resolveMicDeviceSelection(
-        audioInputs,
-        selectedDeviceRef.current,
-        selectedDeviceLabelRef.current
-      );
-      if (
-        resolvedSelection.device &&
-        (resolvedSelection.status === "remapped" || !selectedDeviceLabelRef.current)
-      ) {
-        onDeviceSelectRef.current(
-          resolvedSelection.device.deviceId,
-          resolvedSelection.device.label
+        const resolvedSelection = resolveMicDeviceSelection(
+          audioInputs,
+          selectedDeviceRef.current,
+          selectedDeviceLabelRef.current
         );
-      }
+        if (
+          resolvedSelection.device &&
+          (resolvedSelection.status === "remapped" || !selectedDeviceLabelRef.current)
+        ) {
+          onDeviceSelectRef.current(
+            resolvedSelection.device.deviceId,
+            resolvedSelection.device.label
+          );
+        }
 
-      // If no device is selected and not preferring built-in, select the first device
-      if (!preferBuiltInRef.current && !selectedDeviceRef.current && audioInputs.length > 0) {
-        onDeviceSelectRef.current(audioInputs[0].deviceId, audioInputs[0].label);
+        // If no device is selected and not preferring built-in, select the first device
+        if (!preferBuiltInRef.current && !selectedDeviceRef.current && audioInputs.length > 0) {
+          onDeviceSelectRef.current(audioInputs[0].deviceId, audioInputs[0].label);
+        }
+      } catch {
+        setError(t("microphoneSettings.errors.unableToAccess"));
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      setError(t("microphoneSettings.errors.unableToAccess"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [t]);
+    },
+    [t]
+  );
 
   useEffect(() => {
     loadDevices();
 
-    const handleDeviceChange = () => loadDevices();
+    const handleDeviceChange = () => loadDevices(false);
     navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
 
     return () => {
@@ -152,11 +160,16 @@ export const MicrophoneSettings: React.FC<MicrophoneSettingsProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={loadDevices}
+              onClick={() => void loadDevices(true)}
               disabled={isLoading}
+              aria-label={t("microphoneSettings.refresh")}
+              title={t("microphoneSettings.refresh")}
               className="h-7 w-7 p-0"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                aria-hidden="true"
+                className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
 

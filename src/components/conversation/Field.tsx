@@ -85,6 +85,7 @@ function usePrefersReducedMotion(): boolean {
 export default function Field({
   live,
   intensity = 1,
+  animate = true,
   className,
 }: {
   live: boolean;
@@ -95,6 +96,13 @@ export default function Field({
    * strength the horizon line draws straight through a paragraph.
    */
   intensity?: number;
+  /**
+   * Whether the world moves. The reading surfaces get a still frame of it: the
+   * wind is a backdrop for a conversation, and a renderer that keeps drawing it
+   * behind a page of text is spending a laptop battery on something nobody is
+   * looking at.
+   */
+  animate?: boolean;
   className?: string;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -115,12 +123,19 @@ export default function Field({
         <FieldGL
           live={live}
           intensity={intensity}
+          animate={animate}
           scene={scene}
           reduced={reduced}
           onFailure={onFailure}
         />
       ) : (
-        <FieldCanvas live={live} intensity={intensity} scene={scene} reduced={reduced} />
+        <FieldCanvas
+          live={live}
+          intensity={intensity}
+          animate={animate}
+          scene={scene}
+          reduced={reduced}
+        />
       )}
     </div>
   );

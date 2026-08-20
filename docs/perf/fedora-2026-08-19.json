@@ -1,0 +1,36 @@
+{
+  "when": "2026-08-20T04:28:13.167Z",
+  "platform": "linux x64",
+  "coldLaunchToInteractiveMs": 2613,
+  "warmReloadToInteractiveMs": 9,
+  "surfaceSwitchMs": {
+    "conversation": {
+      "p50": 28.8,
+      "p95": 32.1
+    },
+    "intelligence": {
+      "p50": 26.5,
+      "p95": 29.5
+    },
+    "settings": {
+      "p50": 12.6,
+      "p95": 15
+    }
+  },
+  "settingsFirstOpenMs": 15,
+  "advancedFirstOpenMs": 362,
+  "idlePerSurface": {
+    "conversation": {
+      "cpuPercent": 17.1,
+      "rssMb": 1042
+    },
+    "intelligence": {
+      "cpuPercent": 18.1,
+      "rssMb": 1024
+    },
+    "settings": {
+      "cpuPercent": 16.7,
+      "rssMb": 1028
+    }
+  }
+}

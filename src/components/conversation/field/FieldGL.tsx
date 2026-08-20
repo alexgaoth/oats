@@ -58,6 +58,9 @@ const MIN_DENSITY = 0.35;
  *  grew: arriving should feel like weather, leaving like settling. */
 const RECEDE_MS = 2200;
 
+/** Below this the wheat is gone and the world is at rest — see the loop. */
+const AT_REST = 0.0005;
+
 interface Palette {
   bandColors: Rgb[];
   gold: Rgb;
@@ -188,6 +191,7 @@ function chaffData(): Float32Array {
 export default function FieldGL({
   live,
   intensity,
+  animate,
   scene,
   reduced,
   onFailure,
@@ -196,6 +200,12 @@ export default function FieldGL({
   live: boolean;
   /** How present the world is on this surface, 0..1. */
   intensity: number;
+  /**
+   * Whether the world is in motion. False on the reading surfaces, where the
+   * field is a still image: the loop draws one settled frame and then stops
+   * entirely rather than holding vsync open for a backdrop nobody is watching.
+   */
+  animate: boolean;
   /** Which scenery accompanies recording (DESIGN.md §9.9). */
   scene: FieldScene;
   reduced: boolean;
@@ -209,6 +219,19 @@ export default function FieldGL({
   liveRef.current = live;
   const intensityRef = useRef(intensity);
   intensityRef.current = intensity;
+  const animateRef = useRef(animate);
+  animateRef.current = animate;
+
+  // Set by the GL effect below. Anything that changes what a settled frame
+  // should look like calls it: the loop is not running to notice for itself.
+  const wakeRef = useRef<(() => void) | null>(null);
+
+  // `intensity` and `live` are read through refs so they never rebuild the GL
+  // context (which would reset the grow/recede state mid-transition), which
+  // also means a change to either draws nothing until the loop is woken.
+  useEffect(() => {
+    wakeRef.current?.();
+  }, [animate, intensity, live]);
 
   useEffect(() => {
     if (reduced) return;
@@ -353,6 +376,9 @@ export default function FieldGL({
       paletteRef.current = readPalette(canvas);
       const themeObserver = new MutationObserver(() => {
         paletteRef.current = readPalette(canvas);
+        // Oat milk to steel-cut is switched from Advanced Settings, where the
+        // field is frozen. Without this the world keeps yesterday's palette.
+        wakeRef.current?.();
       });
       themeObserver.observe(document.documentElement, {
         attributes: true,
@@ -378,7 +404,9 @@ export default function FieldGL({
         gl.viewport(0, 0, pixelW, pixelH);
         return true;
       };
-      const resizeObserver = new ResizeObserver(() => resize());
+      const resizeObserver = new ResizeObserver(() => {
+        if (resize()) wakeRef.current?.();
+      });
       resizeObserver.observe(canvas);
       cleanupFns.push(() => resizeObserver.disconnect());
 
@@ -397,18 +425,25 @@ export default function FieldGL({
       // The countryside rides `grow` itself — no timing of its own.
       const sceneId = SCENE_IDS[scene];
 
+      // The world only moves on the Conversation surface, and only for a user
+      // who wants motion. Everywhere else it is a photograph of itself.
+      const settled = () => reduced || !animateRef.current;
+
       const drawFrame = (elapsedMs: number) => {
         if (!resize()) return;
         const palette = paletteRef.current;
         if (!palette) return;
 
+        const still = settled();
         const isLive = liveRef.current;
         if (isLive !== lastLive) {
           lastLive = isLive;
           growFrom = grow;
           growStartedAt = elapsedMs;
         }
-        if (reduced) {
+        if (still) {
+          // Snap rather than freeze mid-transition: a still frame of half-grown
+          // wheat is an animation somebody paused, not a settled world.
           grow = isLive ? 1 : 0;
         } else {
           const span = isLive ? INTRO_MS : RECEDE_MS;
@@ -417,8 +452,8 @@ export default function FieldGL({
           grow = growFrom + ((isLive ? 1 : 0) - growFrom) * eased;
         }
 
-        const time = reduced ? 0 : elapsedMs / 1000;
-        const pointer = reduced ? null : pointerRef.current;
+        const time = still ? 0 : elapsedMs / 1000;
+        const pointer = still ? null : pointerRef.current;
 
         gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -473,7 +508,7 @@ export default function FieldGL({
 
         // 3. Chaff — atmosphere, and the reason the settled field never reads as
         //    a still image.
-        if (grow > 0.02 && strength > 0.3 && !reduced) {
+        if (grow > 0.02 && strength > 0.3 && !still) {
           gl.useProgram(chaff);
           gl.bindVertexArray(chaffVao);
           gl.uniform2f(chaffU.resolution, width, height);
@@ -486,41 +521,79 @@ export default function FieldGL({
         gl.bindVertexArray(null);
       };
 
-      if (reduced) {
-        requestAnimationFrame(() => {
-          if (!disposed) drawFrame(INTRO_MS);
-        });
-      } else {
-        const startedAt = performance.now();
-        let lastFrame = startedAt;
+      const startedAt = performance.now();
+      let lastFrame = startedAt;
+      let running = false;
 
-        const tick = (now: number) => {
-          if (disposed) return;
-          raf = requestAnimationFrame(tick);
+      const tick = (now: number) => {
+        if (disposed) return;
 
-          // CONTROL_PANEL_CONFIG sets backgroundThrottling: false, so Chromium
-          // will happily run this loop for an hour behind another window.
-          if (document.hidden) return;
-
-          const delta = now - lastFrame;
-          lastFrame = now;
+        // Settled: draw the frame the world rests at, then stop scheduling.
+        // Returning without re-arming is the whole point — an rAF callback that
+        // does nothing still holds the compositor at vsync, which is the cost
+        // this is here to avoid.
+        if (settled()) {
+          running = false;
           drawFrame(now - startedAt);
+          return;
+        }
 
-          if (now - startedAt > INTRO_MS && reductions < 2) {
-            frameTimes.push(delta);
-            if (frameTimes.length >= SAMPLE_WINDOW) {
-              const sorted = frameTimes.slice().sort((a, b) => a - b);
-              const median = sorted[Math.floor(sorted.length / 2)];
-              frameTimes.length = 0;
-              if (median > FRAME_BUDGET_MS) {
-                density = Math.max(MIN_DENSITY, density * 0.62);
-                reductions += 1;
-              }
+        raf = requestAnimationFrame(tick);
+
+        // CONTROL_PANEL_CONFIG sets backgroundThrottling: false, so Chromium
+        // will happily run this loop for an hour behind another window.
+        if (document.hidden) return;
+
+        const delta = now - lastFrame;
+        lastFrame = now;
+        drawFrame(now - startedAt);
+
+        if (now - startedAt > INTRO_MS && reductions < 2) {
+          frameTimes.push(delta);
+          if (frameTimes.length >= SAMPLE_WINDOW) {
+            const sorted = frameTimes.slice().sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            frameTimes.length = 0;
+            if (median > FRAME_BUDGET_MS) {
+              density = Math.max(MIN_DENSITY, density * 0.62);
+              reductions += 1;
             }
           }
-        };
+        }
+
+        // The world at rest, on the Conversation surface, with no conversation
+        // running: the wheat is gone, the chaff and the blades are gated on
+        // `grow`, and the backdrop reads `uTime` only inside `uGrow > 0` (the
+        // birds). Every frame from here is byte-identical to this one.
+        //
+        // Idling on that cost 113% of a core on the Linux target, because the
+        // build composites in software (`--disable-gpu-compositing`) and reads
+        // the whole canvas back every frame. Redrawing an unchanging picture
+        // sixty times a second is not the beautiful moment §9.8 asks for; it is
+        // a laptop battery. `wake` brings it straight back when someone
+        // presses record.
+        if (!liveRef.current && grow <= AT_REST) {
+          cancelAnimationFrame(raf);
+          running = false;
+        }
+      };
+
+      // Wakes a stopped loop for one frame, or for good if the world is moving
+      // again. Also the only way a settled field ever redraws.
+      const wake = () => {
+        if (disposed || running) return;
+        running = true;
+        // A frame delta measured across a pause is not a frame that was slow;
+        // left unreset it would thin the field on the first frame back.
+        lastFrame = performance.now();
+        frameTimes.length = 0;
         raf = requestAnimationFrame(tick);
-      }
+      };
+      wakeRef.current = wake;
+      cleanupFns.push(() => {
+        if (wakeRef.current === wake) wakeRef.current = null;
+      });
+      wake();
 
       const onContextLost = (event: Event) => {
         event.preventDefault();
@@ -549,6 +622,10 @@ export default function FieldGL({
       fail(error instanceof Error ? error.message : String(error));
       return;
     }
+    // `live` is deliberately absent: it is read through `liveRef` on every
+    // frame, and rebuilding the GL context on a recording transition would
+    // discard the grow/recede state that the transition exists to animate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced, onFailure, scene]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;

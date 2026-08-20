@@ -1,6 +1,6 @@
 # Local Whisper Setup
 
-OpenWhispr supports local speech-to-text processing using whisper.cpp. This keeps your audio completely private—nothing leaves your device.
+OpenWhispr supports local speech-to-text processing using whisper.cpp. This keeps your audio completely private — the recording never leaves your device.
 
 ## Quick Start
 

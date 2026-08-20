@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Brain, ChevronLeft, ChevronRight, Mic, Search, Settings, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
@@ -23,9 +23,7 @@ import LifetimeGraph from "./notes/LifetimeGraph";
 import ListeningPulse from "./conversation/ListeningPulse";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import Field from "./conversation/Field";
-import MicrophoneSettings from "./ui/MicrophoneSettings";
 import HotkeyInput from "./ui/HotkeyInput";
-import SettingsPage from "./SettingsPage";
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
@@ -45,6 +43,14 @@ import type {
   ConversationTopicSnapshot,
 } from "../types/conversationEvents";
 import type { NoteItem } from "../types/electron";
+
+// Advanced Settings is the inherited OpenWhispr settings application: every
+// provider, every model picker, every diagnostic. It is behind a deliberate,
+// non-default path (DESIGN.md §13), and a static import pulled all of it — and
+// everything it imports — into the chunk that has to render before the first
+// conversation. Splitting it means the Oats path never pays for a room it does
+// not walk into.
+const AdvancedSettings = React.lazy(() => import("./SettingsPage"));
 
 type Surface = "conversation" | "intelligence" | "settings";
 type DetailTab = "summary" | "transcript" | "threads";
@@ -343,7 +349,7 @@ function ConversationSurface() {
   return (
     <section
       className={cn(
-        "relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-8",
+        "oats-surface relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-8",
         // The composition sits in the sky, above the horizon, rather than dead
         // centre — dead centre reads as an error page, and the ground below
         // belongs to the field.
@@ -695,7 +701,7 @@ function IntelligenceViews({
   // replaces it. Nothing is ever half-visible in a column you are not using.
   if (view === "map") {
     return (
-      <section key="map" className="oats-enter relative flex min-h-0 flex-1 flex-col">
+      <section key="map" className="oats-surface oats-enter relative flex min-h-0 flex-1 flex-col">
         <header className="mx-auto flex w-full max-w-3xl shrink-0 items-baseline justify-between px-8 pt-4">
           <h1 className="text-2xl font-medium lowercase tracking-[-0.03em]">
             {t("lifetime.title")}
@@ -720,7 +726,10 @@ function IntelligenceViews({
 
   if (reading && selected) {
     return (
-      <section key="reading" className="oats-enter relative min-h-0 flex-1 overflow-y-auto">
+      <section
+        key="reading"
+        className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto"
+      >
         <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
           <BackLink onClick={() => setReading(false)} label={t("oats.intelligence.backToList")} />
 
@@ -730,6 +739,7 @@ function IntelligenceViews({
           {renaming ? (
             <input
               autoFocus
+              aria-label={t("oats.intelligence.renameHint")}
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
               onBlur={() => void commitRename()}
@@ -737,18 +747,25 @@ function IntelligenceViews({
                 if (event.key === "Enter") void commitRename();
                 if (event.key === "Escape") setRenaming(false);
               }}
-              className="input-inline mt-2 w-full border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none"
+              className="mt-2 w-full border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none"
             />
           ) : (
-            <h1
-              className="mt-2 cursor-text text-3xl font-medium tracking-[-0.03em]"
-              title={t("oats.intelligence.renameHint")}
-              onClick={() => {
-                setDraftTitle(selected.title || "");
-                setRenaming(true);
-              }}
-            >
-              {selected.title || t("oats.untitled")}
+            // A heading you can rename is still a heading; the control that
+            // makes it operable goes inside it. A click handler on the <h1>
+            // itself was mouse-only — no focus ring, no Enter, and nothing a
+            // screen reader would announce as actionable.
+            <h1 className="mt-2 text-3xl font-medium tracking-[-0.03em]">
+              <button
+                type="button"
+                title={t("oats.intelligence.renameHint")}
+                onClick={() => {
+                  setDraftTitle(selected.title || "");
+                  setRenaming(true);
+                }}
+                className="cursor-text rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {selected.title || t("oats.untitled")}
+              </button>
             </h1>
           )}
 
@@ -837,7 +854,7 @@ function IntelligenceViews({
   }
 
   return (
-    <section key="list" className="oats-enter relative min-h-0 flex-1 overflow-y-auto">
+    <section key="list" className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
         <div className="flex items-baseline justify-between">
           <h1 className="text-3xl font-medium lowercase tracking-[-0.03em]">
@@ -854,10 +871,12 @@ function IntelligenceViews({
         {notes.length > 4 && (
           <input
             ref={searchInputRef}
+            type="search"
+            aria-label={t("oats.intelligence.searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("oats.intelligence.searchPlaceholder")}
-            className="input-inline mt-6 w-full border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:outline-none"
+            className="mt-6 w-full border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:outline-none"
           />
         )}
 
@@ -1129,7 +1148,7 @@ function Row({
     // rhythm halves the height and creates the spine that makes a settings page
     // scannable rather than a form to read. DESIGN.md §13 wants the visible page
     // to fit on one screen; this is most of how it gets there.
-    <div className="grid grid-cols-[minmax(0,13rem)_1fr] items-start gap-x-10 border-b border-border/40 py-4 last:border-b-0">
+    <div className="grid grid-cols-[minmax(0,18rem)_1fr] items-start gap-x-8 border-b border-border/40 py-3 last:border-b-0">
       <div className="min-w-0">
         <label className="text-sm text-foreground" htmlFor={htmlFor}>
           {label}
@@ -1144,6 +1163,97 @@ function Row({
   );
 }
 
+// The visible page's entire microphone control: one line naming the microphone
+// the next conversation will use, and a way to change it.
+//
+// It deliberately does not enumerate anything on mount. `enumerateDevices`
+// returns unlabelled entries until microphone permission has been granted, so
+// any UI that wants to *name* the devices ends up calling `getUserMedia` to
+// unlock the labels — which opens the microphone, and on macOS interrupts
+// whatever else is playing. Opening Settings is not consent to open the
+// microphone; pressing "change" is.
+//
+// It also writes `preferBuiltInMic`, because that flag wins over the chosen
+// device at recording time (`getMeetingMicConstraints`). A picker that let you
+// choose a device the recorder then ignored would be a setting that lies.
+function MicrophoneChoice() {
+  const { t } = useTranslation();
+  const preferBuiltIn = useSettingsStore((s) => s.preferBuiltInMic);
+  const setPreferBuiltIn = useSettingsStore((s) => s.setPreferBuiltInMic);
+  const deviceId = useSettingsStore((s) => s.selectedMicDeviceId);
+  const deviceLabel = useSettingsStore((s) => s.selectedMicDeviceLabel);
+  const setDevice = useSettingsStore((s) => s.setSelectedMicDevice);
+
+  const [devices, setDevices] = useState<{ deviceId: string; label: string }[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  const openPicker = async () => {
+    setFailed(false);
+    try {
+      let all = await navigator.mediaDevices.enumerateDevices();
+      if (!all.some((device) => device.kind === "audioinput" && device.label)) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+        all = await navigator.mediaDevices.enumerateDevices();
+      }
+      setDevices(
+        all
+          .filter((device) => device.kind === "audioinput" && device.deviceId !== "default")
+          .map((device) => ({
+            deviceId: device.deviceId,
+            label: device.label || t("microphoneSettings.unknownDevice"),
+          }))
+      );
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  if (failed) {
+    return <p className="text-sm leading-5 text-foreground">{t("oats.settings.micError")}</p>;
+  }
+
+  if (!devices) {
+    return (
+      <div className="flex items-baseline gap-3">
+        <span className="text-sm text-foreground">
+          {preferBuiltIn
+            ? t("oats.settings.micBuiltIn")
+            : deviceLabel || t("oats.settings.micSystemDefault")}
+        </span>
+        <QuietAction label={t("oats.settings.micChange")} onClick={() => void openPicker()} />
+      </div>
+    );
+  }
+
+  return (
+    <select
+      id="microphone"
+      autoFocus
+      value={preferBuiltIn ? "builtin" : deviceId || "default"}
+      onChange={(event) => {
+        const value = event.target.value;
+        setPreferBuiltIn(value === "builtin");
+        if (value === "builtin") return;
+        if (value === "default") {
+          setDevice("", "");
+          return;
+        }
+        setDevice(value, devices.find((device) => device.deviceId === value)?.label ?? "");
+      }}
+      className={selectClass}
+    >
+      <option value="builtin">{t("oats.settings.micBuiltIn")}</option>
+      <option value="default">{t("oats.settings.micSystemDefault")}</option>
+      {devices.map((device) => (
+        <option key={device.deviceId} value={device.deviceId}>
+          {device.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 // Sensible starting points so the one visible choice actually produces a working
 // pipeline. Anything more specific belongs behind Advanced.
 const DEFAULT_LOCAL_MODEL = "qwen3.5-4b-q4_k_m";
@@ -1153,9 +1263,10 @@ const selectClass =
   // A line rather than a box. A boxed control on a quiet page reads as a form
   // field in a SaaS dashboard; the hairline goes gold only while focused, which
   // is the one moment the accent is earning something (DESIGN.md §3, §6).
-  // `input-inline` opts out of the inherited global input chrome, which is an
-  // element selector and would otherwise beat these utilities and redraw the box.
-  "input-inline h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none";
+  // No opt-out class is needed: the inherited input chrome is an element
+  // selector, but it is scoped out of `.oats-surface` in index.css, so these
+  // utilities are the only thing describing this control.
+  "h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none";
 
 function SettingsSurface() {
   const transcriptionMode = useSettingsStore((s) => s.transcriptionMode);
@@ -1168,15 +1279,8 @@ function SettingsSurface() {
   const setLanguage = useSettingsStore((s) => s.setPreferredLanguage);
   const autoSearch = useSettingsStore((s) => s.conversationAutoSearchEnabled);
   const setAutoSearch = useSettingsStore((s) => s.setConversationAutoSearchEnabled);
-  const preferBuiltInMic = useSettingsStore((s) => s.preferBuiltInMic);
-  const setPreferBuiltInMic = useSettingsStore((s) => s.setPreferBuiltInMic);
-  const micDeviceId = useSettingsStore((s) => s.selectedMicDeviceId);
-  const micDeviceLabel = useSettingsStore((s) => s.selectedMicDeviceLabel);
-  const setSelectedMicDevice = useSettingsStore((s) => s.setSelectedMicDevice);
-  const meetingKey = useSettingsStore((s) => s.meetingKey);
   const conversationKey = useSettingsStore((s) => s.conversationKey);
   const setConversationKey = useSettingsStore((s) => s.setConversationKey);
-  const setMeetingKey = useSettingsStore((s) => s.setMeetingKey);
   const dictationKey = useSettingsStore((s) => s.dictationKey);
   const setDictationKey = useSettingsStore((s) => s.setDictationKey);
   const setNoteFormattingMode = useSettingsStore((s) => s.setNoteFormattingMode);
@@ -1237,22 +1341,30 @@ function SettingsSurface() {
           <p className="text-xs text-muted-foreground">{t("oats.settings.advancedHint")}</p>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <SettingsPage />
+          <Suspense
+            fallback={
+              <p className="px-8 py-6 font-mono text-xs lowercase text-muted-foreground">
+                {t("oats.settings.advancedLoading")}
+              </p>
+            }
+          >
+            <AdvancedSettings />
+          </Suspense>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-10 pt-4">
-      <h1 className="text-3xl font-medium lowercase tracking-[-0.03em]">
+    <section className="oats-surface mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-5">
+      <h1 className="text-2xl font-medium lowercase tracking-[-0.03em]">
         {t("oats.settings.title")}
       </h1>
-      <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
         {t("oats.settings.subtitle")}
       </p>
 
-      <div className="mt-8">
+      <div className="mt-3">
         <Row label={t("oats.settings.processing")} hint={t("oats.settings.processingHint")}>
           {/* The same language as the nav and the reading tabs: a word, and a
               gold rule under the live one. Two filled slabs made the most
@@ -1294,6 +1406,14 @@ function SettingsSurface() {
           </div>
           {!local && (
             <input
+              id="api-key"
+              name="openai-api-key"
+              aria-label={t("oats.settings.apiKeyPlaceholder")}
+              // A password manager offering to fill a login here, or to save an
+              // API key as one, is noise on the one screen that is meant to be
+              // quiet.
+              autoComplete="off"
+              spellCheck={false}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={t("oats.settings.apiKeyPlaceholder")}
@@ -1303,14 +1423,8 @@ function SettingsSurface() {
           )}
         </Row>
 
-        <Row label={t("oats.settings.microphone")} hint={t("oats.settings.microphoneHint")}>
-          <MicrophoneSettings
-            preferBuiltInMic={preferBuiltInMic}
-            selectedMicDeviceId={micDeviceId}
-            selectedMicDeviceLabel={micDeviceLabel}
-            onPreferBuiltInChange={setPreferBuiltInMic}
-            onDeviceSelect={setSelectedMicDevice}
-          />
+        <Row label={t("oats.settings.microphone")} htmlFor="microphone">
+          <MicrophoneChoice />
         </Row>
 
         <Row label={t("oats.settings.language")} htmlFor="language">
@@ -1372,22 +1486,6 @@ function SettingsSurface() {
           </div>
         </Row>
 
-        <Row label={t("oats.settings.shortcut")}>
-          <div className="max-w-sm">
-            <HotkeyInput
-              value={meetingKey}
-              onChange={(value) => void setMeetingKey(value)}
-              onClear={() => void setMeetingKey("")}
-            />
-            {hotkeyRejection?.key === "meetingKey" && (
-              <p className="mt-2 text-xs leading-5 text-foreground">
-                {t("oats.settings.hotkeyRejected", { hotkey: hotkeyRejection.hotkey })}
-                {hotkeyRejection.message ? ` ${hotkeyRejection.message}` : ""}
-              </p>
-            )}
-          </div>
-        </Row>
-
         {/* Stated plainly, not buried: this is the only thing that leaves the
             device during a conversation. */}
         <Row label={t("oats.settings.autoSearch")} hint={t("oats.settings.autoSearchHint")}>
@@ -1413,7 +1511,7 @@ function SettingsSurface() {
       <button
         type="button"
         onClick={() => setAdvanced(true)}
-        className="mt-8 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {t("oats.settings.advanced")}
         <ChevronRight size={12} />
@@ -1541,8 +1639,17 @@ export default function OatsWorkspace() {
 
       {/* Full strength on Conversation, which is the surface the world is for.
           Intelligence and Settings are for reading, so the sky recedes to a
-          suggestion rather than drawing a horizon through a paragraph. */}
-      <Field live={recording} intensity={surface === "conversation" ? 1 : 0.3} />
+          suggestion rather than drawing a horizon through a paragraph — and it
+          stops moving there too. A dimmed backdrop is not worth a GPU frame
+          every 16ms behind a page of text, still less behind another window
+          (the control panel disables Chromium's background throttling). A
+          conversation always pins this surface, so the wheat never freezes
+          part-grown. */}
+      <Field
+        live={recording}
+        intensity={surface === "conversation" ? 1 : 0.3}
+        animate={surface === "conversation"}
+      />
 
       {/* The window is frameless on every platform (windowConfig.js) and nothing
           else provides a drag handle, so without this it cannot be moved at all —

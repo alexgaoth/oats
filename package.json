@@ -74,6 +74,7 @@
     "verify:oats": "npm run setup:check && npm run test:oats && npm run quality-check && npm run build:renderer",
     "verify:all": "npm run verify:oats && npm run test:electron",
     "i18n:check": "node scripts/check-i18n.js",
+    "perf:baseline": "node scripts/perf-baseline.js",
     "preview": "cd src && vite preview",
     "clean": "node cleanup.js"
   },

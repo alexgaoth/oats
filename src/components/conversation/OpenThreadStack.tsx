@@ -58,8 +58,14 @@ export default function OpenThreadStack({
       </button>
 
       <div
+        // `transition-all` animates every animatable property this subtree
+        // has — including the colours and the dither on the thread marks —
+        // for the whole 380ms of an expand. Naming the two that actually
+        // move keeps the stack's growth to the one sanctioned height
+        // animation (DESIGN.md §8, "the silky-smooth rule").
         className={cn(
-          "grid transition-all [transition-duration:var(--motion-slow)]",
+          "grid [transition-duration:var(--motion-slow)] [transition-property:grid-template-rows,opacity]",
+          "[transition-timing-function:var(--ease-oats)]",
           expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >
