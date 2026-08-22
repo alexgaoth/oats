@@ -76,7 +76,7 @@ function readColor(styles: CSSStyleDeclaration, name: string): string {
 // draw loop. `getComputedStyle` forces a style recalculation, and `draw` runs on
 // every frame of a settle (~73 of them per drag), so reading it there billed a
 // full recalc per frame for the length of every drag. CLAUDE.md records this
-// exact mistake as a hard-won lesson from the wheat field; this is the same
+// exact mistake as a hard-won lesson from the retired field renderer; this is the same
 // mistake in a different file.
 interface Palette {
   ink: string;

@@ -18,7 +18,14 @@
   --color-destructive-foreground: #fbf7ef;
   --color-border: #e3d9c6;
   --color-input: #f1ebdd;
-  --color-ring: #c67b27;
+  /* Deliberately darker than `--color-primary` (#c67b27).
+   *
+   * The accent measures 2.98:1 against oat-milk paper — 0.02 under the 3:1 that
+   * SC 1.4.11 requires of a control's focus indicator, which is exactly the
+   * kind of miss that survives a design review and fails a real user. This is
+   * the same gold, taken down until it clears. Dark mode keeps the brighter
+   * value below (7.60:1). */
+  --color-ring: #8b5a1f;
   --color-background: #f6f1e7;
   --color-foreground: #2b2620;
   --color-card: #fbf7ef;
@@ -171,6 +178,30 @@
 .oats-dither--fine {
   background-image: radial-gradient(circle at 0.5px 0.5px, currentcolor 0.75px, transparent 0.75px);
   background-size: 2px 2px;
+}
+
+/* Three graded densities, matching §4's table and `OUTCOME_DITHER` in
+   `conversationContour.mjs`. A boolean dithered/solid was not enough: the
+   contour grades five outcomes by grain two inches above the question cards,
+   and the cards rendered every unsettled state identically, so the same state
+   vocabulary said different things on two surfaces and "uncertainty literally
+   looks grainier" held on only one of them. Larger dots with more gap between
+   them read as *less* settled. */
+/* Integer pitches, and the dot radius carries the grade.
+   
+   A 2.5px tile resampled into a faint irregular smudge at DPR 1, so `--medium`
+   and `--sparse` measured 12.7% and 9.5% ink — a 1/255 difference in greyscale,
+   i.e. no difference at all in the channel §4 says the encoding exists for.
+   Whole-pixel pitches keep every lattice crisp, and grading the dot instead of
+   the spacing widens the gap between the three. */
+.oats-dither--medium {
+  background-image: radial-gradient(circle at 1px 1px, currentcolor 0.9px, transparent 0.9px);
+  background-size: 3px 3px;
+}
+
+.oats-dither--sparse {
+  background-image: radial-gradient(circle at 1px 1px, currentcolor 0.6px, transparent 0.6px);
+  background-size: 4px 4px;
 }
 
 /* §9.2's "hairline + 1px dithered edge". The hairline is a normal border; this
@@ -459,19 +490,31 @@
   font-style: italic;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+/* Inherited heading chrome, scoped out of Oats surfaces for exactly the reason
+   the input and `.card` rules above are.
+   
+   These are **unlayered** element rules, and Tailwind's utilities live in
+   `@layer utilities` — an unlayered declaration beats any layered one whatever
+   its specificity. So `text-2xl font-normal font-mono` on an Oats `h1` never
+   applied: every heading in the product rendered at 40px/700 in the display
+   sans, including the recording clock, which DESIGN.md §9.1 requires *not* to
+   be a banner the other person can read. That went unnoticed because it looks
+   like a deliberate hero until you measure it.
+   
+   §5's six-step scale only ships if the component's own utilities win. */
+h1:not(:where(.oats-surface *)),
+h2:not(:where(.oats-surface *)),
+h3:not(:where(.oats-surface *)),
+h4:not(:where(.oats-surface *)),
+h5:not(:where(.oats-surface *)),
+h6:not(:where(.oats-surface *)) {
   font-family: var(--font-family-sans);
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.15;
 }
 
-h1 {
+h1:not(:where(.oats-surface *)) {
   font-size: 2.5rem;
   font-weight: 700;
 }
@@ -653,12 +696,16 @@ a:hover {
     0 8px 24px color-mix(in oklch, var(--color-foreground) 8%, transparent);
 }
 
+/* Transform, not width. DESIGN.md §8 names animating a layout property in a
+   loop as a review-blocking defect, and this one runs for the whole life of the
+   toast — including the toast that reports a post-recording intelligence
+   failure, on the same main thread that is finishing the conversation. */
 @keyframes toast-progress {
   from {
-    width: 100%;
+    transform: scaleX(1);
   }
   to {
-    width: 0%;
+    transform: scaleX(0);
   }
 }
 

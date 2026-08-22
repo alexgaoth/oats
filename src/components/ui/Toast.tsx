@@ -276,7 +276,7 @@ const Toast: React.FC<
       {duration > 0 && !isExiting && (
         <div className="absolute bottom-0 left-0.5 right-0 h-px overflow-hidden">
           <div
-            className={cn("h-full", config.progressClass)}
+            className={cn("h-full w-full origin-left", config.progressClass)}
             style={{
               animation: `toast-progress ${duration}ms linear forwards`,
             }}

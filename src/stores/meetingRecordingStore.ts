@@ -104,6 +104,18 @@ interface MeetingRecordingState {
    * else entirely.
    */
   questionCards: ConversationCard[];
+  /**
+   * When this sitting began — the moment record was pressed, not the timestamp
+   * of the first utterance.
+   *
+   * It lives here rather than in the surface because it belongs to the
+   * recording: a component that owns it restarts the clock if it ever
+   * remounts, and the contour and the clock have to agree about what "this
+   * conversation" is. Continuing a recent conversation seeds up to half an hour
+   * of the previous sitting's segments, so the transcript's own extent is not
+   * the answer.
+   */
+  recordingStartedAt: number | null;
 }
 
 const MEETING_AUDIO_BUFFER_SIZE = 800;
@@ -471,6 +483,7 @@ const conversationCards = new Map<string, ConversationCard>();
 
 export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   isRecording: false,
+  recordingStartedAt: null,
   isTranscribing: false,
   recordingNoteId: null,
   recordingNoteTitle: null,
@@ -1062,6 +1075,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
 
   useMeetingRecordingStore.setState({
     isRecording: true,
+    recordingStartedAt: Date.now(),
     isTranscribing: true,
     recordingNoteId: args.noteId,
     recordingNoteTitle: args.noteTitle,
@@ -1168,6 +1182,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       useMeetingRecordingStore.setState({
         error: startResult?.error || "Failed to start meeting transcription",
         isRecording: false,
+        recordingStartedAt: null,
         isTranscribing: false,
       });
       stopMediaStream(micResult);
@@ -1208,6 +1223,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
             : systemCaptureError?.message ||
               "No microphone is available and system audio capture could not be started.",
         isRecording: false,
+        recordingStartedAt: null,
         isTranscribing: false,
       });
       await window.electronAPI?.meetingTranscriptionStop?.();
@@ -1539,6 +1555,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     useMeetingRecordingStore.setState({
       error: (err as Error).message,
       isRecording: false,
+      recordingStartedAt: null,
       isTranscribing: false,
     });
     isRecordingFlag = false;
@@ -1559,7 +1576,11 @@ export async function stopRecording(): Promise<StopRecordingResult> {
 
   isRecordingFlag = false;
   isStartingFlag = false;
-  useMeetingRecordingStore.setState({ isRecording: false, isTranscribing: false });
+  useMeetingRecordingStore.setState({
+    isRecording: false,
+    recordingStartedAt: null,
+    isTranscribing: false,
+  });
 
   await stopConversationAide();
 

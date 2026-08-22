@@ -20,7 +20,8 @@
 2. **Warm.** Oat-milk paper, roasted ink, toasted-gold signal. No cold blues, no
    pure white, no pure black. Everything is a little bit "off," like real paper.
 3. **Tactile.** Ordered dithering gives surfaces grain — the sense of a physical,
-   local object you own, not a cloud tab.
+   local object you own, not a cloud tab. Grain is a **material**, never a
+   scene: paper and graphite, not weather and landscape.
 4. **High-signal.** One accent. One idea per screen. Structure over walls of text.
    If a pixel isn't carrying meaning, remove it.
 5. **Honest.** The visual language reinforces the privacy claim: local, calm,
@@ -93,9 +94,16 @@ Warm, low-chroma, single accent. Two modes: **Oat milk** (light) and **Steel-cut
 
 ### Rules
 
-- **One accent.** Toasted gold is the _only_ saturated color, and it is spent
-  carefully: the live pulse, focus, the primary action, a selected node. If two
-  things on screen are gold, one of them is wrong.
+- **One accent.** Toasted gold (flax) is the _only_ saturated color, and it is
+  spent carefully: the live pulse, focus, the primary action, a selected node. If
+  two things on screen are gold, one of them is wrong.
+- **Gold is a momentary mark, not a premium finish.** It marks the thing that is
+  live or selected _right now_. It is never a general accent for anything that
+  wants to look considered, and never body text.
+- **No blue anywhere as a visual-world colour.** The retired field carried a
+  deliberately boosted slate sky, on the argument that it was weather rather
+  than brand. A code comment cannot change the image a user sees. Materials
+  only: paper, graphite, flax, fog, moss (§4 resolved), oxide (§4 denial).
 - **Text is ink, never accent.** Gold fails body-text contrast on paper by design
   — it is a _mark_ color (fills, dots, 1–2px strokes, large glyphs), not a reading
   color. Body text is always `foreground` / `muted-foreground`.
@@ -169,6 +177,16 @@ Restraint is the whole point. Two families, a six-step scale.
 Weights: 400 body, 500 UI emphasis, 600 headings. Never bold for color — use ink.
 Measure caps at ~68ch for reading comfort.
 
+**Case.** `oats` is lowercase; it is the wordmark and the only lowercase thing in
+the product. Everything else — headings, navigation, commands, settings labels,
+conversation titles — is **sentence case**. Blanket lowercase was tried and it
+reads softer and more lifestyle-coded than this audience, who are being asked to
+trust the tool with unannounced work. A settings label that will not capitalise
+itself does not look calm; it looks like it is trying to seem calm.
+
+**No display serif.** Personality is earned from the conversation contour, the
+evidence hierarchy and precise spacing, not from a fashionable face.
+
 ---
 
 ## 6. Space, radius, elevation
@@ -217,7 +235,8 @@ Ordered dithering thresholds a value against a tiling Bayer matrix. The 4×4 mat
 ### Where dither is allowed
 
 - The husked-oat symbol fill, and the live listening pulse (§9.1).
-- Full-bleed empty states and the onboarding hero (a dithered "oat field" horizon).
+- The question marks on the conversation contour (§9.8), where density is the
+  §4 uncertainty encoding rather than texture.
 - State encoding on question cards, stack rows, and graph nodes (§4) — density =
   uncertainty. These are small marks, not surfaces.
 - A 1px dithered edge on raised surfaces in place of a glow.
@@ -283,9 +302,17 @@ hold 60fps on integrated graphics:
 ## 9. Signature components
 
 There are six, and they _are_ the brand: the listening pulse, the question card,
-the open-thread stack, the wheat field, the topic graph, and the lifetime graph.
-Three live during recording, two live after, and the last looks across all of
-them. They are held to this spec exactly.
+the open-thread stack, the conversation contour, the topic graph, and the
+lifetime graph. Three live during recording, two live after, and the last looks
+across all of them. They are held to this spec exactly.
+
+**Superseded 2026-08-20.** The fourth used to be a wheat field with a sky, a
+horizon, birds and a farmhouse, drawn behind every surface. It is retired. Two
+brands cannot share one product, and a pastoral world says pleasant summer
+landscape, wellness app or artisanal farm brand — none of which is a private,
+local instrument for consequential conversations. The replacement is not a
+quieter backdrop but a different kind of thing entirely: a mark made _of the
+conversation_, which is what an evidence tool should put on its own screen.
 
 ### 9.1 The listening pulse
 
@@ -304,11 +331,21 @@ The help moment, and the thing the product is judged on. **Every question asked 
 the room gets a card, the moment it is asked** — not only the unanswered ones, and
 without waiting to hear whether anyone answers.
 
-**Form.** A `surface-raised` card, `14px` radius, hairline + 1px dithered edge,
-entering on `--motion-base`. Contents: the question verbatim in **mono** (verbatim
-earns trust), a state mark in the §4 question-outcome vocabulary, and a single
-gold action. Dismiss is a low-contrast ghost. Small, non-modal, never steals
-focus, never covers the person you are talking to.
+**Form — an annotation, not a card.** A 2px left rule in the question's §4
+outcome colour, the question verbatim in **mono** (verbatim earns trust), a state
+mark whose dither grade is that outcome's, and the outcome word in text. **No
+box**: no panel, no radius, no shadow. Dismiss is a low-contrast ghost. Small,
+non-modal, never steals focus, never covers the person you are talking to.
+
+_Superseded 2026-08-20 — this used to specify a `surface-raised` card with a 14px
+radius and a dithered edge. Rendered, a stack of those read as notifications
+borrowed from another application, floating over the trace rather than belonging
+to it. A rule and words belong to a ledger; a rounded shadowed panel does not._
+
+**The action is ink, gold on reach.** §9.2 previously called for "a single gold
+action", which is right for one card and wrong for the four the surface actually
+holds: four gold buttons is four accents, against §3's one. Reaching for it is
+still the moment gold earns something.
 
 **Two phases, because instant and judged are different jobs.** Waiting to classify
 an answer would cost seconds of silence — so the card does not wait:
@@ -333,10 +370,22 @@ and collapsing it would erase exactly the signal Oats exists to catch. Cards for
 the same subject visually **nest** under the first: indented, hairline-linked, the
 repeats at 70% ink. Density is handled by stacking, never by suppression.
 
-**Stacking.** Cards accumulate in a bottom-corner rail, newest at the bottom,
-`base` enter with a 24ms stagger. Beyond four visible, older cards collapse into a
-single husk-ink count chip ("6 earlier") that expands on click. The rail never
-exceeds half the screen height and never blocks the center.
+**Stacking.** Annotations are **docked in the Conversation surface, directly
+under the contour, on its left spine** — not in a corner and not in a window of
+their own (§9.8; the detached overlay was deleted on 2026-08-20 and must not
+return). **Newest at the top**, `base` enter with a 24ms stagger.
+
+Newest-first is deliberate and it is the opposite of what this section used to
+say. The band has a fixed height with the rest scrolled out of sight, so
+oldest-first put the question just asked at the bottom — exactly where the
+clipping happens, and measured at 1200×800 the newest annotation's top landed on
+the band's own bottom edge. The thing that just happened is at the top; history
+scrolls away beneath it, behind a fade that says so.
+
+Beyond four groups, the rest collapse behind a husk-ink count chip ("6 earlier")
+that expands **and collapses** on click. The band takes the space between the
+pinned head and the pinned foot and scrolls inside it, so a busy conversation can
+never push the dead-microphone warning or the open-thread stack off screen.
 
 **Honesty.** Auto-open is real network activity and the UI says so plainly: the
 card reads `searched · google` under the question once it fires, and Settings
@@ -421,113 +470,61 @@ back to?" is a question about your conversations.
 - Below three conversations there is nothing to see; say so in a sentence rather
   than drawing two dots and a line.
 
-### 9.8 The field — the world Oats lives in
+### 9.8 The conversation contour — the signature mark
 
-**The horizon is the app's permanent ground plane.** Sky above, earth below, and
-every surface sits in that world. This replaces an earlier reading in which the
-field was a recording decoration that appeared for a few seconds and left the app
-as blank paper the rest of the time; permanence is what lets the other surfaces
-stand on something, and it is why navigation runs along the ground rather than
-down a rail that would cut the horizon in half.
+**A conversation, drawn as the thing it actually was.** One thin trace, left to
+right in time, and everything on it is a measurement of the recording it belongs
+to. The model is `src/helpers/conversationContour.mjs`, pure and pinned by
+`test/helpers/conversationContour.test.js`; the renderer owns pixels and nothing
+else, so the meaning of the mark cannot drift from its drawing.
 
-Idle draws the world — sky, warmth, horizon, bare ground. **Pressing record grows
-the wheat out of it**, and stopping lets it withdraw, more slowly than it came.
-Keeping the world permanent and the wheat conditional preserves the one moment
-Oats is allowed to be beautiful while giving the product a place to be.
+Four elements, each a fact:
 
-- **It is a background, never a subject.** The pulse, the button, and the stack
-  sit above it at full contrast; the field never rises above ~50% alpha and never
-  competes with a word on screen. It also has a **volume**: full strength on
-  Conversation, receded to roughly a third on Intelligence and Settings, which
-  are for reading. At full strength the horizon line draws through a paragraph.
-- **Light on paper is a wash, not a disc.** A literal sun cannot work in both
-  modes — on oat-milk paper gold is _darker_ than the background, so a bright
-  disc reads as a stain, and mixing it lighter makes it vanish against
-  near-white. The horizon glow is instead weighted horizontally toward one side,
-  so the light has a direction and an origin without its source ever being drawn.
-  The same term reads as a genuine glow in Steel-cut.
-- **It arrives and then settles.** ~1.4s to rise from the horizon on
-  `--motion-slow`, then a breeze so slow it reads as stillness. It must never be
-  the reason somebody looks at the screen mid-conversation.
-- **It parts around the cursor.** Stalks bend away from the pointer — the single
-  interaction, discoverable by accident, costing nothing.
-- **It has depth, and the depth is manufactured.** The field is pseudo-2D: six
-  discrete bands, no camera and no perspective divide. Depth is spelled four
-  ways at once — position (far bands root under the horizon, the nearest roots
-  _below_ the viewport, so you stand inside the field), motion parallax (near
-  blades swing several times further, which is the strongest cue and the reason
-  a still frame reads flatter than one second of motion), aerial perspective
-  (far is low-contrast haze, near is gold), and **dither density** (§7): far
-  blades dissolve into grain, near blades are solid. Blades are spread
-  vertically _within_ their band, or the bands show as horizontal seams.
-- **It grows, and it grows toward you.** Blades sprout from the horizon first
-  and the front row last, so the field builds forward rather than fading up. A
-  young blade is stiff and only starts catching the wind as it reaches full
-  height — that one term is most of what makes it read as growth rather than as
-  scaling. No overshoot, ever (§8).
-- **The settled state is gusts, not a sway.** A uniform sine wave reads as a
-  screensaver. Two gusts travel the field at incommensurate speeds so the
-  pattern never visibly repeats, and between them the field is nearly still.
-  The gust crossing is what holds the eye; the ambient term only stops it
-  looking frozen.
-- **GPU, but no meshes and no assets.** Instanced blades in a fragment-shader
-  dither pass — the only place §7's animated grain is affordable, and the reason
-  this surface is allowed WebGL at all. A blade is a tapered strip whose grain
-  head is a swelling in its own silhouette; a downloaded mesh would be weight
-  for a surface glanced at for seconds. Where WebGL is absent or software-only,
-  a 2D canvas draws the same field, sparser and without grain — omit the
-  texture, never counterfeit it.
-- **It thins itself rather than dropping frames.** Density steps down if the
-  frame budget slips. A prefix of each band is a uniform subsample, so the field
-  gets sparser evenly instead of clearing a region.
-- **`prefers-reduced-motion` freezes it** to a single still frame of the settled
-  field — the image survives, the motion does not.
+| Element              | Encodes                                                             |
+| -------------------- | ------------------------------------------------------------------- |
+| **Trace thickness**  | how much was said, per unit time                                    |
+| **A thinning**       | a silence — the line never breaks, because the conversation did not |
+| **A notch**          | the subject turning                                                 |
+| **A mark, above**    | a question at the moment it was asked, in its §4 state colour       |
+| **The mark's grain** | how settled that question is — solid answered, grainiest unasked-of |
+| **An arc**           | the room returning to a thread it had left                          |
 
-**Opacity accumulates.** The ~50% ceiling is on what lands on screen, not on a
-blade. Two thousand blades at an individually safe alpha still stack into an
-opaque wall that swallows the copy. When in doubt, fewer and fainter.
+Rules:
 
-### 9.9 The countryside — the world while recording
+- **Every element is derived from speech.** Nothing here may be generated by a
+  noise function, a seed, or elapsed time alone. If two different conversations
+  can produce the same contour, it has become wallpaper and it is wrong.
+- **Dither carries information, never texture.** A mark's density is the §4
+  uncertainty encoding, which is what keeps state legible in greyscale and for
+  colour-blind users. Decorative grain on the contour is a review-blocking
+  defect.
+- **It does not animate.** It redraws when the conversation changes — roughly
+  once every five seconds while recording, and never afterwards. There is no
+  loop to throttle and nothing for `prefers-reduced-motion` to reduce, which is
+  the point: the previous signature held a GPU at 60fps to redraw an unchanging
+  picture, and idling on it cost 113% of a core.
+- **Three sizes, one model.** Full (the live surface and the head of a
+  conversation's record), and a 20–24px strip beside a conversation in a list.
+  The strip keeps the question marks and drops the notches and arcs; a list is
+  scanned for "three unanswered questions in the last third".
+- **An empty conversation draws its own resting baseline** — the ledger before
+  anything is written in it. It is never faked with invented geometry.
 
-The scenery is **part of the recording gesture, not a sequel to it**. It rides
-the wheat's own grow/recede signal — one envelope, defined once in
-`fieldModel.ts` — so pressing record wakes the whole world together (~1.4s, with
-the wheat), it stands for as long as the conversation is live, and stopping
-settles all of it back together (~2.2s). There is no post-recording show, no
-timing of its own, and no state that can be out of sync with the wheat. The
-idle world stays canonical; `prefers-reduced-motion` renders live as a still
-frame of the awake world and idle without it.
-
-The scene is **the dithered countryside** (revised 2026-08-06 after review;
-geometry lives in `fieldModel.ts` and both renderers read it):
-
-- **The sky clears, in grain.** A blue bloom (`SKY_BLUE`) descends from the
-  top of the frame, spelled in dither density; the warm light keeps the
-  horizon. Oat milk takes a 1.45× deeper pour than Steel-cut — blue over
-  near-white washes out long before it breaks the alpha ceiling — keyed off
-  the same paper-vs-charcoal signal as the warm wash.
-- **One irimoya farmhouse condenses on the horizon**, opposite the light:
-  concave hip sweep, short gable tier, raised ridge cap — and nothing else.
-  Companion buildings read as additional rather than belonging; the horizon
-  gets a single dwelling. **The concave roof sweep is load-bearing and
-  unit-tested:** a straight-edged roof reads as a Western barn at any
-  proportions. Arrival is by dither density ramping with growth — the same
-  vocabulary far blades use for distance — never a fade or a slide.
-- **A few birds cross**, right to left, ~50s per crossing: specks whose size
-  breathes as a wingbeat, because at this distance a flap is a shimmer, not an
-  outline.
-
-Everything renders in the field's one canvas against the one shared Bayer
-matrix, so §7's "one animated dither layer, ever" holds. The 2D fallback draws
-the same scene smooth — same model, no counterfeit grain. Alpha stays within
-§9.8's ceiling: the sky never exceeds 0.5 anywhere, and the farmhouse sits at
-0.5 on its lit pixels.
+**The surface behind it is paper.** No sky, no scenery, no permanent world. A
+reading surface is `--color-background` and nothing else, and the contour is the
+only non-textual mark on it.
 
 ### 9.5 Empty states
 
-Where warmth lives. A dithered oat-field horizon, one line of quiet mono copy, one
-gentle next action. The place we can be a little beautiful because there is no data
-to compete with.
+One line of quiet mono copy and one gentle next action — usually the shortcut
+that makes the screen fill itself.
+
+**An empty screen is not licence for scenery.** That was the old reading, and it
+is what let a landscape in through the back door: nothing to compete with became
+a reason to be beautiful, and the beauty had nothing to do with the product.
+Where the surface has data of its own, show the smallest true thing instead — the
+Conversation screen shows the last entry in the ledger and its contour, which
+answers "did that save?" and gives the screen an identity at the same time.
 
 ---
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronUp, Search, Undo2, X } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -38,17 +38,23 @@ const STAGGER_MS = 24;
 // Ink-only state marks. Colour comes from the `--graph-*` tokens so the rail, the
 // thread list, and the topic graph cannot drift apart (DESIGN.md §4).
 //
-// `dither` is §4's uncertainty encoding: a resolved outcome is solid, an unsure
-// one is a stipple. It has to be drawn as *gaps in* the colour — the previous
-// version set the dot's background-color to the same `currentColor` the dither
-// dots are painted in, so every mark rendered solid and the whole vocabulary was
-// invisible.
-const STATE_STYLE: Record<QuestionOutcome, { token: string; dither: boolean }> = {
-  asked: { token: "var(--graph-silence)", dither: true },
-  answered: { token: "var(--graph-answered)", dither: false },
-  uncertain: { token: "var(--graph-uncertain)", dither: true },
-  silence: { token: "var(--graph-silence)", dither: true },
-  denied: { token: "var(--graph-open)", dither: true },
+// `dither` is §4's uncertainty encoding: the less settled an outcome, the
+// grainier its mark, so state survives greyscale and colour-blindness.
+//
+// Graded, not boolean. A `true|false` stipple made `asked`, `silence`,
+// `uncertain` and `denied` identical in the one channel that is not hue —
+// while the contour two inches above graded all five by
+// `OUTCOME_DITHER`. The four surfaces are supposed to speak one vocabulary.
+//
+// It has to be drawn as *gaps in* the colour: an earlier version set the dot's
+// background-color to the same `currentColor` the dither dots are painted in,
+// so every mark rendered solid and the whole vocabulary was invisible.
+const STATE_STYLE: Record<QuestionOutcome, { token: string; dither: string | null }> = {
+  answered: { token: "var(--graph-answered)", dither: null }, // settled — solid
+  denied: { token: "var(--graph-open)", dither: "oats-dither--fine" }, // settled, and acted on
+  uncertain: { token: "var(--graph-uncertain)", dither: "oats-dither--medium" }, // hedged
+  asked: { token: "var(--graph-silence)", dither: "oats-dither--sparse" }, // no verdict yet
+  silence: { token: "var(--graph-silence)", dither: "oats-dither--sparse" }, // an absence
 };
 
 // Searching is always offered by hand. Automatic search is restricted to a
@@ -87,7 +93,7 @@ function StateMark({ state }: { state: QuestionOutcome }) {
       aria-hidden="true"
       className={cn(
         "mt-[5px] h-2 w-2 shrink-0 rounded-full",
-        style.dither && "oats-dither oats-dither--fine"
+        style.dither && `oats-dither ${style.dither}`
       )}
       // Dithered marks paint dots in `color` over nothing; solid marks fill.
       style={style.dither ? { color: style.token } : { backgroundColor: style.token }}
@@ -135,7 +141,7 @@ function Asking({
           <span aria-hidden="true" className="text-muted-foreground/40">
             ·
           </span>
-          <span className="tabular-nums text-muted-foreground/70">
+          <span className="tabular-nums text-muted-foreground">
             {elapsedLabel(card.createdAt, now)}
           </span>
           <span className="flex-1" />
@@ -144,7 +150,7 @@ function Asking({
             // card's own `searchBaseUrl` wins over the current setting: this says
             // where this question actually went, and changing the engine later
             // must not rewrite the history of one that already left.
-            <span className="lowercase text-muted-foreground/70">
+            <span className="text-muted-foreground">
               {(() => {
                 const host = searchHostLabel(card.searchBaseUrl || "") || searchHost;
                 return host ? t("questionCard.searchedHost", { host }) : t("questionCard.searched");
@@ -161,12 +167,12 @@ function Asking({
             // corner is four accents (§3), and it puts the rail's whole visual
             // weight on a secondary action instead of on the questions. Reaching
             // for it is still the one moment gold is earning something — and this
-            // panel floats over a live conversation, where the rule that beats
+            // rail sits beside a live conversation, where the rule that beats
             // every other is that nothing may compete with the person in the room.
             <button
               type="button"
               onClick={() => onSearch(card)}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 lowercase text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 hover:text-primary focus-visible:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 hover:text-primary focus-visible:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Search size={10} />
               {t("topicGraph.search")}
@@ -197,6 +203,7 @@ function QuestionGroup({
   searchHost,
   onDismiss,
   onSearch,
+  onFocus,
 }: {
   group: CardGroup;
   now: number;
@@ -204,17 +211,31 @@ function QuestionGroup({
   searchHost: string;
   onDismiss: (cards: ConversationCard[]) => void;
   onSearch: (card: ConversationCard) => void;
+  /** Tells the contour which mark this annotation belongs to. */
+  onFocus: (groupKey: string | null) => void;
 }) {
   const { t } = useTranslation();
   const [first, ...repeats] = group.cards;
 
   return (
+    // An annotation in the margin of the record, not a notification.
+    //
+    // It used to be a rounded, bordered, drop-shadowed panel stacked in the
+    // corner of the window, and it read exactly like what it was: a card
+    // borrowed from another application, floating over — and unconnected to —
+    // the trace it was talking about. What it is instead is an entry written
+    // against the conversation: a rule in the question's own state colour, the
+    // words, and nothing drawn around them.
     <div
-      className={cn(
-        "oats-enter oats-dithered-edge relative rounded-xl border border-border bg-surface-raised px-3 py-2.5",
-        "shadow-[0_1px_2px_color-mix(in_oklch,var(--color-foreground)_6%,transparent),0_8px_24px_color-mix(in_oklch,var(--color-foreground)_8%,transparent)]"
-      )}
-      style={{ animationDelay: `${index * STAGGER_MS}ms` }}
+      className="oats-enter relative border-l-2 pl-3"
+      style={{
+        animationDelay: `${index * STAGGER_MS}ms`,
+        borderColor: STATE_STYLE[first.state]?.token ?? STATE_STYLE.asked.token,
+      }}
+      onMouseEnter={() => onFocus(group.key)}
+      onMouseLeave={() => onFocus(null)}
+      onFocus={() => onFocus(group.key)}
+      onBlur={() => onFocus(null)}
     >
       {/* One dismiss for the whole group: the repeats are the same question, so
           dropping it one asking at a time would be busywork. A low-contrast
@@ -223,7 +244,7 @@ function QuestionGroup({
         type="button"
         aria-label={t("questionCard.dismiss")}
         onClick={() => onDismiss(group.cards)}
-        className="absolute right-1.5 top-1.5 rounded-md p-1 text-muted-foreground/35 transition-colors [transition-duration:var(--motion-instant)] hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="absolute right-0 top-0 rounded-md p-1 text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <X size={13} />
       </button>
@@ -233,8 +254,10 @@ function QuestionGroup({
       </div>
 
       {repeats.length > 0 && (
-        // Indented and hairline-linked to the question they repeat, at 70% ink.
-        <div className="ml-[3px] mt-2.5 space-y-2.5 border-l border-border pl-3 opacity-70">
+        // Indented and hairline-linked to the question they repeat. Not dimmed
+        // with `opacity`: that dragged each repeat's outcome word and elapsed
+        // time under AA, and a re-asking is signal, not a footnote.
+        <div className="ml-[3px] mt-2.5 space-y-2.5 border-l border-border pl-3">
           {repeats.map((card) => (
             <Asking
               key={card.id}
@@ -251,7 +274,13 @@ function QuestionGroup({
   );
 }
 
-export default function ConversationSignalRail() {
+export default function ConversationSignalRail({
+  onFocus,
+}: {
+  /** Reports which question group the pointer or keyboard is on, so the
+   *  contour can raise the matching mark. Null when nothing is focused. */
+  onFocus: (groupKey: string | null) => void;
+}) {
   const { t } = useTranslation();
   const cards = useMeetingRecordingStore((state) => state.questionCards);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -327,59 +356,116 @@ export default function ConversationSignalRail() {
     [searchBaseUrl]
   );
 
-  const hidden = Math.max(0, groups.length - VISIBLE_GROUPS);
-  const shown = expanded ? groups : groups.slice(hidden);
+  // What has already been announced, so the live region can only ever move
+  // forwards.
+  //
+  // Two earlier attempts got this wrong the same way: both derived "newest"
+  // from the tail of the visible list, so dismissing the newest group made the
+  // tail fall back to an older card and the region re-announced a question the
+  // user had already heard — and undo did it in reverse. Tracking the id of the
+  // newest card is not the same as tracking the last card actually spoken.
+  //
+  // The set is of *everything ever announced*, so a card can never be announced
+  // twice however the list is rearranged, dismissed or restored.
+  const spoken = useRef<Set<string>>(new Set());
+  const [announced, setAnnounced] = useState<{ id: string; question: string } | null>(null);
+  useEffect(() => {
+    // Oldest first, so a burst announces the genuinely newest one last.
+    for (const card of cards) {
+      if (spoken.current.has(card.id)) continue;
+      spoken.current.add(card.id);
+      setAnnounced({ id: card.id, question: card.question });
+    }
+  }, [cards]);
 
-  if (!groups.length && !undoable) return null;
+  const hidden = Math.max(0, groups.length - VISIBLE_GROUPS);
+  // **Newest first.**
+  //
+  // The band is a fixed height with the rest scrolled out of sight, and it used
+  // to run oldest-first, which put the question just asked at the bottom — at
+  // the exact round-2 content shape the newest group's top landed on the band's
+  // bottom edge, so the one card that matters most was the one card nobody
+  // could see, and the next arrival appeared clipped through its outcome and
+  // its Search action. Reading order follows recency here: the thing that just
+  // happened is at the top, and history scrolls away beneath it.
+  const ordered = [...groups].reverse();
+  const shown = expanded ? ordered : ordered.slice(0, VISIBLE_GROUPS);
 
   return (
-    // Anchored to the bottom-right of the pane, over the ground the field leaves
-    // empty (`justify-center pb-[34vh]` on the composition), rather than beside
-    // the pulse. Cards arrive unpredictably and in bursts; putting them in the
-    // centre column would make the composition jump every time somebody asked a
-    // question, and §8 is explicit that a card entering must not shift the
-    // layout anywhere else on screen.
+    // In the record, under the trace it annotates — not in the corner of the
+    // window. The annotations line up on the same left spine as the contour
+    // above them, so a question and the mark it put on the line are read as one
+    // thing rather than as an application and its notifications.
     //
-    // `absolute` resolves against the surface pane, which is `absolute inset-0`
-    // and clips its overflow — so the rail sits inside the window's content area
-    // without reaching past the drag band or under the nav.
-    <div
-      aria-live="polite"
-      className="absolute bottom-5 right-5 z-10 flex max-h-[70%] w-[19rem] flex-col justify-end gap-2"
-    >
-      {undoable && (
-        <button
-          type="button"
-          onClick={undoDismiss}
-          className="self-start rounded-full border border-border bg-surface-raised px-3 py-1 text-[11px] text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Undo2 size={11} className="mr-1 inline" />
-          {t("questionCard.undo")}
-        </button>
+    // The surface gives this region the space left between the pinned head and
+    // foot, so it scrolls inside itself rather than pushing the dead-microphone
+    // warning off screen.
+    <div className="mt-6 flex w-full flex-col gap-3">
+      {/* The only thing announced, and it is mounted **before** it has anything
+          to say.
+          
+          Two mistakes are avoided here. Wrapping the whole stack meant a screen
+          reader re-read every visible question every 15 seconds, when the
+          elapsed labels re-render — during a live in-person conversation, which
+          is the one thing this surface must never do. And a live region that is
+          inserted into the DOM already containing its first message is not
+          announced at all by NVDA, JAWS or VoiceOver: the region has to be
+          there, empty, before the update — otherwise the very first question of
+          every conversation, the one that proves the feature works, is the one
+          nobody hears. That is why this sits above the early return. */}
+      <p aria-live="polite" className="sr-only">
+        {announced ? t("questionCard.announced", { question: announced.question }) : ""}
+      </p>
+
+      {!groups.length && !undoable ? null : (
+        <>
+          {/* The band clips whatever does not fit. Without a cue the crowded
+              case just looked like a row sliced by an invisible boundary — the
+              contour above drew seven marks while six annotations showed, and
+              the seventh was two coloured crumbs in the gap. The fade says
+              "there is more below" in the only place a reader is looking. */}
+          {undoable && (
+            <button
+              type="button"
+              onClick={undoDismiss}
+              className="self-start rounded-sm text-[11px] text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Undo2 size={11} className="mr-1 inline" />
+              {t("questionCard.undo")}
+            </button>
+          )}
+          {/* Reversible. It used to only ever expand, so a user who opened every
+          group mid-conversation had no way back to the four that matter. */}
+          {hidden > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((current) => !current)}
+              aria-expanded={expanded}
+              className="self-start rounded-sm text-[11px] text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronUp
+                size={11}
+                className={cn("mr-1 inline transition-transform", expanded && "rotate-180")}
+              />
+              {expanded ? t("questionCard.collapse") : t("questionCard.earlier", { count: hidden })}
+            </button>
+          )}
+          <div className="flex flex-col gap-3.5">
+            {shown.map((group, index) => (
+              <QuestionGroup
+                key={group.key}
+                group={group}
+                now={now}
+                index={index}
+                searchHost={searchHost}
+                onDismiss={onDismiss}
+                onSearch={onSearch}
+                onFocus={onFocus}
+              />
+            ))}
+          </div>
+        </>
       )}
-      {hidden > 0 && !expanded && (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="self-start rounded-full border border-border bg-surface-raised px-3 py-1 text-[11px] text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ChevronUp size={11} className="mr-1 inline" />
-          {t("questionCard.earlier", { count: hidden })}
-        </button>
-      )}
-      <div className="flex min-h-0 flex-col justify-end gap-2 overflow-y-auto">
-        {shown.map((group, index) => (
-          <QuestionGroup
-            key={group.key}
-            group={group}
-            now={now}
-            index={index}
-            searchHost={searchHost}
-            onDismiss={onDismiss}
-            onSearch={onSearch}
-          />
-        ))}
-      </div>
     </div>
   );
 }

@@ -193,9 +193,11 @@
       "language": "語言"
     },
     "permissions": {
-      "title": "權限",
+      "title": "讓 Oats 聽見這個房間",
       "microphoneTitle": "麥克風",
-      "microphoneDescription": "將你的語音轉為文字。按下快捷鍵之前不會錄製任何內容。",
+      "microphoneReady": "麥克風已就緒。",
+      "microphoneGranted": "已授予麥克風權限。",
+      "microphoneDescription": "Oats 用一支麥克風錄下對話，事後為你整理。在你開始一次對話之前，不會錄製任何內容。",
       "grant": "授權",
       "grantAccess": "授予存取權限",
       "accessibilityTitle": "輔助使用",
@@ -2254,6 +2256,8 @@
     "addToFolder": {
       "title": "新增筆記",
       "searchPlaceholder": "搜尋要新增的筆記...",
+      "searchResults_one": "{{count}} 個對話符合",
+      "searchResults_other": "{{count}} 個對話符合",
       "addExisting": "新增現有筆記",
       "addCount": "新增 {{count}} 則筆記",
       "noResults": "沒有符合的筆記",
@@ -3016,11 +3020,17 @@
       "subtitle": "Oats 記錄現場，然後自動給出標題、摘要與話題脈絡。",
       "listening": "正在聆聽。",
       "listeningHint": "音訊和逐字稿保留在本裝置上。",
+      "contourLabel": "這場對話到目前為止的形狀",
+      "contourLegend": "粗細代表說了多少 · 缺口代表話題轉變 · 標記代表問題，越未解決顆粒越粗",
+      "contourSummary": "{{minutes}} 分鐘，提出 {{questions}} 個問題（{{unresolved}} 個仍未解答），話題轉變 {{shifts}} 次，回到 {{returns}} 條脈絡。",
+      "contourEmpty": "尚未錄製任何內容。",
       "record": "錄製對話",
       "finish": "結束對話",
       "preparing": "準備中…",
       "micOnly": "僅限面對面的麥克風錄音。",
       "micSilent": "麥克風已經安靜了一段時間。請檢查是否被靜音或被其他應用程式占用。",
+      "statusRecording": "正在錄音。音訊與逐字稿都留在這台電腦上。",
+      "statusStopped": "錄音結束。Oats 正在撰寫摘要。",
       "nothingHeard": "沒有聽到任何聲音，因此未儲存對話。請在設定中檢查麥克風。",
       "continuing": "繼續 {{title}}"
     },
@@ -3029,10 +3039,12 @@
       "empty": "還沒有對話",
       "preparing": "正在為這場對話準備智慧內容。",
       "noTranscript": "尚無逐字稿。",
+      "speakerYou": "你",
+      "speakerRoom": "對方",
       "tabs": {
         "summary": "摘要",
         "transcript": "逐字稿",
-        "threads": "脈絡"
+        "connections": "關聯"
       },
       "processing": "正在處理對話…",
       "searchPlaceholder": "搜尋對話",
@@ -3062,6 +3074,7 @@
       "micBuiltIn": "內建麥克風",
       "micSystemDefault": "系統預設",
       "micChange": "變更",
+      "micChangeLabel": "變更麥克風",
       "micError": "Oats 無法讀取麥克風清單。請檢查麥克風權限。",
       "language": "對話語言",
       "autoDetect": "自動偵測",
@@ -3106,7 +3119,9 @@
     "dismiss": "忽略此問題",
     "askedTimes": "提問 {{count}} 次",
     "earlier": "另有 {{count}} 筆",
+    "collapse": "顯示較少",
     "undo": "復原",
+    "announced": "新問題：{{question}}",
     "searchedHost": "已搜尋 · {{host}}"
   },
   "openThreads": {

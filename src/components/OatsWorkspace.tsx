@@ -23,7 +23,14 @@ import LifetimeGraph from "./notes/LifetimeGraph";
 import ListeningPulse from "./conversation/ListeningPulse";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail from "./conversation/ConversationSignalRail";
-import Field from "./conversation/Field";
+import ConversationContour from "./conversation/ConversationContour";
+import type { ContourData } from "./conversation/ConversationContour";
+import {
+  NO_EVENTS,
+  useContourStrip,
+  useLiveContour,
+  useStoredContour,
+} from "./conversation/useContour";
 import HotkeyInput from "./ui/HotkeyInput";
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
@@ -37,6 +44,7 @@ import { initializeActions } from "../stores/actionStore";
 import { runBackgroundAction } from "../stores/actionProcessingStore";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
+import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
 import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 import type {
   ConversationEvent,
@@ -44,6 +52,7 @@ import type {
   ConversationTopicSnapshot,
 } from "../types/conversationEvents";
 import type { NoteItem } from "../types/electron";
+import type { TFunction } from "i18next";
 
 // Advanced Settings is the inherited OpenWhispr settings application: every
 // provider, every model picker, every diagnostic. It is behind a deliberate,
@@ -54,7 +63,7 @@ import type { NoteItem } from "../types/electron";
 const AdvancedSettings = React.lazy(() => import("./SettingsPage"));
 
 type Surface = "conversation" | "intelligence" | "settings";
-type DetailTab = "summary" | "transcript" | "threads";
+type DetailTab = "summary" | "transcript" | "connections";
 
 // Three destinations, named. No icons — see the nav comment in OatsWorkspace.
 const nav = [
@@ -88,13 +97,24 @@ function plainPreview(raw: string | null | undefined): string {
     .trim();
 }
 
-function transcriptText(raw: string | null): string {
+/**
+ * A stored transcript as readable text.
+ *
+ * The speaker labels take a `t` because they are user-facing copy, and they
+ * reach further than the screen: this feeds the reading view, the list preview,
+ * `copy`, and the saved `.txt`. Hard-coded, they put English into every
+ * transcript and every export in all ten locales.
+ */
+function transcriptText(raw: string | null, t: TFunction): string {
   if (!raw) return "";
   try {
     const segments = JSON.parse(raw);
     if (Array.isArray(segments)) {
       return segments
-        .map((s) => `${s.source === "mic" ? "You" : "Conversation"}: ${s.text}`)
+        .map(
+          (s) =>
+            `${s.source === "mic" ? t("oats.intelligence.speakerYou") : t("oats.intelligence.speakerRoom")}: ${s.text}`
+        )
         .join("\n\n");
     }
   } catch {}
@@ -177,6 +197,104 @@ function useLastHeard(recording: boolean): string | null {
   return echo;
 }
 
+// The most recent conversation, at the foot of the idle Conversation surface:
+// its name, when it was, and its contour. One row, no chrome, and it opens the
+// conversation in Intelligence.
+//
+// It is not a list. A list here would be the Intelligence surface drawn twice,
+// and the whole architecture rests on there being exactly three surfaces.
+function LastEntry() {
+  const { t } = useTranslation();
+  const notes = useNotes();
+  const last = notes[0] ?? null;
+  const segments = useMemo(() => parseSegments(last?.transcript ?? null), [last?.transcript]);
+  const strip = useContourStrip(segments, NO_EVENTS);
+
+  if (!last) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new CustomEvent("oats-open-note", { detail: last.id }))}
+      className={cn(
+        "mt-14 w-full max-w-md rounded-sm border-t border-border/50 pt-4 text-left",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      )}
+    >
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="truncate text-[13px] text-foreground">
+          {last.title || t("oats.untitled")}
+        </span>
+        <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+          {new Date(last.created_at).toLocaleDateString()}
+        </span>
+      </div>
+      {!strip.empty && (
+        <ConversationContour contour={strip} className="mt-2.5" height={20} showMarks={false} />
+      )}
+    </button>
+  );
+}
+
+/**
+ * What the contour says, in words.
+ *
+ * A canvas is a rectangle to a screen reader, and the fixed string it used to
+ * carry ("The shape of this conversation so far") described the frame rather
+ * than the picture. This is the same information the drawing carries — how many
+ * questions were asked, how many are still unanswered, how many times the
+ * subject turned, how many threads the room came back to — so the element the
+ * code itself calls "the one part of this document that is not words" is not
+ * simply absent for anyone who cannot see it.
+ */
+function contourLabel(contour: ContourData, t: TFunction): string {
+  if (contour.empty) return t("oats.conversation.contourEmpty");
+  const unresolved = contour.marks.filter(
+    (mark) => mark.state === "asked" || mark.state === "silence" || mark.state === "denied"
+  ).length;
+  return t("oats.conversation.contourSummary", {
+    minutes: Math.max(1, Math.round(contour.span / 60000)),
+    questions: contour.marks.length,
+    unresolved,
+    shifts: contour.shifts.length,
+    returns: contour.returns.length,
+  });
+}
+
+/** mm:ss, or h:mm:ss once a conversation has run past the hour. */
+function clock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const seconds = String(total % 60).padStart(2, "0");
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  if (hours) return `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`;
+  return `${minutes}:${seconds}`;
+}
+
+/**
+ * How long this sitting has run.
+ *
+ * The origin comes from the store (`recordingStartedAt`, stamped when record is
+ * pressed), so the clock and the contour cannot disagree about what "this
+ * conversation" is — and so neither restarts if this surface ever remounts.
+ * They did disagree: continuing a recent conversation seeds up to half an hour
+ * of older segments into the store, and a contour that took its origin from the
+ * transcript drew an hour-wide window, two thirds of it dead air, beside a
+ * clock reading 1:30.
+ *
+ * Ticks once a second, and only while a conversation is running.
+ */
+function useElapsed(startedAt: number | null): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (startedAt === null) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+  return startedAt === null ? 0 : Math.max(0, now - startedAt);
+}
+
 function ConversationSurface() {
   const recording = useMeetingRecordingStore((s) => s.isRecording);
   const recordingNoteId = useMeetingRecordingStore((s) => s.recordingNoteId);
@@ -204,7 +322,29 @@ function ConversationSurface() {
   );
   const micSilentSince = useMeetingRecordingStore((s) => s.micSilentSince);
   const lastHeard = useLastHeard(recording);
+  const sessionStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
+  const elapsed = useElapsed(sessionStartedAt);
+  const contour = useLiveContour(sessionStartedAt);
+  // Which question annotation is being read, so its mark on the trace can rise.
+  const [focusedGroup, setFocusedGroup] = useState<string | null>(null);
+  // The fade says "more below". Scrolled to the end there is nothing below, and
+  // leaving it on half-erased the genuinely-last annotation's outcome and its
+  // Search action — the same dimming the rail deliberately refuses elsewhere.
+  const [bandAtEnd, setBandAtEnd] = useState(false);
   const wasRecording = useRef(false);
+  // Announced once when a recording ends, then cleared, so an idle screen the
+  // user merely navigated to says nothing.
+  const [justStopped, setJustStopped] = useState(false);
+  useEffect(() => {
+    if (recording) {
+      setJustStopped(false);
+      return undefined;
+    }
+    if (!wasRecording.current) return undefined;
+    setJustStopped(true);
+    const timer = window.setTimeout(() => setJustStopped(false), 8000);
+    return () => window.clearTimeout(timer);
+  }, [recording]);
   // Checked before the first word rather than discovered after the last one.
   const preflight = useConversationPreflight();
 
@@ -241,7 +381,7 @@ function ConversationSurface() {
       if (!action) return;
       const settings = useSettingsStore.getState();
       const config = selectResolvedNoteFormatting(settings);
-      const formatted = transcriptText(finalTranscript);
+      const formatted = transcriptText(finalTranscript, t);
       runBackgroundAction(
         recordingNoteId,
         `## Conversation Transcript\n${formatted}`,
@@ -351,60 +491,200 @@ function ConversationSurface() {
     <>
       <section
         className={cn(
-          "oats-surface relative mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-8",
-          // The composition sits in the sky, above the horizon, rather than dead
-          // centre — dead centre reads as an error page, and the ground below
-          // belongs to the field.
-          "justify-center pb-[34vh]"
+          // `min-h-0` is load-bearing, not tidiness: a flex child's default
+          // `min-height: auto` lets it grow past its parent, so without it the
+          // recording branch's own `flex-1 overflow-y-auto` band never becomes
+          // a scroller and the pinned foot is pushed off a window that cannot
+          // scroll. Measured: the dead-microphone warning's bottom edge at
+          // y=836 in an 800px viewport.
+          "oats-surface relative mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-8",
+          // Two different compositions, not one composition with things hidden.
+          //
+          // Idle is an invitation, so it is centred and quiet. Recording is a
+          // ledger being written, so it is left-aligned on a spine and sits high
+          // — the contour needs room beneath it to grow into, and a centred
+          // column that reflows every time an utterance lands is exactly the
+          // layout shift §8 forbids while somebody is being helped.
+          recording
+            ? "justify-start pt-[10vh]"
+            : "items-center justify-center overflow-y-auto pb-[18vh]"
         )}
       >
-        {/* The seed is the button, and the button becomes the pulse. One object in
-          two states rather than a control and an unrelated indicator: press the
-          husked oat and it starts breathing (DESIGN.md §9.1, §9.2). */}
-        <button
-          type="button"
-          disabled={starting}
-          onClick={recording ? () => void stopRecording() : begin}
-          aria-label={recording ? t("oats.conversation.finish") : t("oats.conversation.record")}
-          className={cn(
-            "group relative flex h-28 w-28 items-center justify-center rounded-full",
-            "transition-transform [transition-duration:var(--motion-base)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            "disabled:cursor-not-allowed disabled:opacity-60",
-            !recording && "hover:scale-[1.04] active:scale-[0.98]"
-          )}
-        >
-          <ListeningPulse state={recording ? "live" : "idle"} size="lg" />
-        </button>
-
-        <h1
-          className={cn(
-            "relative mt-9 max-w-lg text-center lowercase text-foreground",
-            "text-[2.5rem] font-medium leading-[1.1] tracking-[-0.03em]"
-          )}
-        >
-          {recording ? t("oats.conversation.listening") : t("oats.conversation.title")}
-        </h1>
-
         {recording ? (
+          // Three bands, and the middle one is the only one that grows.
+          //
+          // When the annotations were simply next in the flow they pushed the
+          // dead-microphone warning off the bottom of a window that does not
+          // scroll: measured at the shipped 1200x800 default with four
+          // questions, three of them asked twice, the warning's last line sat
+          // at y=812 and the open-thread stack was gone entirely. A surface
+          // whose whole reliability promise is "a dead microphone surfaces
+          // while it can still be fixed" cannot let a busy conversation hide
+          // that warning. The head and the foot are pinned; the annotations
+          // take what is left and scroll inside it.
           <>
-            {/* Machine state speaks in mono — the "this is what was heard" voice.
-              While an utterance is fresh the line IS what was heard; when the
-              room has been quiet for a moment it returns to the hint. */}
-            <p className="relative mt-4 w-full max-w-md truncate text-center font-mono text-xs lowercase text-muted-foreground">
-              {lastHeard ?? t("oats.conversation.listeningHint")}
-            </p>
-            {/* Said plainly rather than asked. Oats resumed a recent conversation
-              instead of stopping to check, because the check would have cost
-              the first thing anybody said. */}
-            {continuingFrom && (
-              <p className="relative mt-2 text-center font-mono text-xs text-muted-foreground">
-                {t("oats.conversation.continuing", { title: continuingFrom })}
+            <div className="shrink-0">
+              {/* The Conversation surface's one status channel.
+            
+                Nothing here announced anything: the record control unmounts on
+                press so focus falls to the body, and the dead-microphone
+                warning was a plain paragraph. A screen-reader user pressed
+                record, heard silence, and — twelve minutes later, when the
+                microphone went flat — heard silence again, losing the
+                conversation. That is precisely the "fails quietly at the end"
+                this surface exists to prevent. */}
+              <p aria-live="polite" role="status" className="sr-only">
+                {micSilentSince !== null
+                  ? t("oats.conversation.micSilent")
+                  : t("oats.conversation.statusRecording")}
               </p>
-            )}
+
+              {/* The clock is the heading here. What a person glances at mid-
+                conversation is how long they have been recording, and it is the
+                one thing on this screen that is unambiguously true. */}
+              <div className="flex items-baseline gap-4">
+                <button
+                  type="button"
+                  onClick={() => void stopRecording()}
+                  aria-label={t("oats.conversation.finish")}
+                  className={cn(
+                    "group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                    "transition-transform [transition-duration:var(--motion-base)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  )}
+                >
+                  <ListeningPulse state="live" size="sm" />
+                </button>
+                {/* An actual heading, not a paragraph a comment calls one.
+                    Every other view has an `h1`; a screen-reader user
+                    navigating the live surface by heading found nothing on the
+                    one surface the product exists for. The visible text is the
+                    clock; the name of the screen is for the a11y tree. */}
+                <h1 className="font-mono text-2xl font-normal tabular-nums tracking-[-0.02em] text-muted-foreground">
+                  <span className="sr-only">{t("oats.conversation.listening")} </span>
+                  {clock(elapsed)}
+                </h1>
+              </div>
+
+              {/* Machine state speaks in mono — the "this is what was heard" voice.
+                While an utterance is fresh the line IS what was heard; when the
+                room has been quiet for a moment it returns to the hint. */}
+              <p className="mt-5 w-full truncate font-mono text-xs text-muted-foreground">
+                {lastHeard ?? t("oats.conversation.listeningHint")}
+              </p>
+              {/* Said plainly rather than asked. Oats resumed a recent conversation
+                instead of stopping to check, because the check would have cost
+                the first thing anybody said. */}
+              {continuingFrom && (
+                <p className="mt-1.5 font-mono text-xs text-muted-foreground">
+                  {t("oats.conversation.continuing", { title: continuingFrom })}
+                </p>
+              )}
+
+              {/* The contour — the record being written (DESIGN.md §9.8). Every
+                part of it is a measurement of this conversation, which is the
+                whole reason it replaced a landscape. */}
+              <ConversationContour
+                contour={contour}
+                className="mt-8"
+                height={104}
+                focusedGroup={focusedGroup}
+                label={contourLabel(contour, t)}
+              />
+            </div>
+
+            {/* The questions, written against the trace above them. No legend
+                here: a permanent key beside a live conversation is a tip that
+                never goes away, on the one surface whose whole test is that
+                nothing competes with the person in the room. The vocabulary is
+                explained once, in the reading view, where there is time.
+
+                `min-h-0` is what makes `overflow-y-auto` a scroller rather than
+                a suggestion inside a flex column. */}
+            {/* The fade is the scroll cue: the band clips, and a hard edge made
+                a sliced annotation look like a short one. `mask-image` costs no
+                element and no paint of its own. */}
+            <div
+              onScroll={(event) => {
+                const el = event.currentTarget;
+                setBandAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
+              }}
+              className="min-h-0 flex-1 overflow-y-auto"
+              style={
+                bandAtEnd
+                  ? undefined
+                  : {
+                      maskImage: "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
+                      WebkitMaskImage:
+                        "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
+                    }
+              }
+            >
+              <ConversationSignalRail onFocus={setFocusedGroup} />
+            </div>
+
+            {/* The foot is pinned, but it is not allowed to eat the band.
+            
+                It was `shrink-0` with no bound, so a long conversation's open
+                threads squeezed the annotations to zero — measured: twelve
+                expanded threads left the band at 0px with every question card
+                gone, and fourteen pushed the foot's own contents to y=1007 in a
+                window that does not scroll. A third of the surface is the most
+                the reminder may take, and it scrolls inside that. */}
+            <div className="flex max-h-[34%] shrink-0 flex-col overflow-y-auto pb-6">
+              {/* The microphone went flat for long enough that the room being
+                  quiet is the less likely explanation. Said once, quietly,
+                  while there is still time to fix it — not discovered at the
+                  end when the recording is already gone. It is pinned here so
+                  a busy conversation can never push it out of sight. */}
+              {micSilentSince !== null && (
+                <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
+                  {t("oats.conversation.micSilent")}
+                </p>
+              )}
+              <OpenThreadStack
+                threads={openThreads}
+                suggestions={suggestions}
+                speaking={speaking}
+              />
+            </div>
           </>
         ) : (
           <>
+            {/* Said once, when a recording has just finished. `wasRecording`
+                keeps it from announcing on every visit to an idle screen. */}
+            <p aria-live="polite" role="status" className="sr-only">
+              {justStopped ? t("oats.conversation.statusStopped") : ""}
+            </p>
+
+            {/* The seed is the button, and the button becomes the pulse. One
+                object in two states rather than a control and an unrelated
+                indicator: press the husked oat and it starts breathing
+                (DESIGN.md §9.1, §9.2). */}
+            <button
+              type="button"
+              disabled={starting}
+              onClick={begin}
+              aria-label={t("oats.conversation.record")}
+              className={cn(
+                "group relative flex h-28 w-28 items-center justify-center rounded-full",
+                "transition-transform [transition-duration:var(--motion-base)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+                "hover:scale-[1.04] active:scale-[0.98]"
+              )}
+            >
+              <ListeningPulse state="idle" size="lg" />
+            </button>
+
+            <h1
+              className={cn(
+                "mt-9 max-w-lg text-center text-foreground",
+                "text-[2.5rem] font-medium leading-[1.1] tracking-[-0.03em]"
+              )}
+            >
+              {t("oats.conversation.title")}
+            </h1>
             <p className="relative mt-4 max-w-md text-center text-sm leading-6 text-muted-foreground">
               {starting ? t("oats.conversation.preparing") : t("oats.conversation.subtitle")}
             </p>
@@ -412,21 +692,24 @@ function ConversationSurface() {
               the screen for somebody who has not learned it yet, because after
               they have, they will never open this window to record again. */}
             {shortcut && (
-              <p className="relative mt-7 text-center font-mono text-xs text-muted-foreground/80">
+              <p className="relative mt-7 text-center font-mono text-xs text-muted-foreground">
                 {shortcut}
               </p>
             )}
+
+            {/* The last entry in the ledger.
+            
+                Without it this screen is a centred hero on cream — the field
+                used to be its whole identity, and deleting the field without
+                replacing it would leave a blank page pretending to be a
+                product. What belongs here is not decoration but the most recent
+                true thing Oats knows: what you last recorded, and its shape.
+                It is also the answer to "did that actually save?", which is the
+                question somebody actually has when they open this window. */}
+            <LastEntry />
           </>
         )}
 
-        {/* The microphone went flat for long enough that the room being quiet is the
-          less likely explanation. Said once, quietly, while there is still time
-          to fix it — not discovered at the end when the recording is already gone. */}
-        {recording && micSilentSince !== null && (
-          <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-foreground">
-            {t("oats.conversation.micSilent")}
-          </p>
-        )}
         {!recording && nothingHeard && (
           <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-muted-foreground">
             {t("oats.conversation.nothingHeard")}
@@ -448,25 +731,7 @@ function ConversationSurface() {
             {t(`oats.preflight.${preflight.problem}`)}
           </p>
         )}
-
-        {recording && (
-          <OpenThreadStack
-            threads={openThreads}
-            suggestions={suggestions}
-            speaking={speaking}
-            className="relative mt-10"
-          />
-        )}
       </section>
-
-      {/* Outside the composition, deliberately. The section is the centred
-        `max-w-2xl` reading column; the rail belongs to the *pane*, so it
-        anchors to the window's corner rather than floating a third of the way
-        in. Being a sibling also means a card arriving cannot push the pulse,
-        the heading or the echo line around — §8 forbids a card entering from
-        shifting the layout anywhere else on screen. It renders nothing when
-        there is nothing to say. */}
-      {recording && <ConversationSignalRail />}
     </>
   );
 }
@@ -512,7 +777,14 @@ function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
   }
 }
 
-function ThreadsView({
+// The secondary lens, deliberately.
+//
+// A force-directed graph is a good answer to "how did this conversation move?"
+// and a bad default payoff for opening a record — it is the shape of the tool
+// rather than the shape of what was said. The contour at the head of the
+// document carries the everyday reading; this is here for the question that
+// genuinely needs a graph.
+function ConnectionsView({
   note,
   events,
   onReload,
@@ -636,13 +908,33 @@ function IntelligenceViews({
   const selected = notes.find((note) => note.id === selectedId) ?? notes[0] ?? null;
   const { events, reload } = useConversationEvents(selected?.id ?? null);
 
+  // Sent by the Conversation surface's last-entry row (see the shell). Both
+  // halves are needed: the listener covers a mounted Intelligence, and the
+  // consume call covers the cold first visit, where the press is what mounted
+  // this component and the pushed event predates the listener.
+  useEffect(() => {
+    const open = (noteId: number) => {
+      setSelectedId(noteId);
+      setTab("summary");
+      setReading(true);
+    };
+    const onSelect = (event: Event) => {
+      const noteId = (event as CustomEvent<number>).detail;
+      if (Number.isFinite(noteId)) open(noteId);
+    };
+    window.addEventListener("oats-select-note", onSelect);
+    const pending = consumePendingNote();
+    if (pending !== null) open(pending);
+    return () => window.removeEventListener("oats-select-note", onSelect);
+  }, [setReading]);
+
   useEffect(() => {
     void initializeNotes("meeting", 100);
   }, []);
 
-  // The recall hotkey's landing: back to the list with the filter focused.
-  // The input only renders past four conversations; with fewer, landing on
-  // the short list is already the answer.
+  // The recall hotkey's landing: the list, with recall focused. The input is
+  // unconditional — see the comment at its markup for why the old
+  // four-conversation gate was removed.
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     const focusSearch = () => {
@@ -707,6 +999,19 @@ function IntelligenceViews({
 
   const summary = selected?.enhanced_content || t("oats.intelligence.preparing");
 
+  // The opened conversation's own contour: its speech, its questions with the
+  // verdicts they actually reached, and its topics — all from the record rather
+  // than from the live session, which does not outlive the recording.
+  const selectedSegments = useMemo(
+    () => parseSegments(selected?.transcript ?? null),
+    [selected?.transcript]
+  );
+  const selectedTopics = useMemo(
+    () => readTopicSnapshot(selected?.conversation_topics ?? null)?.nodes ?? [],
+    [selected?.conversation_topics]
+  );
+  const storedContour = useStoredContour(selectedSegments, events, selectedTopics);
+
   // Three regions — rail, list, detail — is a mail client, and DESIGN.md §1 is
   // explicit that a surface needing a third region is really two screens. So the
   // list *is* the screen until you open something, and then the reading view
@@ -715,9 +1020,7 @@ function IntelligenceViews({
     return (
       <section key="map" className="oats-surface oats-enter relative flex min-h-0 flex-1 flex-col">
         <header className="mx-auto flex w-full max-w-3xl shrink-0 items-baseline justify-between px-8 pt-4">
-          <h1 className="text-2xl font-medium lowercase tracking-[-0.03em]">
-            {t("lifetime.title")}
-          </h1>
+          <h1 className="text-2xl font-medium tracking-[-0.03em]">{t("lifetime.title")}</h1>
           <BackLink onClick={() => setView("list")} label={t("lifetime.backToList")} />
         </header>
         {/* Full-bleed: the graph is the content, not a panel inside it. */}
@@ -759,7 +1062,7 @@ function IntelligenceViews({
                 if (event.key === "Enter") void commitRename();
                 if (event.key === "Escape") setRenaming(false);
               }}
-              className="mt-2 w-full border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none"
+              className="mt-2 w-full rounded-sm border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           ) : (
             // A heading you can rename is still a heading; the control that
@@ -805,19 +1108,37 @@ function IntelligenceViews({
             </p>
           )}
 
+          {/* The conversation's own shape, at the head of its record: how the
+              talking was distributed, where the subject turned, what was asked
+              and how settled it came out, and where the room went back to
+              something. It is the one part of this document that is not words,
+              and it is derived entirely from the words. */}
+          <ConversationContour
+            contour={storedContour}
+            className="mt-8"
+            height={92}
+            label={contourLabel(storedContour, t)}
+          />
+          {/* The key lives here and only here: the reading view is where a
+              contour is studied rather than glanced at, and where there is time
+              to learn what the marks mean. */}
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {t("oats.conversation.contourLegend")}
+          </p>
+
           {/* Text links, not tabs. A tab bar is a box drawn around a choice that
               needs no box (DESIGN.md §1). The three actions sit on the same line,
               pushed to the far side: they belong to what is being read, and a
               second row for them would be a third region (§1). */}
-          <div className="mt-8 flex items-baseline justify-between gap-6">
+          <div className="mt-7 flex items-baseline justify-between gap-6">
             <div className="flex gap-5">
-              {(["summary", "transcript", "threads"] as DetailTab[]).map((item) => (
+              {(["summary", "transcript", "connections"] as DetailTab[]).map((item) => (
                 <button
                   key={item}
                   onClick={() => setTab(item)}
                   aria-current={tab === item ? "true" : undefined}
                   className={cn(
-                    "rounded-sm text-sm lowercase transition-colors",
+                    "rounded-sm text-sm transition-colors",
                     "[transition-duration:var(--motion-instant)]",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     tab === item
@@ -852,13 +1173,13 @@ function IntelligenceViews({
           {tab === "transcript" && (
             <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-7 text-muted-foreground">
               <Highlighted
-                text={transcriptText(selected.transcript) || t("oats.intelligence.noTranscript")}
+                text={transcriptText(selected.transcript, t) || t("oats.intelligence.noTranscript")}
                 query={query}
               />
             </article>
           )}
-          {tab === "threads" && (
-            <ThreadsView key={selected.id} note={selected} events={events} onReload={reload} />
+          {tab === "connections" && (
+            <ConnectionsView key={selected.id} note={selected} events={events} onReload={reload} />
           )}
         </div>
       </section>
@@ -869,7 +1190,7 @@ function IntelligenceViews({
     <section key="list" className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
         <div className="flex items-baseline justify-between">
-          <h1 className="text-3xl font-medium lowercase tracking-[-0.03em]">
+          <h1 className="text-3xl font-medium tracking-[-0.03em]">
             {t("oats.intelligence.listTitle")}
           </h1>
           {notes.length > 0 && (
@@ -877,20 +1198,34 @@ function IntelligenceViews({
           )}
         </div>
 
-        {/* The filter appears when there is enough to filter, and it is a line
-            rather than a box — a permanent bordered input is chrome for a
-            capability most sessions never reach for. */}
-        {notes.length > 4 && (
-          <input
-            ref={searchInputRef}
-            type="search"
-            aria-label={t("oats.intelligence.searchPlaceholder")}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("oats.intelligence.searchPlaceholder")}
-            className="mt-6 w-full border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:outline-none"
-          />
-        )}
+        {/* Recall is the first action on this surface, and it is here from the
+            first conversation.
+            
+            It used to appear only above four conversations, on the theory that
+            a short list needs no filter. That is true of a *filter* and false
+            of the thing this actually is: the answer to "what did that
+            candidate say about equity?", which is the reason to keep a record
+            at all. Hiding it until the fifth conversation taught every new user
+            that Oats cannot do the one thing it is for.
+            
+            A line rather than a box — a bordered input is form furniture, and
+            this is the page's opening move. */}
+        <input
+          ref={searchInputRef}
+          type="search"
+          aria-label={t("oats.intelligence.searchPlaceholder")}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("oats.intelligence.searchPlaceholder")}
+          className="mt-6 w-full rounded-sm border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        />
+
+        {/* Recall is the surface's first action, and filtering it said nothing:
+            a screen-reader user typed and had to tab into the list to find out
+            whether anything matched. */}
+        <p aria-live="polite" role="status" className="sr-only">
+          {query ? t("oats.intelligence.searchResults", { count: visibleNotes.length }) : ""}
+        </p>
 
         {visibleNotes.length ? (
           <div className="mt-8">
@@ -903,7 +1238,7 @@ function IntelligenceViews({
                   // meant that finding a conversation by something said in it
                   // dropped you at the top of a different document, with the
                   // sentence you searched for still to be hunted for by eye.
-                  setTab(matchedTab(note, query));
+                  setTab(matchedTab(note, query, t));
                   setReading(true);
                 }}
                 className={cn(
@@ -922,9 +1257,13 @@ function IntelligenceViews({
                 </div>
                 <p className="mt-1.5 line-clamp-2 text-[13px] leading-6 text-muted-foreground">
                   {plainPreview(note.enhanced_content) ||
-                    transcriptText(note.transcript).slice(0, 160) ||
+                    transcriptText(note.transcript, t).slice(0, 160) ||
                     t("oats.intelligence.processing")}
                 </p>
+                {/* Its own shape, in the margin of the list. Two conversations
+                    of the same length and the same title still look different
+                    here, because this is drawn from what was said in them. */}
+                <NoteContourStrip note={note} />
               </button>
             ))}
           </div>
@@ -940,12 +1279,12 @@ function IntelligenceViews({
 }
 
 /** Which tab to open a search result on. The rule itself is in `conversationSearch`. */
-function matchedTab(note: NoteItem, query: string): DetailTab {
+function matchedTab(note: NoteItem, query: string, t: TFunction): DetailTab {
   return matchTarget(
     {
       title: note.title,
       summary: note.enhanced_content,
-      transcript: transcriptText(note.transcript),
+      transcript: transcriptText(note.transcript, t),
     },
     query
   );
@@ -1017,7 +1356,7 @@ function ConversationActions({
   // summary, because that is what is on the screen.
   const payload = () =>
     tab === "transcript"
-      ? transcriptText(note.transcript)
+      ? transcriptText(note.transcript, t)
       : note.enhanced_content || note.content || "";
 
   useEffect(() => setConfirming(false), [note.id, tab]);
@@ -1042,7 +1381,7 @@ function ConversationActions({
   if (confirming) {
     return (
       <div className="flex shrink-0 items-baseline gap-4">
-        <span className="font-mono text-xs lowercase text-foreground">
+        <span className="font-mono text-xs text-foreground">
           {t("oats.intelligence.deleteConfirm")}
         </span>
         <QuietAction
@@ -1078,12 +1417,22 @@ function ConversationActions({
   );
 }
 
-function QuietAction({ label, onClick }: { label: string; onClick: () => void }) {
+function QuietAction({
+  label,
+  onClick,
+  ariaLabel,
+}: {
+  label: string;
+  onClick: () => void;
+  /** When the visible word alone does not say what it acts on. */
+  ariaLabel?: string;
+}) {
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       onClick={onClick}
-      className="rounded-sm font-mono text-xs lowercase text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="rounded-sm font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {label}
     </button>
@@ -1096,7 +1445,7 @@ function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-sm font-mono text-xs lowercase text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="rounded-sm font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {label}
     </button>
@@ -1114,13 +1463,37 @@ function EmptyState({ line, hint }: { line: string; hint?: string | null }) {
   );
   return (
     <div className="mt-24 text-center">
-      <p className="font-mono text-sm lowercase text-muted-foreground">{line}</p>
+      <p className="font-mono text-sm text-muted-foreground">{line}</p>
       {hint && shortcut && (
-        <p className="mt-3 font-mono text-xs text-muted-foreground/70">
+        <p className="mt-3 font-mono text-xs text-muted-foreground">
           {hint.replace("{{shortcut}}", shortcut)}
         </p>
       )}
     </div>
+  );
+}
+
+// One conversation's shape, beside it in the list.
+//
+// Built from the note's own stored utterances, so a list of conversations reads
+// as a page of different entries rather than as identical rows.
+//
+// **Speech shape only, no question marks.** Marks would need this row's
+// persisted events, and a hundred-row list would mean a hundred queries to draw
+// a 24px strip. The marks appear when the conversation is opened, where the
+// events are already loaded. An earlier version of this comment claimed the
+// marks survived here; they never did, because the call site passes no events.
+function NoteContourStrip({ note }: { note: NoteItem }) {
+  const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
+  const strip = useContourStrip(segments, NO_EVENTS);
+  if (strip.empty) return null;
+  return (
+    <ConversationContour
+      contour={strip}
+      className="mt-3 opacity-70"
+      height={22}
+      showMarks={false}
+    />
   );
 }
 
@@ -1162,9 +1535,14 @@ function Row({
     // to fit on one screen; this is most of how it gets there.
     <div className="grid grid-cols-[minmax(0,18rem)_1fr] items-start gap-x-8 border-b border-border/40 py-3 last:border-b-0">
       <div className="min-w-0">
-        <label className="text-sm text-foreground" htmlFor={htmlFor}>
-          {label}
-        </label>
+        {/* A `<label>` with no `for` and no wrapped control labels nothing. */}
+        {htmlFor ? (
+          <label className="text-sm text-foreground" htmlFor={htmlFor}>
+            {label}
+          </label>
+        ) : (
+          <span className="text-sm text-foreground">{label}</span>
+        )}
         {/* The explanation belongs to the label, in the label's cell. Putting it
             on a second grid row pushed it below the control, where it read as an
             orphan belonging to whatever came next. */}
@@ -1233,7 +1611,11 @@ function MicrophoneChoice() {
             ? t("oats.settings.micBuiltIn")
             : deviceLabel || t("oats.settings.micSystemDefault")}
         </span>
-        <QuietAction label={t("oats.settings.micChange")} onClick={() => void openPicker()} />
+        <QuietAction
+          label={t("oats.settings.micChange")}
+          ariaLabel={t("oats.settings.micChangeLabel")}
+          onClick={() => void openPicker()}
+        />
       </div>
     );
   }
@@ -1266,6 +1648,18 @@ function MicrophoneChoice() {
   );
 }
 
+// The conversation languages the visible page offers, each written as its own
+// speakers write it.
+const CONVERSATION_LANGUAGES: [string, string][] = [
+  ["en", "English"],
+  ["es", "Español"],
+  ["fr", "Français"],
+  ["de", "Deutsch"],
+  ["pt", "Português"],
+  ["it", "Italiano"],
+  ["zh", "中文"],
+];
+
 // Sensible starting points so the one visible choice actually produces a working
 // pipeline. Anything more specific belongs behind Advanced.
 const DEFAULT_LOCAL_MODEL = "qwen3.5-4b-q4_k_m";
@@ -1278,7 +1672,12 @@ const selectClass =
   // No opt-out class is needed: the inherited input chrome is an element
   // selector, but it is scoped out of `.oats-surface` in index.css, so these
   // utilities are the only thing describing this control.
-  "h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none";
+  //
+  // The gold hairline alone was the focus state, and it measured 2.40:1 against
+  // the border it replaced — under the 3:1 SC 1.4.11 asks of the thing that
+  // says where focus is. A keyboard user could not tell the microphone select
+  // from the language select. The ring is the same one every button carries.
+  "h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 function SettingsSurface() {
   const transcriptionMode = useSettingsStore((s) => s.transcriptionMode);
@@ -1355,7 +1754,7 @@ function SettingsSurface() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <Suspense
             fallback={
-              <p className="px-8 py-6 font-mono text-xs lowercase text-muted-foreground">
+              <p className="px-8 py-6 font-mono text-xs text-muted-foreground">
                 {t("oats.settings.advancedLoading")}
               </p>
             }
@@ -1369,9 +1768,7 @@ function SettingsSurface() {
 
   return (
     <section className="oats-surface mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-5">
-      <h1 className="text-2xl font-medium lowercase tracking-[-0.03em]">
-        {t("oats.settings.title")}
-      </h1>
+      <h1 className="text-2xl font-medium tracking-[-0.03em]">{t("oats.settings.title")}</h1>
       <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
         {t("oats.settings.subtitle")}
       </p>
@@ -1397,7 +1794,7 @@ function SettingsSurface() {
                   onClick={() => setProcessing(mode)}
                   aria-pressed={active}
                   className={cn(
-                    "relative rounded-sm pb-1.5 text-sm lowercase transition-colors",
+                    "relative rounded-sm pb-1.5 text-sm transition-colors",
                     "[transition-duration:var(--motion-instant)]",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -1435,7 +1832,10 @@ function SettingsSurface() {
           )}
         </Row>
 
-        <Row label={t("oats.settings.microphone")} htmlFor="microphone">
+        {/* No `htmlFor`: the `<select>` this would address only exists once the
+            picker is open, so the label pointed at nothing and the action read
+            as a bare "Change". The action names itself instead. */}
+        <Row label={t("oats.settings.microphone")}>
           <MicrophoneChoice />
         </Row>
 
@@ -1447,13 +1847,15 @@ function SettingsSurface() {
             className={selectClass}
           >
             <option value="auto">{t("oats.settings.autoDetect")}</option>
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="pt">Portuguese</option>
-            <option value="it">Italian</option>
-            <option value="zh">Chinese</option>
+            {/* Endonyms, not English exonyms. A user running Oats in Japanese
+                was offered "Spanish" and "German" in the one control that is
+                about language; a language names itself the same way in every
+                interface, so this needs no translation key. */}
+            {CONVERSATION_LANGUAGES.map(([code, name]) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
           </select>
         </Row>
 
@@ -1500,11 +1902,20 @@ function SettingsSurface() {
 
         {/* Stated plainly, not buried: this is the only thing that leaves the
             device during a conversation. */}
-        <Row label={t("oats.settings.autoSearch")} hint={t("oats.settings.autoSearchHint")}>
+        <Row
+          label={t("oats.settings.autoSearch")}
+          hint={t("oats.settings.autoSearchHint")}
+          htmlFor="auto-search"
+        >
           {/* A boolean is a toggle. Rendering it as two slabs made it look like a
               bigger decision than the mic preference directly above it, which is
               the same shape and already uses a toggle. */}
-          <Toggle checked={autoSearch} onChange={setAutoSearch} />
+          <Toggle
+            id="auto-search"
+            aria-label={t("oats.settings.autoSearch")}
+            checked={autoSearch}
+            onChange={setAutoSearch}
+          />
         </Row>
 
         <Row label={t("oats.settings.data")} hint={t("oats.settings.dataHint")}>
@@ -1549,6 +1960,30 @@ export default function OatsWorkspace() {
       return next;
     });
   }, [surface]);
+
+  // Opening a conversation from the Conversation surface's last-entry row.
+  // Delegated rather than lifted into props for the same reason the recall
+  // hotkey is: the shell owns `surface`, the row is three components down, and
+  // threading a callback through would tie the composition to the shell.
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const noteId = (event as CustomEvent<number>).detail;
+      if (!Number.isFinite(noteId)) return;
+      // Push *and* pull, which is the house pattern for exactly this
+      // (CLAUDE.md, the `conversation-assist-ready` handshake and
+      // `consume-pending-focus-search`). On a cold first visit Intelligence has
+      // not mounted its listener yet, so a fired event lands on nothing: the
+      // press navigated to the list and stopped there, and the row whose job is
+      // to answer "did that save?" appeared to do nothing. The parked id is
+      // consumed by Intelligence on mount, so the first press works like the
+      // second.
+      parkPendingNote(noteId);
+      setSurface("intelligence");
+      window.dispatchEvent(new CustomEvent("oats-select-note", { detail: noteId }));
+    };
+    window.addEventListener("oats-open-note", onOpen);
+    return () => window.removeEventListener("oats-open-note", onOpen);
+  }, []);
 
   // The recall hotkey: from any application into cross-conversation search.
   // Refused while recording for the same reason as Cmd+, — and the focus step
@@ -1649,20 +2084,6 @@ export default function OatsWorkspace() {
         onDone={dismissPostMigration}
       />
 
-      {/* Full strength on Conversation, which is the surface the world is for.
-          Intelligence and Settings are for reading, so the sky recedes to a
-          suggestion rather than drawing a horizon through a paragraph — and it
-          stops moving there too. A dimmed backdrop is not worth a GPU frame
-          every 16ms behind a page of text, still less behind another window
-          (the control panel disables Chromium's background throttling). A
-          conversation always pins this surface, so the wheat never freezes
-          part-grown. */}
-      <Field
-        live={recording}
-        intensity={surface === "conversation" ? 1 : 0.3}
-        animate={surface === "conversation"}
-      />
-
       {/* The window is frameless on every platform (windowConfig.js) and nothing
           else provides a drag handle, so without this it cannot be moved at all —
           including on macOS, where `titleBarStyle: "hiddenInset"` supplies the
@@ -1675,11 +2096,74 @@ export default function OatsWorkspace() {
           Reserving the band also keeps content clear of the macOS traffic lights,
           which sit at y 20–34 (windowConfig.js) — inside this band, and formerly
           6px above the Intelligence heading. */}
+      {/* The orientation band.
+      
+          Navigation used to be three labels centred along the bottom of the
+          window, which is where a consumer media app puts its tabs — and it
+          leaned on the old field's horizon to stand on. With the field gone it
+          had nothing to belong to, and it disappeared during recording, which
+          is the moment orientation matters most.
+      
+          It lives in the window's drag band now: the wordmark on the left, the
+          three destinations beside it, in the one strip that is on every
+          surface and never moves. A ledger is identified at its head. The band
+          keeps `-webkit-app-region: drag` so the frameless window can still be
+          moved; the interactive parts opt back out, because a drag region
+          swallows clicks. */}
       <div
-        aria-hidden="true"
-        className="relative z-20 h-9 shrink-0"
+        className="relative z-20 flex h-9 shrink-0 items-center gap-6 px-5"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-      />
+      >
+        {/* The one lowercase thing in the product (DESIGN.md §5). */}
+        <span
+          aria-hidden="true"
+          className="select-none font-mono text-[13px] tracking-[-0.01em] text-foreground"
+        >
+          oats
+        </span>
+        <nav
+          aria-label={t("oats.nav.label")}
+          inert={recording}
+          aria-hidden={recording || undefined}
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          className={cn(
+            "flex items-center gap-5",
+            "transition-opacity [transition-duration:var(--motion-slow)]",
+            // Nothing but the record being written while somebody is talking.
+            // The tool gets out of the way.
+            recording && "pointer-events-none opacity-0"
+          )}
+        >
+          {nav.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setSurface(item.id)}
+              aria-current={surface === item.id ? "page" : undefined}
+              className={cn(
+                "relative rounded-sm text-[13px] transition-colors",
+                "[transition-duration:var(--motion-instant)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                surface === item.id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t(`oats.nav.${item.id}`)}
+              {/* Ink, not gold. This underline is on screen on *every* surface,
+                  so a gold one guaranteed a second accent competing with the
+                  seed or a selected mark — §3 allows one. */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute -bottom-1 inset-x-0 h-px origin-center bg-foreground transition-transform",
+                  "[transition-duration:var(--motion-base)]",
+                  surface === item.id ? "scale-x-100" : "scale-x-0"
+                )}
+              />
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {/* All three surfaces stay mounted and cross-fade in place.
 
@@ -1722,54 +2206,6 @@ export default function OatsWorkspace() {
           </main>
         ))}
       </div>
-
-      {/* Navigation stands on the ground rather than running down the side.
-          Three destinations do not earn a permanent 208px rail, and a rail cuts
-          the horizon in half — the whole composition depends on the window
-          being uninterrupted edge to edge (DESIGN.md §1: chrome is the enemy).
-
-          Words, no icons: Mic / Brain / Gear were generic glyphs doing no work
-          beside three unambiguous labels, and §10 prefers a word over an icon
-          wherever space allows. */}
-      <nav
-        aria-label={t("oats.nav.label")}
-        className={cn(
-          "relative flex shrink-0 items-center justify-center gap-9 pb-7 pt-4",
-          "transition-opacity [transition-duration:var(--motion-slow)]",
-          // Nothing but the field, the pulse and the cards while somebody is
-          // talking. The tool gets out of the way.
-          recording && "pointer-events-none opacity-0"
-        )}
-      >
-        {nav.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setSurface(item.id)}
-            aria-current={surface === item.id ? "page" : undefined}
-            className={cn(
-              "relative rounded-sm px-1 pb-1.5 text-sm lowercase transition-colors",
-              "[transition-duration:var(--motion-instant)]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              surface === item.id
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t(`oats.nav.${item.id}`)}
-            {/* Ink, not gold. This underline is on screen on *every* surface, so
-                a gold one guaranteed a second accent competing with the seed,
-                the processing choice, or a selected graph node — §3 allows one. */}
-            <span
-              aria-hidden="true"
-              className={cn(
-                "absolute inset-x-1 bottom-0 h-px origin-center bg-foreground transition-transform",
-                "[transition-duration:var(--motion-base)]",
-                surface === item.id ? "scale-x-100" : "scale-x-0"
-              )}
-            />
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }

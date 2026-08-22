@@ -1,33 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import {
-  ChevronRight,
-  ChevronLeft,
-  Flag,
-  Settings,
-  Shield,
-  Command,
-  Sparkles,
-  Users,
-} from "lucide-react";
-import TitleBar from "./TitleBar";
-import WindowControls from "./WindowControls";
-import PermissionsSection from "./ui/PermissionsSection";
-import SupportDropdown from "./ui/SupportDropdown";
-import StepProgress from "./ui/StepProgress";
+import { cn } from "./lib/utils";
+import { Shield } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useDialogs } from "../hooks/useDialogs";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
-import { useSystemAudioPermission } from "../hooks/useSystemAudioPermission";
 import { useSettings } from "../hooks/useSettings";
 import { useSettingsStore } from "../stores/settingsStore";
-import LanguageSelector from "./ui/LanguageSelector";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import {
   formatHotkeyLabel,
@@ -37,16 +18,13 @@ import {
   parseHotkeyList,
   serializeHotkeyList,
 } from "../utils/hotkeys";
-import { HotkeyInput } from "./ui/HotkeyInput";
 import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
 import { getValidationMessage } from "../utils/hotkeyValidator";
 import { validateHotkeyForSlot } from "../utils/hotkeyValidation";
-import { getCachedPlatform, getPlatform } from "../utils/platform";
+import { getPlatform } from "../utils/platform";
 import logger from "../utils/logger";
-import { ActivationModeSelector } from "./ui/ActivationModeSelector";
 import { ACCESSIBILITY_SKIPPED_KEY, areRequiredPermissionsMet } from "../utils/permissions";
-import { USE_CASE_IDS } from "./onboarding/useCases";
 
 const MAX_STEP_INDEX = 2;
 
@@ -104,7 +82,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setDictationKey,
     updateTranscriptionSettings,
     preferredLanguage,
-    onboardingUseCases,
     setOnboardingUseCases,
     onboardingUseCaseNote,
     setOnboardingUseCaseNote,
@@ -160,8 +137,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const permissionsHook = usePermissions(showAlertDialog);
   useClipboard(showAlertDialog); // Initialize clipboard hook for permission checks
 
-  const systemAudio = useSystemAudioPermission();
-
   useEffect(() => {
     if (permissionsHook.accessibilityPermissionGranted && accessibilitySkipped) {
       setAccessibilitySkipped(false);
@@ -190,8 +165,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       setCurrentStep(steps.length - 1);
     }
   }, [currentStep, steps.length, setCurrentStep]);
-
-  const showProgress = true;
 
   useEffect(() => {
     if (isUsingNativeShortcut && !supportsPushToTalk) {
@@ -289,36 +262,41 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     void autoRegisterDefaultHotkey();
   }, [currentStep, hotkey, registerHotkey, activationStepIndex, setDictationKey]);
 
-  const ensureHotkeyRegistered = useCallback(async () => {
-    if (!window.electronAPI?.updateHotkey) {
-      return true;
-    }
-
+  /**
+   * Try to register the dictation shortcut, and **never block first run on it**.
+   *
+   * This used to return false on failure and `saveSettings` returned early, so
+   * `onboardingCompleted` was never written: a user whose shortcut could not be
+   * registered could not enter the product at all. There is no skip, no back
+   * and no "continue anyway" on this screen, so that is a dead end — over a
+   * *dictation* shortcut, which is not one of the three surfaces and which this
+   * flow no longer even asks about. `hotkeyManager.updateHotkey` returns
+   * `success: false` on a slot conflict and on GNOME, Hyprland and KDE
+   * registration failure, all of which CLAUDE.md documents as fragile.
+   *
+   * The failure is still reported — quietly, and after the user is inside,
+   * where Settings can fix it. Losing a shortcut is an inconvenience; being
+   * unable to reach a conversation recorder you have already granted the
+   * microphone to is not.
+   */
+  const tryRegisterHotkey = useCallback(async () => {
+    if (!window.electronAPI?.updateHotkey) return;
     try {
       const result = await window.electronAPI.updateHotkey(withExtraDictationHotkeys(hotkey));
       if (result && !result.success) {
-        showAlertDialog({
-          title: t("onboarding.hotkey.couldNotRegisterTitle"),
-          description: result.message || t("onboarding.hotkey.couldNotRegisterDescription"),
-        });
-        return false;
+        logger.info(
+          "Dictation hotkey not registered during onboarding; continuing",
+          { message: result.message },
+          "onboarding"
+        );
       }
-      return true;
     } catch (error) {
       logger.error("Failed to register onboarding hotkey", { error }, "onboarding");
-      showAlertDialog({
-        title: t("onboarding.hotkey.couldNotRegisterTitle"),
-        description: t("onboarding.hotkey.couldNotRegisterDescription"),
-      });
-      return false;
     }
-  }, [hotkey, withExtraDictationHotkeys, showAlertDialog, t]);
+  }, [hotkey, withExtraDictationHotkeys]);
 
   const saveSettings = useCallback(async () => {
-    const hotkeyRegistered = await ensureHotkeyRegistered();
-    if (!hotkeyRegistered) {
-      return false;
-    }
+    await tryRegisterHotkey();
     setDictationKey(withExtraDictationHotkeys(hotkey));
     saveAgentName(agentName);
 
@@ -347,53 +325,20 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     withExtraDictationHotkeys,
     agentName,
     setDictationKey,
-    ensureHotkeyRegistered,
+    tryRegisterHotkey,
     useLocalWhisper,
     updateTranscriptionSettings,
   ]);
 
+  // Focus moves to the only remaining action the moment permission lands, so
+  // the keyboard is where the user needs it without hunting.
+  const doneRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (permissionsHook.micPermissionGranted) doneRef.current?.focus();
+  }, [permissionsHook.micPermissionGranted]);
+
   const [isFinishing, setIsFinishing] = useState(false);
   const openSettingsOnCompleteRef = useRef(false);
-
-  const nextStep = useCallback(async () => {
-    if (currentStep >= steps.length - 1) {
-      return;
-    }
-
-    const currentStepId = steps[currentStep]?.id;
-    const isPermissionsGate = currentStepId === "permissions";
-    if (
-      getPlatform() === "darwin" &&
-      isPermissionsGate &&
-      !permissionsHook.accessibilityPermissionGranted
-    ) {
-      setAccessibilitySkipped(true);
-    }
-
-    const newStep = currentStep + 1;
-    setCurrentStep(newStep);
-
-    // Show dictation panel when entering activation step
-    if (newStep === activationStepIndex) {
-      if (window.electronAPI?.showDictationPanel) {
-        window.electronAPI.showDictationPanel();
-      }
-    }
-  }, [
-    currentStep,
-    setCurrentStep,
-    steps,
-    activationStepIndex,
-    permissionsHook.accessibilityPermissionGranted,
-    setAccessibilitySkipped,
-  ]);
-
-  const prevStep = useCallback(() => {
-    if (currentStep > 0) {
-      const newStep = currentStep - 1;
-      setCurrentStep(newStep);
-    }
-  }, [currentStep, setCurrentStep]);
 
   const finishOnboarding = useCallback(
     async (openSettings = false) => {
@@ -420,24 +365,79 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         const isMacOS = platform === "darwin";
 
         return (
-          <div className="space-y-4">
-            {/* Header - compact */}
-            <div className="text-center">
-              <h2 className="text-lg font-semibold text-foreground tracking-tight">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-[2rem] font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
                 {t("onboarding.permissions.title")}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              </h1>
+              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
                 {isMacOS
                   ? t("onboarding.permissions.requiredForApp")
                   : t("onboarding.permissions.microphoneRequired")}
               </p>
             </div>
 
-            <PermissionsSection
-              permissions={permissionsHook}
-              systemAudio={systemAudio}
-              systemAudioRecommended={onboardingUseCases.includes(USE_CASE_IDS.meetings)}
-            />
+            {/* The microphone, and nothing else.
+            
+                `PermissionsSection` is the inherited permissions UI — a bordered
+                card, a gold-tinted icon tile, a pill badge and a solid-gold
+                "ultra-premium with subtle depth" CTA. Measured on this screen it
+                spent 0.285% of the window on saturated gold, more than double
+                what the product spends on its own live-recording mark, on the
+                first screen anybody ever sees. It stays where it belongs
+                (`PostMigrationOnboarding`, which walks back through three
+                permissions); first run states the one thing that actually
+                blocks a conversation, in the ledger's own voice.
+            
+                Ink, not gold: the accent is reserved for the live pulse and the
+                selected thing, and a permission request is neither. */}
+            <div className="border-t border-border/60 pt-5">
+              <p className="text-sm text-foreground">
+                {t("onboarding.permissions.microphoneTitle")}
+              </p>
+              <p className="mt-1.5 max-w-md text-xs leading-5 text-muted-foreground">
+                {t("onboarding.permissions.microphoneDescription")}
+              </p>
+              {/* Granting used to unmount the focused button and replace it with
+                  static text while "Done" silently became enabled: focus fell
+                  to the body and nothing was spoken, so a blind first-run user
+                  heard nothing and had to hunt for the way forward. */}
+              <p aria-live="polite" role="status" className="sr-only">
+                {permissionsHook.micPermissionGranted
+                  ? t("onboarding.permissions.microphoneGranted")
+                  : ""}
+              </p>
+              <div className="mt-4 flex items-center gap-5">
+                {permissionsHook.micPermissionGranted ? (
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {t("onboarding.permissions.microphoneReady")}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void permissionsHook.requestMicPermission()}
+                    className="rounded-sm text-sm text-foreground underline underline-offset-4 transition-opacity [transition-duration:var(--motion-instant)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    {t("onboarding.permissions.grant")}
+                  </button>
+                )}
+                {/* Only once the browser prompt cannot help any more. */}
+                {permissionsHook.micPermissionError && (
+                  <button
+                    type="button"
+                    onClick={() => void permissionsHook.openMicPrivacySettings()}
+                    className="rounded-sm text-xs text-muted-foreground underline underline-offset-4 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {t("onboarding.permissions.openSystemSettings")}
+                  </button>
+                )}
+              </div>
+              {permissionsHook.micPermissionError && (
+                <p className="mt-3 max-w-md text-xs leading-5 text-foreground">
+                  {permissionsHook.micPermissionError}
+                </p>
+              )}
+            </div>
           </div>
         );
       }
@@ -482,14 +482,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   };
 
-  const onboardingPlatform =
-    typeof window !== "undefined" && window.electronAPI?.getPlatform
-      ? window.electronAPI.getPlatform()
-      : "darwin";
-
   return (
+    // First run, in the same system as the workspace.
+    //
+    // This used to be a wizard chassis — title bar, step progress, a rounded
+    // card, and a footer of pill buttons — around a flow that has had exactly
+    // one step since the dictation and congratulations steps were removed. It
+    // announced itself as a different product from the three surfaces behind
+    // it, on the first screen anybody sees. There is one thing to do here, so
+    // there is one column, one heading, and one action.
     <div
-      className="h-screen flex flex-col bg-background"
+      className="oats-surface flex h-screen flex-col bg-background"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <ConfirmDialog
@@ -510,66 +513,43 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         onOk={() => {}}
       />
 
-      <div className="shrink-0 z-10">
-        <TitleBar
-          showTitle={true}
-          className="border-b border-border bg-background"
-          actions={<SupportDropdown />}
-          center={
-            onboardingPlatform === "darwin" ? (
-              <StepProgress steps={steps} currentStep={currentStep} />
-            ) : undefined
-          }
-        />
+      {/* The window is frameless, so the drag band is the only way to move it —
+          and it carries the wordmark, exactly as the workspace's does. */}
+      <div
+        className="relative z-20 flex h-9 shrink-0 items-center px-5"
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      >
+        <span
+          aria-hidden="true"
+          className="select-none font-mono text-[13px] tracking-[-0.01em] text-foreground"
+        >
+          oats
+        </span>
       </div>
 
-      {/* Progress bar — on macOS it lives centered in the title bar instead */}
-      {showProgress && onboardingPlatform !== "darwin" && (
-        <div className="z-10 shrink-0 border-b border-border bg-background px-6 py-3 md:px-12">
-          <div className="max-w-3xl mx-auto">
-            <StepProgress steps={steps} currentStep={currentStep} />
-          </div>
-        </div>
-      )}
-
-      {/* Content - This will grow to fill available space */}
-      <div className="flex flex-1 items-center overflow-y-auto px-6 md:px-12">
-        <div className="mx-auto w-full max-w-3xl">
-          <Card className="overflow-hidden rounded-xl border border-border bg-card">
-            <CardContent className="p-6 md:p-8">{renderStep()}</CardContent>
-          </Card>
-        </div>
+      <div className="flex min-h-0 flex-1 items-center overflow-y-auto px-8">
+        <div className="mx-auto w-full max-w-xl pb-10">{renderStep()}</div>
       </div>
 
-      {/* Footer Navigation - hidden on the first step */}
-      {showProgress && (
-        <div className="z-10 shrink-0 border-t border-border bg-background px-6 py-3 md:px-12">
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
-            <Button
-              onClick={prevStep}
-              variant="outline"
-              disabled={currentStep === 0}
-              className="h-8 px-5 rounded-full text-xs"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              {t("common.back")}
-            </Button>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() =>
-                  currentStep >= steps.length - 1 ? void finishOnboarding() : void nextStep()
-                }
-                disabled={!canProceed() || isFinishing}
-                className="h-8 px-6 rounded-full text-xs"
-              >
-                {currentStep >= steps.length - 1 ? t("common.done") : t("common.next")}
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
+      <div className="shrink-0 px-8 pb-8">
+        <div className="mx-auto w-full max-w-xl">
+          <button
+            ref={doneRef}
+            type="button"
+            onClick={() => void finishOnboarding()}
+            disabled={!canProceed() || isFinishing}
+            className={cn(
+              "rounded-sm text-sm transition-colors [transition-duration:var(--motion-instant)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              canProceed() && !isFinishing
+                ? "text-foreground hover:opacity-80"
+                : "cursor-not-allowed text-muted-foreground"
+            )}
+          >
+            {t("common.done")}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -196,8 +196,7 @@ test("canvas text uses the same mono token as the DOM", () => {
 test("canvas backing stores are clamped, so a Retina Mac is not 4x the work", () => {
   for (const [name, source] of [
     ["ForceGraph", FORCE_GRAPH],
-    ["FieldGL", read("src/components/conversation/field/FieldGL.tsx")],
-    ["FieldCanvas", read("src/components/conversation/field/FieldCanvas.tsx")],
+    ["ConversationContour", read("src/components/conversation/ConversationContour.tsx")],
   ]) {
     assert.match(
       source,

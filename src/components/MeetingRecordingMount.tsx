@@ -12,6 +12,9 @@ const EMA_NEXT = 0.5;
 
 // Below this the microphone is producing a flat floor, not a quiet room: normal
 // room noise on a working mic sits comfortably above it.
+/** 10Hz. The dead-microphone check has a 30-second grace period. */
+const MIC_SAMPLE_INTERVAL_MS = 100;
+
 const SILENCE_FLOOR = 0.004;
 // How long that floor must persist before saying anything. Long enough that a
 // genuine pause in conversation never trips it.
@@ -43,8 +46,24 @@ export default function MeetingRecordingMount(): null {
     let smoothed = 0;
     let buf = new Float32Array(256);
     let lastSoundAt = performance.now();
+    let lastSampleAt = 0;
 
-    const tick = () => {
+    const tick = (now: number) => {
+      rafId = requestAnimationFrame(tick);
+
+      // Sampled, not run flat out.
+      //
+      // This used to read the analyser and push `currentMicLevel` into the
+      // store on **every frame** — 60 store writes a second for the whole of a
+      // conversation, waking every subscriber's selector each time, on the one
+      // surface whose premise is that nothing competes with the person in the
+      // room. Nothing renders that level any more (the meter it fed went with
+      // `ControlPanel`); its one live consumer is the dead-microphone warning,
+      // which is judged against a 30-second grace period. 10Hz is six times
+      // more resolution than that needs and a sixth of the cost.
+      if (now - lastSampleAt < MIC_SAMPLE_INTERVAL_MS) return;
+      lastSampleAt = now;
+
       const analyser = getMicAnalyser();
       if (analyser) {
         if (buf.length !== analyser.fftSize) {
@@ -65,7 +84,6 @@ export default function MeetingRecordingMount(): null {
         // as a flat floor rather than as an error, so nothing surfaces until the
         // end of the conversation — by which point the recording is already lost.
         // Track how long the floor has been flat and let the UI say so quietly.
-        const now = performance.now();
         if (clamped > SILENCE_FLOOR) {
           lastSoundAt = now;
           if (useMeetingRecordingStore.getState().micSilentSince !== null) {
@@ -78,7 +96,6 @@ export default function MeetingRecordingMount(): null {
           useMeetingRecordingStore.setState({ micSilentSince: Date.now() });
         }
       }
-      rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);

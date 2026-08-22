@@ -28,9 +28,9 @@ The `conversationAide` implementation still reflects a narrower earlier design. 
 
 Because of rule 2, **never write "nothing leaves your device"** in UI copy, docs, or comments. The accurate claim: audio and transcripts stay on the device; the text of questions nobody could answer is sent to the configured search host. See `docs/network-allowlist.md`.
 
-**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the _renderer_, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, default **true** since 2026-08-07; a closed gate logs to the debug logger and surfaces as the `question-cards-off` preflight line under the record button). The detection and verdict patterns cover all ten shipped locales — JS `\b` is ASCII-only, so the non-English patterns use explicit boundary classes (spaced scripts) or none (CJK); see the comment block in `conversationAide.mjs` before touching them, and change verdict patterns only with both-direction test pins (a false `denied` auto-opens a browser; `test/helpers/conversationAide.test.js` pins ~250 assertions from a 3-round critic loop, including deliberately-declined patterns — do not re-add unaccented es "no se" or whitespace-terminated CJK question endings without new evidence). Finalized segments arrive every ~5s in local mode (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards flow renderer → `conversation-cards-set` IPC → `windowManager.showConversationCards` → a separate always-on-top overlay window (`AppRouter` route `?conversation-assist=true` → `ConversationAssistOverlay`), shown only after the overlay's `conversation-assist-ready` handshake. That handshake is the house pattern: a `webContents.send` fired right after window creation dies before any renderer listener exists, so cold-start events need push-plus-pull (see `consume-pending-focus-search` for the recall hotkey).
+**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the _renderer_, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, default **true** since 2026-08-07; a closed gate logs to the debug logger and surfaces as the `question-cards-off` preflight line under the record button). The detection and verdict patterns cover all ten shipped locales — JS `\b` is ASCII-only, so the non-English patterns use explicit boundary classes (spaced scripts) or none (CJK); see the comment block in `conversationAide.mjs` before touching them, and change verdict patterns only with both-direction test pins (a false `denied` auto-opens a browser; `test/helpers/conversationAide.test.js` pins ~250 assertions from a 3-round critic loop, including deliberately-declined patterns — do not re-add unaccented es "no se" or whitespace-terminated CJK question endings without new evidence). Finalized segments arrive every ~5s in local mode (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards are published into `useMeetingRecordingStore.questionCards` and drawn by `conversation/ConversationSignalRail`, **docked in the Conversation surface** under the contour. Until 2026-08-20 they crossed an IPC boundary into a separate always-on-top overlay window; that window, its route, its five IPC channels and its `conversation-assist-ready` handshake are all deleted. The handshake's _lesson_ still stands and is used elsewhere: an event fired right after a surface is created dies before any listener exists, so cold-start hand-offs need push-plus-pull (`consume-pending-focus-search` for the recall hotkey, `consumePendingNote` for opening a conversation from the Conversation surface).
 
-`DESIGN.md` is the binding visual spec (six signature surfaces: pulse, question card, open-thread stack, topic graph, lifetime graph, wheat field).
+`DESIGN.md` is the binding visual spec (six signature surfaces: pulse, question card, open-thread stack, conversation contour, topic graph, lifetime graph). The art direction is a **private conversation ledger** — paper and graphite, evidence made visible and never made theatrical, with the signature derived from what was actually said (§9.8).
 
 ### Linux input and clipboard — hard-won facts
 
@@ -55,6 +55,12 @@ subscribe` child holding the inherited listening socket, so the port accepts TCP
 and never answers (`ss -ltnp` names the holder). `npm run perf:baseline` does all
 of this — procedure and numbers in `docs/performance-baseline.md`.
 
+**A screenshot harness must not live under `src/`.** `format:check` runs
+`prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"` from the repo root, so one
+unformatted scratch file anywhere in the tree makes `verify:oats` exit 1 for
+everyone — and a harness is the file nobody thinks to format. Keep it outside
+the repo, or delete it in the same turn that used it.
+
 ### The Oats/OpenWhispr style boundary is `.oats-surface` (2026-08-19)
 
 Inherited `input`/`textarea` and `.card` rules in `index.css` are element and
@@ -64,6 +70,10 @@ surface root in `OatsWorkspace.tsx`, and deliberately _not_ on the Advanced
 Settings branch, which is the inherited app and should keep looking like itself.
 Never reach for `.input-inline` inside an Oats surface; it is the per-element
 opt-out for legacy components only.
+
+### The pastoral world was retired (2026-08-20)
+
+The sky, wheat, chaff, birds and farmhouse are **deleted**, along with `Field.tsx`, `field/`, and `test/helpers/fieldModel.test.js`. Oats carried two brands at once — a private instrument for consequential conversations, and a literal summer landscape — and the landscape won every screen it was on. `DESIGN.md` §9.8 is now the **conversation contour**; §9.9 is gone. Do not reintroduce a scenery backdrop, a permanent horizon, or blue as a visual-world colour, however it is justified in a comment.
 
 `IMPLEMENTATION.md` tracks build stages; `TODO.md` is the live tracker for what is
 outstanding. Stages 8–10 are built but not yet exercised against real speech.
@@ -210,21 +220,26 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **conversation/**: The signature surfaces that live during recording (DESIGN.md §9)
   - **ListeningPulse.tsx**: The breathing husked-oat seed (§9.1). Idle = static gold seed, paused = husk-grey, live = `oats-breathe` in `index.css`
   - **OpenThreadStack.tsx**: Collapsed-by-default rail of unfinished threads (§9.3)
-  - **Field.tsx**: The oat field behind the Conversation surface (§9.8). This file is only the **chooser** — it probes WebGL2 once per session, rejects software rasterisers, honours `prefers-reduced-motion`, and reads the recording scenery once per mount (`?fieldScene=`/`oats.fieldScene`: `sky` | `minka` | `scene` (default) | `off`). The scenery — DESIGN.md §9.9's countryside — rides the wheat's own grow/recede signal: it has **no timing of its own and no post-recording phase**
-  - **field/fieldModel.ts**: Pure, DOM-free, deterministic field data, wind math, and the recording scenery (sky colour, irimoya farmhouse geometry, birds). Unit-tested in `test/helpers/fieldModel.test.js`. **Both renderers read this**, so they cannot drift
-  - **field/shaders.ts**: GLSL, with the wind/scene constants interpolated from `fieldModel` rather than retyped — the shader and the JS cannot disagree
-  - **field/FieldGL.tsx**: WebGL2 renderer. One instanced draw per depth band, far to near; growth, wind, gusts and cursor-parting all happen in the vertex shader; §7's ordered dither in the fragment shader. No meshes, no downloaded assets
-  - **field/FieldCanvas.tsx**: 2D fallback drawing the same field, sparser and without dither (§7 forbids faking the grain, so it is omitted rather than counterfeited)
+  - **ConversationContour.tsx**: The signature mark (DESIGN.md §9.8) — one 2D canvas drawing the trace, the topic notches, the question marks and the return arcs. Pixels only; the geometry is `helpers/conversationContour.mjs`
+  - **useContour.ts**: Adapters from what Oats stores (segments, live cards, the topic snapshot, the persisted event graph) to what the contour model wants
+  - **ConversationSignalRail.tsx**: The question cards, docked in the Conversation surface — there is no detached overlay window any more
 - **ui/**: Reusable UI components (buttons, cards, inputs, etc.)
 
-**Editing the wheat field — six things that will bite you:**
+**Editing the conversation contour — what will bite you:**
 
-1. **Opacity accumulates.** The ~50% ceiling is on what reaches the screen, not on one blade. An early version at 7,200 blades and individually "safe" alpha stacked into an opaque wall that swallowed the copy. It is 1,800 now. Fewer and fainter when in doubt.
-2. **Blades must be spread vertically within their band**, or the six bands render as visible horizontal seams.
-3. **Nothing may call `getComputedStyle` in the draw loop.** Palette is read on mount and on theme change via `MutationObserver`. The old implementation read it every frame, forcing a style recalculation 30×/second for the length of a conversation.
-4. **Props passed to `FieldGL` must be referentially stable.** Its GL effect re-runs when `onFailure` (or `scene`/`reduced`) changes identity, and the rebuild silently resets grow/recede state — the exact history a `live` transition needs. `Field.tsx` uses `useCallback` for this reason; an inline arrow reintroduces the bug. `FieldCanvas` keeps that state in a ref because its effect legitimately re-runs on `live`.
-5. **Screenshot verification has its own traps.** Both draw loops gate on `document.hidden`, so a backgrounded Chrome window shows a stale (or never-drawn) canvas — screenshots of it lie. Headless `google-chrome --screenshot`/`--virtual-time-budget` advances RAF only a frame or two; drive headless Chrome over CDP (Node 24's native WebSocket suffices) and wait wall-clock time instead. The browser-extension `javascript_tool` runs in an isolated world: it cannot read page globals or patch the page's `document.hidden`.
-6. **The loop must stop, not idle.** `Field` takes `animate`, and both renderers cancel their rAF entirely — not just skip the draw — off the Conversation surface, under `prefers-reduced-motion`, and on Conversation once the wheat has withdrawn with nothing recording. In that last state blades and chaff are gated on `grow` and the backdrop reads `uTime` only inside `uGrow > 0`, so every frame is byte-identical; redrawing it at 60fps cost **113% of a core** on Linux (software compositing reads the canvas back every frame), and 17% after. A stopped loop only redraws when something calls `wake()`, so any new input to a settled frame — theme, size, `live`, `intensity`, `animate` — must wake it. The theme switch lives in Advanced Settings, where the field is frozen.
+1. **Every element must come from speech.** The contour is the product's claim that its signature is evidence rather than decoration. A value invented by a noise function, a seed, or elapsed time alone breaks that claim, and `test/helpers/conversationContour.test.js` pins it — two different conversations must not draw the same trace.
+2. **Utterances are instants; speech is not.** They arrive with one timestamp and no end, and sampling them as instants put thirty spikes into ninety-six buckets and drew the same flat comb for every conversation. Each utterance is spread across the time it plausibly took to say (`WORDS_PER_SECOND`).
+3. **Dither density is information** — the §4 uncertainty encoding, so state survives greyscale and colour-blindness. Never tune it for looks.
+4. **Nothing may call `getComputedStyle` in a draw.** Palette is read on mount and on theme change via `MutationObserver`.
+5. **`min-h-0` belongs on the section too, not only on the scrolling band.** The
+   recording surface is a pinned head, a scrolling annotations band and a pinned
+   foot. A flex child defaults to `min-height: auto`, so without `min-h-0` on the
+   _section_ it grows past the pane, the band's `overflow-y-auto` never becomes a
+   scroller, and a busy conversation pushes the dead-microphone warning to y=836
+   in an 800px window that cannot scroll. Measure it
+   (`getBoundingClientRect().bottom` against `window.innerHeight`) — a clipped
+   warning looks like a short warning in a screenshot.
+6. **There is no animation loop, and adding one is a regression.** It redraws on data change. The renderer this replaced held vsync open repainting an unchanging picture and cost 113% of a core at idle.
 
 ### React Hooks (src/hooks/)
 
@@ -750,7 +765,8 @@ const { t } = useTranslation();
 2. Use `useTranslation()` hook in components and hooks
 3. Keep `{{variable}}` interpolation syntax for dynamic values
 4. Do NOT translate: brand names (OpenWhispr, Pro), technical terms (Markdown, Signal ID), format names (MP3, WAV), AI system prompts
-5. Group keys by feature area (e.g., `notes.editor.*`, `referral.toasts.*`)
+5. **Never bulk-transform casing across locales.** Capitalising the first letter is sentence case in nine of the ten and a spelling error in German, where every common noun carries a capital — "Audio und transkripte bleiben auf diesem gerät." passed `i18n:check` (it only compares key sets and placeholders) and shipped wrong. Also anchor any scripted locale edit on `"key": "value"`, never on the value alone: a value like `"copy"` matches its own key name and silently renames it
+6. Group keys by feature area (e.g., `notes.editor.*`, `referral.toasts.*`)
 
 ### Adding New Features
 

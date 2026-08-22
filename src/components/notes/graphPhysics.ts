@@ -3,7 +3,7 @@ import type { ThreadState } from "../../types/conversationEvents";
 // The force simulation behind both graph surfaces — the topic graph inside one
 // conversation (DESIGN.md §9.4) and the lifetime graph across all of them (§9.7).
 //
-// Pure and DOM-free, on purpose and for the same reason `field/fieldModel.ts` is:
+// Pure and DOM-free, on purpose and for the same reason `conversationContour.mjs` is:
 // the interesting claims about a graph are claims about where the nodes end up,
 // and those cannot be checked through a canvas. `ForceGraph.tsx` owns pointers,
 // palette and painting; everything here is arithmetic.

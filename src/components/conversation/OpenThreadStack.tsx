@@ -51,7 +51,7 @@ export default function OpenThreadStack({
           {t("openThreads.count", { count: threads.length })}
         </span>
         {!expanded && threads[0] && (
-          <span className="min-w-0 flex-1 truncate text-left font-mono text-xs text-foreground/50">
+          <span className="min-w-0 flex-1 truncate text-left font-mono text-xs text-muted-foreground">
             {threads[0].label}
           </span>
         )}
@@ -63,6 +63,12 @@ export default function OpenThreadStack({
         // for the whole 380ms of an expand. Naming the two that actually
         // move keeps the stack's growth to the one sanctioned height
         // animation (DESIGN.md §8, "the silky-smooth rule").
+        //
+        // `inert` because the trigger says `aria-expanded="false"`: without it
+        // a screen reader reads out every thread and every suggestion as page
+        // content that the control has just announced as collapsed.
+        inert={!expanded}
+        aria-hidden={!expanded || undefined}
         className={cn(
           "grid [transition-duration:var(--motion-slow)] [transition-property:grid-template-rows,opacity]",
           "[transition-timing-function:var(--ease-oats)]",
@@ -79,11 +85,16 @@ export default function OpenThreadStack({
                     "h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full",
                     thread.state === "dropped" && "oats-dither"
                   )}
-                  style={{
-                    color:
-                      thread.state === "dropped" ? "var(--graph-silence)" : "var(--graph-open)",
-                    backgroundColor: "currentColor",
-                  }}
+                  // Dithered marks paint dots *in* `color` over nothing; a solid
+                  // mark fills. Setting both made every mark render solid and
+                  // the non-colour half of the §4 vocabulary invisible —
+                  // ConversationSignalRail.tsx documents fixing this once
+                  // already.
+                  style={
+                    thread.state === "dropped"
+                      ? { color: "var(--graph-silence)" }
+                      : { backgroundColor: "var(--graph-open)" }
+                  }
                 />
                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground/80">
                   {thread.label}
@@ -101,9 +112,11 @@ export default function OpenThreadStack({
               collapsed label. */}
           {suggestions.length > 0 && (
             <div className="mt-1 border-t border-border/40 px-3 pb-1 pt-3">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
-                {t("suggestions.title")}
-              </p>
+              {/* Sentence case, not an all-caps letterspaced eyebrow: that is
+                  the inherited dashboard label pattern, and DESIGN.md §5 now
+                  reserves lowercase for the wordmark and sentence case for
+                  everything else. */}
+              <p className="text-[11px] text-muted-foreground">{t("suggestions.title")}</p>
               <ul className="mt-2 space-y-1.5">
                 {suggestions.map((suggestion) => (
                   <li

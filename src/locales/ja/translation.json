@@ -193,9 +193,11 @@
       "language": "言語"
     },
     "permissions": {
-      "title": "権限",
+      "title": "Oats に部屋の声を届ける",
       "microphoneTitle": "マイク",
-      "microphoneDescription": "あなたの声をテキストに変換します。ホットキーを押すまで何も録音されません。",
+      "microphoneReady": "マイクの準備ができました。",
+      "microphoneGranted": "マイクへのアクセスを許可しました。",
+      "microphoneDescription": "Oats は 1 本のマイクで会話を録音し、あとから書き起こします。会話を開始するまで何も録音されません。",
       "grant": "許可",
       "grantAccess": "アクセスを許可",
       "accessibilityTitle": "アクセシビリティ",
@@ -2080,6 +2082,8 @@
     "addToFolder": {
       "title": "ノートを追加",
       "searchPlaceholder": "追加するノートを検索...",
+      "searchResults_one": "{{count}} 件の会話が一致",
+      "searchResults_other": "{{count}} 件の会話が一致",
       "addExisting": "既存を追加",
       "addCount": "{{count}}件のノートを追加",
       "noResults": "一致するノートがありません",
@@ -3021,11 +3025,17 @@
       "subtitle": "Oats が場を録音し、タイトル・要約・話の筋を自動でまとめます。",
       "listening": "聞いています。",
       "listeningHint": "音声と文字起こしはこの端末に残ります。",
+      "contourLabel": "ここまでの会話のかたち",
+      "contourLegend": "太さは話された量・切れ込みは話題の変化・印は質問で、未解決なほど粒が粗くなります",
+      "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
+      "contourEmpty": "まだ何も記録されていません。",
       "record": "会話を録音",
       "finish": "会話を終了",
       "preparing": "準備中…",
       "micOnly": "対面のマイク録音のみ。",
       "micSilent": "マイクがしばらく無音です。ミュートや他のアプリによる使用を確認してください。",
+      "statusRecording": "録音中。音声と文字起こしはこの端末に残ります。",
+      "statusStopped": "録音を終了しました。Oats が要約を作成しています。",
       "nothingHeard": "何も聞こえなかったため、会話は保存されませんでした。設定でマイクを確認してください。",
       "continuing": "{{title}} を継続中"
     },
@@ -3034,10 +3044,12 @@
       "empty": "まだ会話がありません",
       "preparing": "この会話のインテリジェンスを準備しています。",
       "noTranscript": "文字起こしはまだありません。",
+      "speakerYou": "あなた",
+      "speakerRoom": "相手",
       "tabs": {
         "summary": "要約",
         "transcript": "文字起こし",
-        "threads": "話の筋"
+        "connections": "つながり"
       },
       "processing": "会話を処理しています…",
       "searchPlaceholder": "会話を検索",
@@ -3067,6 +3079,7 @@
       "micBuiltIn": "内蔵マイク",
       "micSystemDefault": "システムの既定",
       "micChange": "変更",
+      "micChangeLabel": "マイクを変更",
       "micError": "マイクの一覧を読み取れませんでした。マイクの権限を確認してください。",
       "language": "会話の言語",
       "autoDetect": "自動検出",
@@ -3111,7 +3124,9 @@
     "dismiss": "質問を閉じる",
     "askedTimes": "{{count}} 回質問",
     "earlier": "他 {{count}} 件",
+    "collapse": "表示を減らす",
     "undo": "元に戻す",
+    "announced": "新しい質問: {{question}}",
     "searchedHost": "検索済み · {{host}}"
   },
   "openThreads": {

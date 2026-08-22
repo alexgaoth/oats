@@ -193,9 +193,11 @@
       "language": "语言"
     },
     "permissions": {
-      "title": "权限",
+      "title": "让 Oats 听见这个房间",
       "microphoneTitle": "麦克风",
-      "microphoneDescription": "将你的语音转为文字。按下快捷键之前不会录制任何内容。",
+      "microphoneReady": "麦克风已就绪。",
+      "microphoneGranted": "已授予麦克风权限。",
+      "microphoneDescription": "Oats 用一支麦克风录下对话，事后为你整理。在你开始一次对话之前，不会录制任何内容。",
       "grant": "授权",
       "grantAccess": "授予访问权限",
       "accessibilityTitle": "辅助功能",
@@ -2254,6 +2256,8 @@
     "addToFolder": {
       "title": "添加笔记",
       "searchPlaceholder": "搜索要添加的笔记...",
+      "searchResults_one": "{{count}} 个对话匹配",
+      "searchResults_other": "{{count}} 个对话匹配",
       "addExisting": "添加已有笔记",
       "addCount": "添加 {{count}} 条笔记",
       "noResults": "没有匹配的笔记",
@@ -3016,11 +3020,17 @@
       "subtitle": "Oats 记录现场，然后自动给出标题、摘要和话题线索。",
       "listening": "正在聆听。",
       "listeningHint": "音频和转录内容保留在本设备上。",
+      "contourLabel": "这场对话到目前为止的形状",
+      "contourLegend": "粗细代表说了多少 · 缺口代表话题转变 · 标记代表问题，越未解决颗粒越粗",
+      "contourSummary": "{{minutes}} 分钟，提出 {{questions}} 个问题（{{unresolved}} 个仍未解答），话题转变 {{shifts}} 次，回到 {{returns}} 条线索。",
+      "contourEmpty": "尚未录制任何内容。",
       "record": "录制对话",
       "finish": "结束对话",
       "preparing": "准备中…",
       "micOnly": "仅限面对面的麦克风录音。",
       "micSilent": "麦克风已经安静了一段时间。请检查是否被静音或被其他应用占用。",
+      "statusRecording": "正在录音。音频和转录都留在这台电脑上。",
+      "statusStopped": "录音结束。Oats 正在撰写摘要。",
       "nothingHeard": "没有听到任何声音，因此未保存对话。请在设置中检查麦克风。",
       "continuing": "继续 {{title}}"
     },
@@ -3029,10 +3039,12 @@
       "empty": "还没有对话",
       "preparing": "正在为这场对话准备智能内容。",
       "noTranscript": "暂无转录。",
+      "speakerYou": "你",
+      "speakerRoom": "对方",
       "tabs": {
         "summary": "摘要",
         "transcript": "转录",
-        "threads": "线索"
+        "connections": "关联"
       },
       "processing": "正在处理对话…",
       "searchPlaceholder": "搜索对话",
@@ -3062,6 +3074,7 @@
       "micBuiltIn": "内置麦克风",
       "micSystemDefault": "系统默认",
       "micChange": "更改",
+      "micChangeLabel": "更改麦克风",
       "micError": "Oats 无法读取麦克风列表。请检查麦克风权限。",
       "language": "对话语言",
       "autoDetect": "自动检测",
@@ -3106,7 +3119,9 @@
     "dismiss": "忽略该问题",
     "askedTimes": "提问 {{count}} 次",
     "earlier": "另有 {{count}} 条",
+    "collapse": "显示更少",
     "undo": "撤销",
+    "announced": "新问题：{{question}}",
     "searchedHost": "已搜索 · {{host}}"
   },
   "openThreads": {
