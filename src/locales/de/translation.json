@@ -3083,7 +3083,6 @@
       "micError": "Oats konnte die Mikrofonliste nicht lesen. Prüfe die Mikrofonberechtigung.",
       "language": "Gesprächssprache",
       "autoDetect": "Automatisch erkennen",
-      "noShortcut": "Kein Kürzel festgelegt",
       "autoSearch": "Unbeantwortete Fragen suchen",
       "autoSearchHint": "Öffnet eine Google-Suche im Hintergrund, wenn niemand es weiß. Nur der Fragetext wird gesendet, nie Audio oder Transkript. Karten erscheinen weiterhin.",
       "data": "Deine Daten",
@@ -3127,6 +3126,8 @@
     "collapse": "Weniger anzeigen",
     "undo": "Rückgängig",
     "announced": "Neue Frage: {{question}}",
+    "announcedAgain": "Erneut gefragt, jetzt {{count}}×: {{question}}",
+    "announcedBatch": "{{count}} neue Fragen, zuletzt: {{question}}",
     "searchedHost": "gesucht · {{host}}"
   },
   "openThreads": {

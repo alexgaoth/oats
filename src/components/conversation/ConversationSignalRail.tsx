@@ -6,6 +6,15 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { searchHostLabel } from "../../utils/searchHost";
 import type { ConversationCard, QuestionOutcome } from "../../types/conversationEvents";
+import { nextAnnouncement } from "../../helpers/questionAnnouncement.mjs";
+
+/** What the live region is currently saying. See `questionAnnouncement.mjs`. */
+interface Announcement {
+  ids: string[];
+  question: string;
+  occurrence: number;
+  count: number;
+}
 
 // The question-card rail (DESIGN.md §9.2) — the help moment, and the surface the
 // spec says the product is judged on. The whole stack for a recording: newest at
@@ -357,26 +366,35 @@ export default function ConversationSignalRail({
   );
 
   // What has already been announced, so the live region can only ever move
-  // forwards.
-  //
-  // Two earlier attempts got this wrong the same way: both derived "newest"
-  // from the tail of the visible list, so dismissing the newest group made the
-  // tail fall back to an older card and the region re-announced a question the
-  // user had already heard — and undo did it in reverse. Tracking the id of the
-  // newest card is not the same as tracking the last card actually spoken.
-  //
-  // The set is of *everything ever announced*, so a card can never be announced
-  // twice however the list is rearranged, dismissed or restored.
+  // forwards. The selection is `helpers/questionAnnouncement.mjs` — pure, and
+  // pinned, because three attempts at it here were wrong and each one read
+  // correctly. The set is of *everything ever announced*, so a card cannot be
+  // announced twice however the list is rearranged, dismissed or restored.
   const spoken = useRef<Set<string>>(new Set());
-  const [announced, setAnnounced] = useState<{ id: string; question: string } | null>(null);
+  const [announced, setAnnounced] = useState<Announcement | null>(null);
   useEffect(() => {
-    // Oldest first, so a burst announces the genuinely newest one last.
-    for (const card of cards) {
-      if (spoken.current.has(card.id)) continue;
-      spoken.current.add(card.id);
-      setAnnounced({ id: card.id, question: card.question });
-    }
+    const next = nextAnnouncement(cards, spoken.current);
+    if (!next) return;
+    for (const id of next.ids) spoken.current.add(id);
+    if (next.count > 0) setAnnounced(next);
   }, [cards]);
+
+  // A live region speaks only when its text changes, so each case has to read
+  // differently as well as truthfully: a re-asking says it is a re-asking
+  // (rule 3 — repeats are the signal), and a batch says how many arrived.
+  const announcement = !announced
+    ? ""
+    : announced.count > 1
+      ? t("questionCard.announcedBatch", {
+          count: announced.count,
+          question: announced.question,
+        })
+      : announced.occurrence > 1
+        ? t("questionCard.announcedAgain", {
+            count: announced.occurrence,
+            question: announced.question,
+          })
+        : t("questionCard.announced", { question: announced.question });
 
   const hidden = Math.max(0, groups.length - VISIBLE_GROUPS);
   // **Newest first.**
@@ -414,7 +432,7 @@ export default function ConversationSignalRail({
           every conversation, the one that proves the feature works, is the one
           nobody hears. That is why this sits above the early return. */}
       <p aria-live="polite" className="sr-only">
-        {announced ? t("questionCard.announced", { question: announced.question }) : ""}
+        {announcement}
       </p>
 
       {!groups.length && !undoable ? null : (

@@ -4,10 +4,38 @@ const assert = require("node:assert/strict");
 let ConversationTopicTracker;
 let contentWords;
 let similarity;
+let topicLabel;
 
 test.before(async () => {
-  ({ ConversationTopicTracker, contentWords, similarity } =
+  ({ ConversationTopicTracker, contentWords, similarity, topicLabel } =
     await import("../../src/helpers/conversationTopics.mjs"));
+});
+
+// A label is two words, and which two is a frequency question — but the order
+// they are said in is not. Ranking by frequency alone renders every multi-word
+// subject backwards as soon as its second word is repeated more than its first.
+test("a label keeps the order the words were first said in, not their ranking", () => {
+  // "onboarding" first, "flow" more often: the subject is still onboarding flow.
+  const counts = new Map([
+    ["onboarding", 2],
+    ["flow", 5],
+  ]);
+  assert.equal(topicLabel(counts, "fallback"), "onboarding flow");
+});
+
+test("a label still picks the two most repeated words", () => {
+  const counts = new Map([
+    ["think", 1],
+    ["pricing", 6],
+    ["seat", 2],
+    ["enterprise", 5],
+  ]);
+  assert.equal(topicLabel(counts, "fallback"), "pricing enterprise");
+});
+
+test("a topic with nothing countable falls back rather than rendering empty", () => {
+  assert.equal(topicLabel(new Map(), "the opening sentence"), "the opening sentence");
+  assert.equal(topicLabel(new Map(), ""), "untitled");
 });
 
 // Feeds utterances a fixed interval apart so duration and drop-age assertions

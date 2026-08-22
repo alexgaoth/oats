@@ -825,8 +825,17 @@ function ConnectionsView({
     <div className="mt-7">
       {/* No box. The graph is the content, not a widget inside a panel, and a
           rounded border around it is exactly the chrome §1 rules out. Full
-          column width so labels have somewhere to sit. */}
-      <div className="h-[26rem] w-full">
+          column width so labels have somewhere to sit.
+
+          Sized to the room left rather than to a constant. A fixed 26rem put the
+          graph at 452–868 in an 800px window: 68px of it below the fold, on the
+          one tab whose entire payload is a picture, and it is a picture you drag
+          nodes around in — so the fix for "I cannot see the bottom" was to
+          scroll the page out from under your own cursor. 29rem is the measured
+          head above it (date, title, meta, contour, legend, tab row) plus a
+          little clearance; the clamp keeps it usable in a short window and stops
+          it becoming a field in a tall one. */}
+      <div className="h-[clamp(16rem,calc(100vh-29rem),34rem)] w-full">
         <TopicGraph
           snapshot={snapshot}
           selectedId={selectedTopic?.id ?? null}
@@ -1484,16 +1493,51 @@ function EmptyState({ line, hint }: { line: string; hint?: string | null }) {
 // events are already loaded. An earlier version of this comment claimed the
 // marks survived here; they never did, because the call site passes no events.
 function NoteContourStrip({ note }: { note: NoteItem }) {
+  // Only the rows you can see are drawn.
+  //
+  // The list loads a hundred conversations, and drawing a hundred strips on open
+  // cost 263ms and three long tasks at DPR 2, with 18.9MB of canvas backing
+  // store then retained for the life of the process — to render strips that are
+  // 22px tall and almost all of them off screen. Each row parses its own
+  // transcript to build its geometry, so the parse is behind the same gate.
+  //
+  // Once a row has been seen it stays drawn: re-drawing on every scroll reversal
+  // would trade a one-off cost for a permanent one.
+  const box = useRef<HTMLDivElement | null>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const element = box.current;
+    if (!element || seen) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setSeen(true);
+      },
+      // A screen of lead time, so a strip is drawn before it is scrolled to
+      // rather than appearing under the reader's eye.
+      { rootMargin: "400px" }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [seen]);
+
+  // The box is reserved at the strip's height so revealing one does not reflow
+  // the list underneath. A note with no transcript has no strip and never will,
+  // and that is knowable without parsing anything, so those rows keep their
+  // tighter shape.
+  if (typeof note.transcript !== "string" || note.transcript.length < 3) return null;
+  return (
+    <div ref={box} className="mt-3 h-[22px]">
+      {seen && <LoadedContourStrip note={note} />}
+    </div>
+  );
+}
+
+function LoadedContourStrip({ note }: { note: NoteItem }) {
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const strip = useContourStrip(segments, NO_EVENTS);
   if (strip.empty) return null;
   return (
-    <ConversationContour
-      contour={strip}
-      className="mt-3 opacity-70"
-      height={22}
-      showMarks={false}
-    />
+    <ConversationContour contour={strip} className="opacity-70" height={22} showMarks={false} />
   );
 }
 

@@ -205,11 +205,21 @@ function coverage(utteranceBag, topicBag) {
 // content words — not after whichever sentence happened to open it. Naming from
 // the first utterance produces labels like "don't i've never", because the
 // sentence that starts a thread is often an aside.
+//
+// *Which* two words is a frequency question; what **order** to say them in is
+// not. Emitting them most-frequent-first scrambles every multi-word subject the
+// moment the second word is said more often than the first — a conversation
+// about onboarding flow was labelled "flow onboarding" — and a scrambled label
+// reads as a bug in the transcription rather than as a summary. `counts` is
+// insertion-ordered by first appearance, so restoring that order restores the
+// phrase people actually used.
 function topicLabel(counts, fallback) {
+  const order = [...counts.keys()];
   const ranked = [...counts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 2)
-    .map(([word]) => word);
+    .map(([word]) => word)
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b));
   return ranked.join(" ") || String(fallback || "").slice(0, 40) || "untitled";
 }
 

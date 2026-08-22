@@ -3078,7 +3078,6 @@
       "micError": "Oats 無法讀取麥克風清單。請檢查麥克風權限。",
       "language": "對話語言",
       "autoDetect": "自動偵測",
-      "noShortcut": "未設定快捷鍵",
       "autoSearch": "搜尋未獲解答的問題",
       "autoSearchHint": "沒人知道答案時，在背景開啟 Google 搜尋。只送出問題文字，絕不送出音訊或逐字稿。關閉後卡片仍會出現。",
       "data": "你的資料",
@@ -3122,6 +3121,8 @@
     "collapse": "顯示較少",
     "undo": "復原",
     "announced": "新問題：{{question}}",
+    "announcedAgain": "再次提問，已 {{count}} 次：{{question}}",
+    "announcedBatch": "{{count}} 個新問題，最新：{{question}}",
     "searchedHost": "已搜尋 · {{host}}"
   },
   "openThreads": {

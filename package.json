@@ -62,7 +62,7 @@
     "format:check": "eslint . && cd src && eslint . && prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "lint": "eslint . && cd src && eslint .",
     "test": "node --test \"test/**/*.test.js\"",
-    "test:oats:core": "node --test test/helpers/conversationAide.test.js test/helpers/conversationGraph.test.js test/helpers/conversationTopics.test.js test/helpers/conversationSuggestions.test.js test/helpers/conversationContour.test.js test/helpers/browserWindowOpen.test.js test/helpers/oatsSetupCheck.test.js",
+    "test:oats:core": "node --test test/helpers/conversationAide.test.js test/helpers/conversationGraph.test.js test/helpers/conversationTopics.test.js test/helpers/conversationSuggestions.test.js test/helpers/conversationContour.test.js test/helpers/questionAnnouncement.test.js test/helpers/browserWindowOpen.test.js test/helpers/oatsSetupCheck.test.js",
     "test:oats:db": "cross-env ELECTRON_RUN_AS_NODE=1 electron --test test/helpers/conversationEventsDatabase.test.js",
     "test:oats": "npm run test:oats:core && npm run test:oats:db",
     "test:electron": "cross-env ELECTRON_RUN_AS_NODE=1 electron --test \"test/**/*.test.js\"",

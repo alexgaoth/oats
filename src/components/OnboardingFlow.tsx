@@ -10,19 +10,8 @@ import { useClipboard } from "../hooks/useClipboard";
 import { useSettings } from "../hooks/useSettings";
 import { useSettingsStore } from "../stores/settingsStore";
 import { setAgentName as saveAgentName } from "../utils/agentName";
-import {
-  formatHotkeyLabel,
-  formatHotkeyListLabel,
-  getDefaultHotkey,
-  isGlobeLikeHotkey,
-  parseHotkeyList,
-  serializeHotkeyList,
-} from "../utils/hotkeys";
-import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
+import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
-import { getValidationMessage } from "../utils/hotkeyValidator";
-import { validateHotkeyForSlot } from "../utils/hotkeyValidation";
-import { getPlatform } from "../utils/platform";
 import logger from "../utils/logger";
 import { ACCESSIBILITY_SKIPPED_KEY, areRequiredPermissionsMet } from "../utils/permissions";
 
@@ -65,26 +54,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     localTranscriptionProvider,
     parakeetModel,
     cloudTranscriptionProvider,
-    cloudTranscriptionModel,
-    cloudTranscriptionBaseUrl,
     openaiApiKey,
     groqApiKey,
     xaiApiKey,
     mistralApiKey,
     tinfoilApiKey,
     dictationKey,
-    meetingKey,
-    setMeetingKey,
-    voiceAgentKey,
-    setVoiceAgentKey,
-    activationMode,
     setActivationMode,
     setDictationKey,
     updateTranscriptionSettings,
-    preferredLanguage,
-    setOnboardingUseCases,
-    onboardingUseCaseNote,
-    setOnboardingUseCaseNote,
   } = useSettings();
 
   // Onboarding edits only the primary dictation hotkey; extra bindings are
@@ -94,44 +72,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   );
   const [agentName, setAgentName] = useState("Oats");
   const [isModelDownloaded, setIsModelDownloaded] = useState(false);
-  const { isUsingNativeShortcut, isUsingHyprland, hyprlandConfigStatus, supportsPushToTalk } =
-    useHotkeyModeInfo("onboarding");
-  const readableHotkey = formatHotkeyLabel(hotkey);
-  const readableVoiceAgentKey = formatHotkeyListLabel(voiceAgentKey);
+  const { isUsingNativeShortcut, supportsPushToTalk } = useHotkeyModeInfo("onboarding");
   const { alertDialog, confirmDialog, showAlertDialog, hideAlertDialog, hideConfirmDialog } =
     useDialogs();
-
-  const autoRegisterInFlightRef = useRef(false);
-  const hotkeyStepInitializedRef = useRef(false);
 
   // Replace the primary dictation hotkey while keeping additional bindings intact.
   const withExtraDictationHotkeys = useCallback(
     (primary: string) => serializeHotkeyList([primary, ...parseHotkeyList(dictationKey).slice(1)]),
     [dictationKey]
-  );
-
-  const { registerHotkey, isRegistering: isHotkeyRegistering } = useHotkeyRegistration({
-    onSuccess: (registeredHotkey) => {
-      setHotkey(parseHotkeyList(registeredHotkey)[0] || registeredHotkey);
-      setDictationKey(registeredHotkey);
-    },
-    showSuccessToast: false,
-    showErrorToast: false,
-  });
-
-  const validateHotkeyForInput = useCallback(
-    (hotkey: string) => getValidationMessage(hotkey, getPlatform()),
-    []
-  );
-
-  const validateVoiceAgentHotkey = useCallback(
-    (newHotkey: string) =>
-      validateHotkeyForSlot(
-        newHotkey,
-        { "settingsPage.general.hotkey.title": withExtraDictationHotkeys(hotkey) },
-        t
-      ),
-    [hotkey, withExtraDictationHotkeys, t]
   );
 
   const permissionsHook = usePermissions(showAlertDialog);
@@ -206,61 +154,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
     checkStatus();
   }, [useLocalWhisper, whisperModel, parakeetModel, localTranscriptionProvider]);
-
-  // Auto-register default hotkey when entering the activation step
-  const activationStepIndex = steps.findIndex((step) => step.id === "activation");
-
-  useEffect(() => {
-    if (currentStep !== activationStepIndex) {
-      // Reset initialization flag when leaving activation step
-      hotkeyStepInitializedRef.current = false;
-      return;
-    }
-
-    // Prevent double-invocation from React.StrictMode
-    if (autoRegisterInFlightRef.current || hotkeyStepInitializedRef.current) {
-      return;
-    }
-
-    const autoRegisterDefaultHotkey = async () => {
-      autoRegisterInFlightRef.current = true;
-      hotkeyStepInitializedRef.current = true;
-
-      try {
-        // Check if backend already registered a hotkey (e.g., KDE D-Bus fallback)
-        const backendKey = localStorage.getItem("dictationKey");
-        if (backendKey && backendKey.trim() !== "") {
-          setHotkey(parseHotkeyList(backendKey)[0] || backendKey);
-          setDictationKey(backendKey);
-          return;
-        }
-
-        // Get platform-appropriate default hotkey from backend (accounts for
-        // X11 modifier-only and GNOME gsettings limitations)
-        const defaultHotkey =
-          (await window.electronAPI?.getEffectiveDefaultHotkey?.()) || getDefaultHotkey();
-        const platform = window.electronAPI?.getPlatform?.() ?? "darwin";
-
-        // Only auto-register if no hotkey is currently set
-        const shouldAutoRegister =
-          !hotkey || hotkey.trim() === "" || (platform !== "darwin" && isGlobeLikeHotkey(hotkey));
-
-        if (shouldAutoRegister) {
-          // Try to register the default hotkey silently
-          const success = await registerHotkey(defaultHotkey);
-          if (success) {
-            setHotkey(defaultHotkey);
-          }
-        }
-      } catch (error) {
-        logger.error("Failed to auto-register default hotkey", { error }, "onboarding");
-      } finally {
-        autoRegisterInFlightRef.current = false;
-      }
-    };
-
-    void autoRegisterDefaultHotkey();
-  }, [currentStep, hotkey, registerHotkey, activationStepIndex, setDictationKey]);
 
   /**
    * Try to register the dictation shortcut, and **never block first run on it**.

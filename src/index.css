@@ -173,35 +173,51 @@
   background-size: 4px 4px;
 }
 
-/* For marks small enough that a 4px grid would fit two dots across and read as a
-   rendering artefact rather than as texture — the §4 question-outcome dot is 8px. */
-.oats-dither--fine {
-  background-image: radial-gradient(circle at 0.5px 0.5px, currentcolor 0.75px, transparent 0.75px);
-  background-size: 2px 2px;
-}
-
 /* Three graded densities, matching §4's table and `OUTCOME_DITHER` in
    `conversationContour.mjs`. A boolean dithered/solid was not enough: the
    contour grades five outcomes by grain two inches above the question cards,
    and the cards rendered every unsettled state identically, so the same state
    vocabulary said different things on two surfaces and "uncertainty literally
-   looks grainier" held on only one of them. Larger dots with more gap between
-   them read as *less* settled. */
-/* Integer pitches, and the dot radius carries the grade.
-   
-   A 2.5px tile resampled into a faint irregular smudge at DPR 1, so `--medium`
-   and `--sparse` measured 12.7% and 9.5% ink — a 1/255 difference in greyscale,
-   i.e. no difference at all in the channel §4 says the encoding exists for.
-   Whole-pixel pitches keep every lattice crisp, and grading the dot instead of
-   the spacing widens the gap between the three. */
+   looks grainier" held on only one of them.
+
+   **Hatching, not stipple, and the reason is arithmetic.** These grade an 8px
+   mark (`StateMark`, `h-2 w-2`) — 64 device pixels at DPR 1. A radial-gradient
+   dot inside a tile that small has a sub-pixel radius, and Chromium quantizes
+   it: measured at the real mark size, r≤0.45px painted *nothing* and r≥1px
+   painted everything, so the shipped grades measured 23.4% / 50.0% / **0.0%**
+   ink — `medium` denser than `fine`, and `sparse`, the state most cards are in,
+   completely invisible. Two rounds of tuning the radius could not fix that,
+   because it is rasterization, not tuning. Hard-stop 1px rules land on pixel
+   boundaries at any DPR and grade cleanly.
+
+   Measured ink over the mark's box, paper background, lum<220 counted as ink:
+
+     DPR 1: fine 46.9%  medium 34.4%  sparse 21.9%   (solid 93.8%)
+     DPR 2: fine 43.0%  medium 30.5%  sparse 19.5%   (solid 85.2%)
+
+   Monotone with ~12-point gaps at both densities. Drawn in one ink so the grade
+   is isolated from the state colour, the four marks measure mean luminance
+   85.8 / 160.5 / 182.2 / 201.2 — four steps about 20 apart, which is the whole
+   requirement: the grade has to be readable without hue.
+
+   The contour keeps its Bayer stipple — it draws into a canvas at a 1px lattice
+   with no antialiasing, where fractional coverage is exact. This constraint is
+   specific to CSS gradients at mark size. */
+.oats-dither--fine {
+  background-image: repeating-linear-gradient(0deg, currentcolor 0 1px, transparent 1px 2px);
+  /* `.oats-dither` sets a 4px tile for its dot lattice; squeezing a repeating
+     gradient into that tile restarts the period at every tile edge. */
+  background-size: auto;
+}
+
 .oats-dither--medium {
-  background-image: radial-gradient(circle at 1px 1px, currentcolor 0.9px, transparent 0.9px);
-  background-size: 3px 3px;
+  background-image: repeating-linear-gradient(0deg, currentcolor 0 1px, transparent 1px 3px);
+  background-size: auto;
 }
 
 .oats-dither--sparse {
-  background-image: radial-gradient(circle at 1px 1px, currentcolor 0.6px, transparent 0.6px);
-  background-size: 4px 4px;
+  background-image: repeating-linear-gradient(0deg, currentcolor 0 1px, transparent 1px 4px);
+  background-size: auto;
 }
 
 /* §9.2's "hairline + 1px dithered edge". The hairline is a normal border; this

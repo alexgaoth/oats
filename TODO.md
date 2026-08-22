@@ -380,28 +380,53 @@ performance and pencil-test approved, art-direction and accessibility did not.
 Full audit trail, 24 screenshots and every verdict in
 `.iterate/20260820-ledger-reset/` — `WRAP-UP.md` first.
 
-Outstanding, in priority order:
+Outstanding, in priority order (2026-08-22 pass — items 2 to 6 closed):
 
-1. **The question rail's live region may still re-announce a heard question**
-   when the newest card is dismissed. Two fixes failed the critic's live test; a
-   third is in place and **unreviewed**. Needs testing against a real screen
-   reader, not a reading of the code.
-2. **Rail dither grades are ~3 percentage points apart at the 8px card mark**, so
-   `uncertain` and `asked` are hard to separate in greyscale. Widened after the
-   last review, unmeasured at mark size. No conformance failure — the state word
-   is always printed beside the mark.
-3. **The Connections graph** starts below the fold at 1200x800, and
-   `topicLabel()` joins the two most frequent words by frequency, so multi-word
-   subjects render scrambled ("flow onboarding"). Its own pass.
-4. **`CONTROL_PANEL_CONFIG` has no `minHeight`** (`windowConfig.js`). A
-   user-resized window reintroduces the recording-surface layout pressure the
-   three-band layout fixes at the default size. Wants a deliberate minimum.
-5. **The Intelligence list renders 100 unvirtualised contour canvases** — 263ms
-   and three long tasks on first open at DPR 2, 18.9MB of backing store retained
-   for the process lifetime. Deferred with the performance critic's agreement.
-6. **Pre-existing dead code** noted but not removed: three `useSettings`
-   destructures in `OnboardingFlow`, and `oats.settings.noShortcut` in all ten
-   locales.
+1. **The question rail's live region may still re-announce a heard question.**
+   Two fixes failed the critic's live test, so the third moved the decision out
+   of the component: `helpers/questionAnnouncement.mjs` is pure and pinned by
+   eight assertions covering dismiss, undo, reorder and repeat. Two further
+   defects were found while pinning it — two questions arriving in the same
+   segment announced only one of them, and a re-asking produced identical text,
+   which a live region does not speak at all. Both are fixed and each case now
+   reads differently (`announcedAgain`, `announcedBatch`, all ten locales).
+   **Still not verified against a real screen reader**, which is the only test
+   that has ever caught this.
+2. ~~Rail dither grades ~3 points apart at the 8px card mark.~~ **Worse than
+   logged, now fixed and measured.** At the real mark size the radial-dot grades
+   measured 23.4% / 50.0% / **0.0%** ink at DPR 1 — `medium` denser than `fine`,
+   and `sparse`, the state most cards sit in, drawing nothing at all. Sub-pixel
+   gradient radii quantize; no amount of tuning fixes that. Hard-stop 1px rules
+   measure 46.9 / 34.4 / 21.9 at DPR 1 and 43.0 / 30.5 / 19.5 at DPR 2 — monotone
+   with ~12-point gaps, and in one ink the four marks read 85.8 / 160.5 / 182.2 /
+   201.2 mean luminance. The contour keeps its Bayer stipple: it draws to a
+   canvas at a 1px lattice, where fractional coverage is exact.
+3. ~~The Connections graph and `topicLabel()`.~~ Both fixed. The label keeps the
+   order the words were first said in rather than their frequency ranking, so
+   "onboarding flow" stops rendering as "flow onboarding" (pinned). The graph was
+   not below the fold as logged — measured, it sat at 452–868 in an 800px window,
+   clipped by 68px at the bottom, on the one tab whose whole payload is a
+   draggable picture. It is sized to the room left now: 452–788, fully visible.
+4. ~~`CONTROL_PANEL_CONFIG` has no `minHeight`.~~ `minWidth: 880, minHeight: 680`.
+   The floor comes from recording, not from the resting surfaces: head and foot
+   occupy 565px at the default size and only the band can give. The three
+   resting surfaces were driven to 880x560 with nothing left unreachable.
+5. ~~The Intelligence list renders 100 unvirtualised contour canvases.~~ Drawn on
+   intersection with 400px of lead, transcript parsing behind the same gate, and
+   the box reserved at the strip's height so nothing reflows. Measured A/B in one
+   harness at DPR 2 with 100 conversations: **101 canvases / 18.87MB → 6 canvases
+   / 1.07MB** on open, and 12 / 2.2MB after scrolling the whole list. A row stays
+   drawn once seen.
+6. ~~Pre-existing dead code.~~ Larger than logged: not three `useSettings`
+   destructures but ten, plus `readableVoiceAgentKey`, `validateVoiceAgentHotkey`,
+   `validateHotkeyForInput`, `readableHotkey`, the whole `useHotkeyRegistration`
+   call, and a ~50-line auto-register effect keyed on an `activation` step that
+   the 2026-07-30 reduction deleted — `steps.findIndex` returns -1, so the effect
+   had always taken its early return. `OnboardingFlow` 559 → 448 lines, five
+   imports gone. `oats.settings.noShortcut` removed from all ten locales.
+
+Not reviewed by any critic. Every claim above is a measurement; none is a
+screen-reader test.
 
 ## Verification gates
 
@@ -419,8 +444,6 @@ Still requiring a real GUI session and realistic speech:
 
 ## Noted in passing, not acted on
 
-- **Pre-existing dead key:** `oats.settings.noShortcut` is unused in all 10
-  locale files.
 - **A killed Oats can leave a `pactl subscribe` child holding inherited file
   descriptors** — it was found holding a listening socket from a dead process.
   The Linux microphone-activity detector spawns it; its child does not appear to

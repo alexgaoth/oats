@@ -3078,7 +3078,6 @@
       "micError": "Oats 无法读取麦克风列表。请检查麦克风权限。",
       "language": "对话语言",
       "autoDetect": "自动检测",
-      "noShortcut": "未设置快捷键",
       "autoSearch": "搜索未获解答的问题",
       "autoSearchHint": "没人知道答案时，在后台打开 Google 搜索。只发送问题文本，绝不发送音频或转录。关闭后卡片依然出现。",
       "data": "你的数据",
@@ -3122,6 +3121,8 @@
     "collapse": "显示更少",
     "undo": "撤销",
     "announced": "新问题：{{question}}",
+    "announcedAgain": "再次提问，已 {{count}} 次：{{question}}",
+    "announcedBatch": "{{count}} 个新问题，最新：{{question}}",
     "searchedHost": "已搜索 · {{host}}"
   },
   "openThreads": {

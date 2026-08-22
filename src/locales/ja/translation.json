@@ -3083,7 +3083,6 @@
       "micError": "マイクの一覧を読み取れませんでした。マイクの権限を確認してください。",
       "language": "会話の言語",
       "autoDetect": "自動検出",
-      "noShortcut": "ショートカット未設定",
       "autoSearch": "未回答の質問を検索",
       "autoSearchHint": "誰も知らないとき、Google 検索を背後で開きます。送るのは質問文だけ。音声も文字起こしも送りません。オフでもカードは出ます。",
       "data": "あなたのデータ",
@@ -3127,6 +3126,8 @@
     "collapse": "表示を減らす",
     "undo": "元に戻す",
     "announced": "新しい質問: {{question}}",
+    "announcedAgain": "再度質問（{{count}} 回目）: {{question}}",
+    "announcedBatch": "新しい質問 {{count}} 件、最新: {{question}}",
     "searchedHost": "検索済み · {{host}}"
   },
   "openThreads": {

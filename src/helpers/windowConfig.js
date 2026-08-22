@@ -64,6 +64,16 @@ const MAIN_WINDOW_CONFIG = {
 const CONTROL_PANEL_CONFIG = {
   width: 1200,
   height: 800,
+  // A floor, because the recording surface is a pinned head, a scrolling band
+  // and a pinned foot, and only the band can give. Measured at the default
+  // 1200x800 with the band fully expanded, the head and foot together occupy
+  // 565px; below roughly two annotations of band (~115px) the surface stops
+  // being able to show a question and the microphone warning at the same time,
+  // which is the exact failure the three-band layout exists to prevent. The
+  // three resting surfaces were driven down to 880x560 with nothing rendered
+  // unreachable, so this minimum is set by recording, not by them.
+  minWidth: 880,
+  minHeight: 680,
   backgroundColor: "#1c1c2e",
   webPreferences: {
     preload: path.join(__dirname, "..", "..", "preload.js"),
