@@ -371,6 +371,38 @@ The oat is a grain in the margin, not a countryside behind the document.
 without mentioning a field, sky, rural scene, or meditation app; the signature
 element is visibly derived from what was said in the conversation.
 
+## Art-direction reset — what the review loop left open (2026-08-21)
+
+The reset landed: the field is deleted, the conversation contour is the
+signature, and the surfaces were rebuilt around it. Four rounds of adversarial
+review across art-direction, pencil-test, accessibility and performance;
+performance and pencil-test approved, art-direction and accessibility did not.
+Full audit trail, 24 screenshots and every verdict in
+`.iterate/20260820-ledger-reset/` — `WRAP-UP.md` first.
+
+Outstanding, in priority order:
+
+1. **The question rail's live region may still re-announce a heard question**
+   when the newest card is dismissed. Two fixes failed the critic's live test; a
+   third is in place and **unreviewed**. Needs testing against a real screen
+   reader, not a reading of the code.
+2. **Rail dither grades are ~3 percentage points apart at the 8px card mark**, so
+   `uncertain` and `asked` are hard to separate in greyscale. Widened after the
+   last review, unmeasured at mark size. No conformance failure — the state word
+   is always printed beside the mark.
+3. **The Connections graph** starts below the fold at 1200x800, and
+   `topicLabel()` joins the two most frequent words by frequency, so multi-word
+   subjects render scrambled ("flow onboarding"). Its own pass.
+4. **`CONTROL_PANEL_CONFIG` has no `minHeight`** (`windowConfig.js`). A
+   user-resized window reintroduces the recording-surface layout pressure the
+   three-band layout fixes at the default size. Wants a deliberate minimum.
+5. **The Intelligence list renders 100 unvirtualised contour canvases** — 263ms
+   and three long tasks on first open at DPR 2, 18.9MB of backing store retained
+   for the process lifetime. Deferred with the performance critic's agreement.
+6. **Pre-existing dead code** noted but not removed: three `useSettings`
+   destructures in `OnboardingFlow`, and `oats.settings.noShortcut` in all ten
+   locales.
+
 ## Verification gates
 
 Still requiring a real GUI session and realistic speech:
