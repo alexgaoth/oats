@@ -198,9 +198,23 @@ colour modes. Every removed bridge method is gone from `window.electronAPI`;
   `1px solid` + `8px` radius + inset shadow; the same `input` inside gets none of
   it. Same for `.card`.
 
-- **Still open: the inventory.** Every renderer surface classified as Oats
-  primary / Advanced only / compatibility-only / delete, and the inherited
-  enterprise and SaaS configuration deleted or isolated rather than themed over.
+- **Done: the inventory** (2026-08-22) — `docs/openwhispr-inventory.md`. Every
+  renderer surface classified by import reachability over the whole repository's
+  graph, not by reading: six entry points, **Oats primary 16 components / 5,332
+  lines**, **Advanced Settings 46 / 11,242**, **agent overlay 12 / 1,318**, and
+  **67 files / 10,471 lines reachable by nothing at all** — the whole OpenWhispr
+  notes application, deleted, along with nine orphaned `ui/` primitives and five
+  npm dependencies. The bundle moved only 4,176,411 → 4,121,110 bytes: it was
+  weight in the repository, not in the build.
+
+- **Still open: the enterprise and BYOK provider block.** It is the largest
+  single piece of inherited surface area and the product direction allows
+  exactly one API key. Isolating it further, or deleting the enterprise cloud
+  credentials path, is a product decision nobody has made. Also open: the locale
+  keys the deletion orphaned — `i18n:check` compares key sets between locales
+  and cannot see a key that is consistently unused, and a scripted sweep across
+  locale files is the operation `CLAUDE.md` warns about most.
+
   Keep the three-surface architecture; do not add a fourth shell to accommodate
   legacy features.
 

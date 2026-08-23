@@ -119,4 +119,4 @@ Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`
 
 ## Where everything is
 
-`docs/architecture.md` — the module map, model registry, platform hotkey integrations, meeting detection, settings and secret storage, troubleshooting. `DESIGN.md` — the binding visual spec. `IMPLEMENTATION.md` — build stages. `TODO.md` — the live tracker. `docs/network-allowlist.md` — what leaves the device.
+`docs/architecture.md` — the module map, model registry, platform hotkey integrations, meeting detection, settings and secret storage, troubleshooting. `docs/openwhispr-inventory.md` — every renderer surface classified by import reachability: which files are the product, which are the inherited app kept behind Advanced, and what was deleted. `DESIGN.md` — the binding visual spec. `IMPLEMENTATION.md` — build stages. `TODO.md` — the live tracker. `docs/network-allowlist.md` — what leaves the device.
