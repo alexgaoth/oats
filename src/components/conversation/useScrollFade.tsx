@@ -75,7 +75,15 @@ export function ScrollFade({ edges }: { edges: { top: boolean; bottom: boolean }
       {edges.top && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-t from-transparent to-background"
+          // Shorter than a line box, and it bottoms out short of the paper.
+          //
+          // At `h-5` (20px) against a 28px line, a turn clipped by 4px had its
+          // whole first line graded away while its own wrapped continuation sat
+          // at full ink — measured 1.43:1 across that row with 8.53:1 directly
+          // beneath it, which reads as a rendering fault rather than as "more
+          // above". A cue may say the text continues; it may not erase a line
+          // that is legibly there.
+          className="pointer-events-none absolute inset-x-0 top-0 h-3 bg-gradient-to-t from-transparent to-background/80"
         />
       )}
       {edges.bottom && (

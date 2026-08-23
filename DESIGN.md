@@ -323,9 +323,12 @@ default**.
 **Clean** is for the person who is in the room: the listening pulse, the elapsed
 clock, the contour, the continuing-from line when one conversation resumes
 another, the dead-microphone warning, and the switch — and nothing else. The
-continuing-from line belongs here because it is stated once and never changes;
-the last-heard echo line does not, and is Detailed-only, because it rewrites
-itself every time somebody speaks. It contains no
+continuing-from line belongs here because it is stated once and never changes.
+
+There used to be a last-heard echo line, one utterance at a time, and it is
+**deleted**: Clean forbade it for rewriting itself whenever anybody spoke, and
+once Detailed carried the transcript the two said the same words on one screen.
+Do not reintroduce it in either composition. It contains no
 text that changes while somebody is speaking. Changing language on a screen
 competes for the same faculty as the person talking, and this product's whole
 claim is that it does not make you choose between the two.
@@ -566,10 +569,10 @@ only non-textual mark on it.
 ### 9.9 The detected dialogue — Detailed-only
 
 The answer to the only question the recording surface could not previously
-answer: **is it hearing me correctly?** One echoed line proves something
-arrived; it proves nothing about whether it arrived right, and somebody deciding
-whether to trust an hour of their conversation to this needs to read a paragraph
-of it.
+answer: **is it hearing me correctly?** A single echoed line — which is what
+this replaced — proves something arrived and nothing about whether it arrived
+right, and somebody deciding whether to trust an hour of their conversation to
+this needs to read a paragraph of it.
 
 **Voice: mono, always.** §5 gives transcripts the "machine heard this" voice, and
 it earns trust precisely by looking verbatim. The reading view renders the same

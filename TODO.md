@@ -460,10 +460,15 @@ Open, and wanting a decision rather than silence:
   composition can only be changed mid-conversation — someone who wants Detailed
   for their next meeting must interrupt one to say so. A Settings line is the
   obvious alternative and was rejected to keep Settings small.
-- **Clean is still largely a subtraction.** Its content ends around y=372 with
-  roughly half the surface empty. The contour was enlarged to 26vh to use some
-  of it; whether clean deserves a composition of its own rather than the detailed
-  layout minus things is unresolved.
+- **Clean is still largely a subtraction.** Measured at HEAD, 1200x800: the
+  contour is `clamp(56px, 17vh, 136px)` = 136px, the composition ends at y=336,
+  and **58%** of the window below it is empty paper with the dead-microphone
+  warning stranded alone at y=729. Enlarging the contour to 208px was tried and
+  reverted — at that size it read as a slab of graphite rather than §9.8's one
+  thin trace, and a bigger drawing was never going to answer the question.
+  Whether clean deserves a composition of its own, rather than the detailed
+  layout minus things, is the open question. Three critics have now raised it and
+  none has asked for it to be reversed.
 - **No screen reader has been run.** Parity between the compositions is verified
   as DOM and AX-tree parity, which is not the same claim.
 
