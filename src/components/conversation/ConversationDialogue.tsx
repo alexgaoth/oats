@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { ScrollFade, useScrollFade } from "./useScrollFade";
@@ -73,12 +73,24 @@ export default function ConversationDialogue({ className }: { className?: string
   // return to the end themselves.
   const scroller = useRef<HTMLDivElement | null>(null);
   const [following, setFollowing] = useState(true);
-  const { faded, measure } = useScrollFade(scroller, turns);
-  useEffect(() => {
+  const followingRef = useRef(true);
+  followingRef.current = following;
+
+  const stickToEnd = useCallback(() => {
     const element = scroller.current;
-    if (!element || !following) return;
+    if (!element || !followingRef.current) return;
     element.scrollTop = element.scrollHeight;
-  }, [turns, following]);
+  }, []);
+
+  // Following has to survive the region *shrinking*, not only new speech
+  // arriving. The dead-microphone warning appearing takes the log 208px to
+  // 152px without a word being said, and that left the newest turn at zero
+  // visible pixels with `atEnd` false — so the surface whose whole job is
+  // proving "it is hearing me" showed a stale tail indefinitely, at the exact
+  // moment reliability was in question, with no further segment coming to
+  // re-scroll it. A window resize did the same, 208px to 85px.
+  const { faded, measure } = useScrollFade(scroller, turns, stickToEnd);
+  useEffect(stickToEnd, [turns, following, stickToEnd]);
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
@@ -161,7 +173,7 @@ export default function ConversationDialogue({ className }: { className?: string
           focus ring away — measured 5.21:1 unmasked, 1.00:1 masked, same
           element, same focus. The overlay sits inside the wrapper, so the ring
           (which is drawn outside the log's box) is untouched. */}
-        <ScrollFade show={faded} />
+        <ScrollFade edges={faded} />
       </div>
     </div>
   );

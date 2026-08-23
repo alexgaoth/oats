@@ -22,15 +22,31 @@ import { useCallback, useEffect, useState, type RefObject } from "react";
  * the ring away: measured 5.21:1 unmasked, **1.00:1** masked, same element,
  * same focus. Callers paint an overlay beside the scroller instead.
  */
-export function useScrollFade(ref: RefObject<HTMLElement | null>, revision: unknown) {
-  const [faded, setFaded] = useState(false);
+export function useScrollFade(
+  ref: RefObject<HTMLElement | null>,
+  revision: unknown,
+  /** Called when the box or its content resizes — the caller may want to
+   *  re-follow rather than silently fall behind. */
+  onResize?: () => void
+) {
+  const [faded, setFaded] = useState<{ top: boolean; bottom: boolean }>({
+    top: false,
+    bottom: false,
+  });
 
   const measure = useCallback(() => {
     const element = ref.current;
     if (!element) return;
     const scrollable = element.scrollHeight > element.clientHeight + 1;
     const atEnd = element.scrollTop + element.clientHeight >= element.scrollHeight - 8;
-    setFaded(scrollable && !atEnd);
+    setFaded({
+      // Both edges clip, and the *top* one is the edge a live conversation
+      // spends its whole life against: following the newest turn means the
+      // oldest visible line is the sliced one. Measured at 40 turns while
+      // following: 12px of a 28px line under the hairline, with no cue.
+      top: scrollable && element.scrollTop > 8,
+      bottom: scrollable && !atEnd,
+    });
   }, [ref]);
 
   useEffect(() => {
@@ -40,22 +56,34 @@ export function useScrollFade(ref: RefObject<HTMLElement | null>, revision: unkn
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(() => {
+      measure();
+      onResize?.();
+    });
     observer.observe(element);
     if (element.firstElementChild) observer.observe(element.firstElementChild);
     return () => observer.disconnect();
-  }, [ref, measure]);
+  }, [ref, measure, onResize]);
 
   return { faded, measure };
 }
 
-/** The fade itself, painted beside a scroller rather than over it. */
-export function ScrollFade({ show }: { show: boolean }) {
-  if (!show) return null;
+/** The fades themselves, painted beside a scroller rather than over it. */
+export function ScrollFade({ edges }: { edges: { top: boolean; bottom: boolean } }) {
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-b from-transparent to-background"
-    />
+    <>
+      {edges.top && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-5 bg-gradient-to-t from-transparent to-background"
+        />
+      )}
+      {edges.bottom && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-b from-transparent to-background"
+        />
+      )}
+    </>
   );
 }

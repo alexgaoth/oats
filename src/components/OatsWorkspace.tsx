@@ -164,42 +164,6 @@ function topicOverlap(a: string[] = [], b: string[] = []): number {
   return shared / Math.min(left.size, right.size);
 }
 
-/** How long the last-heard echo stays before the line returns to the hint. */
-const LAST_HEARD_MS = 6000;
-const LAST_HEARD_MAX_CHARS = 110;
-
-/**
- * The tail of the last finalised utterance, held for a few seconds.
- *
- * Positive proof of hearing: the dead-microphone warning says when nothing has
- * arrived for thirty seconds; this says — quietly, in the machine's own mono
- * voice — that something just did. It is an echo, not a transcript: one line,
- * replaced in place with no animation (motion in the corner of an eye is the
- * exact thing §9.8 forbids), gone six seconds after the room goes quiet.
- */
-function useLastHeard(recording: boolean): string | null {
-  const lastSegment = useMeetingRecordingStore((s) => s.segments[s.segments.length - 1] ?? null);
-  const [echo, setEcho] = useState<string | null>(null);
-  useEffect(() => {
-    if (!recording || !lastSegment?.text?.trim()) {
-      setEcho(null);
-      return undefined;
-    }
-    // A resumed conversation seeds the previous session's segments; echoing a
-    // half-hour-old line as proof of hearing would be a small lie. Segments
-    // without a timestamp fail open — better a rare stale echo than a mute one.
-    if (lastSegment.timestamp && Date.now() - lastSegment.timestamp > 15_000) {
-      setEcho(null);
-      return undefined;
-    }
-    const text = lastSegment.text.trim();
-    setEcho(text.length > LAST_HEARD_MAX_CHARS ? `…${text.slice(-LAST_HEARD_MAX_CHARS)}` : text);
-    const timer = window.setTimeout(() => setEcho(null), LAST_HEARD_MS);
-    return () => window.clearTimeout(timer);
-  }, [recording, lastSegment]);
-  return echo;
-}
-
 // The most recent conversation, at the foot of the idle Conversation surface:
 // its name, when it was, and its contour. One row, no chrome, and it opens the
 // conversation in Intelligence.
@@ -324,7 +288,6 @@ function ConversationSurface() {
     [conversationKey]
   );
   const micSilentSince = useMeetingRecordingStore((s) => s.micSilentSince);
-  const lastHeard = useLastHeard(recording);
   const sessionStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
   const elapsed = useElapsed(sessionStartedAt);
   const contour = useLiveContour(sessionStartedAt);
@@ -571,42 +534,82 @@ function ConversationSurface() {
               {/* The clock is the heading here. What a person glances at mid-
                 conversation is how long they have been recording, and it is the
                 one thing on this screen that is unambiguously true. */}
-              <div className="flex items-baseline gap-4">
-                <button
-                  type="button"
-                  onClick={() => void stopRecording()}
-                  aria-label={t("oats.conversation.finish")}
-                  className={cn(
-                    "group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-                    "transition-transform [transition-duration:var(--motion-base)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  )}
-                >
-                  <ListeningPulse state="live" size="sm" />
-                </button>
-                {/* An actual heading, not a paragraph a comment calls one.
+              {/* The switch rides the clock line, not the column beneath it.
+                  Sitting under the contour it put a chrome control between the
+                  trace and the annotations that annotate it — §9.2's "docked
+                  directly under the contour" was measurably false (contour
+                  bottom 332, switch 352–372, first annotation 397) and §1 calls
+                  a control inside the evidence column a cost. Up here it is
+                  beside the one other control on the surface. */}
+              <div className="flex items-baseline justify-between gap-4">
+                <div className="flex items-baseline gap-4">
+                  <button
+                    type="button"
+                    onClick={() => void stopRecording()}
+                    aria-label={t("oats.conversation.finish")}
+                    className={cn(
+                      "group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                      "transition-transform [transition-duration:var(--motion-base)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    )}
+                  >
+                    <ListeningPulse state="live" size="sm" />
+                  </button>
+                  {/* An actual heading, not a paragraph a comment calls one.
                     Every other view has an `h1`; a screen-reader user
                     navigating the live surface by heading found nothing on the
                     one surface the product exists for. The visible text is the
                     clock; the name of the screen is for the a11y tree. */}
-                <h1 className="font-mono text-2xl font-normal tabular-nums tracking-[-0.02em] text-muted-foreground">
-                  <span className="sr-only">{t("oats.conversation.listening")} </span>
-                  {clock(elapsed)}
-                </h1>
+                  <h1 className="font-mono text-2xl font-normal tabular-nums tracking-[-0.02em] text-muted-foreground">
+                    <span className="sr-only">{t("oats.conversation.listening")} </span>
+                    {clock(elapsed)}
+                  </h1>
+                </div>
+                {/* No `aria-pressed`.
+
+                    It was there alongside a label that states the *action*, and
+                    the two encodings contradicted each other: in detailed a
+                    screen reader said "Hide what was said, toggle button,
+                    pressed" — asserting that hiding was engaged at the moment the
+                    words were on screen. A control may say what it will do or say
+                    what is true, not both in opposite directions. The name states
+                    it: "Show what was said" is only ever offered when they are
+                    hidden, so the current value is unambiguous from the name
+                    alone, and the name is what a screen reader reads first.
+
+                    The underline is the only affordance saying this is a control
+                    rather than a sentence, so it is drawn in `muted-foreground`
+                    (5.19:1 on paper, 6.33:1 on charcoal). At `border` it measured
+                    1.24:1, under the 3:1 this project holds control indicators
+                    to. */}
+                <button
+                  type="button"
+                  onClick={() => setDetail(toggleConversationDetail(detail))}
+                  className={cn(
+                    // `text-sm`, the §5 step for secondary UI labels. At
+                    // `text-xs` this was 12px sans — not a step in the scale at
+                    // all (12/16 is the mono caption step) and the smallest text
+                    // on a surface where it is the only control label.
+                    "mt-5 self-start rounded-sm text-sm text-muted-foreground",
+                    "underline decoration-muted-foreground underline-offset-[5px]",
+                    "transition-colors [transition-duration:var(--motion-instant)]",
+                    "hover:text-foreground hover:decoration-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  )}
+                >
+                  {detailed
+                    ? t("oats.conversation.showClean")
+                    : t("oats.conversation.showDetailed")}
+                </button>
               </div>
 
-              {/* Machine state speaks in mono — the "this is what was heard" voice.
-                While an utterance is fresh the line IS what was heard; when the
-                room has been quiet for a moment it returns to the hint.
-
-                Detailed only. It is a line of text that changes every time
-                somebody speaks, sitting at eye level during a conversation, and
-                that is exactly what the clean composition exists to remove. */}
-              {detailed && (
-                <p className="mt-5 w-full truncate font-mono text-xs text-muted-foreground">
-                  {lastHeard ?? t("oats.conversation.listeningHint")}
-                </p>
-              )}
+              {/* The echo line is gone. It existed to prove something had been
+                  heard, one line at a time — and the detected dialogue proves
+                  the same thing with the paragraph, verbatim. Measured with one
+                  live segment, the echo and the newest turn carried identical
+                  text on the same screen. Clean forbids it (it rewrites itself
+                  whenever anyone speaks) and Detailed no longer needs it, so it
+                  has no composition left to live in. */}
               {/* Said plainly rather than asked. Oats resumed a recent conversation
                 instead of stopping to check, because the check would have cost
                 the first thing anybody said. */}
@@ -632,7 +635,7 @@ function ConversationSurface() {
               <ConversationContour
                 contour={contour}
                 className={detailed ? "mt-8" : "mt-10"}
-                height={detailed ? "clamp(46px, 13vh, 104px)" : "clamp(56px, 26vh, 208px)"}
+                height={detailed ? "clamp(46px, 13vh, 104px)" : "clamp(56px, 17vh, 136px)"}
                 focusedGroup={focusedGroup}
                 label={contourLabel(contour, t)}
               />
@@ -649,40 +652,6 @@ function ConversationSurface() {
                   A text link, not a control in a box (§1), and it says what it
                   will do rather than what is currently true, because a switch
                   labelled with its own state is ambiguous about which. */}
-              {/* No `aria-pressed`.
-
-                  It was there alongside a label that states the *action*, and
-                  the two encodings contradicted each other: in detailed a
-                  screen reader said "Hide what was said, toggle button,
-                  pressed" — asserting that hiding was engaged at the moment the
-                  words were on screen. A control may say what it will do or say
-                  what is true, not both in opposite directions. The name states
-                  it: "Show what was said" is only ever offered when they are
-                  hidden, so the current value is unambiguous from the name
-                  alone, and the name is what a screen reader reads first.
-
-                  The underline is the only affordance saying this is a control
-                  rather than a sentence, so it is drawn in `muted-foreground`
-                  (5.19:1 on paper, 6.33:1 on charcoal). At `border` it measured
-                  1.24:1, under the 3:1 this project holds control indicators
-                  to. */}
-              <button
-                type="button"
-                onClick={() => setDetail(toggleConversationDetail(detail))}
-                className={cn(
-                  // `text-sm`, the §5 step for secondary UI labels. At
-                  // `text-xs` this was 12px sans — not a step in the scale at
-                  // all (12/16 is the mono caption step) and the smallest text
-                  // on a surface where it is the only control label.
-                  "mt-5 self-start rounded-sm text-sm text-muted-foreground",
-                  "underline decoration-muted-foreground underline-offset-[5px]",
-                  "transition-colors [transition-duration:var(--motion-instant)]",
-                  "hover:text-foreground hover:decoration-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                )}
-              >
-                {detailed ? t("oats.conversation.showClean") : t("oats.conversation.showDetailed")}
-              </button>
             </div>
 
             {/* The questions, written against the trace above them. No legend
@@ -757,11 +726,20 @@ function ConversationSurface() {
                 </div>
                 {/* Beside the scroller, never a mask on it: a mask clips the
                   focus ring of whatever it is applied to. */}
-                <ScrollFade show={detailed && bandFaded} />
+                <ScrollFade edges={detailed ? bandFaded : { top: false, bottom: false }} />
               </div>
 
               {detailed && (
-                <ConversationDialogue className="mt-5 min-h-[4.5rem] flex-1 basis-0 border-t border-border/40 pt-4" />
+                <ConversationDialogue
+                  className={cn(
+                    "min-h-[4.5rem] flex-1 basis-0",
+                    // The rule separates the annotations from the transcript.
+                    // With no question asked yet there is nothing above it, and
+                    // a full-width line over 45px of blank paper separates
+                    // nothing (§1).
+                    cardCount > 0 ? "mt-5 border-t border-border/40 pt-4" : "mt-2"
+                  )}
+                />
               )}
             </div>
 
