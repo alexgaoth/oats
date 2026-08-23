@@ -181,7 +181,11 @@ function Asking({
             <button
               type="button"
               onClick={() => onSearch(card)}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 hover:text-primary focus-visible:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              // `focus-visible:text-foreground`, not `text-primary`: flax on
+              // paper measures 2.98:1 at 11px, so the label was least legible
+              // exactly when a keyboard user was standing on it. Hover keeps
+              // the gold — a pointer user can see where the pointer is.
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 hover:text-primary focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Search size={10} />
               {t("topicGraph.search")}

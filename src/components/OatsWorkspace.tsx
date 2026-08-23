@@ -690,7 +690,7 @@ function ConversationSurface() {
                   itself and one card measured 35px of a 68px list. */}
               <div
                 className={cn(
-                  "relative flex min-h-0 shrink-0 flex-col",
+                  "group relative flex min-h-0 shrink-0 flex-col",
                   detailed ? "max-h-[52%]" : "max-h-0"
                 )}
               >

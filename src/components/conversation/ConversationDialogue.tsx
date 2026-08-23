@@ -109,7 +109,7 @@ export default function ConversationDialogue({ className }: { className?: string
           which made `scrollTop = scrollHeight` a no-op and left the newest turn
           1850px below the fold for the whole conversation. A flex child with
           `min-h-0` inside a bounded column is the shape that actually scrolls. */}
-      <div className="relative min-h-0 flex-1">
+      <div className="group relative min-h-0 flex-1">
         <div
           ref={scroller}
           onScroll={(event) => {
