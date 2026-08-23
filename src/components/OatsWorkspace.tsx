@@ -662,7 +662,11 @@ function ConversationSurface() {
                 type="button"
                 onClick={() => setDetail(toggleConversationDetail(detail))}
                 className={cn(
-                  "mt-5 self-start rounded-sm text-xs text-muted-foreground",
+                  // `text-sm`, the §5 step for secondary UI labels. At
+                  // `text-xs` this was 12px sans — not a step in the scale at
+                  // all (12/16 is the mono caption step) and the smallest text
+                  // on a surface where it is the only control label.
+                  "mt-5 self-start rounded-sm text-sm text-muted-foreground",
                   "underline decoration-muted-foreground underline-offset-[5px]",
                   "transition-colors [transition-duration:var(--motion-instant)]",
                   "hover:text-foreground hover:decoration-foreground",
@@ -708,13 +712,29 @@ function ConversationSurface() {
                   setBandAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
                 }}
                 className={cn(
-                  // `min-h-0`, not `shrink-0`: the dialogue below carries a
-                  // floor, so the annotations have to be able to yield to it
-                  // rather than taking the band and leaving it nothing.
-                  "min-h-0 overflow-y-auto",
+                  // `shrink-0` with a ceiling, never a shrinkable box.
+                  //
+                  // Flex distributes shrink in proportion to each child's
+                  // *content* size, and the transcript's content is thousands
+                  // of pixels — so a shrinkable annotations band lost the whole
+                  // negotiation as the conversation ran. Measured before this
+                  // fix at 1200x800 with two cards: band 122px at 2 turns, 39px
+                  // at 20, 21px at 40, 7px at 120 — and **zero visible pixels**
+                  // of the first card past 40 turns, its rect sitting entirely
+                  // below a wrapper that had collapsed above it. Three minutes
+                  // into a conversation the surface silently stopped showing the
+                  // questions it had caught. The dialogue takes the *remainder*
+                  // (`flex-1 basis-0`) instead of bidding with its content.
+                  "shrink-0",
                   // Half the band at most: past that the annotations start
                   // eating the dialogue they are supposed to sit beside.
-                  detailed ? "max-h-[52%]" : "max-h-0"
+                  detailed ? "max-h-[52%]" : "max-h-0",
+                  // A zero-height scroller is keyboard-focusable in Chromium, so
+                  // the closed band became a tab stop in the *default*
+                  // composition — no focus ring anywhere on screen, and an AX
+                  // name read from the stale announcement text. Closed, it has
+                  // nothing to scroll, so it does not get to be a scroller.
+                  detailed ? "overflow-y-auto" : "overflow-hidden"
                 )}
                 style={
                   bandAtEnd || !detailed
@@ -730,7 +750,9 @@ function ConversationSurface() {
                 <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
               </div>
 
-              {detailed && <ConversationDialogue className="mt-5 border-t border-border/40 pt-4" />}
+              {detailed && (
+                <ConversationDialogue className="mt-5 min-h-[4.5rem] flex-1 basis-0 border-t border-border/40 pt-4" />
+              )}
             </div>
 
             {/* The foot is pinned, but it is not allowed to eat the band.

@@ -72,6 +72,7 @@ export default function ConversationDialogue({ className }: { className?: string
   // return to the end themselves.
   const scroller = useRef<HTMLDivElement | null>(null);
   const [following, setFollowing] = useState(true);
+  const [atEnd, setAtEnd] = useState(true);
   useEffect(() => {
     const element = scroller.current;
     if (!element || !following) return;
@@ -99,14 +100,39 @@ export default function ConversationDialogue({ className }: { className?: string
         ref={scroller}
         onScroll={(event) => {
           const element = event.currentTarget;
-          setFollowing(element.scrollTop + element.clientHeight >= element.scrollHeight - 8);
+          const atEnd = element.scrollTop + element.clientHeight >= element.scrollHeight - 8;
+          setFollowing(atEnd);
+          setAtEnd(atEnd);
         }}
+        // The annotations above carry this fade because "a hard edge made a
+        // sliced annotation look like a short one"; a turn sliced mid-glyph
+        // reads as damage rather than as more text, and it was landing 10px
+        // above the dead-microphone warning.
+        style={
+          atEnd
+            ? undefined
+            : {
+                maskImage: "linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent)",
+                WebkitMaskImage:
+                  "linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent)",
+              }
+        }
         role="log"
         aria-live="off"
         aria-label={t("oats.conversation.dialogueLabel")}
         tabIndex={0}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto",
+          // `relative` and `contain` are load-bearing, not tidiness.
+          //
+          // The `sr-only` separators below are `position: absolute`, and a
+          // `position: static` scroller is not their containing block — so they
+          // escaped its clip and propagated into the *section's* scrollable
+          // overflow. Measured at 600x400 with 20 turns: section clientHeight
+          // 364, scrollHeight 2156, children summing to 490; scrolled to the
+          // end the screen was blank paper with the dead-microphone warning
+          // 1,306px above the viewport. `overflow: hidden` on this element did
+          // not fix it (still 2156); containment did (530).
+          "relative [contain:layout_paint] min-h-0 flex-1 overflow-y-auto",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}
       >

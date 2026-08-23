@@ -327,9 +327,16 @@ competes for the same faculty as the person talking, and this product's whole
 claim is that it does not make you choose between the two.
 
 **Detailed** is for the person checking the machine — _is it hearing me right,
-did it catch that, what has it done_ — and adds, in this order, the **detected
-dialogue** (the live speaker-attributed transcript), the question annotations,
-and the open-thread stack.
+did it catch that, what has it done_ — and adds the question annotations
+(directly under the contour, §9.2), the **detected dialogue** beneath them
+(§9.9), and the open-thread stack in the pinned foot (§9.3).
+
+**That order is binding and was arrived at by measurement.** With the transcript
+above the annotations in one scroller, the first question card sat 2,667px down
+and receded ~57px with every finalized segment; with the annotations able to
+shrink against the transcript's content height, the card measured **zero visible
+pixels** past forty turns. The card is docked to the trace it annotates and takes
+a fixed share; the dialogue takes the remainder.
 
 They are compositions, never capabilities. Detection, classification, automatic
 search, persistence, titling and threads are identical in both; clean hides
@@ -414,13 +421,14 @@ the band's own bottom edge. The thing that just happened is at the top; history
 scrolls away beneath it, behind a fade that says so.
 
 Beyond four groups, the rest collapse behind a husk-ink count chip ("6 earlier")
-that expands **and collapses** on click. The annotations take the upper half of
-the band between the pinned head and the pinned foot and scroll inside it, so a
-busy conversation can never push the dead-microphone warning or the open-thread
-stack off screen — and so the detected dialogue below them (§9.9) can never push
-the annotations away from the trace they annotate. A single scroller holding both
-fails that: measured at forty turns the first annotation sat 2,667px down and
-receded further with every finalized segment.
+that expands **and collapses** on click. The annotations take **up to half the
+band** between the pinned head and the pinned foot and scroll inside it, so a busy
+conversation can never push the dead-microphone warning or the open-thread stack
+off screen. They do not shrink: the detected dialogue below them (§9.9) takes the
+remainder rather than bidding for space with its own content height. Measured
+across a conversation growing from 2 to 120 turns the band holds at 126px with
+44px of the newest card visible throughout — flat, where the shrinkable version
+went 122px to 7px and the card from 44px to nothing.
 
 **Honesty.** Auto-open is real network activity and the UI says so plainly: the
 card reads `searched · google` under the question once it fires, and Settings
@@ -429,7 +437,9 @@ device — only the search text does, and only for questions nobody answered.
 
 ### 9.3 The open-thread stack — during recording
 
-**Detailed-only (§9.0).** Live, on the Conversation surface, beside the pulse. It answers one question the
+**Detailed-only (§9.0).** Live, on the Conversation surface, in the pinned foot
+below the dead-microphone warning — never above it, because the warning is the
+reliability promise and the stack is a reminder. It answers one question the
 speakers cannot hold in their own heads: **what did we start and never finish?**
 
 **Collapsed is the default and the normal state.** It rests as a thin vertical
