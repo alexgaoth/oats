@@ -24,6 +24,8 @@ import ListeningPulse from "./conversation/ListeningPulse";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
+import ConversationDialogue from "./conversation/ConversationDialogue";
+import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -325,6 +327,13 @@ function ConversationSurface() {
   const sessionStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
   const elapsed = useElapsed(sessionStartedAt);
   const contour = useLiveContour(sessionStartedAt);
+  // Which composition to draw. `clean` is the default and the quiet one; see
+  // `helpers/conversationDetail.mjs` for what the two mean and why the default
+  // is not a preference so much as a promise.
+  const detail = useSettingsStore((s) => s.conversationDetail);
+  const setDetail = useSettingsStore((s) => s.setConversationDetail);
+  const detailed = detail === "detailed";
+
   // Which question annotation is being read, so its mark on the trace can rise.
   const [focusedGroup, setFocusedGroup] = useState<string | null>(null);
   // The fade says "more below". Scrolled to the end there is nothing below, and
@@ -506,7 +515,19 @@ function ConversationSurface() {
           // column that reflows every time an utterance lands is exactly the
           // layout shift §8 forbids while somebody is being helped.
           recording
-            ? "justify-start pt-[10vh]"
+            ? cn(
+                "justify-start pt-[10vh]",
+                // Below this height the three bands do not fit, and squeezing
+                // them is worse than scrolling. Measured at 600x400 (200% zoom
+                // of the shipped default) the head and foot alone took 312 of
+                // 364px and the band was 12px — one partial turn of forty, and
+                // zero once the dead-microphone warning appeared, with no way
+                // to reach any of it. WCAG 1.4.10 asks for no *two-dimensional*
+                // scrolling and no lost content, not for no scrolling: so at
+                // small heights the surface becomes an ordinary vertical column
+                // and everything stays reachable.
+                "[@media(max-height:640px)]:overflow-y-auto"
+              )
             : "items-center justify-center overflow-y-auto pb-[18vh]"
         )}
       >
@@ -568,10 +589,16 @@ function ConversationSurface() {
 
               {/* Machine state speaks in mono — the "this is what was heard" voice.
                 While an utterance is fresh the line IS what was heard; when the
-                room has been quiet for a moment it returns to the hint. */}
-              <p className="mt-5 w-full truncate font-mono text-xs text-muted-foreground">
-                {lastHeard ?? t("oats.conversation.listeningHint")}
-              </p>
+                room has been quiet for a moment it returns to the hint.
+
+                Detailed only. It is a line of text that changes every time
+                somebody speaks, sitting at eye level during a conversation, and
+                that is exactly what the clean composition exists to remove. */}
+              {detailed && (
+                <p className="mt-5 w-full truncate font-mono text-xs text-muted-foreground">
+                  {lastHeard ?? t("oats.conversation.listeningHint")}
+                </p>
+              )}
               {/* Said plainly rather than asked. Oats resumed a recent conversation
                 instead of stopping to check, because the check would have cost
                 the first thing anybody said. */}
@@ -584,13 +611,66 @@ function ConversationSurface() {
               {/* The contour — the record being written (DESIGN.md §9.8). Every
                 part of it is a measurement of this conversation, which is the
                 whole reason it replaced a landscape. */}
+              {/* Viewport-relative, because the head was fixed and the band
+                  was the only thing that could give. Measured at 600x400 (200%
+                  zoom of the shipped default) the band collapsed to 14px, and
+                  to 0px once the dead-microphone warning appeared, with the
+                  page unable to scroll to recover it — so at 200% the detected
+                  dialogue and the annotations did not exist. The contour is the
+                  largest thing in the head and the one that degrades
+                  gracefully: it is a shape, and a shorter shape is still the
+                  shape. Clean gets more of it because there it is the whole of
+                  the evidence. */}
               <ConversationContour
                 contour={contour}
-                className="mt-8"
-                height={104}
+                className={detailed ? "mt-8" : "mt-10"}
+                height={detailed ? "clamp(46px, 13vh, 104px)" : "clamp(56px, 26vh, 208px)"}
                 focusedGroup={focusedGroup}
                 label={contourLabel(contour, t)}
               />
+
+              {/* The switch between the two compositions.
+              
+                  On the surface rather than in Settings, and visible in both
+                  states, because that is what keeps this from being a mode you
+                  have to remember being in: the screen shows which one you are
+                  in, and the way out is on the same screen. It is also the
+                  moment you want it — "wait, what did it just hear?" happens
+                  during a conversation, not before one.
+
+                  A text link, not a control in a box (§1), and it says what it
+                  will do rather than what is currently true, because a switch
+                  labelled with its own state is ambiguous about which. */}
+              {/* No `aria-pressed`.
+
+                  It was there alongside a label that states the *action*, and
+                  the two encodings contradicted each other: in detailed a
+                  screen reader said "Hide what was said, toggle button,
+                  pressed" — asserting that hiding was engaged at the moment the
+                  words were on screen. A control may say what it will do or say
+                  what is true, not both in opposite directions. The name states
+                  it: "Show what was said" is only ever offered when they are
+                  hidden, so the current value is unambiguous from the name
+                  alone, and the name is what a screen reader reads first.
+
+                  The underline is the only affordance saying this is a control
+                  rather than a sentence, so it is drawn in `muted-foreground`
+                  (5.19:1 on paper, 6.33:1 on charcoal). At `border` it measured
+                  1.24:1, under the 3:1 this project holds control indicators
+                  to. */}
+              <button
+                type="button"
+                onClick={() => setDetail(toggleConversationDetail(detail))}
+                className={cn(
+                  "mt-5 self-start rounded-sm text-xs text-muted-foreground",
+                  "underline decoration-muted-foreground underline-offset-[5px]",
+                  "transition-colors [transition-duration:var(--motion-instant)]",
+                  "hover:text-foreground hover:decoration-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                )}
+              >
+                {detailed ? t("oats.conversation.showClean") : t("oats.conversation.showDetailed")}
+              </button>
             </div>
 
             {/* The questions, written against the trace above them. No legend
@@ -604,23 +684,53 @@ function ConversationSurface() {
             {/* The fade is the scroll cue: the band clips, and a hard edge made
                 a sliced annotation look like a short one. `mask-image` costs no
                 element and no paint of its own. */}
-            <div
-              onScroll={(event) => {
-                const el = event.currentTarget;
-                setBandAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
-              }}
-              className="min-h-0 flex-1 overflow-y-auto"
-              style={
-                bandAtEnd
-                  ? undefined
-                  : {
-                      maskImage: "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
-                      WebkitMaskImage:
-                        "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
-                    }
-              }
-            >
-              <ConversationSignalRail onFocus={setFocusedGroup} />
+            {/* The band, and it holds two regions rather than one scroller.
+
+                Round 1 stacked an unbounded transcript above the annotations in
+                a single scroller, which un-docked the question card from the
+                contour: measured at 40 turns the first annotation's top was at
+                y=2667 and receded ~57px with every finalized segment, so §9.2's
+                "directly under the contour" — the surface the product is judged
+                on — was unreachable during a live conversation. The annotations
+                keep their place under the trace; the dialogue takes what is left
+                and scrolls inside itself.
+
+                The rail is mounted here unconditionally and in the same position
+                in both compositions. Rendering it from two branches put it at
+                two different child indices, so React unmounted and remounted it
+                on every switch, its `spoken` set came back empty, and a blind
+                user pressing the switch once was told three already-heard
+                questions had just arrived. */}
+            <div className="flex min-h-0 flex-1 flex-col [@media(max-height:640px)]:min-h-[13rem]">
+              <div
+                onScroll={(event) => {
+                  const el = event.currentTarget;
+                  setBandAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
+                }}
+                className={cn(
+                  // `min-h-0`, not `shrink-0`: the dialogue below carries a
+                  // floor, so the annotations have to be able to yield to it
+                  // rather than taking the band and leaving it nothing.
+                  "min-h-0 overflow-y-auto",
+                  // Half the band at most: past that the annotations start
+                  // eating the dialogue they are supposed to sit beside.
+                  detailed ? "max-h-[52%]" : "max-h-0"
+                )}
+                style={
+                  bandAtEnd || !detailed
+                    ? undefined
+                    : {
+                        maskImage:
+                          "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
+                        WebkitMaskImage:
+                          "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
+                      }
+                }
+              >
+                <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
+              </div>
+
+              {detailed && <ConversationDialogue className="mt-5 border-t border-border/40 pt-4" />}
             </div>
 
             {/* The foot is pinned, but it is not allowed to eat the band.
@@ -642,11 +752,17 @@ function ConversationSurface() {
                   {t("oats.conversation.micSilent")}
                 </p>
               )}
-              <OpenThreadStack
-                threads={openThreads}
-                suggestions={suggestions}
-                speaking={speaking}
-              />
+              {/* Detailed only. The stack is a standing list of unfinished
+                  business, and reading it is thinking about the conversation
+                  rather than having it. The warning above is not optional in
+                  either composition: it is the reliability promise. */}
+              {detailed && (
+                <OpenThreadStack
+                  threads={openThreads}
+                  suggestions={suggestions}
+                  speaking={speaking}
+                />
+              )}
             </div>
           </>
         ) : (

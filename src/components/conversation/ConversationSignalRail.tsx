@@ -285,7 +285,20 @@ function QuestionGroup({
 
 export default function ConversationSignalRail({
   onFocus,
+  announceOnly = false,
 }: {
+  /**
+   * Mount the announcements without drawing the annotations.
+   *
+   * The clean composition (DESIGN.md §9.0) hides the question cards, and the
+   * first version of it simply did not render this component — which silently
+   * took the *only* channel that tells a screen-reader user a question was
+   * detected and searched, and made "clean" mean "less product" for them
+   * rather than "calmer". The spec is that assistive output is identical in
+   * both compositions, so the live region is mounted either way and only the
+   * drawing is conditional.
+   */
+  announceOnly?: boolean;
   /** Reports which question group the pointer or keyboard is on, so the
    *  contour can raise the matching mark. Null when nothing is focused. */
   onFocus: (groupKey: string | null) => void;
@@ -435,7 +448,7 @@ export default function ConversationSignalRail({
         {announcement}
       </p>
 
-      {!groups.length && !undoable ? null : (
+      {announceOnly || (!groups.length && !undoable) ? null : (
         <>
           {/* The band clips whatever does not fit. Without a cue the crowded
               case just looked like a row sliced by an invisible boundary — the

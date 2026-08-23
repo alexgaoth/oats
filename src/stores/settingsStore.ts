@@ -27,6 +27,10 @@ import type {
   ChatAgentSettings,
 } from "../hooks/useSettings";
 import type { Snippet } from "../utils/snippets";
+import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
+
+/** The Conversation surface's two compositions. See `conversationDetail.mjs`. */
+export type ConversationDetail = "clean" | "detailed";
 
 let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
 
@@ -444,6 +448,8 @@ export interface SettingsState
   meetingCloudTranscriptionMode: string;
   meetingRemoteTranscriptionType: SelfHostedType;
   meetingRemoteTranscriptionUrl: string;
+  /** Which composition the Conversation surface draws. See `conversationDetail.mjs`. */
+  conversationDetail: ConversationDetail;
   conversationAideEnabled: boolean;
   conversationAideOnlineEnabled: boolean;
   conversationAideInRoomEnabled: boolean;
@@ -529,6 +535,7 @@ export interface SettingsState
   setMeetingCloudTranscriptionMode: (value: string) => void;
   setMeetingRemoteTranscriptionType: (type: SelfHostedType) => void;
   setMeetingRemoteTranscriptionUrl: (url: string) => void;
+  setConversationDetail: (value: ConversationDetail) => void;
   setConversationAideEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
   setConversationAideInRoomEnabled: (value: boolean) => void;
@@ -1124,6 +1131,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   // (CLAUDE.md question rules), it runs on local pattern matching with no
   // model, and the only thing that leaves the device — auto-search — has its
   // own toggle. An install where this is off has a flagship that never fires.
+  // Quiet by default. A first conversation must not open onto moving text: the
+  // person in the room is the point, and the words on screen are the one thing
+  // that competes with them for the same faculty. The resolver is pure and
+  // pinned so a missing or corrupt stored value lands here too, rather than on
+  // the busy composition.
+  conversationDetail: resolveConversationDetail(
+    isBrowser ? localStorage.getItem("conversationDetail") : null
+  ) as ConversationDetail,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
   conversationAideInRoomEnabled: readBoolean("conversationAideInRoomEnabled", true),
@@ -1219,6 +1234,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     type: SelfHostedType
   ) => void,
   setMeetingRemoteTranscriptionUrl: createStringSetter("meetingRemoteTranscriptionUrl"),
+  setConversationDetail: createStringSetter("conversationDetail") as (
+    value: ConversationDetail
+  ) => void,
   setConversationAideEnabled: createBooleanSetter("conversationAideEnabled"),
   setConversationAideOnlineEnabled: createBooleanSetter("conversationAideOnlineEnabled"),
   setConversationAideInRoomEnabled: createBooleanSetter("conversationAideInRoomEnabled"),

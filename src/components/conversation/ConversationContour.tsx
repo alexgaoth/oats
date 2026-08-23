@@ -195,7 +195,8 @@ export default function ConversationContour({
 }: {
   contour: ContourData;
   className?: string;
-  height?: number;
+  /** CSS length. A string so a caller can hand it a `clamp()`. */
+  height?: number | string;
   /** The list strip omits notches and arcs — at 40px they are a smudge. */
   showMarks?: boolean;
   /** Read out instead of the drawing, which is decorative to a screen reader. */

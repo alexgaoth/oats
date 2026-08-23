@@ -301,10 +301,11 @@ hold 60fps on integrated graphics:
 
 ## 9. Signature components
 
-There are six, and they _are_ the brand: the listening pulse, the question card,
-the open-thread stack, the conversation contour, the topic graph, and the
-lifetime graph. Three live during recording, two live after, and the last looks
-across all of them. They are held to this spec exactly.
+There are seven, and they _are_ the brand: the listening pulse, the question card,
+the open-thread stack, the conversation contour, the detected dialogue, the topic graph, and the
+lifetime graph. Four live during recording, two live after, and the last looks
+across all of them. They are held to this spec exactly. §9.0 governs which of
+them the recording surface draws at all.
 
 **Superseded 2026-08-20.** The fourth used to be a wheat field with a sky, a
 horizon, birds and a farmhouse, drawn behind every surface. It is retired. Two
@@ -313,6 +314,35 @@ landscape, wellness app or artisanal farm brand — none of which is a private,
 local instrument for consequential conversations. The replacement is not a
 quieter backdrop but a different kind of thing entirely: a mark made _of the
 conversation_, which is what an evidence tool should put on its own screen.
+
+### 9.0 The two compositions of the recording surface
+
+The recording surface draws the same conversation two ways, and **clean is the
+default**.
+
+**Clean** is for the person who is in the room: the listening pulse, the elapsed
+clock, the contour, the dead-microphone warning, and the switch. It contains no
+text that changes while somebody is speaking. Changing language on a screen
+competes for the same faculty as the person talking, and this product's whole
+claim is that it does not make you choose between the two.
+
+**Detailed** is for the person checking the machine — _is it hearing me right,
+did it catch that, what has it done_ — and adds, in this order, the **detected
+dialogue** (the live speaker-attributed transcript), the question annotations,
+and the open-thread stack.
+
+They are compositions, never capabilities. Detection, classification, automatic
+search, persistence, titling and threads are identical in both; clean hides
+evidence and never withholds behaviour. **Assistive-technology output is
+identical in both** — the status region and the question announcements do not
+change, because for a non-visual reader the announcement is the surface, and a
+"quieter" composition that told a screen-reader user less would be a quieter
+product for them, not a calmer one.
+
+The switch is on the surface, visible in both states, and labelled with what it
+will do rather than with what is true. That is what keeps this from being a mode
+to remember: the screen already says which composition you are in, because one
+of them has the words in it.
 
 ### 9.1 The listening pulse
 
@@ -370,7 +400,8 @@ and collapsing it would erase exactly the signal Oats exists to catch. Cards for
 the same subject visually **nest** under the first: indented, hairline-linked, the
 repeats at 70% ink. Density is handled by stacking, never by suppression.
 
-**Stacking.** Annotations are **docked in the Conversation surface, directly
+**Stacking.** Annotations are **Detailed-only (§9.0)**, and there they are
+**docked in the Conversation surface, directly
 under the contour, on its left spine** — not in a corner and not in a window of
 their own (§9.8; the detached overlay was deleted on 2026-08-20 and must not
 return). **Newest at the top**, `base` enter with a 24ms stagger.
@@ -383,9 +414,13 @@ the band's own bottom edge. The thing that just happened is at the top; history
 scrolls away beneath it, behind a fade that says so.
 
 Beyond four groups, the rest collapse behind a husk-ink count chip ("6 earlier")
-that expands **and collapses** on click. The band takes the space between the
-pinned head and the pinned foot and scrolls inside it, so a busy conversation can
-never push the dead-microphone warning or the open-thread stack off screen.
+that expands **and collapses** on click. The annotations take the upper half of
+the band between the pinned head and the pinned foot and scroll inside it, so a
+busy conversation can never push the dead-microphone warning or the open-thread
+stack off screen — and so the detected dialogue below them (§9.9) can never push
+the annotations away from the trace they annotate. A single scroller holding both
+fails that: measured at forty turns the first annotation sat 2,667px down and
+receded further with every finalized segment.
 
 **Honesty.** Auto-open is real network activity and the UI says so plainly: the
 card reads `searched · google` under the question once it fires, and Settings
@@ -394,7 +429,7 @@ device — only the search text does, and only for questions nobody answered.
 
 ### 9.3 The open-thread stack — during recording
 
-Live, on the Conversation surface, beside the pulse. It answers one question the
+**Detailed-only (§9.0).** Live, on the Conversation surface, beside the pulse. It answers one question the
 speakers cannot hold in their own heads: **what did we start and never finish?**
 
 **Collapsed is the default and the normal state.** It rests as a thin vertical
@@ -513,6 +548,46 @@ Rules:
 **The surface behind it is paper.** No sky, no scenery, no permanent world. A
 reading surface is `--color-background` and nothing else, and the contour is the
 only non-textual mark on it.
+
+### 9.9 The detected dialogue — Detailed-only
+
+The answer to the only question the recording surface could not previously
+answer: **is it hearing me correctly?** One echoed line proves something
+arrived; it proves nothing about whether it arrived right, and somebody deciding
+whether to trust an hour of their conversation to this needs to read a paragraph
+of it.
+
+**Voice: mono, always.** §5 gives transcripts the "machine heard this" voice, and
+it earns trust precisely by looking verbatim. The reading view renders the same
+content at `font-mono text-[13px]`; one transcript may not have two voices on two
+surfaces. Nothing here is uppercase — sentence case is the rule for everything
+but the wordmark.
+
+**Turns, not segments.** Speech finalizes in ~5s chunks. Drawn one paragraph per
+chunk, one person's sentence looks like four people arguing. Consecutive chunks
+from one speaker are joined into the turn they were.
+
+**Attribution is the margin, the words are the entry** — the same relationship
+the annotations have to the contour. The two-voice vocabulary is the stored
+transcript's: you, and the room, replaced by a diarized name when there is one.
+The separator between them must be a _character_, not margin: `textContent` is
+what a screen reader and the clipboard read, and margin is invisible to both.
+
+**Bounded, and it follows.** Its own scroller with a real bound — a flex child
+with `min-h-0`, never `max-h-full`, which resolves against a content-height
+parent and bounds nothing. It follows the newest turn, and stops following the
+moment the reader scrolls away from the end: auto-scrolling somebody off the line
+they went back to check is the specific way live transcripts become useless.
+Following resumes when they return to the end themselves.
+
+**Silent.** `role="log"` with `aria-live="off"`. A transcript that announced
+itself would read the conversation aloud over the conversation, which is the one
+thing this surface must never do. The status region and the question
+announcements are the spoken channel; this is the visual one, reachable by
+keyboard and named for the accessibility tree.
+
+**No affordances.** No timestamps, no per-turn controls, no selection handles. A
+live transcript that invites editing is one somebody edits instead of listening.
 
 ### 9.5 Empty states
 

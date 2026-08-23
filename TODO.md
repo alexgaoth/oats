@@ -442,6 +442,31 @@ Outstanding, in priority order (2026-08-22 pass — items 2 to 6 closed):
 Not reviewed by any critic. Every claim above is a measurement; none is a
 screen-reader test.
 
+## Conversation surface — two compositions (2026-08-22)
+
+Clean and Detailed (`DESIGN.md` §9.0, §9.9), switchable from the surface,
+persisted, **clean by default** for fresh installs and for existing ones with no
+stored value. Clean holds a stricter rule than "fewer elements": no text that
+changes while somebody is speaking. Detailed adds the **detected dialogue** — a
+live speaker-attributed transcript that did not exist before — plus the question
+annotations and the open-thread stack. Detection, classification, auto-search,
+persistence and assistive-technology output are identical in both.
+
+Open, and wanting a decision rather than silence:
+
+- **The switch lives only on the recording surface.** Deliberate: it is the
+  moment you want it ("what did it just hear?"), and keeping it on screen in both
+  states is what stops this being a mode to remember. But it means the
+  composition can only be changed mid-conversation — someone who wants Detailed
+  for their next meeting must interrupt one to say so. A Settings line is the
+  obvious alternative and was rejected to keep Settings small.
+- **Clean is still largely a subtraction.** Its content ends around y=372 with
+  roughly half the surface empty. The contour was enlarged to 26vh to use some
+  of it; whether clean deserves a composition of its own rather than the detailed
+  layout minus things is unresolved.
+- **No screen reader has been run.** Parity between the compositions is verified
+  as DOM and AX-tree parity, which is not the same claim.
+
 ## Verification gates
 
 Still requiring a real GUI session and realistic speech:
