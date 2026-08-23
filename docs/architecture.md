@@ -638,6 +638,48 @@ A dedicated global hotkey that starts a dictation whose transcript is sent strai
 
 ## Development Guidelines
 
+The two rules that have actually been broken — every string in all ten locales,
+and never bulk-transform casing across them — are in `CLAUDE.md`, along with the
+five edits a new sidecar binary needs and the two a new IPC channel needs. What
+follows is the rest of the convention, kept here because it is reference rather
+than rule.
+
+### Internationalization (i18n) — REQUIRED
+
+All user-facing strings **must** use the i18n system. Never hardcode UI text in components.
+
+**Setup**: react-i18next (v15) with i18next (v25). Translation files in `src/locales/{lang}/translation.json`.
+
+**Supported languages**: en, es, fr, de, pt, it, ru, ja, zh-CN, zh-TW
+
+**How to use**:
+
+```tsx
+import { useTranslation } from "react-i18next";
+
+const { t } = useTranslation();
+// Simple: t("notes.list.title")
+// With interpolation: t("notes.upload.using", { model: "Whisper" })
+```
+
+**Rules**:
+
+1. Every new UI string must have a translation key in `en/translation.json` and all other language files
+2. Use `useTranslation()` hook in components and hooks
+3. Keep `{{variable}}` interpolation syntax for dynamic values
+4. Do NOT translate: brand names (OpenWhispr, Pro), technical terms (Markdown, Signal ID), format names (MP3, WAV), AI system prompts
+5. **Never bulk-transform casing across locales.** Capitalising the first letter is sentence case in nine of the ten and a spelling error in German, where every common noun carries a capital — "Audio und transkripte bleiben auf diesem gerät." passed `i18n:check` (it only compares key sets and placeholders) and shipped wrong. Also anchor any scripted locale edit on `"key": "value"`, never on the value alone: a value like `"copy"` matches its own key name and silently renames it
+6. Group keys by feature area (e.g., `notes.editor.*`, `referral.toasts.*`)
+
+### Adding New Features
+
+1. **New IPC Channel**: Add to both ipcHandlers.js and preload.js
+2. **New Setting**: Update useSettings.ts and SettingsPage.tsx
+3. **New UI Component**: Follow shadcn/ui patterns in src/components/ui
+4. **New Manager**: Create in src/helpers/, initialize in main.js
+5. **New UI Strings**: Add translation keys to all 10 language files (see i18n section above)
+6. **New Sidecar Binary**: Add download script in `scripts/`, add to `prebuild*` scripts in package.json, add manager in `src/helpers/`, initialize in `main.js`. Spawn the child with `detached: process.platform !== "win32"` so it has its own process group on Unix. Right after spawn call `sidecarPidFile.write(name, child.pid)` and on `close` call `sidecarPidFile.clear(name)`. Add the binary fragment to `EXPECTED_BINARY_FRAGMENTS` in `sidecarReaper.js`. Register a stop function via `sidecarRegistry.register(name, () => manager.stop())` in `registerSidecars()` — that single registration replaces the old `will-quit` line.
+
 ### Testing Checklist
 
 - [ ] Test both local and cloud processing modes
