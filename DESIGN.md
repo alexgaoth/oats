@@ -325,13 +325,14 @@ clock, the contour, the continuing-from line when one conversation resumes
 another, the dead-microphone warning, and the switch — and nothing else. The
 continuing-from line belongs here because it is stated once and never changes.
 
+Clean contains **no text that changes while somebody is speaking**. Changing
+language on a screen competes for the same faculty as the person talking, and
+this product's whole claim is that it does not make you choose between the two.
+
 There used to be a last-heard echo line, one utterance at a time, and it is
-**deleted**: Clean forbade it for rewriting itself whenever anybody spoke, and
-once Detailed carried the transcript the two said the same words on one screen.
-Do not reintroduce it in either composition. It contains no
-text that changes while somebody is speaking. Changing language on a screen
-competes for the same faculty as the person talking, and this product's whole
-claim is that it does not make you choose between the two.
+**deleted from both compositions**: Clean forbade it for rewriting itself
+whenever anybody spoke, and once Detailed carried the transcript the two said
+the same words on one screen. Do not reintroduce it.
 
 **Detailed** is for the person checking the machine — _is it hearing me right,
 did it catch that, what has it done_ — and adds the question annotations
