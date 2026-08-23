@@ -534,7 +534,21 @@ function ConversationSurface() {
               {/* The clock is the heading here. What a person glances at mid-
                 conversation is how long they have been recording, and it is the
                 one thing on this screen that is unambiguously true. */}
-              {/* The switch rides the clock line, not the column beneath it.
+              {/* The switch between the two compositions.
+
+                    On the surface rather than in Settings, and visible in both
+                    states, because that is what keeps this from being a mode
+                    you have to remember being in: the screen shows which one
+                    you are in, and the way out is on the same screen. It is
+                    also the moment you want it — "wait, what did it just
+                    hear?" happens during a conversation, not before one.
+
+                    A text link, not a control in a box (§1), and it says what
+                    it will do rather than what is currently true, because a
+                    switch labelled with its own state is ambiguous about
+                    which.
+
+                    It rides the clock line, not the column beneath it.
                   Sitting under the contour it put a chrome control between the
                   trace and the annotations that annotate it — §9.2's "docked
                   directly under the contour" was measurably false (contour
@@ -639,19 +653,6 @@ function ConversationSurface() {
                 focusedGroup={focusedGroup}
                 label={contourLabel(contour, t)}
               />
-
-              {/* The switch between the two compositions.
-              
-                  On the surface rather than in Settings, and visible in both
-                  states, because that is what keeps this from being a mode you
-                  have to remember being in: the screen shows which one you are
-                  in, and the way out is on the same screen. It is also the
-                  moment you want it — "wait, what did it just hear?" happens
-                  during a conversation, not before one.
-
-                  A text link, not a control in a box (§1), and it says what it
-                  will do rather than what is currently true, because a switch
-                  labelled with its own state is ambiguous about which. */}
             </div>
 
             {/* The questions, written against the trace above them. No legend
