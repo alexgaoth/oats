@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
+import { ScrollFade, useScrollFade } from "./useScrollFade";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 
@@ -72,7 +73,7 @@ export default function ConversationDialogue({ className }: { className?: string
   // return to the end themselves.
   const scroller = useRef<HTMLDivElement | null>(null);
   const [following, setFollowing] = useState(true);
-  const [atEnd, setAtEnd] = useState(true);
+  const { faded, measure } = useScrollFade(scroller, turns);
   useEffect(() => {
     const element = scroller.current;
     if (!element || !following) return;
@@ -96,77 +97,71 @@ export default function ConversationDialogue({ className }: { className?: string
           which made `scrollTop = scrollHeight` a no-op and left the newest turn
           1850px below the fold for the whole conversation. A flex child with
           `min-h-0` inside a bounded column is the shape that actually scrolls. */}
-      <div
-        ref={scroller}
-        onScroll={(event) => {
-          const element = event.currentTarget;
-          const atEnd = element.scrollTop + element.clientHeight >= element.scrollHeight - 8;
-          setFollowing(atEnd);
-          setAtEnd(atEnd);
-        }}
-        // The annotations above carry this fade because "a hard edge made a
-        // sliced annotation look like a short one"; a turn sliced mid-glyph
-        // reads as damage rather than as more text, and it was landing 10px
-        // above the dead-microphone warning.
-        style={
-          atEnd
-            ? undefined
-            : {
-                maskImage: "linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent)",
-                WebkitMaskImage:
-                  "linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent)",
-              }
-        }
-        role="log"
-        aria-live="off"
-        aria-label={t("oats.conversation.dialogueLabel")}
-        tabIndex={0}
-        className={cn(
-          // `relative` and `contain` are load-bearing, not tidiness.
-          //
-          // The `sr-only` separators below are `position: absolute`, and a
-          // `position: static` scroller is not their containing block — so they
-          // escaped its clip and propagated into the *section's* scrollable
-          // overflow. Measured at 600x400 with 20 turns: section clientHeight
-          // 364, scrollHeight 2156, children summing to 490; scrolled to the
-          // end the screen was blank paper with the dead-microphone warning
-          // 1,306px above the viewport. `overflow: hidden` on this element did
-          // not fix it (still 2156); containment did (530).
-          "relative [contain:layout_paint] min-h-0 flex-1 overflow-y-auto",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      >
-        {!turns.length && (
-          // Inside the region, not instead of it: a labelled log that only
-          // exists once somebody has spoken cannot be navigated to beforehand,
-          // and then appears with no signal that it has.
-          <p className="font-mono text-xs text-muted-foreground">
-            {t("oats.conversation.dialogueWaiting")}
-          </p>
-        )}
-        <ol className="space-y-3.5">
-          {turns.map((turn) => (
-            <li key={turn.id} className="font-mono text-[13px] leading-7">
-              {/* Mono, because §5 gives transcripts the "machine heard this"
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scroller}
+          onScroll={(event) => {
+            const element = event.currentTarget;
+            setFollowing(element.scrollTop + element.clientHeight >= element.scrollHeight - 8);
+            measure();
+          }}
+          role="log"
+          aria-live="off"
+          aria-label={t("oats.conversation.dialogueLabel")}
+          tabIndex={0}
+          className={cn(
+            // `relative` and `contain` are load-bearing, not tidiness.
+            //
+            // The `sr-only` separators below are `position: absolute`, and a
+            // `position: static` scroller is not their containing block — so they
+            // escaped its clip and propagated into the *section's* scrollable
+            // overflow. Measured at 600x400 with 20 turns: section clientHeight
+            // 364, scrollHeight 2156, children summing to 490; scrolled to the
+            // end the screen was blank paper with the dead-microphone warning
+            // 1,306px above the viewport. `overflow: hidden` on this element did
+            // not fix it (still 2156); containment did (530).
+            "relative [contain:layout_paint] h-full overflow-y-auto",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          )}
+        >
+          {!turns.length && (
+            // Inside the region, not instead of it: a labelled log that only
+            // exists once somebody has spoken cannot be navigated to beforehand,
+            // and then appears with no signal that it has.
+            <p className="font-mono text-xs text-muted-foreground">
+              {t("oats.conversation.dialogueWaiting")}
+            </p>
+          )}
+          <ol className="space-y-3.5">
+            {turns.map((turn) => (
+              <li key={turn.id} className="font-mono text-[13px] leading-7">
+                {/* Mono, because §5 gives transcripts the "machine heard this"
                   voice — it earns trust by looking verbatim — and because the
                   reading view renders this same content at `font-mono
                   text-[13px]`. One transcript must not have two voices on two
                   surfaces. Sentence case, like everything but the wordmark. */}
-              <span className="mr-2 select-none text-muted-foreground">
-                {turn.speaker ??
-                  (turn.source === "mic"
-                    ? t("oats.intelligence.speakerYou")
-                    : t("oats.intelligence.speakerRoom"))}
-                {/* The gap between the label and the words is margin, which is
+                <span className="mr-2 select-none text-muted-foreground">
+                  {turn.speaker ??
+                    (turn.source === "mic"
+                      ? t("oats.intelligence.speakerYou")
+                      : t("oats.intelligence.speakerRoom"))}
+                  {/* The gap between the label and the words is margin, which is
                     invisible to `textContent` — so a screen reader, and anyone
                     copying the transcript, read "Youso the question is". The
                     separator has to be a character. */}
-                <span className="sr-only">: </span>
-              </span>
-              <span className="text-foreground/85">{turn.text}</span>
-            </li>
-          ))}
-        </ol>
+                  <span className="sr-only">: </span>
+                </span>
+                <span className="text-foreground/85">{turn.text}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+        {/* Painted beside the scroller, never as a mask on it: a mask's painting
+          area is the border box, so masking the focusable log clipped its own
+          focus ring away — measured 5.21:1 unmasked, 1.00:1 masked, same
+          element, same focus. The overlay sits inside the wrapper, so the ring
+          (which is drawn outside the log's box) is untouched. */}
+        <ScrollFade show={faded} />
       </div>
     </div>
   );

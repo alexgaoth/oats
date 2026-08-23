@@ -25,6 +25,7 @@ import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
+import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
@@ -336,10 +337,17 @@ function ConversationSurface() {
 
   // Which question annotation is being read, so its mark on the trace can rise.
   const [focusedGroup, setFocusedGroup] = useState<string | null>(null);
-  // The fade says "more below". Scrolled to the end there is nothing below, and
-  // leaving it on half-erased the genuinely-last annotation's outcome and its
-  // Search action — the same dimming the rail deliberately refuses elsewhere.
-  const [bandAtEnd, setBandAtEnd] = useState(false);
+  // The fade says "more below", so it must be measured rather than remembered.
+  //
+  // It used to be an `atEnd` flag starting `false` and updated only by
+  // `onScroll` — so a band that never scrolls never fired the event and the
+  // fade stayed on forever. Measured with a single question card: band
+  // `clientHeight 68 === scrollHeight 68`, the card's outcome line at **1.58:1**
+  // against paper and its Search control's focus ring at 1.00:1 along the
+  // bottom. The ordinary one-question case, permanently half-erased.
+  const bandRef = useRef<HTMLDivElement | null>(null);
+  const cardCount = useMeetingRecordingStore((s) => s.questionCards.length);
+  const { faded: bandFaded, measure: measureBand } = useScrollFade(bandRef, cardCount);
   const wasRecording = useRef(false);
   // Announced once when a recording ends, then cleared, so an idle screen the
   // user merely navigated to says nothing.
@@ -706,48 +714,50 @@ function ConversationSurface() {
                 user pressing the switch once was told three already-heard
                 questions had just arrived. */}
             <div className="flex min-h-0 flex-1 flex-col [@media(max-height:640px)]:min-h-[13rem]">
+              {/* The ceiling belongs on the wrapper, which is the flex child of
+                  the band. On the inner scroller it resolved against a wrapper
+                  of its own auto height, so "half the band" became half of
+                  itself and one card measured 35px of a 68px list. */}
               <div
-                onScroll={(event) => {
-                  const el = event.currentTarget;
-                  setBandAtEnd(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
-                }}
                 className={cn(
-                  // `shrink-0` with a ceiling, never a shrinkable box.
-                  //
-                  // Flex distributes shrink in proportion to each child's
-                  // *content* size, and the transcript's content is thousands
-                  // of pixels — so a shrinkable annotations band lost the whole
-                  // negotiation as the conversation ran. Measured before this
-                  // fix at 1200x800 with two cards: band 122px at 2 turns, 39px
-                  // at 20, 21px at 40, 7px at 120 — and **zero visible pixels**
-                  // of the first card past 40 turns, its rect sitting entirely
-                  // below a wrapper that had collapsed above it. Three minutes
-                  // into a conversation the surface silently stopped showing the
-                  // questions it had caught. The dialogue takes the *remainder*
-                  // (`flex-1 basis-0`) instead of bidding with its content.
-                  "shrink-0",
-                  // Half the band at most: past that the annotations start
-                  // eating the dialogue they are supposed to sit beside.
-                  detailed ? "max-h-[52%]" : "max-h-0",
-                  // A zero-height scroller is keyboard-focusable in Chromium, so
-                  // the closed band became a tab stop in the *default*
-                  // composition — no focus ring anywhere on screen, and an AX
-                  // name read from the stale announcement text. Closed, it has
-                  // nothing to scroll, so it does not get to be a scroller.
-                  detailed ? "overflow-y-auto" : "overflow-hidden"
+                  "relative flex min-h-0 shrink-0 flex-col",
+                  detailed ? "max-h-[52%]" : "max-h-0"
                 )}
-                style={
-                  bandAtEnd || !detailed
-                    ? undefined
-                    : {
-                        maskImage:
-                          "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
-                        WebkitMaskImage:
-                          "linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)",
-                      }
-                }
               >
-                <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
+                <div
+                  ref={bandRef}
+                  onScroll={measureBand}
+                  className={cn(
+                    // `shrink-0` with a ceiling, never a shrinkable box.
+                    //
+                    // Flex distributes shrink in proportion to each child's
+                    // *content* size, and the transcript's content is thousands
+                    // of pixels — so a shrinkable annotations band lost the whole
+                    // negotiation as the conversation ran. Measured before this
+                    // fix at 1200x800 with two cards: band 122px at 2 turns, 39px
+                    // at 20, 21px at 40, 7px at 120 — and **zero visible pixels**
+                    // of the first card past 40 turns, its rect sitting entirely
+                    // below a wrapper that had collapsed above it. Three minutes
+                    // into a conversation the surface silently stopped showing the
+                    // questions it had caught. The dialogue takes the *remainder*
+                    // (`flex-1 basis-0`) instead of bidding with its content.
+                    // Half the band at most (the ceiling is on the wrapper):
+                    // past that the annotations start eating the dialogue they
+                    // are supposed to sit beside.
+                    "min-h-0",
+                    // A zero-height scroller is keyboard-focusable in Chromium, so
+                    // the closed band became a tab stop in the *default*
+                    // composition — no focus ring anywhere on screen, and an AX
+                    // name read from the stale announcement text. Closed, it has
+                    // nothing to scroll, so it does not get to be a scroller.
+                    detailed ? "overflow-y-auto" : "overflow-hidden"
+                  )}
+                >
+                  <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
+                </div>
+                {/* Beside the scroller, never a mask on it: a mask clips the
+                  focus ring of whatever it is applied to. */}
+                <ScrollFade show={detailed && bandFaded} />
               </div>
 
               {detailed && (

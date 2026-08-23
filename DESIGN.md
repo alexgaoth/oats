@@ -321,7 +321,11 @@ The recording surface draws the same conversation two ways, and **clean is the
 default**.
 
 **Clean** is for the person who is in the room: the listening pulse, the elapsed
-clock, the contour, the dead-microphone warning, and the switch. It contains no
+clock, the contour, the continuing-from line when one conversation resumes
+another, the dead-microphone warning, and the switch — and nothing else. The
+continuing-from line belongs here because it is stated once and never changes;
+the last-heard echo line does not, and is Detailed-only, because it rewrites
+itself every time somebody speaks. It contains no
 text that changes while somebody is speaking. Changing language on a screen
 competes for the same faculty as the person talking, and this product's whole
 claim is that it does not make you choose between the two.
