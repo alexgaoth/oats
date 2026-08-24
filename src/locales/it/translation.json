@@ -1929,6 +1929,8 @@
       "openPrevious": "Apri quella",
       "noMatches": "Nessun risultato",
       "onlyRelated": "Nulla è stato detto con quelle parole. Queste conversazioni potrebbero riguardare lo stesso argomento.",
+      "plusRelated_one": "{{count}} altra forse correlata",
+      "plusRelated_other": "{{count}} altre forse correlate",
       "searchResults_one": "{{count}} conversazione corrisponde",
       "searchResults_other": "{{count}} conversazioni corrispondono",
       "match": {
@@ -1994,7 +1996,7 @@
       "no-speech-engine": "Il motore vocale locale è assente. Reinstallare Oats lo ripristina.",
       "no-model": "Il modello vocale incluso non si è installato. Riavvia Oats; se persiste, reinstalla.",
       "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni.",
-      "question-cards-off": "Le schede delle domande sono disattivate: le domande passeranno in silenzio. Vedi Impostazioni."
+      "question-cards-off": "Le schede delle domande sono disattivate: le domande passeranno in silenzio. Attivale in Avanzate."
     }
   },
   "questionCard": {

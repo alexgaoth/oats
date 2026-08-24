@@ -1929,6 +1929,8 @@
       "openPrevious": "その会話を開く",
       "noMatches": "一致するものがありません",
       "onlyRelated": "その言葉では何も話されていません。これらの会話は同じ主題かもしれません。",
+      "plusRelated_one": "他に {{count}} 件が関連の可能性",
+      "plusRelated_other": "他に {{count}} 件が関連の可能性",
       "searchResults_one": "{{count}} 件の会話が一致",
       "searchResults_other": "{{count}} 件の会話が一致",
       "match": {
@@ -1994,7 +1996,7 @@
       "no-speech-engine": "ローカル音声エンジンがありません。Oats を再インストールすると復元されます。",
       "no-model": "同梱の音声モデルがインストールされませんでした。Oats を再起動し、続く場合は再インストールしてください。",
       "no-api-key": "処理は API キーを使う設定ですが、キーが保存されていません — 設定を確認してください。",
-      "question-cards-off": "質問カードはオフになっています — 質問は記録されません。設定を確認してください。"
+      "question-cards-off": "質問カードがオフです。質問は静かに通り過ぎます。詳細設定でオンにしてください。"
     }
   },
   "questionCard": {

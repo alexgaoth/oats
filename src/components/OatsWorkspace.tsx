@@ -1514,10 +1514,24 @@ function IntelligenceViews({
               told "these conversations are about the same subject" while the
               screen said "Nothing matches that". §9.0 binds assistive output to
               be the same surface, not a lesser one. */}
-          {!query
+          {!query.trim()
             ? ""
             : literalNotes.length
-              ? t("oats.intelligence.searchResults", { count: visibleNotes.length })
+              ? // The count is the *literal* matches, not the row count.
+                //
+                // It announced `visibleNotes.length` — literal plus related — so
+                // a query with one real hit and two index guesses told a
+                // screen-reader user "3 conversations match", and opening the
+                // second found nothing containing the word. Same over-claim as
+                // the zero-result branch, surviving in the mixed case because
+                // the corpus I measured against returned no guesses at all.
+                `${t("oats.intelligence.searchResults", { count: literalNotes.length })}${
+                  recalled.length > literalNotes.length
+                    ? ` · ${t("oats.intelligence.plusRelated", {
+                        count: recalled.length - literalNotes.length,
+                      })}`
+                    : ""
+                }`
               : recalled.length
                 ? t("oats.intelligence.onlyRelated")
                 : t("oats.intelligence.noMatches")}
@@ -1578,14 +1592,17 @@ function IntelligenceViews({
                     summary of a different part of the conversation. An evidence
                     tool has to show you the thing you searched for, and say
                     whether it was *said* or *inferred*. */}
-                <RecallExcerpt
-                  note={note}
-                  query={query}
-                  // The per-row chip earns its place in a *mixed* list. Under a
-                  // line that has just said all of these are the index's guess,
-                  // it is the same statement once per row (§1).
-                  related={related && literalNotes.length > 0}
-                />
+                {/* The chip stays on every guessed row, including when they
+                    are all guesses.
+                
+                    Suppressing it read cleaner and measured worse: the line
+                    that replaced it scrolls away — 595px above the viewport with
+                    eight results — leaving the only search state whose rows
+                    carry no provenance at all. A label that travels with the row
+                    beats a heading that does not, and `RecallExcerpt`'s contract
+                    is that an evidence tool says whether a passage was said or
+                    inferred. */}
+                <RecallExcerpt note={note} query={query} related={related} />
                 {/* Its own shape, in the margin of the list. Two conversations
                     of the same length and the same title still look different
                     here, because this is drawn from what was said in them. */}

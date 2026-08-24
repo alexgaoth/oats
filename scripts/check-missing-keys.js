@@ -136,7 +136,16 @@ function literalKeys(blob) {
       const plainMissed = missing.length > 0;
       missing.length = 0;
       for (const count of [1, 2, 5]) i18next.t(key, { count });
-      const pluralMissedAll = missing.length >= 3;
+      // `> 0`, not `>= 3`.
+      //
+      // i18next fires the handler once per *candidate suffix*, and a language's
+      // candidate count is its CLDR category count: Russian offers four, English
+      // two. A `>= 3` threshold therefore made English, German, Japanese and both
+      // Chinese locales unguarded — deleting `openThreads.count_one` from en left
+      // this check reporting "missing: 0" while `t("openThreads.count",{count:1})`
+      // returned the raw key, and `check-i18n.js` cannot catch it either because
+      // it uses English as its reference.
+      const pluralMissedAll = missing.length > 0;
       if (plainMissed && pluralMissedAll) unresolved.push(`${locale}:${key}`);
     }
   }

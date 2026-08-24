@@ -254,8 +254,12 @@ guess — landing somebody on a turn the search did not find is worse than landi
 them at the top. A transcript with no segments falls back to the flat article
 (measured), and `transcriptText` is untouched so copy and export are unchanged.
 
-**Still open:** whether `related` results should appear at all when the literal
-filter found nothing, or whether an empty literal result should say so first.
+**Decided 2026-08-24 and shipped:** `related` results stay when the literal filter
+found nothing — that is the case semantic recall exists for — and the page says
+so first rather than implying a match it does not have. The `role="status"`
+announcement counts _literal_ matches only, with any guesses named separately,
+because counting them together told a screen-reader user that three conversations
+matched when one did.
 
 ### P2.2 Post-conversation review — the certain half done (2026-08-23)
 

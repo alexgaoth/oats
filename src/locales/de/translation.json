@@ -1929,6 +1929,8 @@
       "openPrevious": "Das öffnen",
       "noMatches": "Nichts gefunden",
       "onlyRelated": "Mit diesen Worten wurde nichts gesagt. Diese Gespräche handeln vielleicht vom selben Thema.",
+      "plusRelated_one": "{{count}} weiteres vielleicht verwandt",
+      "plusRelated_other": "{{count}} weitere vielleicht verwandt",
       "searchResults_one": "{{count}} Gespräch passt",
       "searchResults_other": "{{count}} Gespräche passen",
       "match": {
@@ -1992,9 +1994,9 @@
       "no-microphone": "Kein Mikrofon gefunden. Schließe eines an und drücke erneut.",
       "microphone-permission": "Oats braucht die Erlaubnis, das Mikrofon zu verwenden. Erteile sie in den Systemeinstellungen.",
       "no-speech-engine": "Die lokale Sprach-Engine fehlt. Eine Neuinstallation von Oats stellt sie wieder her.",
-      "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starten Sie Oats neu; wenn es bleibt, installieren Sie neu.",
+      "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
-      "question-cards-off": "Fragekarten sind ausgeschaltet – Fragen bleiben unbemerkt. Siehe Einstellungen."
+      "question-cards-off": "Fragekarten sind ausgeschaltet – Fragen gehen still vorbei. Schalte sie unter Erweitert ein."
     }
   },
   "questionCard": {

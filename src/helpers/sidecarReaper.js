@@ -7,7 +7,13 @@ const EXPECTED_BINARY_FRAGMENTS = {
   // Not a downloaded sidecar, but it orphans like one: `pactl subscribe` from
   // the Linux microphone-activity detector survives a SIGKILLed app, and a
   // long-lived orphan of it was found still running against a dead instance.
-  pactl: ["pactl"],
+  // The exact command the detector spawns, not the word.
+  //
+  // `processCommand` matches the whole `ps -o command=` line, and this is the
+  // only fragment here that is not an Oats-shipped binary name — so on PID reuse
+  // a bare "pactl" would let a fresh launch SIGTERM somebody's unrelated
+  // `pactl set-sink-volume`.
+  pactl: ["pactl subscribe"],
   whisper: ["whisper-server"],
   llama: ["llama-server"],
   qdrant: ["qdrant"],
