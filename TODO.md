@@ -563,6 +563,37 @@ Open, and wanting a decision rather than silence:
 - **No screen reader has been run.** Parity between the compositions is verified
   as DOM and AX-tree parity, which is not the same claim.
 
+## Dictation accuracy — measured, and one change worth making (2026-08-24)
+
+`docs/dictation-accuracy.md` and `scripts/asr-eval.js`. The shipped default —
+bundled multilingual `base` with `--language auto` — measures **7.74% WER and a
+1952ms median** on LibriSpeech test-clean, which is a _floor_: read speech in
+quiet conditions.
+
+Two changes are free of tradeoffs for an English speaker and neither is made:
+
+- **Ship `base.en` and select it when the resolved STT language is English.**
+  Measured 5.72% WER and an 875ms median — 26% fewer errors and 2.2× faster than
+  what ships, at the same 148MB. The model registry has no `.en` variants at all,
+  so these models are unreachable from the product today. This is the single
+  highest-value change available to dictation.
+- **Stop paying for language detection when the language is known.**
+  `preferredLanguage` defaults to `"auto"`, which costs ~860ms per utterance for
+  identical WER. It is plumbed correctly — a user who sets their language in
+  Settings already gets the speed — so the question is whether `auto` is the
+  right default for a product with a language picker on its Settings page.
+
+Both are product decisions, not bugs, which is why they are here rather than
+committed. The pre-Oats build feels quicker and more accurate because it defaults
+`useLocalWhisper` to **false** and transcribes in the cloud; Oats defaults it to
+**true** on purpose, and the offline promise is worth keeping — but it was traded
+against the worst of the four measured configurations.
+
+**Not evaluated:** the cloud row (`--cloud` exists; running it spends the key
+owner's credits), and upstream OpenWhispr **1.8.3**, which has since added
+`--no-timestamps` and a GPU `--device` index to `whisperServer.js` and diverged
+by ~3,000 lines in `audioManager.js`.
+
 ## Verification gates
 
 Still requiring a real GUI session and realistic speech:
