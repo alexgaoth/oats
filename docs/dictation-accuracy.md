@@ -36,29 +36,62 @@ is worse than this, never better.
 ## What was measured
 
 40 utterances, 344s of audio, 891 reference words, 14 threads, one machine
-(Fedora, no GPU backend), 2026-08-24.
+(Fedora, no GPU backend), 2026-08-24. Every row uses the app's own
+`buildWhisperServerArgs`, so a change to the shipped arguments changes the
+benchmark too.
 
-| configuration                               | WER       | median    | p95    | real-time factor |
-| ------------------------------------------- | --------- | --------- | ------ | ---------------- |
-| **`base` + `--language auto`** — what ships | **7.74%** | 1952ms    | 3241ms | 0.242            |
-| `base` + `--language en`                    | 7.74%     | 1090ms    | 2113ms | 0.140            |
-| **`base.en` + `--language en`**             | **5.72%** | **875ms** | 2783ms | 0.121            |
-| `small.en` + `--language en`                | 4.60%     | 3819ms    | 8138ms | 0.497            |
+| configuration                                                    | WER       | median    | p95    | RTF   |
+| ---------------------------------------------------------------- | --------- | --------- | ------ | ----- |
+| `base` + `auto` — what shipped before this work                  | 7.74%     | 1952ms    | 3241ms | 0.242 |
+| `base` + `en`                                                    | 7.74%     | 1090ms    | 2113ms | 0.140 |
+| `base` + `en` + `--no-timestamps`                                | 7.18%     | 584ms     | 1124ms | 0.077 |
+| **`base.en` + `en` + `--no-timestamps` — ships now for English** | **4.83%** | **446ms** | 711ms  | 0.055 |
+| `small.en` + `en` + `--no-timestamps`                            | 4.15%     | 2377ms    | 4024ms | 0.291 |
 
-Two findings, both free of tradeoffs for an English speaker:
+**38% fewer errors and 4.4× faster** than the configuration that shipped, for an
+English speaker who has set their language. Three separate changes got there:
 
-1. **Language auto-detection costs ~860ms per utterance and buys nothing.**
-   Identical WER, 44% slower. `preferredLanguage` defaults to `"auto"`, and it is
-   plumbed correctly — a user who sets their language in Settings already gets
-   this. A user who never opens Settings pays for detection on every dictation.
+### `--no-timestamps` was an accuracy bug, not a formatting preference
 
-2. **`base.en` is both more accurate and faster than the `base` we bundle** —
-   26% fewer errors and 2.2× faster at the same file size (148MB). The model
-   registry has no `.en` variants at all, so the English-only models are not
-   reachable from the product even by a user who wants them.
+whisper.cpp v1.9.x turns token timestamps on for every request, which enables the
+server's 60-character segment wrap. `split_on_word` is off, so the wrap lands on
+a token boundary and breaks words in half; we join segments into one string, so
+the break surfaces as a stray space _inside a word_. Upstream fixed this in
+OpenWhispr #1348 and our fork predates it.
 
-`small.en` buys another 1.1 points of WER for 4.4× the latency. That is a real
-tradeoff and belongs to the user, not to a default.
+Found in our own eval output before the fix — the transcript said `overh anging`
+for "overhanging" and `indisc reet` for "indiscreet", 4 such splits in 40
+utterances. After the flag: 2, and both of those are compound-word judgments
+(`main hall` for "mainhall"), not the wrap. WER 7.74% → 7.18%, median 1090ms →
+584ms.
+
+### `base.en` is strictly better than `base` for English
+
+Same 148MB, same speed class, and it spent none of its capacity on the other
+ninety-eight languages. 7.18% → 4.83% WER and 584ms → 446ms. The registry had no
+`.en` entries at all, so this was unreachable from the product even for somebody
+who wanted it.
+
+It is selected automatically (`helpers/whisperEnglishModel.mjs`) and deliberately
+**not** offered in the model picker: it is not a quality tier to weigh against
+the others, it is the same tier with the dead weight removed, so there is nothing
+for a person to decide. The selection falls back silently when the file is not on
+disk — an upgrade that fails to load is worse than the model the user had.
+
+### Language auto-detection still costs ~500ms, and that one is a real tradeoff
+
+`preferredLanguage` defaults to `"auto"`, and `auto` needs the multilingual model
+— an `.en` build has no language head to detect with. So a user who has never
+opened Settings gets `base` + detection: 7.18% and 584ms, not 4.83% and 446ms.
+
+That default is **kept on purpose.** Guessing English from the OS locale would be
+right most of the time and catastrophic when wrong — a German speaker whose
+laptop is in English would get their dictation mangled rather than merely slowed.
+Slow is recoverable; wrong is not. Setting the language in Settings is one click
+and it is the single highest-value thing a user can do for their dictation.
+
+`small.en` buys another 0.7 points of WER for 5.3× the latency. That is a real
+tradeoff and it belongs to the user, not to a default.
 
 ## Why it feels different from the pre-Oats build
 
@@ -80,7 +113,6 @@ script's decision to make.
 
 ## Upstream
 
-OpenWhispr is at **1.8.3**; both trees here are forked from **1.7.6**. Upstream's
-`whisperServer.js` has since added `--no-timestamps` and a `--device` GPU index,
-and `audioManager.js` has diverged by ~3,000 lines. None of that has been
-evaluated. If dictation latency matters, that diff is the next place to look.
+OpenWhispr is at **1.8.3**; both trees here are forked from **1.7.6**.
+`--no-timestamps` is ported and measured above. Still unevaluated: upstream's
+`--device` GPU index, and ~3,000 lines of divergence in `audioManager.js`.

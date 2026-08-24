@@ -81,6 +81,13 @@ export interface WhisperModelInfo {
   fileName: string;
   downloadUrl: string;
   recommended?: boolean;
+  /**
+   * An English-only build (`base.en`). Selected automatically when the
+   * configured speech language is English — same size and speed class as its
+   * multilingual twin, materially fewer errors — and deliberately not offered
+   * in the picker, because it is not a quality tier to weigh against the others.
+   */
+  englishOnly?: boolean;
 }
 
 export interface WhisperModelConfig {

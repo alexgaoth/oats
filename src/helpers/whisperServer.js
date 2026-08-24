@@ -139,6 +139,19 @@ function buildWhisperServerArgs({
   // explicitly pass "auto" to enable language auto-detection
   args.push("--language", language || "auto");
 
+  // Ported from upstream (OpenWhispr #1348), and it is an accuracy fix, not a
+  // formatting one.
+  //
+  // whisper.cpp v1.9.x turned token timestamps on for every request, which
+  // enables the server's 60-character segment wrap. `split_on_word` is off, so
+  // the wrap lands on a token boundary and breaks words in half; we join the
+  // segments into one string, so the break surfaces as a stray space inside a
+  // word. Measured on 40 LibriSpeech utterances before this flag:
+  // "overhanging" came back as "overh anging" and "indiscreet" as "indisc
+  // reet". We read only `text` and never per-token timings, so the timestamps
+  // buy nothing and the wrap goes with them.
+  args.push("--no-timestamps");
+
   if (isVadActive({ vadEnabled, vadModelPath })) {
     const cfg = sanitizeWhisperVadConfig(vadConfig || DEFAULT_WHISPER_VAD_CONFIG);
     args.push(

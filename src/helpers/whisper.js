@@ -10,6 +10,10 @@ const {
   checkDiskSpace,
 } = require("./downloadUtils");
 const WhisperServerManager = require("./whisperServer");
+// A dynamic import kept in a promise: `whisperEnglishModel.mjs` is ESM so it can
+// be unit-tested with `node:test` without a build step, and this file is CJS.
+let englishModelModule = null;
+const loadEnglishModel = () => (englishModelModule ??= import("./whisperEnglishModel.mjs"));
 const { getModelsDirForService } = require("./modelDirUtils");
 
 const modelRegistryData = require("../models/modelRegistryData.json");
@@ -62,23 +66,42 @@ class WhisperManager {
     return getModelsDirForService("whisper");
   }
 
+  /**
+   * Install whichever bundled models are present and not yet in the models dir.
+   *
+   * Two ship: multilingual `base`, which language auto-detection needs and which
+   * is the offline guarantee in any language, and `base.en`, which
+   * `whisperEnglishModel.mjs` selects automatically when the configured language
+   * is English because it is both more accurate and faster there.
+   *
+   * Missing bundles are skipped rather than treated as an error: a build that
+   * shipped only one of them still starts, on the one it has.
+   */
   async ensureBundledDefaultModel() {
-    const fileName = "ggml-base.bin";
+    const fileNames = ["ggml-base.bin", "ggml-base.en.bin"];
     const modelsDir = this.getModelsDir();
-    const destination = path.join(modelsDir, fileName);
-    if (fs.existsSync(destination)) return destination;
+    let firstInstalled = null;
 
-    const candidates = [
-      process.resourcesPath && path.join(process.resourcesPath, "bin", "whisper-models", fileName),
-      path.join(__dirname, "..", "..", "resources", "bin", "whisper-models", fileName),
-    ].filter(Boolean);
-    const source = candidates.find((candidate) => fs.existsSync(candidate));
-    if (!source) return null;
+    for (const fileName of fileNames) {
+      const destination = path.join(modelsDir, fileName);
+      if (fs.existsSync(destination)) {
+        firstInstalled = firstInstalled ?? destination;
+        continue;
+      }
+      const candidates = [
+        process.resourcesPath &&
+          path.join(process.resourcesPath, "bin", "whisper-models", fileName),
+        path.join(__dirname, "..", "..", "resources", "bin", "whisper-models", fileName),
+      ].filter(Boolean);
+      const source = candidates.find((candidate) => fs.existsSync(candidate));
+      if (!source) continue;
 
-    await fsPromises.mkdir(modelsDir, { recursive: true });
-    await fsPromises.copyFile(source, destination);
-    debugLogger.info("Installed bundled default Whisper model", { model: "base" });
-    return destination;
+      await fsPromises.mkdir(modelsDir, { recursive: true });
+      await fsPromises.copyFile(source, destination);
+      debugLogger.info("Installed bundled Whisper model", { file: fileName });
+      firstInstalled = firstInstalled ?? destination;
+    }
+    return firstInstalled;
   }
 
   validateModelName(modelName) {
@@ -344,8 +367,20 @@ class WhisperManager {
       );
     }
 
-    const model = options.model || "base";
     const language = options.language || null;
+    // The English-only twin when the speaker is speaking English and it is on
+    // disk — same size, roughly a fifth fewer errors, and faster. Decided here
+    // rather than in the renderer because only this process knows what is
+    // installed, and it falls back silently: an upgrade that is not there must
+    // never turn into a model that fails to load.
+    const { resolveWhisperModel } = await loadEnglishModel();
+    const model = resolveWhisperModel(options.model || "base", language, (id) => {
+      try {
+        return fs.existsSync(this.getModelPath(id));
+      } catch {
+        return false;
+      }
+    });
     const initialPrompt = options.initialPrompt || null;
     const vadEnabled = options.vadEnabled === true;
     const vadConfig = options.vadConfig || null;

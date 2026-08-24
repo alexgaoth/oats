@@ -759,14 +759,25 @@ export default function TranscriptionModelPicker({
   ]);
 
   const renderLocalModels = () => {
+    // The English-only twins are not offered as choices.
+    //
+    // `base.en` is not a different quality tier — it is the same tier with the
+    // other ninety-eight languages removed, and for an English speaker it is
+    // strictly better on both accuracy and speed. There is nothing to weigh, so
+    // `helpers/whisperEnglishModel.mjs` selects it automatically when the
+    // configured language is English. Listing it would double this list with a
+    // decision nobody should have to make.
+    const isOffered = (modelId: string) => !WHISPER_MODEL_INFO[modelId]?.englishOnly;
     const modelsToRender =
       localModels.length === 0
-        ? Object.entries(WHISPER_MODEL_INFO).map(([modelId, info]) => ({
-            model: modelId,
-            downloaded: false,
-            size_mb: info.sizeMb,
-          }))
-        : localModels;
+        ? Object.entries(WHISPER_MODEL_INFO)
+            .filter(([modelId]) => isOffered(modelId))
+            .map(([modelId, info]) => ({
+              model: modelId,
+              downloaded: false,
+              size_mb: info.sizeMb,
+            }))
+        : localModels.filter((model) => isOffered(model.model));
 
     return (
       <div className="space-y-0.5">

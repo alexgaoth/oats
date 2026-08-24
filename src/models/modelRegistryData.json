@@ -120,6 +120,17 @@
       "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
       "descriptionKey": "models.descriptions.whisper.tiny"
     },
+    "tiny.en": {
+      "name": "Tiny (English)",
+      "description": "English only — same size, fewer errors",
+      "size": "75MB",
+      "sizeMb": 75,
+      "expectedSizeBytes": 78000000,
+      "fileName": "ggml-tiny.en.bin",
+      "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin",
+      "englishOnly": true,
+      "descriptionKey": "models.descriptions.whisper.tiny"
+    },
     "base": {
       "name": "Base",
       "description": "Good balance",
@@ -129,6 +140,17 @@
       "fileName": "ggml-base.bin",
       "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
       "recommended": true,
+      "descriptionKey": "models.descriptions.whisper.base"
+    },
+    "base.en": {
+      "name": "Base (English)",
+      "description": "English only — same size, fewer errors",
+      "size": "142MB",
+      "sizeMb": 142,
+      "expectedSizeBytes": 148000000,
+      "fileName": "ggml-base.en.bin",
+      "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
+      "englishOnly": true,
       "descriptionKey": "models.descriptions.whisper.base"
     },
     "small": {
@@ -141,6 +163,17 @@
       "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
       "descriptionKey": "models.descriptions.whisper.small"
     },
+    "small.en": {
+      "name": "Small (English)",
+      "description": "English only — same size, fewer errors",
+      "size": "466MB",
+      "sizeMb": 466,
+      "expectedSizeBytes": 488000000,
+      "fileName": "ggml-small.en.bin",
+      "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin",
+      "englishOnly": true,
+      "descriptionKey": "models.descriptions.whisper.small"
+    },
     "medium": {
       "name": "Medium",
       "description": "High quality",
@@ -149,6 +182,17 @@
       "expectedSizeBytes": 1570000000,
       "fileName": "ggml-medium.bin",
       "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
+      "descriptionKey": "models.descriptions.whisper.medium"
+    },
+    "medium.en": {
+      "name": "Medium (English)",
+      "description": "English only — same size, fewer errors",
+      "size": "1.5GB",
+      "sizeMb": 1500,
+      "expectedSizeBytes": 1570000000,
+      "fileName": "ggml-medium.en.bin",
+      "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin",
+      "englishOnly": true,
       "descriptionKey": "models.descriptions.whisper.medium"
     },
     "large": {

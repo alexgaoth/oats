@@ -563,36 +563,41 @@ Open, and wanting a decision rather than silence:
 - **No screen reader has been run.** Parity between the compositions is verified
   as DOM and AX-tree parity, which is not the same claim.
 
-## Dictation accuracy — measured, and one change worth making (2026-08-24)
+## Dictation accuracy — measured and fixed (2026-08-24)
 
-`docs/dictation-accuracy.md` and `scripts/asr-eval.js`. The shipped default —
-bundled multilingual `base` with `--language auto` — measures **7.74% WER and a
-1952ms median** on LibriSpeech test-clean, which is a _floor_: read speech in
-quiet conditions.
+`docs/dictation-accuracy.md` and `scripts/asr-eval.js`. **38% fewer errors and
+4.4× faster** than what shipped, for an English speaker who has set their
+language: 7.74% WER / 1952ms median → **4.83% / 446ms** on LibriSpeech
+test-clean. Read that as a floor — it is read speech in a quiet room.
 
-Two changes are free of tradeoffs for an English speaker and neither is made:
+Three changes, each measured with the app's own `buildWhisperServerArgs` so the
+benchmark cannot drift from the product:
 
-- **Ship `base.en` and select it when the resolved STT language is English.**
-  Measured 5.72% WER and an 875ms median — 26% fewer errors and 2.2× faster than
-  what ships, at the same 148MB. The model registry has no `.en` variants at all,
-  so these models are unreachable from the product today. This is the single
-  highest-value change available to dictation.
-- **Stop paying for language detection when the language is known.**
-  `preferredLanguage` defaults to `"auto"`, which costs ~860ms per utterance for
-  identical WER. It is plumbed correctly — a user who sets their language in
-  Settings already gets the speed — so the question is whether `auto` is the
-  right default for a product with a language picker on its Settings page.
+- **`--no-timestamps`, ported from upstream (#1348).** An accuracy bug, not a
+  formatting preference: whisper.cpp v1.9.x enables a 60-character segment wrap
+  that lands on token boundaries with `split_on_word` off, breaking words in
+  half. Our own eval output had `overh anging` and `indisc reet`. 7.74% → 7.18%,
+  1090ms → 584ms.
+- **`base.en` bundled and selected automatically for English.** Same 148MB, and
+  it spent none of its capacity on the other ninety-eight languages. 7.18% →
+  4.83%, 584ms → 446ms. The registry had no `.en` entries at all. It is not
+  offered in the picker — it is not a tier to weigh, it is the same tier with the
+  dead weight removed — and it falls back silently when not on disk.
+- **The `.en` family is in the registry** (`tiny/base/small/medium`), so larger
+  English-only models are reachable at all now.
 
-Both are product decisions, not bugs, which is why they are here rather than
-committed. The pre-Oats build feels quicker and more accurate because it defaults
-`useLocalWhisper` to **false** and transcribes in the cloud; Oats defaults it to
-**true** on purpose, and the offline promise is worth keeping — but it was traded
-against the worst of the four measured configurations.
+**Kept deliberately:** `preferredLanguage` still defaults to `"auto"`, which
+needs the multilingual model and costs ~140ms and 2.4 points of WER. Guessing
+English from the OS locale would be right most of the time and catastrophic when
+wrong — a German speaker on an English laptop would get mangled dictation rather
+than merely slow dictation. Slow is recoverable; wrong is not. Setting the
+language in Settings is one click and is the highest-value thing a user can do.
 
-**Not evaluated:** the cloud row (`--cloud` exists; running it spends the key
-owner's credits), and upstream OpenWhispr **1.8.3**, which has since added
-`--no-timestamps` and a GPU `--device` index to `whisperServer.js` and diverged
-by ~3,000 lines in `audioManager.js`.
+**Still open:** the cloud row (`--cloud` exists; running it spends the key
+owner's credits), upstream's `--device` GPU index, and ~3,000 lines of
+divergence in upstream `audioManager.js`. The pre-Oats build feels different
+because it defaults `useLocalWhisper` to **false** and transcribes in the cloud;
+Oats keeps local on purpose, and local is now much closer.
 
 ## Verification gates
 

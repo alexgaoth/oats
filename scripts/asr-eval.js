@@ -27,6 +27,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const { spawn, spawnSync } = require("child_process");
+const { buildWhisperServerArgs } = require("../src/helpers/whisperServer.js");
 
 function arg(name, fallback = null) {
   const at = process.argv.indexOf(`--${name}`);
@@ -222,13 +223,19 @@ function audioSeconds(wav) {
 
   // The same arguments `buildWhisperServerArgs` produces, so this measures the
   // shipped path rather than a favourable one.
+  // The app's own argument builder, not a copy of it. A benchmark that assembles
+  // its own flags measures a configuration nobody ships, and drifts the first
+  // time the real one changes.
+  const args = CLOUD
+    ? []
+    : buildWhisperServerArgs({ modelPath: MODEL, port: PORT, language: LANGUAGE, threads: Number(THREADS) });
+  if (!CLOUD) console.log(`  args: ${args.join(" ")}`);
   const server = CLOUD
     ? null
-    : spawn(
-        binary,
-        ["--model", MODEL, "--host", "127.0.0.1", "--port", String(PORT), "--threads", THREADS, "--language", LANGUAGE],
-        { stdio: "ignore", env: { ...process.env, LD_LIBRARY_PATH: path.dirname(binary) } }
-      );
+    : spawn(binary, args, {
+        stdio: "ignore",
+        env: { ...process.env, LD_LIBRARY_PATH: path.dirname(binary) },
+      });
   const stop = () => { try { server?.kill("SIGKILL"); } catch {} };
   process.on("exit", stop);
 
