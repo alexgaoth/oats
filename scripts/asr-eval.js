@@ -62,7 +62,7 @@ if (!CORPUS) {
 function normalise(text) {
   return String(text || "")
     .toLowerCase()
-    .replace(/[.,!?;:"“”‘’()\[\]—–]/g, " ")
+    .replace(/[.,!?;:"“”‘’()[\]—–]/g, " ")
     .replace(/'\s/g, " ")
     .replace(/\s+/g, " ")
     .trim();
