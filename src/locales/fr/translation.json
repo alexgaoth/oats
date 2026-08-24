@@ -1997,6 +1997,23 @@
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
       "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Réactivez l'assistant de conversation dans Avancé."
+    },
+    "aide": {
+      "title": "Assistant de conversation",
+      "intro": "Détecte localement les questions factuelles sans réponse et propose une recherche que vous lancez.",
+      "enable": "Activer l'assistant de conversation",
+      "withModel": "La détection des questions est locale ; le modèle téléchargé affine les verdicts.",
+      "withoutModel": "Fonctionne sans modèle — détection et verdicts reposent sur des motifs locaux.",
+      "online": "Réunions en ligne",
+      "onlineHint": "Analyser les tours finalisés des réunions en ligne.",
+      "inRoom": "Conversations en personne",
+      "inRoomHint": "Analyser les tours finalisés des conversations au micro seul.",
+      "model": "Modèle de classification local",
+      "notDownloaded": " (non téléchargé)",
+      "download": "Télécharger le modèle de classification",
+      "confidence": "Confiance",
+      "silence": "Silence (secondes)",
+      "searchUrl": "URL de base de recherche (HTTPS uniquement)"
     }
   },
   "questionCard": {

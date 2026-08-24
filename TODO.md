@@ -635,11 +635,18 @@ turned up that nobody had logged.
   markup instead of telling a screen-reader user about conversations that do not
   exist.
 
-**Noted, out of this goal's lens: CI runs almost none of this.**
-`.github/workflows/tests.yml` runs only `npm test` — not `verify:oats`, not
-`i18n:check`, so neither the missing-key guard nor the 775-test suite runs on a
-push. Every gate in this repository is currently a thing somebody has to
-remember to type. Pre-existing, and the cheapest high-value fix left.
+**Done: CI runs the gates (2026-08-24).** It ran only `npm test`, and that command
+globbed `test/**` including the four tests needing Electron's better-sqlite3 ABI
+— which `npm ci --ignore-scripts` never builds, so the single job CI ran was
+**exiting 1**. `npm test` is the plain-node suite now, and the workflow has four
+jobs: unit tests, both locale gates, `quality-check`, and the renderer build. The
+locales job clones with `fetch-depth: 2` because `check-missing-keys.js` compares
+each runtime-built subtree against the previous commit, and it degrades to
+skipping that comparison outside a git checkout rather than failing.
+
+**Done: the conversation-aide settings panel speaks ten languages.** It shipped
+fifteen hardcoded English strings — the section a preflight warning now sends
+people to. `oats.aide.*`, all ten locales.
 
 **Still open — `--device` is ported but nothing sets it.** `buildWhisperServerArgs`
 takes `gpuDeviceIndex` and is pinned both ways, but no caller supplies one: the

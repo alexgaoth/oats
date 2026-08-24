@@ -1997,6 +1997,23 @@
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings.",
       "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced."
+    },
+    "aide": {
+      "title": "Conversation aide",
+      "intro": "Locally detects unanswered factual questions and offers a user-initiated search.",
+      "enable": "Enable conversation aide",
+      "withModel": "Question detection is local; the downloaded model refines the verdicts.",
+      "withoutModel": "Works without a model — detection and verdicts are local pattern matching.",
+      "online": "Online meetings",
+      "onlineHint": "Analyze finalized online meeting turns.",
+      "inRoom": "In-person conversations",
+      "inRoomHint": "Analyze finalized microphone-only conversation turns.",
+      "model": "Local classifier model",
+      "notDownloaded": " (not downloaded)",
+      "download": "Download classifier model",
+      "confidence": "Confidence",
+      "silence": "Silence (seconds)",
+      "searchUrl": "Search base URL (HTTPS only)"
     }
   },
   "questionCard": {

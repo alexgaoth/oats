@@ -1992,6 +1992,23 @@
       "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
       "question-cards-off": "问题卡片已关闭，问题会静静溜走。请在高级设置中重新开启对话助手。"
+    },
+    "aide": {
+      "title": "对话助手",
+      "intro": "在本地检测无人回答的事实性问题，并提供由你发起的搜索。",
+      "enable": "启用对话助手",
+      "withModel": "问题检测在本地进行；已下载的模型用于细化判定。",
+      "withoutModel": "无需模型即可运行——检测与判定均为本地模式匹配。",
+      "online": "线上会议",
+      "onlineHint": "分析线上会议中已确定的发言。",
+      "inRoom": "面对面对话",
+      "inRoomHint": "分析仅使用麦克风的对话中已确定的发言。",
+      "model": "本地分类模型",
+      "notDownloaded": "（未下载）",
+      "download": "下载分类模型",
+      "confidence": "置信度",
+      "silence": "静默（秒）",
+      "searchUrl": "搜索基础 URL（仅限 HTTPS）"
     }
   },
   "questionCard": {

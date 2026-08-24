@@ -1997,6 +1997,23 @@
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
       "question-cards-off": "Fragekarten sind ausgeschaltet – Fragen gehen still vorbei. Schalte die Gesprächshilfe unter Erweitert wieder ein."
+    },
+    "aide": {
+      "title": "Gesprächshilfe",
+      "intro": "Erkennt lokal unbeantwortete Sachfragen und bietet eine von dir gestartete Suche an.",
+      "enable": "Gesprächshilfe aktivieren",
+      "withModel": "Die Fragenerkennung ist lokal; das geladene Modell verfeinert die Urteile.",
+      "withoutModel": "Funktioniert ohne Modell – Erkennung und Urteile sind lokaler Musterabgleich.",
+      "online": "Online-Besprechungen",
+      "onlineHint": "Abgeschlossene Beiträge aus Online-Besprechungen auswerten.",
+      "inRoom": "Gespräche vor Ort",
+      "inRoomHint": "Abgeschlossene Beiträge reiner Mikrofongespräche auswerten.",
+      "model": "Lokales Klassifikationsmodell",
+      "notDownloaded": " (nicht geladen)",
+      "download": "Klassifikationsmodell laden",
+      "confidence": "Konfidenz",
+      "silence": "Stille (Sekunden)",
+      "searchUrl": "Basis-URL für die Suche (nur HTTPS)"
     }
   },
   "questionCard": {

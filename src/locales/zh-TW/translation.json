@@ -1992,6 +1992,23 @@
       "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
       "question-cards-off": "問題卡片已關閉，問題會靜靜溜走。請在進階設定中重新開啟對話助手。"
+    },
+    "aide": {
+      "title": "對話助手",
+      "intro": "在本機偵測無人回答的事實性問題，並提供由你發起的搜尋。",
+      "enable": "啟用對話助手",
+      "withModel": "問題偵測在本機進行；已下載的模型用於細化判定。",
+      "withoutModel": "無需模型即可運行——偵測與判定均為本機模式比對。",
+      "online": "線上會議",
+      "onlineHint": "分析線上會議中已確定的發言。",
+      "inRoom": "面對面對話",
+      "inRoomHint": "分析僅使用麥克風的對話中已確定的發言。",
+      "model": "本機分類模型",
+      "notDownloaded": "（未下載）",
+      "download": "下載分類模型",
+      "confidence": "信賴度",
+      "silence": "靜默（秒）",
+      "searchUrl": "搜尋基礎 URL（僅限 HTTPS）"
     }
   },
   "questionCard": {

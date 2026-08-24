@@ -1997,6 +1997,23 @@
       "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
       "question-cards-off": "Las tarjetas de preguntas están desactivadas: las preguntas pasarán en silencio. Vuelve a activar el asistente de conversación en Avanzado."
+    },
+    "aide": {
+      "title": "Asistente de conversación",
+      "intro": "Detecta localmente preguntas factuales sin responder y ofrece una búsqueda iniciada por ti.",
+      "enable": "Activar el asistente de conversación",
+      "withModel": "La detección de preguntas es local; el modelo descargado refina los veredictos.",
+      "withoutModel": "Funciona sin modelo: la detección y los veredictos son coincidencia de patrones local.",
+      "online": "Reuniones en línea",
+      "onlineHint": "Analizar turnos finalizados de reuniones en línea.",
+      "inRoom": "Conversaciones presenciales",
+      "inRoomHint": "Analizar turnos finalizados de conversaciones solo por micrófono.",
+      "model": "Modelo clasificador local",
+      "notDownloaded": " (no descargado)",
+      "download": "Descargar modelo clasificador",
+      "confidence": "Confianza",
+      "silence": "Silencio (segundos)",
+      "searchUrl": "URL base de búsqueda (solo HTTPS)"
     }
   },
   "questionCard": {
