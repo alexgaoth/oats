@@ -1928,7 +1928,7 @@
       "carriedOver": "Left open last time:",
       "openPrevious": "Open that one",
       "noMatches": "Nothing matches that",
-      "onlyRelated": "Nothing was said in those words. These conversations may be about the same subject.",
+      "onlyRelated": "Nothing was said in those words. What follows may be about the same subject.",
       "plusRelated_one": "{{count}} more may be related",
       "plusRelated_other": "{{count}} more may be related",
       "searchResults_one": "{{count}} conversation matches",
@@ -1996,7 +1996,7 @@
       "no-speech-engine": "The local speech engine is missing. Reinstalling Oats restores it.",
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings.",
-      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn them on under Advanced."
+      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced."
     }
   },
   "questionCard": {

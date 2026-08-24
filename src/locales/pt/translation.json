@@ -1928,7 +1928,7 @@
       "carriedOver": "Ficou em aberto da última vez:",
       "openPrevious": "Abrir essa",
       "noMatches": "Nada corresponde",
-      "onlyRelated": "Nada foi dito com essas palavras. Estas conversas talvez sejam sobre o mesmo assunto.",
+      "onlyRelated": "Nada foi dito com essas palavras. O que segue talvez seja sobre o mesmo assunto.",
       "plusRelated_one": "mais {{count}} talvez relacionada",
       "plusRelated_other": "mais {{count}} talvez relacionadas",
       "searchResults_one": "{{count}} conversa corresponde",
@@ -1996,7 +1996,7 @@
       "no-speech-engine": "O motor de voz local está faltando. Reinstalar o Oats o restaura.",
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
-      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue-os em Avançado."
+      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue novamente o assistente de conversa em Avançado."
     }
   },
   "questionCard": {

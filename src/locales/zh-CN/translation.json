@@ -1923,7 +1923,7 @@
       "carriedOver": "上次未收尾的：",
       "openPrevious": "打开那一场",
       "noMatches": "没有匹配项",
-      "onlyRelated": "没有人这样说过。以下对话可能谈的是同一个主题。",
+      "onlyRelated": "没有人这样说过。以下内容可能谈的是同一个主题。",
       "plusRelated_one": "另有 {{count}} 个可能相关",
       "plusRelated_other": "另有 {{count}} 个可能相关",
       "searchResults_one": "{{count}} 个对话匹配",
@@ -1991,7 +1991,7 @@
       "no-speech-engine": "本地语音引擎缺失。重新安装 Oats 即可恢复。",
       "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
-      "question-cards-off": "问题卡片已关闭，问题会静静溜走。请在高级设置中开启。"
+      "question-cards-off": "问题卡片已关闭，问题会静静溜走。请在高级设置中重新开启对话助手。"
     }
   },
   "questionCard": {

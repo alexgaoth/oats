@@ -1525,11 +1525,20 @@ function IntelligenceViews({
                 // second found nothing containing the word. Same over-claim as
                 // the zero-result branch, surviving in the mixed case because
                 // the corpus I measured against returned no guesses at all.
-                `${t("oats.intelligence.searchResults", { count: literalNotes.length })}${
+                // Two sentences, not a middot.
+                //
+                // This region is `sr-only`: it has no visual reader at all, so a
+                // purely visual separator is doing the work of a sentence
+                // boundary. A reader that omits U+00B7 says "one conversation
+                // matches one more may be related", which garden-paths into a
+                // wrong count — the exact ambiguity this branch was rewritten to
+                // remove — and one that speaks it injects "middle dot" into a
+                // status line. The middot stays where it is read by eye.
+                `${t("oats.intelligence.searchResults", { count: literalNotes.length })}.${
                   recalled.length > literalNotes.length
-                    ? ` · ${t("oats.intelligence.plusRelated", {
+                    ? ` ${t("oats.intelligence.plusRelated", {
                         count: recalled.length - literalNotes.length,
-                      })}`
+                      })}.`
                     : ""
                 }`
               : recalled.length
@@ -1612,7 +1621,10 @@ function IntelligenceViews({
           </div>
         ) : (
           <EmptyState
-            line={query ? t("oats.intelligence.noMatches") : t("oats.intelligence.empty")}
+            // `.trim()`, like the announcement beside it: a first-run user who
+            // types a space should see the empty state that tells them what to
+            // do, not "Nothing matches that" for a search that never ran.
+            line={query.trim() ? t("oats.intelligence.noMatches") : t("oats.intelligence.empty")}
             hint={query ? null : t("oats.intelligence.emptyHint")}
           />
         )}
