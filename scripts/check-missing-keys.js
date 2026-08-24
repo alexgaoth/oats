@@ -25,11 +25,15 @@ const at = process.argv.indexOf("--locale");
 const WANTED = at !== -1 && process.argv[at + 1] ? process.argv[at + 1].split(",") : ["en", "de", "ru", "ja"];
 
 /**
- * The values a runtime-built key's variable can take.
+ * Values a runtime-built key's variable can take, where naming them is better
+ * than guessing.
  *
- * Hand-maintained on purpose: the alternative is guessing, and a guess here
- * either misses a real key or invents one. Each entry names where the union
- * comes from, so it can be rechecked when that type changes.
+ * These are unions the checker cannot see — enum members, discriminated kinds —
+ * and each entry says where it comes from. It is a *supplement*, never the
+ * source of truth: the bases themselves are derived mechanically below, because
+ * a hand-kept list of them covered 5 of the 14 in source, and deleting
+ * `oats.nav.conversation` left every gate green while the Conversation nav
+ * button rendered the raw key.
  */
 const DYNAMIC = {
   // SuggestionKind — src/types/conversationEvents.ts
@@ -50,6 +54,54 @@ const DYNAMIC = {
     "question-cards-off",
   ],
 };
+
+/**
+ * Guard the runtime-built subtrees against shrinking.
+ *
+ * The obvious idea — ask for every English key under each dynamic base — cannot
+ * work, and measuring it is what showed why: the asked set is derived from the
+ * same file being checked, so deleting `oats.nav.conversation` simply removes it
+ * from both sides and the check stays green. Verified: asked went 1251 → 1249
+ * and reported 0 missing.
+ *
+ * What the value union actually is lives in the code (`t(`oats.nav.${id}`)` with
+ * `id` from a list in a component), and there is no general way to read it. So
+ * this guards the thing a prune can actually break: a subtree that used to have
+ * a key and now does not. It compares each dynamic base's key set against the
+ * last commit.
+ *
+ * It does **not** catch a key that never existed — `check-i18n.js` and the
+ * literal-`t()` sweep cover that ground — and it says so rather than implying
+ * otherwise.
+ */
+function shrunkDynamicSubtrees(bases, flattenKeys) {
+  let previous;
+  try {
+    previous = JSON.parse(
+      require("child_process").execSync("git show HEAD:src/locales/en/translation.json", {
+        cwd: ROOT,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      })
+    );
+  } catch {
+    // No git, or no previous version: nothing to compare, and inventing a
+    // failure here would make the gate flaky rather than strict.
+    return [];
+  }
+  const now = new Set(flattenKeys(JSON.parse(fs.readFileSync(path.join(LOCALES, "en", "translation.json"), "utf8"))));
+  const lost = [];
+  for (const key of flattenKeys(previous)) {
+    if (now.has(key)) continue;
+    for (const base of bases) {
+      if (key === base || key.startsWith(`${base}.`)) {
+        lost.push(key);
+        break;
+      }
+    }
+  }
+  return lost;
+}
 
 function sourceFiles() {
   const files = [];
@@ -88,6 +140,7 @@ function literalKeys(blob) {
 
 (async () => {
   const i18next = require("i18next");
+  const { dynamicBases, flattenKeys } = await import("../src/helpers/localeKeyUsage.mjs");
   const blob = sourceFiles().map((f) => fs.readFileSync(f, "utf8")).join("\n");
 
   const asked = literalKeys(blob);
@@ -104,6 +157,9 @@ function literalKeys(blob) {
   for (const [base, values] of Object.entries(DYNAMIC)) {
     for (const value of values) asked.add(`${base}.${value}`);
   }
+
+  const bases = dynamicBases(blob);
+  const lost = shrunkDynamicSubtrees(bases, flattenKeys);
 
   const resources = {};
   for (const locale of WANTED) {
@@ -151,9 +207,13 @@ function literalKeys(blob) {
   }
 
   const unique = [...new Set(unresolved)];
-  console.log(`asked ${asked.size} keys x ${WANTED.length} locales; missing: ${unique.length}`);
-  for (const entry of unique.slice(0, 40)) console.log(`  ${entry}`);
-  if (unique.length) process.exit(1);
+  console.log(
+    `asked ${asked.size} keys x ${WANTED.length} locales; missing: ${unique.length}; ` +
+      `runtime-built subtrees shrunk: ${lost.length}`
+  );
+  for (const entry of unique.slice(0, 40)) console.log(`  missing  ${entry}`);
+  for (const entry of lost.slice(0, 40)) console.log(`  removed  ${entry}`);
+  if (unique.length || lost.length) process.exit(1);
 })().catch((error) => {
   console.error(error.message);
   process.exit(1);

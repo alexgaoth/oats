@@ -635,6 +635,12 @@ turned up that nobody had logged.
   markup instead of telling a screen-reader user about conversations that do not
   exist.
 
+**Noted, out of this goal's lens: CI runs almost none of this.**
+`.github/workflows/tests.yml` runs only `npm test` — not `verify:oats`, not
+`i18n:check`, so neither the missing-key guard nor the 775-test suite runs on a
+push. Every gate in this repository is currently a thing somebody has to
+remember to type. Pre-existing, and the cheapest high-value fix left.
+
 **Still open — `--device` is ported but nothing sets it.** `buildWhisperServerArgs`
 takes `gpuDeviceIndex` and is pinned both ways, but no caller supplies one: the
 Settings GPU picker stores a **UUID** that becomes `CUDA_VISIBLE_DEVICES`. Wiring
