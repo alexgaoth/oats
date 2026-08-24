@@ -36,7 +36,12 @@ function sourceBlob() {
       if (skip.has(entry.name)) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (/\.(tsx?|jsx?|mjs|cjs)$/.test(entry.name)) parts.push(fs.readFileSync(full, "utf8"));
+      // JSON data files name keys too — `modelRegistryData.json` carries 102
+      // `descriptionKey` values. Nothing was lost by omitting them, but only
+      // because one of them happened to be a substring of an unrelated literal,
+      // and a prune that survives on a coincidence is not a prune you can run
+      // again.
+      else if (/\.(tsx?|jsx?|mjs|cjs|json)$/.test(entry.name)) parts.push(fs.readFileSync(full, "utf8"));
     }
   };
   walk(path.join(ROOT, "src"));

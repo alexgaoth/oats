@@ -91,6 +91,16 @@ function literalKeys(blob) {
   const blob = sourceFiles().map((f) => fs.readFileSync(f, "utf8")).join("\n");
 
   const asked = literalKeys(blob);
+  // Keys named by data rather than by code: the model registry's
+  // `descriptionKey` fields are asked for at render time exactly like a literal
+  // `t()` and are invisible to a source scan of JS alone.
+  for (const file of ["src/models/modelRegistryData.json"]) {
+    const full = path.join(ROOT, file);
+    if (!fs.existsSync(full)) continue;
+    for (const m of fs.readFileSync(full, "utf8").matchAll(/"descriptionKey"\s*:\s*"([^"]+)"/g)) {
+      asked.add(m[1]);
+    }
+  }
   for (const [base, values] of Object.entries(DYNAMIC)) {
     for (const value of values) asked.add(`${base}.${value}`);
   }
