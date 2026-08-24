@@ -3060,6 +3060,12 @@
       "carriedOver": "Resté ouvert la dernière fois :",
       "openPrevious": "Ouvrir celle-là",
       "noMatches": "Aucun résultat",
+      "match": {
+        "transcript": "dit",
+        "summary": "résumé",
+        "title": "titre"
+      },
+      "matchRelated": "connexe",
       "emptyHint": "Appuyez sur {{shortcut}} n'importe où et posez une question dont personne ne connaît la réponse",
       "backToList": "Retour",
       "copy": "Copier",

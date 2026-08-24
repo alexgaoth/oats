@@ -27,6 +27,7 @@ import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
+import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -1121,7 +1122,7 @@ function IntelligenceViews({
   // Local filter over title, summary, and transcript. Everything is already in
   // memory, so this needs no index and no IPC — and it is the only way to find a
   // conversation by what was said in it rather than by scrolling.
-  const visibleNotes = useMemo(() => {
+  const literalNotes = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     if (!needle) return notes;
     return notes.filter((note) =>
@@ -1130,6 +1131,52 @@ function IntelligenceViews({
         .some((field) => String(field).toLocaleLowerCase().includes(needle))
     );
   }, [notes, query]);
+
+  // What the local vector index thinks the question is about.
+  //
+  // Substring matching answers "where did somebody say this word"; it cannot
+  // answer "what did we decide about pricing", which is the question people
+  // actually have about their own conversations. The index is already in the
+  // product — Qdrant plus a local MiniLM, with a keyword fallback in the main
+  // process — and Intelligence was the one surface not using it.
+  //
+  // It runs *behind* the literal filter, never instead of it: literal results
+  // keep their order and their place at the top, and these are appended as
+  // `related`. It is also entirely optional — no index, no network, no model,
+  // and the search still works exactly as it did.
+  const [semanticNotes, setSemanticNotes] = useState<NoteItem[]>([]);
+  useEffect(() => {
+    const needle = query.trim();
+    if (needle.length < 3) {
+      setSemanticNotes([]);
+      return undefined;
+    }
+    let cancelled = false;
+    // Debounced: this crosses IPC and embeds the query, so firing it per
+    // keystroke would queue a model call behind every letter.
+    const timer = window.setTimeout(() => {
+      void Promise.resolve(window.electronAPI?.semanticSearchNotes?.(needle, 8))
+        .then((found) => {
+          if (!cancelled && Array.isArray(found)) setSemanticNotes(found);
+        })
+        .catch(() => {
+          if (!cancelled) setSemanticNotes([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
+  const recalled = useMemo(
+    () =>
+      query.trim()
+        ? mergeRecall(literalNotes, semanticNotes)
+        : literalNotes.map((note) => ({ note, related: false })),
+    [literalNotes, semanticNotes, query]
+  );
+  const visibleNotes = useMemo(() => recalled.map((entry) => entry.note), [recalled]);
 
   // What the previous conversation on this subject left open. The lifetime graph
   // already knows which conversations share a subject; this puts that knowledge
@@ -1398,7 +1445,7 @@ function IntelligenceViews({
 
         {visibleNotes.length ? (
           <div className="mt-8">
-            {visibleNotes.map((note) => (
+            {recalled.map(({ note, related }) => (
               <button
                 key={note.id}
                 onClick={() => {
@@ -1424,11 +1471,15 @@ function IntelligenceViews({
                     {new Date(note.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <p className="mt-1.5 line-clamp-2 text-[13px] leading-6 text-muted-foreground">
-                  {plainPreview(note.enhanced_content) ||
-                    transcriptText(note.transcript, t).slice(0, 160) ||
-                    t("oats.intelligence.processing")}
-                </p>
+                {/* The passage that matched, and where it came from.
+                
+                    The row used to show the same first-160-characters preview
+                    whether you had searched for a word somebody said, a word
+                    Oats wrote, or nothing at all — so a search answered with a
+                    summary of a different part of the conversation. An evidence
+                    tool has to show you the thing you searched for, and say
+                    whether it was *said* or *inferred*. */}
+                <RecallExcerpt note={note} query={query} related={related} />
                 {/* Its own shape, in the margin of the list. Two conversations
                     of the same length and the same title still look different
                     here, because this is drawn from what was said in them. */}
@@ -1652,6 +1703,73 @@ function EmptyState({ line, hint }: { line: string; hint?: string | null }) {
 // a 24px strip. The marks appear when the conversation is opened, where the
 // events are already loaded. An earlier version of this comment claimed the
 // marks survived here; they never did, because the call site passes no events.
+/**
+ * One search result's evidence line.
+ *
+ * With no query this is the ordinary preview. With one it is the passage that
+ * matched, marked, under a label saying where it came from — because "these are
+ * the words that were spoken" and "this is what a 1.5B model wrote about the
+ * conversation" are different claims, and a tool whose whole premise is evidence
+ * may not present them identically.
+ *
+ * `related` is the weakest claim on the page: the vector index thinks this
+ * conversation is about your question, and nothing in it literally matched.
+ */
+function RecallExcerpt({
+  note,
+  query,
+  related,
+}: {
+  note: NoteItem;
+  query: string;
+  related: boolean;
+}) {
+  const { t } = useTranslation();
+  const excerpt = useMemo(() => (query.trim() ? findExcerpt(note, query) : null), [note, query]);
+
+  if (!excerpt) {
+    return (
+      <p className="mt-1.5 line-clamp-2 text-[13px] leading-6 text-muted-foreground">
+        {related && (
+          <span className="mr-2 font-mono text-[11px] text-muted-foreground/80">
+            {t("oats.intelligence.matchRelated")}
+            <span className="sr-only">: </span>
+          </span>
+        )}
+        {plainPreview(note.enhanced_content) ||
+          transcriptText(note.transcript, t) ||
+          t("oats.intelligence.processing")}
+      </p>
+    );
+  }
+
+  return (
+    <p
+      className={cn(
+        "mt-1.5 line-clamp-2 text-[13px] leading-6 text-muted-foreground",
+        // Mono for a transcript excerpt, sans for a summary: §5's rule that the
+        // machine's verbatim record and the model's prose do not share a voice.
+        excerpt.source === "transcript" && "font-mono text-[12px]"
+      )}
+    >
+      <span className="mr-2 font-mono text-[11px] text-muted-foreground/80">
+        {t(`oats.intelligence.match.${excerpt.source}`)}
+        {/* A character, not margin. `textContent` is what a screen reader and
+            the clipboard read, and margin is invisible to both — this is the
+            same defect the transcript's speaker labels had ("Youso the question
+            is"), caught there by measurement and avoided here by the same
+            means. */}
+        <span className="sr-only">: </span>
+      </span>
+      {excerpt.prefixed && "…"}
+      {excerpt.before}
+      <mark className="rounded-[2px] bg-primary/20 px-0.5 text-foreground">{excerpt.match}</mark>
+      {excerpt.after}
+      {excerpt.suffixed && "…"}
+    </p>
+  );
+}
+
 function NoteContourStrip({ note }: { note: NoteItem }) {
   // Only the rows you can see are drawn.
   //

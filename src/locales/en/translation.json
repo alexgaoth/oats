@@ -3060,6 +3060,12 @@
       "carriedOver": "Left open last time:",
       "openPrevious": "Open that one",
       "noMatches": "Nothing matches that",
+      "match": {
+        "transcript": "said",
+        "summary": "summary",
+        "title": "title"
+      },
+      "matchRelated": "related",
       "emptyHint": "Press {{shortcut}} anywhere and ask something nobody in the room knows",
       "backToList": "Back",
       "copy": "Copy",

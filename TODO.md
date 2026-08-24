@@ -223,15 +223,34 @@ colour modes. Every removed bridge method is gone from `window.electronAPI`;
 Not started. These are product builds, not fixes, and each wants a decision
 before code.
 
-### P2.1 Build source-linked local recall
+### P2.1 Source-linked local recall — first pass done (2026-08-23)
 
-Ask across conversations in natural language; return local semantic results with
-source excerpts that jump to the transcript moment and distinguish exact wording
-from inferred summary. The present Intelligence search is lowercased substring
-matching that only appears above four conversations.
+**Done: the excerpt and its provenance.** A result now shows the passage that
+matched, marked, under a label saying where it came from — `said` for the
+transcript, `summary` for what Oats wrote, `title` for the name, `related` for a
+vector-index suggestion with no literal match. Transcript excerpts render in mono
+(§5's verbatim voice), summaries in sans. Ranking is transcript > summary >
+title, because what somebody said is better evidence than what a 1.5B model wrote
+about it. Pure and pinned: `helpers/conversationRecall.mjs`, 8 tests.
 
-**Evidence:** `src/components/OatsWorkspace.tsx` — the `query`/`visibleNotes`
-filter and the `notes.length > 4` gate.
+Measured in the built renderer: `"seat price"` → `said: I do not know the median
+seat price off the top of my head` (mono, marked); `"agreed"` → `summary: The
+team agreed the demo would slip`; `"prep"` → `title: Board prep`; a semantic-only
+result appears last as `related:` with nothing marked.
+
+**Done: semantic recall is wired in.** `semanticSearchNotes` (Qdrant + local
+MiniLM, keyword fallback in main) already existed and Intelligence was the one
+surface not using it. It runs debounced at 220ms behind the literal filter,
+never instead of it — literal results keep their order and their place at the
+top. No index, no model, no network: the search still works exactly as before.
+
+**Still open:** the excerpt does not yet _jump to the moment_. `findExcerpt`
+returns the `segmentId` and `timestamp` of a transcript match and nothing
+consumes them; opening a result lands on the right tab and `Highlighted` scrolls
+the first literal match into view, which is close but is not the same thing —
+a semantic result has no literal match to scroll to. Also unresolved: whether
+`related` results should be shown at all when the literal filter found nothing,
+or whether an empty literal result should say so first.
 
 ### P2.2 Add a compact post-conversation review
 

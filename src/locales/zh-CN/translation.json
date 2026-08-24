@@ -3055,6 +3055,12 @@
       "carriedOver": "上次未收尾的：",
       "openPrevious": "打开那一场",
       "noMatches": "没有匹配项",
+      "match": {
+        "transcript": "说过",
+        "summary": "摘要",
+        "title": "标题"
+      },
+      "matchRelated": "相关",
       "emptyHint": "在任意位置按 {{shortcut}}，然后问一个没人知道答案的问题",
       "backToList": "返回",
       "copy": "复制",
