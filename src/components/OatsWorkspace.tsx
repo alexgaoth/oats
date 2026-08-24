@@ -487,7 +487,24 @@ function ConversationSurface() {
           // layout shift §8 forbids while somebody is being helped.
           recording
             ? cn(
-                "justify-start pt-[10vh]",
+                // Clean is centred; Detailed sits high on a spine.
+                //
+                // The reflow argument that put recording at the top belongs to
+                // Detailed alone: it is the *annotations and the transcript*
+                // that grow, and a centred column carrying them would move every
+                // time somebody spoke. Nothing in Clean grows — the contour is a
+                // fixed height and the clock is tabular — so Clean was paying a
+                // cost it does not incur, and paying it as 58% of the window in
+                // dead space below the mark. Three reviews called it a
+                // subtraction rather than a composition, and they were right:
+                // it was Detailed's layout with things removed.
+                //
+                // Centred, it is its own composition and it rhymes with the
+                // idle surface it comes from, so pressing record no longer
+                // throws the page upward. Switching compositions re-lays out,
+                // which is a deliberate act by the reader and not the unbidden
+                // §8 shift.
+                detailed ? "justify-start pt-[10vh]" : "justify-center",
                 // Below this height the three bands do not fit, and squeezing
                 // them is worse than scrolling. Measured at 600x400 (200% zoom
                 // of the shipped default) the head and foot alone took 312 of
@@ -515,7 +532,14 @@ function ConversationSurface() {
           // that warning. The head and the foot are pinned; the annotations
           // take what is left and scroll inside it.
           <>
-            <div className="shrink-0">
+            {/* `my-auto` in Clean is what actually centres it. `justify-center`
+                on the section had no effect while the band below claimed
+                `flex-1`: there was no free space left to distribute, and the
+                block still sat at the top with 464px of dead paper under it
+                (measured balance 0.02). Auto margins take the free space
+                symmetrically, and the foot stays pinned because it comes after
+                them. */}
+            <div className={cn("shrink-0", !detailed && "my-auto")}>
               {/* The Conversation surface's one status channel.
             
                 Nothing here announced anything: the record control unmounts on
@@ -683,7 +707,16 @@ function ConversationSurface() {
                 on every switch, its `spoken` set came back empty, and a blind
                 user pressing the switch once was told three already-heard
                 questions had just arrived. */}
-            <div className="flex min-h-0 flex-1 flex-col [@media(max-height:640px)]:min-h-[13rem]">
+            <div
+              className={cn(
+                "flex min-h-0 flex-col",
+                // Only Detailed has anything to put here, and only Detailed
+                // needs the space. In Clean the band holds the announcing rail
+                // and nothing else, so claiming `flex-1` there was what kept
+                // the composition pinned to the top.
+                detailed && "flex-1 [@media(max-height:640px)]:min-h-[13rem]"
+              )}
+            >
               {/* The ceiling belongs on the wrapper, which is the flex child of
                   the band. On the inner scroller it resolved against a wrapper
                   of its own auto height, so "half the band" became half of

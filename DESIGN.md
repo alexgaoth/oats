@@ -329,6 +329,22 @@ Clean contains **no text that changes while somebody is speaking**. Changing
 language on a screen competes for the same faculty as the person talking, and
 this product's whole claim is that it does not make you choose between the two.
 
+**Clean is centred; Detailed sits high on a spine.** The reflow argument that put
+the recording surface at the top belongs to Detailed alone — it is the
+annotations and the transcript that grow, and a centred column carrying them
+would move every time somebody spoke. Nothing in Clean grows, so Clean was paying
+a cost it does not incur, and paying it as 464px of dead paper below the mark at
+1200x800. Centred it is its own composition and it rhymes with the idle surface
+it comes from, so pressing record no longer throws the page upward. Measured
+balance above/below the block: 1.03 at 1200x800, 1.03 at 1400x900, 1.04 at
+1000x700, with the dead-microphone warning still pinned and fully visible.
+
+**Clean is not silent about questions.** The §4 state marks are drawn on the
+trace in both compositions — measured 628 hued pixels on a 608x136 canvas with
+four cards — so a question being caught, and how settled it came out, is visible
+without a word of text. That is what makes hiding the annotations a reduction in
+_language_ rather than in _evidence_.
+
 There used to be a last-heard echo line, one utterance at a time, and it is
 **deleted from both compositions**: Clean forbade it for rewriting itself
 whenever anybody spoke, and once Detailed carried the transcript the two said

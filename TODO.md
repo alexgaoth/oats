@@ -460,15 +460,18 @@ Open, and wanting a decision rather than silence:
   composition can only be changed mid-conversation — someone who wants Detailed
   for their next meeting must interrupt one to say so. A Settings line is the
   obvious alternative and was rejected to keep Settings small.
-- **Clean is still largely a subtraction.** Measured at HEAD, 1200x800: the
-  contour is `clamp(56px, 17vh, 136px)` = 136px, the composition ends at y=336,
-  and **58%** of the window below it is empty paper with the dead-microphone
-  warning stranded alone at y=729. Enlarging the contour to 208px was tried and
-  reverted — at that size it read as a slab of graphite rather than §9.8's one
-  thin trace, and a bigger drawing was never going to answer the question.
-  Whether clean deserves a composition of its own, rather than the detailed
-  layout minus things, is the open question. Three critics have now raised it and
-  none has asked for it to be reversed.
+- ~~Clean is still largely a subtraction.~~ **Answered 2026-08-23 by making it a
+  composition rather than by resizing anything.** The reflow argument that pinned
+  the recording surface to the top belongs to Detailed alone — the annotations
+  and the transcript are what grow — so Clean was paying a cost it does not
+  incur, as 464px of dead paper below the mark. It is centred now: measured
+  balance above/below the block 1.03 at 1200x800, 1.03 at 1400x900, 1.04 at
+  1000x700, dead-microphone warning still pinned and fully visible, page never
+  scrolls. `justify-center` alone did nothing — the band below claimed `flex-1`,
+  so there was no free space to distribute; `my-auto` on the head is what
+  centres it. Enlarging the contour to 208px had been tried first and reverted:
+  at that size it read as a slab rather than §9.8's one thin trace, and a bigger
+  drawing was never going to answer the question.
 - **No screen reader has been run.** Parity between the compositions is verified
   as DOM and AX-tree parity, which is not the same claim.
 
