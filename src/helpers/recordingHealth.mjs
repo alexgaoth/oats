@@ -41,3 +41,58 @@ export function checkpointRisk({ failingSince, unsavedTurns, lastSavedAt, now } 
       Number.isFinite(lastSavedAt) && lastSavedAt !== null ? Math.max(0, now - lastSavedAt) : 0,
   };
 }
+
+/**
+ * How long the room may be audibly busy with nothing transcribed before that is
+ * a fault rather than a lull.
+ *
+ * Deliberately far beyond the ~5s local chunk interval. The false positive here
+ * is expensive in a specific way: a fan, an air-conditioner or a laptop on a
+ * hard desk sits above the silence floor all meeting, and telling somebody
+ * mid-conversation that their recording is broken when it is not is worse than
+ * telling them nothing — they stop the recording to check.
+ */
+export const STALLED_GRACE_MS = 90_000;
+
+/**
+ * Whether transcription has stopped while the room kept talking.
+ *
+ * This is the failure the dead-microphone warning cannot see. That one watches
+ * the *audio level*: muted, unplugged, or taken by another app all read as a
+ * flat floor. But a Whisper server that died, a model that failed to load, or a
+ * sidecar that was reaped leaves the level perfectly healthy and produces
+ * nothing — the pulse breathes, the clock runs, and the transcript stays empty
+ * until you press stop. Loud at the start, not quiet at the end, is the whole
+ * promise, and this was the gap in it.
+ *
+ * @param {object} input
+ * @param {number|null} input.lastSoundAt When the mic last read above the floor.
+ * @param {number|null} input.lastSegmentAt When a turn was last finalized.
+ * @param {number|null} input.startedAt When this recording began.
+ * @param {boolean} input.micSilent Whether the dead-microphone warning is up.
+ * @param {number} input.now
+ * @returns {{ stalled: boolean, quietMs: number }}
+ */
+export function transcriptionStalled({
+  lastSoundAt,
+  lastSegmentAt,
+  startedAt,
+  micSilent,
+  now,
+} = {}) {
+  // One problem, one warning. A silent microphone explains the missing turns
+  // perfectly well and already says so.
+  if (micSilent) return { stalled: false, quietMs: 0 };
+  if (!Number.isFinite(lastSoundAt) || lastSoundAt === null) return { stalled: false, quietMs: 0 };
+  // Sound has to be recent, or the room simply stopped talking.
+  if (now - lastSoundAt > 5_000) return { stalled: false, quietMs: 0 };
+
+  // Before the first turn, the recording's own start is the baseline: a backend
+  // that never came up should be caught on the first conversation, not the last.
+  const since =
+    Number.isFinite(lastSegmentAt) && lastSegmentAt !== null ? lastSegmentAt : startedAt;
+  if (!Number.isFinite(since) || since === null) return { stalled: false, quietMs: 0 };
+
+  const quietMs = Math.max(0, now - since);
+  return { stalled: quietMs >= STALLED_GRACE_MS, quietMs };
+}

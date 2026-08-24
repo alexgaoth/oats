@@ -29,7 +29,7 @@ import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
 import { buildReview } from "../helpers/conversationReview.mjs";
-import { checkpointRisk } from "../helpers/recordingHealth.mjs";
+import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -295,6 +295,8 @@ function ConversationSurface() {
   const checkpointedSegments = useMeetingRecordingStore((s) => s.checkpointedSegments);
   const lastCheckpointAt = useMeetingRecordingStore((s) => s.lastCheckpointAt);
   const segmentCount = useMeetingRecordingStore((s) => s.segments.length);
+  const lastSoundAt = useMeetingRecordingStore((s) => s.lastSoundAt);
+  const lastSegmentAt = useMeetingRecordingStore((s) => s.lastSegmentAt);
   const sessionStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
   const elapsed = useElapsed(sessionStartedAt);
   const contour = useLiveContour(sessionStartedAt);
@@ -315,6 +317,16 @@ function ConversationSurface() {
   // rather than at the next utterance — which, if transcription is what broke,
   // may never come. A `useMemo` keyed on `elapsed` says the same thing while
   // pretending `elapsed` is an input, and lint is right to call that out.
+  // The failure the dead-microphone warning cannot see: level healthy, backend
+  // producing nothing. Same tick, same reason.
+  const stalled = transcriptionStalled({
+    lastSoundAt,
+    lastSegmentAt,
+    startedAt: sessionStartedAt,
+    micSilent: micSilentSince !== null,
+    now: Date.now(),
+  });
+
   const atRisk = checkpointRisk({
     failingSince: checkpointFailedSince,
     unsavedTurns: Math.max(0, segmentCount - checkpointedSegments),
@@ -575,9 +587,11 @@ function ConversationSurface() {
               <p aria-live="polite" role="status" className="sr-only">
                 {atRisk.atRisk
                   ? t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })
-                  : micSilentSince !== null
-                    ? t("oats.conversation.micSilent")
-                    : t("oats.conversation.statusRecording")}
+                  : stalled.stalled
+                    ? t("oats.conversation.notTranscribing")
+                    : micSilentSince !== null
+                      ? t("oats.conversation.micSilent")
+                      : t("oats.conversation.statusRecording")}
               </p>
 
               {/* The clock is the heading here. What a person glances at mid-
@@ -832,6 +846,14 @@ function ConversationSurface() {
               {atRisk.atRisk && (
                 <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
                   {t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })}
+                </p>
+              )}
+              {/* Sound is arriving and nothing is being transcribed. The pulse
+                  breathes and the clock runs either way, so without this the
+                  first sign is an empty transcript at the end. */}
+              {stalled.stalled && (
+                <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
+                  {t("oats.conversation.notTranscribing")}
                 </p>
               )}
               {/* Detailed only. The stack is a standing list of unfinished

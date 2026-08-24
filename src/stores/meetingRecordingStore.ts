@@ -96,6 +96,10 @@ interface MeetingRecordingState {
   // it is more likely broken or muted than the room being quiet.
   micSilentSince: number | null;
   /** When checkpoint writes began failing, or null while they are landing. */
+  /** When the microphone last read above the silence floor. */
+  lastSoundAt: number | null;
+  /** When a turn was last finalized — not the same as when sound arrived. */
+  lastSegmentAt: number | null;
   checkpointFailedSince: number | null;
   /** How many finalized turns are known to be on disk. */
   checkpointedSegments: number;
@@ -511,6 +515,8 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   openThreads: [],
   suggestions: [],
   micSilentSince: null,
+  lastSoundAt: null,
+  lastSegmentAt: null,
   checkpointFailedSince: null,
   checkpointedSegments: 0,
   lastCheckpointAt: null,
@@ -739,6 +745,8 @@ function startTranscriptCheckpoints(noteId: number | null) {
     checkpointFailedSince: null,
     checkpointedSegments: 0,
     lastCheckpointAt: null,
+    lastSegmentAt: null,
+    lastSoundAt: null,
   });
 }
 
@@ -1372,6 +1380,9 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         });
         conversationAideSession?.onFinalized(seg);
         trackConversationTopic(seg);
+        // When a turn last landed, which is what tells a stalled backend apart
+        // from a quiet room: the microphone level cannot distinguish them.
+        useMeetingRecordingStore.setState({ lastSegmentAt: Date.now() });
         // The transcript just grew, so persist it. This is what bounds how much
         // of a conversation a crash can take with it.
         scheduleTranscriptCheckpoint();

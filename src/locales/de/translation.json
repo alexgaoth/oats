@@ -3039,6 +3039,7 @@
       "micSilent": "Das Mikrofon ist seit einer Weile still. Prüfe, ob es stummgeschaltet ist oder von einer anderen App belegt wird.",
       "notSaving_one": "Der letzte Beitrag wurde nicht gespeichert. Prüfen Sie den Speicherplatz, beenden Sie dann das Gespräch und öffnen Sie es erneut.",
       "notSaving_other": "Die letzten {{count}} Beiträge wurden nicht gespeichert. Prüfen Sie den Speicherplatz, beenden Sie dann das Gespräch und öffnen Sie es erneut.",
+      "notTranscribing": "Es kommt Ton an, aber seit einiger Zeit wird nichts transkribiert. Beenden Sie das Gespräch und öffnen Sie es erneut, um die Transkription neu zu starten.",
       "statusRecording": "Aufnahme läuft. Audio und Transkripte bleiben auf diesem Gerät.",
       "statusStopped": "Aufnahme beendet. Oats schreibt die Zusammenfassung.",
       "nothingHeard": "Es wurde nichts gehört, daher wurde kein Gespräch gespeichert. Prüfe das Mikrofon in den Einstellungen.",

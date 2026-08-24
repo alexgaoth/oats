@@ -46,6 +46,7 @@ export default function MeetingRecordingMount(): null {
     let smoothed = 0;
     let buf = new Float32Array(256);
     let lastSoundAt = performance.now();
+    let lastSoundPublishedAt = 0;
     let lastSampleAt = 0;
 
     const tick = (now: number) => {
@@ -86,6 +87,19 @@ export default function MeetingRecordingMount(): null {
         // Track how long the floor has been flat and let the UI say so quietly.
         if (clamped > SILENCE_FLOOR) {
           lastSoundAt = now;
+          // Published at most once a second — this runs on rAF, and a store
+          // write per frame would re-render every subscriber sixty times a
+          // second to record a timestamp nothing reads that often.
+          if (now - lastSoundPublishedAt > 1000) {
+            lastSoundPublishedAt = now;
+            // `now` here is `performance.now()` — a monotonic clock measured
+            // from page load. The health check compares against `Date.now()`,
+            // so the wall clock is what goes in the store. Publishing the rAF
+            // timestamp would have made "sound was heard recently" compare a
+            // number near zero against a number near 1.7e12, and the check
+            // would simply never have fired.
+            useMeetingRecordingStore.setState({ lastSoundAt: Date.now() });
+          }
           if (useMeetingRecordingStore.getState().micSilentSince !== null) {
             useMeetingRecordingStore.setState({ micSilentSince: null });
           }

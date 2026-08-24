@@ -3039,6 +3039,7 @@
       "micSilent": "Le microphone est silencieux depuis un moment. Vérifiez qu'il n'est ni coupé ni utilisé par une autre application.",
       "notSaving_one": "Le dernier tour n'a pas été enregistré. Vérifiez l'espace disque, puis terminez et rouvrez la conversation.",
       "notSaving_other": "Les {{count}} derniers tours n'ont pas été enregistrés. Vérifiez l'espace disque, puis terminez et rouvrez la conversation.",
+      "notTranscribing": "Du son arrive mais rien n'est transcrit depuis un moment. Terminez la conversation et rouvrez-la pour relancer la transcription.",
       "statusRecording": "Enregistrement en cours. L'audio et les transcriptions restent sur cet ordinateur.",
       "statusStopped": "Enregistrement terminé. Oats rédige le résumé.",
       "nothingHeard": "Rien n'a été entendu, aucune conversation n'a donc été enregistrée. Vérifiez le microphone dans les réglages.",

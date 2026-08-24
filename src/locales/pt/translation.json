@@ -3039,6 +3039,7 @@
       "micSilent": "O microfone está em silêncio há algum tempo. Verifique se não está mudo ou a ser usado por outra aplicação.",
       "notSaving_one": "A última fala não foi guardada. Verifique o espaço em disco, depois termine e reabra a conversa.",
       "notSaving_other": "As últimas {{count}} falas não foram guardadas. Verifique o espaço em disco, depois termine e reabra a conversa.",
+      "notTranscribing": "Está a chegar som mas há algum tempo que nada é transcrito. Termine a conversa e reabra-a para reiniciar a transcrição.",
       "statusRecording": "Gravando. Áudio e transcrições ficam neste computador.",
       "statusStopped": "Gravação concluída. O Oats está escrevendo o resumo.",
       "nothingHeard": "Não se ouviu nada, por isso não foi guardada nenhuma conversa. Verifique o microfone nas Definições.",

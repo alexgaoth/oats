@@ -314,10 +314,29 @@ the pinned foot **and** in the `role="status"` region; failing but nothing
 unsaved → silent. It says how much is at risk because "saving failed" is a
 status and "the last four turns are not saved" is something a person can act on.
 
-**Still open:** local model readiness and network actions. The mic signal is
-already covered by the dead-microphone warning, and auto-search already announces
-itself on the card (`searched · google`), so what remains is a transcription
-backend that has stopped producing — which today looks identical to a quiet room.
+**Done: a stalled transcription backend is loud too.** That was the gap the
+dead-microphone warning cannot cover — it watches the _audio level_, and muted,
+unplugged or taken-by-another-app all read as a flat floor. But a Whisper server
+that died, a model that failed to load, or a sidecar that was reaped leaves the
+level perfectly healthy and produces nothing: the pulse breathes, the clock runs,
+and the transcript stays empty until you press stop.
+
+`transcriptionStalled()` reports sustained sound with no finalized turn. The
+grace period is **90s**, far beyond the ~5s local chunk interval, because the
+false positive here is expensive in a specific way: a fan or an air-conditioner
+sits above the silence floor all meeting, and telling somebody mid-conversation
+that their recording is broken when it is not makes them stop it to check. Before
+the first turn it measures against the recording's own start, so a backend that
+never came up is caught on the first conversation rather than the last.
+
+Measured, five states: talking-and-transcribed silent; nothing for 30s silent;
+nothing for 2min loud, in the foot and the `role="status"` region; room-went-quiet
+silent; dead microphone shows only the microphone warning — one problem, one
+warning.
+
+**Still open:** local model readiness _before_ a recording starts (the preflight
+already checks some of this) and a network action other than auto-search, which
+already announces itself on the card (`searched · google`).
 
 ## Product truth and documentation — done
 
