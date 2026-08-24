@@ -52,7 +52,7 @@ function trimToWord(text, fromStart) {
  *
  * @returns {{ source: "transcript"|"summary"|"title", before: string,
  *   match: string, after: string, segmentId?: string, timestamp?: number,
- *   prefixed: boolean, suffixed: boolean } | null}
+ *   offsetMs?: number, prefixed: boolean, suffixed: boolean } | null}
  *   The three pieces concatenate to the excerpt; `match` is what to mark.
  */
 export function findExcerpt(note, query) {
@@ -64,15 +64,27 @@ export function findExcerpt(note, query) {
   const fold = (value) => String(value ?? "").toLocaleLowerCase();
 
   // 1. What was said.
-  for (const segment of parseSegments(note.transcript)) {
+  const segments = parseSegments(note.transcript);
+  const startedAt = segments.find((s) => Number.isFinite(s?.timestamp))?.timestamp;
+  for (const segment of segments) {
     const text = String(segment?.text ?? "");
     const at = fold(text).indexOf(needle);
     if (at === -1) continue;
+    const timestamp = Number.isFinite(segment.timestamp) ? segment.timestamp : undefined;
     return {
       ...window_(text, at, needle.length),
       source: "transcript",
       segmentId: segment.id != null ? String(segment.id) : undefined,
-      timestamp: Number.isFinite(segment.timestamp) ? segment.timestamp : undefined,
+      timestamp,
+      // How far into the conversation it was said. A recall tool that can tell
+      // you *what* was said and not *when* has answered half the question: the
+      // whole product draws time as its signature, and a result that lands you
+      // in an hour of transcript with no bearing is a result you still have to
+      // search by hand.
+      offsetMs:
+        Number.isFinite(timestamp) && Number.isFinite(startedAt)
+          ? Math.max(0, timestamp - startedAt)
+          : undefined,
     };
   }
 

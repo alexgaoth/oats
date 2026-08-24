@@ -1145,6 +1145,7 @@ function IntelligenceViews({
   // `related`. It is also entirely optional — no index, no network, no model,
   // and the search still works exactly as it did.
   const [semanticNotes, setSemanticNotes] = useState<NoteItem[]>([]);
+  const [landedOnSegment, setLandedOnSegment] = useState<string | null>(null);
   useEffect(() => {
     const needle = query.trim();
     if (needle.length < 3) {
@@ -1387,12 +1388,7 @@ function IntelligenceViews({
             />
           )}
           {tab === "transcript" && (
-            <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-7 text-muted-foreground">
-              <Highlighted
-                text={transcriptText(selected.transcript, t) || t("oats.intelligence.noTranscript")}
-                query={query}
-              />
-            </article>
+            <TranscriptView note={selected} query={query} scrollToId={landedOnSegment} />
           )}
           {tab === "connections" && (
             <ConnectionsView key={selected.id} note={selected} events={events} onReload={reload} />
@@ -1455,6 +1451,11 @@ function IntelligenceViews({
                   // dropped you at the top of a different document, with the
                   // sentence you searched for still to be hunted for by eye.
                   setTab(matchedTab(note, query, t));
+                  // Which turn this result was about. A literal transcript match
+                  // has one; a semantic suggestion does not, and gets null
+                  // rather than a guess — landing somebody on a turn the search
+                  // did not actually find is worse than landing them at the top.
+                  setLandedOnSegment(findExcerpt(note, query)?.segmentId ?? null);
                   setReading(true);
                 }}
                 className={cn(
@@ -1507,6 +1508,105 @@ function matchedTab(note: NoteItem, query: string, t: TFunction): DetailTab {
       transcript: transcriptText(note.transcript, t),
     },
     query
+  );
+}
+
+/**
+ * The transcript as the timed record it is, rather than as one wall of text.
+ *
+ * The reading view used to render `transcriptText()` — the same flat string the
+ * clipboard and the `.txt` export get — so an hour of conversation arrived with
+ * no bearings at all. The whole product draws time as its signature, and the one
+ * surface where you go to *read* what was said showed none of it: a search
+ * result landed you somewhere in a wall with nothing to say how far in you were,
+ * or how long the room had been on the subject.
+ *
+ * Each turn now carries its offset from the first thing said. The gutter is mono
+ * and quiet — it is a coordinate, not content — and it is `aria-hidden`, because
+ * a screen reader working through a transcript does not want a timestamp read
+ * before every line. The time is on the paragraph as a `title` for anyone who
+ * wants it.
+ *
+ * `transcriptText` is untouched: copy and export still produce the plain text
+ * they always did.
+ */
+function TranscriptView({
+  note,
+  query,
+  scrollToId,
+}: {
+  note: NoteItem;
+  query: string;
+  /** The segment a search matched, so arriving from a result lands on it. */
+  scrollToId?: string | null;
+}) {
+  const { t } = useTranslation();
+  const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
+  const target = useRef<HTMLLIElement | null>(null);
+
+  useEffect(() => {
+    if (!target.current) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    target.current.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+  }, [scrollToId, segments]);
+
+  // No segments means no timings — an imported or legacy transcript. Fall back
+  // to what the reading view has always shown rather than to an empty page.
+  if (!segments.length) {
+    return (
+      <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-7 text-muted-foreground">
+        <Highlighted
+          text={transcriptText(note.transcript, t) || t("oats.intelligence.noTranscript")}
+          query={query}
+        />
+      </article>
+    );
+  }
+
+  const startedAt = segments.find((segment) => Number.isFinite(segment.timestamp))?.timestamp;
+
+  return (
+    <ol className="mt-7 space-y-4">
+      {segments.map((segment) => {
+        const at =
+          Number.isFinite(segment.timestamp) && Number.isFinite(startedAt)
+            ? clock(Math.max(0, (segment.timestamp as number) - (startedAt as number)))
+            : null;
+        const matched = scrollToId != null && String(segment.id) === scrollToId;
+        return (
+          <li
+            key={segment.id}
+            ref={matched ? target : undefined}
+            className="flex gap-4 font-mono text-[13px] leading-7"
+          >
+            <span
+              aria-hidden="true"
+              className="w-12 shrink-0 pt-px text-right text-[11px] tabular-nums text-muted-foreground/70"
+            >
+              {at ?? ""}
+            </span>
+            <p
+              title={at ?? undefined}
+              className={cn(
+                "min-w-0 flex-1 text-muted-foreground",
+                // The turn a search landed on is ink rather than husk. It is not
+                // a highlight — a semantic match has no span to highlight — it
+                // is "this is the one".
+                matched && "text-foreground"
+              )}
+            >
+              <span className="mr-2 select-none text-muted-foreground/70">
+                {segment.source === "mic"
+                  ? t("oats.intelligence.speakerYou")
+                  : t("oats.intelligence.speakerRoom")}
+                <span className="sr-only">: </span>
+              </span>
+              <Highlighted text={String(segment.text ?? "")} query={query} />
+            </p>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -1754,6 +1854,10 @@ function RecallExcerpt({
     >
       <span className="mr-2 font-mono text-[11px] text-muted-foreground/80">
         {t(`oats.intelligence.match.${excerpt.source}`)}
+        {/* How far in. The product's signature is a picture of time, and a
+            result that says what was said but not when leaves you to find it
+            again by eye in an hour of transcript. */}
+        {excerpt.offsetMs !== undefined && ` · ${clock(excerpt.offsetMs)}`}
         {/* A character, not margin. `textContent` is what a screen reader and
             the clipboard read, and margin is invisible to both — this is the
             same defect the transcript's speaker labels had ("Youso the question

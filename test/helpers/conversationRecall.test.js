@@ -35,6 +35,7 @@ test("a transcript match carries the segment it came from", () => {
   const found = findExcerpt(note(), "board meeting");
   assert.equal(found.segmentId, "s1");
   assert.equal(found.timestamp, 1700);
+  assert.equal(found.offsetMs, 0, "the first segment is zero into the conversation");
   assert.equal(found.match, "board meeting");
   assert.equal(`${found.before}${found.match}${found.after}`, SAID);
 });
@@ -92,4 +93,35 @@ test("literal results keep their order and their place ahead of guesses", () => 
 test("merging survives a missing or empty semantic result", () => {
   assert.deepEqual(mergeRecall([{ id: 1 }], undefined), [{ note: { id: 1 }, related: false }]);
   assert.deepEqual(mergeRecall([], []), []);
+});
+
+// A recall tool that says what was said but not when has answered half of it.
+test("a transcript match knows how far into the conversation it was", () => {
+  const T0 = 1_700_000_000_000;
+  const found = findExcerpt(
+    note({
+      transcript: JSON.stringify([
+        { id: "a", text: "opening remarks", timestamp: T0 },
+        { id: "b", text: "and then the migration slipped", timestamp: T0 + 18 * 60_000 },
+      ]),
+    }),
+    "migration"
+  );
+  assert.equal(found.segmentId, "b");
+  assert.equal(found.offsetMs, 18 * 60_000);
+});
+
+test("an untimed transcript reports no offset rather than a wrong one", () => {
+  const found = findExcerpt(
+    note({ transcript: JSON.stringify([{ id: "a", text: "the migration slipped" }]) }),
+    "migration"
+  );
+  assert.equal(found.source, "transcript");
+  assert.equal(found.offsetMs, undefined);
+  assert.equal(found.timestamp, undefined);
+});
+
+test("summary and title matches carry no offset — they happened at no moment", () => {
+  assert.equal(findExcerpt(note(), "agreed").offsetMs, undefined);
+  assert.equal(findExcerpt(note(), "prep").offsetMs, undefined);
 });
