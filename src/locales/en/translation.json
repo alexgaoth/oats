@@ -688,6 +688,268 @@
     }
   },
   "settingsPage": {
+    "workspace": {
+      "title": "Workspace",
+      "description": "Collaborate with teammates, share notes, and manage billing in one place.",
+      "empty": {
+        "title": "Create your first workspace",
+        "description": "Workspaces let you collaborate with teammates and share notes.",
+        "create": "Create workspace"
+      },
+      "tab": {
+        "general": "General",
+        "members": "Members",
+        "teams": "Teams",
+        "billing": "Billing",
+        "developer": "Developer"
+      },
+      "role": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "member": "Member"
+      },
+      "general": {
+        "nameLabel": "Workspace name",
+        "slugLabel": "Slug",
+        "slugHint": "Used in URLs and invite links. Lowercase letters, digits, and dashes only.",
+        "saved": "Workspace updated",
+        "dangerTitle": "Delete workspace",
+        "dangerDescription": "All shared notes, folders, and integrations will be deleted. This cannot be undone.",
+        "delete": "Delete workspace",
+        "confirmTitle": "Delete {{name}}?",
+        "confirmDescription": "This cancels the subscription and removes all workspace data permanently."
+      },
+      "members": {
+        "title": "Members",
+        "description": "{{count}} of {{seats}} seats used.",
+        "invite": "Invite",
+        "empty": "No members yet.",
+        "roleUpdated": "Role updated",
+        "promote": "Make admin",
+        "demote": "Make member",
+        "transferOwnership": "Transfer ownership",
+        "remove": "Remove from workspace"
+      },
+      "invites": {
+        "title": "Pending invitations",
+        "resend": "Resend",
+        "revoke": "Revoke",
+        "resent": "Invitation resent"
+      },
+      "teams": {
+        "title": "Teams",
+        "description": "Group members for scoped sharing.",
+        "new": "New team",
+        "empty": "No teams yet.",
+        "createFirst": "Create your first team",
+        "createTitle": "Create team",
+        "nameLabel": "Team name",
+        "descriptionLabel": "Description",
+        "memberCount": "{{count}} members"
+      },
+      "billing": {
+        "title": "Billing",
+        "description": "Plan, seats, and payment.",
+        "plan": "Plan",
+        "seats": "Seats",
+        "nextInvoice": "Next invoice",
+        "manageStripe": "Manage in Stripe",
+        "startSubscription": "Start subscription"
+      },
+      "developer": {
+        "title": "API keys",
+        "description": "Programmatic access scoped to this workspace.",
+        "empty": "No API keys yet. Create one to integrate with this workspace.",
+        "new": "New key",
+        "create": "Create key",
+        "createTitle": "Create API key",
+        "createDescription": "Choose the permissions this key needs. You can revoke it any time.",
+        "nameLabel": "Key name",
+        "namePlaceholder": "Production integration",
+        "revoke": "Revoke key",
+        "lastUsed": "Last used {{date}}",
+        "neverUsed": "Never used",
+        "keyCreatedTitle": "API key created",
+        "keyCreatedDescription": "Copy this key now — you won't be able to see it again."
+      }
+    },
+    "account": {
+      "badges": {
+        "free": "Free",
+        "limitReached": "Limit reached",
+        "pastDue": "Past due",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Trial"
+      },
+      "billing": {
+        "couldNotOpenDescription": "We had trouble opening the billing page. Please try again.",
+        "couldNotOpenTitle": "Couldn't open billing",
+        "manageBilling": "Manage Billing",
+        "opening": "Opening...",
+        "updatePaymentMethod": "Update Payment Method"
+      },
+      "checkout": {
+        "couldNotOpenDescription": "We had trouble opening the checkout page. Please try again.",
+        "couldNotOpenTitle": "Couldn't open checkout",
+        "opening": "Opening...",
+        "upgradeToPro": "Upgrade to Pro"
+      },
+      "disabled": "Disabled",
+      "featuresDisabled": "Account Features Disabled",
+      "featuresDisabledDescription": "Set VITE_AUTH_URL in your .env file to enable account features.",
+      "notConfigured": "Authentication is not configured",
+      "notSignedIn": "Not signed in",
+      "notSignedInDescription": "Create an account to unlock premium features.",
+      "offline": "Offline",
+      "pastDue": {
+        "description": "You're on the free plan for now. Update your payment method to get back to Pro.",
+        "title": "We couldn't process your payment"
+      },
+      "planDescriptions": {
+        "freeUsage": "{{used}} / {{limit}} words this week",
+        "nextBilling": "Next billing: {{date}}",
+        "pastDue": "{{used}} / {{limit}} free words this week - update payment to restore Pro",
+        "trial": "{{days}} days remaining - unlimited transcriptions",
+        "unlimited": "Unlimited"
+      },
+      "planLabels": {
+        "free": "Free",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Trial"
+      },
+      "planTitle": "Plan",
+      "pricing": {
+        "title": "Plans",
+        "billedYearly": "Billed yearly",
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "forever",
+          "features": [
+            "## Oats Cloud",
+            "2,000 words/week transcription",
+            "5 hours of meeting recordings/month",
+            "## Always free",
+            "Unlimited local AI models",
+            "Unlimited cloud transcription with your own API keys",
+            "100+ languages supported",
+            "Custom dictionary",
+            "Zero data retention",
+            "Community support"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "monthlyPrice": "$8",
+          "monthlyPeriod": "/mo",
+          "annualPrice": "$80",
+          "annualPeriod": "/yr",
+          "annualEquivalent": "$6.67",
+          "includesPrefix": "All Free features +",
+          "features": [
+            "Unlimited cloud transcription",
+            "20 hours of meeting recordings/month",
+            "Sync across devices",
+            "Personal API access",
+            "MCP integration in all your apps",
+            "Mobile app (iOS Coming Soon)",
+            "Email support"
+          ],
+          "cta": "Get Started",
+          "switchToAnnual": "Switch to Annual"
+        },
+        "business": {
+          "name": "Business",
+          "monthlyPrice": "$20",
+          "monthlyPeriod": "/mo",
+          "annualPrice": "$200",
+          "annualPeriod": "/yr",
+          "annualEquivalent": "$16.67",
+          "includesPrefix": "All Pro features +",
+          "badge": "Most Popular",
+          "features": [
+            "Unlimited meeting recordings",
+            "Agent mode",
+            "Chat over your data",
+            "Priority support"
+          ],
+          "cta": "Get Started",
+          "switchToAnnual": "Switch to Annual"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Custom",
+          "subtitle": "For advanced security & support",
+          "includesPrefix": "All Business features +",
+          "features": [
+            "Managed API credits",
+            "Cloud sync across devices",
+            "Team features & admin",
+            "SSO & compliance",
+            "Dedicated support"
+          ],
+          "cta": "Contact Sales"
+        },
+        "currentPlan": "Current plan",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade",
+        "planSwitched": "Plan updated successfully",
+        "confirmSwitch": {
+          "title": "Confirm plan change",
+          "description": "Switch to {{plan}} ({{interval}})",
+          "monthly": "monthly",
+          "yearly": "yearly",
+          "chargeToday": "Charge today",
+          "accountCredit": "Account credit",
+          "newPrice": "New price",
+          "nextBilling": "Next billing",
+          "mo": "mo",
+          "yr": "yr",
+          "cancel": "Cancel",
+          "confirm": "Confirm"
+        }
+      },
+      "rollingWeeklyLimit": "Rolling weekly limit",
+      "signOut": {
+        "failedDescription": "Something went wrong signing out. Please try again.",
+        "failedTitle": "Couldn't sign out",
+        "signOut": "Sign Out",
+        "signingOut": "Signing out..."
+      },
+      "signedIn": "Signed in",
+      "title": "Account",
+      "toasts": {
+        "approachingLimit": {
+          "description": "You've used {{used}} of {{limit}} free words this week. Upgrade to Pro for unlimited use.",
+          "title": "Approaching weekly limit"
+        }
+      },
+      "trialCta": {
+        "button": "Create Free Account",
+        "description": "Unlimited transcriptions, priority processing, and more.",
+        "title": "Try Pro free for 7 days"
+      },
+      "signedOutPlans": {
+        "button": "Create Free Account"
+      },
+      "user": "User",
+      "wordsRemaining": "{{remaining}} remaining",
+      "deleteAccount": {
+        "label": "Delete Account",
+        "labelDescription": "Permanently delete your account, all cloud data, and local data. This action cannot be undone.",
+        "button": "Delete My Account",
+        "deleting": "Deleting...",
+        "title": "Delete Your Account?",
+        "description": "This will permanently delete your Oats account, all cloud-synced notes, and all local data including transcriptions, audio recordings, downloaded models, calendar connections, and settings. This action cannot be undone.",
+        "confirmText": "Delete Everything",
+        "successTitle": "Account Deleted",
+        "successDescription": "Your account and all data have been deleted. The app will now reload.",
+        "failedTitle": "Deletion Failed",
+        "failedDescription": "Something went wrong deleting your account. Your local data may have been partially removed. Please try again."
+      }
+    },
     "agentConfig": {
       "agentName": "Agent Name",
       "description": "Name your AI assistant so you can address it directly during dictation",
@@ -1202,6 +1464,12 @@
         }
       }
     },
+    "intelligence": {
+      "gpuDevice": {
+        "title": "Intelligence GPU",
+        "description": "GPU used for local AI processing"
+      }
+    },
     "selfHosted": {
       "endpointUrl": "Endpoint URL",
       "serverUrl": "Server URL",
@@ -1661,6 +1929,8 @@
       "openPrevious": "Open that one",
       "noMatches": "Nothing matches that",
       "onlyRelated": "Nothing was said in those words. These conversations are about the same subject.",
+      "searchResults_one": "{{count}} conversation matches",
+      "searchResults_other": "{{count}} conversations match",
       "match": {
         "transcript": "said",
         "summary": "summary",
@@ -1764,6 +2034,8 @@
   },
   "suggestions": {
     "title": "Worth raising",
+    "unfinished": "left open",
+    "shallow": "barely touched",
     "adjacent_one": "usually comes up",
     "adjacent_other": "usually comes up"
   },

@@ -685,6 +685,183 @@
     }
   },
   "settingsPage": {
+    "account": {
+      "badges": {
+        "free": "Gratuito",
+        "limitReached": "Limite raggiunto",
+        "pastDue": "Scaduto",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Prova"
+      },
+      "billing": {
+        "couldNotOpenDescription": "Si è verificato un problema nell'apertura della pagina di fatturazione. Riprova.",
+        "couldNotOpenTitle": "Impossibile aprire la fatturazione",
+        "manageBilling": "Gestisci fatturazione",
+        "opening": "Apertura...",
+        "updatePaymentMethod": "Aggiorna metodo di pagamento"
+      },
+      "checkout": {
+        "couldNotOpenDescription": "Si è verificato un problema nell'apertura della pagina di pagamento. Riprova.",
+        "couldNotOpenTitle": "Impossibile aprire il pagamento",
+        "opening": "Apertura...",
+        "upgradeToPro": "Passa a Pro"
+      },
+      "disabled": "Disabilitato",
+      "featuresDisabled": "Funzionalità account disabilitate",
+      "featuresDisabledDescription": "Imposta VITE_AUTH_URL nel file .env per abilitare le funzionalità dell'account.",
+      "notConfigured": "L'autenticazione non è configurata",
+      "notSignedIn": "Non hai effettuato l'accesso",
+      "notSignedInDescription": "Crea un account per sbloccare le funzionalità premium.",
+      "offline": "Offline",
+      "pastDue": {
+        "description": "Sei nel piano gratuito per ora. Aggiorna il metodo di pagamento per tornare a Pro.",
+        "title": "Non siamo riusciti a elaborare il pagamento"
+      },
+      "planDescriptions": {
+        "freeUsage": "{{used}} / {{limit}} parole questa settimana",
+        "nextBilling": "Prossima fatturazione: {{date}}",
+        "pastDue": "{{used}} / {{limit}} parole gratuite questa settimana — aggiorna il pagamento per ripristinare Pro",
+        "trial": "{{days}} giorni rimanenti — trascrizioni illimitate",
+        "unlimited": "Illimitato"
+      },
+      "planLabels": {
+        "free": "Gratuito",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Prova"
+      },
+      "planTitle": "Piano",
+      "rollingWeeklyLimit": "Limite settimanale progressivo",
+      "signOut": {
+        "failedDescription": "Qualcosa è andato storto durante la disconnessione. Riprova.",
+        "failedTitle": "Impossibile disconnettersi",
+        "signOut": "Disconnetti",
+        "signingOut": "Disconnessione..."
+      },
+      "signedIn": "Accesso effettuato",
+      "title": "Account",
+      "toasts": {
+        "approachingLimit": {
+          "description": "Hai usato {{used}} di {{limit}} parole gratuite questa settimana. Passa a Pro per un uso illimitato.",
+          "title": "Prossimo al limite settimanale"
+        }
+      },
+      "trialCta": {
+        "button": "Crea account gratuito",
+        "description": "Trascrizioni illimitate, elaborazione prioritaria e altro ancora.",
+        "title": "Prova Pro gratis per 7 giorni"
+      },
+      "pricing": {
+        "title": "Piani",
+        "billedYearly": "Fatturazione annuale",
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "per sempre",
+          "features": [
+            "## Oats Cloud",
+            "2.000 parole/settimana di trascrizione",
+            "5 ore di registrazioni riunioni/mese",
+            "## Sempre gratuito",
+            "Modelli IA locali illimitati",
+            "Trascrizione cloud illimitata con le tue chiavi API",
+            "Oltre 100 lingue supportate",
+            "Dizionario personalizzato",
+            "Nessuna conservazione dei dati",
+            "Supporto della comunità"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "monthlyPrice": "$8",
+          "monthlyPeriod": "/mese",
+          "annualPrice": "$80",
+          "annualPeriod": "/anno",
+          "annualEquivalent": "$6.67",
+          "includesPrefix": "Tutte le funzionalità Free +",
+          "features": [
+            "Trascrizione cloud illimitata",
+            "20 ore di registrazioni riunioni/mese",
+            "Sincronizzazione tra dispositivi",
+            "Accesso personale all'API",
+            "Integrazione MCP in tutte le tue app",
+            "App mobile (iOS in arrivo)",
+            "Supporto via e-mail"
+          ],
+          "cta": "Inizia",
+          "switchToAnnual": "Passa all'annuale"
+        },
+        "business": {
+          "name": "Business",
+          "monthlyPrice": "$20",
+          "monthlyPeriod": "/mese",
+          "annualPrice": "$200",
+          "annualPeriod": "/anno",
+          "annualEquivalent": "$16.67",
+          "includesPrefix": "Tutte le funzionalità Pro +",
+          "badge": "Più popolare",
+          "features": [
+            "Registrazioni riunioni illimitate",
+            "Modalità agente",
+            "Chatta con i tuoi dati",
+            "Supporto prioritario"
+          ],
+          "cta": "Inizia",
+          "switchToAnnual": "Passa all'annuale"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Personalizzato",
+          "subtitle": "Per sicurezza avanzata e supporto dedicato",
+          "includesPrefix": "Tutte le funzionalità Business +",
+          "features": [
+            "Crediti API gestiti",
+            "Sincronizzazione cloud tra dispositivi",
+            "Funzionalità di team e amministrazione",
+            "SSO e conformità",
+            "Supporto dedicato"
+          ],
+          "cta": "Contatta le vendite"
+        },
+        "currentPlan": "Piano attuale",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade",
+        "planSwitched": "Piano aggiornato con successo",
+        "confirmSwitch": {
+          "title": "Conferma cambio piano",
+          "description": "Passa a {{plan}} ({{interval}})",
+          "monthly": "mensile",
+          "yearly": "annuale",
+          "chargeToday": "Addebito oggi",
+          "accountCredit": "Credito sull'account",
+          "newPrice": "Nuovo prezzo",
+          "nextBilling": "Prossima fatturazione",
+          "mo": "mo",
+          "yr": "yr",
+          "cancel": "Annulla",
+          "confirm": "Conferma"
+        }
+      },
+      "signedOutPlans": {
+        "button": "Crea account gratuito"
+      },
+      "user": "Utente",
+      "wordsRemaining": "{{remaining}} rimanenti",
+      "deleteAccount": {
+        "label": "Elimina account",
+        "labelDescription": "Elimina permanentemente il tuo account, tutti i dati cloud e i dati locali. Questa azione non può essere annullata.",
+        "button": "Elimina il mio account",
+        "deleting": "Eliminazione...",
+        "title": "Eliminare il tuo account?",
+        "description": "Questo eliminerà permanentemente il tuo account Oats, tutte le note sincronizzate nel cloud e tutti i dati locali, incluse trascrizioni, registrazioni audio, modelli scaricati, connessioni calendario e impostazioni. Questa azione non può essere annullata.",
+        "confirmText": "Elimina tutto",
+        "successTitle": "Account eliminato",
+        "successDescription": "Il tuo account e tutti i dati sono stati eliminati. L'app si ricaricherà ora.",
+        "failedTitle": "Eliminazione fallita",
+        "failedDescription": "Qualcosa è andato storto durante l'eliminazione del tuo account. I tuoi dati locali potrebbero essere stati parzialmente rimossi. Riprova."
+      }
+    },
     "agentConfig": {
       "agentName": "Nome dell'agente",
       "description": "Dai un nome al tuo assistente IA per rivolgerti direttamente a lui durante la dettatura",
@@ -1199,10 +1376,101 @@
         }
       }
     },
+    "intelligence": {
+      "gpuDevice": {
+        "title": "GPU di intelligenza",
+        "description": "GPU usata per l'elaborazione IA locale"
+      }
+    },
     "selfHosted": {
       "endpointUrl": "URL endpoint",
       "serverUrl": "URL server",
       "apiKeyOptional": "API Key (opzionale)"
+    },
+    "workspace": {
+      "title": "Espace de travail",
+      "description": "Collaborez, partagez des notes et gérez la facturation au même endroit.",
+      "empty": {
+        "title": "Créez votre premier espace de travail",
+        "description": "Les espaces de travail vous permettent de collaborer et partager des notes.",
+        "create": "Créer un espace"
+      },
+      "tab": {
+        "general": "Général",
+        "members": "Membres",
+        "teams": "Équipes",
+        "billing": "Facturation",
+        "developer": "Développeur"
+      },
+      "role": {
+        "owner": "Propriétaire",
+        "admin": "Administrateur",
+        "member": "Membre"
+      },
+      "general": {
+        "nameLabel": "Nom",
+        "slugLabel": "Slug",
+        "slugHint": "Utilisé dans les URL. Minuscules, chiffres et tirets uniquement.",
+        "saved": "Espace mis à jour",
+        "dangerTitle": "Supprimer l'espace",
+        "dangerDescription": "Toutes les notes, dossiers et intégrations partagés seront supprimés. Cette action est irréversible.",
+        "delete": "Supprimer l'espace",
+        "confirmTitle": "Supprimer {{name}} ?",
+        "confirmDescription": "Cela annule l'abonnement et supprime définitivement toutes les données."
+      },
+      "members": {
+        "title": "Membres",
+        "description": "{{count}} sur {{seats}} sièges utilisés.",
+        "invite": "Inviter",
+        "empty": "Aucun membre pour l'instant.",
+        "roleUpdated": "Rôle mis à jour",
+        "promote": "Promouvoir administrateur",
+        "demote": "Rétrograder membre",
+        "transferOwnership": "Transférer la propriété",
+        "remove": "Retirer de l'espace"
+      },
+      "invites": {
+        "title": "Invitations en attente",
+        "resend": "Renvoyer",
+        "revoke": "Révoquer",
+        "resent": "Invitation renvoyée"
+      },
+      "teams": {
+        "title": "Équipes",
+        "description": "Groupez les membres pour un partage ciblé.",
+        "new": "Nouvelle équipe",
+        "empty": "Aucune équipe.",
+        "createFirst": "Créez votre première équipe",
+        "createTitle": "Créer une équipe",
+        "nameLabel": "Nom de l'équipe",
+        "descriptionLabel": "Description",
+        "memberCount": "{{count}} membres"
+      },
+      "billing": {
+        "title": "Facturation",
+        "description": "Plan, sièges et paiement.",
+        "plan": "Plan",
+        "seats": "Sièges",
+        "nextInvoice": "Prochaine facture",
+        "manageStripe": "Gérer dans Stripe",
+        "startSubscription": "Démarrer l'abonnement"
+      },
+      "developer": {
+        "title": "Clés API",
+        "description": "Accès programmatique limité à cet espace.",
+        "empty": "Aucune clé API. Créez-en une pour vous intégrer.",
+        "new": "Nouvelle clé",
+        "create": "Créer la clé",
+        "createTitle": "Créer une clé API",
+        "createDescription": "Choisissez les permissions. Vous pouvez la révoquer à tout moment.",
+        "nameLabel": "Nom de la clé",
+        "namePlaceholder": "Intégration production",
+        "revoke": "Révoquer la clé",
+        "lastUsed": "Dernière utilisation {{date}}",
+        "neverUsed": "Jamais utilisée",
+        "keyCreatedTitle": "Clé API créée",
+        "keyCreatedDescription": "Copiez cette clé maintenant — vous ne pourrez plus la voir."
+      }
     }
   },
   "models": {
@@ -1661,6 +1929,8 @@
       "openPrevious": "Apri quella",
       "noMatches": "Nessun risultato",
       "onlyRelated": "Nulla è stato detto con quelle parole. Queste conversazioni riguardano lo stesso argomento.",
+      "searchResults_one": "{{count}} conversazione corrisponde",
+      "searchResults_other": "{{count}} conversazioni corrispondono",
       "match": {
         "transcript": "detto",
         "summary": "riassunto",
@@ -1764,6 +2034,8 @@
   },
   "suggestions": {
     "title": "Vale la pena sollevare",
+    "unfinished": "rimasto aperto",
+    "shallow": "appena sfiorato",
     "adjacent_one": "salta fuori spesso",
     "adjacent_other": "salta fuori spesso"
   },

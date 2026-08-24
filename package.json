@@ -62,7 +62,7 @@
     "format:check": "eslint . && cd src && eslint . && prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "lint": "eslint . && cd src && eslint .",
     "test": "node --test \"test/**/*.test.js\"",
-    "test:oats:core": "node --test \"test/helpers/*.test.js\"",
+    "test:oats:core": "node --test \"test/helpers/*.test.js\" \"test/utils/*.test.js\"",
     "test:oats:db": "cross-env ELECTRON_RUN_AS_NODE=1 electron --test \"test/db/*.test.js\"",
     "test:oats": "npm run test:oats:core && npm run test:oats:db",
     "test:electron": "cross-env ELECTRON_RUN_AS_NODE=1 electron --test \"test/**/*.test.js\"",
@@ -73,7 +73,7 @@
     "seed:sample": "electron scripts/seed-sample-conversation.js",
     "verify:oats": "npm run setup:check && npm run test:oats && npm run quality-check && npm run build:renderer",
     "verify:all": "npm run verify:oats && npm run test:electron",
-    "i18n:check": "node scripts/check-i18n.js",
+    "i18n:check": "node scripts/check-i18n.js && node scripts/check-missing-keys.js",
     "perf:baseline": "node scripts/perf-baseline.js",
     "preview": "cd src && vite preview",
     "clean": "node cleanup.js"

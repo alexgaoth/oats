@@ -685,6 +685,183 @@
     }
   },
   "settingsPage": {
+    "account": {
+      "badges": {
+        "free": "Бесплатный",
+        "limitReached": "Лимит достигнут",
+        "pastDue": "Просрочен",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Пробный"
+      },
+      "billing": {
+        "couldNotOpenDescription": "Не удалось открыть страницу оплаты. Попробуйте ещё раз.",
+        "couldNotOpenTitle": "Не удалось открыть оплату",
+        "manageBilling": "Управление оплатой",
+        "opening": "Открытие...",
+        "updatePaymentMethod": "Обновить способ оплаты"
+      },
+      "checkout": {
+        "couldNotOpenDescription": "Не удалось открыть страницу оформления. Попробуйте ещё раз.",
+        "couldNotOpenTitle": "Не удалось открыть оформление",
+        "opening": "Открытие...",
+        "upgradeToPro": "Перейти на Pro"
+      },
+      "disabled": "Отключено",
+      "featuresDisabled": "Функции аккаунта отключены",
+      "featuresDisabledDescription": "Установите VITE_AUTH_URL в файле .env для включения функций аккаунта.",
+      "notConfigured": "Аутентификация не настроена",
+      "notSignedIn": "Вы не вошли в систему",
+      "notSignedInDescription": "Создайте аккаунт, чтобы разблокировать премиум-функции.",
+      "offline": "Нет сети",
+      "pastDue": {
+        "description": "Сейчас вы на бесплатном плане. Обновите способ оплаты, чтобы вернуться к Pro.",
+        "title": "Не удалось обработать платёж"
+      },
+      "planDescriptions": {
+        "freeUsage": "{{used}} / {{limit}} слов на этой неделе",
+        "nextBilling": "Следующее списание: {{date}}",
+        "pastDue": "{{used}} / {{limit}} бесплатных слов на этой неделе — обновите платёж для восстановления Pro",
+        "trial": "Осталось {{days}} дней — безлимитные транскрипции",
+        "unlimited": "Без ограничений"
+      },
+      "planLabels": {
+        "free": "Бесплатный",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Пробный"
+      },
+      "planTitle": "Тариф",
+      "rollingWeeklyLimit": "Скользящий недельный лимит",
+      "signOut": {
+        "failedDescription": "Произошла ошибка при выходе. Попробуйте ещё раз.",
+        "failedTitle": "Не удалось выйти",
+        "signOut": "Выйти",
+        "signingOut": "Выход..."
+      },
+      "signedIn": "Вы вошли",
+      "title": "Аккаунт",
+      "toasts": {
+        "approachingLimit": {
+          "description": "Вы использовали {{used}} из {{limit}} бесплатных слов на этой неделе. Перейдите на Pro для безлимитного использования.",
+          "title": "Приближение к недельному лимиту"
+        }
+      },
+      "trialCta": {
+        "button": "Создать бесплатный аккаунт",
+        "description": "Безлимитные транскрипции, приоритетная обработка и многое другое.",
+        "title": "Попробуйте Pro бесплатно на 7 дней"
+      },
+      "pricing": {
+        "title": "Тарифы",
+        "billedYearly": "Годовая оплата",
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "навсегда",
+          "features": [
+            "## Oats Cloud",
+            "2 000 слов/неделю транскрипции",
+            "5 часов записи встреч/месяц",
+            "## Всегда бесплатно",
+            "Безлимитные локальные модели ИИ",
+            "Безлимитная облачная транскрипция с вашими ключами API",
+            "Поддержка более 100 языков",
+            "Пользовательский словарь",
+            "Нулевое хранение данных",
+            "Поддержка сообщества"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "monthlyPrice": "$8",
+          "monthlyPeriod": "/мес.",
+          "annualPrice": "$80",
+          "annualPeriod": "/год",
+          "annualEquivalent": "$6.67",
+          "includesPrefix": "Все функции Free +",
+          "features": [
+            "Безлимитная облачная транскрипция",
+            "20 часов записи встреч/месяц",
+            "Синхронизация между устройствами",
+            "Персональный доступ к API",
+            "Интеграция MCP во всех ваших приложениях",
+            "Мобильное приложение (iOS скоро)",
+            "Поддержка по электронной почте"
+          ],
+          "cta": "Начать",
+          "switchToAnnual": "Перейти на годовой"
+        },
+        "business": {
+          "name": "Business",
+          "monthlyPrice": "$20",
+          "monthlyPeriod": "/мес.",
+          "annualPrice": "$200",
+          "annualPeriod": "/год",
+          "annualEquivalent": "$16.67",
+          "includesPrefix": "Все функции Pro +",
+          "badge": "Самый популярный",
+          "features": [
+            "Безлимитные записи встреч",
+            "Режим агента",
+            "Чат с вашими данными",
+            "Приоритетная поддержка"
+          ],
+          "cta": "Начать",
+          "switchToAnnual": "Перейти на годовой"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Индивидуально",
+          "subtitle": "Для расширенной безопасности и поддержки",
+          "includesPrefix": "Все функции Business +",
+          "features": [
+            "Управляемые кредиты API",
+            "Облачная синхронизация между устройствами",
+            "Командные функции и администрирование",
+            "SSO и соответствие требованиям",
+            "Выделенная поддержка"
+          ],
+          "cta": "Связаться с отделом продаж"
+        },
+        "currentPlan": "Текущий тариф",
+        "upgrade": "Улучшить план",
+        "downgrade": "Понизить план",
+        "planSwitched": "План успешно обновлён",
+        "confirmSwitch": {
+          "title": "Подтвердите смену плана",
+          "description": "Перейти на {{plan}} ({{interval}})",
+          "monthly": "ежемесячно",
+          "yearly": "ежегодно",
+          "chargeToday": "Списание сегодня",
+          "accountCredit": "Кредит на счёте",
+          "newPrice": "Новая цена",
+          "nextBilling": "Следующее списание",
+          "mo": "mo",
+          "yr": "yr",
+          "cancel": "Отмена",
+          "confirm": "Подтвердить"
+        }
+      },
+      "signedOutPlans": {
+        "button": "Создать бесплатный аккаунт"
+      },
+      "user": "Пользователь",
+      "wordsRemaining": "Осталось {{remaining}}",
+      "deleteAccount": {
+        "label": "Удалить аккаунт",
+        "labelDescription": "Навсегда удалить ваш аккаунт, все облачные и локальные данные. Это действие нельзя отменить.",
+        "button": "Удалить мой аккаунт",
+        "deleting": "Удаление...",
+        "title": "Удалить ваш аккаунт?",
+        "description": "Это навсегда удалит ваш аккаунт Oats, все синхронизированные облачные заметки и все локальные данные, включая транскрипции, аудиозаписи, загруженные модели, подключения календаря и настройки. Это действие нельзя отменить.",
+        "confirmText": "Удалить всё",
+        "successTitle": "Аккаунт удалён",
+        "successDescription": "Ваш аккаунт и все данные были удалены. Приложение сейчас перезагрузится.",
+        "failedTitle": "Ошибка удаления",
+        "failedDescription": "Что-то пошло не так при удалении вашего аккаунта. Ваши локальные данные могли быть частично удалены. Попробуйте снова."
+      }
+    },
     "agentConfig": {
       "agentName": "Имя агента",
       "description": "Назовите вашего ИИ-помощника, чтобы обращаться к нему во время диктовки",
@@ -1199,10 +1376,101 @@
         }
       }
     },
+    "intelligence": {
+      "gpuDevice": {
+        "title": "GPU для интеллекта",
+        "description": "GPU для локальной обработки ИИ"
+      }
+    },
     "selfHosted": {
       "endpointUrl": "URL эндпоинта",
       "serverUrl": "URL сервера",
       "apiKeyOptional": "API-ключ (необязательно)"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Arbeiten Sie zusammen, teilen Sie Notizen und verwalten Sie die Abrechnung an einem Ort.",
+      "empty": {
+        "title": "Ersten Workspace erstellen",
+        "description": "Workspaces ermöglichen die Zusammenarbeit und das Teilen von Notizen.",
+        "create": "Workspace erstellen"
+      },
+      "tab": {
+        "general": "Allgemein",
+        "members": "Mitglieder",
+        "teams": "Teams",
+        "billing": "Abrechnung",
+        "developer": "Entwickler"
+      },
+      "role": {
+        "owner": "Inhaber",
+        "admin": "Administrator",
+        "member": "Mitglied"
+      },
+      "general": {
+        "nameLabel": "Workspace-Name",
+        "slugLabel": "Slug",
+        "slugHint": "Wird in URLs verwendet. Nur Kleinbuchstaben, Ziffern und Bindestriche.",
+        "saved": "Workspace aktualisiert",
+        "dangerTitle": "Workspace löschen",
+        "dangerDescription": "Alle geteilten Notizen, Ordner und Integrationen werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "delete": "Workspace löschen",
+        "confirmTitle": "{{name}} löschen?",
+        "confirmDescription": "Dies kündigt das Abonnement und entfernt alle Workspace-Daten dauerhaft."
+      },
+      "members": {
+        "title": "Mitglieder",
+        "description": "{{count}} von {{seats}} Plätzen belegt.",
+        "invite": "Einladen",
+        "empty": "Noch keine Mitglieder.",
+        "roleUpdated": "Rolle aktualisiert",
+        "promote": "Zum Administrator machen",
+        "demote": "Zum Mitglied machen",
+        "transferOwnership": "Eigentum übertragen",
+        "remove": "Aus Workspace entfernen"
+      },
+      "invites": {
+        "title": "Ausstehende Einladungen",
+        "resend": "Erneut senden",
+        "revoke": "Widerrufen",
+        "resent": "Einladung erneut gesendet"
+      },
+      "teams": {
+        "title": "Teams",
+        "description": "Mitglieder gruppieren für gezieltes Teilen.",
+        "new": "Neues Team",
+        "empty": "Noch keine Teams.",
+        "createFirst": "Erstellen Sie Ihr erstes Team",
+        "createTitle": "Team erstellen",
+        "nameLabel": "Team-Name",
+        "descriptionLabel": "Beschreibung",
+        "memberCount": "{{count}} Mitglieder"
+      },
+      "billing": {
+        "title": "Abrechnung",
+        "description": "Plan, Plätze und Zahlung.",
+        "plan": "Plan",
+        "seats": "Plätze",
+        "nextInvoice": "Nächste Rechnung",
+        "manageStripe": "In Stripe verwalten",
+        "startSubscription": "Abonnement starten"
+      },
+      "developer": {
+        "title": "API-Schlüssel",
+        "description": "Programmatischer Zugriff auf diesen Workspace.",
+        "empty": "Noch keine API-Schlüssel. Erstellen Sie einen für Integrationen.",
+        "new": "Neuer Schlüssel",
+        "create": "Schlüssel erstellen",
+        "createTitle": "API-Schlüssel erstellen",
+        "createDescription": "Wählen Sie die Berechtigungen. Sie können den Schlüssel jederzeit widerrufen.",
+        "nameLabel": "Schlüsselname",
+        "namePlaceholder": "Produktionsintegration",
+        "revoke": "Schlüssel widerrufen",
+        "lastUsed": "Zuletzt verwendet {{date}}",
+        "neverUsed": "Nie verwendet",
+        "keyCreatedTitle": "API-Schlüssel erstellt",
+        "keyCreatedDescription": "Kopieren Sie diesen Schlüssel jetzt — Sie können ihn nicht erneut sehen."
+      }
     }
   },
   "models": {
@@ -1635,6 +1903,8 @@
       "micOnly": "Только запись с микрофона при личной встрече.",
       "micSilent": "Микрофон уже некоторое время молчит. Проверьте, не выключен ли он и не занят ли другим приложением.",
       "notSaving_one": "Последняя реплика не сохранена. Проверьте место на диске, затем завершите и снова откройте разговор.",
+      "notSaving_few": "Последние {{count}} реплики не сохранены. Проверьте место на диске, затем завершите и снова откройте разговор.",
+      "notSaving_many": "Последние {{count}} реплик не сохранены. Проверьте место на диске, затем завершите и снова откройте разговор.",
       "notSaving_other": "Последние {{count}} реплик не сохранены. Проверьте место на диске, затем завершите и снова откройте разговор.",
       "notTranscribing": "Звук поступает, но уже некоторое время ничего не расшифровывается. Завершите разговор и откройте его снова, чтобы перезапустить расшифровку.",
       "statusRecording": "Идёт запись. Аудио и расшифровки остаются на этом компьютере.",
@@ -1661,6 +1931,10 @@
       "openPrevious": "Открыть тот",
       "noMatches": "Ничего не найдено",
       "onlyRelated": "Этими словами ничего не было сказано. Эти разговоры об одном и том же.",
+      "searchResults_one": "Найден {{count}} разговор",
+      "searchResults_few": "Найдено разговора: {{count}}",
+      "searchResults_many": "Найдено разговоров: {{count}}",
+      "searchResults_other": "Найдено разговоров: {{count}}",
       "match": {
         "transcript": "сказано",
         "summary": "сводка",
@@ -1681,6 +1955,8 @@
       "title": "Что осталось открытым",
       "tally": "задано {{asked}}, отвечено {{answered}}",
       "openThreads_one": "{{count}} тема всё ещё открыта",
+      "openThreads_few": "{{count}} темы всё ещё открыты",
+      "openThreads_many": "{{count}} тем всё ещё открыты",
       "openThreads_other": "{{count}} темы всё ещё открыты"
     },
     "settings": {
@@ -1747,6 +2023,8 @@
   },
   "openThreads": {
     "count_one": "{{count}} открытая линия",
+    "count_few": "{{count}} открытые линии",
+    "count_many": "{{count}} открытых линий",
     "count_other": "{{count}} открытых линий",
     "state": {
       "open": "открыта",
@@ -1756,15 +2034,23 @@
   "topicGraph": {
     "node": "{{label}}, {{seconds}} с",
     "seconds_one": "{{count}} с",
+    "seconds_few": "{{count}} с",
+    "seconds_many": "{{count}} с",
     "seconds_other": "{{count}} с",
     "returned_one": "возврат {{count}}×",
+    "returned_few": "возврат {{count}}×",
+    "returned_many": "возврат {{count}}×",
     "returned_other": "возврат {{count}}×",
     "search": "Искать",
     "noQuestions": "В этой линии нет вопросов."
   },
   "suggestions": {
     "title": "Стоит поднять",
+    "unfinished": "осталось открытым",
+    "shallow": "едва затронуто",
     "adjacent_one": "обычно всплывает",
+    "adjacent_few": "обычно всплывает",
+    "adjacent_many": "обычно всплывает",
     "adjacent_other": "обычно всплывает"
   },
   "lifetime": {
@@ -1773,9 +2059,13 @@
     "backToList": "Назад к разговорам",
     "recurring": "Повторяется:",
     "inCount_one": "{{count}} разговор",
+    "inCount_few": "{{count}} разговора",
+    "inCount_many": "{{count}} разговоров",
     "inCount_other": "{{count}} разговоров",
     "node": "{{label}}, тем: {{count}}",
     "topicCount_one": "{{count}} тема",
+    "topicCount_few": "{{count}} темы",
+    "topicCount_many": "{{count}} тем",
     "topicCount_other": "{{count}} тем",
     "open": "Открыть этот разговор",
     "empty": "Карта появится, когда наберётся {{count}} записанных разговора для связи."

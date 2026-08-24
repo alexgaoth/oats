@@ -5,9 +5,10 @@ let partitionKeys;
 let prefixesOf;
 let stemOf;
 let flattenKeys;
+let dynamicBases;
 
 test.before(async () => {
-  ({ partitionKeys, prefixesOf, stemOf, flattenKeys } =
+  ({ partitionKeys, prefixesOf, stemOf, flattenKeys, dynamicBases } =
     await import("../../src/helpers/localeKeyUsage.mjs"));
 });
 
@@ -66,4 +67,30 @@ test("an empty or missing source makes everything unreachable, not everything al
 test("malformed input does not throw", () => {
   assert.deepEqual(partitionKeys(null, "x"), { reachable: [], unreachable: [] });
   assert.deepEqual(flattenKeys(undefined), []);
+});
+
+// The miss that shipped: `suggestions.unfinished` is reached only through
+// t(`suggestions.${kind}`), its static head is one segment, and the dotted-prefix
+// rule deleted it — so the open-thread stack drew a raw key at anybody whose
+// conversation left a thread unfinished.
+test("a one-segment head of a runtime-built key keeps its namespace alive", () => {
+  const translation = { suggestions: { unfinished: "left open", shallow: "barely touched" } };
+  const source = "t(`suggestions.${suggestion.kind}`)";
+  const { reachable, unreachable } = partitionKeys(translation, source);
+  assert.deepEqual(unreachable, []);
+  assert.equal(reachable.length, 2);
+});
+
+test("a bare word in prose still does not keep a namespace alive", () => {
+  const translation = { suggestions: { unfinished: "x" } };
+  const source = "// we have some suggestions about this";
+  assert.deepEqual(partitionKeys(translation, source).unreachable, ["suggestions.unfinished"]);
+});
+
+test("dynamic bases are the static head before the interpolation", () => {
+  const bases = dynamicBases("t(`a.b.${x}`) t(`c.${y}`) `${z}` `has space.${w}`");
+  assert.ok(bases.has("a.b"));
+  assert.ok(bases.has("c"));
+  assert.ok(!bases.has(""));
+  assert.ok(!bases.has("has space"));
 });

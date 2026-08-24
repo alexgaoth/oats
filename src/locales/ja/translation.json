@@ -685,6 +685,183 @@
     }
   },
   "settingsPage": {
+    "account": {
+      "badges": {
+        "free": "無料",
+        "limitReached": "上限到達",
+        "pastDue": "支払い遅延",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "トライアル"
+      },
+      "billing": {
+        "couldNotOpenDescription": "請求ページを開く際に問題が発生しました。もう一度お試しください。",
+        "couldNotOpenTitle": "請求を開けませんでした",
+        "manageBilling": "請求を管理",
+        "opening": "開いています...",
+        "updatePaymentMethod": "お支払い方法を更新"
+      },
+      "checkout": {
+        "couldNotOpenDescription": "購入ページを開く際に問題が発生しました。もう一度お試しください。",
+        "couldNotOpenTitle": "購入ページを開けませんでした",
+        "opening": "開いています...",
+        "upgradeToPro": "Pro にアップグレード"
+      },
+      "disabled": "無効",
+      "featuresDisabled": "アカウント機能が無効です",
+      "featuresDisabledDescription": ".env ファイルで VITE_AUTH_URL を設定してアカウント機能を有効にしてください。",
+      "notConfigured": "認証が設定されていません",
+      "notSignedIn": "サインインしていません",
+      "notSignedInDescription": "アカウントを作成してプレミアム機能をアンロックしましょう。",
+      "offline": "オフライン",
+      "pastDue": {
+        "description": "現在は無料プランをご利用中です。お支払い方法を更新して Pro に戻しましょう。",
+        "title": "お支払いを処理できませんでした"
+      },
+      "planDescriptions": {
+        "freeUsage": "今週 {{used}} / {{limit}} ワード使用済み",
+        "nextBilling": "次の請求日: {{date}}",
+        "pastDue": "今週 {{used}} / {{limit}} 無料ワード使用済み - お支払い方法を更新して Pro を復元",
+        "trial": "残り {{days}} 日 - 無制限の文字起こし",
+        "unlimited": "無制限"
+      },
+      "planLabels": {
+        "free": "無料",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "トライアル"
+      },
+      "planTitle": "プラン",
+      "pricing": {
+        "title": "プラン",
+        "billedYearly": "年払い",
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "永久",
+          "features": [
+            "## Oats Cloud",
+            "週2,000ワードの文字起こし",
+            "月5時間の会議録音",
+            "## 永久無料",
+            "無制限のローカルAIモデル",
+            "独自のAPIキーで無制限のクラウド文字起こし",
+            "100以上の言語に対応",
+            "カスタム辞書",
+            "データ保持なし",
+            "コミュニティサポート"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "monthlyPrice": "$8",
+          "monthlyPeriod": "/月",
+          "annualPrice": "$80",
+          "annualPeriod": "/年",
+          "annualEquivalent": "$6.67",
+          "includesPrefix": "Free の全機能 +",
+          "features": [
+            "無制限のクラウド文字起こし",
+            "月20時間の会議録音",
+            "デバイス間の同期",
+            "個人APIアクセス",
+            "すべてのアプリでMCP統合",
+            "モバイルアプリ（iOS 近日公開）",
+            "メールサポート"
+          ],
+          "cta": "始める",
+          "switchToAnnual": "年払いに切り替え"
+        },
+        "business": {
+          "name": "Business",
+          "monthlyPrice": "$20",
+          "monthlyPeriod": "/月",
+          "annualPrice": "$200",
+          "annualPeriod": "/年",
+          "annualEquivalent": "$16.67",
+          "includesPrefix": "Pro の全機能 +",
+          "badge": "一番人気",
+          "features": [
+            "無制限の会議録音",
+            "エージェントモード",
+            "データとチャット",
+            "優先サポート"
+          ],
+          "cta": "始める",
+          "switchToAnnual": "年払いに切り替え"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "カスタム",
+          "subtitle": "高度なセキュリティとサポート向け",
+          "includesPrefix": "Business の全機能 +",
+          "features": [
+            "管理されたAPIクレジット",
+            "デバイス間のクラウド同期",
+            "チーム機能と管理",
+            "SSO とコンプライアンス",
+            "専任サポート"
+          ],
+          "cta": "営業に問い合わせる"
+        },
+        "currentPlan": "現在のプラン",
+        "upgrade": "アップグレード",
+        "downgrade": "ダウングレード",
+        "planSwitched": "プランが正常に更新されました",
+        "confirmSwitch": {
+          "title": "プラン変更の確認",
+          "description": "{{plan}}（{{interval}}）に変更",
+          "monthly": "月額",
+          "yearly": "年額",
+          "chargeToday": "本日のご請求",
+          "accountCredit": "アカウントクレジット",
+          "newPrice": "新しい料金",
+          "nextBilling": "次回請求日",
+          "mo": "mo",
+          "yr": "yr",
+          "cancel": "キャンセル",
+          "confirm": "確認"
+        }
+      },
+      "rollingWeeklyLimit": "週間利用上限（ローリング）",
+      "signOut": {
+        "failedDescription": "サインアウト中に問題が発生しました。もう一度お試しください。",
+        "failedTitle": "サインアウトできませんでした",
+        "signOut": "サインアウト",
+        "signingOut": "サインアウト中..."
+      },
+      "signedIn": "サインイン済み",
+      "signedOutPlans": {
+        "button": "無料アカウントを作成"
+      },
+      "title": "アカウント",
+      "toasts": {
+        "approachingLimit": {
+          "description": "今週 {{used}} / {{limit}} 無料ワードを使用しました。Pro にアップグレードして無制限にご利用ください。",
+          "title": "週間利用上限に近づいています"
+        }
+      },
+      "trialCta": {
+        "button": "無料アカウントを作成",
+        "description": "無制限の文字起こし、優先処理など。",
+        "title": "Pro を 7 日間無料でお試し"
+      },
+      "user": "ユーザー",
+      "wordsRemaining": "残り {{remaining}}",
+      "deleteAccount": {
+        "label": "アカウントを削除",
+        "labelDescription": "アカウント、すべてのクラウドデータ、ローカルデータを完全に削除します。この操作は元に戻せません。",
+        "button": "アカウントを削除",
+        "deleting": "削除中...",
+        "title": "アカウントを削除しますか？",
+        "description": "Oats アカウント、すべてのクラウド同期ノート、すべてのローカルデータ（文字起こし、音声録音、ダウンロード済みモデル、カレンダー接続、設定を含む）が完全に削除されます。この操作は元に戻せません。",
+        "confirmText": "すべて削除",
+        "successTitle": "アカウントが削除されました",
+        "successDescription": "アカウントとすべてのデータが削除されました。アプリが再読み込みされます。",
+        "failedTitle": "削除に失敗しました",
+        "failedDescription": "アカウントの削除中にエラーが発生しました。ローカルデータが部分的に削除された可能性があります。もう一度お試しください。"
+      }
+    },
     "agentConfig": {
       "agentName": "エージェント名",
       "description": "ディクテーション中に直接呼びかけられるよう、AI アシスタントに名前を付けましょう",
@@ -1199,10 +1376,101 @@
         }
       }
     },
+    "intelligence": {
+      "gpuDevice": {
+        "title": "インテリジェンスGPU",
+        "description": "ローカルAI処理に使用するGPU"
+      }
+    },
     "selfHosted": {
       "endpointUrl": "エンドポイント URL",
       "serverUrl": "サーバー URL",
       "apiKeyOptional": "API キー（任意）"
+    },
+    "workspace": {
+      "title": "Espacio de trabajo",
+      "description": "Colabora con compañeros, comparte notas y administra la facturación en un solo lugar.",
+      "empty": {
+        "title": "Crea tu primer espacio de trabajo",
+        "description": "Los espacios de trabajo te permiten colaborar con compañeros y compartir notas.",
+        "create": "Crear espacio de trabajo"
+      },
+      "tab": {
+        "general": "General",
+        "members": "Miembros",
+        "teams": "Equipos",
+        "billing": "Facturación",
+        "developer": "Desarrollador"
+      },
+      "role": {
+        "owner": "Propietario",
+        "admin": "Administrador",
+        "member": "Miembro"
+      },
+      "general": {
+        "nameLabel": "Nombre del espacio de trabajo",
+        "slugLabel": "Slug",
+        "slugHint": "Se usa en URLs y enlaces de invitación. Solo letras minúsculas, dígitos y guiones.",
+        "saved": "Espacio de trabajo actualizado",
+        "dangerTitle": "Eliminar espacio de trabajo",
+        "dangerDescription": "Todas las notas, carpetas e integraciones compartidas se eliminarán. Esto no se puede deshacer.",
+        "delete": "Eliminar espacio de trabajo",
+        "confirmTitle": "¿Eliminar {{name}}?",
+        "confirmDescription": "Esto cancela la suscripción y elimina todos los datos del espacio de trabajo permanentemente."
+      },
+      "members": {
+        "title": "Miembros",
+        "description": "{{count}} de {{seats}} asientos utilizados.",
+        "invite": "Invitar",
+        "empty": "Aún no hay miembros.",
+        "roleUpdated": "Rol actualizado",
+        "promote": "Hacer administrador",
+        "demote": "Hacer miembro",
+        "transferOwnership": "Transferir propiedad",
+        "remove": "Quitar del espacio de trabajo"
+      },
+      "invites": {
+        "title": "Invitaciones pendientes",
+        "resend": "Reenviar",
+        "revoke": "Revocar",
+        "resent": "Invitación reenviada"
+      },
+      "teams": {
+        "title": "Equipos",
+        "description": "Agrupa miembros para compartir con alcance limitado.",
+        "new": "Nuevo equipo",
+        "empty": "Aún no hay equipos.",
+        "createFirst": "Crea tu primer equipo",
+        "createTitle": "Crear equipo",
+        "nameLabel": "Nombre del equipo",
+        "descriptionLabel": "Descripción",
+        "memberCount": "{{count}} miembros"
+      },
+      "billing": {
+        "title": "Facturación",
+        "description": "Plan, asientos y pago.",
+        "plan": "Plan",
+        "seats": "Asientos",
+        "nextInvoice": "Próxima factura",
+        "manageStripe": "Administrar en Stripe",
+        "startSubscription": "Iniciar suscripción"
+      },
+      "developer": {
+        "title": "Claves API",
+        "description": "Acceso programático limitado a este espacio de trabajo.",
+        "empty": "Aún no hay claves API. Crea una para integrarte con este espacio de trabajo.",
+        "new": "Nueva clave",
+        "create": "Crear clave",
+        "createTitle": "Crear clave API",
+        "createDescription": "Elige los permisos que necesita esta clave. Puedes revocarla en cualquier momento.",
+        "nameLabel": "Nombre de la clave",
+        "namePlaceholder": "Integración de producción",
+        "revoke": "Revocar clave",
+        "lastUsed": "Último uso {{date}}",
+        "neverUsed": "Nunca utilizada",
+        "keyCreatedTitle": "Clave API creada",
+        "keyCreatedDescription": "Copia esta clave ahora — no podrás verla de nuevo."
+      }
     }
   },
   "models": {
@@ -1661,6 +1929,8 @@
       "openPrevious": "その会話を開く",
       "noMatches": "一致するものがありません",
       "onlyRelated": "その言葉では何も話されていません。これらの会話は同じ主題についてです。",
+      "searchResults_one": "{{count}} 件の会話が一致",
+      "searchResults_other": "{{count}} 件の会話が一致",
       "match": {
         "transcript": "発言",
         "summary": "要約",
@@ -1764,6 +2034,8 @@
   },
   "suggestions": {
     "title": "話す価値のあること",
+    "unfinished": "未決のまま",
+    "shallow": "ほとんど触れず",
     "adjacent_one": "よく一緒に出る",
     "adjacent_other": "よく一緒に出る"
   },

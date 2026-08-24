@@ -685,6 +685,178 @@
     }
   },
   "settingsPage": {
+    "account": {
+      "badges": {
+        "free": "免费版",
+        "limitReached": "已达上限",
+        "pastDue": "逾期未付",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "试用"
+      },
+      "billing": {
+        "couldNotOpenDescription": "打开账单页面时出错，请重试。",
+        "couldNotOpenTitle": "无法打开账单",
+        "manageBilling": "管理账单",
+        "opening": "正在打开...",
+        "updatePaymentMethod": "更新支付方式"
+      },
+      "checkout": {
+        "couldNotOpenDescription": "打开结账页面时出错，请重试。",
+        "couldNotOpenTitle": "无法打开结账页",
+        "opening": "正在打开...",
+        "upgradeToPro": "升级到 Pro"
+      },
+      "disabled": "已禁用",
+      "featuresDisabled": "账户功能已禁用",
+      "featuresDisabledDescription": "在 .env 文件中设置 VITE_AUTH_URL 以启用账户功能。",
+      "notConfigured": "身份验证未配置",
+      "notSignedIn": "未登录",
+      "notSignedInDescription": "创建账户以解锁高级功能。",
+      "offline": "离线",
+      "pastDue": {
+        "description": "你目前使用的是免费版。更新支付方式即可恢复 Pro 版。",
+        "title": "我们无法处理你的付款"
+      },
+      "planDescriptions": {
+        "freeUsage": "本周已使用 {{used}} / {{limit}} 个词",
+        "nextBilling": "下次扣费：{{date}}",
+        "pastDue": "本周 {{used}} / {{limit}} 免费词数——更新支付方式以恢复 Pro",
+        "trial": "剩余 {{days}} 天——无限转录",
+        "unlimited": "无限制"
+      },
+      "planLabels": {
+        "free": "免费版",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "试用"
+      },
+      "planTitle": "套餐",
+      "rollingWeeklyLimit": "滚动周限额",
+      "signOut": {
+        "failedDescription": "退出登录时出错，请重试。",
+        "failedTitle": "无法退出登录",
+        "signOut": "退出登录",
+        "signingOut": "正在退出..."
+      },
+      "signedIn": "已登录",
+      "title": "账户",
+      "toasts": {
+        "approachingLimit": {
+          "description": "本周已使用 {{used}} / {{limit}} 个免费词数。升级到 Pro 可享受无限使用。",
+          "title": "即将达到周限额"
+        }
+      },
+      "trialCta": {
+        "button": "免费创建账户",
+        "description": "无限转录、优先处理等更多功能。",
+        "title": "免费试用 Pro 版 7 天"
+      },
+      "pricing": {
+        "title": "套餐",
+        "billedYearly": "按年计费",
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "永久",
+          "features": [
+            "## Oats Cloud",
+            "每周 2,000 字转录",
+            "每月 5 小时会议录制",
+            "## 永久免费",
+            "无限本地 AI 模型",
+            "使用自己的 API 密钥无限云端转录",
+            "支持 100+ 种语言",
+            "自定义词典",
+            "零数据留存",
+            "社区支持"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "monthlyPrice": "$8",
+          "monthlyPeriod": "/月",
+          "annualPrice": "$80",
+          "annualPeriod": "/年",
+          "annualEquivalent": "$6.67",
+          "includesPrefix": "所有 Free 功能 +",
+          "features": [
+            "无限云端转录",
+            "每月 20 小时会议录制",
+            "跨设备同步",
+            "个人 API 访问",
+            "在所有应用中集成 MCP",
+            "移动应用（iOS 即将推出）",
+            "邮件支持"
+          ],
+          "cta": "开始使用",
+          "switchToAnnual": "切换为年付"
+        },
+        "business": {
+          "name": "Business",
+          "monthlyPrice": "$20",
+          "monthlyPeriod": "/月",
+          "annualPrice": "$200",
+          "annualPeriod": "/年",
+          "annualEquivalent": "$16.67",
+          "includesPrefix": "所有 Pro 功能 +",
+          "badge": "最受欢迎",
+          "features": ["无限会议录制", "代理模式", "与您的数据对话", "优先支持"],
+          "cta": "开始使用",
+          "switchToAnnual": "切换为年付"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "自定义",
+          "subtitle": "提供高级安全保障与支持",
+          "includesPrefix": "所有 Business 功能 +",
+          "features": [
+            "托管 API 额度",
+            "跨设备云端同步",
+            "团队功能与管理",
+            "SSO 与合规",
+            "专属支持"
+          ],
+          "cta": "联系销售"
+        },
+        "currentPlan": "当前套餐",
+        "upgrade": "升级",
+        "downgrade": "降级",
+        "planSwitched": "套餐已成功更新",
+        "confirmSwitch": {
+          "title": "确认更换套餐",
+          "description": "切换至 {{plan}}（{{interval}}）",
+          "monthly": "月付",
+          "yearly": "年付",
+          "chargeToday": "今日收费",
+          "accountCredit": "账户余额",
+          "newPrice": "新价格",
+          "nextBilling": "下次计费",
+          "mo": "mo",
+          "yr": "yr",
+          "cancel": "取消",
+          "confirm": "确认"
+        }
+      },
+      "signedOutPlans": {
+        "button": "免费创建账户"
+      },
+      "user": "用户",
+      "wordsRemaining": "剩余 {{remaining}} 个词",
+      "deleteAccount": {
+        "label": "删除账户",
+        "labelDescription": "永久删除您的账户、所有云端数据和本地数据。此操作无法撤销。",
+        "button": "删除我的账户",
+        "deleting": "正在删除...",
+        "title": "删除您的账户？",
+        "description": "这将永久删除您的 Oats 账户、所有云端同步笔记和所有本地数据，包括转录、音频录制、下载的模型、日历连接和设置。此操作无法撤销。",
+        "confirmText": "删除所有内容",
+        "successTitle": "账户已删除",
+        "successDescription": "您的账户和所有数据已被删除。应用将立即重新加载。",
+        "failedTitle": "删除失败",
+        "failedDescription": "删除您的账户时出错。您的本地数据可能已被部分删除。请重试。"
+      }
+    },
     "agentConfig": {
       "agentName": "助手名称",
       "description": "为你的 AI 助手取个名字，这样你就能在听写时直接呼唤它",
@@ -1199,10 +1371,101 @@
         }
       }
     },
+    "intelligence": {
+      "gpuDevice": {
+        "title": "智能处理 GPU",
+        "description": "用于本地 AI 处理的 GPU"
+      }
+    },
     "selfHosted": {
       "endpointUrl": "端点 URL",
       "serverUrl": "服务器 URL",
       "apiKeyOptional": "API Key（可选）"
+    },
+    "workspace": {
+      "title": "Espacio de trabajo",
+      "description": "Colabora con compañeros, comparte notas y administra la facturación en un solo lugar.",
+      "empty": {
+        "title": "Crea tu primer espacio de trabajo",
+        "description": "Los espacios de trabajo te permiten colaborar con compañeros y compartir notas.",
+        "create": "Crear espacio de trabajo"
+      },
+      "tab": {
+        "general": "General",
+        "members": "Miembros",
+        "teams": "Equipos",
+        "billing": "Facturación",
+        "developer": "Desarrollador"
+      },
+      "role": {
+        "owner": "Propietario",
+        "admin": "Administrador",
+        "member": "Miembro"
+      },
+      "general": {
+        "nameLabel": "Nombre del espacio de trabajo",
+        "slugLabel": "Slug",
+        "slugHint": "Se usa en URLs y enlaces de invitación. Solo letras minúsculas, dígitos y guiones.",
+        "saved": "Espacio de trabajo actualizado",
+        "dangerTitle": "Eliminar espacio de trabajo",
+        "dangerDescription": "Todas las notas, carpetas e integraciones compartidas se eliminarán. Esto no se puede deshacer.",
+        "delete": "Eliminar espacio de trabajo",
+        "confirmTitle": "¿Eliminar {{name}}?",
+        "confirmDescription": "Esto cancela la suscripción y elimina todos los datos del espacio de trabajo permanentemente."
+      },
+      "members": {
+        "title": "Miembros",
+        "description": "{{count}} de {{seats}} asientos utilizados.",
+        "invite": "Invitar",
+        "empty": "Aún no hay miembros.",
+        "roleUpdated": "Rol actualizado",
+        "promote": "Hacer administrador",
+        "demote": "Hacer miembro",
+        "transferOwnership": "Transferir propiedad",
+        "remove": "Quitar del espacio de trabajo"
+      },
+      "invites": {
+        "title": "Invitaciones pendientes",
+        "resend": "Reenviar",
+        "revoke": "Revocar",
+        "resent": "Invitación reenviada"
+      },
+      "teams": {
+        "title": "Equipos",
+        "description": "Agrupa miembros para compartir con alcance limitado.",
+        "new": "Nuevo equipo",
+        "empty": "Aún no hay equipos.",
+        "createFirst": "Crea tu primer equipo",
+        "createTitle": "Crear equipo",
+        "nameLabel": "Nombre del equipo",
+        "descriptionLabel": "Descripción",
+        "memberCount": "{{count}} miembros"
+      },
+      "billing": {
+        "title": "Facturación",
+        "description": "Plan, asientos y pago.",
+        "plan": "Plan",
+        "seats": "Asientos",
+        "nextInvoice": "Próxima factura",
+        "manageStripe": "Administrar en Stripe",
+        "startSubscription": "Iniciar suscripción"
+      },
+      "developer": {
+        "title": "Claves API",
+        "description": "Acceso programático limitado a este espacio de trabajo.",
+        "empty": "Aún no hay claves API. Crea una para integrarte con este espacio de trabajo.",
+        "new": "Nueva clave",
+        "create": "Crear clave",
+        "createTitle": "Crear clave API",
+        "createDescription": "Elige los permisos que necesita esta clave. Puedes revocarla en cualquier momento.",
+        "nameLabel": "Nombre de la clave",
+        "namePlaceholder": "Integración de producción",
+        "revoke": "Revocar clave",
+        "lastUsed": "Último uso {{date}}",
+        "neverUsed": "Nunca utilizada",
+        "keyCreatedTitle": "Clave API creada",
+        "keyCreatedDescription": "Copia esta clave ahora — no podrás verla de nuevo."
+      }
     }
   },
   "models": {
@@ -1661,6 +1924,8 @@
       "openPrevious": "打开那一场",
       "noMatches": "没有匹配项",
       "onlyRelated": "没有人这样说过。以下对话谈的是同一个主题。",
+      "searchResults_one": "{{count}} 个对话匹配",
+      "searchResults_other": "{{count}} 个对话匹配",
       "match": {
         "transcript": "说过",
         "summary": "摘要",
@@ -1764,6 +2029,8 @@
   },
   "suggestions": {
     "title": "值得提起",
+    "unfinished": "尚未收尾",
+    "shallow": "几乎未展开",
     "adjacent_one": "常常一起出现",
     "adjacent_other": "常常一起出现"
   },

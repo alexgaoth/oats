@@ -18,6 +18,28 @@
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 
+/**
+ * The static head of every runtime-built key, e.g. `suggestions` from
+ * `` t(`suggestions.${suggestion.kind}`) ``.
+ *
+ * Requiring a *dotted* prefix was not enough, and the miss was expensive:
+ * `suggestions.unfinished` and `suggestions.shallow` are only ever reached
+ * through that template, their static head is one segment, and the rule deleted
+ * both — so an open-thread stack drew the raw key `suggestions.unfinished` at
+ * anybody whose conversation left a thread unfinished. The dot requirement
+ * exists to stop a bare word in prose keeping a whole namespace alive; a head
+ * that is literally followed by `.${` in a template is not prose.
+ */
+export function dynamicBases(source) {
+  const bases = new Set();
+  for (const match of String(source ?? "").matchAll(/`([^`\n]*?)\$\{/g)) {
+    const head = match[1].replace(/\.$/, "").trim();
+    // `${foo}` with no static head, and heads with spaces, are not key prefixes.
+    if (head && !/\s/.test(head)) bases.add(head);
+  }
+  return bases;
+}
+
 /** Every dotted prefix of a key, longest first. */
 export function prefixesOf(key) {
   const parts = String(key || "").split(".");
@@ -64,11 +86,16 @@ export function partitionKeys(translation, source) {
     return verdict.get(candidate);
   };
 
+  const bases = dynamicBases(haystack);
   for (const key of flattenKeys(translation)) {
     const stem = stemOf(key);
-    // A one-segment key like "common" is a namespace, not something the code
-    // writes on its own; requiring a dotted prefix would keep every key alive.
-    const hit = prefixesOf(stem).some((prefix) => prefix.includes(".") && isPresent(prefix));
+    const hit = prefixesOf(stem).some(
+      // A one-segment key like "common" is a namespace, not something the code
+      // writes on its own, so a bare word in prose must not keep a whole
+      // namespace alive — unless it is the head of a runtime-built key, which
+      // is not prose.
+      (prefix) => bases.has(prefix) || (prefix.includes(".") && isPresent(prefix))
+    );
     (hit ? reachable : unreachable).push(key);
   }
   return { reachable, unreachable };

@@ -685,6 +685,183 @@
     }
   },
   "settingsPage": {
+    "account": {
+      "badges": {
+        "free": "Kostenlos",
+        "limitReached": "Limit erreicht",
+        "pastDue": "Überfällig",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Testversion"
+      },
+      "billing": {
+        "couldNotOpenDescription": "Die Abrechnungsseite konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+        "couldNotOpenTitle": "Abrechnung konnte nicht geöffnet werden",
+        "manageBilling": "Abrechnung verwalten",
+        "opening": "Wird geöffnet...",
+        "updatePaymentMethod": "Zahlungsmethode aktualisieren"
+      },
+      "checkout": {
+        "couldNotOpenDescription": "Die Checkout-Seite konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+        "couldNotOpenTitle": "Checkout konnte nicht geöffnet werden",
+        "opening": "Wird geöffnet...",
+        "upgradeToPro": "Auf Pro upgraden"
+      },
+      "disabled": "Deaktiviert",
+      "featuresDisabled": "Kontofunktionen deaktiviert",
+      "featuresDisabledDescription": "Setzen Sie VITE_AUTH_URL in Ihrer .env-Datei, um Kontofunktionen zu aktivieren.",
+      "notConfigured": "Authentifizierung ist nicht konfiguriert",
+      "notSignedIn": "Nicht angemeldet",
+      "notSignedInDescription": "Erstellen Sie ein Konto, um Premium-Funktionen freizuschalten.",
+      "offline": "Offline",
+      "pastDue": {
+        "description": "Sie sind vorerst im kostenlosen Tarif. Aktualisieren Sie Ihre Zahlungsmethode, um wieder Pro zu erhalten.",
+        "title": "Ihre Zahlung konnte nicht verarbeitet werden"
+      },
+      "planDescriptions": {
+        "freeUsage": "{{used}} / {{limit}} Wörter diese Woche",
+        "nextBilling": "Nächste Abrechnung: {{date}}",
+        "pastDue": "{{used}} / {{limit}} kostenlose Wörter diese Woche – Zahlung aktualisieren, um Pro wiederherzustellen",
+        "trial": "Noch {{days}} Tage – unbegrenzte Transkriptionen",
+        "unlimited": "Unbegrenzt"
+      },
+      "planLabels": {
+        "free": "Kostenlos",
+        "pro": "Pro",
+        "business": "Business",
+        "trial": "Testversion"
+      },
+      "planTitle": "Tarif",
+      "pricing": {
+        "title": "Tarife",
+        "billedYearly": "Jährliche Abrechnung",
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "für immer",
+          "features": [
+            "## Oats Cloud",
+            "2.000 Wörter/Woche Transkription",
+            "5 Stunden Meeting-Aufnahmen/Monat",
+            "## Immer kostenlos",
+            "Unbegrenzte lokale KI-Modelle",
+            "Unbegrenzte Cloud-Transkription mit eigenen API-Schlüsseln",
+            "Über 100 Sprachen unterstützt",
+            "Benutzerdefiniertes Wörterbuch",
+            "Keine Datenspeicherung",
+            "Community-Support"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "monthlyPrice": "$8",
+          "monthlyPeriod": "/Monat",
+          "annualPrice": "$80",
+          "annualPeriod": "/Jahr",
+          "annualEquivalent": "$6.67",
+          "includesPrefix": "Alle Free-Funktionen +",
+          "features": [
+            "Unbegrenzte Cloud-Transkription",
+            "20 Stunden Meeting-Aufnahmen/Monat",
+            "Geräteübergreifende Synchronisierung",
+            "Persönlicher API-Zugang",
+            "MCP-Integration in all deinen Apps",
+            "Mobile App (iOS demnächst verfügbar)",
+            "E-Mail-Support"
+          ],
+          "cta": "Jetzt starten",
+          "switchToAnnual": "Zum Jahresabo wechseln"
+        },
+        "business": {
+          "name": "Business",
+          "monthlyPrice": "$20",
+          "monthlyPeriod": "/Monat",
+          "annualPrice": "$200",
+          "annualPeriod": "/Jahr",
+          "annualEquivalent": "$16.67",
+          "includesPrefix": "Alle Pro-Funktionen +",
+          "badge": "Beliebteste Wahl",
+          "features": [
+            "Unbegrenzte Meeting-Aufnahmen",
+            "Agentenmodus",
+            "Chat über Ihre Daten",
+            "Prioritäts-Support"
+          ],
+          "cta": "Jetzt starten",
+          "switchToAnnual": "Zum Jahresabo wechseln"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Individuell",
+          "subtitle": "Für erweiterte Sicherheit & Support",
+          "includesPrefix": "Alle Business-Funktionen +",
+          "features": [
+            "Verwaltete API-Guthaben",
+            "Cloud-Synchronisierung über Geräte hinweg",
+            "Team-Funktionen & Verwaltung",
+            "SSO & Compliance",
+            "Dedizierter Support"
+          ],
+          "cta": "Vertrieb kontaktieren"
+        },
+        "currentPlan": "Aktueller Tarif",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade",
+        "planSwitched": "Plan erfolgreich aktualisiert",
+        "confirmSwitch": {
+          "title": "Planwechsel bestätigen",
+          "description": "Zu {{plan}} ({{interval}}) wechseln",
+          "monthly": "monatlich",
+          "yearly": "jährlich",
+          "chargeToday": "Heutige Belastung",
+          "accountCredit": "Kontoguthaben",
+          "newPrice": "Neuer Preis",
+          "nextBilling": "Nächste Abrechnung",
+          "mo": "mo",
+          "yr": "yr",
+          "cancel": "Abbrechen",
+          "confirm": "Bestätigen"
+        }
+      },
+      "rollingWeeklyLimit": "Rollierendes Wochenlimit",
+      "signOut": {
+        "failedDescription": "Beim Abmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+        "failedTitle": "Abmeldung fehlgeschlagen",
+        "signOut": "Abmelden",
+        "signingOut": "Abmeldung läuft..."
+      },
+      "signedIn": "Angemeldet",
+      "signedOutPlans": {
+        "button": "Kostenloses Konto erstellen"
+      },
+      "title": "Konto",
+      "toasts": {
+        "approachingLimit": {
+          "description": "Sie haben diese Woche {{used}} von {{limit}} kostenlosen Wörtern verwendet. Upgraden Sie auf Pro für unbegrenzte Nutzung.",
+          "title": "Wochenlimit fast erreicht"
+        }
+      },
+      "trialCta": {
+        "button": "Kostenloses Konto erstellen",
+        "description": "Unbegrenzte Transkriptionen, bevorzugte Verarbeitung und mehr.",
+        "title": "Pro 7 Tage kostenlos testen"
+      },
+      "user": "Benutzer",
+      "wordsRemaining": "{{remaining}} verbleibend",
+      "deleteAccount": {
+        "label": "Konto löschen",
+        "labelDescription": "Konto, alle Cloud-Daten und lokale Daten dauerhaft löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "button": "Mein Konto löschen",
+        "deleting": "Wird gelöscht...",
+        "title": "Konto löschen?",
+        "description": "Dies löscht dauerhaft Ihr Oats-Konto, alle in der Cloud synchronisierten Notizen und alle lokalen Daten, einschließlich Transkriptionen, Audioaufnahmen, heruntergeladene Modelle, Kalenderverbindungen und Einstellungen. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "confirmText": "Alles löschen",
+        "successTitle": "Konto gelöscht",
+        "successDescription": "Ihr Konto und alle Daten wurden gelöscht. Die App wird jetzt neu geladen.",
+        "failedTitle": "Löschung fehlgeschlagen",
+        "failedDescription": "Beim Löschen Ihres Kontos ist ein Fehler aufgetreten. Ihre lokalen Daten wurden möglicherweise teilweise entfernt. Bitte versuchen Sie es erneut."
+      }
+    },
     "agentConfig": {
       "agentName": "Agent-Name",
       "description": "Benennen Sie Ihren KI-Assistenten, damit Sie ihn beim Diktieren direkt ansprechen können",
@@ -1199,10 +1376,101 @@
         }
       }
     },
+    "intelligence": {
+      "gpuDevice": {
+        "title": "Intelligenz-GPU",
+        "description": "GPU für lokale KI-Verarbeitung"
+      }
+    },
     "selfHosted": {
       "endpointUrl": "Endpunkt-URL",
       "serverUrl": "Server-URL",
       "apiKeyOptional": "API-Schlüssel (optional)"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Arbeiten Sie zusammen, teilen Sie Notizen und verwalten Sie die Abrechnung an einem Ort.",
+      "empty": {
+        "title": "Ersten Workspace erstellen",
+        "description": "Workspaces ermöglichen die Zusammenarbeit und das Teilen von Notizen.",
+        "create": "Workspace erstellen"
+      },
+      "tab": {
+        "general": "Allgemein",
+        "members": "Mitglieder",
+        "teams": "Teams",
+        "billing": "Abrechnung",
+        "developer": "Entwickler"
+      },
+      "role": {
+        "owner": "Inhaber",
+        "admin": "Administrator",
+        "member": "Mitglied"
+      },
+      "general": {
+        "nameLabel": "Workspace-Name",
+        "slugLabel": "Slug",
+        "slugHint": "Wird in URLs verwendet. Nur Kleinbuchstaben, Ziffern und Bindestriche.",
+        "saved": "Workspace aktualisiert",
+        "dangerTitle": "Workspace löschen",
+        "dangerDescription": "Alle geteilten Notizen, Ordner und Integrationen werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "delete": "Workspace löschen",
+        "confirmTitle": "{{name}} löschen?",
+        "confirmDescription": "Dies kündigt das Abonnement und entfernt alle Workspace-Daten dauerhaft."
+      },
+      "members": {
+        "title": "Mitglieder",
+        "description": "{{count}} von {{seats}} Plätzen belegt.",
+        "invite": "Einladen",
+        "empty": "Noch keine Mitglieder.",
+        "roleUpdated": "Rolle aktualisiert",
+        "promote": "Zum Administrator machen",
+        "demote": "Zum Mitglied machen",
+        "transferOwnership": "Eigentum übertragen",
+        "remove": "Aus Workspace entfernen"
+      },
+      "invites": {
+        "title": "Ausstehende Einladungen",
+        "resend": "Erneut senden",
+        "revoke": "Widerrufen",
+        "resent": "Einladung erneut gesendet"
+      },
+      "teams": {
+        "title": "Teams",
+        "description": "Mitglieder gruppieren für gezieltes Teilen.",
+        "new": "Neues Team",
+        "empty": "Noch keine Teams.",
+        "createFirst": "Erstellen Sie Ihr erstes Team",
+        "createTitle": "Team erstellen",
+        "nameLabel": "Team-Name",
+        "descriptionLabel": "Beschreibung",
+        "memberCount": "{{count}} Mitglieder"
+      },
+      "billing": {
+        "title": "Abrechnung",
+        "description": "Plan, Plätze und Zahlung.",
+        "plan": "Plan",
+        "seats": "Plätze",
+        "nextInvoice": "Nächste Rechnung",
+        "manageStripe": "In Stripe verwalten",
+        "startSubscription": "Abonnement starten"
+      },
+      "developer": {
+        "title": "API-Schlüssel",
+        "description": "Programmatischer Zugriff auf diesen Workspace.",
+        "empty": "Noch keine API-Schlüssel. Erstellen Sie einen für Integrationen.",
+        "new": "Neuer Schlüssel",
+        "create": "Schlüssel erstellen",
+        "createTitle": "API-Schlüssel erstellen",
+        "createDescription": "Wählen Sie die Berechtigungen. Sie können den Schlüssel jederzeit widerrufen.",
+        "nameLabel": "Schlüsselname",
+        "namePlaceholder": "Produktionsintegration",
+        "revoke": "Schlüssel widerrufen",
+        "lastUsed": "Zuletzt verwendet {{date}}",
+        "neverUsed": "Nie verwendet",
+        "keyCreatedTitle": "API-Schlüssel erstellt",
+        "keyCreatedDescription": "Kopieren Sie diesen Schlüssel jetzt — Sie können ihn nicht erneut sehen."
+      }
     }
   },
   "models": {
@@ -1661,6 +1929,8 @@
       "openPrevious": "Das öffnen",
       "noMatches": "Nichts gefunden",
       "onlyRelated": "Mit diesen Worten wurde nichts gesagt. Diese Gespräche handeln vom selben Thema.",
+      "searchResults_one": "{{count}} Gespräch passt",
+      "searchResults_other": "{{count}} Gespräche passen",
       "match": {
         "transcript": "gesagt",
         "summary": "Zusammenfassung",
@@ -1764,6 +2034,8 @@
   },
   "suggestions": {
     "title": "Wert anzusprechen",
+    "unfinished": "offen geblieben",
+    "shallow": "kaum berührt",
     "adjacent_one": "kommt meist auf",
     "adjacent_other": "kommt meist auf"
   },
