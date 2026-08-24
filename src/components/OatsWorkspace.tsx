@@ -1506,11 +1506,21 @@ function IntelligenceViews({
             a screen-reader user typed and had to tab into the list to find out
             whether anything matched. */}
         <p aria-live="polite" role="status" className="sr-only">
+          {/* The same three-way split the markup below computes.
+          
+              It used to fall to `onlyRelated` whenever the literal filter was
+              empty — including when there were no results at all — so a
+              screen-reader user searching for something Oats has never heard was
+              told "these conversations are about the same subject" while the
+              screen said "Nothing matches that". §9.0 binds assistive output to
+              be the same surface, not a lesser one. */}
           {!query
             ? ""
             : literalNotes.length
               ? t("oats.intelligence.searchResults", { count: visibleNotes.length })
-              : t("oats.intelligence.onlyRelated")}
+              : recalled.length
+                ? t("oats.intelligence.onlyRelated")
+                : t("oats.intelligence.noMatches")}
         </p>
 
         {/* Nothing was said in those words.
@@ -1568,7 +1578,14 @@ function IntelligenceViews({
                     summary of a different part of the conversation. An evidence
                     tool has to show you the thing you searched for, and say
                     whether it was *said* or *inferred*. */}
-                <RecallExcerpt note={note} query={query} related={related} />
+                <RecallExcerpt
+                  note={note}
+                  query={query}
+                  // The per-row chip earns its place in a *mixed* list. Under a
+                  // line that has just said all of these are the index's guess,
+                  // it is the same statement once per row (§1).
+                  related={related && literalNotes.length > 0}
+                />
                 {/* Its own shape, in the margin of the list. Two conversations
                     of the same length and the same title still look different
                     here, because this is drawn from what was said in them. */}

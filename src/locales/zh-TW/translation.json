@@ -1923,7 +1923,7 @@
       "carriedOver": "上次未收尾的：",
       "openPrevious": "開啟那一場",
       "noMatches": "沒有相符項目",
-      "onlyRelated": "沒有人這樣說過。以下對話談的是同一個主題。",
+      "onlyRelated": "沒有人這樣說過。以下對話可能談的是同一個主題。",
       "searchResults_one": "{{count}} 個對話符合",
       "searchResults_other": "{{count}} 個對話符合",
       "match": {
@@ -1986,8 +1986,8 @@
     "preflight": {
       "no-microphone": "找不到麥克風。請接上一個後再按一次。",
       "microphone-permission": "Oats 需要麥克風權限。請在系統設定中授予。",
-      "no-speech-engine": "本機語音引擎尚未安裝 — 請查看設定。",
-      "no-model": "尚未下載語音模型 — 請查看設定。",
+      "no-speech-engine": "本機語音引擎缺失。重新安裝 Oats 即可復原。",
+      "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
       "question-cards-off": "問題卡片已關閉——提問將不會被捕捉。請查看設定。"
     }

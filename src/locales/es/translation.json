@@ -1928,7 +1928,7 @@
       "carriedOver": "Quedó abierto la última vez:",
       "openPrevious": "Abrir aquella",
       "noMatches": "Nada coincide",
-      "onlyRelated": "Nada se dijo con esas palabras. Estas conversaciones tratan del mismo tema.",
+      "onlyRelated": "Nada se dijo con esas palabras. Estas conversaciones podrían tratar del mismo tema.",
       "searchResults_one": "{{count}} conversación coincide",
       "searchResults_other": "{{count}} conversaciones coinciden",
       "match": {
@@ -1991,8 +1991,8 @@
     "preflight": {
       "no-microphone": "No se ha encontrado ningún micrófono. Conecta uno y vuelve a pulsar.",
       "microphone-permission": "Oats necesita permiso para usar el micrófono. Concédelo en los ajustes del sistema.",
-      "no-speech-engine": "El motor de voz local aún no está instalado: revisa Ajustes.",
-      "no-model": "Todavía no se ha descargado ningún modelo de voz: revisa Ajustes.",
+      "no-speech-engine": "Falta el motor de voz local. Reinstalar Oats lo restaura.",
+      "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
       "question-cards-off": "Las tarjetas de preguntas están desactivadas: las preguntas pasarán en silencio. Ver Ajustes."
     }

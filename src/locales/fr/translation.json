@@ -1928,7 +1928,7 @@
       "carriedOver": "Resté ouvert la dernière fois :",
       "openPrevious": "Ouvrir celle-là",
       "noMatches": "Aucun résultat",
-      "onlyRelated": "Rien n'a été dit avec ces mots. Ces conversations portent sur le même sujet.",
+      "onlyRelated": "Rien n'a été dit avec ces mots. Ces conversations portent peut-être sur le même sujet.",
       "searchResults_one": "{{count}} conversation correspond",
       "searchResults_other": "{{count}} conversations correspondent",
       "match": {
@@ -1991,8 +1991,8 @@
     "preflight": {
       "no-microphone": "Aucun microphone détecté. Branchez-en un, puis appuyez à nouveau.",
       "microphone-permission": "Oats a besoin de l'autorisation d'utiliser le microphone. Accordez-la dans les réglages du système.",
-      "no-speech-engine": "Le moteur vocal local n'est pas encore installé — voir les Réglages.",
-      "no-model": "Aucun modèle vocal n'a encore été téléchargé — voir les Réglages.",
+      "no-speech-engine": "Le moteur vocal local est absent. Réinstaller Oats le rétablit.",
+      "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
       "question-cards-off": "Les cartes de questions sont désactivées — les questions passeront en silence. Voir Réglages."
     }

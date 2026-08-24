@@ -599,6 +599,46 @@ divergence in upstream `audioManager.js`. The pre-Oats build feels different
 because it defaults `useLocalWhisper` to **false** and transcribes in the cloud;
 Oats keeps local on purpose, and local is now much closer.
 
+## Backlog close-out (2026-08-24)
+
+`.iterate/20260824-close-the-backlog/`. Five items, plus two defects the loop
+turned up that nobody had logged.
+
+- **Dead locale keys removed.** 2,296 → 1,435 per locale (ru 1,453: Russian's
+  CLDR `_few`/`_many` are kept, and pruning them away was one of the two blockers
+  this loop caught). Reachability is prefix-aware _and_ template-aware —
+  ``t(`suggestions.${kind}`)`` anchors a namespace whose head is one segment,
+  which a dotted-prefix rule cannot see. `scripts/prune-locale-keys.js`,
+  `helpers/localeKeyUsage.mjs`, 12 pins.
+- **`scripts/check-missing-keys.js` is part of `i18n:check`.** It asks i18next
+  itself with `fallbackLng: false` — every literal `t()`, every runtime-built key
+  expanded over the values the code produces, every `descriptionKey` the model
+  registry names in JSON. `check-i18n.js` only compares locales against each
+  other and is blind to a key missing from all ten; this found four, including
+  `oats.intelligence.searchResults`, which the `aria-live` region had been
+  announcing as a literal key string.
+- **The gate ran a sixth of the suite.** `test:oats:core` was a hand-kept list of
+  15 files; 79 helper tests and all of `test/utils` never ran. It is a glob now:
+  **775 + 16 tests, 0 failures**, up from ~110.
+- **`pactl` orphan.** The backlog's stated cause — inherited file descriptors —
+  is false, measured by socket inodes in `/proc/<pid>/fd`; `detached` changes
+  neither inheritance nor survival of `kill -9`. It is an orphan, and it is
+  registered with `sidecarPidFile` / `sidecarReaper` now.
+- **Model readiness before recording** was already implemented; the note was
+  stale. Verified by driving the app in four states.
+- **`related` results** stay when nothing literal matched — that is the case they
+  exist for — and the announcement now uses the same three-way split as the
+  markup instead of telling a screen-reader user about conversations that do not
+  exist.
+
+**Still open — `--device` is ported but nothing sets it.** `buildWhisperServerArgs`
+takes `gpuDeviceIndex` and is pinned both ways, but no caller supplies one: the
+Settings GPU picker stores a **UUID** that becomes `CUDA_VISIBLE_DEVICES`. Wiring
+it needs a Vulkan device enumeration mapped to ggml's _logical_ indices, which
+diverge from physical ones whenever a device is filtered out — and it cannot be
+verified on a machine with no GPU backend, which is what this work ran on.
+Shipping an unverifiable GPU path is worse than shipping none.
+
 ## Verification gates
 
 Still requiring a real GUI session and realistic speech:
