@@ -109,42 +109,16 @@
     "accessibility": "La configuración de accesibilidad no está disponible en esta plataforma.",
     "systemAudio": "La configuración de audio del sistema no está disponible en esta plataforma."
   },
-  "upgradePrompt": {
-    "paymentFailed": "No pudimos procesar tu pago",
-    "weeklyLimit": "Has alcanzado tu límite semanal",
-    "pastDueDescription": "Estás en el plan gratuito por ahora, pero no te preocupes: aún tienes {{limit}} palabras por semana.\nActualiza tu método de pago para volver a Pro ilimitado.",
-    "limitDescription": "{{used}} de {{limit}} palabras usadas.\nTu transcripción fue guardada y pegada.",
-    "updatePayment": "Actualizar método de pago",
-    "updatePaymentDescription": "Vuelve a las transcripciones Pro ilimitadas.",
-    "upgradeToPro": "Mejorar a Pro",
-    "upgradeDescription": "Transcripciones ilimitadas desde solo $8/mes.",
-    "useApiKey": "Usa tu propia clave API",
-    "useApiKeyDescription": "Trae tu propia clave para uso ilimitado.",
-    "switchToLocal": "Cambiar a local",
-    "switchToLocalDescription": "Transcripción sin conexión. Sin límites.",
-    "rollingWeeklyLimit": "Límite semanal móvil"
-  },
-  "windowControls": {
-    "minimize": "Minimizar",
-    "maximize": "Maximizar",
-    "restore": "Restaurar",
-    "close": "Cerrar"
-  },
   "windows": {
     "pttUnavailable": "El módulo nativo de Push-to-Talk no está disponible"
   },
   "common": {
-    "retry": "Reintentar",
-    "back": "Atrás",
-    "next": "Siguiente",
-    "complete": "Completar",
     "reset": "Restablecer",
     "refresh": "Actualizar",
     "download": "Descargar",
     "cancel": "Cancelar",
     "recommended": "Recomendado",
     "active": "Activo",
-    "freeAccountRequired": "Cuenta gratuita requerida",
     "cloud": "Nube",
     "local": "Local",
     "apiKey": "Clave API",
@@ -152,25 +126,12 @@
     "loading": "Cargando...",
     "unknown": "Desconocido",
     "availableModels": "Modelos disponibles",
-    "fast": "Rápido",
     "hold": "Mantener",
-    "private": "Privado",
     "tap": "Pulsar",
-    "close": "Cerrar",
-    "dismiss": "Descartar",
     "save": "Guardar",
-    "saving": "Guardando…",
-    "create": "Crear",
-    "delete": "Eliminar",
-    "actions": "Acciones",
-    "error": "Algo salió mal",
-    "unknownError": "Ocurrió un error desconocido",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo",
-    "skip": "Omitir",
-    "on": "Activado",
-    "off": "Desactivado"
+    "done": "Listo"
   },
   "onboarding": {
     "steps": {
@@ -182,15 +143,6 @@
       "meeting": "Reuniones",
       "finish": "Listo",
       "voiceAgent": "Agente de voz"
-    },
-    "hotkey": {
-      "couldNotRegisterTitle": "No se pudo registrar ese atajo",
-      "couldNotRegisterDescription": "Esa combinación puede estar en uso. Prueba con otra."
-    },
-    "setup": {
-      "title": "Configuración",
-      "description": "Elige tu idioma y concede permisos",
-      "language": "Idioma"
     },
     "permissions": {
       "title": "Deja que Oats oiga la sala",
@@ -211,93 +163,6 @@
       "optional": "Opcional",
       "recommended": "Recomendado",
       "accessibilityTroubleshooting": "En Configuración del Sistema → Accesibilidad, desactiva el interruptor de Oats y vuelve a activarlo. Si eso no funciona, elimina Oats de la lista y añádelo de nuevo."
-    },
-    "transcription": {
-      "title": "Configuración de transcripción",
-      "description": "Elige tu modo y proveedor",
-      "preferredLanguage": "Idioma preferido"
-    },
-    "activation": {
-      "title": "Configuración de dictado",
-      "description": "Configura cómo activar el dictado",
-      "hotkey": "Atajo",
-      "mode": "Modo",
-      "tapDescription": "Pulsa para iniciar/detener",
-      "holdDescription": "Mantén pulsado mientras hablas",
-      "test": "Prueba",
-      "hotkeyToStartStop": "{{hotkey}} para iniciar/detener",
-      "holdHotkey": "Mantener {{hotkey}}",
-      "textareaPlaceholder": "Haz clic aquí y usa tu atajo para dictar..."
-    },
-    "voiceAgent": {
-      "title": "Configuración del agente de voz",
-      "description": "Habla con tu agente de IA con una sola pulsación",
-      "hotkey": "Atajo",
-      "howItWorks": "Pulsa la tecla y di lo que quieres, por ejemplo «escribe una breve nota de agradecimiento». {{agentName}} escribe el resultado donde esté el cursor. No hace falta decir «Hey {{agentName}}» antes.",
-      "test": "Pruébalo",
-      "testInstruction": "Haz clic abajo, pulsa {{hotkey}} y di un comando",
-      "testSetHotkey": "Configura un atajo arriba para probarlo",
-      "testPlaceholder": "Haz clic aquí, pulsa tu atajo y di uno de los ejemplos...",
-      "examples": [
-        "Traduce al italiano: «Hablo más rápido de lo que escribo»",
-        "Escribe un correo breve a mi jefe diciéndole que quiero un ascenso, se llama Mark",
-        "¿Cuánto es 5 × 5?"
-      ],
-      "optionalNote": "Opcional: puedes configurarlo o cambiarlo en cualquier momento en los ajustes."
-    },
-    "connectivity": {
-      "title": "No podemos conectar con Oats Cloud desde esta red",
-      "body": "{{cause}} Puedes cambiar al motor local o continuar e intentarlo más tarde.",
-      "useLocal": "Usar motor local",
-      "continue": "Continuar de todos modos"
-    },
-    "useCase": {
-      "title": "¿Qué te trae por aquí?",
-      "description": "Somos un equipo pequeño que lanza mejoras cada semana. Lo que elijas configura la aplicación a tu medida y nos dice qué construir a continuación.",
-      "noteLabel": "¿Algo más que quieras contarnos?",
-      "notePlaceholder": "Opcional",
-      "options": {
-        "dictation": {
-          "title": "Escribir más rápido",
-          "description": "Dicta en cualquier aplicación en lugar de teclear"
-        },
-        "meetings": {
-          "title": "Notas y resúmenes de reuniones",
-          "description": "Graba, transcribe y resume tus reuniones"
-        },
-        "healthcare": {
-          "title": "Transcripción médica, clínica y terapéutica",
-          "description": "Dicta notas de pacientes, notas de sesión e informes"
-        },
-        "translation": {
-          "title": "Traducir idiomas",
-          "description": "Habla un idioma, escribe en otro"
-        },
-        "ai": {
-          "title": "Hablar con mi IA",
-          "description": "Controla por voz ChatGPT, Claude y otros agentes"
-        },
-        "upload": {
-          "title": "Subir archivos de audio",
-          "description": "Sube y transcribe MP3, OGG y más"
-        }
-      },
-      "selectHint": "Selecciona todas las que correspondan"
-    },
-    "meeting": {
-      "title": "Notas de reuniones",
-      "description": "Captura y resume tus reuniones",
-      "autoDetect": "Oats detecta automáticamente cuando estás en una reunión y te ofrece iniciar notas; no se graba nada sin tu permiso.",
-      "hotkeyLabel": "Atajo de reunión",
-      "hotkeyHint": "Opcional: púlsalo en cualquier reunión para iniciar una nota al instante."
-    },
-    "finish": {
-      "title": "Todo listo",
-      "cloudDescription": "Estás en Oats Cloud: rápido, preciso, sin retención de datos y con 2.000 palabras gratis a la semana. ¿Prefieres que todo quede en tu equipo? Cambia al procesamiento local en Ajustes.",
-      "localDescription": "Has configurado el procesamiento local o tu propia clave. Ajusta cómo se procesa tu audio cuando quieras en Ajustes.",
-      "cleanupNote": "La limpieza de texto con IA funciona con valores predeterminados razonables. Puedes ajustarla en Ajustes.",
-      "openSettings": "Abrir Ajustes",
-      "skipForNow": "Omitir por ahora"
     }
   },
   "streaming": {
@@ -329,19 +194,9 @@
       "installButton": "Instalar actualización",
       "availableButton": "Actualización disponible"
     },
-    "limit": {
-      "weeklyTitle": "Límite semanal alcanzado",
-      "weeklyDescription": "Tu límite se restablece de forma continua. Mejora a Pro o usa tu propia clave API para uso ilimitado."
-    },
     "accessibilityMissing": {
       "title": "Se necesitan permisos de accesibilidad",
       "description": "Hemos detectado que Oats necesita permisos de accesibilidad para funcionar correctamente. Actívalos a continuación."
-    },
-    "billing": {
-      "pastDueTitle": "No pudimos procesar tu pago",
-      "pastDueDescription": "No te preocupes: estás en el plan gratuito por ahora. Actualiza tu pago en Ajustes para volver a Pro.",
-      "bannerDescription": "Estás en el plan gratuito por ahora: aún tienes {{limit}} palabras por semana. Actualiza tu pago para volver a Pro.",
-      "updatePayment": "Actualizar pago"
     },
     "history": {
       "couldNotLoadTitle": "No se pudo cargar tu historial",
@@ -398,25 +253,7 @@
       "audioNotFound": "Archivo de audio no encontrado o expirado",
       "noAiProcessing": "No se aplicó procesamiento de IA a esta transcripción",
       "rawTranscript": "Transcripción sin procesar"
-    },
-    "cloudMigration": {
-      "title": "Bienvenido a Oats Cloud",
-      "description": "Cambiamos tu transcripción a Oats Cloud para resultados más rápidos y precisos. Tu configuración anterior se guardó: puedes volver cuando quieras en Ajustes.",
-      "viewSettings": "Ver ajustes"
-    },
-    "aiCta": {
-      "title": "Mejora tus transcripciones con IA",
-      "description": "Corrige automáticamente gramática, puntuación y formato mientras hablas.",
-      "enable": "Activar mejora con IA"
-    },
-    "loading": "Cargando...",
-    "gpu": {
-      "bannerTitle": "Aceleración GPU disponible",
-      "bannerDescription": "Activa la aceleración GPU para un rendimiento más rápido.",
-      "enableButton": "Activar GPU",
-      "dismissButton": "Ahora no"
-    },
-    "backToNotes": "Volver a notas"
+    }
   },
   "reasoning": {
     "mode": {
@@ -464,48 +301,6 @@
     "selfHosted": {
       "endpointHelp": "Apunta a un servidor compatible con OpenAI en tu red local (p. ej. Ollama, LM Studio, vLLM o llama-server)."
     },
-    "enterprise": {
-      "title": "Proveedores empresariales",
-      "description": "Conecta con proveedores de nube usando las credenciales de tu organización.",
-      "testConnection": "Probar conexión",
-      "testing": "Probando…",
-      "testSuccess": "Conectado",
-      "testFailed": "Conexión fallida",
-      "authMode": "Autenticación",
-      "ssoProfile": "Perfil SSO",
-      "accessKeys": "Claves de acceso",
-      "adc": "Application Default Credentials",
-      "apiKeyMode": "Clave API",
-      "region": "Región",
-      "profile": "Nombre del perfil",
-      "accessKeyId": "Access Key ID",
-      "secretAccessKey": "Secret Access Key",
-      "sessionToken": "Session Token (opcional)",
-      "endpoint": "URL del endpoint",
-      "deploymentName": "Nombre del deployment",
-      "apiVersion": "Versión de la API",
-      "projectId": "ID del proyecto",
-      "location": "Ubicación",
-      "customModelId": "ID de modelo personalizado",
-      "customModelPlaceholder": "Introduce un ID de modelo o nombre de deployment",
-      "suggestedModels": "Modelos sugeridos",
-      "browseModels": "Explorar todos los modelos",
-      "loadingModels": "Obteniendo modelos...",
-      "allModels": "Todos los modelos en {{region}}",
-      "modelListError": "No se pudieron cargar los modelos.",
-      "bedrock": {
-        "ssoHelp": "Usa tu configuración SSO de AWS CLI. Asegúrate de haber ejecutado 'aws sso login'.",
-        "keysHelp": "Introduce tus claves de acceso de AWS IAM."
-      },
-      "azure": {
-        "endpointHelp": "El endpoint de tu recurso Azure OpenAI (por ejemplo, https://myresource.openai.azure.com).",
-        "deploymentHelp": "Nombre del deployment de tu modelo en Azure OpenAI."
-      },
-      "vertex": {
-        "adcHelp": "Usa Application Default Credentials. Ejecuta: gcloud auth application-default login",
-        "apikeyHelp": "Clave API de Vertex AI Express Mode obtenida en Google AI Studio."
-      }
-    },
     "tinfoil": {
       "modelRetiredTitle": "Modelo ya no disponible",
       "modelRetired": "Tinfoil retiró {{from}}. Se cambió a {{to}}.",
@@ -517,10 +312,6 @@
       "title": "Eliminar modelo",
       "description": "¿Seguro que quieres eliminar este modelo? Tendrás que descargarlo otra vez para usarlo."
     },
-    "parakeet": {
-      "multilingual": "25 idiomas",
-      "english": "Inglés"
-    },
     "apiKeyOptional": "Clave API (opcional)",
     "getKey": "Obtener clave ->",
     "endpointUrl": "URL del endpoint",
@@ -530,7 +321,6 @@
       "whisperModelDescription": "Modelo",
       "parakeetModelDescription": "Modelo NVIDIA Parakeet"
     },
-    "whisperModels": "Modelos Whisper",
     "tinfoil": {
       "transportNote": "Tinfoil transmite con Voxtral Mini 4B y procesa por lotes con Voxtral Small 24B.",
       "docsLink": "Ver la documentación"
@@ -694,69 +484,6 @@
       }
     }
   },
-  "auth": {
-    "cloudNotConfigured": "Nube no configurada",
-    "common": {
-      "back": "Atrás",
-      "continue": "Continuar",
-      "or": "o"
-    },
-    "emailStep": {
-      "continueWithEmail": "Continuar con correo electrónico",
-      "continueWithoutAccount": "Continuar sin cuenta",
-      "emailPlaceholder": "tu@ejemplo.com"
-    },
-    "errors": {
-      "accountExistsSignIn": "Ya existe una cuenta con este correo. Inicia sesión.",
-      "accountNotFoundCreate": "No se encontró una cuenta con este correo. Crea una cuenta.",
-      "authNotConfigured": "La autenticación no está configurada",
-      "createAccountFailed": "No se pudo crear la cuenta",
-      "failedProviderSignIn": "No se pudo iniciar sesión con {{provider}}",
-      "failedUserCheck": "No se pudo verificar la cuenta de usuario",
-      "generic": "Algo salió mal. Inténtalo de nuevo.",
-      "invalidCredentials": "Correo o contraseña incorrectos",
-      "plusAliasUnsupported": "Los alias de correo con '+' no son compatibles"
-    },
-    "getStarted": "Comenzar",
-    "legal": {
-      "and": "y",
-      "prefix": "Al continuar, aceptas nuestros",
-      "privacy": "Política de privacidad",
-      "suffix": "",
-      "terms": "Términos de servicio"
-    },
-    "passwordForm": {
-      "createAccount": "Crear una cuenta",
-      "createAccountButton": "Crear cuenta",
-      "createAccountLink": "Crear cuenta",
-      "createPasswordPlaceholder": "Crea una contraseña",
-      "creatingAccount": "Creando cuenta...",
-      "enterPasswordPlaceholder": "Introduce tu contraseña",
-      "forgotPassword": "¿Olvidaste tu contraseña?",
-      "fullNamePlaceholder": "Nombre completo",
-      "haveAccount": "¿Ya tienes una cuenta?",
-      "newHere": "¿Eres nuevo?",
-      "passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
-      "signIn": "Iniciar sesión",
-      "signInLink": "Iniciar sesión",
-      "signingIn": "Iniciando sesión...",
-      "welcomeBack": "Bienvenido de nuevo"
-    },
-    "signedIn": {
-      "ready": "Listo",
-      "welcomeBack": "Bienvenido de nuevo",
-      "welcomeBackName": "Bienvenido de nuevo, {{name}}"
-    },
-    "sso": {
-      "continueWithSSO": "Iniciar sesión con SSO",
-      "emailRequired": "Introduce tu correo del trabajo para usar SSO.",
-      "failed": "Error al iniciar sesión con SSO. Inténtalo de nuevo."
-    },
-    "welcomeSubtitle": "Dicta en cualquier lugar usando tu voz",
-    "welcomeTitle": "Bienvenido a Oats",
-    "sessionExpired": "Sesión expirada"
-  },
-  "cleanupPrompt": "Corrección",
   "developerSection": {
     "currentLogFile": "Archivo de registro actual",
     "debugMode": {
@@ -822,135 +549,10 @@
       "title": "Qué se registra"
     }
   },
-  "apiKeysSection": {
-    "title": "Claves API",
-    "description": "Crea claves para acceder a la API de Oats de forma programática.",
-    "docsLink": "Docs de la API",
-    "empty": "Aún no hay claves API",
-    "createButton": "Crear clave API",
-    "create": {
-      "title": "Crear clave API",
-      "nameLabel": "Nombre de la clave",
-      "namePlaceholder": "ej. Mi Integración",
-      "scopesLabel": "Permisos",
-      "expiryLabel": "Caducidad",
-      "expiryOptions": {
-        "never": "Nunca caduca",
-        "30days": "30 días",
-        "60days": "60 días",
-        "90days": "90 días",
-        "1year": "1 año"
-      },
-      "submit": "Crear",
-      "cancel": "Cancelar"
-    },
-    "created": {
-      "title": "Clave API creada",
-      "warning": "Copia esta clave ahora. No se mostrará de nuevo.",
-      "copied": "¡Copiado!",
-      "copyButton": "Copiar al portapapeles",
-      "done": "Listo"
-    },
-    "scopes": {
-      "notesRead": "Leer notas",
-      "notesWrite": "Crear y editar notas",
-      "transcriptionsRead": "Leer transcripciones"
-    },
-    "revoke": {
-      "button": "Revocar",
-      "confirm": "¿Revocar esta clave? Las integraciones que la usen dejarán de funcionar.",
-      "success": "Clave API revocada"
-    },
-    "neverUsed": "Nunca usada",
-    "lastUsed": "Último uso {{time}}",
-    "maxKeysReached": "Máximo de {{max}} claves permitidas",
-    "errors": {
-      "loadFailed": "No se pudieron cargar las claves API",
-      "createFailed": "No se pudo crear la clave API",
-      "revokeFailed": "No se pudo revocar la clave API"
-    }
-  },
-  "dictionarySuffix": "Sufijo del diccionario",
-  "emailVerification": {
-    "checkEmailDescription": "Enviamos un enlace de verificación a",
-    "checkEmailTitle": "Revisa tu correo",
-    "errors": {
-      "resendFailed": "No pudimos reenviar el correo. Inténtalo de nuevo.",
-      "serverUnreachable": "No se pudo conectar al servidor. Revisa tu conexión e inténtalo de nuevo."
-    },
-    "resendButton": "Reenviar correo de verificación",
-    "resendIn": "Reenviar en {{seconds}}s",
-    "verifiedDescription": "Tu cuenta está lista.",
-    "verifiedTitle": "Correo verificado",
-    "waiting": "Esperando verificación...",
-    "backToSignIn": "Volver a iniciar sesión"
-  },
   "errorBoundary": {
     "description": "Ocurrió un error inesperado. Recarga para intentar de nuevo.",
     "reload": "Recargar",
     "title": "Algo salió mal"
-  },
-  "forgotPassword": {
-    "back": "Atrás",
-    "backToSignIn": "Volver a iniciar sesión",
-    "emailPlaceholder": "Introduce tu correo electrónico",
-    "goBack": "Volver",
-    "notConfigured": "La autenticación aún no está configurada.",
-    "sendResetLink": "Enviar enlace de restablecimiento",
-    "sending": "Enviando...",
-    "subtitle": "Introduce tu correo y te enviaremos un enlace de restablecimiento",
-    "success": {
-      "description": "Enviamos un enlace de restablecimiento de contraseña a",
-      "help": "¿No recibiste el correo? Revisa tu carpeta de spam o inténtalo de nuevo.",
-      "title": "Revisa tu correo",
-      "tryAnother": "Prueba con otro correo"
-    },
-    "title": "Restablece tu contraseña"
-  },
-  "actionPrompt": "Prompt de acción",
-  "hotkeyGuidance": {
-    "blockedDescription": "Estos atajos están bloqueados porque son de uso común del sistema.",
-    "blockedTitle": "Atajos bloqueados",
-    "description": "Usa estas reglas de plataforma para elegir un atajo que no entre en conflicto con tu sistema.",
-    "examplesTitle": "Ejemplos válidos",
-    "platforms": {
-      "linux": "Linux",
-      "macos": "macOS",
-      "windows": "Windows"
-    },
-    "recommended": {
-      "linux": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Super+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Ctrl+Shift+J",
-        "4": "Alt+Space"
-      },
-      "macos": {
-        "0": "⌥Space",
-        "1": "⌃⌥S",
-        "2": "⌃⌥D",
-        "3": "Fn",
-        "4": "⌘⇧J"
-      },
-      "windows": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Ctrl+Shift+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Win+Alt+K"
-      }
-    },
-    "recommendedTitle": "Atajos recomendados",
-    "rulesTitle": "Reglas de atajos",
-    "showAll": "Mostrar todo",
-    "showFewer": "Mostrar menos",
-    "title": "Guía de atajos",
-    "validationRules": {
-      "0": "Debe usar al menos un modificador (Ctrl, Alt, Shift, etc.)",
-      "1": "No se pueden usar atajos reservados del sistema",
-      "2": "No se permiten teclas individuales sin modificador",
-      "3": "Algunas combinaciones pueden entrar en conflicto con otras apps"
-    }
   },
   "hotkeyInput": {
     "ariaLabel": "Pulsa una combinación de teclas para configurar el atajo",
@@ -1082,231 +684,7 @@
       "modified": "Modificado"
     }
   },
-  "settingsModal": {
-    "groups": {
-      "account": "Cuenta",
-      "app": "Aplicación",
-      "aiModels": "Modelos de IA",
-      "system": "Sistema"
-    },
-    "sections": {
-      "account": {
-        "description": "Perfil e inicio de sesión",
-        "label": "Cuenta"
-      },
-      "plansBilling": {
-        "description": "Planes, uso y facturación",
-        "label": "Planes y facturación"
-      },
-      "general": {
-        "description": "Apariencia, sonidos e inicio",
-        "label": "Preferencias"
-      },
-      "hotkeys": {
-        "description": "Atajo de dictado y activación",
-        "label": "Atajos"
-      },
-      "speechToText": {
-        "description": "Motores para dictado y grabación de notas",
-        "label": "Conversión de voz a texto"
-      },
-      "llms": {
-        "description": "Modelos para chat, limpieza y resúmenes",
-        "label": "Modelos de lenguaje"
-      },
-      "privacyData": {
-        "description": "Privacidad, permisos y análisis",
-        "label": "Privacidad y datos"
-      },
-      "system": {
-        "description": "Actualizaciones, almacenamiento y herramientas de desarrollo",
-        "label": "Sistema"
-      },
-      "workspace": {
-        "label": "Espacio de trabajo",
-        "description": "Miembros, equipos, facturación y claves API"
-      }
-    },
-    "title": "Ajustes"
-  },
   "settingsPage": {
-    "account": {
-      "badges": {
-        "free": "Gratis",
-        "limitReached": "Límite alcanzado",
-        "pastDue": "Pago vencido",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Prueba"
-      },
-      "billing": {
-        "couldNotOpenDescription": "Tuvimos problemas al abrir la página de facturación. Inténtalo de nuevo.",
-        "couldNotOpenTitle": "No se pudo abrir facturación",
-        "manageBilling": "Administrar facturación",
-        "opening": "Abriendo...",
-        "updatePaymentMethod": "Actualizar método de pago"
-      },
-      "checkout": {
-        "couldNotOpenDescription": "Tuvimos problemas al abrir la página de pago. Inténtalo de nuevo.",
-        "couldNotOpenTitle": "No se pudo abrir el pago",
-        "opening": "Abriendo...",
-        "upgradeToPro": "Mejorar a Pro"
-      },
-      "disabled": "Desactivado",
-      "featuresDisabled": "Funciones de cuenta desactivadas",
-      "featuresDisabledDescription": "Configura VITE_AUTH_URL en tu archivo .env para habilitar las funciones de cuenta.",
-      "notConfigured": "La autenticación no está configurada",
-      "notSignedIn": "Sin sesión iniciada",
-      "notSignedInDescription": "Crea una cuenta para desbloquear funciones premium.",
-      "offline": "Sin conexión",
-      "pastDue": {
-        "description": "Estás en el plan gratuito por ahora. Actualiza tu método de pago para volver a Pro.",
-        "title": "No pudimos procesar tu pago"
-      },
-      "planDescriptions": {
-        "freeUsage": "{{used}} / {{limit}} palabras esta semana",
-        "nextBilling": "Próxima facturación: {{date}}",
-        "pastDue": "{{used}} / {{limit}} palabras gratis esta semana: actualiza el pago para restaurar Pro",
-        "trial": "{{days}} días restantes: transcripciones ilimitadas",
-        "unlimited": "Ilimitado"
-      },
-      "planLabels": {
-        "free": "Gratis",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Prueba"
-      },
-      "planTitle": "Plan",
-      "pricing": {
-        "title": "Planes",
-        "billedYearly": "Facturación anual",
-        "free": {
-          "name": "Free",
-          "price": "$0",
-          "period": "para siempre",
-          "features": [
-            "## Oats Cloud",
-            "2.000 palabras/semana de transcripción",
-            "5 horas de grabaciones de reuniones/mes",
-            "## Siempre gratis",
-            "Modelos de IA locales ilimitados",
-            "Transcripción en la nube ilimitada con tus propias claves API",
-            "Más de 100 idiomas compatibles",
-            "Diccionario personalizado",
-            "Sin retención de datos",
-            "Soporte de la comunidad"
-          ]
-        },
-        "pro": {
-          "name": "Pro",
-          "monthlyPrice": "$8",
-          "monthlyPeriod": "/mes",
-          "annualPrice": "$80",
-          "annualPeriod": "/año",
-          "annualEquivalent": "$6.67",
-          "includesPrefix": "Todas las funciones de Free +",
-          "features": [
-            "Transcripción en la nube ilimitada",
-            "20 horas de grabaciones de reuniones/mes",
-            "Sincronización entre dispositivos",
-            "Acceso personal a la API",
-            "Integración MCP en todas tus apps",
-            "Aplicación móvil (iOS próximamente)",
-            "Soporte por correo electrónico"
-          ],
-          "cta": "Comenzar",
-          "switchToAnnual": "Cambiar a Anual"
-        },
-        "business": {
-          "name": "Business",
-          "monthlyPrice": "$20",
-          "monthlyPeriod": "/mes",
-          "annualPrice": "$200",
-          "annualPeriod": "/año",
-          "annualEquivalent": "$16.67",
-          "includesPrefix": "Todas las funciones de Pro +",
-          "badge": "Más popular",
-          "features": [
-            "Grabaciones de reuniones ilimitadas",
-            "Modo agente",
-            "Chatea sobre tus datos",
-            "Soporte prioritario"
-          ],
-          "cta": "Comenzar",
-          "switchToAnnual": "Cambiar a Anual"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "Personalizado",
-          "subtitle": "Para seguridad avanzada y soporte",
-          "includesPrefix": "Todas las funciones de Business +",
-          "features": [
-            "Créditos API gestionados",
-            "Sincronización en la nube entre dispositivos",
-            "Funciones de equipo y administración",
-            "SSO y cumplimiento normativo",
-            "Soporte dedicado"
-          ],
-          "cta": "Contactar a ventas"
-        },
-        "currentPlan": "Plan actual",
-        "upgrade": "Mejorar plan",
-        "downgrade": "Reducir plan",
-        "planSwitched": "Plan actualizado correctamente",
-        "confirmSwitch": {
-          "title": "Confirmar cambio de plan",
-          "description": "Cambiar a {{plan}} ({{interval}})",
-          "monthly": "mensual",
-          "yearly": "anual",
-          "chargeToday": "Cargo hoy",
-          "accountCredit": "Crédito en cuenta",
-          "newPrice": "Nuevo precio",
-          "nextBilling": "Próxima facturación",
-          "mo": "mo",
-          "yr": "yr",
-          "cancel": "Cancelar",
-          "confirm": "Confirmar"
-        }
-      },
-      "rollingWeeklyLimit": "Límite semanal móvil",
-      "signOut": {
-        "failedDescription": "Algo salió mal al cerrar sesión. Inténtalo de nuevo.",
-        "failedTitle": "No se pudo cerrar sesión",
-        "signOut": "Cerrar sesión",
-        "signingOut": "Cerrando sesión..."
-      },
-      "signedIn": "Sesión iniciada",
-      "signedOutPlans": {
-        "button": "Crear cuenta gratuita"
-      },
-      "title": "Cuenta",
-      "toasts": {
-        "approachingLimit": {
-          "description": "Has usado {{used}} de {{limit}} palabras gratis esta semana. Mejora a Pro para uso ilimitado.",
-          "title": "Cerca del límite semanal"
-        }
-      },
-      "trialCta": {
-        "button": "Crear cuenta gratuita",
-        "description": "Transcripciones ilimitadas, procesamiento prioritario y más.",
-        "title": "Prueba Pro gratis por 7 días"
-      },
-      "user": "Usuario",
-      "wordsRemaining": "{{remaining}} restantes",
-      "deleteAccount": {
-        "label": "Eliminar cuenta",
-        "labelDescription": "Eliminar permanentemente tu cuenta, todos los datos en la nube y los datos locales. Esta acción no se puede deshacer.",
-        "button": "Eliminar mi cuenta",
-        "deleting": "Eliminando...",
-        "title": "¿Eliminar tu cuenta?",
-        "description": "Esto eliminará permanentemente tu cuenta de Oats, todas las notas sincronizadas en la nube y todos los datos locales, incluyendo transcripciones, grabaciones de audio, modelos descargados, conexiones de calendario y configuraciones. Esta acción no se puede deshacer.",
-        "confirmText": "Eliminar todo",
-        "successTitle": "Cuenta eliminada",
-        "successDescription": "Tu cuenta y todos los datos han sido eliminados. La aplicación se recargará ahora.",
-        "failedTitle": "Error al eliminar",
-        "failedDescription": "Algo salió mal al eliminar tu cuenta. Es posible que tus datos locales se hayan eliminado parcialmente. Inténtalo de nuevo."
-      }
-    },
     "agentConfig": {
       "agentName": "Nombre del agente",
       "description": "Nombra a tu asistente de IA para que puedas dirigirte a él directamente durante el dictado",
@@ -1821,101 +1199,10 @@
         }
       }
     },
-    "intelligence": {
-      "gpuDevice": {
-        "title": "GPU de inteligencia",
-        "description": "GPU usado para procesamiento IA local"
-      }
-    },
     "selfHosted": {
       "endpointUrl": "URL del endpoint",
       "serverUrl": "URL del servidor",
       "apiKeyOptional": "API Key (opcional)"
-    },
-    "workspace": {
-      "title": "Espacio de trabajo",
-      "description": "Colabora con compañeros, comparte notas y administra la facturación en un solo lugar.",
-      "empty": {
-        "title": "Crea tu primer espacio de trabajo",
-        "description": "Los espacios de trabajo te permiten colaborar con compañeros y compartir notas.",
-        "create": "Crear espacio de trabajo"
-      },
-      "tab": {
-        "general": "General",
-        "members": "Miembros",
-        "teams": "Equipos",
-        "billing": "Facturación",
-        "developer": "Desarrollador"
-      },
-      "role": {
-        "owner": "Propietario",
-        "admin": "Administrador",
-        "member": "Miembro"
-      },
-      "general": {
-        "nameLabel": "Nombre del espacio de trabajo",
-        "slugLabel": "Slug",
-        "slugHint": "Se usa en URLs y enlaces de invitación. Solo letras minúsculas, dígitos y guiones.",
-        "saved": "Espacio de trabajo actualizado",
-        "dangerTitle": "Eliminar espacio de trabajo",
-        "dangerDescription": "Todas las notas, carpetas e integraciones compartidas se eliminarán. Esto no se puede deshacer.",
-        "delete": "Eliminar espacio de trabajo",
-        "confirmTitle": "¿Eliminar {{name}}?",
-        "confirmDescription": "Esto cancela la suscripción y elimina todos los datos del espacio de trabajo permanentemente."
-      },
-      "members": {
-        "title": "Miembros",
-        "description": "{{count}} de {{seats}} asientos utilizados.",
-        "invite": "Invitar",
-        "empty": "Aún no hay miembros.",
-        "roleUpdated": "Rol actualizado",
-        "promote": "Hacer administrador",
-        "demote": "Hacer miembro",
-        "transferOwnership": "Transferir propiedad",
-        "remove": "Quitar del espacio de trabajo"
-      },
-      "invites": {
-        "title": "Invitaciones pendientes",
-        "resend": "Reenviar",
-        "revoke": "Revocar",
-        "resent": "Invitación reenviada"
-      },
-      "teams": {
-        "title": "Equipos",
-        "description": "Agrupa miembros para compartir con alcance limitado.",
-        "new": "Nuevo equipo",
-        "empty": "Aún no hay equipos.",
-        "createFirst": "Crea tu primer equipo",
-        "createTitle": "Crear equipo",
-        "nameLabel": "Nombre del equipo",
-        "descriptionLabel": "Descripción",
-        "memberCount": "{{count}} miembros"
-      },
-      "billing": {
-        "title": "Facturación",
-        "description": "Plan, asientos y pago.",
-        "plan": "Plan",
-        "seats": "Asientos",
-        "nextInvoice": "Próxima factura",
-        "manageStripe": "Administrar en Stripe",
-        "startSubscription": "Iniciar suscripción"
-      },
-      "developer": {
-        "title": "Claves API",
-        "description": "Acceso programático limitado a este espacio de trabajo.",
-        "empty": "Aún no hay claves API. Crea una para integrarte con este espacio de trabajo.",
-        "new": "Nueva clave",
-        "create": "Crear clave",
-        "createTitle": "Crear clave API",
-        "createDescription": "Elige los permisos que necesita esta clave. Puedes revocarla en cualquier momento.",
-        "nameLabel": "Nombre de la clave",
-        "namePlaceholder": "Integración de producción",
-        "revoke": "Revocar clave",
-        "lastUsed": "Último uso {{date}}",
-        "neverUsed": "Nunca utilizada",
-        "keyCreatedTitle": "Clave API creada",
-        "keyCreatedDescription": "Copia esta clave ahora — no podrás verla de nuevo."
-      }
     }
   },
   "models": {
@@ -2038,234 +1325,12 @@
       }
     }
   },
-  "referral": {
-    "title": "Recomienda y gana recompensas",
-    "subtitle": "Regala un mes. Recibe un mes.",
-    "modalTitle": "Invitar amigos",
-    "tabs": {
-      "refer": "Recomendar",
-      "pastInvites": "Invitaciones anteriores"
-    },
-    "howItWorks": {
-      "shareLink": "Comparte tu enlace de invitación",
-      "theySignUp": "Se registran y obtienen un ",
-      "freeMonthOfPro": "mes gratis de Pro",
-      "youGet": "Tú recibes un ",
-      "freeMonth": "mes gratis",
-      "whenTheyDictate": " cuando dicten 2.000 palabras"
-    },
-    "inviteLink": {
-      "title": "Tu enlace de invitación",
-      "copy": "Copiar",
-      "copied": "Copiado"
-    },
-    "sendInvites": {
-      "title": "Enviar invitaciones",
-      "placeholder": "friend@example.com",
-      "send": "Enviar",
-      "sending": "Enviando"
-    },
-    "stats": {
-      "referred": "Recomendados",
-      "converted": "Convertidos",
-      "monthsEarned": "Meses ganados"
-    },
-    "status": {
-      "converted": "Convertido",
-      "opened": "Abierto",
-      "failed": "Fallido",
-      "sent": "Enviado"
-    },
-    "empty": {
-      "title": "Aún no se han enviado invitaciones",
-      "description": "Comparte tu enlace o envía una invitación para comenzar"
-    },
-    "toasts": {
-      "copiedTitle": "¡Copiado!",
-      "copiedDescription": "Enlace de referido copiado al portapapeles",
-      "copyFailedTitle": "Error al copiar",
-      "copyFailedDescription": "No se pudo copiar el enlace al portapapeles",
-      "invalidEmailTitle": "Correo electrónico inválido",
-      "invalidEmailDescription": "Por favor, introduce una dirección de correo electrónico válida",
-      "inviteSentTitle": "¡Invitación enviada!",
-      "inviteSentDescription": "Invitación enviada a {{email}}",
-      "sendFailedTitle": "Error al enviar",
-      "sendFailedDescription": "No se pudo enviar la invitación. Por favor, inténtalo de nuevo."
-    },
-    "errors": {
-      "unableToLoad": "No se pudieron cargar los datos de referidos",
-      "unableToLoadStats": "No se pudieron cargar las estadísticas de referidos. Por favor, inténtalo más tarde."
-    },
-    "tryAgain": "Intentar de nuevo",
-    "card": {
-      "brand": "Oats",
-      "signalId": "Signal ID",
-      "audioSignature": "Tu firma de audio",
-      "stop": "Detener",
-      "playSignal": "Reproducir señal"
-    },
-    "friends": {
-      "title": "Amigos",
-      "completed": "Completado",
-      "sentInvites": "Invitaciones enviadas"
-    }
-  },
   "notes": {
-    "sidebar": {
-      "newNote": "Nueva nota",
-      "searchNotes": "Buscar notas",
-      "actions": "Acciones"
-    },
-    "folders": {
-      "title": "Carpetas",
-      "soon": "Próximamente",
-      "folderName": "Nombre de la carpeta",
-      "couldNotCreate": "No se pudo crear la carpeta",
-      "couldNotRename": "No se pudo renombrar la carpeta",
-      "couldNotDelete": "No se pudo eliminar la carpeta",
-      "deleteTitle": "¿Eliminar carpeta?",
-      "deleteDescription": "Esto eliminará permanentemente \"{{name}}\" y sus {{count}} nota(s). Esta acción no se puede deshacer.",
-      "deleteDescriptionEmpty": "Esto eliminará permanentemente \"{{name}}\". Esta acción no se puede deshacer.",
-      "deleteConfirm": "Eliminar carpeta y notas"
-    },
-    "list": {
-      "title": "Notas",
-      "newNote": "Nueva nota",
-      "untitled": "Sin título",
-      "untitledNote": "Nota sin título",
-      "timeNow": "Ahora",
-      "minutesAgo": "hace {{count}}m",
-      "hoursAgo": "hace {{count}}h",
-      "daysAgo": "hace {{count}}d"
-    },
-    "editor": {
-      "untitled": "Sin título",
-      "noteTitle": "Título de la nota",
-      "stop": "Detener",
-      "transcribe": "Transcribir",
-      "processing": "Procesando...",
-      "export": "Exportar",
-      "asMarkdown": "Como Markdown",
-      "asPlainText": "Como texto plano",
-      "asTranscriptText": "Como texto plano (.txt)",
-      "asSubtitles": "Como subtítulos (.srt)",
-      "asJson": "Como JSON (.json)",
-      "asTranscriptMarkdown": "Como Markdown (.md)",
-      "raw": "Sin procesar",
-      "enhanced": "Mejorado",
-      "saving": "Guardando",
-      "startWriting": "Comienza a escribir...",
-      "staleIndicator": "El contenido ha cambiado desde la mejora",
-      "live": "En vivo",
-      "transcript": "Transcripción",
-      "notes": "Notas",
-      "conversationWillAppear": "La conversación aparecerá aquí...",
-      "linkedEvent": "Evento vinculado",
-      "noFolder": "Sin carpeta",
-      "participants": "Participantes",
-      "graph": "Gráfico"
-    },
-    "participants": {
-      "attendee": "asistente",
-      "attendees": "asistentes",
-      "addAttendees": "Agregar asistentes",
-      "addPlaceholder": "Agregar asistentes...",
-      "typeEmail": "Escribe un correo para agregar...",
-      "me": "(yo)"
-    },
-    "upload": {
-      "title": "Subir audio",
-      "using": "Usando {{model}}",
-      "dropOrBrowse": "Arrastra un archivo de audio o haz clic para explorar",
-      "supportedFormats": "MP3, WAV, M4A, WebM, OGG, FLAC, AAC, Opus",
-      "dropToUpload": "Suelta para subir",
-      "transcribe": "Transcribir",
-      "cancel": "Cancelar",
-      "transcribingCloud": "Transcribiendo en la nube...",
-      "transcribingLocal": "Transcribiendo localmente...",
-      "transcribingProvider": "Transcribiendo con {{provider}}...",
-      "cancelTranscription": "Cancelar transcripción",
-      "transcriptionComplete": "Transcripción completada",
-      "partialWarning": "No se pudo transcribir una parte del audio.",
-      "openNote": "Abrir nota",
-      "uploadAnother": "Subir otro",
-      "retry": "Reintentar",
-      "startOver": "Empezar de nuevo",
-      "newFolder": "Nueva carpeta",
-      "folderName": "Nombre de la carpeta",
-      "create": "Crear",
-      "legacyCloud": "Oats Cloud",
-      "custom": "Personalizado",
-      "selectFolder": "Seleccionar carpeta",
-      "transcriptionFailed": "Error en la transcripción",
-      "errorOccurred": "Se produjo un error",
-      "noSpeechDetected": "No se detectó voz en este audio.",
-      "noProviderTitle": "No se ha configurado un proveedor de transcripción",
-      "noProviderDescription": "Agrega una clave API o descarga un modelo local para comenzar a transcribir.",
-      "noProviderAction": "Abrir configuración de transcripción",
-      "fileTooLarge": "Este archivo supera el límite de 500 MB.",
-      "largeFileNote": "Los archivos grandes se dividen y transcriben en paralelo.",
-      "chunkProgress": "Transcribiendo parte {{completed}} de {{total}}...",
-      "paidPlanRequired": "La transcripción en la nube para archivos de más de 25 MB requiere un plan de pago. Los archivos grandes se procesan con Oats Cloud para resultados fiables y de alta calidad.",
-      "byokTooLarge": "Las claves API de terceros solo admiten archivos de hasta 25 MB.",
-      "byokTooLargeDetail": "Para archivos de más de 25 MB, Oats Cloud se encarga de dividir, procesar en paralelo y reensamblar, obteniendo resultados fiables sin depender de los límites de proveedores de terceros.",
-      "byokTooLargeNeedsAccount": "Crea una cuenta y cambia a un plan de pago para transcribir archivos más grandes con Oats Cloud.",
-      "byokTooLargeNeedsUpgrade": "Cambia a un plan de pago para transcribir archivos más grandes con Oats Cloud.",
-      "switchToCloudForLargeFiles": "Cambia a Oats Cloud para transcribir este archivo.",
-      "createAccount": "Crear cuenta",
-      "upgrade": "Mejorar plan",
-      "switchToCloud": "Oats Cloud",
-      "orDivider": "o",
-      "urlPlaceholder": "Pega una URL de YouTube o de audio",
-      "urlDownloading": "Descargando audio...",
-      "urlResolving": "Resolviendo URL...",
-      "urlInvalid": "URL no válida. Pega un enlace de YouTube o una URL directa de archivo de audio.",
-      "urlVideoUnavailable": "Este video no está disponible. Puede ser privado, eliminado o bloqueado geográficamente.",
-      "urlPlaylistNotSupported": "Las listas de reproducción no son compatibles. Pega la URL de un solo video.",
-      "urlContentTypeInvalid": "Esta URL no apunta a un archivo de audio o video.",
-      "urlDownloadFailed": "Error en la descarga. Verifica la URL e inténtalo de nuevo.",
-      "urlCancelDownload": "Cancelar descarga",
-      "addToQueue": "Agregar a la cola",
-      "queueProgress": "{{completed}}/{{total}} completados",
-      "cancelAll": "Cancelar todo",
-      "clearQueue": "Limpiar",
-      "pasteUrls": "Pegar URLs (una por línea)",
-      "speakerDetection": "Detección de hablantes",
-      "speakerDetectionDescription": "Identificar diferentes hablantes en el audio",
-      "numSpeakersPlaceholder": "Detección automática",
-      "downloadingModels": "Descargando modelos...",
-      "openaiDiarizeNote": "Reemplaza tu modelo de transcripción con gpt-4o-transcribe-diarize, el único modelo de OpenAI con detección de hablantes. Los costos pueden diferir de tu modelo seleccionado.",
-      "mistralDiarizeNote": "Detección de hablantes incluida sin costo adicional con Voxtral.",
-      "groqDiarizeNote": "La detección de hablantes no está disponible con Groq. Se usará la diarización local en su lugar.",
-      "batchCancelled": "Cancelado",
-      "batchTranscriptionFailed": "Error en la transcripción",
-      "batchSaveFailed": "Error al guardar la nota",
-      "batchUnknownError": "Error desconocido",
-      "removeFromQueue": "Eliminar de la cola",
-      "diarizationRunsLocally": "La detección de hablantes se ejecuta localmente en tu dispositivo.",
-      "urlSubmit": "Añadir enlace",
-      "urlsSkipped": "Algunos enlaces no se pudieron añadir ({{n}})",
-      "queueFailed": "{{n}} con error",
-      "urlFileTooLarge": "El archivo es demasiado grande para descargar. El tamaño máximo es 500 MB.",
-      "urlYoutubeBlocked": "YouTube está bloqueando temporalmente las descargas desde tu red. Inténtalo de nuevo más tarde."
-    },
     "meeting": {
       "title": "Notas de reunión",
       "description": "Transcripciones y resúmenes estructurados",
       "comingSoon": "Próximamente",
       "back": "Atrás"
-    },
-    "meetingPill": {
-      "returnToNote": "Volver a la grabación"
-    },
-    "context": {
-      "moveToFolder": "Mover a carpeta",
-      "delete": "Eliminar",
-      "rename": "Renombrar",
-      "searchFolders": "Buscar carpetas...",
-      "noResults": "No se encontraron carpetas",
-      "newFolder": "Nueva carpeta",
-      "showInFileManager": "Mostrar en {{manager}}"
     },
     "actions": {
       "manage": "Gestionar acciones...",
@@ -2298,94 +1363,8 @@
         "actionFailed": "La acción falló"
       }
     },
-    "empty": {
-      "title": "Todavía no hay notas aquí",
-      "description": "Crea tu primera nota para empezar a escribir",
-      "selectTitle": "Selecciona una nota",
-      "selectDescription": "Elige una nota de la barra lateral",
-      "createNote": "Crear nota",
-      "emptyFolder": "No hay notas en esta carpeta"
-    },
-    "addToFolder": {
-      "title": "Añadir notas",
-      "searchPlaceholder": "Buscar notas para añadir...",
-      "searchResults_one": "{{count}} conversación coincide",
-      "searchResults_other": "{{count}} conversaciones coinciden",
-      "addExisting": "Añadir existentes",
-      "addCount": "Añadir {{count}} notas",
-      "noResults": "No hay notas coincidentes",
-      "noNotesAvailable": "No hay otras notas disponibles"
-    },
-    "onboarding": {
-      "llm": {
-        "title": "Configurar un modelo de IA",
-        "description": "Las acciones usan IA para transformar tus notas. Configura un modelo de lenguaje para comenzar.",
-        "configured": "Modelo de IA configurado"
-      },
-      "actions": {
-        "title": "Acciones impulsadas por IA",
-        "description": "Las acciones transforman tus notas: corrigen transcripciones, resumen reuniones y más. Usa acciones integradas o crea las tuyas.",
-        "builtInLabel": "Integrada",
-        "createTitle": "Crea tu propia acción",
-        "createDescription": "Define una acción personalizada con tu propio prompt de IA. Puedes editar o agregar más después en los ajustes.",
-        "created": "¡Creada!"
-      },
-      "getStarted": "Comenzar",
-      "systemAudio": {
-        "title": "Audio del sistema",
-        "description": "Captura audio de reuniones y otras aplicaciones junto con tu micrófono.",
-        "grant": "Conceder permiso",
-        "enabled": "Activado"
-      }
-    },
-    "realtimeBanner": {
-      "message": "Transcripción en tiempo real disponible con Pro",
-      "upgrade": "Mejorar"
-    },
     "enhance": {
       "title": "Error de mejora"
-    },
-    "speaker": {
-      "you": "Tú",
-      "them": "Ellos",
-      "label": "Participante {{n}}",
-      "identifyingSpeakers": "Identificando participantes...",
-      "liveAccuracyHint": "Aún identificando participantes. La precisión de las etiquetas mejorará cuando termine la llamada.",
-      "speakersIdentified": "Participantes identificados",
-      "typeNamePlaceholder": "Escribe un nombre",
-      "knownSpeakers": "Hablantes conocidos",
-      "meetingAttendees": "Asistentes de la reunión",
-      "assignName": "Asignar nombre",
-      "isThisPerson": "¿Es {{name}}?",
-      "selected": "{{n}} seleccionados",
-      "assignTo": "Asignar a…",
-      "deselectAll": "Deseleccionar todo",
-      "confirmed": "Confirmado",
-      "nameAssigned": "Nombre asignado",
-      "state": {
-        "provisional": "Provisional",
-        "confirmed": "Confirmado",
-        "suggested": "Sugerido",
-        "locked": "Bloqueado"
-      },
-      "createNewPrefix": "Crear",
-      "emailPlaceholder": "nombre@ejemplo.com",
-      "nameOrEmailPlaceholder": "Escribe un nombre o correo",
-      "addContact": "Añadir contacto",
-      "save": "Guardar",
-      "cancel": "Cancelar",
-      "pill": {
-        "identifying": "Identificando participantes",
-        "notLabeled": "Participantes sin etiquetar",
-        "finalizing": "Finalizando participantes…",
-        "justYou": "solo tú",
-        "defaultingHint": "por defecto 1 otra persona",
-        "toggleAria": "Alternar identificación de participantes para esta grabación",
-        "incAria": "Aumentar número de participantes esperados",
-        "decAria": "Disminuir número de participantes esperados",
-        "othersInCall_one": "{{count}} otra persona en la llamada",
-        "othersInCall_other": "{{count}} otras personas en la llamada"
-      }
     },
     "conversationGraph": {
       "title": "Preguntas de la conversación",
@@ -2411,132 +1390,6 @@
         "expired": "Expirada"
       }
     }
-  },
-  "dictionary": {
-    "addWord": "Añadir palabra",
-    "removeWord": "Eliminar {{word}}",
-    "clearAll": "Borrar todo",
-    "clearTitle": "¿Borrar el diccionario?",
-    "clearDescription": "Esto eliminará todas las palabras de tu diccionario personalizado. Esta acción no se puede deshacer.",
-    "addPlaceholder": "Añade palabras separadas por comas: Oats, Supabase, John Snow, ARR",
-    "add": "Añadir",
-    "importWords": "Importar palabras",
-    "importPlaceholder": "Pega palabras separadas por comas...",
-    "separateWithCommas": "Separa con comas",
-    "wordsReady_one": "{{count}} palabra lista",
-    "wordsReady_other": "{{count}} palabras listas",
-    "import": "Importar",
-    "yourDictionary": "Tu diccionario",
-    "exportDictionary": "Exportar diccionario",
-    "exportFailed": "Error al exportar",
-    "editWord": "Editar {{word}}",
-    "noMatches": "Sin coincidencias — pulsa Enter para añadir \"{{word}}\"",
-    "tabDictionary": "Diccionario",
-    "tabSnippets": "Snippets",
-    "snippets": {
-      "title": "Snippets",
-      "edit": "Editar {{trigger}}",
-      "remove": "Eliminar {{trigger}}",
-      "editTitle": "Editar snippet",
-      "dialogDescription": "Cuando digas el disparador, se reemplazará por tu texto guardado.",
-      "triggerLabel": "Disparador",
-      "triggerPlaceholder": "p. ej. mi agenda",
-      "replacementLabel": "Reemplazo",
-      "replacementPlaceholder": "Texto que se insertará al decir el disparador…",
-      "create": "Crear snippet",
-      "duplicate": "Ya existe un snippet con este disparador",
-      "emptyTitle": "Lo que no deberías tener que decir",
-      "emptyTitleAccent": "dos veces",
-      "emptyDescription": "Di una palabra disparadora y Oats la reemplaza por lo que guardaste: URLs, presentaciones, despedidas, prompts.",
-      "new": "Nuevo snippet",
-      "examples": {
-        "linkedinTrigger": "Mi LinkedIn",
-        "linkedinText": "linkedin.com/in/tu",
-        "rewriteTrigger": "Prompt de reescritura",
-        "rewriteText": "Reescribe esto para que sea más conciso y profesional",
-        "introTrigger": "Email de presentación",
-        "introText": "Hola, me encantaría encontrar un momento para hablar esta semana…",
-        "signoffTrigger": "Despedida",
-        "signoffText": "Saludos, Alex · alex@example.com"
-      },
-      "addPlaceholder": "Añade una frase disparadora: \"mi agenda\", \"mi LinkedIn\""
-    },
-    "emptyTitle": "Tu diccionario está vacío",
-    "emptyDescription": "Añade palabras que {{agentName}} siempre debe reconocer: nombres, herramientas, siglas.",
-    "addFirstWord": "Añade tu primera palabra",
-    "importList": "Importar una lista",
-    "agentDefault": "Añadido por defecto"
-  },
-  "sidebar": {
-    "home": "Inicio",
-    "notes": "Notas",
-    "upload": "Subir",
-    "dictionary": "Diccionario",
-    "referral": "Obtener un mes gratis",
-    "settings": "Configuración",
-    "support": "Soporte",
-    "limitReached": "Límite semanal alcanzado",
-    "limitReachedDescription": "Mejora a Pro para transcripciones ilimitadas.",
-    "viewPlans": "Ver planes",
-    "upgradeTitle": "Mejorar a Pro",
-    "upgradeDescription": "Transcripciones ilimitadas y más.",
-    "learnMore": "Más información",
-    "integrations": "Integraciones",
-    "defaultUser": "Usuario",
-    "notSignedIn": "Sin sesión iniciada",
-    "chat": "Chat",
-    "inviteTeammate": "Invitar compañero",
-    "createWorkspace": "Crear espacio de trabajo",
-    "collapse": "Contraer barra lateral",
-    "expand": "Expandir barra lateral"
-  },
-  "chat": {
-    "newChat": "Nuevo chat",
-    "search": "Buscar conversaciones...",
-    "archived": "Archivadas",
-    "noConversations": "Inicia tu primera conversación",
-    "selectChat": "Selecciona una conversación o inicia una nueva",
-    "noResults": "Sin conversaciones coincidentes",
-    "today": "Hoy",
-    "yesterday": "Ayer",
-    "previousWeek": "Últimos 7 días",
-    "older": "Anteriores",
-    "archive": "Archivar",
-    "unarchive": "Desarchivar",
-    "delete": "Eliminar",
-    "deleteConfirm": "Esta conversación se eliminará permanentemente. No se puede deshacer.",
-    "editTitle": "Doble clic para editar el título",
-    "untitled": "Sin título",
-    "searchChats": "Buscar chats",
-    "searchTitle": "Buscar conversaciones",
-    "searchDescription": "Buscar en todas tus conversaciones",
-    "newChatEmpty": "Pregunta sobre tus notas, transcripciones o lo que quieras"
-  },
-  "usage": {
-    "approachingLimit": "Cerca del límite semanal",
-    "approachingLimitDescription": "Has usado {{wordsUsed}} de {{limit}} palabras gratuitas esta semana.",
-    "yourPlan": "Tu plan",
-    "trial": "Prueba (queda {{days}} día)",
-    "trial_other": "Prueba (quedan {{days}} días)",
-    "pro": "Pro",
-    "business": "Business",
-    "unlimitedTrial": "Transcripciones ilimitadas durante tu período de prueba",
-    "unlimited": "Transcripciones ilimitadas",
-    "manageSubscription": "Gestionar suscripción",
-    "weeklyUsage": "Uso semanal",
-    "limitReached": "Límite alcanzado",
-    "free": "Gratis",
-    "wordsRemaining": "{{remaining}} palabras restantes",
-    "rollingLimit": "Límite semanal renovable",
-    "upgradeToPro": "Actualizar a Pro",
-    "useYourOwnKey": "Usar tu propia clave API",
-    "upgradeUnlimited": "Actualizar a Pro — transcripciones ilimitadas"
-  },
-  "support": {
-    "documentation": "Documentación",
-    "joinDiscord": "Unirse a Discord",
-    "contactSupport": "Contactar soporte",
-    "submitBug": "Reportar un error"
   },
   "postMigration": {
     "title": "Te damos la bienvenida de nuevo a Oats",
@@ -2619,9 +1472,7 @@
     "sourceLanguage": "Idioma hablado",
     "sourceLanguageDescription": "El idioma en el que dictas: Automático también gestiona dictados mixtos",
     "targetLanguage": "Traducir a",
-    "targetLanguageDescription": "El idioma del texto pegado",
     "targetLanguageMissing": "Elige un idioma de destino para activar el atajo de traducción",
-    "selectLanguage": "Seleccionar idioma…",
     "prompt": {
       "title": "Prompt de Traducción",
       "description": "Personaliza cómo el modelo traduce tu dictado"
@@ -2726,221 +1577,15 @@
       "invalidArgs": "Argumentos de herramienta no válidos para {{name}}"
     }
   },
-  "integrations": {
-    "title": "Integraciones",
-    "description": "Conecta servicios para potenciar tu flujo de trabajo",
-    "googleCalendar": {
-      "title": "Google Calendar",
-      "optional": "Opcional",
-      "description": "Rellena automáticamente los títulos y asistentes de las reuniones desde tu calendario.",
-      "connect": "Conectar Google Calendar",
-      "connecting": "Conectando...",
-      "connected": "Conectado",
-      "addAnother": "Añadir otro calendario",
-      "primaryOnly": "Sincronizar solo el calendario principal",
-      "primaryOnlyDescription": "Ignorar los eventos de los calendarios compartidos contigo.",
-      "disconnect": "Desconectar",
-      "disconnectConfirm": "¿Desconectar {{email}}?",
-      "disconnectDescription": "Ya no se grabarán notas de reuniones de este calendario.",
-      "systemAudioRequired": "Se requiere permiso de Audio del Sistema",
-      "systemAudioDescription": "Para transcribir reuniones, Oats necesita el permiso de Audio del Sistema para capturar el audio de otros participantes. Nunca grabamos tu pantalla. Serás dirigido a Ajustes del Sistema para activarlo.",
-      "openSettings": "Abrir Ajustes del Sistema"
-    },
-    "sections": {
-      "calendar": "Calendario",
-      "api": "API",
-      "mcp": "MCP",
-      "cli": "CLI"
-    },
-    "api": {
-      "title": "Claves API",
-      "description": "Administra las claves API para acceso programático",
-      "proRequired": "Actualiza a un plan de pago para acceder a la API",
-      "manage": "Administrar claves",
-      "viewPlans": "Ver planes",
-      "dialogTitle": "Claves API"
-    },
-    "mcp": {
-      "title": "Lleva tus notas a tus herramientas de IA",
-      "description": "Chatea, busca y trabaja con tus notas en Claude, ChatGPT y Cursor.",
-      "step1": "En tu herramienta de IA, añade Oats MCP usando la URL pública",
-      "step2": "Crea una clave API arriba con los permisos que necesites.",
-      "step3": "Pega la clave como cabecera Authorization para conectar.",
-      "learnMore": "Más información",
-      "viewPlans": "Ver planes",
-      "copyUrl": "Copiar URL de MCP",
-      "proRequired": "Actualiza a un plan de pago para conectar Oats con Claude, ChatGPT y Cursor.",
-      "copied": "Copiado"
-    },
-    "cli": {
-      "title": "Acceso por línea de comandos",
-      "description": "Dale a tu agente acceso a tus notas desde la terminal.",
-      "installLabel": "Instalar",
-      "learnMore": "Leer la documentación",
-      "copyDocsLink": "Copiar enlace de la documentación",
-      "docsLinkCopied": "Enlace de la documentación copiado",
-      "viewPlans": "Ver planes",
-      "local": {
-        "label": "Local",
-        "freeBadge": "Gratis",
-        "description": "Lee tus notas locales directamente. Sin inicio de sesión ni clave API — funciona mientras Oats esté abierto."
-      },
-      "cloud": {
-        "label": "Nube",
-        "description": "Sincroniza entre dispositivos con tu clave API.",
-        "proRequired": "Actualiza a un plan de pago para usar la CLI en modo nube."
-      }
-    },
-    "plan": {
-      "title": "Tu Plan",
-      "current": "Actual",
-      "free": "Gratis",
-      "freeLimit": "5 reuniones / mes",
-      "essential": "Essential",
-      "essentialLimit": "20 reuniones / mes",
-      "pro": "Pro",
-      "proLimit": "Ilimitado",
-      "upgrade": "Mejorar"
-    },
-    "notABot": {
-      "title": "Oats es un grabador de reuniones, no un bot",
-      "description": "Oats captura el audio directamente de tu sistema — nunca se une a tus reuniones como participante. Solo conecta tu calendario y toma notas con normalidad."
-    }
-  },
-  "calendar": {
-    "title": "Google Calendar",
-    "status": "Estado",
-    "connected": "Conectado",
-    "disconnected": "Desconectado",
-    "notConnectedDescription": "Conectar para detectar y grabar reuniones",
-    "connectCta": {
-      "title": "Integración de Calendario",
-      "description": "Detectar reuniones automáticamente y grabar transcripciones"
-    },
-    "connect": "Conectar Google Calendar",
-    "connecting": "Conectando...",
-    "disconnect": "Desconectar",
-    "disconnecting": "Desconectando...",
-    "sync": "Sincronizar",
-    "syncing": "Sincronizando...",
-    "calendarsTitle": "Calendarios",
-    "upcomingTitle": "Próximos",
-    "noUpcoming": "No hay eventos próximos",
-    "meetingStarting": "La reunión comienza ahora",
-    "today": "Hoy",
-    "tomorrow": "Mañana"
-  },
   "upcoming": {
-    "title": "Próximas reuniones",
-    "transcriptions": "Transcripciones",
-    "tomorrow": "Mañana",
-    "noMoreMeetings": "No hay más reuniones hoy",
-    "now": "Ahora",
-    "join": "Unirse",
-    "untitledEvent": "Evento sin título",
-    "systemAudioRequired": "Se necesita el permiso de Audio del Sistema para capturar el audio de otros participantes.",
-    "openSettings": "Abrir Ajustes del Sistema",
-    "signInRequired": "Inicia sesión para usar la grabación de reuniones",
-    "signInDescription": "Crea una cuenta o inicia sesión para grabar y transcribir reuniones.",
-    "connectCalendar": "Conecta tu calendario",
-    "connectCalendarDescription": "Vincula tu Google Calendar para ver próximas reuniones y grabar notas automáticamente.",
-    "notABot": "Oats graba usando el audio de tu sistema — nunca se une a las reuniones como un bot.",
-    "connectCalendarButton": "Conectar calendario"
-  },
-  "notesView": {
-    "searchPlaceholder": "Buscar notas…",
-    "newNote": "Nueva nota",
-    "empty": {
-      "title": "Sin notas todavía",
-      "description": "Crea tu primera nota para empezar."
-    },
-    "searchEmpty": {
-      "title": "Sin resultados",
-      "description": "No se encontraron notas para \"{{query}}\"."
-    },
-    "noteType": {
-      "personal": "personal",
-      "meeting": "reunión",
-      "upload": "subida"
-    }
-  },
-  "noteEditor": {
-    "saved": "Guardado",
-    "deleteNote": "Eliminar nota",
-    "deleteConfirmTitle": "¿Eliminar nota?",
-    "deleteConfirmDescription": "Esta nota se eliminará permanentemente y no se podrá recuperar.",
-    "deleteConfirm": "Eliminar",
-    "share": {
-      "button": "Compartir",
-      "dialog": {
-        "title": "Compartir nota",
-        "searchPlaceholder": "Añade personas por correo",
-        "emailLabel": "Correo del destinatario",
-        "shareButton": "Compartir",
-        "copyLink": "Copiar enlace",
-        "copied": "Copiado",
-        "owner": "Propietario",
-        "pending": "Pendiente",
-        "accepted": "Tiene acceso",
-        "resend": "Reenviar invitación",
-        "revoke": "Quitar",
-        "invitationActions": "Acciones de la invitación",
-        "permissionRequired": "Solo el propietario de la nota puede cambiar el uso compartido.",
-        "visibility": {
-          "label": "Visibilidad",
-          "link": "Cualquiera con el enlace",
-          "domain": "Todos en {{domain}} con el enlace",
-          "invited": "Solo personas invitadas"
-        },
-        "error": {
-          "invalidEmail": "Introduce un correo válido",
-          "alreadyInvited": "{{email}} ya está invitado",
-          "inviteFailed": "No se pudo enviar la invitación. Inténtalo de nuevo.",
-          "linkUnavailable": "Genera o rota el enlace para copiarlo"
-        }
-      }
-    }
-  },
-  "commandSearch": {
-    "title": "Buscar",
-    "description": "Buscar en notas y transcripciones",
-    "shortPlaceholder": "Buscar",
-    "placeholder": "Buscar notas y transcripciones…",
-    "sections": {
-      "notes": "Notas",
-      "transcripts": "Transcripciones"
-    },
-    "noResults": "Sin resultados",
-    "emptyState": "Escribe para buscar",
-    "footer": {
-      "navigate": "Navegar",
-      "open": "Abrir",
-      "dismiss": "Cerrar"
-    }
+    "tomorrow": "Mañana"
   },
   "updateNotification": {
     "title": "Actualización de Oats disponible",
     "body": "La versión {{version}} está lista para descargar",
     "cta": "Actualizar ahora"
   },
-  "permissionsGate": {
-    "title": "Permisos necesarios",
-    "description": "Oats necesita algunos permisos para funcionar en este ordenador.",
-    "continue": "Continuar"
-  },
-  "embeddedChat": {
-    "askPlaceholder": "Pregunta algo...",
-    "send": "Enviar",
-    "title": "Chat",
-    "emptyState": "Haz una pregunta sobre esta nota",
-    "dock": "Anclar a la barra lateral",
-    "undock": "Desanclar de la barra lateral",
-    "close": "Cerrar chat",
-    "newChat": "Nuevo chat",
-    "conversationSelector": "Cambiar conversación"
-  },
   "transcriptionPreview": {
-    "label": "Vista previa",
     "listening": "Escuchando...",
     "polishing": "Corrigiendo...",
     "ready": "Listo",
@@ -2952,54 +1597,6 @@
     "speaker": {
       "you": "Tú",
       "others": "Otros"
-    }
-  },
-  "workspaces": {
-    "switcher": {
-      "personal": "Personal",
-      "workspaces": "Espacios de trabajo",
-      "empty": "Aún no hay espacios de trabajo",
-      "create": "Crear espacio de trabajo…"
-    },
-    "create": {
-      "title": "Crear espacio de trabajo",
-      "description": "Los espacios de trabajo te permiten colaborar, compartir notas y administrar la facturación.",
-      "nameLabel": "Nombre del espacio de trabajo",
-      "namePlaceholder": "Acme Corp",
-      "submit": "Crear espacio de trabajo",
-      "submitting": "Creando…",
-      "errorTitle": "No se pudo crear el espacio de trabajo"
-    },
-    "created": {
-      "title": "Espacio de trabajo creado",
-      "description": "Ahora eres el propietario de {{name}}."
-    },
-    "invite": {
-      "title": "Invitar a {{workspace}}",
-      "description": "Agrega compañeros por correo. Recibirán un enlace para unirse.",
-      "emailLabel": "Correo electrónico",
-      "roleLabel": "Rol",
-      "teamsLabel": "Agregar a equipos",
-      "submit": "Enviar invitación",
-      "submitting": "Enviando…",
-      "sentTitle": "Invitación enviada",
-      "sentDescription": "Enviamos una invitación a {{email}}.",
-      "errorTitle": "No se pudo enviar la invitación",
-      "role": {
-        "admin": "Administrador",
-        "member": "Miembro"
-      }
-    },
-    "accept": {
-      "title": "Unirse al espacio de trabajo",
-      "description": "{{inviter}} te invitó a unirte a {{workspace}} como {{role}}.",
-      "loading": "Cargando invitación…",
-      "accept": "Aceptar invitación",
-      "accepting": "Aceptando…",
-      "signInToAccept": "Inicia sesión para aceptar",
-      "successTitle": "Te uniste",
-      "successDescription": "Bienvenido a {{name}}.",
-      "errorTitle": "No se pudo aceptar la invitación"
     }
   },
   "meetingNotification": {
@@ -3063,6 +1660,7 @@
       "carriedOver": "Quedó abierto la última vez:",
       "openPrevious": "Abrir aquella",
       "noMatches": "Nada coincide",
+      "onlyRelated": "Nada se dijo con esas palabras. Estas conversaciones tratan del mismo tema.",
       "match": {
         "transcript": "dicho",
         "summary": "resumen",
@@ -3139,7 +1737,6 @@
     },
     "searched": "buscado",
     "dismiss": "Descartar pregunta",
-    "askedTimes": "preguntado {{count}}×",
     "earlier": "{{count}} anteriores",
     "collapse": "Mostrar menos",
     "undo": "Deshacer",
@@ -3163,13 +1760,10 @@
     "returned_one": "retomado {{count}}×",
     "returned_other": "retomado {{count}}×",
     "search": "Buscar",
-    "noQuestions": "No hay preguntas en este hilo.",
-    "selectPrompt": "Selecciona un tema para ver las preguntas que se hicieron en él."
+    "noQuestions": "No hay preguntas en este hilo."
   },
   "suggestions": {
     "title": "Vale la pena tratar",
-    "unfinished": "quedó abierto",
-    "shallow": "apenas tratado",
     "adjacent_one": "suele surgir",
     "adjacent_other": "suele surgir"
   },
@@ -3184,7 +1778,6 @@
     "topicCount_one": "{{count}} tema",
     "topicCount_other": "{{count}} temas",
     "open": "Abrir esta conversación",
-    "selectPrompt": "Selecciona una conversación para ver qué trató.",
     "empty": "El mapa aparece cuando tengas {{count}} conversaciones grabadas que conectar."
   }
 }

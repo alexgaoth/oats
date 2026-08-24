@@ -166,7 +166,13 @@ test("macOS traffic lights have the band to themselves", () => {
   // A traffic light button is 14px tall, so the group ends at y + 14.
   const bottom = y + 14;
 
-  const height = WORKSPACE.match(/className="relative z-20 h-(\d+) shrink-0"/);
+  // Match the height inside the band's class list rather than pinning the whole
+  // string: the band legitimately gained layout classes when the orientation nav
+  // moved onto it, and this test is about the traffic lights, not about which
+  // other utilities happen to sit beside `h-9`.
+  const band = WORKSPACE.match(/className="([^"]*\bz-20\b[^"]*\bshrink-0\b[^"]*)"/);
+  assert.ok(band, "expected to find the drag band's class list");
+  const height = band[1].match(/\bh-(\d+)\b/);
   assert.ok(height, "expected the drag band to declare a Tailwind height");
   const bandPx = Number(height[1]) * 4;
 

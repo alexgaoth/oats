@@ -3,6 +3,7 @@ const { promisify } = require("util");
 const path = require("path");
 const fs = require("fs");
 const EventEmitter = require("events");
+const sidecarPidFile = require("./sidecarPidFile");
 const debugLogger = require("./debugLogger");
 
 const execAsync = promisify(exec);
@@ -139,6 +140,7 @@ class AudioActivityDetector extends EventEmitter {
       } catch {
         // already exited
       }
+      sidecarPidFile.clear("pactl");
       this._listenerProcess = null;
     }
   }
@@ -315,7 +317,23 @@ class AudioActivityDetector extends EventEmitter {
 
   _tryEventDrivenLinux() {
     try {
+      // Registered with the sidecar reaper, because this child outlives a
+      // SIGKILLed parent.
+      //
+      // The backlog recorded this as the child "holding inherited file
+      // descriptors". Measured, that is not what happens: comparing socket
+      // inodes in `/proc/<pid>/fd`, the child inherits **none** of the parent's
+      // sockets — Node sets CLOEXEC on its own descriptors — and `detached`
+      // changes neither that nor whether the child survives a `kill -9` of the
+      // parent. It survives either way.
+      //
+      // So the real defect is an orphan, not a leak, and the repository already
+      // has the answer for orphans: write the pid where the next launch will
+      // find it and let `sidecarReaper` clean it up. See CLAUDE.md's sidecar
+      // checklist.
       const child = spawn("pactl", ["subscribe"], { stdio: ["ignore", "pipe", "pipe"] });
+      sidecarPidFile.write("pactl", child.pid);
+      child.on("close", () => sidecarPidFile.clear("pactl"));
       this._listenerProcess = child;
 
       let buffer = "";

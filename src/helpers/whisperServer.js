@@ -130,10 +130,23 @@ function buildWhisperServerArgs({
   vadEnabled = false,
   vadModelPath = null,
   vadConfig,
+  gpuDeviceIndex = null,
 }) {
   const args = ["--model", modelPath, "--host", "127.0.0.1", "--port", String(port)];
 
   if (threads) args.push("--threads", String(threads));
+
+  // Ported from upstream 1.8.3.
+  //
+  // `--device` counts the logical GPU devices ggml registers — exactly the
+  // indices whisper-server prints as "ggml_vulkan: N = ...". Do NOT reach for
+  // `GGML_VK_VISIBLE_DEVICES` instead: that takes raw physical enumeration
+  // indices, which diverge from the printed ones the moment a device is filtered
+  // out (lavapipe, dual-driver dedupe), so the two disagree on exactly the
+  // machines where picking the right GPU matters.
+  if (Number.isInteger(gpuDeviceIndex) && gpuDeviceIndex >= 0) {
+    args.push("--device", String(gpuDeviceIndex));
+  }
 
   // whisper.cpp defaults to English when --language is omitted;
   // explicitly pass "auto" to enable language auto-detection

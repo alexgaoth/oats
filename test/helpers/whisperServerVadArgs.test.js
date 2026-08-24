@@ -29,6 +29,9 @@ test("buildWhisperServerArgs includes VAD flags when enabled and model path prov
     "8180",
     "--language",
     "auto",
+    // whisper.cpp v1.9.x enables a 60-character segment wrap when token
+    // timestamps are on, which breaks words in half. We read only `text`.
+    "--no-timestamps",
     "--vad",
     "--vad-model",
     "/tmp/ggml-silero-v5.1.2.bin",

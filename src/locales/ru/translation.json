@@ -109,42 +109,16 @@
     "accessibility": "Настройки универсального доступа недоступны на этой платформе.",
     "systemAudio": "Настройки системного аудио недоступны на этой платформе."
   },
-  "upgradePrompt": {
-    "paymentFailed": "Не удалось обработать платёж",
-    "weeklyLimit": "Вы достигли недельного лимита",
-    "pastDueDescription": "Сейчас вы на бесплатном плане — не волнуйтесь, у вас есть {{limit}} слов в неделю.\nОбновите способ оплаты, чтобы вернуться к безлимитному Pro.",
-    "limitDescription": "Использовано {{used}} из {{limit}} слов.\nВаша транскрипция сохранена и вставлена.",
-    "updatePayment": "Обновить способ оплаты",
-    "updatePaymentDescription": "Вернитесь к безлимитным Pro-транскрипциям.",
-    "upgradeToPro": "Перейти на Pro",
-    "upgradeDescription": "Безлимитные транскрипции от $8/мес.",
-    "useApiKey": "Использовать свой API-ключ",
-    "useApiKeyDescription": "Свой ключ — без ограничений.",
-    "switchToLocal": "Перейти на локальный режим",
-    "switchToLocalDescription": "Офлайн-транскрипция. Без ограничений.",
-    "rollingWeeklyLimit": "Скользящий недельный лимит"
-  },
-  "windowControls": {
-    "minimize": "Свернуть",
-    "maximize": "Развернуть",
-    "restore": "Восстановить",
-    "close": "Закрыть"
-  },
   "windows": {
     "pttUnavailable": "Нативный слушатель Push-to-Talk недоступен"
   },
   "common": {
-    "retry": "Повторить",
-    "back": "Назад",
-    "next": "Далее",
-    "complete": "Готово",
     "reset": "Сбросить",
     "refresh": "Обновить",
     "download": "Скачать",
     "cancel": "Отмена",
     "recommended": "Рекомендуется",
     "active": "Активно",
-    "freeAccountRequired": "Требуется бесплатный аккаунт",
     "cloud": "Облако",
     "local": "Локально",
     "apiKey": "API-ключ",
@@ -152,25 +126,12 @@
     "loading": "Загрузка...",
     "unknown": "Неизвестно",
     "availableModels": "Доступные модели",
-    "fast": "Быстрый",
     "hold": "Удержание",
-    "private": "Приватный",
     "tap": "Нажатие",
-    "close": "Закрыть",
-    "dismiss": "Скрыть",
     "save": "Speichern",
-    "saving": "Speichern…",
-    "create": "Erstellen",
-    "delete": "Löschen",
-    "actions": "Aktionen",
-    "error": "Etwas ist schiefgelaufen",
-    "unknownError": "Ein unbekannter Fehler ist aufgetreten",
     "copy": "Kopieren",
     "copied": "Kopiert",
-    "done": "Fertig",
-    "skip": "Пропустить",
-    "on": "Вкл.",
-    "off": "Выкл."
+    "done": "Fertig"
   },
   "onboarding": {
     "steps": {
@@ -182,15 +143,6 @@
       "meeting": "Встречи",
       "finish": "Готово",
       "voiceAgent": "Голосовой агент"
-    },
-    "hotkey": {
-      "couldNotRegisterTitle": "Не удалось зарегистрировать горячую клавишу",
-      "couldNotRegisterDescription": "Эта комбинация клавиш, возможно, уже используется. Попробуйте другую."
-    },
-    "setup": {
-      "title": "Настройка",
-      "description": "Выберите язык и предоставьте разрешения",
-      "language": "Язык"
     },
     "permissions": {
       "title": "Дайте Oats услышать комнату",
@@ -211,93 +163,6 @@
       "optional": "Необязательно",
       "recommended": "Рекомендуется",
       "accessibilityTroubleshooting": "В Системных настройках → Универсальный доступ выключите переключатель Oats и снова включите его. Если это не помогло, удалите Oats из списка и добавьте заново."
-    },
-    "transcription": {
-      "title": "Настройка транскрипции",
-      "description": "Выберите режим и провайдера",
-      "preferredLanguage": "Предпочитаемый язык"
-    },
-    "activation": {
-      "title": "Настройка диктовки",
-      "description": "Настройте способ запуска диктовки",
-      "hotkey": "Горячая клавиша",
-      "mode": "Режим",
-      "tapDescription": "Нажмите для старта/остановки",
-      "holdDescription": "Удерживайте во время речи",
-      "test": "Тест",
-      "hotkeyToStartStop": "{{hotkey}} для старта/остановки",
-      "holdHotkey": "Удерживайте {{hotkey}}",
-      "textareaPlaceholder": "Нажмите сюда и используйте горячую клавишу для диктовки..."
-    },
-    "voiceAgent": {
-      "title": "Настройка голосового агента",
-      "description": "Обращайтесь к ИИ-агенту одним нажатием",
-      "hotkey": "Горячая клавиша",
-      "howItWorks": "Нажмите клавишу и скажите, что вам нужно — например, «напиши короткую благодарственную записку». {{agentName}} напечатает результат там, где находится курсор. Говорить «Hey {{agentName}}» не нужно.",
-      "test": "Попробуйте",
-      "testInstruction": "Нажмите ниже, нажмите {{hotkey}} и произнесите команду",
-      "testSetHotkey": "Задайте горячую клавишу выше, чтобы попробовать",
-      "testPlaceholder": "Нажмите здесь, нажмите горячую клавишу и произнесите один из примеров...",
-      "examples": [
-        "Переведи на итальянский: «Я говорю быстрее, чем печатаю»",
-        "Напиши короткое письмо начальнику о том, что я хочу повышение, его зовут Марк",
-        "Сколько будет 5 × 5?"
-      ],
-      "optionalNote": "Необязательно — вы можете настроить или изменить её в любое время в настройках."
-    },
-    "connectivity": {
-      "title": "Не удаётся подключиться к Oats Cloud из этой сети",
-      "body": "{{cause}} Вы можете переключиться на локальный движок или продолжить и повторить попытку позже.",
-      "useLocal": "Использовать локальный движок",
-      "continue": "Продолжить всё равно"
-    },
-    "useCase": {
-      "title": "Что вас сюда привело?",
-      "description": "Мы — небольшая команда и выпускаем обновления каждую неделю. Ваш выбор настраивает приложение под вас — и подсказывает нам, что делать дальше.",
-      "noteLabel": "Хотите рассказать что-то ещё?",
-      "notePlaceholder": "Необязательно",
-      "options": {
-        "dictation": {
-          "title": "Писать быстрее",
-          "description": "Диктуйте в любом приложении вместо набора текста"
-        },
-        "meetings": {
-          "title": "Заметки и резюме встреч",
-          "description": "Записывайте, расшифровывайте и резюмируйте встречи"
-        },
-        "healthcare": {
-          "title": "Медицинская, клиническая и терапевтическая транскрипция",
-          "description": "Диктуйте записи пациентов, заметки сессий и отчёты"
-        },
-        "translation": {
-          "title": "Перевод языков",
-          "description": "Говорите на одном языке — печатайте на другом"
-        },
-        "ai": {
-          "title": "Общение с моим ИИ",
-          "description": "Управляйте голосом ChatGPT, Claude и другими агентами"
-        },
-        "upload": {
-          "title": "Загрузка аудиофайлов",
-          "description": "Загружайте и расшифровывайте MP3, OGG и другие"
-        }
-      },
-      "selectHint": "Выберите все подходящие варианты"
-    },
-    "meeting": {
-      "title": "Заметки встреч",
-      "description": "Записывайте и резюмируйте встречи",
-      "autoDetect": "Oats автоматически определяет, когда вы на встрече, и предлагает начать заметки — без вас ничего не записывается.",
-      "hotkeyLabel": "Горячая клавиша встречи",
-      "hotkeyHint": "Необязательно — нажмите её на любой встрече, чтобы сразу начать заметку."
-    },
-    "finish": {
-      "title": "Всё готово",
-      "cloudDescription": "Вы используете Oats Cloud: быстро, точно, без хранения данных и 2 000 слов бесплатно каждую неделю. Хотите, чтобы всё оставалось на устройстве? Переключитесь на локальную обработку в Настройках.",
-      "localDescription": "У вас настроена локальная обработка или собственный ключ. Изменить обработку аудио можно в любой момент в Настройках.",
-      "cleanupNote": "ИИ-очистка текста работает с разумными настройками по умолчанию. Их можно изменить в Настройках.",
-      "openSettings": "Открыть Настройки",
-      "skipForNow": "Пока пропустить"
     }
   },
   "streaming": {
@@ -329,19 +194,9 @@
       "installButton": "Установить обновление",
       "availableButton": "Доступно обновление"
     },
-    "limit": {
-      "weeklyTitle": "Недельный лимит достигнут",
-      "weeklyDescription": "Ваш лимит обновляется на скользящей основе. Перейдите на Pro или используйте свой API-ключ для безлимитного использования."
-    },
     "accessibilityMissing": {
       "title": "Необходимы разрешения универсального доступа",
       "description": "Мы обнаружили, что Oats нуждается в разрешениях универсального доступа для корректной работы. Включите их ниже."
-    },
-    "billing": {
-      "pastDueTitle": "Не удалось обработать платёж",
-      "pastDueDescription": "Не волнуйтесь — сейчас вы на бесплатном плане. Обновите способ оплаты в настройках, чтобы вернуться к Pro.",
-      "bannerDescription": "Сейчас вы на бесплатном плане — у вас есть {{limit}} слов в неделю. Обновите способ оплаты, чтобы вернуться к Pro.",
-      "updatePayment": "Обновить платёж"
     },
     "history": {
       "couldNotLoadTitle": "Не удалось загрузить историю",
@@ -398,25 +253,7 @@
         "recover": "Восстановить",
         "recovered": "Восстановлено"
       }
-    },
-    "cloudMigration": {
-      "title": "Добро пожаловать в Oats Cloud",
-      "description": "Мы переключили транскрипцию на Oats Cloud для более быстрых и точных результатов. Ваши предыдущие настройки сохранены — вы можете вернуться к ним в любой момент в настройках.",
-      "viewSettings": "Открыть настройки"
-    },
-    "aiCta": {
-      "title": "Улучшите транскрипции с помощью ИИ",
-      "description": "Автоматически исправляйте грамматику, пунктуацию и форматирование прямо во время диктовки.",
-      "enable": "Включить ИИ-улучшение"
-    },
-    "loading": "Загрузка...",
-    "gpu": {
-      "bannerTitle": "Доступно ускорение GPU",
-      "bannerDescription": "Включите ускорение GPU для повышения производительности.",
-      "enableButton": "Включить GPU",
-      "dismissButton": "Не сейчас"
-    },
-    "backToNotes": "Назад к заметкам"
+    }
   },
   "reasoning": {
     "mode": {
@@ -464,48 +301,6 @@
     "selfHosted": {
       "endpointHelp": "Укажите OpenAI-совместимый сервер в вашей локальной сети (например, Ollama, LM Studio, vLLM или llama-server)."
     },
-    "enterprise": {
-      "title": "Корпоративные провайдеры",
-      "description": "Подключайтесь к облачным провайдерам с учётными данными вашей организации.",
-      "testConnection": "Проверить соединение",
-      "testing": "Проверка…",
-      "testSuccess": "Подключено",
-      "testFailed": "Ошибка подключения",
-      "authMode": "Аутентификация",
-      "ssoProfile": "Профиль SSO",
-      "accessKeys": "Ключи доступа",
-      "adc": "Application Default Credentials",
-      "apiKeyMode": "API-ключ",
-      "region": "Регион",
-      "profile": "Имя профиля",
-      "accessKeyId": "Access Key ID",
-      "secretAccessKey": "Secret Access Key",
-      "sessionToken": "Session Token (необязательно)",
-      "endpoint": "Endpoint URL",
-      "deploymentName": "Имя развёртывания",
-      "apiVersion": "Версия API",
-      "projectId": "ID проекта",
-      "location": "Расположение",
-      "customModelId": "Пользовательский ID модели",
-      "customModelPlaceholder": "Введите ID модели или имя развёртывания",
-      "suggestedModels": "Рекомендуемые модели",
-      "browseModels": "Просмотреть все модели",
-      "loadingModels": "Загрузка моделей...",
-      "allModels": "Все модели в {{region}}",
-      "modelListError": "Не удалось загрузить модели.",
-      "bedrock": {
-        "ssoHelp": "Использует настройки SSO из AWS CLI. Убедитесь, что выполнили 'aws sso login'.",
-        "keysHelp": "Введите ключи доступа AWS IAM."
-      },
-      "azure": {
-        "endpointHelp": "Endpoint вашего ресурса Azure OpenAI (например, https://myresource.openai.azure.com).",
-        "deploymentHelp": "Имя развёртывания модели в Azure OpenAI."
-      },
-      "vertex": {
-        "adcHelp": "Использует Application Default Credentials. Выполните: gcloud auth application-default login",
-        "apikeyHelp": "API-ключ Vertex AI Express Mode из Google AI Studio."
-      }
-    },
     "tinfoil": {
       "modelRetiredTitle": "Модель больше недоступна",
       "modelRetired": "Tinfoil прекратил поддержку {{from}}. Выполнен переход на {{to}}.",
@@ -517,10 +312,6 @@
       "title": "Удалить модель",
       "description": "Вы уверены, что хотите удалить эту модель? Для повторного использования её нужно будет скачать заново."
     },
-    "parakeet": {
-      "multilingual": "25 языков",
-      "english": "Английский"
-    },
     "apiKeyOptional": "API-ключ (необязательно)",
     "getKey": "Получить ключ ->",
     "endpointUrl": "URL конечной точки",
@@ -530,7 +321,6 @@
       "whisperModelDescription": "Модель",
       "parakeetModelDescription": "Модель NVIDIA Parakeet"
     },
-    "whisperModels": "Модели Whisper",
     "tinfoil": {
       "transportNote": "Tinfoil использует Voxtral Mini 4B для потоковой обработки и Voxtral Small 24B для пакетной.",
       "docsLink": "Открыть документацию"
@@ -694,69 +484,6 @@
       }
     }
   },
-  "auth": {
-    "cloudNotConfigured": "Облако не настроено",
-    "common": {
-      "back": "Назад",
-      "continue": "Продолжить",
-      "or": "или"
-    },
-    "emailStep": {
-      "continueWithEmail": "Продолжить с электронной почтой",
-      "continueWithoutAccount": "Продолжить без аккаунта",
-      "emailPlaceholder": "you@example.com"
-    },
-    "errors": {
-      "accountExistsSignIn": "Аккаунт с этой электронной почтой уже существует. Войдите в систему.",
-      "accountNotFoundCreate": "Аккаунт с этой электронной почтой не найден. Создайте аккаунт.",
-      "authNotConfigured": "Аутентификация не настроена",
-      "createAccountFailed": "Не удалось создать аккаунт",
-      "failedProviderSignIn": "Не удалось войти через {{provider}}",
-      "failedUserCheck": "Не удалось проверить аккаунт пользователя",
-      "generic": "Что-то пошло не так. Попробуйте ещё раз.",
-      "invalidCredentials": "Неверный адрес электронной почты или пароль",
-      "plusAliasUnsupported": "Алиасы электронной почты с символом «+» не поддерживаются"
-    },
-    "getStarted": "Начать",
-    "legal": {
-      "and": "и",
-      "prefix": "Продолжая, вы соглашаетесь с нашими",
-      "privacy": "Политикой конфиденциальности",
-      "suffix": "",
-      "terms": "Условиями использования"
-    },
-    "passwordForm": {
-      "createAccount": "Создать аккаунт",
-      "createAccountButton": "Создать аккаунт",
-      "createAccountLink": "Создать аккаунт",
-      "createPasswordPlaceholder": "Придумайте пароль",
-      "creatingAccount": "Создание аккаунта...",
-      "enterPasswordPlaceholder": "Введите пароль",
-      "forgotPassword": "Забыли пароль?",
-      "fullNamePlaceholder": "Полное имя",
-      "haveAccount": "Уже есть аккаунт?",
-      "newHere": "Впервые здесь?",
-      "passwordMinLength": "Пароль должен содержать не менее 8 символов",
-      "signIn": "Войти",
-      "signInLink": "Войти",
-      "signingIn": "Вход...",
-      "welcomeBack": "С возвращением"
-    },
-    "signedIn": {
-      "ready": "Готово",
-      "welcomeBack": "С возвращением",
-      "welcomeBackName": "С возвращением, {{name}}"
-    },
-    "sso": {
-      "continueWithSSO": "Войти через SSO",
-      "emailRequired": "Введите рабочий адрес электронной почты для использования SSO.",
-      "failed": "Не удалось выполнить единый вход. Повторите попытку."
-    },
-    "welcomeSubtitle": "Диктуйте где угодно голосом",
-    "welcomeTitle": "Добро пожаловать в Oats",
-    "sessionExpired": "Сессия истекла. Пожалуйста, войдите снова."
-  },
-  "cleanupPrompt": "Очистка",
   "developerSection": {
     "currentLogFile": "Текущий файл логов",
     "debugMode": {
@@ -822,87 +549,10 @@
       "title": "Что записывается в логи"
     }
   },
-  "dictionarySuffix": "Суффикс словаря",
-  "emailVerification": {
-    "checkEmailDescription": "Мы отправили ссылку для подтверждения на",
-    "checkEmailTitle": "Проверьте почту",
-    "errors": {
-      "resendFailed": "Не удалось повторно отправить письмо. Попробуйте ещё раз.",
-      "serverUnreachable": "Не удалось подключиться к серверу. Проверьте соединение и попробуйте снова."
-    },
-    "resendButton": "Отправить письмо повторно",
-    "resendIn": "Повторная отправка через {{seconds}} с",
-    "verifiedDescription": "Ваш аккаунт настроен.",
-    "verifiedTitle": "Электронная почта подтверждена",
-    "waiting": "Ожидание подтверждения...",
-    "backToSignIn": "Вернуться ко входу"
-  },
   "errorBoundary": {
     "description": "Произошла непредвиденная ошибка. Перезагрузите, чтобы попробовать снова.",
     "reload": "Перезагрузить",
     "title": "Что-то пошло не так"
-  },
-  "forgotPassword": {
-    "back": "Назад",
-    "backToSignIn": "Вернуться к входу",
-    "emailPlaceholder": "Введите вашу электронную почту",
-    "goBack": "Вернуться",
-    "notConfigured": "Аутентификация ещё не настроена.",
-    "sendResetLink": "Отправить ссылку для сброса",
-    "sending": "Отправка...",
-    "subtitle": "Введите вашу электронную почту, и мы отправим вам ссылку для сброса пароля",
-    "success": {
-      "description": "Мы отправили ссылку для сброса пароля на",
-      "help": "Не получили письмо? Проверьте папку «Спам» или попробуйте снова.",
-      "title": "Проверьте почту",
-      "tryAnother": "Попробовать другой адрес"
-    },
-    "title": "Сброс пароля"
-  },
-  "actionPrompt": "Промпт действия",
-  "hotkeyGuidance": {
-    "blockedDescription": "Эти сочетания заблокированы, так как часто используются системой.",
-    "blockedTitle": "Заблокированные сочетания",
-    "description": "Используйте эти правила для выбора сочетания клавиш, которое не будет конфликтовать с системой.",
-    "examplesTitle": "Допустимые примеры",
-    "platforms": {
-      "linux": "Linux",
-      "macos": "macOS",
-      "windows": "Windows"
-    },
-    "recommended": {
-      "linux": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Super+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Ctrl+Shift+J",
-        "4": "Alt+Space"
-      },
-      "macos": {
-        "0": "⌥Space",
-        "1": "⌃⌥S",
-        "2": "⌃⌥D",
-        "3": "Fn",
-        "4": "⌘⇧J"
-      },
-      "windows": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Ctrl+Shift+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Win+Alt+K"
-      }
-    },
-    "recommendedTitle": "Рекомендуемые сочетания",
-    "rulesTitle": "Правила сочетаний",
-    "showAll": "Показать все",
-    "showFewer": "Показать меньше",
-    "title": "Справка по сочетаниям клавиш",
-    "validationRules": {
-      "0": "Необходимо использовать хотя бы один модификатор (Ctrl, Alt, Shift и т.д.)",
-      "1": "Нельзя использовать зарезервированные системные сочетания",
-      "2": "Одиночные клавиши без модификаторов не допускаются",
-      "3": "Некоторые сочетания могут конфликтовать с другими приложениями"
-    }
   },
   "hotkeyInput": {
     "ariaLabel": "Нажмите комбинацию клавиш для назначения горячей клавиши",
@@ -1034,231 +684,7 @@
       "modified": "Изменён"
     }
   },
-  "settingsModal": {
-    "groups": {
-      "account": "Аккаунт",
-      "app": "Приложение",
-      "aiModels": "Модели ИИ",
-      "system": "Система"
-    },
-    "sections": {
-      "account": {
-        "description": "Профиль и вход",
-        "label": "Аккаунт"
-      },
-      "plansBilling": {
-        "description": "Тарифы, использование и оплата",
-        "label": "Тарифы и оплата"
-      },
-      "general": {
-        "description": "Внешний вид, звуки и автозапуск",
-        "label": "Настройки"
-      },
-      "hotkeys": {
-        "description": "Горячая клавиша диктовки и активация",
-        "label": "Горячие клавиши"
-      },
-      "speechToText": {
-        "description": "Движки для диктовки и записи заметок",
-        "label": "Речь в текст"
-      },
-      "llms": {
-        "description": "Модели для чата, очистки и резюме",
-        "label": "Языковые модели"
-      },
-      "privacyData": {
-        "description": "Конфиденциальность, разрешения и аналитика",
-        "label": "Конфиденциальность и данные"
-      },
-      "system": {
-        "description": "Обновления, хранилище и инструменты разработчика",
-        "label": "Система"
-      },
-      "workspace": {
-        "label": "Workspace",
-        "description": "Mitglieder, Teams, Abrechnung und API-Schlüssel"
-      }
-    },
-    "title": "Настройки"
-  },
   "settingsPage": {
-    "account": {
-      "badges": {
-        "free": "Бесплатный",
-        "limitReached": "Лимит достигнут",
-        "pastDue": "Просрочен",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Пробный"
-      },
-      "billing": {
-        "couldNotOpenDescription": "Не удалось открыть страницу оплаты. Попробуйте ещё раз.",
-        "couldNotOpenTitle": "Не удалось открыть оплату",
-        "manageBilling": "Управление оплатой",
-        "opening": "Открытие...",
-        "updatePaymentMethod": "Обновить способ оплаты"
-      },
-      "checkout": {
-        "couldNotOpenDescription": "Не удалось открыть страницу оформления. Попробуйте ещё раз.",
-        "couldNotOpenTitle": "Не удалось открыть оформление",
-        "opening": "Открытие...",
-        "upgradeToPro": "Перейти на Pro"
-      },
-      "disabled": "Отключено",
-      "featuresDisabled": "Функции аккаунта отключены",
-      "featuresDisabledDescription": "Установите VITE_AUTH_URL в файле .env для включения функций аккаунта.",
-      "notConfigured": "Аутентификация не настроена",
-      "notSignedIn": "Вы не вошли в систему",
-      "notSignedInDescription": "Создайте аккаунт, чтобы разблокировать премиум-функции.",
-      "offline": "Нет сети",
-      "pastDue": {
-        "description": "Сейчас вы на бесплатном плане. Обновите способ оплаты, чтобы вернуться к Pro.",
-        "title": "Не удалось обработать платёж"
-      },
-      "planDescriptions": {
-        "freeUsage": "{{used}} / {{limit}} слов на этой неделе",
-        "nextBilling": "Следующее списание: {{date}}",
-        "pastDue": "{{used}} / {{limit}} бесплатных слов на этой неделе — обновите платёж для восстановления Pro",
-        "trial": "Осталось {{days}} дней — безлимитные транскрипции",
-        "unlimited": "Без ограничений"
-      },
-      "planLabels": {
-        "free": "Бесплатный",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Пробный"
-      },
-      "planTitle": "Тариф",
-      "rollingWeeklyLimit": "Скользящий недельный лимит",
-      "signOut": {
-        "failedDescription": "Произошла ошибка при выходе. Попробуйте ещё раз.",
-        "failedTitle": "Не удалось выйти",
-        "signOut": "Выйти",
-        "signingOut": "Выход..."
-      },
-      "signedIn": "Вы вошли",
-      "title": "Аккаунт",
-      "toasts": {
-        "approachingLimit": {
-          "description": "Вы использовали {{used}} из {{limit}} бесплатных слов на этой неделе. Перейдите на Pro для безлимитного использования.",
-          "title": "Приближение к недельному лимиту"
-        }
-      },
-      "trialCta": {
-        "button": "Создать бесплатный аккаунт",
-        "description": "Безлимитные транскрипции, приоритетная обработка и многое другое.",
-        "title": "Попробуйте Pro бесплатно на 7 дней"
-      },
-      "pricing": {
-        "title": "Тарифы",
-        "billedYearly": "Годовая оплата",
-        "free": {
-          "name": "Free",
-          "price": "$0",
-          "period": "навсегда",
-          "features": [
-            "## Oats Cloud",
-            "2 000 слов/неделю транскрипции",
-            "5 часов записи встреч/месяц",
-            "## Всегда бесплатно",
-            "Безлимитные локальные модели ИИ",
-            "Безлимитная облачная транскрипция с вашими ключами API",
-            "Поддержка более 100 языков",
-            "Пользовательский словарь",
-            "Нулевое хранение данных",
-            "Поддержка сообщества"
-          ]
-        },
-        "pro": {
-          "name": "Pro",
-          "monthlyPrice": "$8",
-          "monthlyPeriod": "/мес.",
-          "annualPrice": "$80",
-          "annualPeriod": "/год",
-          "annualEquivalent": "$6.67",
-          "includesPrefix": "Все функции Free +",
-          "features": [
-            "Безлимитная облачная транскрипция",
-            "20 часов записи встреч/месяц",
-            "Синхронизация между устройствами",
-            "Персональный доступ к API",
-            "Интеграция MCP во всех ваших приложениях",
-            "Мобильное приложение (iOS скоро)",
-            "Поддержка по электронной почте"
-          ],
-          "cta": "Начать",
-          "switchToAnnual": "Перейти на годовой"
-        },
-        "business": {
-          "name": "Business",
-          "monthlyPrice": "$20",
-          "monthlyPeriod": "/мес.",
-          "annualPrice": "$200",
-          "annualPeriod": "/год",
-          "annualEquivalent": "$16.67",
-          "includesPrefix": "Все функции Pro +",
-          "badge": "Самый популярный",
-          "features": [
-            "Безлимитные записи встреч",
-            "Режим агента",
-            "Чат с вашими данными",
-            "Приоритетная поддержка"
-          ],
-          "cta": "Начать",
-          "switchToAnnual": "Перейти на годовой"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "Индивидуально",
-          "subtitle": "Для расширенной безопасности и поддержки",
-          "includesPrefix": "Все функции Business +",
-          "features": [
-            "Управляемые кредиты API",
-            "Облачная синхронизация между устройствами",
-            "Командные функции и администрирование",
-            "SSO и соответствие требованиям",
-            "Выделенная поддержка"
-          ],
-          "cta": "Связаться с отделом продаж"
-        },
-        "currentPlan": "Текущий тариф",
-        "upgrade": "Улучшить план",
-        "downgrade": "Понизить план",
-        "planSwitched": "План успешно обновлён",
-        "confirmSwitch": {
-          "title": "Подтвердите смену плана",
-          "description": "Перейти на {{plan}} ({{interval}})",
-          "monthly": "ежемесячно",
-          "yearly": "ежегодно",
-          "chargeToday": "Списание сегодня",
-          "accountCredit": "Кредит на счёте",
-          "newPrice": "Новая цена",
-          "nextBilling": "Следующее списание",
-          "mo": "mo",
-          "yr": "yr",
-          "cancel": "Отмена",
-          "confirm": "Подтвердить"
-        }
-      },
-      "signedOutPlans": {
-        "button": "Создать бесплатный аккаунт"
-      },
-      "user": "Пользователь",
-      "wordsRemaining": "Осталось {{remaining}}",
-      "deleteAccount": {
-        "label": "Удалить аккаунт",
-        "labelDescription": "Навсегда удалить ваш аккаунт, все облачные и локальные данные. Это действие нельзя отменить.",
-        "button": "Удалить мой аккаунт",
-        "deleting": "Удаление...",
-        "title": "Удалить ваш аккаунт?",
-        "description": "Это навсегда удалит ваш аккаунт Oats, все синхронизированные облачные заметки и все локальные данные, включая транскрипции, аудиозаписи, загруженные модели, подключения календаря и настройки. Это действие нельзя отменить.",
-        "confirmText": "Удалить всё",
-        "successTitle": "Аккаунт удалён",
-        "successDescription": "Ваш аккаунт и все данные были удалены. Приложение сейчас перезагрузится.",
-        "failedTitle": "Ошибка удаления",
-        "failedDescription": "Что-то пошло не так при удалении вашего аккаунта. Ваши локальные данные могли быть частично удалены. Попробуйте снова."
-      }
-    },
     "agentConfig": {
       "agentName": "Имя агента",
       "description": "Назовите вашего ИИ-помощника, чтобы обращаться к нему во время диктовки",
@@ -1773,101 +1199,10 @@
         }
       }
     },
-    "intelligence": {
-      "gpuDevice": {
-        "title": "GPU для интеллекта",
-        "description": "GPU для локальной обработки ИИ"
-      }
-    },
     "selfHosted": {
       "endpointUrl": "URL эндпоинта",
       "serverUrl": "URL сервера",
       "apiKeyOptional": "API-ключ (необязательно)"
-    },
-    "workspace": {
-      "title": "Workspace",
-      "description": "Arbeiten Sie zusammen, teilen Sie Notizen und verwalten Sie die Abrechnung an einem Ort.",
-      "empty": {
-        "title": "Ersten Workspace erstellen",
-        "description": "Workspaces ermöglichen die Zusammenarbeit und das Teilen von Notizen.",
-        "create": "Workspace erstellen"
-      },
-      "tab": {
-        "general": "Allgemein",
-        "members": "Mitglieder",
-        "teams": "Teams",
-        "billing": "Abrechnung",
-        "developer": "Entwickler"
-      },
-      "role": {
-        "owner": "Inhaber",
-        "admin": "Administrator",
-        "member": "Mitglied"
-      },
-      "general": {
-        "nameLabel": "Workspace-Name",
-        "slugLabel": "Slug",
-        "slugHint": "Wird in URLs verwendet. Nur Kleinbuchstaben, Ziffern und Bindestriche.",
-        "saved": "Workspace aktualisiert",
-        "dangerTitle": "Workspace löschen",
-        "dangerDescription": "Alle geteilten Notizen, Ordner und Integrationen werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
-        "delete": "Workspace löschen",
-        "confirmTitle": "{{name}} löschen?",
-        "confirmDescription": "Dies kündigt das Abonnement und entfernt alle Workspace-Daten dauerhaft."
-      },
-      "members": {
-        "title": "Mitglieder",
-        "description": "{{count}} von {{seats}} Plätzen belegt.",
-        "invite": "Einladen",
-        "empty": "Noch keine Mitglieder.",
-        "roleUpdated": "Rolle aktualisiert",
-        "promote": "Zum Administrator machen",
-        "demote": "Zum Mitglied machen",
-        "transferOwnership": "Eigentum übertragen",
-        "remove": "Aus Workspace entfernen"
-      },
-      "invites": {
-        "title": "Ausstehende Einladungen",
-        "resend": "Erneut senden",
-        "revoke": "Widerrufen",
-        "resent": "Einladung erneut gesendet"
-      },
-      "teams": {
-        "title": "Teams",
-        "description": "Mitglieder gruppieren für gezieltes Teilen.",
-        "new": "Neues Team",
-        "empty": "Noch keine Teams.",
-        "createFirst": "Erstellen Sie Ihr erstes Team",
-        "createTitle": "Team erstellen",
-        "nameLabel": "Team-Name",
-        "descriptionLabel": "Beschreibung",
-        "memberCount": "{{count}} Mitglieder"
-      },
-      "billing": {
-        "title": "Abrechnung",
-        "description": "Plan, Plätze und Zahlung.",
-        "plan": "Plan",
-        "seats": "Plätze",
-        "nextInvoice": "Nächste Rechnung",
-        "manageStripe": "In Stripe verwalten",
-        "startSubscription": "Abonnement starten"
-      },
-      "developer": {
-        "title": "API-Schlüssel",
-        "description": "Programmatischer Zugriff auf diesen Workspace.",
-        "empty": "Noch keine API-Schlüssel. Erstellen Sie einen für Integrationen.",
-        "new": "Neuer Schlüssel",
-        "create": "Schlüssel erstellen",
-        "createTitle": "API-Schlüssel erstellen",
-        "createDescription": "Wählen Sie die Berechtigungen. Sie können den Schlüssel jederzeit widerrufen.",
-        "nameLabel": "Schlüsselname",
-        "namePlaceholder": "Produktionsintegration",
-        "revoke": "Schlüssel widerrufen",
-        "lastUsed": "Zuletzt verwendet {{date}}",
-        "neverUsed": "Nie verwendet",
-        "keyCreatedTitle": "API-Schlüssel erstellt",
-        "keyCreatedDescription": "Kopieren Sie diesen Schlüssel jetzt — Sie können ihn nicht erneut sehen."
-      }
     }
   },
   "models": {
@@ -1990,234 +1325,12 @@
       }
     }
   },
-  "referral": {
-    "modalTitle": "Реферальная программа",
-    "title": "Приглашайте и получайте награды",
-    "subtitle": "Подарите месяц. Получите месяц.",
-    "tabs": {
-      "refer": "Пригласить",
-      "pastInvites": "Отправленные приглашения"
-    },
-    "howItWorks": {
-      "shareLink": "Поделитесь ссылкой-приглашением",
-      "theySignUp": "Они регистрируются и получают ",
-      "freeMonthOfPro": "бесплатный месяц Pro",
-      "youGet": "Вы получаете ",
-      "freeMonth": "бесплатный месяц",
-      "whenTheyDictate": ", когда они надиктуют 2 000 слов"
-    },
-    "inviteLink": {
-      "title": "Ваша ссылка-приглашение",
-      "copy": "Копировать",
-      "copied": "Скопировано"
-    },
-    "sendInvites": {
-      "title": "Отправить приглашения",
-      "placeholder": "friend@example.com",
-      "send": "Отправить",
-      "sending": "Отправка"
-    },
-    "stats": {
-      "referred": "Приглашено",
-      "converted": "Активировано",
-      "monthsEarned": "Месяцев заработано"
-    },
-    "status": {
-      "converted": "Активировано",
-      "opened": "Открыто",
-      "failed": "Не удалось",
-      "sent": "Отправлено"
-    },
-    "empty": {
-      "title": "Приглашения ещё не отправлены",
-      "description": "Поделитесь ссылкой или отправьте приглашение, чтобы начать"
-    },
-    "toasts": {
-      "copiedTitle": "Скопировано!",
-      "copiedDescription": "Реферальная ссылка скопирована в буфер обмена",
-      "copyFailedTitle": "Ошибка копирования",
-      "copyFailedDescription": "Не удалось скопировать ссылку в буфер обмена",
-      "invalidEmailTitle": "Неверный адрес электронной почты",
-      "invalidEmailDescription": "Пожалуйста, введите корректный адрес электронной почты",
-      "inviteSentTitle": "Приглашение отправлено!",
-      "inviteSentDescription": "Приглашение отправлено на {{email}}",
-      "sendFailedTitle": "Ошибка отправки",
-      "sendFailedDescription": "Не удалось отправить приглашение. Пожалуйста, попробуйте ещё раз."
-    },
-    "errors": {
-      "unableToLoad": "Не удалось загрузить данные реферальной программы",
-      "unableToLoadStats": "Не удалось загрузить статистику рефералов. Пожалуйста, попробуйте позже."
-    },
-    "tryAgain": "Попробовать снова",
-    "card": {
-      "brand": "Oats",
-      "signalId": "Signal ID",
-      "audioSignature": "Ваша аудиоподпись",
-      "stop": "Стоп",
-      "playSignal": "Воспроизвести сигнал"
-    },
-    "friends": {
-      "title": "Друзья",
-      "completed": "Завершено",
-      "sentInvites": "Отправленные приглашения"
-    }
-  },
   "notes": {
-    "sidebar": {
-      "newNote": "Новая заметка",
-      "searchNotes": "Поиск заметок",
-      "actions": "Действия"
-    },
-    "folders": {
-      "title": "Папки",
-      "soon": "Скоро",
-      "folderName": "Название папки",
-      "couldNotCreate": "Не удалось создать папку",
-      "couldNotRename": "Не удалось переименовать папку",
-      "couldNotDelete": "Не удалось удалить папку",
-      "deleteTitle": "Удалить папку?",
-      "deleteDescription": "Это навсегда удалит «{{name}}» и {{count}} заметок в ней. Это действие нельзя отменить.",
-      "deleteDescriptionEmpty": "Это навсегда удалит «{{name}}». Это действие нельзя отменить.",
-      "deleteConfirm": "Удалить папку и заметки"
-    },
-    "list": {
-      "title": "Заметки",
-      "newNote": "Новая заметка",
-      "untitled": "Без названия",
-      "untitledNote": "Заметка без названия",
-      "timeNow": "Только что",
-      "minutesAgo": "{{count}} мин. назад",
-      "hoursAgo": "{{count}} ч. назад",
-      "daysAgo": "{{count}} дн. назад"
-    },
-    "editor": {
-      "untitled": "Без названия",
-      "noteTitle": "Название заметки",
-      "stop": "Стоп",
-      "transcribe": "Транскрибировать",
-      "processing": "Обработка...",
-      "export": "Экспорт",
-      "asMarkdown": "Как Markdown",
-      "asPlainText": "Как обычный текст",
-      "asTranscriptText": "Как текстовый файл (.txt)",
-      "asSubtitles": "Как субтитры (.srt)",
-      "asJson": "Как JSON (.json)",
-      "asTranscriptMarkdown": "Как Markdown (.md)",
-      "raw": "Исходный",
-      "enhanced": "Улучшенный",
-      "saving": "Сохранение",
-      "startWriting": "Начните писать...",
-      "staleIndicator": "Содержимое изменилось после улучшения",
-      "live": "Живой",
-      "transcript": "Транскрипция",
-      "notes": "Заметки",
-      "conversationWillAppear": "Разговор появится здесь...",
-      "linkedEvent": "Связанное событие",
-      "noFolder": "Без папки",
-      "participants": "Участники",
-      "graph": "Граф"
-    },
-    "participants": {
-      "attendee": "участник",
-      "attendees": "участников",
-      "addAttendees": "Добавить участников",
-      "addPlaceholder": "Добавить участников...",
-      "typeEmail": "Введите email для добавления...",
-      "me": "(я)"
-    },
-    "upload": {
-      "title": "Загрузить аудио",
-      "using": "Используется {{model}}",
-      "dropOrBrowse": "Перетащите аудиофайл или нажмите для выбора",
-      "supportedFormats": "MP3, WAV, M4A, WebM, OGG, FLAC, AAC, Opus",
-      "dropToUpload": "Отпустите для загрузки",
-      "transcribe": "Транскрибировать",
-      "cancel": "Отмена",
-      "transcribingCloud": "Транскрибирование через облако...",
-      "transcribingLocal": "Локальное транскрибирование...",
-      "transcribingProvider": "Транскрибирование через {{provider}}...",
-      "cancelTranscription": "Отменить транскрибирование",
-      "transcriptionComplete": "Транскрибирование завершено",
-      "partialWarning": "Не удалось транскрибировать часть аудио.",
-      "openNote": "Открыть заметку",
-      "uploadAnother": "Загрузить ещё",
-      "retry": "Повторить",
-      "startOver": "Начать сначала",
-      "newFolder": "Новая папка",
-      "folderName": "Название папки",
-      "create": "Создать",
-      "legacyCloud": "Oats Cloud",
-      "custom": "Другой",
-      "selectFolder": "Выбрать папку",
-      "transcriptionFailed": "Ошибка транскрибирования",
-      "errorOccurred": "Произошла ошибка",
-      "noSpeechDetected": "В этой аудиозаписи речь не обнаружена.",
-      "noProviderTitle": "Провайдер транскрипции не настроен",
-      "noProviderDescription": "Добавьте API-ключ или скачайте локальную модель, чтобы начать транскрипцию.",
-      "noProviderAction": "Открыть настройки транскрипции",
-      "fileTooLarge": "Этот файл превышает ограничение в 500 MB.",
-      "largeFileNote": "Большие файлы разделяются и транскрибируются параллельно.",
-      "chunkProgress": "Транскрибирование части {{completed}} из {{total}}...",
-      "paidPlanRequired": "Облачная транскрипция файлов более 25 МБ требует платного плана. Большие файлы обрабатываются через Oats Cloud для надёжных и качественных результатов.",
-      "byokTooLarge": "Сторонние API-ключи поддерживают файлы только до 25 МБ.",
-      "byokTooLargeDetail": "Для файлов более 25 МБ Oats Cloud выполняет разделение, параллельную обработку и сборку — для надёжных результатов без ограничений сторонних провайдеров.",
-      "byokTooLargeNeedsAccount": "Создайте аккаунт и перейдите на платный план, чтобы транскрибировать большие файлы через Oats Cloud.",
-      "byokTooLargeNeedsUpgrade": "Перейдите на платный план, чтобы транскрибировать большие файлы через Oats Cloud.",
-      "switchToCloudForLargeFiles": "Переключитесь на Oats Cloud, чтобы транскрибировать этот файл.",
-      "createAccount": "Создать аккаунт",
-      "upgrade": "Обновить",
-      "switchToCloud": "Oats Cloud",
-      "orDivider": "или",
-      "urlPlaceholder": "Вставьте URL YouTube или аудиофайла",
-      "urlDownloading": "Загрузка аудио...",
-      "urlResolving": "Определение URL...",
-      "urlInvalid": "Недопустимый URL. Вставьте ссылку на YouTube или прямой URL аудиофайла.",
-      "urlVideoUnavailable": "Это видео недоступно. Возможно, оно приватное, удалено или заблокировано в вашем регионе.",
-      "urlPlaylistNotSupported": "Плейлисты не поддерживаются. Вставьте URL одного видео.",
-      "urlContentTypeInvalid": "Этот URL не указывает на аудио- или видеофайл.",
-      "urlDownloadFailed": "Ошибка загрузки. Проверьте URL и попробуйте снова.",
-      "urlCancelDownload": "Отменить загрузку",
-      "addToQueue": "Добавить в очередь",
-      "queueProgress": "{{completed}}/{{total}} завершено",
-      "cancelAll": "Отменить все",
-      "clearQueue": "Очистить",
-      "pasteUrls": "Вставьте URL (по одному на строку)",
-      "speakerDetection": "Определение говорящих",
-      "speakerDetectionDescription": "Определить разных говорящих в аудио",
-      "numSpeakersPlaceholder": "Автоопределение",
-      "downloadingModels": "Загрузка моделей...",
-      "openaiDiarizeNote": "Заменяет вашу модель транскрипции на gpt-4o-transcribe-diarize — единственную модель OpenAI с определением говорящих. Стоимость может отличаться от выбранной модели.",
-      "mistralDiarizeNote": "Определение говорящих включено без дополнительной оплаты с Voxtral.",
-      "groqDiarizeNote": "Определение говорящих недоступно с Groq. Вместо этого будет использована локальная диаризация.",
-      "batchCancelled": "Отменено",
-      "batchTranscriptionFailed": "Ошибка транскрипции",
-      "batchSaveFailed": "Не удалось сохранить заметку",
-      "batchUnknownError": "Неизвестная ошибка",
-      "removeFromQueue": "Удалить из очереди",
-      "diarizationRunsLocally": "Распознавание говорящих выполняется локально на вашем устройстве.",
-      "urlSubmit": "Добавить ссылку",
-      "urlsSkipped": "Некоторые ссылки не удалось добавить ({{n}})",
-      "queueFailed": "{{n}} с ошибкой",
-      "urlFileTooLarge": "Файл слишком большой для загрузки. Максимальный размер — 500 МБ.",
-      "urlYoutubeBlocked": "YouTube временно блокирует загрузки из вашей сети. Попробуйте снова чуть позже."
-    },
     "meeting": {
       "title": "Заметки со встреч",
       "description": "Транскрипции и структурированные резюме",
       "comingSoon": "Скоро",
       "back": "Назад"
-    },
-    "meetingPill": {
-      "returnToNote": "Вернуться к записи"
-    },
-    "context": {
-      "moveToFolder": "Переместить в папку",
-      "delete": "Удалить",
-      "rename": "Переименовать",
-      "searchFolders": "Поиск папок...",
-      "noResults": "Папки не найдены",
-      "newFolder": "Новая папка",
-      "showInFileManager": "Показать в {{manager}}"
     },
     "actions": {
       "manage": "Управление действиями...",
@@ -2250,96 +1363,8 @@
         "actionFailed": "Действие не выполнено"
       }
     },
-    "empty": {
-      "title": "Нет заметок",
-      "description": "Создайте первую заметку",
-      "selectTitle": "Выберите заметку",
-      "selectDescription": "Выберите заметку на боковой панели",
-      "createNote": "Создать заметку",
-      "emptyFolder": "Папка пуста"
-    },
-    "addToFolder": {
-      "title": "Добавить заметки",
-      "searchPlaceholder": "Поиск заметок...",
-      "searchResults_one": "Найден {{count}} разговор",
-      "searchResults_other": "Найдено разговоров: {{count}}",
-      "addExisting": "Добавить существующие",
-      "addCount": "Добавить: {{count}}",
-      "noResults": "Не найдено",
-      "noNotesAvailable": "Нет доступных заметок"
-    },
-    "onboarding": {
-      "llm": {
-        "title": "Настройте модель ИИ",
-        "description": "Действия используют ИИ для обработки ваших заметок. Настройте языковую модель, чтобы начать.",
-        "configured": "Модель ИИ настроена"
-      },
-      "actions": {
-        "title": "Действия на основе ИИ",
-        "description": "Действия преобразуют ваши заметки — очищают транскрипции, создают резюме встреч и многое другое. Используйте встроенные действия или создавайте свои.",
-        "builtInLabel": "Встроенное",
-        "createTitle": "Создайте своё действие",
-        "createDescription": "Определите пользовательское действие с собственным промптом для ИИ. Вы всегда сможете изменить или добавить новые в настройках.",
-        "created": "Создано!"
-      },
-      "getStarted": "Начать",
-      "systemAudio": {
-        "title": "Системный звук",
-        "description": "Записывайте звук с собраний и других приложений вместе с микрофоном.",
-        "grant": "Предоставить разрешение",
-        "enabled": "Включено"
-      }
-    },
-    "realtimeBanner": {
-      "message": "Транскрипция в реальном времени доступна в Pro",
-      "upgrade": "Перейти"
-    },
     "enhance": {
       "title": "Ошибка улучшения"
-    },
-    "speaker": {
-      "you": "Вы",
-      "them": "Собеседник",
-      "label": "Участник {{n}}",
-      "identifyingSpeakers": "Определение участников...",
-      "liveAccuracyHint": "Ещё определяем участников. Точность меток улучшится после завершения звонка.",
-      "speakersIdentified": "Участники определены",
-      "typeNamePlaceholder": "Введите имя",
-      "knownSpeakers": "Известные собеседники",
-      "meetingAttendees": "Участники встречи",
-      "assignName": "Назначить имя",
-      "isThisPerson": "Это {{name}}?",
-      "selected": "Выбрано: {{n}}",
-      "assignTo": "Назначить…",
-      "deselectAll": "Снять выделение",
-      "confirmed": "Подтверждено",
-      "nameAssigned": "Имя назначено",
-      "state": {
-        "provisional": "Временный",
-        "confirmed": "Подтверждено",
-        "suggested": "Предложен",
-        "locked": "Закреплён"
-      },
-      "createNewPrefix": "Создать",
-      "emailPlaceholder": "name@example.com",
-      "nameOrEmailPlaceholder": "Введите имя или email",
-      "addContact": "Добавить контакт",
-      "save": "Сохранить",
-      "cancel": "Отмена",
-      "pill": {
-        "identifying": "Определение участников",
-        "notLabeled": "Участники не подписаны",
-        "finalizing": "Завершение определения участников…",
-        "justYou": "только вы",
-        "defaultingHint": "по умолчанию 1 собеседник",
-        "toggleAria": "Переключить распознавание участников для этой записи",
-        "incAria": "Увеличить ожидаемое число участников",
-        "decAria": "Уменьшить ожидаемое число участников",
-        "othersInCall_one": "{{count}} собеседник в разговоре",
-        "othersInCall_few": "{{count}} собеседника в разговоре",
-        "othersInCall_many": "{{count}} собеседников в разговоре",
-        "othersInCall_other": "{{count}} собеседника в разговоре"
-      }
     },
     "conversationGraph": {
       "title": "Вопросы разговора",
@@ -2365,134 +1390,6 @@
         "expired": "Истёк"
       }
     }
-  },
-  "dictionary": {
-    "addWord": "Добавить слово",
-    "removeWord": "Удалить {{word}}",
-    "clearAll": "Очистить все",
-    "addPlaceholder": "Добавьте слова через запятую — Oats, Supabase, John Snow, ARR",
-    "clearTitle": "Очистить словарь?",
-    "clearDescription": "Все слова будут удалены без возможности восстановления.",
-    "add": "Добавить",
-    "importWords": "Импортировать слова",
-    "importPlaceholder": "Вставьте слова, разделённые запятыми...",
-    "separateWithCommas": "Разделяйте запятыми",
-    "wordsReady_one": "{{count}} слово готово",
-    "wordsReady_few": "{{count}} слова готовы",
-    "wordsReady_many": "{{count}} слов готово",
-    "wordsReady_other": "{{count}} слова готово",
-    "import": "Импортировать",
-    "yourDictionary": "Ваш словарь",
-    "exportDictionary": "Экспортировать словарь",
-    "exportFailed": "Не удалось экспортировать",
-    "editWord": "Изменить {{word}}",
-    "noMatches": "Совпадений нет — нажмите Enter, чтобы добавить «{{word}}»",
-    "tabDictionary": "Словарь",
-    "tabSnippets": "Сниппеты",
-    "snippets": {
-      "title": "Сниппеты",
-      "edit": "Изменить {{trigger}}",
-      "remove": "Удалить {{trigger}}",
-      "editTitle": "Изменить сниппет",
-      "dialogDescription": "Когда вы произносите триггер, он заменяется сохранённым текстом.",
-      "triggerLabel": "Триггер",
-      "triggerPlaceholder": "например, мой календарь",
-      "replacementLabel": "Замена",
-      "replacementPlaceholder": "Текст, который будет вставлен при произнесении триггера…",
-      "create": "Создать сниппет",
-      "duplicate": "Сниппет с таким триггером уже существует",
-      "emptyTitle": "То, что не нужно повторять",
-      "emptyTitleAccent": "дважды",
-      "emptyDescription": "Произнесите слово-триггер, и Oats заменит его сохранённым текстом: ссылки, приветствия, подписи, промпты.",
-      "new": "Новый сниппет",
-      "examples": {
-        "linkedinTrigger": "Мой LinkedIn",
-        "linkedinText": "linkedin.com/in/you",
-        "rewriteTrigger": "Промпт для переписывания",
-        "rewriteText": "Перепиши это более кратко и профессионально",
-        "introTrigger": "Вступительное письмо",
-        "introText": "Привет, буду рад найти время пообщаться на этой неделе…",
-        "signoffTrigger": "Подпись",
-        "signoffText": "С уважением, Алекс · alex@example.com"
-      },
-      "addPlaceholder": "Добавьте фразу-триггер — «мой календарь», «мой LinkedIn»"
-    },
-    "emptyTitle": "Ваш словарь пуст",
-    "emptyDescription": "Добавьте слова, которые {{agentName}} всегда должен распознавать: имена, инструменты, аббревиатуры.",
-    "addFirstWord": "Добавьте первое слово",
-    "importList": "Импортировать список",
-    "agentDefault": "Добавлено по умолчанию"
-  },
-  "sidebar": {
-    "home": "Главная",
-    "notes": "Заметки",
-    "upload": "Загрузить",
-    "dictionary": "Словарь",
-    "referral": "Получить бесплатный месяц",
-    "settings": "Настройки",
-    "support": "Поддержка",
-    "limitReached": "Недельный лимит достигнут",
-    "limitReachedDescription": "Перейдите на Pro для безлимитных транскрипций.",
-    "viewPlans": "Посмотреть тарифы",
-    "upgradeTitle": "Перейдите на Pro",
-    "upgradeDescription": "Безлимитные транскрипции, транскрипция в реальном времени и многое другое.",
-    "learnMore": "Узнать больше",
-    "integrations": "Интеграции",
-    "defaultUser": "Пользователь",
-    "notSignedIn": "Не авторизован",
-    "chat": "Чат",
-    "inviteTeammate": "Teammitglied einladen",
-    "createWorkspace": "Workspace erstellen",
-    "collapse": "Свернуть боковую панель",
-    "expand": "Развернуть боковую панель"
-  },
-  "chat": {
-    "newChat": "Новый чат",
-    "search": "Поиск бесед...",
-    "archived": "Архив",
-    "noConversations": "Начните свою первую беседу",
-    "selectChat": "Выберите беседу или начните новую",
-    "noResults": "Совпадений не найдено",
-    "today": "Сегодня",
-    "yesterday": "Вчера",
-    "previousWeek": "Последние 7 дней",
-    "older": "Ранее",
-    "archive": "В архив",
-    "unarchive": "Из архива",
-    "delete": "Удалить",
-    "deleteConfirm": "Эта беседа будет удалена навсегда. Отменить действие невозможно.",
-    "editTitle": "Двойной клик для редактирования названия",
-    "untitled": "Без названия",
-    "searchChats": "Поиск чатов",
-    "searchTitle": "Поиск бесед",
-    "searchDescription": "Поиск по всем беседам",
-    "newChatEmpty": "Спросите о заметках, транскрипциях или о чём угодно"
-  },
-  "usage": {
-    "approachingLimit": "Приближается недельный лимит",
-    "approachingLimitDescription": "На этой неделе использовано {{wordsUsed}} / {{limit}} слов.",
-    "yourPlan": "Ваш тариф",
-    "trial": "Пробный период ({{days}} дн.)",
-    "trial_other": "Пробный период ({{days}} дн.)",
-    "pro": "Pro",
-    "business": "Business",
-    "unlimitedTrial": "Без ограничений в пробный период",
-    "unlimited": "Без ограничений",
-    "manageSubscription": "Управление подпиской",
-    "weeklyUsage": "За неделю",
-    "limitReached": "Лимит достигнут",
-    "free": "Бесплатно",
-    "wordsRemaining": "Осталось {{remaining}} слов",
-    "rollingLimit": "Скользящий недельный лимит",
-    "upgradeToPro": "Перейти на Pro",
-    "useYourOwnKey": "Свой API-ключ",
-    "upgradeUnlimited": "Pro — без ограничений"
-  },
-  "support": {
-    "documentation": "Документация",
-    "joinDiscord": "Присоединиться к Discord",
-    "contactSupport": "Связаться с поддержкой",
-    "submitBug": "Сообщить об ошибке"
   },
   "postMigration": {
     "title": "С возвращением в Oats",
@@ -2575,9 +1472,7 @@
     "sourceLanguage": "Язык речи",
     "sourceLanguageDescription": "Язык, на котором вы диктуете — «Автоматически» подходит и для смешанной речи",
     "targetLanguage": "Перевести на",
-    "targetLanguageDescription": "Язык вставляемого текста",
     "targetLanguageMissing": "Выберите целевой язык, чтобы активировать горячую клавишу перевода",
-    "selectLanguage": "Выберите язык…",
     "prompt": {
       "title": "Промпт перевода",
       "description": "Настройте, как модель переводит вашу диктовку"
@@ -2682,269 +1577,15 @@
       "invalidArgs": "Недопустимые аргументы инструмента для {{name}}"
     }
   },
-  "integrations": {
-    "title": "Интеграции",
-    "description": "Подключите сервисы для улучшения рабочего процесса",
-    "googleCalendar": {
-      "title": "Google Calendar",
-      "optional": "Необязательно",
-      "description": "Автоматически подставляйте названия встреч и участников из вашего календаря.",
-      "connect": "Подключить Google Calendar",
-      "connecting": "Подключение...",
-      "connected": "Подключено",
-      "addAnother": "Добавить ещё один календарь",
-      "primaryOnly": "Синхронизировать только основной календарь",
-      "primaryOnlyDescription": "Игнорировать события из календарей, к которым вам открыли доступ.",
-      "disconnect": "Отключить",
-      "disconnectConfirm": "Отключить {{email}}?",
-      "disconnectDescription": "Заметки встреч больше не будут записываться из этого календаря.",
-      "systemAudioRequired": "Требуется разрешение «Системное аудио»",
-      "systemAudioDescription": "Для транскрипции встреч Oats нужно разрешение «Системное аудио» для записи звука других участников. Мы никогда не записываем ваш экран. Вы будете перенаправлены в Системные настройки для включения.",
-      "openSettings": "Открыть Системные настройки"
-    },
-    "sections": {
-      "calendar": "Календарь",
-      "api": "API",
-      "mcp": "MCP",
-      "cli": "CLI"
-    },
-    "api": {
-      "title": "API-ключи",
-      "description": "Управление API-ключами для программного доступа",
-      "proRequired": "Перейдите на платный план, чтобы получить доступ к API",
-      "manage": "Управлять ключами",
-      "viewPlans": "Посмотреть планы",
-      "dialogTitle": "API-ключи"
-    },
-    "mcp": {
-      "title": "Перенесите заметки в ваши инструменты ИИ",
-      "description": "Общайтесь, ищите и работайте с заметками в Claude, ChatGPT и Cursor.",
-      "step1": "В вашем инструменте ИИ добавьте Oats MCP, используя публичный URL",
-      "step2": "Создайте API-ключ выше с нужными разрешениями.",
-      "step3": "Вставьте ключ в заголовок Authorization для подключения.",
-      "learnMore": "Узнать больше",
-      "viewPlans": "Посмотреть планы",
-      "copyUrl": "Копировать URL MCP",
-      "proRequired": "Перейдите на платный план, чтобы подключить Oats к Claude, ChatGPT и Cursor.",
-      "copied": "Скопировано"
-    },
-    "cli": {
-      "title": "Доступ через командную строку",
-      "description": "Дайте своему агенту доступ к заметкам из терминала.",
-      "installLabel": "Установить",
-      "learnMore": "Открыть документацию",
-      "copyDocsLink": "Скопировать ссылку на документацию",
-      "docsLinkCopied": "Ссылка на документацию скопирована",
-      "viewPlans": "Посмотреть планы",
-      "local": {
-        "label": "Локально",
-        "freeBadge": "Бесплатно",
-        "description": "Читайте свои локальные заметки напрямую. Без входа в аккаунт и API-ключа — работает, пока Oats запущен."
-      },
-      "cloud": {
-        "label": "Облако",
-        "description": "Синхронизируйте устройства с помощью API-ключа.",
-        "proRequired": "Перейдите на платный план, чтобы использовать CLI в облачном режиме."
-      }
-    },
-    "plan": {
-      "title": "Ваш план",
-      "current": "Текущий",
-      "free": "Бесплатный",
-      "freeLimit": "5 встреч / месяц",
-      "essential": "Essential",
-      "essentialLimit": "20 встреч / месяц",
-      "pro": "Pro",
-      "proLimit": "Безлимитно",
-      "upgrade": "Улучшить"
-    },
-    "notABot": {
-      "title": "Oats — это запись встреч, а не бот",
-      "description": "Oats захватывает аудио напрямую из вашей системы — он никогда не присоединяется к встречам как участник. Просто подключите календарь и делайте заметки как обычно."
-    }
-  },
-  "calendar": {
-    "title": "Google Календарь",
-    "status": "Статус",
-    "connected": "Подключено",
-    "disconnected": "Отключено",
-    "notConnectedDescription": "Подключите для обнаружения и записи встреч",
-    "connectCta": {
-      "title": "Интеграция с Календарём",
-      "description": "Автоматическое обнаружение встреч и запись транскрипций"
-    },
-    "connect": "Подключить Google Календарь",
-    "connecting": "Подключение...",
-    "disconnect": "Отключить",
-    "disconnecting": "Отключение...",
-    "sync": "Синхронизировать",
-    "syncing": "Синхронизация...",
-    "calendarsTitle": "Календари",
-    "upcomingTitle": "Предстоящие",
-    "noUpcoming": "Нет предстоящих событий",
-    "meetingStarting": "Встреча начинается сейчас",
-    "today": "Сегодня",
-    "tomorrow": "Завтра"
-  },
   "upcoming": {
-    "title": "Предстоящие встречи",
-    "transcriptions": "Транскрипции",
-    "tomorrow": "Завтра",
-    "noMoreMeetings": "Больше встреч сегодня нет",
-    "now": "Сейчас",
-    "join": "Присоединиться",
-    "untitledEvent": "Без названия",
-    "systemAudioRequired": "Разрешение «Системное аудио» необходимо для записи звука других участников.",
-    "openSettings": "Открыть Системные настройки",
-    "signInRequired": "Войдите, чтобы записывать встречи",
-    "signInDescription": "Создайте аккаунт или войдите для записи и транскрипции встреч.",
-    "connectCalendar": "Подключите календарь",
-    "connectCalendarDescription": "Свяжите Google Календарь, чтобы видеть предстоящие встречи и автоматически записывать заметки.",
-    "notABot": "Oats записывает через системный звук — он никогда не присоединяется к встречам как бот.",
-    "connectCalendarButton": "Подключить календарь"
-  },
-  "notesView": {
-    "searchPlaceholder": "Поиск заметок…",
-    "newNote": "Новая заметка",
-    "empty": {
-      "title": "Заметок пока нет",
-      "description": "Создайте первую заметку, чтобы начать."
-    },
-    "searchEmpty": {
-      "title": "Нет результатов",
-      "description": "По запросу «{{query}}» заметки не найдены."
-    },
-    "noteType": {
-      "personal": "личная",
-      "meeting": "встреча",
-      "upload": "загрузка"
-    }
-  },
-  "noteEditor": {
-    "saved": "Сохранено",
-    "deleteNote": "Удалить заметку",
-    "deleteConfirmTitle": "Удалить заметку?",
-    "deleteConfirmDescription": "Эта заметка будет удалена безвозвратно.",
-    "deleteConfirm": "Удалить",
-    "share": {
-      "button": "Поделиться",
-      "dialog": {
-        "title": "Поделиться заметкой",
-        "searchPlaceholder": "Добавьте людей по эл. почте",
-        "emailLabel": "Эл. почта получателя",
-        "shareButton": "Поделиться",
-        "copyLink": "Скопировать ссылку",
-        "copied": "Скопировано",
-        "owner": "Владелец",
-        "pending": "Ожидает",
-        "accepted": "Имеет доступ",
-        "resend": "Отправить приглашение снова",
-        "revoke": "Удалить",
-        "invitationActions": "Действия с приглашением",
-        "permissionRequired": "Изменять настройки публикации может только владелец заметки.",
-        "visibility": {
-          "label": "Видимость",
-          "link": "Любой со ссылкой",
-          "domain": "Все в {{domain}} со ссылкой",
-          "invited": "Только приглашённые"
-        },
-        "error": {
-          "invalidEmail": "Введите корректный адрес эл. почты",
-          "alreadyInvited": "{{email}} уже приглашён",
-          "inviteFailed": "Не удалось отправить приглашение. Попробуйте ещё раз.",
-          "linkUnavailable": "Сгенерируйте или обновите ссылку, чтобы скопировать её"
-        }
-      }
-    }
-  },
-  "commandSearch": {
-    "title": "Поиск",
-    "description": "Поиск по заметкам и транскрипциям",
-    "shortPlaceholder": "Поиск",
-    "placeholder": "Поиск по заметкам и транскрипциям…",
-    "sections": {
-      "notes": "Заметки",
-      "transcripts": "Транскрипции"
-    },
-    "noResults": "Нет результатов",
-    "emptyState": "Начните ввод для поиска",
-    "footer": {
-      "navigate": "Навигация",
-      "open": "Открыть",
-      "dismiss": "Закрыть"
-    }
+    "tomorrow": "Завтра"
   },
   "updateNotification": {
     "title": "Доступно обновление Oats",
     "body": "Версия {{version}} готова к загрузке",
     "cta": "Обновить"
   },
-  "permissionsGate": {
-    "title": "Требуются разрешения",
-    "description": "Oats нужны некоторые разрешения для работы на этом компьютере.",
-    "continue": "Продолжить"
-  },
-  "apiKeysSection": {
-    "title": "API-ключи",
-    "description": "Создавайте ключи для программного доступа к API Oats.",
-    "docsLink": "Документация API",
-    "empty": "API-ключей пока нет",
-    "createButton": "Создать API-ключ",
-    "create": {
-      "title": "Создать API-ключ",
-      "nameLabel": "Название ключа",
-      "namePlaceholder": "напр. Моя интеграция",
-      "scopesLabel": "Разрешения",
-      "expiryLabel": "Срок действия",
-      "expiryOptions": {
-        "never": "Бессрочно",
-        "30days": "30 дней",
-        "60days": "60 дней",
-        "90days": "90 дней",
-        "1year": "1 год"
-      },
-      "submit": "Создать",
-      "cancel": "Отмена"
-    },
-    "created": {
-      "title": "API-ключ создан",
-      "warning": "Скопируйте этот ключ сейчас. Он больше не будет показан.",
-      "copied": "Скопировано!",
-      "copyButton": "Скопировать в буфер обмена",
-      "done": "Готово"
-    },
-    "scopes": {
-      "notesRead": "Чтение заметок",
-      "notesWrite": "Создание и редактирование заметок",
-      "transcriptionsRead": "Чтение транскрипций"
-    },
-    "revoke": {
-      "button": "Отозвать",
-      "confirm": "Отозвать этот ключ? Интеграции, использующие его, перестанут работать.",
-      "success": "API-ключ отозван"
-    },
-    "neverUsed": "Не использовался",
-    "lastUsed": "Последнее использование {{time}}",
-    "maxKeysReached": "Максимум {{max}} ключей разрешено",
-    "errors": {
-      "loadFailed": "Не удалось загрузить API-ключи",
-      "createFailed": "Не удалось создать API-ключ",
-      "revokeFailed": "Не удалось отозвать API-ключ"
-    }
-  },
-  "embeddedChat": {
-    "askPlaceholder": "Спросите что-нибудь...",
-    "send": "Отправить",
-    "title": "Чат",
-    "emptyState": "Задайте вопрос об этой заметке",
-    "dock": "Закрепить на боковой панели",
-    "undock": "Открепить от боковой панели",
-    "close": "Закрыть чат",
-    "newChat": "Новый чат",
-    "conversationSelector": "Сменить беседу"
-  },
   "transcriptionPreview": {
-    "label": "Предпросмотр",
     "listening": "Слушаю...",
     "polishing": "Полирую...",
     "ready": "Готово",
@@ -2956,54 +1597,6 @@
     "speaker": {
       "you": "Вы",
       "others": "Другие"
-    }
-  },
-  "workspaces": {
-    "switcher": {
-      "personal": "Persönlich",
-      "workspaces": "Workspaces",
-      "empty": "Noch keine Workspaces",
-      "create": "Workspace erstellen…"
-    },
-    "create": {
-      "title": "Workspace erstellen",
-      "description": "Workspaces ermöglichen Zusammenarbeit, geteilte Notizen und gemeinsame Abrechnung.",
-      "nameLabel": "Workspace-Name",
-      "namePlaceholder": "Acme Corp",
-      "submit": "Workspace erstellen",
-      "submitting": "Erstelle…",
-      "errorTitle": "Workspace konnte nicht erstellt werden"
-    },
-    "created": {
-      "title": "Workspace erstellt",
-      "description": "Sie sind nun Inhaber von {{name}}."
-    },
-    "invite": {
-      "title": "Zu {{workspace}} einladen",
-      "description": "Fügen Sie Teammitglieder per E-Mail hinzu. Sie erhalten einen Beitrittslink.",
-      "emailLabel": "E-Mail",
-      "roleLabel": "Rolle",
-      "teamsLabel": "Zu Teams hinzufügen",
-      "submit": "Einladung senden",
-      "submitting": "Sende…",
-      "sentTitle": "Einladung gesendet",
-      "sentDescription": "Einladung an {{email}} gesendet.",
-      "errorTitle": "Einladung konnte nicht gesendet werden",
-      "role": {
-        "admin": "Administrator",
-        "member": "Mitglied"
-      }
-    },
-    "accept": {
-      "title": "Workspace beitreten",
-      "description": "{{inviter}} hat Sie eingeladen, {{workspace}} als {{role}} beizutreten.",
-      "loading": "Lade Einladung…",
-      "accept": "Einladung annehmen",
-      "accepting": "Annehmen…",
-      "signInToAccept": "Anmelden zum Annehmen",
-      "successTitle": "Beigetreten",
-      "successDescription": "Willkommen bei {{name}}.",
-      "errorTitle": "Einladung konnte nicht angenommen werden"
     }
   },
   "meetingNotification": {
@@ -3067,6 +1660,7 @@
       "carriedOver": "В прошлый раз осталось открытым:",
       "openPrevious": "Открыть тот",
       "noMatches": "Ничего не найдено",
+      "onlyRelated": "Этими словами ничего не было сказано. Эти разговоры об одном и том же.",
       "match": {
         "transcript": "сказано",
         "summary": "сводка",
@@ -3143,7 +1737,6 @@
     },
     "searched": "найдено",
     "dismiss": "Скрыть вопрос",
-    "askedTimes": "задан {{count}}×",
     "earlier": "ещё {{count}}",
     "collapse": "Показать меньше",
     "undo": "Отменить",
@@ -3154,8 +1747,6 @@
   },
   "openThreads": {
     "count_one": "{{count}} открытая линия",
-    "count_few": "{{count}} открытые линии",
-    "count_many": "{{count}} открытых линий",
     "count_other": "{{count}} открытых линий",
     "state": {
       "open": "открыта",
@@ -3165,24 +1756,15 @@
   "topicGraph": {
     "node": "{{label}}, {{seconds}} с",
     "seconds_one": "{{count}} с",
-    "seconds_few": "{{count}} с",
-    "seconds_many": "{{count}} с",
     "seconds_other": "{{count}} с",
     "returned_one": "возврат {{count}}×",
-    "returned_few": "возврат {{count}}×",
-    "returned_many": "возврат {{count}}×",
     "returned_other": "возврат {{count}}×",
     "search": "Искать",
-    "noQuestions": "В этой линии нет вопросов.",
-    "selectPrompt": "Выберите тему, чтобы увидеть заданные в ней вопросы."
+    "noQuestions": "В этой линии нет вопросов."
   },
   "suggestions": {
     "title": "Стоит поднять",
-    "unfinished": "осталось открытым",
-    "shallow": "едва затронуто",
     "adjacent_one": "обычно всплывает",
-    "adjacent_few": "обычно всплывает",
-    "adjacent_many": "обычно всплывает",
     "adjacent_other": "обычно всплывает"
   },
   "lifetime": {
@@ -3191,16 +1773,11 @@
     "backToList": "Назад к разговорам",
     "recurring": "Повторяется:",
     "inCount_one": "{{count}} разговор",
-    "inCount_few": "{{count}} разговора",
-    "inCount_many": "{{count}} разговоров",
     "inCount_other": "{{count}} разговоров",
     "node": "{{label}}, тем: {{count}}",
     "topicCount_one": "{{count}} тема",
-    "topicCount_few": "{{count}} темы",
-    "topicCount_many": "{{count}} тем",
     "topicCount_other": "{{count}} тем",
     "open": "Открыть этот разговор",
-    "selectPrompt": "Выберите разговор, чтобы увидеть, о чём он был.",
     "empty": "Карта появится, когда наберётся {{count}} записанных разговора для связи."
   }
 }

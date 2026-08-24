@@ -1506,8 +1506,26 @@ function IntelligenceViews({
             a screen-reader user typed and had to tab into the list to find out
             whether anything matched. */}
         <p aria-live="polite" role="status" className="sr-only">
-          {query ? t("oats.intelligence.searchResults", { count: visibleNotes.length }) : ""}
+          {!query
+            ? ""
+            : literalNotes.length
+              ? t("oats.intelligence.searchResults", { count: visibleNotes.length })
+              : t("oats.intelligence.onlyRelated")}
         </p>
+
+        {/* Nothing was said in those words.
+        
+            `related` results are kept when the literal search finds nothing —
+            that is the case semantic recall exists for, and suppressing it
+            exactly when it is the only thing that could help would defeat the
+            feature. But the page must not imply a match it does not have: with
+            no literal hit, every row below is the index's guess, and the line
+            says so before the reader reads them as findings. */}
+        {query.trim() && !literalNotes.length && recalled.length > 0 && (
+          <p className="mt-8 text-[13px] leading-6 text-muted-foreground">
+            {t("oats.intelligence.onlyRelated")}
+          </p>
+        )}
 
         {visibleNotes.length ? (
           <div className="mt-8">

@@ -109,42 +109,16 @@
     "accessibility": "此平台不支持辅助功能设置。",
     "systemAudio": "系统音频设置在此平台上不可用。"
   },
-  "upgradePrompt": {
-    "paymentFailed": "我们无法处理你的付款",
-    "weeklyLimit": "你已达到本周的使用上限",
-    "pastDueDescription": "你目前使用的是免费版——别担心，每周仍有 {{limit}} 个词的额度。\n更新支付方式即可恢复无限制的 Pro 版。",
-    "limitDescription": "已使用 {{used}} / {{limit}} 个词。\n你的转录已保存并粘贴。",
-    "updatePayment": "更新支付方式",
-    "updatePaymentDescription": "恢复无限制的 Pro 版转录。",
-    "upgradeToPro": "升级到 Pro",
-    "upgradeDescription": "无限转录，每月最低 $8 起。",
-    "useApiKey": "使用自己的 API Key",
-    "useApiKeyDescription": "使用你自己的密钥，无限制使用。",
-    "switchToLocal": "切换到本地模式",
-    "switchToLocalDescription": "离线转录，无使用限制。",
-    "rollingWeeklyLimit": "滚动周限额"
-  },
-  "windowControls": {
-    "minimize": "最小化",
-    "maximize": "最大化",
-    "restore": "还原",
-    "close": "关闭"
-  },
   "windows": {
     "pttUnavailable": "按住说话原生监听器不可用"
   },
   "common": {
-    "retry": "重试",
-    "back": "返回",
-    "next": "下一步",
-    "complete": "完成",
     "reset": "重置",
     "refresh": "刷新",
     "download": "下载",
     "cancel": "取消",
     "recommended": "推荐",
     "active": "已激活",
-    "freeAccountRequired": "需要免费账户",
     "cloud": "云端",
     "local": "本地",
     "apiKey": "API Key",
@@ -152,25 +126,12 @@
     "loading": "加载中...",
     "unknown": "未知",
     "availableModels": "可用模型",
-    "fast": "快速",
     "hold": "按住",
-    "private": "隐私",
     "tap": "点按",
-    "close": "关闭",
-    "dismiss": "忽略",
     "save": "Guardar",
-    "saving": "Guardando…",
-    "create": "Crear",
-    "delete": "Eliminar",
-    "actions": "Acciones",
-    "error": "Algo salió mal",
-    "unknownError": "Ocurrió un error desconocido",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo",
-    "skip": "跳过",
-    "on": "开",
-    "off": "关"
+    "done": "Listo"
   },
   "onboarding": {
     "steps": {
@@ -182,15 +143,6 @@
       "meeting": "会议",
       "finish": "完成",
       "voiceAgent": "语音助手"
-    },
-    "hotkey": {
-      "couldNotRegisterTitle": "无法注册该快捷键",
-      "couldNotRegisterDescription": "该组合键可能已被占用，请尝试其他组合。"
-    },
-    "setup": {
-      "title": "设置",
-      "description": "选择语言并授予权限",
-      "language": "语言"
     },
     "permissions": {
       "title": "让 Oats 听见这个房间",
@@ -211,93 +163,6 @@
       "optional": "可选",
       "recommended": "推荐",
       "accessibilityTroubleshooting": "在系统设置 → 辅助功能中，将 Oats 的开关关闭再重新打开。如果无效，请将 Oats 从列表中移除后重新添加。"
-    },
-    "transcription": {
-      "title": "转录设置",
-      "description": "选择模式和服务商",
-      "preferredLanguage": "首选语言"
-    },
-    "activation": {
-      "title": "听写设置",
-      "description": "配置触发听写的方式",
-      "hotkey": "快捷键",
-      "mode": "模式",
-      "tapDescription": "按下开始/停止",
-      "holdDescription": "按住说话",
-      "test": "测试",
-      "hotkeyToStartStop": "{{hotkey}} 开始/停止",
-      "holdHotkey": "按住 {{hotkey}}",
-      "textareaPlaceholder": "点击此处，然后使用快捷键进行听写..."
-    },
-    "voiceAgent": {
-      "title": "语音助手设置",
-      "description": "一键唤起你的 AI 助手",
-      "hotkey": "快捷键",
-      "howItWorks": "按下快捷键，说出你想要的内容，例如“写一段简短的感谢语”。{{agentName}} 会把结果输入到光标所在的位置。无需先说“Hey {{agentName}}”。",
-      "test": "试一试",
-      "testInstruction": "点击下方，按下 {{hotkey}} 并说出指令",
-      "testSetHotkey": "在上方设置快捷键即可试用",
-      "testPlaceholder": "点击这里，按下快捷键并说出其中一个示例...",
-      "examples": [
-        "翻译成意大利语:“我说话比打字快”",
-        "给我的老板写一封简短的邮件,告诉他我想要升职,他叫 Mark",
-        "5 × 5 等于多少?"
-      ],
-      "optionalNote": "可选——你可以随时在设置中添加或修改。"
-    },
-    "connectivity": {
-      "title": "无法从该网络连接到 Oats Cloud",
-      "body": "{{cause}} 你可以切换到本地引擎，或继续并稍后重试。",
-      "useLocal": "使用本地引擎",
-      "continue": "仍然继续"
-    },
-    "useCase": {
-      "title": "你为什么来到这里？",
-      "description": "我们是一个小团队，每周发布更新。你的选择会为你配置应用，也告诉我们接下来该做什么。",
-      "noteLabel": "还有什么想告诉我们的吗？",
-      "notePlaceholder": "可选",
-      "options": {
-        "dictation": {
-          "title": "更快地写作",
-          "description": "在任何应用中口述，而不是打字"
-        },
-        "meetings": {
-          "title": "会议笔记与摘要",
-          "description": "录制、转写并总结会议"
-        },
-        "healthcare": {
-          "title": "医疗、临床与治疗转写",
-          "description": "口述病历、咨询记录和报告"
-        },
-        "translation": {
-          "title": "语言翻译",
-          "description": "说一种语言，输出另一种"
-        },
-        "ai": {
-          "title": "与我的 AI 对话",
-          "description": "用语音驱动 ChatGPT、Claude 等智能体"
-        },
-        "upload": {
-          "title": "上传音频文件",
-          "description": "上传并转写 MP3、OGG 等"
-        }
-      },
-      "selectHint": "可多选"
-    },
-    "meeting": {
-      "title": "会议笔记",
-      "description": "捕捉并总结你的会议",
-      "autoDetect": "Oats 会自动检测你是否在开会，并提议开始记录 — 未经你确认不会录制任何内容。",
-      "hotkeyLabel": "会议快捷键",
-      "hotkeyHint": "可选 — 在任何会议中按下即可立即开始记录。"
-    },
-    "finish": {
-      "title": "一切就绪",
-      "cloudDescription": "你正在使用 Oats Cloud — 快速、准确、零数据保留，每周免费 2,000 词。希望一切都在本地？可在“设置”中切换到本地处理。",
-      "localDescription": "你已配置本地处理或自带密钥。可随时在“设置”中调整音频处理方式。",
-      "cleanupNote": "AI 文本清理使用合理的默认设置，可随时在“设置”中调整。",
-      "openSettings": "打开设置",
-      "skipForNow": "暂时跳过"
     }
   },
   "streaming": {
@@ -329,19 +194,9 @@
       "installButton": "安装更新",
       "availableButton": "有可用更新"
     },
-    "limit": {
-      "weeklyTitle": "已达到周限额",
-      "weeklyDescription": "你的额度按滚动方式重置。升级到 Pro 或使用自己的 API Key 可不受限制。"
-    },
     "accessibilityMissing": {
       "title": "需要辅助功能权限",
       "description": "我们检测到 Oats 需要辅助功能权限才能正常工作。请在下方启用。"
-    },
-    "billing": {
-      "pastDueTitle": "我们无法处理你的付款",
-      "pastDueDescription": "别担心——你目前使用的是免费版。在设置中更新支付方式即可恢复 Pro 版。",
-      "bannerDescription": "你目前使用的是免费版——每周仍有 {{limit}} 个词的额度。更新支付方式即可恢复 Pro 版。",
-      "updatePayment": "更新支付方式"
     },
     "history": {
       "couldNotLoadTitle": "无法加载历史记录",
@@ -398,25 +253,7 @@
         "recover": "恢复",
         "recovered": "已恢复"
       }
-    },
-    "cloudMigration": {
-      "title": "欢迎使用 Oats 云端",
-      "description": "我们已将转录切换到 Oats 云端，以获得更快、更准确的结果。你之前的设置已保存——随时可以在设置中切换回去。",
-      "viewSettings": "查看设置"
-    },
-    "aiCta": {
-      "title": "用 AI 提升你的转录质量",
-      "description": "在你说话的同时，自动修正语法、标点和格式。",
-      "enable": "启用 AI 增强"
-    },
-    "loading": "加载中...",
-    "gpu": {
-      "bannerTitle": "GPU 加速可用",
-      "bannerDescription": "启用 GPU 加速以获得更快的性能。",
-      "enableButton": "启用 GPU",
-      "dismissButton": "暂不启用"
-    },
-    "backToNotes": "返回笔记"
+    }
   },
   "reasoning": {
     "mode": {
@@ -464,48 +301,6 @@
     "selfHosted": {
       "endpointHelp": "指向本地网络中兼容 OpenAI 的服务器（例如 Ollama、LM Studio、vLLM 或 llama-server）。"
     },
-    "enterprise": {
-      "title": "企业级提供商",
-      "description": "使用你组织的凭据连接云端提供商。",
-      "testConnection": "测试连接",
-      "testing": "测试中…",
-      "testSuccess": "已连接",
-      "testFailed": "连接失败",
-      "authMode": "认证方式",
-      "ssoProfile": "SSO 配置文件",
-      "accessKeys": "访问密钥",
-      "adc": "Application Default Credentials",
-      "apiKeyMode": "API 密钥",
-      "region": "区域",
-      "profile": "配置文件名称",
-      "accessKeyId": "Access Key ID",
-      "secretAccessKey": "Secret Access Key",
-      "sessionToken": "Session Token（可选）",
-      "endpoint": "端点 URL",
-      "deploymentName": "部署名称",
-      "apiVersion": "API 版本",
-      "projectId": "项目 ID",
-      "location": "位置",
-      "customModelId": "自定义模型 ID",
-      "customModelPlaceholder": "输入模型 ID 或部署名称",
-      "suggestedModels": "推荐模型",
-      "browseModels": "浏览全部模型",
-      "loadingModels": "正在获取模型...",
-      "allModels": "{{region}} 的全部模型",
-      "modelListError": "无法加载模型。",
-      "bedrock": {
-        "ssoHelp": "使用你的 AWS CLI SSO 配置。请确保已运行 'aws sso login'。",
-        "keysHelp": "输入你的 AWS IAM 访问密钥。"
-      },
-      "azure": {
-        "endpointHelp": "你的 Azure OpenAI 资源端点（例如 https://myresource.openai.azure.com）。",
-        "deploymentHelp": "Azure OpenAI 中的模型部署名称。"
-      },
-      "vertex": {
-        "adcHelp": "使用 Application Default Credentials。请执行：gcloud auth application-default login",
-        "apikeyHelp": "从 Google AI Studio 获取的 Vertex AI Express Mode API 密钥。"
-      }
-    },
     "tinfoil": {
       "modelRetiredTitle": "模型已不可用",
       "modelRetired": "Tinfoil 已停用 {{from}}，已切换至 {{to}}。",
@@ -517,10 +312,6 @@
       "title": "删除模型",
       "description": "确定要删除此模型吗？如果需要再次使用，你需要重新下载。"
     },
-    "parakeet": {
-      "multilingual": "25 种语言",
-      "english": "英语"
-    },
     "apiKeyOptional": "API Key（可选）",
     "getKey": "获取密钥 ->",
     "endpointUrl": "端点 URL",
@@ -530,7 +321,6 @@
       "whisperModelDescription": "模型",
       "parakeetModelDescription": "NVIDIA Parakeet 模型"
     },
-    "whisperModels": "Whisper 模型",
     "tinfoil": {
       "transportNote": "Tinfoil 流式转录使用 Voxtral Mini 4B，批量转录使用 Voxtral Small 24B。",
       "docsLink": "查看文档"
@@ -694,69 +484,6 @@
       }
     }
   },
-  "auth": {
-    "cloudNotConfigured": "云端未配置",
-    "common": {
-      "back": "返回",
-      "continue": "继续",
-      "or": "或"
-    },
-    "emailStep": {
-      "continueWithEmail": "使用邮箱继续",
-      "continueWithoutAccount": "不登录继续",
-      "emailPlaceholder": "you@example.com"
-    },
-    "errors": {
-      "accountExistsSignIn": "此邮箱已注册账户，请直接登录。",
-      "accountNotFoundCreate": "未找到此邮箱的账户，请先注册。",
-      "authNotConfigured": "身份验证未配置",
-      "createAccountFailed": "创建账户失败",
-      "failedProviderSignIn": "使用 {{provider}} 登录失败",
-      "failedUserCheck": "检查用户账户失败",
-      "generic": "出了点问题，请重试。",
-      "invalidCredentials": "邮箱或密码无效",
-      "plusAliasUnsupported": "不支持包含“+”的邮箱别名"
-    },
-    "getStarted": "开始使用",
-    "legal": {
-      "and": "和",
-      "prefix": "继续即表示你同意我们的",
-      "privacy": "隐私政策",
-      "suffix": "",
-      "terms": "服务条款"
-    },
-    "passwordForm": {
-      "createAccount": "创建账户",
-      "createAccountButton": "创建账户",
-      "createAccountLink": "创建账户",
-      "createPasswordPlaceholder": "创建密码",
-      "creatingAccount": "正在创建账户...",
-      "enterPasswordPlaceholder": "输入密码",
-      "forgotPassword": "忘记密码？",
-      "fullNamePlaceholder": "姓名",
-      "haveAccount": "已有账户？",
-      "newHere": "新用户？",
-      "passwordMinLength": "密码至少需要 8 个字符",
-      "signIn": "登录",
-      "signInLink": "登录",
-      "signingIn": "正在登录...",
-      "welcomeBack": "欢迎回来"
-    },
-    "signedIn": {
-      "ready": "就绪",
-      "welcomeBack": "欢迎回来",
-      "welcomeBackName": "欢迎回来，{{name}}"
-    },
-    "sso": {
-      "continueWithSSO": "使用 SSO 登录",
-      "emailRequired": "输入您的工作邮箱以使用 SSO。",
-      "failed": "单点登录失败，请重试。"
-    },
-    "welcomeSubtitle": "随时随地用语音输入",
-    "welcomeTitle": "欢迎使用 Oats",
-    "sessionExpired": "会话已过期，请重新登录。"
-  },
-  "cleanupPrompt": "文本整理",
   "developerSection": {
     "currentLogFile": "当前日志文件",
     "debugMode": {
@@ -822,87 +549,10 @@
       "title": "记录的内容"
     }
   },
-  "dictionarySuffix": "词典后缀",
-  "emailVerification": {
-    "checkEmailDescription": "我们已向以下邮箱发送了验证链接",
-    "checkEmailTitle": "查看你的邮箱",
-    "errors": {
-      "resendFailed": "无法重新发送邮件，请重试。",
-      "serverUnreachable": "无法连接到服务器，请检查网络连接后重试。"
-    },
-    "resendButton": "重新发送验证邮件",
-    "resendIn": "{{seconds}} 秒后可重新发送",
-    "verifiedDescription": "你的账户已准备就绪。",
-    "verifiedTitle": "邮箱已验证",
-    "waiting": "正在等待验证...",
-    "backToSignIn": "返回登录"
-  },
   "errorBoundary": {
     "description": "发生了意外错误，请重新加载后重试。",
     "reload": "重新加载",
     "title": "出了点问题"
-  },
-  "forgotPassword": {
-    "back": "返回",
-    "backToSignIn": "返回登录",
-    "emailPlaceholder": "输入你的邮箱",
-    "goBack": "返回",
-    "notConfigured": "身份验证尚未配置。",
-    "sendResetLink": "发送重置链接",
-    "sending": "正在发送...",
-    "subtitle": "输入你的邮箱，我们将发送重置链接",
-    "success": {
-      "description": "我们已将密码重置链接发送至",
-      "help": "没有收到邮件？请检查垃圾邮件文件夹或重试。",
-      "title": "查看你的邮箱",
-      "tryAnother": "尝试其他邮箱"
-    },
-    "title": "重置密码"
-  },
-  "actionPrompt": "动作提示词",
-  "hotkeyGuidance": {
-    "blockedDescription": "以下快捷方式已被屏蔽，因为它们是常用的系统快捷键。",
-    "blockedTitle": "被屏蔽的快捷方式",
-    "description": "使用以下平台规则来选择不会与系统冲突的快捷键。",
-    "examplesTitle": "有效示例",
-    "platforms": {
-      "linux": "Linux",
-      "macos": "macOS",
-      "windows": "Windows"
-    },
-    "recommended": {
-      "linux": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Super+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Ctrl+Shift+J",
-        "4": "Alt+Space"
-      },
-      "macos": {
-        "0": "⌥Space",
-        "1": "⌃⌥S",
-        "2": "⌃⌥D",
-        "3": "Fn",
-        "4": "⌘⇧J"
-      },
-      "windows": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Ctrl+Shift+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Win+Alt+K"
-      }
-    },
-    "recommendedTitle": "推荐快捷键",
-    "rulesTitle": "快捷键规则",
-    "showAll": "显示全部",
-    "showFewer": "收起",
-    "title": "快捷键指南",
-    "validationRules": {
-      "0": "必须使用至少一个修饰键（Ctrl、Alt、Shift 等）",
-      "1": "不能使用系统保留的快捷键",
-      "2": "不允许单独使用单个按键",
-      "3": "某些组合可能与其他应用冲突"
-    }
   },
   "hotkeyInput": {
     "ariaLabel": "按下组合键以设置快捷键",
@@ -1034,226 +684,7 @@
       "modified": "已修改"
     }
   },
-  "settingsModal": {
-    "groups": {
-      "account": "账户",
-      "app": "应用",
-      "aiModels": "AI 模型",
-      "system": "系统"
-    },
-    "sections": {
-      "account": {
-        "description": "个人资料与登录",
-        "label": "账户"
-      },
-      "plansBilling": {
-        "description": "套餐、用量与账单",
-        "label": "套餐与账单"
-      },
-      "general": {
-        "description": "外观、声音与启动",
-        "label": "偏好设置"
-      },
-      "hotkeys": {
-        "description": "听写快捷键与激活模式",
-        "label": "快捷键"
-      },
-      "speechToText": {
-        "description": "听写与笔记录音引擎",
-        "label": "语音转文字"
-      },
-      "llms": {
-        "description": "用于清理、笔记格式化和聊天的模型",
-        "label": "语言模型"
-      },
-      "privacyData": {
-        "description": "隐私、权限与数据分析",
-        "label": "隐私与数据"
-      },
-      "system": {
-        "description": "更新、存储与开发者工具",
-        "label": "系统"
-      },
-      "workspace": {
-        "label": "Espacio de trabajo",
-        "description": "Miembros, equipos, facturación y claves API"
-      }
-    },
-    "title": "设置"
-  },
   "settingsPage": {
-    "account": {
-      "badges": {
-        "free": "免费版",
-        "limitReached": "已达上限",
-        "pastDue": "逾期未付",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "试用"
-      },
-      "billing": {
-        "couldNotOpenDescription": "打开账单页面时出错，请重试。",
-        "couldNotOpenTitle": "无法打开账单",
-        "manageBilling": "管理账单",
-        "opening": "正在打开...",
-        "updatePaymentMethod": "更新支付方式"
-      },
-      "checkout": {
-        "couldNotOpenDescription": "打开结账页面时出错，请重试。",
-        "couldNotOpenTitle": "无法打开结账页",
-        "opening": "正在打开...",
-        "upgradeToPro": "升级到 Pro"
-      },
-      "disabled": "已禁用",
-      "featuresDisabled": "账户功能已禁用",
-      "featuresDisabledDescription": "在 .env 文件中设置 VITE_AUTH_URL 以启用账户功能。",
-      "notConfigured": "身份验证未配置",
-      "notSignedIn": "未登录",
-      "notSignedInDescription": "创建账户以解锁高级功能。",
-      "offline": "离线",
-      "pastDue": {
-        "description": "你目前使用的是免费版。更新支付方式即可恢复 Pro 版。",
-        "title": "我们无法处理你的付款"
-      },
-      "planDescriptions": {
-        "freeUsage": "本周已使用 {{used}} / {{limit}} 个词",
-        "nextBilling": "下次扣费：{{date}}",
-        "pastDue": "本周 {{used}} / {{limit}} 免费词数——更新支付方式以恢复 Pro",
-        "trial": "剩余 {{days}} 天——无限转录",
-        "unlimited": "无限制"
-      },
-      "planLabels": {
-        "free": "免费版",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "试用"
-      },
-      "planTitle": "套餐",
-      "rollingWeeklyLimit": "滚动周限额",
-      "signOut": {
-        "failedDescription": "退出登录时出错，请重试。",
-        "failedTitle": "无法退出登录",
-        "signOut": "退出登录",
-        "signingOut": "正在退出..."
-      },
-      "signedIn": "已登录",
-      "title": "账户",
-      "toasts": {
-        "approachingLimit": {
-          "description": "本周已使用 {{used}} / {{limit}} 个免费词数。升级到 Pro 可享受无限使用。",
-          "title": "即将达到周限额"
-        }
-      },
-      "trialCta": {
-        "button": "免费创建账户",
-        "description": "无限转录、优先处理等更多功能。",
-        "title": "免费试用 Pro 版 7 天"
-      },
-      "pricing": {
-        "title": "套餐",
-        "billedYearly": "按年计费",
-        "free": {
-          "name": "Free",
-          "price": "$0",
-          "period": "永久",
-          "features": [
-            "## Oats Cloud",
-            "每周 2,000 字转录",
-            "每月 5 小时会议录制",
-            "## 永久免费",
-            "无限本地 AI 模型",
-            "使用自己的 API 密钥无限云端转录",
-            "支持 100+ 种语言",
-            "自定义词典",
-            "零数据留存",
-            "社区支持"
-          ]
-        },
-        "pro": {
-          "name": "Pro",
-          "monthlyPrice": "$8",
-          "monthlyPeriod": "/月",
-          "annualPrice": "$80",
-          "annualPeriod": "/年",
-          "annualEquivalent": "$6.67",
-          "includesPrefix": "所有 Free 功能 +",
-          "features": [
-            "无限云端转录",
-            "每月 20 小时会议录制",
-            "跨设备同步",
-            "个人 API 访问",
-            "在所有应用中集成 MCP",
-            "移动应用（iOS 即将推出）",
-            "邮件支持"
-          ],
-          "cta": "开始使用",
-          "switchToAnnual": "切换为年付"
-        },
-        "business": {
-          "name": "Business",
-          "monthlyPrice": "$20",
-          "monthlyPeriod": "/月",
-          "annualPrice": "$200",
-          "annualPeriod": "/年",
-          "annualEquivalent": "$16.67",
-          "includesPrefix": "所有 Pro 功能 +",
-          "badge": "最受欢迎",
-          "features": ["无限会议录制", "代理模式", "与您的数据对话", "优先支持"],
-          "cta": "开始使用",
-          "switchToAnnual": "切换为年付"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "自定义",
-          "subtitle": "提供高级安全保障与支持",
-          "includesPrefix": "所有 Business 功能 +",
-          "features": [
-            "托管 API 额度",
-            "跨设备云端同步",
-            "团队功能与管理",
-            "SSO 与合规",
-            "专属支持"
-          ],
-          "cta": "联系销售"
-        },
-        "currentPlan": "当前套餐",
-        "upgrade": "升级",
-        "downgrade": "降级",
-        "planSwitched": "套餐已成功更新",
-        "confirmSwitch": {
-          "title": "确认更换套餐",
-          "description": "切换至 {{plan}}（{{interval}}）",
-          "monthly": "月付",
-          "yearly": "年付",
-          "chargeToday": "今日收费",
-          "accountCredit": "账户余额",
-          "newPrice": "新价格",
-          "nextBilling": "下次计费",
-          "mo": "mo",
-          "yr": "yr",
-          "cancel": "取消",
-          "confirm": "确认"
-        }
-      },
-      "signedOutPlans": {
-        "button": "免费创建账户"
-      },
-      "user": "用户",
-      "wordsRemaining": "剩余 {{remaining}} 个词",
-      "deleteAccount": {
-        "label": "删除账户",
-        "labelDescription": "永久删除您的账户、所有云端数据和本地数据。此操作无法撤销。",
-        "button": "删除我的账户",
-        "deleting": "正在删除...",
-        "title": "删除您的账户？",
-        "description": "这将永久删除您的 Oats 账户、所有云端同步笔记和所有本地数据，包括转录、音频录制、下载的模型、日历连接和设置。此操作无法撤销。",
-        "confirmText": "删除所有内容",
-        "successTitle": "账户已删除",
-        "successDescription": "您的账户和所有数据已被删除。应用将立即重新加载。",
-        "failedTitle": "删除失败",
-        "failedDescription": "删除您的账户时出错。您的本地数据可能已被部分删除。请重试。"
-      }
-    },
     "agentConfig": {
       "agentName": "助手名称",
       "description": "为你的 AI 助手取个名字，这样你就能在听写时直接呼唤它",
@@ -1768,101 +1199,10 @@
         }
       }
     },
-    "intelligence": {
-      "gpuDevice": {
-        "title": "智能处理 GPU",
-        "description": "用于本地 AI 处理的 GPU"
-      }
-    },
     "selfHosted": {
       "endpointUrl": "端点 URL",
       "serverUrl": "服务器 URL",
       "apiKeyOptional": "API Key（可选）"
-    },
-    "workspace": {
-      "title": "Espacio de trabajo",
-      "description": "Colabora con compañeros, comparte notas y administra la facturación en un solo lugar.",
-      "empty": {
-        "title": "Crea tu primer espacio de trabajo",
-        "description": "Los espacios de trabajo te permiten colaborar con compañeros y compartir notas.",
-        "create": "Crear espacio de trabajo"
-      },
-      "tab": {
-        "general": "General",
-        "members": "Miembros",
-        "teams": "Equipos",
-        "billing": "Facturación",
-        "developer": "Desarrollador"
-      },
-      "role": {
-        "owner": "Propietario",
-        "admin": "Administrador",
-        "member": "Miembro"
-      },
-      "general": {
-        "nameLabel": "Nombre del espacio de trabajo",
-        "slugLabel": "Slug",
-        "slugHint": "Se usa en URLs y enlaces de invitación. Solo letras minúsculas, dígitos y guiones.",
-        "saved": "Espacio de trabajo actualizado",
-        "dangerTitle": "Eliminar espacio de trabajo",
-        "dangerDescription": "Todas las notas, carpetas e integraciones compartidas se eliminarán. Esto no se puede deshacer.",
-        "delete": "Eliminar espacio de trabajo",
-        "confirmTitle": "¿Eliminar {{name}}?",
-        "confirmDescription": "Esto cancela la suscripción y elimina todos los datos del espacio de trabajo permanentemente."
-      },
-      "members": {
-        "title": "Miembros",
-        "description": "{{count}} de {{seats}} asientos utilizados.",
-        "invite": "Invitar",
-        "empty": "Aún no hay miembros.",
-        "roleUpdated": "Rol actualizado",
-        "promote": "Hacer administrador",
-        "demote": "Hacer miembro",
-        "transferOwnership": "Transferir propiedad",
-        "remove": "Quitar del espacio de trabajo"
-      },
-      "invites": {
-        "title": "Invitaciones pendientes",
-        "resend": "Reenviar",
-        "revoke": "Revocar",
-        "resent": "Invitación reenviada"
-      },
-      "teams": {
-        "title": "Equipos",
-        "description": "Agrupa miembros para compartir con alcance limitado.",
-        "new": "Nuevo equipo",
-        "empty": "Aún no hay equipos.",
-        "createFirst": "Crea tu primer equipo",
-        "createTitle": "Crear equipo",
-        "nameLabel": "Nombre del equipo",
-        "descriptionLabel": "Descripción",
-        "memberCount": "{{count}} miembros"
-      },
-      "billing": {
-        "title": "Facturación",
-        "description": "Plan, asientos y pago.",
-        "plan": "Plan",
-        "seats": "Asientos",
-        "nextInvoice": "Próxima factura",
-        "manageStripe": "Administrar en Stripe",
-        "startSubscription": "Iniciar suscripción"
-      },
-      "developer": {
-        "title": "Claves API",
-        "description": "Acceso programático limitado a este espacio de trabajo.",
-        "empty": "Aún no hay claves API. Crea una para integrarte con este espacio de trabajo.",
-        "new": "Nueva clave",
-        "create": "Crear clave",
-        "createTitle": "Crear clave API",
-        "createDescription": "Elige los permisos que necesita esta clave. Puedes revocarla en cualquier momento.",
-        "nameLabel": "Nombre de la clave",
-        "namePlaceholder": "Integración de producción",
-        "revoke": "Revocar clave",
-        "lastUsed": "Último uso {{date}}",
-        "neverUsed": "Nunca utilizada",
-        "keyCreatedTitle": "Clave API creada",
-        "keyCreatedDescription": "Copia esta clave ahora — no podrás verla de nuevo."
-      }
     }
   },
   "models": {
@@ -1985,234 +1325,12 @@
       }
     }
   },
-  "referral": {
-    "modalTitle": "推荐计划",
-    "title": "推荐赚取奖励",
-    "subtitle": "送一个月，得一个月。",
-    "tabs": {
-      "refer": "推荐",
-      "pastInvites": "历史邀请"
-    },
-    "howItWorks": {
-      "shareLink": "分享你的邀请链接",
-      "theySignUp": "对方注册即可获得",
-      "freeMonthOfPro": "一个月免费 Pro",
-      "youGet": "你将获得",
-      "freeMonth": "一个月免费",
-      "whenTheyDictate": "当对方听写满 2,000 个词时"
-    },
-    "inviteLink": {
-      "title": "你的邀请链接",
-      "copy": "复制",
-      "copied": "已复制"
-    },
-    "sendInvites": {
-      "title": "发送邀请",
-      "placeholder": "friend@example.com",
-      "send": "发送",
-      "sending": "发送中"
-    },
-    "stats": {
-      "referred": "已推荐",
-      "converted": "已转化",
-      "monthsEarned": "已获得月数"
-    },
-    "status": {
-      "converted": "已转化",
-      "opened": "已打开",
-      "failed": "失败",
-      "sent": "已发送"
-    },
-    "empty": {
-      "title": "尚未发送任何邀请",
-      "description": "分享你的链接或发送邀请以开始使用"
-    },
-    "toasts": {
-      "copiedTitle": "已复制！",
-      "copiedDescription": "推荐链接已复制到剪贴板",
-      "copyFailedTitle": "复制失败",
-      "copyFailedDescription": "无法将链接复制到剪贴板",
-      "invalidEmailTitle": "邮箱地址无效",
-      "invalidEmailDescription": "请输入有效的邮箱地址",
-      "inviteSentTitle": "邀请已发送！",
-      "inviteSentDescription": "邀请已发送至 {{email}}",
-      "sendFailedTitle": "发送失败",
-      "sendFailedDescription": "邀请发送失败，请重试。"
-    },
-    "errors": {
-      "unableToLoad": "无法加载推荐数据",
-      "unableToLoadStats": "无法加载推荐统计数据，请稍后重试。"
-    },
-    "tryAgain": "重试",
-    "card": {
-      "brand": "Oats",
-      "signalId": "Signal ID",
-      "audioSignature": "你的声纹签名",
-      "stop": "停止",
-      "playSignal": "播放信号"
-    },
-    "friends": {
-      "title": "好友",
-      "completed": "已完成",
-      "sentInvites": "已发出的邀请"
-    }
-  },
   "notes": {
-    "sidebar": {
-      "newNote": "新建笔记",
-      "searchNotes": "搜索笔记",
-      "actions": "操作"
-    },
-    "folders": {
-      "title": "文件夹",
-      "soon": "即将推出",
-      "folderName": "文件夹名称",
-      "couldNotCreate": "无法创建文件夹",
-      "couldNotRename": "无法重命名文件夹",
-      "couldNotDelete": "无法删除文件夹",
-      "deleteTitle": "删除文件夹？",
-      "deleteDescription": "这将永久删除「{{name}}」及其 {{count}} 条笔记。此操作无法撤销。",
-      "deleteDescriptionEmpty": "这将永久删除「{{name}}」。此操作无法撤销。",
-      "deleteConfirm": "删除文件夹和笔记"
-    },
-    "list": {
-      "title": "笔记",
-      "newNote": "新建笔记",
-      "untitled": "无标题",
-      "untitledNote": "无标题笔记",
-      "timeNow": "刚刚",
-      "minutesAgo": "{{count}} 分钟前",
-      "hoursAgo": "{{count}} 小时前",
-      "daysAgo": "{{count}} 天前"
-    },
-    "editor": {
-      "untitled": "无标题",
-      "noteTitle": "笔记标题",
-      "stop": "停止",
-      "transcribe": "转录",
-      "processing": "处理中...",
-      "export": "导出",
-      "asMarkdown": "导出为 Markdown",
-      "asPlainText": "导出为纯文本",
-      "asTranscriptText": "导出为纯文本 (.txt)",
-      "asSubtitles": "导出为字幕 (.srt)",
-      "asJson": "导出为 JSON (.json)",
-      "asTranscriptMarkdown": "导出为 Markdown (.md)",
-      "raw": "原始内容",
-      "enhanced": "增强内容",
-      "saving": "保存中",
-      "startWriting": "开始书写...",
-      "staleIndicator": "内容在增强后已更改",
-      "live": "实时",
-      "transcript": "转录",
-      "notes": "笔记",
-      "conversationWillAppear": "对话将显示在这里...",
-      "linkedEvent": "关联日程",
-      "noFolder": "无文件夹",
-      "participants": "参与者",
-      "graph": "图谱"
-    },
-    "participants": {
-      "attendee": "位参会者",
-      "attendees": "位参会者",
-      "addAttendees": "添加参会者",
-      "addPlaceholder": "添加参会者...",
-      "typeEmail": "输入邮箱以添加...",
-      "me": "（我）"
-    },
-    "upload": {
-      "title": "上传音频",
-      "using": "使用 {{model}}",
-      "dropOrBrowse": "拖放音频文件或点击浏览",
-      "supportedFormats": "MP3、WAV、M4A、WebM、OGG、FLAC、AAC、Opus",
-      "dropToUpload": "拖放以上传",
-      "transcribe": "转录",
-      "cancel": "取消",
-      "transcribingCloud": "正在通过云端转录...",
-      "transcribingLocal": "正在本地转录...",
-      "transcribingProvider": "正在通过 {{provider}} 转录...",
-      "cancelTranscription": "取消转录",
-      "transcriptionComplete": "转录完成",
-      "partialWarning": "部分音频内容无法转录。",
-      "openNote": "打开笔记",
-      "uploadAnother": "上传另一个",
-      "retry": "重试",
-      "startOver": "重新开始",
-      "newFolder": "新建文件夹",
-      "folderName": "文件夹名称",
-      "create": "创建",
-      "legacyCloud": "Oats Cloud",
-      "custom": "自定义",
-      "selectFolder": "选择文件夹",
-      "transcriptionFailed": "转录失败",
-      "errorOccurred": "发生错误",
-      "noSpeechDetected": "未在此音频中检测到语音。",
-      "noProviderTitle": "尚未设置转录服务商",
-      "noProviderDescription": "添加 API Key 或下载本地模型以开始转录。",
-      "noProviderAction": "打开转录设置",
-      "fileTooLarge": "此文件超过了 500 MB 的大小限制。",
-      "largeFileNote": "大文件将被分割并平行转录。",
-      "chunkProgress": "正在转录第 {{completed}} 部分，共 {{total}} 部分...",
-      "paidPlanRequired": "超过 25 MB 的文件需要付费计划才能使用云端转录。大文件通过 Oats Cloud 处理，确保可靠、高质量的结果。",
-      "byokTooLarge": "第三方 API 密钥仅支持 25 MB 以内的文件。",
-      "byokTooLargeDetail": "超过 25 MB 的文件由 Oats Cloud 负责分割、并行处理和重组——无需依赖第三方服务限制，即可获得可靠的结果。",
-      "byokTooLargeNeedsAccount": "创建账户并升级到付费计划，即可使用 Oats Cloud 转录更大的文件。",
-      "byokTooLargeNeedsUpgrade": "升级到付费计划，即可使用 Oats Cloud 转录更大的文件。",
-      "switchToCloudForLargeFiles": "切换到 Oats Cloud 来转录此文件。",
-      "createAccount": "创建账户",
-      "upgrade": "升级",
-      "switchToCloud": "Oats Cloud",
-      "orDivider": "或",
-      "urlPlaceholder": "粘贴 YouTube 或音频 URL",
-      "urlDownloading": "正在下载音频...",
-      "urlResolving": "正在解析 URL...",
-      "urlInvalid": "无效的 URL。请粘贴 YouTube 链接或直接音频文件 URL。",
-      "urlVideoUnavailable": "此视频不可用。可能是私密、已删除或受地区限制。",
-      "urlPlaylistNotSupported": "不支持播放列表。请粘贴单个视频的 URL。",
-      "urlContentTypeInvalid": "此 URL 不指向音频或视频文件。",
-      "urlDownloadFailed": "下载失败。请检查 URL 后重试。",
-      "urlCancelDownload": "取消下载",
-      "addToQueue": "添加到队列",
-      "queueProgress": "{{completed}}/{{total}} 已完成",
-      "cancelAll": "取消全部",
-      "clearQueue": "清除",
-      "pasteUrls": "粘贴 URL（每行一个）",
-      "speakerDetection": "说话人检测",
-      "speakerDetectionDescription": "识别音频中的不同说话人",
-      "numSpeakersPlaceholder": "自动检测",
-      "downloadingModels": "正在下载模型...",
-      "openaiDiarizeNote": "将替换您的转录模型为 gpt-4o-transcribe-diarize，这是唯一支持说话人检测的 OpenAI 模型。费用可能与您选择的模型不同。",
-      "mistralDiarizeNote": "使用 Voxtral 时说话人检测无需额外费用。",
-      "groqDiarizeNote": "Groq 不支持说话人检测。将改用本地分离。",
-      "batchCancelled": "已取消",
-      "batchTranscriptionFailed": "转录失败",
-      "batchSaveFailed": "保存笔记失败",
-      "batchUnknownError": "未知错误",
-      "removeFromQueue": "从队列中移除",
-      "diarizationRunsLocally": "说话人检测在您的设备上本地运行。",
-      "urlSubmit": "添加链接",
-      "urlsSkipped": "部分链接无法添加（{{n}} 个）",
-      "queueFailed": "{{n}} 个失败",
-      "urlFileTooLarge": "文件过大，无法下载。最大大小为 500 MB。",
-      "urlYoutubeBlocked": "YouTube 暂时阻止了来自您网络的下载。请稍后重试。"
-    },
     "meeting": {
       "title": "会议笔记",
       "description": "转录与结构化摘要",
       "comingSoon": "即将推出",
       "back": "返回"
-    },
-    "meetingPill": {
-      "returnToNote": "返回到录音"
-    },
-    "context": {
-      "moveToFolder": "移动到文件夹",
-      "delete": "删除",
-      "rename": "重命名",
-      "searchFolders": "搜索文件夹...",
-      "noResults": "未找到文件夹",
-      "newFolder": "新建文件夹",
-      "showInFileManager": "在{{manager}}中显示"
     },
     "actions": {
       "manage": "管理操作...",
@@ -2245,94 +1363,8 @@
         "actionFailed": "操作失败"
       }
     },
-    "empty": {
-      "title": "这里还没有笔记",
-      "description": "创建你的第一条笔记，开始书写",
-      "selectTitle": "选择笔记",
-      "selectDescription": "从侧边栏选择一条笔记",
-      "createNote": "创建笔记",
-      "emptyFolder": "此文件夹中没有笔记"
-    },
-    "addToFolder": {
-      "title": "添加笔记",
-      "searchPlaceholder": "搜索要添加的笔记...",
-      "searchResults_one": "{{count}} 个对话匹配",
-      "searchResults_other": "{{count}} 个对话匹配",
-      "addExisting": "添加已有笔记",
-      "addCount": "添加 {{count}} 条笔记",
-      "noResults": "没有匹配的笔记",
-      "noNotesAvailable": "没有其他可用笔记"
-    },
-    "onboarding": {
-      "llm": {
-        "title": "配置 AI 模型",
-        "description": "操作使用 AI 来处理你的笔记。设置一个语言模型以开始使用。",
-        "configured": "AI 模型已配置"
-      },
-      "actions": {
-        "title": "AI 驱动的操作",
-        "description": "操作可以处理你的笔记——整理转录、总结会议等。使用内置操作或创建你自己的。",
-        "builtInLabel": "内置",
-        "createTitle": "创建你的操作",
-        "createDescription": "使用你自己的 AI 提示词定义自定义操作。你可以随时在设置中编辑或添加更多。",
-        "created": "已创建！"
-      },
-      "getStarted": "开始使用",
-      "systemAudio": {
-        "title": "系统音频",
-        "description": "在使用麦克风的同时捕获会议和其他应用程序的音频。",
-        "grant": "授予权限",
-        "enabled": "已启用"
-      }
-    },
-    "realtimeBanner": {
-      "message": "Pro 版可使用实时转录",
-      "upgrade": "升级"
-    },
     "enhance": {
       "title": "增强错误"
-    },
-    "speaker": {
-      "you": "你",
-      "them": "对方",
-      "label": "发言者 {{n}}",
-      "identifyingSpeakers": "正在识别发言者...",
-      "liveAccuracyHint": "正在识别发言者。通话结束后，标签准确性会提升。",
-      "speakersIdentified": "已识别发言者",
-      "typeNamePlaceholder": "输入姓名",
-      "knownSpeakers": "已知说话者",
-      "meetingAttendees": "会议参与者",
-      "assignName": "分配姓名",
-      "isThisPerson": "这是{{name}}吗？",
-      "selected": "已选 {{n}} 个",
-      "assignTo": "分配给…",
-      "deselectAll": "取消全选",
-      "confirmed": "已确认",
-      "nameAssigned": "姓名已分配",
-      "state": {
-        "provisional": "临时",
-        "confirmed": "已确认",
-        "suggested": "建议",
-        "locked": "锁定"
-      },
-      "createNewPrefix": "创建",
-      "emailPlaceholder": "name@example.com",
-      "nameOrEmailPlaceholder": "输入姓名或邮箱",
-      "addContact": "添加联系人",
-      "save": "保存",
-      "cancel": "取消",
-      "pill": {
-        "identifying": "正在识别发言者",
-        "notLabeled": "发言者未标记",
-        "finalizing": "正在完成发言者识别…",
-        "justYou": "只有你",
-        "defaultingHint": "默认 1 位其他人",
-        "toggleAria": "切换本次录音的发言者识别",
-        "incAria": "增加预计发言人数",
-        "decAria": "减少预计发言人数",
-        "othersInCall_one": "通话中还有 {{count}} 人",
-        "othersInCall_other": "通话中还有 {{count}} 人"
-      }
     },
     "conversationGraph": {
       "title": "对话问题",
@@ -2358,132 +1390,6 @@
         "expired": "已过期"
       }
     }
-  },
-  "dictionary": {
-    "addWord": "添加词语",
-    "removeWord": "移除 {{word}}",
-    "clearAll": "全部清除",
-    "clearTitle": "清空词典？",
-    "clearDescription": "这将删除自定义词典中的所有词汇，此操作无法撤销。",
-    "addPlaceholder": "用逗号分隔添加多个词——Oats、Supabase、ARR",
-    "add": "添加",
-    "importWords": "导入词语",
-    "importPlaceholder": "粘贴以逗号分隔的词语...",
-    "separateWithCommas": "用逗号分隔",
-    "wordsReady_other": "{{count}} 个词语就绪",
-    "import": "导入",
-    "yourDictionary": "你的词典",
-    "exportDictionary": "导出词典",
-    "exportFailed": "导出失败",
-    "editWord": "编辑 {{word}}",
-    "wordsReady_one": "{{count}} 个词语就绪",
-    "noMatches": "无匹配项 — 按 Enter 添加“{{word}}”",
-    "tabDictionary": "词典",
-    "tabSnippets": "片段",
-    "snippets": {
-      "title": "片段",
-      "edit": "编辑 {{trigger}}",
-      "remove": "删除 {{trigger}}",
-      "editTitle": "编辑片段",
-      "dialogDescription": "当你说出触发词时，它会被替换为你保存的文本。",
-      "triggerLabel": "触发词",
-      "triggerPlaceholder": "例如：我的日程链接",
-      "replacementLabel": "替换文本",
-      "replacementPlaceholder": "说出触发词时插入的文本…",
-      "create": "创建片段",
-      "duplicate": "已存在使用此触发词的片段",
-      "emptyTitle": "同样的话，只说",
-      "emptyTitleAccent": "一遍",
-      "emptyDescription": "说出触发词，Oats 会把它替换为你保存的内容：链接、开场白、签名、提示词。",
-      "new": "新建片段",
-      "examples": {
-        "linkedinTrigger": "我的 LinkedIn",
-        "linkedinText": "linkedin.com/in/you",
-        "rewriteTrigger": "改写提示词",
-        "rewriteText": "把这段话改写得更简洁、更专业",
-        "introTrigger": "开场邮件",
-        "introText": "你好，希望本周能找个时间聊聊…",
-        "signoffTrigger": "签名",
-        "signoffText": "祝好，Alex · alex@example.com"
-      },
-      "addPlaceholder": "添加触发词——“我的日程链接”“签名”"
-    },
-    "emptyTitle": "你的词典是空的",
-    "emptyDescription": "添加希望{{agentName}}始终识别正确的词：名字、工具、缩写。",
-    "addFirstWord": "添加第一个词",
-    "importList": "导入列表",
-    "agentDefault": "默认添加"
-  },
-  "sidebar": {
-    "home": "首页",
-    "notes": "笔记",
-    "upload": "上传",
-    "dictionary": "词典",
-    "referral": "获取免费一个月",
-    "settings": "设置",
-    "support": "支持",
-    "limitReached": "已达每周上限",
-    "limitReachedDescription": "升级到 Pro 即可无限转录。",
-    "viewPlans": "查看套餐",
-    "upgradeTitle": "升级到 Pro",
-    "upgradeDescription": "无限转录、实时转录等更多功能。",
-    "learnMore": "了解更多",
-    "integrations": "集成",
-    "defaultUser": "用户",
-    "notSignedIn": "未登录",
-    "chat": "聊天",
-    "inviteTeammate": "Invitar compañero",
-    "createWorkspace": "Crear espacio de trabajo",
-    "collapse": "折叠侧边栏",
-    "expand": "展开侧边栏"
-  },
-  "chat": {
-    "newChat": "新对话",
-    "search": "搜索对话...",
-    "archived": "已归档",
-    "noConversations": "开始你的第一个对话",
-    "selectChat": "选择一个对话或开始新的对话",
-    "noResults": "没有匹配的对话",
-    "today": "今天",
-    "yesterday": "昨天",
-    "previousWeek": "最近 7 天",
-    "older": "更早",
-    "archive": "归档",
-    "unarchive": "取消归档",
-    "delete": "删除",
-    "deleteConfirm": "此对话将被永久删除，无法撤消。",
-    "editTitle": "双击编辑标题",
-    "untitled": "无标题",
-    "searchChats": "搜索聊天",
-    "searchTitle": "搜索对话",
-    "searchDescription": "搜索所有对话",
-    "newChatEmpty": "询问关于笔记、转录或其他任何内容"
-  },
-  "usage": {
-    "approachingLimit": "即将达到周限额",
-    "approachingLimitDescription": "你本周已使用 {{wordsUsed}} / {{limit}} 个免费词数。",
-    "yourPlan": "你的套餐",
-    "trial": "试用期（剩余 {{days}} 天）",
-    "trial_other": "试用期（剩余 {{days}} 天）",
-    "pro": "Pro",
-    "business": "Business",
-    "unlimitedTrial": "试用期间无限转录",
-    "unlimited": "无限转录",
-    "manageSubscription": "管理订阅",
-    "weeklyUsage": "每周用量",
-    "limitReached": "已达上限",
-    "free": "免费版",
-    "wordsRemaining": "剩余 {{remaining}} 个词",
-    "rollingLimit": "滚动周限额",
-    "upgradeToPro": "升级到 Pro",
-    "useYourOwnKey": "使用自己的 API Key",
-    "upgradeUnlimited": "升级到 Pro — 无限转录"
-  },
-  "support": {
-    "documentation": "文档",
-    "joinDiscord": "加入 Discord",
-    "contactSupport": "联系支持",
-    "submitBug": "提交 Bug"
   },
   "postMigration": {
     "title": "欢迎回到 Oats",
@@ -2566,9 +1472,7 @@
     "sourceLanguage": "口语语言",
     "sourceLanguageDescription": "你听写时使用的语言——自动检测也能处理混合语言听写",
     "targetLanguage": "翻译为",
-    "targetLanguageDescription": "粘贴文本的语言",
     "targetLanguageMissing": "请选择目标语言以启用翻译快捷键",
-    "selectLanguage": "选择语言…",
     "prompt": {
       "title": "翻译提示词",
       "description": "自定义模型翻译听写内容的方式"
@@ -2673,269 +1577,15 @@
       "invalidArgs": "{{name}} 的工具参数无效"
     }
   },
-  "integrations": {
-    "title": "集成",
-    "description": "连接服务以增强您的工作流程",
-    "googleCalendar": {
-      "title": "Google 日历",
-      "optional": "可选",
-      "description": "从日历自动填充会议名称和参与者。",
-      "connect": "连接 Google 日历",
-      "connecting": "连接中...",
-      "connected": "已连接",
-      "addAnother": "添加其他日历",
-      "primaryOnly": "仅同步主日历",
-      "primaryOnlyDescription": "忽略他人共享给你的日历事件。",
-      "disconnect": "断开",
-      "disconnectConfirm": "断开 {{email}}？",
-      "disconnectDescription": "将不再从此日历记录会议笔记。",
-      "systemAudioRequired": "需要系统音频权限",
-      "systemAudioDescription": "要转录会议，Oats 需要系统音频权限来录制其他参与者的音频。我们绝不会录制您的屏幕。您将被引导至系统设置以启用此权限。",
-      "openSettings": "打开系统设置"
-    },
-    "sections": {
-      "calendar": "日历",
-      "api": "API",
-      "mcp": "MCP",
-      "cli": "CLI"
-    },
-    "api": {
-      "title": "API 密钥",
-      "description": "管理用于程序访问的 API 密钥",
-      "proRequired": "升级到付费计划以访问 API",
-      "manage": "管理密钥",
-      "viewPlans": "查看套餐",
-      "dialogTitle": "API 密钥"
-    },
-    "mcp": {
-      "title": "将笔记带到你的 AI 工具中",
-      "description": "在 Claude、ChatGPT 和 Cursor 中与你的笔记一起聊天、搜索和工作。",
-      "step1": "在你的 AI 工具中，使用公开 URL 添加 Oats MCP",
-      "step2": "在上方创建具有所需权限的 API 密钥。",
-      "step3": "将密钥粘贴为 Authorization 标头以连接。",
-      "learnMore": "了解更多",
-      "viewPlans": "查看套餐",
-      "copyUrl": "复制 MCP URL",
-      "proRequired": "升级到付费计划，以将 Oats 连接到 Claude、ChatGPT 和 Cursor。",
-      "copied": "已复制"
-    },
-    "cli": {
-      "title": "命令行访问",
-      "description": "让你的智能助手通过终端访问你的笔记。",
-      "installLabel": "安装",
-      "learnMore": "查看文档",
-      "copyDocsLink": "复制文档链接",
-      "docsLinkCopied": "已复制文档链接",
-      "viewPlans": "查看套餐",
-      "local": {
-        "label": "本地",
-        "freeBadge": "免费",
-        "description": "直接读取你的本地笔记。无需登录或 API 密钥 — 在 Oats 运行时即可使用。"
-      },
-      "cloud": {
-        "label": "云端",
-        "description": "使用 API 密钥在多台设备之间同步。",
-        "proRequired": "升级到付费计划以在云端模式下使用 CLI。"
-      }
-    },
-    "plan": {
-      "title": "您的方案",
-      "current": "当前",
-      "free": "免费",
-      "freeLimit": "每月5次会议",
-      "essential": "Essential",
-      "essentialLimit": "每月20次会议",
-      "pro": "Pro",
-      "proLimit": "无限",
-      "upgrade": "升级"
-    },
-    "notABot": {
-      "title": "Oats 是会议录制工具，不是机器人",
-      "description": "Oats 直接从您的系统捕获音频 — 它不会以参与者身份加入您的会议。只需连接日历，正常记录笔记即可。"
-    }
-  },
-  "calendar": {
-    "title": "Google 日历",
-    "status": "状态",
-    "connected": "已连接",
-    "disconnected": "未连接",
-    "notConnectedDescription": "连接以检测和录制会议",
-    "connectCta": {
-      "title": "日历集成",
-      "description": "自动检测会议并录制转录"
-    },
-    "connect": "连接 Google 日历",
-    "connecting": "连接中...",
-    "disconnect": "断开连接",
-    "disconnecting": "断开中...",
-    "sync": "同步",
-    "syncing": "同步中...",
-    "calendarsTitle": "日历",
-    "upcomingTitle": "即将到来",
-    "noUpcoming": "没有即将到来的事件",
-    "meetingStarting": "会议即将开始",
-    "today": "今天",
-    "tomorrow": "明天"
-  },
   "upcoming": {
-    "title": "即将开始的会议",
-    "transcriptions": "转录",
-    "tomorrow": "明天",
-    "noMoreMeetings": "今天没有更多会议了",
-    "now": "进行中",
-    "join": "加入",
-    "untitledEvent": "无标题事件",
-    "systemAudioRequired": "需要系统音频权限来录制其他参与者的音频。",
-    "openSettings": "打开系统设置",
-    "signInRequired": "登录以使用会议录制",
-    "signInDescription": "创建账户或登录以录制和转录会议。",
-    "connectCalendar": "连接您的日历",
-    "connectCalendarDescription": "关联 Google 日历以查看即将到来的会议并自动记录笔记。",
-    "notABot": "Oats 通过系统音频录制 — 它不会以机器人身份加入您的会议。",
-    "connectCalendarButton": "连接日历"
-  },
-  "notesView": {
-    "searchPlaceholder": "搜索笔记…",
-    "newNote": "新建笔记",
-    "empty": {
-      "title": "暂无笔记",
-      "description": "创建你的第一条笔记开始使用。"
-    },
-    "searchEmpty": {
-      "title": "无结果",
-      "description": "未找到与“{{query}}”匹配的笔记。"
-    },
-    "noteType": {
-      "personal": "个人",
-      "meeting": "会议",
-      "upload": "上传"
-    }
-  },
-  "noteEditor": {
-    "saved": "已保存",
-    "deleteNote": "删除笔记",
-    "deleteConfirmTitle": "删除笔记？",
-    "deleteConfirmDescription": "此笔记将被永久删除，无法恢复。",
-    "deleteConfirm": "删除",
-    "share": {
-      "button": "分享",
-      "dialog": {
-        "title": "分享笔记",
-        "searchPlaceholder": "通过电子邮件添加成员",
-        "emailLabel": "收件人邮箱",
-        "shareButton": "分享",
-        "copyLink": "复制链接",
-        "copied": "已复制",
-        "owner": "所有者",
-        "pending": "待处理",
-        "accepted": "已获得访问权限",
-        "resend": "重新发送邀请",
-        "revoke": "移除",
-        "invitationActions": "邀请操作",
-        "permissionRequired": "只有笔记的所有者可以更改分享设置。",
-        "visibility": {
-          "label": "可见性",
-          "link": "拥有链接的任何人",
-          "domain": "{{domain}} 内拥有链接的所有人",
-          "invited": "仅受邀者"
-        },
-        "error": {
-          "invalidEmail": "请输入有效的电子邮件地址",
-          "alreadyInvited": "{{email}} 已经被邀请",
-          "inviteFailed": "无法发送邀请。请重试。",
-          "linkUnavailable": "生成或更换链接后即可复制"
-        }
-      }
-    }
-  },
-  "commandSearch": {
-    "title": "搜索",
-    "description": "搜索笔记和转录",
-    "shortPlaceholder": "搜索",
-    "placeholder": "搜索笔记和转录…",
-    "sections": {
-      "notes": "笔记",
-      "transcripts": "转录"
-    },
-    "noResults": "无结果",
-    "emptyState": "输入内容开始搜索",
-    "footer": {
-      "navigate": "导航",
-      "open": "打开",
-      "dismiss": "关闭"
-    }
+    "tomorrow": "明天"
   },
   "updateNotification": {
     "title": "Oats 有可用更新",
     "body": "版本 {{version}} 已可下载",
     "cta": "立即更新"
   },
-  "permissionsGate": {
-    "title": "需要权限",
-    "description": "Oats 需要一些权限才能在此电脑上正常运行。",
-    "continue": "继续"
-  },
-  "apiKeysSection": {
-    "title": "API 密钥",
-    "description": "创建密钥以编程方式访问 Oats API。",
-    "docsLink": "API 文档",
-    "empty": "暂无 API 密钥",
-    "createButton": "创建 API 密钥",
-    "create": {
-      "title": "创建 API 密钥",
-      "nameLabel": "密钥名称",
-      "namePlaceholder": "例如：我的集成",
-      "scopesLabel": "权限",
-      "expiryLabel": "有效期",
-      "expiryOptions": {
-        "never": "永不过期",
-        "30days": "30 天",
-        "60days": "60 天",
-        "90days": "90 天",
-        "1year": "1 年"
-      },
-      "submit": "创建",
-      "cancel": "取消"
-    },
-    "created": {
-      "title": "API 密钥已创建",
-      "warning": "请立即复制此密钥，它将不会再次显示。",
-      "copied": "已复制！",
-      "copyButton": "复制到剪贴板",
-      "done": "完成"
-    },
-    "scopes": {
-      "notesRead": "读取笔记",
-      "notesWrite": "创建和编辑笔记",
-      "transcriptionsRead": "读取转录"
-    },
-    "revoke": {
-      "button": "撤销",
-      "confirm": "撤销此密钥？使用它的集成将停止工作。",
-      "success": "API 密钥已撤销"
-    },
-    "neverUsed": "从未使用",
-    "lastUsed": "上次使用 {{time}}",
-    "maxKeysReached": "最多允许 {{max}} 个密钥",
-    "errors": {
-      "loadFailed": "无法加载 API 密钥",
-      "createFailed": "无法创建 API 密钥",
-      "revokeFailed": "无法撤销 API 密钥"
-    }
-  },
-  "embeddedChat": {
-    "askPlaceholder": "随便问点什么...",
-    "send": "发送",
-    "title": "聊天",
-    "emptyState": "就这条笔记提个问题",
-    "dock": "固定到侧边栏",
-    "undock": "从侧边栏取消固定",
-    "close": "关闭聊天",
-    "newChat": "新对话",
-    "conversationSelector": "切换对话"
-  },
   "transcriptionPreview": {
-    "label": "预览",
     "listening": "正在聆听...",
     "polishing": "正在润色...",
     "ready": "就绪",
@@ -2947,54 +1597,6 @@
     "speaker": {
       "you": "你",
       "others": "其他人"
-    }
-  },
-  "workspaces": {
-    "switcher": {
-      "personal": "Personal",
-      "workspaces": "Espacios de trabajo",
-      "empty": "Aún no hay espacios de trabajo",
-      "create": "Crear espacio de trabajo…"
-    },
-    "create": {
-      "title": "Crear espacio de trabajo",
-      "description": "Los espacios de trabajo te permiten colaborar, compartir notas y administrar la facturación.",
-      "nameLabel": "Nombre del espacio de trabajo",
-      "namePlaceholder": "Acme Corp",
-      "submit": "Crear espacio de trabajo",
-      "submitting": "Creando…",
-      "errorTitle": "No se pudo crear el espacio de trabajo"
-    },
-    "created": {
-      "title": "Espacio de trabajo creado",
-      "description": "Ahora eres el propietario de {{name}}."
-    },
-    "invite": {
-      "title": "Invitar a {{workspace}}",
-      "description": "Agrega compañeros por correo. Recibirán un enlace para unirse.",
-      "emailLabel": "Correo electrónico",
-      "roleLabel": "Rol",
-      "teamsLabel": "Agregar a equipos",
-      "submit": "Enviar invitación",
-      "submitting": "Enviando…",
-      "sentTitle": "Invitación enviada",
-      "sentDescription": "Enviamos una invitación a {{email}}.",
-      "errorTitle": "No se pudo enviar la invitación",
-      "role": {
-        "admin": "Administrador",
-        "member": "Miembro"
-      }
-    },
-    "accept": {
-      "title": "Unirse al espacio de trabajo",
-      "description": "{{inviter}} te invitó a unirte a {{workspace}} como {{role}}.",
-      "loading": "Cargando invitación…",
-      "accept": "Aceptar invitación",
-      "accepting": "Aceptando…",
-      "signInToAccept": "Inicia sesión para aceptar",
-      "successTitle": "Te uniste",
-      "successDescription": "Bienvenido a {{name}}.",
-      "errorTitle": "No se pudo aceptar la invitación"
     }
   },
   "meetingNotification": {
@@ -3058,6 +1660,7 @@
       "carriedOver": "上次未收尾的：",
       "openPrevious": "打开那一场",
       "noMatches": "没有匹配项",
+      "onlyRelated": "没有人这样说过。以下对话谈的是同一个主题。",
       "match": {
         "transcript": "说过",
         "summary": "摘要",
@@ -3134,7 +1737,6 @@
     },
     "searched": "已搜索",
     "dismiss": "忽略该问题",
-    "askedTimes": "提问 {{count}} 次",
     "earlier": "另有 {{count}} 条",
     "collapse": "显示更少",
     "undo": "撤销",
@@ -3158,13 +1760,10 @@
     "returned_one": "回到 {{count}} 次",
     "returned_other": "回到 {{count}} 次",
     "search": "搜索",
-    "noQuestions": "这条线索中没有问题。",
-    "selectPrompt": "选择一个话题，查看其中提出的问题。"
+    "noQuestions": "这条线索中没有问题。"
   },
   "suggestions": {
     "title": "值得提起",
-    "unfinished": "尚未收尾",
-    "shallow": "几乎未展开",
     "adjacent_one": "常常一起出现",
     "adjacent_other": "常常一起出现"
   },
@@ -3179,7 +1778,6 @@
     "topicCount_one": "{{count}} 个话题",
     "topicCount_other": "{{count}} 个话题",
     "open": "打开这场对话",
-    "selectPrompt": "选择一场对话，查看它谈了什么。",
     "empty": "当你有 {{count}} 场录制的对话可以连接时，图谱就会出现。"
   }
 }
