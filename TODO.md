@@ -244,13 +244,18 @@ surface not using it. It runs debounced at 220ms behind the literal filter,
 never instead of it — literal results keep their order and their place at the
 top. No index, no model, no network: the search still works exactly as before.
 
-**Still open:** the excerpt does not yet _jump to the moment_. `findExcerpt`
-returns the `segmentId` and `timestamp` of a transcript match and nothing
-consumes them; opening a result lands on the right tab and `Highlighted` scrolls
-the first literal match into view, which is close but is not the same thing —
-a semantic result has no literal match to scroll to. Also unresolved: whether
-`related` results should be shown at all when the literal filter found nothing,
-or whether an empty literal result should say so first.
+**Done: it jumps to the moment.** The reading view renders the transcript as the
+timed record it is — a mono gutter of offsets beside each turn — instead of the
+flat string the clipboard gets, so an hour of conversation finally has bearings.
+A result carries `· 12:30` beside its provenance label, and opening it lands on
+that turn: measured, `tab: Transcript`, gutters `0:00 / 1:00 / 2:00`, exactly one
+turn inked, `inkedOnScreen: true`. A semantic result gets `null` rather than a
+guess — landing somebody on a turn the search did not find is worse than landing
+them at the top. A transcript with no segments falls back to the flat article
+(measured), and `transcriptText` is untouched so copy and export are unchanged.
+
+**Still open:** whether `related` results should appear at all when the literal
+filter found nothing, or whether an empty literal result should say so first.
 
 ### P2.2 Add a compact post-conversation review
 
