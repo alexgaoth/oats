@@ -257,12 +257,34 @@ them at the top. A transcript with no segments falls back to the flat article
 **Still open:** whether `related` results should appear at all when the literal
 filter found nothing, or whether an empty literal result should say so first.
 
-### P2.2 Add a compact post-conversation review
+### P2.2 Post-conversation review — the certain half done (2026-08-23)
 
-Decisions, commitments and owners where explicit, open and researched questions,
-what changed since the last related conversation, and links to the exact
-supporting utterances. A quiet review layer — not a task manager, not a chat
-panel.
+**Done: open and researched questions, with links to the exact utterance.** The
+reading view opened on the summary — prose from a local 1.5B model CLAUDE.md is
+explicit "frequently does not" succeed — and that was the first and only thing
+you saw, while Oats was already holding facts it knows exactly and showing none
+of them. `helpers/conversationReview.mjs` (pure, 9 pins) reports what nobody
+answered, how each one came out, which ones Oats went and searched, and which
+threads were left open. It renders **above** the summary: an evidence tool that
+leads with a model's prose is asking you to trust the weakest thing on the page.
+
+Each unresolved question is a place, not a sentence — pressing it opens the
+transcript at the turn it was asked in. Measured: heading "What this left open",
+one item for the denied question and none for the answered one, tally
+`2 asked, 1 answered`, `reviewAboveSummary: true`, and pressing the item lands on
+the Transcript tab with that turn inked and on screen.
+
+**Deliberately not done: decisions, commitments and owners.** Detecting those
+means pattern-matching intent, and this product's posture on inference is set by
+the question rules — local patterns first, the model only refining, a false
+positive treated as expensive. A commitment Oats invented and attributed to
+somebody in the room is exactly that kind of expensive. It wants its own pass,
+with both-direction pins the way `conversationAide` has, and probably its own
+critic loop.
+
+**Also still open:** "what changed since the last related conversation" — the
+`carriedOver` line already names what the previous conversation on this subject
+left open, but it does not say what _this_ one closed.
 
 ### P2.3 Evaluate local people/project memory after recall works
 

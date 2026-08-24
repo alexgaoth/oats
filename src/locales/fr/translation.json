@@ -3076,6 +3076,12 @@
       "deleteYes": "Supprimer",
       "deleteCancel": "Conserver"
     },
+    "review": {
+      "title": "Ce qui reste ouvert",
+      "tally": "{{asked}} posées, {{answered}} répondues",
+      "openThreads_one": "{{count}} fil encore ouvert",
+      "openThreads_other": "{{count}} fils encore ouverts"
+    },
     "settings": {
       "title": "Peu de choix.",
       "subtitle": "Oats écrit lui-même le titre, le résumé et les fils.",

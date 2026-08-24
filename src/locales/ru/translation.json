@@ -3080,6 +3080,12 @@
       "deleteYes": "Удалить",
       "deleteCancel": "Оставить"
     },
+    "review": {
+      "title": "Что осталось открытым",
+      "tally": "задано {{asked}}, отвечено {{answered}}",
+      "openThreads_one": "{{count}} тема всё ещё открыта",
+      "openThreads_other": "{{count}} темы всё ещё открыты"
+    },
     "settings": {
       "title": "Минимум решений.",
       "subtitle": "Oats сам пишет заголовок, резюме и нити.",

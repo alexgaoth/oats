@@ -3076,6 +3076,12 @@
       "deleteYes": "Delete",
       "deleteCancel": "Keep"
     },
+    "review": {
+      "title": "What this left open",
+      "tally": "{{asked}} asked, {{answered}} answered",
+      "openThreads_one": "{{count}} thread still open",
+      "openThreads_other": "{{count}} threads still open"
+    },
     "settings": {
       "title": "Keep the choices small.",
       "subtitle": "Oats writes the title, summary, and threads itself.",

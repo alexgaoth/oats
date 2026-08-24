@@ -28,6 +28,7 @@ import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
+import { buildReview } from "../helpers/conversationReview.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -1382,10 +1383,21 @@ function IntelligenceViews({
               and bold. Rendering it as preformatted text put literal ** around
               every thread name, on the one payload Intelligence exists to show. */}
           {tab === "summary" && (
-            <MarkdownRenderer
-              content={summary}
-              className="mt-7 text-[15px] leading-7 text-foreground"
-            />
+            <>
+              {/* Certain first, inferred second. */}
+              <ConversationReview
+                events={events}
+                topics={selectedTopics}
+                onOpenTurn={(segmentId) => {
+                  setLandedOnSegment(segmentId);
+                  setTab("transcript");
+                }}
+              />
+              <MarkdownRenderer
+                content={summary}
+                className="mt-7 text-[15px] leading-7 text-foreground"
+              />
+            </>
           )}
           {tab === "transcript" && (
             <TranscriptView note={selected} query={query} scrollToId={landedOnSegment} />
@@ -1508,6 +1520,88 @@ function matchedTab(note: NoteItem, query: string, t: TFunction): DetailTab {
       transcript: transcriptText(note.transcript, t),
     },
     query
+  );
+}
+
+/**
+ * What the conversation certainly contained, above what a model wrote about it.
+ *
+ * The reading view opened on the summary — prose from a local 1.5B model that
+ * CLAUDE.md is explicit "frequently does not" succeed — and that was the first
+ * and only thing you saw. Underneath, Oats was already holding facts it knows
+ * exactly: which questions were asked, how each came out, which it went and
+ * searched, and which threads were left open. It showed none of them.
+ *
+ * So the certain part goes first and the inferred part follows. Ordering is the
+ * argument: an evidence tool that leads with a summary is asking you to trust
+ * the weakest thing on the page.
+ *
+ * It is a review, not a task manager (§1): no checkboxes, no owners, no due
+ * dates, and nothing Oats had to guess. Each unresolved question is a *place* —
+ * pressing it opens the transcript at the turn it was asked in.
+ */
+function ConversationReview({
+  events,
+  topics,
+  onOpenTurn,
+}: {
+  events: ConversationEvent[];
+  topics: ConversationTopicNode[];
+  onOpenTurn: (segmentId: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const review = useMemo(() => buildReview({ events, topics }), [events, topics]);
+
+  // Nothing observed means nothing to review. A panel saying "0 questions" is a
+  // panel that has to be read to learn it says nothing.
+  if (review.empty) return null;
+
+  return (
+    <section className="mt-7 border-l-2 border-border/60 pl-4">
+      <h2 className="font-mono text-[11px] text-muted-foreground">{t("oats.review.title")}</h2>
+
+      {review.unresolved.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {review.unresolved.map((item) => (
+            <li key={item.key}>
+              <button
+                type="button"
+                onClick={() => onOpenTurn(item.segmentId)}
+                disabled={!item.segmentId}
+                className={cn(
+                  "w-full rounded-sm text-left text-[13px] leading-6 text-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  item.segmentId
+                    ? "underline decoration-border underline-offset-[5px] hover:decoration-foreground"
+                    : "cursor-default"
+                )}
+              >
+                {item.question}
+              </button>
+              <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                {t(`questionCard.state.${item.outcome === "open" ? "asked" : item.outcome}`)}
+                {item.searched && ` · ${t("questionCard.searched")}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* One line of arithmetic, not a dashboard. It exists so "three questions
+          went unanswered" has a denominator. */}
+      <p className="mt-3 font-mono text-[11px] leading-5 text-muted-foreground">
+        {t("oats.review.tally", { asked: review.asked, answered: review.answered })}
+        {review.openThreads.length > 0 && (
+          <>
+            {" · "}
+            {t("oats.review.openThreads", { count: review.openThreads.length })}{" "}
+            <span className="text-foreground/70">
+              {review.openThreads.map((thread) => thread.label).join(", ")}
+            </span>
+          </>
+        )}
+      </p>
+    </section>
   );
 }
 

@@ -3076,6 +3076,12 @@
       "deleteYes": "削除",
       "deleteCancel": "残す"
     },
+    "review": {
+      "title": "未解決のまま残ったこと",
+      "tally": "{{asked}} 件質問、{{answered}} 件回答",
+      "openThreads_one": "{{count}} 件のスレッドが未解決",
+      "openThreads_other": "{{count}} 件のスレッドが未解決"
+    },
     "settings": {
       "title": "選択は少なく。",
       "subtitle": "タイトル・要約・スレッドは Oats が自分で書きます。",

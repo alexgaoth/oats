@@ -3076,6 +3076,12 @@
       "deleteYes": "Löschen",
       "deleteCancel": "Behalten"
     },
+    "review": {
+      "title": "Was offen geblieben ist",
+      "tally": "{{asked}} gefragt, {{answered}} beantwortet",
+      "openThreads_one": "{{count}} Faden noch offen",
+      "openThreads_other": "{{count}} Fäden noch offen"
+    },
     "settings": {
       "title": "Wenige Entscheidungen.",
       "subtitle": "Oats schreibt Titel, Zusammenfassung und Stränge selbst.",

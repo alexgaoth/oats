@@ -3071,6 +3071,12 @@
       "deleteYes": "刪除",
       "deleteCancel": "保留"
     },
+    "review": {
+      "title": "尚未解決的內容",
+      "tally": "提問 {{asked}}，回答 {{answered}}",
+      "openThreads_one": "{{count}} 個話題仍未結束",
+      "openThreads_other": "{{count}} 個話題仍未結束"
+    },
     "settings": {
       "title": "把選擇降到最少。",
       "subtitle": "標題、摘要與脈絡由 Oats 自動產生。",

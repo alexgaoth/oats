@@ -3076,6 +3076,12 @@
       "deleteYes": "Eliminar",
       "deleteCancel": "Conservar"
     },
+    "review": {
+      "title": "Lo que quedó abierto",
+      "tally": "{{asked}} preguntadas, {{answered}} respondidas",
+      "openThreads_one": "{{count}} hilo sigue abierto",
+      "openThreads_other": "{{count}} hilos siguen abiertos"
+    },
     "settings": {
       "title": "Pocas decisiones.",
       "subtitle": "Oats escribe el título, el resumen y los hilos por sí solo.",

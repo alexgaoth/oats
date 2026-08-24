@@ -3076,6 +3076,12 @@
       "deleteYes": "Excluir",
       "deleteCancel": "Manter"
     },
+    "review": {
+      "title": "O que ficou em aberto",
+      "tally": "{{asked}} perguntadas, {{answered}} respondidas",
+      "openThreads_one": "{{count}} tópico ainda aberto",
+      "openThreads_other": "{{count}} tópicos ainda abertos"
+    },
     "settings": {
       "title": "Poucas escolhas.",
       "subtitle": "O Oats escreve o título, o resumo e os fios sozinho.",

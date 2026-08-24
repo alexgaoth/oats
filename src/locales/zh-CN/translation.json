@@ -3071,6 +3071,12 @@
       "deleteYes": "删除",
       "deleteCancel": "保留"
     },
+    "review": {
+      "title": "尚未解决的内容",
+      "tally": "提问 {{asked}}，回答 {{answered}}",
+      "openThreads_one": "{{count}} 个话题仍未结束",
+      "openThreads_other": "{{count}} 个话题仍未结束"
+    },
     "settings": {
       "title": "把选择降到最少。",
       "subtitle": "标题、摘要和线索由 Oats 自动生成。",
