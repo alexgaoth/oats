@@ -61,7 +61,7 @@
     "format": "npm run format:js",
     "format:check": "eslint . && cd src && eslint . && prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "lint": "eslint . && cd src && eslint .",
-    "test": "node --test \"test/**/*.test.js\"",
+    "test": "npm run test:oats:core",
     "test:oats:core": "node --test \"test/helpers/*.test.js\" \"test/utils/*.test.js\"",
     "test:oats:db": "cross-env ELECTRON_RUN_AS_NODE=1 electron --test \"test/db/*.test.js\"",
     "test:oats": "npm run test:oats:core && npm run test:oats:db",

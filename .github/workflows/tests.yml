@@ -2,8 +2,14 @@ name: Tests
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 jobs:
+  # Everything plain Node can run without a native build. `npm ci
+  # --ignore-scripts` skips better-sqlite3 and the Electron download, so the four
+  # tests that need Electron's ABI live in `test/db/` and run separately, locally,
+  # via `npm run test:oats:db`.
   tests:
     runs-on: ubuntu-latest
     steps:
@@ -13,8 +19,56 @@ jobs:
           node-version-file: .nvmrc
       - name: Install dependencies
         run: npm ci --ignore-scripts
-      - name: Run tests
+      - name: Unit tests
         run: npm test
         env:
           # keeps require("electron") from throwing when postinstall was skipped
+          ELECTRON_OVERRIDE_DIST_PATH: /tmp
+
+  # The two locale gates. `check-i18n.js` compares locales against each other;
+  # `check-missing-keys.js` asks i18next for every key the code can ask for,
+  # because the first is blind to a key missing from all ten. Neither needs a
+  # native module, and neither ran in CI until now.
+  locales:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `check-missing-keys.js` compares each runtime-built subtree against
+          # the previous commit, so it needs more than a shallow clone.
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --ignore-scripts
+      - name: Locale parity and missing keys
+        run: npm run i18n:check
+
+  # Lint, format and types — the half of `verify:oats` that needs no binaries.
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --ignore-scripts
+      - name: Lint, format, types
+        run: npm run quality-check
+        env:
+          ELECTRON_OVERRIDE_DIST_PATH: /tmp
+
+  # The renderer has to build. A broken import in a component is not something
+  # any of the above would catch.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --ignore-scripts
+      - name: Build renderer
+        run: npm run build:renderer
+        env:
           ELECTRON_OVERRIDE_DIST_PATH: /tmp

@@ -82,6 +82,10 @@ function shrunkDynamicSubtrees(bases, flattenKeys) {
         cwd: ROOT,
         encoding: "utf8",
         maxBuffer: 64 * 1024 * 1024,
+        // Silenced: outside a git checkout this prints "fatal: not a git
+        // repository" and then succeeds, and a fatal line in a green build is
+        // the kind of noise people learn to scroll past.
+        stdio: ["ignore", "pipe", "ignore"],
       })
     );
   } catch {
