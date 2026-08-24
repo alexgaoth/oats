@@ -3037,6 +3037,8 @@
       "preparing": "Preparazione…",
       "micOnly": "Solo registrazione con microfono in presenza.",
       "micSilent": "Il microfono è in silenzio da un po'. Controlla che non sia muto o usato da un'altra app.",
+      "notSaving_one": "L'ultimo turno non è stato salvato. Controlla lo spazio su disco, poi termina e riapri la conversazione.",
+      "notSaving_other": "Gli ultimi {{count}} turni non sono stati salvati. Controlla lo spazio su disco, poi termina e riapri la conversazione.",
       "statusRecording": "Registrazione in corso. Audio e trascrizioni restano su questo computer.",
       "statusStopped": "Registrazione terminata. Oats sta scrivendo il riassunto.",
       "nothingHeard": "Non è stato sentito nulla, quindi nessuna conversazione è stata salvata. Controlla il microfono nelle Impostazioni.",

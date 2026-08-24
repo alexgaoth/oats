@@ -290,11 +290,34 @@ left open, but it does not say what _this_ one closed.
 
 Only after P2.1 is accurate. A lightweight memory aid, not a CRM.
 
-### P2.4 Add a problem-only trust/health surface
+### P2.4 Problem-only trust/health surface — the checkpoint done (2026-08-23)
 
-Microphone signal, local model readiness, last successful transcript checkpoint,
-and any network action — surfaced **only** when it helps someone recover. The
-pencil standard is silent when healthy and specific when it is not.
+**Done: a failing checkpoint is loud.** Checkpointing already bounded what a
+crash could take — every finalized utterance schedules a debounced write — but
+the write was fired with `void` and its result discarded, so the _other_ failure
+(database refusing, disk full, file locked) was completely silent. You would
+record for an hour, press stop, and find out then. That is the exact shape the
+product's own standard forbids, and it was the one case nothing watched.
+
+The result is read now. `checkpointLastWritten` only advances on success, so a
+failed write is retried by the next utterance instead of being assumed done, and
+the store carries `checkpointFailedSince` / `checkpointedSegments` /
+`lastCheckpointAt`. `helpers/recordingHealth.mjs` (pure, 6 pins) decides when
+that is worth saying: never while healthy, and not on a single refused write —
+one failure during a database checkpoint is not news, and a warning that cries
+wolf is one people learn to ignore before the real one arrives.
+
+Measured in the built renderer, four states: healthy → silent; failed 3s ago →
+silent; failing 40s with 4 unsaved turns → `The last 4 turns have not been
+saved. Check disk space, then finish and reopen the conversation.`, on screen in
+the pinned foot **and** in the `role="status"` region; failing but nothing
+unsaved → silent. It says how much is at risk because "saving failed" is a
+status and "the last four turns are not saved" is something a person can act on.
+
+**Still open:** local model readiness and network actions. The mic signal is
+already covered by the dead-microphone warning, and auto-search already announces
+itself on the card (`searched · google`), so what remains is a transcription
+backend that has stopped producing — which today looks identical to a quiet room.
 
 ## Product truth and documentation — done
 

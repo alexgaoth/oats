@@ -29,6 +29,7 @@ import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
 import { buildReview } from "../helpers/conversationReview.mjs";
+import { checkpointRisk } from "../helpers/recordingHealth.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -290,6 +291,10 @@ function ConversationSurface() {
     [conversationKey]
   );
   const micSilentSince = useMeetingRecordingStore((s) => s.micSilentSince);
+  const checkpointFailedSince = useMeetingRecordingStore((s) => s.checkpointFailedSince);
+  const checkpointedSegments = useMeetingRecordingStore((s) => s.checkpointedSegments);
+  const lastCheckpointAt = useMeetingRecordingStore((s) => s.lastCheckpointAt);
+  const segmentCount = useMeetingRecordingStore((s) => s.segments.length);
   const sessionStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
   const elapsed = useElapsed(sessionStartedAt);
   const contour = useLiveContour(sessionStartedAt);
@@ -301,6 +306,22 @@ function ConversationSurface() {
   const detailed = detail === "detailed";
 
   // Which question annotation is being read, so its mark on the trace can rise.
+  // Re-evaluated on the same tick the elapsed clock already ticks on, so a
+  // failing write becomes visible within a second of crossing the grace period
+  // rather than at the next utterance — which, if transcription is what broke,
+  // may never come.
+  // Deliberately not memoised: it must be recomputed on the clock's own tick, so
+  // a failing write becomes visible within a second of crossing the grace period
+  // rather than at the next utterance — which, if transcription is what broke,
+  // may never come. A `useMemo` keyed on `elapsed` says the same thing while
+  // pretending `elapsed` is an input, and lint is right to call that out.
+  const atRisk = checkpointRisk({
+    failingSince: checkpointFailedSince,
+    unsavedTurns: Math.max(0, segmentCount - checkpointedSegments),
+    lastSavedAt: lastCheckpointAt,
+    now: Date.now(),
+  });
+
   const [focusedGroup, setFocusedGroup] = useState<string | null>(null);
   // The fade says "more below", so it must be measured rather than remembered.
   //
@@ -552,9 +573,11 @@ function ConversationSurface() {
                 conversation. That is precisely the "fails quietly at the end"
                 this surface exists to prevent. */}
               <p aria-live="polite" role="status" className="sr-only">
-                {micSilentSince !== null
-                  ? t("oats.conversation.micSilent")
-                  : t("oats.conversation.statusRecording")}
+                {atRisk.atRisk
+                  ? t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })
+                  : micSilentSince !== null
+                    ? t("oats.conversation.micSilent")
+                    : t("oats.conversation.statusRecording")}
               </p>
 
               {/* The clock is the heading here. What a person glances at mid-
@@ -796,6 +819,19 @@ function ConversationSurface() {
               {micSilentSince !== null && (
                 <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
                   {t("oats.conversation.micSilent")}
+                </p>
+              )}
+              {/* The recording is not reaching disk.
+              
+                  Same weight and same place as the dead microphone, because it
+                  is the same class of problem: something that will cost you the
+                  conversation, said while there is still time to do something
+                  about it. It says how much is at risk, because "saving failed"
+                  is a status and "the last nine minutes are not saved" is
+                  something a person can act on. */}
+              {atRisk.atRisk && (
+                <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
+                  {t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })}
                 </p>
               )}
               {/* Detailed only. The stack is a standing list of unfinished

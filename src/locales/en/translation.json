@@ -3037,6 +3037,8 @@
       "preparing": "Preparing…",
       "micOnly": "In-person microphone recording only.",
       "micSilent": "The microphone has been silent for a while. Check it is not muted or in use by another app.",
+      "notSaving_one": "The last turn has not been saved. Check disk space, then finish and reopen the conversation.",
+      "notSaving_other": "The last {{count}} turns have not been saved. Check disk space, then finish and reopen the conversation.",
       "statusRecording": "Recording. Audio and transcripts stay on this device.",
       "statusStopped": "Recording finished. Oats is writing the summary.",
       "nothingHeard": "Nothing was heard, so no conversation was saved. Check the microphone in Settings.",

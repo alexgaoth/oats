@@ -95,6 +95,11 @@ interface MeetingRecordingState {
   // Set when the microphone has produced nothing but silence for long enough that
   // it is more likely broken or muted than the room being quiet.
   micSilentSince: number | null;
+  /** When checkpoint writes began failing, or null while they are landing. */
+  checkpointFailedSince: number | null;
+  /** How many finalized turns are known to be on disk. */
+  checkpointedSegments: number;
+  lastCheckpointAt: number | null;
   /**
    * The question cards for the running conversation, oldest first.
    *
@@ -506,6 +511,9 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   openThreads: [],
   suggestions: [],
   micSilentSince: null,
+  checkpointFailedSince: null,
+  checkpointedSegments: 0,
+  lastCheckpointAt: null,
   questionCards: [],
 }));
 
@@ -725,6 +733,13 @@ function startTranscriptCheckpoints(noteId: number | null) {
   stopTranscriptCheckpoints();
   checkpointNoteId = noteId;
   checkpointLastWritten = "";
+  // A new recording starts healthy. Carrying the previous conversation's
+  // failure forward would warn about speech that is not at risk.
+  useMeetingRecordingStore.setState({
+    checkpointFailedSince: null,
+    checkpointedSegments: 0,
+    lastCheckpointAt: null,
+  });
 }
 
 /** Write now, skipping the debounce. Used when recording stops. */
@@ -739,12 +754,39 @@ function flushTranscriptCheckpoint() {
   if (!state.segments.length) return;
   const serialized = serializeTranscriptSegments(state.segments);
   if (serialized === checkpointLastWritten) return;
-  checkpointLastWritten = serialized;
+  const attemptedCount = state.segments.length;
   const topics = conversationTopicTracker?.snapshot(Date.now());
-  void window.electronAPI?.updateNote?.(noteId, {
-    transcript: serialized,
-    ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
-  });
+  // The result is read now instead of thrown away with `void`.
+  //
+  // Checkpointing already bounded what a crash could take. The other failure —
+  // the database refusing, the disk full, the file locked — was completely
+  // silent: you would record for an hour, press stop, and find out then. That
+  // is precisely the "fails quietly at the end" the product's own standard
+  // forbids, and it was the one case nothing watched.
+  //
+  // `checkpointLastWritten` is only advanced on success, so a failed write is
+  // retried by the next utterance rather than being assumed done.
+  void Promise.resolve(
+    window.electronAPI?.updateNote?.(noteId, {
+      transcript: serialized,
+      ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
+    })
+  )
+    .then((result) => {
+      if (result && result.success === false) throw new Error("checkpoint refused");
+      checkpointLastWritten = serialized;
+      useMeetingRecordingStore.setState({
+        checkpointFailedSince: null,
+        checkpointedSegments: attemptedCount,
+        lastCheckpointAt: Date.now(),
+      });
+    })
+    .catch(() => {
+      const current = useMeetingRecordingStore.getState().checkpointFailedSince;
+      if (current === null) {
+        useMeetingRecordingStore.setState({ checkpointFailedSince: Date.now() });
+      }
+    });
 }
 
 /** Called for each finalized utterance. */

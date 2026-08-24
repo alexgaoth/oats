@@ -3037,6 +3037,8 @@
       "preparing": "Preparando…",
       "micOnly": "Solo grabación con micrófono presencial.",
       "micSilent": "El micrófono lleva un rato en silencio. Comprueba que no esté silenciado ni en uso por otra app.",
+      "notSaving_one": "El último turno no se ha guardado. Comprueba el espacio en disco, luego finaliza y vuelve a abrir la conversación.",
+      "notSaving_other": "Los últimos {{count}} turnos no se han guardado. Comprueba el espacio en disco, luego finaliza y vuelve a abrir la conversación.",
       "statusRecording": "Grabando. El audio y las transcripciones no salen de este equipo.",
       "statusStopped": "Grabación finalizada. Oats está escribiendo el resumen.",
       "nothingHeard": "No se oyó nada, así que no se guardó ninguna conversación. Revisa el micrófono en Ajustes.",
