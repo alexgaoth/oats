@@ -110,6 +110,15 @@ All three were "fails quietly at the end", which the pencil standard forbids, an
 
 `MeetingRecordingMount`'s tick runs on `performance.now()`; anything it publishes for these checks must be `Date.now()`, or the comparison is ~0 against ~1.7e12 and the warning silently never fires.
 
+### Dictation quality is measured, not argued (2026-08-24)
+
+`scripts/asr-eval.js` runs the real path — the app's own `buildWhisperServerArgs`, the shipped `whisper-server` binary — over LibriSpeech test-clean and reports WER and latency. Numbers and the fork/upstream comparison in `docs/dictation-accuracy.md`. Never claim a transcription change helps without a row from it.
+
+- **`--no-timestamps` is load-bearing.** whisper.cpp v1.9.x enables a 60-character segment wrap that lands on token boundaries with `split_on_word` off, so words break in half ("overh anging"). We read only `text`, so removing it costs nothing. Do not drop the flag.
+- **`base.en` ships beside `base` and is chosen automatically for English** (`helpers/whisperEnglishModel.mjs`) — same size, 38% fewer errors, 4.4x faster than the old default. It is absent from the model picker on purpose (`englishOnly` in the registry): it is not a tier to weigh, and the selection falls back silently when the file is missing.
+- **`preferredLanguage` defaults to `auto` deliberately**, which forces the multilingual model. Guessing English from the OS locale is right often and catastrophic when wrong; slow is recoverable, wrong is not.
+- The pre-Oats `../oats` tree feels quicker only because it defaults `useLocalWhisper` to **false** and transcribes in the cloud. `whisperServer.js` is otherwise byte-identical. Upstream is 1.8.3; we forked 1.7.6.
+
 ### Transcription scopes — the trap that broke recording
 
 Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`meetingUseLocalWhisper`), and upload (`uploadUseLocalWhisper`). **Recording a conversation — the primary action — reads the _meeting_ scope**, via `selectResolvedMeetingTranscription`. The visible Settings page has one processing choice, so it must write every scope; when it wrote only the dictation scope, "On this computer" appeared selected while recording still went to OpenAI and failed for want of an API key. All three default to local, because Oats bundles a Whisper model and promises to work offline with no account. There is also a legacy `meetingFollows*` migration in `settingsStore.ts` that copies dictation values into meeting fields for pre-existing installs — it does not run for fresh ones, which is why the defaults themselves have to be right.
