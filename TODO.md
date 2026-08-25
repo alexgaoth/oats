@@ -672,10 +672,97 @@ Still requiring a real GUI session and realistic speech:
 
 ## Noted in passing, not acted on
 
-- **A killed Oats can leave a `pactl subscribe` child holding inherited file
-  descriptors** — it was found holding a listening socket from a dead process.
-  The Linux microphone-activity detector spawns it; its child does not appear to
-  close inherited fds.
-- **Idle RSS is ~1 GB** across the process tree, and the ~17 % idle CPU floor is
-  the same on every surface. Neither is a rendering problem; both are the next
-  thing worth measuring after the field work above.
+(Both entries that lived here have been measured and closed — the `pactl`
+orphan, and the idle cost below.)
+
+## Idle cost — attributed, and the floor removed (2026-08-24)
+
+`.iterate/20260824-idle-cost/`. The backlog said "idle RSS is ~1 GB … the ~17 %
+idle CPU floor is the same on every surface … neither is a rendering problem."
+Both halves were wrong, and both were wrong because the instrument reported one
+number for a tree of thirteen processes.
+
+- **The idle CPU was one CSS animation.** `.oats-listening-pulse::before`
+  breathes on `infinite`, and `src/App.jsx` put that class in the floating oat's
+  **base** class list — so the always-on-top window breathed in `idle` and
+  `hover` too. With GPU compositing disabled on Linux every frame is read back on
+  the CPU. Attributed per process: GPU 3.3 % + oat renderer 2.4 % of a 6.1 %
+  total, in a window nobody is looking at. Fixed the way `ListeningPulse.tsx`
+  already did it; idle CPU **6.1 / 7.5 / 6.1 % → 0.4 / 1.6 / 0.7 %**. `processing`
+  keeps its breath on purpose — it is the only positive sign that window has that
+  work is happening, and it is bounded by the transcription.
+- It was also wrong on screen. `DESIGN.md` §9.1 says the seed breathes while a
+  session is live and "Idle = static gold seed"; the oat claimed to be listening
+  whenever the app was open, on the one window whose whole job is that
+  distinction.
+- **The 17.1 % does not reproduce on its own commit.** `933f7cb` was checked out,
+  built and driven by the same instrument: **5.9 / 7.6 / 5.7 %**, with the same
+  ~6 points of breath. Nothing between the two dates changed idle CPU; the older
+  row is a property of that afternoon's machine, and is not comparable.
+- **The instrument was reading a subset of the tree.** All four walks used
+  `/proc/<pid>/task/<pid>/children`, which lists only the _main thread's_
+  children — and Chromium forks renderers from a launcher thread. It reached 10
+  of 13 processes, omitting the renderer drawing the surface being measured.
+- **The ~1 GB was double counting.** Summed `VmRSS` counts every shared page once
+  per process holding it. PSS, over the corrected walk: **746 MB**, of which
+  ~330 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade
+  for an instant first recording and first search, not a defect.
+- **`pactl` does inherit the debug port's listening socket.** A pass earlier the
+  same day removed that claim as measured-false; it is true, and there is now an
+  inode to prove it (`/proc/<pactl>/fd/63 -> socket:[8511221]`, the inode `ss`
+  reports LISTENing). `perf:baseline` clears the port itself before launching,
+  because Chromium binds it before any application code can reap anything.
+- **`perf:baseline` attributes idle cost per process**, naming Chromium's own via
+  `SystemInfo.getProcessInfo`, the sidecars by walking `/proc`, and telling the
+  two renderers apart by making one busy — a renderer forked from the zygote
+  keeps the zygote's command line, so it cannot be identified from `/proc` alone.
+- **The floating oat's main control had no accessible name**, while the two small
+  buttons beside it did. It now uses `app.mic.hotkeyToSpeak` — a string that was
+  translated into all ten locales and had no call site — so the name says what
+  the key does rather than naming the key.
+
+## Verification gates
+
+Still requiring a real GUI session and realistic speech:
+
+- Fedora install and smoke test from the RPM;
+- notarized Apple Silicon DMG smoke test;
+- real-speech question detection, question-state resolution, thread stack, and
+  topic graph evaluation;
+- dark/light and reduced-motion review of the _recording_ surfaces (the three
+  resting surfaces were checked in both modes during this pass);
+- release network trace, including automatic-search behaviour;
+- the macOS half of the performance baseline, plus occluded idle and the
+  60-minute conversation — see `docs/performance-baseline.md`.
+
+## Noted in passing, not acted on
+
+(Both entries that lived here have been measured and closed — the `pactl`
+orphan, and the idle cost below.)
+
+## Idle cost — attributed, and the floor removed (2026-08-24)
+
+`.iterate/20260824-idle-cost/`. The backlog said "idle RSS is ~1 GB … the ~17 %
+idle CPU floor is the same on every surface … neither is a rendering problem."
+Both halves were wrong, and both were wrong because the instrument reported one
+number for a tree of nine processes.
+
+- **The floor was one CSS animation.** `.oats-listening-pulse::before` breathes
+  on `infinite`, and `src/App.jsx` put that class in the floating oat's **base**
+  class list — so the always-on-top window breathed in `idle` and `hover` too.
+  With GPU compositing disabled on Linux every frame is read back on the CPU:
+  **7.3 points of a core, forever, for a 96px window.** Measured A/B on a driven
+  build, then fixed the way `ListeningPulse.tsx` already did it. Idle CPU
+  **17.1 / 18.1 / 16.7 % → 0.4 / 1.0 / 0.6 %**.
+- It was also wrong on screen. `DESIGN.md` §9.1 says the seed breathes while a
+  session is live and "Idle = static gold seed"; the oat claimed to be listening
+  whenever the app was open, on the one window whose whole job is that
+  distinction.
+- **The ~1 GB was 37 % double counting.** Summed `VmRSS` counts every shared page
+  once per process holding it. PSS from `smaps_rollup`: **627 MB**, of which
+  274 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade for
+  an instant first recording and first search, not a defect.
+- **`perf:baseline` now attributes idle cost per process**, naming Chromium's own
+  via `SystemInfo.getProcessInfo`, the sidecars by walking `/proc`, and telling
+  the two renderers apart by making one busy — a renderer forked from the zygote
+  keeps the zygote's command line, which is why they were indistinguishable.

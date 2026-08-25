@@ -59,6 +59,35 @@ function findBrowserPid(port) {
   return null;
 }
 
+/**
+ * The children of a process — read from every thread, not just the main one.
+ *
+ * `/proc/<pid>/task/<pid>/children` lists only the children of the *main
+ * thread*, and Chromium forks its renderers and mojo utilities from a launcher
+ * thread. Walking the main thread alone silently reached 10 of 13 processes
+ * here, omitting the renderer that draws the surface being measured — so both
+ * the CPU and the memory totals were of an arbitrary subset that varied between
+ * runs.
+ */
+function childrenOf(pid) {
+  const out = [];
+  let threads;
+  try {
+    threads = fs.readdirSync(`/proc/${pid}/task`);
+  } catch {
+    return out;
+  }
+  for (const tid of threads) {
+    try {
+      const listed = fs.readFileSync(`/proc/${pid}/task/${tid}/children`, "utf8").trim();
+      if (listed) out.push(...listed.split(/\s+/).map(Number));
+    } catch {
+      // The thread went away between the listing and the read.
+    }
+  }
+  return out;
+}
+
 /** Total CPU jiffies for a process tree, read from /proc. Linux only. */
 function cpuJiffies(rootPid) {
   if (process.platform !== "linux" || !rootPid) return null;
@@ -71,8 +100,7 @@ function cpuJiffies(rootPid) {
       const stat = fs.readFileSync(`/proc/${pid}/stat`, "utf8");
       const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
       total += Number(fields[11]) + Number(fields[12]); // utime + stime
-      const children = fs.readFileSync(`/proc/${pid}/task/${pid}/children`, "utf8").trim();
-      if (children) children.split(/\s+/).forEach((child) => walk(Number(child)));
+      childrenOf(pid).forEach(walk);
     } catch {
       // The process went away between the listing and the read.
     }
@@ -92,14 +120,96 @@ function rssKb(rootPid) {
       const status = fs.readFileSync(`/proc/${pid}/status`, "utf8");
       const match = /VmRSS:\s+(\d+) kB/.exec(status);
       if (match) total += Number(match[1]);
-      const children = fs.readFileSync(`/proc/${pid}/task/${pid}/children`, "utf8").trim();
-      if (children) children.split(/\s+/).forEach((child) => walk(Number(child)));
+      childrenOf(pid).forEach(walk);
     } catch {
       // Same.
     }
   };
   walk(rootPid);
   return total;
+}
+
+/**
+ * Proportional set size for a process tree, from /proc/<pid>/smaps_rollup.
+ *
+ * `rssKb` sums VmRSS, and a Chromium tree shares a great deal: the binary, the
+ * fonts, the buffers a renderer and the GPU process both map. Summed RSS counts
+ * every shared page once per process holding it, which is how "idle RSS is
+ * ~1 GB" came to be written down. PSS divides each shared page among its
+ * sharers, so the total is the tree's own share of physical memory. Both are
+ * reported — the gap between them is the double count.
+ *
+ * PSS divides shared pages among every sharer on the machine, so a second Oats
+ * or Electron running beside this one halves the pages they have in common and
+ * lowers this figure for a reason that has nothing to do with the build. Run it
+ * with no other instance up.
+ */
+function pssKb(rootPid) {
+  if (process.platform !== "linux" || !rootPid) return null;
+  let total = 0;
+  const seen = new Set();
+  const walk = (pid) => {
+    if (seen.has(pid)) return;
+    seen.add(pid);
+    try {
+      const rollup = fs.readFileSync(`/proc/${pid}/smaps_rollup`, "utf8");
+      const match = /^Pss:\s+(\d+) kB/m.exec(rollup);
+      if (match) total += Number(match[1]);
+      childrenOf(pid).forEach(walk);
+    } catch {
+      // Same.
+    }
+  };
+  walk(rootPid);
+  return total;
+}
+
+function procStat(pid) {
+  try {
+    const stat = fs.readFileSync(`/proc/${pid}/stat`, "utf8");
+    const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+    return Number(fields[11]) + Number(fields[12]);
+  } catch {
+    return null;
+  }
+}
+
+function procPssKb(pid) {
+  try {
+    const match = /^Pss:\s+(\d+) kB/m.exec(fs.readFileSync(`/proc/${pid}/smaps_rollup`, "utf8"));
+    return match ? Number(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The sidecars: every process in the tree that is not one of Chromium's own.
+ * `SystemInfo.getProcessInfo` enumerates the browser, the renderers, the GPU
+ * process and the mojo utilities, and knows nothing about whisper-server,
+ * qdrant, or `pactl subscribe`. Those are found by walking /proc and skipping
+ * anything carrying a `--type=` switch.
+ */
+function sidecarPids(rootPid, knownPids) {
+  if (process.platform !== "linux" || !rootPid) return [];
+  const found = [];
+  const seen = new Set();
+  const walk = (pid) => {
+    if (seen.has(pid)) return;
+    seen.add(pid);
+    try {
+      const raw = fs.readFileSync(`/proc/${pid}/cmdline`, "utf8");
+      const argv = raw.split("\0").filter(Boolean);
+      if (!knownPids.has(pid) && !raw.includes("--type=") && argv.length) {
+        found.push({ pid, name: path.basename(argv[0]) });
+      }
+      childrenOf(pid).forEach(walk);
+    } catch {
+      // Same.
+    }
+  };
+  walk(rootPid);
+  return found;
 }
 
 async function connect(urlFragment, timeoutMs = 90000) {
@@ -115,8 +225,17 @@ async function connect(urlFragment, timeoutMs = 90000) {
     if (!target) await sleep(200);
   }
   if (!target) throw new Error(`no debugger target matching "${urlFragment}"`);
+  return openSocket(target.webSocketDebuggerUrl);
+}
 
-  const ws = new WebSocket(target.webSocketDebuggerUrl);
+/** The browser-level endpoint, which is the only one that answers SystemInfo. */
+async function connectBrowser() {
+  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+  return openSocket(version.webSocketDebuggerUrl);
+}
+
+async function openSocket(wsUrl) {
+  const ws = new WebSocket(wsUrl);
   await new Promise((resolve, reject) => {
     ws.onopen = resolve;
     ws.onerror = reject;
@@ -147,11 +266,167 @@ async function connect(urlFragment, timeoutMs = 90000) {
     }
     return result.result.value;
   };
-  await send("Runtime.enable");
+  // The browser-level target has no Runtime domain; page targets need it.
+  await send("Runtime.enable").catch(() => {});
   return { ws, send, evaluate };
 }
 
+/**
+ * Idle CPU and PSS per process, named. Returns rows sorted by CPU.
+ */
+async function attributeIdleCost(sampleMs) {
+  if (process.platform !== "linux") return null;
+  let browser;
+  try {
+    browser = await connectBrowser();
+  } catch {
+    return null;
+  }
+  let info;
+  try {
+    info = (await browser.send("SystemInfo.getProcessInfo")).processInfo;
+  } catch {
+    browser.ws.close();
+    return null;
+  }
+  const rows = info.map((p) => ({ pid: p.id, name: p.type }));
+
+  // Name each renderer by the window it draws.
+  const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+  const rendererPids = info.filter((p) => p.type === "renderer").map((p) => p.id);
+  for (const target of targets.filter((t) => t.type === "page")) {
+    // Overlay windows are created and destroyed by IPC while this runs, so a
+    // target listed a moment ago may already be gone. A dead socket never
+    // rejects — it just never answers — so this needs its own deadline, or a
+    // four-minute run hangs here and writes no report at all.
+    let page;
+    try {
+      page = await Promise.race([
+        openSocket(target.webSocketDebuggerUrl),
+        sleep(5000).then(() => Promise.reject(new Error("target went away"))),
+      ]);
+    } catch {
+      continue;
+    }
+    const before = rendererPids.map(procStat);
+    await Promise.race([
+      page.evaluate("(() => { const t = Date.now(); while (Date.now() - t < 500); return 1 })()"),
+      sleep(5000),
+    ]).catch(() => {});
+    const after = rendererPids.map(procStat);
+    const busiest = rendererPids
+      .map((pid, i) => ({ pid, delta: (after[i] ?? 0) - (before[i] ?? 0) }))
+      .sort((a, b) => b.delta - a.delta)[0];
+    // Only believe the identification if the spin actually showed up. If the
+    // evaluate failed, every delta is ~0 and the "winner" is whichever pid
+    // sorted first — which would print a confidently mislabelled table, and
+    // which renderer is spending the CPU is the entire published conclusion.
+    const row = busiest && busiest.delta >= 25 ? rows.find((r) => r.pid === busiest.pid) : null;
+    if (row) row.name = `renderer ${target.url.replace(/^.*\//, "")}`;
+    page.ws.close();
+  }
+
+  const known = new Set(rows.map((r) => r.pid));
+  const browserPid = info.find((p) => p.type === "browser")?.id;
+  for (const sidecar of sidecarPids(browserPid, known)) {
+    rows.push({ pid: sidecar.pid, name: `sidecar ${sidecar.name}` });
+  }
+
+  // Let the spins above settle — their GC lands in the renderer that was just
+  // made busy, which is exactly the process whose *idle* cost is being read.
+  await sleep(2500);
+  const before = rows.map((r) => procStat(r.pid));
+  const t0 = Date.now();
+  await sleep(sampleMs);
+  const elapsed = (Date.now() - t0) / 1000;
+  const measured = rows.map((row, i) => {
+    const after = procStat(row.pid);
+    const jiffies = after === null || before[i] === null ? null : after - before[i];
+    const pss = procPssKb(row.pid);
+    return {
+      process: row.name,
+      cpuPercent: jiffies === null ? null : Math.round((jiffies / 100 / elapsed) * 1000) / 10,
+      pssMb: pss === null ? null : Math.round(pss / 1024),
+    };
+  });
+  browser.ws.close();
+  const sorted = measured.sort((a, b) => (b.cpuPercent ?? 0) - (a.cpuPercent ?? 0));
+
+  // Whatever the named rows do not account for — the zygotes Chromium forks
+  // from, and the node launcher. Without this the table silently fails to sum
+  // to the per-surface total above it, and a reader has no way to tell whether
+  // the difference is a process nobody named or an error in the walk.
+  const treePss = pssKb(browserPid);
+  const namedPss = sorted.reduce((total, row) => total + (row.pssMb ?? 0), 0);
+  const remainder = treePss === null ? null : Math.round(treePss / 1024) - namedPss;
+  if (remainder && remainder > 0) {
+    sorted.push({ process: "zygote and launcher processes", cpuPercent: null, pssMb: remainder });
+  }
+  // Read at this instant, so the rows above sum to it. The per-surface PSS
+  // printed earlier is a different sample and will differ by a few tens of MB.
+  if (treePss !== null) {
+    sorted.push({
+      process: "— whole tree, this instant",
+      cpuPercent: null,
+      pssMb: Math.round(treePss / 1024),
+    });
+  }
+  return sorted;
+}
+
+/**
+ * Kill whatever is still holding our debug port, before Chromium tries to bind.
+ *
+ * A killed Oats leaves its `pactl subscribe` child behind, and that child holds
+ * an *inherited* copy of the debug port's listening socket — measured here:
+ * `/proc/<pactl>/fd/63 -> socket:[8511221]`, the same inode `ss -ltnp` reports
+ * LISTENing on the port, with the pactl reparented to init. So the port accepts
+ * connections and never answers, and Chromium — which binds before any app code
+ * runs, so `reapStaleSidecars()` is far too late — disables remote debugging
+ * without a word. The symptom is `no debugger target matching "panel=true"`
+ * ninety seconds later.
+ */
+function freePort(port) {
+  if (process.platform !== "linux") return;
+  const hex = port.toString(16).toUpperCase().padStart(4, "0");
+  let inode = null;
+  try {
+    for (const line of fs.readFileSync("/proc/net/tcp", "utf8").split("\n").slice(1)) {
+      const fields = line.trim().split(/\s+/);
+      // 0A is TCP_LISTEN.
+      if (fields[3] === "0A" && fields[1]?.endsWith(`:${hex}`)) inode = fields[9];
+    }
+  } catch {
+    return;
+  }
+  if (!inode || inode === "0") return;
+  for (const entry of fs.readdirSync("/proc")) {
+    if (!/^\d+$/.test(entry)) continue;
+    let fds;
+    try {
+      fds = fs.readdirSync(`/proc/${entry}/fd`);
+    } catch {
+      continue;
+    }
+    for (const fd of fds) {
+      try {
+        if (fs.readlinkSync(`/proc/${entry}/fd/${fd}`) !== `socket:[${inode}]`) continue;
+      } catch {
+        continue;
+      }
+      console.warn(`[perf] pid ${entry} still holds port ${port}; killing it`);
+      try {
+        process.kill(Number(entry), "SIGKILL");
+      } catch {
+        // Already gone.
+      }
+      break;
+    }
+  }
+}
+
 async function main() {
+  freePort(PORT);
   const started = Date.now();
   // `--ozone-platform=x11` is passed here rather than left to main.js. On a
   // Wayland session main.js re-execs itself with that flag; the first process
@@ -246,9 +521,21 @@ async function main() {
         beforeCpu === null
           ? null
           : Math.round(((afterCpu - beforeCpu) / clockTick / elapsed) * 1000) / 10,
-      rssMb: rssKb(browserPid) === null ? null : Math.round(rssKb(browserPid) / 1024),
+      pssMb: pssKb(browserPid) === null ? null : Math.round(pssKb(browserPid) / 1024),
+      summedRssMb: rssKb(browserPid) === null ? null : Math.round(rssKb(browserPid) / 1024),
     };
   }
+
+  // Where the idle cost actually is. The per-surface number above is one figure
+  // for a tree of a dozen processes, and for months it was read as "the
+  // application floor" — Electron plus the sidecars — which turned out to be
+  // wrong by a factor of twenty-five. Chromium's own processes are named by
+  // SystemInfo; the sidecars are found by walking /proc; and the two renderers
+  // are told apart by making one of them busy and seeing which pid moved, since
+  // a renderer forked from the zygote keeps the zygote's command line.
+  await evaluate(switchTo("conversation"));
+  await sleep(1500);
+  const attribution = await attributeIdleCost(IDLE_SAMPLE_MS);
 
   // Advanced Settings is a lazily-loaded chunk; first open pays for the fetch.
   await evaluate(switchTo("settings"));
@@ -280,6 +567,7 @@ async function main() {
     settingsFirstOpenMs: Math.round(settingsFirstOpen ?? 0),
     advancedFirstOpenMs: advancedFirstMs === null ? null : Math.round(advancedFirstMs),
     idlePerSurface: idle,
+    idleAttribution: attribution,
   };
 
   console.log("\nOats performance baseline");
@@ -295,8 +583,19 @@ async function main() {
   console.log("idle, foreground:");
   for (const [surface, stats] of Object.entries(report.idlePerSurface)) {
     console.log(
-      `  ${surface.padEnd(14)}            ${stats.cpuPercent}% CPU   ${stats.rssMb} MB RSS`
+      `  ${surface.padEnd(14)}            ${stats.cpuPercent}% CPU   ` +
+        `${stats.pssMb} MB PSS (${stats.summedRssMb} MB summed RSS)`
     );
+  }
+
+  if (report.idleAttribution) {
+    console.log("idle cost per process (conversation surface):");
+    for (const row of report.idleAttribution) {
+      console.log(
+        `  ${(row.cpuPercent === null ? "" : `${row.cpuPercent}%`).padStart(6)}  ` +
+          `${String(row.pssMb).padStart(5)} MB  ${row.process}`
+      );
+    }
   }
 
   const jsonFlag = process.argv.indexOf("--json");

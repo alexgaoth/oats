@@ -329,8 +329,22 @@ export default function App() {
   const micState = getMicState();
 
   const getMicButtonProps = () => {
-    const baseClasses =
-      "oats-listening-pulse rounded-full w-10 h-10 flex items-center justify-center relative overflow-visible border border-border cursor-pointer bg-surface-raised";
+    // DESIGN.md §9.1: "Idle = static gold seed". This window is always on top
+    // and almost always idle, and an unconditional breath both claimed to be
+    // listening when nothing was, and — Linux runs with GPU compositing
+    // disabled, so every frame is read back on the CPU — cost about seven
+    // points of a core forever, for a window 96px wide
+    // (docs/performance-baseline.md). ListeningPulse hides the pseudo-element
+    // the same way.
+    //
+    // `processing` breathes even though nothing is being heard. Motion is the
+    // only positive sign this window has that work is happening: idle and
+    // processing are otherwise one opacity step apart, and a local transcribe
+    // can take seconds or fail outright. It is bounded by the transcription,
+    // so it is not an idle cost — which is the whole of the argument above.
+    const breathing =
+      micState === "conversation" || micState === "recording" || micState === "processing";
+    const baseClasses = `oats-listening-pulse${breathing ? "" : " before:hidden"} rounded-full w-10 h-10 flex items-center justify-center relative overflow-visible border border-border cursor-pointer bg-surface-raised`;
 
     switch (micState) {
       case "idle":
@@ -338,6 +352,7 @@ export default function App() {
         return {
           className: baseClasses,
           tooltip: formatHotkeyListLabel(hotkey),
+          ariaLabel: t("app.mic.hotkeyToSpeak", { hotkey: formatHotkeyListLabel(hotkey) }),
         };
       case "conversation":
         return {
@@ -451,6 +466,13 @@ export default function App() {
           >
             <button
               ref={buttonRef}
+              // The two small buttons beside this one are labelled; this one —
+              // the control the window exists for — was not, so assistive
+              // technology read the whole oat as an unnamed button. At rest the
+              // visible tooltip is a bare key name ("Right Alt"), which says
+              // nothing on its own, so the name says what the key does. It
+              // contains the visible text, which WCAG 2.5.3 requires.
+              aria-label={micProps.ariaLabel ?? micProps.tooltip}
               onPointerDown={(e) => {
                 setIsCommandMenuOpen(false);
                 // Screen coordinates, not client ones. The window is being moved

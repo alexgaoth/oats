@@ -1,0 +1,96 @@
+{
+  "when": "2026-08-25T01:23:31.185Z",
+  "platform": "linux x64",
+  "coldLaunchToInteractiveMs": 1369,
+  "warmReloadToInteractiveMs": 5,
+  "surfaceSwitchMs": {
+    "conversation": {
+      "p50": 24.3,
+      "p95": 38.8
+    },
+    "intelligence": {
+      "p50": 5.1,
+      "p95": 20.4
+    },
+    "settings": {
+      "p50": 5.8,
+      "p95": 22.7
+    }
+  },
+  "settingsFirstOpenMs": 7,
+  "advancedFirstOpenMs": 340,
+  "idlePerSurface": {
+    "conversation": {
+      "cpuPercent": 6.1,
+      "pssMb": 752,
+      "summedRssMb": 1266
+    },
+    "intelligence": {
+      "cpuPercent": 7.5,
+      "pssMb": 665,
+      "summedRssMb": 1165
+    },
+    "settings": {
+      "cpuPercent": 6.1,
+      "pssMb": 648,
+      "summedRssMb": 1147
+    }
+  },
+  "idleAttribution": [
+    {
+      "process": "GPU",
+      "cpuPercent": 3.3,
+      "pssMb": 44
+    },
+    {
+      "process": "renderer index.html",
+      "cpuPercent": 2.4,
+      "pssMb": 56
+    },
+    {
+      "process": "browser",
+      "cpuPercent": 0.2,
+      "pssMb": 90
+    },
+    {
+      "process": "renderer index.html?panel=true",
+      "cpuPercent": 0.1,
+      "pssMb": 93
+    },
+    {
+      "process": "sidecar qdrant-linux-x64",
+      "cpuPercent": 0.1,
+      "pssMb": 82
+    },
+    {
+      "process": "network.mojom.NetworkService",
+      "cpuPercent": 0,
+      "pssMb": 21
+    },
+    {
+      "process": "audio.mojom.AudioService",
+      "cpuPercent": 0,
+      "pssMb": 19
+    },
+    {
+      "process": "sidecar pactl",
+      "cpuPercent": 0,
+      "pssMb": 1
+    },
+    {
+      "process": "sidecar whisper-server-linux-x64",
+      "cpuPercent": 0,
+      "pssMb": 185
+    },
+    {
+      "process": "zygote and launcher processes",
+      "cpuPercent": null,
+      "pssMb": 25
+    },
+    {
+      "process": "— whole tree, this instant",
+      "cpuPercent": null,
+      "pssMb": 616
+    }
+  ]
+}
