@@ -1965,6 +1965,11 @@
       "localProcessing": "Auf diesem Computer",
       "apiProcessing": "API-Schlüssel verwenden",
       "provider": "Anbieter",
+      "vault": "Obsidian-Tresor",
+      "vaultHint": "Jede Unterhaltung schreibt sich als Notiz hinein, mit Themen als [[Wikilinks]].",
+      "vaultChoose": "Ordner wählen",
+      "vaultChange": "Ändern",
+      "vaultStop": "Beenden",
       "apiKeyPlaceholder": "OpenAI-API-Schlüssel",
       "microphone": "Mikrofon",
       "micBuiltIn": "Eingebautes Mikrofon",
@@ -2017,6 +2022,15 @@
       "confidence": "Konfidenz",
       "silence": "Stille (Sekunden)",
       "searchUrl": "Basis-URL für die Suche (nur HTTPS)"
+    },
+    "vault": {
+      "untitled": "Unbenannte Unterhaltung",
+      "summary": "Zusammenfassung",
+      "openQuestions": "Offene Fragen",
+      "topics": "Themen",
+      "transcript": "Transkript",
+      "you": "Du",
+      "room": "Raum"
     }
   },
   "questionCard": {

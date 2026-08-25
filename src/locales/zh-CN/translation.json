@@ -1960,6 +1960,11 @@
       "localProcessing": "在本机上",
       "apiProcessing": "使用 API 密钥",
       "provider": "服务商",
+      "vault": "Obsidian 仓库",
+      "vaultHint": "每次对话都会写成一条笔记，主题以 [[双链]] 形式呈现。",
+      "vaultChoose": "选择文件夹",
+      "vaultChange": "更改",
+      "vaultStop": "停止",
       "apiKeyPlaceholder": "OpenAI API 密钥",
       "microphone": "麦克风",
       "micBuiltIn": "内置麦克风",
@@ -2012,6 +2017,15 @@
       "confidence": "置信度",
       "silence": "静默（秒）",
       "searchUrl": "搜索基础 URL（仅限 HTTPS）"
+    },
+    "vault": {
+      "untitled": "未命名对话",
+      "summary": "摘要",
+      "openQuestions": "未解答的问题",
+      "topics": "主题",
+      "transcript": "转录",
+      "you": "你",
+      "room": "房间"
     }
   },
   "questionCard": {

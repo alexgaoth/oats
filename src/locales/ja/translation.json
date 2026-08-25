@@ -1965,6 +1965,11 @@
       "localProcessing": "このコンピューター上",
       "apiProcessing": "API キーを使う",
       "provider": "プロバイダー",
+      "vault": "Obsidian ボールト",
+      "vaultHint": "会話ごとにノートとして書き出し、トピックは [[リンク]] になります。",
+      "vaultChoose": "フォルダを選択",
+      "vaultChange": "変更",
+      "vaultStop": "停止",
       "apiKeyPlaceholder": "OpenAI API キー",
       "microphone": "マイク",
       "micBuiltIn": "内蔵マイク",
@@ -2017,6 +2022,15 @@
       "confidence": "確信度",
       "silence": "沈黙（秒）",
       "searchUrl": "検索のベース URL（HTTPS のみ）"
+    },
+    "vault": {
+      "untitled": "無題の会話",
+      "summary": "要約",
+      "openQuestions": "未解決の質問",
+      "topics": "トピック",
+      "transcript": "文字起こし",
+      "you": "あなた",
+      "room": "部屋"
     }
   },
   "questionCard": {

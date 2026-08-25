@@ -2334,6 +2334,10 @@ function SettingsSurface() {
   const setTranscriptionMode = useSettingsStore((s) => s.setTranscriptionMode);
   const cleanupMode = useSettingsStore((s) => s.cleanupMode);
   const setCleanupMode = useSettingsStore((s) => s.setCleanupMode);
+  const vaultPath = useSettingsStore((s) => s.obsidianVaultPath);
+  const setVaultPath = useSettingsStore((s) => s.setObsidianVaultPath);
+  const vaultEnabled = useSettingsStore((s) => s.obsidianExportEnabled);
+  const setVaultEnabled = useSettingsStore((s) => s.setObsidianExportEnabled);
   const cloudProvider = useSettingsStore((s) => s.cloudTranscriptionProvider) || "openai";
   const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
   const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
@@ -2531,6 +2535,41 @@ function SettingsSurface() {
         {/* No `htmlFor`: the `<select>` this would address only exists once the
             picker is open, so the label pointed at nothing and the action read
             as a bare "Change". The action names itself instead. */}
+        {/* A vault folder, not a file: each conversation writes itself in as its
+            own note when its title and summary land, with topics as
+            [[wikilinks]] so Obsidian's own graph shows which conversations
+            share a subject. Off until a folder is chosen — nothing writes
+            outside this app without being pointed somewhere. */}
+        <Row label={t("oats.settings.vault")} hint={t("oats.settings.vaultHint")}>
+          <div className="flex items-center gap-4">
+            <QuietAction
+              label={vaultPath ? t("oats.settings.vaultChange") : t("oats.settings.vaultChoose")}
+              onClick={() => {
+                void (async () => {
+                  const picked = await window.electronAPI?.chooseObsidianVault?.();
+                  if (!picked?.success || !picked.path) return;
+                  setVaultPath(picked.path);
+                  setVaultEnabled(true);
+                })();
+              }}
+            />
+            {vaultPath && (
+              <>
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {vaultPath}
+                </span>
+                <QuietAction
+                  label={t("oats.settings.vaultStop")}
+                  onClick={() => {
+                    setVaultEnabled(false);
+                    setVaultPath("");
+                  }}
+                />
+              </>
+            )}
+          </div>
+        </Row>
+
         <Row label={t("oats.settings.microphone")}>
           <MicrophoneChoice />
         </Row>
@@ -2656,6 +2695,18 @@ export default function OatsWorkspace() {
       return next;
     });
   }, [surface]);
+
+  // The vault path lives in the renderer's settings, but the write happens in
+  // the main process on every note update — so main has to be told, on boot and
+  // on every change. Same shape as `activation-mode-changed`.
+  const vaultPathSetting = useSettingsStore((s) => s.obsidianVaultPath);
+  const vaultEnabledSetting = useSettingsStore((s) => s.obsidianExportEnabled);
+  useEffect(() => {
+    void window.electronAPI?.configureObsidianVault?.({
+      vaultPath: vaultPathSetting || null,
+      enabled: vaultEnabledSetting,
+    });
+  }, [vaultPathSetting, vaultEnabledSetting]);
 
   // Opening a conversation from the Conversation surface's last-entry row.
   // Delegated rather than lifted into props for the same reason the recall

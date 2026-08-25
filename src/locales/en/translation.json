@@ -1965,6 +1965,11 @@
       "localProcessing": "On this computer",
       "apiProcessing": "Use API key",
       "provider": "Provider",
+      "vault": "Obsidian vault",
+      "vaultHint": "Each conversation writes itself in as a note, with topics as [[wikilinks]].",
+      "vaultChoose": "Choose folder",
+      "vaultChange": "Change",
+      "vaultStop": "Stop",
       "apiKeyPlaceholder": "OpenAI API key",
       "microphone": "Microphone",
       "micBuiltIn": "Built-in microphone",
@@ -2017,6 +2022,15 @@
       "confidence": "Confidence",
       "silence": "Silence (seconds)",
       "searchUrl": "Search base URL (HTTPS only)"
+    },
+    "vault": {
+      "untitled": "Untitled conversation",
+      "summary": "Summary",
+      "openQuestions": "Open questions",
+      "topics": "Topics",
+      "transcript": "Transcript",
+      "you": "You",
+      "room": "Room"
     }
   },
   "questionCard": {

@@ -1965,6 +1965,11 @@
       "localProcessing": "Neste computador",
       "apiProcessing": "Usar chave de API",
       "provider": "Provedor",
+      "vault": "Cofre do Obsidian",
+      "vaultHint": "Cada conversa se grava como uma nota, com os temas como [[links]].",
+      "vaultChoose": "Escolher pasta",
+      "vaultChange": "Alterar",
+      "vaultStop": "Parar",
       "apiKeyPlaceholder": "Chave de API da OpenAI",
       "microphone": "Microfone",
       "micBuiltIn": "Microfone integrado",
@@ -2017,6 +2022,15 @@
       "confidence": "Confiança",
       "silence": "Silêncio (segundos)",
       "searchUrl": "URL base de busca (apenas HTTPS)"
+    },
+    "vault": {
+      "untitled": "Conversa sem título",
+      "summary": "Resumo",
+      "openQuestions": "Perguntas em aberto",
+      "topics": "Temas",
+      "transcript": "Transcrição",
+      "you": "Você",
+      "room": "Sala"
     }
   },
   "questionCard": {

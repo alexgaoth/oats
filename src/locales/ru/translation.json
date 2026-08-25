@@ -1973,6 +1973,11 @@
       "localProcessing": "На этом компьютере",
       "apiProcessing": "Использовать ключ API",
       "provider": "Провайдер",
+      "vault": "Хранилище Obsidian",
+      "vaultHint": "Каждый разговор записывается заметкой, темы — как [[ссылки]].",
+      "vaultChoose": "Выбрать папку",
+      "vaultChange": "Изменить",
+      "vaultStop": "Остановить",
       "apiKeyPlaceholder": "Ключ API OpenAI",
       "microphone": "Микрофон",
       "micBuiltIn": "Встроенный микрофон",
@@ -2025,6 +2030,15 @@
       "confidence": "Уверенность",
       "silence": "Тишина (секунды)",
       "searchUrl": "Базовый URL поиска (только HTTPS)"
+    },
+    "vault": {
+      "untitled": "Разговор без названия",
+      "summary": "Сводка",
+      "openQuestions": "Открытые вопросы",
+      "topics": "Темы",
+      "transcript": "Расшифровка",
+      "you": "Вы",
+      "room": "Комната"
     }
   },
   "questionCard": {

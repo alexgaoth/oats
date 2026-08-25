@@ -398,6 +398,73 @@ class IPCHandlers {
     });
   }
 
+  /**
+   * Mirror a conversation into the Obsidian vault, if one is configured.
+   *
+   * Deliberately hung off `db-update-note` rather than off the end of a
+   * recording: the title and the summary generate *after* the recording stops,
+   * so a write triggered by "stop" would put an untitled, summary-less note in
+   * the vault and leave it that way. Every update re-renders it, debounced, so
+   * whatever the reader opens in Obsidian is what Oats currently knows.
+   */
+  _asyncVaultWrite(note) {
+    const vault = require("./obsidianVault");
+    if (!vault.isEnabled() || !note?.id) return;
+    // Conversations only. Every dictation is a note too, and mirroring those
+    // would fill the vault with one-line fragments — measured: an unrelated
+    // note updated during a test run wrote itself in as "Untitled
+    // conversation.md" beside the real one.
+    if (note.note_type !== "meeting") return;
+    vault.schedule(note.id, async () => {
+      const { buildVaultNote } = await import("./obsidianNote.mjs");
+      const fresh = this.databaseManager.getNote(note.id) || note;
+      let snapshot = null;
+      try {
+        snapshot = fresh.conversation_topics ? JSON.parse(fresh.conversation_topics) : null;
+      } catch {
+        snapshot = null;
+      }
+      let events = [];
+      try {
+        events = this.databaseManager.listConversationEvents(fresh.id) || [];
+      } catch {
+        events = [];
+      }
+      return buildVaultNote({
+        note: fresh,
+        snapshot,
+        events,
+        transcript: this._vaultTranscript(fresh),
+        strings: {
+          untitled: i18nMain.t("oats.vault.untitled"),
+          summary: i18nMain.t("oats.vault.summary"),
+          openQuestions: i18nMain.t("oats.vault.openQuestions"),
+          topics: i18nMain.t("oats.vault.topics"),
+          transcript: i18nMain.t("oats.vault.transcript"),
+        },
+      });
+    });
+  }
+
+  /** The stored transcript as speaker-labelled markdown, in the reader's language. */
+  _vaultTranscript(note) {
+    if (!note?.transcript) return "";
+    try {
+      const segments = JSON.parse(note.transcript);
+      if (!Array.isArray(segments)) return "";
+      return segments
+        .map((seg) => {
+          const who =
+            seg.source === "mic" ? i18nMain.t("oats.vault.you") : i18nMain.t("oats.vault.room");
+          return `**${who}:** ${String(seg.text || "").trim()}`;
+        })
+        .filter((line) => line.length > 0)
+        .join("\n\n");
+    } catch {
+      return "";
+    }
+  }
+
   _asyncMirrorDelete(noteId) {
     if (!this._noteFilesEnabled) {
       debugLogger.debug("Mirror delete skipped: note files disabled", { noteId }, "note-files");
@@ -925,6 +992,50 @@ class IPCHandlers {
       return result;
     });
 
+    ipcMain.handle("configure-obsidian-vault", async (event, config) => {
+      require("./obsidianVault").configure(config || {});
+      return { success: true };
+    });
+
+    ipcMain.handle("choose-obsidian-vault", async () => {
+      const { dialog } = require("electron");
+      const result = await dialog.showOpenDialog({
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (result.canceled || !result.filePaths?.[0]) return { success: false };
+      return { success: true, path: result.filePaths[0] };
+    });
+
+    // The manual counterpart: writes this note now rather than on the debounce,
+    // and reports where it landed so the interface can say so.
+    ipcMain.handle("export-note-to-vault", async (event, noteId) => {
+      const vault = require("./obsidianVault");
+      if (!vault.getVaultPath()) return { success: false, error: "No vault folder configured" };
+      const note = this.databaseManager.getNote(noteId);
+      if (!note) return { success: false, error: "Note not found" };
+      const { buildVaultNote } = await import("./obsidianNote.mjs");
+      let snapshot = null;
+      try {
+        snapshot = note.conversation_topics ? JSON.parse(note.conversation_topics) : null;
+      } catch {
+        snapshot = null;
+      }
+      const built = buildVaultNote({
+        note,
+        snapshot,
+        events: this.databaseManager.listConversationEvents(note.id) || [],
+        transcript: this._vaultTranscript(note),
+        strings: {
+          untitled: i18nMain.t("oats.vault.untitled"),
+          summary: i18nMain.t("oats.vault.summary"),
+          openQuestions: i18nMain.t("oats.vault.openQuestions"),
+          topics: i18nMain.t("oats.vault.topics"),
+          transcript: i18nMain.t("oats.vault.transcript"),
+        },
+      });
+      return vault.write(built.filename, built.markdown);
+    });
+
     ipcMain.handle("get-note-recording-config", async () => {
       return { success: true, providers: REALTIME_PROVIDER_CATALOG };
     });
@@ -1099,6 +1210,7 @@ class IPCHandlers {
         setImmediate(() => this.broadcastToWindows("note-updated", result.note));
         this._asyncVectorUpsert(result.note);
         this._asyncMirrorWrite(result.note);
+        this._asyncVaultWrite(result.note);
         if (updates.participants) this._tryAutoLabelOneOnOne(id);
       }
       return result;

@@ -1960,6 +1960,11 @@
       "localProcessing": "在本機上",
       "apiProcessing": "使用 API 金鑰",
       "provider": "服務商",
+      "vault": "Obsidian 儲存庫",
+      "vaultHint": "每次對話都會寫成一則筆記，主題以 [[雙鏈]] 形式呈現。",
+      "vaultChoose": "選擇資料夾",
+      "vaultChange": "變更",
+      "vaultStop": "停止",
       "apiKeyPlaceholder": "OpenAI API 金鑰",
       "microphone": "麥克風",
       "micBuiltIn": "內建麥克風",
@@ -2012,6 +2017,15 @@
       "confidence": "信賴度",
       "silence": "靜默（秒）",
       "searchUrl": "搜尋基礎 URL（僅限 HTTPS）"
+    },
+    "vault": {
+      "untitled": "未命名對話",
+      "summary": "摘要",
+      "openQuestions": "未解答的問題",
+      "topics": "主題",
+      "transcript": "轉錄",
+      "you": "你",
+      "room": "房間"
     }
   },
   "questionCard": {
