@@ -65,6 +65,23 @@ export default function ConversationDialogue({ className }: { className?: string
   const segments = useMeetingRecordingStore((state) => state.segments);
   const turns = useMemo(() => buildTurns(segments), [segments]);
 
+  // The words currently being said, before the provider commits to them.
+  //
+  // These already arrived — `onPartialTranscript` has been sending them the
+  // whole time — and were used only as a boolean for "is somebody speaking",
+  // so a surface whose job is to show what is being said was throwing away the
+  // words and waiting for the next ~5s commit. Rendered, the line grows as the
+  // sentence is spoken and is replaced by the final when it lands.
+  //
+  // Only the streaming providers produce these (`attachMeetingStreamingHandlers`
+  // in ipcHandlers.js). Local Whisper transcribes fixed chunks and emits finals
+  // only, so on the default local path this stays empty and the log behaves as
+  // it did — chunked, not word by word.
+  const micPartial = useMeetingRecordingStore((state) => state.micPartial);
+  const systemPartial = useMeetingRecordingStore((state) => state.systemPartial);
+  const partial = (micPartial || systemPartial || "").trim();
+  const partialSource = micPartial ? "mic" : "system";
+
   // Follow the newest turn, but stop the moment the reader scrolls away.
   //
   // Auto-scrolling a reader off the line they are reading is the specific way
@@ -90,7 +107,7 @@ export default function ConversationDialogue({ className }: { className?: string
   // moment reliability was in question, with no further segment coming to
   // re-scroll it. A window resize did the same, 208px to 85px.
   const { faded, measure } = useScrollFade(scroller, turns, stickToEnd);
-  useEffect(stickToEnd, [turns, following, stickToEnd]);
+  useEffect(stickToEnd, [turns, partial, following, stickToEnd]);
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
@@ -136,7 +153,7 @@ export default function ConversationDialogue({ className }: { className?: string
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           )}
         >
-          {!turns.length && (
+          {!turns.length && !partial && (
             // Inside the region, not instead of it: a labelled log that only
             // exists once somebody has spoken cannot be navigated to beforehand,
             // and then appears with no signal that it has.
@@ -166,6 +183,26 @@ export default function ConversationDialogue({ className }: { className?: string
                 <span className="text-foreground/85">{turn.text}</span>
               </li>
             ))}
+            {partial && (
+              // Not committed yet, and it says so by being quieter — §4 asks
+              // uncertainty to survive greyscale, and this is the one place a
+              // reader must be able to tell "heard" from "still hearing" at a
+              // glance. No key churn: one node whose text changes, so the
+              // browser updates the line instead of remounting it every frame.
+              <li
+                key="in-progress"
+                className="font-mono text-[13px] leading-7"
+                data-state="in-progress"
+              >
+                <span className="mr-2 select-none text-muted-foreground/70">
+                  {partialSource === "mic"
+                    ? t("oats.intelligence.speakerYou")
+                    : t("oats.intelligence.speakerRoom")}
+                  <span className="sr-only">: </span>
+                </span>
+                <span className="text-muted-foreground">{partial}</span>
+              </li>
+            )}
           </ol>
         </div>
         {/* Painted beside the scroller, never as a mask on it: a mask's painting

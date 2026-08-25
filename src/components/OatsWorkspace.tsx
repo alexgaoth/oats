@@ -21,6 +21,7 @@ import ConversationGraph from "./notes/ConversationGraph";
 import TopicGraph from "./notes/TopicGraph";
 import LifetimeGraph from "./notes/LifetimeGraph";
 import ListeningPulse from "./conversation/ListeningPulse";
+import LiveThreadMap from "./conversation/LiveThreadMap";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
@@ -861,11 +862,18 @@ function ConversationSurface() {
                   rather than having it. The warning above is not optional in
                   either composition: it is the reliability promise. */}
               {detailed && (
-                <OpenThreadStack
-                  threads={openThreads}
-                  suggestions={suggestions}
-                  speaking={speaking}
-                />
+                <>
+                  {/* Beside the stack, never instead of it. The list is the
+                      readable version of the same data and the one that works
+                      under four subjects; the map is for pointing at something
+                      raised twenty minutes ago. */}
+                  <LiveThreadMap />
+                  <OpenThreadStack
+                    threads={openThreads}
+                    suggestions={suggestions}
+                    speaking={speaking}
+                  />
+                </>
               )}
             </div>
           </>

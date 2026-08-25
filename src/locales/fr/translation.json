@@ -1910,7 +1910,9 @@
       "statusRecording": "Enregistrement en cours. L'audio et les transcriptions restent sur cet ordinateur.",
       "statusStopped": "Enregistrement terminé. Oats rédige le résumé.",
       "nothingHeard": "Rien n'a été entendu, aucune conversation n'a donc été enregistrée. Vérifiez le microphone dans les réglages.",
-      "continuing": "Poursuite de {{title}}"
+      "continuing": "Poursuite de {{title}}",
+      "threadMapLabel": "Carte des {{count}} sujets abordés jusqu'ici",
+      "threadMapNoQuote": "rien de récent à citer"
     },
     "intelligence": {
       "listTitle": "Conversations",

@@ -89,6 +89,8 @@ interface MeetingRecordingState {
   // Unfinished threads, most recently dropped first. Drives the collapsed
   // open-thread stack on the Conversation surface (DESIGN.md §9.3).
   openThreads: OpenThread[];
+  /** The live topic graph, republished on every finalized utterance. */
+  topicSnapshot: ConversationTopicSnapshot | null;
   // What else is worth raising (DESIGN.md §9.6). Recomputed as the conversation
   // moves, shown only inside the expanded stack.
   suggestions: ConversationSuggestion[];
@@ -513,6 +515,7 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   windowWidth: typeof window !== "undefined" ? window.innerWidth : SIDE_PANEL_BREAKPOINT_PX,
   recordingMode: "online",
   openThreads: [],
+  topicSnapshot: null,
   suggestions: [],
   micSilentSince: null,
   lastSoundAt: null,
@@ -678,6 +681,9 @@ function trackConversationTopic(segment: TranscriptSegment) {
   // TypeScript build), which is why its output is asserted at this boundary.
   const snapshot = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
   useMeetingRecordingStore.setState({
+    // Already computed on the line above for the suggestions; publishing it
+    // costs nothing and is what the live map draws.
+    topicSnapshot: snapshot,
     openThreads: conversationTopicTracker.openThreads(Date.now()) as OpenThread[],
     suggestions: buildSuggestions({
       snapshot,

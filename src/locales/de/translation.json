@@ -1910,7 +1910,9 @@
       "statusRecording": "Aufnahme läuft. Audio und Transkripte bleiben auf diesem Gerät.",
       "statusStopped": "Aufnahme beendet. Oats schreibt die Zusammenfassung.",
       "nothingHeard": "Es wurde nichts gehört, daher wurde kein Gespräch gespeichert. Prüfe das Mikrofon in den Einstellungen.",
-      "continuing": "Fortsetzung von {{title}}"
+      "continuing": "Fortsetzung von {{title}}",
+      "threadMapLabel": "Karte von {{count}} bisher angesprochenen Themen",
+      "threadMapNoQuote": "nichts Aktuelles zum Zitieren"
     },
     "intelligence": {
       "listTitle": "Gespräche",

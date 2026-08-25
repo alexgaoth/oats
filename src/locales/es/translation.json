@@ -1910,7 +1910,9 @@
       "statusRecording": "Grabando. El audio y las transcripciones no salen de este equipo.",
       "statusStopped": "Grabación finalizada. Oats está escribiendo el resumen.",
       "nothingHeard": "No se oyó nada, así que no se guardó ninguna conversación. Revisa el micrófono en Ajustes.",
-      "continuing": "Continuando {{title}}"
+      "continuing": "Continuando {{title}}",
+      "threadMapLabel": "Mapa de {{count}} temas planteados hasta ahora",
+      "threadMapNoQuote": "nada reciente que citar"
     },
     "intelligence": {
       "listTitle": "Conversaciones",
