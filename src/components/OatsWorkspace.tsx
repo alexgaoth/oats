@@ -2307,6 +2307,16 @@ const CONVERSATION_LANGUAGES: [string, string][] = [
 const DEFAULT_LOCAL_MODEL = "qwen3.5-4b-q4_k_m";
 const DEFAULT_CLOUD_MODEL = "gpt-5.6-terra";
 
+/** The model providers `getAIModel` in services/ai/providers.ts can build.
+ *  OpenRouter needs no base URL here — ReasoningService supplies its own. */
+const SUMMARY_PROVIDERS = [
+  { id: "openai", name: "OpenAI", defaultModel: DEFAULT_CLOUD_MODEL },
+  { id: "anthropic", name: "Anthropic", defaultModel: "claude-sonnet-4-5" },
+  { id: "gemini", name: "Google Gemini", defaultModel: "gemini-2.5-flash" },
+  { id: "groq", name: "Groq", defaultModel: "llama-3.3-70b-versatile" },
+  { id: "openrouter", name: "OpenRouter", defaultModel: "" },
+] as const;
+
 /** The realtime transcription providers this build can actually connect to —
  *  `STREAMING_CLIENT_BY_PROVIDER` in ipcHandlers.js is the authority. */
 const REALTIME_PROVIDERS = [
@@ -2344,11 +2354,26 @@ function SettingsSurface() {
   // One key box, but for whichever provider is selected. Before this the box was
   // hardwired to OpenAI and no provider could be chosen at all, because the
   // catalog IPC it would have come from was never implemented.
+  const anthropicApiKey = useSettingsStore((s) => s.anthropicApiKey);
+  const setAnthropicApiKey = useSettingsStore((s) => s.setAnthropicApiKey);
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
+  const setGeminiApiKey = useSettingsStore((s) => s.setGeminiApiKey);
+  const groqApiKey = useSettingsStore((s) => s.groqApiKey);
+  const setGroqApiKey = useSettingsStore((s) => s.setGroqApiKey);
+  const openrouterApiKey = useSettingsStore((s) => s.openrouterApiKey);
+  const setOpenrouterApiKey = useSettingsStore((s) => s.setOpenrouterApiKey);
   const providerKey: Record<string, { value: string; set: (v: string) => void }> = {
     openai: { value: openaiApiKey, set: setOpenaiApiKey },
     deepgram: { value: deepgramApiKey, set: setDeepgramApiKey },
     assemblyai: { value: assemblyaiApiKey, set: setAssemblyaiApiKey },
+    anthropic: { value: anthropicApiKey, set: setAnthropicApiKey },
+    gemini: { value: geminiApiKey, set: setGeminiApiKey },
+    groq: { value: groqApiKey, set: setGroqApiKey },
+    openrouter: { value: openrouterApiKey, set: setOpenrouterApiKey },
   };
+  const summaryProvider = useSettingsStore((s) => s.cleanupProvider) || "openai";
+  const summaryModel = useSettingsStore((s) => s.cleanupModel);
+  const summaryKey = providerKey[summaryProvider];
   const apiKey = providerKey[cloudProvider]?.value ?? openaiApiKey;
   const setApiKey = providerKey[cloudProvider]?.set ?? setOpenaiApiKey;
   const language = useSettingsStore((s) => s.preferredLanguage);
@@ -2527,6 +2552,65 @@ function SettingsSurface() {
             />
           )}
         </Row>
+
+        {/* Transcription and summaries are different providers with barely any
+            overlap — only OpenAI does both — so one row cannot honestly cover
+            them. This is the model that writes the title, the summary and the
+            threads; it is the row that makes OpenRouter reachable. */}
+        {!local && (
+          <Row label={t("oats.settings.summaryProvider")} hint={t("oats.settings.summaryHint")}>
+            <select
+              aria-label={t("oats.settings.summaryProvider")}
+              value={summaryProvider}
+              onChange={(e) => {
+                const next = e.target.value;
+                const chosen = SUMMARY_PROVIDERS.find((p) => p.id === next);
+                setCleanupProvider(next);
+                setNoteFormattingProvider(next);
+                // A provider change makes the old model id meaningless — an
+                // OpenAI id sent to Anthropic is a hard failure, not a fallback.
+                setCleanupModel(chosen?.defaultModel ?? "");
+                setNoteFormattingModel(chosen?.defaultModel ?? "");
+              }}
+              className={selectClass}
+            >
+              {SUMMARY_PROVIDERS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {summaryKey && (
+              <input
+                aria-label={t("oats.settings.summaryKeyPlaceholder")}
+                autoComplete="off"
+                spellCheck={false}
+                value={summaryKey.value}
+                onChange={(e) => summaryKey.set(e.target.value)}
+                placeholder={t("oats.settings.summaryKeyPlaceholder")}
+                type="password"
+                className={cn(selectClass, "mt-3")}
+              />
+            )}
+            {/* OpenRouter ids are namespaced ("anthropic/claude-sonnet-4-5")
+                and are not in the local registry, so there is nothing sensible
+                to preselect — the reader has to name one. */}
+            {summaryProvider === "openrouter" && (
+              <input
+                aria-label={t("oats.settings.summaryModel")}
+                autoComplete="off"
+                spellCheck={false}
+                value={summaryModel}
+                onChange={(e) => {
+                  setCleanupModel(e.target.value);
+                  setNoteFormattingModel(e.target.value);
+                }}
+                placeholder="anthropic/claude-sonnet-4-5"
+                className={cn(selectClass, "mt-3 font-mono text-xs")}
+              />
+            )}
+          </Row>
+        )}
 
         {/* No `htmlFor`: the `<select>` this would address only exists once the
             picker is open, so the label pointed at nothing and the action read
