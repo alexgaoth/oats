@@ -82,9 +82,16 @@ Settings branch, which is the inherited app and should keep looking like itself.
 Never reach for `.input-inline` inside an Oats surface; it is the per-element
 opt-out for legacy components only.
 
-### The pastoral world was retired (2026-08-20)
+### Two interfaces, and the field is one of them (2026-08-25)
 
-The sky, wheat, chaff, birds and farmhouse are **deleted** (`Field.tsx`, `field/`, `test/helpers/fieldModel.test.js`). `DESIGN.md` §9.8 is now the **conversation contour**; §9.9 is gone. Do not reintroduce a scenery backdrop, a permanent horizon, or blue as a visual-world colour, however it is justified in a comment.
+The pastoral world was deleted on 2026-08-20 because Oats carried two brands at once and the landscape won every screen. It is back, as an **opt-in second mode** rather than the product's face: `uiMode` is `work` (the ledger — paper, graphite, gold, default) or `field` (sky, horizon, wheat, chaff). `helpers/uiMode.mjs` resolves it; `.oats-field-mode` on the shell gates everything. `DESIGN.md` §9.8 remains the **conversation contour**. Work mode must stay exactly what it is — the field may not leak into it, and no scenery belongs on a work-mode surface.
+
+**A full-screen layer cannot be animated continuously here, and this is measured, not cautious.** Linux forces `--disable-gpu-compositing`, so an animated frame repaints everything under it. On the Conversation surface at rest: still field **2.6 points** of a core, four 3px chaff motes drifting **+0.8**, three full-width bands swaying **104**, thirty-nine individually-swaying blades **131.8** — worse than the 113 that killed the first field. Cost tracks _animated area_, not element count or transform type (skew and translate measured the same). Two rules follow:
+
+- Anything that animates over painted background needs `will-change` on **both** — the mover and the background beneath it. Promoting the motes alone took chaff from 98% to 0.8%.
+- Motion across a large area is an **event**, never a state. The wheat is still; a gust runs one cycle on entering field mode and on a recording starting or stopping. Idle measures **1.1 points**.
+
+Blades are their own small SVGs placed with CSS. One stretched full-width `viewBox` with `preserveAspectRatio="none"` scales x by ~24 and turns every stalk into a slab with a lily pad on top.
 
 Stages 8–10 in `IMPLEMENTATION.md` are built but not yet exercised against real
 speech. The repository contains inherited OpenWhispr components throughout; they

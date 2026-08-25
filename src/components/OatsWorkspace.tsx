@@ -21,6 +21,8 @@ import ConversationGraph from "./notes/ConversationGraph";
 import TopicGraph from "./notes/TopicGraph";
 import LifetimeGraph from "./notes/LifetimeGraph";
 import ListeningPulse from "./conversation/ListeningPulse";
+import FieldBackdrop from "./field/FieldBackdrop";
+import WheatPerch from "./field/WheatPerch";
 import LiveThreadMap from "./conversation/LiveThreadMap";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail from "./conversation/ConversationSignalRail";
@@ -632,6 +634,7 @@ function ConversationSurface() {
                     )}
                   >
                     <ListeningPulse state="live" size="sm" />
+                    <WheatPerch />
                   </button>
                   {/* An actual heading, not a paragraph a comment calls one.
                     Every other view has an `h1`; a screen-reader user
@@ -903,6 +906,9 @@ function ConversationSurface() {
               )}
             >
               <ListeningPulse state="idle" size="lg" />
+              {/* Sits on the seed until you press it. Field mode only; renders
+                  null otherwise, and never intercepts the press. */}
+              <WheatPerch />
             </button>
 
             <h1
@@ -2352,6 +2358,8 @@ function SettingsSurface() {
   const setTranscriptionMode = useSettingsStore((s) => s.setTranscriptionMode);
   const cleanupMode = useSettingsStore((s) => s.cleanupMode);
   const setCleanupMode = useSettingsStore((s) => s.setCleanupMode);
+  const uiMode = useSettingsStore((s) => s.uiMode);
+  const setUiMode = useSettingsStore((s) => s.setUiMode);
   const cloudProvider = useSettingsStore((s) => s.cloudTranscriptionProvider) || "openai";
   const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
   const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
@@ -2561,6 +2569,45 @@ function SettingsSurface() {
           )}
         </Row>
 
+        {/* Two interfaces, not a theme: they differ in what is on screen. Named
+            rather than inferred, and stored, so the choice survives a restart. */}
+        <Row label={t("oats.settings.uiMode")} hint={t("oats.settings.uiModeHint")}>
+          <div className="flex items-center gap-6">
+            {(
+              [
+                ["work", t("oats.settings.uiModeWork")],
+                ["field", t("oats.settings.uiModeField")],
+              ] as const
+            ).map(([value, copy]) => {
+              const active = uiMode === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setUiMode(value)}
+                  aria-pressed={active}
+                  className={cn(
+                    "relative rounded-sm pb-1.5 text-sm transition-colors",
+                    "[transition-duration:var(--motion-instant)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {copy}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute inset-x-0 bottom-0 h-px origin-center bg-primary transition-transform",
+                      "[transition-duration:var(--motion-base)]",
+                      active ? "scale-x-100" : "scale-x-0"
+                    )}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </Row>
+
         {/* Transcription and summaries are different providers with barely any
             overlap — only OpenAI does both — so one row cannot honestly cover
             them. This is the model that writes the title, the summary and the
@@ -2733,6 +2780,7 @@ function SettingsSurface() {
 
 export default function OatsWorkspace() {
   const { t } = useTranslation();
+  const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
 
   // Which surfaces have been opened at least once. A surface is built on first
@@ -2850,7 +2898,21 @@ export default function OatsWorkspace() {
   }, [recording]);
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
+    <div
+      className={cn(
+        "relative flex h-screen flex-col overflow-hidden bg-background text-foreground",
+        // The field paints on the shell's own background, so in field mode the
+        // background must be transparent or it would cover the sky.
+        fieldMode && "bg-transparent",
+        // Field mode is a class on the shell, so every surface inside can
+        // answer to it without threading a prop, and so the whole thing is
+        // inert — not merely hidden — in work mode.
+        fieldMode && "oats-field-mode"
+      )}
+    >
+      {/* Behind everything, and only in field mode. Returns null otherwise, so
+          work mode pays nothing for it. */}
+      <FieldBackdrop />
       {/* Renders nothing. It drives microphone level and the dead-mic warning,
           and pre-warms the audio worklet so the first recording starts fast.
           It was previously mounted only inside unreachable ControlPanel markup,

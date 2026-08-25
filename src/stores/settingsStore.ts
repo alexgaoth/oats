@@ -28,6 +28,10 @@ import type {
 } from "../hooks/useSettings";
 import type { Snippet } from "../utils/snippets";
 import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
+import { resolveUiMode } from "../helpers/uiMode.mjs";
+
+/** Which interface Oats wears. See `uiMode.mjs`. */
+export type UiMode = "work" | "field";
 
 /** The Conversation surface's two compositions. See `conversationDetail.mjs`. */
 export type ConversationDetail = "clean" | "detailed";
@@ -450,6 +454,8 @@ export interface SettingsState
   meetingRemoteTranscriptionUrl: string;
   /** Which composition the Conversation surface draws. See `conversationDetail.mjs`. */
   conversationDetail: ConversationDetail;
+  /** The ledger, or the oat field. See `uiMode.mjs`. */
+  uiMode: UiMode;
   conversationAideEnabled: boolean;
   conversationAideOnlineEnabled: boolean;
   conversationAideInRoomEnabled: boolean;
@@ -536,6 +542,7 @@ export interface SettingsState
   setMeetingRemoteTranscriptionType: (type: SelfHostedType) => void;
   setMeetingRemoteTranscriptionUrl: (url: string) => void;
   setConversationDetail: (value: ConversationDetail) => void;
+  setUiMode: (value: UiMode) => void;
   setConversationAideEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
   setConversationAideInRoomEnabled: (value: boolean) => void;
@@ -1147,6 +1154,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   conversationDetail: resolveConversationDetail(
     isBrowser ? localStorage.getItem("conversationDetail") : null
   ) as ConversationDetail,
+  uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
   conversationAideInRoomEnabled: readBoolean("conversationAideInRoomEnabled", true),
@@ -1242,6 +1250,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     type: SelfHostedType
   ) => void,
   setMeetingRemoteTranscriptionUrl: createStringSetter("meetingRemoteTranscriptionUrl"),
+  setUiMode: createStringSetter("uiMode") as (value: UiMode) => void,
   setConversationDetail: createStringSetter("conversationDetail") as (
     value: ConversationDetail
   ) => void,
