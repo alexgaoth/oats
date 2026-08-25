@@ -1716,6 +1716,7 @@
     "mic": {
       "hotkeyToSpeak": "{{hotkey}} para hablar",
       "recording": "Grabando...",
+      "recordingStop": "Grabando: haz clic para detener y transcribir",
       "processing": "Procesando...",
       "clickToSpeak": "Haz clic para hablar",
       "conversation": "Grabando una conversación: haz clic para terminar"

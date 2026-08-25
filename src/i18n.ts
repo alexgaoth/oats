@@ -100,4 +100,17 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 });
 
+// Keep <html lang> in step with the UI language. It ships as lang="en" and
+// nothing else touches it, so a screen reader read every locale with English
+// phonemes — "F8 で話す" and "F8 для записи" in an English voice. That only
+// started to cost anything once a translated string became the accessible name
+// of the floating oat's control, which is what it now is.
+function syncDocumentLanguage(language: string) {
+  if (typeof document === "undefined") return;
+  document.documentElement.lang = language;
+}
+
+syncDocumentLanguage(initialLanguage);
+i18n.on("languageChanged", syncDocumentLanguage);
+
 export default i18n;

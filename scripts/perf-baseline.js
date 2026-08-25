@@ -43,17 +43,39 @@ function percentile(values, p) {
  * gone by the time there is anything to measure. Everything below is measured
  * from here down.
  */
-function findBrowserPid(port) {
+async function findBrowserPid(port) {
   if (process.platform !== "linux") return null;
+
+  // Ask Chromium. It is the only party that knows which of the processes
+  // carrying our flag is the browser — a substring scan of /proc cannot tell,
+  // and got it wrong: /proc enumerates in ascending pid order, the node
+  // launcher is spawned before the browser and carries the same flag, so the
+  // scan returned the launcher (26.8 MB PSS of harness that is not the
+  // application) and on one occasion returned a shell whose command line
+  // merely mentioned the flag.
+  try {
+    const browser = await connectBrowser();
+    const info = (await browser.send("SystemInfo.getProcessInfo")).processInfo;
+    browser.ws.close();
+    const pid = info.find((p) => p.type === "browser")?.id;
+    if (pid) return pid;
+  } catch {
+    // Fall through to the scan below.
+  }
+
+  // Fallback only. Requires the executable to be Electron, which excludes the
+  // node launcher and anything that just names the flag.
   for (const entry of fs.readdirSync("/proc")) {
     if (!/^\d+$/.test(entry)) continue;
     try {
       const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf8");
-      if (cmdline.includes(`--remote-debugging-port=${port}`) && !cmdline.includes("--type=")) {
-        return Number(entry);
+      if (!cmdline.includes(`--remote-debugging-port=${port}`) || cmdline.includes("--type=")) {
+        continue;
       }
+      if (!fs.readlinkSync(`/proc/${entry}/exe`).includes("electron")) continue;
+      return Number(entry);
     } catch {
-      // Vanished mid-scan.
+      // Vanished mid-scan, or /proc/<pid>/exe is not readable.
     }
   }
   return null;
@@ -292,7 +314,15 @@ async function attributeIdleCost(sampleMs) {
   const rows = info.map((p) => ({ pid: p.id, name: p.type }));
 
   // Name each renderer by the window it draws.
-  const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+  let targets;
+  try {
+    targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+  } catch {
+    // The browser exited between the surface loop and here; a four-minute run
+    // must still write its report.
+    browser.ws.close();
+    return null;
+  }
   const rendererPids = info.filter((p) => p.type === "renderer").map((p) => p.id);
   for (const target of targets.filter((t) => t.type === "page")) {
     // Overlay windows are created and destroyed by IPC while this runs, so a
@@ -359,8 +389,13 @@ async function attributeIdleCost(sampleMs) {
   const treePss = pssKb(browserPid);
   const namedPss = sorted.reduce((total, row) => total + (row.pssMb ?? 0), 0);
   const remainder = treePss === null ? null : Math.round(treePss / 1024) - namedPss;
-  if (remainder && remainder > 0) {
-    sorted.push({ process: "zygote and launcher processes", cpuPercent: null, pssMb: remainder });
+  // Emitted whenever the tree could be read at all, negative included: PSS moves
+  // between the per-row samples and this one, and a row that silently vanishes
+  // when it goes non-positive leaves the table not summing with nothing saying
+  // why — which is the whole reason the row exists. The tree is rooted at the
+  // browser, whose parent is the launcher, so what is left over is the zygotes.
+  if (treePss !== null) {
+    sorted.push({ process: "zygote processes", cpuPercent: null, pssMb: remainder });
   }
   // Read at this instant, so the rows above sum to it. The per-surface PSS
   // printed earlier is a different sample and will differ by a few tens of MB.
@@ -385,6 +420,10 @@ async function attributeIdleCost(sampleMs) {
  * runs, so `reapStaleSidecars()` is far too late — disables remote debugging
  * without a word. The symptom is `no debugger target matching "panel=true"`
  * ninety seconds later.
+ *
+ * Only `/proc/net/tcp` is read. Chromium binds the debug port on 127.0.0.1, so
+ * an IPv6 holder has not been observed; if one ever appears this returns
+ * quietly rather than reporting it.
  */
 function freePort(port) {
   if (process.platform !== "linux") return;
@@ -414,7 +453,29 @@ function freePort(port) {
       } catch {
         continue;
       }
-      console.warn(`[perf] pid ${entry} still holds port ${port}; killing it`);
+      // Only ever kill something this harness could have left behind. The port
+      // is configurable and the default could belong to anything; killing a
+      // stranger's process to make a benchmark run is not a trade to make
+      // silently.
+      let argv0 = "";
+      try {
+        argv0 = fs.readFileSync(`/proc/${entry}/cmdline`, "utf8").split("\0")[0] || "";
+      } catch {
+        // Gone already.
+      }
+      const ours = ["electron", "pactl", "qdrant", "whisper-server", "parakeet"].some((name) =>
+        argv0.includes(name)
+      );
+      if (!ours) {
+        console.warn(
+          `[perf] port ${port} is held by pid ${entry} (${argv0 || "unknown"}), which is not ours — ` +
+            `leaving it alone. Set OATS_PERF_PORT to something free.`
+        );
+        break;
+      }
+      console.warn(
+        `[perf] pid ${entry} (${path.basename(argv0)}) still holds port ${port}; killing it`
+      );
       try {
         process.kill(Number(entry), "SIGKILL");
       } catch {
@@ -462,7 +523,7 @@ async function main() {
   process.on("exit", stop);
 
   const { send, evaluate } = await connect("panel=true");
-  browserPid = findBrowserPid(PORT);
+  browserPid = await findBrowserPid(PORT);
   if (!browserPid && process.platform === "linux") {
     console.warn("[perf] could not locate the browser process; CPU and memory will be blank");
   }

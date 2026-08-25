@@ -108,7 +108,10 @@ turned out to be mostly wrong. What inactive surfaces actually do was checked:
 - After P1.1 the retained _bundle_ is gone, which was the real cost.
 
 So an inactive mounted surface now performs no continuous work, and the measured
-idle CPU is flat across all three surfaces (17.1 / 18.1 / 16.7 %). Against that,
+idle CPU is flat across all three surfaces (17.1 / 18.1 / 16.7 % when this was
+written; **0.5 / 1.8 / 0.5 %** since 2026-08-24, and the 17 % figure does not
+reproduce even on its own commit — see the idle-cost section below). Against
+that,
 unmounting would cost two real things: the `<main>` panes staying mounted is what
 makes `DESIGN.md` §8's cross-fade possible at all (there must be something left
 on screen to dim), and Intelligence would lose your reading position and scroll
@@ -656,25 +659,6 @@ diverge from physical ones whenever a device is filtered out — and it cannot b
 verified on a machine with no GPU backend, which is what this work ran on.
 Shipping an unverifiable GPU path is worse than shipping none.
 
-## Verification gates
-
-Still requiring a real GUI session and realistic speech:
-
-- Fedora install and smoke test from the RPM;
-- notarized Apple Silicon DMG smoke test;
-- real-speech question detection, question-state resolution, thread stack, and
-  topic graph evaluation;
-- dark/light and reduced-motion review of the _recording_ surfaces (the three
-  resting surfaces were checked in both modes during this pass);
-- release network trace, including automatic-search behaviour;
-- the macOS half of the performance baseline, plus occluded idle and the
-  60-minute conversation — see `docs/performance-baseline.md`.
-
-## Noted in passing, not acted on
-
-(Both entries that lived here have been measured and closed — the `pactl`
-orphan, and the idle cost below.)
-
 ## Idle cost — attributed, and the floor removed (2026-08-24)
 
 `.iterate/20260824-idle-cost/`. The backlog said "idle RSS is ~1 GB … the ~17 %
@@ -686,9 +670,9 @@ number for a tree of thirteen processes.
   breathes on `infinite`, and `src/App.jsx` put that class in the floating oat's
   **base** class list — so the always-on-top window breathed in `idle` and
   `hover` too. With GPU compositing disabled on Linux every frame is read back on
-  the CPU. Attributed per process: GPU 3.3 % + oat renderer 2.4 % of a 6.1 %
+  the CPU. Attributed per process: GPU 3.2 % + oat renderer 2.3 % of a 6.2 %
   total, in a window nobody is looking at. Fixed the way `ListeningPulse.tsx`
-  already did it; idle CPU **6.1 / 7.5 / 6.1 % → 0.4 / 1.6 / 0.7 %**. `processing`
+  already did it; idle CPU **6.2 / 8.2 / 6.5 % → 0.5 / 1.8 / 0.5 %**. `processing`
   keeps its breath on purpose — it is the only positive sign that window has that
   work is happening, and it is bounded by the transcription.
 - It was also wrong on screen. `DESIGN.md` §9.1 says the seed breathes while a
@@ -696,16 +680,17 @@ number for a tree of thirteen processes.
   whenever the app was open, on the one window whose whole job is that
   distinction.
 - **The 17.1 % does not reproduce on its own commit.** `933f7cb` was checked out,
-  built and driven by the same instrument: **5.9 / 7.6 / 5.7 %**, with the same
-  ~6 points of breath. Nothing between the two dates changed idle CPU; the older
+  built and driven by the same instrument, and recorded as
+  `docs/perf/fedora-2026-08-24-933f7cb.json`: **6.2 / 7.5 / 6.3 %**, with the
+  same ~5.4 points of breath. Nothing between the two dates changed idle CPU; the older
   row is a property of that afternoon's machine, and is not comparable.
 - **The instrument was reading a subset of the tree.** All four walks used
   `/proc/<pid>/task/<pid>/children`, which lists only the _main thread's_
   children — and Chromium forks renderers from a launcher thread. It reached 10
   of 13 processes, omitting the renderer drawing the surface being measured.
 - **The ~1 GB was double counting.** Summed `VmRSS` counts every shared page once
-  per process holding it. PSS, over the corrected walk: **746 MB**, of which
-  ~330 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade
+  per process holding it. PSS, over the corrected walk: **746–823 MB**
+  across runs, of which ~340 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade
   for an instant first recording and first search, not a defect.
 - **`pactl` does inherit the debug port's listening socket.** A pass earlier the
   same day removed that claim as measured-false; it is true, and there is now an
@@ -720,6 +705,19 @@ number for a tree of thirteen processes.
   buttons beside it did. It now uses `app.mic.hotkeyToSpeak` — a string that was
   translated into all ten locales and had no call site — so the name says what
   the key does rather than naming the key.
+- **`findBrowserPid` was returning the node launcher**, not the browser — `/proc`
+  enumerates in ascending pid order and the launcher carries the same
+  `--remote-debugging-port` flag, so ~27 MB of harness counted as application,
+  and once the scan returned a shell. The browser pid now comes from
+  `SystemInfo.getProcessInfo`.
+- **The oat's control named a status, not an action.** While recording, a screen
+  reader said "Recording…" for a button that _stops and transcribes_; while
+  processing it named a control that does nothing. Now `app.mic.recordingStop`
+  (ten locales) and `aria-disabled` respectively.
+- **Found, not fixed:** the oat's tooltip measures 209px in a 96px window during
+  a conversation, and the elapsed clock loses its leading digit past 100 minutes.
+  Both measured, both pre-existing, both recorded in
+  `docs/performance-baseline.md`.
 
 ## Verification gates
 
@@ -739,30 +737,3 @@ Still requiring a real GUI session and realistic speech:
 
 (Both entries that lived here have been measured and closed — the `pactl`
 orphan, and the idle cost below.)
-
-## Idle cost — attributed, and the floor removed (2026-08-24)
-
-`.iterate/20260824-idle-cost/`. The backlog said "idle RSS is ~1 GB … the ~17 %
-idle CPU floor is the same on every surface … neither is a rendering problem."
-Both halves were wrong, and both were wrong because the instrument reported one
-number for a tree of nine processes.
-
-- **The floor was one CSS animation.** `.oats-listening-pulse::before` breathes
-  on `infinite`, and `src/App.jsx` put that class in the floating oat's **base**
-  class list — so the always-on-top window breathed in `idle` and `hover` too.
-  With GPU compositing disabled on Linux every frame is read back on the CPU:
-  **7.3 points of a core, forever, for a 96px window.** Measured A/B on a driven
-  build, then fixed the way `ListeningPulse.tsx` already did it. Idle CPU
-  **17.1 / 18.1 / 16.7 % → 0.4 / 1.0 / 0.6 %**.
-- It was also wrong on screen. `DESIGN.md` §9.1 says the seed breathes while a
-  session is live and "Idle = static gold seed"; the oat claimed to be listening
-  whenever the app was open, on the one window whose whole job is that
-  distinction.
-- **The ~1 GB was 37 % double counting.** Summed `VmRSS` counts every shared page
-  once per process holding it. PSS from `smaps_rollup`: **627 MB**, of which
-  274 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade for
-  an instant first recording and first search, not a defect.
-- **`perf:baseline` now attributes idle cost per process**, naming Chromium's own
-  via `SystemInfo.getProcessInfo`, the sidecars by walking `/proc`, and telling
-  the two renderers apart by making one busy — a renderer forked from the zygote
-  keeps the zygote's command line, which is why they were indistinguishable.

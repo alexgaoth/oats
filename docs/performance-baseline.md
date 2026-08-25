@@ -93,18 +93,25 @@ rendering problem. Both halves are corrected below.
 
 ### Fedora 44, GNOME/Wayland (XWayland), Intel ARL — 2026-08-24
 
-Raw JSON: `docs/perf/fedora-2026-08-24.json` (as shipped) and
-`docs/perf/fedora-2026-08-24-prefix.json` (the same tree with only the fix
-below reverted). Every number here is from one of those two runs.
+Three runs of this instrument, all recorded, all on the same machine on the same
+evening. Every number below comes from one of these files; nothing here is quoted
+from an unrecorded run.
 
-| Metric                    | 2026-08-19 (recorded) | 2026-08-24 before | 2026-08-24 after |
-| ------------------------- | --------------------- | ----------------- | ---------------- |
-| cold launch → interactive | 2613 ms               | 1369 ms           | 1264 ms          |
-| idle CPU — conversation   | 17.1 %                | 6.1 %             | **0.4 %**        |
-| idle CPU — intelligence   | 18.1 %                | 7.5 %             | **1.6 %**        |
-| idle CPU — settings       | 16.7 %                | 6.1 %             | **0.7 %**        |
-| idle memory — PSS         | not measured          | 752 MB            | 746 MB           |
-| idle memory — summed RSS  | ~1.03 GB              | 1266 MB           | 1272 MB          |
+| Run                                                        | File                                       |
+| ---------------------------------------------------------- | ------------------------------------------ |
+| `933f7cb`, the commit the 2026-08-19 row was recorded from | `docs/perf/fedora-2026-08-24-933f7cb.json` |
+| today, with only the fix below reverted                    | `docs/perf/fedora-2026-08-24-prefix.json`  |
+| today, as shipped                                          | `docs/perf/fedora-2026-08-24.json`         |
+
+| Metric                     | `933f7cb` | before  | after     |
+| -------------------------- | --------- | ------- | --------- |
+| idle CPU — conversation    | 6.2 %     | 6.2 %   | **0.5 %** |
+| idle CPU — intelligence    | 7.5 %     | 8.2 %   | **1.8 %** |
+| idle CPU — settings        | 6.3 %     | 6.5 %   | **0.5 %** |
+| of which: GPU process      | 3.1 %     | 3.2 %   | 0.0 %     |
+| of which: the oat renderer | 2.3 %     | 2.3 %   | 0.1 %     |
+| idle memory — PSS          | 670 MB    | 805 MB  | 823 MB    |
+| idle memory — summed RSS   | 1204 MB   | 1333 MB | 1359 MB   |
 
 **The idle CPU was one CSS animation on a 96-pixel window.**
 `.oats-listening-pulse::before` carries `animation: oats-breathe … infinite`, and
@@ -112,18 +119,8 @@ below reverted). Every number here is from one of those two runs.
 component — put that class in its **base** class list. So the floating oat
 breathed in every state, `idle` and `hover` included. It is always on top and
 almost always idle, `--disable-gpu-compositing` is on for Linux, and every frame
-of that breath is read back on the CPU. The per-process attribution says it
-plainly — before, on the Conversation surface:
-
-```
-    3.3%   GPU
-    2.4%   renderer index.html          (the floating oat)
-    0.2%   browser
-    0.1%   renderer index.html?panel=true  (the surface being measured)
-```
-
-5.7 of the 6.1 points, in a window you are not looking at. After the fix the same
-two rows are 0.0 % and 0.1 %.
+of that breath is read back on the CPU. The GPU process and the oat's renderer
+together are 5.5 of the 6.2 points before, and 0.1 after.
 
 It was also a lie in the interface. `DESIGN.md` §9.1 is explicit — the seed
 breathes _while a session is live_, and "**Idle = static gold seed**" — because
@@ -132,59 +129,96 @@ exists to say. `ListeningPulse.tsx` implements exactly that with
 `state !== "live" && "before:hidden"`; the inherited panel never did.
 
 `processing` deliberately keeps the breath. Motion is the only positive sign this
-window has that work is happening — idle and processing are otherwise one opacity
-step apart — and it is bounded by the transcription, so it is not an idle cost,
-which is the whole of the argument above.
+window has that work is happening, and it is bounded by the transcription rather
+than by the app being open, so it is not an idle cost. It does not re-create the
+"says listening when nothing is heard" problem: the listening signifier here is
+the full-strength gold rim, which both live states carry and processing does not.
 
-**What about the 17.1 %?** It does not reproduce on its own commit. `933f7cb` —
-the tree the 2026-08-19 row was recorded from — was checked out into a separate
-worktree, built, given the same `resources/bin` sidecars, and driven by this same
-instrument on 2026-08-24: **5.9 / 7.6 / 5.7 %**, with GPU 3.5 % and the oat
-renderer 2.5 % — the same breath, the same size. So no commit between the two
-dates changed the idle CPU; the 17.1 % is a property of that afternoon's machine,
-not of that build, and the honest reading of the older row is that it is not
-comparable. (The likely cause is this document's own invitation to keep a
-development Oats open beside the measurement; two Electron trees share a GPU and
-a compositor. It has not been reproduced, and is not claimed.)
+**The 17.1 % does not reproduce on its own commit.** `933f7cb` — the tree the
+2026-08-19 row was recorded from — was checked out into a separate worktree,
+`npm install`ed for the five packages removed since, given this repository's
+`resources/bin` so its sidecars could actually start (they are gitignored;
+without them nothing starts and the memory figure is meaningless), and driven by
+this instrument: **6.2 / 7.5 / 6.3 %** — within noise of today's pre-fix
+**6.2 / 8.2 / 6.5 %**, with the same ~5.4 points of breath. So no commit between
+the two dates changed idle CPU, the field's deletion is ruled out as an
+explanation, and the older row is not comparable to anything. Why that afternoon
+read 17.1 % is not established; only that the build does not.
 
 **The ~1 GB was double counting — and the instrument was reading a subset.**
 `rssKb()` sums `VmRSS`, and a Chromium tree shares heavily, so every shared page
 was counted once per process holding it. Worse, all four tree walks read
 `/proc/<pid>/task/<pid>/children`, which lists only the **main thread's**
 children — and Chromium forks renderers and mojo utilities from a launcher
-thread. The walk was reaching 10 of 13 processes, omitting the renderer drawing
-the surface being measured, with membership varying between runs. Both are
-fixed: the walk reads every thread, and PSS is reported beside summed RSS.
+thread, so the walk reached 10 of 13 processes, omitting the renderer drawing the
+surface being measured. Worse still, `findBrowserPid` returned the **node
+launcher** rather than the browser: `/proc` enumerates in ascending pid order,
+the launcher carries the same `--remote-debugging-port` flag, and a substring
+scan cannot tell them apart — so ~27 MB of harness was being counted as
+application, and on one occasion the scan returned a shell. All three are fixed;
+the browser pid now comes from `SystemInfo.getProcessInfo`, which is the only
+party that actually knows.
 
-What the 746 MB is, on the Conversation surface at rest (post-fix run):
+Read PSS as a range, not a constant: the same build measured 746, 805 and 823 MB
+across the runs behind this section, and `qdrant` alone ranged 79–168 MB. The
+claim that survives is the shape — **not ~1 GB resident, and summed RSS
+over-reports by roughly 40 %.**
 
-| Process                          | idle CPU | PSS    |
-| -------------------------------- | -------- | ------ |
-| sidecar `whisper-server`         | 0.1 %    | 185 MB |
-| sidecar `qdrant`                 | 0.1 %    | 141 MB |
-| renderer `index.html?panel=true` | 0.0 %    | 96 MB  |
-| browser                          | 0.3 %    | 94 MB  |
-| renderer `index.html` (the oat)  | 0.1 %    | 58 MB  |
-| GPU                              | 0.0 %    | 47 MB  |
-| `zygote and launcher processes`  | —        | 26 MB  |
-| `network.mojom.NetworkService`   | 0.0 %    | 22 MB  |
-| `audio.mojom.AudioService`       | 0.0 %    | 19 MB  |
-| sidecar `pactl subscribe`        | 0.0 %    | 1 MB   |
+What the tree is, on the Conversation surface at rest (the shipped run):
 
-**Roughly 330 MB of that is two sidecars pre-warmed before anyone asks for
+| Process                          | idle CPU | PSS        |
+| -------------------------------- | -------- | ---------- |
+| sidecar `whisper-server`         | 0.0 %    | 186 MB     |
+| sidecar `qdrant`                 | 0.1 %    | 157 MB     |
+| renderer `index.html?panel=true` | 0.0 %    | 104 MB     |
+| browser                          | 0.2 %    | 104 MB     |
+| GPU                              | 0.0 %    | 64 MB      |
+| renderer `index.html` (the oat)  | 0.1 %    | 62 MB      |
+| zygote processes                 | —        | 28 MB      |
+| `network.mojom.NetworkService`   | 0.0 %    | 23 MB      |
+| `audio.mojom.AudioService`       | 0.0 %    | 20 MB      |
+| sidecar `pactl subscribe`        | 0.0 %    | 1 MB       |
+| **— whole tree, this instant**   | —        | **749 MB** |
+
+The rows sum to the whole-tree row, which is read at the moment the table is
+built. The per-surface PSS printed above it is a different sample, taken during
+the idle loop, and will differ by a few tens of MB; that gap is sampling drift,
+not a missing process.
+
+**Roughly 340 MB of that is two sidecars pre-warmed before anyone asks for
 them**, and that is a trade, not a defect. `whisperManager.initializeAtStartup`
 loads the model at launch so the first recording transcribes immediately;
 Qdrant is up so the first search answers. Oats promises to work with no network
 and no account, and paying that to keep the promise instant is the right side of
 the trade. It is recorded here so the next person to consider making recording
-lazy knows what they would be buying. Treat the figure as one run: across the
-four runs behind this section `qdrant` measured 82–168 MB and `whisper-server`
-185–188 MB.
+lazy knows what they would be buying.
 
 **Read PSS with one instance running.** PSS divides each shared page among every
 sharer on the machine, so a second Oats or Electron beside the measurement halves
 the pages they have in common and lowers the number for a reason that has nothing
 to do with the build.
+
+### Found while measuring, not fixed
+
+Both are on the floating oat, both pre-existing, both outside this goal:
+
+- **The tooltip is wider than its window.** The window is 96px and does not
+  resize on hover, and the tooltip is `whitespace-nowrap`. Measured live at rest
+  the tooltip is 25px and fits; during a conversation it is **209px at
+  `left: -117`**, so two thirds of it is outside the window. Which two thirds
+  depends on `panelStartPosition`: anchored bottom-right the _tail_ survives
+  ("… click to finish"), anchored bottom-left the head does. `app.mic.recording`
+  (70px) and `app.mic.processing` (73px) fit; `app.mic.conversation` does not, in
+  any of the ten locales (129–279px), and `clickToSpeak` overflows in de, ru, es
+  and it. The cheap fix is to drop `whitespace-nowrap` and let it wrap into the
+  ~52px above the button — it does **not** require resizing the window, and so
+  does not touch the `setIgnoreMouseEvents` click-through model.
+- **The elapsed clock clips past 100 minutes.** It renders `m:ss` with unbounded
+  minutes, so `83:45` measures 44px at `left: 0` and just fits, while `100:45`
+  measures 50px at `left: -6` and loses its leading digit. A 100-minute
+  conversation and a 45-second one would both read `00:45`. (An earlier review
+  reported this as failing past one hour, from a measurement of `1:23:45` — a
+  string this code never produces.)
 
 ## Still manual
 

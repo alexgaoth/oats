@@ -1716,6 +1716,7 @@
     "mic": {
       "hotkeyToSpeak": "{{hotkey}} で話す",
       "recording": "録音中...",
+      "recordingStop": "録音中 — クリックで停止して文字起こし",
       "processing": "処理中...",
       "clickToSpeak": "クリックして話す",
       "conversation": "会話を録音中 — クリックで終了"

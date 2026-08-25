@@ -366,11 +366,19 @@ export default function App() {
         return {
           className: `${baseClasses} border-primary`,
           tooltip: t("app.mic.recording"),
+          // The visible tooltip is a status; the accessible name has to be what
+          // pressing does. "Recording…, button" reads as *start* recording to
+          // somebody who cannot see the gold rim, and pressing it ends a
+          // dictation. `app.mic.conversation` already names its action.
+          ariaLabel: t("app.mic.recordingStop"),
         };
       case "processing":
         return {
           className: `${baseClasses} opacity-60 cursor-not-allowed`,
           tooltip: t("app.mic.processing"),
+          // `toggleListening` is a no-op while transcribing, and the cursor
+          // says so to a mouse. Nothing said so to a screen reader.
+          disabled: true,
         };
       default:
         return {
@@ -473,6 +481,7 @@ export default function App() {
               // nothing on its own, so the name says what the key does. It
               // contains the visible text, which WCAG 2.5.3 requires.
               aria-label={micProps.ariaLabel ?? micProps.tooltip}
+              aria-disabled={micProps.disabled ? true : undefined}
               onPointerDown={(e) => {
                 setIsCommandMenuOpen(false);
                 // Screen coordinates, not client ones. The window is being moved

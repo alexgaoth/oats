@@ -1709,8 +1709,9 @@
       }
     },
     "mic": {
-      "hotkeyToSpeak": "{{hotkey}} 說話",
+      "hotkeyToSpeak": "按 {{hotkey}} 說話",
       "recording": "錄音中...",
+      "recordingStop": "正在錄音 — 點擊停止並轉寫",
       "processing": "處理中...",
       "clickToSpeak": "點擊開始說話",
       "conversation": "正在錄製對話 — 點擊結束"
