@@ -1725,6 +1725,7 @@
     "commandMenu": {
       "stopListening": "停止录音",
       "startListening": "开始录音",
+      "processing": "正在转录 — 请稍候",
       "hideForNow": "暂时隐藏"
     }
   },

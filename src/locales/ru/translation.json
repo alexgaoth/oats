@@ -1730,6 +1730,7 @@
     "commandMenu": {
       "stopListening": "Остановить запись",
       "startListening": "Начать запись",
+      "processing": "Идёт расшифровка — подождите",
       "hideForNow": "Скрыть"
     }
   },

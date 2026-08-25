@@ -2371,6 +2371,17 @@ function SettingsSurface() {
     setNoteFormattingMode(mode);
     setMeetingTranscriptionMode(mode);
     setMeetingUseLocalWhisper(mode === "local");
+    // The same rule as `meetingUseLocalWhisper` above, for the field that
+    // decides whether the key is *used*. Recording reads the meeting scope, and
+    // `meetingCloudTranscriptionMode` was never written here — it stayed empty,
+    // which resolves to "legacy", and the realtime handler then refuses with
+    // "OpenAI realtime requires a bring-your-own-key API key" while the key sits
+    // in Settings. This writes the cloud mode, provider and model to the
+    // dictation, meeting and upload scopes at once.
+    useSettingsStore.getState().setCloudTranscriptionForAllScopes({
+      useLocalWhisper: mode === "local",
+      cloudTranscriptionMode: "byok",
+    });
     if (mode === "local") {
       setCleanupProvider("local");
       setNoteFormattingProvider("local");

@@ -1733,6 +1733,7 @@
     "commandMenu": {
       "stopListening": "Stop listening",
       "startListening": "Start listening",
+      "processing": "Transcribing — please wait",
       "hideForNow": "Hide for now"
     }
   },

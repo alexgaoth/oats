@@ -1730,6 +1730,7 @@
     "commandMenu": {
       "stopListening": "録音を停止",
       "startListening": "録音を開始",
+      "processing": "文字起こし中 — お待ちください",
       "hideForNow": "一時的に非表示"
     }
   },

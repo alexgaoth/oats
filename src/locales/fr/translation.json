@@ -1730,6 +1730,7 @@
     "commandMenu": {
       "stopListening": "Arrêter l’écoute",
       "startListening": "Commencer l’écoute",
+      "processing": "Transcription en cours — veuillez patienter",
       "hideForNow": "Masquer pour l’instant"
     }
   },

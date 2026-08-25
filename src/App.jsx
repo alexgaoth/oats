@@ -610,14 +610,24 @@ export default function App() {
                 // opposite of what the button beside it was doing — and did
                 // nothing when pressed. The mic itself says so now; this has to
                 // agree with it.
-                disabled={isProcessing && !isRecording}
-                className="w-full px-3 py-2 text-left text-sm font-medium hover:bg-muted focus:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                //
+                // `aria-disabled`, not `disabled`: a disabled button is dropped
+                // from the accessibility tree by some screen readers, which
+                // would silence the very state this was added to announce. The
+                // mic beside it makes the same choice.
+                aria-disabled={isProcessing && !isRecording ? true : undefined}
+                className={`w-full px-3 py-2 text-left text-sm font-medium focus:outline-none ${
+                  isProcessing && !isRecording
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:bg-muted focus:bg-muted"
+                }`}
                 onClick={() => {
+                  if (isProcessing && !isRecording) return;
                   toggleListening();
                 }}
               >
                 {isProcessing && !isRecording
-                  ? t("app.mic.processing")
+                  ? t("app.commandMenu.processing")
                   : isRecording
                     ? t("app.commandMenu.stopListening")
                     : t("app.commandMenu.startListening")}
