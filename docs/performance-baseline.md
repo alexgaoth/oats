@@ -106,13 +106,13 @@ from an unrecorded run.
 
 | Metric                     | `933f7cb` | before  | after     |
 | -------------------------- | --------- | ------- | --------- |
-| idle CPU — conversation    | 6.2 %     | 6.2 %   | **0.5 %** |
-| idle CPU — intelligence    | 7.5 %     | 8.2 %   | **1.8 %** |
-| idle CPU — settings        | 6.3 %     | 6.5 %   | **0.5 %** |
+| idle CPU — conversation    | 6.2 %     | 6.2 %   | **0.3 %** |
+| idle CPU — intelligence    | 7.5 %     | 8.2 %   | **1.7 %** |
+| idle CPU — settings        | 6.3 %     | 6.5 %   | **0.6 %** |
 | of which: GPU process      | 3.1 %     | 3.2 %   | 0.0 %     |
-| of which: the oat renderer | 2.3 %     | 2.3 %   | 0.1 %     |
-| idle memory — PSS          | 670 MB    | 805 MB  | 823 MB    |
-| idle memory — summed RSS   | 1204 MB   | 1333 MB | 1359 MB   |
+| of which: the oat renderer | 2.3 %     | 2.3 %   | 0.0 %     |
+| idle memory — PSS          | 670 MB    | 805 MB  | 771 MB    |
+| idle memory — summed RSS   | 1204 MB   | 1333 MB | 1250 MB   |
 
 **The idle CPU was one CSS animation on a 96-pixel window.**
 `.oats-listening-pulse::before` carries `animation: oats-breathe … infinite`, and
@@ -162,7 +162,7 @@ party that actually knows.
 
 Read PSS as a range, not a constant. Across the three recorded runs the
 Conversation surface measured **670, 805 and 771 MB**, and `qdrant` alone 79 to
-100 MB; a critic's independent run of the shipped build measured 557–656 MB. It
+100 MB. It
 moves with what else on the machine shares pages, and with how long the sidecars
 have been up. The claim that survives is the shape — **not ~1 GB resident, and
 summed RSS over-reports by roughly 40 %.**
@@ -229,7 +229,16 @@ oversight. The escape that does work without a pointer is the cancel hotkey — 
 it only called `cancelRecording()`, so it did nothing while a transcription was
 running, even though `cancelProcessing()` existed and the hover UI already offered
 it. A hung `whisper-server` — a failure this app watches for elsewhere — had no
-non-pointer escape at all. It does now.
+non-pointer escape at all.
+
+It does now, but not for the reason first written here. The hotkey handler was
+taught to fall through to `cancelProcessing()`, and that changed nothing,
+because `useAudioRecording.js` **released the key at the very moment processing
+began** — `onStateChange` unregistered it on `!isRecording`, and stopping is
+what starts a transcription. The handler was unreachable dead code and this
+paragraph claimed a working escape for a day. The registration now survives
+until the work is actually finished (`!isRecording && !isProcessing`), and
+stopping no longer releases it.
 
 ### Found while measuring, not fixed
 

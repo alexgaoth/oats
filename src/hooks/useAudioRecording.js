@@ -73,7 +73,9 @@ export const useAudioRecording = (toast, options = {}) => {
       const currentState = audioManagerRef.current.getState();
       if (!currentState.isRecording && !currentState.isStreamingStartInProgress) return false;
 
-      window.electronAPI?.unregisterCancelHotkey?.();
+      // Not released here: stopping is what *starts* transcription, and
+      // `onStateChange` above owns the lifetime — it releases the key once the
+      // work is actually finished.
 
       if (currentState.isStreaming || currentState.isStreamingStartInProgress) {
         void playStopCue();
@@ -97,8 +99,15 @@ export const useAudioRecording = (toast, options = {}) => {
 
     audioManagerRef.current.setCallbacks({
       onStateChange: ({ isRecording, isProcessing, isStreaming }) => {
-        if (!isRecording) {
+        // Escape stays registered through transcription, not just recording.
+        // The floating oat is `focusable: false`, so it never receives keyboard
+        // focus, and its Cancel button is mounted only while the pointer hovers
+        // — which made this hotkey the only way out of a transcription that had
+        // hung, and it was being released at the very moment processing began.
+        if (!isRecording && !isProcessing) {
           window.electronAPI?.unregisterCancelHotkey?.();
+        }
+        if (!isRecording) {
           // Resume media the instant recording ends, not after transcription.
           if (wasRecordingRef.current && getSettings().pauseMediaOnDictation) {
             window.electronAPI?.resumeMediaPlayback?.();
@@ -316,12 +325,15 @@ export const useAudioRecording = (toast, options = {}) => {
     return false;
   }, []);
 
-  const cancelProcessing = () => {
+  // Memoized because App.jsx keys the cancel-hotkey subscription on it; a fresh
+  // closure each render tore down and re-registered that IPC listener every time
+  // the panel rendered.
+  const cancelProcessing = useCallback(() => {
     if (audioManagerRef.current) {
       return audioManagerRef.current.cancelProcessing();
     }
     return false;
-  };
+  }, []);
 
   const toggleListening = async () => {
     if (!isRecording && !isProcessing) {

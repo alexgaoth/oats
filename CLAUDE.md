@@ -41,6 +41,7 @@ Re-deriving these costs hours, so they are recorded here:
 - `wl-paste` has been observed **hanging indefinitely**, even on `--list-types`. It sits on the paste hot path and must be behind a circuit breaker.
 - A freshly created `uinput` device is **not usable for ~200ms+** — udev, then libinput, then the compositor. Writes before that succeed at the kernel and are silently dropped, so the paste tool exits 0 while nothing was typed. `resources/linux-fast-paste.c` waits 300ms.
 - **`setIgnoreMouseEvents(true, { forward: true })` does not forward on Linux.** `forward` is macOS and Windows only; on Linux Electron replaces the window's X11 _input shape_ with a 1×1 rectangle, so a click-through window receives **no** mouse events — including the `mouseenter` that would turn it back on. Any design where the renderer's own hover decides its click-through state deadlocks on the first `mouseleave`. The floating oat's state is therefore decided in the main process from three inputs (renderer hold, real cursor position, drag in progress) — `oatInteractivity.js`, applied by `windowManager`, with a 250ms cursor poll while the oat is on screen as the only way back.
+- **The floating oat cannot be focused, so it fires no focus events at all.** All three overlay windows are `focusable: false` (`windowConfig.js`); measured, `document.hasFocus()` is `false` and a `focusin` listener counts zero events while `activeElement` moves under `.focus()`. Every `onFocus`/`onBlur` on that window is dead code, and any control mounted only on hover is pointer-only by construction — the escape that works without a pointer is the cancel hotkey, which `useAudioRecording.js` registers on start and unregisters the moment transcription begins.
 - **Fn cannot be a hotkey on Linux.** Most keyboards handle it in firmware and never emit `KEY_FN`, and `hotkeyManager.js` rejects `Fn`/`GLOBE` outside macOS. Right-side modifiers (`RightAlt` and friends) are the working single-key equivalent.
 
 ### Running a second Oats to check a claim (2026-08-19)
@@ -48,7 +49,9 @@ Re-deriving these costs hours, so they are recorded here:
 `OATS_CHANNEL=staging npx electron . --remote-debugging-port=PORT --ozone-platform=x11`
 drives the real app without disturbing one the user has open. Three traps:
 `OATS_CHANNEL` is what isolates userData, **not** `--user-data-dir` (`main.js`
-calls `app.setPath` and overrides it); pass `--ozone-platform=x11` yourself or
+calls `app.setPath` and overrides it) — and a value outside `VALID_CHANNELS`
+silently falls back to `development`, so a typo'd channel writes into the
+developer's own profile and proves nothing about a fresh one; pass `--ozone-platform=x11` yourself or
 the XWayland re-exec loses the race to rebind the debug port and Chromium
 disables remote debugging silently; and a killed instance can leave a `pactl
 subscribe` child holding the inherited listening socket, so the port accepts TCP
@@ -81,7 +84,7 @@ opt-out for legacy components only.
 
 ### The pastoral world was retired (2026-08-20)
 
-The sky, wheat, chaff, birds and farmhouse are **deleted**, along with `Field.tsx`, `field/`, and `test/helpers/fieldModel.test.js`. Oats carried two brands at once — a private instrument for consequential conversations, and a literal summer landscape — and the landscape won every screen it was on. `DESIGN.md` §9.8 is now the **conversation contour**; §9.9 is gone. Do not reintroduce a scenery backdrop, a permanent horizon, or blue as a visual-world colour, however it is justified in a comment.
+The sky, wheat, chaff, birds and farmhouse are **deleted** (`Field.tsx`, `field/`, `test/helpers/fieldModel.test.js`). `DESIGN.md` §9.8 is now the **conversation contour**; §9.9 is gone. Do not reintroduce a scenery backdrop, a permanent horizon, or blue as a visual-world colour, however it is justified in a comment.
 
 Stages 8–10 in `IMPLEMENTATION.md` are built but not yet exercised against real
 speech. The repository contains inherited OpenWhispr components throughout; they
@@ -121,7 +124,7 @@ All three were "fails quietly at the end", which the pencil standard forbids, an
 
 ### Transcription scopes — the trap that broke recording
 
-Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`meetingUseLocalWhisper`), and upload (`uploadUseLocalWhisper`). **Recording a conversation — the primary action — reads the _meeting_ scope**, via `selectResolvedMeetingTranscription`. The visible Settings page has one processing choice, so it must write every scope; when it wrote only the dictation scope, "On this computer" appeared selected while recording still went to OpenAI and failed for want of an API key. All three default to local, because Oats bundles a Whisper model and promises to work offline with no account. There is also a legacy `meetingFollows*` migration in `settingsStore.ts` that copies dictation values into meeting fields for pre-existing installs — it does not run for fresh ones, which is why the defaults themselves have to be right.
+Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`meetingUseLocalWhisper`), and upload (`uploadUseLocalWhisper`). **Recording a conversation — the primary action — reads the _meeting_ scope**, via `selectResolvedMeetingTranscription`. The visible Settings page has one processing choice, so it must write every scope — **call `setCloudTranscriptionForAllScopes`, never a hand-picked list of setters.** This has now bitten twice: writing only `useLocalWhisper` made "On this computer" appear selected while recording still reached for OpenAI, and writing every field _but_ `meetingCloudTranscriptionMode` left it empty, which resolves to `"legacy"` and throws "OpenAI realtime requires a bring-your-own-key API key" with the key already saved. All three default to local, because Oats bundles a Whisper model and promises to work offline with no account. There is also a legacy `meetingFollows*` migration in `settingsStore.ts` that copies dictation values into meeting fields for pre-existing installs — it does not run for fresh ones, which is why the defaults themselves have to be right.
 
 ## Rules
 
@@ -134,7 +137,7 @@ Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`
 
 ## Gates
 
-`npm run verify:oats` — setup check, tests, lint, format, renderer build. `npm run test:oats:core` is the fast inner loop (pure helpers under `node --test`). `npm run i18n:check` for locale parity. `npm run perf:baseline` drives a real second instance; procedure and numbers in `docs/performance-baseline.md`.
+`npm run verify:oats` — setup check, tests, lint, format, renderer build. Tests under `test/` are linted as **scripts**: use `require` plus `await import("...mjs")` inside `test.before`, never top-level `import`, or `format:check` fails with "'import' and 'export' may appear only with sourceType: module". `npm run test:oats:core` is the fast inner loop (pure helpers under `node --test`). `npm run i18n:check` for locale parity. `npm run perf:baseline` drives a real second instance; procedure and numbers in `docs/performance-baseline.md`.
 
 ## Where everything is
 

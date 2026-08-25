@@ -24,6 +24,20 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = Number(process.env.OATS_PERF_PORT || 9455);
+
+/**
+ * A fresh deadline for each request to the debug port.
+ *
+ * A leftover `pactl subscribe` — or any stranger — holding the port accepts the
+ * connection and never answers, so a bare `fetch` never settles, and a polling
+ * loop awaiting it never reaches its own timeout check: the run hangs silently
+ * instead of reporting the one failure this script documents. Measured: 160s
+ * with no output beyond the refusal to kill the holder.
+ *
+ * A function, not a constant — one `AbortSignal.timeout` fires once and would
+ * then abort every later request in the run.
+ */
+const timed = () => ({ signal: AbortSignal.timeout(3000) });
 const SETTLE_MS = 400;
 const IDLE_SAMPLE_MS = Number(process.env.OATS_PERF_IDLE_MS || 15000);
 const REPEATS = Number(process.env.OATS_PERF_REPEATS || 7);
@@ -239,7 +253,7 @@ async function connect(urlFragment, timeoutMs = 90000) {
   let target;
   while (!target && Date.now() < deadline) {
     try {
-      const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+      const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`, timed())).json();
       target = list.find((t) => t.type === "page" && t.url.includes(urlFragment));
     } catch {
       // Not listening yet.
@@ -252,7 +266,7 @@ async function connect(urlFragment, timeoutMs = 90000) {
 
 /** The browser-level endpoint, which is the only one that answers SystemInfo. */
 async function connectBrowser() {
-  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`, timed())).json();
   return openSocket(version.webSocketDebuggerUrl);
 }
 
@@ -264,6 +278,14 @@ async function openSocket(wsUrl) {
   });
   let id = 0;
   const pending = new Map();
+  // A CDP promise on a closed socket never settles on its own: the browser is
+  // gone, so no reply arrives, and an awaited call simply stops the run where
+  // it stands. Node then finds nothing left in the event loop and exits 0 —
+  // a benchmark that printed nothing and reported success.
+  ws.onclose = () => {
+    for (const entry of pending.values()) entry.reject(new Error("debugger socket closed"));
+    pending.clear();
+  };
   ws.onmessage = (message) => {
     const msg = JSON.parse(message.data);
     const entry = pending.get(msg.id);
@@ -316,7 +338,7 @@ async function attributeIdleCost(sampleMs) {
   // Name each renderer by the window it draws.
   let targets;
   try {
-    targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+    targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`, timed())).json();
   } catch {
     // The browser exited between the surface loop and here; a four-minute run
     // must still write its report.
@@ -490,6 +512,10 @@ function freePort(port) {
 }
 
 async function main() {
+  // Non-zero until the report exists. Anything that ends this process early —
+  // a drained event loop, a killed child, an unhandled rejection — then exits
+  // non-zero by default rather than looking like a pass.
+  process.exitCode = 1;
   freePort(PORT);
   const started = Date.now();
   // `--ozone-platform=x11` is passed here rather than left to main.js. On a
@@ -701,9 +727,14 @@ async function main() {
     console.log(`\nwritten to ${path.relative(path.join(__dirname, ".."), outPath)}`);
   }
 
+  process.exitCode = 0;
   stop();
   process.exit(0);
 }
+
+process.on("exit", (code) => {
+  if (code !== 0) console.error("[perf] no baseline was produced");
+});
 
 main().catch((error) => {
   console.error(`[perf] ${error.message}`);
