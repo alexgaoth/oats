@@ -1972,6 +1972,7 @@
       "processingHint": "Один выбор охватывает расшифровку и аналитику.",
       "localProcessing": "На этом компьютере",
       "apiProcessing": "Использовать ключ API",
+      "provider": "Провайдер",
       "apiKeyPlaceholder": "Ключ API OpenAI",
       "microphone": "Микрофон",
       "micBuiltIn": "Встроенный микрофон",

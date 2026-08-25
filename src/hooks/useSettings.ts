@@ -72,6 +72,8 @@ export interface ApiKeySettings {
   mistralApiKey: string;
   openrouterApiKey: string;
   tinfoilApiKey: string;
+  deepgramApiKey: string;
+  assemblyaiApiKey: string;
   customTranscriptionApiKey: string;
   cleanupCustomApiKey: string;
 }
@@ -251,6 +253,8 @@ function useSettingsInternal() {
     mistralApiKey: store.mistralApiKey,
     openrouterApiKey: store.openrouterApiKey,
     tinfoilApiKey: store.tinfoilApiKey,
+    deepgramApiKey: store.deepgramApiKey,
+    assemblyaiApiKey: store.assemblyaiApiKey,
     dictationKey: store.dictationKey,
     meetingKey: store.meetingKey,
     voiceAgentKey: store.voiceAgentKey,

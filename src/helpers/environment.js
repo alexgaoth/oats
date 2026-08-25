@@ -263,22 +263,6 @@ class EnvironmentManager {
     return { success: true };
   }
 
-  getAssemblyAIKey() {
-    return this._getKey("ASSEMBLYAI_API_KEY");
-  }
-
-  saveAssemblyAIKey(key) {
-    return this._saveKey("ASSEMBLYAI_API_KEY", key);
-  }
-
-  getDeepgramKey() {
-    return this._getKey("DEEPGRAM_API_KEY");
-  }
-
-  saveDeepgramKey(key) {
-    return this._saveKey("DEEPGRAM_API_KEY", key);
-  }
-
   getCustomTranscriptionKey() {
     return this._getKey("CUSTOM_TRANSCRIPTION_API_KEY");
   }

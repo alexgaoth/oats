@@ -615,6 +615,8 @@ export interface SettingsState
   setMistralApiKey: (key: string) => void;
   setOpenrouterApiKey: (key: string) => void;
   setTinfoilApiKey: (key: string) => void;
+  setDeepgramApiKey: (key: string) => void;
+  setAssemblyaiApiKey: (key: string) => void;
   setCustomTranscriptionApiKey: (key: string) => void;
   setCleanupCustomApiKey: (key: string) => void;
 
@@ -831,6 +833,8 @@ const SECRET_IPC_SAVERS = {
   mistral: "saveMistralKey",
   openrouter: "saveOpenrouterKey",
   tinfoil: "saveTinfoilKey",
+  deepgram: "saveDeepgramKey",
+  assemblyai: "saveAssemblyAIKey",
   customTranscription: "saveCustomTranscriptionKey",
   cleanupCustom: "saveCleanupCustomKey",
   bedrockAccessKeyId: "saveBedrockAccessKeyId",
@@ -870,6 +874,8 @@ const STALE_SECRET_LOCALSTORAGE_KEYS = [
   "mistralApiKey",
   "openrouterApiKey",
   "tinfoilApiKey",
+  "deepgramApiKey",
+  "assemblyaiApiKey",
   "customTranscriptionApiKey",
   "customReasoningApiKey",
   "cleanupCustomApiKey",
@@ -963,6 +969,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   // Secrets hydrate from main process in initializeSettings, never from localStorage.
   openaiApiKey: "",
+  deepgramApiKey: "",
+  assemblyaiApiKey: "",
   anthropicApiKey: "",
   geminiApiKey: "",
   groqApiKey: "",
@@ -1420,6 +1428,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   setOpenaiApiKey: createSecretSetter("openaiApiKey", "openai", "openai"),
   setAnthropicApiKey: createSecretSetter("anthropicApiKey", "anthropic", "anthropic"),
+  setDeepgramApiKey: createSecretSetter("deepgramApiKey", "deepgram"),
+  setAssemblyaiApiKey: createSecretSetter("assemblyaiApiKey", "assemblyai"),
   setGeminiApiKey: createSecretSetter("geminiApiKey", "gemini", "gemini"),
   setGroqApiKey: createSecretSetter("groqApiKey", "groq", "groq"),
   setXaiApiKey: createSecretSetter("xaiApiKey", "xai"),
@@ -2130,6 +2140,8 @@ export async function initializeSettings(): Promise<void> {
         mistral,
         openrouter,
         tinfoil,
+        deepgram,
+        assemblyai,
         customTx,
         customRx,
         bedrockAccessKeyId,
@@ -2146,6 +2158,8 @@ export async function initializeSettings(): Promise<void> {
         window.electronAPI.getMistralKey?.(),
         window.electronAPI.getOpenrouterKey?.(),
         window.electronAPI.getTinfoilKey?.(),
+        window.electronAPI.getDeepgramKey?.(),
+        window.electronAPI.getAssemblyAIKey?.(),
         window.electronAPI.getCustomTranscriptionKey?.(),
         window.electronAPI.getCleanupCustomKey?.(),
         window.electronAPI.getBedrockAccessKeyId?.(),
@@ -2164,6 +2178,8 @@ export async function initializeSettings(): Promise<void> {
         mistralApiKey: mistral || "",
         openrouterApiKey: openrouter || "",
         tinfoilApiKey: tinfoil || "",
+        deepgramApiKey: deepgram || "",
+        assemblyaiApiKey: assemblyai || "",
         customTranscriptionApiKey: customTx || "",
         cleanupCustomApiKey: customRx || "",
         bedrockAccessKeyId: bedrockAccessKeyId || "",

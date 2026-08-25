@@ -1959,6 +1959,7 @@
       "processingHint": "一个选择同时覆盖转录与智能。",
       "localProcessing": "在本机上",
       "apiProcessing": "使用 API 密钥",
+      "provider": "服务商",
       "apiKeyPlaceholder": "OpenAI API 密钥",
       "microphone": "麦克风",
       "micBuiltIn": "内置麦克风",

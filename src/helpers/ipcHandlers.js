@@ -62,6 +62,44 @@ const ALLOWED_MEETING_PROVIDERS = new Set([
   "deepgram-realtime",
 ]);
 
+/**
+ * The realtime transcription providers, as the renderer's provider picker needs
+ * them. `streamingProvidersStore.fetchProviders()` has always asked for this
+ * over `get-note-recording-config`, and nothing ever answered — the channel was
+ * declared in `types/electron.ts` and implemented nowhere, so the catalog was
+ * permanently null and every cloud recording fell through to a hardcoded
+ * `openai-realtime`. That is why the visible Settings could only ever be one
+ * OpenAI key box.
+ *
+ * Ids are bare (`openai`), not suffixed: the store appends `-realtime`.
+ */
+const REALTIME_PROVIDER_CATALOG = [
+  {
+    id: "openai",
+    name: "OpenAI",
+    keySetting: "openaiApiKey",
+    models: [
+      { id: "gpt-4o-mini-transcribe", name: "GPT-4o mini Transcribe", default: true },
+      { id: "gpt-4o-transcribe", name: "GPT-4o Transcribe" },
+    ],
+  },
+  {
+    id: "deepgram",
+    name: "Deepgram",
+    keySetting: "deepgramApiKey",
+    models: [
+      { id: "nova-3", name: "Nova 3", default: true },
+      { id: "nova-2", name: "Nova 2" },
+    ],
+  },
+  {
+    id: "assemblyai",
+    name: "AssemblyAI",
+    keySetting: "assemblyaiApiKey",
+    models: [{ id: "universal-streaming", name: "Universal Streaming", default: true }],
+  },
+];
+
 // Meeting capture runs at 24 kHz (see meetingRecordingStore AudioContext); cloud
 // streaming providers must be told the true PCM rate or they misread the audio.
 const MEETING_STREAM_SAMPLE_RATE = 24000;
@@ -885,6 +923,10 @@ class IPCHandlers {
         if (updated) this.broadcastToWindows("transcription-updated", updated);
       }
       return result;
+    });
+
+    ipcMain.handle("get-note-recording-config", async () => {
+      return { success: true, providers: REALTIME_PROVIDER_CATALOG };
     });
 
     ipcMain.handle("get-audio-path", async (event, id) => {

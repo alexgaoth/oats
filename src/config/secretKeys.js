@@ -36,6 +36,23 @@ const BYOK_API_KEYS = [
     storeKey: "groqApiKey",
   },
   { base: "xai", env: "XAI_API_KEY", get: "getXaiKey", save: "saveXaiKey", storeKey: "xaiApiKey" },
+  // The two realtime transcription providers. `environment.js` could already
+  // read these keys and `ipcHandlers` could already use them, but they were
+  // absent from this manifest, so nothing in the interface could ever set one.
+  {
+    base: "deepgram",
+    env: "DEEPGRAM_API_KEY",
+    get: "getDeepgramKey",
+    save: "saveDeepgramKey",
+    storeKey: "deepgramApiKey",
+  },
+  {
+    base: "assemblyai",
+    env: "ASSEMBLYAI_API_KEY",
+    get: "getAssemblyAIKey",
+    save: "saveAssemblyAIKey",
+    storeKey: "assemblyaiApiKey",
+  },
   {
     base: "mistral",
     env: "MISTRAL_API_KEY",

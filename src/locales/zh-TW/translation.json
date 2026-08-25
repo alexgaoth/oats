@@ -1959,6 +1959,7 @@
       "processingHint": "一個選擇同時涵蓋逐字稿與智慧。",
       "localProcessing": "在本機上",
       "apiProcessing": "使用 API 金鑰",
+      "provider": "服務商",
       "apiKeyPlaceholder": "OpenAI API 金鑰",
       "microphone": "麥克風",
       "micBuiltIn": "內建麥克風",

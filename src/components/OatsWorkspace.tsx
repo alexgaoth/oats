@@ -2307,6 +2307,14 @@ const CONVERSATION_LANGUAGES: [string, string][] = [
 const DEFAULT_LOCAL_MODEL = "qwen3.5-4b-q4_k_m";
 const DEFAULT_CLOUD_MODEL = "gpt-5.6-terra";
 
+/** The realtime transcription providers this build can actually connect to —
+ *  `STREAMING_CLIENT_BY_PROVIDER` in ipcHandlers.js is the authority. */
+const REALTIME_PROVIDERS = [
+  { id: "openai", name: "OpenAI" },
+  { id: "deepgram", name: "Deepgram" },
+  { id: "assemblyai", name: "AssemblyAI" },
+] as const;
+
 const selectClass =
   // A line rather than a box. A boxed control on a quiet page reads as a form
   // field in a SaaS dashboard; the hairline goes gold only while focused, which
@@ -2326,8 +2334,23 @@ function SettingsSurface() {
   const setTranscriptionMode = useSettingsStore((s) => s.setTranscriptionMode);
   const cleanupMode = useSettingsStore((s) => s.cleanupMode);
   const setCleanupMode = useSettingsStore((s) => s.setCleanupMode);
-  const apiKey = useSettingsStore((s) => s.openaiApiKey);
-  const setApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
+  const cloudProvider = useSettingsStore((s) => s.cloudTranscriptionProvider) || "openai";
+  const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
+  const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
+  const deepgramApiKey = useSettingsStore((s) => s.deepgramApiKey);
+  const setDeepgramApiKey = useSettingsStore((s) => s.setDeepgramApiKey);
+  const assemblyaiApiKey = useSettingsStore((s) => s.assemblyaiApiKey);
+  const setAssemblyaiApiKey = useSettingsStore((s) => s.setAssemblyaiApiKey);
+  // One key box, but for whichever provider is selected. Before this the box was
+  // hardwired to OpenAI and no provider could be chosen at all, because the
+  // catalog IPC it would have come from was never implemented.
+  const providerKey: Record<string, { value: string; set: (v: string) => void }> = {
+    openai: { value: openaiApiKey, set: setOpenaiApiKey },
+    deepgram: { value: deepgramApiKey, set: setDeepgramApiKey },
+    assemblyai: { value: assemblyaiApiKey, set: setAssemblyaiApiKey },
+  };
+  const apiKey = providerKey[cloudProvider]?.value ?? openaiApiKey;
+  const setApiKey = providerKey[cloudProvider]?.set ?? setOpenaiApiKey;
   const language = useSettingsStore((s) => s.preferredLanguage);
   const setLanguage = useSettingsStore((s) => s.setPreferredLanguage);
   const autoSearch = useSettingsStore((s) => s.conversationAutoSearchEnabled);
@@ -2467,9 +2490,29 @@ function SettingsSurface() {
             })}
           </div>
           {!local && (
+            <select
+              aria-label={t("oats.settings.provider")}
+              value={cloudProvider}
+              onChange={(e) => {
+                const next = e.target.value;
+                useSettingsStore.getState().setCloudTranscriptionForAllScopes({
+                  cloudTranscriptionProvider: next,
+                  cloudTranscriptionMode: "byok",
+                });
+              }}
+              className={cn(selectClass, "mt-3")}
+            >
+              {REALTIME_PROVIDERS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {!local && (
             <input
               id="api-key"
-              name="openai-api-key"
+              name={`${cloudProvider}-api-key`}
               aria-label={t("oats.settings.apiKeyPlaceholder")}
               // A password manager offering to fill a login here, or to save an
               // API key as one, is noise on the one screen that is meant to be

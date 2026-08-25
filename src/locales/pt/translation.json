@@ -1964,6 +1964,7 @@
       "processingHint": "Uma escolha cobre a transcrição e a inteligência.",
       "localProcessing": "Neste computador",
       "apiProcessing": "Usar chave de API",
+      "provider": "Provedor",
       "apiKeyPlaceholder": "Chave de API da OpenAI",
       "microphone": "Microfone",
       "micBuiltIn": "Microfone integrado",

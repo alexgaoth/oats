@@ -10,6 +10,8 @@ const BYOK_KEY_BRIDGES = [
   { base: "gemini", get: "getGeminiKey", save: "saveGeminiKey" },
   { base: "groq", get: "getGroqKey", save: "saveGroqKey" },
   { base: "xai", get: "getXaiKey", save: "saveXaiKey" },
+  { base: "deepgram", get: "getDeepgramKey", save: "saveDeepgramKey" },
+  { base: "assemblyai", get: "getAssemblyAIKey", save: "saveAssemblyAIKey" },
   { base: "mistral", get: "getMistralKey", save: "saveMistralKey" },
   { base: "openrouter", get: "getOpenrouterKey", save: "saveOpenrouterKey" },
   { base: "tinfoil", get: "getTinfoilKey", save: "saveTinfoilKey" },
@@ -390,6 +392,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Audio event listeners
   onNoAudioDetected: registerListener("no-audio-detected"),
+  getNoteRecordingConfig: () => ipcRenderer.invoke("get-note-recording-config"),
   onCancelHotkeyPressed: registerListener("cancel-hotkey-pressed", (cb) => () => cb()),
   registerCancelHotkey: (key) => ipcRenderer.invoke("register-cancel-hotkey", key),
   unregisterCancelHotkey: () => ipcRenderer.invoke("unregister-cancel-hotkey"),

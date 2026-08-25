@@ -993,6 +993,14 @@ declare global {
       }) => Promise<{ text: string }>;
 
       getTinfoilKey?: () => Promise<string | null>;
+
+      getDeepgramKey?: () => Promise<string | null>;
+
+      getAssemblyAIKey?: () => Promise<string | null>;
+
+      saveDeepgramKey?: (key: string) => Promise<unknown>;
+
+      saveAssemblyAIKey?: (key: string) => Promise<unknown>;
       saveTinfoilKey?: (key: string) => Promise<void>;
       getTinfoilChatModels?: () => Promise<TinfoilCatalogModel[]>;
       proxyTinfoilTranscription?: (data: {

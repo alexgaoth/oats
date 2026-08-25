@@ -1964,6 +1964,7 @@
       "processingHint": "ひとつの選択が文字起こしとインテリジェンスの両方をカバーします。",
       "localProcessing": "このコンピューター上",
       "apiProcessing": "API キーを使う",
+      "provider": "プロバイダー",
       "apiKeyPlaceholder": "OpenAI API キー",
       "microphone": "マイク",
       "micBuiltIn": "内蔵マイク",
