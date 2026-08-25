@@ -463,8 +463,11 @@ function freePort(port) {
       } catch {
         // Gone already.
       }
-      const ours = ["electron", "pactl", "qdrant", "whisper-server", "parakeet"].some((name) =>
-        argv0.includes(name)
+      // `wl-copy` is on this list because a Wayland clipboard offer is served by
+      // a live process, so it is *designed* never to exit (CLAUDE.md) — which
+      // makes it one of the likeliest things to be holding the port.
+      const ours = ["electron", "pactl", "qdrant", "whisper-server", "parakeet", "wl-copy"].some(
+        (name) => argv0.includes(name)
       );
       if (!ours) {
         console.warn(
@@ -531,14 +534,33 @@ async function main() {
   // Cold launch → interactive: the moment the three destinations can be clicked.
   const navReady = async () =>
     evaluate(`document.querySelectorAll('nav button').length >= 3`).catch(() => false);
-  while (!(await navReady())) await sleep(50);
+
+  // Set before the first wait, not after it. On a profile that has never run
+  // Oats the control panel renders OnboardingFlow, which has no <nav> at all —
+  // so waiting for three nav buttons first meant the script sat there forever
+  // on exactly the machines it had never run on: a new checkout, a second
+  // developer, CI. It is cheap to set and harmless when already set.
+  await evaluate(`localStorage.setItem("onboardingCompleted","true")`).catch(() => {});
+  await send("Page.reload", { ignoreCache: false });
+
+  const waitForNav = async (label) => {
+    const deadline = Date.now() + 90000;
+    while (!(await navReady())) {
+      if (Date.now() > deadline) {
+        const seen = await evaluate(
+          `document.body.innerText.slice(0, 200).replace(/\\s+/g, " ")`
+        ).catch(() => "(could not read the page)");
+        throw new Error(`${label}: no three-destination nav after 90s. On screen: ${seen}`);
+      }
+      await sleep(50);
+    }
+  };
+  await waitForNav("cold launch");
   const coldLaunchMs = Date.now() - started;
 
-  // Onboarding would sit in front of everything on a fresh profile.
-  await evaluate(`localStorage.setItem("onboardingCompleted","true")`);
   await send("Page.reload", { ignoreCache: false });
   const reloadStart = Date.now();
-  while (!(await navReady())) await sleep(50);
+  await waitForNav("warm reload");
   const warmReloadMs = Date.now() - reloadStart;
   await sleep(2500);
 
@@ -598,6 +620,12 @@ async function main() {
   await sleep(1500);
   const attribution = await attributeIdleCost(IDLE_SAMPLE_MS);
 
+  // Intelligence too, because it is reproducibly the most expensive of the three
+  // at rest and one attribution taken only on Conversation cannot say why.
+  await evaluate(switchTo("intelligence"));
+  await sleep(1500);
+  const attributionIntelligence = await attributeIdleCost(IDLE_SAMPLE_MS);
+
   // Advanced Settings is a lazily-loaded chunk; first open pays for the fetch.
   await evaluate(switchTo("settings"));
   await sleep(600);
@@ -629,6 +657,7 @@ async function main() {
     advancedFirstOpenMs: advancedFirstMs === null ? null : Math.round(advancedFirstMs),
     idlePerSurface: idle,
     idleAttribution: attribution,
+    idleAttributionIntelligence: attributionIntelligence,
   };
 
   console.log("\nOats performance baseline");
@@ -649,9 +678,13 @@ async function main() {
     );
   }
 
-  if (report.idleAttribution) {
-    console.log("idle cost per process (conversation surface):");
-    for (const row of report.idleAttribution) {
+  for (const [surface, rows] of [
+    ["conversation", report.idleAttribution],
+    ["intelligence", report.idleAttributionIntelligence],
+  ]) {
+    if (!rows) continue;
+    console.log(`idle cost per process (${surface} surface):`);
+    for (const row of rows) {
       console.log(
         `  ${(row.cpuPercent === null ? "" : `${row.cpuPercent}%`).padStart(6)}  ` +
           `${String(row.pssMb).padStart(5)} MB  ${row.process}`

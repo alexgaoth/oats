@@ -15,14 +15,15 @@ so it gets its own `userData` directory and its own single-instance lock and a
 development Oats can stay open beside it. It drives the three surfaces over the
 Chrome DevTools Protocol and reports:
 
-| Metric                      | What it is                                                  |
-| --------------------------- | ----------------------------------------------------------- |
-| cold launch → interactive   | process spawn until the three destinations can be clicked   |
-| warm reload → interactive   | the same after the renderer is warm                         |
-| surface switch p50 / p95    | click → React commit → paint, `REPEATS` samples per surface |
-| settings first open         | the first switch to Settings specifically                   |
-| advanced first open         | click "Advanced" → legacy settings on screen (lazy chunk)   |
-| idle CPU / RSS, per surface | whole process tree, `/proc`, over `OATS_PERF_IDLE_MS`       |
+| Metric                     | `933f7cb` | before  | after     |
+| -------------------------- | --------- | ------- | --------- |
+| idle CPU — conversation    | 6.2 %     | 6.2 %   | **0.3 %** |
+| idle CPU — intelligence    | 7.5 %     | 8.2 %   | **1.7 %** |
+| idle CPU — settings        | 6.3 %     | 6.5 %   | **0.6 %** |
+| of which: GPU process      | 3.1 %     | 3.2 %   | 0.0 %     |
+| of which: the oat renderer | 2.3 %     | 2.3 %   | 0.0 %     |
+| idle PSS — conversation    | 670 MB    | 805 MB  | 771 MB    |
+| idle summed RSS            | 1204 MB   | 1333 MB | 1250 MB   |
 
 Environment overrides: `OATS_PERF_PORT`, `OATS_PERF_IDLE_MS`, `OATS_PERF_REPEATS`.
 
@@ -120,7 +121,7 @@ component — put that class in its **base** class list. So the floating oat
 breathed in every state, `idle` and `hover` included. It is always on top and
 almost always idle, `--disable-gpu-compositing` is on for Linux, and every frame
 of that breath is read back on the CPU. The GPU process and the oat's renderer
-together are 5.5 of the 6.2 points before, and 0.1 after.
+together are 5.5 of the 6.2 points before, and 0.0 after.
 
 It was also a lie in the interface. `DESIGN.md` §9.1 is explicit — the seed
 breathes _while a session is live_, and "**Idle = static gold seed**" — because
@@ -159,34 +160,37 @@ application, and on one occasion the scan returned a shell. All three are fixed;
 the browser pid now comes from `SystemInfo.getProcessInfo`, which is the only
 party that actually knows.
 
-Read PSS as a range, not a constant: the same build measured 746, 805 and 823 MB
-across the runs behind this section, and `qdrant` alone ranged 79–168 MB. The
-claim that survives is the shape — **not ~1 GB resident, and summed RSS
-over-reports by roughly 40 %.**
+Read PSS as a range, not a constant. Across the three recorded runs the
+Conversation surface measured **670, 805 and 771 MB**, and `qdrant` alone 79 to
+100 MB; a critic's independent run of the shipped build measured 557–656 MB. It
+moves with what else on the machine shares pages, and with how long the sidecars
+have been up. The claim that survives is the shape — **not ~1 GB resident, and
+summed RSS over-reports by roughly 40 %.**
 
 What the tree is, on the Conversation surface at rest (the shipped run):
 
 | Process                          | idle CPU | PSS        |
 | -------------------------------- | -------- | ---------- |
-| sidecar `whisper-server`         | 0.0 %    | 186 MB     |
-| sidecar `qdrant`                 | 0.1 %    | 157 MB     |
-| renderer `index.html?panel=true` | 0.0 %    | 104 MB     |
-| browser                          | 0.2 %    | 104 MB     |
-| GPU                              | 0.0 %    | 64 MB      |
-| renderer `index.html` (the oat)  | 0.1 %    | 62 MB      |
-| zygote processes                 | —        | 28 MB      |
-| `network.mojom.NetworkService`   | 0.0 %    | 23 MB      |
-| `audio.mojom.AudioService`       | 0.0 %    | 20 MB      |
+| sidecar `whisper-server`         | 0.1 %    | 185 MB     |
+| renderer `index.html?panel=true` | 0.0 %    | 83 MB      |
+| sidecar `qdrant`                 | 0.1 %    | 79 MB      |
+| browser                          | 0.2 %    | 78 MB      |
+| GPU                              | 0.0 %    | 55 MB      |
+| renderer `index.html` (the oat)  | 0.0 %    | 49 MB      |
+| zygote processes                 | —        | 23 MB      |
+| `network.mojom.NetworkService`   | 0.0 %    | 18 MB      |
+| `audio.mojom.AudioService`       | 0.0 %    | 17 MB      |
 | sidecar `pactl subscribe`        | 0.0 %    | 1 MB       |
-| **— whole tree, this instant**   | —        | **749 MB** |
+| **— whole tree, this instant**   | —        | **588 MB** |
 
 The rows sum to the whole-tree row, which is read at the moment the table is
 built. The per-surface PSS printed above it is a different sample, taken during
 the idle loop, and will differ by a few tens of MB; that gap is sampling drift,
 not a missing process.
 
-**Roughly 340 MB of that is two sidecars pre-warmed before anyone asks for
-them**, and that is a trade, not a defect. `whisperManager.initializeAtStartup`
+**264 to 286 MB of that is two sidecars pre-warmed before anyone asks for
+them** (`whisper-server` 185–186 MB, `qdrant` 79–100 MB, across the three
+recorded runs), and that is a trade, not a defect. `whisperManager.initializeAtStartup`
 loads the model at launch so the first recording transcribes immediately;
 Qdrant is up so the first search answers. Oats promises to work with no network
 and no account, and paying that to keep the promise instant is the right side of
@@ -197,6 +201,35 @@ lazy knows what they would be buying.
 sharer on the machine, so a second Oats or Electron beside the measurement halves
 the pages they have in common and lowers the number for a reason that has nothing
 to do with the build.
+
+**Intelligence's extra point is entry cost, not idle cost.** It reproducibly
+idles above the other two — 1.7 % against 0.3 % and 0.6 % in the shipped run, and
+~1.2 points above its siblings in both pre-fix builds. Attributing that surface
+separately says where it is not: its per-process rows sum to **0.6 %**, against
+the **1.7 %** the same run reports for the surface. The difference is the sampling
+offset. The per-surface figure starts 1.5s after the switch; the attribution's own
+window starts about five seconds after it, behind the renderer identification and
+its settle. So the extra cost is work Intelligence does on entry that has decayed
+by the second window — consistent with the `IntersectionObserver`-gated contour
+drawing and transcript parsing that surface does as rows come into view. It is a
+cost of arriving, which is bounded, not a cost of sitting there.
+
+### The floating oat cannot be focused, and that changed what "unavailable" means
+
+Worth recording because it took an A/B to establish and it is not obvious from
+the code: the oat window is created `focusable: false` (`windowConfig.js`), so it
+**never receives keyboard focus and fires no focus events at all** — measured,
+`document.hasFocus()` is `false` and a `focusin` listener counts zero events even
+as `activeElement` moves under a programmatic `.focus()`. Every `onFocus`/`onBlur`
+on that window is therefore dead code today.
+
+That matters because the on-screen "Cancel" control is mounted only while the
+pointer hovers, which makes it pointer-only by construction rather than by
+oversight. The escape that does work without a pointer is the cancel hotkey — and
+it only called `cancelRecording()`, so it did nothing while a transcription was
+running, even though `cancelProcessing()` existed and the hover UI already offered
+it. A hung `whisper-server` — a failure this app watches for elsewhere — had no
+non-pointer escape at all. It does now.
 
 ### Found while measuring, not fixed
 
@@ -215,8 +248,10 @@ Both are on the floating oat, both pre-existing, both outside this goal:
   does not touch the `setIgnoreMouseEvents` click-through model.
 - **The elapsed clock clips past 100 minutes.** It renders `m:ss` with unbounded
   minutes, so `83:45` measures 44px at `left: 0` and just fits, while `100:45`
-  measures 50px at `left: -6` and loses its leading digit. A 100-minute
-  conversation and a 45-second one would both read `00:45`. (An earlier review
+  measures 50px at `left: -6` and loses its leading digit — a 100-minute
+  conversation reads `00:45`, which is a minute and a half. (45 seconds renders
+  `0:45`, four characters, and fits; the two are not identical, they are merely
+  both short.) (An earlier review
   reported this as failing past one hour, from a measurement of `1:23:45` — a
   string this code never produces.)
 

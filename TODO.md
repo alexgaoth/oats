@@ -17,8 +17,10 @@ not.
 
 The performance question is no longer open. It was measured, and the review's
 suspicion was correct and worse than suspected: idling on the Conversation
-surface with **no conversation running** cost **113 % of a core**. It is now
-**17 %**, level with the other two surfaces. See "P0.1" below.
+surface with **no conversation running** cost **113 % of a core**. Freezing the
+field took that to 17 %, and removing an infinite CSS animation from the floating
+oat took it to **0.3 %** (2026-08-24). The 17 % figure does not reproduce even on
+the commit it was recorded from. See "P0.1" and "Idle cost" below.
 
 `npm run verify:oats` passes with zero lint problems.
 
@@ -109,7 +111,7 @@ turned out to be mostly wrong. What inactive surfaces actually do was checked:
 
 So an inactive mounted surface now performs no continuous work, and the measured
 idle CPU is flat across all three surfaces (17.1 / 18.1 / 16.7 % when this was
-written; **0.5 / 1.8 / 0.5 %** since 2026-08-24, and the 17 % figure does not
+written; **0.3 / 1.7 / 0.6 %** since 2026-08-24, and the 17 % figure does not
 reproduce even on its own commit — see the idle-cost section below). Against
 that,
 unmounting would cost two real things: the `<main>` panes staying mounted is what
@@ -672,7 +674,7 @@ number for a tree of thirteen processes.
   `hover` too. With GPU compositing disabled on Linux every frame is read back on
   the CPU. Attributed per process: GPU 3.2 % + oat renderer 2.3 % of a 6.2 %
   total, in a window nobody is looking at. Fixed the way `ListeningPulse.tsx`
-  already did it; idle CPU **6.2 / 8.2 / 6.5 % → 0.5 / 1.8 / 0.5 %**. `processing`
+  already did it; idle CPU **6.2 / 8.2 / 6.5 % → 0.3 / 1.7 / 0.6 %**. `processing`
   keeps its breath on purpose — it is the only positive sign that window has that
   work is happening, and it is bounded by the transcription.
 - It was also wrong on screen. `DESIGN.md` §9.1 says the seed breathes while a
@@ -689,8 +691,8 @@ number for a tree of thirteen processes.
   children — and Chromium forks renderers from a launcher thread. It reached 10
   of 13 processes, omitting the renderer drawing the surface being measured.
 - **The ~1 GB was double counting.** Summed `VmRSS` counts every shared page once
-  per process holding it. PSS, over the corrected walk: **746–823 MB**
-  across runs, of which ~340 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade
+  per process holding it. PSS, over the corrected walk: **670–805 MB**
+  across the three recorded runs, of which 264–286 MB is `whisper-server` and Qdrant pre-warmed at launch — a stated trade
   for an instant first recording and first search, not a defect.
 - **`pactl` does inherit the debug port's listening socket.** A pass earlier the
   same day removed that claim as measured-false; it is true, and there is now an
@@ -714,10 +716,12 @@ number for a tree of thirteen processes.
   reader said "Recording…" for a button that _stops and transcribes_; while
   processing it named a control that does nothing. Now `app.mic.recordingStop`
   (ten locales) and `aria-disabled` respectively.
-- **Found, not fixed:** the oat's tooltip measures 209px in a 96px window during
-  a conversation, and the elapsed clock loses its leading digit past 100 minutes.
-  Both measured, both pre-existing, both recorded in
-  `docs/performance-baseline.md`.
+- **Found, not fixed:** two measured defects on the oat, filed under "Noted in
+  passing" below.
+- **Intelligence's extra idle point is entry cost.** It idles at 1.7 % against
+  0.3 %, but its own per-process rows sum to 0.6 % in the same run — the
+  difference is that the attribution samples about five seconds later, by which
+  time the on-entry contour drawing and transcript parsing have decayed.
 
 ## Verification gates
 
@@ -735,5 +739,20 @@ Still requiring a real GUI session and realistic speech:
 
 ## Noted in passing, not acted on
 
-(Both entries that lived here have been measured and closed — the `pactl`
-orphan, and the idle cost below.)
+The two entries that lived here — the `pactl` orphan and the idle cost — were
+measured and closed on 2026-08-24. These two replaced them, found while measuring
+that, both on the floating oat, both pre-existing, both measured and neither
+fixed:
+
+- **The tooltip is wider than its window.** 96px window, no hover resize,
+  `whitespace-nowrap`: during a conversation the tooltip measures **209px at
+  `left: -117`** (129px in zh-CN). `app.mic.recording` and `app.mic.processing`
+  fit; `app.mic.conversation` does not, in any of the ten locales. The cheap fix
+  is to drop `whitespace-nowrap` and wrap into the ~52px above the button — it
+  does not need the window to resize, so it does not touch the
+  `setIgnoreMouseEvents` click-through model.
+- **The elapsed clock clips past 100 minutes.** `m:ss` with unbounded minutes:
+  `83:45` is 44px at `left: 0` and fits, `100:45` is 50px at `left: -6` and loses
+  its leading digit, so a 100-minute conversation reads `00:45`.
+
+Both are recorded with their measurements in `docs/performance-baseline.md`.

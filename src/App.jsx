@@ -243,12 +243,28 @@ export default function App() {
     isRecordingRef.current = isRecording;
   }, [isRecording]);
 
+  const isProcessingRef = useRef(isProcessing);
+
+  useEffect(() => {
+    isProcessingRef.current = isProcessing;
+  }, [isProcessing]);
+
+  // The cancel hotkey is the only way out of a dictation that does not require a
+  // pointer: this window is created `focusable: false` (windowConfig.js), so it
+  // never receives keyboard focus and fires no focus events at all — measured,
+  // `document.hasFocus()` is false and a `focusin` listener sees zero events
+  // even as `activeElement` moves. The on-screen cancel button is therefore
+  // hover-only by construction. This handler used to fire only while recording,
+  // so a transcription that hung — a failure this app watches for elsewhere —
+  // had no escape except a mouse, even though `cancelProcessing` existed and the
+  // hover UI already offered it.
   useEffect(() => {
     const unsubscribe = window.electronAPI?.onCancelHotkeyPressed?.(() => {
       if (isRecordingRef.current) cancelRecording();
+      else if (isProcessingRef.current) cancelProcessing();
     });
     return () => unsubscribe?.();
-  }, [cancelRecording]);
+  }, [cancelRecording, cancelProcessing]);
 
   // Auto-hide the floating icon when idle (setting enabled or dictation cycle completed)
   useEffect(() => {
@@ -415,6 +431,25 @@ export default function App() {
               setWindowInteractivity(false);
             }
           }}
+          // Focus is handled for the whole cluster rather than per button, so
+          // that moving focus *to* Cancel cannot destroy it: it is mounted only
+          // while `isHovered`, and the mic used to clear that on its own blur.
+          // This is currently inert — the window is `focusable: false`, so no
+          // focus event fires here at all (measured) — but the per-button
+          // version was a trap for whoever makes it focusable, and this costs
+          // the same two handlers. The escape that works today is the cancel
+          // hotkey, above.
+          onFocus={() => {
+            setIsHovered(true);
+            setWindowInteractivity(true);
+          }}
+          onBlur={(event) => {
+            if (event.currentTarget.contains(event.relatedTarget)) return;
+            setIsHovered(false);
+            if (!isCommandMenuOpen) {
+              setWindowInteractivity(false);
+            }
+          }}
         >
           {/* The running clock. It is the difference between "Oats is open" and
               "Oats is listening right now", and it is the reason this window
@@ -478,8 +513,10 @@ export default function App() {
               // the control the window exists for — was not, so assistive
               // technology read the whole oat as an unnamed button. At rest the
               // visible tooltip is a bare key name ("Right Alt"), which says
-              // nothing on its own, so the name says what the key does. It
-              // contains the visible text, which WCAG 2.5.3 requires.
+              // nothing on its own, so the name says what the key does. Each
+              // state's name contains that state's visible tooltip text, which
+              // WCAG 2.5.3 requires — check both halves in every locale when
+              // editing either, since three of the ten failed it once already.
               aria-label={micProps.ariaLabel ?? micProps.tooltip}
               aria-disabled={micProps.disabled ? true : undefined}
               onPointerDown={(e) => {
@@ -538,8 +575,6 @@ export default function App() {
                   setIsCommandMenuOpen((prev) => !prev);
                 }
               }}
-              onFocus={() => setIsHovered(true)}
-              onBlur={() => setIsHovered(false)}
               className={micProps.className}
               style={{
                 ...micProps.style,
@@ -570,14 +605,22 @@ export default function App() {
               }}
             >
               <button
-                className="w-full px-3 py-2 text-left text-sm font-medium hover:bg-muted focus:bg-muted focus:outline-none"
+                // `toggleListening` is a no-op while a transcription is running,
+                // so during processing this offered "Start listening" — the
+                // opposite of what the button beside it was doing — and did
+                // nothing when pressed. The mic itself says so now; this has to
+                // agree with it.
+                disabled={isProcessing && !isRecording}
+                className="w-full px-3 py-2 text-left text-sm font-medium hover:bg-muted focus:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
                 onClick={() => {
                   toggleListening();
                 }}
               >
-                {isRecording
-                  ? t("app.commandMenu.stopListening")
-                  : t("app.commandMenu.startListening")}
+                {isProcessing && !isRecording
+                  ? t("app.mic.processing")
+                  : isRecording
+                    ? t("app.commandMenu.stopListening")
+                    : t("app.commandMenu.startListening")}
               </button>
               <div className="h-px bg-border" />
               <button
