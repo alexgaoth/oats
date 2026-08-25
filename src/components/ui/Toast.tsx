@@ -34,7 +34,11 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const id = Math.random().toString(36).substring(2, 11);
       const newToast: ToastState = { ...props, id, createdAt: Date.now() };
 
-      setToasts((prev) => [...prev, newToast]);
+      // Bounded. The dictation panel is a 96px overlay whose window is resized
+      // to hold the stack, so an uncapped stack is both an unreadable pile and
+      // a growing interactive rectangle over the user's desktop. Three is what
+      // WINDOW_SIZES.WITH_TOAST is measured to fit (324x302); the oldest goes.
+      setToasts((prev) => [...prev, newToast].slice(-MAX_VISIBLE_TOASTS));
 
       const duration = props.duration ?? (props.variant === "destructive" ? 6000 : 3500);
       if (duration > 0) {
@@ -105,6 +109,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     </ToastContext.Provider>
   );
 };
+
+/** Kept in step with `WINDOW_SIZES.WITH_TOAST` in `windowConfig.js`. */
+const MAX_VISIBLE_TOASTS = 3;
 
 const ToastViewport: React.FC<{
   toasts: ToastState[];

@@ -31,7 +31,13 @@ const FLOATING_OVERLAY_TYPE =
 const WINDOW_SIZES = {
   BASE: { width: 96, height: 96 },
   WITH_MENU: { width: 240, height: 280 },
-  WITH_TOAST: { width: 400, height: 500 },
+  // Measured, not guessed: three stacked toasts occupy 324x302 from the
+  // window's bottom-right (`w-75` toast, `gap-1.5`, viewport at `bottom-20
+  // right-6`). The old 400x500 was 65% larger than the most it can ever hold —
+  // and while a toast is up this window is *interactive*, so every one of those
+  // spare pixels was a transparent rectangle swallowing clicks meant for
+  // whatever is behind it. Keep in step with MAX_VISIBLE_TOASTS in Toast.tsx.
+  WITH_TOAST: { width: 340, height: 320 },
   EXPANDED: { width: 400, height: 500 },
 };
 
