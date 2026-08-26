@@ -4,6 +4,7 @@ import { cn } from "../lib/utils";
 import { ScrollFade, useScrollFade } from "./useScrollFade";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
+import { revealRate, revealedCount, revealedText, splitWords } from "../../helpers/wordReveal.mjs";
 
 // The detected dialogue — what Oats has actually heard, while it is hearing it.
 //
@@ -82,6 +83,70 @@ export default function ConversationDialogue({ className }: { className?: string
   const partial = (micPartial || systemPartial || "").trim();
   const partialSource = micPartial ? "mic" : "system";
 
+  // Pay the newest turn out at the pace it was said.
+  //
+  // Local Whisper — the default — hands over finished ~5s chunks, so without
+  // this a paragraph appears at once and then nothing happens for five seconds.
+  // The words are the point of this surface; they should arrive like words.
+  // Only the newest turn is revealed; everything above it is already read.
+  const newest = turns.length ? turns[turns.length - 1] : null;
+  const newestId = newest?.id ?? "";
+  const newestText = newest?.text ?? "";
+  const reveal = useRef({ id: "", from: 0, at: 0, rate: 0 });
+  const [, setTick] = useState(0);
+
+  // In an effect, never in the render body: React 19's StrictMode deliberately
+  // double-invokes render, and a ref mutated there would advance the reveal
+  // twice per frame.
+  useEffect(() => {
+    const total = splitWords(newestText).length;
+    if (!total) return;
+    if (reveal.current.id !== newestId) {
+      reveal.current = { id: newestId, from: 0, at: Date.now(), rate: revealRate(total) };
+      setTick((n) => n + 1);
+      return;
+    }
+    const shown = revealedCount({
+      total,
+      from: reveal.current.from,
+      elapsedMs: Date.now() - reveal.current.at,
+      rate: reveal.current.rate,
+    });
+    // The same turn grew: continue from what is on screen rather than retyping
+    // the paragraph, and re-price the rate against the new backlog.
+    if (total > reveal.current.from && shown < total) {
+      reveal.current = {
+        id: newestId,
+        from: shown,
+        at: Date.now(),
+        rate: revealRate(total - shown),
+      };
+      setTick((n) => n + 1);
+    }
+  }, [newestId, newestText]);
+
+  const newestVisible = newest
+    ? revealedText(
+        newestText,
+        revealedCount({
+          total: splitWords(newestText).length,
+          from: reveal.current.id === newestId ? reveal.current.from : 0,
+          elapsedMs: reveal.current.id === newestId ? Date.now() - reveal.current.at : 0,
+          rate: reveal.current.rate,
+        })
+      )
+    : null;
+
+  // Tick only while there is something left to say. When the turn is fully
+  // revealed the timer stops, so a quiet room costs nothing — the rule this
+  // repository learned the hard way about animation that never ends.
+  const revealing = Boolean(newestVisible && !newestVisible.done);
+  useEffect(() => {
+    if (!revealing) return undefined;
+    const timer = window.setInterval(() => setTick((n) => n + 1), 90);
+    return () => window.clearInterval(timer);
+  }, [revealing]);
+
   // Follow the newest turn, but stop the moment the reader scrolls away.
   //
   // Auto-scrolling a reader off the line they are reading is the specific way
@@ -107,7 +172,7 @@ export default function ConversationDialogue({ className }: { className?: string
   // moment reliability was in question, with no further segment coming to
   // re-scroll it. A window resize did the same, 208px to 85px.
   const { faded, measure } = useScrollFade(scroller, turns, stickToEnd);
-  useEffect(stickToEnd, [turns, partial, following, stickToEnd]);
+  useEffect(stickToEnd, [turns, partial, newestVisible?.text, following, stickToEnd]);
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
@@ -180,7 +245,11 @@ export default function ConversationDialogue({ className }: { className?: string
                     separator has to be a character. */}
                   <span className="sr-only">: </span>
                 </span>
-                <span className="text-foreground/85">{turn.text}</span>
+                <span className="text-foreground/85">
+                  {newest && turn.id === newest.id && newestVisible
+                    ? newestVisible.text
+                    : turn.text}
+                </span>
               </li>
             ))}
             {partial && (
