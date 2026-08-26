@@ -1266,26 +1266,31 @@ body:has(.agent-overlay-window) #root {
 .oats-field-mode .oats-surface::before {
   content: "";
   position: absolute;
-  /* Wider than the text column and taller than the surface, so the feather
-     happens outside the words rather than across them. */
-  inset: -4% -6%;
+  /* Square, and larger than the column, so the circle is a circle rather than
+     an ellipse squeezed by the box it is drawn in. */
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  transform: translate(-50%, -50%);
   z-index: -1;
   pointer-events: none;
-  background: var(--color-background);
-  /* Feathered on both axes and composited, rather than one radial gradient.
-     A radial shows its own bounding box as an arc across the sky — visible in
-     the first screenshot of this — because the ellipse reaches transparent at
-     the corners while the edge midpoints are still half paper. Two linear
-     masks intersected fade to nothing on every side. */
-  -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, black 14%, black 82%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, black 14%, black 82%, transparent 100%);
-  mask-composite: intersect;
-  opacity: 0.92;
+  /* One circular gradient, not two composited masks.
+     
+     The first attempt was a radial sized in percentages of a tall narrow
+     column, which made an *ellipse* and showed its own edge as an arc across
+     the sky. The retreat to two `mask-composite` masks fixed the arc and
+     introduced a rectangle — and costs two mask layers plus a composite on a
+     full-height element. A circle whose falloff completes well inside its own
+     box has neither problem, and is one static paint. */
+  background: radial-gradient(
+    circle closest-side at 50% 50%,
+    var(--color-background) 0%,
+    var(--color-background) 17%,
+    color-mix(in oklab, var(--color-background) 86%, transparent) 23%,
+    color-mix(in oklab, var(--color-background) 45%, transparent) 29%,
+    transparent 36%
+  );
 }
 
 /* A sprig perched on a control. It sits until pressed, then hops off and is
