@@ -32,7 +32,7 @@ import {
 // explicit that faking the grain with noise or blur looks cheap rather than
 // intentional. Better to omit the texture than to counterfeit it.
 
-const BLADE_COUNT = 900;
+const BLADE_COUNT = 1700;
 const FRAME_MS = 1000 / 30;
 
 const FALLBACK_GOLD: Rgb = [198 / 255, 123 / 255, 39 / 255];

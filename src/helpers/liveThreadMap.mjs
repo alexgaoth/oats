@@ -19,8 +19,10 @@
 // removing (CLAUDE.md, the conversation contour). Positions are a function of
 // the data, recomputed only when the data changes.
 
-/** Below this a topic got a sentence, not a subject — drawing it is noise. */
-const MIN_TOPIC_MS = 8000;
+/** Below this a topic got a sentence, not a subject — drawing it is noise.
+ *  Four seconds, not eight: at eight the map stayed empty through the opening
+ *  minutes of a conversation, which is exactly when somebody looks for it. */
+const MIN_TOPIC_MS = 4000;
 
 /** More than this and the map is a hairball; the rest stay in the thread list. */
 const MAX_NODES = 14;

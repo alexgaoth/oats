@@ -47,7 +47,7 @@ import {
 // about 1.8ms/frame at 2x DPR.
 
 /** Blades at full density. Stepped down automatically if frames start slipping. */
-const BLADE_COUNT = 1800;
+const BLADE_COUNT = 3600;
 
 /** Frame budget. Above this for a sustained stretch, the field thins itself. */
 const FRAME_BUDGET_MS = 20.5;

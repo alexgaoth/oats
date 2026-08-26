@@ -1248,8 +1248,45 @@ body:has(.agent-overlay-window) #root {
 
 /* ── Field mode ─────────────────────────────────────────────────────────────
    The second interface (helpers/uiMode.mjs). The world itself is drawn by
-   `conversation/field/` — WebGL, with a 2D canvas fallback — not by CSS; what
-   is left here is the one piece of field furniture that lives on a control. */
+   `conversation/field/` — WebGL, with a 2D canvas fallback — not by CSS.
+
+   What CSS owns is the one rule that lets a world and an interface share a
+   screen: **the world never goes behind text.** Wheat is a dithered texture at
+   the contrast of body copy, and a paragraph laid over it is unreadable however
+   pretty the frame is — DESIGN.md §9.8 says so and every review of this mode
+   said so again. So the reading column gets its own paper, feathered at the
+   edges so the field is still visible either side of it rather than boxed off
+   behind a card. Static gradients: no frame cost. */
+
+.oats-field-mode .oats-surface {
+  position: relative;
+  isolation: isolate;
+}
+
+.oats-field-mode .oats-surface::before {
+  content: "";
+  position: absolute;
+  /* Wider than the text column and taller than the surface, so the feather
+     happens outside the words rather than across them. */
+  inset: -4% -6%;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--color-background);
+  /* Feathered on both axes and composited, rather than one radial gradient.
+     A radial shows its own bounding box as an arc across the sky — visible in
+     the first screenshot of this — because the ellipse reaches transparent at
+     the corners while the edge midpoints are still half paper. Two linear
+     masks intersected fade to nothing on every side. */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, black 14%, black 82%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, black 14%, black 82%, transparent 100%);
+  mask-composite: intersect;
+  opacity: 0.92;
+}
 
 /* A sprig perched on a control. It sits until pressed, then hops off and is
    gone — one shot, no loop, and it never intercepts the press it decorates. */

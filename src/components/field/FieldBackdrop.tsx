@@ -12,13 +12,17 @@ import { useSettingsStore } from "../../stores/settingsStore";
 //
 // The three props are the field's own design and are kept as they were:
 //
-//   live      — the wheat grows out of the ground while a conversation is being
-//               recorded and withdraws when it stops. Keeping it up permanently
-//               was tried and is not available: the renderer only comes to rest
-//               once the wheat has withdrawn, so a permanently grown field
-//               animates forever and measured **128.6 points of a core** at
-//               idle — the same failure that retired it. The world (sky, sun,
-//               horizon, farmhouse) is drawn always; the wheat is the gesture.
+//   live      — always true here. In the work interface the wheat grew only
+//               while recording, because the field was that interface's one
+//               moment of beauty; in field mode an empty field most of the time
+//               is not a field. Permanently grown wheat was tried once with
+//               `animate` still on and cost 128.6 points of a core, because the
+//               renderer only comes to rest once the wheat has withdrawn — so
+//               the two props are split instead: the field stands, and the wind
+//               is what waits for a conversation.
+//   animate   — wind only while recording. A still field is a photograph and
+//               costs nothing; a moving one is a frame loop, and this app runs
+//               with GPU compositing disabled on Linux.
 //   intensity — Conversation is the hero surface and gets the full sky.
 //               Intelligence and Settings are for *reading*, and §9.8 is
 //               explicit that the world must never compete with a word on
@@ -41,9 +45,9 @@ export default function FieldBackdrop({ surface }: { surface: string }) {
 
   return (
     <Field
-      live={recording}
+      live
       intensity={INTENSITY[surface] ?? 0.42}
-      animate={surface === "conversation"}
+      animate={recording && surface === "conversation"}
       className="fixed inset-0 -z-10"
     />
   );

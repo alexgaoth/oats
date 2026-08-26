@@ -44,7 +44,7 @@ export const HORIZON = 0.57;
 export const SUN_X = 0.34;
 
 /** How many motes of chaff drift in the air. Few — this is atmosphere, not snow. */
-export const CHAFF_COUNT = 34;
+export const CHAFF_COUNT = 58;
 
 /** Segments per blade. More segments = smoother curve; 5 is past the point of
  *  diminishing returns at the sizes a background layer is drawn at. */
