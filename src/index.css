@@ -56,6 +56,15 @@
 
   /* Border states */
   --color-border-subtle: #e3d9c6;
+  /* The edge of a control, as distinct from the line between two rows.
+     
+     `--color-border` is 1.24:1 on paper, which is right for a divider and wrong
+     for the only thing telling you where a field is. Oats controls are a bottom
+     hairline and nothing else (`selectClass`), so that hairline *is* the
+     control's boundary and SC 1.4.11 asks 3:1 of it. This is 3.31:1 and stays a
+     hairline — an underline in a book, not a box in a dashboard. Dividers keep
+     the quiet value. */
+  --color-border-control: #948263;
   --color-border-hover: #d3c6ac;
   --color-border-active: #c67b27;
 }
@@ -168,6 +177,7 @@
 
   /* Border states */
   --color-border-subtle: #3b352b;
+  --color-border-control: #7a7060;
   --color-border-hover: #4a4335;
   --color-border-active: #e0a34a;
   --color-link: #e0a34a;

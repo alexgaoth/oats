@@ -2351,7 +2351,7 @@ const selectClass =
   // the border it replaced — under the 3:1 SC 1.4.11 asks of the thing that
   // says where focus is. A keyboard user could not tell the microphone select
   // from the language select. The ring is the same one every button carries.
-  "h-10 w-full max-w-sm border-b border-border bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "h-10 w-full max-w-sm border-b border-border-control bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 function SettingsSurface() {
   const transcriptionMode = useSettingsStore((s) => s.transcriptionMode);
