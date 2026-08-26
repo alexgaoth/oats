@@ -366,8 +366,7 @@
    shorter animation (§8, §12), and the outgoing copy is not drawn at all. */
 @media (prefers-reduced-motion: reduce) {
   .oats-enter {
-    animation: oats-field-drift linear infinite;
-    will-change: transform, opacity;
+    animation: none;
   }
 }
 
