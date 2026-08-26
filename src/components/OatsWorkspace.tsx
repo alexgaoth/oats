@@ -2912,7 +2912,7 @@ export default function OatsWorkspace() {
     >
       {/* Behind everything, and only in field mode. Returns null otherwise, so
           work mode pays nothing for it. */}
-      <FieldBackdrop />
+      <FieldBackdrop surface={surface} />
       {/* Renders nothing. It drives microphone level and the dead-mic warning,
           and pre-warms the audio worklet so the first recording starts fast.
           It was previously mounted only inside unreachable ControlPanel markup,
