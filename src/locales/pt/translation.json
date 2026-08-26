@@ -1976,6 +1976,7 @@
       "summaryKeyPlaceholder": "Chave de API",
       "summaryModel": "Modelo",
       "apiKeyPlaceholder": "Chave de API da OpenAI",
+      "apiKeyFor": "Chave de API do {{provider}}",
       "microphone": "Microfone",
       "micBuiltIn": "Microfone integrado",
       "micSystemDefault": "Padrão do sistema",

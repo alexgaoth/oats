@@ -1971,6 +1971,7 @@
       "summaryKeyPlaceholder": "API 密钥",
       "summaryModel": "模型",
       "apiKeyPlaceholder": "OpenAI API 密钥",
+      "apiKeyFor": "{{provider}} API 密钥",
       "microphone": "麦克风",
       "micBuiltIn": "内置麦克风",
       "micSystemDefault": "系统默认",

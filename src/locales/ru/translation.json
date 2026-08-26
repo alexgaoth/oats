@@ -1984,6 +1984,7 @@
       "summaryKeyPlaceholder": "Ключ API",
       "summaryModel": "Модель",
       "apiKeyPlaceholder": "Ключ API OpenAI",
+      "apiKeyFor": "Ключ API {{provider}}",
       "microphone": "Микрофон",
       "micBuiltIn": "Встроенный микрофон",
       "micSystemDefault": "Системный по умолчанию",

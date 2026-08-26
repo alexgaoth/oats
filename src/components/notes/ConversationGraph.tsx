@@ -204,7 +204,7 @@ function ConversationGraphNodeCard({
               <button
                 type="button"
                 onClick={() => node.suggestion && onSearch(node.suggestion)}
-                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-foreground px-2 py-1 text-[11px] font-medium text-foreground-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ExternalLink size={11} />
                 {t("notes.conversationGraph.search")}

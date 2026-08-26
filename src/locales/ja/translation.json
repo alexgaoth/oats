@@ -1976,6 +1976,7 @@
       "summaryKeyPlaceholder": "API キー",
       "summaryModel": "モデル",
       "apiKeyPlaceholder": "OpenAI API キー",
+      "apiKeyFor": "{{provider}} API キー",
       "microphone": "マイク",
       "micBuiltIn": "内蔵マイク",
       "micSystemDefault": "システムの既定",

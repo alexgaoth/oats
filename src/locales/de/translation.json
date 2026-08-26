@@ -1976,6 +1976,7 @@
       "summaryKeyPlaceholder": "API-Schlüssel",
       "summaryModel": "Modell",
       "apiKeyPlaceholder": "OpenAI-API-Schlüssel",
+      "apiKeyFor": "{{provider}}-API-Schlüssel",
       "microphone": "Mikrofon",
       "micBuiltIn": "Eingebautes Mikrofon",
       "micSystemDefault": "Systemstandard",

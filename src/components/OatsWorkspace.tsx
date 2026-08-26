@@ -2554,7 +2554,9 @@ function SettingsSurface() {
             <input
               id="api-key"
               name={`${cloudProvider}-api-key`}
-              aria-label={t("oats.settings.apiKeyPlaceholder")}
+              aria-label={t("oats.settings.apiKeyFor", {
+                provider: REALTIME_PROVIDERS.find((p) => p.id === cloudProvider)?.name ?? "OpenAI",
+              })}
               // A password manager offering to fill a login here, or to save an
               // API key as one, is noise on the one screen that is meant to be
               // quiet.
@@ -2562,7 +2564,9 @@ function SettingsSurface() {
               spellCheck={false}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder={t("oats.settings.apiKeyPlaceholder")}
+              placeholder={t("oats.settings.apiKeyFor", {
+                provider: REALTIME_PROVIDERS.find((p) => p.id === cloudProvider)?.name ?? "OpenAI",
+              })}
               type="password"
               className={cn(selectClass, "mt-3")}
             />
