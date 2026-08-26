@@ -1982,7 +1982,12 @@ function QuietAction({
       type="button"
       aria-label={ariaLabel}
       onClick={onClick}
-      className="rounded-sm font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // 24px tall, and the padding is negative-margined away so the target grows
+      // without the words moving. These measured 23.5 x 12 — Map, Back, Copy,
+      // Save and Delete all of them — which is under WCAG 2.2's 24x24 minimum
+      // for a pointer target, and Delete is not a control to make small.
+      // `inline-flex` rather than `block`: these sit on baseline-aligned rows.
+      className="-my-1.5 inline-flex min-h-6 items-center rounded-sm py-1.5 font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {label}
     </button>
@@ -1995,7 +2000,10 @@ function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-sm font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // Same 24px floor as QuietAction, same negative margin so the words do
+      // not move. `Map` measured 23.5 x 12 and is the only door to the lifetime
+      // graph.
+      className="-my-1.5 inline-flex min-h-6 items-center rounded-sm py-1.5 font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {label}
     </button>
@@ -2763,7 +2771,7 @@ function SettingsSurface() {
           <button
             type="button"
             onClick={() => window.electronAPI?.openLogsFolder?.()}
-            className="rounded-sm text-sm text-muted-foreground underline underline-offset-4 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-my-1 inline-flex min-h-6 items-center rounded-sm py-1 text-sm text-muted-foreground underline underline-offset-4 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t("oats.settings.openDataFolder")}
           </button>
@@ -2773,7 +2781,7 @@ function SettingsSurface() {
       <button
         type="button"
         onClick={() => setAdvanced(true)}
-        className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-4 inline-flex min-h-6 items-center gap-1.5 py-1.5 text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {t("oats.settings.advanced")}
         <ChevronRight size={12} />
