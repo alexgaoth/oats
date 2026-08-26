@@ -213,6 +213,10 @@ export default function FieldGL({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  /** 0..1, eased toward the pointer's presence so the parting cannot pop. */
+  const pointerFadeRef = useRef(0);
+  /** Where the pointer last was, kept while the parting fades out. */
+  const pointerLastRef = useRef<{ x: number; y: number } | null>(null);
   const paletteRef = useRef<Palette | null>(null);
   const failedRef = useRef(false);
   const liveRef = useRef(live);
@@ -478,8 +482,16 @@ export default function FieldGL({
           gl.uniform2f(bladeU.resolution, width, height);
           gl.uniform1f(bladeU.time, time);
           gl.uniform1f(bladeU.intro, grow);
-          gl.uniform2f(bladeU.pointer, pointer?.x ?? 0, pointer?.y ?? 0);
-          gl.uniform1f(bladeU.pointerActive, pointer ? 1 : 0);
+          // Ease toward presence rather than switching. As a flag the parting
+          // dropped between two frames when the cursor left, which reads as a
+          // twitch in whatever it was next to. Holding the last position means
+          // the wheat closes where it was opened rather than snapping shut.
+          if (pointer) pointerLastRef.current = pointer;
+          pointerFadeRef.current += ((pointer ? 1 : 0) - pointerFadeRef.current) * 0.18;
+          if (pointerFadeRef.current < 0.002) pointerFadeRef.current = 0;
+          const held = pointer ?? pointerLastRef.current;
+          gl.uniform2f(bladeU.pointer, held?.x ?? 0, held?.y ?? 0);
+          gl.uniform1f(bladeU.pointerActive, held ? pointerFadeRef.current : 0);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
           for (let band = 0; band < BANDS; band += 1) {

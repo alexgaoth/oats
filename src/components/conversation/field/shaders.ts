@@ -338,20 +338,24 @@ void main() {
   float baseX  = x * uResolution.x;
   float baseY  = bandDepth * uResolution.y;
 
-  // Depth parallax: the cursor's offset from centre shifts nearer bands further.
-  float pointerOffset = (uPointer.x / uResolution.x - 0.5) * 2.0;
-  baseX += pointerOffset * uParallax * uPointerActive;
+  // No depth parallax. It shifted *every* blade by the cursor's offset from
+  // centre, so moving the mouse slid the whole field sideways and leaving it
+  // snapped the field back — one pointer, a row of wheat, and a jump at the
+  // edge. The cursor should displace what it is next to and nothing else.
 
   float bend = wind * bladeH * uWindScale * 0.3;
 
   // The field parts around the cursor — always sideways, so it opens rather
-  // than flattens.
-  if (uPointerActive > 0.5) {
+  // than flattens. uPointerActive is a 0..1 ramp, not a flag: as a boolean it
+  // switched the parting on and off between frames, which pops for every blade
+  // inside the radius at once. (No backticks in this file — the whole shader
+  // lives in a JS template literal, and one would end it.)
+  if (uPointerActive > 0.001) {
     vec2 d = vec2(baseX - uPointer.x, baseY - uPointer.y);
     float dist = length(d);
     if (dist < ${f(POINTER_RADIUS)}) {
       float push = pow(1.0 - dist / ${f(POINTER_RADIUS)}, 2.0);
-      bend += (d.x >= 0.0 ? 1.0 : -1.0) * push * bladeH * 0.55;
+      bend += (d.x >= 0.0 ? 1.0 : -1.0) * push * bladeH * 0.55 * uPointerActive;
     }
   }
 

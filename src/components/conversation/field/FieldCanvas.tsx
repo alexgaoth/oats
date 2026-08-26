@@ -82,6 +82,10 @@ export default function FieldCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  /** 0..1, eased toward the pointer's presence so the parting cannot pop. */
+  const pointerFadeRef = useRef(0);
+  /** Where the pointer last was, kept while the parting fades out. */
+  const pointerLastRef = useRef<{ x: number; y: number } | null>(null);
   const paletteRef = useRef<CanvasPalette | null>(null);
   // Growth state lives in a ref, not the effect closure: `live` is in the
   // effect's deps, so the closure is torn down on every transition — exactly
@@ -177,8 +181,17 @@ export default function FieldCanvas({
       // The wheat follows `live`; the world below does not.
       const grow = still ? (live ? 1 : 0) : liveProgress(elapsed);
       const time = still ? 0 : elapsed / 1000;
-      const pointer = still ? null : pointerRef.current;
-      const parallax = pointer ? (pointer.x / width - 0.5) * 2 : 0;
+      const live_pointer = still ? null : pointerRef.current;
+      // Eased, and holding the last position while it fades — as a flag the
+      // parting dropped between two frames when the cursor left the window.
+      if (live_pointer) pointerLastRef.current = live_pointer;
+      pointerFadeRef.current += ((live_pointer ? 1 : 0) - pointerFadeRef.current) * 0.18;
+      if (pointerFadeRef.current < 0.002) pointerFadeRef.current = 0;
+      const pointer = pointerFadeRef.current > 0 ? (live_pointer ?? pointerLastRef.current) : null;
+      const pointerFade = pointerFadeRef.current;
+      // No parallax. It shifted every blade by the cursor's offset from centre,
+      // so the whole field slid with the mouse and snapped back on the way out.
+      const parallax = 0;
 
       // The world: sky warming toward the horizon, and earth below it. No
       // dither — ordered dithering per pixel is not affordable here, and §7 is
@@ -314,7 +327,7 @@ export default function FieldCanvas({
             const distance = Math.hypot(dx, dy);
             if (distance < POINTER_RADIUS) {
               const push = (1 - distance / POINTER_RADIUS) ** 2;
-              bend += (dx >= 0 ? 1 : -1) * push * bladeHeight * 0.55;
+              bend += (dx >= 0 ? 1 : -1) * push * bladeHeight * 0.55 * pointerFade;
             }
           }
 
