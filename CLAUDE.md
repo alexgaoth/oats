@@ -86,12 +86,17 @@ opt-out for legacy components only.
 
 The pastoral world was deleted on 2026-08-20 because Oats carried two brands at once and the landscape won every screen. It is back, as an **opt-in second mode** rather than the product's face: `uiMode` is `work` (the ledger — paper, graphite, gold, default) or `field` (sky, horizon, wheat, chaff). `helpers/uiMode.mjs` resolves it; `.oats-field-mode` on the shell gates everything. `DESIGN.md` §9.8 remains the **conversation contour**. Work mode must stay exactly what it is — the field may not leak into it, and no scenery belongs on a work-mode surface.
 
-**A full-screen layer cannot be animated continuously here, and this is measured, not cautious.** Linux forces `--disable-gpu-compositing`, so an animated frame repaints everything under it. On the Conversation surface at rest: still field **2.6 points** of a core, four 3px chaff motes drifting **+0.8**, three full-width bands swaying **104**, thirty-nine individually-swaying blades **131.8** — worse than the 113 that killed the first field. Cost tracks _animated area_, not element count or transform type (skew and translate measured the same). Two rules follow:
+**The field is the original WebGL renderer, recovered from `575102d^`** — `components/conversation/field/` (GL, with a 2D-canvas fallback, one model). Do not rebuild it in CSS; a hand-rolled SVG field was tried and is not close. It keeps its three props, and they are load-bearing:
 
-- Anything that animates over painted background needs `will-change` on **both** — the mover and the background beneath it. Promoting the motes alone took chaff from 98% to 0.8%.
-- Motion across a large area is an **event**, never a state. The wheat is still; a gust runs one cycle on entering field mode and on a recording starting or stopping. Idle measures **1.1 points**.
+- `live` — the wheat is grown. Always true in field mode; an empty sky is not a field.
+- `animate` — the wind. **Only while recording.** The renderer comes to rest _only once the wheat withdraws_, so `live` and `animate` both on permanently measured **128.6 points of a core**. Split, the standing field measures **0.7**.
+- `intensity` — 1 on Conversation, 0.42 on the reading surfaces, because §9.8 forbids the world competing with a word.
 
-Blades are their own small SVGs placed with CSS. One stretched full-width `viewBox` with `preserveAspectRatio="none"` scales x by ~24 and turns every stalk into a slab with a lily pad on top.
+**The world never goes behind text.** Wheat is a dithered texture at roughly body-copy contrast. The reading column gets its own paper — one circular gradient on a square box sized in `vmax`, falloff completing inside it. A radial sized in percentages of a tall column is an _ellipse_ and shows its edge as an arc; two composited masks cure the arc by drawing a rectangle and cost two mask layers.
+
+**One cursor displaces one place.** The renderers carried a depth _parallax_ that shifted every blade by the pointer's offset from centre, gated by a binary flag — so the mouse slid the whole field and leaving it snapped back. Removed; what remains is the local parting inside `POINTER_RADIUS`, on a 0..1 ramp that holds the last position while it fades. The pointer effect exists only while animating (`still ? null : pointerRef.current`), so at rest the cursor does nothing.
+
+**No backticks in `shaders.ts`.** The whole shader is a JS template literal; one in a comment ends it, and the parse error points at the GLSL rather than at the comment.
 
 Stages 8–10 in `IMPLEMENTATION.md` are built but not yet exercised against real
 speech. The repository contains inherited OpenWhispr components throughout; they
