@@ -1,8 +1,9 @@
 // A conversation as a note in an Obsidian vault.
 //
 // Pure and DOM-free so it can be pinned: given a stored note, its topic
-// snapshot and its events, produce the filename and the markdown. The main
-// process writes the file; nothing here touches the filesystem.
+// snapshot, its events and its transcript segments, produce the filename and
+// the markdown. The main process writes the file; nothing here touches the
+// filesystem.
 //
 // The point of the export is not that markdown is a nicer container than
 // SQLite. It is that Oats already knows which conversations share a subject —
@@ -10,6 +11,8 @@
 // vault already has a graph view. Writing each topic as a `[[wikilink]]` hands
 // that structure to a tool the reader already uses, instead of asking them to
 // come back here to see it.
+
+import { buildConversationGraph, responseReason } from "./conversationGraph.mjs";
 
 /** Characters no common filesystem will take, plus the ones Obsidian reads as syntax. */
 const UNSAFE_FILENAME = /[/\\?%*:|"<>#^[\]]/g;
@@ -21,6 +24,12 @@ const UNSAFE_LINK = /[[\]|#^]/g;
 const MIN_TOPIC_MS = 20_000;
 
 const pad = (n) => String(n).padStart(2, "0");
+
+/** Speech has no line breaks in it; a title or a topic label with one is a parse hazard. */
+const oneLine = (value) =>
+  String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 /** `YYYY-MM-DD`, in local time — the date the reader remembers, not UTC's. */
 export function isoDate(ms) {
@@ -36,21 +45,34 @@ export function humanDuration(seconds) {
   return `${Math.floor(mins / 60)}h${pad(mins % 60)}`;
 }
 
+/**
+ * How long the conversation ran, taken from the transcript itself.
+ *
+ * `audio_duration_seconds` is written only by the INSERT in `saveNote`, and a
+ * conversation's note is created *before* its recording starts — `updateNote`
+ * does not even list the column as writable. So it is null for every
+ * conversation Oats records, and a duration read from it never appeared at all.
+ * The transcript is a timed record: every segment carries the epoch millisecond
+ * it was finalized at, so the span it covers is the conversation's length, and
+ * it comes from the speech rather than from a field nothing fills.
+ */
+export function transcriptSpanSeconds(segments) {
+  const times = (Array.isArray(segments) ? segments : [])
+    .map((segment) => segment?.timestamp)
+    .filter((t) => Number.isFinite(t));
+  if (times.length < 2) return null;
+  return (Math.max(...times) - Math.min(...times)) / 1000;
+}
+
 export function safeFilename(title, ms) {
-  const cleaned = String(title || "")
-    .replace(UNSAFE_FILENAME, "-")
-    .replace(/\s+/g, " ")
-    .trim();
+  const cleaned = oneLine(String(title || "").replace(UNSAFE_FILENAME, "-"));
   const stem = cleaned || "Untitled conversation";
   // The date leads so a vault folder sorts chronologically without a plugin.
   return `${isoDate(ms)} ${stem}`.slice(0, 120) + ".md";
 }
 
 export function topicLink(label) {
-  const cleaned = String(label || "")
-    .replace(UNSAFE_LINK, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const cleaned = oneLine(String(label || "").replace(UNSAFE_LINK, ""));
   return cleaned ? `[[${cleaned}]]` : null;
 }
 
@@ -69,50 +91,129 @@ export function linkableTopics(snapshot, limit = 12) {
     .map((n) => n.label);
 }
 
+/**
+ * The questions nobody answered.
+ *
+ * The verdict comes from the same place the Intelligence surface's "what this
+ * left open" panel reads it — the question's own `response` event, through
+ * `buildConversationGraph`. It used to be read from `metadata.outcome` on the
+ * *question*, which nothing writes there: the aide inserts a question as
+ * `{ state: "asked" }` and merges `{ state: <outcome> }` over it, while
+ * `outcome` belongs to responses and suggestions. So the filter matched every
+ * question ever asked and the section listed the answered ones too.
+ *
+ * Going through the graph rather than that `state` is deliberate even now that
+ * both are written: two lists of what a conversation left open — one on screen,
+ * one in the reader's vault — must never be able to disagree.
+ *
+ * Repeats are never suppressed upstream (CLAUDE.md: each asking gets its own
+ * card and its own event, sharing a `groupKey`), so one question can arrive
+ * three times. One question is one line here, and it is open only if no asking
+ * of it was ever answered — an answer on the third asking answers the question.
+ */
+export function openQuestions(events) {
+  const groups = new Map();
+  for (const node of buildConversationGraph(Array.isArray(events) ? events : [])) {
+    if (!node.question) continue;
+    const text = String(node.question.text || "").trim();
+    if (!text) continue;
+    const key = node.question.metadata?.groupKey || text.toLowerCase();
+    const answered = responseReason(node.response) === "answered";
+    const seen = groups.get(key);
+    if (seen) seen.answered = seen.answered || answered;
+    else groups.set(key, { text, answered });
+  }
+  return [...groups.values()].filter((group) => !group.answered).map((group) => group.text);
+}
+
+/**
+ * Whether a note update is worth writing into the vault.
+ *
+ * The mirror hangs off `db-update-note`, which is also how a recording
+ * checkpoints itself — and a conversation's note is created with a placeholder
+ * title *before* the recording starts. So every lull in a recording used to
+ * write `<date> Untitled conversation.md`, and when the real title landed after
+ * the stop it was written *beside* that file, leaving the placeholder in the
+ * reader's vault for good. Nothing is mirrored until the conversation has a
+ * name of its own.
+ *
+ * Dictation is excluded for the same reason it always was: every dictation is a
+ * note too, and mirroring those fills the vault with one-line fragments.
+ */
+export function shouldMirrorNote(note, placeholderTitle) {
+  if (!note || note.note_type !== "meeting") return false;
+  const title = oneLine(note.title);
+  return Boolean(title) && title !== oneLine(placeholderTitle);
+}
+
 /** YAML needs quoting for anything that could be read as structure. */
 function yamlString(value) {
   const s = String(value ?? "");
-  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  return `"${s
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")}"`;
+}
+
+/** The stored transcript as speaker-labelled markdown, in the reader's language. */
+function renderTranscript(segments, strings) {
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment) => {
+      const text = String(segment?.text || "").trim();
+      if (!text) return null;
+      return `**${segment?.source === "mic" ? strings.you : strings.room}:** ${text}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /**
  * Build the vault note.
  *
- * `strings` carries every user-facing heading, so the export speaks the
- * reader's language rather than putting English headings in ten locales'
- * vaults — the same rule `transcriptText` follows for speaker labels.
+ * `strings` carries every user-facing heading and speaker label, so the export
+ * speaks the reader's language rather than putting English headings in ten
+ * locales' vaults.
  */
-export function buildVaultNote({ note, snapshot, events = [], transcript = "", strings }) {
+export function buildVaultNote({ note, snapshot, events = [], segments = [], strings }) {
   const createdMs = Number.isFinite(note?.createdAtMs)
     ? note.createdAtMs
     : Date.parse(note?.created_at ?? "") || Date.now();
 
   const topics = linkableTopics(snapshot);
   const links = topics.map(topicLink).filter(Boolean);
-  const duration = humanDuration(note?.audio_duration_seconds);
+  const recorded = Number.isFinite(note?.audio_duration_seconds)
+    ? note.audio_duration_seconds
+    : null;
+  const duration = humanDuration(recorded > 0 ? recorded : transcriptSpanSeconds(segments));
 
   const front = ["---", `date: ${isoDate(createdMs)}`, `source: ${yamlString("Oats")}`];
+  // The conversation's own id, so the mirror can recognise its file after the
+  // reader renames the conversation and never overwrites somebody else's note
+  // that happens to share a title and a date.
+  if (Number.isFinite(note?.id)) front.push(`oats_id: ${note.id}`);
   if (duration) front.push(`duration: ${duration}`);
   if (topics.length) front.push(`topics: [${topics.map(yamlString).join(", ")}]`);
   front.push("---", "");
 
-  const out = [...front, `# ${note?.title || strings.untitled}`, ""];
+  const out = [...front, `# ${oneLine(note?.title) || strings.untitled}`, ""];
 
   const summary = (note?.enhanced_content || note?.content || "").trim();
   if (summary) out.push(`## ${strings.summary}`, "", summary, "");
 
   // Questions nobody answered are the reason to come back, so they lead the
   // body rather than trailing the transcript.
-  const open = events.filter((e) => e?.kind === "question" && e?.metadata?.outcome !== "answered");
+  const open = openQuestions(events);
   if (open.length) {
     out.push(`## ${strings.openQuestions}`, "");
-    for (const q of open) out.push(`- ${String(q.text || "").trim()}`);
+    for (const question of open) out.push(`- ${question}`);
     out.push("");
   }
 
   if (links.length) out.push(`## ${strings.topics}`, "", links.join(" · "), "");
 
-  const body = String(transcript || "").trim();
+  const body = renderTranscript(segments, strings);
   if (body) out.push(`## ${strings.transcript}`, "", body, "");
 
   return { filename: safeFilename(note?.title, createdMs), markdown: out.join("\n") };
