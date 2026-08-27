@@ -1955,6 +1955,10 @@
       "copy": "Копировать",
       "copied": "Скопировано",
       "save": "Сохранить",
+      "vault": "Хранилище",
+      "vaultSaved": "В хранилище",
+      "vaultFailed": "Не сохранено",
+      "vaultLabel": "Сохранить этот разговор в хранилище Obsidian",
       "delete": "Удалить",
       "deleteConfirm": "Удалить этот разговор?",
       "deleteYes": "Удалить",
@@ -1984,6 +1988,11 @@
       "summaryHint": "Модель, которая пишет заголовок, сводку и темы после разговора.",
       "summaryKeyPlaceholder": "Ключ API",
       "summaryModel": "Модель",
+      "vault": "Хранилище Obsidian",
+      "vaultHint": "Каждый разговор записывается заметкой, темы — как [[ссылки]].",
+      "vaultChoose": "Выбрать папку",
+      "vaultChange": "Изменить",
+      "vaultStop": "Остановить",
       "apiKeyPlaceholder": "Ключ API OpenAI",
       "apiKeyFor": "Ключ API {{provider}}",
       "microphone": "Микрофон",
@@ -2037,6 +2046,15 @@
       "confidence": "Уверенность",
       "silence": "Тишина (секунды)",
       "searchUrl": "Базовый URL поиска (только HTTPS)"
+    },
+    "vault": {
+      "untitled": "Разговор без названия",
+      "summary": "Сводка",
+      "openQuestions": "Открытые вопросы",
+      "topics": "Темы",
+      "transcript": "Расшифровка",
+      "you": "Вы",
+      "room": "Комната"
     }
   },
   "questionCard": {

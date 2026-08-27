@@ -1949,6 +1949,10 @@
       "copy": "Copiar",
       "copied": "Copiado",
       "save": "Salvar",
+      "vault": "Cofre",
+      "vaultSaved": "No cofre",
+      "vaultFailed": "Não salvo",
+      "vaultLabel": "Salvar esta conversa no cofre do Obsidian",
       "delete": "Excluir",
       "deleteConfirm": "Excluir esta conversa?",
       "deleteYes": "Excluir",
@@ -1976,6 +1980,11 @@
       "summaryHint": "O modelo que escreve o título, o resumo e os tópicos após uma conversa.",
       "summaryKeyPlaceholder": "Chave de API",
       "summaryModel": "Modelo",
+      "vault": "Cofre do Obsidian",
+      "vaultHint": "Cada conversa se grava como uma nota, com os temas como [[links]].",
+      "vaultChoose": "Escolher pasta",
+      "vaultChange": "Alterar",
+      "vaultStop": "Parar",
       "apiKeyPlaceholder": "Chave de API da OpenAI",
       "apiKeyFor": "Chave de API do {{provider}}",
       "microphone": "Microfone",
@@ -2029,6 +2038,15 @@
       "confidence": "Confiança",
       "silence": "Silêncio (segundos)",
       "searchUrl": "URL base de busca (apenas HTTPS)"
+    },
+    "vault": {
+      "untitled": "Conversa sem título",
+      "summary": "Resumo",
+      "openQuestions": "Perguntas em aberto",
+      "topics": "Temas",
+      "transcript": "Transcrição",
+      "you": "Você",
+      "room": "Sala"
     }
   },
   "questionCard": {

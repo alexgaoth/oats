@@ -416,6 +416,14 @@ declare global {
         streamingProvider: string;
       } | null>;
 
+      configureObsidianVault?: (config: {
+        vaultPath: string | null;
+        enabled: boolean;
+      }) => Promise<{ success: boolean }>;
+      chooseObsidianVault?: () => Promise<{ success: boolean; path?: string }>;
+      exportNoteToVault?: (
+        noteId: number
+      ) => Promise<{ success: boolean; filePath?: string; error?: string }>;
       getNoteRecordingConfig?: () => Promise<{
         success: boolean;
         providers: Array<{

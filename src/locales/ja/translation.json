@@ -1949,6 +1949,10 @@
       "copy": "コピー",
       "copied": "コピーしました",
       "save": "保存",
+      "vault": "ボールト",
+      "vaultSaved": "保存しました",
+      "vaultFailed": "保存できません",
+      "vaultLabel": "この会話を Obsidian ボールトに保存",
       "delete": "削除",
       "deleteConfirm": "この会話を削除しますか？",
       "deleteYes": "削除",
@@ -1976,6 +1980,11 @@
       "summaryHint": "会話の後にタイトル・要約・話題を書くモデルです。",
       "summaryKeyPlaceholder": "API キー",
       "summaryModel": "モデル",
+      "vault": "Obsidian ボールト",
+      "vaultHint": "会話ごとにノートとして書き出し、トピックは [[リンク]] になります。",
+      "vaultChoose": "フォルダを選択",
+      "vaultChange": "変更",
+      "vaultStop": "停止",
       "apiKeyPlaceholder": "OpenAI API キー",
       "apiKeyFor": "{{provider}} API キー",
       "microphone": "マイク",
@@ -2029,6 +2038,15 @@
       "confidence": "確信度",
       "silence": "沈黙（秒）",
       "searchUrl": "検索のベース URL（HTTPS のみ）"
+    },
+    "vault": {
+      "untitled": "無題の会話",
+      "summary": "要約",
+      "openQuestions": "未解決の質問",
+      "topics": "トピック",
+      "transcript": "文字起こし",
+      "you": "あなた",
+      "room": "部屋"
     }
   },
   "questionCard": {

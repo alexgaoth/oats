@@ -1949,6 +1949,10 @@
       "copy": "Copia",
       "copied": "Copiato",
       "save": "Salva",
+      "vault": "Vault",
+      "vaultSaved": "Nel vault",
+      "vaultFailed": "Non salvato",
+      "vaultLabel": "Salva questa conversazione nel vault di Obsidian",
       "delete": "Elimina",
       "deleteConfirm": "Eliminare questa conversazione?",
       "deleteYes": "Elimina",
@@ -1976,6 +1980,11 @@
       "summaryHint": "Il modello che scrive titolo, riepilogo e argomenti dopo una conversazione.",
       "summaryKeyPlaceholder": "Chiave API",
       "summaryModel": "Modello",
+      "vault": "Vault di Obsidian",
+      "vaultHint": "Ogni conversazione si scrive come nota, con i temi come [[collegamenti]].",
+      "vaultChoose": "Scegli cartella",
+      "vaultChange": "Modifica",
+      "vaultStop": "Interrompi",
       "apiKeyPlaceholder": "Chiave API OpenAI",
       "apiKeyFor": "Chiave API {{provider}}",
       "microphone": "Microfono",
@@ -2029,6 +2038,15 @@
       "confidence": "Confidenza",
       "silence": "Silenzio (secondi)",
       "searchUrl": "URL di base della ricerca (solo HTTPS)"
+    },
+    "vault": {
+      "untitled": "Conversazione senza titolo",
+      "summary": "Riepilogo",
+      "openQuestions": "Domande aperte",
+      "topics": "Temi",
+      "transcript": "Trascrizione",
+      "you": "Tu",
+      "room": "Stanza"
     }
   },
   "questionCard": {

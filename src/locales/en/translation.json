@@ -1949,6 +1949,10 @@
       "copy": "Copy",
       "copied": "Copied",
       "save": "Save",
+      "vault": "Vault",
+      "vaultSaved": "In vault",
+      "vaultFailed": "Not saved",
+      "vaultLabel": "Save this conversation to the Obsidian vault",
       "delete": "Delete",
       "deleteConfirm": "Delete this conversation?",
       "deleteYes": "Delete",
@@ -1976,6 +1980,11 @@
       "summaryHint": "The model that writes the title, summary and threads after a conversation.",
       "summaryKeyPlaceholder": "API key",
       "summaryModel": "Model",
+      "vault": "Obsidian vault",
+      "vaultHint": "Each conversation writes itself in as a note, with topics as [[wikilinks]].",
+      "vaultChoose": "Choose folder",
+      "vaultChange": "Change",
+      "vaultStop": "Stop",
       "apiKeyPlaceholder": "OpenAI API key",
       "apiKeyFor": "{{provider}} API key",
       "microphone": "Microphone",
@@ -2029,6 +2038,15 @@
       "confidence": "Confidence",
       "silence": "Silence (seconds)",
       "searchUrl": "Search base URL (HTTPS only)"
+    },
+    "vault": {
+      "untitled": "Untitled conversation",
+      "summary": "Summary",
+      "openQuestions": "Open questions",
+      "topics": "Topics",
+      "transcript": "Transcript",
+      "you": "You",
+      "room": "Room"
     }
   },
   "questionCard": {

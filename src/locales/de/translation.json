@@ -1949,6 +1949,10 @@
       "copy": "Kopieren",
       "copied": "Kopiert",
       "save": "Speichern",
+      "vault": "Tresor",
+      "vaultSaved": "Im Tresor",
+      "vaultFailed": "Nicht gespeichert",
+      "vaultLabel": "Diese Unterhaltung im Obsidian-Tresor speichern",
       "delete": "Löschen",
       "deleteConfirm": "Diese Unterhaltung löschen?",
       "deleteYes": "Löschen",
@@ -1976,6 +1980,11 @@
       "summaryHint": "Das Modell, das nach einer Unterhaltung Titel, Zusammenfassung und Themenstränge schreibt.",
       "summaryKeyPlaceholder": "API-Schlüssel",
       "summaryModel": "Modell",
+      "vault": "Obsidian-Tresor",
+      "vaultHint": "Jede Unterhaltung schreibt sich als Notiz hinein, mit Themen als [[Wikilinks]].",
+      "vaultChoose": "Ordner wählen",
+      "vaultChange": "Ändern",
+      "vaultStop": "Beenden",
       "apiKeyPlaceholder": "OpenAI-API-Schlüssel",
       "apiKeyFor": "{{provider}}-API-Schlüssel",
       "microphone": "Mikrofon",
@@ -2029,6 +2038,15 @@
       "confidence": "Konfidenz",
       "silence": "Stille (Sekunden)",
       "searchUrl": "Basis-URL für die Suche (nur HTTPS)"
+    },
+    "vault": {
+      "untitled": "Unbenannte Unterhaltung",
+      "summary": "Zusammenfassung",
+      "openQuestions": "Offene Fragen",
+      "topics": "Themen",
+      "transcript": "Transkript",
+      "you": "Du",
+      "room": "Raum"
     }
   },
   "questionCard": {

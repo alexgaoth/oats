@@ -398,6 +398,79 @@ class IPCHandlers {
     });
   }
 
+  /**
+   * This conversation as a vault note, or null if it is not one to write.
+   *
+   * Shared by the automatic mirror and the manual action, which is the whole
+   * difference between them: the mirror is a background write that must decline
+   * a conversation not ready for one, and the action is a person pointing at
+   * this conversation and asking, which is never declined for being untitled.
+   */
+  async _vaultPayload(noteId, { requireTitle }) {
+    const { buildVaultNote, shouldMirrorNote } = await import("./obsidianNote.mjs");
+    const note = this.databaseManager.getNote(noteId);
+    if (!note) return null;
+    if (requireTitle && !shouldMirrorNote(note, i18nMain.t("oats.untitled"))) return null;
+    let snapshot = null;
+    try {
+      snapshot = note.conversation_topics ? JSON.parse(note.conversation_topics) : null;
+    } catch {
+      snapshot = null;
+    }
+    let segments = [];
+    try {
+      const parsed = note.transcript ? JSON.parse(note.transcript) : [];
+      if (Array.isArray(parsed)) segments = parsed;
+    } catch {
+      segments = [];
+    }
+    let events = [];
+    try {
+      events = this.databaseManager.listConversationEvents(note.id) || [];
+    } catch {
+      events = [];
+    }
+    return buildVaultNote({
+      note,
+      snapshot,
+      events,
+      segments,
+      strings: {
+        untitled: i18nMain.t("oats.vault.untitled"),
+        summary: i18nMain.t("oats.vault.summary"),
+        openQuestions: i18nMain.t("oats.vault.openQuestions"),
+        topics: i18nMain.t("oats.vault.topics"),
+        transcript: i18nMain.t("oats.vault.transcript"),
+        you: i18nMain.t("oats.vault.you"),
+        room: i18nMain.t("oats.vault.room"),
+      },
+    });
+  }
+
+  /**
+   * Mirror a conversation into the Obsidian vault, if one is configured.
+   *
+   * Deliberately hung off `db-update-note` rather than off the end of a
+   * recording: the title and the summary generate *after* the recording stops,
+   * so a write triggered by "stop" would never see either. Every update
+   * re-renders the note, debounced, so whatever the reader opens in Obsidian is
+   * what Oats currently knows.
+   *
+   * `db-update-note` is also how a recording checkpoints itself, though, and
+   * the note is created with a placeholder title before the recording starts —
+   * so whether this note is ready to be mirrored is decided against a *freshly
+   * read* note inside the debounce. By the time that runs, the title has
+   * usually landed.
+   */
+  _asyncVaultWrite(note) {
+    const vault = require("./obsidianVault");
+    if (!vault.isEnabled() || !note?.id) return;
+    // Cheap gate first: every dictation is a note too, and scheduling a timer
+    // for each keystroke in one is pure waste.
+    if (note.note_type !== "meeting") return;
+    vault.schedule(note.id, () => this._vaultPayload(note.id, { requireTitle: true }));
+  }
+
   _asyncMirrorDelete(noteId) {
     if (!this._noteFilesEnabled) {
       debugLogger.debug("Mirror delete skipped: note files disabled", { noteId }, "note-files");
@@ -925,6 +998,30 @@ class IPCHandlers {
       return result;
     });
 
+    ipcMain.handle("configure-obsidian-vault", async (event, config) => {
+      require("./obsidianVault").configure(config || {});
+      return { success: true };
+    });
+
+    ipcMain.handle("choose-obsidian-vault", async () => {
+      const { dialog } = require("electron");
+      const result = await dialog.showOpenDialog({
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (result.canceled || !result.filePaths?.[0]) return { success: false };
+      return { success: true, path: result.filePaths[0] };
+    });
+
+    // The manual counterpart: writes this conversation now rather than on the
+    // debounce, so one recorded before the vault was chosen can still be filed.
+    ipcMain.handle("export-note-to-vault", async (event, noteId) => {
+      const vault = require("./obsidianVault");
+      if (!vault.getVaultPath()) return { success: false, error: "No vault folder configured" };
+      const built = await this._vaultPayload(noteId, { requireTitle: false });
+      if (!built) return { success: false, error: "Note not found" };
+      return vault.write(noteId, built.filename, built.markdown);
+    });
+
     ipcMain.handle("get-note-recording-config", async () => {
       return { success: true, providers: REALTIME_PROVIDER_CATALOG };
     });
@@ -1099,6 +1196,7 @@ class IPCHandlers {
         setImmediate(() => this.broadcastToWindows("note-updated", result.note));
         this._asyncVectorUpsert(result.note);
         this._asyncMirrorWrite(result.note);
+        this._asyncVaultWrite(result.note);
         if (updates.participants) this._tryAutoLabelOneOnOne(id);
       }
       return result;

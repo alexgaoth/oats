@@ -1949,6 +1949,10 @@
       "copy": "Copier",
       "copied": "Copié",
       "save": "Enregistrer",
+      "vault": "Coffre",
+      "vaultSaved": "Dans le coffre",
+      "vaultFailed": "Non enregistré",
+      "vaultLabel": "Enregistrer cette conversation dans le coffre Obsidian",
       "delete": "Supprimer",
       "deleteConfirm": "Supprimer cette conversation ?",
       "deleteYes": "Supprimer",
@@ -1976,6 +1980,11 @@
       "summaryHint": "Le modèle qui rédige le titre, le résumé et les fils après une conversation.",
       "summaryKeyPlaceholder": "Clé d'API",
       "summaryModel": "Modèle",
+      "vault": "Coffre Obsidian",
+      "vaultHint": "Chaque conversation s'y écrit comme une note, avec les sujets en [[liens]].",
+      "vaultChoose": "Choisir un dossier",
+      "vaultChange": "Modifier",
+      "vaultStop": "Arrêter",
       "apiKeyPlaceholder": "Clé API OpenAI",
       "apiKeyFor": "Clé d'API {{provider}}",
       "microphone": "Microphone",
@@ -2029,6 +2038,15 @@
       "confidence": "Confiance",
       "silence": "Silence (secondes)",
       "searchUrl": "URL de base de recherche (HTTPS uniquement)"
+    },
+    "vault": {
+      "untitled": "Conversation sans titre",
+      "summary": "Résumé",
+      "openQuestions": "Questions en suspens",
+      "topics": "Sujets",
+      "transcript": "Transcription",
+      "you": "Vous",
+      "room": "Salle"
     }
   },
   "questionCard": {

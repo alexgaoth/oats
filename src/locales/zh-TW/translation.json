@@ -1944,6 +1944,10 @@
       "copy": "複製",
       "copied": "已複製",
       "save": "儲存",
+      "vault": "儲存庫",
+      "vaultSaved": "已存入儲存庫",
+      "vaultFailed": "未儲存",
+      "vaultLabel": "將此對話儲存至 Obsidian 儲存庫",
       "delete": "刪除",
       "deleteConfirm": "刪除這次對話？",
       "deleteYes": "刪除",
@@ -1971,6 +1975,11 @@
       "summaryHint": "對話結束後撰寫標題、摘要和話題的模型。",
       "summaryKeyPlaceholder": "API 金鑰",
       "summaryModel": "模型",
+      "vault": "Obsidian 儲存庫",
+      "vaultHint": "每次對話都會寫成一則筆記，主題以 [[雙鏈]] 形式呈現。",
+      "vaultChoose": "選擇資料夾",
+      "vaultChange": "變更",
+      "vaultStop": "停止",
       "apiKeyPlaceholder": "OpenAI API 金鑰",
       "apiKeyFor": "{{provider}} API 金鑰",
       "microphone": "麥克風",
@@ -2024,6 +2033,15 @@
       "confidence": "信賴度",
       "silence": "靜默（秒）",
       "searchUrl": "搜尋基礎 URL（僅限 HTTPS）"
+    },
+    "vault": {
+      "untitled": "未命名對話",
+      "summary": "摘要",
+      "openQuestions": "未解答的問題",
+      "topics": "主題",
+      "transcript": "轉錄",
+      "you": "你",
+      "room": "房間"
     }
   },
   "questionCard": {

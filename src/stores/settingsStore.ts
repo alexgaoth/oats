@@ -623,6 +623,10 @@ export interface SettingsState
   setOpenrouterApiKey: (key: string) => void;
   setTinfoilApiKey: (key: string) => void;
   setDeepgramApiKey: (key: string) => void;
+  obsidianVaultPath: string;
+  setObsidianVaultPath: (value: string) => void;
+  obsidianExportEnabled: boolean;
+  setObsidianExportEnabled: (value: boolean) => void;
   setAssemblyaiApiKey: (key: string) => void;
   setCustomTranscriptionApiKey: (key: string) => void;
   setCleanupCustomApiKey: (key: string) => void;
@@ -978,6 +982,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   openaiApiKey: "",
   deepgramApiKey: "",
   assemblyaiApiKey: "",
+  obsidianVaultPath: readString("obsidianVaultPath", ""),
+  obsidianExportEnabled: readBoolean("obsidianExportEnabled", false),
   anthropicApiKey: "",
   geminiApiKey: "",
   groqApiKey: "",
@@ -1438,6 +1444,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setOpenaiApiKey: createSecretSetter("openaiApiKey", "openai", "openai"),
   setAnthropicApiKey: createSecretSetter("anthropicApiKey", "anthropic", "anthropic"),
   setDeepgramApiKey: createSecretSetter("deepgramApiKey", "deepgram"),
+  setObsidianVaultPath: createStringSetter("obsidianVaultPath"),
+  setObsidianExportEnabled: createBooleanSetter("obsidianExportEnabled"),
   setAssemblyaiApiKey: createSecretSetter("assemblyaiApiKey", "assemblyai"),
   setGeminiApiKey: createSecretSetter("geminiApiKey", "gemini", "gemini"),
   setGroqApiKey: createSecretSetter("groqApiKey", "groq", "groq"),

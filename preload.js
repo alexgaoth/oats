@@ -393,6 +393,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Audio event listeners
   onNoAudioDetected: registerListener("no-audio-detected"),
   getNoteRecordingConfig: () => ipcRenderer.invoke("get-note-recording-config"),
+  configureObsidianVault: (config) => ipcRenderer.invoke("configure-obsidian-vault", config),
+  chooseObsidianVault: () => ipcRenderer.invoke("choose-obsidian-vault"),
+  exportNoteToVault: (noteId) => ipcRenderer.invoke("export-note-to-vault", noteId),
   onCancelHotkeyPressed: registerListener("cancel-hotkey-pressed", (cb) => () => cb()),
   registerCancelHotkey: (key) => ipcRenderer.invoke("register-cancel-hotkey", key),
   unregisterCancelHotkey: () => ipcRenderer.invoke("unregister-cancel-hotkey"),
