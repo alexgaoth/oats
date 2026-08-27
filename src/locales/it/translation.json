@@ -1911,6 +1911,7 @@
       "statusStopped": "Registrazione terminata. Oats sta scrivendo il riassunto.",
       "nothingHeard": "Non è stato sentito nulla, quindi nessuna conversazione è stata salvata. Controlla il microfono nelle Impostazioni.",
       "continuing": "Continuazione di {{title}}",
+      "notAContinuation": "Conversazione separata",
       "threadMapLabel": "Mappa di {{count}} temi affrontati finora",
       "threadMapNoQuote": "niente di recente da citare"
     },

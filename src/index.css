@@ -142,6 +142,8 @@
      gold accent for contrast. Elevation ladder anchored on the two values DESIGN.md
      gives explicitly (surface-0 #2A261F, surface-raised #322D24); surface-2 is
      interpolated between them. */
+  color-scheme: dark;
+
   --color-background: #201d18;
   --color-foreground: #ede6d6;
   --color-card: #2a261f;
@@ -442,6 +444,21 @@
     transform: scale(1.2);
     opacity: 0.24;
   }
+}
+
+/* Tells the platform which way to paint the things CSS cannot reach: the native
+   <select> popup, scrollbars, spinners. Without it Chromium paints them light in
+   dark mode, so the language and shortcut dropdowns opened as white lists over a
+   charcoal page. Measured before this: color-scheme "normal".
+   
+   Not inside `@theme` — Tailwind v4 allows only custom properties there, and the
+   build fails with "`@theme` blocks must only contain custom properties". */
+:root {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
 }
 
 @layer base {

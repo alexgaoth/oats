@@ -1911,6 +1911,7 @@
       "statusStopped": "Gravação concluída. O Oats está escrevendo o resumo.",
       "nothingHeard": "Não se ouviu nada, por isso não foi guardada nenhuma conversa. Verifique o microfone nas Definições.",
       "continuing": "Continuando {{title}}",
+      "notAContinuation": "Conversa separada",
       "threadMapLabel": "Mapa de {{count}} temas abordados até agora",
       "threadMapNoQuote": "nada recente para citar"
     },

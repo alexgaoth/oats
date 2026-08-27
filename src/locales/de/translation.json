@@ -1911,6 +1911,7 @@
       "statusStopped": "Aufnahme beendet. Oats schreibt die Zusammenfassung.",
       "nothingHeard": "Es wurde nichts gehört, daher wurde kein Gespräch gespeichert. Prüfe das Mikrofon in den Einstellungen.",
       "continuing": "Fortsetzung von {{title}}",
+      "notAContinuation": "Eigene Unterhaltung",
       "threadMapLabel": "Karte von {{count}} bisher angesprochenen Themen",
       "threadMapNoQuote": "nichts Aktuelles zum Zitieren"
     },

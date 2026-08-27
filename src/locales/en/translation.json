@@ -1911,6 +1911,7 @@
       "statusStopped": "Recording finished. Oats is writing the summary.",
       "nothingHeard": "Nothing was heard, so no conversation was saved. Check the microphone in Settings.",
       "continuing": "Continuing {{title}}",
+      "notAContinuation": "Separate conversation",
       "threadMapLabel": "Map of {{count}} subjects raised so far",
       "threadMapNoQuote": "nothing recent to quote"
     },

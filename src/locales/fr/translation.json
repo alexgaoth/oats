@@ -1911,6 +1911,7 @@
       "statusStopped": "Enregistrement terminé. Oats rédige le résumé.",
       "nothingHeard": "Rien n'a été entendu, aucune conversation n'a donc été enregistrée. Vérifiez le microphone dans les réglages.",
       "continuing": "Poursuite de {{title}}",
+      "notAContinuation": "Conversation distincte",
       "threadMapLabel": "Carte des {{count}} sujets abordés jusqu'ici",
       "threadMapNoQuote": "rien de récent à citer"
     },

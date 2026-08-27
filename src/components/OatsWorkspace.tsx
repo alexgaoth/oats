@@ -694,9 +694,23 @@ function ConversationSurface() {
               {/* Said plainly rather than asked. Oats resumed a recent conversation
                 instead of stopping to check, because the check would have cost
                 the first thing anybody said. */}
+              {/* And a way out of it. Resuming without asking is the right
+                  default — the question would cost the first thing anybody says
+                  — but it was silently merging into a conversation that ended up
+                  to half an hour ago with no way to say "this is a different
+                  one". The notice is the place to put that. */}
               {continuingFrom && (
-                <p className="mt-1.5 font-mono text-xs text-muted-foreground">
-                  {t("oats.conversation.continuing", { title: continuingFrom })}
+                <p className="mt-1.5 flex items-baseline gap-3 font-mono text-xs text-muted-foreground">
+                  <span>{t("oats.conversation.continuing", { title: continuingFrom })}</span>
+                  <QuietAction
+                    label={t("oats.conversation.notAContinuation")}
+                    onClick={() => {
+                      void (async () => {
+                        await stopRecording();
+                        await startFresh();
+                      })();
+                    }}
+                  />
                 </p>
               )}
 
@@ -1077,47 +1091,55 @@ function ConnectionsView({
           layoutKey={`oats:topic-layout:${note.id}`}
         />
       </div>
-      {/* The panel exists only once a topic is selected. A permanent column
-          holding "select a topic to see…" is a third region carrying an
-          instruction rather than content. */}
-      {selectedTopic && (
-        <aside className="mt-6 border-t border-border/40 pt-5">
-          <>
-            <p className="font-mono text-sm text-foreground">{selectedTopic.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("topicGraph.seconds", {
-                count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
-              })}
-              {selectedTopic.returns > 0 &&
-                ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
-            </p>
-            <ul className="mt-4 space-y-3">
-              {topicQuestions.map((question) => (
-                <li key={question.id}>
-                  <p className="font-mono text-xs leading-snug text-foreground/70">
-                    {question.text}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => research(question.text)}
-                    // Ink. §9.4's "gold appears exactly twice" is one selected node and one
-                    // re-search action — but this list renders a link per question, so on a
-                    // topic with three questions the accent multiplied. The selected node
-                    // keeps the gold; the links are reading text (§3).
-                    className="mt-1 inline-flex items-center gap-1 rounded-sm text-[11px] text-muted-foreground underline underline-offset-2 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Search size={10} />
-                    {t("topicGraph.search")}
-                  </button>
-                </li>
-              ))}
-              {!topicQuestions.length && (
-                <li className="text-xs text-muted-foreground">{t("topicGraph.noQuestions")}</li>
-              )}
-            </ul>
-          </>
-        </aside>
-      )}
+      {/* The panel's *space* is permanent even though its content is not.
+          
+          Rendering it only on selection meant the first click inserted a block
+          and pushed the graph up, and every click after that resized it —
+          a topic with three questions is much taller than one with none — so
+          moving between bubbles made the whole page jump under the cursor. The
+          band is a fixed height that scrolls inside itself, so selecting
+          anything moves nothing. Still no "select a topic to see…" placeholder:
+          empty space is not an instruction. */}
+      <div className="mt-6 h-44 overflow-y-auto border-t border-border/40 pt-5">
+        {selectedTopic && (
+          <aside>
+            <>
+              <p className="font-mono text-sm text-foreground">{selectedTopic.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("topicGraph.seconds", {
+                  count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
+                })}
+                {selectedTopic.returns > 0 &&
+                  ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
+              </p>
+              <ul className="mt-4 space-y-3">
+                {topicQuestions.map((question) => (
+                  <li key={question.id}>
+                    <p className="font-mono text-xs leading-snug text-foreground/70">
+                      {question.text}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => research(question.text)}
+                      // Ink. §9.4's "gold appears exactly twice" is one selected node and one
+                      // re-search action — but this list renders a link per question, so on a
+                      // topic with three questions the accent multiplied. The selected node
+                      // keeps the gold; the links are reading text (§3).
+                      className="mt-1 inline-flex items-center gap-1 rounded-sm text-[11px] text-muted-foreground underline underline-offset-2 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Search size={10} />
+                      {t("topicGraph.search")}
+                    </button>
+                  </li>
+                ))}
+                {!topicQuestions.length && (
+                  <li className="text-xs text-muted-foreground">{t("topicGraph.noQuestions")}</li>
+                )}
+              </ul>
+            </>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
@@ -2420,6 +2442,7 @@ function SettingsSurface() {
   const setMeetingUseLocalWhisper = useSettingsStore((s) => s.setMeetingUseLocalWhisper);
   const hotkeyRejection = useSettingsStore((s) => s.hotkeyRejection);
   const [advanced, setAdvanced] = useState(false);
+
   const { t } = useTranslation();
 
   const local = transcriptionMode === "local" && cleanupMode === "local" && meetingLocal;
@@ -2476,16 +2499,23 @@ function SettingsSurface() {
           </Button>
           <p className="text-xs text-muted-foreground">{t("oats.settings.advancedHint")}</p>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <Suspense
-            fallback={
-              <p className="px-8 py-6 font-mono text-xs text-muted-foreground">
-                {t("oats.settings.advancedLoading")}
-              </p>
-            }
-          >
-            <AdvancedSettings />
-          </Suspense>
+        {/* The inherited page brings its own cards but no page frame, so it ran
+            edge to edge: section headings flush at x=0 and rows the full width
+            of the window, with a label on one side and its toggle a thousand
+            pixels away. It keeps its own look — that is deliberate — inside the
+            same column the rest of the app uses. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
+          <div className="mx-auto w-full max-w-3xl">
+            <Suspense
+              fallback={
+                <p className="px-8 py-6 font-mono text-xs text-muted-foreground">
+                  {t("oats.settings.advancedLoading")}
+                </p>
+              }
+            >
+              <AdvancedSettings />
+            </Suspense>
+          </div>
         </div>
       </section>
     );

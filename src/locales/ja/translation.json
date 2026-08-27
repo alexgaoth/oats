@@ -1911,6 +1911,7 @@
       "statusStopped": "録音を終了しました。Oats が要約を作成しています。",
       "nothingHeard": "何も聞こえなかったため、会話は保存されませんでした。設定でマイクを確認してください。",
       "continuing": "{{title}} を継続中",
+      "notAContinuation": "別の会話にする",
       "threadMapLabel": "これまでに出た {{count}} 件の話題のマップ",
       "threadMapNoQuote": "引用できる発言がありません"
     },

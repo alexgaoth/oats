@@ -128,7 +128,10 @@ export default function LiveThreadMap({ className }: { className?: string }) {
       {/* Reserved height, so quoting does not shove the transcript below it down
           the page mid-sentence — §8 forbids layout shift while somebody is being
           helped. */}
-      <p className="min-h-8 font-mono text-xs leading-4 text-muted-foreground">
+      {/* A fixed height, not a minimum: a long quote wraps to three lines and a
+          short one to one, so a minimum still moved the transcript below it
+          every time a different topic was pressed. */}
+      <p className="h-8 overflow-hidden font-mono text-xs leading-4 text-muted-foreground">
         {point && (
           <>
             <span className="text-foreground">{point.label}</span>

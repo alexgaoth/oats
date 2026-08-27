@@ -1906,6 +1906,7 @@
       "statusStopped": "錄音結束。Oats 正在撰寫摘要。",
       "nothingHeard": "沒有聽到任何聲音，因此未儲存對話。請在設定中檢查麥克風。",
       "continuing": "繼續 {{title}}",
+      "notAContinuation": "另起一段對話",
       "threadMapLabel": "目前提到的 {{count}} 個話題的地圖",
       "threadMapNoQuote": "沒有可引用的近期發言"
     },
