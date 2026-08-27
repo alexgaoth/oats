@@ -1868,11 +1868,15 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 /**
- * Copy it, save it, or delete it.
+ * Copy it, save it, file it, or delete it.
  *
  * Until now a conversation could be recorded and read and nothing else: there
  * was no way to get the text out of Oats and no way to remove one at all, which
  * for a tool holding unannounced work is the more serious of the two.
+ *
+ * The vault action appears only when a vault folder has been chosen. A disabled
+ * control that exists to advertise a setting is a thing to learn and dismiss;
+ * for everybody who does not keep a vault, the row is simply three words.
  */
 function ConversationActions({
   note,
@@ -1886,6 +1890,9 @@ function ConversationActions({
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const vaultPath = useSettingsStore((state) => state.obsidianVaultPath);
+  // null when idle, true once it landed, false when the write was refused.
+  const [filed, setFiled] = useState<boolean | null>(null);
 
   // Whatever is being read is what leaves — no menu of formats, no dialog asking
   // which part. The transcript tab copies the transcript, the other two copy the
@@ -1896,11 +1903,17 @@ function ConversationActions({
       : note.enhanced_content || note.content || "";
 
   useEffect(() => setConfirming(false), [note.id, tab]);
+  useEffect(() => setFiled(null), [note.id]);
   useEffect(() => {
     if (!copied) return undefined;
     const timer = setTimeout(() => setCopied(false), 2000);
     return () => clearTimeout(timer);
   }, [copied]);
+  useEffect(() => {
+    if (filed === null) return undefined;
+    const timer = setTimeout(() => setFiled(null), 2000);
+    return () => clearTimeout(timer);
+  }, [filed]);
 
   const copy = async () => {
     const text = payload();
@@ -1912,6 +1925,14 @@ function ConversationActions({
   const save = () => {
     if (tab === "transcript") void window.electronAPI?.exportTranscript?.(note.id, "txt");
     else void window.electronAPI?.exportNote?.(note.id, "md");
+  };
+
+  // Every conversation files itself once the vault is set, so this is for the
+  // ones recorded before it was — and it says whether it worked, because a
+  // write that quietly did nothing is the failure this product does not accept.
+  const file = async () => {
+    const result = await window.electronAPI?.exportNoteToVault?.(note.id);
+    setFiled(Boolean(result?.success));
   };
 
   if (confirming) {
@@ -1944,6 +1965,19 @@ function ConversationActions({
         onClick={() => void copy()}
       />
       <QuietAction label={t("oats.intelligence.save")} onClick={save} />
+      {vaultPath && (
+        <QuietAction
+          label={
+            filed === null
+              ? t("oats.intelligence.vault")
+              : filed
+                ? t("oats.intelligence.vaultSaved")
+                : t("oats.intelligence.vaultFailed")
+          }
+          ariaLabel={t("oats.intelligence.vaultLabel")}
+          onClick={() => void file()}
+        />
+      )}
       {/* Deleting a conversation is the one irreversible thing in the product, so
           it asks — in place, on the same line, rather than in a modal. A dialog
           would be the only modal in Oats; a second press is the same guarantee
@@ -2535,41 +2569,6 @@ function SettingsSurface() {
         {/* No `htmlFor`: the `<select>` this would address only exists once the
             picker is open, so the label pointed at nothing and the action read
             as a bare "Change". The action names itself instead. */}
-        {/* A vault folder, not a file: each conversation writes itself in as its
-            own note when its title and summary land, with topics as
-            [[wikilinks]] so Obsidian's own graph shows which conversations
-            share a subject. Off until a folder is chosen — nothing writes
-            outside this app without being pointed somewhere. */}
-        <Row label={t("oats.settings.vault")} hint={t("oats.settings.vaultHint")}>
-          <div className="flex items-center gap-4">
-            <QuietAction
-              label={vaultPath ? t("oats.settings.vaultChange") : t("oats.settings.vaultChoose")}
-              onClick={() => {
-                void (async () => {
-                  const picked = await window.electronAPI?.chooseObsidianVault?.();
-                  if (!picked?.success || !picked.path) return;
-                  setVaultPath(picked.path);
-                  setVaultEnabled(true);
-                })();
-              }}
-            />
-            {vaultPath && (
-              <>
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  {vaultPath}
-                </span>
-                <QuietAction
-                  label={t("oats.settings.vaultStop")}
-                  onClick={() => {
-                    setVaultEnabled(false);
-                    setVaultPath("");
-                  }}
-                />
-              </>
-            )}
-          </div>
-        </Row>
-
         <Row label={t("oats.settings.microphone")}>
           <MicrophoneChoice />
         </Row>
@@ -2651,6 +2650,52 @@ function SettingsSurface() {
             checked={autoSearch}
             onChange={setAutoSearch}
           />
+        </Row>
+
+        {/* A vault folder, not a file: each conversation writes itself in as its
+            own note when its title and summary land, with topics as
+            [[wikilinks]] so Obsidian's own graph shows which conversations
+            share a subject. Off until a folder is chosen — nothing writes
+            outside this app without being pointed somewhere. */}
+        <Row label={t("oats.settings.vault")} hint={t("oats.settings.vaultHint")}>
+          {/* `w-full`, because the Row's control column is `items-start`: without
+              it this line sizes to its content, grows past the column, and takes
+              the "stop" action off the edge of the pane with it. */}
+          <div className="flex w-full min-w-0 items-center gap-4">
+            <QuietAction
+              label={vaultPath ? t("oats.settings.vaultChange") : t("oats.settings.vaultChoose")}
+              onClick={() => {
+                void (async () => {
+                  const picked = await window.electronAPI?.chooseObsidianVault?.();
+                  if (!picked?.success || !picked.path) return;
+                  setVaultPath(picked.path);
+                  setVaultEnabled(true);
+                })();
+              }}
+            />
+            {vaultPath && (
+              <>
+                {/* `truncate` alone does nothing to a flex child: its min-width
+                    is auto, so it refuses to shrink and overflows instead —
+                    which pushed the control that turns the export off past the
+                    edge of the pane. `min-w-0` is what lets it shrink, and the
+                    title carries the path the ellipsis eats. */}
+                <span
+                  title={vaultPath}
+                  className="min-w-0 truncate font-mono text-xs text-muted-foreground"
+                >
+                  {vaultPath}
+                </span>
+                <QuietAction
+                  label={t("oats.settings.vaultStop")}
+                  onClick={() => {
+                    setVaultEnabled(false);
+                    setVaultPath("");
+                  }}
+                />
+              </>
+            )}
+          </div>
         </Row>
 
         <Row label={t("oats.settings.data")} hint={t("oats.settings.dataHint")}>
