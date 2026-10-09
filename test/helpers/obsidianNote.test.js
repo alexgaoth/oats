@@ -399,3 +399,77 @@ test("an in-room transcript is labelled by voice, by name once named, and not at
     /## Transcript\n\nbefore the speaker pass\n\n\*\*Speaker 1:\*\* first voice\n\n\*\*Priya:\*\* named/
   );
 });
+
+// Copy on the summary tab took the summary prose alone, while Save from the same
+// tab wrote the title, the marks and the open questions around it. Both now go
+// through `readingExport`, with the same keys in the interface's language.
+test("Copy and Save on the summary tab produce one document from the stored note", async () => {
+  const { readingExport, buildReadingExport } = await import("../../src/helpers/obsidianNote.mjs");
+  const { i18nMain } = require("../../src/helpers/i18nMain");
+  const t = (key) => i18nMain.t(key);
+  const note = {
+    title: "Board prep",
+    enhanced_content: "The deck leads with pricing.",
+    conversation_marks: JSON.stringify([{ id: "m", at: 5000, note: "the gap" }]),
+    transcript: JSON.stringify([{ id: "s1", text: "Nobody has computed it", timestamp: 4000 }]),
+  };
+  const events = [...asked("What is our NRR?", null), ...asked("Who owns pricing?", "answered")];
+
+  const text = readingExport({ note, events, t });
+  assert.equal(
+    text,
+    [
+      "# Board prep",
+      "",
+      "## Marked",
+      "",
+      "- `0:01` “Nobody has computed it” — the gap",
+      "",
+      "## Open questions",
+      "",
+      "- What is our NRR?",
+      "",
+      "The deck leads with pricing.",
+      "",
+    ].join("\n")
+  );
+  // The defect, both ways round: the clipboard is no longer the prose alone,
+  // and it is exactly what the export handler wrote before it shared this path.
+  assert.notEqual(text.trim(), note.enhanced_content);
+  assert.equal(
+    text,
+    buildReadingExport({
+      note,
+      events,
+      segments: JSON.parse(note.transcript),
+      strings: {
+        untitled: t("oats.vault.untitled"),
+        marked: t("oats.vault.marked"),
+        openQuestions: t("oats.vault.openQuestions"),
+      },
+    })
+  );
+});
+
+test("with nothing marked and nothing left open, the copied text adds only the title", async () => {
+  const { readingExport } = await import("../../src/helpers/obsidianNote.mjs");
+  const t = (key) => ({ "oats.vault.untitled": "Untitled conversation" })[key] ?? key;
+  const note = { title: "Quick sync", enhanced_content: "We agreed.", transcript: "[]" };
+  assert.equal(readingExport({ note, events: [], t }), "# Quick sync\n\nWe agreed.\n");
+  assert.equal(
+    readingExport({ note: { ...note, title: "" }, events: [], t }),
+    "# Untitled conversation\n\nWe agreed.\n"
+  );
+});
+
+test("a transcript that does not parse still leaves the marks and the summary", async () => {
+  const { readingExport } = await import("../../src/helpers/obsidianNote.mjs");
+  const t = (key) => ({ "oats.vault.marked": "Marked" })[key] ?? key;
+  const note = {
+    title: "T",
+    content: "s",
+    conversation_marks: JSON.stringify([{ id: "m", at: 9000, note: "here" }]),
+    transcript: "{not json",
+  };
+  assert.equal(readingExport({ note, t }), "# T\n\n## Marked\n\n- `0:00` — here\n\ns\n");
+});

@@ -44,6 +44,7 @@ import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
+import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
   momentSegment,
   parseMoments,
@@ -1700,6 +1701,7 @@ function IntelligenceViews({
             <ConversationActions
               note={selected}
               tab={tab}
+              events={events}
               onDeleted={async () => {
                 setReading(false);
                 setSelectedId(null);
@@ -2520,10 +2522,13 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 function ConversationActions({
   note,
   tab,
+  events,
   onDeleted,
 }: {
   note: NoteItem;
   tab: DetailTab;
+  /** The conversation's question events, for the open questions Save writes. */
+  events: ConversationEvent[];
   onDeleted: () => void | Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -2534,12 +2539,12 @@ function ConversationActions({
   const [filed, setFiled] = useState<boolean | null>(null);
 
   // Whatever is being read is what leaves — no menu of formats, no dialog asking
-  // which part. The transcript tab copies the transcript, the other two copy the
-  // summary, because that is what is on the screen.
+  // which part. The transcript tab copies the transcript with the screen's
+  // speaker labels. The other two copy exactly what Save writes from them: the
+  // title, the marks, the open questions and the summary. Copy used to take the
+  // summary prose alone, so the clipboard and the saved file were two documents.
   const payload = () =>
-    tab === "transcript"
-      ? transcriptText(note.transcript, t)
-      : note.enhanced_content || note.content || "";
+    tab === "transcript" ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
 
   useEffect(() => setConfirming(false), [note.id, tab]);
   useEffect(() => setFiled(null), [note.id]);

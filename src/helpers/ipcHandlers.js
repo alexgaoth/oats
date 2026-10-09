@@ -1487,31 +1487,16 @@ class IPCHandlers {
         } else {
           // What the summary tab shows, in its order: the title, the moments
           // the reader marked, what was left open, then the summary — so the
-          // certain parts of the record leave with the inferred one.
-          const { buildReadingExport } = await import("./obsidianNote.mjs");
-          let segments = [];
-          try {
-            const parsed = note.transcript ? JSON.parse(note.transcript) : [];
-            if (Array.isArray(parsed)) segments = parsed;
-          } catch {
-            segments = [];
-          }
+          // certain parts of the record leave with the inferred one. Copy on
+          // that tab builds the same text through the same function.
+          const { readingExport } = await import("./obsidianNote.mjs");
           let events = [];
           try {
             events = this.databaseManager.listConversationEvents(note.id) || [];
           } catch {
             events = [];
           }
-          exportContent = buildReadingExport({
-            note,
-            events,
-            segments,
-            strings: {
-              untitled: i18nMain.t("oats.vault.untitled"),
-              marked: i18nMain.t("oats.vault.marked"),
-              openQuestions: i18nMain.t("oats.vault.openQuestions"),
-            },
-          });
+          exportContent = readingExport({ note, events, t: (key) => i18nMain.t(key) });
         }
 
         fs.writeFileSync(result.filePath, exportContent, "utf-8");

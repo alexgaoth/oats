@@ -240,6 +240,35 @@ export function buildReadingExport({ note, events = [], segments = [], strings }
 }
 
 /**
+ * The reading export from a stored note: what Save writes from the summary tab
+ * and what Copy puts on the clipboard there, so the two cannot disagree.
+ *
+ * Copy used to take the summary prose alone while Save wrote the title, the
+ * marks and the open questions around it, so the clipboard and the file were
+ * two different documents. Both processes call this with their own i18next `t`;
+ * the main process follows the interface language, so the headings match too.
+ */
+export function readingExport({ note, events = [], t }) {
+  let segments = [];
+  try {
+    const parsed = note?.transcript ? JSON.parse(note.transcript) : [];
+    if (Array.isArray(parsed)) segments = parsed;
+  } catch {
+    segments = [];
+  }
+  return buildReadingExport({
+    note,
+    events,
+    segments,
+    strings: {
+      untitled: t("oats.vault.untitled"),
+      marked: t("oats.vault.marked"),
+      openQuestions: t("oats.vault.openQuestions"),
+    },
+  });
+}
+
+/**
  * Build the vault note.
  *
  * `strings` carries every user-facing heading and speaker label, so the export
