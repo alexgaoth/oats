@@ -416,6 +416,10 @@ declare global {
         }) => void
       ) => () => void;
       requestToggleConversation?: () => Promise<{ success: boolean }>;
+      // Quitting during a conversation: main asks the panel to finish it, and
+      // waits for the answer before tearing anything down.
+      onFinishConversationForQuit?: (callback: () => void) => () => void;
+      reportConversationFinishedForQuit?: () => void;
       onToggleTranslation?: (callback: () => void) => () => void;
       onStartDictation?: (callback: () => void) => () => void;
       onStopDictation?: (callback: () => void) => () => void;

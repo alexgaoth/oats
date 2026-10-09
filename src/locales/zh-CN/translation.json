@@ -2025,7 +2025,16 @@
       "dictationHint": "按住或轻点；在光标处输入。",
       "hotkeyRejected": "无法注册「{{hotkey}}」，因此仍在使用之前的快捷键。",
       "conversationHotkey": "对话快捷键",
-      "conversationHotkeyHint": "在任何地方开始或停止。"
+      "conversationHotkeyHint": "在任何地方开始或停止。",
+      "sections": {
+        "label": "高级设置分区",
+        "general": "通用",
+        "hotkeys": "快捷键",
+        "speechToText": "语音转文字",
+        "llms": "语言模型",
+        "privacyData": "隐私",
+        "system": "系统"
+      }
     },
     "errors": {
       "noModel": "录制对话前请先配置 Oats 的处理方式。",
