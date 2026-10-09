@@ -1872,9 +1872,9 @@
   "meetingNotification": {
     "title": "Reunião detectada",
     "body": {
-      "detected": "Parece que você está em uma reunião. Quer fazer anotações?",
-      "starting": "Sua reunião está começando. Quer fazer anotações?",
-      "underway": "Parece que sua reunião já está em andamento. Quer fazer anotações?"
+      "detected": "Quer fazer anotações?",
+      "starting": "Começa agora. Anotar?",
+      "underway": "Em andamento. Anotar?"
     },
     "start": "Fazer anotações",
     "join": "Entrar e transcrever"
