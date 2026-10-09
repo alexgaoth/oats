@@ -1896,7 +1896,13 @@
       "dialogueLabel": "Detected dialogue",
       "dialogueWaiting": "Nothing heard yet.",
       "contourLabel": "The shape of this conversation so far",
-      "contourLegend": "Thickness is how much was said · a notch is the subject turning · a mark is a question, grainier the less settled it is · a caret below is a moment you marked",
+      "legend": {
+        "label": "What the marks mean",
+        "open": "No answer yet",
+        "topic": "Topic change",
+        "return": "Topic revisited",
+        "marked": "Marked moment"
+      },
       "contourSummary": "{{minutes}} minutes, {{questions}} questions asked ({{unresolved}} still unanswered), the subject turned {{shifts}} times, and the room came back to {{returns}} threads.",
       "contourEmpty": "Nothing recorded yet.",
       "record": "Record conversation",
@@ -2181,7 +2187,7 @@
       "answered": "Answered",
       "uncertain": "Uncertain",
       "silence": "No answer",
-      "denied": "Unanswered"
+      "denied": "Nobody knew"
     },
     "searched": "Searched",
     "dismiss": "Dismiss question",

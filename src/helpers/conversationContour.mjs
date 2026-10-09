@@ -54,20 +54,20 @@ const WORDS_PER_SECOND = 2.6;
 export const QUIET_THRESHOLD = 0.18;
 
 /**
- * Dither density per question outcome, 0 = solid, 1 = barely there.
+ * How a question's mark is drawn, per outcome.
  *
- * This is the §4 state vocabulary's "uncertainty literally looks grainier",
- * expressed as a number so the contour, the rail and the transcript margin all
- * grain identically. It is information, not texture: reading a mark's density
- * tells you how settled the question is, and it does so in grayscale and
- * without relying on hue.
+ * The shape says how settled the question is: filled when the room settled it,
+ * half filled when the answer was hedged, a ring when nobody gave a verdict.
+ * The shape carries the meaning by itself, so it reads in greyscale and with
+ * colour blindness. The status colour repeats it. This is the same idiom as a
+ * Linear status icon, and it replaces the v1 dither grain (DESIGN.md §6).
  */
-export const OUTCOME_DITHER = {
-  answered: 0, // settled — solid
-  denied: 0.25, // settled, and Oats acted on it
-  uncertain: 0.45, // hedged
-  asked: 0.7, // no verdict yet
-  silence: 0.7, // nobody answered; an absence, not a verdict
+export const OUTCOME_FILL = {
+  answered: "solid", // settled
+  denied: "solid", // settled: somebody said they did not know
+  uncertain: "half", // hedged
+  asked: "ring", // no verdict yet
+  silence: "ring", // nobody answered
 };
 
 /** Rounds to 4dp so pinned geometry does not depend on float noise. */
@@ -237,7 +237,7 @@ export function buildContour({
         // asked *into* the conversation rather than floating over it.
         y: points[bucket]?.y ?? 0,
         state: card.state ?? "asked",
-        dither: OUTCOME_DITHER[card.state] ?? OUTCOME_DITHER.asked,
+        fill: OUTCOME_FILL[card.state] ?? OUTCOME_FILL.asked,
         question: card.question ?? "",
         groupKey: card.groupKey ?? card.id ?? `q-${card.createdAt}`,
         occurrence: card.occurrence ?? 1,

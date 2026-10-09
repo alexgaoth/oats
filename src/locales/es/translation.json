@@ -1896,7 +1896,13 @@
       "dialogueLabel": "Diálogo detectado",
       "dialogueWaiting": "Todavía no se ha oído nada.",
       "contourLabel": "La forma de esta conversación hasta ahora",
-      "contourLegend": "El grosor es cuánto se ha dicho · una muesca es un cambio de tema · una marca es una pregunta, más granulada cuanto menos resuelta · un triángulo debajo es un momento que marcaste",
+      "legend": {
+        "label": "Qué significan las marcas",
+        "open": "Aún sin respuesta",
+        "topic": "Cambio de tema",
+        "return": "Vuelta a un tema anterior",
+        "marked": "Momento marcado"
+      },
       "contourSummary": "{{minutes}} minutos, {{questions}} preguntas ({{unresolved}} sin responder), el tema cambió {{shifts}} veces y se volvió a {{returns}} hilos.",
       "contourEmpty": "Todavía no se ha grabado nada.",
       "record": "Grabar conversación",

@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 // (see conversationGraph.test.js): the module stays pure ESM so it needs no
 // build step, and the test reaches it through a dynamic import.
 let CONTOUR_RESOLUTION;
-let OUTCOME_DITHER;
+let OUTCOME_FILL;
 let QUIET_THRESHOLD;
 let buildContour;
 let contourStrip;
@@ -14,7 +14,7 @@ let speechWeight;
 test.before(async () => {
   ({
     CONTOUR_RESOLUTION,
-    OUTCOME_DITHER,
+    OUTCOME_FILL,
     QUIET_THRESHOLD,
     buildContour,
     contourStrip,
@@ -162,14 +162,14 @@ test("questions become marks that sit on the trace at the moment they were asked
   assert.equal(contour.marks[0].y, contour.points[bucket].y);
 });
 
-// Dither is the accessibility story as much as the aesthetic one: state has to
-// survive grayscale and colour-blindness, so density must track certainty.
-test("dither density encodes how settled a question is, monotonically", () => {
-  assert.equal(OUTCOME_DITHER.answered, 0);
-  assert.ok(OUTCOME_DITHER.answered < OUTCOME_DITHER.denied);
-  assert.ok(OUTCOME_DITHER.denied < OUTCOME_DITHER.uncertain);
-  assert.ok(OUTCOME_DITHER.uncertain < OUTCOME_DITHER.asked);
-  assert.equal(OUTCOME_DITHER.asked, OUTCOME_DITHER.silence);
+// The shape is the accessibility story: state has to survive greyscale and
+// colour blindness, so how filled a mark is must track how settled it is.
+test("a mark is filled when settled, half when hedged, a ring when open", () => {
+  assert.equal(OUTCOME_FILL.answered, "solid");
+  assert.equal(OUTCOME_FILL.denied, "solid");
+  assert.equal(OUTCOME_FILL.uncertain, "half");
+  assert.equal(OUTCOME_FILL.asked, "ring");
+  assert.equal(OUTCOME_FILL.silence, "ring");
 
   const contour = buildContour({
     utterances: talk([
@@ -179,10 +179,14 @@ test("dither density encodes how settled a question is, monotonically", () => {
     questions: [
       { id: "a", state: "answered", createdAt: T0 + 5 * MINUTE },
       { id: "b", state: "asked", createdAt: T0 + 15 * MINUTE },
+      { id: "c", state: "mystery", createdAt: T0 + 16 * MINUTE },
     ],
   });
-  const [answered, asked] = contour.marks;
-  assert.ok(answered.dither < asked.dither);
+  const [answered, asked, unknown] = contour.marks;
+  assert.equal(answered.fill, "solid");
+  assert.equal(asked.fill, "ring");
+  // An outcome this build does not know is drawn as open, never as settled.
+  assert.equal(unknown.fill, "ring");
 });
 
 test("repeats each get their own mark and keep their group", () => {
@@ -332,7 +336,7 @@ test("the list strip keeps the shape and the marks at a scannable size", () => {
   assert.equal(strip.points[23].x, 1);
   assert.equal(strip.marks.length, 1);
   assert.equal(strip.marks[0].state, "denied");
-  assert.equal(strip.marks[0].dither, OUTCOME_DITHER.denied);
+  assert.equal(strip.marks[0].fill, OUTCOME_FILL.denied);
 });
 
 test("an empty contour makes an empty strip rather than throwing", () => {

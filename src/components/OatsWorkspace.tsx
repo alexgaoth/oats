@@ -82,6 +82,7 @@ import LiveThreadMap from "./conversation/LiveThreadMap";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
+import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
@@ -1664,9 +1665,7 @@ function IntelligenceViews({
               }}
               pickLabel={(time) => clock(Math.max(0, time - (storedContour.start ?? time)))}
             />
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">
-              {t("oats.conversation.contourLegend")}
-            </p>
+            <ContourLegend contour={storedContour} className="mt-4" />
           </Card>
 
           <Tabs
