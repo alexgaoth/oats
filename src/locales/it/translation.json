@@ -194,10 +194,6 @@
       "installButton": "Installa aggiornamento",
       "availableButton": "Aggiornamento disponibile"
     },
-    "accessibilityMissing": {
-      "title": "Autorizzazioni di accessibilità necessarie",
-      "description": "Abbiamo rilevato che Oats ha bisogno delle autorizzazioni di accessibilità per funzionare correttamente. Abilitale qui sotto."
-    },
     "history": {
       "couldNotLoadTitle": "Impossibile caricare la cronologia",
       "couldNotLoadDescription": "Si è verificato un errore nel caricamento delle trascrizioni. Chiudi e riapri l'app.",

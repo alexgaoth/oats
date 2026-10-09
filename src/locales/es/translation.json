@@ -194,10 +194,6 @@
       "installButton": "Instalar actualización",
       "availableButton": "Actualización disponible"
     },
-    "accessibilityMissing": {
-      "title": "Se necesitan permisos de accesibilidad",
-      "description": "Hemos detectado que Oats necesita permisos de accesibilidad para funcionar correctamente. Actívalos a continuación."
-    },
     "history": {
       "couldNotLoadTitle": "No se pudo cargar tu historial",
       "couldNotLoadDescription": "Ocurrió un problema al cargar tus transcripciones. Cierra y abre la app de nuevo.",
