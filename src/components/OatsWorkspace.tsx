@@ -40,7 +40,7 @@ import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
-import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
+import { findExcerpt, mergeRecall, recallText } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
@@ -1969,22 +1969,16 @@ function IntelligenceViews({
  * NFD, drop the marks, lowercase — over a hundred transcripts each time would
  * be the same work repeated for an answer that has not changed. A note object
  * is replaced whenever the note is, so a stale fold cannot outlive its text.
+ *
+ * What is searched is `recallText`, the same function the main process runs
+ * over the conversations this list does not hold: the words of every turn and
+ * who said them, never the JSON keys they are stored under.
  */
 const foldedNotes = new WeakMap<NoteItem, string>();
 function foldedNote(note: NoteItem): string {
   let folded = foldedNotes.get(note);
   if (folded === undefined) {
-    folded = [
-      note.title,
-      note.enhanced_content,
-      note.transcript,
-      // The reader's own notes on what they marked — the words they are most
-      // likely to remember having written.
-      ...parseMoments(note.conversation_marks ?? null).map((moment) => moment.note),
-    ]
-      .filter(Boolean)
-      .map((field) => foldText(field))
-      .join("\n");
+    folded = foldText(recallText(note));
     foldedNotes.set(note, folded);
   }
   return folded;

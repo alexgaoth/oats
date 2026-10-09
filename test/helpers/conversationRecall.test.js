@@ -3,9 +3,13 @@ const assert = require("node:assert/strict");
 
 let findExcerpt;
 let mergeRecall;
+let recallText;
+let foldText;
 
 test.before(async () => {
-  ({ findExcerpt, mergeRecall } = await import("../../src/helpers/conversationRecall.mjs"));
+  ({ findExcerpt, mergeRecall, recallText, withOlderMatches } =
+    await import("../../src/helpers/conversationRecall.mjs"));
+  ({ foldText } = await import("../../src/helpers/searchFold.mjs"));
 });
 
 const SAID = "so the question is whether enterprise pricing lands before the board meeting";
@@ -183,4 +187,58 @@ test("a transcript saved without ids still names the turn it matched", () => {
     "pricing question"
   );
   assert.equal(found.segmentId, "legacy-1");
+});
+
+// The literal filter is `foldText(recallText(note)).includes(foldText(query))`,
+// in the renderer over the conversations it holds and in the main process over
+// the rest — so these pins hold for both halves of a search.
+const matches = (n, query) => foldText(recallText(n)).includes(foldText(query.trim()));
+
+test("a search reads the words of a transcript, not the JSON they are stored in", () => {
+  const stored = note({
+    transcript: JSON.stringify([
+      { id: "seg-7", text: SAID, timestamp: 1700, startMs: 0, speakerStatus: "provisional" },
+    ]),
+  });
+  assert.ok(matches(stored, "board meeting"), "what was said matches");
+  // Key names, ids, and offsets used to match every recorded conversation.
+  for (const query of ["speaker", "timestamp", "text", "seg-7", "provisional", "1700", "startMs"]) {
+    assert.equal(matches(stored, query), false, query);
+  }
+});
+
+test("a search still finds the title, the summary, a named speaker, and a mark's note", () => {
+  const stored = note({
+    title: "Quarterly sync",
+    enhanced_content: "The room agreed to hold the tier.",
+    transcript: JSON.stringify([
+      { id: "a", text: "first", speaker: "speaker_0", speakerName: "Ada Lovelace" },
+      { id: "b", text: "second", speaker: "speaker_1", speakerIsPlaceholder: true },
+      { id: "c", text: "third", suggestedName: "Grace Hopper" },
+    ]),
+    conversation_marks: JSON.stringify([{ id: "m1", at: 5, note: "the churn counter-example" }]),
+  });
+  assert.ok(matches(stored, "quarterly"));
+  assert.ok(matches(stored, "hold the tier"));
+  assert.ok(matches(stored, "ada lovelace"), "a name given to a speaker");
+  assert.ok(matches(stored, "counter-example"), "the reader's own note");
+  assert.equal(matches(stored, "grace hopper"), false, "a suggestion nobody confirmed");
+  // A name is listed once, not once per turn it spoke.
+  const twice = note({
+    transcript: JSON.stringify([
+      { text: "x", speakerName: "Ada" },
+      { text: "y", speakerName: "Ada" },
+    ]),
+  });
+  assert.equal(recallText(twice).split("Ada").length - 1, 1);
+});
+
+test("a transcript that is not a JSON array is searched as the words it is", () => {
+  assert.ok(matches(note({ transcript: "an old plain transcript about pricing" }), "plain"));
+  assert.ok(matches(note({ transcript: '{"text":"an object"}' }), "an object"));
+  assert.equal(recallText(note({ title: "", enhanced_content: null, transcript: "" })), "");
+  assert.equal(recallText(null), "");
+  // Turns that are not objects, or text that is not text, are skipped, not thrown on.
+  const odd = note({ transcript: JSON.stringify([null, "loose", { text: { nested: 1 } }]) });
+  assert.doesNotThrow(() => recallText(odd));
 });

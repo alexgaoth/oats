@@ -154,6 +154,65 @@ function window_(text, at, length) {
 }
 
 /**
+ * The words in one stored transcript: every turn's text, then each name a
+ * person was given — never the JSON they are stored in.
+ *
+ * A transcript that is not a JSON array is a string somebody wrote before
+ * turns were kept, and it is all words.
+ */
+function transcriptWords(raw) {
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [raw];
+  }
+  if (!Array.isArray(parsed)) return [raw];
+  const said = [];
+  const names = new Set();
+  for (const segment of parsed) {
+    if (!segment || typeof segment !== "object") continue;
+    if (typeof segment.text === "string" || typeof segment.text === "number") {
+      said.push(String(segment.text));
+    }
+    // Who said it. A name somebody gave a speaker is how a conversation with
+    // them is looked for; an unconfirmed suggestion is not, and placeholders
+    // carry no name at all.
+    if (typeof segment.speakerName === "string" && segment.speakerName.trim()) {
+      names.add(segment.speakerName);
+    }
+  }
+  return [...said, ...names];
+}
+
+/**
+ * Everything a literal search looks through in one conversation, as one string:
+ * its title, what Oats wrote, the words of every turn and who said them, and
+ * the reader's notes on what they marked.
+ *
+ * The transcript is read as the turns it stores. The filter used to fold the
+ * raw column, so key names — `speaker`, `timestamp`, `text` — and every id and
+ * offset matched every recorded conversation, and a search for one of them
+ * listed them all with no passage to show.
+ *
+ * One function for both halves of the search: the renderer's filter over the
+ * conversations it holds, and the main process's scan over the ones it does
+ * not. Two copies of this rule would be two answers to "did it match".
+ */
+export function recallText(note) {
+  if (!note) return "";
+  return [
+    note.title,
+    note.enhanced_content,
+    ...transcriptWords(note.transcript),
+    ...parseMoments(note.conversation_marks ?? null).map((moment) => moment.note),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
  * Merge the literal results with what the vector index suggests.
  *
  * Literal matches come first and keep their order: they are certain, and a
