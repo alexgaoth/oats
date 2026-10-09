@@ -1588,7 +1588,9 @@
         "segmentation": "Detección de límites del habla para la identificación de hablantes",
         "embedding_en": "Huella vocal para la identificación del hablante"
       }
-    }
+    },
+    "downloaded": "Descargado",
+    "delete": "Eliminar {{model}}"
   },
   "notes": {
     "meeting": {
@@ -1969,9 +1971,10 @@
       "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
       "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
       "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
-      "needsSummaryModel": "Sin resumen: no hay ningún modelo de resumen listo en este equipo. Configura uno en Ajustes › Avanzado › Modelos de lenguaje y vuelve para resumir.",
+      "needsSummaryModel": "Aún no hay un modelo de resumen listo, así que esta conversación no se ha resumido.",
       "notSummarized": "Esta conversación aún no se ha resumido.",
-      "summarize": "Resumir"
+      "summarize": "Resumir",
+      "setUpModel": "Configurar un modelo"
     },
     "review": {
       "title": "Lo que quedó abierto",
@@ -1996,58 +1999,121 @@
       "next": "Coincidencia siguiente"
     },
     "settings": {
-      "title": "Pocas decisiones.",
-      "subtitle": "Oats escribe el título, el resumen y los hilos por sí solo.",
       "processing": "Procesamiento",
-      "processingHint": "Una sola opción cubre la transcripción y la inteligencia.",
-      "uiMode": "Interfaz",
-      "uiModeHint": "El registro de trabajo o el campo de avena.",
-      "uiModeWork": "Registro",
-      "uiModeField": "Campo",
-      "localProcessing": "En este ordenador",
-      "apiProcessing": "Usar clave de API",
-      "provider": "Proveedor",
-      "summaryProvider": "Resúmenes",
-      "summaryHint": "El modelo que escribe el título, el resumen y los hilos tras una conversación.",
-      "summaryKeyPlaceholder": "Clave de API",
-      "summaryModel": "Modelo",
       "vault": "Bóveda de Obsidian",
       "vaultHint": "Cada conversación se guarda como una nota, con los temas como [[enlaces]].",
       "vaultChoose": "Elegir carpeta",
       "vaultChange": "Cambiar",
       "vaultStop": "Detener",
-      "apiKeyPlaceholder": "Clave de API de OpenAI",
-      "apiKeyFor": "Clave de API de {{provider}}",
-      "microphone": "Micrófono",
-      "micBuiltIn": "Micrófono integrado",
-      "micSystemDefault": "Predeterminado del sistema",
-      "micChange": "Cambiar",
-      "micChangeLabel": "Cambiar micrófono",
-      "micError": "Oats no pudo leer la lista de micrófonos. Comprueba el permiso del micrófono.",
-      "language": "Idioma de la conversación",
-      "autoDetect": "Detección automática",
       "autoSearch": "Buscar preguntas sin responder",
       "autoSearchHint": "Abre una búsqueda de Google en segundo plano cuando nadie lo sabe. Solo se envía el texto de la pregunta, nunca audio ni transcripción. Las tarjetas siguen apareciendo.",
-      "data": "Tus datos",
-      "dataHint": "Las grabaciones y transcripciones no salen de este equipo.",
-      "openDataFolder": "Abrir carpeta de datos",
-      "advanced": "Avanzado",
-      "advancedHint": "Avanzado: modelos, proveedores y diagnósticos por función.",
       "advancedLoading": "Abriendo…",
-      "dictationShortcut": "Dictar con",
-      "dictationHint": "Mantén o pulsa; escribe donde esté el cursor.",
       "hotkeyRejected": "No se pudo registrar «{{hotkey}}», así que sigue en uso el atajo anterior.",
       "conversationHotkey": "Atajo de conversación",
       "conversationHotkeyHint": "Inicia y detiene desde cualquier sitio.",
-      "sections": {
-        "label": "Secciones avanzadas",
-        "general": "General",
-        "hotkeys": "Atajos",
-        "speechToText": "Conversión de voz a texto",
-        "llms": "Modelos de lenguaje",
-        "privacyData": "Privacidad",
-        "system": "Sistema"
-      }
+      "backToApp": "Volver a la app",
+      "navLabel": "Páginas de ajustes",
+      "themeSystem": "Sistema",
+      "processingDescription": "Transcripción, resúmenes y limpieza en una sola elección. Cada uno se puede cambiar abajo.",
+      "processingLocal": "En este Mac",
+      "processingProviders": "Con claves de API",
+      "processingMixed": "Mixto: algunas funciones de abajo usan otra opción.",
+      "tuning": "Ajuste fino",
+      "dictationAudio": "Audio de dictados",
+      "dictationAudioDescription": "Grabaciones de dictados, guardadas 30 días para poder transcribir de nuevo uno que falló.",
+      "cleanup": "Limpieza",
+      "cleanupDescription": "Un modelo ordena cada dictado antes de pegarlo.",
+      "pages": {
+        "general": {
+          "title": "General",
+          "description": "Cómo se ve Oats, cómo arranca y cómo te avisa."
+        },
+        "shortcuts": {
+          "title": "Atajos",
+          "description": "Teclas que funcionan desde cualquier app y las de dentro de Oats."
+        },
+        "recording": {
+          "title": "Grabación",
+          "description": "El micrófono, el idioma y las tarjetas de preguntas durante una conversación."
+        },
+        "dictation": {
+          "title": "Dictado",
+          "description": "Escribir con la voz en cualquier app: qué se pega y cómo se limpia."
+        },
+        "models": {
+          "title": "Modelos de IA",
+          "description": "Qué transcribe y resume, en este Mac o con tus claves de API."
+        },
+        "connections": {
+          "title": "Conexiones",
+          "description": "Adónde van las conversaciones una vez grabadas."
+        },
+        "privacy": {
+          "title": "Privacidad y datos",
+          "description": "Permisos y el audio que guarda Oats."
+        },
+        "about": {
+          "title": "Acerca de",
+          "description": "Versión, registros y empezar de cero."
+        }
+      },
+      "inApp": {
+        "title": "En Oats",
+        "description": "Funcionan con la ventana de Oats delante.",
+        "toggleConversation": "Iniciar o detener una conversación",
+        "mark": "Marcar un momento mientras grabas",
+        "search": "Buscar conversaciones",
+        "find": "Buscar en una conversación",
+        "back": "Volver"
+      },
+      "questions": {
+        "title": "Tarjetas de preguntas",
+        "description": "Durante una conversación, Oats detecta preguntas de datos que nadie en la sala supo responder.",
+        "enable": "Mostrar tarjetas de preguntas",
+        "model": "Modelo clasificador",
+        "modelDescription": "Opcional. Se ejecuta en este Mac y hace las tarjetas más precisas.",
+        "download": "Descargar",
+        "searchWith": "Buscar con"
+      },
+      "connections": {
+        "vaultTitle": "Obsidian",
+        "vaultDescription": "Cada conversación terminada se guarda en tu bóveda como una nota.",
+        "vaultFolder": "Carpeta de la bóveda",
+        "noVault": "No has elegido carpeta.",
+        "filesTitle": "Archivos Markdown",
+        "filesDescription": "Una copia de cada nota y transcripción como archivos en la carpeta que elijas."
+      },
+      "dictionary": {
+        "title": "Diccionario",
+        "description": "Nombres, productos y jerga que Oats debe entender bien, en dictado y en conversaciones.",
+        "placeholder": "Añade palabras separadas por comas",
+        "add": "Añadir",
+        "remove": "Quitar {{word}}",
+        "empty": "Aún no hay palabras.",
+        "autoLearn": "Aprender de las correcciones",
+        "autoLearnDescription": "Cuando corriges una palabra dictada en otra app, Oats la añade aquí."
+      },
+      "models": {
+        "conversations": "Conversaciones",
+        "conversationsDescription": "El modelo de voz que transcribe una conversación.",
+        "summaries": "Resúmenes",
+        "summariesDescription": "El modelo que escribe el título, el resumen y los hilos.",
+        "dictation": "Dictado",
+        "dictationDescription": "El modelo de voz para el dictado."
+      },
+      "global": {
+        "title": "Desde cualquier app",
+        "description": "Funcionan aunque Oats esté en segundo plano.",
+        "conversation": "Iniciar o detener una conversación",
+        "conversationHint": "Graba la sala o termina la conversación en curso.",
+        "dictation": "Dictar",
+        "dictationHint": "Escribe lo que dices donde está el cursor.",
+        "activation": "Tecla de dictado",
+        "activationHint": "Pulsa para empezar y parar, o mantén pulsada mientras hablas.",
+        "search": "Buscar conversaciones",
+        "searchHint": "Abre Oats con la búsqueda lista."
+      },
+      "microphoneDescription": "El micrófono que usa Oats para conversaciones y dictado."
     },
     "errors": {
       "noModel": "Configura el procesamiento de Oats antes de grabar una conversación.",

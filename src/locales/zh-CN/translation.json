@@ -1583,7 +1583,9 @@
         "segmentation": "用于说话人分离的语音边界检测",
         "embedding_en": "用于说话人识别的声纹提取"
       }
-    }
+    },
+    "downloaded": "已下载",
+    "delete": "删除 {{model}}"
   },
   "notes": {
     "meeting": {
@@ -1964,9 +1966,10 @@
       "deleteDescription": "它的转录、摘要和标记时刻将从 Oats 中删除。此操作无法撤销。",
       "emptyDescription": "你录制的对话会显示在这里，并附有摘要和可搜索的转录。",
       "noMatchesHint": "搜索范围包括标题、摘要、转录和你的备注。",
-      "needsSummaryModel": "暂无摘要：此电脑上没有可用的摘要模型。请在 设置 › 高级 › 语言模型 中设置，然后回来生成摘要。",
+      "needsSummaryModel": "还没有可用的摘要模型，所以这段对话没有摘要。",
       "notSummarized": "此对话尚未生成摘要。",
-      "summarize": "生成摘要"
+      "summarize": "生成摘要",
+      "setUpModel": "设置模型"
     },
     "review": {
       "title": "尚未解决的内容",
@@ -1991,58 +1994,121 @@
       "next": "下一个匹配项"
     },
     "settings": {
-      "title": "把选择降到最少。",
-      "subtitle": "标题、摘要和线索由 Oats 自动生成。",
       "processing": "处理方式",
-      "processingHint": "一个选择同时覆盖转录与智能。",
-      "uiMode": "界面",
-      "uiModeHint": "工作台账，或燕麦田。",
-      "uiModeWork": "台账",
-      "uiModeField": "麦田",
-      "localProcessing": "在本机上",
-      "apiProcessing": "使用 API 密钥",
-      "provider": "服务商",
-      "summaryProvider": "摘要",
-      "summaryHint": "对话结束后撰写标题、摘要和话题的模型。",
-      "summaryKeyPlaceholder": "API 密钥",
-      "summaryModel": "模型",
       "vault": "Obsidian 仓库",
       "vaultHint": "每次对话都会写成一条笔记，主题以 [[双链]] 形式呈现。",
       "vaultChoose": "选择文件夹",
       "vaultChange": "更改",
       "vaultStop": "停止",
-      "apiKeyPlaceholder": "OpenAI API 密钥",
-      "apiKeyFor": "{{provider}} API 密钥",
-      "microphone": "麦克风",
-      "micBuiltIn": "内置麦克风",
-      "micSystemDefault": "系统默认",
-      "micChange": "更改",
-      "micChangeLabel": "更改麦克风",
-      "micError": "Oats 无法读取麦克风列表。请检查麦克风权限。",
-      "language": "对话语言",
-      "autoDetect": "自动检测",
       "autoSearch": "搜索未获解答的问题",
       "autoSearchHint": "没人知道答案时，在后台打开 Google 搜索。只发送问题文本，绝不发送音频或转录。关闭后卡片依然出现。",
-      "data": "你的数据",
-      "dataHint": "录音和转录都留在这台电脑上。",
-      "openDataFolder": "打开数据文件夹",
-      "advanced": "高级",
-      "advancedHint": "高级 — 各功能的模型、提供方与诊断。",
       "advancedLoading": "正在打开…",
-      "dictationShortcut": "听写快捷键",
-      "dictationHint": "按住或轻点；在光标处输入。",
       "hotkeyRejected": "无法注册「{{hotkey}}」，因此仍在使用之前的快捷键。",
       "conversationHotkey": "对话快捷键",
       "conversationHotkeyHint": "在任何地方开始或停止。",
-      "sections": {
-        "label": "高级设置分区",
-        "general": "通用",
-        "hotkeys": "快捷键",
-        "speechToText": "语音转文字",
-        "llms": "语言模型",
-        "privacyData": "隐私",
-        "system": "系统"
-      }
+      "backToApp": "返回应用",
+      "navLabel": "设置页面",
+      "themeSystem": "跟随系统",
+      "processingDescription": "转录、摘要和整理一次选好。每一项都可以在下面单独更改。",
+      "processingLocal": "在这台 Mac 上",
+      "processingProviders": "使用 API 密钥",
+      "processingMixed": "混合：下面有些功能使用了不同的选择。",
+      "tuning": "微调",
+      "dictationAudio": "听写音频",
+      "dictationAudioDescription": "听写录音会保留 30 天，以便重新转录失败的那一段。",
+      "cleanup": "整理",
+      "cleanupDescription": "粘贴前，由模型整理每段听写。",
+      "pages": {
+        "general": {
+          "title": "通用",
+          "description": "Oats 的外观、启动方式和通知。"
+        },
+        "shortcuts": {
+          "title": "快捷键",
+          "description": "在任何应用中都能用的按键，以及 Oats 内的按键。"
+        },
+        "recording": {
+          "title": "录音",
+          "description": "对话时的麦克风、语言和问题卡片。"
+        },
+        "dictation": {
+          "title": "听写",
+          "description": "在任何应用中用语音输入：粘贴什么、如何整理。"
+        },
+        "models": {
+          "title": "AI 模型",
+          "description": "负责转录和摘要的模型，在这台 Mac 上或使用你的 API 密钥。"
+        },
+        "connections": {
+          "title": "连接",
+          "description": "录制完成后对话的去处。"
+        },
+        "privacy": {
+          "title": "隐私与数据",
+          "description": "权限，以及 Oats 保存的音频。"
+        },
+        "about": {
+          "title": "关于",
+          "description": "版本、日志和重新开始。"
+        }
+      },
+      "inApp": {
+        "title": "在 Oats 中",
+        "description": "Oats 窗口在最前面时可用。",
+        "toggleConversation": "开始或停止对话",
+        "mark": "录音时标记一个时刻",
+        "search": "搜索对话",
+        "find": "在对话中查找",
+        "back": "返回"
+      },
+      "questions": {
+        "title": "问题卡片",
+        "description": "对话中，Oats 会注意到在场没人能回答的事实性问题。",
+        "enable": "显示问题卡片",
+        "model": "分类模型",
+        "modelDescription": "可选。在这台 Mac 上运行，让卡片更准确。",
+        "download": "下载",
+        "searchWith": "搜索方式"
+      },
+      "connections": {
+        "vaultTitle": "Obsidian",
+        "vaultDescription": "每段结束的对话都会作为笔记写入你的仓库。",
+        "vaultFolder": "仓库文件夹",
+        "noVault": "尚未选择文件夹。",
+        "filesTitle": "Markdown 文件",
+        "filesDescription": "把每条笔记和转录以文件形式复制到你选择的文件夹。"
+      },
+      "dictionary": {
+        "title": "词典",
+        "description": "希望 Oats 在听写和对话中都听准的名字、产品和术语。",
+        "placeholder": "添加词语，用逗号分隔",
+        "add": "添加",
+        "remove": "移除 {{word}}",
+        "empty": "还没有词语。",
+        "autoLearn": "从更正中学习",
+        "autoLearnDescription": "你在其他应用中更正听写的词语时，Oats 会把它加到这里。"
+      },
+      "models": {
+        "conversations": "对话",
+        "conversationsDescription": "转录对话的语音模型。",
+        "summaries": "摘要",
+        "summariesDescription": "撰写标题、摘要和主线的模型。",
+        "dictation": "听写",
+        "dictationDescription": "听写使用的语音模型。"
+      },
+      "global": {
+        "title": "在任何应用中",
+        "description": "即使 Oats 在后台也能使用。",
+        "conversation": "开始或停止对话",
+        "conversationHint": "录下现场，或结束正在进行的对话。",
+        "dictation": "听写",
+        "dictationHint": "在光标处输入你说的话。",
+        "activation": "听写按键",
+        "activationHint": "轻按开始和停止，或说话时按住。",
+        "search": "搜索对话",
+        "searchHint": "打开 Oats 并准备好搜索框。"
+      },
+      "microphoneDescription": "Oats 用于对话和听写的麦克风。"
     },
     "errors": {
       "noModel": "录制对话前请先配置 Oats 的处理方式。",

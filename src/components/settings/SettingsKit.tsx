@@ -170,7 +170,10 @@ export function SettingsNav<T extends string>({
           >
             <Icon
               aria-hidden="true"
-              className={cn("size-4 shrink-0", current ? "text-brand-ink" : "text-muted-foreground")}
+              className={cn(
+                "size-4 shrink-0",
+                current ? "text-brand-ink" : "text-muted-foreground"
+              )}
             />
             <span className="truncate">{text}</span>
           </button>

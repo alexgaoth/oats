@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
+import { cn } from "./lib/utils";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Download, Trash2, Cloud, Lock, X, Zap, Check } from "lucide-react";
@@ -86,95 +87,94 @@ function LocalModelCard({
 
   return (
     <div
+      role="radio"
+      aria-checked={isSelected}
+      aria-disabled={!isDownloaded || undefined}
+      tabIndex={isDownloaded ? 0 : -1}
       onClick={handleClick}
-      className={`relative w-full text-left overflow-hidden rounded-md border transition-colors duration-200 group ${
-        isSelected ? cardStyles.modelCard.selected : cardStyles.modelCard.default
-      } ${isDownloaded && !isSelected ? "cursor-pointer" : ""}`}
+      onKeyDown={(event) => {
+        if ((event.key === "Enter" || event.key === " ") && isDownloaded) {
+          event.preventDefault();
+          handleClick();
+        }
+      }}
+      className={cn(
+        "group flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-colors",
+        "focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
+        isSelected ? "bg-primary/[0.06]" : isDownloaded ? "cursor-pointer hover:bg-muted/50" : ""
+      )}
     >
-      <div className="flex items-center gap-1.5 p-2">
-        <div className="shrink-0">
-          {isDownloaded ? (
-            <div
-              className={`w-1.5 h-1.5 rounded-full ${
-                isSelected
-                  ? "bg-primary shadow-[0_0_6px_color-mix(in_oklch,var(--color-primary)_60%,transparent)] animate-[pulse-glow_2s_ease-in-out_infinite]"
-                  : "bg-success shadow-[0_0_4px_rgba(34,197,94,0.5)]"
-              }`}
-            />
-          ) : isDownloading ? (
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.5)] animate-[spinner-rotate_1s_linear_infinite]" />
-          ) : (
-            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/20" />
-          )}
-        </div>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+          isSelected ? "border-primary bg-primary" : "border-input",
+          !isDownloaded && "opacity-40"
+        )}
+      >
+        {isSelected && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+      </span>
+      <ProviderIcon provider={provider} className="size-4 shrink-0" />
+      <span className="truncate text-sm font-medium text-foreground">{name}</span>
+      <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
+        {actualSizeMb ? `${actualSizeMb}MB` : size}
+      </span>
+      {recommended && (
+        <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-brand-ink">
+          {t("common.recommended")}
+        </span>
+      )}
+      {languageLabel && (
+        <span className="shrink-0 text-[13px] text-muted-foreground">{languageLabel}</span>
+      )}
 
-        <div className="flex-1 min-w-0 flex items-center gap-1.5">
-          <ProviderIcon provider={provider} className="w-3.5 h-3.5 shrink-0" />
-          <span className="font-semibold text-sm text-foreground truncate tracking-tight">
-            {name}
-          </span>
-          <span className="text-xs text-muted-foreground/50 tabular-nums shrink-0">
-            {actualSizeMb ? `${actualSizeMb}MB` : size}
-          </span>
-          {recommended && (
-            <span className={cardStyles.badges.recommended}>{t("common.recommended")}</span>
-          )}
-          {languageLabel && (
-            <span className="text-xs text-muted-foreground/50 font-medium shrink-0">
-              {languageLabel}
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {isDownloaded ? (
+          <>
+            <span className="flex items-center gap-1 text-[13px] text-muted-foreground">
+              <Check aria-hidden="true" className="size-3.5 text-success" />
+              {t("models.downloaded")}
             </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isDownloaded ? (
-            <>
-              {isSelected && (
-                <span className="text-xs font-medium text-primary px-2 py-0.5 bg-primary/10 rounded-sm">
-                  {t("common.active")}
-                </span>
-              )}
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0 text-muted-foreground/40 hover:text-destructive opacity-0 group-hover:opacity-100 transition-[color,opacity,transform] active:scale-95"
-              >
-                <Trash2 size={12} />
-              </Button>
-            </>
-          ) : isDownloading ? (
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                onCancel();
+                onDelete();
               }}
-              disabled={isCancelling}
-              size="sm"
-              variant="outline"
-              className="h-6 px-2.5 text-xs text-destructive border-destructive/25 hover:bg-destructive/8"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("models.delete", { model: name })}
+              className="size-7 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
             >
-              <X size={11} className="mr-0.5" />
-              {isCancelling ? "..." : t("common.cancel")}
+              <Trash2 aria-hidden="true" className="size-3.5" />
             </Button>
-          ) : (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDownload();
-              }}
-              size="sm"
-              variant="default"
-              className="h-6 px-2.5 text-xs"
-            >
-              <Download size={11} className="mr-1" />
-              {t("common.download")}
-            </Button>
-          )}
-        </div>
+          </>
+        ) : isDownloading ? (
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            disabled={isCancelling}
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+          >
+            <X aria-hidden="true" />
+            {isCancelling ? "…" : t("common.cancel")}
+          </Button>
+        ) : (
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <Download aria-hidden="true" />
+            {t("common.download")}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -780,7 +780,10 @@ export default function TranscriptionModelPicker({
         : localModels.filter((model) => isOffered(model.model));
 
     return (
-      <div className="space-y-0.5">
+      <div
+        role="radiogroup"
+        className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs"
+      >
         {modelsToRender.map((model) => {
           const modelId = model.model;
           const info = WHISPER_MODEL_INFO[modelId] ?? {
@@ -853,7 +856,10 @@ export default function TranscriptionModelPicker({
         : parakeetModels;
 
     return (
-      <div className="space-y-0.5">
+      <div
+        role="radiogroup"
+        className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs"
+      >
         {modelsToRender.map((model) => {
           const modelId = model.model;
           const info = PARAKEET_MODEL_INFO[modelId] ?? {

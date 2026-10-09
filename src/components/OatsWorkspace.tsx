@@ -11,12 +11,10 @@ import {
   AlertTriangle,
   ArrowRight,
   Bookmark,
-  Brain,
   CalendarDays,
   Check,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
   ChevronUp,
   Clock,
   Copy,
@@ -32,7 +30,6 @@ import {
   MoreHorizontal,
   Search,
   SearchX,
-  Settings,
   Sparkles,
   Square,
   StickyNote,
@@ -59,9 +56,11 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { ConfirmDialog } from "./ui/dialog";
-import { Toggle } from "./ui/toggle";
 import { useNotes, initializeNotes, setActiveNoteId } from "../stores/noteStore";
 import { AppSidebar } from "./shell/AppSidebar";
+import { useSettingsNavStore } from "../stores/settingsNavStore";
+import { isSettingsPageId, SETTINGS_PAGES } from "./settings/settingsPages";
+import { SettingsPageHeader } from "./settings/SettingsKit";
 import {
   useMeetingRecordingStore,
   startRecording,
@@ -79,9 +78,7 @@ import { useConversationEvents } from "../hooks/useConversationEvents";
 import ConversationGraph from "./notes/ConversationGraph";
 import TopicGraph from "./notes/TopicGraph";
 import LifetimeGraph from "./notes/LifetimeGraph";
-import ListeningPulse from "./conversation/ListeningPulse";
 import FieldBackdrop from "./field/FieldBackdrop";
-import WheatPerch from "./field/WheatPerch";
 import LiveThreadMap from "./conversation/LiveThreadMap";
 import OpenThreadStack from "./conversation/OpenThreadStack";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
@@ -123,7 +120,6 @@ import {
   useLiveContour,
   useStoredContour,
 } from "./conversation/useContour";
-import HotkeyInput from "./ui/HotkeyInput";
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
@@ -147,7 +143,6 @@ import type {
   QuestionOutcome,
 } from "../types/conversationEvents";
 import type { NoteItem } from "../types/electron";
-import type { SettingsSectionType } from "./SettingsPage";
 import type { TFunction } from "i18next";
 
 // Advanced Settings is the inherited OpenWhispr settings application: every
@@ -163,14 +158,6 @@ const AdvancedSettings = React.lazy(() => import("./SettingsPage"));
 // "General" and nothing else, so everything behind it — the speech model, the
 // shortcuts, the question cards, the summary model — was unreachable, including
 // the screens other messages point people to.
-const ADVANCED_SECTIONS: SettingsSectionType[] = [
-  "general",
-  "hotkeys",
-  "speechToText",
-  "llms",
-  "privacyData",
-  "system",
-];
 
 type Surface = "conversation" | "intelligence" | "settings";
 
@@ -1734,6 +1721,18 @@ function IntelligenceViews({
                         ? t("oats.intelligence.needsSummaryModel")
                         : t("oats.intelligence.notSummarized")}
                   </p>
+                  {summaryState === "needs-model" && (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent("oats-open-settings", { detail: "models" })
+                        )
+                      }
+                    >
+                      {t("oats.intelligence.setUpModel")}
+                    </Button>
+                  )}
                   {summaryState === "not-summarized" && (
                     <Button
                       size="sm"
@@ -2721,35 +2720,6 @@ function ConversationActions({
   );
 }
 
-function QuietAction({
-  label,
-  onClick,
-  ariaLabel,
-  ariaExpanded,
-}: {
-  label: string;
-  onClick: () => void;
-  /** When the visible word alone does not say what it acts on. */
-  ariaLabel?: string;
-  /** For the ones that open something in place. */
-  ariaExpanded?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      aria-expanded={ariaExpanded}
-      onClick={onClick}
-      // 24px tall, and the padding is negative-margined away so the target grows
-      // without the words moving: WCAG 2.2's 24x24 minimum for a pointer target.
-      // `inline-flex` rather than `block`: these sit on baseline-aligned rows.
-      className="-my-1.5 inline-flex min-h-6 items-center rounded-sm py-1.5 font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {label}
-    </button>
-  );
-}
-
 /** Back to where the reader came from, named, the way a desktop app says it. */
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -3027,719 +2997,28 @@ function IntelligenceSurface() {
   );
 }
 
-// One settings row: a label, an optional line of explanation, and the control.
-// Rows are separated by whitespace and a hairline, not by card borders — the
-// visible page is a single quiet list, not a wall of panels (DESIGN.md §13).
-function Row({
-  label,
-  hint,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    // Label left, control right, on a shared alignment spine.
-    //
-    // Stacking label → hint → control vertically for every setting made the page
-    // three screens tall and gave the eye nothing to follow. A two-column
-    // rhythm halves the height and creates the spine that makes a settings page
-    // scannable rather than a form to read. DESIGN.md §13 wants the visible page
-    // to fit on one screen; this is most of how it gets there.
-    <div className="grid grid-cols-[minmax(0,18rem)_1fr] items-start gap-x-8 border-b border-border/40 py-2.5 last:border-b-0">
-      <div className="min-w-0">
-        {/* A `<label>` with no `for` and no wrapped control labels nothing. */}
-        {htmlFor ? (
-          <label className="text-sm text-foreground" htmlFor={htmlFor}>
-            {label}
-          </label>
-        ) : (
-          <span className="text-sm text-foreground">{label}</span>
-        )}
-        {/* The explanation belongs to the label, in the label's cell. Putting it
-            on a second grid row pushed it below the control, where it read as an
-            orphan belonging to whatever came next. */}
-        {hint && <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p>}
-      </div>
-      <div className="flex min-w-0 flex-col items-start gap-2 pt-0.5">{children}</div>
-    </div>
-  );
-}
-
-// The visible page's entire microphone control: one line naming the microphone
-// the next conversation will use, and a way to change it.
-//
-// It deliberately does not enumerate anything on mount. `enumerateDevices`
-// returns unlabelled entries until microphone permission has been granted, so
-// any UI that wants to *name* the devices ends up calling `getUserMedia` to
-// unlock the labels — which opens the microphone, and on macOS interrupts
-// whatever else is playing. Opening Settings is not consent to open the
-// microphone; pressing "change" is.
-//
-// It also writes `preferBuiltInMic`, because that flag wins over the chosen
-// device at recording time (`getMeetingMicConstraints`). A picker that let you
-// choose a device the recorder then ignored would be a setting that lies.
-function MicrophoneChoice() {
-  const { t } = useTranslation();
-  const preferBuiltIn = useSettingsStore((s) => s.preferBuiltInMic);
-  const setPreferBuiltIn = useSettingsStore((s) => s.setPreferBuiltInMic);
-  const deviceId = useSettingsStore((s) => s.selectedMicDeviceId);
-  const deviceLabel = useSettingsStore((s) => s.selectedMicDeviceLabel);
-  const setDevice = useSettingsStore((s) => s.setSelectedMicDevice);
-
-  const [devices, setDevices] = useState<{ deviceId: string; label: string }[] | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const openPicker = async () => {
-    setFailed(false);
-    try {
-      let all = await navigator.mediaDevices.enumerateDevices();
-      if (!all.some((device) => device.kind === "audioinput" && device.label)) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-        all = await navigator.mediaDevices.enumerateDevices();
-      }
-      setDevices(
-        all
-          .filter((device) => device.kind === "audioinput" && device.deviceId !== "default")
-          .map((device) => ({
-            deviceId: device.deviceId,
-            label: device.label || t("microphoneSettings.unknownDevice"),
-          }))
-      );
-    } catch {
-      setFailed(true);
-    }
-  };
-
-  if (failed) {
-    return <p className="text-sm leading-5 text-foreground">{t("oats.settings.micError")}</p>;
-  }
-
-  if (!devices) {
-    return (
-      <div className="flex items-baseline gap-3">
-        <span className="text-sm text-foreground">
-          {preferBuiltIn
-            ? t("oats.settings.micBuiltIn")
-            : deviceLabel || t("oats.settings.micSystemDefault")}
-        </span>
-        <QuietAction
-          label={t("oats.settings.micChange")}
-          ariaLabel={t("oats.settings.micChangeLabel")}
-          onClick={() => void openPicker()}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <select
-      id="microphone"
-      autoFocus
-      value={preferBuiltIn ? "builtin" : deviceId || "default"}
-      onChange={(event) => {
-        const value = event.target.value;
-        setPreferBuiltIn(value === "builtin");
-        if (value === "builtin") return;
-        if (value === "default") {
-          setDevice("", "");
-          return;
-        }
-        setDevice(value, devices.find((device) => device.deviceId === value)?.label ?? "");
-      }}
-      className={selectClass}
-    >
-      <option value="builtin">{t("oats.settings.micBuiltIn")}</option>
-      <option value="default">{t("oats.settings.micSystemDefault")}</option>
-      {devices.map((device) => (
-        <option key={device.deviceId} value={device.deviceId}>
-          {device.label}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-// The conversation languages the visible page offers, each written as its own
-// speakers write it.
-const CONVERSATION_LANGUAGES: [string, string][] = [
-  ["en", "English"],
-  ["es", "Español"],
-  ["fr", "Français"],
-  ["de", "Deutsch"],
-  ["pt", "Português"],
-  ["it", "Italiano"],
-  ["zh", "中文"],
-];
-
-// Sensible starting points so the one visible choice actually produces a working
-// pipeline. Anything more specific belongs behind Advanced.
-const DEFAULT_LOCAL_MODEL = "qwen3.5-4b-q4_k_m";
-const DEFAULT_CLOUD_MODEL = "gpt-5.6-terra";
-
-/** The model providers `getAIModel` in services/ai/providers.ts can build.
- *  OpenRouter needs no base URL here — ReasoningService supplies its own. */
-const SUMMARY_PROVIDERS = [
-  { id: "openai", name: "OpenAI", defaultModel: DEFAULT_CLOUD_MODEL },
-  { id: "anthropic", name: "Anthropic", defaultModel: "claude-sonnet-4-5" },
-  { id: "gemini", name: "Google Gemini", defaultModel: "gemini-2.5-flash" },
-  { id: "groq", name: "Groq", defaultModel: "llama-3.3-70b-versatile" },
-  { id: "openrouter", name: "OpenRouter", defaultModel: "" },
-] as const;
-
-/** The realtime transcription providers this build can actually connect to —
- *  `STREAMING_CLIENT_BY_PROVIDER` in ipcHandlers.js is the authority. */
-const REALTIME_PROVIDERS = [
-  { id: "openai", name: "OpenAI" },
-  { id: "deepgram", name: "Deepgram" },
-  { id: "assemblyai", name: "AssemblyAI" },
-] as const;
-
-const selectClass =
-  // A line rather than a box. A boxed control on a quiet page reads as a form
-  // field in a SaaS dashboard; the hairline goes gold only while focused, which
-  // is the one moment the accent is earning something (DESIGN.md §3, §6).
-  // No opt-out class is needed: the inherited input chrome is an element
-  // selector, but it is scoped out of `.oats-surface` in index.css, so these
-  // utilities are the only thing describing this control.
-  //
-  // The gold hairline alone was the focus state, and it measured 2.40:1 against
-  // the border it replaced — under the 3:1 SC 1.4.11 asks of the thing that
-  // says where focus is. A keyboard user could not tell the microphone select
-  // from the language select. The ring is the same one every button carries.
-  "h-10 w-full max-w-sm border-b border-border-control bg-transparent text-sm transition-colors [transition-duration:var(--motion-instant)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-
+/** Settings: the page the sidebar has open, under its title. */
 function SettingsSurface() {
-  const transcriptionMode = useSettingsStore((s) => s.transcriptionMode);
-  const setTranscriptionMode = useSettingsStore((s) => s.setTranscriptionMode);
-  const cleanupMode = useSettingsStore((s) => s.cleanupMode);
-  const setCleanupMode = useSettingsStore((s) => s.setCleanupMode);
-  const uiMode = useSettingsStore((s) => s.uiMode);
-  const setUiMode = useSettingsStore((s) => s.setUiMode);
-  const vaultPath = useSettingsStore((s) => s.obsidianVaultPath);
-  const setVaultPath = useSettingsStore((s) => s.setObsidianVaultPath);
-  const vaultEnabled = useSettingsStore((s) => s.obsidianExportEnabled);
-  const setVaultEnabled = useSettingsStore((s) => s.setObsidianExportEnabled);
-  const cloudProvider = useSettingsStore((s) => s.cloudTranscriptionProvider) || "openai";
-  const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
-  const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
-  const deepgramApiKey = useSettingsStore((s) => s.deepgramApiKey);
-  const setDeepgramApiKey = useSettingsStore((s) => s.setDeepgramApiKey);
-  const assemblyaiApiKey = useSettingsStore((s) => s.assemblyaiApiKey);
-  const setAssemblyaiApiKey = useSettingsStore((s) => s.setAssemblyaiApiKey);
-  // One key box, but for whichever provider is selected. Before this the box was
-  // hardwired to OpenAI and no provider could be chosen at all, because the
-  // catalog IPC it would have come from was never implemented.
-  const anthropicApiKey = useSettingsStore((s) => s.anthropicApiKey);
-  const setAnthropicApiKey = useSettingsStore((s) => s.setAnthropicApiKey);
-  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
-  const setGeminiApiKey = useSettingsStore((s) => s.setGeminiApiKey);
-  const groqApiKey = useSettingsStore((s) => s.groqApiKey);
-  const setGroqApiKey = useSettingsStore((s) => s.setGroqApiKey);
-  const openrouterApiKey = useSettingsStore((s) => s.openrouterApiKey);
-  const setOpenrouterApiKey = useSettingsStore((s) => s.setOpenrouterApiKey);
-  const providerKey: Record<string, { value: string; set: (v: string) => void }> = {
-    openai: { value: openaiApiKey, set: setOpenaiApiKey },
-    deepgram: { value: deepgramApiKey, set: setDeepgramApiKey },
-    assemblyai: { value: assemblyaiApiKey, set: setAssemblyaiApiKey },
-    anthropic: { value: anthropicApiKey, set: setAnthropicApiKey },
-    gemini: { value: geminiApiKey, set: setGeminiApiKey },
-    groq: { value: groqApiKey, set: setGroqApiKey },
-    openrouter: { value: openrouterApiKey, set: setOpenrouterApiKey },
-  };
-  const summaryProvider = useSettingsStore((s) => s.cleanupProvider) || "openai";
-  const summaryModel = useSettingsStore((s) => s.cleanupModel);
-  const summaryKey = providerKey[summaryProvider];
-  const apiKey = providerKey[cloudProvider]?.value ?? openaiApiKey;
-  const setApiKey = providerKey[cloudProvider]?.set ?? setOpenaiApiKey;
-  const language = useSettingsStore((s) => s.preferredLanguage);
-  const setLanguage = useSettingsStore((s) => s.setPreferredLanguage);
-  const autoSearch = useSettingsStore((s) => s.conversationAutoSearchEnabled);
-  const setAutoSearch = useSettingsStore((s) => s.setConversationAutoSearchEnabled);
-  const conversationKey = useSettingsStore((s) => s.conversationKey);
-  const setConversationKey = useSettingsStore((s) => s.setConversationKey);
-  const dictationKey = useSettingsStore((s) => s.dictationKey);
-  const setDictationKey = useSettingsStore((s) => s.setDictationKey);
-  const setNoteFormattingMode = useSettingsStore((s) => s.setNoteFormattingMode);
-  const cleanupModel = useSettingsStore((s) => s.cleanupModel);
-  const setCleanupModel = useSettingsStore((s) => s.setCleanupModel);
-  const setCleanupProvider = useSettingsStore((s) => s.setCleanupProvider);
-  const noteFormattingModel = useSettingsStore((s) => s.noteFormattingModel);
-  const setNoteFormattingModel = useSettingsStore((s) => s.setNoteFormattingModel);
-  const setNoteFormattingProvider = useSettingsStore((s) => s.setNoteFormattingProvider);
-  const meetingLocal = useSettingsStore((s) => s.meetingUseLocalWhisper);
-  const setMeetingTranscriptionMode = useSettingsStore((s) => s.setMeetingTranscriptionMode);
-  const setMeetingUseLocalWhisper = useSettingsStore((s) => s.setMeetingUseLocalWhisper);
-  const hotkeyRejection = useSettingsStore((s) => s.hotkeyRejection);
-  const [advanced, setAdvanced] = useState(false);
-  const [advancedSection, setAdvancedSection] = useState<SettingsSectionType>("general");
-
   const { t } = useTranslation();
-
-  const local = transcriptionMode === "local" && cleanupMode === "local" && meetingLocal;
-
-  // Choosing "on this computer" or "use API key" has to configure the *whole*
-  // pipeline, not just the mode flags. `cleanupModel` and `noteFormattingModel`
-  // both default to an empty string, and their scopes have no fallback — so
-  // setting the mode alone leaves dictation cleanup and post-conversation
-  // intelligence with no model at all, and they silently do nothing. That is a
-  // configuration hole, not a missing feature: the engine underneath is fine.
-  //
-  // It must also configure the **meeting** scope. Recording a conversation is
-  // the primary action, and it reads `meetingUseLocalWhisper` via
-  // `selectResolvedMeetingTranscription` — a field the visible page never wrote.
-  // The result was that "On this computer" could be selected and lit gold while
-  // pressing record still reached for OpenAI and failed on a missing API key.
-  // One visible choice has to mean one pipeline, or it is not a choice.
-  const setProcessing = (mode: "local" | "providers") => {
-    setTranscriptionMode(mode);
-    setCleanupMode(mode);
-    setNoteFormattingMode(mode);
-    setMeetingTranscriptionMode(mode);
-    setMeetingUseLocalWhisper(mode === "local");
-    // The same rule as `meetingUseLocalWhisper` above, for the field that
-    // decides whether the key is *used*. Recording reads the meeting scope, and
-    // `meetingCloudTranscriptionMode` was never written here — it stayed empty,
-    // which resolves to "legacy", and the realtime handler then refuses with
-    // "OpenAI realtime requires a bring-your-own-key API key" while the key sits
-    // in Settings. This writes the cloud mode, provider and model to the
-    // dictation, meeting and upload scopes at once.
-    useSettingsStore.getState().setCloudTranscriptionForAllScopes({
-      useLocalWhisper: mode === "local",
-      cloudTranscriptionMode: "byok",
-    });
-    if (mode === "local") {
-      setCleanupProvider("local");
-      setNoteFormattingProvider("local");
-      if (!cleanupModel) setCleanupModel(DEFAULT_LOCAL_MODEL);
-      if (!noteFormattingModel) setNoteFormattingModel(DEFAULT_LOCAL_MODEL);
-    } else {
-      setCleanupProvider("openai");
-      setNoteFormattingProvider("openai");
-      if (!cleanupModel) setCleanupModel(DEFAULT_CLOUD_MODEL);
-      if (!noteFormattingModel) setNoteFormattingModel(DEFAULT_CLOUD_MODEL);
-    }
-  };
-
-  if (advanced) {
-    const sectionLabels: Record<SettingsSectionType, string> = {
-      general: t("oats.settings.sections.general"),
-      hotkeys: t("oats.settings.sections.hotkeys"),
-      speechToText: t("oats.settings.sections.speechToText"),
-      llms: t("oats.settings.sections.llms"),
-      privacyData: t("oats.settings.sections.privacyData"),
-      system: t("oats.settings.sections.system"),
-    };
-    return (
-      <section className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 border-b border-border/40 px-8 py-4">
-          <Button variant="ghost" size="sm" onClick={() => setAdvanced(false)}>
-            <ChevronLeft size={14} /> {t("oats.nav.settings")}
-          </Button>
-          <p className="text-xs text-muted-foreground">{t("oats.settings.advancedHint")}</p>
-        </div>
-        {/* The same quiet links as the app's own nav: words, ink for the one
-            you are on, no chrome. */}
-        <nav
-          aria-label={t("oats.settings.sections.label")}
-          className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border/40 px-8 py-3"
-        >
-          {ADVANCED_SECTIONS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setAdvancedSection(id)}
-              aria-current={advancedSection === id ? "page" : undefined}
-              className={cn(
-                "rounded-sm text-[13px] transition-colors",
-                "[transition-duration:var(--motion-instant)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                advancedSection === id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {sectionLabels[id]}
-            </button>
-          ))}
-        </nav>
-        {/* The inherited page brings its own cards but no page frame, so it ran
-            edge to edge: section headings flush at x=0 and rows the full width
-            of the window, with a label on one side and its toggle a thousand
-            pixels away. It keeps its own look — that is deliberate — inside the
-            same column the rest of the app uses. */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
-          <div className="mx-auto w-full max-w-3xl">
-            <Suspense
-              fallback={
-                <p className="px-8 py-6 font-mono text-xs text-muted-foreground">
-                  {t("oats.settings.advancedLoading")}
-                </p>
-              }
-            >
-              <AdvancedSettings
-                activeSection={advancedSection}
-                onNavigateToSection={setAdvancedSection}
-              />
-            </Suspense>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
+  const page = useSettingsNavStore((state) => state.page);
+  const entry = SETTINGS_PAGES.find((item) => item.id === page) ?? SETTINGS_PAGES[0];
+  const scroller = useRef<HTMLElement | null>(null);
+  // A new page starts at its top, not where the last one was scrolled to.
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [page]);
   return (
-    // `pt-4`, as Intelligence has: the heading sat flush against the
-    // orientation band, the only surface whose title touched it.
-    <section className="oats-surface mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-5 pt-4">
-      <h1 className="text-2xl font-medium tracking-[-0.03em]">{t("oats.settings.title")}</h1>
-      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        {t("oats.settings.subtitle")}
-      </p>
-
-      <div className="mt-3">
-        <Row label={t("oats.settings.processing")} hint={t("oats.settings.processingHint")}>
-          {/* The same language as the nav and the reading tabs: a word, and an
-              ink rule under the chosen one. Two filled slabs made the most
-              consequential setting on the page also the loudest object on it.
-              The rule was gold until the Interface row arrived beneath it with
-              the same markup: two choices are two resting golds on one page,
-              and §3 says one of them is wrong. A setting that is chosen is not
-              a momentary mark, which is what gold is for — the nav and the tabs
-              reached the same answer for the same reason. */}
-          <div className="flex items-center gap-6">
-            {(
-              [
-                ["local", t("oats.settings.localProcessing")],
-                ["providers", t("oats.settings.apiProcessing")],
-              ] as const
-            ).map(([mode, copy]) => {
-              const active = mode === "local" ? local : !local;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setProcessing(mode)}
-                  aria-pressed={active}
-                  className={cn(
-                    "relative rounded-sm pb-1.5 text-sm transition-colors",
-                    "[transition-duration:var(--motion-instant)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {copy}
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "absolute inset-x-0 bottom-0 h-px origin-center bg-foreground transition-transform",
-                      "[transition-duration:var(--motion-base)]",
-                      active ? "scale-x-100" : "scale-x-0"
-                    )}
-                  />
-                </button>
-              );
-            })}
-          </div>
-          {!local && (
-            <select
-              aria-label={t("oats.settings.provider")}
-              value={cloudProvider}
-              onChange={(e) => {
-                const next = e.target.value;
-                useSettingsStore.getState().setCloudTranscriptionForAllScopes({
-                  cloudTranscriptionProvider: next,
-                  cloudTranscriptionMode: "byok",
-                });
-              }}
-              className={cn(selectClass, "mt-3")}
-            >
-              {REALTIME_PROVIDERS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {!local && (
-            <input
-              id="api-key"
-              name={`${cloudProvider}-api-key`}
-              aria-label={t("oats.settings.apiKeyFor", {
-                provider: REALTIME_PROVIDERS.find((p) => p.id === cloudProvider)?.name ?? "OpenAI",
-              })}
-              // A password manager offering to fill a login here, or to save an
-              // API key as one, is noise on the one screen that is meant to be
-              // quiet.
-              autoComplete="off"
-              spellCheck={false}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={t("oats.settings.apiKeyFor", {
-                provider: REALTIME_PROVIDERS.find((p) => p.id === cloudProvider)?.name ?? "OpenAI",
-              })}
-              type="password"
-              className={cn(selectClass, "mt-3")}
-            />
-          )}
-        </Row>
-
-        {/* Two interfaces, not a theme: they differ in what is on screen. Named
-            rather than inferred, and stored, so the choice survives a restart. */}
-        <Row label={t("oats.settings.uiMode")} hint={t("oats.settings.uiModeHint")}>
-          <div className="flex items-center gap-6">
-            {(
-              [
-                ["work", t("oats.settings.uiModeWork")],
-                ["field", t("oats.settings.uiModeField")],
-              ] as const
-            ).map(([value, copy]) => {
-              const active = uiMode === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setUiMode(value)}
-                  aria-pressed={active}
-                  className={cn(
-                    "relative rounded-sm pb-1.5 text-sm transition-colors",
-                    "[transition-duration:var(--motion-instant)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {copy}
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "absolute inset-x-0 bottom-0 h-px origin-center bg-foreground transition-transform",
-                      "[transition-duration:var(--motion-base)]",
-                      active ? "scale-x-100" : "scale-x-0"
-                    )}
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </Row>
-
-        {/* Transcription and summaries are different providers with barely any
-            overlap — only OpenAI does both — so one row cannot honestly cover
-            them. This is the model that writes the title, the summary and the
-            threads; it is the row that makes OpenRouter reachable. */}
-        {!local && (
-          <Row label={t("oats.settings.summaryProvider")} hint={t("oats.settings.summaryHint")}>
-            <select
-              aria-label={t("oats.settings.summaryProvider")}
-              value={summaryProvider}
-              onChange={(e) => {
-                const next = e.target.value;
-                const chosen = SUMMARY_PROVIDERS.find((p) => p.id === next);
-                setCleanupProvider(next);
-                setNoteFormattingProvider(next);
-                // A provider change makes the old model id meaningless — an
-                // OpenAI id sent to Anthropic is a hard failure, not a fallback.
-                setCleanupModel(chosen?.defaultModel ?? "");
-                setNoteFormattingModel(chosen?.defaultModel ?? "");
-              }}
-              className={selectClass}
-            >
-              {SUMMARY_PROVIDERS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            {summaryKey && (
-              <input
-                aria-label={t("oats.settings.summaryKeyPlaceholder")}
-                autoComplete="off"
-                spellCheck={false}
-                value={summaryKey.value}
-                onChange={(e) => summaryKey.set(e.target.value)}
-                placeholder={t("oats.settings.summaryKeyPlaceholder")}
-                type="password"
-                className={cn(selectClass, "mt-3")}
-              />
-            )}
-            {/* OpenRouter ids are namespaced ("anthropic/claude-sonnet-4-5")
-                and are not in the local registry, so there is nothing sensible
-                to preselect — the reader has to name one. */}
-            {summaryProvider === "openrouter" && (
-              <input
-                aria-label={t("oats.settings.summaryModel")}
-                autoComplete="off"
-                spellCheck={false}
-                value={summaryModel}
-                onChange={(e) => {
-                  setCleanupModel(e.target.value);
-                  setNoteFormattingModel(e.target.value);
-                }}
-                placeholder="anthropic/claude-sonnet-4-5"
-                className={cn(selectClass, "mt-3 font-mono text-xs")}
-              />
-            )}
-          </Row>
-        )}
-
-        {/* No `htmlFor`: the `<select>` this would address only exists once the
-            picker is open, so the label pointed at nothing and the action read
-            as a bare "Change". The action names itself instead. */}
-        <Row label={t("oats.settings.microphone")}>
-          <MicrophoneChoice />
-        </Row>
-
-        <Row label={t("oats.settings.language")} htmlFor="language">
-          <select
-            id="language"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className={selectClass}
-          >
-            <option value="auto">{t("oats.settings.autoDetect")}</option>
-            {/* Endonyms, not English exonyms. A user running Oats in Japanese
-                was offered "Spanish" and "German" in the one control that is
-                about language; a language names itself the same way in every
-                interface, so this needs no translation key. */}
-            {CONVERSATION_LANGUAGES.map(([code, name]) => (
-              <option key={code} value={code}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </Row>
-
-        {/* Both shortcuts use the real capture control rather than a text field:
-            a hotkey typed as a string is a hotkey nobody gets right, and the
-            control already knows how to reject combinations the platform cannot
-            register. */}
-        {/* The primary action comes first. This is the one shortcut that ships
-            with a working default, because a conversation you have to open a
-            window to start is a conversation you will miss the beginning of. */}
-        <Row
-          label={t("oats.settings.conversationHotkey")}
-          hint={t("oats.settings.conversationHotkeyHint")}
+    <section ref={scroller} className="oats-surface relative min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-2xl px-8 pb-16 pt-8">
+        <SettingsPageHeader title={t(entry.title)} description={t(entry.description)} />
+        <Suspense
+          fallback={
+            <p className="text-sm text-muted-foreground">{t("oats.settings.advancedLoading")}</p>
+          }
         >
-          <div className="max-w-sm">
-            <HotkeyInput
-              variant="ledger"
-              value={conversationKey}
-              onChange={(value) => void setConversationKey(value)}
-            />
-            {hotkeyRejection?.key === "conversationKey" && (
-              <p className="mt-2 text-xs leading-5 text-foreground">
-                {t("oats.settings.hotkeyRejected", { hotkey: hotkeyRejection.hotkey })}
-                {hotkeyRejection.message ? ` ${hotkeyRejection.message}` : ""}
-              </p>
-            )}
-          </div>
-        </Row>
-
-        <Row label={t("oats.settings.dictationShortcut")} hint={t("oats.settings.dictationHint")}>
-          <div className="max-w-sm">
-            <HotkeyInput
-              variant="ledger"
-              value={dictationKey}
-              onChange={(value) => void setDictationKey(value)}
-              onClear={() => void setDictationKey("")}
-            />
-            {hotkeyRejection?.key === "dictationKey" && (
-              <p className="mt-2 text-xs leading-5 text-foreground">
-                {t("oats.settings.hotkeyRejected", { hotkey: hotkeyRejection.hotkey })}
-                {hotkeyRejection.message ? ` ${hotkeyRejection.message}` : ""}
-              </p>
-            )}
-          </div>
-        </Row>
-
-        {/* Stated plainly, not buried: this is the only thing that leaves the
-            device during a conversation. */}
-        <Row
-          label={t("oats.settings.autoSearch")}
-          hint={t("oats.settings.autoSearchHint")}
-          htmlFor="auto-search"
-        >
-          {/* A boolean is a toggle. Rendering it as two slabs made it look like a
-              bigger decision than the mic preference directly above it, which is
-              the same shape and already uses a toggle. */}
-          <Toggle
-            id="auto-search"
-            aria-label={t("oats.settings.autoSearch")}
-            checked={autoSearch}
-            onChange={setAutoSearch}
-          />
-        </Row>
-
-        {/* A vault folder, not a file: each conversation writes itself in as its
-            own note when its title and summary land, with topics as
-            [[wikilinks]] so Obsidian's own graph shows which conversations
-            share a subject. Off until a folder is chosen — nothing writes
-            outside this app without being pointed somewhere. */}
-        <Row label={t("oats.settings.vault")} hint={t("oats.settings.vaultHint")}>
-          {/* `w-full`, because the Row's control column is `items-start`: without
-              it this line sizes to its content, grows past the column, and takes
-              the "stop" action off the edge of the pane with it. */}
-          <div className="flex w-full min-w-0 items-center gap-4">
-            <QuietAction
-              label={vaultPath ? t("oats.settings.vaultChange") : t("oats.settings.vaultChoose")}
-              onClick={() => {
-                void (async () => {
-                  const picked = await window.electronAPI?.chooseObsidianVault?.();
-                  if (!picked?.success || !picked.path) return;
-                  setVaultPath(picked.path);
-                  setVaultEnabled(true);
-                })();
-              }}
-            />
-            {vaultPath && (
-              <>
-                {/* `truncate` alone does nothing to a flex child: its min-width
-                    is auto, so it refuses to shrink and overflows instead —
-                    which pushed the control that turns the export off past the
-                    edge of the pane. `min-w-0` is what lets it shrink, and the
-                    title carries the path the ellipsis eats. */}
-                <span
-                  title={vaultPath}
-                  className="min-w-0 truncate font-mono text-xs text-muted-foreground"
-                >
-                  {vaultPath}
-                </span>
-                <QuietAction
-                  label={t("oats.settings.vaultStop")}
-                  onClick={() => {
-                    setVaultEnabled(false);
-                    setVaultPath("");
-                  }}
-                />
-              </>
-            )}
-          </div>
-        </Row>
-
-        <Row label={t("oats.settings.data")} hint={t("oats.settings.dataHint")}>
-          {/* A quiet action, as the vault's folder action two lines above is.
-              Opening a folder is a side errand, not what the page is for — and
-              the two folder actions on one page were drawn two different
-              ways, an underlined sans link and a mono word. */}
-          <QuietAction
-            label={t("oats.settings.openDataFolder")}
-            onClick={() => window.electronAPI?.openLogsFolder?.()}
-          />
-        </Row>
+          <AdvancedSettings activeSection={page} />
+        </Suspense>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setAdvanced(true)}
-        className="mt-4 inline-flex min-h-6 items-center gap-1.5 py-1.5 text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {t("oats.settings.advanced")}
-        <ChevronRight size={12} />
-      </button>
     </section>
   );
 }
@@ -3748,6 +3027,24 @@ export default function OatsWorkspace() {
   const { t } = useTranslation();
   const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
+  const settingsPage = useSettingsNavStore((state) => state.page);
+  const setSettingsPage = useSettingsNavStore((state) => state.setPage);
+  // Where "Back to app" returns to: the last screen that was not Settings.
+  const lastSurface = useRef<Exclude<Surface, "settings">>("conversation");
+  useEffect(() => {
+    if (surface !== "settings") lastSurface.current = surface;
+  }, [surface]);
+  // Any screen can send you to a Settings page ("set up a summary model").
+  useEffect(() => {
+    const open = (event: Event) => {
+      if (useMeetingRecordingStore.getState().isRecording) return;
+      const page = (event as CustomEvent<unknown>).detail;
+      if (isSettingsPageId(page)) setSettingsPage(page);
+      setSurface("settings");
+    };
+    window.addEventListener("oats-open-settings", open);
+    return () => window.removeEventListener("oats-open-settings", open);
+  }, [setSettingsPage]);
 
   // Which surfaces have been opened at least once. A surface is built on first
   // visit and never torn down again — so the conversation lifecycle, once
@@ -3982,6 +3279,9 @@ export default function OatsWorkspace() {
         <div className="flex min-h-0 flex-1">
           <AppSidebar
             surface={surface}
+            settingsPage={settingsPage}
+            onSettingsPage={setSettingsPage}
+            onExitSettings={() => setSurface(lastSurface.current)}
             onNavigate={(next) => {
               // Settings stays closed while a conversation is live, as Cmd+, does.
               if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;

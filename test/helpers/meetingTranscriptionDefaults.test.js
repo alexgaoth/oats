@@ -20,8 +20,9 @@ const path = require("node:path");
 // two files that broke them.
 
 const STORE = fs.readFileSync(path.join(__dirname, "../../src/stores/settingsStore.ts"), "utf8");
-const WORKSPACE = fs.readFileSync(
-  path.join(__dirname, "../../src/components/OatsWorkspace.tsx"),
+// The Processing switch moved out of OatsWorkspace when Settings was rebuilt.
+const PROCESSING = fs.readFileSync(
+  path.join(__dirname, "../../src/components/settings/processing.ts"),
   "utf8"
 );
 
@@ -47,9 +48,9 @@ test("the meeting scope is what the primary action actually reads", () => {
 });
 
 test("the one visible processing choice configures the meeting scope too", () => {
-  const start = WORKSPACE.indexOf("const setProcessing =");
+  const start = PROCESSING.indexOf("export function setProcessing(");
   assert.ok(start > -1, "setProcessing not found");
-  const body = WORKSPACE.slice(start, start + 1200);
+  const body = PROCESSING.slice(start, start + 2000);
 
   assert.match(
     body,
@@ -66,9 +67,25 @@ test("the one visible processing choice configures the meeting scope too", () =>
 test("the Settings toggle reflects the meeting scope, not just dictation", () => {
   // Otherwise the button can read "On this computer" while recording is cloud —
   // which is exactly how the bug stayed invisible.
-  assert.match(
-    WORKSPACE,
-    /const local =[\s\S]{0,160}meetingLocal/,
-    "the selected state must include the meeting scope"
-  );
+  const start = PROCESSING.indexOf("function processingMode(");
+  assert.ok(start > -1, "processingMode not found");
+  const body = PROCESSING.slice(start, start + 600);
+  for (const scope of [
+    "transcriptionMode",
+    "cleanupMode",
+    "noteFormattingMode",
+    "meetingTranscriptionMode",
+  ]) {
+    assert.ok(body.includes(`state.${scope}`), `the selected state must include ${scope}`);
+  }
+});
+
+test("switching processing does not leave the other mode's model behind", () => {
+  // A cloud model id used to survive the switch to local, so summaries kept
+  // going to the provider while the switch read "On this Mac".
+  const start = PROCESSING.indexOf("export function setProcessing(");
+  const body = PROCESSING.slice(start, start + 2000);
+  assert.match(body, /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_LOCAL_MODEL\)/);
+  assert.match(body, /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_CLOUD_MODEL\)/);
+  assert.match(body, /setCleanupModel\(remembered\?\.cleanupModel \|\| DEFAULT_LOCAL_MODEL\)/);
 });

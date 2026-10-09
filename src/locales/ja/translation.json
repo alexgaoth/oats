@@ -1588,7 +1588,9 @@
         "segmentation": "話者分離のための発話区間検出",
         "embedding_en": "話者識別のための声紋認識"
       }
-    }
+    },
+    "downloaded": "ダウンロード済み",
+    "delete": "{{model}} を削除"
   },
   "notes": {
     "actions": {
@@ -1969,9 +1971,10 @@
       "deleteDescription": "文字起こし、要約、マークした瞬間が Oats から削除されます。元に戻すことはできません。",
       "emptyDescription": "録音した会話がここに表示されます。要約と、検索できる文字起こしが付きます。",
       "noMatchesHint": "タイトル、要約、文字起こし、あなたのメモを検索します。",
-      "needsSummaryModel": "要約はありません。このコンピューターで使える要約モデルがありません。設定 › 詳細設定 › 言語モデル で設定してから、もう一度要約してください。",
+      "needsSummaryModel": "要約モデルがまだ準備できていないため、この会話は要約されていません。",
       "notSummarized": "この会話はまだ要約されていません。",
-      "summarize": "要約する"
+      "summarize": "要約する",
+      "setUpModel": "モデルを設定"
     },
     "review": {
       "title": "未解決のまま残ったこと",
@@ -1996,58 +1999,121 @@
       "next": "次の一致"
     },
     "settings": {
-      "title": "選択は少なく。",
-      "subtitle": "タイトル・要約・スレッドは Oats が自分で書きます。",
       "processing": "処理",
-      "processingHint": "ひとつの選択が文字起こしとインテリジェンスの両方をカバーします。",
-      "uiMode": "インターフェース",
-      "uiModeHint": "作業用の台帳か、燕麦の畑か。",
-      "uiModeWork": "台帳",
-      "uiModeField": "畑",
-      "localProcessing": "このコンピューター上",
-      "apiProcessing": "API キーを使う",
-      "provider": "プロバイダー",
-      "summaryProvider": "要約",
-      "summaryHint": "会話の後にタイトル・要約・話題を書くモデルです。",
-      "summaryKeyPlaceholder": "API キー",
-      "summaryModel": "モデル",
       "vault": "Obsidian ボールト",
       "vaultHint": "会話ごとにノートとして書き出し、トピックは [[リンク]] になります。",
       "vaultChoose": "フォルダを選択",
       "vaultChange": "変更",
       "vaultStop": "停止",
-      "apiKeyPlaceholder": "OpenAI API キー",
-      "apiKeyFor": "{{provider}} API キー",
-      "microphone": "マイク",
-      "micBuiltIn": "内蔵マイク",
-      "micSystemDefault": "システムの既定",
-      "micChange": "変更",
-      "micChangeLabel": "マイクを変更",
-      "micError": "マイクの一覧を読み取れませんでした。マイクの権限を確認してください。",
-      "language": "会話の言語",
-      "autoDetect": "自動検出",
       "autoSearch": "未回答の質問を検索",
       "autoSearchHint": "誰も知らないとき、Google 検索を背後で開きます。送るのは質問文だけ。音声も文字起こしも送りません。オフでもカードは出ます。",
-      "data": "あなたのデータ",
-      "dataHint": "録音と文字起こしはこのコンピューターに残ります。",
-      "openDataFolder": "データフォルダーを開く",
-      "advanced": "詳細設定",
-      "advancedHint": "詳細設定 — 機能ごとのモデル・プロバイダー・診断。",
       "advancedLoading": "開いています…",
-      "dictationShortcut": "音声入力のキー",
-      "dictationHint": "長押しまたはタップ。カーソル位置に入力します。",
       "hotkeyRejected": "「{{hotkey}}」を登録できなかったため、以前のショートカットのままです。",
       "conversationHotkey": "会話のショートカット",
       "conversationHotkeyHint": "どこからでも開始・停止できます。",
-      "sections": {
-        "label": "詳細設定のセクション",
-        "general": "一般",
-        "hotkeys": "ショートカット",
-        "speechToText": "音声認識",
-        "llms": "言語モデル",
-        "privacyData": "プライバシー",
-        "system": "システム"
-      }
+      "backToApp": "アプリに戻る",
+      "navLabel": "設定のページ",
+      "themeSystem": "システム",
+      "processingDescription": "文字起こし・要約・整形をひとつの選択で。それぞれ下で変更できます。",
+      "processingLocal": "この Mac で",
+      "processingProviders": "API キーで",
+      "processingMixed": "混在：下の一部の機能は別の設定を使っています。",
+      "tuning": "詳細な調整",
+      "dictationAudio": "音声入力の音声",
+      "dictationAudioDescription": "音声入力の録音は 30 日間保存され、失敗したものを文字起こしし直せます。",
+      "cleanup": "整形",
+      "cleanupDescription": "貼り付ける前に、モデルが音声入力の文章を整えます。",
+      "pages": {
+        "general": {
+          "title": "一般",
+          "description": "Oats の見た目、起動、通知。"
+        },
+        "shortcuts": {
+          "title": "ショートカット",
+          "description": "どのアプリからでも使えるキーと、Oats の中で使えるキー。"
+        },
+        "recording": {
+          "title": "録音",
+          "description": "会話中のマイク、言語、質問カード。"
+        },
+        "dictation": {
+          "title": "音声入力",
+          "description": "どのアプリにも声で入力：貼り付ける内容と整え方。"
+        },
+        "models": {
+          "title": "AI モデル",
+          "description": "文字起こしと要約を行うもの。この Mac で、または API キーで。"
+        },
+        "connections": {
+          "title": "連携",
+          "description": "録音後の会話の保存先。"
+        },
+        "privacy": {
+          "title": "プライバシーとデータ",
+          "description": "権限と、Oats が保持する音声。"
+        },
+        "about": {
+          "title": "情報",
+          "description": "バージョン、ログ、リセット。"
+        }
+      },
+      "inApp": {
+        "title": "Oats の中",
+        "description": "Oats のウインドウが前面にあるときに使えます。",
+        "toggleConversation": "会話を開始・停止",
+        "mark": "録音中に瞬間をマーク",
+        "search": "会話を検索",
+        "find": "会話内を検索",
+        "back": "戻る"
+      },
+      "questions": {
+        "title": "質問カード",
+        "description": "会話中、その場の誰も答えられなかった事実に関する質問を Oats が見つけます。",
+        "enable": "質問カードを表示",
+        "model": "分類モデル",
+        "modelDescription": "任意。この Mac で動作し、カードの精度を上げます。",
+        "download": "ダウンロード",
+        "searchWith": "検索に使うサイト"
+      },
+      "connections": {
+        "vaultTitle": "Obsidian",
+        "vaultDescription": "終わった会話はそれぞれノートとしてボールトに書き込まれます。",
+        "vaultFolder": "ボールトのフォルダ",
+        "noVault": "フォルダが選ばれていません。",
+        "filesTitle": "Markdown ファイル",
+        "filesDescription": "すべてのメモと文字起こしを、選んだフォルダにファイルとして保存します。"
+      },
+      "dictionary": {
+        "title": "辞書",
+        "description": "音声入力と会話で Oats に正しく聞き取ってほしい名前、製品、専門用語。",
+        "placeholder": "単語をカンマ区切りで追加",
+        "add": "追加",
+        "remove": "{{word}} を削除",
+        "empty": "まだ単語はありません。",
+        "autoLearn": "修正から学習",
+        "autoLearnDescription": "ほかのアプリで音声入力の単語を修正すると、Oats がここに追加します。"
+      },
+      "models": {
+        "conversations": "会話",
+        "conversationsDescription": "会話を文字起こしする音声モデル。",
+        "summaries": "要約",
+        "summariesDescription": "タイトル、要約、スレッドを書くモデル。",
+        "dictation": "音声入力",
+        "dictationDescription": "音声入力用の音声モデル。"
+      },
+      "global": {
+        "title": "どのアプリからでも",
+        "description": "Oats がバックグラウンドでも使えます。",
+        "conversation": "会話を開始・停止",
+        "conversationHint": "その場を録音するか、進行中の会話を終了します。",
+        "dictation": "音声入力",
+        "dictationHint": "話した内容をカーソルの位置に入力します。",
+        "activation": "音声入力キー",
+        "activationHint": "タップで開始・停止、または話している間押し続けます。",
+        "search": "会話を検索",
+        "searchHint": "検索欄を開いた状態で Oats を表示します。"
+      },
+      "microphoneDescription": "Oats が会話と音声入力に使うマイク。"
     },
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
