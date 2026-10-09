@@ -57,6 +57,8 @@ import {
   ledgerDateLong,
 } from "../helpers/ledgerDate.mjs";
 import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
+import { findResumableConversation } from "../helpers/conversationResume.mjs";
+import { parseDbTimestamp } from "../helpers/dbTime.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -159,11 +161,6 @@ function transcriptText(raw: string | null, t: TFunction): string {
   return raw;
 }
 
-// A conversation is offered as a continuation only if it ended recently enough
-// that resuming is plausible. Longer than this and it is a new conversation that
-// happens to be about the same thing — which the lifetime graph already links.
-const RESUME_WINDOW_MS = 30 * 60 * 1000;
-
 // Resolved by the Finish effect once the final transcript write has landed, or
 // once there turned out to be nothing to write. Quitting during a conversation
 // waits on exactly this (conversationGuards.js), rather than on capture
@@ -195,18 +192,6 @@ function parseSegments(raw: string | null): TranscriptSegment[] {
   } catch {
     return [];
   }
-}
-
-function findResumableConversation(notes: NoteItem[]): NoteItem | null {
-  const now = Date.now();
-  for (const note of notes) {
-    if (!note.transcript) continue;
-    const endedAt = new Date(note.updated_at || note.created_at).getTime();
-    if (!Number.isFinite(endedAt)) continue;
-    if (now - endedAt > RESUME_WINDOW_MS) return null;
-    return note;
-  }
-  return null;
 }
 
 // Same forgiving fingerprint comparison the lifetime graph uses; kept local here
@@ -1534,8 +1519,8 @@ function IntelligenceViews({
     if (!current) return null;
     const earlier = notes
       .filter((note) => note.id !== selected.id && note.conversation_topics)
-      .filter((note) => new Date(note.created_at) < new Date(selected.created_at))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      .filter((note) => parseDbTimestamp(note.created_at) < parseDbTimestamp(selected.created_at))
+      .sort((a, b) => parseDbTimestamp(b.created_at) - parseDbTimestamp(a.created_at));
     for (const note of earlier) {
       const past = readTopicSnapshot(note.conversation_topics);
       if (!past) continue;
