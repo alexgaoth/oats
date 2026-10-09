@@ -117,17 +117,31 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 - **Clean (default):** a status card — pulsing red dot, the elapsed time as the
   heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
   (`M`) and **Stop** — then the contour in its own card section, then "Show what
-  was said". Nothing on screen changes while somebody speaks except the clock and
-  the contour.
-- **Detailed:** adds the question cards, the live transcript, and the open threads
-  below the status card, each in standard card/list styling.
+  was said". Below it, the **conversation flow** card. Nothing on screen changes
+  while somebody speaks except the clock, the contour and the flow card — and the
+  flow card shows topics, not words, so it changes every few minutes, when the
+  subject does.
+- **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
+  talked about so far, as a **stack** (the topic now, then the most recent: state
+  dot, label, state badge, returns, minutes) or a **graph** (x is when a topic was
+  first raised, y how unsettled it still is; a dashed honey curve is a return to
+  an earlier topic). A segmented control chooses Auto / Stack / Graph, and the
+  choice persists. Auto shows the graph only when a list would hide the shape —
+  four or more topics, with two returns to earlier topics or a topic that
+  branches — and says why in a one-line caption. It changes view only when two
+  snapshots in a row agree and 20 s after its last change, so it never
+  flip-flops (`helpers/conversationFlow.mjs`).
+- **Detailed:** adds the question cards and the live transcript below the flow
+  card, each in standard card/list styling. The flow card then yields height to
+  them (at most 40% of the column) and scrolls inside.
 - Health warnings (silent microphone, not saving, not transcribing) are alerts
   directly under the status card, so a busy conversation can never push them away.
 
 ## 6. Data visualisation
 
-The conversation contour (`helpers/conversationContour.mjs`) and the topic/lifetime
-graphs stay: every value in them is measured from the conversation. They draw in
+The conversation contour (`helpers/conversationContour.mjs`), the flow card's
+graph and the topic/lifetime graphs stay: every value in them is measured from
+the conversation. They draw in
 `muted-foreground` with status colors for question marks, on the card surface,
 with no decorative gradient.
 
