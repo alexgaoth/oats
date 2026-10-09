@@ -1298,6 +1298,19 @@ if (gotSingleInstanceLock) {
     log: (message, meta) => debugLogger?.warn?.(message, meta, "quit"),
   });
 
+  // Closing the lid sleeps the Mac whatever Oats asks (prevent-app-suspension
+  // only holds off *idle* sleep, so a suspend during a conversation was chosen),
+  // and the built-in microphone goes with the lid. Recording on through it left
+  // a silent gap, a clock that kept running, and turns stamped on the wrong side
+  // of it. The conversation is finished and saved on the way down instead —
+  // the same bounded finish as quitting — and pressing Record after waking
+  // resumes it, so the room's two halves stay one conversation.
+  require("electron").powerMonitor.on("suspend", () => {
+    if (!windowManager?.isConversationRecording?.()) return;
+    debugLogger?.info?.("System is going to sleep — finishing the conversation", {}, "quit");
+    void finishBeforeQuit();
+  });
+
   let isShuttingDown = false;
   app.on("before-quit", (event) => {
     const forUpdate = Boolean(updateManager && updateManager.isQuittingForUpdate);
