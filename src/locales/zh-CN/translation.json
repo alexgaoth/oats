@@ -1950,7 +1950,10 @@
       "delete": "删除",
       "deleteConfirm": "删除这次对话？",
       "deleteYes": "删除",
-      "deleteCancel": "保留"
+      "deleteCancel": "保留",
+      "needsSummaryModel": "暂无摘要：此电脑上没有可用的摘要模型。请在 设置 › 高级 › 语言模型 中设置，然后回来生成摘要。",
+      "notSummarized": "此对话尚未生成摘要。",
+      "summarize": "生成摘要"
     },
     "review": {
       "title": "尚未解决的内容",
@@ -2037,7 +2040,8 @@
       "no-speech-engine": "本地语音引擎缺失。重新安装 Oats 即可恢复。",
       "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
-      "question-cards-off": "问题卡片已关闭，问题会静静溜走。请在高级设置中重新开启对话助手。"
+      "question-cards-off": "问题卡片已关闭，问题会静静溜走。请在高级设置中重新开启对话助手。",
+      "no-summary-model": "摘要模型尚未就绪，对话将以无标题、无摘要的形式保存。请在 设置 › 高级 › 语言模型 中进行设置。"
     },
     "aide": {
       "title": "对话助手",

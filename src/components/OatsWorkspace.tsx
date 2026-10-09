@@ -77,7 +77,9 @@ import { useConversationPreflight } from "../hooks/useConversationPreflight";
 import { getCachedPlatform } from "../utils/platform";
 import { formatHotkey } from "../utils/hotkeyLabel";
 import { initializeActions } from "../stores/actionStore";
-import { runBackgroundAction } from "../stores/actionProcessingStore";
+import { runBackgroundAction, useActionProcessingStore } from "../stores/actionProcessingStore";
+import { useSummaryReadiness } from "../hooks/useSummaryReadiness";
+import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
@@ -209,6 +211,44 @@ function parseSegments(raw: string | null): TranscriptSegment[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Write a conversation's title, summary and threads.
+ *
+ * Finish runs this once, automatically. The record runs it again on request —
+ * for a conversation recorded before a summary model existed, or one whose
+ * summary was cut off by a quit — which until now could never be retried,
+ * because nothing but the Finish effect ever called it.
+ */
+async function summarizeConversation(
+  noteId: number,
+  transcript: string,
+  t: TFunction,
+  { allowTitleGeneration }: { allowTitleGeneration: boolean }
+): Promise<void> {
+  const action = (await initializeActions()).find((item) => item.is_builtin);
+  if (!action) return;
+  const settings = useSettingsStore.getState();
+  const config = selectResolvedNoteFormatting(settings);
+  const formatted = transcriptText(transcript, t);
+  runBackgroundAction(
+    noteId,
+    `## Conversation Transcript\n${formatted}`,
+    `${transcript.length}-${transcript.slice(0, 50)}`,
+    action,
+    {
+      isCloudMode: selectIsCloudNoteFormattingMode(settings),
+      modelId: config.model,
+      isMeetingNote: true,
+      allowTitleGeneration,
+    },
+    {
+      noModel: t("oats.errors.noModel"),
+      noEndpoint: t("oats.errors.noEndpoint"),
+      actionFailed: t("oats.errors.actionFailed"),
+    }
+  );
 }
 
 // Same forgiving fingerprint comparison the lifetime graph uses; kept local here
@@ -467,28 +507,9 @@ function ConversationSurface() {
       } finally {
         finishSaved();
       }
-      const action = (await initializeActions()).find((item) => item.is_builtin);
-      if (!action) return;
-      const settings = useSettingsStore.getState();
-      const config = selectResolvedNoteFormatting(settings);
-      const formatted = transcriptText(finalTranscript, t);
-      runBackgroundAction(
-        recordingNoteId,
-        `## Conversation Transcript\n${formatted}`,
-        `${finalTranscript.length}-${finalTranscript.slice(0, 50)}`,
-        action,
-        {
-          isCloudMode: selectIsCloudNoteFormattingMode(settings),
-          modelId: config.model,
-          isMeetingNote: true,
-          allowTitleGeneration: true,
-        },
-        {
-          noModel: t("oats.errors.noModel"),
-          noEndpoint: t("oats.errors.noEndpoint"),
-          actionFailed: t("oats.errors.actionFailed"),
-        }
-      );
+      await summarizeConversation(recordingNoteId, finalTranscript, t, {
+        allowTitleGeneration: true,
+      });
     })();
     // `t` is a dependency only because the failure messages are translated. A
     // language change re-runs this, but the `wasRecording` guard above makes that
@@ -1562,7 +1583,20 @@ function IntelligenceViews({
     await initializeNotes("meeting", 100);
   };
 
-  const summary = selected?.enhanced_content || t("oats.intelligence.preparing");
+  // What the summary area can honestly say. "Being prepared" only while it is;
+  // otherwise why there is none, and the way to get one.
+  const summaryReadinessNow = useSummaryReadiness();
+  const summarizing = useActionProcessingStore((state) =>
+    selected ? state.noteStates[selected.id]?.status === "processing" : false
+  );
+  const summaryState: "summary" | "preparing" | "needs-model" | "not-summarized" =
+    selected?.enhanced_content
+      ? "summary"
+      : summarizing
+        ? "preparing"
+        : summaryReadinessNow && summaryReadinessNow !== "ready"
+          ? "needs-model"
+          : "not-summarized";
 
   // The opened conversation's own contour: its speech, its questions with the
   // verdicts they actually reached, and its topics — all from the record rather
@@ -1780,10 +1814,42 @@ function IntelligenceViews({
                   setTab("transcript");
                 }}
               />
-              <MarkdownRenderer
-                content={summary}
-                className="mt-7 text-[15px] leading-7 text-foreground"
-              />
+              {summaryState === "summary" && (
+                <MarkdownRenderer
+                  content={selected?.enhanced_content ?? ""}
+                  className="mt-7 text-[15px] leading-7 text-foreground"
+                />
+              )}
+              {summaryState === "preparing" && (
+                <p className="mt-7 text-sm text-muted-foreground">
+                  {t("oats.intelligence.preparing")}
+                </p>
+              )}
+              {summaryState === "needs-model" && (
+                <p className="mt-7 text-sm text-muted-foreground">
+                  {t("oats.intelligence.needsSummaryModel")}
+                </p>
+              )}
+              {summaryState === "not-summarized" && selected && (
+                <p className="mt-7 text-sm text-muted-foreground">
+                  {t("oats.intelligence.notSummarized")}{" "}
+                  <button
+                    type="button"
+                    className="rounded-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() =>
+                      void summarizeConversation(selected.id, selected.transcript ?? "", t, {
+                        // A title somebody wrote is theirs; only a placeholder
+                        // is replaced.
+                        allowTitleGeneration: isRegenerableNoteTitle(selected.title, [
+                          t("oats.untitled"),
+                        ]),
+                      })
+                    }
+                  >
+                    {t("oats.intelligence.summarize")}
+                  </button>
+                </p>
+              )}
             </>
           )}
           {tab === "transcript" && finding !== null && (
