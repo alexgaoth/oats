@@ -60,6 +60,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => (_event, state) => callback(state)
   ),
   requestToggleConversation: () => ipcRenderer.invoke("toggle-conversation-request"),
+  // Quitting during a conversation finishes it first: main asks, the panel
+  // finishes through the ordinary path and answers once the transcript is
+  // written, and only then does main tear anything down.
+  onFinishConversationForQuit: registerListener(
+    "finish-conversation-for-quit",
+    (callback) => () => callback()
+  ),
+  reportConversationFinishedForQuit: () => ipcRenderer.send("conversation-finished-for-quit"),
   // Marking the moment from the floating oat, which is all that is on screen
   // when a conversation is recorded with the panel hidden. Main forwards it to
   // the panel, which owns the recording, so there is one implementation.

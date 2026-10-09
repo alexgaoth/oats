@@ -14,6 +14,11 @@
 //
 // Pure and DOM-free so the bucket boundaries can be pinned.
 
+import { dbDate } from "./dbTime.mjs";
+
+// A stored moment is a SQLite UTC string ("2026-10-08 21:19:35"); `dbDate` reads
+// it as UTC rather than letting `new Date` read it as local time.
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function calendarDaysBetween(earlier, later) {
@@ -28,7 +33,7 @@ function calendarDaysBetween(earlier, later) {
  * @returns {"time" | "weekday" | "date" | "dateYear"}
  */
 export function ledgerDateKind(when, now = new Date()) {
-  const date = when instanceof Date ? when : new Date(when);
+  const date = when instanceof Date ? when : dbDate(when);
   const days = calendarDaysBetween(date, now);
   if (days === 0) return "time";
   // Six days back still names a distinct weekday; seven would repeat today's.
@@ -51,7 +56,7 @@ const FORMATS = {
  * @param {{ now?: Date, locale?: string }} [options]
  */
 export function ledgerDate(when, { now = new Date(), locale } = {}) {
-  const date = when instanceof Date ? when : new Date(when);
+  const date = when instanceof Date ? when : dbDate(when);
   if (!Number.isFinite(date.getTime())) return "";
   return new Intl.DateTimeFormat(locale, FORMATS[ledgerDateKind(date, now)]).format(date);
 }
@@ -63,7 +68,7 @@ export function ledgerDate(when, { now = new Date(), locale } = {}) {
  * @param {{ locale?: string }} [options]
  */
 export function ledgerDateLong(when, { locale } = {}) {
-  const date = when instanceof Date ? when : new Date(when);
+  const date = when instanceof Date ? when : dbDate(when);
   if (!Number.isFinite(date.getTime())) return "";
   return new Intl.DateTimeFormat(locale, {
     weekday: "short",

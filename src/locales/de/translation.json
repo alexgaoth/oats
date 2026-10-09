@@ -2026,7 +2026,16 @@
       "dictationHint": "Halten oder tippen; schreibt an der Cursorposition.",
       "hotkeyRejected": "„{{hotkey}}“ konnte nicht registriert werden, das vorherige Kürzel bleibt aktiv.",
       "conversationHotkey": "Konversations-Kurzbefehl",
-      "conversationHotkeyHint": "Startet und stoppt von überall."
+      "conversationHotkeyHint": "Startet und stoppt von überall.",
+      "sections": {
+        "label": "Erweiterte Bereiche",
+        "general": "Allgemein",
+        "hotkeys": "Tastenkürzel",
+        "speechToText": "Spracherkennung",
+        "llms": "Sprachmodelle",
+        "privacyData": "Datenschutz",
+        "system": "System"
+      }
     },
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",

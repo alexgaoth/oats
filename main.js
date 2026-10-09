@@ -187,6 +187,7 @@ const MeetingDetectionEngine = require("./src/helpers/meetingDetectionEngine");
 const { i18nMain, changeLanguage } = require("./src/helpers/i18nMain");
 const { ensureYdotool } = require("./src/helpers/ensureYdotool");
 const sidecarRegistry = require("./src/helpers/sidecarRegistry");
+const { createQuitGuard } = require("./src/helpers/conversationGuards");
 const { reapStaleSidecars } = require("./src/helpers/sidecarReaper");
 
 // Manager instances - initialized after app.whenReady()
@@ -1274,11 +1275,27 @@ if (gotSingleInstanceLock) {
     }
   });
 
+  // ⌘Q during a conversation finishes it first, through the same path a press
+  // of the seed takes, and quits once the transcript is written — bounded, so a
+  // renderer that never answers cannot hold the app open (conversationGuards.js).
+  const finishBeforeQuit = createQuitGuard({
+    isRecording: () => Boolean(windowManager?.isConversationRecording?.()),
+    finish: () => windowManager.finishConversationForQuit(),
+    log: (message, meta) => debugLogger?.warn?.(message, meta, "quit"),
+  });
+
   let isShuttingDown = false;
   app.on("before-quit", (event) => {
-    if (isShuttingDown) return;
+    const forUpdate = Boolean(updateManager && updateManager.isQuittingForUpdate);
+    if (isShuttingDown) {
+      // A second ⌘Q while the first is still finishing a conversation waits for
+      // it instead of cutting it off. The first ends in `app.exit`, which does
+      // not come back through here.
+      if (!forUpdate) event.preventDefault();
+      return;
+    }
     isShuttingDown = true;
-    if (updateManager && updateManager.isQuittingForUpdate) {
+    if (forUpdate) {
       // Quit must proceed for the installer to run, so no preventDefault;
       // sidecar shutdown is best-effort (the reaper cleans up orphans on relaunch).
       performSyncTeardown();
@@ -1286,8 +1303,11 @@ if (gotSingleInstanceLock) {
       return;
     }
     event.preventDefault();
-    performSyncTeardown();
-    sidecarRegistry.shutdownAll().finally(() => app.exit(0));
+    void finishBeforeQuit().finally(() => {
+      windowManager?.releaseSleepGuard?.();
+      performSyncTeardown();
+      sidecarRegistry.shutdownAll().finally(() => app.exit(0));
+    });
   });
 }
 

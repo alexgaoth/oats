@@ -2026,7 +2026,16 @@
       "dictationHint": "Maintenez ou appuyez ; écrit là où est le curseur.",
       "hotkeyRejected": "« {{hotkey}} » n'a pas pu être enregistré, le raccourci précédent reste actif.",
       "conversationHotkey": "Raccourci de conversation",
-      "conversationHotkeyHint": "Démarre et arrête depuis n'importe où."
+      "conversationHotkeyHint": "Démarre et arrête depuis n'importe où.",
+      "sections": {
+        "label": "Sections avancées",
+        "general": "Général",
+        "hotkeys": "Raccourcis",
+        "speechToText": "Reconnaissance vocale",
+        "llms": "Modèles de langage",
+        "privacyData": "Confidentialité",
+        "system": "Système"
+      }
     },
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",

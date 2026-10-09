@@ -2026,7 +2026,16 @@
       "dictationHint": "Tieni premuto o tocca; scrive dov'è il cursore.",
       "hotkeyRejected": "Non è stato possibile registrare «{{hotkey}}», quindi resta attiva la scorciatoia precedente.",
       "conversationHotkey": "Scorciatoia conversazione",
-      "conversationHotkeyHint": "Avvia e ferma da ovunque."
+      "conversationHotkeyHint": "Avvia e ferma da ovunque.",
+      "sections": {
+        "label": "Sezioni avanzate",
+        "general": "Generale",
+        "hotkeys": "Scorciatoie",
+        "speechToText": "Riconoscimento vocale",
+        "llms": "Modelli linguistici",
+        "privacyData": "Privacy",
+        "system": "Sistema"
+      }
     },
     "errors": {
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",
