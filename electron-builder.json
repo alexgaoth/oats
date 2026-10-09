@@ -135,6 +135,14 @@
       "to": "bin/mediaremote-adapter.LICENSE"
     }
   ],
+  "electronFuses": {
+    "runAsNode": false,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true,
+    "resetAdHocDarwinSignature": true
+  },
   "mac": {
     "category": "public.app-category.productivity",
     "target": ["dmg", "zip"],
