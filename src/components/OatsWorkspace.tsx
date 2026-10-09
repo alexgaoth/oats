@@ -139,9 +139,10 @@ function plainPreview(raw: string | null | undefined): string {
  * A stored transcript as readable text.
  *
  * The speaker labels take a `t` because they are user-facing copy, and they
- * reach further than the screen: this feeds the reading view, the list preview,
- * `copy`, and the saved `.txt`. Hard-coded, they put English into every
- * transcript and every export in all ten locales.
+ * reach further than the screen: this feeds the reading view, the list preview
+ * and `copy`. Hard-coded, they put English into every transcript and every
+ * export in all ten locales. The saved `.txt` is written in the main process by
+ * `helpers/transcriptFormatter.js`, which labels speakers by the same rule.
  */
 function transcriptText(raw: string | null, t: TFunction): string {
   if (!raw) return "";
@@ -2239,11 +2240,11 @@ function ConversationReview({
  * The transcript as the timed record it is, rather than as one wall of text.
  *
  * The reading view used to render `transcriptText()` — the same flat string the
- * clipboard and the `.txt` export get — so an hour of conversation arrived with
- * no bearings at all. The whole product draws time as its signature, and the one
- * surface where you go to *read* what was said showed none of it: a search
- * result landed you somewhere in a wall with nothing to say how far in you were,
- * or how long the room had been on the subject.
+ * clipboard gets — so an hour of conversation arrived with no bearings at all.
+ * The whole product draws time as its signature, and the one surface where you
+ * go to *read* what was said showed none of it: a search result landed you
+ * somewhere in a wall with nothing to say how far in you were, or how long the
+ * room had been on the subject.
  *
  * Each turn now carries its offset from the first thing said. The gutter is mono
  * and quiet — it is a coordinate, not content — and it is `aria-hidden`, because
@@ -2251,8 +2252,9 @@ function ConversationReview({
  * before every line. The time is on the paragraph as a `title` for anyone who
  * wants it.
  *
- * `transcriptText` is untouched: copy and export still produce the plain text
- * they always did.
+ * `transcriptText` is untouched: copy still produces the plain text it always
+ * did. The saved `.txt` carries the same offsets as this gutter, written by
+ * `helpers/transcriptFormatter.js` from the same first turn.
  */
 function TranscriptView({
   note,

@@ -1863,12 +1863,6 @@
     "copied": "Скопировано",
     "waitingForInput": "Скажите что-нибудь..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "Вы",
-      "others": "Другие"
-    }
-  },
   "meetingNotification": {
     "title": "Обнаружена встреча",
     "body": {
