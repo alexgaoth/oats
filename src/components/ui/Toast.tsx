@@ -194,7 +194,7 @@ const Toast: React.FC<
   const handleCopyError = async () => {
     if (!description) return;
     try {
-      await navigator.clipboard.writeText(description);
+      await navigator.clipboard.writeText([title, description].filter(Boolean).join("\n"));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}
@@ -219,31 +219,28 @@ const Toast: React.FC<
       {icon}
       <div className="min-w-0 flex-1">
         {message && <p className="text-sm font-medium leading-5 text-foreground">{message}</p>}
-        {detail &&
-          (isDestructive ? (
-            // The error itself, as the machine said it: copyable, in mono.
-            <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-border bg-muted/50 px-2 py-1.5">
-              <span className="min-w-0 flex-1 select-all break-words font-mono text-xs leading-5 text-destructive">
-                {detail}
-              </span>
-              <button
-                type="button"
-                onClick={handleCopyError}
-                aria-label={t("common.copy")}
-                className="mt-px shrink-0 rounded-sm p-0.5 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                {copied ? (
-                  <Check aria-hidden="true" className="size-3.5" />
-                ) : (
-                  <Copy aria-hidden="true" className="size-3.5" />
-                )}
-              </button>
-            </div>
-          ) : (
-            <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{detail}</p>
-          ))}
+        {detail && (
+          // Plain text for every variant: most error toasts carry a translated
+          // sentence, and mono is for machine text (DESIGN.md §3).
+          <p className="mt-0.5 break-words text-[13px] leading-5 text-muted-foreground">{detail}</p>
+        )}
         {action && <div className="mt-2.5">{action}</div>}
       </div>
+      {isDestructive && detail && (
+        // An error's words are what a bug report needs, so they can be copied.
+        <button
+          type="button"
+          onClick={handleCopyError}
+          aria-label={t("common.copy")}
+          className="-mr-1 -mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {copied ? (
+            <Check aria-hidden="true" className="size-3.5" />
+          ) : (
+            <Copy aria-hidden="true" className="size-3.5" />
+          )}
+        </button>
+      )}
 
       {onClose && (
         <button

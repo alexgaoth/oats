@@ -1872,9 +1872,9 @@
   "meetingNotification": {
     "title": "Réunion détectée",
     "body": {
-      "detected": "On dirait que vous êtes en réunion. Vous voulez prendre des notes ?",
-      "starting": "Votre réunion va commencer. Vous voulez prendre des notes ?",
-      "underway": "On dirait que votre réunion est déjà en cours. Vous voulez prendre des notes ?"
+      "detected": "Prendre des notes ?",
+      "starting": "Ça commence.",
+      "underway": "Déjà en cours."
     },
     "start": "Prendre des notes",
     "join": "Rejoindre et transcrire"
