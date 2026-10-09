@@ -176,6 +176,22 @@ function transcriptText(raw: string | null, t: TFunction): string {
   return raw;
 }
 
+// Resolved by the Finish effect once the final transcript write has landed, or
+// once there turned out to be nothing to write. Quitting during a conversation
+// waits on exactly this (conversationGuards.js), rather than on capture
+// stopping, which happens well before the transcript is safe.
+let finishSavedWaiters: Array<() => void> = [];
+
+function whenFinishSaved(): Promise<void> {
+  return new Promise((resolve) => finishSavedWaiters.push(resolve));
+}
+
+function finishSaved(): void {
+  const waiters = finishSavedWaiters;
+  finishSavedWaiters = [];
+  for (const resolve of waiters) resolve();
+}
+
 function parseSegments(raw: string | null): TranscriptSegment[] {
   if (!raw) return [];
   try {
@@ -418,7 +434,10 @@ function ConversationSurface() {
     const finalTranscript = state.segments.length
       ? serializeTranscriptSegments(state.segments)
       : state.transcript || transcript;
-    if (!recordingNoteId) return;
+    if (!recordingNoteId) {
+      finishSaved();
+      return;
+    }
     // A conversation that captured nothing is not a conversation. Leaving an
     // empty note behind means the Intelligence list slowly fills with blanks the
     // user has to clean up, and it hides the actual problem: the mic heard
@@ -426,6 +445,7 @@ function ConversationSurface() {
     if (!finalTranscript.trim()) {
       setNothingHeard(true);
       void window.electronAPI?.deleteNote?.(recordingNoteId);
+      finishSaved();
       return;
     }
     setNothingHeard(false);
@@ -434,13 +454,17 @@ function ConversationSurface() {
     const topics = getConversationTopicSnapshot();
     const moments = state.moments;
     void (async () => {
-      await window.electronAPI?.updateNote(recordingNoteId, {
-        transcript: finalTranscript,
-        ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
-        // Written on every press already; once more here so a press whose
-        // write was refused still lands with the transcript it belongs to.
-        ...(moments.length ? { conversation_marks: JSON.stringify(moments) } : {}),
-      });
+      try {
+        await window.electronAPI?.updateNote(recordingNoteId, {
+          transcript: finalTranscript,
+          ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
+          // Written on every press already; once more here so a press whose
+          // write was refused still lands with the transcript it belongs to.
+          ...(moments.length ? { conversation_marks: JSON.stringify(moments) } : {}),
+        });
+      } finally {
+        finishSaved();
+      }
       const action = (await initializeActions()).find((item) => item.is_builtin);
       if (!action) return;
       const settings = useSettingsStore.getState();
@@ -573,6 +597,27 @@ function ConversationSurface() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [recording, mark]);
+
+  // Quitting during a conversation lands here. Main holds the quit until this
+  // answers, so it answers only once the transcript is written: capture is
+  // released, main transcribes what it still holds, and the Finish effect saves.
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onFinishConversationForQuit?.(() => {
+      void (async () => {
+        try {
+          const { isRecording, isTranscribing } = useMeetingRecordingStore.getState();
+          if (isRecording || isTranscribing) {
+            const saved = whenFinishSaved();
+            if (isRecording) await stopRecording();
+            await saved;
+          }
+        } finally {
+          window.electronAPI?.reportConversationFinishedForQuit?.();
+        }
+      })();
+    });
+    return () => cleanup?.();
+  }, []);
 
   // The global hotkey lands here. The window may be hidden, unfocused, or on
   // another workspace; nothing about this path surfaces it.
