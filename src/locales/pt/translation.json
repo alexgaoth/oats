@@ -2033,7 +2033,16 @@
       "dictationHint": "Segure ou toque; escreve onde está o cursor.",
       "hotkeyRejected": "Não foi possível registar “{{hotkey}}”, por isso o atalho anterior continua em uso.",
       "conversationHotkey": "Atalho de conversa",
-      "conversationHotkeyHint": "Inicia e para de qualquer lugar."
+      "conversationHotkeyHint": "Inicia e para de qualquer lugar.",
+      "sections": {
+        "label": "Seções avançadas",
+        "general": "Geral",
+        "hotkeys": "Atalhos",
+        "speechToText": "Voz para texto",
+        "llms": "Modelos de linguagem",
+        "privacyData": "Privacidade",
+        "system": "Sistema"
+      }
     },
     "errors": {
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",

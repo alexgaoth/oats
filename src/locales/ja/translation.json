@@ -2033,7 +2033,16 @@
       "dictationHint": "長押しまたはタップ。カーソル位置に入力します。",
       "hotkeyRejected": "「{{hotkey}}」を登録できなかったため、以前のショートカットのままです。",
       "conversationHotkey": "会話のショートカット",
-      "conversationHotkeyHint": "どこからでも開始・停止できます。"
+      "conversationHotkeyHint": "どこからでも開始・停止できます。",
+      "sections": {
+        "label": "詳細設定のセクション",
+        "general": "一般",
+        "hotkeys": "ショートカット",
+        "speechToText": "音声認識",
+        "llms": "言語モデル",
+        "privacyData": "プライバシー",
+        "system": "システム"
+      }
     },
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
