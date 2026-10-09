@@ -1,4 +1,17 @@
-const { Menu } = require("electron");
+const { app, Menu } = require("electron");
+
+// Reload and the inspector rebuild the renderer that holds a running
+// conversation, and a reload mid-recording loses it. They are for development;
+// a packaged Oats has no use for them.
+function developmentViewItems() {
+  if (app.isPackaged) return [];
+  return [
+    { role: "reload" },
+    { role: "forceReload" },
+    { role: "toggleDevTools" },
+    { type: "separator" },
+  ];
+}
 const { i18nMain } = require("./i18nMain");
 
 class MenuManager {
@@ -77,10 +90,7 @@ class MenuManager {
         {
           label: "View",
           submenu: [
-            { role: "reload" },
-            { role: "forceReload" },
-            { role: "toggleDevTools" },
-            { type: "separator" },
+            ...developmentViewItems(),
             { role: "resetZoom" },
             { role: "zoomIn" },
             { role: "zoomOut" },
@@ -146,10 +156,7 @@ class MenuManager {
         {
           label: "View",
           submenu: [
-            { role: "reload" },
-            { role: "forceReload" },
-            { role: "toggleDevTools" },
-            { type: "separator" },
+            ...developmentViewItems(),
             { role: "resetZoom" },
             { role: "zoomIn" },
             { role: "zoomOut" },

@@ -1,8 +1,9 @@
-const { app, screen, BrowserWindow, shell, dialog } = require("electron");
+const { app, screen, BrowserWindow, shell, dialog, powerSaveBlocker } = require("electron");
 const debugLogger = require("./debugLogger");
 const HotkeyManager = require("./hotkeyManager");
 const { isGlobeLikeHotkey } = HotkeyManager;
 const DragManager = require("./dragManager");
+const { createSleepGuard } = require("./conversationGuards");
 const MenuManager = require("./menuManager");
 const DevServerManager = require("./devServerManager");
 const dockManager = require("./dockManager");
@@ -1315,6 +1316,10 @@ class WindowManager {
     };
     const wasRecording = this._conversationState?.recording ?? false;
     this._conversationState = next;
+    // Nobody touches the laptop during an in-person conversation, which is
+    // exactly when idle sleep would suspend capture (conversationGuards.js).
+    this._sleepGuard ??= createSleepGuard(powerSaveBlocker);
+    this._sleepGuard.update(next.recording);
     // Only on the transition into recording: re-showing it on every update would
     // undo the user hiding it mid-conversation, which is their call to make.
     if (next.recording && !wasRecording && !this.isDictationPanelVisible()) {
@@ -1327,6 +1332,32 @@ class WindowManager {
 
   isConversationRecording() {
     return Boolean(this._conversationState?.recording);
+  }
+
+  releaseSleepGuard() {
+    this._sleepGuard?.release();
+  }
+
+  /**
+   * Ask the panel to finish the running conversation before the app quits.
+   *
+   * Resolves once the panel reports the transcript written — the same Finish a
+   * press of the seed runs — so nothing it was still transcribing is lost. The
+   * caller bounds the wait (conversationGuards.js); this only forwards.
+   */
+  finishConversationForQuit() {
+    const win = this.controlPanelWindow;
+    if (!win || win.isDestroyed() || win.webContents.isLoading()) return Promise.resolve();
+    return new Promise((resolve) => {
+      this._finishedForQuit = resolve;
+      win.webContents.send("finish-conversation-for-quit");
+    });
+  }
+
+  conversationFinishedForQuit() {
+    const resolve = this._finishedForQuit;
+    this._finishedForQuit = null;
+    resolve?.();
   }
 
   hideControlPanelToTray() {
