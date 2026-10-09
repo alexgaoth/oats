@@ -681,8 +681,14 @@ async function startApp() {
     });
   }
 
-  // Auto-download diarization models if binary is available
+  // Nothing is fetched at launch in a packaged build (docs/network-allowlist.md:
+  // downloads are explicit user actions). A conversation in a room uses the
+  // bundled pyannote and TitaNet models. CAM++ and Silero serve only the call
+  // path, which no surface starts today; whatever brings calls back must bundle
+  // them or fetch them as a stated action. A development checkout still fetches
+  // them, as it always has.
   if (
+    !app.isPackaged &&
     diarizationManager.getBinaryPath() &&
     (!diarizationManager.isModelDownloaded() || !diarizationManager.isVadModelDownloaded())
   ) {
@@ -714,7 +720,10 @@ async function startApp() {
   }
 
   const localEmbeddings = require("./src/helpers/localEmbeddings");
-  if (!localEmbeddings.isAvailable()) {
+  // Bundled by prebuild on every platform; only a development checkout that has
+  // never run it downloads at launch. A packaged build without it degrades to
+  // keyword search rather than reaching for the network.
+  if (!localEmbeddings.isAvailable() && !app.isPackaged) {
     localEmbeddings.downloadModel().catch((err) => {
       debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
     });
