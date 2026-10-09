@@ -194,7 +194,8 @@ the shipped config, which is on for dictation by default.
   cost. Turbo with VAD also emptied one 13s utterance to "Horrible!". What VAD
   is for — no text invented in silence or room noise — is exactly what read
   speech in a quiet room cannot show, so this is evidence for a decision, not
-  the decision. Nothing about VAD is changed here.
+  the decision. Whether VAD stays on is still open; its overlap is now settled
+  (below).
 - **What `auto` costs is the English model, not the detection.** Detection is
   27ms on `base` (81ms against 54ms with `en`, both 5.95%) and 540ms on turbo,
   whose encoder is most of its work. But `auto` needs the multilingual model,
@@ -253,6 +254,23 @@ The default model does not change here; that is the owner's call. The evidence:
   memory against 254MB for `base.en`. Two things stand between it and a
   default: a third of its output has no capitals or punctuation, and with VAD
   it once dropped a whole utterance. Both need a fix and a row first.
+
+### The VAD overlap: 0.1s, not 0.5s (2026-10-08)
+
+The one-off run above, repeated as rows. Same corpus and utterances, VAD on,
+only `samplesOverlap` changed, both runs on the M5 Pro:
+
+| configuration (VAD on)              | n   | 0.5s (shipped)  | 0.1s            | utterances better / worse | repeated phrases |
+| ----------------------------------- | --- | --------------- | --------------- | ------------------------- | ---------------- |
+| `base.en` + `en`                    | 200 | 5.69% (4.6–6.9) | 5.34% (4.4–6.4) | 12 / 5                    | 4 → 1            |
+| `base` + `auto` (out of the box)    | 200 | 6.61% (5.5–7.8) | 6.48% (5.4–7.7) | 12 / 6                    | 2 → 0            |
+| long dictation, `base.en`, cut      | 40  | 4.63% (3.7–5.6) | 4.16% (3.4–4.9) | 15 / 5                    | 6 → 1            |
+
+Every row moves the same way, the repeated-phrase count (the mechanism)
+falls in each, and median latency moves by 1–3ms. The intervals overlap, so
+the claim is the direction and the mechanism, not the size. 0.1s is also
+whisper.cpp's own default. It ships as the default for every VAD scope; the
+settings store now reads it from `whisperVad.json` instead of repeating it.
 
 ## Who said it
 
