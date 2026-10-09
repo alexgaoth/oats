@@ -12,6 +12,11 @@ const { getSafeTempDir } = require("./safeTempDir");
 const { convertToWav } = require("./ffmpegUtils");
 const sidecarPidFile = require("./sidecarPidFile");
 const { sanitizeWhisperVadConfig, DEFAULT_WHISPER_VAD_CONFIG } = require("./whisperVadConfig");
+const { pcm16ToWav } = require("../utils/audioUtils");
+// A dynamic import kept in a promise: `whisperRequestCuts.mjs` is ESM so it can
+// be unit-tested with `node:test` and run by scripts/asr-eval.js, and this file is CJS.
+let requestCutsModule = null;
+const loadRequestCuts = () => (requestCutsModule ??= import("./whisperRequestCuts.mjs"));
 
 const PORT_RANGE_START = 8178;
 const PORT_RANGE_END = 8199;
@@ -754,6 +759,31 @@ class WhisperServerManager extends EventEmitter {
     }
     finalBuffer = await this._convertToWav(audioBuffer);
 
+    // With `--no-timestamps` (buildWhisperServerArgs) whisper.cpp cannot resume
+    // inside a 30 s window, so one request for a long recording loses words:
+    // 13.10% WER against 4.37% on 40 dictations of 31–89 s
+    // (docs/dictation-accuracy.md). A longer recording is cut at its pauses
+    // and sent piece by piece, in order. Anything that fits one request gets
+    // null here and goes out whole, exactly as it always did.
+    const { transcribeInPieces } = await loadRequestCuts();
+    const cut = await transcribeInPieces(finalBuffer, async (samples) => {
+      const piece = pcm16ToWav(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
+      const result = await this._requestInference(piece, { language, initialPrompt });
+      return typeof result?.text === "string" ? result.text : "";
+    });
+    if (cut) {
+      debugLogger.info("Long recording transcribed in pieces", {
+        pieces: cut.pieces.length,
+        seconds: cut.pieces.map((p) => Math.round((p.endSample - p.startSample) / 1600) / 10),
+      });
+      return { text: cut.text };
+    }
+
+    return await this._requestInference(finalBuffer, { language, initialPrompt });
+  }
+
+  /** One `/inference` request: a whole recording, or one piece of a long one. */
+  async _requestInference(wav, { language, initialPrompt }) {
     const boundary = `----WhisperBoundary${Date.now()}`;
     const parts = [];
     const fileName = "audio.wav";
@@ -764,7 +794,7 @@ class WhisperServerManager extends EventEmitter {
         `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
         `Content-Type: ${contentType}\r\n\r\n`
     );
-    parts.push(finalBuffer);
+    parts.push(wav);
     parts.push("\r\n");
 
     parts.push(

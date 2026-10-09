@@ -11,6 +11,15 @@ update feed is contacted. v1 updates are signed manual downloads.
 One outbound action is **on by default**: the question search below. It is the
 only default-on connection in the product, and it is switchable off in Settings.
 
+**Nothing is downloaded at launch.** Every model a conversation needs ships in
+the app: Whisper `base` and `base.en`, the Silero VAD, pyannote segmentation,
+TitaNet for speakers, and MiniLM for search. A development checkout fetches the
+ones it is missing; a packaged build never does. The local vector store (Qdrant)
+listens on 127.0.0.1 only and runs with its anonymous usage statistics turned
+off, by config and by flag (`src/helpers/qdrantManager.js`). Nothing of the
+builder's machine is packed into the app — in particular no `.env`. All of this
+is pinned in `test/helpers/networkBoundary.test.js`.
+
 ## Default-on
 
 | Host                                            | What is sent                                                                                                                                                                                                                                                                   |
