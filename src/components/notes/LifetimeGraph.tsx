@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowRight } from "lucide-react";
 import ForceGraph from "./ForceGraph";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import { buildLifetimeGraph, recurringTopics } from "../../helpers/lifetimeGraph";
 import { ledgerDate } from "../../helpers/ledgerDate.mjs";
 import { parseDbTimestamp } from "../../helpers/dbTime.mjs";
@@ -89,11 +92,8 @@ export default function LifetimeGraph({
           {recurring.map((item, index) => (
             <span key={item.label}>
               {index > 0 && ", "}
-              <span className="font-mono text-foreground/80">{item.label}</span>
-              <span className="text-muted-foreground/70">
-                {" "}
-                ({t("lifetime.inCount", { count: item.conversations })})
-              </span>
+              <span className="font-medium text-foreground">{item.label}</span>
+              <span> ({t("lifetime.inCount", { count: item.conversations })})</span>
             </span>
           ))}
         </p>
@@ -119,31 +119,36 @@ export default function LifetimeGraph({
           // the graph and wrong for prose: unpadded, a selected conversation's
           // title, date and topic list appeared jammed into the window's
           // bottom-left corner, lined up with nothing on the screen.
-          <aside className="shrink-0 border-t border-border/40">
+          <aside className="shrink-0 border-t border-border">
             <div className="mx-auto w-full max-w-3xl px-8 pb-6 pt-5">
-              <p className="text-sm font-medium leading-snug text-foreground">{selected.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h3 className="text-sm font-semibold leading-snug text-foreground">
+                {selected.label}
+              </h3>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
                 {ledgerDate(selected.createdAt, { locale: i18n.language })} ·{" "}
                 {t("lifetime.topicCount", { count: selected.topicCount })}
               </p>
-              <ul className="mt-4 space-y-1.5">
-                {selected.topics.map((topic) => (
-                  <li key={topic} className="font-mono text-xs text-foreground/70">
-                    {topic}
-                  </li>
-                ))}
-              </ul>
-              <button
+              {selected.topics.length > 0 && (
+                <ul className="mt-3 flex flex-wrap gap-1.5">
+                  {selected.topics.map((topic) => (
+                    <li key={topic}>
+                      <Badge variant="secondary">{topic}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {/* Outline, not the brand fill: the map's selected node already
+                  carries the brand, and opening is a way out, not the point. */}
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => onOpen(selected.id)}
-                // Ink, not gold. §3: gold is a mark colour, never a reading colour, and §9.4
-                // grants the accent to the *topic* graph's re-search action only — the
-                // lifetime graph has no such grant, so an "open" link in gold would be a
-                // second accent competing with the connected nodes.
-                className="mt-5 rounded-sm text-xs text-foreground underline underline-offset-4 transition-opacity [transition-duration:var(--motion-instant)] hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="mt-4"
               >
                 {t("lifetime.open")}
-              </button>
+                <ArrowRight aria-hidden="true" />
+              </Button>
             </div>
           </aside>
         )}

@@ -230,25 +230,19 @@ export default function ConversationDialogue({ className }: { className?: string
             // Inside the region, not instead of it: a labelled log that only
             // exists once somebody has spoken cannot be navigated to beforehand,
             // and then appears with no signal that it has.
-            <p className="font-mono text-xs text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               {t("oats.conversation.dialogueWaiting")}
             </p>
           )}
           <ol className="space-y-3.5">
             {turns.map((turn) => (
-              <li key={turn.id} className="font-mono text-[13px] leading-6">
-                {/* Mono, because §5 gives transcripts the "machine heard this"
-                  voice — it earns trust by looking verbatim — and because the
-                  reading view renders this same content at `font-mono
-                  text-[13px] leading-6`. One transcript must not have two voices
-                  on two surfaces. Sentence case, like everything but the
-                  wordmark.
-
-                  24px, not 28: at 2.15x the type size a turn's wrapped line sat
-                  almost as far below it as the next turn did, so a continuation
-                  read as a new entry. */}
+              <li key={turn.id} className="text-pretty text-sm leading-6">
+                {/* Inter, like the record view's transcript: one transcript must
+                  not have two voices on two surfaces, and mono is for machine
+                  text (DESIGN.md §3). 24px leading at 14px keeps a wrapped line
+                  closer to its turn than the next turn is. */}
                 {speakerText(turn.head, t) && (
-                  <span className="mr-2 select-none text-muted-foreground">
+                  <span className="mr-1.5 select-none font-medium text-muted-foreground">
                     {speakerText(turn.head, t)}
                     {/* The gap between the label and the words is margin, which is
                     invisible to `textContent` — so a screen reader, and anyone
@@ -257,7 +251,7 @@ export default function ConversationDialogue({ className }: { className?: string
                     <span className="sr-only">: </span>
                   </span>
                 )}
-                <span className="text-foreground/85">
+                <span className="text-foreground/90">
                   {newest && turn.id === newest.id && newestVisible
                     ? newestVisible.text
                     : turn.text}
@@ -272,11 +266,11 @@ export default function ConversationDialogue({ className }: { className?: string
               // browser updates the line instead of remounting it every frame.
               <li
                 key="in-progress"
-                className="font-mono text-[13px] leading-6"
+                className="text-pretty text-sm leading-6"
                 data-state="in-progress"
               >
                 {partialLabel && (
-                  <span className="mr-2 select-none text-muted-foreground/70">
+                  <span className="mr-1.5 select-none font-medium text-muted-foreground">
                     {partialLabel}
                     <span className="sr-only">: </span>
                   </span>

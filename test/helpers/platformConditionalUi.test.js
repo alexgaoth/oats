@@ -182,18 +182,19 @@ test("macOS traffic lights have the band to themselves", () => {
   assert.ok(Math.abs(y + 8 - bandPx / 2) <= 2, "the traffic lights are centred in the band");
 });
 
-test("canvas text uses the same mono token as the DOM", () => {
-  // Canvas does not inherit CSS. A hard-coded stack here resolves to SF Mono on
+test("canvas text uses the same sans token as the DOM", () => {
+  // Canvas does not inherit CSS. A hard-coded stack here resolves to one font on
   // macOS and to something else everywhere else, so the divergence is invisible
-  // on the platform this mostly ships to.
+  // on the platform this mostly ships to. Labels are Inter, like every other
+  // label in the app (DESIGN.md §3).
   assert.match(
     FORCE_GRAPH,
-    /getPropertyValue\("--font-family-mono"\)/,
-    "graph labels should read the app's mono token"
+    /getPropertyValue\("--font-family-sans"\)/,
+    "graph labels should read the app's sans token"
   );
   assert.doesNotMatch(
     FORCE_GRAPH,
-    /ctx\.font = ['"`]\d+px ui-monospace/,
+    /ctx\.font = ['"`][^'"`]*\d+px (ui-monospace|ui-sans-serif|"?Inter)/,
     "graph labels should not hard-code a font stack"
   );
 });

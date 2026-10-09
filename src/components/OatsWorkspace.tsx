@@ -1091,43 +1091,43 @@ function ConnectionsView({
           band is a fixed height that scrolls inside itself, so selecting
           anything moves nothing. Still no "select a topic to see…" placeholder:
           empty space is not an instruction. */}
-      <div className="mt-6 h-44 overflow-y-auto border-t border-border/40 pt-5">
+      <div className="mt-6 h-44 overflow-y-auto border-t border-border pt-5">
         {selectedTopic && (
           <aside>
-            <>
-              <p className="font-mono text-sm text-foreground">{selectedTopic.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("topicGraph.seconds", {
-                  count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
-                })}
-                {selectedTopic.returns > 0 &&
-                  ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
-              </p>
-              <ul className="mt-4 space-y-3">
-                {topicQuestions.map((question) => (
-                  <li key={question.id}>
-                    <p className="font-mono text-xs leading-snug text-foreground/70">
-                      {question.text}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => research(question.text)}
-                      // Ink. §9.4's "gold appears exactly twice" is one selected node and one
-                      // re-search action — but this list renders a link per question, so on a
-                      // topic with three questions the accent multiplied. The selected node
-                      // keeps the gold; the links are reading text (§3).
-                      className="mt-1 inline-flex items-center gap-1 rounded-sm text-[11px] text-muted-foreground underline underline-offset-2 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <Search size={10} />
-                      {t("topicGraph.search")}
-                    </button>
-                  </li>
-                ))}
-                {!topicQuestions.length && (
-                  <li className="text-xs text-muted-foreground">{t("topicGraph.noQuestions")}</li>
-                )}
-              </ul>
-            </>
+            <h3 className="text-sm font-semibold text-foreground">{selectedTopic.label}</h3>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              {t("topicGraph.seconds", {
+                count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
+              })}
+              {selectedTopic.returns > 0 &&
+                ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
+            </p>
+            <ul className="mt-3 divide-y divide-border">
+              {topicQuestions.map((question) => (
+                <li key={question.id} className="flex items-start gap-3 py-2.5">
+                  <p className="min-w-0 flex-1 text-pretty text-sm leading-snug text-foreground">
+                    {question.text}
+                  </p>
+                  {/* A ghost button, not the brand: the selected node keeps the
+                      brand colour, and one row per question would multiply it. */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => research(question.text)}
+                    className="-my-0.5 shrink-0 text-muted-foreground"
+                  >
+                    <Search aria-hidden="true" />
+                    {t("topicGraph.search")}
+                  </Button>
+                </li>
+              ))}
+              {!topicQuestions.length && (
+                <li className="py-2.5 text-[13px] text-muted-foreground">
+                  {t("topicGraph.noQuestions")}
+                </li>
+              )}
+            </ul>
           </aside>
         )}
       </div>

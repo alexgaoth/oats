@@ -140,10 +140,6 @@
   --shadow-selected-glow: 0 0 0 1px var(--color-primary);
   --shadow-metallic-light: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-card-hover-subtle: 0 2px 8px -2px rgb(0 0 0 / 0.08);
-  --graph-answered: var(--color-success);
-  --graph-uncertain: var(--color-warning);
-  --graph-silence: var(--color-muted-foreground);
-  --graph-open: var(--color-destructive);
 }
 
 .dark {
@@ -206,7 +202,6 @@
   --shadow-metallic-dark: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-selected-glow: 0 0 0 1px var(--color-primary);
   --shadow-card-hover-subtle: 0 2px 8px -2px rgb(0 0 0 / 0.3);
-  --graph-answered: var(--color-success);
 }
 
 .oats-listening-pulse {
