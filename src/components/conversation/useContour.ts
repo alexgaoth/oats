@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildContour, contourStrip } from "../../helpers/conversationContour.mjs";
 import { buildConversationGraph, responseReason } from "../../helpers/conversationGraph";
-import {
-  getConversationTopicSnapshot,
-  useMeetingRecordingStore,
-} from "../../stores/meetingRecordingStore";
+import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { ContourData } from "./ConversationContour";
 import type {
   ConversationEvent,
@@ -74,6 +71,10 @@ export function useLiveContour(startedAt: number | null): ContourData {
   const cards = useMeetingRecordingStore((state) => state.questionCards);
   const moments = useMeetingRecordingStore((state) => state.moments);
   const recording = useMeetingRecordingStore((state) => state.isRecording);
+  // The snapshot the store publishes after each utterance. Not the tracker's
+  // final snapshot: that one commits the tracker's held turn, and taking it on
+  // every utterance meant no change of subject could ever start a topic.
+  const topicSnapshot = useMeetingRecordingStore((state) => state.topicSnapshot);
   const [edge, setEdge] = useState(() => Date.now());
 
   useEffect(() => {
@@ -83,9 +84,7 @@ export function useLiveContour(startedAt: number | null): ContourData {
   }, [recording]);
 
   return useMemo(() => {
-    const snapshot = recording
-      ? (getConversationTopicSnapshot() as ConversationTopicSnapshot | null)
-      : null;
+    const snapshot: ConversationTopicSnapshot | null = recording ? topicSnapshot : null;
     return buildContour({
       utterances: utterancesFor(segments),
       questions: cards,
@@ -105,7 +104,7 @@ export function useLiveContour(startedAt: number | null): ContourData {
       // last tick, and a window that stopped short would drop its caret.
       now: recording ? Math.max(edge, Date.now()) : undefined,
     }) as ContourData;
-  }, [segments, cards, moments, recording, edge, startedAt]);
+  }, [segments, cards, moments, recording, edge, startedAt, topicSnapshot]);
 }
 
 /**
