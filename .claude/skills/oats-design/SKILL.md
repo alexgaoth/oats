@@ -112,8 +112,9 @@ them fails review.
 5. **No visible focus** on an interactive element, or no `prefers-reduced-motion`
    path for an animation.
 6. **A gradient, texture, glow or decorative animation.** Surfaces are flat.
-7. **Red for anything but recording or danger**, or the brand amber anywhere but
-   the oat mark.
+7. **Red for anything but recording or danger**; the brand yellow-orange as
+   text on a light surface (use `brand-ink`), or on more than one primary button
+   in a view.
 8. **The phrase "nothing leaves your device"** in copy, docs, or comments. It is
    false while auto-search is on. State what leaves, when, and how to switch it off.
 9. **A new user-facing string not added to all 10 locale files.**

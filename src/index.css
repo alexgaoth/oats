@@ -14,8 +14,10 @@
   --color-card-foreground: #09090b;
   --color-popover: #ffffff;
   --color-popover-foreground: #09090b;
-  --color-primary: #18181b;
-  --color-primary-foreground: #fafafa;
+  /* The brand: a warm yellow-orange for the important action on a screen.
+     It is a fill, with a dark label; text in brand colour uses brand-ink. */
+  --color-primary: #f5a30f;
+  --color-primary-foreground: #1a1306;
   --color-secondary: #f4f4f5;
   --color-secondary-foreground: #18181b;
   --color-muted: #f4f4f5;
@@ -26,7 +28,7 @@
   --color-destructive-foreground: #ffffff;
   --color-border: #e4e4e7;
   --color-input: #d4d4d8;
-  --color-ring: #a1a1aa;
+  --color-ring: #f5a30f;
   --color-link: #18181b;
   --color-success: #16a34a;
   --color-success-foreground: #ffffff;
@@ -46,7 +48,8 @@
      appears in the mark only. */
   --color-recording: #ef4444;
   --color-recording-foreground: #ffffff;
-  --color-brand: #e8a33d;
+  --color-brand: #f5a30f;
+  --color-brand-ink: #9a5b00;
 
   /* Surface ladder, lightest to darkest. */
   --color-surface-0: #ffffff;
@@ -144,8 +147,8 @@
   --color-card-foreground: #fafafa;
   --color-popover: #131316;
   --color-popover-foreground: #fafafa;
-  --color-primary: #fafafa;
-  --color-primary-foreground: #18181b;
+  --color-primary: #f5a30f;
+  --color-primary-foreground: #1a1306;
   --color-secondary: #1c1c1f;
   --color-secondary-foreground: #fafafa;
   --color-muted: #1c1c1f;
@@ -156,7 +159,8 @@
   --color-destructive-foreground: #ffffff;
   --color-border: #27272a;
   --color-input: #3f3f46;
-  --color-ring: #71717a;
+  --color-ring: #f5a30f;
+  --color-brand-ink: #f5b544;
   --color-link: #fafafa;
   --color-success: #22c55e;
   --color-success-foreground: #052e16;

@@ -64,7 +64,7 @@ function NavItem({
           : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
       )}
     >
-      <Icon className="size-4 shrink-0 text-muted-foreground group-aria-[current=page]:text-foreground" />
+      <Icon className="size-4 shrink-0 text-muted-foreground group-aria-[current=page]:text-brand-ink" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {trailing}
     </button>
@@ -128,13 +128,13 @@ export function AppSidebar({
             "outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
             recording
               ? "bg-recording text-recording-foreground hover:bg-recording/90"
-              : "border border-input bg-background text-foreground hover:bg-accent dark:bg-input/20 dark:hover:bg-input/40"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
           )}
         >
           {recording ? (
             <Square className="size-3.5 fill-current" aria-hidden="true" />
           ) : (
-            <span aria-hidden="true" className="size-2.5 rounded-full bg-recording" />
+            <span aria-hidden="true" className="size-2.5 rounded-full bg-current" />
           )}
           <span className="flex-1 text-left">
             {recording ? t("oats.shell.stop") : t("oats.shell.record")}

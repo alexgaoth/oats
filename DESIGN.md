@@ -6,7 +6,7 @@ gold, mono, dithering), which lives in git history.
 > Oats should look and behave like the best desktop tools a team already uses —
 > Linear, Notion, Granola, Raycast — so nothing about it has to be learned. The
 > standard is the shadcn/ui (new-york) foundation, executed consistently: neutral
-> color, one type family, real controls, a predictable frame. Distinction comes
+> surfaces with one warm brand colour, one type family, real controls, a predictable frame. Distinction comes
 > from what Oats does with a conversation, not from novel chrome.
 
 The product rules from v1 still hold and still win over taste:
@@ -50,7 +50,8 @@ The product rules from v1 still hold and still win over taste:
 
 ## 2. Color
 
-Neutral zinc, shadcn semantic names (`src/index.css`, `@theme` and `.dark`).
+Neutral zinc surfaces, saturated status colours, and one brand colour; shadcn
+semantic names (`src/index.css`, `@theme` and `.dark`).
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -61,16 +62,24 @@ Neutral zinc, shadcn semantic names (`src/index.css`, `@theme` and `.dark`).
 | `muted-foreground` | `#71717a` | `#a1a1aa` | secondary text |
 | `border` | `#e4e4e7` | `#27272a` | dividers, card edges |
 | `input` | `#d4d4d8` | `#3f3f46` | control edges |
-| `primary` | `#18181b` | `#fafafa` | primary buttons (ink) |
+| `primary` | `#f5a30f` | `#f5a30f` | the brand: the important action (fill, dark label) |
+| `primary-foreground` | `#1a1306` | `#1a1306` | the label on a primary fill (8.9:1) |
+| `brand-ink` | `#9a5b00` | `#f5b544` | brand-coloured text and icons (5.4:1 on white) |
+| `ring` | `#f5a30f` | `#f5a30f` | focus rings and focused field edges |
 | `recording` | `#ef4444` | `#ef4444` | recording, and only recording |
-| `brand` | `#e8a33d` | — | the oat mark, and nowhere else |
 | `success` / `warning` / `destructive` / `info` | green / amber / red / blue | | status |
 
 Rules:
 
 - **No gradients, no textures, no glows.** Surfaces are flat; depth comes from a
   border and at most `shadow-xs`/`shadow-sm`.
-- **Red means recording or danger.** It is never decoration.
+- **The brand is one warm yellow-orange** (`primary`, "honey"). It marks the
+  important action on a screen — New recording, Start recording, Save, Download —
+  and the states that belong to it: a switch that is on, focus, selection, the
+  current section's icon. It is a fill with a dark label; never orange text on
+  white (use `brand-ink`). One primary button per view.
+- **Red means recording or danger.** It is never decoration. Idle, the record
+  action is the brand; live, it turns red and says Stop.
 - Status is a soft badge (`bg-success/10 text-success`), never a colored border bar.
 - Both themes are complete; follow the system appearance by default.
 
@@ -88,7 +97,7 @@ Rules:
 
 Everything comes from `src/components/ui/` (shadcn/ui new-york):
 
-- **Button** — `default` (ink), `secondary`, `outline`, `ghost`, `destructive`,
+- **Button** — `default` (brand), `secondary`, `outline`, `ghost`, `destructive`,
   `record`, `link`; sizes `sm` (32px), `default` (36px), `lg` (40px), `icon`,
   `icon-sm`. A button has a label and, where it helps, a 16px lucide icon on the
   left. Text links are for navigation inside prose only.

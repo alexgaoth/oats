@@ -876,8 +876,8 @@ function ConversationSurface() {
 
             <Card className="gap-0">
               <div className="flex items-start gap-4 p-6">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-recording/10">
-                  <Mic aria-hidden="true" className="size-5 text-recording" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                  <Mic aria-hidden="true" className="size-5 text-brand-ink" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-base font-semibold tracking-[-0.01em]">
@@ -888,7 +888,6 @@ function ConversationSurface() {
                   </p>
                   <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
                     <Button
-                      variant="record"
                       onClick={begin}
                       disabled={starting || preflight.blocking}
                       aria-label={t("oats.conversation.record")}
