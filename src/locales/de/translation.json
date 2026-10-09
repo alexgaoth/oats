@@ -54,8 +54,8 @@
     "closeWindow": "Fenster schließen"
   },
   "window": {
-    "voiceRecorderTitle": "Sprachrekorder",
-    "controlPanelTitle": "Kontrollzentrum",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "Agenten-Chat"
   },
   "dialog": {

@@ -54,8 +54,8 @@
     "closeWindow": "关闭窗口"
   },
   "window": {
-    "voiceRecorderTitle": "录音器",
-    "controlPanelTitle": "控制面板",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "智能助手聊天"
   },
   "dialog": {

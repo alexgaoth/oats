@@ -153,7 +153,7 @@
     "extendInfo": {
       "LSUIElement": false,
       "CFBundleIconName": "oats",
-      "NSMicrophoneUsageDescription": "Oats uses the microphone to capture your voice for transcription.",
+      "NSMicrophoneUsageDescription": "Oats uses the microphone to record a conversation when you start one, and for dictation when you press its shortcut.",
       "NSAudioCaptureUsageDescription": "Oats uses system audio to capture other participants' audio from calls and meetings.",
       "NSAccessibilityUsageDescription": "Oats needs accessibility permissions to paste transcribed text into other applications."
     }

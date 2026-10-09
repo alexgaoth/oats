@@ -1416,3 +1416,18 @@ body:has(.agent-overlay-window) #root {
     opacity: 0.5;
   }
 }
+
+/* DESIGN.md §5: "Noto Sans … -apple-system on macOS". On a Mac the sans is the
+   system's own; Noto there read as a web page inside a native window. Mono is
+   already the system's (ui-monospace). */
+html[data-platform="darwin"] {
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+}
+
+/* macOS draws the traffic lights inside the window (hiddenInset). They sit at
+   x 16–70, centred in the 36px band (windowConfig.js), so the band's own content
+   starts after them: at x 20 the wordmark was under the close and minimise
+   buttons. */
+html[data-platform="darwin"] .oats-titlebar {
+  padding-left: 88px;
+}
