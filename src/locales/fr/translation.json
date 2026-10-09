@@ -194,10 +194,6 @@
       "installButton": "Installer la mise à jour",
       "availableButton": "Mise à jour disponible"
     },
-    "accessibilityMissing": {
-      "title": "Autorisations d'accessibilité nécessaires",
-      "description": "Nous avons détecté qu'Oats a besoin des autorisations d'accessibilité pour fonctionner correctement. Veuillez les activer ci-dessous."
-    },
     "history": {
       "couldNotLoadTitle": "Impossible de charger votre historique",
       "couldNotLoadDescription": "Un problème est survenu lors du chargement des transcriptions. Fermez puis rouvrez l'application.",
@@ -2030,7 +2026,16 @@
       "dictationHint": "Maintenez ou appuyez ; écrit là où est le curseur.",
       "hotkeyRejected": "« {{hotkey}} » n'a pas pu être enregistré, le raccourci précédent reste actif.",
       "conversationHotkey": "Raccourci de conversation",
-      "conversationHotkeyHint": "Démarre et arrête depuis n'importe où."
+      "conversationHotkeyHint": "Démarre et arrête depuis n'importe où.",
+      "sections": {
+        "label": "Sections avancées",
+        "general": "Général",
+        "hotkeys": "Raccourcis",
+        "speechToText": "Reconnaissance vocale",
+        "llms": "Modèles de langage",
+        "privacyData": "Confidentialité",
+        "system": "Système"
+      }
     },
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",

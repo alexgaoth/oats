@@ -194,10 +194,6 @@
       "installButton": "安装更新",
       "availableButton": "有可用更新"
     },
-    "accessibilityMissing": {
-      "title": "需要辅助功能权限",
-      "description": "我们检测到 Oats 需要辅助功能权限才能正常工作。请在下方启用。"
-    },
     "history": {
       "couldNotLoadTitle": "无法加载历史记录",
       "couldNotLoadDescription": "加载转录记录时出错，请尝试关闭并重新打开应用。",
@@ -2025,7 +2021,16 @@
       "dictationHint": "按住或轻点；在光标处输入。",
       "hotkeyRejected": "无法注册「{{hotkey}}」，因此仍在使用之前的快捷键。",
       "conversationHotkey": "对话快捷键",
-      "conversationHotkeyHint": "在任何地方开始或停止。"
+      "conversationHotkeyHint": "在任何地方开始或停止。",
+      "sections": {
+        "label": "高级设置分区",
+        "general": "通用",
+        "hotkeys": "快捷键",
+        "speechToText": "语音转文字",
+        "llms": "语言模型",
+        "privacyData": "隐私",
+        "system": "系统"
+      }
     },
     "errors": {
       "noModel": "录制对话前请先配置 Oats 的处理方式。",

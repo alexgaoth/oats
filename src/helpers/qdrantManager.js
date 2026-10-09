@@ -11,6 +11,33 @@ const {
 } = require("../utils/serverUtils");
 const sidecarPidFile = require("./sidecarPidFile");
 
+/**
+ * The sidecar's config. Bound to loopback only, and with Qdrant's anonymous
+ * usage statistics off: it reports to its developers unless told not to
+ * (qdrant.tech/documentation/guides/telemetry), and Oats promises that no
+ * analytics endpoint is contacted (docs/network-allowlist.md). Pinned in
+ * test/helpers/networkBoundary.test.js.
+ */
+function qdrantConfigYaml(storagePath, port) {
+  return [
+    "storage:",
+    `  storage_path: ${storagePath}`,
+    "service:",
+    "  host: 127.0.0.1",
+    `  http_port: ${port}`,
+    `  grpc_port: ${port + 1}`,
+    "log_level: warn",
+    "telemetry_disabled: true",
+    "",
+  ].join("\n");
+}
+
+// The flag as well as the config key: either alone would do, and both survive
+// one of them changing shape in a future Qdrant release.
+function qdrantArgs(configPath) {
+  return ["--config-path", configPath, "--disable-telemetry"];
+}
+
 const PORT_RANGE_START = 6333;
 const PORT_RANGE_END = 6350;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -74,16 +101,7 @@ class QdrantManager {
 
     const configPath = path.join(STORAGE_DIR, "config.yaml");
     const storagePath = path.join(STORAGE_DIR, "storage");
-    const configContent = [
-      "storage:",
-      `  storage_path: ${storagePath}`,
-      "service:",
-      "  host: 127.0.0.1",
-      `  http_port: ${this.port}`,
-      `  grpc_port: ${this.port + 1}`,
-      "log_level: warn",
-      "",
-    ].join("\n");
+    const configContent = qdrantConfigYaml(storagePath, this.port);
 
     fs.writeFileSync(configPath, configContent, "utf-8");
 
@@ -94,7 +112,7 @@ class QdrantManager {
       storagePath,
     });
 
-    this.process = spawn(binaryPath, ["--config-path", configPath], {
+    this.process = spawn(binaryPath, qdrantArgs(configPath), {
       cwd: STORAGE_DIR,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -255,3 +273,5 @@ class QdrantManager {
 }
 
 module.exports = QdrantManager;
+module.exports.qdrantConfigYaml = qdrantConfigYaml;
+module.exports.qdrantArgs = qdrantArgs;

@@ -897,8 +897,8 @@ Still requiring a real GUI session and realistic speech:
 
 ## Noted in passing, not acted on
 
-- **`docs/network-allowlist.md` is wrong about launch.** It says the question
-  search is the only default-on connection, but `main.js` (~line 684)
-  downloads the CAM++ voice model and Silero VAD from GitHub on every launch
-  where they are missing — observed on a fresh staging profile, 2026-10-04.
-  Either bundle them like the in-room models or list the fetch.
+- ~~**`docs/network-allowlist.md` is wrong about launch.**~~ Fixed 2026-10-08: a
+  packaged build fetches nothing at launch (CAM++ and Silero serve only the call
+  path; MiniLM is bundled on every platform; the bundled pyannote is no longer
+  re-downloaded), and Qdrant's telemetry is off. Pinned in
+  `test/helpers/networkBoundary.test.js`.

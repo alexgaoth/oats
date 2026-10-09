@@ -187,6 +187,7 @@ const MeetingDetectionEngine = require("./src/helpers/meetingDetectionEngine");
 const { i18nMain, changeLanguage } = require("./src/helpers/i18nMain");
 const { ensureYdotool } = require("./src/helpers/ensureYdotool");
 const sidecarRegistry = require("./src/helpers/sidecarRegistry");
+const { createQuitGuard } = require("./src/helpers/conversationGuards");
 const { reapStaleSidecars } = require("./src/helpers/sidecarReaper");
 
 // Manager instances - initialized after app.whenReady()
@@ -680,8 +681,14 @@ async function startApp() {
     });
   }
 
-  // Auto-download diarization models if binary is available
+  // Nothing is fetched at launch in a packaged build (docs/network-allowlist.md:
+  // downloads are explicit user actions). A conversation in a room uses the
+  // bundled pyannote and TitaNet models. CAM++ and Silero serve only the call
+  // path, which no surface starts today; whatever brings calls back must bundle
+  // them or fetch them as a stated action. A development checkout still fetches
+  // them, as it always has.
   if (
+    !app.isPackaged &&
     diarizationManager.getBinaryPath() &&
     (!diarizationManager.isModelDownloaded() || !diarizationManager.isVadModelDownloaded())
   ) {
@@ -713,7 +720,10 @@ async function startApp() {
   }
 
   const localEmbeddings = require("./src/helpers/localEmbeddings");
-  if (!localEmbeddings.isAvailable()) {
+  // Bundled by prebuild on every platform; only a development checkout that has
+  // never run it downloads at launch. A packaged build without it degrades to
+  // keyword search rather than reaching for the network.
+  if (!localEmbeddings.isAvailable() && !app.isPackaged) {
     localEmbeddings.downloadModel().catch((err) => {
       debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
     });
@@ -738,6 +748,9 @@ async function startApp() {
     let globeLastStopTime = 0;
     const MIN_HOLD_DURATION_MS = 150;
     const POST_STOP_COOLDOWN_MS = 300;
+    // Tap mode toggles on a quick, solitary press, decided on release
+    // (globeTap.js) — never on the way down, which made every Fn chord a toggle.
+    const globeTap = require("./src/helpers/globeTap").createGlobeTap();
 
     globeKeyManager.on("globe-down", async () => {
       const currentHotkey = hotkeyManager.getCurrentHotkey && hotkeyManager.getCurrentHotkey();
@@ -778,7 +791,7 @@ async function startApp() {
               }
             }, MIN_HOLD_DURATION_MS);
           } else {
-            windowManager.sendToggleDictation();
+            globeTap.down();
           }
         } else {
           debugLogger?.debug("[Globe] Ignored — mainWindow not live");
@@ -825,6 +838,9 @@ async function startApp() {
             debugLogger?.debug("[Globe] Stopping dictation (push release)");
             windowManager.sendStopDictation();
           }
+        } else if (globeTap.up() && isLiveWindow(windowManager.mainWindow)) {
+          debugLogger?.debug("[Globe] Tap — toggling dictation");
+          windowManager.sendToggleDictation();
         }
       }
 
@@ -838,6 +854,8 @@ async function startApp() {
     // Only the bare-Fn path uses globeKeyDownTime/globeKeyIsRecording, so compound
     // Fn-hotkey push-to-talk and tap mode are untouched.
     globeKeyManager.on("globe-interrupted", () => {
+      // In tap mode a chord is not a tap; the release will toggle nothing.
+      globeTap.interrupted();
       if (globeKeyDownTime === 0 && !globeKeyIsRecording) {
         return;
       }
@@ -1030,29 +1048,15 @@ async function startApp() {
       }
     });
 
-    // After starting globe-listener, check if accessibility is granted.
-    // If not, notify the control panel so it can prompt the user.
-    const checkAndNotifyAccessibility = () => {
-      if (!systemPreferences.isTrustedAccessibilityClient(false)) {
-        debugLogger.info("[Accessibility] macOS accessibility not trusted — notifying renderers");
-        if (isLiveWindow(windowManager.controlPanelWindow)) {
-          windowManager.controlPanelWindow.webContents.send("accessibility-missing");
-        }
-      }
-    };
-
-    // Check shortly after startup (give windows time to load)
-    setTimeout(checkAndNotifyAccessibility, 3000);
-
-    // Allow renderer to request an accessibility check (e.g. on sign-in).
-    // Also sends accessibility-missing events if untrusted.
-    ipcMain.handle("check-accessibility-trusted", () => {
-      const trusted = systemPreferences.isTrustedAccessibilityClient(false);
-      if (!trusted) {
-        checkAndNotifyAccessibility();
-      }
-      return trusted;
-    });
+    // Accessibility is only needed to paste dictation into another app, and is
+    // asked for where that happens. It used to be checked 3s after every launch,
+    // and when missing the panel jumped to Settings with a ten-second toast —
+    // every launch, forever (nothing ever set the skip flag), for something a
+    // person recording conversations may never use, pointing at a page that has
+    // no accessibility control on it. A question, not a nag.
+    ipcMain.handle("check-accessibility-trusted", () =>
+      systemPreferences.isTrustedAccessibilityClient(false)
+    );
 
     // Reset native key state when hotkey changes
     ipcMain.on("hotkey-changed", (_event, _newHotkey) => {
@@ -1288,11 +1292,40 @@ if (gotSingleInstanceLock) {
     }
   });
 
+  // ⌘Q during a conversation finishes it first, through the same path a press
+  // of the seed takes, and quits once the transcript is written — bounded, so a
+  // renderer that never answers cannot hold the app open (conversationGuards.js).
+  const finishBeforeQuit = createQuitGuard({
+    isRecording: () => Boolean(windowManager?.isConversationRecording?.()),
+    finish: () => windowManager.finishConversationForQuit(),
+    log: (message, meta) => debugLogger?.warn?.(message, meta, "quit"),
+  });
+
+  // Closing the lid sleeps the Mac whatever Oats asks (prevent-app-suspension
+  // only holds off *idle* sleep, so a suspend during a conversation was chosen),
+  // and the built-in microphone goes with the lid. Recording on through it left
+  // a silent gap, a clock that kept running, and turns stamped on the wrong side
+  // of it. The conversation is finished and saved on the way down instead —
+  // the same bounded finish as quitting — and pressing Record after waking
+  // resumes it, so the room's two halves stay one conversation.
+  require("electron").powerMonitor.on("suspend", () => {
+    if (!windowManager?.isConversationRecording?.()) return;
+    debugLogger?.info?.("System is going to sleep — finishing the conversation", {}, "quit");
+    void finishBeforeQuit();
+  });
+
   let isShuttingDown = false;
   app.on("before-quit", (event) => {
-    if (isShuttingDown) return;
+    const forUpdate = Boolean(updateManager && updateManager.isQuittingForUpdate);
+    if (isShuttingDown) {
+      // A second ⌘Q while the first is still finishing a conversation waits for
+      // it instead of cutting it off. The first ends in `app.exit`, which does
+      // not come back through here.
+      if (!forUpdate) event.preventDefault();
+      return;
+    }
     isShuttingDown = true;
-    if (updateManager && updateManager.isQuittingForUpdate) {
+    if (forUpdate) {
       // Quit must proceed for the installer to run, so no preventDefault;
       // sidecar shutdown is best-effort (the reaper cleans up orphans on relaunch).
       performSyncTeardown();
@@ -1300,8 +1333,11 @@ if (gotSingleInstanceLock) {
       return;
     }
     event.preventDefault();
-    performSyncTeardown();
-    sidecarRegistry.shutdownAll().finally(() => app.exit(0));
+    void finishBeforeQuit().finally(() => {
+      windowManager?.releaseSleepGuard?.();
+      performSyncTeardown();
+      sidecarRegistry.shutdownAll().finally(() => app.exit(0));
+    });
   });
 }
 

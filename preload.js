@@ -60,6 +60,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => (_event, state) => callback(state)
   ),
   requestToggleConversation: () => ipcRenderer.invoke("toggle-conversation-request"),
+  // Quitting during a conversation finishes it first: main asks, the panel
+  // finishes through the ordinary path and answers once the transcript is
+  // written, and only then does main tear anything down.
+  onFinishConversationForQuit: registerListener(
+    "finish-conversation-for-quit",
+    (callback) => () => callback()
+  ),
+  reportConversationFinishedForQuit: () => ipcRenderer.send("conversation-finished-for-quit"),
   // Marking the moment from the floating oat, which is all that is on screen
   // when a conversation is recorded with the panel hidden. Main forwards it to
   // the panel, which owns the recording, so there is one implementation.
@@ -647,11 +655,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onShowSettings: registerListener("show-settings", (callback) => () => callback()),
 
   // Accessibility permission events (macOS)
-  onAccessibilityMissing: (callback) => {
-    const listener = () => callback?.();
-    ipcRenderer.on("accessibility-missing", listener);
-    return () => ipcRenderer.removeListener("accessibility-missing", listener);
-  },
   checkAccessibilityTrusted: () => ipcRenderer.invoke("check-accessibility-trusted"),
 
   // Notify main process of activation mode changes (for Windows Push-to-Talk)
@@ -796,11 +799,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   meetingNotificationReady: () => ipcRenderer.invoke("meeting-notification-ready"),
   meetingNotificationRespond: (detectionId, action) =>
     ipcRenderer.invoke("meeting-notification-respond", detectionId, action),
-  getPendingMeetingNoteNavigation: () => ipcRenderer.invoke("get-pending-meeting-note-navigation"),
-  onMeetingNoteNavigationPending: registerListener(
-    "meeting-note-navigation-pending",
-    (callback) => () => callback()
-  ),
   onNavigateToNote: registerListener(
     "navigate-to-note",
     (callback) => (_event, data) => callback(data)

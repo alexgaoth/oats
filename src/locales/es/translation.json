@@ -194,10 +194,6 @@
       "installButton": "Instalar actualización",
       "availableButton": "Actualización disponible"
     },
-    "accessibilityMissing": {
-      "title": "Se necesitan permisos de accesibilidad",
-      "description": "Hemos detectado que Oats necesita permisos de accesibilidad para funcionar correctamente. Actívalos a continuación."
-    },
     "history": {
       "couldNotLoadTitle": "No se pudo cargar tu historial",
       "couldNotLoadDescription": "Ocurrió un problema al cargar tus transcripciones. Cierra y abre la app de nuevo.",
@@ -2030,7 +2026,16 @@
       "dictationHint": "Mantén o pulsa; escribe donde esté el cursor.",
       "hotkeyRejected": "No se pudo registrar «{{hotkey}}», así que sigue en uso el atajo anterior.",
       "conversationHotkey": "Atajo de conversación",
-      "conversationHotkeyHint": "Inicia y detiene desde cualquier sitio."
+      "conversationHotkeyHint": "Inicia y detiene desde cualquier sitio.",
+      "sections": {
+        "label": "Secciones avanzadas",
+        "general": "General",
+        "hotkeys": "Atajos",
+        "speechToText": "Conversión de voz a texto",
+        "llms": "Modelos de lenguaje",
+        "privacyData": "Privacidad",
+        "system": "Sistema"
+      }
     },
     "errors": {
       "noModel": "Configura el procesamiento de Oats antes de grabar una conversación.",

@@ -194,10 +194,6 @@
       "installButton": "Installa aggiornamento",
       "availableButton": "Aggiornamento disponibile"
     },
-    "accessibilityMissing": {
-      "title": "Autorizzazioni di accessibilità necessarie",
-      "description": "Abbiamo rilevato che Oats ha bisogno delle autorizzazioni di accessibilità per funzionare correttamente. Abilitale qui sotto."
-    },
     "history": {
       "couldNotLoadTitle": "Impossibile caricare la cronologia",
       "couldNotLoadDescription": "Si è verificato un errore nel caricamento delle trascrizioni. Chiudi e riapri l'app.",
@@ -2030,7 +2026,16 @@
       "dictationHint": "Tieni premuto o tocca; scrive dov'è il cursore.",
       "hotkeyRejected": "Non è stato possibile registrare «{{hotkey}}», quindi resta attiva la scorciatoia precedente.",
       "conversationHotkey": "Scorciatoia conversazione",
-      "conversationHotkeyHint": "Avvia e ferma da ovunque."
+      "conversationHotkeyHint": "Avvia e ferma da ovunque.",
+      "sections": {
+        "label": "Sezioni avanzate",
+        "general": "Generale",
+        "hotkeys": "Scorciatoie",
+        "speechToText": "Riconoscimento vocale",
+        "llms": "Modelli linguistici",
+        "privacyData": "Privacy",
+        "system": "Sistema"
+      }
     },
     "errors": {
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",
