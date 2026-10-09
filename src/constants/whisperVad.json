@@ -5,7 +5,7 @@
     "minSilenceDurationMs": 200,
     "maxSpeechDurationS": 30,
     "speechPadMs": 100,
-    "samplesOverlap": 0.5
+    "samplesOverlap": 0.1
   },
   "LIMITS": {
     "threshold": { "min": 0.1, "max": 0.95, "round": false },
