@@ -1089,9 +1089,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     readString("whisperVadMaxSpeechDurationS", "30")
   ),
   whisperVadSpeechPadMs: clampVadValue("speechPadMs", readString("whisperVadSpeechPadMs", "100")),
+  // From the constants rather than a second literal: the two had to agree, and
+  // the overlap is a measured choice (docs/dictation-accuracy.md).
   whisperVadSamplesOverlap: clampVadValue(
     "samplesOverlap",
-    readString("whisperVadSamplesOverlap", "0.5")
+    readString("whisperVadSamplesOverlap", String(whisperVadConstants.DEFAULTS.samplesOverlap))
   ),
   panelStartPosition: (() => {
     const v = readString("panelStartPosition", "bottom-right");
