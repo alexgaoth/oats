@@ -2030,7 +2030,16 @@
       "dictationHint": "Hold or tap; types where your cursor is.",
       "hotkeyRejected": "“{{hotkey}}” could not be registered, so the previous shortcut is still in use.",
       "conversationHotkey": "Conversation shortcut",
-      "conversationHotkeyHint": "Starts and stops from anywhere."
+      "conversationHotkeyHint": "Starts and stops from anywhere.",
+      "sections": {
+        "label": "Advanced sections",
+        "general": "General",
+        "hotkeys": "Shortcuts",
+        "speechToText": "Speech-to-Text",
+        "llms": "Language Models",
+        "privacyData": "Privacy",
+        "system": "System"
+      }
     },
     "errors": {
       "noModel": "Configure Oats processing before recording a conversation.",

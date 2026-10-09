@@ -57,6 +57,8 @@ import {
   ledgerDateLong,
 } from "../helpers/ledgerDate.mjs";
 import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
+import { findResumableConversation } from "../helpers/conversationResume.mjs";
+import { parseDbTimestamp } from "../helpers/dbTime.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -86,6 +88,7 @@ import type {
   QuestionOutcome,
 } from "../types/conversationEvents";
 import type { NoteItem } from "../types/electron";
+import type { SettingsSectionType } from "./SettingsPage";
 import type { TFunction } from "i18next";
 
 // Advanced Settings is the inherited OpenWhispr settings application: every
@@ -95,6 +98,20 @@ import type { TFunction } from "i18next";
 // conversation. Splitting it means the Oats path never pays for a room it does
 // not walk into.
 const AdvancedSettings = React.lazy(() => import("./SettingsPage"));
+
+// Advanced is the inherited settings page, which draws one section at a time and
+// used to rely on a sidebar this app deleted. Mounted with no section it showed
+// "General" and nothing else, so everything behind it — the speech model, the
+// shortcuts, the question cards, the summary model — was unreachable, including
+// the screens other messages point people to.
+const ADVANCED_SECTIONS: SettingsSectionType[] = [
+  "general",
+  "hotkeys",
+  "speechToText",
+  "llms",
+  "privacyData",
+  "system",
+];
 
 type Surface = "conversation" | "intelligence" | "settings";
 type DetailTab = "summary" | "transcript" | "connections";
@@ -159,10 +176,21 @@ function transcriptText(raw: string | null, t: TFunction): string {
   return raw;
 }
 
-// A conversation is offered as a continuation only if it ended recently enough
-// that resuming is plausible. Longer than this and it is a new conversation that
-// happens to be about the same thing — which the lifetime graph already links.
-const RESUME_WINDOW_MS = 30 * 60 * 1000;
+// Resolved by the Finish effect once the final transcript write has landed, or
+// once there turned out to be nothing to write. Quitting during a conversation
+// waits on exactly this (conversationGuards.js), rather than on capture
+// stopping, which happens well before the transcript is safe.
+let finishSavedWaiters: Array<() => void> = [];
+
+function whenFinishSaved(): Promise<void> {
+  return new Promise((resolve) => finishSavedWaiters.push(resolve));
+}
+
+function finishSaved(): void {
+  const waiters = finishSavedWaiters;
+  finishSavedWaiters = [];
+  for (const resolve of waiters) resolve();
+}
 
 function parseSegments(raw: string | null): TranscriptSegment[] {
   if (!raw) return [];
@@ -179,18 +207,6 @@ function parseSegments(raw: string | null): TranscriptSegment[] {
   } catch {
     return [];
   }
-}
-
-function findResumableConversation(notes: NoteItem[]): NoteItem | null {
-  const now = Date.now();
-  for (const note of notes) {
-    if (!note.transcript) continue;
-    const endedAt = new Date(note.updated_at || note.created_at).getTime();
-    if (!Number.isFinite(endedAt)) continue;
-    if (now - endedAt > RESUME_WINDOW_MS) return null;
-    return note;
-  }
-  return null;
 }
 
 // Same forgiving fingerprint comparison the lifetime graph uses; kept local here
@@ -418,7 +434,10 @@ function ConversationSurface() {
     const finalTranscript = state.segments.length
       ? serializeTranscriptSegments(state.segments)
       : state.transcript || transcript;
-    if (!recordingNoteId) return;
+    if (!recordingNoteId) {
+      finishSaved();
+      return;
+    }
     // A conversation that captured nothing is not a conversation. Leaving an
     // empty note behind means the Intelligence list slowly fills with blanks the
     // user has to clean up, and it hides the actual problem: the mic heard
@@ -426,6 +445,7 @@ function ConversationSurface() {
     if (!finalTranscript.trim()) {
       setNothingHeard(true);
       void window.electronAPI?.deleteNote?.(recordingNoteId);
+      finishSaved();
       return;
     }
     setNothingHeard(false);
@@ -434,13 +454,17 @@ function ConversationSurface() {
     const topics = getConversationTopicSnapshot();
     const moments = state.moments;
     void (async () => {
-      await window.electronAPI?.updateNote(recordingNoteId, {
-        transcript: finalTranscript,
-        ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
-        // Written on every press already; once more here so a press whose
-        // write was refused still lands with the transcript it belongs to.
-        ...(moments.length ? { conversation_marks: JSON.stringify(moments) } : {}),
-      });
+      try {
+        await window.electronAPI?.updateNote(recordingNoteId, {
+          transcript: finalTranscript,
+          ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
+          // Written on every press already; once more here so a press whose
+          // write was refused still lands with the transcript it belongs to.
+          ...(moments.length ? { conversation_marks: JSON.stringify(moments) } : {}),
+        });
+      } finally {
+        finishSaved();
+      }
       const action = (await initializeActions()).find((item) => item.is_builtin);
       if (!action) return;
       const settings = useSettingsStore.getState();
@@ -573,6 +597,27 @@ function ConversationSurface() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [recording, mark]);
+
+  // Quitting during a conversation lands here. Main holds the quit until this
+  // answers, so it answers only once the transcript is written: capture is
+  // released, main transcribes what it still holds, and the Finish effect saves.
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onFinishConversationForQuit?.(() => {
+      void (async () => {
+        try {
+          const { isRecording, isTranscribing } = useMeetingRecordingStore.getState();
+          if (isRecording || isTranscribing) {
+            const saved = whenFinishSaved();
+            if (isRecording) await stopRecording();
+            await saved;
+          }
+        } finally {
+          window.electronAPI?.reportConversationFinishedForQuit?.();
+        }
+      })();
+    });
+    return () => cleanup?.();
+  }, []);
 
   // The global hotkey lands here. The window may be hidden, unfocused, or on
   // another workspace; nothing about this path surfaces it.
@@ -1489,8 +1534,8 @@ function IntelligenceViews({
     if (!current) return null;
     const earlier = notes
       .filter((note) => note.id !== selected.id && note.conversation_topics)
-      .filter((note) => new Date(note.created_at) < new Date(selected.created_at))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      .filter((note) => parseDbTimestamp(note.created_at) < parseDbTimestamp(selected.created_at))
+      .sort((a, b) => parseDbTimestamp(b.created_at) - parseDbTimestamp(a.created_at));
     for (const note of earlier) {
       const past = readTopicSnapshot(note.conversation_topics);
       if (!past) continue;
@@ -3135,6 +3180,7 @@ function SettingsSurface() {
   const setMeetingUseLocalWhisper = useSettingsStore((s) => s.setMeetingUseLocalWhisper);
   const hotkeyRejection = useSettingsStore((s) => s.hotkeyRejection);
   const [advanced, setAdvanced] = useState(false);
+  const [advancedSection, setAdvancedSection] = useState<SettingsSectionType>("general");
 
   const { t } = useTranslation();
 
@@ -3184,6 +3230,14 @@ function SettingsSurface() {
   };
 
   if (advanced) {
+    const sectionLabels: Record<SettingsSectionType, string> = {
+      general: t("oats.settings.sections.general"),
+      hotkeys: t("oats.settings.sections.hotkeys"),
+      speechToText: t("oats.settings.sections.speechToText"),
+      llms: t("oats.settings.sections.llms"),
+      privacyData: t("oats.settings.sections.privacyData"),
+      system: t("oats.settings.sections.system"),
+    };
     return (
       <section className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-border/40 px-8 py-4">
@@ -3192,6 +3246,31 @@ function SettingsSurface() {
           </Button>
           <p className="text-xs text-muted-foreground">{t("oats.settings.advancedHint")}</p>
         </div>
+        {/* The same quiet links as the app's own nav: words, ink for the one
+            you are on, no chrome. */}
+        <nav
+          aria-label={t("oats.settings.sections.label")}
+          className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border/40 px-8 py-3"
+        >
+          {ADVANCED_SECTIONS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setAdvancedSection(id)}
+              aria-current={advancedSection === id ? "page" : undefined}
+              className={cn(
+                "rounded-sm text-[13px] transition-colors",
+                "[transition-duration:var(--motion-instant)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                advancedSection === id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {sectionLabels[id]}
+            </button>
+          ))}
+        </nav>
         {/* The inherited page brings its own cards but no page frame, so it ran
             edge to edge: section headings flush at x=0 and rows the full width
             of the window, with a label on one side and its toggle a thousand
@@ -3206,7 +3285,10 @@ function SettingsSurface() {
                 </p>
               }
             >
-              <AdvancedSettings />
+              <AdvancedSettings
+                activeSection={advancedSection}
+                onNavigateToSection={setAdvancedSection}
+              />
             </Suspense>
           </div>
         </div>
