@@ -40,7 +40,12 @@ import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
-import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
+import {
+  findExcerpt,
+  mergeRecall,
+  recallText,
+  withOlderMatches,
+} from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
@@ -1404,8 +1409,34 @@ function IntelligenceViews({
   // in place beats making the user hunt for where a title can be changed.
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
-  const selected = notes.find((note) => note.id === selectedId) ?? notes[0] ?? null;
+  // A conversation opened from a result the list does not hold — one older than
+  // the newest hundred, found by the main process's scan or by the vector index.
+  // `selected` fell back to `notes[0]` for an id it could not find, so opening
+  // one of those opened the newest conversation instead.
+  const [openedNote, setOpenedNote] = useState<NoteItem | null>(null);
+  const selected =
+    notes.find((note) => note.id === selectedId) ??
+    (openedNote && openedNote.id === selectedId ? openedNote : null) ??
+    notes[0] ??
+    null;
   const { events, reload } = useConversationEvents(selected?.id ?? null);
+
+  // The store's listeners keep only the notes it holds current, so a rename, a
+  // mark's note, or a deletion has to reach an opened older one here.
+  const openedId = openedNote?.id ?? null;
+  useEffect(() => {
+    if (openedId == null) return undefined;
+    const offUpdated = window.electronAPI?.onNoteUpdated?.((note) => {
+      if (note?.id === openedId) setOpenedNote(note);
+    });
+    const offDeleted = window.electronAPI?.onNoteDeleted?.((payload) => {
+      if (payload?.id === openedId) setOpenedNote(null);
+    });
+    return () => {
+      offUpdated?.();
+      offDeleted?.();
+    };
+  }, [openedId]);
 
   // Sent by the Conversation surface's last-entry row (see the shell). Both
   // halves are needed: the listener covers a mounted Intelligence, and the
@@ -1492,14 +1523,58 @@ function IntelligenceViews({
     if (notes.length && selectedId == null) setSelectedId(notes[0].id);
   }, [notes, selectedId]);
 
-  // Local filter over title, summary, and transcript. Everything is already in
-  // memory, so this needs no index and no IPC — and it is the only way to find a
-  // conversation by what was said in it rather than by scrolling.
+  // What the list does not hold. It holds the hundred most recently updated
+  // conversations and nothing else, so a word said in anything older could not
+  // be found at all. The main process runs the same literal test over the rest
+  // and returns only the matches: no transcript is loaded that a query does not
+  // need. Keyed on which notes are held, not on the array, which is replaced on
+  // every recording checkpoint.
+  const heldIds = useMemo(() => notes.map((note) => note.id).join(","), [notes]);
+  const [olderNotes, setOlderNotes] = useState<NoteItem[]>([]);
+  // Until the scan for this query answers, "nothing matches" is not yet true.
+  const [olderPending, setOlderPending] = useState(false);
+  useEffect(() => {
+    const needle = query.trim();
+    if (!needle) {
+      setOlderNotes([]);
+      setOlderPending(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setOlderPending(true);
+    // Debounced like the vector search below: each call reads every older
+    // transcript. A newer call also ends the older one's scan in main.
+    const timer = window.setTimeout(() => {
+      const excludeIds = heldIds ? heldIds.split(",").map(Number) : [];
+      void Promise.resolve(window.electronAPI?.recallNotes?.(needle, { excludeIds }))
+        .then((found) => {
+          if (cancelled) return;
+          setOlderNotes(Array.isArray(found) ? found : []);
+          setOlderPending(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setOlderNotes([]);
+          setOlderPending(false);
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, heldIds]);
+
+  // Local filter over title, summary, and transcript: the conversations the list
+  // holds, then the older matches for this query. The older ones are tested
+  // again here, so the matches for a previous query that this one no longer
+  // matches drop out on the keystroke, not when the next answer lands.
+  const searchable = useMemo(() => withOlderMatches(notes, olderNotes), [notes, olderNotes]);
   const literalNotes = useMemo(() => {
     const needle = foldText(query.trim());
     if (!needle) return notes;
-    return notes.filter((note) => foldedNote(note).includes(needle));
-  }, [notes, query]);
+    return searchable.filter((note) => foldedNote(note).includes(needle));
+  }, [notes, searchable, query]);
+  const awaitingOlder = olderPending && query.trim().length > 0;
 
   // What the local vector index thinks the question is about.
   //
@@ -1984,9 +2059,13 @@ function IntelligenceViews({
                       })}.`
                     : ""
                 }`
-              : recalled.length
-                ? t("oats.intelligence.onlyRelated")
-                : t("oats.intelligence.noMatches")}
+              : // Older conversations are still being read: saying nothing
+                // matches now would be a claim the next moment may take back.
+                awaitingOlder
+                ? ""
+                : recalled.length
+                  ? t("oats.intelligence.onlyRelated")
+                  : t("oats.intelligence.noMatches")}
         </p>
 
         {/* Nothing was said in those words.
@@ -1997,7 +2076,7 @@ function IntelligenceViews({
             feature. But the page must not imply a match it does not have: with
             no literal hit, every row below is the index's guess, and the line
             says so before the reader reads them as findings. */}
-        {query.trim() && !literalNotes.length && recalled.length > 0 && (
+        {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
           <p className="mt-8 text-[13px] leading-6 text-muted-foreground">
             {t("oats.intelligence.onlyRelated")}
           </p>
@@ -2010,6 +2089,9 @@ function IntelligenceViews({
                 key={note.id}
                 onClick={() => {
                   setSelectedId(note.id);
+                  // A result the list does not hold is kept here, or the reading
+                  // view would open the newest conversation in its place.
+                  if (!notes.some((held) => held.id === note.id)) setOpenedNote(note);
                   // Land where the match is. Opening every result on the summary
                   // meant that finding a conversation by something said in it
                   // dropped you at the top of a different document, with the
@@ -2062,7 +2144,7 @@ function IntelligenceViews({
               </button>
             ))}
           </div>
-        ) : (
+        ) : awaitingOlder ? null : (
           <EmptyState
             // `.trim()`, like the announcement beside it: a first-run user who
             // types a space should see the empty state that tells them what to
@@ -2083,22 +2165,16 @@ function IntelligenceViews({
  * NFD, drop the marks, lowercase — over a hundred transcripts each time would
  * be the same work repeated for an answer that has not changed. A note object
  * is replaced whenever the note is, so a stale fold cannot outlive its text.
+ *
+ * What is searched is `recallText`, the same function the main process runs
+ * over the conversations this list does not hold: the words of every turn and
+ * who said them, never the JSON keys they are stored under.
  */
 const foldedNotes = new WeakMap<NoteItem, string>();
 function foldedNote(note: NoteItem): string {
   let folded = foldedNotes.get(note);
   if (folded === undefined) {
-    folded = [
-      note.title,
-      note.enhanced_content,
-      note.transcript,
-      // The reader's own notes on what they marked — the words they are most
-      // likely to remember having written.
-      ...parseMoments(note.conversation_marks ?? null).map((moment) => moment.note),
-    ]
-      .filter(Boolean)
-      .map((field) => foldText(field))
-      .join("\n");
+    folded = foldText(recallText(note));
     foldedNotes.set(note, folded);
   }
   return folded;

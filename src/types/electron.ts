@@ -586,6 +586,13 @@ declare global {
       ) => Promise<{ success: boolean; error?: string }>;
       exportDictionary: (words: string[]) => Promise<{ success: boolean; error?: string }>;
       searchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
+      // Meeting notes whose title, summary, transcript words or mark notes
+      // contain `query` (case- and accent-folded), newest first, skipping the
+      // ones the caller already holds. Whole rows; at most `limit` (default 50).
+      recallNotes: (
+        query: string,
+        options?: { excludeIds?: number[]; limit?: number }
+      ) => Promise<NoteItem[]>;
       semanticSearchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
       semanticReindexAll: () => Promise<{ success: boolean; indexed?: number; error?: string }>;
       onSemanticReindexProgress: (

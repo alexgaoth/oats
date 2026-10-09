@@ -153,6 +153,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   exportTranscript: (noteId, format) => ipcRenderer.invoke("export-transcript", noteId, format),
   exportDictionary: (words) => ipcRenderer.invoke("export-dictionary", words),
   searchNotes: (query, limit) => ipcRenderer.invoke("db-search-notes", query, limit),
+  recallNotes: (query, options) => ipcRenderer.invoke("db-recall-notes", query, options),
   semanticSearchNotes: (query, limit) =>
     ipcRenderer.invoke("db-semantic-search-notes", query, limit),
   semanticReindexAll: () => ipcRenderer.invoke("db-semantic-reindex-all"),

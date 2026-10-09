@@ -298,6 +298,11 @@ class IPCHandlers {
     this.audioStorageManager = new AudioStorageManager();
     this._audioCleanupInterval = null;
     this._noteFilesEnabled = false;
+    // The latest recall query per window, so a newer one ends the scan an
+    // older one started (`db-recall-notes`). Tickets only ever increase, so a
+    // stale scan can never mistake a later query for its own.
+    this._recallTicket = 0;
+    this._recallLatest = new Map();
     this.speakerDiarizationEnabled = true;
     this.activeMeetingSpeakerConfig = null;
     this.whisperVadSettings = {
@@ -1208,6 +1213,23 @@ class IPCHandlers {
 
     ipcMain.handle("db-search-notes", async (event, query, limit) => {
       return this.databaseManager.searchNotes(query, limit);
+    });
+
+    // Literal recall over the conversations the renderer does not hold — it
+    // keeps the newest hundred in memory, and nothing older was findable.
+    ipcMain.handle("db-recall-notes", async (event, query, options) => {
+      const sender = event.sender.id;
+      const ticket = ++this._recallTicket;
+      this._recallLatest.set(sender, ticket);
+      try {
+        return await this.databaseManager.recallNotes(query, {
+          excludeIds: options?.excludeIds,
+          limit: options?.limit,
+          shouldStop: () => this._recallLatest.get(sender) !== ticket,
+        });
+      } finally {
+        if (this._recallLatest.get(sender) === ticket) this._recallLatest.delete(sender);
+      }
     });
 
     ipcMain.handle("db-semantic-search-notes", async (event, query, limit = 5) => {
