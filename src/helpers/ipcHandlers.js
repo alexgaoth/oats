@@ -841,6 +841,12 @@ class IPCHandlers {
       this.getTrayManager?.()?.setConversationState?.(next);
     });
 
+    // The panel's answer to "finish before quitting": the transcript is written,
+    // or there was nothing to write. Main is holding the quit until it arrives.
+    ipcMain.on("conversation-finished-for-quit", () => {
+      this.windowManager?.conversationFinishedForQuit?.();
+    });
+
     // Stopping from the oat or the tray goes through the same path as the global
     // shortcut, so there is exactly one implementation of "toggle a conversation"
     // and the three entry points cannot drift.
