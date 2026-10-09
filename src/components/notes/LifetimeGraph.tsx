@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import ForceGraph from "./ForceGraph";
 import { buildLifetimeGraph, recurringTopics } from "../../helpers/lifetimeGraph";
 import { ledgerDate } from "../../helpers/ledgerDate.mjs";
+import { parseDbTimestamp } from "../../helpers/dbTime.mjs";
 import type { ConversationTopicSnapshot } from "../../types/conversationEvents";
 import type { NoteItem } from "../../types/electron";
 
@@ -55,7 +56,7 @@ export default function LifetimeGraph({
         .map((note) => ({
           id: note.id,
           title: note.title || t("oats.untitled"),
-          createdAt: new Date(note.created_at).getTime() || 0,
+          createdAt: parseDbTimestamp(note.created_at) || 0,
           snapshot: readSnapshot(note.conversation_topics),
         }))
         .filter((item) => item.snapshot),
