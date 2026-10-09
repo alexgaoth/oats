@@ -131,7 +131,8 @@
     "save": "Guardar",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo"
+    "done": "Listo",
+    "close": "关闭"
   },
   "onboarding": {
     "steps": {
@@ -1912,7 +1913,6 @@
       "viewAll": "查看全部"
     },
     "intelligence": {
-      "listTitle": "对话",
       "empty": "还没有对话",
       "preparing": "正在为这场对话准备智能内容。",
       "noTranscript": "暂无转录。",
@@ -1945,19 +1945,25 @@
       "matchRelated": "相关",
       "markedCount_one": "{{count}} 个标记时刻",
       "markedCount_other": "{{count}} 个标记时刻",
-      "emptyHint": "在任意位置按 {{shortcut}}，然后问一个没人知道答案的问题",
-      "backToList": "返回",
       "copy": "复制",
       "copied": "已复制",
-      "save": "保存",
-      "vault": "仓库",
       "vaultSaved": "已存入仓库",
       "vaultFailed": "未保存",
-      "vaultLabel": "将此对话保存到 Obsidian 仓库",
       "delete": "删除",
       "deleteConfirm": "删除这次对话？",
       "deleteYes": "删除",
-      "deleteCancel": "保留",
+      "speakerCount_one": "{{count}} 位说话人",
+      "speakerCount_other": "{{count}} 位说话人",
+      "copySummary": "复制摘要",
+      "copyTranscript": "复制转录",
+      "export": "导出",
+      "exportSummary": "将摘要导出为 Markdown",
+      "exportTranscript": "将转录导出为文本",
+      "more": "更多操作",
+      "vaultAction": "保存到仓库",
+      "deleteDescription": "它的转录、摘要和标记时刻将从 Oats 中删除。此操作无法撤销。",
+      "emptyDescription": "你录制的对话会显示在这里，并附有摘要和可搜索的转录。",
+      "noMatchesHint": "搜索范围包括标题、摘要、转录和你的备注。",
       "needsSummaryModel": "暂无摘要：此电脑上没有可用的摘要模型。请在 设置 › 高级 › 语言模型 中设置，然后回来生成摘要。",
       "notSummarized": "此对话尚未生成摘要。",
       "summarize": "生成摘要"
@@ -1969,18 +1975,20 @@
       "openThreads_other": "{{count}} 个话题仍未结束：{{threads}}",
       "showAnswers": "显示回答",
       "hideAnswers": "隐藏回答",
-      "marked": "你标记的",
       "addNote": "添加备注",
       "noteLabel": "{{time}} 时刻的备注",
       "removeMark": "移除",
       "removeMarkLabel": "移除 {{time}} 的标记",
-      "markedTurn": "已标记。"
+      "markedTurn": "已标记。",
+      "markedTitle": "标记时刻"
     },
     "find": {
       "label": "在此对话中查找",
       "count": "{{current}} / {{total}}",
       "none": "无匹配",
-      "close": "关闭"
+      "close": "关闭",
+      "previous": "上一个匹配项",
+      "next": "下一个匹配项"
     },
     "settings": {
       "title": "把选择降到最少。",
@@ -2134,7 +2142,6 @@
   "lifetime": {
     "title": "你反复回到的主题",
     "viewMap": "图谱",
-    "backToList": "返回对话列表",
     "recurring": "反复出现：",
     "inCount_one": "{{count}} 场对话",
     "inCount_other": "{{count}} 场对话",

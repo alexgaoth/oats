@@ -131,7 +131,8 @@
     "save": "Speichern",
     "copy": "Kopieren",
     "copied": "Kopiert",
-    "done": "Fertig"
+    "done": "Fertig",
+    "close": "Schließen"
   },
   "onboarding": {
     "steps": {
@@ -1917,7 +1918,6 @@
       "viewAll": "Alle anzeigen"
     },
     "intelligence": {
-      "listTitle": "Gespräche",
       "empty": "Noch keine Gespräche",
       "preparing": "Die Intelligenz für dieses Gespräch wird vorbereitet.",
       "noTranscript": "Noch kein Transkript.",
@@ -1942,27 +1942,33 @@
       "searchResults_one": "{{count}} Gespräch passt",
       "searchResults_other": "{{count}} Gespräche passen",
       "match": {
-        "transcript": "gesagt",
+        "transcript": "Gesagt",
         "note": "Ihre Notiz",
         "summary": "Zusammenfassung",
         "title": "Titel"
       },
-      "matchRelated": "verwandt",
+      "matchRelated": "Verwandt",
       "markedCount_one": "{{count}} markierter Moment",
       "markedCount_other": "{{count}} markierte Momente",
-      "emptyHint": "Drücke überall {{shortcut}} und stelle eine Frage, die niemand im Raum beantworten kann",
-      "backToList": "Zurück",
       "copy": "Kopieren",
       "copied": "Kopiert",
-      "save": "Speichern",
-      "vault": "Tresor",
       "vaultSaved": "Im Tresor",
       "vaultFailed": "Nicht gespeichert",
-      "vaultLabel": "Diese Unterhaltung im Obsidian-Tresor speichern",
       "delete": "Löschen",
       "deleteConfirm": "Diese Unterhaltung löschen?",
       "deleteYes": "Löschen",
-      "deleteCancel": "Behalten",
+      "speakerCount_one": "{{count}} Sprecher",
+      "speakerCount_other": "{{count}} Sprecher",
+      "copySummary": "Zusammenfassung kopieren",
+      "copyTranscript": "Transkript kopieren",
+      "export": "Exportieren",
+      "exportSummary": "Zusammenfassung als Markdown exportieren",
+      "exportTranscript": "Transkript als Text exportieren",
+      "more": "Weitere Aktionen",
+      "vaultAction": "Im Tresor speichern",
+      "deleteDescription": "Transkript, Zusammenfassung und markierte Momente werden aus Oats entfernt. Das lässt sich nicht rückgängig machen.",
+      "emptyDescription": "Aufgenommene Gespräche erscheinen hier, mit einer Zusammenfassung und einem durchsuchbaren Transkript.",
+      "noMatchesHint": "Die Suche umfasst Titel, Zusammenfassungen, Transkripte und deine Notizen.",
       "needsSummaryModel": "Keine Zusammenfassung: Auf diesem Computer ist kein Zusammenfassungsmodell bereit. Nach dem Einrichten unter Einstellungen › Erweitert › Sprachmodelle lässt sich das Gespräch hier zusammenfassen.",
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
       "summarize": "Zusammenfassen"
@@ -1974,18 +1980,20 @@
       "openThreads_other": "{{count}} Fäden noch offen: {{threads}}",
       "showAnswers": "Antworten zeigen",
       "hideAnswers": "Antworten ausblenden",
-      "marked": "Von Ihnen markiert",
       "addNote": "Notiz hinzufügen",
       "noteLabel": "Notiz zum Moment bei {{time}}",
       "removeMark": "Entfernen",
       "removeMarkLabel": "Markierung bei {{time}} entfernen",
-      "markedTurn": "Markiert."
+      "markedTurn": "Markiert.",
+      "markedTitle": "Markierte Momente"
     },
     "find": {
       "label": "In diesem Gespräch suchen",
       "count": "{{current}} von {{total}}",
       "none": "Keine Treffer",
-      "close": "Schließen"
+      "close": "Schließen",
+      "previous": "Vorheriger Treffer",
+      "next": "Nächster Treffer"
     },
     "settings": {
       "title": "Wenige Entscheidungen.",
@@ -2096,13 +2104,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "gefragt",
-      "answered": "beantwortet",
-      "uncertain": "unsicher",
-      "silence": "keine Antwort",
-      "denied": "niemand wusste es"
+      "asked": "Gefragt",
+      "answered": "Beantwortet",
+      "uncertain": "Unsicher",
+      "silence": "Keine Antwort",
+      "denied": "Niemand wusste es"
     },
-    "searched": "gesucht",
+    "searched": "Gesucht",
     "dismiss": "Frage verwerfen",
     "earlier": "{{count}} frühere",
     "collapse": "Weniger anzeigen",
@@ -2139,7 +2147,6 @@
   "lifetime": {
     "title": "Worauf du immer zurückkommst",
     "viewMap": "Karte",
-    "backToList": "Zurück zu den Gesprächen",
     "recurring": "Wiederkehrend:",
     "inCount_one": "{{count}} Gespräch",
     "inCount_other": "{{count}} Gespräche",

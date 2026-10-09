@@ -131,7 +131,8 @@
     "save": "Guardar",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo"
+    "done": "Listo",
+    "close": "閉じる"
   },
   "onboarding": {
     "steps": {
@@ -1917,7 +1918,6 @@
       "viewAll": "すべて表示"
     },
     "intelligence": {
-      "listTitle": "会話",
       "empty": "まだ会話がありません",
       "preparing": "この会話のインテリジェンスを準備しています。",
       "noTranscript": "文字起こしはまだありません。",
@@ -1950,19 +1950,25 @@
       "matchRelated": "関連",
       "markedCount_one": "マークした瞬間 {{count}} 件",
       "markedCount_other": "マークした瞬間 {{count}} 件",
-      "emptyHint": "どこからでも {{shortcut}} を押して、誰も答えを知らない質問をしてみてください",
-      "backToList": "戻る",
       "copy": "コピー",
       "copied": "コピーしました",
-      "save": "保存",
-      "vault": "ボールト",
       "vaultSaved": "保存しました",
       "vaultFailed": "保存できません",
-      "vaultLabel": "この会話を Obsidian ボールトに保存",
       "delete": "削除",
       "deleteConfirm": "この会話を削除しますか？",
       "deleteYes": "削除",
-      "deleteCancel": "残す",
+      "speakerCount_one": "話者 {{count}} 人",
+      "speakerCount_other": "話者 {{count}} 人",
+      "copySummary": "要約をコピー",
+      "copyTranscript": "文字起こしをコピー",
+      "export": "書き出す",
+      "exportSummary": "要約を Markdown で書き出す",
+      "exportTranscript": "文字起こしをテキストで書き出す",
+      "more": "その他の操作",
+      "vaultAction": "ボールトに保存",
+      "deleteDescription": "文字起こし、要約、マークした瞬間が Oats から削除されます。元に戻すことはできません。",
+      "emptyDescription": "録音した会話がここに表示されます。要約と、検索できる文字起こしが付きます。",
+      "noMatchesHint": "タイトル、要約、文字起こし、あなたのメモを検索します。",
       "needsSummaryModel": "要約はありません。このコンピューターで使える要約モデルがありません。設定 › 詳細設定 › 言語モデル で設定してから、もう一度要約してください。",
       "notSummarized": "この会話はまだ要約されていません。",
       "summarize": "要約する"
@@ -1974,18 +1980,20 @@
       "openThreads_other": "{{count}} 件のスレッドが未解決：{{threads}}",
       "showAnswers": "回答を表示",
       "hideAnswers": "回答を隠す",
-      "marked": "マークした瞬間",
       "addNote": "メモを追加",
       "noteLabel": "{{time}} の瞬間へのメモ",
       "removeMark": "削除",
       "removeMarkLabel": "{{time}} のマークを削除",
-      "markedTurn": "マーク済み。"
+      "markedTurn": "マーク済み。",
+      "markedTitle": "マークした瞬間"
     },
     "find": {
       "label": "この会話内を検索",
       "count": "{{current}} / {{total}}",
       "none": "一致なし",
-      "close": "閉じる"
+      "close": "閉じる",
+      "previous": "前の一致",
+      "next": "次の一致"
     },
     "settings": {
       "title": "選択は少なく。",
@@ -2139,7 +2147,6 @@
   "lifetime": {
     "title": "繰り返し戻ってくるもの",
     "viewMap": "マップ",
-    "backToList": "会話一覧に戻る",
     "recurring": "繰り返し:",
     "inCount_one": "{{count}} 件の会話",
     "inCount_other": "{{count}} 件の会話",

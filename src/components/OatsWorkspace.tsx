@@ -9,24 +9,56 @@ import React, {
 } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   Bookmark,
   Brain,
+  CalendarDays,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  Clock,
+  Copy,
+  Download,
   Eye,
   EyeOff,
   History,
+  Info,
+  Loader2,
+  MessageSquarePlus,
+  MessagesSquare,
   Mic,
+  MoreHorizontal,
   Search,
+  SearchX,
   Settings,
+  Sparkles,
   Square,
+  StickyNote,
+  Trash2,
+  Users,
+  Vault,
+  Waypoints,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
 import { Button } from "./ui/button";
-import { Card } from "./ui/card";
-import { Badge } from "./ui/badge";
+import { Card, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Badge, type BadgeProps } from "./ui/badge";
 import { Kbd } from "./ui/kbd";
+import { Input } from "./ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { ConfirmDialog } from "./ui/dialog";
 import { Toggle } from "./ui/toggle";
 import { useNotes, initializeNotes, setActiveNoteId } from "../stores/noteStore";
 import { AppSidebar } from "./shell/AppSidebar";
@@ -78,6 +110,8 @@ import {
   formatSpan,
   ledgerDate,
   ledgerDateLong,
+  ledgerDayGroup,
+  ledgerTime,
 } from "../helpers/ledgerDate.mjs";
 import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
 import { findResumableConversation } from "../helpers/conversationResume.mjs";
@@ -1393,6 +1427,29 @@ function IntelligenceViews({
   );
   const visibleNotes = useMemo(() => recalled.map((entry) => entry.note), [recalled]);
 
+  // The list without a query, by day: the bearing a record of conversations is
+  // scanned by.
+  const dayGroups = useMemo(() => {
+    const names = {
+      now: new Date(),
+      locale: i18n.language,
+      today: t("controlPanel.history.dateGroups.today"),
+      yesterday: t("controlPanel.history.dateGroups.yesterday"),
+    };
+    // The store orders by last change; a day heading is about when it happened.
+    const byTime = [...visibleNotes].sort(
+      (a, b) => (parseDbTimestamp(b.created_at) || 0) - (parseDbTimestamp(a.created_at) || 0)
+    );
+    const groups = new Map<string, { key: string; label: string; notes: NoteItem[] }>();
+    for (const note of byTime) {
+      const { key, label } = ledgerDayGroup(note.created_at, names);
+      const group = groups.get(key);
+      if (group) group.notes.push(note);
+      else groups.set(key, { key, label, notes: [note] });
+    }
+    return [...groups.values()];
+  }, [visibleNotes, i18n.language, t]);
+
   // What the previous conversation on this subject left open. The lifetime graph
   // already knows which conversations share a subject; this puts that knowledge
   // where it is actually useful — at the top of the one you are reading.
@@ -1479,12 +1536,11 @@ function IntelligenceViews({
   if (view === "map") {
     return (
       <section key="map" className="oats-surface oats-enter relative flex min-h-0 flex-1 flex-col">
-        <header className="mx-auto flex w-full max-w-3xl shrink-0 items-baseline justify-between px-8 pt-4">
-          <h1 className="text-2xl font-medium tracking-[-0.03em]">{t("lifetime.title")}</h1>
-          <BackLink onClick={() => setView("list")} label={t("lifetime.backToList")} />
+        <header className="mx-auto flex w-full max-w-3xl shrink-0 flex-col items-start gap-3 px-8 pt-6">
+          <BackButton onClick={() => setView("list")} label={t("oats.shell.conversations")} />
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{t("lifetime.title")}</h1>
         </header>
-        {/* Full-bleed: the graph is the content, not a panel inside it. */}
-        <div className="relative mt-6 min-h-0 flex-1">
+        <div className="relative mt-4 min-h-0 flex-1">
           <LifetimeGraph
             notes={notes}
             onOpen={(noteId) => {
@@ -1500,128 +1556,21 @@ function IntelligenceViews({
   }
 
   if (reading && selected) {
+    const speakerCount = new Set(selectedSegments.map((segment) => segment.speaker).filter(Boolean))
+      .size;
+    const openTurn = (segmentId: string | null) => {
+      setLandedOnSegment(segmentId);
+      setTab("transcript");
+    };
     return (
       <section
         key="reading"
         className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
-          <BackLink onClick={() => setReading(false)} label={t("oats.intelligence.backToList")} />
-
-          {/* When, in full, and for how long — the bearings a record is
-              found again by. */}
-          <p className="mt-8 font-mono text-xs text-muted-foreground">
-            {ledgerDateLong(selected.created_at, { locale: i18n.language })}
-            {selectedSpan && ` · ${selectedSpan}`}
-          </p>
-          {renaming ? (
-            <input
-              autoFocus
-              aria-label={t("oats.intelligence.renameHint")}
-              value={draftTitle}
-              onChange={(event) => setDraftTitle(event.target.value)}
-              onBlur={() => void commitRename()}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void commitRename();
-                if (event.key === "Escape") setRenaming(false);
-              }}
-              className="mt-2 w-full rounded-sm border-b border-border bg-transparent pb-1 text-3xl font-medium tracking-[-0.03em] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            />
-          ) : (
-            // A heading you can rename is still a heading; the control that
-            // makes it operable goes inside it. A click handler on the <h1>
-            // itself was mouse-only — no focus ring, no Enter, and nothing a
-            // screen reader would announce as actionable.
-            <h1 className="mt-2 text-3xl font-medium tracking-[-0.03em]">
-              <button
-                type="button"
-                title={t("oats.intelligence.renameHint")}
-                onClick={() => {
-                  setDraftTitle(selected.title || "");
-                  setRenaming(true);
-                }}
-                className="cursor-text rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {selected.title || t("oats.untitled")}
-              </button>
-            </h1>
-          )}
-
-          {/* What the last conversation on this subject left unfinished. Shown
-              once, at the top, because that is the moment it is useful. */}
-          {carriedOver && (
-            <p className="mt-4 text-xs leading-5 text-muted-foreground">
-              {t("oats.intelligence.carriedOver")}{" "}
-              {carriedOver.open.map((node, index) => (
-                <span key={node.id}>
-                  {index > 0 && ", "}
-                  <span className="font-mono text-foreground/70">{node.label}</span>
-                </span>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedId(carriedOver.note.id);
-                  setTab("summary");
-                }}
-                className="ml-2 underline underline-offset-2 transition-opacity [transition-duration:var(--motion-instant)] hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {t("oats.intelligence.openPrevious")}
-              </button>
-            </p>
-          )}
-
-          {/* The conversation's own shape, at the head of its record: how the
-              talking was distributed, where the subject turned, what was asked
-              and how settled it came out, and where the room went back to
-              something. It is the one part of this document that is not words,
-              and it is derived entirely from the words. */}
-          {/* And it is the way into the record: a click on the trace opens
-              the transcript at that moment, and the hairline under the
-              pointer says when that was before you press. */}
-          <ConversationContour
-            contour={storedContour}
-            className="mt-8"
-            height={92}
-            label={contourLabel(storedContour, t)}
-            onPick={(time) => {
-              const segment = momentSegment({ at: time }, selectedSegments);
-              setLandedOnSegment(segment?.id != null ? String(segment.id) : null);
-              setTab("transcript");
-            }}
-            pickLabel={(time) => clock(Math.max(0, time - (storedContour.start ?? time)))}
-          />
-          {/* The key lives here and only here: the reading view is where a
-              contour is studied rather than glanced at, and where there is time
-              to learn what the marks mean. */}
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">
-            {t("oats.conversation.contourLegend")}
-          </p>
-
-          {/* Text links, not tabs. A tab bar is a box drawn around a choice that
-              needs no box (DESIGN.md §1). The three actions sit on the same line,
-              pushed to the far side: they belong to what is being read, and a
-              second row for them would be a third region (§1). */}
-          <div className="mt-7 flex items-baseline justify-between gap-6">
-            <div className="flex gap-5">
-              {(["summary", "transcript", "connections"] as DetailTab[]).map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setTab(item)}
-                  aria-current={tab === item ? "true" : undefined}
-                  className={cn(
-                    "rounded-sm text-sm transition-colors",
-                    "[transition-duration:var(--motion-instant)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    tab === item
-                      ? "text-foreground underline decoration-foreground underline-offset-[6px]"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {t(`oats.intelligence.tabs.${item}`)}
-                </button>
-              ))}
-            </div>
+        <div className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
+          {/* The way back, and what can be done with the whole record. */}
+          <div className="flex items-center justify-between gap-4">
+            <BackButton onClick={() => setReading(false)} label={t("oats.shell.conversations")} />
             <ConversationActions
               note={selected}
               tab={tab}
@@ -1634,194 +1583,334 @@ function IntelligenceViews({
             />
           </div>
 
-          {/* The summary is markdown — the intelligence pipeline emits headings
-              and bold. Rendering it as preformatted text put literal ** around
-              every thread name, on the one payload Intelligence exists to show. */}
-          {tab === "summary" && (
-            <>
-              {/* What the reader marked, first: it is the one part of the
-                  record that is theirs rather than the room's or the model's. */}
+          <div className="mt-6">
+            {renaming ? (
+              <input
+                autoFocus
+                aria-label={t("oats.intelligence.renameHint")}
+                value={draftTitle}
+                onChange={(event) => setDraftTitle(event.target.value)}
+                onBlur={() => void commitRename()}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void commitRename();
+                  if (event.key === "Escape") setRenaming(false);
+                }}
+                className="-mx-2 block w-[calc(100%+1rem)] rounded-md border border-input bg-transparent px-2 py-0.5 text-[28px] font-semibold leading-tight tracking-[-0.02em] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+            ) : (
+              // A heading you can rename is still a heading; the control that
+              // makes it operable goes inside it, so it has focus, Enter, and a
+              // role a screen reader announces.
+              <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em]">
+                <button
+                  type="button"
+                  title={t("oats.intelligence.renameHint")}
+                  onClick={() => {
+                    setDraftTitle(selected.title || "");
+                    setRenaming(true);
+                  }}
+                  className="-mx-2 block max-w-[calc(100%+1rem)] cursor-text rounded-md border border-transparent px-2 py-0.5 text-left outline-none transition-colors hover:bg-accent/70 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  {selected.title || t("oats.untitled")}
+                </button>
+              </h1>
+            )}
+
+            {/* When, for how long, with how many voices: the bearings a record is
+                found again by. Each value says what it is, so no labels. */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground">
+              <MetaItem icon={CalendarDays}>
+                {ledgerDateLong(selected.created_at, { locale: i18n.language })}
+              </MetaItem>
+              {selectedSpan && <MetaItem icon={Clock}>{selectedSpan}</MetaItem>}
+              {speakerCount > 0 && (
+                <MetaItem icon={Users}>
+                  {t("oats.intelligence.speakerCount", { count: speakerCount })}
+                </MetaItem>
+              )}
+              {selectedMoments.length > 0 && (
+                <MetaItem icon={Bookmark}>
+                  {t("oats.intelligence.markedCount", { count: selectedMoments.length })}
+                </MetaItem>
+              )}
+            </div>
+          </div>
+
+          {/* What the last conversation on this subject left unfinished. Shown
+              once, at the top, because that is the moment it is useful. */}
+          {carriedOver && (
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-[13px]">
+              <History aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+              <span className="text-muted-foreground">{t("oats.intelligence.carriedOver")}</span>
+              {carriedOver.open.map((node) => (
+                <Badge key={node.id} variant="outline">
+                  {node.label}
+                </Badge>
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="-my-1 ml-auto"
+                onClick={() => {
+                  setSelectedId(carriedOver.note.id);
+                  setTab("summary");
+                }}
+              >
+                {t("oats.intelligence.openPrevious")}
+                <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+          )}
+
+          {/* The conversation's own shape: how the talking was distributed,
+              where the subject turned, what was asked and how settled it came
+              out. It is also the way in — a click on the trace opens the
+              transcript at that moment, and the hairline under the pointer says
+              when that was before you press. */}
+          <Card className="mt-6 px-5 pb-4 pt-7">
+            <ConversationContour
+              contour={storedContour}
+              height={92}
+              label={contourLabel(storedContour, t)}
+              onPick={(time) => {
+                const segment = momentSegment({ at: time }, selectedSegments);
+                openTurn(segment?.id != null ? String(segment.id) : null);
+              }}
+              pickLabel={(time) => clock(Math.max(0, time - (storedContour.start ?? time)))}
+            />
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              {t("oats.conversation.contourLegend")}
+            </p>
+          </Card>
+
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(value as DetailTab)}
+            className="mt-8 gap-5"
+          >
+            <TabsList>
+              {(["summary", "transcript", "connections"] as DetailTab[]).map((item) => (
+                <TabsTrigger key={item} value={item}>
+                  {t(`oats.intelligence.tabs.${item}`)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {/* Certain first, inferred second: what the reader marked, then what
+                was asked and how it came out, and only then the model's prose. */}
+            <TabsContent value="summary" className="flex flex-col gap-4">
               <MarkedMoments
                 note={selected}
                 moments={selectedMoments}
                 segments={selectedSegments}
-                onOpenTurn={(segmentId) => {
-                  setLandedOnSegment(segmentId);
-                  setTab("transcript");
-                }}
+                onOpenTurn={openTurn}
               />
-              {/* Certain first, inferred second. */}
-              <ConversationReview
-                events={events}
-                topics={selectedTopics}
-                onOpenTurn={(segmentId) => {
-                  setLandedOnSegment(segmentId);
-                  setTab("transcript");
-                }}
-              />
-              {summaryState === "summary" && (
+              <ConversationReview events={events} topics={selectedTopics} onOpenTurn={openTurn} />
+              {/* The summary is markdown — the pipeline emits headings and bold.
+                  Without one, the page says why before anything else, and
+                  offers to write it when it can. */}
+              {summaryState === "summary" ? (
                 <MarkdownRenderer
-                  content={selected?.enhanced_content ?? ""}
-                  className="mt-7 text-[15px] leading-7 text-foreground"
+                  content={selected.enhanced_content ?? ""}
+                  className="pt-2 text-[15px] leading-7 text-foreground"
                 />
+              ) : (
+                <div
+                  role="status"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-5 text-muted-foreground"
+                >
+                  {summaryState === "preparing" ? (
+                    <Loader2
+                      aria-hidden="true"
+                      className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
+                    />
+                  ) : (
+                    <Sparkles aria-hidden="true" className="size-4 shrink-0" />
+                  )}
+                  <p className="min-w-0 flex-1">
+                    {summaryState === "preparing"
+                      ? t("oats.intelligence.preparing")
+                      : summaryState === "needs-model"
+                        ? t("oats.intelligence.needsSummaryModel")
+                        : t("oats.intelligence.notSummarized")}
+                  </p>
+                  {summaryState === "not-summarized" && (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        void summarizeConversation(selected.id, selected.transcript ?? "", t, {
+                          // A title somebody wrote is theirs; only a placeholder
+                          // is replaced.
+                          allowTitleGeneration: isRegenerableNoteTitle(selected.title, [
+                            t("oats.untitled"),
+                          ]),
+                        })
+                      }
+                    >
+                      <Sparkles aria-hidden="true" />
+                      {t("oats.intelligence.summarize")}
+                    </Button>
+                  )}
+                </div>
               )}
-              {summaryState === "preparing" && (
-                <p className="mt-7 text-sm text-muted-foreground">
-                  {t("oats.intelligence.preparing")}
-                </p>
+            </TabsContent>
+
+            <TabsContent value="transcript">
+              {finding !== null && (
+                // Find in this conversation. It stays at the top of the scroll
+                // while you step through the matches.
+                <div className="sticky top-0 z-10 -mx-1 mb-4 bg-background px-1 pb-2 pt-1">
+                  <div className="flex h-9 items-center gap-0.5 rounded-md border border-input bg-background pl-2.5 pr-1 shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/20">
+                    <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                    <input
+                      ref={findInputRef}
+                      // Mounting is the first open, and the frame callback in
+                      // the `oats-find` handler runs before this commits; it only
+                      // covers a second `/` while the bar is already open.
+                      autoFocus
+                      type="text"
+                      value={finding}
+                      onChange={(event) => setFinding(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setFinding(null);
+                        } else if (event.key === "Enter" && findCount > 0) {
+                          event.preventDefault();
+                          setFindAt(
+                            (at) => (at + (event.shiftKey ? findCount - 1 : 1)) % findCount
+                          );
+                        }
+                      }}
+                      aria-label={t("oats.find.label")}
+                      placeholder={t("oats.find.label")}
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="h-full min-w-0 flex-1 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    <span
+                      aria-live="polite"
+                      className="shrink-0 px-1.5 text-xs tabular-nums text-muted-foreground"
+                    >
+                      {findQuery
+                        ? findCount
+                          ? t("oats.find.count", { current: findAt + 1, total: findCount })
+                          : t("oats.find.none")
+                        : ""}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-7"
+                      aria-label={t("oats.find.previous")}
+                      disabled={!findCount}
+                      onClick={() => setFindAt((at) => (at + findCount - 1) % findCount)}
+                    >
+                      <ChevronUp aria-hidden="true" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-7"
+                      aria-label={t("oats.find.next")}
+                      disabled={!findCount}
+                      onClick={() => setFindAt((at) => (at + 1) % findCount)}
+                    >
+                      <ChevronDown aria-hidden="true" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-7"
+                      aria-label={t("oats.find.close")}
+                      onClick={() => setFinding(null)}
+                    >
+                      <X aria-hidden="true" />
+                    </Button>
+                  </div>
+                </div>
               )}
-              {summaryState === "needs-model" && (
-                <p className="mt-7 text-sm text-muted-foreground">
-                  {t("oats.intelligence.needsSummaryModel")}
-                </p>
-              )}
-              {summaryState === "not-summarized" && selected && (
-                <p className="mt-7 text-sm text-muted-foreground">
-                  {t("oats.intelligence.notSummarized")}{" "}
-                  <button
-                    type="button"
-                    className="rounded-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={() =>
-                      void summarizeConversation(selected.id, selected.transcript ?? "", t, {
-                        // A title somebody wrote is theirs; only a placeholder
-                        // is replaced.
-                        allowTitleGeneration: isRegenerableNoteTitle(selected.title, [
-                          t("oats.untitled"),
-                        ]),
-                      })
-                    }
-                  >
-                    {t("oats.intelligence.summarize")}
-                  </button>
-                </p>
-              )}
-            </>
-          )}
-          {tab === "transcript" && finding !== null && (
-            // The find line: a line, like every field on these surfaces, with
-            // where you are among the matches beside it.
-            <div className="mt-7 flex items-baseline gap-4 border-b border-border-control pb-1.5">
-              <input
-                ref={findInputRef}
-                // Mounting is the first open, and the frame callback in the
-                // `oats-find` handler runs before this commits; it only covers a
-                // second `/` while the line is already open.
-                autoFocus
-                type="text"
-                value={finding}
-                onChange={(event) => setFinding(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    setFinding(null);
-                  } else if (event.key === "Enter" && findCount > 0) {
-                    event.preventDefault();
-                    setFindAt((at) => (at + (event.shiftKey ? findCount - 1 : 1)) % findCount);
-                  }
-                }}
-                aria-label={t("oats.find.label")}
-                placeholder={t("oats.find.label")}
-                autoComplete="off"
-                spellCheck={false}
-                className="min-w-0 flex-1 rounded-sm bg-transparent font-mono text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+              <TranscriptView
+                note={selected}
+                query={findQuery || query}
+                scrollToId={landedOnSegment}
+                events={events}
+                moments={selectedMoments}
+                currentMatch={findQuery && findCount ? findAt : null}
               />
-              <span
-                aria-live="polite"
-                className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground"
-              >
-                {findQuery
-                  ? findCount
-                    ? t("oats.find.count", { current: findAt + 1, total: findCount })
-                    : t("oats.find.none")
-                  : ""}
-              </span>
-              <QuietAction label={t("oats.find.close")} onClick={() => setFinding(null)} />
-            </div>
-          )}
-          {tab === "transcript" && (
-            <TranscriptView
-              note={selected}
-              query={findQuery || query}
-              scrollToId={landedOnSegment}
-              events={events}
-              moments={selectedMoments}
-              currentMatch={findQuery && findCount ? findAt : null}
-            />
-          )}
-          {tab === "connections" && (
-            <ConnectionsView key={selected.id} note={selected} events={events} onReload={reload} />
-          )}
+            </TabsContent>
+
+            <TabsContent value="connections">
+              <ConnectionsView
+                key={selected.id}
+                note={selected}
+                events={events}
+                onReload={reload}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
     );
   }
 
+  const openResult = (note: NoteItem) => {
+    setSelectedId(note.id);
+    // A result the list does not hold (an older conversation recall found) is
+    // kept here, or the reading view would open the newest one in its place.
+    if (!notes.some((held) => held.id === note.id)) setOpenedNote(note);
+    setTab(matchedTab(note, query, t));
+    setLandedOnSegment(findExcerpt(note, query)?.segmentId ?? null);
+    setReading(true);
+  };
+
   return (
     <section key="list" className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-3xl font-medium tracking-[-0.03em]">
-            {t("oats.intelligence.listTitle")}
-          </h1>
+      <div className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
+        {/* Search is always here, from the first conversation: "what did that
+            candidate say about equity?" is the reason to keep a record at all. */}
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              ref={searchInputRef}
+              type="search"
+              aria-label={t("oats.intelligence.searchPlaceholder")}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("oats.intelligence.searchPlaceholder")}
+              className="peer pl-8 pr-9"
+            />
+            {!query && (
+              <Kbd
+                aria-hidden="true"
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 peer-focus:hidden"
+              >
+                /
+              </Kbd>
+            )}
+          </div>
           {notes.length > 0 && (
-            <BackLink onClick={() => setView("map")} label={t("lifetime.viewMap")} />
+            <Button variant="outline" onClick={() => setView("map")}>
+              <Waypoints aria-hidden="true" />
+              {t("lifetime.viewMap")}
+            </Button>
           )}
         </div>
 
-        {/* Recall is the first action on this surface, and it is here from the
-            first conversation.
-            
-            It used to appear only above four conversations, on the theory that
-            a short list needs no filter. That is true of a *filter* and false
-            of the thing this actually is: the answer to "what did that
-            candidate say about equity?", which is the reason to keep a record
-            at all. Hiding it until the fifth conversation taught every new user
-            that Oats cannot do the one thing it is for.
-            
-            A line rather than a box — a bordered input is form furniture, and
-            this is the page's opening move. */}
-        <input
-          ref={searchInputRef}
-          type="search"
-          aria-label={t("oats.intelligence.searchPlaceholder")}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("oats.intelligence.searchPlaceholder")}
-          className="mt-6 w-full rounded-sm border-b border-border bg-transparent pb-2 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        />
-
-        {/* Recall is the surface's first action, and filtering it said nothing:
-            a screen-reader user typed and had to tab into the list to find out
-            whether anything matched. */}
+        {/* The result, announced. A screen-reader user who types should not have
+            to tab into the list to learn whether anything matched. */}
         <p aria-live="polite" role="status" className="sr-only">
-          {/* The same three-way split the markup below computes.
-          
-              It used to fall to `onlyRelated` whenever the literal filter was
-              empty — including when there were no results at all — so a
-              screen-reader user searching for something Oats has never heard was
-              told "these conversations are about the same subject" while the
-              screen said "Nothing matches that". §9.0 binds assistive output to
-              be the same surface, not a lesser one. */}
+          {/* Literal matches first, then the related ones; "only related" only
+              when there are related results to speak of, so assistive output
+              never claims a match the screen does not show. */}
           {!query.trim()
             ? ""
             : literalNotes.length
               ? // The count is the *literal* matches, not the row count.
-                //
-                // It announced `visibleNotes.length` — literal plus related — so
-                // a query with one real hit and two index guesses told a
-                // screen-reader user "3 conversations match", and opening the
-                // second found nothing containing the word. Same over-claim as
-                // the zero-result branch, surviving in the mixed case because
-                // the corpus I measured against returned no guesses at all.
-                // Two sentences, not a middot.
-                //
-                // This region is `sr-only`: it has no visual reader at all, so a
-                // purely visual separator is doing the work of a sentence
-                // boundary. A reader that omits U+00B7 says "one conversation
-                // matches one more may be related", which garden-paths into a
-                // wrong count — the exact ambiguity this branch was rewritten to
-                // remove — and one that speaks it injects "middle dot" into a
-                // status line. The middot stays where it is read by eye.
                 `${t("oats.intelligence.searchResults", { count: literalNotes.length })}.${
                   recalled.length > literalNotes.length
                     ? ` ${t("oats.intelligence.plusRelated", {
@@ -1838,90 +1927,68 @@ function IntelligenceViews({
                   : t("oats.intelligence.noMatches")}
         </p>
 
-        {/* Nothing was said in those words.
-        
-            `related` results are kept when the literal search finds nothing —
-            that is the case semantic recall exists for, and suppressing it
-            exactly when it is the only thing that could help would defeat the
-            feature. But the page must not imply a match it does not have: with
-            no literal hit, every row below is the index's guess, and the line
-            says so before the reader reads them as findings. */}
+        {/* With no literal hit, every row below is the index's guess, and the
+            page says so before the reader takes them as findings. */}
         {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
-          <p className="mt-8 text-[13px] leading-6 text-muted-foreground">
+          <p className="mt-5 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
+            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             {t("oats.intelligence.onlyRelated")}
           </p>
         )}
 
-        {visibleNotes.length ? (
-          <div className="mt-8">
-            {recalled.map(({ note, related }) => (
-              <button
-                key={note.id}
-                onClick={() => {
-                  setSelectedId(note.id);
-                  // A result the list does not hold is kept here, or the reading
-                  // view would open the newest conversation in its place.
-                  if (!notes.some((held) => held.id === note.id)) setOpenedNote(note);
-                  // Land where the match is. Opening every result on the summary
-                  // meant that finding a conversation by something said in it
-                  // dropped you at the top of a different document, with the
-                  // sentence you searched for still to be hunted for by eye.
-                  setTab(matchedTab(note, query, t));
-                  // Which turn this result was about. A literal transcript match
-                  // has one; a semantic suggestion does not, and gets null
-                  // rather than a guess — landing somebody on a turn the search
-                  // did not actually find is worse than landing them at the top.
-                  setLandedOnSegment(findExcerpt(note, query)?.segmentId ?? null);
-                  setReading(true);
-                }}
-                className={cn(
-                  "group w-full border-b border-border/40 py-5 text-left",
-                  "transition-colors [transition-duration:var(--motion-instant)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                )}
-              >
-                <div className="flex items-baseline justify-between gap-6">
-                  <p className="truncate text-[15px] font-medium text-foreground">
-                    {note.title || t("oats.untitled")}
-                  </p>
-                  <p className="shrink-0 font-mono text-[11px] text-muted-foreground">
-                    {ledgerDate(note.created_at, { locale: i18n.language })}
-                  </p>
-                </div>
-                {/* The passage that matched, and where it came from.
-                
-                    The row used to show the same first-160-characters preview
-                    whether you had searched for a word somebody said, a word
-                    Oats wrote, or nothing at all — so a search answered with a
-                    summary of a different part of the conversation. An evidence
-                    tool has to show you the thing you searched for, and say
-                    whether it was *said* or *inferred*. */}
-                {/* The chip stays on every guessed row, including when they
-                    are all guesses.
-                
-                    Suppressing it read cleaner and measured worse: the line
-                    that replaced it scrolls away — 595px above the viewport with
-                    eight results — leaving the only search state whose rows
-                    carry no provenance at all. A label that travels with the row
-                    beats a heading that does not, and `RecallExcerpt`'s contract
-                    is that an evidence tool says whether a passage was said or
-                    inferred. */}
-                <RecallExcerpt note={note} query={query} related={related} />
-                {/* Its own shape, in the margin of the list. Two conversations
-                    of the same length and the same title still look different
-                    here, because this is drawn from what was said in them. */}
-                <NoteContourStrip note={note} />
-              </button>
-            ))}
-          </div>
-        ) : awaitingOlder ? null : (
-          <EmptyState
-            // `.trim()`, like the announcement beside it: a first-run user who
-            // types a space should see the empty state that tells them what to
-            // do, not "Nothing matches that" for a search that never ran.
-            line={query.trim() ? t("oats.intelligence.noMatches") : t("oats.intelligence.empty")}
-            hint={query ? null : t("oats.intelligence.emptyHint")}
-          />
+        {!visibleNotes.length ? (
+          // Older conversations are still being read: say nothing yet, rather
+          // than "Nothing matches that" a moment before a match arrives.
+          awaitingOlder ? null : query.trim() ? (
+            <EmptyState
+              icon={SearchX}
+              title={t("oats.intelligence.noMatches")}
+              description={t("oats.intelligence.noMatchesHint")}
+            />
+          ) : (
+            <EmptyState
+              icon={MessagesSquare}
+              title={t("oats.intelligence.empty")}
+              description={t("oats.intelligence.emptyDescription")}
+              action={<StartRecordingButton />}
+            />
+          )
+        ) : query.trim() ? (
+          // Ranked, not dated: literal matches first, then the related ones, and
+          // a date heading between them would break that order.
+          <Card className="mt-5 gap-0 overflow-hidden">
+            <ul className="divide-y divide-border">
+              {recalled.map(({ note, related }) => (
+                <ConversationRow
+                  key={note.id}
+                  note={note}
+                  query={query}
+                  related={related}
+                  onOpen={() => openResult(note)}
+                />
+              ))}
+            </ul>
+          </Card>
+        ) : (
+          dayGroups.map((group) => (
+            <section key={group.key} aria-label={group.label} className="mt-6">
+              <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">{group.label}</h2>
+              <Card className="gap-0 overflow-hidden">
+                <ul className="divide-y divide-border">
+                  {group.notes.map((note) => (
+                    <ConversationRow
+                      key={note.id}
+                      note={note}
+                      query=""
+                      related={false}
+                      timeOnly
+                      onOpen={() => openResult(note)}
+                    />
+                  ))}
+                </ul>
+              </Card>
+            </section>
+          ))
         )}
       </div>
     </section>
@@ -1999,95 +2066,124 @@ function MarkedMoments({
   };
 
   return (
-    <section className="mt-7 border-l-2 border-border/60 pl-4">
-      <h2 className="font-mono text-[11px] text-muted-foreground">{t("oats.review.marked")}</h2>
-      <ul className="mt-3 space-y-3">
+    <Card className="gap-0 overflow-hidden">
+      <CardHeader className="flex-row items-center justify-between pb-4">
+        <CardTitle>{t("oats.review.markedTitle")}</CardTitle>
+        <Badge className="tabular-nums">{moments.length}</Badge>
+      </CardHeader>
+      <ul className="divide-y divide-border border-t border-border">
         {moments.map((moment) => {
           const segment = momentSegment(moment, segments);
           const time = clock(Math.max(0, moment.at - (startedAt as number)));
           return (
-            <li key={moment.id}>
-              <button
-                type="button"
-                onClick={() => onOpenTurn(segment?.id != null ? String(segment.id) : null)}
-                disabled={!segment}
-                className={cn(
-                  "line-clamp-2 w-full rounded-sm text-left font-mono text-[13px] leading-6 text-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  segment
-                    ? "underline decoration-border underline-offset-[5px] hover:decoration-foreground"
-                    : "cursor-default"
-                )}
-              >
-                {segment ? String(segment.text ?? "").trim() : time}
-              </button>
-              <div className="mt-0.5 flex min-w-0 items-baseline gap-3 font-mono text-[11px] leading-5 text-muted-foreground">
-                <span className="shrink-0 tabular-nums">{time}</span>
+            <li key={moment.id} className="group flex items-start gap-3 px-5 py-3">
+              <Bookmark aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <span className="block text-xs tabular-nums leading-6 text-muted-foreground">
+                  {time}
+                </span>
+                {/* The words being said when Mark was pressed: a place in the
+                    record, so pressing them opens the transcript there. */}
+                <button
+                  type="button"
+                  onClick={() => onOpenTurn(segment?.id != null ? String(segment.id) : null)}
+                  disabled={!segment}
+                  className={cn(
+                    "line-clamp-2 w-full rounded-sm text-left text-sm leading-6 text-foreground outline-none",
+                    "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                    segment
+                      ? "decoration-muted-foreground/50 underline-offset-4 hover:underline"
+                      : "cursor-default"
+                  )}
+                >
+                  {segment ? String(segment.text ?? "").trim() : time}
+                </button>
                 {editing === moment.id ? (
-                  <input
+                  <Input
                     autoFocus
                     defaultValue={moment.note}
                     maxLength={280}
                     aria-label={t("oats.review.noteLabel", { time })}
+                    placeholder={t("oats.review.addNote")}
                     spellCheck
                     onBlur={(event) => void save(moment.id, event.currentTarget.value)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") event.currentTarget.blur();
                       if (event.key === "Escape") setEditing(null);
                     }}
-                    className="min-w-0 flex-1 rounded-sm border-b border-border bg-transparent font-sans text-[13px] text-foreground focus-visible:border-primary focus-visible:outline-none"
+                    className="mt-2 h-8 text-[13px]"
                   />
                 ) : moment.note ? (
-                  // The reader's own words, in the reader's voice — sans, not the
-                  // machine's mono. Pressing them edits them.
+                  // The reader's own words. Pressing them edits them.
                   <button
                     type="button"
                     onClick={() => setEditing(moment.id)}
                     aria-label={t("oats.review.noteLabel", { time })}
-                    className="min-w-0 truncate rounded-sm text-left font-sans text-[13px] text-foreground/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="mt-1 flex max-w-full items-start gap-1.5 rounded-sm text-left text-[13px] leading-5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
-                    {moment.note}
+                    <StickyNote aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                    <span className="min-w-0">{moment.note}</span>
                   </button>
-                ) : (
-                  <QuietAction
-                    label={t("oats.review.addNote")}
-                    ariaLabel={t("oats.review.noteLabel", { time })}
-                    onClick={() => setEditing(moment.id)}
-                  />
-                )}
-                {/* A press made by mistake is the reader's to take back. Not
-                    evidence — a highlight — so no second press to confirm. */}
-                {editing !== moment.id && (
-                  <QuietAction
-                    label={t("oats.review.removeMark")}
-                    ariaLabel={t("oats.review.removeMarkLabel", { time })}
-                    onClick={() => void write(removeMoment(moments, moment.id))}
-                  />
-                )}
+                ) : null}
               </div>
+              {/* Row actions, on hover or focus: add a note, or take back a mark
+                  pressed by mistake. A mark is a highlight, not evidence, so
+                  removing it does not ask twice. */}
+              {editing !== moment.id && (
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                  {!moment.note && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("oats.review.noteLabel", { time })}
+                      title={t("oats.review.addNote")}
+                      onClick={() => setEditing(moment.id)}
+                    >
+                      <MessageSquarePlus aria-hidden="true" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("oats.review.removeMarkLabel", { time })}
+                    title={t("oats.review.removeMark")}
+                    onClick={() => void write(removeMoment(moments, moment.id))}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                </div>
+              )}
             </li>
           );
         })}
       </ul>
-    </section>
+    </Card>
   );
 }
 
 /**
+ * How a question came out, as a status badge. Amber for the ones worth chasing
+ * (nobody knew, or nobody was sure); red is for recording and danger only.
+ */
+const OUTCOME_BADGE: Record<string, BadgeProps["variant"]> = {
+  asked: "secondary",
+  silence: "secondary",
+  uncertain: "warning",
+  denied: "warning",
+  answered: "success",
+};
+
+/**
  * What the conversation certainly contained, above what a model wrote about it.
  *
- * The reading view opened on the summary — prose from a local 1.5B model that
- * CLAUDE.md is explicit "frequently does not" succeed — and that was the first
- * and only thing you saw. Underneath, Oats was already holding facts it knows
- * exactly: which questions were asked, how each came out, which it went and
- * searched, and which threads were left open. It showed none of them.
+ * Oats knows some things exactly: which questions were asked, how each came
+ * out, which it went and searched, and which threads were left open. The
+ * summary is prose from a small local model. So the certain part goes first and
+ * the inferred part follows — an evidence tool that leads with a summary is
+ * asking you to trust the weakest thing on the page.
  *
- * So the certain part goes first and the inferred part follows. Ordering is the
- * argument: an evidence tool that leads with a summary is asking you to trust
- * the weakest thing on the page.
- *
- * It is a review, not a task manager (§1): no checkboxes, no owners, no due
- * dates, and nothing Oats had to guess. Each unresolved question is a *place* —
+ * It is a review, not a task manager: no checkboxes, no owners, no due dates,
+ * and nothing Oats had to guess. Each unresolved question is a *place* —
  * pressing it opens the transcript at the turn it was asked in.
  */
 function ConversationReview({
@@ -2101,88 +2197,74 @@ function ConversationReview({
 }) {
   const { t } = useTranslation();
   const review = useMemo(() => buildReview({ events, topics }), [events, topics]);
-  // The answered half, on request. What was left open is the reason to come
-  // back; what was answered is the record of the exchange — worth having one
-  // press away, not worth the page's length by default.
+  // The answered half, on request: what was left open is the reason to come
+  // back; what was answered is one press away.
   const [showAnswers, setShowAnswers] = useState(false);
   useEffect(() => setShowAnswers(false), [events]);
 
-  // Nothing observed means nothing to review. A panel saying "0 questions" is a
-  // panel that has to be read to learn it says nothing.
+  // Nothing observed means nothing to review, and no "0 questions" panel.
   if (review.empty) return null;
 
   return (
-    <section className="mt-7 border-l-2 border-border/60 pl-4">
-      <h2 className="font-mono text-[11px] text-muted-foreground">{t("oats.review.title")}</h2>
+    <Card className="gap-0 overflow-hidden">
+      <CardHeader className="flex-row items-center justify-between gap-4 pb-4">
+        <CardTitle>{t("oats.review.title")}</CardTitle>
+        {/* The denominator for "three went unanswered". */}
+        <span className="text-[13px] tabular-nums text-muted-foreground">
+          {t("oats.review.tally", { asked: review.asked, answered: review.answered })}
+        </span>
+      </CardHeader>
 
       {review.unresolved.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {review.unresolved.map((item) => (
-            <li key={item.key}>
-              <button
-                type="button"
-                onClick={() => onOpenTurn(item.segmentId)}
-                disabled={!item.segmentId}
-                className={cn(
-                  "w-full rounded-sm text-left text-[13px] leading-6 text-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  item.segmentId
-                    ? "underline decoration-border underline-offset-[5px] hover:decoration-foreground"
-                    : "cursor-default"
-                )}
-              >
-                {item.question}
-              </button>
-              {/* Its own line, flush with the question. The button above is
-                  full-width, so this always wrapped — and the inline margin
-                  meant for sitting beside the question indented it instead. */}
-              <span className="block font-mono text-[11px] leading-5 text-muted-foreground">
-                {t(`questionCard.state.${item.outcome === "open" ? "asked" : item.outcome}`)}
-                {item.searched && ` · ${t("questionCard.searched")}`}
-              </span>
-            </li>
-          ))}
+        <ul className="divide-y divide-border border-t border-border">
+          {review.unresolved.map((item) => {
+            const outcome = item.outcome === "open" ? "asked" : item.outcome;
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={() => onOpenTurn(item.segmentId)}
+                  disabled={!item.segmentId}
+                  className={cn(
+                    "flex w-full items-start gap-4 px-5 py-3 text-left outline-none transition-colors",
+                    "focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
+                    item.segmentId ? "hover:bg-muted/60" : "cursor-default"
+                  )}
+                >
+                  <span className="min-w-0 flex-1 text-sm leading-6 text-foreground">
+                    {item.question}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5">
+                    {item.searched && <Badge variant="info">{t("questionCard.searched")}</Badge>}
+                    <Badge variant={OUTCOME_BADGE[outcome] ?? "secondary"}>
+                      {t(`questionCard.state.${outcome}`)}
+                    </Badge>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {/* One line of arithmetic, not a dashboard. It exists so "three questions
-          went unanswered" has a denominator. */}
-      <p className="mt-3 font-mono text-[11px] leading-5 text-muted-foreground">
-        {t("oats.review.tally", { asked: review.asked, answered: review.answered })}
-        {/* The labels go through the string, not beside it: appended as markup
-            they read as part of the count ("2 threads still open pricing
-            enterprise"), and the colon that separates them is spaced
-            differently in French and full-width in Chinese and Japanese. */}
-        {review.openThreads.length > 0 &&
-          ` · ${t("oats.review.openThreads", {
-            count: review.openThreads.length,
-            threads: review.openThreads.map((thread) => thread.label).join(", "),
-          })}`}
-        {review.answers.length > 0 && (
-          <>
-            {" "}
-            <QuietAction
-              label={showAnswers ? t("oats.review.hideAnswers") : t("oats.review.showAnswers")}
-              ariaExpanded={showAnswers}
-              onClick={() => setShowAnswers((open) => !open)}
-            />
-          </>
-        )}
-      </p>
-
       {showAnswers && (
-        <ul className="mt-3 space-y-3">
+        <ul className="divide-y divide-border border-t border-border">
           {review.answers.map((item) => (
-            <li key={item.key}>
-              <p className="text-[13px] leading-6 text-foreground">{item.question}</p>
-              {/* The words that answered it, in the machine's verbatim voice,
-                  and a place: pressing them opens the transcript there. */}
+            <li key={item.key} className="px-5 py-3">
+              <p className="flex items-start gap-4 text-sm leading-6 text-foreground">
+                <span className="min-w-0 flex-1">{item.question}</span>
+                <Badge variant="success" className="mt-0.5">
+                  {t("questionCard.state.answered")}
+                </Badge>
+              </p>
+              {/* The words that answered it, and a place: pressing them opens
+                  the transcript there. */}
               {item.reply ? (
                 <button
                   type="button"
                   onClick={() => onOpenTurn(item.segmentId)}
                   disabled={!item.segmentId}
-                  className="line-clamp-2 w-full rounded-sm text-left font-mono text-[12px] leading-5 text-muted-foreground underline decoration-transparent underline-offset-4 hover:text-foreground hover:decoration-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="mt-1 line-clamp-2 w-full rounded-sm text-left text-[13px] leading-5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                   {item.reply}
                 </button>
@@ -2191,25 +2273,49 @@ function ConversationReview({
           ))}
         </ul>
       )}
-    </section>
+
+      {(review.openThreads.length > 0 || review.answers.length > 0) && (
+        <CardFooter className="justify-between gap-4 text-[13px] text-muted-foreground">
+          {/* The labels go through the string, not beside it: appended as markup
+              they read as part of the count, and the colon is spaced differently
+              in French and full-width in Chinese and Japanese. */}
+          <span className="min-w-0">
+            {review.openThreads.length > 0 &&
+              t("oats.review.openThreads", {
+                count: review.openThreads.length,
+                threads: review.openThreads.map((thread) => thread.label).join(", "),
+              })}
+          </span>
+          {review.answers.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-my-1 -mr-2 shrink-0"
+              aria-expanded={showAnswers}
+              onClick={() => setShowAnswers((open) => !open)}
+            >
+              {showAnswers ? t("oats.review.hideAnswers") : t("oats.review.showAnswers")}
+              <ChevronDown
+                aria-hidden="true"
+                className={cn("transition-transform", showAnswers && "rotate-180")}
+              />
+            </Button>
+          )}
+        </CardFooter>
+      )}
+    </Card>
   );
 }
 
 /**
  * The transcript as the timed record it is, rather than as one wall of text.
  *
- * The reading view used to render `transcriptText()` — the same flat string the
- * clipboard gets — so an hour of conversation arrived with no bearings at all.
- * The whole product draws time as its signature, and the one surface where you
- * go to *read* what was said showed none of it: a search result landed you
- * somewhere in a wall with nothing to say how far in you were, or how long the
- * room had been on the subject.
- *
- * Each turn now carries its offset from the first thing said. The gutter is mono
- * and quiet — it is a coordinate, not content — and it is `aria-hidden`, because
- * a screen reader working through a transcript does not want a timestamp read
- * before every line. The time is on the paragraph as a `title` for anyone who
- * wants it.
+ * Each turn carries its offset from the first thing said, in a quiet gutter that
+ * is `aria-hidden` (a screen reader working through a transcript does not want a
+ * timestamp read before every line; the time is on the paragraph as a `title`).
+ * The speaker is named once per run of turns, the way every transcript reader
+ * does it, and the gutter also carries the margin marks: which turns asked a
+ * question, and which the reader marked.
  *
  * `transcriptText` is untouched: copy still produces the plain text it always
  * did. The saved `.txt` carries the same offsets as this gutter, written by
@@ -2229,13 +2335,13 @@ function TranscriptView({
   scrollToId?: string | null;
   events: ConversationEvent[];
   moments: { id: string; at: number; note: string }[];
-  /** Which highlighted match the find line is on, or null when it is not open. */
+  /** Which highlighted match the find bar is on, or null when it is not open. */
   currentMatch?: number | null;
 }) {
   const { t } = useTranslation();
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const target = useRef<HTMLLIElement | null>(null);
-  // The match the find line is on: marked, and brought to the middle of the
+  // The match the find bar is on: marked, and brought to the middle of the
   // screen. Children's effects run first, so this lands after `Highlighted`
   // has scrolled to the first match on a new query.
   const transcriptRef = useRef<HTMLDivElement | null>(null);
@@ -2249,9 +2355,6 @@ function TranscriptView({
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     marks[currentMatch]?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
   }, [currentMatch, query]);
-  // The margin: which turns asked a question (and how it came out), and which
-  // ones the reader marked. Scanning an hour of transcript for "where were the
-  // questions" is what a margin is for.
   const asked = useMemo(() => questionTurns(events), [events]);
   const marked = useMemo(() => {
     const ids = new Set<string>();
@@ -2269,11 +2372,11 @@ function TranscriptView({
   }, [scrollToId, segments]);
 
   // No segments means no timings — an imported or legacy transcript. Fall back
-  // to what the reading view has always shown rather than to an empty page.
+  // to the plain text rather than to an empty page.
   if (!segments.length) {
     return (
       <div ref={transcriptRef}>
-        <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-6 text-muted-foreground">
+        <article className="whitespace-pre-wrap text-[15px] leading-7 text-foreground/90">
           <Highlighted
             text={transcriptText(note.transcript, t) || t("oats.intelligence.noTranscript")}
             query={query}
@@ -2287,8 +2390,8 @@ function TranscriptView({
 
   return (
     <div ref={transcriptRef}>
-      <ol className="mt-7 space-y-4">
-        {segments.map((segment) => {
+      <ol>
+        {segments.map((segment, index) => {
           const at =
             Number.isFinite(segment.timestamp) && Number.isFinite(startedAt)
               ? clock(Math.max(0, (segment.timestamp as number) - (startedAt as number)))
@@ -2296,21 +2399,28 @@ function TranscriptView({
           const matched = scrollToId != null && String(segment.id) === scrollToId;
           const outcome = asked.get(String(segment.id));
           const isMarked = marked.has(String(segment.id));
+          const previous = index > 0 ? segments[index - 1] : null;
+          const newSpeaker = !previous || speakerText(previous, t) !== speakerText(segment, t);
           return (
             <li
               key={segment.id}
               ref={matched ? target : undefined}
-              className="flex gap-4 font-mono text-[13px] leading-6"
+              className={cn(
+                "grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-4 rounded-md",
+                index > 0 && (newSpeaker ? "mt-5" : "mt-1.5"),
+                // The turn a search landed on. Not a highlight — a semantic match
+                // has no span to highlight — but "this is the one".
+                matched && "-mx-2 bg-muted/70 px-2 py-1"
+              )}
             >
               <span
                 aria-hidden="true"
-                className="flex w-16 shrink-0 items-center justify-end gap-1.5 self-start pt-px text-[11px] tabular-nums text-muted-foreground/70"
-              >
-                {isMarked && (
-                  <svg width="8" height="7" viewBox="0 0 8 7" className="text-foreground/80">
-                    <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
-                  </svg>
+                className={cn(
+                  "flex items-center justify-end gap-1.5 self-start text-xs leading-5 tabular-nums text-muted-foreground",
+                  newSpeaker ? "pt-0" : "pt-1"
                 )}
+              >
+                {isMarked && <Bookmark className="size-3 fill-current text-foreground" />}
                 {outcome && (
                   <StateMark
                     state={(outcome === "open" ? "asked" : outcome) as QuestionOutcome}
@@ -2319,20 +2429,13 @@ function TranscriptView({
                 )}
                 {at ?? ""}
               </span>
-              <p
-                title={at ?? undefined}
-                className={cn(
-                  "min-w-0 flex-1 text-muted-foreground",
-                  // The turn a search landed on is ink rather than husk. It is not
-                  // a highlight — a semantic match has no span to highlight — it
-                  // is "this is the one".
-                  matched && "text-foreground"
-                )}
-              >
-                {isMarked && <span className="sr-only">{t("oats.review.markedTurn")} </span>}
-                <SpeakerName note={note} segments={segments} segment={segment} />
-                <Highlighted text={String(segment.text ?? "")} query={query} />
-              </p>
+              <div className="min-w-0">
+                {newSpeaker && <SpeakerName note={note} segments={segments} segment={segment} />}
+                <p title={at ?? undefined} className="text-[15px] leading-7 text-foreground/90">
+                  {isMarked && <span className="sr-only">{t("oats.review.markedTurn")} </span>}
+                  <Highlighted text={String(segment.text ?? "")} query={query} />
+                </p>
+              </div>
             </li>
           );
         })}
@@ -2342,7 +2445,7 @@ function TranscriptView({
 }
 
 /**
- * A turn's speaker, and the way to name them.
+ * A run of turns' speaker, and the way to name them.
  *
  * Oats tells voices apart after a conversation stops and numbers them by who
  * spoke first; it cannot know names, and guessing one would put words in a
@@ -2387,7 +2490,7 @@ function SpeakerName({
 
   if (naming) {
     return (
-      <input
+      <Input
         autoFocus
         defaultValue={segment.speakerIsPlaceholder ? "" : (segment.speakerName ?? "")}
         placeholder={label}
@@ -2399,19 +2502,20 @@ function SpeakerName({
           if (event.key === "Enter") event.currentTarget.blur();
           if (event.key === "Escape") setNaming(false);
         }}
-        className="mr-2 w-32 rounded-sm border-b border-border bg-transparent font-mono text-[13px] text-foreground focus-visible:border-primary focus-visible:outline-none"
+        className="mb-1 h-7 w-48 px-2 text-[13px]"
       />
     );
   }
 
   return (
-    <span className="mr-2 select-none text-muted-foreground/70">
+    <span className="block select-none text-[13px] font-medium leading-5 text-foreground">
       {nameable ? (
         <button
           type="button"
           onClick={() => setNaming(true)}
           aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
-          className="rounded-sm underline decoration-transparent underline-offset-4 hover:text-foreground hover:decoration-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title={t("oats.intelligence.nameSpeaker", { speaker: label })}
+          className="rounded-sm outline-none decoration-muted-foreground/50 underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {label}
         </button>
@@ -2451,11 +2555,8 @@ function Highlighted({ text, query }: { text: string; query: string }) {
                   }
                 : undefined
             }
-            // Gold, used here as a mark colour rather than a reading colour
-            // (DESIGN.md §3) — which is precisely what a search hit is. The text
-            // itself stays ink so the highlight never costs legibility.
-            // The one the find line is on is the stronger mark of the two.
-            className="rounded-sm bg-primary/25 px-0.5 text-foreground data-[current]:bg-primary/60"
+            // The one the find bar is on is the stronger of the two marks.
+            className="rounded-sm bg-highlight px-0.5 text-foreground data-[current]:bg-highlight-strong"
           >
             {part.text}
           </mark>
@@ -2466,15 +2567,15 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 /**
- * Copy it, save it, file it, or delete it.
+ * Copy it, export it, file it, or delete it.
  *
- * Until now a conversation could be recorded and read and nothing else: there
- * was no way to get the text out of Oats and no way to remove one at all, which
- * for a tool holding unannounced work is the more serious of the two.
+ * Whatever is being read is what leaves: the transcript tab copies and exports
+ * the transcript, the other two the summary, because that is what is on the
+ * screen. The tooltip and the accessible name say which.
  *
- * The vault action appears only when a vault folder has been chosen. A disabled
- * control that exists to advertise a setting is a thing to learn and dismiss;
- * for everybody who does not keep a vault, the row is simply three words.
+ * Saving to the vault appears only once a vault folder has been chosen, and it
+ * says whether it worked — a write that quietly did nothing is the failure this
+ * product does not accept.
  */
 function ConversationActions({
   note,
@@ -2494,16 +2595,22 @@ function ConversationActions({
   const vaultPath = useSettingsStore((state) => state.obsidianVaultPath);
   // null when idle, true once it landed, false when the write was refused.
   const [filed, setFiled] = useState<boolean | null>(null);
+  const transcript = tab === "transcript";
+  const copyLabel = transcript
+    ? t("oats.intelligence.copyTranscript")
+    : t("oats.intelligence.copySummary");
+  const exportLabel = transcript
+    ? t("oats.intelligence.exportTranscript")
+    : t("oats.intelligence.exportSummary");
 
-  // Whatever is being read is what leaves — no menu of formats, no dialog asking
-  // which part. The transcript tab copies the transcript with the screen's
-  // speaker labels. The other two copy exactly what Save writes from them: the
-  // title, the marks, the open questions and the summary. Copy used to take the
-  // summary prose alone, so the clipboard and the saved file were two documents.
+  // Whatever is being read is what leaves. The transcript tab copies the
+  // transcript with the screen's speaker labels; the other two copy exactly what
+  // Export writes from them — the title, the marks, the open questions and the
+  // summary — so the clipboard and the saved file are one document.
   const payload = () =>
-    tab === "transcript" ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
+    transcript ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
 
-  useEffect(() => setConfirming(false), [note.id, tab]);
+  useEffect(() => setConfirming(false), [note.id]);
   useEffect(() => setFiled(null), [note.id]);
   useEffect(() => {
     if (!copied) return undefined;
@@ -2512,7 +2619,7 @@ function ConversationActions({
   }, [copied]);
   useEffect(() => {
     if (filed === null) return undefined;
-    const timer = setTimeout(() => setFiled(null), 2000);
+    const timer = setTimeout(() => setFiled(null), 2500);
     return () => clearTimeout(timer);
   }, [filed]);
 
@@ -2523,67 +2630,93 @@ function ConversationActions({
     setCopied(true);
   };
 
-  const save = () => {
-    if (tab === "transcript") void window.electronAPI?.exportTranscript?.(note.id, "txt");
+  const exportFile = () => {
+    if (transcript) void window.electronAPI?.exportTranscript?.(note.id, "txt");
     else void window.electronAPI?.exportNote?.(note.id, "md");
   };
 
   // Every conversation files itself once the vault is set, so this is for the
-  // ones recorded before it was — and it says whether it worked, because a
-  // write that quietly did nothing is the failure this product does not accept.
+  // ones recorded before it was.
   const file = async () => {
     const result = await window.electronAPI?.exportNoteToVault?.(note.id);
     setFiled(Boolean(result?.success));
   };
 
-  if (confirming) {
-    return (
-      <div className="flex shrink-0 items-baseline gap-4">
-        <span className="font-mono text-xs text-foreground">
-          {t("oats.intelligence.deleteConfirm")}
-        </span>
-        <QuietAction
-          label={t("oats.intelligence.deleteYes")}
-          onClick={() => {
-            void (async () => {
-              await window.electronAPI?.deleteNote?.(note.id);
-              await onDeleted();
-            })();
-          }}
-        />
-        <QuietAction
-          label={t("oats.intelligence.deleteCancel")}
-          onClick={() => setConfirming(false)}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex shrink-0 items-baseline gap-4">
-      <QuietAction
-        label={copied ? t("oats.intelligence.copied") : t("oats.intelligence.copy")}
-        onClick={() => void copy()}
-      />
-      <QuietAction label={t("oats.intelligence.save")} onClick={save} />
-      {vaultPath && (
-        <QuietAction
-          label={
-            filed === null
-              ? t("oats.intelligence.vault")
-              : filed
-                ? t("oats.intelligence.vaultSaved")
-                : t("oats.intelligence.vaultFailed")
-          }
-          ariaLabel={t("oats.intelligence.vaultLabel")}
-          onClick={() => void file()}
-        />
+    <div className="flex shrink-0 items-center gap-2">
+      {filed !== null && (
+        <span
+          role="status"
+          className={cn(
+            "flex items-center gap-1.5 text-[13px]",
+            filed ? "text-muted-foreground" : "text-destructive"
+          )}
+        >
+          {filed ? (
+            <Check aria-hidden="true" className="size-4" />
+          ) : (
+            <AlertTriangle aria-hidden="true" className="size-4" />
+          )}
+          {filed ? t("oats.intelligence.vaultSaved") : t("oats.intelligence.vaultFailed")}
+        </span>
       )}
-      {/* Deleting a conversation is the one irreversible thing in the product, so
-          it asks — in place, on the same line, rather than in a modal. A dialog
-          would be the only modal in Oats; a second press is the same guarantee
-          with none of the chrome. */}
-      <QuietAction label={t("oats.intelligence.delete")} onClick={() => setConfirming(true)} />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="sm" aria-label={copyLabel} onClick={() => void copy()}>
+            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+            {copied ? t("oats.intelligence.copied") : t("oats.intelligence.copy")}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{copyLabel}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="sm" aria-label={exportLabel} onClick={exportFile}>
+            <Download aria-hidden="true" />
+            {t("oats.intelligence.export")}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{exportLabel}</TooltipContent>
+      </Tooltip>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label={t("oats.intelligence.more")}>
+            <MoreHorizontal aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48">
+          {vaultPath && (
+            <>
+              <DropdownMenuItem onSelect={() => void file()}>
+                <Vault aria-hidden="true" />
+                {t("oats.intelligence.vaultAction")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
+            <Trash2 aria-hidden="true" />
+            {t("oats.intelligence.delete")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {/* Deleting a conversation is the one irreversible thing in the product,
+          so it asks, and the safe answer has the focus. */}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("oats.intelligence.deleteConfirm")}
+        description={t("oats.intelligence.deleteDescription")}
+        confirmText={t("oats.intelligence.deleteYes")}
+        cancelText={t("common.cancel")}
+        variant="destructive"
+        onConfirm={() => {
+          void (async () => {
+            await window.electronAPI?.deleteNote?.(note.id);
+            await onDeleted();
+          })();
+        }}
+      />
     </div>
   );
 }
@@ -2608,9 +2741,7 @@ function QuietAction({
       aria-expanded={ariaExpanded}
       onClick={onClick}
       // 24px tall, and the padding is negative-margined away so the target grows
-      // without the words moving. These measured 23.5 x 12 — Map, Back, Copy,
-      // Save and Delete all of them — which is under WCAG 2.2's 24x24 minimum
-      // for a pointer target, and Delete is not a control to make small.
+      // without the words moving: WCAG 2.2's 24x24 minimum for a pointer target.
       // `inline-flex` rather than `block`: these sit on baseline-aligned rows.
       className="-my-1.5 inline-flex min-h-6 items-center rounded-sm py-1.5 font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
@@ -2619,61 +2750,158 @@ function QuietAction({
   );
 }
 
-// A quiet way back. Husk ink, no chevron box, no button chrome.
-function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
+/** Back to where the reader came from, named, the way a desktop app says it. */
+function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={onClick}
-      // Same 24px floor as QuietAction, same negative margin so the words do
-      // not move. `Map` measured 23.5 x 12 and is the only door to the lifetime
-      // graph.
-      className="-my-1.5 inline-flex min-h-6 items-center rounded-sm py-1.5 font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="-ml-2.5 text-muted-foreground hover:text-foreground"
     >
+      <ChevronLeft aria-hidden="true" />
       {label}
-    </button>
+    </Button>
   );
 }
 
-// DESIGN.md §9.5: an empty screen is where warmth lives, and it is an invitation
-// to act rather than a shrug. One line of quiet mono copy, and the shortcut that
-// makes the screen fill itself.
-function EmptyState({ line, hint }: { line: string; hint?: string | null }) {
+/** One fact about a record, with the icon that says which fact it is. */
+function MetaItem({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="flex items-center gap-1.5 tabular-nums">
+      <Icon aria-hidden="true" className="size-4 shrink-0" />
+      {children}
+    </span>
+  );
+}
+
+/** The record action, from a page that has nothing to show without it. */
+function StartRecordingButton() {
+  const { t } = useTranslation();
   const conversationKey = useSettingsStore((state) => state.conversationKey);
   const shortcut = useMemo(
     () => formatHotkey(conversationKey, getCachedPlatform()),
     [conversationKey]
   );
   return (
-    <div className="mt-24 text-center">
-      <p className="font-mono text-sm text-muted-foreground">{line}</p>
-      {hint && shortcut && (
-        <p className="mt-3 font-mono text-xs text-muted-foreground">
-          {hint.replace("{{shortcut}}", shortcut)}
-        </p>
+    <div className="flex flex-col items-center gap-3">
+      <Button onClick={() => void window.electronAPI?.requestToggleConversation?.()}>
+        <span aria-hidden="true" className="size-2 rounded-full bg-current" />
+        {t("oats.conversation.start")}
+      </Button>
+      {shortcut && (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Kbd>{shortcut}</Kbd>
+          {t("oats.conversation.shortcutAnywhere")}
+        </span>
       )}
     </div>
   );
 }
 
-// One conversation's shape, beside it in the list.
-//
-// Built from the note's own stored utterances, so a list of conversations reads
-// as a page of different entries rather than as identical rows.
-//
-// **Speech shape only, no question marks.** Marks would need this row's
-// persisted events, and a hundred-row list would mean a hundred queries to draw
-// a 24px strip. The marks appear when the conversation is opened, where the
-// events are already loaded. An earlier version of this comment claimed the
-// marks survived here; they never did, because the call site passes no events.
+/** An empty page that says what would be here, and how to fill it. */
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>;
+  title: string;
+  description?: string | null;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mt-20 flex flex-col items-center text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+        <Icon aria-hidden="true" className="size-5 text-muted-foreground" />
+      </div>
+      <p className="mt-4 text-sm font-medium text-foreground">{title}</p>
+      {description && (
+        <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
+      )}
+      {action && <div className="mt-6">{action}</div>}
+    </div>
+  );
+}
+
+/**
+ * One conversation in the list: its name, when, what it was about, and its
+ * shape. The same row the Home page's recent list uses, plus the contour — so
+ * two conversations of the same length and title still look different here,
+ * because this is drawn from what was said in them.
+ */
+function ConversationRow({
+  note,
+  query,
+  related,
+  timeOnly = false,
+  onOpen,
+}: {
+  note: NoteItem;
+  query: string;
+  related: boolean;
+  /** Under a day heading the day is already said, so the row gives the time. */
+  timeOnly?: boolean;
+  onOpen: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const marked = useMemo(
+    () => parseMoments(note.conversation_marks ?? null).length,
+    [note.conversation_marks]
+  );
+  const when = timeOnly
+    ? ledgerTime(note.created_at, { locale: i18n.language })
+    : ledgerDate(note.created_at, { locale: i18n.language });
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className={cn(
+          "flex w-full flex-col gap-1 px-5 py-3.5 text-left transition-colors hover:bg-muted/60",
+          "outline-none focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+        )}
+      >
+        <span className="flex items-baseline gap-4">
+          <span className="flex min-w-0 flex-1 items-baseline gap-2">
+            <span className="truncate text-sm font-medium text-foreground">
+              {note.title || t("oats.untitled")}
+            </span>
+            {marked > 0 && (
+              <span className="flex shrink-0 items-center gap-1 self-center text-xs tabular-nums text-muted-foreground">
+                <Bookmark aria-hidden="true" className="size-3" />
+                <span aria-hidden="true">{marked}</span>
+                <span className="sr-only">
+                  {t("oats.intelligence.markedCount", { count: marked })}
+                </span>
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{when}</span>
+        </span>
+        <span className="flex items-center gap-6">
+          <RecallExcerpt note={note} query={query} related={related} />
+          <NoteContourStrip note={note} />
+        </span>
+      </button>
+    </li>
+  );
+}
+
 /**
  * One search result's evidence line.
  *
  * With no query this is the ordinary preview. With one it is the passage that
- * matched, marked, under a label saying where it came from — because "these are
- * the words that were spoken" and "this is what a 1.5B model wrote about the
- * conversation" are different claims, and a tool whose whole premise is evidence
- * may not present them identically.
+ * matched, marked, under a label saying where it came from — "these are the
+ * words that were spoken" and "this is what a model wrote" are different claims,
+ * and a tool whose premise is evidence may not present them identically.
  *
  * `related` is the weakest claim on the page: the vector index thinks this
  * conversation is about your question, and nothing in it literally matched.
@@ -2692,48 +2920,36 @@ function RecallExcerpt({
 
   if (!excerpt) {
     return (
-      <p className="mt-1.5 line-clamp-2 text-[13px] leading-6 text-muted-foreground">
+      <span className="line-clamp-1 min-w-0 flex-1 text-[13px] leading-5 text-muted-foreground">
         {related && (
-          <span className="mr-2 font-mono text-[11px] text-muted-foreground/80">
+          <Badge variant="outline" className="mr-1.5 py-0">
             {t("oats.intelligence.matchRelated")}
             <span className="sr-only">: </span>
-          </span>
+          </Badge>
         )}
         {plainPreview(note.enhanced_content) ||
           transcriptText(note.transcript, t) ||
           t("oats.intelligence.processing")}
-      </p>
+      </span>
     );
   }
 
+  const source = t(`oats.intelligence.match.${excerpt.source}`);
   return (
-    <p
-      className={cn(
-        "mt-1.5 line-clamp-2 text-[13px] leading-6 text-muted-foreground",
-        // Mono for a transcript excerpt, sans for a summary: §5's rule that the
-        // machine's verbatim record and the model's prose do not share a voice.
-        excerpt.source === "transcript" && "font-mono text-[12px]"
-      )}
-    >
-      <span className="mr-2 font-mono text-[11px] text-muted-foreground/80">
-        {t(`oats.intelligence.match.${excerpt.source}`)}
-        {/* How far in. The product's signature is a picture of time, and a
-            result that says what was said but not when leaves you to find it
-            again by eye in an hour of transcript. */}
-        {excerpt.offsetMs !== undefined && ` · ${clock(excerpt.offsetMs)}`}
-        {/* A character, not margin. `textContent` is what a screen reader and
-            the clipboard read, and margin is invisible to both — this is the
-            same defect the transcript's speaker labels had ("Youso the question
-            is"), caught there by measurement and avoided here by the same
-            means. */}
+    <span className="line-clamp-2 min-w-0 flex-1 text-[13px] leading-5 text-muted-foreground">
+      {/* Where it came from, and how far in: a result that says what was said
+          but not when leaves you to find it again by eye. One text node, so a
+          screen reader and the clipboard read "Said 12:04: …". */}
+      <Badge className="mr-1.5 py-0 tabular-nums">
+        {excerpt.offsetMs !== undefined ? `${source} ${clock(excerpt.offsetMs)}` : source}
         <span className="sr-only">: </span>
-      </span>
+      </Badge>
       {excerpt.prefixed && "…"}
       {excerpt.before}
-      <mark className="rounded-[2px] bg-primary/20 px-0.5 text-foreground">{excerpt.match}</mark>
+      <mark className="rounded-sm bg-highlight px-0.5 text-foreground">{excerpt.match}</mark>
       {excerpt.after}
       {excerpt.suffixed && "…"}
-    </p>
+    </span>
   );
 }
 
@@ -2742,13 +2958,12 @@ function NoteContourStrip({ note }: { note: NoteItem }) {
   //
   // The list loads a hundred conversations, and drawing a hundred strips on open
   // cost 263ms and three long tasks at DPR 2, with 18.9MB of canvas backing
-  // store then retained for the life of the process — to render strips that are
-  // 22px tall and almost all of them off screen. Each row parses its own
+  // store then retained for the life of the process. Each row parses its own
   // transcript to build its geometry, so the parse is behind the same gate.
   //
   // Once a row has been seen it stays drawn: re-drawing on every scroll reversal
   // would trade a one-off cost for a permanent one.
-  const box = useRef<HTMLDivElement | null>(null);
+  const box = useRef<HTMLSpanElement | null>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
     const element = box.current;
@@ -2757,82 +2972,44 @@ function NoteContourStrip({ note }: { note: NoteItem }) {
       ([entry]) => {
         if (entry.isIntersecting) setSeen(true);
       },
-      // A screen of lead time, so a strip is drawn before it is scrolled to
-      // rather than appearing under the reader's eye.
+      // A screen of lead time, so a strip is drawn before it is scrolled to.
       { rootMargin: "400px" }
     );
     observer.observe(element);
     return () => observer.disconnect();
   }, [seen]);
 
-  // The box is reserved at the strip's height so revealing one does not reflow
-  // the list underneath. A note with no transcript has no strip and never will,
-  // and that is knowable without parsing anything, so those rows keep their
-  // tighter shape.
+  // The box is reserved at the strip's size so revealing one does not reflow
+  // the row. A note with no transcript has no strip and never will.
   if (typeof note.transcript !== "string" || note.transcript.length < 3) return null;
   return (
-    <div ref={box} className="mt-3 h-[22px]">
+    <span ref={box} className="flex h-4 min-w-[8.5rem] shrink-0 items-center justify-end gap-2">
       {seen && <LoadedContourStrip note={note} />}
-    </div>
+    </span>
   );
 }
 
+/**
+ * A conversation's contour as a sparkline, and how long it ran.
+ *
+ * Every strip is drawn to the same width whatever the conversation's length, so
+ * the strip alone cannot say which ran longer; its length is written beside it.
+ */
 function LoadedContourStrip({ note }: { note: NoteItem }) {
   const { i18n } = useTranslation();
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const strip = useContourStrip(segments, NO_EVENTS);
   if (strip.empty) return null;
+  const span = formatSpan(conversationSpanMs(segments), { locale: i18n.language });
   return (
-    <StripWithSpan
-      span={formatSpan(conversationSpanMs(segments), { locale: i18n.language })}
-      marked={parseMoments(note.conversation_marks ?? null).length}
-    >
-      <ConversationContour contour={strip} className="opacity-70" height={22} showMarks={false} />
-    </StripWithSpan>
-  );
-}
-
-/**
- * A contour strip and how long it is.
- *
- * Every strip is drawn to the full width of its row whatever the conversation's
- * length, so two strips side by side said nothing about which conversation ran
- * longer. The strip *is* the time axis; its length is written at its end. Shown
- * only where the transcript is already parsed for the strip, so it adds no
- * parsing to a list that gates exactly that on visibility.
- */
-function StripWithSpan({
-  span,
-  marked = 0,
-  className,
-  children,
-}: {
-  span: string;
-  /** How many moments were marked in it — the conversations where something
-   *  mattered enough to press for, which is worth seeing while scanning. */
-  marked?: number;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <div className="min-w-0 flex-1">{children}</div>
-      {marked > 0 && (
-        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[11px] tabular-nums text-foreground/80">
-          <svg aria-hidden="true" width="7" height="6" viewBox="0 0 8 7">
-            <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
-          </svg>
-          <span aria-hidden="true">{marked}</span>
-          <span className="sr-only">{t("oats.intelligence.markedCount", { count: marked })}</span>
-        </span>
-      )}
+    <>
+      <ConversationContour contour={strip} className="w-20" height={16} showMarks={false} />
       {span && (
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+        <span className="min-w-12 shrink-0 whitespace-nowrap text-right text-[13px] tabular-nums text-muted-foreground">
           {span}
         </span>
       )}
-    </div>
+    </>
   );
 }
 
@@ -3744,49 +3921,50 @@ export default function OatsWorkspace() {
   }, [recording]);
 
   return (
-    <div
-      className={cn(
-        // `overflow-clip`, not `overflow-hidden`: a hidden box is still
-        // scrollable by script, and `scrollIntoView` scrolls every ancestor that
-        // is. Opening a search result scrolled this root by 8px — the drag band
-        // and the nav slid half out of the window and stayed there, because a
-        // hidden box has no scrollbar to bring them back. A clip box cannot be
-        // scrolled at all.
-        "relative flex h-screen flex-col overflow-clip bg-background text-foreground antialiased",
-        // The field paints on the shell's own background, so in field mode the
-        // background must be transparent or it would cover the sky.
-        fieldMode && "bg-transparent",
-        // Field mode is a class on the shell, so every surface inside can
-        // answer to it without threading a prop, and so the whole thing is
-        // inert — not merely hidden — in work mode.
-        fieldMode && "oats-field-mode"
-      )}
-    >
-      {/* Behind everything, and only in field mode. Returns null otherwise, so
+    <TooltipProvider>
+      <div
+        className={cn(
+          // `overflow-clip`, not `overflow-hidden`: a hidden box is still
+          // scrollable by script, and `scrollIntoView` scrolls every ancestor that
+          // is. Opening a search result scrolled this root by 8px — the drag band
+          // and the nav slid half out of the window and stayed there, because a
+          // hidden box has no scrollbar to bring them back. A clip box cannot be
+          // scrolled at all.
+          "relative flex h-screen flex-col overflow-clip bg-background text-foreground antialiased",
+          // The field paints on the shell's own background, so in field mode the
+          // background must be transparent or it would cover the sky.
+          fieldMode && "bg-transparent",
+          // Field mode is a class on the shell, so every surface inside can
+          // answer to it without threading a prop, and so the whole thing is
+          // inert — not merely hidden — in work mode.
+          fieldMode && "oats-field-mode"
+        )}
+      >
+        {/* Behind everything, and only in field mode. Returns null otherwise, so
           work mode pays nothing for it. */}
-      <FieldBackdrop surface={surface} />
-      {/* Renders nothing. It drives microphone level and the dead-mic warning,
+        <FieldBackdrop surface={surface} />
+        {/* Renders nothing. It drives microphone level and the dead-mic warning,
           and pre-warms the audio worklet so the first recording starts fast.
           It was previously mounted only inside unreachable ControlPanel markup,
           which silently disabled all three. */}
-      <MeetingRecordingMount />
-      {/* Also headless, and also previously mounted only in unreachable markup.
+        <MeetingRecordingMount />
+        {/* Also headless, and also previously mounted only in unreachable markup.
           The post-recording intelligence pipeline reports failures through the
           action-processing store, so without this a conversation could finish,
           its summary could fail, and the user would never be told. */}
-      <BackgroundActionToastListener />
-      {/* Headless too: reports the recording to the tray and the floating oat,
+        <BackgroundActionToastListener />
+        {/* Headless too: reports the recording to the tray and the floating oat,
           which are the only parts of Oats visible when this window is not. */}
-      <ConversationStateBridge />
-      <PostMigrationOnboarding
-        open={showPostMigration}
-        onOpenChange={(open) => {
-          if (!open) void dismissPostMigration();
-        }}
-        onDone={dismissPostMigration}
-      />
+        <ConversationStateBridge />
+        <PostMigrationOnboarding
+          open={showPostMigration}
+          onOpenChange={(open) => {
+            if (!open) void dismissPostMigration();
+          }}
+          onDone={dismissPostMigration}
+        />
 
-      {/* All three surfaces stay mounted and cross-fade in place.
+        {/* All three surfaces stay mounted and cross-fade in place.
 
           This is DESIGN.md §8's "the outgoing view dims to 0 as the incoming
           rises", which an enter-only fade on a keyed, remounting `<main>` could
@@ -3801,46 +3979,46 @@ export default function OatsWorkspace() {
           global conversation hotkey — the product's primary action, documented in
           CLAUDE.md as starting a conversation "from anywhere" — did nothing at
           all on Intelligence and Settings. */}
-      <div className="flex min-h-0 flex-1">
-        <AppSidebar
-          surface={surface}
-          onNavigate={(next) => {
-            // Settings stays closed while a conversation is live, as Cmd+, does.
-            if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
-            setSurface(next);
-          }}
-          onOpenNote={(noteId) =>
-            window.dispatchEvent(new CustomEvent("oats-open-note", { detail: noteId }))
-          }
-          onSearch={() => {
-            setSurface("intelligence");
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
-            });
-          }}
-        />
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* The window is frameless (windowConfig.js); this band and the
+        <div className="flex min-h-0 flex-1">
+          <AppSidebar
+            surface={surface}
+            onNavigate={(next) => {
+              // Settings stays closed while a conversation is live, as Cmd+, does.
+              if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
+              setSurface(next);
+            }}
+            onOpenNote={(noteId) =>
+              window.dispatchEvent(new CustomEvent("oats-open-note", { detail: noteId }))
+            }
+            onSearch={() => {
+              setSurface("intelligence");
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
+              });
+            }}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* The window is frameless (windowConfig.js); this band and the
               sidebar's are what move it, so they take real layout rather than
               floating over content a drag region would stop being clickable. */}
-          <header
-            className="flex h-[52px] shrink-0 items-center border-b border-border px-6"
-            style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-          >
-            <h1 className="text-sm font-semibold tracking-[-0.01em]">
-              {t(SURFACE_TITLES[surface])}
-            </h1>
-          </header>
-          <div className="oats-enter relative min-h-0 flex-1">
-            {SURFACES.map(({ id, render }) => (
-              <main
-                key={id}
-                data-active={surface === id}
-                inert={surface !== id}
-                aria-hidden={surface !== id}
-                className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-clip"
-              >
-                {/* The pane element exists from the first render; its *contents* wait
+            <header
+              className="flex h-[52px] shrink-0 items-center border-b border-border px-6"
+              style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+            >
+              <h1 className="text-sm font-semibold tracking-[-0.01em]">
+                {t(SURFACE_TITLES[surface])}
+              </h1>
+            </header>
+            <div className="oats-enter relative min-h-0 flex-1">
+              {SURFACES.map(({ id, render }) => (
+                <main
+                  key={id}
+                  data-active={surface === id}
+                  inert={surface !== id}
+                  aria-hidden={surface !== id}
+                  className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-clip"
+                >
+                  {/* The pane element exists from the first render; its *contents* wait
                 until the surface has been opened once, and then stay.
 
                 Both halves matter. Mounting the element early is what makes the
@@ -3853,12 +4031,13 @@ export default function OatsWorkspace() {
                 nothing on screen to explain it (and on macOS it pauses whatever
                 is playing). A user who never opens Settings should never pay for
                 it. */}
-                {visited.has(id) ? render() : null}
-              </main>
-            ))}
+                  {visited.has(id) ? render() : null}
+                </main>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

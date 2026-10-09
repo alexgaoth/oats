@@ -62,6 +62,46 @@ export function ledgerDate(when, { now = new Date(), locale } = {}) {
 }
 
 /**
+ * The time of day alone, for a row that already sits under its day's heading.
+ *
+ * @param {Date | string | number} when
+ * @param {{ locale?: string }} [options]
+ */
+export function ledgerTime(when, { locale } = {}) {
+  const date = when instanceof Date ? when : dbDate(when);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(locale, FORMATS.time).format(date);
+}
+
+/**
+ * The day a moment belongs to, for a list grouped by day: a key that is stable
+ * for every moment of that local day, and the heading a reader scans for.
+ *
+ * Today and yesterday by name — the caller passes them already translated —
+ * then the weekday while it is still distinct, then the date, with the year only
+ * once it differs. The same distances `ledgerDateKind` uses for a single row.
+ *
+ * @param {Date | string | number} when
+ * @param {{ now?: Date, locale?: string, today?: string, yesterday?: string }} [options]
+ * @returns {{ key: string, label: string }}
+ */
+export function ledgerDayGroup(when, { now = new Date(), locale, today, yesterday } = {}) {
+  const date = when instanceof Date ? when : dbDate(when);
+  if (!Number.isFinite(date.getTime())) return { key: "", label: "" };
+  const key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  const days = calendarDaysBetween(date, now);
+  if (days === 0 && today) return { key, label: today };
+  if (days === 1 && yesterday) return { key, label: yesterday };
+  const format =
+    days > 0 && days < 7
+      ? { weekday: "long" }
+      : date.getFullYear() === now.getFullYear()
+        ? { weekday: "short", day: "numeric", month: "short" }
+        : { day: "numeric", month: "short", year: "numeric" };
+  return { key, label: new Intl.DateTimeFormat(locale, format).format(date) };
+}
+
+/**
  * The moment in full, for the head of a record: weekday, date, and time.
  *
  * @param {Date | string | number} when

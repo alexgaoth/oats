@@ -131,7 +131,8 @@
     "save": "Speichern",
     "copy": "Kopieren",
     "copied": "Kopiert",
-    "done": "Fertig"
+    "done": "Fertig",
+    "close": "Закрыть"
   },
   "onboarding": {
     "steps": {
@@ -1919,7 +1920,6 @@
       "viewAll": "Показать все"
     },
     "intelligence": {
-      "listTitle": "Разговоры",
       "empty": "Разговоров пока нет",
       "preparing": "Аналитика для этого разговора готовится.",
       "noTranscript": "Расшифровки пока нет.",
@@ -1948,29 +1948,37 @@
       "searchResults_many": "Найдено разговоров: {{count}}",
       "searchResults_other": "Найдено разговоров: {{count}}",
       "match": {
-        "transcript": "сказано",
-        "note": "ваша заметка",
-        "summary": "сводка",
-        "title": "заголовок"
+        "transcript": "Сказано",
+        "note": "Ваша заметка",
+        "summary": "Сводка",
+        "title": "Заголовок"
       },
-      "matchRelated": "связано",
+      "matchRelated": "Связано",
       "markedCount_one": "{{count}} отмеченный момент",
       "markedCount_few": "{{count}} отмеченных момента",
       "markedCount_many": "{{count}} отмеченных моментов",
       "markedCount_other": "{{count}} отмеченного момента",
-      "emptyHint": "Нажмите {{shortcut}} где угодно и задайте вопрос, на который никто не знает ответа",
-      "backToList": "Назад",
       "copy": "Копировать",
       "copied": "Скопировано",
-      "save": "Сохранить",
-      "vault": "Хранилище",
       "vaultSaved": "В хранилище",
       "vaultFailed": "Не сохранено",
-      "vaultLabel": "Сохранить этот разговор в хранилище Obsidian",
       "delete": "Удалить",
       "deleteConfirm": "Удалить этот разговор?",
       "deleteYes": "Удалить",
-      "deleteCancel": "Оставить",
+      "speakerCount_one": "{{count}} собеседник",
+      "speakerCount_few": "{{count}} собеседника",
+      "speakerCount_many": "{{count}} собеседников",
+      "speakerCount_other": "{{count}} собеседника",
+      "copySummary": "Копировать резюме",
+      "copyTranscript": "Копировать расшифровку",
+      "export": "Экспорт",
+      "exportSummary": "Экспортировать резюме в Markdown",
+      "exportTranscript": "Экспортировать расшифровку как текст",
+      "more": "Другие действия",
+      "vaultAction": "Сохранить в хранилище",
+      "deleteDescription": "Расшифровка, резюме и отмеченные моменты будут удалены из Oats. Это действие нельзя отменить.",
+      "emptyDescription": "Здесь появятся записанные разговоры — с резюме и расшифровкой, по которой можно искать.",
+      "noMatchesHint": "Поиск идёт по названиям, резюме, расшифровкам и вашим заметкам.",
       "needsSummaryModel": "Сводки нет: на этом компьютере не готова модель для сводок. Настройте её в разделе Настройки › Дополнительно › Языковые модели, а затем вернитесь, чтобы составить сводку.",
       "notSummarized": "Сводка для этого разговора ещё не составлена.",
       "summarize": "Составить сводку"
@@ -1984,18 +1992,20 @@
       "openThreads_other": "{{count}} темы всё ещё открыты: {{threads}}",
       "showAnswers": "Показать ответы",
       "hideAnswers": "Скрыть ответы",
-      "marked": "Вы отметили",
       "addNote": "Добавить заметку",
       "noteLabel": "Заметка к моменту {{time}}",
       "removeMark": "Убрать",
       "removeMarkLabel": "Убрать отметку на {{time}}",
-      "markedTurn": "Отмечено."
+      "markedTurn": "Отмечено.",
+      "markedTitle": "Отмеченные моменты"
     },
     "find": {
       "label": "Найти в этом разговоре",
       "count": "{{current}} из {{total}}",
       "none": "Совпадений нет",
-      "close": "Закрыть"
+      "close": "Закрыть",
+      "previous": "Предыдущее совпадение",
+      "next": "Следующее совпадение"
     },
     "settings": {
       "title": "Минимум решений.",
@@ -2106,13 +2116,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "задан",
-      "answered": "отвечен",
-      "uncertain": "неуверенно",
-      "silence": "нет ответа",
-      "denied": "никто не знал"
+      "asked": "Задан",
+      "answered": "Отвечен",
+      "uncertain": "Неуверенно",
+      "silence": "Нет ответа",
+      "denied": "Никто не знал"
     },
-    "searched": "найдено",
+    "searched": "Найдено",
     "dismiss": "Скрыть вопрос",
     "earlier": "ещё {{count}}",
     "collapse": "Показать меньше",
@@ -2157,7 +2167,6 @@
   "lifetime": {
     "title": "К чему вы возвращаетесь",
     "viewMap": "Карта",
-    "backToList": "Назад к разговорам",
     "recurring": "Повторяется:",
     "inCount_one": "{{count}} разговор",
     "inCount_few": "{{count}} разговора",

@@ -131,7 +131,8 @@
     "save": "Enregistrer",
     "copy": "Copier",
     "copied": "Copié",
-    "done": "Terminé"
+    "done": "Terminé",
+    "close": "Fermer"
   },
   "onboarding": {
     "steps": {
@@ -1917,7 +1918,6 @@
       "viewAll": "Tout afficher"
     },
     "intelligence": {
-      "listTitle": "Conversations",
       "empty": "Aucune conversation",
       "preparing": "L'intelligence de cette conversation est en cours de préparation.",
       "noTranscript": "Pas encore de transcription.",
@@ -1942,27 +1942,33 @@
       "searchResults_one": "{{count}} conversation correspond",
       "searchResults_other": "{{count}} conversations correspondent",
       "match": {
-        "transcript": "dit",
-        "note": "votre note",
-        "summary": "résumé",
-        "title": "titre"
+        "transcript": "Dit",
+        "note": "Votre note",
+        "summary": "Résumé",
+        "title": "Titre"
       },
-      "matchRelated": "connexe",
+      "matchRelated": "Connexe",
       "markedCount_one": "{{count}} moment marqué",
       "markedCount_other": "{{count}} moments marqués",
-      "emptyHint": "Appuyez sur {{shortcut}} n'importe où et posez une question dont personne ne connaît la réponse",
-      "backToList": "Retour",
       "copy": "Copier",
       "copied": "Copié",
-      "save": "Enregistrer",
-      "vault": "Coffre",
       "vaultSaved": "Dans le coffre",
       "vaultFailed": "Non enregistré",
-      "vaultLabel": "Enregistrer cette conversation dans le coffre Obsidian",
       "delete": "Supprimer",
       "deleteConfirm": "Supprimer cette conversation ?",
       "deleteYes": "Supprimer",
-      "deleteCancel": "Conserver",
+      "speakerCount_one": "{{count}} intervenant",
+      "speakerCount_other": "{{count}} intervenants",
+      "copySummary": "Copier le résumé",
+      "copyTranscript": "Copier la transcription",
+      "export": "Exporter",
+      "exportSummary": "Exporter le résumé en Markdown",
+      "exportTranscript": "Exporter la transcription en texte",
+      "more": "Plus d’actions",
+      "vaultAction": "Enregistrer dans le coffre",
+      "deleteDescription": "Sa transcription, son résumé et ses moments marqués sont supprimés d’Oats. Cette action est irréversible.",
+      "emptyDescription": "Les conversations que vous enregistrez apparaissent ici, avec un résumé et une transcription dans laquelle chercher.",
+      "noMatchesHint": "La recherche porte sur les titres, les résumés, les transcriptions et vos notes.",
       "needsSummaryModel": "Pas de résumé : aucun modèle de résumé n'est prêt sur cet ordinateur. Configurez-en un dans Réglages › Avancé › Modèles de langage, puis revenez pour résumer.",
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
       "summarize": "Résumer"
@@ -1974,18 +1980,20 @@
       "openThreads_other": "{{count}} fils encore ouverts : {{threads}}",
       "showAnswers": "Voir les réponses",
       "hideAnswers": "Masquer les réponses",
-      "marked": "Ce que vous avez marqué",
       "addNote": "Ajouter une note",
       "noteLabel": "Note pour le moment à {{time}}",
       "removeMark": "Retirer",
       "removeMarkLabel": "Retirer la marque à {{time}}",
-      "markedTurn": "Marqué."
+      "markedTurn": "Marqué.",
+      "markedTitle": "Moments marqués"
     },
     "find": {
       "label": "Rechercher dans cette conversation",
       "count": "{{current}} sur {{total}}",
       "none": "Aucun résultat",
-      "close": "Fermer"
+      "close": "Fermer",
+      "previous": "Résultat précédent",
+      "next": "Résultat suivant"
     },
     "settings": {
       "title": "Peu de choix.",
@@ -2096,13 +2104,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "posée",
-      "answered": "répondue",
-      "uncertain": "incertaine",
-      "silence": "sans réponse",
-      "denied": "personne ne savait"
+      "asked": "Posée",
+      "answered": "Répondue",
+      "uncertain": "Incertaine",
+      "silence": "Sans réponse",
+      "denied": "Personne ne savait"
     },
-    "searched": "recherchée",
+    "searched": "Recherchée",
     "dismiss": "Ignorer la question",
     "earlier": "{{count}} précédentes",
     "collapse": "Afficher moins",
@@ -2139,7 +2147,6 @@
   "lifetime": {
     "title": "Ce sur quoi vous revenez",
     "viewMap": "Carte",
-    "backToList": "Retour aux conversations",
     "recurring": "Récurrent :",
     "inCount_one": "{{count}} conversation",
     "inCount_other": "{{count}} conversations",

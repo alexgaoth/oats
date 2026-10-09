@@ -131,7 +131,8 @@
     "save": "Guardar",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo"
+    "done": "Listo",
+    "close": "Cerrar"
   },
   "onboarding": {
     "steps": {
@@ -1917,7 +1918,6 @@
       "viewAll": "Ver todas"
     },
     "intelligence": {
-      "listTitle": "Conversaciones",
       "empty": "Aún no hay conversaciones",
       "preparing": "Se está preparando la inteligencia de esta conversación.",
       "noTranscript": "Aún no hay transcripción.",
@@ -1942,27 +1942,33 @@
       "searchResults_one": "{{count}} conversación coincide",
       "searchResults_other": "{{count}} conversaciones coinciden",
       "match": {
-        "transcript": "dicho",
-        "note": "tu nota",
-        "summary": "resumen",
-        "title": "título"
+        "transcript": "Dicho",
+        "note": "Tu nota",
+        "summary": "Resumen",
+        "title": "Título"
       },
-      "matchRelated": "relacionado",
+      "matchRelated": "Relacionado",
       "markedCount_one": "{{count}} momento marcado",
       "markedCount_other": "{{count}} momentos marcados",
-      "emptyHint": "Pulsa {{shortcut}} en cualquier lugar y pregunta algo que nadie sepa",
-      "backToList": "Volver",
       "copy": "Copiar",
       "copied": "Copiado",
-      "save": "Guardar",
-      "vault": "Bóveda",
       "vaultSaved": "En la bóveda",
       "vaultFailed": "No se guardó",
-      "vaultLabel": "Guardar esta conversación en la bóveda de Obsidian",
       "delete": "Eliminar",
-      "deleteConfirm": "¿eliminar esta conversación?",
+      "deleteConfirm": "¿Eliminar esta conversación?",
       "deleteYes": "Eliminar",
-      "deleteCancel": "Conservar",
+      "speakerCount_one": "{{count}} hablante",
+      "speakerCount_other": "{{count}} hablantes",
+      "copySummary": "Copiar el resumen",
+      "copyTranscript": "Copiar la transcripción",
+      "export": "Exportar",
+      "exportSummary": "Exportar el resumen como Markdown",
+      "exportTranscript": "Exportar la transcripción como texto",
+      "more": "Más acciones",
+      "vaultAction": "Guardar en la bóveda",
+      "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
+      "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
+      "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
       "needsSummaryModel": "Sin resumen: no hay ningún modelo de resumen listo en este equipo. Configura uno en Ajustes › Avanzado › Modelos de lenguaje y vuelve para resumir.",
       "notSummarized": "Esta conversación aún no se ha resumido.",
       "summarize": "Resumir"
@@ -1974,18 +1980,20 @@
       "openThreads_other": "{{count}} hilos siguen abiertos: {{threads}}",
       "showAnswers": "Ver las respuestas",
       "hideAnswers": "Ocultar las respuestas",
-      "marked": "Lo que marcaste",
       "addNote": "Añadir una nota",
       "noteLabel": "Nota del momento en {{time}}",
       "removeMark": "Quitar",
       "removeMarkLabel": "Quitar la marca en {{time}}",
-      "markedTurn": "Marcado."
+      "markedTurn": "Marcado.",
+      "markedTitle": "Momentos marcados"
     },
     "find": {
       "label": "Buscar en esta conversación",
       "count": "{{current}} de {{total}}",
       "none": "Sin coincidencias",
-      "close": "Cerrar"
+      "close": "Cerrar",
+      "previous": "Coincidencia anterior",
+      "next": "Coincidencia siguiente"
     },
     "settings": {
       "title": "Pocas decisiones.",
@@ -2096,13 +2104,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "preguntado",
-      "answered": "respondido",
-      "uncertain": "incierto",
-      "silence": "sin respuesta",
-      "denied": "no lo sabían"
+      "asked": "Preguntado",
+      "answered": "Respondido",
+      "uncertain": "Incierto",
+      "silence": "Sin respuesta",
+      "denied": "No lo sabían"
     },
-    "searched": "buscado",
+    "searched": "Buscado",
     "dismiss": "Descartar pregunta",
     "earlier": "{{count}} anteriores",
     "collapse": "Mostrar menos",
@@ -2139,7 +2147,6 @@
   "lifetime": {
     "title": "A lo que siempre vuelves",
     "viewMap": "Mapa",
-    "backToList": "Volver a las conversaciones",
     "recurring": "Recurrente:",
     "inCount_one": "{{count}} conversación",
     "inCount_other": "{{count}} conversaciones",

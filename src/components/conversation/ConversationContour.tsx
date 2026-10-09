@@ -147,8 +147,8 @@ function readPalette(element: HTMLElement): Palette {
     ink: value("--color-foreground", "#2b2620"),
     husk: value("--color-muted-foreground", "#6b6459"),
     hairline: value("--color-border", "#e3d9c6"),
-    flax: value("--color-primary", "#c67b27"),
-    moss: value("--graph-answered", "#7c8b6f"),
+    flax: value("--graph-uncertain", "#d97706"),
+    moss: value("--graph-answered", "#16a34a"),
     oxide: value("--color-destructive", "#c05b3c"),
   };
 }
