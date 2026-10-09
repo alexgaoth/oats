@@ -586,6 +586,13 @@ declare global {
       ) => Promise<{ success: boolean; error?: string }>;
       exportDictionary: (words: string[]) => Promise<{ success: boolean; error?: string }>;
       searchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
+      // Meeting notes whose title, summary, transcript words or mark notes
+      // contain `query` (case- and accent-folded), newest first, skipping the
+      // ones the caller already holds. Whole rows; at most `limit` (default 50).
+      recallNotes: (
+        query: string,
+        options?: { excludeIds?: number[]; limit?: number }
+      ) => Promise<NoteItem[]>;
       semanticSearchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
       semanticReindexAll: () => Promise<{ success: boolean; indexed?: number; error?: string }>;
       onSemanticReindexProgress: (
@@ -986,7 +993,6 @@ declare global {
       onShowSettings?: (callback: () => void) => () => void;
 
       // Accessibility permission events (macOS)
-      onAccessibilityMissing?: (callback: () => void) => () => void;
       checkAccessibilityTrusted?: () => Promise<boolean>;
 
       // Gemini API key management
@@ -1540,13 +1546,6 @@ declare global {
         action: string
       ) => Promise<{ success: boolean }>;
       joinCalendarMeeting?: (eventId: string) => Promise<{ success: boolean }>;
-      getPendingMeetingNoteNavigation?: () => Promise<{
-        noteId: number;
-        folderId: number;
-        event: any;
-        trigger?: "hotkey" | "manual" | "calendar-join";
-      } | null>;
-      onMeetingNoteNavigationPending?: (callback: () => void) => () => void;
       onNavigateToNote?: (
         callback: (data: { noteId: number; folderId: number | null }) => void
       ) => () => void;

@@ -194,10 +194,6 @@
       "installButton": "Installa aggiornamento",
       "availableButton": "Aggiornamento disponibile"
     },
-    "accessibilityMissing": {
-      "title": "Autorizzazioni di accessibilità necessarie",
-      "description": "Abbiamo rilevato che Oats ha bisogno delle autorizzazioni di accessibilità per funzionare correttamente. Abilitale qui sotto."
-    },
     "history": {
       "couldNotLoadTitle": "Impossibile caricare la cronologia",
       "couldNotLoadDescription": "Si è verificato un errore nel caricamento delle trascrizioni. Chiudi e riapri l'app.",
@@ -1863,12 +1859,6 @@
     "copied": "Copiato",
     "waitingForInput": "Di qualcosa..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "Tu",
-      "others": "Altri"
-    }
-  },
   "meetingNotification": {
     "title": "Riunione rilevata",
     "body": {
@@ -1972,7 +1962,10 @@
       "delete": "Elimina",
       "deleteConfirm": "Eliminare questa conversazione?",
       "deleteYes": "Elimina",
-      "deleteCancel": "Mantieni"
+      "deleteCancel": "Mantieni",
+      "needsSummaryModel": "Nessun riassunto: nessun modello di riassunto è pronto su questo computer. Configurane uno in Impostazioni › Avanzate › Modelli linguistici, poi torna qui per riassumere.",
+      "notSummarized": "Questa conversazione non è ancora stata riassunta.",
+      "summarize": "Riassumi"
     },
     "review": {
       "title": "Ciò che è rimasto aperto",
@@ -2059,7 +2052,8 @@
       "no-speech-engine": "Il motore vocale locale è assente. Reinstallare Oats lo ripristina.",
       "no-model": "Il modello vocale incluso non si è installato. Riavvia Oats; se persiste, reinstalla.",
       "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni.",
-      "question-cards-off": "Le schede delle domande sono disattivate: le domande passeranno in silenzio. Riattiva l'assistente di conversazione in Avanzate."
+      "question-cards-off": "Le schede delle domande sono disattivate: le domande passeranno in silenzio. Riattiva l'assistente di conversazione in Avanzate.",
+      "no-summary-model": "Le conversazioni verranno salvate senza titolo né riassunto: nessun modello di riassunto è pronto. Configurane uno in Impostazioni › Avanzate › Modelli linguistici."
     },
     "aide": {
       "title": "Assistente di conversazione",

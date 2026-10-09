@@ -57,10 +57,16 @@ import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
-import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
+import {
+  findExcerpt,
+  mergeRecall,
+  recallText,
+  withOlderMatches,
+} from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
+import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
   momentSegment,
   parseMoments,
@@ -93,7 +99,9 @@ import { useConversationPreflight } from "../hooks/useConversationPreflight";
 import { getCachedPlatform } from "../utils/platform";
 import { formatHotkey } from "../utils/hotkeyLabel";
 import { initializeActions } from "../stores/actionStore";
-import { runBackgroundAction } from "../stores/actionProcessingStore";
+import { runBackgroundAction, useActionProcessingStore } from "../stores/actionProcessingStore";
+import { useSummaryReadiness } from "../hooks/useSummaryReadiness";
+import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
@@ -174,9 +182,10 @@ function plainPreview(raw: string | null | undefined): string {
  * A stored transcript as readable text.
  *
  * The speaker labels take a `t` because they are user-facing copy, and they
- * reach further than the screen: this feeds the reading view, the list preview,
- * `copy`, and the saved `.txt`. Hard-coded, they put English into every
- * transcript and every export in all ten locales.
+ * reach further than the screen: this feeds the reading view, the list preview
+ * and `copy`. Hard-coded, they put English into every transcript and every
+ * export in all ten locales. The saved `.txt` is written in the main process by
+ * `helpers/transcriptFormatter.js`, which labels speakers by the same rule.
  */
 function transcriptText(raw: string | null, t: TFunction): string {
   if (!raw) return "";
@@ -225,6 +234,44 @@ function parseSegments(raw: string | null): TranscriptSegment[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Write a conversation's title, summary and threads.
+ *
+ * Finish runs this once, automatically. The record runs it again on request —
+ * for a conversation recorded before a summary model existed, or one whose
+ * summary was cut off by a quit — which until now could never be retried,
+ * because nothing but the Finish effect ever called it.
+ */
+async function summarizeConversation(
+  noteId: number,
+  transcript: string,
+  t: TFunction,
+  { allowTitleGeneration }: { allowTitleGeneration: boolean }
+): Promise<void> {
+  const action = (await initializeActions()).find((item) => item.is_builtin);
+  if (!action) return;
+  const settings = useSettingsStore.getState();
+  const config = selectResolvedNoteFormatting(settings);
+  const formatted = transcriptText(transcript, t);
+  runBackgroundAction(
+    noteId,
+    `## Conversation Transcript\n${formatted}`,
+    `${transcript.length}-${transcript.slice(0, 50)}`,
+    action,
+    {
+      isCloudMode: selectIsCloudNoteFormattingMode(settings),
+      modelId: config.model,
+      isMeetingNote: true,
+      allowTitleGeneration,
+    },
+    {
+      noModel: t("oats.errors.noModel"),
+      noEndpoint: t("oats.errors.noEndpoint"),
+      actionFailed: t("oats.errors.actionFailed"),
+    }
+  );
 }
 
 // Same forgiving fingerprint comparison the lifetime graph uses; kept local here
@@ -519,28 +566,9 @@ function ConversationSurface() {
       } finally {
         finishSaved();
       }
-      const action = (await initializeActions()).find((item) => item.is_builtin);
-      if (!action) return;
-      const settings = useSettingsStore.getState();
-      const config = selectResolvedNoteFormatting(settings);
-      const formatted = transcriptText(finalTranscript, t);
-      runBackgroundAction(
-        recordingNoteId,
-        `## Conversation Transcript\n${formatted}`,
-        `${finalTranscript.length}-${finalTranscript.slice(0, 50)}`,
-        action,
-        {
-          isCloudMode: selectIsCloudNoteFormattingMode(settings),
-          modelId: config.model,
-          isMeetingNote: true,
-          allowTitleGeneration: true,
-        },
-        {
-          noModel: t("oats.errors.noModel"),
-          noEndpoint: t("oats.errors.noEndpoint"),
-          actionFailed: t("oats.errors.actionFailed"),
-        }
-      );
+      await summarizeConversation(recordingNoteId, finalTranscript, t, {
+        allowTitleGeneration: true,
+      });
     })();
     // `t` is a dependency only because the failure messages are translated. A
     // language change re-runs this, but the `wasRecording` guard above makes that
@@ -1151,8 +1179,34 @@ function IntelligenceViews({
   // in place beats making the user hunt for where a title can be changed.
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
-  const selected = notes.find((note) => note.id === selectedId) ?? notes[0] ?? null;
+  // A conversation opened from a result the list does not hold — one older than
+  // the newest hundred, found by the main process's scan or by the vector index.
+  // `selected` fell back to `notes[0]` for an id it could not find, so opening
+  // one of those opened the newest conversation instead.
+  const [openedNote, setOpenedNote] = useState<NoteItem | null>(null);
+  const selected =
+    notes.find((note) => note.id === selectedId) ??
+    (openedNote && openedNote.id === selectedId ? openedNote : null) ??
+    notes[0] ??
+    null;
   const { events, reload } = useConversationEvents(selected?.id ?? null);
+
+  // The store's listeners keep only the notes it holds current, so a rename, a
+  // mark's note, or a deletion has to reach an opened older one here.
+  const openedId = openedNote?.id ?? null;
+  useEffect(() => {
+    if (openedId == null) return undefined;
+    const offUpdated = window.electronAPI?.onNoteUpdated?.((note) => {
+      if (note?.id === openedId) setOpenedNote(note);
+    });
+    const offDeleted = window.electronAPI?.onNoteDeleted?.((payload) => {
+      if (payload?.id === openedId) setOpenedNote(null);
+    });
+    return () => {
+      offUpdated?.();
+      offDeleted?.();
+    };
+  }, [openedId]);
 
   // Sent by the Conversation surface's last-entry row (see the shell). Both
   // halves are needed: the listener covers a mounted Intelligence, and the
@@ -1239,14 +1293,58 @@ function IntelligenceViews({
     if (notes.length && selectedId == null) setSelectedId(notes[0].id);
   }, [notes, selectedId]);
 
-  // Local filter over title, summary, and transcript. Everything is already in
-  // memory, so this needs no index and no IPC — and it is the only way to find a
-  // conversation by what was said in it rather than by scrolling.
+  // What the list does not hold. It holds the hundred most recently updated
+  // conversations and nothing else, so a word said in anything older could not
+  // be found at all. The main process runs the same literal test over the rest
+  // and returns only the matches: no transcript is loaded that a query does not
+  // need. Keyed on which notes are held, not on the array, which is replaced on
+  // every recording checkpoint.
+  const heldIds = useMemo(() => notes.map((note) => note.id).join(","), [notes]);
+  const [olderNotes, setOlderNotes] = useState<NoteItem[]>([]);
+  // Until the scan for this query answers, "nothing matches" is not yet true.
+  const [olderPending, setOlderPending] = useState(false);
+  useEffect(() => {
+    const needle = query.trim();
+    if (!needle) {
+      setOlderNotes([]);
+      setOlderPending(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setOlderPending(true);
+    // Debounced like the vector search below: each call reads every older
+    // transcript. A newer call also ends the older one's scan in main.
+    const timer = window.setTimeout(() => {
+      const excludeIds = heldIds ? heldIds.split(",").map(Number) : [];
+      void Promise.resolve(window.electronAPI?.recallNotes?.(needle, { excludeIds }))
+        .then((found) => {
+          if (cancelled) return;
+          setOlderNotes(Array.isArray(found) ? found : []);
+          setOlderPending(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setOlderNotes([]);
+          setOlderPending(false);
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, heldIds]);
+
+  // Local filter over title, summary, and transcript: the conversations the list
+  // holds, then the older matches for this query. The older ones are tested
+  // again here, so the matches for a previous query that this one no longer
+  // matches drop out on the keystroke, not when the next answer lands.
+  const searchable = useMemo(() => withOlderMatches(notes, olderNotes), [notes, olderNotes]);
   const literalNotes = useMemo(() => {
     const needle = foldText(query.trim());
     if (!needle) return notes;
-    return notes.filter((note) => foldedNote(note).includes(needle));
-  }, [notes, query]);
+    return searchable.filter((note) => foldedNote(note).includes(needle));
+  }, [notes, searchable, query]);
+  const awaitingOlder = olderPending && query.trim().length > 0;
 
   // What the local vector index thinks the question is about.
   //
@@ -1330,7 +1428,20 @@ function IntelligenceViews({
     await initializeNotes("meeting", 100);
   };
 
-  const summary = selected?.enhanced_content || t("oats.intelligence.preparing");
+  // What the summary area can honestly say. "Being prepared" only while it is;
+  // otherwise why there is none, and the way to get one.
+  const summaryReadinessNow = useSummaryReadiness();
+  const summarizing = useActionProcessingStore((state) =>
+    selected ? state.noteStates[selected.id]?.status === "processing" : false
+  );
+  const summaryState: "summary" | "preparing" | "needs-model" | "not-summarized" =
+    selected?.enhanced_content
+      ? "summary"
+      : summarizing
+        ? "preparing"
+        : summaryReadinessNow && summaryReadinessNow !== "ready"
+          ? "needs-model"
+          : "not-summarized";
 
   // The opened conversation's own contour: its speech, its questions with the
   // verdicts they actually reached, and its topics — all from the record rather
@@ -1514,6 +1625,7 @@ function IntelligenceViews({
             <ConversationActions
               note={selected}
               tab={tab}
+              events={events}
               onDeleted={async () => {
                 setReading(false);
                 setSelectedId(null);
@@ -1547,10 +1659,42 @@ function IntelligenceViews({
                   setTab("transcript");
                 }}
               />
-              <MarkdownRenderer
-                content={summary}
-                className="mt-7 text-[15px] leading-7 text-foreground"
-              />
+              {summaryState === "summary" && (
+                <MarkdownRenderer
+                  content={selected?.enhanced_content ?? ""}
+                  className="mt-7 text-[15px] leading-7 text-foreground"
+                />
+              )}
+              {summaryState === "preparing" && (
+                <p className="mt-7 text-sm text-muted-foreground">
+                  {t("oats.intelligence.preparing")}
+                </p>
+              )}
+              {summaryState === "needs-model" && (
+                <p className="mt-7 text-sm text-muted-foreground">
+                  {t("oats.intelligence.needsSummaryModel")}
+                </p>
+              )}
+              {summaryState === "not-summarized" && selected && (
+                <p className="mt-7 text-sm text-muted-foreground">
+                  {t("oats.intelligence.notSummarized")}{" "}
+                  <button
+                    type="button"
+                    className="rounded-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() =>
+                      void summarizeConversation(selected.id, selected.transcript ?? "", t, {
+                        // A title somebody wrote is theirs; only a placeholder
+                        // is replaced.
+                        allowTitleGeneration: isRegenerableNoteTitle(selected.title, [
+                          t("oats.untitled"),
+                        ]),
+                      })
+                    }
+                  >
+                    {t("oats.intelligence.summarize")}
+                  </button>
+                </p>
+              )}
             </>
           )}
           {tab === "transcript" && finding !== null && (
@@ -1685,9 +1829,13 @@ function IntelligenceViews({
                       })}.`
                     : ""
                 }`
-              : recalled.length
-                ? t("oats.intelligence.onlyRelated")
-                : t("oats.intelligence.noMatches")}
+              : // Older conversations are still being read: saying nothing
+                // matches now would be a claim the next moment may take back.
+                awaitingOlder
+                ? ""
+                : recalled.length
+                  ? t("oats.intelligence.onlyRelated")
+                  : t("oats.intelligence.noMatches")}
         </p>
 
         {/* Nothing was said in those words.
@@ -1698,7 +1846,7 @@ function IntelligenceViews({
             feature. But the page must not imply a match it does not have: with
             no literal hit, every row below is the index's guess, and the line
             says so before the reader reads them as findings. */}
-        {query.trim() && !literalNotes.length && recalled.length > 0 && (
+        {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
           <p className="mt-8 text-[13px] leading-6 text-muted-foreground">
             {t("oats.intelligence.onlyRelated")}
           </p>
@@ -1711,6 +1859,9 @@ function IntelligenceViews({
                 key={note.id}
                 onClick={() => {
                   setSelectedId(note.id);
+                  // A result the list does not hold is kept here, or the reading
+                  // view would open the newest conversation in its place.
+                  if (!notes.some((held) => held.id === note.id)) setOpenedNote(note);
                   // Land where the match is. Opening every result on the summary
                   // meant that finding a conversation by something said in it
                   // dropped you at the top of a different document, with the
@@ -1763,7 +1914,7 @@ function IntelligenceViews({
               </button>
             ))}
           </div>
-        ) : (
+        ) : awaitingOlder ? null : (
           <EmptyState
             // `.trim()`, like the announcement beside it: a first-run user who
             // types a space should see the empty state that tells them what to
@@ -1784,22 +1935,16 @@ function IntelligenceViews({
  * NFD, drop the marks, lowercase — over a hundred transcripts each time would
  * be the same work repeated for an answer that has not changed. A note object
  * is replaced whenever the note is, so a stale fold cannot outlive its text.
+ *
+ * What is searched is `recallText`, the same function the main process runs
+ * over the conversations this list does not hold: the words of every turn and
+ * who said them, never the JSON keys they are stored under.
  */
 const foldedNotes = new WeakMap<NoteItem, string>();
 function foldedNote(note: NoteItem): string {
   let folded = foldedNotes.get(note);
   if (folded === undefined) {
-    folded = [
-      note.title,
-      note.enhanced_content,
-      note.transcript,
-      // The reader's own notes on what they marked — the words they are most
-      // likely to remember having written.
-      ...parseMoments(note.conversation_marks ?? null).map((moment) => moment.note),
-    ]
-      .filter(Boolean)
-      .map((field) => foldText(field))
-      .join("\n");
+    folded = foldText(recallText(note));
     foldedNotes.set(note, folded);
   }
   return folded;
@@ -2054,11 +2199,11 @@ function ConversationReview({
  * The transcript as the timed record it is, rather than as one wall of text.
  *
  * The reading view used to render `transcriptText()` — the same flat string the
- * clipboard and the `.txt` export get — so an hour of conversation arrived with
- * no bearings at all. The whole product draws time as its signature, and the one
- * surface where you go to *read* what was said showed none of it: a search
- * result landed you somewhere in a wall with nothing to say how far in you were,
- * or how long the room had been on the subject.
+ * clipboard gets — so an hour of conversation arrived with no bearings at all.
+ * The whole product draws time as its signature, and the one surface where you
+ * go to *read* what was said showed none of it: a search result landed you
+ * somewhere in a wall with nothing to say how far in you were, or how long the
+ * room had been on the subject.
  *
  * Each turn now carries its offset from the first thing said. The gutter is mono
  * and quiet — it is a coordinate, not content — and it is `aria-hidden`, because
@@ -2066,8 +2211,9 @@ function ConversationReview({
  * before every line. The time is on the paragraph as a `title` for anyone who
  * wants it.
  *
- * `transcriptText` is untouched: copy and export still produce the plain text
- * they always did.
+ * `transcriptText` is untouched: copy still produces the plain text it always
+ * did. The saved `.txt` carries the same offsets as this gutter, written by
+ * `helpers/transcriptFormatter.js` from the same first turn.
  */
 function TranscriptView({
   note,
@@ -2333,10 +2479,13 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 function ConversationActions({
   note,
   tab,
+  events,
   onDeleted,
 }: {
   note: NoteItem;
   tab: DetailTab;
+  /** The conversation's question events, for the open questions Save writes. */
+  events: ConversationEvent[];
   onDeleted: () => void | Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -2347,12 +2496,12 @@ function ConversationActions({
   const [filed, setFiled] = useState<boolean | null>(null);
 
   // Whatever is being read is what leaves — no menu of formats, no dialog asking
-  // which part. The transcript tab copies the transcript, the other two copy the
-  // summary, because that is what is on the screen.
+  // which part. The transcript tab copies the transcript with the screen's
+  // speaker labels. The other two copy exactly what Save writes from them: the
+  // title, the marks, the open questions and the summary. Copy used to take the
+  // summary prose alone, so the clipboard and the saved file were two documents.
   const payload = () =>
-    tab === "transcript"
-      ? transcriptText(note.transcript, t)
-      : note.enhanced_content || note.content || "";
+    tab === "transcript" ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
 
   useEffect(() => setConfirming(false), [note.id, tab]);
   useEffect(() => setFiled(null), [note.id]);

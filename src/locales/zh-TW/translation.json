@@ -194,10 +194,6 @@
       "installButton": "安裝更新",
       "availableButton": "有可用更新"
     },
-    "accessibilityMissing": {
-      "title": "需要輔助使用權限",
-      "description": "我們偵測到 Oats 需要輔助使用權限才能正常運作。請在下方啟用。"
-    },
     "history": {
       "couldNotLoadTitle": "無法載入歷史記錄",
       "couldNotLoadDescription": "載入轉錄記錄時發生錯誤。請嘗試關閉並重新開啟應用程式。",
@@ -1858,12 +1854,6 @@
     "copied": "已複製",
     "waitingForInput": "說點什麼..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "你",
-      "others": "其他人"
-    }
-  },
   "meetingNotification": {
     "title": "偵測到會議",
     "body": {
@@ -1967,7 +1957,10 @@
       "delete": "刪除",
       "deleteConfirm": "刪除這次對話？",
       "deleteYes": "刪除",
-      "deleteCancel": "保留"
+      "deleteCancel": "保留",
+      "needsSummaryModel": "目前沒有摘要：這台電腦上沒有可用的摘要模型。請在 設定 › 進階 › 語言模型 中設定，然後回來產生摘要。",
+      "notSummarized": "此對話尚未產生摘要。",
+      "summarize": "產生摘要"
     },
     "review": {
       "title": "尚未解決的內容",
@@ -2054,7 +2047,8 @@
       "no-speech-engine": "本機語音引擎缺失。重新安裝 Oats 即可復原。",
       "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
-      "question-cards-off": "問題卡片已關閉，問題會靜靜溜走。請在進階設定中重新開啟對話助手。"
+      "question-cards-off": "問題卡片已關閉，問題會靜靜溜走。請在進階設定中重新開啟對話助手。",
+      "no-summary-model": "摘要模型尚未就緒，對話將以無標題、無摘要的形式儲存。請在 設定 › 進階 › 語言模型 中進行設定。"
     },
     "aide": {
       "title": "對話助手",

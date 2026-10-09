@@ -64,7 +64,6 @@ class WindowManager {
     this._ignoringMouseEvents = null;
     this._oatCursorWatch = null;
     this._isDictatingToggle = false;
-    this._pendingMeetingNoteNavigation = null;
 
     app.on("before-quit", () => {
       this.isQuitting = true;
@@ -1639,18 +1638,6 @@ class WindowManager {
     } else {
       win.webContents.send(channel, data);
     }
-  }
-
-  async queueMeetingNoteNavigation(payload) {
-    this._pendingMeetingNoteNavigation = payload;
-    await this.createControlPanelWindow();
-    this.sendToControlPanel("meeting-note-navigation-pending");
-  }
-
-  consumePendingMeetingNoteNavigation() {
-    const payload = this._pendingMeetingNoteNavigation;
-    this._pendingMeetingNoteNavigation = null;
-    return payload;
   }
 
   snapControlPanelToMeetingMode() {

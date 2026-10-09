@@ -59,8 +59,8 @@ function MainApp() {
     }
 
     if (isDictationPanel && !resolved) {
-      // Keep the dictation overlay hidden during onboarding — OnboardingFlow
-      // shows it explicitly when the user reaches the activation step.
+      // Keep the floating oat hidden during onboarding; it comes back when
+      // onboarding completes (handleOnboardingComplete).
       window.electronAPI?.hideWindow?.();
     }
 
@@ -70,6 +70,10 @@ function MainApp() {
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
     localStorage.setItem("onboardingCompleted", "true");
+    // The oat was hidden "until the activation step", a step onboarding no
+    // longer has — so a new user's whole first session ran without it, while
+    // every later launch shows it. It appears as onboarding ends instead.
+    void window.electronAPI?.showDictationPanel?.();
   };
 
   if (isAgentPanel) {
