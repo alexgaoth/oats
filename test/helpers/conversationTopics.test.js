@@ -249,3 +249,70 @@ test("snapshot weights topics by time spent, not by utterance count", () => {
   const hiring = nodes.find((node) => /research|engineer|hiring/.test(node.label));
   assert.ok(pricing.durationMs > hiring.durationMs);
 });
+
+// The store reads the graph and the stack after every finalized utterance. While
+// a read committed the held turn, every change of subject was folded into the
+// current topic before the next turn could confirm it, and a real recording
+// stayed one topic from start to finish. Measured on a two-voice recording
+// through the app: three subjects in, one topic out.
+test("reading after every utterance decides nothing the tracker would not", () => {
+  const lines = [
+    "The pricing model is broken for enterprise",
+    "Enterprise pricing needs a rethink",
+    "Separately, hiring the research engineer is urgent",
+    "The research engineer role has been open for months",
+    "Now the investor demo on Friday keeps crashing",
+    "The investor demo build crashes on the slides",
+    "Coming back to enterprise pricing though, it is broken",
+  ];
+  const quiet = new ConversationTopicTracker();
+  feed(quiet, lines);
+  const read = new ConversationTopicTracker();
+  lines.forEach((text, index) => {
+    read.onUtterance({ id: `u${index}`, text, at: index * 1000 });
+    read.snapshot(index * 1000);
+    read.openThreads(index * 1000);
+  });
+  const shape = (tracker) => {
+    const { nodes, edges } = tracker.snapshot(7000);
+    return { labels: nodes.map((node) => node.label), edges };
+  };
+  assert.equal(shape(quiet).labels.length, 3);
+  assert.deepEqual(shape(read), shape(quiet));
+});
+
+test("a live read leaves a trailing aside held, and the record keeps it", () => {
+  const tracker = new ConversationTopicTracker();
+  feed(tracker, [
+    "The pricing model is broken for enterprise",
+    "Enterprise pricing needs a rethink",
+    "Separately, hiring the research engineer is urgent",
+  ]);
+  const ids = (snapshot) => snapshot.nodes.flatMap((node) => node.utteranceIds);
+  assert.ok(!ids(tracker.snapshot(3000)).includes("u2"), "not placed until the next turn");
+  assert.ok(ids(tracker.snapshot(3000, { final: true })).includes("u2"), "never lost");
+});
+
+test("a question answered while its turn is held resolves the topic it joins", () => {
+  const tracker = new ConversationTopicTracker();
+  feed(tracker, [
+    "The pricing model is broken for enterprise",
+    "Enterprise pricing needs a rethink",
+    "Separately, have we hired the research engineer yet",
+  ]);
+  // The verdict lands before the next turn has placed the question.
+  assert.equal(tracker.resolveTopicForUtterance("u2"), null);
+  tracker.onUtterance({
+    id: "u3",
+    text: "The research engineer role was filled on Monday",
+    at: 3000,
+  });
+  const hiring = tracker.snapshot(4000).nodes.find((node) => node.utteranceIds.includes("u2"));
+  assert.ok(hiring && /research|engineer|hired/.test(hiring.label));
+  assert.ok(
+    tracker.openThreads(4000).every((thread) => thread.id !== hiring.id),
+    "the answered thread is not a reminder"
+  );
+  // It is the live topic, so it reads live until the room moves on.
+  assert.equal(tracker.snapshot(4000, { final: true }).nodes.at(-1).state, "resolved");
+});

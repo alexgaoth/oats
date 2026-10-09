@@ -29,12 +29,16 @@ import type {
 import type { Snippet } from "../utils/snippets";
 import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
 import { resolveUiMode } from "../helpers/uiMode.mjs";
+import { resolveFlowMode } from "../helpers/conversationFlow.mjs";
 
 /** Which interface Oats wears. See `uiMode.mjs`. */
 export type UiMode = "work" | "field";
 
 /** The Conversation surface's two compositions. See `conversationDetail.mjs`. */
 export type ConversationDetail = "clean" | "detailed";
+
+/** How the conversation flow card draws its topics. See `conversationFlow.mjs`. */
+export type ConversationFlowView = "auto" | "stack" | "graph";
 
 let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
 
@@ -454,6 +458,8 @@ export interface SettingsState
   meetingRemoteTranscriptionUrl: string;
   /** Which composition the Conversation surface draws. See `conversationDetail.mjs`. */
   conversationDetail: ConversationDetail;
+  /** Stack, graph, or Auto choosing by the flow's shape. See `conversationFlow.mjs`. */
+  conversationFlowView: ConversationFlowView;
   /** The ledger, or the oat field. See `uiMode.mjs`. */
   uiMode: UiMode;
   conversationAideEnabled: boolean;
@@ -542,6 +548,7 @@ export interface SettingsState
   setMeetingRemoteTranscriptionType: (type: SelfHostedType) => void;
   setMeetingRemoteTranscriptionUrl: (url: string) => void;
   setConversationDetail: (value: ConversationDetail) => void;
+  setConversationFlowView: (value: ConversationFlowView) => void;
   setUiMode: (value: UiMode) => void;
   setConversationAideEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
@@ -1165,6 +1172,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   conversationDetail: resolveConversationDetail(
     isBrowser ? localStorage.getItem("conversationDetail") : null
   ) as ConversationDetail,
+  // Auto unless the person chose otherwise; an unknown stored value is Auto too.
+  conversationFlowView: resolveFlowMode(
+    isBrowser ? localStorage.getItem("conversationFlowView") : null
+  ) as ConversationFlowView,
   uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
@@ -1264,6 +1275,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setUiMode: createStringSetter("uiMode") as (value: UiMode) => void,
   setConversationDetail: createStringSetter("conversationDetail") as (
     value: ConversationDetail
+  ) => void,
+  setConversationFlowView: createStringSetter("conversationFlowView") as (
+    value: ConversationFlowView
   ) => void,
   setConversationAideEnabled: createBooleanSetter("conversationAideEnabled"),
   setConversationAideOnlineEnabled: createBooleanSetter("conversationAideOnlineEnabled"),

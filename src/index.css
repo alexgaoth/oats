@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* The enter/exit animations the shadcn components ask for (animate-in, fade-in-0,
+   zoom-in-95, slide-in-from-*). It was a dependency but never imported, so every
+   dialog, menu, tooltip and toast appeared without them. The reduced-motion
+   rule below collapses them for anyone who asked for less motion. */
+@import "tw-animate-css";
 @import "@fontsource-variable/inter";
 
 @custom-variant dark (&:where(.dark, .dark *));

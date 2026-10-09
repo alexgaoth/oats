@@ -1916,8 +1916,6 @@
       "marked": "マークしました",
       "markLabel": "この瞬間をマーク",
       "markAnnounced": "{{time}} にマークしました",
-      "threadMapLabel": "これまでに出た {{count}} 件の話題のマップ",
-      "threadMapNoQuote": "引用できる発言がありません",
       "recordTitle": "会話を録音",
       "start": "録音を開始",
       "shortcutAnywhere": "どのアプリからでも",
@@ -1925,6 +1923,45 @@
       "stop": "停止",
       "recentHeading": "最近の会話",
       "viewAll": "すべて表示"
+    },
+    "flow": {
+      "title": "会話の流れ",
+      "viewLabel": "表示方法",
+      "mode": {
+        "auto": "自動",
+        "stack": "リスト",
+        "graph": "グラフ"
+      },
+      "empty": "会話が進むと、ここに話題が表示されます。",
+      "caption": {
+        "few_one": "リストを表示中：まだ話題は {{count}} 件だけです。",
+        "few_other": "リストを表示中：まだ話題は {{count}} 件だけです。",
+        "linear": "リストを表示中：会話は一直線に進んでいます。",
+        "returns_one": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
+        "returns_other": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
+        "branching": "グラフを表示中：会話が枝分かれしています。",
+        "stack": "リストを表示中。",
+        "graph": "グラフを表示中。"
+      },
+      "state": {
+        "live": "現在",
+        "open": "未完",
+        "resolved": "解決済み",
+        "dropped": "途切れ"
+      },
+      "back_one": "{{count}} 回戻った",
+      "back_other": "{{count}} 回戻った",
+      "showMore_one": "さらに {{count}} 件表示",
+      "showMore_other": "さらに {{count}} 件表示",
+      "showFewer": "表示を減らす",
+      "stackLabel": "話題（新しい順）",
+      "graphLabel_one": "これまでに出た {{count}} 件の話題のグラフ",
+      "graphLabel_other": "これまでに出た {{count}} 件の話題のグラフ",
+      "nodeName": "{{label}}、{{state}}",
+      "nodeNameBack": "{{label}}、{{state}}、{{back}}",
+      "quote": "「{{text}}」",
+      "noQuote": "引用できる発言がありません。",
+      "earlier": "以前の会話で出た話題："
     },
     "intelligence": {
       "empty": "まだ会話がありません",
@@ -2198,14 +2235,6 @@
     "announcedBatch": "新しい質問 {{count}} 件、最新: {{question}}",
     "searchedHost": "検索済み · {{host}}"
   },
-  "openThreads": {
-    "count_one": "未完の話 {{count}} 件",
-    "count_other": "未完の話 {{count}} 件",
-    "state": {
-      "open": "未完",
-      "dropped": "途切れ"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}、{{seconds}} 秒",
     "seconds_one": "{{count}} 秒",
@@ -2214,13 +2243,6 @@
     "returned_other": "{{count}} 回戻った",
     "search": "検索",
     "noQuestions": "この話の筋に質問はありません。"
-  },
-  "suggestions": {
-    "title": "話す価値のあること",
-    "unfinished": "未決のまま",
-    "shallow": "ほとんど触れず",
-    "adjacent_one": "よく一緒に出る",
-    "adjacent_other": "よく一緒に出る"
   },
   "lifetime": {
     "title": "繰り返し戻ってくるもの",

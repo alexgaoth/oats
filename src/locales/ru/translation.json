@@ -1918,8 +1918,6 @@
       "marked": "Отмечено",
       "markLabel": "Отметить этот момент",
       "markAnnounced": "Отмечено на {{time}}",
-      "threadMapLabel": "Карта тем, поднятых пока: {{count}}",
-      "threadMapNoQuote": "нечего процитировать",
       "recordTitle": "Записать разговор",
       "start": "Начать запись",
       "shortcutAnywhere": "из любого приложения",
@@ -1927,6 +1925,55 @@
       "stop": "Остановить",
       "recentHeading": "Недавние разговоры",
       "viewAll": "Показать все"
+    },
+    "flow": {
+      "title": "Ход разговора",
+      "viewLabel": "Вид отображения",
+      "mode": {
+        "auto": "Авто",
+        "stack": "Список",
+        "graph": "Граф"
+      },
+      "empty": "Темы появятся здесь по ходу разговора.",
+      "caption": {
+        "few_one": "Показан список: пока только {{count}} тема.",
+        "few_few": "Показан список: пока только {{count}} темы.",
+        "few_many": "Показан список: пока только {{count}} тем.",
+        "few_other": "Показан список: пока только {{count}} темы.",
+        "linear": "Показан список: разговор идёт по прямой.",
+        "returns_one": "Показан граф: пока {{count}} возврат к прежним темам.",
+        "returns_few": "Показан граф: пока {{count}} возврата к прежним темам.",
+        "returns_many": "Показан граф: пока {{count}} возвратов к прежним темам.",
+        "returns_other": "Показан граф: пока {{count}} возврата к прежним темам.",
+        "branching": "Показан граф: разговор разветвился.",
+        "stack": "Показан список.",
+        "graph": "Показан граф."
+      },
+      "state": {
+        "live": "Сейчас",
+        "open": "Открыта",
+        "resolved": "Решена",
+        "dropped": "Оставлена"
+      },
+      "back_one": "Возврат {{count}}×",
+      "back_few": "Возврат {{count}}×",
+      "back_many": "Возврат {{count}}×",
+      "back_other": "Возврат {{count}}×",
+      "showMore_one": "Показать ещё {{count}}",
+      "showMore_few": "Показать ещё {{count}}",
+      "showMore_many": "Показать ещё {{count}}",
+      "showMore_other": "Показать ещё {{count}}",
+      "showFewer": "Свернуть",
+      "stackLabel": "Темы, сначала последние",
+      "graphLabel_one": "Граф тем, поднятых пока: {{count}}",
+      "graphLabel_few": "Граф тем, поднятых пока: {{count}}",
+      "graphLabel_many": "Граф тем, поднятых пока: {{count}}",
+      "graphLabel_other": "Граф тем, поднятых пока: {{count}}",
+      "nodeName": "{{label}}, {{state}}",
+      "nodeNameBack": "{{label}}, {{state}}, {{back}}",
+      "quote": "«{{text}}»",
+      "noQuote": "Нечего процитировать.",
+      "earlier": "Встречалось в прошлых разговорах:"
     },
     "intelligence": {
       "empty": "Разговоров пока нет",
@@ -2210,16 +2257,6 @@
     "announcedBatch": "Новых вопросов: {{count}}, последний: {{question}}",
     "searchedHost": "поиск · {{host}}"
   },
-  "openThreads": {
-    "count_one": "{{count}} открытая линия",
-    "count_few": "{{count}} открытые линии",
-    "count_many": "{{count}} открытых линий",
-    "count_other": "{{count}} открытых линий",
-    "state": {
-      "open": "открыта",
-      "dropped": "остыла"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} с",
     "seconds_one": "{{count}} с",
@@ -2232,15 +2269,6 @@
     "returned_other": "возврат {{count}}×",
     "search": "Искать",
     "noQuestions": "В этой линии нет вопросов."
-  },
-  "suggestions": {
-    "title": "Стоит поднять",
-    "unfinished": "осталось открытым",
-    "shallow": "едва затронуто",
-    "adjacent_one": "обычно всплывает",
-    "adjacent_few": "обычно всплывает",
-    "adjacent_many": "обычно всплывает",
-    "adjacent_other": "обычно всплывает"
   },
   "lifetime": {
     "title": "К чему вы возвращаетесь",
