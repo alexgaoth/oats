@@ -5,6 +5,14 @@ on:
   push:
     branches: [main]
 
+# One run per pull request, and one per branch for pushes. A new push to a pull
+# request cancels the run it replaces, so superseded runs stop holding
+# runners. A push to main waits for the run in progress instead of cancelling
+# it, and GitHub keeps only the newest waiting run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # Everything plain Node can run without a native build. `npm ci
   # --ignore-scripts` skips better-sqlite3 and the Electron download, so the four
