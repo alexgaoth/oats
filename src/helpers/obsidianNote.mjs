@@ -15,6 +15,7 @@
 import { buildConversationGraph, responseReason } from "./conversationGraph.mjs";
 import { momentSegment, parseMoments } from "./conversationMoments.mjs";
 import { speakerLabelKind } from "./speakerTurns.mjs";
+import { parseDbTimestamp } from "./dbTime.mjs";
 
 /** Characters no common filesystem will take, plus the ones Obsidian reads as syntax. */
 const UNSAFE_FILENAME = /[/\\?%*:|"<>#^[\]]/g;
@@ -278,7 +279,7 @@ export function readingExport({ note, events = [], t }) {
 export function buildVaultNote({ note, snapshot, events = [], segments = [], strings }) {
   const createdMs = Number.isFinite(note?.createdAtMs)
     ? note.createdAtMs
-    : Date.parse(note?.created_at ?? "") || Date.now();
+    : parseDbTimestamp(note?.created_at) || Date.now();
 
   const topics = linkableTopics(snapshot);
   const links = topics.map(topicLink).filter(Boolean);

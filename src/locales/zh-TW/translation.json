@@ -2019,7 +2019,16 @@
       "dictationHint": "按住或輕點；在游標處輸入。",
       "hotkeyRejected": "無法註冊「{{hotkey}}」，因此仍在使用先前的快捷鍵。",
       "conversationHotkey": "對話快速鍵",
-      "conversationHotkeyHint": "在任何地方開始或停止。"
+      "conversationHotkeyHint": "在任何地方開始或停止。",
+      "sections": {
+        "label": "進階設定分區",
+        "general": "一般",
+        "hotkeys": "快速鍵",
+        "speechToText": "語音轉文字",
+        "llms": "語言模型",
+        "privacyData": "隱私權",
+        "system": "系統"
+      }
     },
     "errors": {
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",
