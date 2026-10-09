@@ -21,6 +21,7 @@ const badgeVariants = cva(
         warning: "border-transparent bg-warning/10 text-warning dark:bg-warning/15",
         info: "border-transparent bg-info/10 text-info dark:bg-info/15",
         recording: "border-transparent bg-recording/10 text-recording dark:bg-recording/15",
+        brand: "border-transparent bg-primary/15 text-brand-ink dark:bg-primary/15",
       },
     },
     defaultVariants: {
