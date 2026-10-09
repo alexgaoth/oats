@@ -1854,12 +1854,6 @@
     "copied": "已複製",
     "waitingForInput": "說點什麼..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "你",
-      "others": "其他人"
-    }
-  },
   "meetingNotification": {
     "title": "偵測到會議",
     "body": {

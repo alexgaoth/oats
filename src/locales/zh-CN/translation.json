@@ -1854,12 +1854,6 @@
     "copied": "已复制",
     "waitingForInput": "说点什么..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "你",
-      "others": "其他人"
-    }
-  },
   "meetingNotification": {
     "title": "检测到会议",
     "body": {

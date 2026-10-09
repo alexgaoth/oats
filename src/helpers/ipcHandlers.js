@@ -393,7 +393,7 @@ class IPCHandlers {
       const folderName = this._getFolderName(note.folder_id);
       markdownMirror.writeNote(note, folderName);
       if (note.transcript) {
-        markdownMirror.writeTranscript(note, folderName, this._buildSpeakerMappings(note.id));
+        markdownMirror.writeTranscript(note, folderName);
       }
     });
   }
@@ -493,15 +493,6 @@ class IPCHandlers {
     return map;
   }
 
-  _buildSpeakerMappings(noteId) {
-    const arr = this.databaseManager.getSpeakerMappings(noteId);
-    const map = {};
-    for (const m of arr) {
-      map[m.speaker_id] = m.display_name;
-    }
-    return map;
-  }
-
   _parseNonSelfParticipants(participantsJson) {
     if (!participantsJson) return [];
     let participants;
@@ -570,13 +561,7 @@ class IPCHandlers {
     const markdownMirror = require("./markdownMirror");
     if (basePath) markdownMirror.init(basePath);
     const notes = this.databaseManager.getNotes(null, 99999);
-    const speakerMappingsMap = {};
-    for (const note of notes) {
-      if (note.transcript) {
-        speakerMappingsMap[note.id] = this._buildSpeakerMappings(note.id);
-      }
-    }
-    markdownMirror.rebuildAll(notes, this._buildFolderMap(), speakerMappingsMap);
+    markdownMirror.rebuildAll(notes, this._buildFolderMap());
   }
 
   _getFolderName(folderId) {
@@ -1508,31 +1493,16 @@ class IPCHandlers {
         } else {
           // What the summary tab shows, in its order: the title, the moments
           // the reader marked, what was left open, then the summary — so the
-          // certain parts of the record leave with the inferred one.
-          const { buildReadingExport } = await import("./obsidianNote.mjs");
-          let segments = [];
-          try {
-            const parsed = note.transcript ? JSON.parse(note.transcript) : [];
-            if (Array.isArray(parsed)) segments = parsed;
-          } catch {
-            segments = [];
-          }
+          // certain parts of the record leave with the inferred one. Copy on
+          // that tab builds the same text through the same function.
+          const { readingExport } = await import("./obsidianNote.mjs");
           let events = [];
           try {
             events = this.databaseManager.listConversationEvents(note.id) || [];
           } catch {
             events = [];
           }
-          exportContent = buildReadingExport({
-            note,
-            events,
-            segments,
-            strings: {
-              untitled: i18nMain.t("oats.vault.untitled"),
-              marked: i18nMain.t("oats.vault.marked"),
-              openQuestions: i18nMain.t("oats.vault.openQuestions"),
-            },
-          });
+          exportContent = readingExport({ note, events, t: (key) => i18nMain.t(key) });
         }
 
         fs.writeFileSync(result.filePath, exportContent, "utf-8");
@@ -1551,39 +1521,21 @@ class IPCHandlers {
         const segments = JSON.parse(note.transcript || "[]");
         if (!segments.length) return { success: false, error: "No transcript available" };
 
-        const speakerMappings = this._buildSpeakerMappings(noteId);
-
         const { dialog } = require("electron");
         const fs = require("fs");
-        const extMap = { srt: "srt", json: "json", md: "md" };
-        const ext = extMap[format] || "txt";
+        const { formatTranscript, saveFormat } = require("./transcriptFormatter");
+        // One format in the panel: the one that is written (see `saveFormat`).
+        const { ext, filters } = saveFormat(format);
         const safeName = (note.title || "Untitled").replace(/[/\\?%*:|"<>]/g, "-");
 
         const result = await dialog.showSaveDialog({
           defaultPath: `${safeName}.${ext}`,
-          filters: [
-            { name: "Text", extensions: ["txt"] },
-            { name: "SubRip Subtitles", extensions: ["srt"] },
-            { name: "JSON", extensions: ["json"] },
-            { name: "Markdown", extensions: ["md"] },
-          ],
+          filters,
         });
 
         if (result.canceled || !result.filePath) return { success: false };
 
-        const transcriptFormatter = require("./transcriptFormatter");
-        let exportContent;
-        if (format === "txt") {
-          exportContent = transcriptFormatter.formatTxt(note, segments, speakerMappings);
-        } else if (format === "srt") {
-          exportContent = transcriptFormatter.formatSrt(segments, speakerMappings);
-        } else if (format === "md") {
-          exportContent = transcriptFormatter.formatMd(note, segments, speakerMappings);
-        } else {
-          exportContent = transcriptFormatter.formatJson(note, segments, speakerMappings);
-        }
-
-        fs.writeFileSync(result.filePath, exportContent, "utf-8");
+        fs.writeFileSync(result.filePath, formatTranscript(ext, note, segments), "utf-8");
         return { success: true };
       } catch (error) {
         debugLogger.error("Error exporting transcript", { error: error.message }, "notes");

@@ -1859,12 +1859,6 @@
     "copied": "コピー済み",
     "waitingForInput": "何か話してください..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "あなた",
-      "others": "他の人"
-    }
-  },
   "meetingNotification": {
     "title": "会議を検出しました",
     "body": {

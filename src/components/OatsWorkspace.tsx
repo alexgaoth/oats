@@ -44,6 +44,7 @@ import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
+import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
   momentSegment,
   parseMoments,
@@ -156,9 +157,10 @@ function plainPreview(raw: string | null | undefined): string {
  * A stored transcript as readable text.
  *
  * The speaker labels take a `t` because they are user-facing copy, and they
- * reach further than the screen: this feeds the reading view, the list preview,
- * `copy`, and the saved `.txt`. Hard-coded, they put English into every
- * transcript and every export in all ten locales.
+ * reach further than the screen: this feeds the reading view, the list preview
+ * and `copy`. Hard-coded, they put English into every transcript and every
+ * export in all ten locales. The saved `.txt` is written in the main process by
+ * `helpers/transcriptFormatter.js`, which labels speakers by the same rule.
  */
 function transcriptText(raw: string | null, t: TFunction): string {
   if (!raw) return "";
@@ -1744,6 +1746,7 @@ function IntelligenceViews({
             <ConversationActions
               note={selected}
               tab={tab}
+              events={events}
               onDeleted={async () => {
                 setReading(false);
                 setSelectedId(null);
@@ -2284,11 +2287,11 @@ function ConversationReview({
  * The transcript as the timed record it is, rather than as one wall of text.
  *
  * The reading view used to render `transcriptText()` — the same flat string the
- * clipboard and the `.txt` export get — so an hour of conversation arrived with
- * no bearings at all. The whole product draws time as its signature, and the one
- * surface where you go to *read* what was said showed none of it: a search
- * result landed you somewhere in a wall with nothing to say how far in you were,
- * or how long the room had been on the subject.
+ * clipboard gets — so an hour of conversation arrived with no bearings at all.
+ * The whole product draws time as its signature, and the one surface where you
+ * go to *read* what was said showed none of it: a search result landed you
+ * somewhere in a wall with nothing to say how far in you were, or how long the
+ * room had been on the subject.
  *
  * Each turn now carries its offset from the first thing said. The gutter is mono
  * and quiet — it is a coordinate, not content — and it is `aria-hidden`, because
@@ -2296,8 +2299,9 @@ function ConversationReview({
  * before every line. The time is on the paragraph as a `title` for anyone who
  * wants it.
  *
- * `transcriptText` is untouched: copy and export still produce the plain text
- * they always did.
+ * `transcriptText` is untouched: copy still produces the plain text it always
+ * did. The saved `.txt` carries the same offsets as this gutter, written by
+ * `helpers/transcriptFormatter.js` from the same first turn.
  */
 function TranscriptView({
   note,
@@ -2563,10 +2567,13 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 function ConversationActions({
   note,
   tab,
+  events,
   onDeleted,
 }: {
   note: NoteItem;
   tab: DetailTab;
+  /** The conversation's question events, for the open questions Save writes. */
+  events: ConversationEvent[];
   onDeleted: () => void | Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -2577,12 +2584,12 @@ function ConversationActions({
   const [filed, setFiled] = useState<boolean | null>(null);
 
   // Whatever is being read is what leaves — no menu of formats, no dialog asking
-  // which part. The transcript tab copies the transcript, the other two copy the
-  // summary, because that is what is on the screen.
+  // which part. The transcript tab copies the transcript with the screen's
+  // speaker labels. The other two copy exactly what Save writes from them: the
+  // title, the marks, the open questions and the summary. Copy used to take the
+  // summary prose alone, so the clipboard and the saved file were two documents.
   const payload = () =>
-    tab === "transcript"
-      ? transcriptText(note.transcript, t)
-      : note.enhanced_content || note.content || "";
+    tab === "transcript" ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
 
   useEffect(() => setConfirming(false), [note.id, tab]);
   useEffect(() => setFiled(null), [note.id]);

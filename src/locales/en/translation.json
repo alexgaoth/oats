@@ -1859,12 +1859,6 @@
     "copied": "Copied",
     "waitingForInput": "Say something..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "You",
-      "others": "Others"
-    }
-  },
   "meetingNotification": {
     "title": "Meeting detected",
     "body": {

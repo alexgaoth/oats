@@ -83,7 +83,7 @@ class MarkdownMirror {
     }
   }
 
-  writeTranscript(note, folderName, speakerMappings) {
+  writeTranscript(note, folderName) {
     if (!this._basePath) return;
     try {
       const segments = JSON.parse(note.transcript || "[]");
@@ -107,7 +107,7 @@ class MarkdownMirror {
       }
 
       const { formatMd } = require("./transcriptFormatter");
-      fs.writeFileSync(newFilePath, formatMd(note, segments, speakerMappings || {}), "utf-8");
+      fs.writeFileSync(newFilePath, formatMd(note, segments), "utf-8");
     } catch (err) {
       debugLogger.error(
         "Failed to write transcript file",
@@ -175,14 +175,14 @@ class MarkdownMirror {
     }
   }
 
-  rebuildAll(notes, folderMap, speakerMappingsMap) {
+  rebuildAll(notes, folderMap) {
     if (!this._basePath) return;
     try {
       for (const note of notes) {
         const folderName = folderMap[note.folder_id] || "Personal";
         this.writeNote(note, folderName);
         if (note.transcript) {
-          this.writeTranscript(note, folderName, speakerMappingsMap?.[note.id] || {});
+          this.writeTranscript(note, folderName);
         }
       }
       debugLogger.info("Markdown mirror rebuild complete", { count: notes.length }, "note-files");
