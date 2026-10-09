@@ -131,7 +131,8 @@
     "save": "Guardar",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo"
+    "done": "Listo",
+    "close": "Fechar"
   },
   "onboarding": {
     "steps": {
@@ -1927,7 +1928,6 @@
       "viewAll": "Ver todas"
     },
     "intelligence": {
-      "listTitle": "Conversas",
       "empty": "Ainda sem conversas",
       "preparing": "A inteligência desta conversa está a ser preparada.",
       "noTranscript": "Ainda sem transcrição.",
@@ -1952,27 +1952,33 @@
       "searchResults_one": "{{count}} conversa corresponde",
       "searchResults_other": "{{count}} conversas correspondem",
       "match": {
-        "transcript": "dito",
-        "note": "sua nota",
-        "summary": "resumo",
-        "title": "título"
+        "transcript": "Dito",
+        "note": "Sua nota",
+        "summary": "Resumo",
+        "title": "Título"
       },
-      "matchRelated": "relacionado",
+      "matchRelated": "Relacionado",
       "markedCount_one": "{{count}} momento marcado",
       "markedCount_other": "{{count}} momentos marcados",
-      "emptyHint": "Pressione {{shortcut}} em qualquer lugar e faça uma pergunta que ninguém saiba responder",
-      "backToList": "Voltar",
       "copy": "Copiar",
       "copied": "Copiado",
-      "save": "Salvar",
-      "vault": "Cofre",
       "vaultSaved": "No cofre",
       "vaultFailed": "Não salvo",
-      "vaultLabel": "Salvar esta conversa no cofre do Obsidian",
       "delete": "Excluir",
       "deleteConfirm": "Excluir esta conversa?",
       "deleteYes": "Excluir",
-      "deleteCancel": "Manter"
+      "speakerCount_one": "{{count}} falante",
+      "speakerCount_other": "{{count}} falantes",
+      "copySummary": "Copiar o resumo",
+      "copyTranscript": "Copiar a transcrição",
+      "export": "Exportar",
+      "exportSummary": "Exportar o resumo como Markdown",
+      "exportTranscript": "Exportar a transcrição como texto",
+      "more": "Mais ações",
+      "vaultAction": "Salvar no cofre",
+      "deleteDescription": "A transcrição, o resumo e os momentos marcados são removidos do Oats. Isso não pode ser desfeito.",
+      "emptyDescription": "As conversas que você gravar aparecem aqui, com um resumo e uma transcrição pesquisável.",
+      "noMatchesHint": "A busca abrange títulos, resumos, transcrições e suas notas."
     },
     "review": {
       "title": "O que ficou em aberto",
@@ -1981,18 +1987,20 @@
       "openThreads_other": "{{count}} tópicos ainda abertos: {{threads}}",
       "showAnswers": "Ver as respostas",
       "hideAnswers": "Ocultar as respostas",
-      "marked": "O que você marcou",
       "addNote": "Adicionar uma nota",
       "noteLabel": "Nota do momento em {{time}}",
       "removeMark": "Remover",
       "removeMarkLabel": "Remover a marca em {{time}}",
-      "markedTurn": "Marcado."
+      "markedTurn": "Marcado.",
+      "markedTitle": "Momentos marcados"
     },
     "find": {
       "label": "Procurar nesta conversa",
       "count": "{{current}} de {{total}}",
       "none": "Nenhum resultado",
-      "close": "Fechar"
+      "close": "Fechar",
+      "previous": "Resultado anterior",
+      "next": "Próximo resultado"
     },
     "settings": {
       "title": "Poucas escolhas.",
@@ -2102,13 +2110,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "perguntada",
-      "answered": "respondida",
-      "uncertain": "incerta",
-      "silence": "sem resposta",
-      "denied": "ninguém sabia"
+      "asked": "Perguntada",
+      "answered": "Respondida",
+      "uncertain": "Incerta",
+      "silence": "Sem resposta",
+      "denied": "Ninguém sabia"
     },
-    "searched": "pesquisada",
+    "searched": "Pesquisada",
     "dismiss": "Dispensar pergunta",
     "earlier": "{{count}} anteriores",
     "collapse": "Mostrar menos",
@@ -2145,7 +2153,6 @@
   "lifetime": {
     "title": "Aquilo a que volta sempre",
     "viewMap": "Mapa",
-    "backToList": "Voltar às conversas",
     "recurring": "Recorrente:",
     "inCount_one": "{{count}} conversa",
     "inCount_other": "{{count}} conversas",

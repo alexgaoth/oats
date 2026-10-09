@@ -47,6 +47,9 @@
   --color-recording: #ef4444;
   --color-recording-foreground: #ffffff;
   --color-brand: #e8a33d;
+  /* Search hits in text. The stronger one is the match the find bar is on. */
+  --color-highlight: #fef08a;
+  --color-highlight-strong: #facc15;
 
   /* Surface ladder, lightest to darkest. */
   --color-surface-0: #ffffff;
@@ -173,6 +176,8 @@
 
   --color-recording: #ef4444;
   --color-recording-foreground: #ffffff;
+  --color-highlight: rgb(234 179 8 / 0.3);
+  --color-highlight-strong: rgb(234 179 8 / 0.65);
 
   --color-surface-0: #09090b;
   --color-surface-1: #0f0f12;

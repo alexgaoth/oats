@@ -131,7 +131,8 @@
     "save": "Enregistrer",
     "copy": "Copier",
     "copied": "Copié",
-    "done": "Terminé"
+    "done": "Terminé",
+    "close": "Chiudi"
   },
   "onboarding": {
     "steps": {
@@ -1927,7 +1928,6 @@
       "viewAll": "Vedi tutte"
     },
     "intelligence": {
-      "listTitle": "Conversazioni",
       "empty": "Ancora nessuna conversazione",
       "preparing": "L'intelligenza per questa conversazione è in preparazione.",
       "noTranscript": "Nessuna trascrizione ancora.",
@@ -1952,27 +1952,33 @@
       "searchResults_one": "{{count}} conversazione corrisponde",
       "searchResults_other": "{{count}} conversazioni corrispondono",
       "match": {
-        "transcript": "detto",
-        "note": "la tua nota",
-        "summary": "riassunto",
-        "title": "titolo"
+        "transcript": "Detto",
+        "note": "La tua nota",
+        "summary": "Riassunto",
+        "title": "Titolo"
       },
-      "matchRelated": "correlato",
+      "matchRelated": "Correlato",
       "markedCount_one": "{{count}} momento segnato",
       "markedCount_other": "{{count}} momenti segnati",
-      "emptyHint": "Premi {{shortcut}} ovunque e fai una domanda a cui nessuno sa rispondere",
-      "backToList": "Indietro",
       "copy": "Copia",
       "copied": "Copiato",
-      "save": "Salva",
-      "vault": "Vault",
       "vaultSaved": "Nel vault",
       "vaultFailed": "Non salvato",
-      "vaultLabel": "Salva questa conversazione nel vault di Obsidian",
       "delete": "Elimina",
       "deleteConfirm": "Eliminare questa conversazione?",
       "deleteYes": "Elimina",
-      "deleteCancel": "Mantieni"
+      "speakerCount_one": "{{count}} interlocutore",
+      "speakerCount_other": "{{count}} interlocutori",
+      "copySummary": "Copia il riepilogo",
+      "copyTranscript": "Copia la trascrizione",
+      "export": "Esporta",
+      "exportSummary": "Esporta il riepilogo in Markdown",
+      "exportTranscript": "Esporta la trascrizione come testo",
+      "more": "Altre azioni",
+      "vaultAction": "Salva nel vault",
+      "deleteDescription": "Trascrizione, riepilogo e momenti segnati vengono rimossi da Oats. L’operazione non si può annullare.",
+      "emptyDescription": "Le conversazioni che registri compaiono qui, con un riepilogo e una trascrizione in cui cercare.",
+      "noMatchesHint": "La ricerca copre titoli, riepiloghi, trascrizioni e le tue note."
     },
     "review": {
       "title": "Ciò che è rimasto aperto",
@@ -1981,18 +1987,20 @@
       "openThreads_other": "{{count}} fili ancora aperti: {{threads}}",
       "showAnswers": "Mostra le risposte",
       "hideAnswers": "Nascondi le risposte",
-      "marked": "Momenti segnati",
       "addNote": "Aggiungi una nota",
       "noteLabel": "Nota per il momento a {{time}}",
       "removeMark": "Rimuovi",
       "removeMarkLabel": "Rimuovi il segno a {{time}}",
-      "markedTurn": "Segnato."
+      "markedTurn": "Segnato.",
+      "markedTitle": "Momenti segnati"
     },
     "find": {
       "label": "Cerca in questa conversazione",
       "count": "{{current}} di {{total}}",
       "none": "Nessun risultato",
-      "close": "Chiudi"
+      "close": "Chiudi",
+      "previous": "Risultato precedente",
+      "next": "Risultato successivo"
     },
     "settings": {
       "title": "Poche scelte.",
@@ -2102,13 +2110,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "posta",
-      "answered": "risposta",
-      "uncertain": "incerta",
-      "silence": "nessuna risposta",
-      "denied": "nessuno lo sapeva"
+      "asked": "Posta",
+      "answered": "Risposta",
+      "uncertain": "Incerta",
+      "silence": "Nessuna risposta",
+      "denied": "Nessuno lo sapeva"
     },
-    "searched": "cercata",
+    "searched": "Cercata",
     "dismiss": "Ignora domanda",
     "earlier": "{{count}} precedenti",
     "collapse": "Mostra meno",
@@ -2145,7 +2153,6 @@
   "lifetime": {
     "title": "Ciò a cui torni sempre",
     "viewMap": "Mappa",
-    "backToList": "Torna alle conversazioni",
     "recurring": "Ricorrente:",
     "inCount_one": "{{count}} conversazione",
     "inCount_other": "{{count}} conversazioni",

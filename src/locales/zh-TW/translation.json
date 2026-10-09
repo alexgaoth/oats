@@ -131,7 +131,8 @@
     "save": "Guardar",
     "copy": "Copiar",
     "copied": "Copiado",
-    "done": "Listo"
+    "done": "Listo",
+    "close": "關閉"
   },
   "onboarding": {
     "steps": {
@@ -1922,7 +1923,6 @@
       "viewAll": "查看全部"
     },
     "intelligence": {
-      "listTitle": "對話",
       "empty": "還沒有對話",
       "preparing": "正在為這場對話準備智慧內容。",
       "noTranscript": "尚無逐字稿。",
@@ -1955,19 +1955,25 @@
       "matchRelated": "相關",
       "markedCount_one": "{{count}} 個標記時刻",
       "markedCount_other": "{{count}} 個標記時刻",
-      "emptyHint": "在任意位置按 {{shortcut}}，然後問一個沒人知道答案的問題",
-      "backToList": "返回",
       "copy": "複製",
       "copied": "已複製",
-      "save": "儲存",
-      "vault": "儲存庫",
       "vaultSaved": "已存入儲存庫",
       "vaultFailed": "未儲存",
-      "vaultLabel": "將此對話儲存至 Obsidian 儲存庫",
       "delete": "刪除",
       "deleteConfirm": "刪除這次對話？",
       "deleteYes": "刪除",
-      "deleteCancel": "保留"
+      "speakerCount_one": "{{count}} 位說話者",
+      "speakerCount_other": "{{count}} 位說話者",
+      "copySummary": "複製摘要",
+      "copyTranscript": "複製逐字稿",
+      "export": "匯出",
+      "exportSummary": "將摘要匯出為 Markdown",
+      "exportTranscript": "將逐字稿匯出為文字",
+      "more": "更多動作",
+      "vaultAction": "儲存至儲存庫",
+      "deleteDescription": "它的逐字稿、摘要與標記時刻將從 Oats 中刪除。此動作無法復原。",
+      "emptyDescription": "你錄製的對話會顯示在這裡，並附上摘要與可搜尋的逐字稿。",
+      "noMatchesHint": "搜尋範圍包括標題、摘要、逐字稿與你的筆記。"
     },
     "review": {
       "title": "尚未解決的內容",
@@ -1976,18 +1982,20 @@
       "openThreads_other": "{{count}} 個話題仍未結束：{{threads}}",
       "showAnswers": "顯示回答",
       "hideAnswers": "隱藏回答",
-      "marked": "你標記的",
       "addNote": "新增備註",
       "noteLabel": "{{time}} 時刻的備註",
       "removeMark": "移除",
       "removeMarkLabel": "移除 {{time}} 的標記",
-      "markedTurn": "已標記。"
+      "markedTurn": "已標記。",
+      "markedTitle": "標記時刻"
     },
     "find": {
       "label": "在此對話中尋找",
       "count": "{{current}} / {{total}}",
       "none": "無相符結果",
-      "close": "關閉"
+      "close": "關閉",
+      "previous": "上一個相符項目",
+      "next": "下一個相符項目"
     },
     "settings": {
       "title": "把選擇降到最少。",
@@ -2140,7 +2148,6 @@
   "lifetime": {
     "title": "你反覆回到的主題",
     "viewMap": "圖譜",
-    "backToList": "返回對話列表",
     "recurring": "反覆出現：",
     "inCount_one": "{{count}} 場對話",
     "inCount_other": "{{count}} 場對話",

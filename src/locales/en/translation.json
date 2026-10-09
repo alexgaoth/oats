@@ -131,7 +131,8 @@
     "save": "Save",
     "copy": "Copy",
     "copied": "Copied",
-    "done": "Done"
+    "done": "Done",
+    "close": "Close"
   },
   "onboarding": {
     "steps": {
@@ -1927,7 +1928,6 @@
       "viewAll": "View all"
     },
     "intelligence": {
-      "listTitle": "Conversations",
       "empty": "No conversations yet",
       "preparing": "Intelligence is being prepared for this conversation.",
       "noTranscript": "No transcript yet.",
@@ -1952,27 +1952,33 @@
       "searchResults_one": "{{count}} conversation matches",
       "searchResults_other": "{{count}} conversations match",
       "match": {
-        "transcript": "said",
-        "note": "your note",
-        "summary": "summary",
-        "title": "title"
+        "transcript": "Said",
+        "note": "Your note",
+        "summary": "Summary",
+        "title": "Title"
       },
-      "matchRelated": "related",
+      "matchRelated": "Related",
       "markedCount_one": "{{count}} marked moment",
       "markedCount_other": "{{count}} marked moments",
-      "emptyHint": "Press {{shortcut}} anywhere and ask something nobody in the room knows",
-      "backToList": "Back",
       "copy": "Copy",
       "copied": "Copied",
-      "save": "Save",
-      "vault": "Vault",
       "vaultSaved": "In vault",
       "vaultFailed": "Not saved",
-      "vaultLabel": "Save this conversation to the Obsidian vault",
       "delete": "Delete",
       "deleteConfirm": "Delete this conversation?",
       "deleteYes": "Delete",
-      "deleteCancel": "Keep"
+      "speakerCount_one": "{{count}} speaker",
+      "speakerCount_other": "{{count}} speakers",
+      "copySummary": "Copy the summary",
+      "copyTranscript": "Copy the transcript",
+      "export": "Export",
+      "exportSummary": "Export the summary as Markdown",
+      "exportTranscript": "Export the transcript as text",
+      "more": "More actions",
+      "vaultAction": "Save to vault",
+      "deleteDescription": "Its transcript, summary and marked moments are removed from Oats. This cannot be undone.",
+      "emptyDescription": "Conversations you record appear here, with a summary and a transcript you can search.",
+      "noMatchesHint": "Search looks through titles, summaries, transcripts and your notes."
     },
     "review": {
       "title": "What this left open",
@@ -1981,18 +1987,20 @@
       "openThreads_other": "{{count}} threads still open: {{threads}}",
       "showAnswers": "Show the answers",
       "hideAnswers": "Hide the answers",
-      "marked": "You marked",
       "addNote": "Add a note",
       "noteLabel": "Note for the moment at {{time}}",
       "removeMark": "Remove",
       "removeMarkLabel": "Remove the mark at {{time}}",
-      "markedTurn": "Marked."
+      "markedTurn": "Marked.",
+      "markedTitle": "Marked moments"
     },
     "find": {
       "label": "Find in this conversation",
       "count": "{{current}} of {{total}}",
       "none": "No matches",
-      "close": "Close"
+      "close": "Close",
+      "previous": "Previous match",
+      "next": "Next match"
     },
     "settings": {
       "title": "Keep the choices small.",
@@ -2102,13 +2110,13 @@
   },
   "questionCard": {
     "state": {
-      "asked": "asked",
-      "answered": "answered",
-      "uncertain": "uncertain",
-      "silence": "no answer",
-      "denied": "unanswered"
+      "asked": "Asked",
+      "answered": "Answered",
+      "uncertain": "Uncertain",
+      "silence": "No answer",
+      "denied": "Unanswered"
     },
-    "searched": "searched",
+    "searched": "Searched",
     "dismiss": "Dismiss question",
     "earlier": "{{count}} earlier",
     "collapse": "Show fewer",
@@ -2145,7 +2153,6 @@
   "lifetime": {
     "title": "What you keep coming back to",
     "viewMap": "Map",
-    "backToList": "Back to conversations",
     "recurring": "Recurring:",
     "inCount_one": "{{count}} conversation",
     "inCount_other": "{{count}} conversations",
