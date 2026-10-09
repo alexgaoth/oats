@@ -54,8 +54,8 @@
     "closeWindow": "Закрыть окно"
   },
   "window": {
-    "voiceRecorderTitle": "Диктофон",
-    "controlPanelTitle": "Панель управления",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "Чат агента"
   },
   "dialog": {

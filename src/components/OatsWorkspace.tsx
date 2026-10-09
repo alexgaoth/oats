@@ -3888,7 +3888,7 @@ export default function OatsWorkspace() {
           moved; the interactive parts opt back out, because a drag region
           swallows clicks. */}
       <div
-        className="relative z-20 flex h-9 shrink-0 items-center gap-6 px-5"
+        className="oats-titlebar relative z-20 flex h-9 shrink-0 items-center gap-6 px-5"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
         {/* The one lowercase thing in the product (DESIGN.md §5). */}
