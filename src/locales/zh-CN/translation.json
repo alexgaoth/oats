@@ -164,6 +164,13 @@
       "optional": "可选",
       "recommended": "推荐",
       "accessibilityTroubleshooting": "在系统设置 → 辅助功能中，将 Oats 的开关关闭再重新打开。如果无效，请将 Oats 从列表中移除后重新添加。"
+    },
+    "welcome": {
+      "allow": "允许",
+      "allowed": "已允许",
+      "shortcutTitle": "在任何应用中开始",
+      "shortcutDescription": "再按一次即可结束对话。",
+      "getStarted": "开始使用"
     }
   },
   "streaming": {

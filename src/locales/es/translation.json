@@ -164,6 +164,13 @@
       "optional": "Opcional",
       "recommended": "Recomendado",
       "accessibilityTroubleshooting": "En Configuración del Sistema → Accesibilidad, desactiva el interruptor de Oats y vuelve a activarlo. Si eso no funciona, elimina Oats de la lista y añádelo de nuevo."
+    },
+    "welcome": {
+      "allow": "Permitir",
+      "allowed": "Permitido",
+      "shortcutTitle": "Empieza desde cualquier app",
+      "shortcutDescription": "Púlsalo otra vez para terminar la conversación.",
+      "getStarted": "Empezar"
     }
   },
   "streaming": {

@@ -164,6 +164,13 @@
       "optional": "Optional",
       "recommended": "Recommended",
       "accessibilityTroubleshooting": "In System Settings → Accessibility, switch Oats's toggle off and back on. If that doesn't work, remove Oats from the list and add it back."
+    },
+    "welcome": {
+      "allow": "Allow",
+      "allowed": "Allowed",
+      "shortcutTitle": "Start from any app",
+      "shortcutDescription": "Press it again to finish the conversation.",
+      "getStarted": "Get started"
     }
   },
   "streaming": {

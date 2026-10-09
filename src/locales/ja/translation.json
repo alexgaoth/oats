@@ -164,6 +164,13 @@
       "optional": "任意",
       "recommended": "推奨",
       "accessibilityTroubleshooting": "システム設定 → アクセシビリティで、Oatsのスイッチをオフにしてから再度オンにしてください。それでもうまくいかない場合は、リストからOatsを削除して再度追加してみてください。"
+    },
+    "welcome": {
+      "allow": "許可",
+      "allowed": "許可済み",
+      "shortcutTitle": "どのアプリからでも開始",
+      "shortcutDescription": "もう一度押すと会話を終了します。",
+      "getStarted": "はじめる"
     }
   },
   "streaming": {

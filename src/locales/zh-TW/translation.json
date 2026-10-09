@@ -164,6 +164,13 @@
       "optional": "可選",
       "recommended": "建議",
       "accessibilityTroubleshooting": "在系統設定 → 輔助使用中，將 Oats 的開關關閉再重新開啟。如果無效，請將 Oats 從清單中移除後重新加入。"
+    },
+    "welcome": {
+      "allow": "允許",
+      "allowed": "已允許",
+      "shortcutTitle": "在任何應用程式中開始",
+      "shortcutDescription": "再按一次即可結束對話。",
+      "getStarted": "開始使用"
     }
   },
   "streaming": {

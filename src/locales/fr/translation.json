@@ -164,6 +164,13 @@
       "optional": "Facultatif",
       "recommended": "Recommandé",
       "accessibilityTroubleshooting": "Dans Réglages Système → Accessibilité, désactivez le bouton d'Oats puis réactivez-le. Si ça ne marche pas, supprimez Oats de la liste et rajoutez-le."
+    },
+    "welcome": {
+      "allow": "Autoriser",
+      "allowed": "Autorisé",
+      "shortcutTitle": "Démarrez depuis n’importe quelle app",
+      "shortcutDescription": "Appuyez de nouveau pour terminer la conversation.",
+      "getStarted": "Commencer"
     }
   },
   "streaming": {
