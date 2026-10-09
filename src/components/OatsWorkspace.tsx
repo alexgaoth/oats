@@ -82,8 +82,7 @@ import LifetimeGraph from "./notes/LifetimeGraph";
 import ListeningPulse from "./conversation/ListeningPulse";
 import FieldBackdrop from "./field/FieldBackdrop";
 import WheatPerch from "./field/WheatPerch";
-import LiveThreadMap from "./conversation/LiveThreadMap";
-import OpenThreadStack from "./conversation/OpenThreadStack";
+import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
@@ -465,11 +464,6 @@ function ConversationSurface() {
   const transcribing = useMeetingRecordingStore((s) => s.isTranscribing);
   const recordingNoteId = useMeetingRecordingStore((s) => s.recordingNoteId);
   const transcript = useMeetingRecordingStore((s) => s.transcript);
-  const openThreads = useMeetingRecordingStore((s) => s.openThreads);
-  const suggestions = useMeetingRecordingStore((s) => s.suggestions);
-  // A live partial is the earliest signal that somebody is talking again, which
-  // is when the stack has to get out of the way.
-  const speaking = useMeetingRecordingStore((s) => Boolean(s.micPartial || s.systemPartial));
   const { t } = useTranslation();
   const notes = useNotes();
   const [starting, setStarting] = useState(false);
@@ -886,6 +880,15 @@ function ConversationSurface() {
               notice("danger", t("oats.conversation.notSaving", { count: atRisk.unsavedTurns }))}
             {stalled.stalled && notice("warning", t("oats.conversation.notTranscribing"))}
 
+            {/* What has been talked about, in both compositions: it moves with
+                the topic, every few minutes, not with the words. In Detailed it
+                is compact and yields height to the live dialogue below,
+                scrolling inside when it must — the share the thread map used. */}
+            <ConversationFlow
+              compact={detailed}
+              className={cn("shrink-0", detailed && "max-h-[34%]")}
+            />
+
             {/* The question rail stays mounted in both compositions — remounting
                 it on every switch re-announced every question already heard. */}
             <div
@@ -918,17 +921,6 @@ function ConversationSurface() {
                 />
               )}
             </div>
-
-            {detailed && (
-              <div className="flex max-h-[34%] shrink-0 flex-col gap-3 overflow-y-auto pb-2">
-                <LiveThreadMap />
-                <OpenThreadStack
-                  threads={openThreads}
-                  suggestions={suggestions}
-                  speaking={speaking}
-                />
-              </div>
-            )}
           </div>
         ) : (
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">
