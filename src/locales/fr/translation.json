@@ -1907,7 +1907,14 @@
       "markLabel": "Marquer ce moment",
       "markAnnounced": "Marqué à {{time}}",
       "threadMapLabel": "Carte des {{count}} sujets abordés jusqu'ici",
-      "threadMapNoQuote": "rien de récent à citer"
+      "threadMapNoQuote": "rien de récent à citer",
+      "recordTitle": "Enregistrer une conversation",
+      "start": "Démarrer l’enregistrement",
+      "shortcutAnywhere": "depuis n’importe quelle app",
+      "recordingBadge": "Enregistrement",
+      "stop": "Arrêter",
+      "recentHeading": "Conversations récentes",
+      "viewAll": "Tout afficher"
     },
     "intelligence": {
       "listTitle": "Conversations",
@@ -2075,6 +2082,16 @@
       "you": "Vous",
       "room": "Salle",
       "speaker": "Intervenant {{n}}"
+    },
+    "shell": {
+      "sidebar": "Barre latérale",
+      "home": "Accueil",
+      "conversations": "Conversations",
+      "search": "Rechercher",
+      "recent": "Récents",
+      "noRecent": "Aucune conversation pour l’instant",
+      "record": "Nouvel enregistrement",
+      "stop": "Arrêter l’enregistrement"
     }
   },
   "questionCard": {

@@ -108,9 +108,8 @@ const CONTROL_PANEL_CONFIG = {
   frame: false,
   ...(process.platform === "darwin" && {
     titleBarStyle: "hiddenInset",
-    // Centred in the 36px drag band (a 16px-tall button row at y 11), with the
-    // band's content starting after them (index.css, `.oats-titlebar`).
-    trafficLightPosition: { x: 16, y: 11 },
+    // Centred in the sidebar's 52px drag band (a 16px-tall button row at y 18).
+    trafficLightPosition: { x: 18, y: 18 },
   }),
   transparent: false,
   minimizable: true,

@@ -1907,7 +1907,14 @@
       "markLabel": "Mark this moment",
       "markAnnounced": "Marked at {{time}}",
       "threadMapLabel": "Map of {{count}} subjects raised so far",
-      "threadMapNoQuote": "nothing recent to quote"
+      "threadMapNoQuote": "nothing recent to quote",
+      "recordTitle": "Record a conversation",
+      "start": "Start recording",
+      "shortcutAnywhere": "from any app",
+      "recordingBadge": "Recording",
+      "stop": "Stop",
+      "recentHeading": "Recent conversations",
+      "viewAll": "View all"
     },
     "intelligence": {
       "listTitle": "Conversations",
@@ -2075,6 +2082,16 @@
       "you": "You",
       "room": "Room",
       "speaker": "Speaker {{n}}"
+    },
+    "shell": {
+      "sidebar": "Sidebar",
+      "home": "Home",
+      "conversations": "Conversations",
+      "search": "Search",
+      "recent": "Recent",
+      "noRecent": "No conversations yet",
+      "record": "New recording",
+      "stop": "Stop recording"
     }
   },
   "questionCard": {

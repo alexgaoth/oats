@@ -1907,7 +1907,14 @@
       "markLabel": "Marcar este momento",
       "markAnnounced": "Marcado en {{time}}",
       "threadMapLabel": "Mapa de {{count}} temas planteados hasta ahora",
-      "threadMapNoQuote": "nada reciente que citar"
+      "threadMapNoQuote": "nada reciente que citar",
+      "recordTitle": "Grabar una conversación",
+      "start": "Empezar a grabar",
+      "shortcutAnywhere": "desde cualquier app",
+      "recordingBadge": "Grabando",
+      "stop": "Detener",
+      "recentHeading": "Conversaciones recientes",
+      "viewAll": "Ver todas"
     },
     "intelligence": {
       "listTitle": "Conversaciones",
@@ -2075,6 +2082,16 @@
       "you": "Tú",
       "room": "Sala",
       "speaker": "Hablante {{n}}"
+    },
+    "shell": {
+      "sidebar": "Barra lateral",
+      "home": "Inicio",
+      "conversations": "Conversaciones",
+      "search": "Buscar",
+      "recent": "Recientes",
+      "noRecent": "Aún no hay conversaciones",
+      "record": "Nueva grabación",
+      "stop": "Detener grabación"
     }
   },
   "questionCard": {

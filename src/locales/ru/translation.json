@@ -1909,7 +1909,14 @@
       "markLabel": "Отметить этот момент",
       "markAnnounced": "Отмечено на {{time}}",
       "threadMapLabel": "Карта тем, поднятых пока: {{count}}",
-      "threadMapNoQuote": "нечего процитировать"
+      "threadMapNoQuote": "нечего процитировать",
+      "recordTitle": "Записать разговор",
+      "start": "Начать запись",
+      "shortcutAnywhere": "из любого приложения",
+      "recordingBadge": "Запись",
+      "stop": "Остановить",
+      "recentHeading": "Недавние разговоры",
+      "viewAll": "Показать все"
     },
     "intelligence": {
       "listTitle": "Разговоры",
@@ -2085,6 +2092,16 @@
       "you": "Вы",
       "room": "Комната",
       "speaker": "Собеседник {{n}}"
+    },
+    "shell": {
+      "sidebar": "Боковая панель",
+      "home": "Главная",
+      "conversations": "Разговоры",
+      "search": "Поиск",
+      "recent": "Недавние",
+      "noRecent": "Пока нет разговоров",
+      "record": "Новая запись",
+      "stop": "Остановить запись"
     }
   },
   "questionCard": {

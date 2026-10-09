@@ -1907,7 +1907,14 @@
       "markLabel": "Segna questo momento",
       "markAnnounced": "Segnato a {{time}}",
       "threadMapLabel": "Mappa di {{count}} temi affrontati finora",
-      "threadMapNoQuote": "niente di recente da citare"
+      "threadMapNoQuote": "niente di recente da citare",
+      "recordTitle": "Registra una conversazione",
+      "start": "Avvia registrazione",
+      "shortcutAnywhere": "da qualsiasi app",
+      "recordingBadge": "In registrazione",
+      "stop": "Interrompi",
+      "recentHeading": "Conversazioni recenti",
+      "viewAll": "Vedi tutte"
     },
     "intelligence": {
       "listTitle": "Conversazioni",
@@ -2075,6 +2082,16 @@
       "you": "Tu",
       "room": "Stanza",
       "speaker": "Interlocutore {{n}}"
+    },
+    "shell": {
+      "sidebar": "Barra laterale",
+      "home": "Home",
+      "conversations": "Conversazioni",
+      "search": "Cerca",
+      "recent": "Recenti",
+      "noRecent": "Ancora nessuna conversazione",
+      "record": "Nuova registrazione",
+      "stop": "Interrompi registrazione"
     }
   },
   "questionCard": {
