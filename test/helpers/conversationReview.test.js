@@ -30,14 +30,14 @@ function response(parent, reason) {
     createdAt: parent.createdAt + 1,
   };
 }
-function suggestion(parent) {
+function suggestion(parent, state = "opened") {
   return {
     id: nextId++,
     kind: "search_suggestion",
     parentEventId: parent.id,
     segmentIds: [],
     text: "q",
-    metadata: { state: "opened" },
+    metadata: { state },
     createdAt: parent.createdAt + 2,
   };
 }
@@ -106,6 +106,29 @@ test("what Oats went and searched is counted and marked on the item", () => {
   assert.equal(review.unresolved[0].searched, true);
 });
 
+// Every unanswered question gets a suggestion row at `shown`; only `opened`
+// means the question text actually left for the search host. An automatic
+// search that failed also stays at `shown`.
+test("a search that was only offered is not reported as searched", () => {
+  const offered = question("has anyone benchmarked seat price?");
+  const failedAuto = question("what is our net revenue retention?");
+  const review = buildReview({
+    events: [
+      offered,
+      response(offered, "uncertain_response"),
+      suggestion(offered, "shown"),
+      failedAuto,
+      response(failedAuto, "denied_knowledge"),
+      { ...suggestion(failedAuto, "shown"), metadata: { state: "shown", auto: true } },
+    ],
+  });
+  assert.equal(review.searched, 0);
+  assert.deepEqual(
+    review.unresolved.map((item) => item.searched),
+    [false, false]
+  );
+});
+
 test("open and dropped threads are carried; resolved and live are not", () => {
   const review = buildReview({
     events: [],
@@ -127,4 +150,48 @@ test("open and dropped threads are carried; resolved and live are not", () => {
 test("malformed input does not throw", () => {
   assert.equal(buildReview({ events: null, topics: "nope" }).empty, true);
   assert.equal(buildReview().empty, true);
+});
+
+// The transcript's margin marks the turn a question was asked in, with the same
+// outcome the review reports for it.
+test("question turns map the asking turn to its outcome", async () => {
+  const { questionTurns } = await import("../../src/helpers/conversationReview.mjs");
+  const asked = question("what is the median seat price?", "turn-4");
+  const known = question("who owns the migration?", "turn-9");
+  const open = question("anyone benchmarked it?", "turn-12");
+  const turns = questionTurns([
+    asked,
+    response(asked, "denied_knowledge"),
+    known,
+    response(known, "answered"),
+    open,
+  ]);
+  assert.deepEqual(Object.fromEntries(turns), {
+    "turn-4": "denied",
+    "turn-9": "answered",
+    "turn-12": "open",
+  });
+  assert.equal(questionTurns(null).size, 0);
+});
+
+// The answered half of the review quotes the reply the response event carries,
+// and places it at the turn the answer was said in.
+test("an answered question carries its reply, verbatim, and where it was said", () => {
+  const known = question("who owns the migration?", "turn-9");
+  const reply = {
+    ...response(known, "answered"),
+    text: " Priya does, since March. ",
+    segmentIds: ["turn-10"],
+  };
+  const silent = question("anyone?", "turn-12");
+  const bare = { ...response(silent, "answered"), text: "", segmentIds: [] };
+  const review = buildReview({ events: [known, reply, silent, bare] });
+  assert.deepEqual(
+    review.answers.map((item) => [item.question, item.reply, item.segmentId]),
+    [
+      ["who owns the migration?", "Priya does, since March.", "turn-10"],
+      ["anyone?", "", "turn-12"],
+    ]
+  );
+  assert.equal(review.unresolved.length, 0);
 });

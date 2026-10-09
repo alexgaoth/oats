@@ -1891,7 +1891,7 @@
       "dialogueLabel": "检测到的对话",
       "dialogueWaiting": "尚未听到任何内容。",
       "contourLabel": "这场对话到目前为止的形状",
-      "contourLegend": "粗细代表说了多少 · 缺口代表话题转变 · 标记代表问题，越未解决颗粒越粗",
+      "contourLegend": "粗细代表说了多少 · 缺口代表话题转变 · 标记代表问题，越未解决颗粒越粗 · 下方的三角代表标记的时刻",
       "contourSummary": "{{minutes}} 分钟，提出 {{questions}} 个问题（{{unresolved}} 个仍未解答），话题转变 {{shifts}} 次，回到 {{returns}} 条线索。",
       "contourEmpty": "尚未录制任何内容。",
       "record": "录制对话",
@@ -1907,6 +1907,10 @@
       "nothingHeard": "没有听到任何声音，因此未保存对话。请在设置中检查麦克风。",
       "continuing": "继续 {{title}}",
       "notAContinuation": "另起一段对话",
+      "mark": "标记",
+      "marked": "已标记",
+      "markLabel": "标记此刻",
+      "markAnnounced": "已在 {{time}} 标记",
       "threadMapLabel": "目前提到的 {{count}} 个话题的地图",
       "threadMapNoQuote": "没有可引用的近期发言"
     },
@@ -1917,6 +1921,8 @@
       "noTranscript": "暂无转录。",
       "speakerYou": "你",
       "speakerRoom": "对方",
+      "speakerN": "说话人 {{n}}",
+      "nameSpeaker": "为{{speaker}}命名",
       "tabs": {
         "summary": "摘要",
         "transcript": "转录",
@@ -1935,10 +1941,13 @@
       "searchResults_other": "{{count}} 个对话匹配",
       "match": {
         "transcript": "说过",
+        "note": "你的备注",
         "summary": "摘要",
         "title": "标题"
       },
       "matchRelated": "相关",
+      "markedCount_one": "{{count}} 个标记时刻",
+      "markedCount_other": "{{count}} 个标记时刻",
       "emptyHint": "在任意位置按 {{shortcut}}，然后问一个没人知道答案的问题",
       "backToList": "返回",
       "copy": "复制",
@@ -1956,8 +1965,22 @@
     "review": {
       "title": "尚未解决的内容",
       "tally": "提问 {{asked}}，回答 {{answered}}",
-      "openThreads_one": "{{count}} 个话题仍未结束",
-      "openThreads_other": "{{count}} 个话题仍未结束"
+      "openThreads_one": "{{count}} 个话题仍未结束：{{threads}}",
+      "openThreads_other": "{{count}} 个话题仍未结束：{{threads}}",
+      "showAnswers": "显示回答",
+      "hideAnswers": "隐藏回答",
+      "marked": "你标记的",
+      "addNote": "添加备注",
+      "noteLabel": "{{time}} 时刻的备注",
+      "removeMark": "移除",
+      "removeMarkLabel": "移除 {{time}} 的标记",
+      "markedTurn": "已标记。"
+    },
+    "find": {
+      "label": "在此对话中查找",
+      "count": "{{current}} / {{total}}",
+      "none": "无匹配",
+      "close": "关闭"
     },
     "settings": {
       "title": "把选择降到最少。",
@@ -2038,10 +2061,12 @@
       "untitled": "未命名对话",
       "summary": "摘要",
       "openQuestions": "未解答的问题",
+      "marked": "标记",
       "topics": "主题",
       "transcript": "转录",
       "you": "你",
-      "room": "房间"
+      "room": "房间",
+      "speaker": "说话人 {{n}}"
     }
   },
   "questionCard": {

@@ -13,6 +13,34 @@ import { useSettingsStore } from "./stores/settingsStore";
 // Tooltip Component
 const Tooltip = ({ children, content, emoji, align = "center" }) => {
   const [isVisible, setIsVisible] = useState(false);
+  // How far the tip has to move to stay inside the window. The oat's window is
+  // 96px and every tooltip is anchored to a control inside it, so a tip
+  // anchored near one edge — Hide sits 24px from the left — ran off the other
+  // however it wrapped. Measured once per showing; the arrow moves back by the
+  // same amount so it still points at its control.
+  //
+  // Upward it can only give back the gap above its control: a four-line tip
+  // (French) otherwise lost its first line off the top of the window, and
+  // sliding further would cover the control it describes.
+  const tipRef = useRef(null);
+  const [shift, setShift] = useState({ x: 0, y: 0 });
+  useLayoutEffect(() => {
+    if (!isVisible || !tipRef.current) {
+      setShift((current) => (current.x || current.y ? { x: 0, y: 0 } : current));
+      return;
+    }
+    const MARGIN = 4;
+    const GAP_TO_GIVE = 6;
+    const box = tipRef.current.getBoundingClientRect();
+    const left = box.left - shift.x;
+    const right = box.right - shift.x;
+    const top = box.top - shift.y;
+    let x = 0;
+    if (right > window.innerWidth - MARGIN) x = window.innerWidth - MARGIN - right;
+    if (left + x < MARGIN) x = MARGIN - left;
+    const y = top < 0 ? Math.min(-top, GAP_TO_GIVE) : 0;
+    if (x !== shift.x || y !== shift.y) setShift({ x, y });
+  }, [isVisible, content, shift]);
 
   const alignClass =
     align === "right" ? "right-0" : align === "left" ? "left-0" : "left-1/2 -translate-x-1/2";
@@ -27,11 +55,20 @@ const Tooltip = ({ children, content, emoji, align = "center" }) => {
       </div>
       {isVisible && (
         <div
-          className={`absolute bottom-full ${alignClass} mb-2 px-1.5 py-1 text-[10px] text-popover-foreground bg-popover border border-border rounded-md z-10 shadow-lg transition-opacity duration-150 whitespace-nowrap`}
+          ref={tipRef}
+          style={
+            shift.x || shift.y ? { transform: `translate(${shift.x}px, ${shift.y}px)` } : undefined
+          }
+          // Wraps inside the window rather than running out of it. The window is
+          // 96px and does not grow on hover, and `whitespace-nowrap` drew the
+          // conversation tooltip 209px wide at `left: -117` — measured, more
+          // than half of it outside the window and never painted (TODO.md).
+          className={`absolute bottom-full ${alignClass} mb-2 w-max max-w-[88px] text-balance px-1.5 py-1 text-[10px] leading-tight text-popover-foreground bg-popover border border-border rounded-md z-10 shadow-lg transition-opacity duration-150`}
         >
           {emoji && <span className="mr-1">{emoji}</span>}
           {content}
           <div
+            style={shift.x ? { transform: `translateX(${-shift.x}px)` } : undefined}
             className={`absolute top-full ${arrowClass} w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-popover`}
           ></div>
         </div>
@@ -57,6 +94,13 @@ export default function App() {
   // the only thing at all, since there is no tray without an extension.
   const [conversation, setConversation] = useState({ recording: false, startedAt: null });
   const [conversationElapsed, setConversationElapsed] = useState("");
+  // A beat of feedback after the clock is pressed to mark the moment.
+  const [markFlash, setMarkFlash] = useState(false);
+  useEffect(() => {
+    if (!markFlash) return undefined;
+    const timer = setTimeout(() => setMarkFlash(false), 1200);
+    return () => clearTimeout(timer);
+  }, [markFlash]);
 
   // Floating icon auto-hide setting (read from store, synced via IPC)
   const floatingIconAutoHide = useSettingsStore((s) => s.floatingIconAutoHide);
@@ -212,7 +256,9 @@ export default function App() {
 
   // Elapsed time, ticking once a second and only while there is something to
   // count. Minutes and seconds, in mono — machine state speaks in mono
-  // (DESIGN.md §C3), and hours would be a width the 96px window does not have.
+  // (DESIGN.md §C3). Past the hour it is hours and minutes, written `1h05`:
+  // unbounded minutes put `100:47` 50px wide into a 48px slot, where it lost
+  // its first digit and read `00:47`, and `1:05` alone would read as a minute.
   useEffect(() => {
     if (!conversation.recording || !conversation.startedAt) {
       setConversationElapsed("");
@@ -220,8 +266,13 @@ export default function App() {
     }
     const tick = () => {
       const seconds = Math.max(0, Math.floor((Date.now() - conversation.startedAt) / 1000));
-      const minutes = Math.floor(seconds / 60);
-      setConversationElapsed(`${minutes}:${String(seconds % 60).padStart(2, "0")}`);
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor(seconds / 60) % 60;
+      setConversationElapsed(
+        hours
+          ? `${hours}h${String(minutes).padStart(2, "0")}`
+          : `${minutes}:${String(seconds % 60).padStart(2, "0")}`
+      );
     };
     tick();
     const timer = setInterval(tick, 1000);
@@ -376,7 +427,11 @@ export default function App() {
           // the difference between "listening" and "not listening" has to be
           // legible at 40px from across a desk.
           className: `${baseClasses} border-2 border-primary`,
-          tooltip: t("app.mic.conversation"),
+          // What the press does, in the words the Conversation surface's own
+          // stop control uses. The rim and the clock already say a conversation
+          // is running; the sentence that said so too was 209px in a 96px
+          // window and could not be read in any of the ten languages.
+          tooltip: t("oats.conversation.finish"),
         };
       case "recording":
         return {
@@ -454,10 +509,40 @@ export default function App() {
           {/* The running clock. It is the difference between "Oats is open" and
               "Oats is listening right now", and it is the reason this window
               refuses to auto-hide while a conversation is running. */}
+          {/* Pressing it marks the moment — a mark is a time, and this is the
+              time. It is the only way to mark while the panel is hidden, which
+              the global shortcut makes the normal way to record. The caret it
+              shows for a beat is the one the mark leaves on the contour. */}
           {conversation.recording && conversationElapsed && (
-            <span className="rounded-full border border-primary/40 bg-surface-2/90 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-foreground shadow-sm backdrop-blur-sm">
-              {conversationElapsed}
-            </span>
+            <Tooltip content={t("oats.conversation.markLabel")} align="left">
+              <button
+                type="button"
+                aria-label={t("oats.conversation.markLabel")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void window.electronAPI?.requestMarkMoment?.();
+                  setMarkFlash(true);
+                }}
+                className="relative inline-flex items-center rounded-full border border-primary/40 bg-surface-2/90 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-foreground shadow-sm backdrop-blur-sm transition-colors duration-150 hover:border-primary"
+              >
+                {/* For a beat the caret takes the time's place. The time stays
+                    in the layout, invisible, so the pill does not grow: it has
+                    48px of a 96px window and a caret beside the time measured
+                    6px past the window's edge. */}
+                <span className={markFlash ? "invisible" : undefined}>{conversationElapsed}</span>
+                {markFlash && (
+                  <svg
+                    aria-hidden="true"
+                    width="7"
+                    height="6"
+                    viewBox="0 0 8 7"
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                  >
+                    <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
+                  </svg>
+                )}
+              </button>
+            </Tooltip>
           )}
           {/* Hide is only offered when idle: during a recording the same corner
               belongs to cancel, and two X buttons side by side is a trap. Also

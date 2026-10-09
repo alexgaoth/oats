@@ -22,7 +22,7 @@
 //
 // Pure and DOM-free so the classification can be pinned rather than eyeballed.
 
-import { buildConversationGraph, responseReason } from "./conversationGraph.mjs";
+import { buildConversationGraph, responseReason, suggestionState } from "./conversationGraph.mjs";
 
 /** Outcomes that mean nobody in the room supplied an answer. */
 const UNRESOLVED = new Set(["denied", "silence", "uncertain_response"]);
@@ -43,6 +43,8 @@ function outcomeOf(node) {
  * @param {Array} [input.topics] Topic nodes, for the threads left open.
  * @returns {{ unresolved: Array<{key: string, question: string, outcome: string,
  *   segmentId: string|null, searched: boolean, at: number}>,
+ *   answers: Array<{key: string, question: string, reply: string,
+ *   segmentId: string|null}>,
  *   answered: number, asked: number, searched: number,
  *   openThreads: Array<{id: string|number, label: string}>, empty: boolean }}
  */
@@ -52,14 +54,30 @@ export function buildReview({ events, topics } = {}) {
   let answered = 0;
   let searched = 0;
   const unresolved = [];
+  // The answered questions, with the words that answered them. Verbatim: the
+  // response event carries the turns that followed the question, so this
+  // quotes the room rather than inferring anything about it.
+  const answers = [];
 
   for (const node of nodes) {
     if (!node.question) continue;
     const outcome = outcomeOf(node);
-    const wasSearched = node.suggestion != null;
+    // Opened, not offered. Every question that was not answered gets a
+    // suggestion row at `shown`, so counting rows marked a question "searched"
+    // when nothing was ever sent — and an automatic search that failed stays at
+    // `shown` too. "Searched" is a network claim, and this product states those
+    // exactly or not at all.
+    const wasSearched = suggestionState(node.suggestion) === "opened";
     if (wasSearched) searched += 1;
     if (outcome === "answered") {
       answered += 1;
+      answers.push({
+        key: node.key,
+        question: String(node.question.text ?? "").trim(),
+        reply: String(node.response?.text ?? "").trim(),
+        // Where the answer was said, falling back to where it was asked.
+        segmentId: node.response?.segmentIds?.[0] ?? node.question.segmentIds?.[0] ?? null,
+      });
       continue;
     }
     unresolved.push({
@@ -83,12 +101,30 @@ export function buildReview({ events, topics } = {}) {
 
   return {
     unresolved,
+    answers,
     answered,
     asked,
     searched,
     openThreads,
     empty: asked === 0 && openThreads.length === 0,
   };
+}
+
+/**
+ * Which turns asked a question, and how each came out — for the transcript's
+ * margin. Keyed by the segment the question started in.
+ *
+ * @returns {Map<string, string>} segment id → "answered" | "uncertain" |
+ *   "silence" | "denied" | "open"
+ */
+export function questionTurns(events) {
+  const turns = new Map();
+  for (const node of buildConversationGraph(Array.isArray(events) ? events : [])) {
+    const segmentId = node.question?.segmentIds?.[0];
+    if (segmentId == null || turns.has(String(segmentId))) continue;
+    turns.set(String(segmentId), outcomeOf(node));
+  }
+  return turns;
 }
 
 export { UNRESOLVED };

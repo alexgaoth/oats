@@ -31,6 +31,7 @@ import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 const NO_TOPICS: ConversationTopicNode[] = [];
 const NO_CONTOUR_TOPICS: ReturnType<typeof topicsForContour> = [];
 export const NO_EVENTS: ConversationEvent[] = [];
+const NO_MOMENTS: { id: string; at: number; note: string }[] = [];
 
 // Adapters between what Oats stores and what the contour model wants. They live
 // here rather than in the model so the model stays pure ESM that `node:test` can
@@ -71,6 +72,7 @@ function utterancesFor(segments: TranscriptSegment[]) {
 export function useLiveContour(startedAt: number | null): ContourData {
   const segments = useMeetingRecordingStore((state) => state.segments);
   const cards = useMeetingRecordingStore((state) => state.questionCards);
+  const moments = useMeetingRecordingStore((state) => state.moments);
   const recording = useMeetingRecordingStore((state) => state.isRecording);
   const [edge, setEdge] = useState(() => Date.now());
 
@@ -88,6 +90,7 @@ export function useLiveContour(startedAt: number | null): ContourData {
       utterances: utterancesFor(segments),
       questions: cards,
       topics: snapshot?.nodes ? topicsForContour(snapshot.nodes) : NO_CONTOUR_TOPICS,
+      moments,
       // Both ends of the window are the *session*, never the transcript.
       //
       // Continuing a recent conversation seeds up to half an hour of previous
@@ -98,9 +101,11 @@ export function useLiveContour(startedAt: number | null): ContourData {
       // the clock beside it read 1:30. The contour and the clock have to be
       // measuring the same sitting.
       startedAt: startedAt ?? undefined,
+      // `Date.now()` as well as the edge tick: a mark is pressed *now*, past the
+      // last tick, and a window that stopped short would drop its caret.
       now: recording ? Math.max(edge, Date.now()) : undefined,
     }) as ContourData;
-  }, [segments, cards, recording, edge, startedAt]);
+  }, [segments, cards, moments, recording, edge, startedAt]);
 }
 
 /**
@@ -128,7 +133,8 @@ function storedOutcome(reason: string | null, hasResponse: boolean): string {
 export function useStoredContour(
   segments: TranscriptSegment[],
   events: ConversationEvent[],
-  topics: ConversationTopicNode[] = NO_TOPICS
+  topics: ConversationTopicNode[] = NO_TOPICS,
+  moments: { id: string; at: number; note: string }[] = NO_MOMENTS
 ): ContourData {
   return useMemo(() => {
     const questions = buildConversationGraph(events)
@@ -146,8 +152,9 @@ export function useStoredContour(
       utterances: utterancesFor(segments),
       questions,
       topics: topicsForContour(topics),
+      moments,
     }) as ContourData;
-  }, [segments, events, topics]);
+  }, [segments, events, topics, moments]);
 }
 
 /** The miniature beside a conversation in the Intelligence list. */

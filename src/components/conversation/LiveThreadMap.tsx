@@ -1,6 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { buildThreadMap, quotedUtterance } from "../../helpers/liveThreadMap.mjs";
+import {
+  buildThreadMap,
+  dotSize,
+  placeLabels,
+  quotedUtterance,
+} from "../../helpers/liveThreadMap.mjs";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { cn } from "../lib/utils";
 
@@ -23,6 +29,54 @@ import { cn } from "../lib/utils";
 // force-directed layout is an animation loop, and an animation loop during a
 // recording is the defect this repository spent a day removing.
 
+// The §4 thread-state vocabulary, the same one the topic graph and the stack
+// speak: gold for the one subject being spoken, terracotta and dense grain for
+// open, sage for resolved, husk and sparse grain for dropped. It used to fill
+// every unsettled dot gold and outline a "settled" state the tracker never
+// emits — so a resolved subject drew exactly like an open one, and a busy map
+// put four golds on the live surface beside the seed (§3 allows one).
+const THREAD_MARK: Record<string, { style: CSSProperties; className?: string }> = {
+  live: { style: { backgroundColor: "var(--color-primary)" } },
+  open: { style: { color: "var(--graph-open)" }, className: "oats-dither oats-dither--fine" },
+  resolved: { style: { backgroundColor: "var(--graph-answered)", opacity: 0.6 } },
+  dropped: {
+    style: { color: "var(--graph-silence)" },
+    className: "oats-dither oats-dither--sparse",
+  },
+};
+
+/** The button's padding (`px-1.5 py-0.5`), between its edge and the dot. */
+const BUTTON_PAD_X_PX = 6;
+const BUTTON_PAD_Y_PX = 2;
+
+/**
+ * Where the button goes so that its *dot* lands on the point, for each place
+ * `placeLabels` can put the words. The button used to be centred on the point
+ * as a whole, so a subject's dot was drawn half a label to the left of when it
+ * was raised and the connectors ended in the middle of its words.
+ */
+function anchorTransform(side: string, align: string, size: number): string {
+  const x = BUTTON_PAD_X_PX + size / 2;
+  const y = BUTTON_PAD_Y_PX + size / 2;
+  if (side === "left") return `translate(calc(-100% + ${x}px), -50%)`;
+  if (side === "right") return `translate(${-x}px, -50%)`;
+  const dx = align === "start" ? `${-x}px` : align === "end" ? `calc(-100% + ${x}px)` : "-50%";
+  const dy = side === "above" ? `calc(-100% + ${y}px)` : `${-y}px`;
+  return `translate(${dx}, ${dy})`;
+}
+
+const LAYOUT: Record<string, string> = {
+  right: "flex-row gap-1.5",
+  left: "flex-row-reverse gap-1.5",
+  above: "flex-col-reverse gap-0.5",
+  below: "flex-col gap-0.5",
+};
+const ALIGN: Record<string, string> = {
+  center: "items-center",
+  start: "items-start",
+  end: "items-end",
+};
+
 export default function LiveThreadMap({ className }: { className?: string }) {
   const { t } = useTranslation();
   const snapshot = useMeetingRecordingStore((s) => s.topicSnapshot);
@@ -41,11 +95,29 @@ export default function LiveThreadMap({ className }: { className?: string }) {
   );
   const quote = useMemo(() => quotedUtterance(point, segments), [point, segments]);
 
+  // The box in px, so labels can be placed against each other. Measured on
+  // resize only; nothing here runs per frame.
+  const box = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const element = box.current;
+    if (!element) return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize((previous) =>
+        previous.width === width && previous.height === height ? previous : { width, height }
+      );
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [map.empty]);
+  const placement = useMemo(() => placeLabels(map.points, size), [map.points, size]);
+
   if (map.empty) return null;
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <div className="relative h-36 w-full">
+      <div ref={box} className="relative h-36 w-full">
         {/* Connectors only. `preserveAspectRatio="none"` is fine for lines and
             would have been ruinous for text, which is why text left. */}
         <svg
@@ -84,20 +156,33 @@ export default function LiveThreadMap({ className }: { className?: string }) {
           {map.points.map(
             (p: { id: number; label: string; state: string; x: number; y: number; r: number }) => {
               const isSelected = p.id === selected;
+              const size = dotSize(p);
+              const { side, align, hidden } = placement.get(p.id) ?? {
+                side: "right",
+                align: "center",
+                hidden: false,
+              };
+              const mark = THREAD_MARK[p.state] ?? THREAD_MARK.dropped;
               return (
                 <li
                   key={p.id}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  className="absolute"
                   style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
                 >
                   <button
                     type="button"
                     onClick={() => setSelected(isSelected ? null : p.id)}
                     aria-pressed={isSelected}
+                    title={hidden ? p.label : undefined}
+                    style={{ transform: anchorTransform(side, align, size) }}
                     // 24px minimum, because it is a real target and WCAG 2.2
                     // asks for one. The dot inside carries the weight.
                     className={cn(
-                      "flex min-h-6 items-center gap-1.5 rounded-full px-1.5 py-0.5",
+                      "flex min-h-6 rounded-xl px-1.5 py-0.5",
+                      LAYOUT[side] ?? LAYOUT.right,
+                      side === "left" || side === "right"
+                        ? "items-center"
+                        : (ALIGN[align] ?? ALIGN.center),
                       "font-mono text-[11px] leading-4 whitespace-nowrap transition-colors",
                       "[transition-duration:var(--motion-instant)]",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -108,15 +193,14 @@ export default function LiveThreadMap({ className }: { className?: string }) {
                   >
                     <span
                       aria-hidden="true"
-                      // State survives greyscale: unfinished is filled, settled
-                      // is an outline. Size carries dwell.
-                      className={cn(
-                        "inline-block shrink-0 rounded-full border border-primary",
-                        p.state === "settled" ? "bg-transparent" : "bg-primary"
-                      )}
-                      style={{ width: 5 + p.r * 5, height: 5 + p.r * 5 }}
+                      // Size carries dwell; colour and grain carry state, so
+                      // state survives greyscale.
+                      className={cn("inline-block shrink-0 rounded-full", mark.className)}
+                      style={{ ...mark.style, width: size, height: size }}
                     />
-                    {p.label}
+                    {/* Hidden when it has nowhere to go without covering another
+                        subject's words; still the button's name, and its title. */}
+                    <span className={hidden ? "sr-only" : undefined}>{p.label}</span>
                   </button>
                 </li>
               );

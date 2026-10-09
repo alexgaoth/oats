@@ -339,3 +339,28 @@ test("an empty contour makes an empty strip rather than throwing", () => {
   assert.equal(contourStrip(buildContour({ utterances: [] })).empty, true);
   assert.equal(contourStrip(null).empty, true);
 });
+
+// A mark is the one element not measured from the room, so the trace must place
+// it exactly where it was pressed and say where its window starts — a reader
+// clicking the trace is turned back into that moment.
+test("marked moments sit at their instant, and the window can be inverted", () => {
+  const contour = buildContour({
+    utterances: [
+      { id: "a", text: "we should cut the take home", timestamp: T0 },
+      { id: "b", text: "the hiring loop is broken", timestamp: T0 + 60_000 },
+    ],
+    moments: [
+      { id: "m1", at: T0 + 15_000, note: "the counter-example" },
+      { id: "before", at: T0 - 5_000 },
+      { id: "nan", at: Number.NaN },
+    ],
+  });
+  assert.deepEqual(
+    contour.moments.map((moment) => [moment.id, moment.x, moment.note]),
+    [["m1", 0.25, "the counter-example"]]
+  );
+  assert.equal(contour.start, T0);
+  const back = contour.start + contour.moments[0].x * contour.span;
+  assert.equal(back, T0 + 15_000);
+  assert.deepEqual(buildContour({}).moments, []);
+});

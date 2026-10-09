@@ -62,12 +62,23 @@ export interface ContourReturn {
   state?: string;
 }
 
+export interface ContourMoment {
+  id: string;
+  x: number;
+  at: number;
+  note: string;
+}
+
 export interface ContourData {
   points: ContourPoint[];
   marks: ContourMark[];
   shifts: ContourShift[];
   returns: ContourReturn[];
+  /** Instants somebody pressed "Mark". Optional: older callers build none. */
+  moments?: ContourMoment[];
   span: number;
+  /** Where the window begins, epoch ms — with `span`, a position is a time. */
+  start?: number;
   empty: boolean;
 }
 
@@ -192,6 +203,8 @@ export default function ConversationContour({
   showMarks = true,
   label,
   focusedGroup = null,
+  onPick,
+  pickLabel,
 }: {
   contour: ContourData;
   className?: string;
@@ -207,9 +220,22 @@ export default function ConversationContour({
    * visibly the same thing.
    */
   focusedGroup?: string | null;
+  /**
+   * Makes the trace a way into the record: a click is turned back into the
+   * moment it stands for. Pointer-only by design — the transcript it lands on
+   * is the keyboard path to the same place.
+   */
+  onPick?: (time: number) => void;
+  /** What the hover hairline says about the moment under the pointer. */
+  pickLabel?: (time: number) => string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [palette, setPalette] = useState<Palette | null>(null);
+  // Where the pointer is over a pickable trace, as a fraction of its width.
+  // A DOM hairline rather than a redraw: hovering must not repaint the canvas.
+  const [hover, setHover] = useState<number | null>(null);
+  const pickable = Boolean(onPick) && !contour.empty && contour.span > 0;
+  const timeAt = (fraction: number) => (contour.start ?? 0) + fraction * contour.span;
 
   // Read on mount and on theme change only — never in a draw (the house rule:
   // getComputedStyle in a loop forces a style recalculation every frame).
@@ -347,6 +373,24 @@ export default function ConversationContour({
           // the outcome was barely resolvable.
           stippleDisc(ctx, px, py - stem - 4, focused ? 6 : 4, mark.dither, color);
         }
+        // 5. Moments somebody marked: an ink caret under the baseline. Ink, not a
+        //    state colour, because it is not a verdict on anything — it is the
+        //    reader's own hand in the margin.
+        ctx.fillStyle = palette.ink;
+        ctx.globalAlpha = 0.8;
+        for (const moment of contour.moments ?? []) {
+          // Held inside the canvas: a mark made live is made *now*, which is
+          // the right-hand edge, and an unclamped caret there drew half a
+          // triangle — on the one press whose feedback is that triangle.
+          const px = Math.min(width - 4, Math.max(4, Math.round(x(moment.x)))) + 0.5;
+          ctx.beginPath();
+          ctx.moveTo(px, baseline + 5);
+          ctx.lineTo(px + 3.5, baseline + 11);
+          ctx.lineTo(px - 3.5, baseline + 11);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
       } else {
         // The list strip keeps the marks — "three unanswered questions in the
         // last third" is exactly what a list is scanned for — but drops the
@@ -367,15 +411,59 @@ export default function ConversationContour({
     return () => observer.disconnect();
   }, [contour, palette, showMarks, focusedGroup]);
 
-  return (
+  const canvas = (
     <canvas
       ref={canvasRef}
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      className={cn("block w-full", className)}
+      className={cn(
+        "block w-full",
+        pickable ? "cursor-pointer" : undefined,
+        !pickable && className
+      )}
       style={{ height }}
+      onPointerMove={
+        pickable
+          ? (event) => {
+              const box = event.currentTarget.getBoundingClientRect();
+              setHover(Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)));
+            }
+          : undefined
+      }
+      onPointerLeave={pickable ? () => setHover(null) : undefined}
+      onClick={
+        pickable
+          ? (event) => {
+              const box = event.currentTarget.getBoundingClientRect();
+              const fraction = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+              onPick?.(timeAt(fraction));
+            }
+          : undefined
+      }
     />
+  );
+
+  if (!pickable) return canvas;
+
+  return (
+    <div className={cn("relative", className)}>
+      {canvas}
+      {hover !== null && (
+        // Where a click would land, and when that was.
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 w-px bg-foreground/30"
+          style={{ left: `${hover * 100}%` }}
+        >
+          {pickLabel && (
+            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tabular-nums text-muted-foreground">
+              {pickLabel(timeAt(hover))}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

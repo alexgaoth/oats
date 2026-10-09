@@ -80,6 +80,29 @@ test("a conversation that stays on one subject stays on one topic", () => {
   assert.ok(nodes[0].durationMs > 0);
 });
 
+// A stored record is not being spoken. The topic current at stop takes the
+// state it would have had the moment the room left it — including `resolved`,
+// which `live` used to mask.
+test("a final snapshot has nothing live, and keeps a resolved current topic resolved", () => {
+  const tracker = new ConversationTopicTracker();
+  feed(tracker, [
+    "The pricing model is broken for enterprise",
+    "Enterprise pricing needs a rethink",
+    "Separately, hiring the research engineer is urgent",
+    "The research engineer role has been open for months",
+  ]);
+  const open = tracker.snapshot(4000, { final: true });
+  assert.deepEqual(
+    open.nodes.map((node) => node.state),
+    ["open", "open"]
+  );
+
+  tracker.resolveTopicForUtterance("u3");
+  const settled = tracker.snapshot(4000, { final: true });
+  assert.equal(settled.nodes[1].state, "resolved");
+  assert.equal(tracker.snapshot(4000).nodes[1].state, "live", "the live view is unchanged");
+});
+
 test("backchannel utterances are ignored rather than becoming topics", () => {
   const tracker = new ConversationTopicTracker();
   feed(tracker, ["The pricing model is broken", "Yeah", "Mm-hm", "Right, okay"]);

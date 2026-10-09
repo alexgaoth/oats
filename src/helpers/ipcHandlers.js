@@ -439,10 +439,12 @@ class IPCHandlers {
         untitled: i18nMain.t("oats.vault.untitled"),
         summary: i18nMain.t("oats.vault.summary"),
         openQuestions: i18nMain.t("oats.vault.openQuestions"),
+        marked: i18nMain.t("oats.vault.marked"),
         topics: i18nMain.t("oats.vault.topics"),
         transcript: i18nMain.t("oats.vault.transcript"),
         you: i18nMain.t("oats.vault.you"),
         room: i18nMain.t("oats.vault.room"),
+        speaker: (n) => i18nMain.t("oats.vault.speaker", { n }),
       },
     });
   }
@@ -844,6 +846,13 @@ class IPCHandlers {
     // and the three entry points cannot drift.
     ipcMain.handle("toggle-conversation-request", () => {
       void this.windowManager?.sendToggleConversation?.();
+      return { success: true };
+    });
+
+    // Marking from the oat: the same forward, to the window that owns the
+    // recording. A mark when nothing is recording is dropped there.
+    ipcMain.handle("mark-moment-request", () => {
+      this.windowManager?.sendMarkMoment?.();
       return { success: true };
     });
 
@@ -1491,12 +1500,33 @@ class IPCHandlers {
             .replace(/^>\s+/gm, "")
             .trim();
         } else {
-          const body = note.enhanced_content || note.content || "";
-          // The file carries its own name: the conversation title as the H1,
-          // then the summary and threads exactly as read in Intelligence. The
-          // guard keeps a body that already opens with an H1 from getting two.
-          exportContent =
-            note.title && !body.startsWith("# ") ? `# ${note.title}\n\n${body}` : body;
+          // What the summary tab shows, in its order: the title, the moments
+          // the reader marked, what was left open, then the summary — so the
+          // certain parts of the record leave with the inferred one.
+          const { buildReadingExport } = await import("./obsidianNote.mjs");
+          let segments = [];
+          try {
+            const parsed = note.transcript ? JSON.parse(note.transcript) : [];
+            if (Array.isArray(parsed)) segments = parsed;
+          } catch {
+            segments = [];
+          }
+          let events = [];
+          try {
+            events = this.databaseManager.listConversationEvents(note.id) || [];
+          } catch {
+            events = [];
+          }
+          exportContent = buildReadingExport({
+            note,
+            events,
+            segments,
+            strings: {
+              untitled: i18nMain.t("oats.vault.untitled"),
+              marked: i18nMain.t("oats.vault.marked"),
+              openQuestions: i18nMain.t("oats.vault.openQuestions"),
+            },
+          });
         }
 
         fs.writeFileSync(result.filePath, exportContent, "utf-8");
@@ -4693,6 +4723,10 @@ class IPCHandlers {
     let meetingLocalModel = null;
     let meetingLocalLanguage = null;
     let meetingLocalTranscribing = false;
+    // An in-person conversation recorded locally: its audio cut where people
+    // pause rather than every 5 s, and kept on disk for the speaker pass after
+    // Stop. Null for every other kind of recording.
+    let meetingInRoom = null;
     let meetingPendingMicChunks = [];
     let meetingPendingMicFinals = [];
     let meetingPendingMicFinalTimer = null;
@@ -4765,6 +4799,10 @@ class IPCHandlers {
 
     const dispatchMeetingAudioBuffer = (buffer, source) => {
       if (meetingLocalMode) {
+        if (meetingInRoom && source === "mic") {
+          feedInRoomAudio(buffer);
+          return;
+        }
         meetingLocalBuffers[source].push(buffer);
         return;
       }
@@ -5217,6 +5255,153 @@ class IPCHandlers {
       }
     };
 
+    /**
+     * An in-person conversation, transcribed where people pause.
+     *
+     * The 5 s timer cut the room mid-word: measured over nine LibriSpeech
+     * conversations with the same `base` model, fixed 5 s windows 15.15% WER,
+     * segments cut at pauses 6.17% (docs/dictation-accuracy.md). Each segment
+     * goes out with its exact place in the recording (`startMs`/`endMs`), and
+     * the 16 kHz audio is kept in a temporary file so the speakers can be told
+     * apart over the whole conversation once it stops.
+     */
+    const startInRoomSegmenting = async () => {
+      const { SpeechSegmenter } = await import("./speechSegmenter.mjs");
+      const os = require("os");
+      const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
+      const stream = fs.createWriteStream(audioPath);
+      // A header now, its sizes patched at Stop.
+      stream.write(pcm16ToWav(Buffer.alloc(0)));
+      meetingInRoom = {
+        segmenter: new SpeechSegmenter(),
+        startedAt: Date.now(),
+        queue: [],
+        draining: null,
+        audio: { path: audioPath, stream, bytes: 0 },
+      };
+    };
+
+    const feedInRoomAudio = (buffer24k) => {
+      const session = meetingInRoom;
+      const pcm16k = downsample24kTo16k(buffer24k);
+      session.audio.stream.write(pcm16k);
+      session.audio.bytes += pcm16k.length;
+      const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
+      for (const segment of session.segmenter.push(samples)) enqueueInRoomSegment(session, segment);
+    };
+
+    const enqueueInRoomSegment = (session, segment) => {
+      session.queue.push(segment);
+      if (session.draining) return;
+      session.draining = (async () => {
+        while (session.queue.length) await transcribeInRoomSegment(session, session.queue.shift());
+      })().finally(() => {
+        session.draining = null;
+      });
+    };
+
+    const transcribeInRoomSegment = async (session, segment) => {
+      const pcm = Buffer.from(
+        segment.samples.buffer,
+        segment.samples.byteOffset,
+        segment.samples.byteLength
+      );
+      try {
+        let result;
+        if (meetingLocalProvider === "nvidia") {
+          result = await this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
+            model: meetingLocalModel,
+          });
+        } else {
+          result = await this.whisperManager.transcribeLocalWhisper(pcm16ToWav(pcm), {
+            model: meetingLocalModel,
+            language: meetingLocalLanguage,
+            ...this._resolveWhisperVadOptions("meeting"),
+          });
+        }
+        const text = result?.success ? result.text?.trim() : "";
+        if (!text) return;
+        meetingLocalTranscript = meetingLocalTranscript
+          ? `${meetingLocalTranscript} ${text}`
+          : text;
+        const win = meetingLocalWin;
+        if (win && !win.isDestroyed()) {
+          win.webContents.send("meeting-transcription-segment", {
+            text,
+            source: "mic",
+            type: "final",
+            // When it was *said*, not when transcription finished.
+            timestamp: session.startedAt + segment.startMs,
+            startMs: segment.startMs,
+            endMs: segment.endMs,
+          });
+        }
+      } catch (error) {
+        debugLogger.error("In-room segment transcription failed", { error: error.message });
+        if (meetingLocalWin && !meetingLocalWin.isDestroyed()) {
+          meetingLocalWin.webContents.send("meeting-transcription-error", error.message);
+        }
+      }
+    };
+
+    /**
+     * Stop: the last thing said is transcribed before Stop returns, and the
+     * recording's audio is closed into a WAV whose path is handed back.
+     */
+    const finishInRoomSegmenting = async () => {
+      const session = meetingInRoom;
+      if (!session) return null;
+      for (const segment of session.segmenter.flush()) enqueueInRoomSegment(session, segment);
+      while (session.draining) await session.draining;
+      await new Promise((resolve) => session.audio.stream.end(resolve));
+      meetingInRoom = null;
+      try {
+        const fd = fs.openSync(session.audio.path, "r+");
+        fs.writeSync(fd, pcm16ToWav(Buffer.alloc(session.audio.bytes)).subarray(0, 44), 0, 44, 0);
+        fs.closeSync(fd);
+      } catch (error) {
+        debugLogger.warn("In-room audio header patch failed", { error: error.message });
+      }
+      return {
+        audioPath: session.audio.path,
+        startedAt: session.startedAt,
+        bytes: session.audio.bytes,
+      };
+    };
+
+    /**
+     * Who spoke, over the whole conversation, after it stops: TitaNet voices on
+     * pyannote segments (diarization.js). Runs in the background — a title and
+     * a summary do not wait for it — and the audio is deleted when it is done,
+     * whatever happened, so nothing of the room outlives the transcript.
+     */
+    const runInRoomSpeakerPass = async (finished, noteId, win) => {
+      if (!finished) return;
+      try {
+        const DiarizationManager = require("./diarization");
+        const minimumBytes = 16000 * 2 * 4; // under 4 s there is no conversation to divide
+        if (!noteId || finished.bytes < minimumBytes || !this.diarizationManager?.isInRoomReady()) {
+          return;
+        }
+        const turns = await this.diarizationManager.diarize(finished.audioPath, {
+          embedding: DiarizationManager.IN_ROOM_EMBEDDING_ONNX,
+          threshold: 0.85,
+          threads: Math.max(1, Math.min(4, require("os").cpus().length - 1)),
+        });
+        if (turns.length && win && !win.isDestroyed()) {
+          win.webContents.send("conversation-speakers", {
+            noteId,
+            startedAt: finished.startedAt,
+            turns,
+          });
+        }
+      } catch (error) {
+        debugLogger.warn("In-room speaker pass failed", { error: error.message });
+      } finally {
+        fs.unlink(finished.audioPath, () => {});
+      }
+    };
+
     const transcribeAllLocalBuffers = async () => {
       if (meetingLocalTranscribing) return;
       meetingLocalTranscribing = true;
@@ -5245,6 +5430,12 @@ class IPCHandlers {
       meetingNoteId = null;
       meetingLocalMode = false;
       meetingLocalBuffers = { mic: [], system: [] };
+      // A recording that ended without Stop still deletes its audio.
+      if (meetingInRoom) {
+        const abandoned = meetingInRoom;
+        meetingInRoom = null;
+        abandoned.audio.stream.end(() => fs.unlink(abandoned.audio.path, () => {}));
+      }
       if (meetingDiarizationStream) {
         meetingDiarizationStream.end();
         meetingDiarizationStream = null;
@@ -5660,9 +5851,13 @@ class IPCHandlers {
             await startMeetingAec(systemAudioMode);
           }
 
-          meetingLocalTimer = setInterval(() => {
-            transcribeAllLocalBuffers();
-          }, LOCAL_MEETING_CHUNK_INTERVAL_MS);
+          if (isInRoom) {
+            await startInRoomSegmenting();
+          } else {
+            meetingLocalTimer = setInterval(() => {
+              transcribeAllLocalBuffers();
+            }, LOCAL_MEETING_CHUNK_INTERVAL_MS);
+          }
 
           ({ systemAudioMode, systemAudioStrategy } = await startMeetingSystemAudio(
             event,
@@ -5902,6 +6097,13 @@ class IPCHandlers {
             clearInterval(meetingLocalTimer);
             meetingLocalTimer = null;
           }
+          let inRoomFinished = null;
+          try {
+            inRoomFinished = await finishInRoomSegmenting();
+          } catch (err) {
+            debugLogger.error("In-room final transcription failed", { error: err.message });
+          }
+          void runInRoomSpeakerPass(inRoomFinished, meetingNoteId, diarizationWin);
           try {
             await transcribeAllLocalBuffers();
           } catch (err) {

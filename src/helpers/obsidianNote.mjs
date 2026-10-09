@@ -13,6 +13,8 @@
 // come back here to see it.
 
 import { buildConversationGraph, responseReason } from "./conversationGraph.mjs";
+import { momentSegment, parseMoments } from "./conversationMoments.mjs";
+import { speakerLabelKind } from "./speakerTurns.mjs";
 
 /** Characters no common filesystem will take, plus the ones Obsidian reads as syntax. */
 const UNSAFE_FILENAME = /[/\\?%*:|"<>#^[\]]/g;
@@ -157,16 +159,84 @@ function yamlString(value) {
     .replace(/\t/g, "\\t")}"`;
 }
 
+/** An offset into the conversation, as the transcript gutter writes it. */
+function offset(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor(total / 60) % 60;
+  const seconds = pad(total % 60);
+  return hours ? `${hours}:${pad(minutes)}:${seconds}` : `${minutes}:${seconds}`;
+}
+
+/**
+ * The moments the reader marked, as list items: when, the words being said,
+ * and the note if there is one. Empty when nothing was marked.
+ */
+export function markedLines(rawMoments, segments) {
+  const moments = parseMoments(rawMoments);
+  if (!moments.length) return [];
+  const timed = (Array.isArray(segments) ? segments : []).filter((segment) =>
+    Number.isFinite(segment?.timestamp)
+  );
+  const start = timed.length
+    ? Math.min(...timed.map((segment) => segment.timestamp))
+    : moments[0].at;
+  return moments.map((moment) => {
+    const said = oneLine(momentSegment(moment, timed)?.text);
+    const note = oneLine(moment.note);
+    return [`- \`${offset(moment.at - start)}\``, said && `“${said}”`, note && `— ${note}`]
+      .filter(Boolean)
+      .join(" ");
+  });
+}
+
 /** The stored transcript as speaker-labelled markdown, in the reader's language. */
 function renderTranscript(segments, strings) {
   return (Array.isArray(segments) ? segments : [])
     .map((segment) => {
       const text = String(segment?.text || "").trim();
       if (!text) return null;
-      return `**${segment?.source === "mic" ? strings.you : strings.room}:** ${text}`;
+      const kind = speakerLabelKind(segment);
+      if (!kind) return text;
+      const label =
+        kind.kind === "name"
+          ? kind.name
+          : kind.kind === "number"
+            ? strings.speaker(kind.n)
+            : kind.kind === "you"
+              ? strings.you
+              : strings.room;
+      return `**${label}:** ${text}`;
     })
     .filter(Boolean)
     .join("\n\n");
+}
+
+/**
+ * The summary tab, as a file: what is on screen when "Save" is pressed there.
+ *
+ * The title, what the reader marked, what the conversation left open, and the
+ * summary — in the order the reading view shows them. It used to be the title
+ * and the model's prose alone, so the parts of the record that are certain
+ * (the marks, the unanswered questions) stayed behind whenever a conversation
+ * was saved or shared. Built from the same pieces as the vault note so the two
+ * cannot drift; no frontmatter and no transcript, because those are the vault's
+ * and the transcript tab's.
+ */
+export function buildReadingExport({ note, events = [], segments = [], strings }) {
+  const out = [`# ${oneLine(note?.title) || strings.untitled}`, ""];
+  const marked = markedLines(note?.conversation_marks, segments);
+  if (marked.length) out.push(`## ${strings.marked}`, "", ...marked, "");
+  const open = openQuestions(events);
+  if (open.length) {
+    out.push(`## ${strings.openQuestions}`, "");
+    for (const question of open) out.push(`- ${question}`);
+    out.push("");
+  }
+  const body = String(note?.enhanced_content || note?.content || "").trim();
+  // A summary that already opens with its own H1 would put two titles on top.
+  if (body) out.push(body.replace(/^# .*\n+/, ""), "");
+  return out.join("\n");
 }
 
 /**
@@ -201,6 +271,11 @@ export function buildVaultNote({ note, snapshot, events = [], segments = [], str
 
   const summary = (note?.enhanced_content || note?.content || "").trim();
   if (summary) out.push(`## ${strings.summary}`, "", summary, "");
+
+  // What the reader marked leads what the room left open: it is the part of
+  // the record that is theirs.
+  const marked = markedLines(note?.conversation_marks, segments);
+  if (marked.length && strings.marked) out.push(`## ${strings.marked}`, "", ...marked, "");
 
   // Questions nobody answered are the reason to come back, so they lead the
   // body rather than trailing the transcript.

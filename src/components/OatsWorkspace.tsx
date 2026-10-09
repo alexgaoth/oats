@@ -1,4 +1,12 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Brain, ChevronLeft, ChevronRight, Mic, Search, Settings, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
@@ -10,6 +18,8 @@ import {
   startRecording,
   stopRecording,
   getConversationTopicSnapshot,
+  markMoment,
+  applyConversationSpeakers,
 } from "../stores/meetingRecordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import {
@@ -25,13 +35,27 @@ import FieldBackdrop from "./field/FieldBackdrop";
 import WheatPerch from "./field/WheatPerch";
 import LiveThreadMap from "./conversation/LiveThreadMap";
 import OpenThreadStack from "./conversation/OpenThreadStack";
-import ConversationSignalRail from "./conversation/ConversationSignalRail";
+import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import { findExcerpt, mergeRecall } from "../helpers/conversationRecall.mjs";
-import { buildReview } from "../helpers/conversationReview.mjs";
+import { findMatches, foldText } from "../helpers/searchFold.mjs";
+import { speakerText } from "../utils/speakerLabel";
+import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
+import {
+  momentSegment,
+  parseMoments,
+  removeMoment,
+  setMomentNote,
+} from "../helpers/conversationMoments.mjs";
+import {
+  conversationSpanMs,
+  formatSpan,
+  ledgerDate,
+  ledgerDateLong,
+} from "../helpers/ledgerDate.mjs";
 import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
@@ -59,6 +83,7 @@ import type {
   ConversationEvent,
   ConversationTopicNode,
   ConversationTopicSnapshot,
+  QuestionOutcome,
 } from "../types/conversationEvents";
 import type { NoteItem } from "../types/electron";
 import type { TFunction } from "i18next";
@@ -94,11 +119,15 @@ const SURFACES: { id: Surface; render: () => React.ReactNode }[] = [
 // The summary is markdown. A two-line preview is no place for "## Threads" or
 // stray asterisks, so the syntax is stripped rather than rendered — the list is
 // scanning, not reading.
+//
+// A heading goes whole, not just its hashes. Stripping only the marker left the
+// heading's words in the run of prose — "only one of them closed. Threads
+// Enterprise pricing is…" — a sentence nobody wrote.
 function plainPreview(raw: string | null | undefined): string {
   if (!raw) return "";
   return raw
     .replace(/```[\s\S]*?```/g, " ")
-    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^#{1,6}\s.*$/gm, " ")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/[*_`>]/g, "")
     .replace(/^\s*[-+]\s+/gm, "")
@@ -120,10 +149,10 @@ function transcriptText(raw: string | null, t: TFunction): string {
     const segments = JSON.parse(raw);
     if (Array.isArray(segments)) {
       return segments
-        .map(
-          (s) =>
-            `${s.source === "mic" ? t("oats.intelligence.speakerYou") : t("oats.intelligence.speakerRoom")}: ${s.text}`
-        )
+        .map((s) => {
+          const label = speakerText(s, t);
+          return label ? `${label}: ${s.text}` : s.text;
+        })
         .join("\n\n");
     }
   } catch {}
@@ -139,7 +168,14 @@ function parseSegments(raw: string | null): TranscriptSegment[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as TranscriptSegment[]) : [];
+    if (!Array.isArray(parsed)) return [];
+    // Transcripts saved before ids were kept get stable positional ones, so a
+    // list of turns has keys and a resumed conversation saves them from then
+    // on. Questions asked in those recordings point at ids that were never
+    // saved, and stay unlinked — nothing can recover those.
+    return (parsed as TranscriptSegment[]).map((segment, index) =>
+      segment && segment.id != null ? segment : { ...segment, id: `legacy-${index}` }
+    );
   } catch {
     return [];
   }
@@ -177,11 +213,12 @@ function topicOverlap(a: string[] = [], b: string[] = []): number {
 // It is not a list. A list here would be the Intelligence surface drawn twice,
 // and the whole architecture rests on there being exactly three surfaces.
 function LastEntry() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const notes = useNotes();
   const last = notes[0] ?? null;
   const segments = useMemo(() => parseSegments(last?.transcript ?? null), [last?.transcript]);
   const strip = useContourStrip(segments, NO_EVENTS);
+  const span = formatSpan(conversationSpanMs(segments), { locale: i18n.language });
 
   if (!last) return null;
 
@@ -199,11 +236,13 @@ function LastEntry() {
           {last.title || t("oats.untitled")}
         </span>
         <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-          {new Date(last.created_at).toLocaleDateString()}
+          {ledgerDate(last.created_at, { locale: i18n.language })}
         </span>
       </div>
       {!strip.empty && (
-        <ConversationContour contour={strip} className="mt-2.5" height={20} showMarks={false} />
+        <StripWithSpan className="mt-2.5" span={span}>
+          <ConversationContour contour={strip} height={20} showMarks={false} />
+        </StripWithSpan>
       )}
     </button>
   );
@@ -270,6 +309,9 @@ function useElapsed(startedAt: number | null): number {
 
 function ConversationSurface() {
   const recording = useMeetingRecordingStore((s) => s.isRecording);
+  // Still true for a moment after Finish, while the last words since the final
+  // pause are transcribed. The save below waits for them.
+  const transcribing = useMeetingRecordingStore((s) => s.isTranscribing);
   const recordingNoteId = useMeetingRecordingStore((s) => s.recordingNoteId);
   const transcript = useMeetingRecordingStore((s) => s.transcript);
   const openThreads = useMeetingRecordingStore((s) => s.openThreads);
@@ -367,8 +409,8 @@ function ConversationSurface() {
   const preflight = useConversationPreflight();
 
   useEffect(() => {
-    if (!wasRecording.current || recording) {
-      wasRecording.current = recording;
+    if (!wasRecording.current || recording || transcribing) {
+      wasRecording.current = recording || transcribing;
       return;
     }
     wasRecording.current = false;
@@ -390,10 +432,14 @@ function ConversationSurface() {
     // Snapshot the topics before anything else awaits: the tracker is live
     // renderer state, and the graph in Intelligence reads only what is persisted.
     const topics = getConversationTopicSnapshot();
+    const moments = state.moments;
     void (async () => {
       await window.electronAPI?.updateNote(recordingNoteId, {
         transcript: finalTranscript,
         ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
+        // Written on every press already; once more here so a press whose
+        // write was refused still lands with the transcript it belongs to.
+        ...(moments.length ? { conversation_marks: JSON.stringify(moments) } : {}),
       });
       const action = (await initializeActions()).find((item) => item.is_builtin);
       if (!action) return;
@@ -421,7 +467,7 @@ function ConversationSurface() {
     // `t` is a dependency only because the failure messages are translated. A
     // language change re-runs this, but the `wasRecording` guard above makes that
     // an immediate no-op rather than a second intelligence run.
-  }, [recording, recordingNoteId, transcript, t]);
+  }, [recording, transcribing, recordingNoteId, transcript, t]);
 
   const startFresh = async () => {
     setStarting(true);
@@ -458,6 +504,7 @@ function ConversationSurface() {
         folderId: note.folder_id ?? null,
         mode: "in_room",
         seedSegments: parseSegments(note.transcript),
+        seedMoments: note.conversation_marks,
       });
     } finally {
       setStarting(false);
@@ -491,6 +538,41 @@ function ConversationSurface() {
   // running the current implementation on each press.
   const beginRef = useRef(begin);
   beginRef.current = begin;
+
+  // Marking the moment. One press, nothing to type while somebody is talking;
+  // a note can be added afterwards in the record. `markedAt` drives the brief
+  // "Marked" on the control and the announcement — the caret on the trace is
+  // the lasting answer.
+  const [markedAt, setMarkedAt] = useState<number | null>(null);
+  const mark = useCallback(async () => {
+    const moment = await markMoment();
+    if (moment) setMarkedAt(moment.at);
+  }, []);
+  useEffect(() => {
+    if (markedAt === null) return undefined;
+    const timer = window.setTimeout(() => setMarkedAt(null), 1600);
+    return () => window.clearTimeout(timer);
+  }, [markedAt]);
+  // And from the floating oat's clock, which is all there is on screen when a
+  // conversation is recorded with this window hidden.
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onMarkMoment?.(() => void mark());
+    return () => cleanup?.();
+  }, [mark]);
+  // `M`, while a conversation is running and nothing is being typed into.
+  useEffect(() => {
+    if (!recording) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "m" && event.key !== "M") return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      event.preventDefault();
+      void mark();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [recording, mark]);
 
   // The global hotkey lands here. The window may be hidden, unfocused, or on
   // another workspace; nothing about this path surfaces it.
@@ -542,7 +624,13 @@ function ConversationSurface() {
                 // throws the page upward. Switching compositions re-lays out,
                 // which is a deliberate act by the reader and not the unbidden
                 // §8 shift.
-                detailed ? "justify-start pt-[10vh]" : "justify-center",
+                //
+                // Detailed's margin above the clock is small because everything
+                // below it is bidding for the same height, and the detected
+                // dialogue — the composition's reason to exist (§9.9) — gets
+                // only what is left. At 10vh it was handed 93px at the shipped
+                // 1200x800: two lines, under a band of blank paper.
+                detailed ? "justify-start pt-[4vh]" : "justify-center",
                 // Below this height the three bands do not fit, and squeezing
                 // them is worse than scrolling. Measured at 600x400 (200% zoom
                 // of the shipped default) the head and foot alone took 312 of
@@ -587,6 +675,16 @@ function ConversationSurface() {
                 microphone went flat — heard silence again, losing the
                 conversation. That is precisely the "fails quietly at the end"
                 this surface exists to prevent. */}
+              {/* A mark is announced on its own: the status region above says
+                  whether the recording is healthy, and a mark replacing that
+                  sentence would hide a warning that was about to be read. */}
+              <p aria-live="polite" className="sr-only">
+                {markedAt !== null && sessionStartedAt !== null
+                  ? t("oats.conversation.markAnnounced", {
+                      time: clock(markedAt - sessionStartedAt),
+                    })
+                  : ""}
+              </p>
               <p aria-live="polite" role="status" className="sr-only">
                 {atRisk.atRisk
                   ? t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })
@@ -645,6 +743,33 @@ function ConversationSurface() {
                     <span className="sr-only">{t("oats.conversation.listening")} </span>
                     {clock(elapsed)}
                   </h1>
+                  {/* Beside the clock, because a mark is a time: "this one".
+                      It carries the same ink caret it leaves under the trace,
+                      so what it did is visible where it did it. In both
+                      compositions — it is the reader's hand, not evidence to
+                      hide. */}
+                  <button
+                    type="button"
+                    onClick={() => void mark()}
+                    aria-label={t("oats.conversation.markLabel")}
+                    aria-keyshortcuts="M"
+                    title={`${t("oats.conversation.markLabel")} (M)`}
+                    className={cn(
+                      "inline-flex min-h-6 items-center gap-1.5 self-center rounded-sm text-sm",
+                      "transition-colors [transition-duration:var(--motion-instant)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      markedAt !== null
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <svg aria-hidden="true" width="8" height="7" viewBox="0 0 8 7">
+                      <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
+                    </svg>
+                    {markedAt !== null
+                      ? t("oats.conversation.marked")
+                      : t("oats.conversation.mark")}
+                  </button>
                 </div>
                 {/* No `aria-pressed`.
 
@@ -1019,6 +1144,10 @@ function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) return null;
+    // Records stored before `snapshot({ final: true })` carry the topic that was
+    // current at stop as `live`, which the graph draws gold. Nothing in a record
+    // is being spoken; unresolved is the most that is known about it.
+    for (const node of parsed.nodes) if (node?.state === "live") node.state = "open";
     return parsed as ConversationTopicSnapshot;
   } catch {
     return null;
@@ -1045,6 +1174,8 @@ function ConnectionsView({
   const [selectedTopic, setSelectedTopic] = useState<ConversationTopicNode | null>(null);
   const searchBaseUrl = useSettingsStore((s) => s.conversationAideSearchBaseUrl);
   const snapshot = useMemo(() => readTopicSnapshot(note.conversation_topics), [note]);
+  const graphBox = useRef<HTMLDivElement | null>(null);
+  const graphHeight = useRoomBelow(graphBox);
 
   if (!snapshot || snapshot.nodes.length < MIN_GRAPH_TOPICS) {
     return (
@@ -1079,11 +1210,15 @@ function ConnectionsView({
           graph at 452–868 in an 800px window: 68px of it below the fold, on the
           one tab whose entire payload is a picture, and it is a picture you drag
           nodes around in — so the fix for "I cannot see the bottom" was to
-          scroll the page out from under your own cursor. 29rem is the measured
-          head above it (date, title, meta, contour, legend, tab row) plus a
-          little clearance; the clamp keeps it usable in a short window and stops
-          it becoming a field in a tall one. */}
-      <div className="h-[clamp(16rem,calc(100vh-29rem),34rem)] w-full">
+          scroll the page out from under your own cursor.
+
+          The room is measured, not estimated. `calc(100vh - 29rem)` assumed a
+          head of one known height, and a title that wraps to two lines or a
+          "left open last time" line made it taller: measured at 1200x800 the
+          graph ended 16px below the window and cut its lowest label in half.
+          The bounds keep it usable in a short window and stop it becoming a
+          field in a tall one. */}
+      <div ref={graphBox} className="w-full" style={{ height: graphHeight }}>
         <TopicGraph
           snapshot={snapshot}
           selectedId={selectedTopic?.id ?? null}
@@ -1144,6 +1279,37 @@ function ConnectionsView({
   );
 }
 
+/**
+ * How much of the window is left below an element, in px, within bounds.
+ *
+ * Measured against the element's position in its scrolling column rather than
+ * on screen, so it does not change as the reader scrolls. Re-measured when the
+ * window is resized and never otherwise — nothing here runs per frame.
+ */
+function useRoomBelow(
+  ref: React.RefObject<HTMLElement | null>,
+  { min = 256, max = 544, clearance = 24 } = {}
+): number {
+  const [room, setRoom] = useState(min);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const element = ref.current;
+      if (!element) return;
+      let scroller: HTMLElement | null = element.parentElement;
+      while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) {
+        scroller = scroller.parentElement;
+      }
+      const top = element.getBoundingClientRect().top + (scroller?.scrollTop ?? 0);
+      const next = Math.round(Math.min(max, Math.max(min, window.innerHeight - top - clearance)));
+      setRoom((previous) => (previous === next ? previous : next));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [ref, min, max, clearance]);
+  return room;
+}
+
 // Which of the three Intelligence views is showing. Drives the cross-fade key.
 type IntelligenceView = "list" | "reading" | "map";
 
@@ -1158,7 +1324,7 @@ function IntelligenceViews({
   reading: boolean;
   setReading: (reading: boolean) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const notes = useNotes();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [tab, setTab] = useState<DetailTab>("summary");
@@ -1210,6 +1376,50 @@ function IntelligenceViews({
     window.addEventListener("oats-focus-search", focusSearch);
     return () => window.removeEventListener("oats-focus-search", focusSearch);
   }, [setReading, setView]);
+
+  // Find in this conversation. `null` is closed; a string is the find line,
+  // open, with what is typed in it. "Search what you are looking at": in the
+  // list `/` searches conversations, in a record it finds inside that record —
+  // the global recall hotkey keeps its own event and always means the list.
+  const [finding, setFinding] = useState<string | null>(null);
+  const [findAt, setFindAt] = useState(0);
+  const findInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    setFinding(null);
+    setFindAt(0);
+  }, [selectedId, reading]);
+  useEffect(() => setFindAt(0), [finding]);
+
+  // Escape: one step back towards the list, which is where every path in here
+  // starts — and an open find line is the nearest step. Read from refs so the
+  // listeners are registered once.
+  const backState = useRef({ reading, view, finding });
+  backState.current = { reading, view, finding };
+  useEffect(() => {
+    const back = () => {
+      if (backState.current.finding !== null) setFinding(null);
+      else if (backState.current.reading) setReading(false);
+      else if (backState.current.view === "map") setView("list");
+    };
+    const find = () => {
+      if (!backState.current.reading) {
+        window.dispatchEvent(new Event("oats-focus-search"));
+        return;
+      }
+      setTab("transcript");
+      setFinding((current) => current ?? "");
+      requestAnimationFrame(() => {
+        findInputRef.current?.focus();
+        findInputRef.current?.select();
+      });
+    };
+    window.addEventListener("oats-intelligence-back", back);
+    window.addEventListener("oats-find", find);
+    return () => {
+      window.removeEventListener("oats-intelligence-back", back);
+      window.removeEventListener("oats-find", find);
+    };
+  }, [setReading, setView]);
   useEffect(() => {
     if (notes.length && selectedId == null) setSelectedId(notes[0].id);
   }, [notes, selectedId]);
@@ -1218,13 +1428,9 @@ function IntelligenceViews({
   // memory, so this needs no index and no IPC — and it is the only way to find a
   // conversation by what was said in it rather than by scrolling.
   const literalNotes = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase();
+    const needle = foldText(query.trim());
     if (!needle) return notes;
-    return notes.filter((note) =>
-      [note.title, note.enhanced_content, note.transcript]
-        .filter(Boolean)
-        .some((field) => String(field).toLocaleLowerCase().includes(needle))
-    );
+    return notes.filter((note) => foldedNote(note).includes(needle));
   }, [notes, query]);
 
   // What the local vector index thinks the question is about.
@@ -1322,7 +1528,23 @@ function IntelligenceViews({
     () => readTopicSnapshot(selected?.conversation_topics ?? null)?.nodes ?? [],
     [selected?.conversation_topics]
   );
-  const storedContour = useStoredContour(selectedSegments, events, selectedTopics);
+  const selectedMoments = useMemo(
+    () => parseMoments(selected?.conversation_marks ?? null),
+    [selected?.conversation_marks]
+  );
+  const findQuery = finding?.trim() ?? "";
+  const findCount = useMemo(() => {
+    if (!findQuery) return 0;
+    if (!selectedSegments.length) {
+      return findMatches(transcriptText(selected?.transcript ?? null, t), findQuery).length;
+    }
+    return selectedSegments.reduce(
+      (total, segment) => total + findMatches(String(segment.text ?? ""), findQuery).length,
+      0
+    );
+  }, [findQuery, selectedSegments, selected?.transcript, t]);
+  const storedContour = useStoredContour(selectedSegments, events, selectedTopics, selectedMoments);
+  const selectedSpan = formatSpan(conversationSpanMs(selectedSegments), { locale: i18n.language });
 
   // Three regions — rail, list, detail — is a mail client, and DESIGN.md §1 is
   // explicit that a surface needing a third region is really two screens. So the
@@ -1360,8 +1582,11 @@ function IntelligenceViews({
         <div className="mx-auto w-full max-w-[68ch] px-8 pb-16 pt-4">
           <BackLink onClick={() => setReading(false)} label={t("oats.intelligence.backToList")} />
 
+          {/* When, in full, and for how long — the bearings a record is
+              found again by. */}
           <p className="mt-8 font-mono text-xs text-muted-foreground">
-            {new Date(selected.created_at).toLocaleDateString()}
+            {ledgerDateLong(selected.created_at, { locale: i18n.language })}
+            {selectedSpan && ` · ${selectedSpan}`}
           </p>
           {renaming ? (
             <input
@@ -1425,11 +1650,20 @@ function IntelligenceViews({
               and how settled it came out, and where the room went back to
               something. It is the one part of this document that is not words,
               and it is derived entirely from the words. */}
+          {/* And it is the way into the record: a click on the trace opens
+              the transcript at that moment, and the hairline under the
+              pointer says when that was before you press. */}
           <ConversationContour
             contour={storedContour}
             className="mt-8"
             height={92}
             label={contourLabel(storedContour, t)}
+            onPick={(time) => {
+              const segment = momentSegment({ at: time }, selectedSegments);
+              setLandedOnSegment(segment?.id != null ? String(segment.id) : null);
+              setTab("transcript");
+            }}
+            pickLabel={(time) => clock(Math.max(0, time - (storedContour.start ?? time)))}
           />
           {/* The key lives here and only here: the reading view is where a
               contour is studied rather than glanced at, and where there is time
@@ -1478,6 +1712,17 @@ function IntelligenceViews({
               every thread name, on the one payload Intelligence exists to show. */}
           {tab === "summary" && (
             <>
+              {/* What the reader marked, first: it is the one part of the
+                  record that is theirs rather than the room's or the model's. */}
+              <MarkedMoments
+                note={selected}
+                moments={selectedMoments}
+                segments={selectedSegments}
+                onOpenTurn={(segmentId) => {
+                  setLandedOnSegment(segmentId);
+                  setTab("transcript");
+                }}
+              />
               {/* Certain first, inferred second. */}
               <ConversationReview
                 events={events}
@@ -1493,8 +1738,56 @@ function IntelligenceViews({
               />
             </>
           )}
+          {tab === "transcript" && finding !== null && (
+            // The find line: a line, like every field on these surfaces, with
+            // where you are among the matches beside it.
+            <div className="mt-7 flex items-baseline gap-4 border-b border-border-control pb-1.5">
+              <input
+                ref={findInputRef}
+                // Mounting is the first open, and the frame callback in the
+                // `oats-find` handler runs before this commits; it only covers a
+                // second `/` while the line is already open.
+                autoFocus
+                type="text"
+                value={finding}
+                onChange={(event) => setFinding(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setFinding(null);
+                  } else if (event.key === "Enter" && findCount > 0) {
+                    event.preventDefault();
+                    setFindAt((at) => (at + (event.shiftKey ? findCount - 1 : 1)) % findCount);
+                  }
+                }}
+                aria-label={t("oats.find.label")}
+                placeholder={t("oats.find.label")}
+                autoComplete="off"
+                spellCheck={false}
+                className="min-w-0 flex-1 rounded-sm bg-transparent font-mono text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+              />
+              <span
+                aria-live="polite"
+                className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground"
+              >
+                {findQuery
+                  ? findCount
+                    ? t("oats.find.count", { current: findAt + 1, total: findCount })
+                    : t("oats.find.none")
+                  : ""}
+              </span>
+              <QuietAction label={t("oats.find.close")} onClick={() => setFinding(null)} />
+            </div>
+          )}
           {tab === "transcript" && (
-            <TranscriptView note={selected} query={query} scrollToId={landedOnSegment} />
+            <TranscriptView
+              note={selected}
+              query={findQuery || query}
+              scrollToId={landedOnSegment}
+              events={events}
+              moments={selectedMoments}
+              currentMatch={findQuery && findCount ? findAt : null}
+            />
           )}
           {tab === "connections" && (
             <ConnectionsView key={selected.id} note={selected} events={events} onReload={reload} />
@@ -1626,7 +1919,7 @@ function IntelligenceViews({
                     {note.title || t("oats.untitled")}
                   </p>
                   <p className="shrink-0 font-mono text-[11px] text-muted-foreground">
-                    {new Date(note.created_at).toLocaleDateString()}
+                    {ledgerDate(note.created_at, { locale: i18n.language })}
                   </p>
                 </div>
                 {/* The passage that matched, and where it came from.
@@ -1669,6 +1962,34 @@ function IntelligenceViews({
   );
 }
 
+/**
+ * A note's searchable text, folded once per note object.
+ *
+ * The filter runs on every keystroke over every conversation, and folding —
+ * NFD, drop the marks, lowercase — over a hundred transcripts each time would
+ * be the same work repeated for an answer that has not changed. A note object
+ * is replaced whenever the note is, so a stale fold cannot outlive its text.
+ */
+const foldedNotes = new WeakMap<NoteItem, string>();
+function foldedNote(note: NoteItem): string {
+  let folded = foldedNotes.get(note);
+  if (folded === undefined) {
+    folded = [
+      note.title,
+      note.enhanced_content,
+      note.transcript,
+      // The reader's own notes on what they marked — the words they are most
+      // likely to remember having written.
+      ...parseMoments(note.conversation_marks ?? null).map((moment) => moment.note),
+    ]
+      .filter(Boolean)
+      .map((field) => foldText(field))
+      .join("\n");
+    foldedNotes.set(note, folded);
+  }
+  return folded;
+}
+
 /** Which tab to open a search result on. The rule itself is in `conversationSearch`. */
 function matchedTab(note: NoteItem, query: string, t: TFunction): DetailTab {
   return matchTarget(
@@ -1678,6 +1999,117 @@ function matchedTab(note: NoteItem, query: string, t: TFunction): DetailTab {
       transcript: transcriptText(note.transcript, t),
     },
     query
+  );
+}
+
+/**
+ * The moments the reader marked, quoted.
+ *
+ * Each is the words being said when "Mark" was pressed — a place in the
+ * record, so pressing it opens the transcript there — with the time, and a note
+ * that can be added here, afterwards, where there is time to write one. Nothing
+ * to type during the conversation was the whole point of the mark.
+ */
+function MarkedMoments({
+  note,
+  moments,
+  segments,
+  onOpenTurn,
+}: {
+  note: NoteItem;
+  moments: { id: string; at: number; note: string }[];
+  segments: TranscriptSegment[];
+  onOpenTurn: (segmentId: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const [editing, setEditing] = useState<string | null>(null);
+  useEffect(() => setEditing(null), [note.id]);
+  if (!moments.length) return null;
+  const startedAt =
+    segments.find((segment) => Number.isFinite(segment.timestamp))?.timestamp ?? moments[0].at;
+
+  const write = async (next: { id: string; at: number; note: string }[]) => {
+    if (JSON.stringify(next) === JSON.stringify(moments)) return;
+    await window.electronAPI?.updateNote?.(note.id, { conversation_marks: JSON.stringify(next) });
+    await initializeNotes("meeting", 100);
+  };
+  const save = async (id: string, text: string) => {
+    setEditing(null);
+    await write(setMomentNote(moments, id, text));
+  };
+
+  return (
+    <section className="mt-7 border-l-2 border-border/60 pl-4">
+      <h2 className="font-mono text-[11px] text-muted-foreground">{t("oats.review.marked")}</h2>
+      <ul className="mt-3 space-y-3">
+        {moments.map((moment) => {
+          const segment = momentSegment(moment, segments);
+          const time = clock(Math.max(0, moment.at - (startedAt as number)));
+          return (
+            <li key={moment.id}>
+              <button
+                type="button"
+                onClick={() => onOpenTurn(segment?.id != null ? String(segment.id) : null)}
+                disabled={!segment}
+                className={cn(
+                  "line-clamp-2 w-full rounded-sm text-left font-mono text-[13px] leading-6 text-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  segment
+                    ? "underline decoration-border underline-offset-[5px] hover:decoration-foreground"
+                    : "cursor-default"
+                )}
+              >
+                {segment ? String(segment.text ?? "").trim() : time}
+              </button>
+              <div className="mt-0.5 flex min-w-0 items-baseline gap-3 font-mono text-[11px] leading-5 text-muted-foreground">
+                <span className="shrink-0 tabular-nums">{time}</span>
+                {editing === moment.id ? (
+                  <input
+                    autoFocus
+                    defaultValue={moment.note}
+                    maxLength={280}
+                    aria-label={t("oats.review.noteLabel", { time })}
+                    spellCheck
+                    onBlur={(event) => void save(moment.id, event.currentTarget.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                      if (event.key === "Escape") setEditing(null);
+                    }}
+                    className="min-w-0 flex-1 rounded-sm border-b border-border bg-transparent font-sans text-[13px] text-foreground focus-visible:border-primary focus-visible:outline-none"
+                  />
+                ) : moment.note ? (
+                  // The reader's own words, in the reader's voice — sans, not the
+                  // machine's mono. Pressing them edits them.
+                  <button
+                    type="button"
+                    onClick={() => setEditing(moment.id)}
+                    aria-label={t("oats.review.noteLabel", { time })}
+                    className="min-w-0 truncate rounded-sm text-left font-sans text-[13px] text-foreground/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {moment.note}
+                  </button>
+                ) : (
+                  <QuietAction
+                    label={t("oats.review.addNote")}
+                    ariaLabel={t("oats.review.noteLabel", { time })}
+                    onClick={() => setEditing(moment.id)}
+                  />
+                )}
+                {/* A press made by mistake is the reader's to take back. Not
+                    evidence — a highlight — so no second press to confirm. */}
+                {editing !== moment.id && (
+                  <QuietAction
+                    label={t("oats.review.removeMark")}
+                    ariaLabel={t("oats.review.removeMarkLabel", { time })}
+                    onClick={() => void write(removeMoment(moments, moment.id))}
+                  />
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -1709,6 +2141,11 @@ function ConversationReview({
 }) {
   const { t } = useTranslation();
   const review = useMemo(() => buildReview({ events, topics }), [events, topics]);
+  // The answered half, on request. What was left open is the reason to come
+  // back; what was answered is the record of the exchange — worth having one
+  // press away, not worth the page's length by default.
+  const [showAnswers, setShowAnswers] = useState(false);
+  useEffect(() => setShowAnswers(false), [events]);
 
   // Nothing observed means nothing to review. A panel saying "0 questions" is a
   // panel that has to be read to learn it says nothing.
@@ -1736,7 +2173,10 @@ function ConversationReview({
               >
                 {item.question}
               </button>
-              <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+              {/* Its own line, flush with the question. The button above is
+                  full-width, so this always wrapped — and the inline margin
+                  meant for sitting beside the question indented it instead. */}
+              <span className="block font-mono text-[11px] leading-5 text-muted-foreground">
                 {t(`questionCard.state.${item.outcome === "open" ? "asked" : item.outcome}`)}
                 {item.searched && ` · ${t("questionCard.searched")}`}
               </span>
@@ -1749,16 +2189,48 @@ function ConversationReview({
           went unanswered" has a denominator. */}
       <p className="mt-3 font-mono text-[11px] leading-5 text-muted-foreground">
         {t("oats.review.tally", { asked: review.asked, answered: review.answered })}
-        {review.openThreads.length > 0 && (
+        {/* The labels go through the string, not beside it: appended as markup
+            they read as part of the count ("2 threads still open pricing
+            enterprise"), and the colon that separates them is spaced
+            differently in French and full-width in Chinese and Japanese. */}
+        {review.openThreads.length > 0 &&
+          ` · ${t("oats.review.openThreads", {
+            count: review.openThreads.length,
+            threads: review.openThreads.map((thread) => thread.label).join(", "),
+          })}`}
+        {review.answers.length > 0 && (
           <>
-            {" · "}
-            {t("oats.review.openThreads", { count: review.openThreads.length })}{" "}
-            <span className="text-foreground/70">
-              {review.openThreads.map((thread) => thread.label).join(", ")}
-            </span>
+            {" "}
+            <QuietAction
+              label={showAnswers ? t("oats.review.hideAnswers") : t("oats.review.showAnswers")}
+              ariaExpanded={showAnswers}
+              onClick={() => setShowAnswers((open) => !open)}
+            />
           </>
         )}
       </p>
+
+      {showAnswers && (
+        <ul className="mt-3 space-y-3">
+          {review.answers.map((item) => (
+            <li key={item.key}>
+              <p className="text-[13px] leading-6 text-foreground">{item.question}</p>
+              {/* The words that answered it, in the machine's verbatim voice,
+                  and a place: pressing them opens the transcript there. */}
+              {item.reply ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenTurn(item.segmentId)}
+                  disabled={!item.segmentId}
+                  className="line-clamp-2 w-full rounded-sm text-left font-mono text-[12px] leading-5 text-muted-foreground underline decoration-transparent underline-offset-4 hover:text-foreground hover:decoration-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {item.reply}
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -1786,15 +2258,48 @@ function TranscriptView({
   note,
   query,
   scrollToId,
+  events,
+  moments,
+  currentMatch = null,
 }: {
   note: NoteItem;
   query: string;
   /** The segment a search matched, so arriving from a result lands on it. */
   scrollToId?: string | null;
+  events: ConversationEvent[];
+  moments: { id: string; at: number; note: string }[];
+  /** Which highlighted match the find line is on, or null when it is not open. */
+  currentMatch?: number | null;
 }) {
   const { t } = useTranslation();
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const target = useRef<HTMLLIElement | null>(null);
+  // The match the find line is on: marked, and brought to the middle of the
+  // screen. Children's effects run first, so this lands after `Highlighted`
+  // has scrolled to the first match on a new query.
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const marks = transcriptRef.current?.querySelectorAll("mark") ?? [];
+    marks.forEach((mark, index) => {
+      if (index === currentMatch) mark.setAttribute("data-current", "");
+      else mark.removeAttribute("data-current");
+    });
+    if (currentMatch == null) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    marks[currentMatch]?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+  }, [currentMatch, query]);
+  // The margin: which turns asked a question (and how it came out), and which
+  // ones the reader marked. Scanning an hour of transcript for "where were the
+  // questions" is what a margin is for.
+  const asked = useMemo(() => questionTurns(events), [events]);
+  const marked = useMemo(() => {
+    const ids = new Set<string>();
+    for (const moment of moments) {
+      const segment = momentSegment(moment, segments);
+      if (segment?.id != null) ids.add(String(segment.id));
+    }
+    return ids;
+  }, [moments, segments]);
 
   useEffect(() => {
     if (!target.current) return;
@@ -1806,59 +2311,154 @@ function TranscriptView({
   // to what the reading view has always shown rather than to an empty page.
   if (!segments.length) {
     return (
-      <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-7 text-muted-foreground">
-        <Highlighted
-          text={transcriptText(note.transcript, t) || t("oats.intelligence.noTranscript")}
-          query={query}
-        />
-      </article>
+      <div ref={transcriptRef}>
+        <article className="mt-7 whitespace-pre-wrap font-mono text-[13px] leading-6 text-muted-foreground">
+          <Highlighted
+            text={transcriptText(note.transcript, t) || t("oats.intelligence.noTranscript")}
+            query={query}
+          />
+        </article>
+      </div>
     );
   }
 
   const startedAt = segments.find((segment) => Number.isFinite(segment.timestamp))?.timestamp;
 
   return (
-    <ol className="mt-7 space-y-4">
-      {segments.map((segment) => {
-        const at =
-          Number.isFinite(segment.timestamp) && Number.isFinite(startedAt)
-            ? clock(Math.max(0, (segment.timestamp as number) - (startedAt as number)))
-            : null;
-        const matched = scrollToId != null && String(segment.id) === scrollToId;
-        return (
-          <li
-            key={segment.id}
-            ref={matched ? target : undefined}
-            className="flex gap-4 font-mono text-[13px] leading-7"
-          >
-            <span
-              aria-hidden="true"
-              className="w-12 shrink-0 pt-px text-right text-[11px] tabular-nums text-muted-foreground/70"
+    <div ref={transcriptRef}>
+      <ol className="mt-7 space-y-4">
+        {segments.map((segment) => {
+          const at =
+            Number.isFinite(segment.timestamp) && Number.isFinite(startedAt)
+              ? clock(Math.max(0, (segment.timestamp as number) - (startedAt as number)))
+              : null;
+          const matched = scrollToId != null && String(segment.id) === scrollToId;
+          const outcome = asked.get(String(segment.id));
+          const isMarked = marked.has(String(segment.id));
+          return (
+            <li
+              key={segment.id}
+              ref={matched ? target : undefined}
+              className="flex gap-4 font-mono text-[13px] leading-6"
             >
-              {at ?? ""}
-            </span>
-            <p
-              title={at ?? undefined}
-              className={cn(
-                "min-w-0 flex-1 text-muted-foreground",
-                // The turn a search landed on is ink rather than husk. It is not
-                // a highlight — a semantic match has no span to highlight — it
-                // is "this is the one".
-                matched && "text-foreground"
-              )}
-            >
-              <span className="mr-2 select-none text-muted-foreground/70">
-                {segment.source === "mic"
-                  ? t("oats.intelligence.speakerYou")
-                  : t("oats.intelligence.speakerRoom")}
-                <span className="sr-only">: </span>
+              <span
+                aria-hidden="true"
+                className="flex w-16 shrink-0 items-center justify-end gap-1.5 self-start pt-px text-[11px] tabular-nums text-muted-foreground/70"
+              >
+                {isMarked && (
+                  <svg width="8" height="7" viewBox="0 0 8 7" className="text-foreground/80">
+                    <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
+                  </svg>
+                )}
+                {outcome && (
+                  <StateMark
+                    state={(outcome === "open" ? "asked" : outcome) as QuestionOutcome}
+                    className=""
+                  />
+                )}
+                {at ?? ""}
               </span>
-              <Highlighted text={String(segment.text ?? "")} query={query} />
-            </p>
-          </li>
-        );
-      })}
-    </ol>
+              <p
+                title={at ?? undefined}
+                className={cn(
+                  "min-w-0 flex-1 text-muted-foreground",
+                  // The turn a search landed on is ink rather than husk. It is not
+                  // a highlight — a semantic match has no span to highlight — it
+                  // is "this is the one".
+                  matched && "text-foreground"
+                )}
+              >
+                {isMarked && <span className="sr-only">{t("oats.review.markedTurn")} </span>}
+                <SpeakerName note={note} segments={segments} segment={segment} />
+                <Highlighted text={String(segment.text ?? "")} query={query} />
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/**
+ * A turn's speaker, and the way to name them.
+ *
+ * Oats tells voices apart after a conversation stops and numbers them by who
+ * spoke first; it cannot know names, and guessing one would put words in a
+ * stranger's mouth. Pressing "Speaker 2" names them — once, for every turn
+ * that voice said in this conversation.
+ */
+function SpeakerName({
+  note,
+  segments,
+  segment,
+}: {
+  note: NoteItem;
+  segments: TranscriptSegment[];
+  segment: TranscriptSegment;
+}) {
+  const { t } = useTranslation();
+  const [naming, setNaming] = useState(false);
+  const label = speakerText(segment, t);
+  if (!label) return null;
+  const nameable = Boolean(segment.speaker && /^speaker_\d+$/.test(segment.speaker));
+
+  const save = async (value: string) => {
+    setNaming(false);
+    const name = value.replace(/\s+/g, " ").trim().slice(0, 60);
+    const next = segments.map((s) =>
+      s.speaker === segment.speaker
+        ? name
+          ? {
+              ...s,
+              speakerName: name,
+              speakerIsPlaceholder: false,
+              speakerStatus: "locked" as const,
+            }
+          : { ...s, speakerName: undefined, speakerIsPlaceholder: true }
+        : s
+    );
+    await window.electronAPI?.updateNote?.(note.id, {
+      transcript: serializeTranscriptSegments(next),
+    });
+    await initializeNotes("meeting", 100);
+  };
+
+  if (naming) {
+    return (
+      <input
+        autoFocus
+        defaultValue={segment.speakerIsPlaceholder ? "" : (segment.speakerName ?? "")}
+        placeholder={label}
+        aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
+        maxLength={60}
+        spellCheck={false}
+        onBlur={(event) => void save(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") setNaming(false);
+        }}
+        className="mr-2 w-32 rounded-sm border-b border-border bg-transparent font-mono text-[13px] text-foreground focus-visible:border-primary focus-visible:outline-none"
+      />
+    );
+  }
+
+  return (
+    <span className="mr-2 select-none text-muted-foreground/70">
+      {nameable ? (
+        <button
+          type="button"
+          onClick={() => setNaming(true)}
+          aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
+          className="rounded-sm underline decoration-transparent underline-offset-4 hover:text-foreground hover:decoration-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {label}
+        </button>
+      ) : (
+        label
+      )}
+      <span className="sr-only">: </span>
+    </span>
   );
 }
 
@@ -1893,7 +2493,8 @@ function Highlighted({ text, query }: { text: string; query: string }) {
             // Gold, used here as a mark colour rather than a reading colour
             // (DESIGN.md §3) — which is precisely what a search hit is. The text
             // itself stays ink so the highlight never costs legibility.
-            className="rounded-sm bg-primary/25 px-0.5 text-foreground"
+            // The one the find line is on is the stronger mark of the two.
+            className="rounded-sm bg-primary/25 px-0.5 text-foreground data-[current]:bg-primary/60"
           >
             {part.text}
           </mark>
@@ -2027,16 +2628,20 @@ function QuietAction({
   label,
   onClick,
   ariaLabel,
+  ariaExpanded,
 }: {
   label: string;
   onClick: () => void;
   /** When the visible word alone does not say what it acts on. */
   ariaLabel?: string;
+  /** For the ones that open something in place. */
+  ariaExpanded?: boolean;
 }) {
   return (
     <button
       type="button"
       aria-label={ariaLabel}
+      aria-expanded={ariaExpanded}
       onClick={onClick}
       // 24px tall, and the padding is negative-margined away so the target grows
       // without the words moving. These measured 23.5 x 12 — Map, Back, Copy,
@@ -2209,11 +2814,61 @@ function NoteContourStrip({ note }: { note: NoteItem }) {
 }
 
 function LoadedContourStrip({ note }: { note: NoteItem }) {
+  const { i18n } = useTranslation();
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const strip = useContourStrip(segments, NO_EVENTS);
   if (strip.empty) return null;
   return (
-    <ConversationContour contour={strip} className="opacity-70" height={22} showMarks={false} />
+    <StripWithSpan
+      span={formatSpan(conversationSpanMs(segments), { locale: i18n.language })}
+      marked={parseMoments(note.conversation_marks ?? null).length}
+    >
+      <ConversationContour contour={strip} className="opacity-70" height={22} showMarks={false} />
+    </StripWithSpan>
+  );
+}
+
+/**
+ * A contour strip and how long it is.
+ *
+ * Every strip is drawn to the full width of its row whatever the conversation's
+ * length, so two strips side by side said nothing about which conversation ran
+ * longer. The strip *is* the time axis; its length is written at its end. Shown
+ * only where the transcript is already parsed for the strip, so it adds no
+ * parsing to a list that gates exactly that on visibility.
+ */
+function StripWithSpan({
+  span,
+  marked = 0,
+  className,
+  children,
+}: {
+  span: string;
+  /** How many moments were marked in it — the conversations where something
+   *  mattered enough to press for, which is worth seeing while scanning. */
+  marked?: number;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className={cn("flex items-center gap-3", className)}>
+      <div className="min-w-0 flex-1">{children}</div>
+      {marked > 0 && (
+        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[11px] tabular-nums text-foreground/80">
+          <svg aria-hidden="true" width="7" height="6" viewBox="0 0 8 7">
+            <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
+          </svg>
+          <span aria-hidden="true">{marked}</span>
+          <span className="sr-only">{t("oats.intelligence.markedCount", { count: marked })}</span>
+        </span>
+      )}
+      {span && (
+        <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+          {span}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -2253,7 +2908,7 @@ function Row({
     // rhythm halves the height and creates the spine that makes a settings page
     // scannable rather than a form to read. DESIGN.md §13 wants the visible page
     // to fit on one screen; this is most of how it gets there.
-    <div className="grid grid-cols-[minmax(0,18rem)_1fr] items-start gap-x-8 border-b border-border/40 py-3 last:border-b-0">
+    <div className="grid grid-cols-[minmax(0,18rem)_1fr] items-start gap-x-8 border-b border-border/40 py-2.5 last:border-b-0">
       <div className="min-w-0">
         {/* A `<label>` with no `for` and no wrapped control labels nothing. */}
         {htmlFor ? (
@@ -2560,7 +3215,9 @@ function SettingsSurface() {
   }
 
   return (
-    <section className="oats-surface mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-5">
+    // `pt-4`, as Intelligence has: the heading sat flush against the
+    // orientation band, the only surface whose title touched it.
+    <section className="oats-surface mx-auto w-full max-w-2xl overflow-y-auto px-8 pb-5 pt-4">
       <h1 className="text-2xl font-medium tracking-[-0.03em]">{t("oats.settings.title")}</h1>
       <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
         {t("oats.settings.subtitle")}
@@ -2568,10 +3225,14 @@ function SettingsSurface() {
 
       <div className="mt-3">
         <Row label={t("oats.settings.processing")} hint={t("oats.settings.processingHint")}>
-          {/* The same language as the nav and the reading tabs: a word, and a
-              gold rule under the live one. Two filled slabs made the most
-              consequential setting on the page also the loudest object on it,
-              and put a second gold next to the toggle (DESIGN.md §3). */}
+          {/* The same language as the nav and the reading tabs: a word, and an
+              ink rule under the chosen one. Two filled slabs made the most
+              consequential setting on the page also the loudest object on it.
+              The rule was gold until the Interface row arrived beneath it with
+              the same markup: two choices are two resting golds on one page,
+              and §3 says one of them is wrong. A setting that is chosen is not
+              a momentary mark, which is what gold is for — the nav and the tabs
+              reached the same answer for the same reason. */}
           <div className="flex items-center gap-6">
             {(
               [
@@ -2597,7 +3258,7 @@ function SettingsSurface() {
                   <span
                     aria-hidden="true"
                     className={cn(
-                      "absolute inset-x-0 bottom-0 h-px origin-center bg-primary transition-transform",
+                      "absolute inset-x-0 bottom-0 h-px origin-center bg-foreground transition-transform",
                       "[transition-duration:var(--motion-base)]",
                       active ? "scale-x-100" : "scale-x-0"
                     )}
@@ -2677,7 +3338,7 @@ function SettingsSurface() {
                   <span
                     aria-hidden="true"
                     className={cn(
-                      "absolute inset-x-0 bottom-0 h-px origin-center bg-primary transition-transform",
+                      "absolute inset-x-0 bottom-0 h-px origin-center bg-foreground transition-transform",
                       "[transition-duration:var(--motion-base)]",
                       active ? "scale-x-100" : "scale-x-0"
                     )}
@@ -2787,6 +3448,7 @@ function SettingsSurface() {
         >
           <div className="max-w-sm">
             <HotkeyInput
+              variant="ledger"
               value={conversationKey}
               onChange={(value) => void setConversationKey(value)}
             />
@@ -2802,6 +3464,7 @@ function SettingsSurface() {
         <Row label={t("oats.settings.dictationShortcut")} hint={t("oats.settings.dictationHint")}>
           <div className="max-w-sm">
             <HotkeyInput
+              variant="ledger"
               value={dictationKey}
               onChange={(value) => void setDictationKey(value)}
               onClear={() => void setDictationKey("")}
@@ -2880,15 +3543,14 @@ function SettingsSurface() {
         </Row>
 
         <Row label={t("oats.settings.data")} hint={t("oats.settings.dataHint")}>
-          {/* A link, not a button. Opening a folder is a side errand, not an
-              action the page is for. */}
-          <button
-            type="button"
+          {/* A quiet action, as the vault's folder action two lines above is.
+              Opening a folder is a side errand, not what the page is for — and
+              the two folder actions on one page were drawn two different
+              ways, an underlined sans link and a mono word. */}
+          <QuietAction
+            label={t("oats.settings.openDataFolder")}
             onClick={() => window.electronAPI?.openLogsFolder?.()}
-            className="-my-1 inline-flex min-h-6 items-center rounded-sm py-1 text-sm text-muted-foreground underline underline-offset-4 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {t("oats.settings.openDataFolder")}
-          </button>
+          />
         </Row>
       </div>
 
@@ -2922,6 +3584,16 @@ export default function OatsWorkspace() {
       return next;
     });
   }, [surface]);
+
+  // Who spoke, once the speaker pass over a stopped conversation finishes.
+  // Mounted here, beside the other headless subscriptions, because the result
+  // arrives minutes later on whichever surface is showing.
+  useEffect(() => {
+    const cleanup = window.electronAPI?.onConversationSpeakers?.(
+      (payload) => void applyConversationSpeakers(payload)
+    );
+    return () => cleanup?.();
+  }, []);
 
   // The vault path lives in the renderer's settings, but the write happens in
   // the main process on every note update — so main has to be told, on boot and
@@ -3018,6 +3690,35 @@ export default function OatsWorkspace() {
 
   const recording = useMeetingRecordingStore((state) => state.isRecording);
 
+  // Intelligence's two keys: `/` to search, the convention every reading tool
+  // shares, and Escape to step back — from a record or the map to the list.
+  // Only on that surface, and never while somebody is typing: Escape in the
+  // rename field cancels the rename, and in the search field clears it.
+  useEffect(() => {
+    if (surface !== "intelligence") return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd+F is the platform's find, and Electron draws no find bar of its
+      // own — so it is ours, from anywhere on this surface, field or not.
+      const mod = getCachedPlatform() === "darwin" ? event.metaKey : event.ctrlKey;
+      if (mod && !event.altKey && (event.key === "f" || event.key === "F")) {
+        event.preventDefault();
+        window.dispatchEvent(new Event("oats-find"));
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (event.key === "/") {
+        event.preventDefault();
+        window.dispatchEvent(new Event("oats-find"));
+      } else if (event.key === "Escape") {
+        window.dispatchEvent(new Event("oats-intelligence-back"));
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [surface]);
+
   // A conversation starting always brings the Conversation surface with it.
   //
   // The global hotkey works from anywhere — that is the point of it — but until
@@ -3038,7 +3739,13 @@ export default function OatsWorkspace() {
   return (
     <div
       className={cn(
-        "relative flex h-screen flex-col overflow-hidden bg-background text-foreground",
+        // `overflow-clip`, not `overflow-hidden`: a hidden box is still
+        // scrollable by script, and `scrollIntoView` scrolls every ancestor that
+        // is. Opening a search result scrolled this root by 8px — the drag band
+        // and the nav slid half out of the window and stayed there, because a
+        // hidden box has no scrollbar to bring them back. A clip box cannot be
+        // scrolled at all.
+        "relative flex h-screen flex-col overflow-clip bg-background text-foreground",
         // The field paints on the shell's own background, so in field mode the
         // background must be transparent or it would cover the sky.
         fieldMode && "bg-transparent",
@@ -3175,7 +3882,7 @@ export default function OatsWorkspace() {
             data-active={surface === id}
             inert={surface !== id}
             aria-hidden={surface !== id}
-            className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-hidden"
+            className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-clip"
           >
             {/* The pane element exists from the first render; its *contents* wait
                 until the surface has been opened once, and then stay.

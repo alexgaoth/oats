@@ -1896,7 +1896,7 @@
       "dialogueLabel": "Erkannter Dialog",
       "dialogueWaiting": "Noch nichts gehört.",
       "contourLabel": "Die Form dieses Gesprächs bis jetzt",
-      "contourLegend": "Dicke ist, wie viel gesagt wurde · eine Kerbe ist ein Themenwechsel · eine Marke ist eine Frage, körniger je offener",
+      "contourLegend": "Dicke ist, wie viel gesagt wurde · eine Kerbe ist ein Themenwechsel · eine Marke ist eine Frage, körniger je offener · ein Dreieck darunter ist ein markierter Moment",
       "contourSummary": "{{minutes}} Minuten, {{questions}} Fragen ({{unresolved}} unbeantwortet), das Thema wechselte {{shifts}}-mal, und {{returns}} Stränge wurden wieder aufgegriffen.",
       "contourEmpty": "Noch nichts aufgezeichnet.",
       "record": "Gespräch aufnehmen",
@@ -1912,6 +1912,10 @@
       "nothingHeard": "Es wurde nichts gehört, daher wurde kein Gespräch gespeichert. Prüfe das Mikrofon in den Einstellungen.",
       "continuing": "Fortsetzung von {{title}}",
       "notAContinuation": "Eigene Unterhaltung",
+      "mark": "Markieren",
+      "marked": "Markiert",
+      "markLabel": "Diesen Moment markieren",
+      "markAnnounced": "Markiert bei {{time}}",
       "threadMapLabel": "Karte von {{count}} bisher angesprochenen Themen",
       "threadMapNoQuote": "nichts Aktuelles zum Zitieren"
     },
@@ -1922,6 +1926,8 @@
       "noTranscript": "Noch kein Transkript.",
       "speakerYou": "Du",
       "speakerRoom": "Raum",
+      "speakerN": "Sprecher {{n}}",
+      "nameSpeaker": "{{speaker}} benennen",
       "tabs": {
         "summary": "Zusammenfassung",
         "transcript": "Transkript",
@@ -1940,10 +1946,13 @@
       "searchResults_other": "{{count}} Gespräche passen",
       "match": {
         "transcript": "gesagt",
+        "note": "Ihre Notiz",
         "summary": "Zusammenfassung",
         "title": "Titel"
       },
       "matchRelated": "verwandt",
+      "markedCount_one": "{{count}} markierter Moment",
+      "markedCount_other": "{{count}} markierte Momente",
       "emptyHint": "Drücke überall {{shortcut}} und stelle eine Frage, die niemand im Raum beantworten kann",
       "backToList": "Zurück",
       "copy": "Kopieren",
@@ -1961,8 +1970,22 @@
     "review": {
       "title": "Was offen geblieben ist",
       "tally": "{{asked}} gefragt, {{answered}} beantwortet",
-      "openThreads_one": "{{count}} Faden noch offen",
-      "openThreads_other": "{{count}} Fäden noch offen"
+      "openThreads_one": "{{count}} Faden noch offen: {{threads}}",
+      "openThreads_other": "{{count}} Fäden noch offen: {{threads}}",
+      "showAnswers": "Antworten zeigen",
+      "hideAnswers": "Antworten ausblenden",
+      "marked": "Von Ihnen markiert",
+      "addNote": "Notiz hinzufügen",
+      "noteLabel": "Notiz zum Moment bei {{time}}",
+      "removeMark": "Entfernen",
+      "removeMarkLabel": "Markierung bei {{time}} entfernen",
+      "markedTurn": "Markiert."
+    },
+    "find": {
+      "label": "In diesem Gespräch suchen",
+      "count": "{{current}} von {{total}}",
+      "none": "Keine Treffer",
+      "close": "Schließen"
     },
     "settings": {
       "title": "Wenige Entscheidungen.",
@@ -2043,10 +2066,12 @@
       "untitled": "Unbenannte Unterhaltung",
       "summary": "Zusammenfassung",
       "openQuestions": "Offene Fragen",
+      "marked": "Markiert",
       "topics": "Themen",
       "transcript": "Transkript",
       "you": "Du",
-      "room": "Raum"
+      "room": "Raum",
+      "speaker": "Sprecher {{n}}"
     }
   },
   "questionCard": {

@@ -93,6 +93,66 @@ and it is the single highest-value thing a user can do for their dictation.
 `small.en` buys another 0.7 points of WER for 5.3× the latency. That is a real
 tradeoff and it belongs to the user, not to a default.
 
+## Conversations, against OpenWhispr 1.10.2 (2026-10-04)
+
+Dictation is one utterance. A conversation is an unbroken stream that somebody
+has to cut, and **where it is cut** turned out to matter more than any flag.
+
+The instrument: nine synthetic conversations (921s, two or three LibriSpeech
+test-clean voices, 12 turns each, 0.25–1.15s between turns), each sent through
+`whisper-server` four ways — fixed 5s chunks (what both apps did in a room),
+cuts at pauses, the whole recording in one request, and cuts at the true turn
+boundaries as a ceiling. `base`, `language auto`, 8 threads.
+
+| how the stream is cut     | Oats flags | OpenWhispr 1.10.2 flags |
+| ------------------------- | ---------- | ----------------------- |
+| fixed 5s chunks           | 15.15%     | 14.27%                  |
+| **at pauses — ships now** | **6.17%**  | 7.14%                   |
+| whole recording           | 19.35%     | 5.91%                   |
+| true turn boundaries      | 5.47%      | 5.56%                   |
+
+- **The two apps transcribe the same, locally.** Upstream's only local change is
+  `--max-len 4096` in place of `--no-timestamps`; on 40 dictation utterances it
+  is worse (5.27% against 4.83% in English), so `--no-timestamps` stays.
+- **Fixed chunks were the defect.** A 5s cut lands mid-word ~once per chunk and
+  Whisper guesses both halves. Cutting at pauses (`helpers/speechSegmenter.mjs`,
+  20s ceiling) is within a point of cutting at the true turns. With `base.en`:
+  14.01% → 5.74%.
+- **Never send more than one 30s window with `--no-timestamps`.** The "whole"
+  row is that flag skipping every window after the first: whisper.cpp seeks by
+  the last timestamp, and there is none. The segmenter's 20s cap is why it is
+  safe.
+- **What you hear as "OpenWhispr is clearer" is its default, not its model.**
+  1.10.2 still defaults `useLocalWhisper` to `false`, so out of the box it
+  transcribes in the cloud. Oats defaults to local by design (see below).
+
+## Who said it
+
+Both apps carry sherpa-onnx diarization (pyannote segmentation 3.0) with the
+3D-Speaker CAM++ voice model. Our 1.7.6 fork ran it only on a call's system
+audio, so in a room nothing told voices apart; 1.10.2 also diarizes an in-person
+mic track, still with CAM++ at 0.55 under 15 minutes. Measured on the same
+conversations, as the share of turns given to the right person:
+
+| voice model                     | count known | count guessed | held-out, guessed |
+| ------------------------------- | ----------- | ------------- | ----------------- |
+| CAM++ (both apps)               | 59%         | 38%           | —                 |
+| WeSpeaker ResNet34              | 83%         | 82%           | —                 |
+| **TitaNet-small, 0.85 — ships** | 96%         | 92.6%         | 91.7%             |
+
+The threshold was swept on the first nine conversations (0.55 → 77%, 0.75 → 89%,
+0.85 and 0.95 → 92.6%) and checked once on nine unseen ones. The models (46MB)
+are bundled, not downloaded on demand: a speaker pass that needs a network is not
+a default.
+
+After Finish, the recording's own WAV is diarized once and each transcript
+segment takes the speaker it overlaps most, by its `startMs`/`endMs` within the
+recording (`helpers/speakerTurns.mjs`). Speakers are numbered by who spoke
+first; one voice gets no label at all.
+
+**Read these as a floor that flatters.** Read speech, clean audio, no crosstalk,
+no real microphone. A café will be worse.
+
 ## Why it feels different from the pre-Oats build
 
 `../oats` (OpenWhispr 1.7.6) defaults `useLocalWhisper` to **false**. With an API
@@ -113,6 +173,7 @@ script's decision to make.
 
 ## Upstream
 
-OpenWhispr is at **1.8.3**; both trees here are forked from **1.7.6**.
+OpenWhispr is at **1.10.2** (2026-10-02); both trees here are forked from
+**1.7.6**.
 `--no-timestamps` is ported and measured above. Still unevaluated: upstream's
 `--device` GPU index, and ~3,000 lines of divergence in `audioManager.js`.

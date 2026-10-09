@@ -1891,7 +1891,7 @@
       "dialogueLabel": "偵測到的對話",
       "dialogueWaiting": "尚未聽到任何內容。",
       "contourLabel": "這場對話到目前為止的形狀",
-      "contourLegend": "粗細代表說了多少 · 缺口代表話題轉變 · 標記代表問題，越未解決顆粒越粗",
+      "contourLegend": "粗細代表說了多少 · 缺口代表話題轉變 · 標記代表問題，越未解決顆粒越粗 · 下方的三角代表標記的時刻",
       "contourSummary": "{{minutes}} 分鐘，提出 {{questions}} 個問題（{{unresolved}} 個仍未解答），話題轉變 {{shifts}} 次，回到 {{returns}} 條脈絡。",
       "contourEmpty": "尚未錄製任何內容。",
       "record": "錄製對話",
@@ -1907,6 +1907,10 @@
       "nothingHeard": "沒有聽到任何聲音，因此未儲存對話。請在設定中檢查麥克風。",
       "continuing": "繼續 {{title}}",
       "notAContinuation": "另起一段對話",
+      "mark": "標記",
+      "marked": "已標記",
+      "markLabel": "標記此刻",
+      "markAnnounced": "已在 {{time}} 標記",
       "threadMapLabel": "目前提到的 {{count}} 個話題的地圖",
       "threadMapNoQuote": "沒有可引用的近期發言"
     },
@@ -1917,6 +1921,8 @@
       "noTranscript": "尚無逐字稿。",
       "speakerYou": "你",
       "speakerRoom": "對方",
+      "speakerN": "說話者 {{n}}",
+      "nameSpeaker": "為{{speaker}}命名",
       "tabs": {
         "summary": "摘要",
         "transcript": "逐字稿",
@@ -1935,10 +1941,13 @@
       "searchResults_other": "{{count}} 個對話符合",
       "match": {
         "transcript": "說過",
+        "note": "你的備註",
         "summary": "摘要",
         "title": "標題"
       },
       "matchRelated": "相關",
+      "markedCount_one": "{{count}} 個標記時刻",
+      "markedCount_other": "{{count}} 個標記時刻",
       "emptyHint": "在任意位置按 {{shortcut}}，然後問一個沒人知道答案的問題",
       "backToList": "返回",
       "copy": "複製",
@@ -1956,8 +1965,22 @@
     "review": {
       "title": "尚未解決的內容",
       "tally": "提問 {{asked}}，回答 {{answered}}",
-      "openThreads_one": "{{count}} 個話題仍未結束",
-      "openThreads_other": "{{count}} 個話題仍未結束"
+      "openThreads_one": "{{count}} 個話題仍未結束：{{threads}}",
+      "openThreads_other": "{{count}} 個話題仍未結束：{{threads}}",
+      "showAnswers": "顯示回答",
+      "hideAnswers": "隱藏回答",
+      "marked": "你標記的",
+      "addNote": "新增備註",
+      "noteLabel": "{{time}} 時刻的備註",
+      "removeMark": "移除",
+      "removeMarkLabel": "移除 {{time}} 的標記",
+      "markedTurn": "已標記。"
+    },
+    "find": {
+      "label": "在此對話中尋找",
+      "count": "{{current}} / {{total}}",
+      "none": "無相符結果",
+      "close": "關閉"
     },
     "settings": {
       "title": "把選擇降到最少。",
@@ -2038,10 +2061,12 @@
       "untitled": "未命名對話",
       "summary": "摘要",
       "openQuestions": "未解答的問題",
+      "marked": "標記",
       "topics": "主題",
       "transcript": "轉錄",
       "you": "你",
-      "room": "房間"
+      "room": "房間",
+      "speaker": "說話者 {{n}}"
     }
   },
   "questionCard": {

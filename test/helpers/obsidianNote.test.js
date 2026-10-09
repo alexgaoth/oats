@@ -35,6 +35,7 @@ const STRINGS = {
   transcript: "Transcript",
   you: "You",
   room: "Room",
+  speaker: (n) => `Speaker ${n}`,
 };
 
 // A fixed local-time instant, so the date assertions do not depend on the clock.
@@ -195,7 +196,9 @@ test("a question asked three times is one line, and an answer anywhere closes it
 test("malformed events never throw", () => {
   assert.deepEqual(openQuestions(null), []);
   assert.deepEqual(
-    openQuestions([null, {}, { kind: "question" }, { kind: "question", text: " " }].filter(Boolean)),
+    openQuestions(
+      [null, {}, { kind: "question" }, { kind: "question", text: " " }].filter(Boolean)
+    ),
     []
   );
 });
@@ -226,7 +229,14 @@ test("the note carries frontmatter, summary, open questions, links and transcrip
     events: [
       ...asked("What is the EU VAT rule?", "denied", "g1"),
       ...asked("Answered one", "answered", "g2"),
-      { id: 900, kind: "response", text: "not a question", parentEventId: null, createdAt: 900, metadata: {} },
+      {
+        id: 900,
+        kind: "response",
+        text: "not a question",
+        parentEventId: null,
+        createdAt: 900,
+        metadata: {},
+      },
     ],
     segments: [
       { text: "hello", source: "mic", timestamp: AT },
@@ -296,4 +306,96 @@ test("headings come from the caller, so a vault is not English in ten locales", 
   assert.ok(markdown.includes("## Zusammenfassung"));
   assert.ok(markdown.includes("## Transkript"));
   assert.ok(markdown.includes("**Du:** x"));
+});
+
+// What the reader marked leads the note's body, each line saying when, what
+// was being said, and the note if there is one.
+test("marked moments are listed with their time, their words and their note", async () => {
+  const { markedLines } = await import("../../src/helpers/obsidianNote.mjs");
+  const segments = [
+    { id: "a", text: "So the pricing model", timestamp: 1000 },
+    { id: "b", text: "No, I don't know.\nNobody does", timestamp: 46_000 },
+  ];
+  const marks = JSON.stringify([
+    { id: "m2", at: 47_000, note: "the number nobody had" },
+    { id: "m1", at: 2000 },
+  ]);
+  assert.deepEqual(markedLines(marks, segments), [
+    "- `0:01` “So the pricing model”",
+    "- `0:46` “No, I don't know. Nobody does” — the number nobody had",
+  ]);
+  assert.deepEqual(markedLines(null, segments), []);
+  assert.deepEqual(markedLines("not json", segments), []);
+});
+
+// "Save" on the summary tab writes what the tab shows, in its order.
+test("the reading export carries the marks and the open questions above the summary", async () => {
+  const { buildReadingExport } = await import("../../src/helpers/obsidianNote.mjs");
+  const markdown = buildReadingExport({
+    note: {
+      title: "Board prep",
+      enhanced_content: "# Board prep\n\nThe deck leads with pricing.",
+      conversation_marks: JSON.stringify([{ id: "m", at: 5000, note: "the gap" }]),
+    },
+    events: [
+      {
+        id: 1,
+        kind: "question",
+        parentEventId: null,
+        segmentIds: ["s1"],
+        text: "What is our NRR?",
+        metadata: {},
+        createdAt: 1,
+      },
+    ],
+    segments: [{ id: "s1", text: "Nobody has computed it", timestamp: 4000 }],
+    strings: { untitled: "Untitled", marked: "Marked", openQuestions: "Open questions" },
+  });
+  assert.equal(
+    markdown,
+    [
+      "# Board prep",
+      "",
+      "## Marked",
+      "",
+      "- `0:01` “Nobody has computed it” — the gap",
+      "",
+      "## Open questions",
+      "",
+      "- What is our NRR?",
+      "",
+      "The deck leads with pricing.",
+      "",
+    ].join("\n")
+  );
+});
+
+// One rule with the reading view (speakerLabelKind), so a vault cannot call a
+// person something the transcript tab does not.
+test("an in-room transcript is labelled by voice, by name once named, and not at all before", () => {
+  const room = {
+    source: "mic",
+    speaker: "room",
+    speakerName: "Conversation",
+    speakerIsPlaceholder: true,
+  };
+  const { markdown } = buildVaultNote({
+    note: { id: 3, title: "Lab", createdAtMs: AT },
+    segments: [
+      { ...room, text: "before the speaker pass" },
+      { source: "mic", speaker: "speaker_1", speakerIsPlaceholder: true, text: "first voice" },
+      {
+        source: "mic",
+        speaker: "speaker_2",
+        speakerName: "Priya",
+        speakerIsPlaceholder: false,
+        text: "named",
+      },
+    ],
+    strings: STRINGS,
+  });
+  assert.match(
+    markdown,
+    /## Transcript\n\nbefore the speaker pass\n\n\*\*Speaker 1:\*\* first voice\n\n\*\*Priya:\*\* named/
+  );
 });

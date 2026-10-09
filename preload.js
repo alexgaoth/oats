@@ -60,6 +60,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => (_event, state) => callback(state)
   ),
   requestToggleConversation: () => ipcRenderer.invoke("toggle-conversation-request"),
+  // Marking the moment from the floating oat, which is all that is on screen
+  // when a conversation is recorded with the panel hidden. Main forwards it to
+  // the panel, which owns the recording, so there is one implementation.
+  requestMarkMoment: () => ipcRenderer.invoke("mark-moment-request"),
+  onMarkMoment: registerListener("mark-moment", (callback) => () => callback()),
+  // Who spoke, found over a whole in-person conversation after it stopped.
+  onConversationSpeakers: registerListener(
+    "conversation-speakers",
+    (callback) => (_event, payload) => callback(payload)
+  ),
   onToggleTranslation: registerListener("toggle-translation", (callback) => () => callback()),
   onStartDictation: registerListener("start-dictation", (callback) => () => callback()),
   onStopDictation: registerListener("stop-dictation", (callback) => () => callback()),

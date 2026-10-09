@@ -469,6 +469,14 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // The moments somebody pressed "Mark" on during the conversation, as JSON
+      // (`helpers/conversationMoments.mjs`). On the note, beside the topics, for
+      // the same reason: events are per-question and CHECK-constrained.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN conversation_marks TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS contacts (
@@ -1639,6 +1647,7 @@ class DatabaseManager {
         "diarization_enabled",
         "expected_speaker_count",
         "conversation_topics",
+        "conversation_marks",
         "sync_status",
         "deleted_at",
         "client_note_id",

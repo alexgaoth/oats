@@ -61,11 +61,15 @@ const STATE_VAR: Record<ThreadState, string> = {
 
 // Dither density encodes uncertainty (DESIGN.md §4): a resolved thread is solid,
 // a dropped one is barely there. Drawn as a stipple so it survives greyscale.
+//
+// The value is the share of the disc taken back to paper, quantised to the 4×4
+// Bayer matrix's sixteenths: open keeps ~69% of its ink ("dense"), dropped ~38%
+// (§4's "sparse, 40% ink").
 const STATE_DITHER: Record<ThreadState, number> = {
   live: 0,
-  open: 0.45,
+  open: 0.3,
   resolved: 0,
-  dropped: 0.7,
+  dropped: 0.6,
 };
 
 function readColor(styles: CSSStyleDeclaration, name: string): string {
@@ -203,12 +207,21 @@ function drawDither(
   ctx.fillStyle = background;
   const step = 3;
   // Ordered 4×4 Bayer thresholding — crisp and pixel-locked, never blurred noise.
+  //
+  // Each hole fills its whole cell, on a lattice fixed to the canvas. Holes
+  // used to be 2×2 in a 3×3 cell, so even the densest setting left 56% of the
+  // disc inked and "dropped" drew at ~69% — the one-off conversations on the
+  // lifetime map were its heaviest, darkest objects, the opposite of §4. The
+  // cells start on whole pixels so neighbouring holes meet without a seam, and
+  // the lattice does not travel with a dragged node.
   const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-  for (let y = node.y - node.radius; y < node.y + node.radius; y += step) {
-    for (let x = node.x - node.radius; x < node.x + node.radius; x += step) {
-      const bx = Math.abs(Math.round(x / step)) % 4;
-      const by = Math.abs(Math.round(y / step)) % 4;
-      if (bayer[by * 4 + bx] / 16 < density) ctx.fillRect(x, y, step - 1, step - 1);
+  const x0 = Math.floor((node.x - node.radius) / step) * step;
+  const y0 = Math.floor((node.y - node.radius) / step) * step;
+  for (let y = y0; y < node.y + node.radius; y += step) {
+    for (let x = x0; x < node.x + node.radius; x += step) {
+      const bx = (((x / step) % 4) + 4) % 4;
+      const by = (((y / step) % 4) + 4) % 4;
+      if (bayer[by * 4 + bx] / 16 < density) ctx.fillRect(x, y, step, step);
     }
   }
   ctx.restore();

@@ -1896,7 +1896,7 @@
       "dialogueLabel": "Diálogo detetado",
       "dialogueWaiting": "Ainda não se ouviu nada.",
       "contourLabel": "O formato desta conversa até agora",
-      "contourLegend": "A espessura é o quanto se falou · um entalhe é a mudança de assunto · uma marca é uma pergunta, mais granulada quanto menos resolvida",
+      "contourLegend": "A espessura é o quanto se falou · um entalhe é a mudança de assunto · uma marca é uma pergunta, mais granulada quanto menos resolvida · um triângulo abaixo é um momento marcado",
       "contourSummary": "{{minutes}} minutos, {{questions}} perguntas ({{unresolved}} sem resposta), o assunto mudou {{shifts}} vezes e {{returns}} fios foram retomados.",
       "contourEmpty": "Nada gravado ainda.",
       "record": "Gravar conversa",
@@ -1912,6 +1912,10 @@
       "nothingHeard": "Não se ouviu nada, por isso não foi guardada nenhuma conversa. Verifique o microfone nas Definições.",
       "continuing": "Continuando {{title}}",
       "notAContinuation": "Conversa separada",
+      "mark": "Marcar",
+      "marked": "Marcado",
+      "markLabel": "Marcar este momento",
+      "markAnnounced": "Marcado em {{time}}",
       "threadMapLabel": "Mapa de {{count}} temas abordados até agora",
       "threadMapNoQuote": "nada recente para citar"
     },
@@ -1922,6 +1926,8 @@
       "noTranscript": "Ainda sem transcrição.",
       "speakerYou": "Você",
       "speakerRoom": "Sala",
+      "speakerN": "Falante {{n}}",
+      "nameSpeaker": "Dar nome a {{speaker}}",
       "tabs": {
         "summary": "Resumo",
         "transcript": "Transcrição",
@@ -1940,10 +1946,13 @@
       "searchResults_other": "{{count}} conversas correspondem",
       "match": {
         "transcript": "dito",
+        "note": "sua nota",
         "summary": "resumo",
         "title": "título"
       },
       "matchRelated": "relacionado",
+      "markedCount_one": "{{count}} momento marcado",
+      "markedCount_other": "{{count}} momentos marcados",
       "emptyHint": "Pressione {{shortcut}} em qualquer lugar e faça uma pergunta que ninguém saiba responder",
       "backToList": "Voltar",
       "copy": "Copiar",
@@ -1961,8 +1970,22 @@
     "review": {
       "title": "O que ficou em aberto",
       "tally": "{{asked}} perguntadas, {{answered}} respondidas",
-      "openThreads_one": "{{count}} tópico ainda aberto",
-      "openThreads_other": "{{count}} tópicos ainda abertos"
+      "openThreads_one": "{{count}} tópico ainda aberto: {{threads}}",
+      "openThreads_other": "{{count}} tópicos ainda abertos: {{threads}}",
+      "showAnswers": "Ver as respostas",
+      "hideAnswers": "Ocultar as respostas",
+      "marked": "O que você marcou",
+      "addNote": "Adicionar uma nota",
+      "noteLabel": "Nota do momento em {{time}}",
+      "removeMark": "Remover",
+      "removeMarkLabel": "Remover a marca em {{time}}",
+      "markedTurn": "Marcado."
+    },
+    "find": {
+      "label": "Procurar nesta conversa",
+      "count": "{{current}} de {{total}}",
+      "none": "Nenhum resultado",
+      "close": "Fechar"
     },
     "settings": {
       "title": "Poucas escolhas.",
@@ -2043,10 +2066,12 @@
       "untitled": "Conversa sem título",
       "summary": "Resumo",
       "openQuestions": "Perguntas em aberto",
+      "marked": "Marcado",
       "topics": "Temas",
       "transcript": "Transcrição",
       "you": "Você",
-      "room": "Sala"
+      "room": "Sala",
+      "speaker": "Falante {{n}}"
     }
   },
   "questionCard": {

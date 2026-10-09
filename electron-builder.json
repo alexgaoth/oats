@@ -120,6 +120,7 @@
         "meeting-aec-helper-*",
         "all-MiniLM-L6-v2/**/*",
         "whisper-vad/**/*",
+        "diarization-models/**/*",
         "*.dylib",
         "*.dll",
         "*.so*"

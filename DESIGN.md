@@ -1,6 +1,6 @@
 # Oats — Design Language
 
-**Product:** Oats · **Company:** arum · **Status:** v1 direction
+**Product:** Oats · **Status:** v1 direction
 
 > The interface should feel like the product does: a sharp, quiet person sitting
 > next to you. Warm, tactile, unhurried, and private by default. Nothing shouts.
@@ -43,8 +43,6 @@ enemy; air is the feature. If a screen needs a third region, it is two screens.
 - **Wordmark:** `oats` — always lowercase, set in the display sans, tight tracking
   (`-0.02em`). Never capitalized, never "Oats" in the mark itself (prose may
   capitalize the product name).
-- **Company lockup:** `oats · by arum` — the `· by arum` is muted-ink, small,
-  set beside or beneath the wordmark. arum is the whisper, oats is the voice.
 - **Symbol:** a single **husked oat grain** — an almond-form seed with one seam,
   rendered as a dithered fill (see §7). At small sizes it collapses to a solid
   toasted-gold seed. It doubles as the app icon and the tray/menubar mark.
@@ -176,6 +174,14 @@ Restraint is the whole point. Two families, a six-step scale.
 
 Weights: 400 body, 500 UI emphasis, 600 headings. Never bold for color — use ink.
 Measure caps at ~68ch for reading comfort.
+
+**Dates are written by distance**, the way a ledger is read: a time for today, a
+weekday and time within the week, a day and month within the year, the year only
+once it differs. A record's head carries the full moment and how long it ran; a
+contour strip carries its length at its end, because every strip is drawn to the
+full width of its row. Every string comes from `Intl` in the interface language
+(`helpers/ledgerDate.mjs`) — never `toLocaleDateString()`, which made every
+conversation of a day read `10/3/2026`.
 
 **Case.** `oats` is lowercase; it is the wordmark and the only lowercase thing in
 the product. Everything else — headings, navigation, commands, settings labels,
@@ -321,8 +327,9 @@ The recording surface draws the same conversation two ways, and **clean is the
 default**.
 
 **Clean** is for the person who is in the room: the listening pulse, the elapsed
-clock, the contour, the continuing-from line when one conversation resumes
-another, the dead-microphone warning, and the switch — and nothing else. The
+clock, **Mark** (§9.10), the contour, the continuing-from line when one
+conversation resumes another, the dead-microphone warning, and the switch — and
+nothing else. The
 continuing-from line belongs here because it is stated once and never changes.
 
 Clean contains **no text that changes while somebody is speaking**. Changing
@@ -431,6 +438,11 @@ and collapsing it would erase exactly the signal Oats exists to catch. Cards for
 the same subject visually **nest** under the first: indented, hairline-linked, the
 repeats at 70% ink. Density is handled by stacking, never by suppression.
 
+A group is ordered by its **latest** asking, not its first. A re-asking is the
+newest thing that happened in the room and the strongest signal there is; ordered
+by its first asking, it sank with a twenty-minute-old group below the band's fold.
+The group rises when it is asked again, and the repeat still nests under the first.
+
 **Stacking.** Annotations are **Detailed-only (§9.0)**, and there they are
 **docked in the Conversation surface, directly
 under the contour, on its left spine** — not in a corner and not in a window of
@@ -480,6 +492,17 @@ nothing but scroll the live transcript to where it was dropped.
 
 It auto-collapses when the user starts speaking again, and never expands itself.
 The stack never has an urgent state; if it is nagging, it is wrong.
+
+**The live thread map** sits beside it in Detailed: the same threads as a shape,
+so you can point at something raised twenty minutes ago. Both axes are
+measurements — x is when a subject was first raised, y how unsettled it still is —
+and there is no simulation, because a force layout is an animation loop during a
+recording. Its marks speak §4 exactly: the one live subject gold, open terracotta
+and densely grained, resolved sage, dropped husk and sparse. The **dot** sits on
+the point, never the middle of its label, so connectors meet dots. Labels go right
+of the dot, then left, then above or below it; one with nowhere to go is hidden
+rather than drawn over another and stays in the button's name. Heavier subjects
+are placed first. Geometry lives in `helpers/liveThreadMap.mjs`, pinned.
 
 ### 9.4 The topic graph — the Intelligence view
 
@@ -557,12 +580,19 @@ Four elements, each a fact:
 | **A mark, above**    | a question at the moment it was asked, in its §4 state colour       |
 | **The mark's grain** | how settled that question is — solid answered, grainiest unasked-of |
 | **An arc**           | the room returning to a thread it had left                          |
+| **A caret, below**   | a moment the reader marked (§9.10)                                  |
 
 Rules:
 
-- **Every element is derived from speech.** Nothing here may be generated by a
-  noise function, a seed, or elapsed time alone. If two different conversations
-  can produce the same contour, it has become wallpaper and it is wrong.
+- **Every element is derived from speech** — or, for the caret, from the
+  reader's own press, which is the one thing in a record that is theirs rather
+  than the room's. Nothing here may be generated by a noise function, a seed, or
+  elapsed time alone. If two different conversations can produce the same
+  contour, it has become wallpaper and it is wrong.
+- **In a record it is the way in.** A click on the trace opens the transcript at
+  that moment; a hairline under the pointer says when that was before the press.
+  Pointer-only, because the transcript it lands on is the keyboard path to the
+  same place. The live surface is not pickable — there is nowhere to go.
 - **Dither carries information, never texture.** A mark's density is the §4
   uncertainty encoding, which is what keeps state legible in greyscale and for
   colour-blind users. Decorative grain on the contour is a review-blocking
@@ -597,15 +627,22 @@ content at `font-mono text-[13px]`; one transcript may not have two voices on tw
 surfaces. Nothing here is uppercase — sentence case is the rule for everything
 but the wordmark.
 
-**Turns, not segments.** Speech finalizes in ~5s chunks. Drawn one paragraph per
-chunk, one person's sentence looks like four people arguing. Consecutive chunks
-from one speaker are joined into the turn they were.
+**Turns, not segments.** Speech finalizes in pieces — at pauses in a room, every
+~5s on a call. Drawn one paragraph per piece, one person's sentence looks like
+four people arguing. Consecutive pieces from one speaker are joined into the turn
+they were.
 
 **Attribution is the margin, the words are the entry** — the same relationship
-the annotations have to the contour. The two-voice vocabulary is the stored
-transcript's: you, and the room, replaced by a diarized name when there is one.
-The separator between them must be a _character_, not margin: `textContent` is
-what a screen reader and the clipboard read, and margin is invisible to both.
+the annotations have to the contour. One rule names a speaker on every surface,
+live, reading, copy and vault (`speakerLabelKind`): a name somebody gave; else
+_Speaker N_, numbered by who spoke first; else, on a call, you and the room.
+**A conversation in one room carries no label until its voices are told apart**,
+after Finish — "You" on every line of a two-person conversation was a wrong
+label, and no label beats a wrong one. One voice is never labelled. Naming is one
+press on _Speaker 2_ in the reading view and applies to every turn of that voice
+in that conversation; nothing guesses a name. The separator between label and
+words must be a _character_, not margin: `textContent` is what a screen reader
+and the clipboard read, and margin is invisible to both.
 
 **Bounded, and it follows.** Its own scroller with a real bound — a flex child
 with `min-h-0`, never `max-h-full`, which resolves against a content-height
@@ -622,6 +659,42 @@ keyboard and named for the accessibility tree.
 
 **No affordances.** No timestamps, no per-turn controls, no selection handles. A
 live transcript that invites editing is one somebody edits instead of listening.
+
+### 9.10 Marked moments — the reader's hand
+
+The one action a person in the room takes besides starting and stopping:
+**Mark**, beside the clock, or `M` — or the floating oat's own clock, which is
+all there is on screen when a conversation is recorded with the panel hidden
+(the normal way, through the global shortcut). Pressing that clock swaps the
+time for the caret for a beat, in place, so the 48px it has never grows. It records *this instant* — the
+counter-example, the number somebody quoted, the idea to come back to — and asks
+for nothing else. Nothing is typed during the conversation; a note is added in
+the record afterwards, where there is time.
+
+- **One press, saved at once.** Written to the note on the press, not at stop: a
+  crash before stop would otherwise take exactly the moments somebody thought
+  most worth keeping. Two presses inside a second are one mark.
+- **Ink, not gold, and never a state colour.** A mark is not a verdict on
+  anything. It is drawn as a small caret under the contour's baseline, and the
+  control carries the same caret, so what it did is visible where it did it.
+- **In both compositions.** Clean hides evidence; a mark is not evidence, it is
+  the reader writing in their own margin.
+- **In the record it leads.** "You marked" sits above what the conversation left
+  open: each mark quotes the words being said at the press (the nearest
+  utterance), its time, and its note, and opens the transcript there. The
+  transcript's margin carries the same caret, beside the question marks (§4).
+- **The vault gets them too**, as the first section after the summary, and so
+  does **Save** on the summary tab, which writes what that tab shows in its
+  order: the marks, what was left open, then the summary.
+- **A note is searchable**, labelled `your note` — the reader's own words,
+  ranked below what was said and above what a model wrote — and a conversation
+  carries its count of marks beside its strip in the list, because "the ones
+  where something mattered" is worth seeing while scanning.
+- **A mark can be removed.** It is a highlight, not evidence, so there is no
+  second press to confirm.
+
+Stored as JSON on the note (`notes.conversation_marks`); the model is
+`helpers/conversationMoments.mjs`.
 
 ### 9.5 Empty states
 

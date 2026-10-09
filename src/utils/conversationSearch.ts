@@ -5,6 +5,8 @@
 // opens on, and where the matches are in it. `OatsWorkspace` renders what these
 // return and owns nothing else about search.
 
+import { findMatches, foldText } from "../helpers/searchFold.mjs";
+
 export type MatchTarget = "summary" | "transcript";
 
 export interface TextPart {
@@ -28,17 +30,13 @@ export function matchTarget(
   }: { title?: string | null; summary?: string | null; transcript?: string | null },
   query: string
 ): MatchTarget {
-  const needle = query.trim().toLocaleLowerCase();
+  const needle = foldText(query.trim());
   if (!needle) return "summary";
   const inSummary = [title, summary]
     .filter(Boolean)
-    .some((field) => String(field).toLocaleLowerCase().includes(needle));
+    .some((field) => foldText(field).includes(needle));
   if (inSummary) return "summary";
-  return String(transcript ?? "")
-    .toLocaleLowerCase()
-    .includes(needle)
-    ? "transcript"
-    : "summary";
+  return foldText(transcript).includes(needle) ? "transcript" : "summary";
 }
 
 /**
@@ -46,23 +44,21 @@ export function matchTarget(
  *
  * Deliberately not a regular expression: the query is whatever somebody typed
  * into a search box, and a stray `(` must never become a syntax error in a view.
- * Case-insensitive by the same lowercase fold the filter itself uses, so what
- * the list matched is what the reading view marks.
+ * Case- and accent-insensitive by the same fold the filter itself uses
+ * (`helpers/searchFold.mjs`), so what the list matched is what the reading view
+ * marks.
  */
 export function splitOnMatches(text: string, query: string): TextPart[] {
-  const needle = query.trim().toLocaleLowerCase();
-  if (!needle) return [{ text, match: false }];
-  const haystack = text.toLocaleLowerCase();
+  const ranges = findMatches(text, query);
+  if (!ranges.length) return [{ text, match: false }];
   const parts: TextPart[] = [];
   let cursor = 0;
-  for (;;) {
-    const at = haystack.indexOf(needle, cursor);
-    if (at === -1) break;
-    if (at > cursor) parts.push({ text: text.slice(cursor, at), match: false });
+  for (const [start, end] of ranges) {
+    if (start > cursor) parts.push({ text: text.slice(cursor, start), match: false });
     // Sliced out of the *original* text, never out of the folded copy: the
     // highlight has to show what was written, not what it was compared as.
-    parts.push({ text: text.slice(at, at + needle.length), match: true });
-    cursor = at + needle.length;
+    parts.push({ text: text.slice(start, end), match: true });
+    cursor = end;
   }
   if (cursor < text.length) parts.push({ text: text.slice(cursor), match: false });
   return parts;

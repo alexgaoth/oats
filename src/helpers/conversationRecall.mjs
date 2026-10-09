@@ -16,6 +16,9 @@
 // Pure and DOM-free so the ranking and the boundaries can be pinned rather than
 // eyeballed; the component owns the rendering.
 
+import { findMatches, foldText } from "./searchFold.mjs";
+import { momentSegment, parseMoments } from "./conversationMoments.mjs";
+
 /** Characters of context either side of the match. */
 const RADIUS = 96;
 
@@ -26,7 +29,12 @@ function parseSegments(raw) {
   if (typeof raw !== "string" || !raw.trim()) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // The same positional ids the reading view gives a transcript saved before
+    // ids were kept, so a search still lands on the turn it found.
+    return parsed.map((segment, index) =>
+      segment && segment.id != null ? segment : { ...segment, id: `legacy-${index}` }
+    );
   } catch {
     return [];
   }
@@ -50,29 +58,30 @@ function trimToWord(text, fromStart) {
  * name. Case- and accent-insensitive, because a search for "resume" should find
  * "résumé" — but the excerpt is returned in the original text, never folded.
  *
- * @returns {{ source: "transcript"|"summary"|"title", before: string,
+ * @returns {{ source: "transcript"|"note"|"summary"|"title", before: string,
  *   match: string, after: string, segmentId?: string, timestamp?: number,
  *   offsetMs?: number, prefixed: boolean, suffixed: boolean } | null}
  *   The three pieces concatenate to the excerpt; `match` is what to mark.
  */
 export function findExcerpt(note, query) {
-  const needle = String(query ?? "")
-    .trim()
-    .toLocaleLowerCase();
+  const needle = foldText(String(query ?? "").trim());
   if (!needle || !note) return null;
 
-  const fold = (value) => String(value ?? "").toLocaleLowerCase();
+  // Whether a field matches is asked of the fast whole-string fold; *where* is
+  // asked of `findMatches`, which maps the folded position back to the
+  // original — the two differ in length whenever an accent is dropped.
+  const locate = (text) => findMatches(text, query)[0] ?? null;
 
   // 1. What was said.
   const segments = parseSegments(note.transcript);
   const startedAt = segments.find((s) => Number.isFinite(s?.timestamp))?.timestamp;
   for (const segment of segments) {
     const text = String(segment?.text ?? "");
-    const at = fold(text).indexOf(needle);
-    if (at === -1) continue;
+    if (!foldText(text).includes(needle)) continue;
+    const [at, end] = locate(text);
     const timestamp = Number.isFinite(segment.timestamp) ? segment.timestamp : undefined;
     return {
-      ...window_(text, at, needle.length),
+      ...window_(text, at, end - at),
       source: "transcript",
       segmentId: segment.id != null ? String(segment.id) : undefined,
       timestamp,
@@ -88,18 +97,32 @@ export function findExcerpt(note, query) {
     };
   }
 
-  // 2. What Oats wrote about it.
-  const summary = String(note.enhanced_content ?? "");
-  const inSummary = fold(summary).indexOf(needle);
-  if (inSummary !== -1 && inSummary <= SUMMARY_HEAD + summary.length) {
-    return { ...window_(summary, inSummary, needle.length), source: "summary" };
+  // 2. What the reader wrote on a mark. Their own words, so it outranks what a
+  //    model wrote — and it is a place too: the turn the mark belongs to.
+  for (const moment of parseMoments(note.conversation_marks)) {
+    if (!moment.note || !foldText(moment.note).includes(needle)) continue;
+    const [at, end] = locate(moment.note);
+    const segment = momentSegment(moment, segments);
+    return {
+      ...window_(moment.note, at, end - at),
+      source: "note",
+      segmentId: segment?.id != null ? String(segment.id) : undefined,
+      offsetMs: Number.isFinite(startedAt) ? Math.max(0, moment.at - startedAt) : undefined,
+    };
   }
 
-  // 3. The name, and nothing else.
+  // 3. What Oats wrote about it.
+  const summary = String(note.enhanced_content ?? "");
+  const inSummary = foldText(summary).includes(needle) ? locate(summary) : null;
+  if (inSummary && inSummary[0] <= SUMMARY_HEAD + summary.length) {
+    return { ...window_(summary, inSummary[0], inSummary[1] - inSummary[0]), source: "summary" };
+  }
+
+  // 4. The name, and nothing else.
   const title = String(note.title ?? "");
-  const inTitle = fold(title).indexOf(needle);
-  if (inTitle !== -1) {
-    return { ...window_(title, inTitle, needle.length), source: "title" };
+  const inTitle = foldText(title).includes(needle) ? locate(title) : null;
+  if (inTitle) {
+    return { ...window_(title, inTitle[0], inTitle[1] - inTitle[0]), source: "title" };
   }
 
   return null;

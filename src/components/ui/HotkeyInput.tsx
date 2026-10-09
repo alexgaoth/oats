@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { formatHotkeyLabel, isGlobeLikeHotkey } from "../../utils/hotkeys";
 import { getPlatform } from "../../utils/platform";
+import { formatHotkey } from "../../utils/hotkeyLabel";
 
 const CODE_TO_KEY: Record<string, string> = {
   Backquote: "`",
@@ -179,7 +180,7 @@ function mapKeyboardEventToHotkey(e: KeyboardEvent): string | null {
 }
 
 export interface HotkeyInputVariant {
-  variant?: "default" | "hero";
+  variant?: "default" | "hero" | "ledger";
 }
 
 export function HotkeyInput({
@@ -495,6 +496,68 @@ export function HotkeyInput({
         <Trash2 className="w-3.5 h-3.5" />
       </button>
     ) : null;
+
+  // Ledger variant: the Oats Settings page.
+  //
+  // The shortcut written the way the Conversation screen already writes it —
+  // `Ctrl+Shift+O` in mono, the line the app uses to teach its own hotkey — and
+  // the same quiet "change" beside it that the microphone row has. The default
+  // variant drew bordered keycaps behind a "Hotkey" prefix that only repeated
+  // the row's own label: the last inherited control on the visible page, and
+  // the one place in Oats the shortcut looked like a different product's.
+  // Capture is unchanged; only the drawing differs.
+  if (variant === "ledger") {
+    const written = formatHotkey(value, platform) || displayValue;
+    return (
+      <div
+        ref={containerRef}
+        tabIndex={disabled ? -1 : 0}
+        role="button"
+        aria-label={t("hotkeyInput.ariaLabel")}
+        data-capturing={isCapturing || undefined}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onMouseDown={handleMouseDown}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        className={[
+          "group relative flex min-h-6 w-full flex-wrap items-baseline gap-x-3 gap-y-1 rounded-sm",
+          "select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+        ].join(" ")}
+      >
+        {isCapturing ? (
+          // Listening for the new combination. The modifiers held so far are
+          // written as they will be stored; nothing pulses — a capture is a
+          // moment you are in, not a state the page has to keep announcing.
+          <span className="font-mono text-sm text-foreground">
+            {activeModifiers.size > 0
+              ? `${Array.from(activeModifiers).join("+")} ${
+                  isFnHeld ? t("hotkeyInput.fnCaptureHint") : t("hotkeyInput.keyHint")
+                }`
+              : isMac
+                ? t("hotkeyInput.tryShortcutMac")
+                : t("hotkeyInput.tryShortcut")}
+          </span>
+        ) : value ? (
+          <>
+            <span className="font-mono text-sm text-foreground">{written}</span>
+            <span className="font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] group-hover:text-foreground">
+              {t("hotkeyInput.clickToChangeLower")}
+            </span>
+            {clearButton}
+          </>
+        ) : (
+          <span className="text-sm text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] group-hover:text-foreground">
+            {t("hotkeyInput.clickToSet")}
+          </span>
+        )}
+        {validationWarning && (
+          <span className="basis-full text-xs leading-5 text-foreground">{validationWarning}</span>
+        )}
+      </div>
+    );
+  }
 
   // Hero variant: large centered key display for onboarding
   if (variant === "hero") {

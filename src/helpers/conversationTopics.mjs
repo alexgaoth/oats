@@ -466,7 +466,14 @@ class ConversationTopicTracker {
 
   // The graph's contents. Node weight is time spent, which is what the radius
   // encodes; edges keep their direction and weight.
-  snapshot(at = this.now()) {
+  //
+  // `final` is the snapshot a finished conversation is stored as. Nothing is
+  // being spoken in a record, so nothing in it is live: stored with the topic
+  // that happened to be current at stop marked `live`, the reading view drew it
+  // gold — a second accent beside the selected node (DESIGN.md §9.4) — on a
+  // subject nobody was discussing any more, and hid whether it had been
+  // resolved, because `live` is decided before `resolved` is consulted.
+  snapshot(at = this.now(), { final = false } = {}) {
     this._flushPending();
     const { topics, edges } = this._condensed();
     const nodes = topics.map((topic) => ({
@@ -479,7 +486,7 @@ class ConversationTopicTracker {
       lastAt: topic.lastAt,
       returns: topic.returns,
       state:
-        topic.id === this.currentId
+        !final && topic.id === this.currentId
           ? "live"
           : topic.resolved
             ? "resolved"

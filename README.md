@@ -30,7 +30,7 @@ Opening a tab mid-conversation is disruptive enough that it demands a **confirme
 
 Only the question is quoted, not the turn it arrived in. People rarely speak in tidy single clauses, so a minute of context ending in "…do you know what the median seat price is?" shows just that question on the card and uses just that as the search query.
 
-**How the verdict is reached.** The reply is read locally first — denial, hedge, backchannel, or a substantive answer are formulaic enough for pattern matching. The optional classifier model only refines that reading, and only when it is confident. This keeps outcomes working when the model is small, slow, or returns something off-contract: a card always resolves rather than sitting unjudged, and "no idea" is recognised as a denial without any model at all. The local patterns are currently English-only; in other languages an unrecognised reply resolves as uncertain, which shows the card but does not search.
+**How the verdict is reached.** The reply is read locally first — denial, hedge, backchannel, or a substantive answer are formulaic enough for pattern matching. The optional classifier model only refines that reading, and only when it is confident. This keeps outcomes working when the model is small, slow, or returns something off-contract: a card always resolves rather than sitting unjudged, and "no idea" is recognised as a denial without any model at all. The local patterns cover all ten interface languages; a reply in any other language resolves as uncertain, which shows the card but does not search.
 
 Asking again is treated as signal, not noise. The same question asked twice produces two cards, and a rephrasing — “do you know…” then “are you aware of…” — produces its own card each time. Repeats nest under the first card rather than being suppressed, because re-asking is how people mark what actually matters.
 
@@ -38,7 +38,9 @@ Auto-search is the one thing that leaves the device during a conversation, it is
 
 ## During and after the conversation
 
-Oats sits in a **field of oats** — a horizon, warm light gathering along it, and the earth below. That world is always there, so the app is a place rather than a blank page. Starting a conversation **grows the wheat out of it**, and stopping lets it withdraw. It is the warm answer to "you are being listened to", and it is a background rather than a subject: it never competes with a word on screen, it recedes on the reading surfaces, and `prefers-reduced-motion` freezes it to a still image.
+While a conversation is recorded, the screen draws its **contour**: one thin trace, left to right in time, thicker where more was said, notched where the subject turned, and marked above wherever a question was asked — grainier the less settled it came out. Every part of it is measured from the conversation itself, so no two conversations draw the same line. By default the screen shows only that, the listening seed and the clock; **Show what was said** adds the question cards, the live transcript and the threads still open, and switches back the same way.
+
+Oats has a second interface, chosen in Settings: the **field**, where the conversation is recorded in a field of oats that grows while you talk and withdraws when you stop. The default is the **ledger** — paper, graphite and one gold mark.
 
 If you stop and start again within half an hour, Oats **resumes the same conversation** rather than asking. Appending to the same note gives one transcript, one summary, and one set of threads instead of two halves to reconcile — and recording starts on the first press, because stopping to ask would cost the opening sentences, which are usually the ones worth catching. The screen simply says which conversation it is continuing.
 

@@ -1896,7 +1896,7 @@
       "dialogueLabel": "Detected dialogue",
       "dialogueWaiting": "Nothing heard yet.",
       "contourLabel": "The shape of this conversation so far",
-      "contourLegend": "Thickness is how much was said · a notch is the subject turning · a mark is a question, grainier the less settled it is",
+      "contourLegend": "Thickness is how much was said · a notch is the subject turning · a mark is a question, grainier the less settled it is · a caret below is a moment you marked",
       "contourSummary": "{{minutes}} minutes, {{questions}} questions asked ({{unresolved}} still unanswered), the subject turned {{shifts}} times, and the room came back to {{returns}} threads.",
       "contourEmpty": "Nothing recorded yet.",
       "record": "Record conversation",
@@ -1912,6 +1912,10 @@
       "nothingHeard": "Nothing was heard, so no conversation was saved. Check the microphone in Settings.",
       "continuing": "Continuing {{title}}",
       "notAContinuation": "Separate conversation",
+      "mark": "Mark",
+      "marked": "Marked",
+      "markLabel": "Mark this moment",
+      "markAnnounced": "Marked at {{time}}",
       "threadMapLabel": "Map of {{count}} subjects raised so far",
       "threadMapNoQuote": "nothing recent to quote"
     },
@@ -1922,6 +1926,8 @@
       "noTranscript": "No transcript yet.",
       "speakerYou": "You",
       "speakerRoom": "Room",
+      "speakerN": "Speaker {{n}}",
+      "nameSpeaker": "Name {{speaker}}",
       "tabs": {
         "summary": "Summary",
         "transcript": "Transcript",
@@ -1940,10 +1946,13 @@
       "searchResults_other": "{{count}} conversations match",
       "match": {
         "transcript": "said",
+        "note": "your note",
         "summary": "summary",
         "title": "title"
       },
       "matchRelated": "related",
+      "markedCount_one": "{{count}} marked moment",
+      "markedCount_other": "{{count}} marked moments",
       "emptyHint": "Press {{shortcut}} anywhere and ask something nobody in the room knows",
       "backToList": "Back",
       "copy": "Copy",
@@ -1961,8 +1970,22 @@
     "review": {
       "title": "What this left open",
       "tally": "{{asked}} asked, {{answered}} answered",
-      "openThreads_one": "{{count}} thread still open",
-      "openThreads_other": "{{count}} threads still open"
+      "openThreads_one": "{{count}} thread still open: {{threads}}",
+      "openThreads_other": "{{count}} threads still open: {{threads}}",
+      "showAnswers": "Show the answers",
+      "hideAnswers": "Hide the answers",
+      "marked": "You marked",
+      "addNote": "Add a note",
+      "noteLabel": "Note for the moment at {{time}}",
+      "removeMark": "Remove",
+      "removeMarkLabel": "Remove the mark at {{time}}",
+      "markedTurn": "Marked."
+    },
+    "find": {
+      "label": "Find in this conversation",
+      "count": "{{current}} of {{total}}",
+      "none": "No matches",
+      "close": "Close"
     },
     "settings": {
       "title": "Keep the choices small.",
@@ -2043,10 +2066,12 @@
       "untitled": "Untitled conversation",
       "summary": "Summary",
       "openQuestions": "Open questions",
+      "marked": "Marked",
       "topics": "Topics",
       "transcript": "Transcript",
       "you": "You",
-      "room": "Room"
+      "room": "Room",
+      "speaker": "Speaker {{n}}"
     }
   },
   "questionCard": {

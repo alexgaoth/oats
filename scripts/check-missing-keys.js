@@ -41,7 +41,7 @@ const DYNAMIC = {
   // QuestionOutcome — src/types/conversationEvents.ts
   "questionCard.state": ["asked", "answered", "uncertain", "silence", "denied"],
   // findExcerpt's `source` — src/helpers/conversationRecall.mjs
-  "oats.intelligence.match": ["transcript", "summary", "title"],
+  "oats.intelligence.match": ["transcript", "note", "summary", "title"],
   // DetailTab — src/components/OatsWorkspace.tsx
   "oats.intelligence.tabs": ["summary", "transcript", "connections"],
   // PreflightProblem — src/utils/preflight.ts

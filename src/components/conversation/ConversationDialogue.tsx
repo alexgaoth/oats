@@ -4,6 +4,7 @@ import { cn } from "../lib/utils";
 import { ScrollFade, useScrollFade } from "./useScrollFade";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
+import { speakerText } from "../../utils/speakerLabel";
 import { revealRate, revealedCount, revealedText, splitWords } from "../../helpers/wordReveal.mjs";
 
 // The detected dialogue — what Oats has actually heard, while it is hearing it.
@@ -19,16 +20,18 @@ import { revealRate, revealedCount, revealedText, splitWords } from "../../helpe
 // a transcript somebody edits instead of listening. Speaker, words, and the
 // order they came in.
 //
-// Turns, not segments. Speech arrives in ~5s chunks (LOCAL_MEETING_CHUNK_
-// INTERVAL_MS), and rendering each as its own paragraph makes one person's
-// sentence look like an argument between four of them. Consecutive chunks from
-// the same speaker are joined into the turn they actually were.
+// Turns, not segments. Speech arrives in pieces — at pauses in a room, every
+// ~5s on a call (LOCAL_MEETING_CHUNK_INTERVAL_MS) — and rendering each as its
+// own paragraph makes one person's sentence look like an argument between four
+// of them. Consecutive pieces from the same speaker are joined into the turn
+// they actually were.
 
 /** A run of consecutive segments from one speaker. */
 interface Turn {
   id: string;
   source: "mic" | "system";
-  speaker?: string;
+  /** The turn's first segment, for its speaker label. */
+  head: TranscriptSegment;
   text: string;
 }
 
@@ -54,7 +57,7 @@ export function buildTurns(segments: TranscriptSegment[]): Turn[] {
     turns.push({
       id: `${speakerKey(segment)}|${segment.id}`,
       source: segment.source,
-      speaker: segment.speakerName ?? undefined,
+      head: segment,
       text,
     });
   }
@@ -75,13 +78,18 @@ export default function ConversationDialogue({ className }: { className?: string
   // sentence is spoken and is replaced by the final when it lands.
   //
   // Only the streaming providers produce these (`attachMeetingStreamingHandlers`
-  // in ipcHandlers.js). Local Whisper transcribes fixed chunks and emits finals
+  // in ipcHandlers.js). Local Whisper transcribes whole segments and emits finals
   // only, so on the default local path this stays empty and the log behaves as
   // it did — chunked, not word by word.
   const micPartial = useMeetingRecordingStore((state) => state.micPartial);
   const systemPartial = useMeetingRecordingStore((state) => state.systemPartial);
   const partial = (micPartial || systemPartial || "").trim();
   const partialSource = micPartial ? "mic" : "system";
+  const inRoom = useMeetingRecordingStore((state) => state.recordingMode === "in_room");
+  const partialLabel = speakerText(
+    { source: partialSource, ...(inRoom ? { speaker: "room" } : {}) },
+    t
+  );
 
   // Pay the newest turn out at the pace it was said.
   //
@@ -228,23 +236,27 @@ export default function ConversationDialogue({ className }: { className?: string
           )}
           <ol className="space-y-3.5">
             {turns.map((turn) => (
-              <li key={turn.id} className="font-mono text-[13px] leading-7">
+              <li key={turn.id} className="font-mono text-[13px] leading-6">
                 {/* Mono, because §5 gives transcripts the "machine heard this"
                   voice — it earns trust by looking verbatim — and because the
                   reading view renders this same content at `font-mono
-                  text-[13px]`. One transcript must not have two voices on two
-                  surfaces. Sentence case, like everything but the wordmark. */}
-                <span className="mr-2 select-none text-muted-foreground">
-                  {turn.speaker ??
-                    (turn.source === "mic"
-                      ? t("oats.intelligence.speakerYou")
-                      : t("oats.intelligence.speakerRoom"))}
-                  {/* The gap between the label and the words is margin, which is
+                  text-[13px] leading-6`. One transcript must not have two voices
+                  on two surfaces. Sentence case, like everything but the
+                  wordmark.
+
+                  24px, not 28: at 2.15x the type size a turn's wrapped line sat
+                  almost as far below it as the next turn did, so a continuation
+                  read as a new entry. */}
+                {speakerText(turn.head, t) && (
+                  <span className="mr-2 select-none text-muted-foreground">
+                    {speakerText(turn.head, t)}
+                    {/* The gap between the label and the words is margin, which is
                     invisible to `textContent` — so a screen reader, and anyone
                     copying the transcript, read "Youso the question is". The
                     separator has to be a character. */}
-                  <span className="sr-only">: </span>
-                </span>
+                    <span className="sr-only">: </span>
+                  </span>
+                )}
                 <span className="text-foreground/85">
                   {newest && turn.id === newest.id && newestVisible
                     ? newestVisible.text
@@ -260,15 +272,15 @@ export default function ConversationDialogue({ className }: { className?: string
               // browser updates the line instead of remounting it every frame.
               <li
                 key="in-progress"
-                className="font-mono text-[13px] leading-7"
+                className="font-mono text-[13px] leading-6"
                 data-state="in-progress"
               >
-                <span className="mr-2 select-none text-muted-foreground/70">
-                  {partialSource === "mic"
-                    ? t("oats.intelligence.speakerYou")
-                    : t("oats.intelligence.speakerRoom")}
-                  <span className="sr-only">: </span>
-                </span>
+                {partialLabel && (
+                  <span className="mr-2 select-none text-muted-foreground/70">
+                    {partialLabel}
+                    <span className="sr-only">: </span>
+                  </span>
+                )}
                 <span className="text-muted-foreground">{partial}</span>
               </li>
             )}

@@ -26,6 +26,8 @@ import {
 import { ConversationAideSession } from "../helpers/conversationAide";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
+import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
+import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
 import type {
   ConversationCard,
   ConversationSuggestion,
@@ -40,6 +42,13 @@ export interface TranscriptSegment {
   text: string;
   source: "mic" | "system";
   timestamp?: number;
+  /**
+   * Where in the recording this was said, in ms from its start — from the
+   * speech segmenter, so exact rather than the time transcription finished.
+   * What lets a speaker found over the whole recording be put on these words.
+   */
+  startMs?: number;
+  endMs?: number;
   speaker?: string;
   speakerName?: string;
   speakerIsPlaceholder?: boolean;
@@ -127,6 +136,19 @@ interface MeetingRecordingState {
    * the answer.
    */
   recordingStartedAt: number | null;
+  /**
+   * The instants "Mark" was pressed during this conversation, oldest first
+   * (`helpers/conversationMoments.mjs`). Written to the note on every press, so
+   * a crash keeps them — a mark is the one thing in the record nobody can
+   * reconstruct.
+   */
+  moments: ConversationMoment[];
+}
+
+export interface ConversationMoment {
+  id: string;
+  at: number;
+  note: string;
 }
 
 const MEETING_AUDIO_BUFFER_SIZE = 800;
@@ -464,6 +486,10 @@ const flushAndDisconnectProcessor = async (processor: AudioWorkletNode | null) =
 };
 
 let segmentCounter = 0;
+// Segment ids are saved with the transcript, and question events point at them,
+// so they must not repeat across launches: the counter alone restarts at 1, and
+// a conversation resumed after a restart would mint ids it already holds.
+const segmentIdPrefix = `seg-${Date.now().toString(36)}`;
 
 // Pipeline lives in module scope — not on React refs — so it survives
 // view changes and re-mounts of the consumer view.
@@ -524,6 +550,7 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   checkpointedSegments: 0,
   lastCheckpointAt: null,
   questionCards: [],
+  moments: [],
 }));
 
 function startConversationAide(noteId: number | null, mode: ConversationRecordingMode) {
@@ -821,7 +848,9 @@ function stopTranscriptCheckpoints() {
 
 export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null {
   if (!conversationTopicTracker) return null;
-  return conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
+  return conversationTopicTracker.snapshot(Date.now(), {
+    final: true,
+  }) as ConversationTopicSnapshot;
 }
 
 async function stopConversationAide() {
@@ -1000,7 +1029,8 @@ function assignProvisionalSpeaker(segment: TranscriptSegment): TranscriptSegment
   });
 }
 
-async function cleanup(): Promise<void> {
+/** Stop capturing. The IPC listeners stay: see `stopRecording`. */
+async function releaseCapture(): Promise<void> {
   await flushAndDisconnectProcessor(micProcessor);
   micProcessor = null;
 
@@ -1033,7 +1063,10 @@ async function cleanup(): Promise<void> {
     await systemContext?.close();
   } catch {}
   systemContext = null;
+}
 
+async function cleanup(): Promise<void> {
+  await releaseCapture();
   ipcCleanups.forEach((fn) => fn());
   ipcCleanups = [];
   isPrepared = false;
@@ -1083,12 +1116,111 @@ export interface StartRecordingArgs {
   noteTitle: string | null;
   folderId: number | null;
   seedSegments?: TranscriptSegment[];
+  /** The marks a continued conversation already carries, stored form. */
+  seedMoments?: unknown;
   diarizationEnabled?: boolean | null;
   expectedCount?: number | null;
   mode?: ConversationRecordingMode;
 }
 
+/**
+ * Mark this moment of the running conversation.
+ *
+ * Saved to the note immediately rather than at stop: the mark is pressed
+ * because the moment matters, and a crash before stop would take exactly the
+ * moments somebody thought most worth keeping. A refused write is not retried
+ * here — every later mark rewrites the whole list, and stop writes it again.
+ *
+ * @returns the moment, or null when nothing is recording or it was a repeat
+ *   press inside the same second.
+ */
+export async function markMoment(at: number = Date.now()): Promise<ConversationMoment | null> {
+  const state = useMeetingRecordingStore.getState();
+  if (!state.isRecording) return null;
+  const { moments, added } = addMoment(state.moments, at);
+  if (!added) return null;
+  const next = moments as ConversationMoment[];
+  useMeetingRecordingStore.setState({ moments: next });
+  if (state.recordingNoteId != null) {
+    await window.electronAPI?.updateNote?.(state.recordingNoteId, {
+      conversation_marks: JSON.stringify(next),
+    });
+  }
+  return next.find((moment) => moment.at === at) ?? null;
+}
+
+/**
+ * Put the speakers found after Stop onto the words they said.
+ *
+ * Only this sitting's words: a conversation resumed within half an hour holds
+ * an earlier sitting whose offsets count from a different start, so its words
+ * are matched by when they were said (`timestamp` from `startedAt` on) and the
+ * new voices are numbered after the ones already there — two sittings' "Speaker
+ * 1" may be two different people, and the labels must not claim otherwise.
+ *
+ * If that conversation is being recorded again right now, the live segments are
+ * updated instead of the note, so the next checkpoint keeps the speakers rather
+ * than writing over them.
+ */
+export async function applyConversationSpeakers(payload: {
+  noteId: number;
+  startedAt: number;
+  turns: { start: number; end: number; speaker: string }[];
+}): Promise<void> {
+  const { noteId, startedAt, turns } = payload ?? ({} as typeof payload);
+  if (!noteId || !Array.isArray(turns) || !turns.length) return;
+  const state = useMeetingRecordingStore.getState();
+  // The store's segments while they are still this note's — recording again
+  // after a resume, or just stopped and not yet saved. Reading the database
+  // then could miss the tail, and the save after it would erase the speakers.
+  const live = state.recordingNoteId === noteId && state.segments.length > 0;
+  let segments: TranscriptSegment[] = live ? state.segments : [];
+  if (!live) {
+    const note = await window.electronAPI?.getNote?.(noteId);
+    try {
+      const parsed = note?.transcript ? JSON.parse(note.transcript) : [];
+      segments = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      segments = [];
+    }
+  }
+  const sitting = segments.filter(
+    (segment) =>
+      Number.isFinite(segment.timestamp) &&
+      (segment.timestamp as number) >= startedAt - 1000 &&
+      Number.isFinite(segment.startMs)
+  );
+  const { assignments, speakers } = assignSpeakers(sitting, turns);
+  if (!speakers.length) return;
+  const before = segments
+    .filter((segment) => !assignments.has(String(segment.id)))
+    .reduce((most, segment) => Math.max(most, speakerNumber(segment.speaker) ?? 0), 0);
+  const next = segments.map((segment) => {
+    const found = assignments.get(String(segment.id));
+    if (!found) return segment;
+    return {
+      ...segment,
+      speaker: `speaker_${(speakerNumber(found) ?? 0) + before}`,
+      speakerName: undefined,
+      speakerIsPlaceholder: true,
+      speakerStatus: "provisional" as const,
+    };
+  });
+  if (live) {
+    segmentsRefValue = next;
+    useMeetingRecordingStore.setState({ segments: next });
+    // Recording again: the checkpoint will write it. Stopped: nothing else will.
+    if (state.isRecording) return;
+  }
+  await window.electronAPI?.updateNote?.(noteId, {
+    transcript: serializeTranscriptSegments(next),
+  });
+}
+
 export async function startRecording(args: StartRecordingArgs): Promise<void> {
+  // Record pressed straight after Finish: the stop's cleanup would otherwise
+  // tear down this recording's capture and listeners when it lands.
+  if (stopping) await stopping;
   if (isRecordingFlag || isStartingFlag) return;
   isStartingFlag = true;
 
@@ -1141,6 +1273,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     userTouchedStepper: args.expectedCount != null,
     segments: seed,
     transcript: buildTranscriptText(seed),
+    moments: parseMoments(args.seedMoments) as ConversationMoment[],
     micPartial: "",
     systemPartial: "",
     systemPartialSpeakerId: null,
@@ -1295,6 +1428,8 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         source: "mic" | "system";
         type: "partial" | "final" | "retract";
         timestamp?: number;
+        startMs?: number;
+        endMs?: number;
       }) => {
         if (data.type === "retract") {
           const current = useMeetingRecordingStore.getState().segments;
@@ -1340,10 +1475,13 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         }
 
         let rawSegment: TranscriptSegment = normalizeTranscriptSegment({
-          id: `seg-${++segmentCounter}`,
+          id: `${segmentIdPrefix}-${++segmentCounter}`,
           text: data.text,
           source: data.source,
           timestamp: data.timestamp,
+          ...(Number.isFinite(data.startMs) && Number.isFinite(data.endMs)
+            ? { startMs: data.startMs, endMs: data.endMs }
+            : {}),
           ...(recordingMode === "in_room"
             ? {
                 speaker: "room",
@@ -1628,22 +1766,36 @@ export interface StopRecordingResult {
   diarizationSessionId: string | null;
 }
 
-export async function stopRecording(): Promise<StopRecordingResult> {
-  if (!isRecordingFlag) {
-    return { diarizationSessionId: null };
-  }
+// A Finish still landing its last words, which owns the IPC listeners and
+// main's session until it resolves.
+let stopping: Promise<StopRecordingResult> | null = null;
 
+export function stopRecording(): Promise<StopRecordingResult> {
+  if (!isRecordingFlag) {
+    return stopping ?? Promise.resolve({ diarizationSessionId: null });
+  }
+  stopping = finishRecording().finally(() => {
+    stopping = null;
+  });
+  return stopping;
+}
+
+async function finishRecording(): Promise<StopRecordingResult> {
   isRecordingFlag = false;
   isStartingFlag = false;
+  // Recording ends at the press; transcription does not. Main still holds the
+  // speech since the last pause — up to twenty seconds in a room, more when
+  // transcription is behind — and `isTranscribing` stays true until what it
+  // makes of that has landed, because the post-conversation save waits on it.
   useMeetingRecordingStore.setState({
     isRecording: false,
     recordingStartedAt: null,
-    isTranscribing: false,
   });
 
-  await stopConversationAide();
-
-  await cleanup();
+  // Capture first, listeners last. Removing the listeners before asking main
+  // to stop threw away every word main transcribed while stopping: measured,
+  // the last 34 seconds of a 72-second conversation.
+  await releaseCapture();
 
   let diarizationSessionId: string | null = null;
   try {
@@ -1662,7 +1814,12 @@ export async function stopRecording(): Promise<StopRecordingResult> {
     logger.error("Meeting transcription stop failed", { error: (err as Error).message }, "meeting");
   }
 
+  // After the tail, so the aide's last checkpoint write carries it too.
+  await stopConversationAide();
+  await cleanup();
+
   useMeetingRecordingStore.setState({
+    isTranscribing: false,
     micPartial: "",
     systemPartial: "",
     systemPartialSpeakerId: null,

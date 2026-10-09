@@ -57,6 +57,12 @@ const SILERO_VAD_MODEL_URL =
 const SEGMENTATION_DIR = "sherpa-onnx-pyannote-segmentation-3-0";
 const SEGMENTATION_ONNX = path.join(SEGMENTATION_DIR, "model.onnx");
 const EMBEDDING_ONNX = "3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx";
+// The voice model for a conversation recorded in one room from one microphone.
+// Not CAM++ above, which stays for the online-call path and the voice profiles
+// built on it: over nine unseen two- and three-speaker LibriSpeech
+// conversations with the count known, CAM++ attributed 49% of turns correctly
+// and TitaNet-small 94% (scripts/download-diarization-models.js).
+const IN_ROOM_EMBEDDING_ONNX = "nemo_en_titanet_small.onnx";
 const SILERO_VAD_ONNX = "silero_vad.onnx";
 
 class DiarizationManager {
@@ -107,13 +113,31 @@ class DiarizationManager {
       }
     }
 
+    // A development run reads the models the build would bundle, the same way
+    // the bundled Whisper models resolve (whisper.js).
+    const projectPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "resources",
+      "bin",
+      "diarization-models",
+      relativePath
+    );
+    if (fs.existsSync(projectPath)) return projectPath;
+
     return path.join(this.getModelsDir(), relativePath);
   }
 
-  isModelDownloaded() {
+  isModelDownloaded(embedding = EMBEDDING_ONNX) {
     const segPath = this._resolveModelPath(SEGMENTATION_ONNX);
-    const embPath = this._resolveModelPath(EMBEDDING_ONNX);
+    const embPath = this._resolveModelPath(embedding);
     return fs.existsSync(segPath) && fs.existsSync(embPath);
+  }
+
+  /** Whether a single-microphone conversation can be told apart by speaker. */
+  isInRoomReady() {
+    return this.getBinaryPath() !== null && this.isModelDownloaded(IN_ROOM_EMBEDDING_ONNX);
   }
 
   getVadModelPath() {
@@ -280,7 +304,12 @@ class DiarizationManager {
   }
 
   async diarize(wavPath, options = {}) {
-    const { numSpeakers = -1, threshold = 0.55 } = options;
+    const {
+      numSpeakers = -1,
+      threshold = 0.55,
+      embedding = EMBEDDING_ONNX,
+      threads = null,
+    } = options;
 
     const binaryPath = this.getBinaryPath();
     if (!binaryPath) {
@@ -288,8 +317,8 @@ class DiarizationManager {
       return [];
     }
 
-    if (!this.isModelDownloaded()) {
-      debugLogger.warn("Diarization models not downloaded");
+    if (!this.isModelDownloaded(embedding)) {
+      debugLogger.warn("Diarization models not downloaded", { embedding });
       return [];
     }
 
@@ -299,11 +328,14 @@ class DiarizationManager {
     }
 
     const segPath = this._resolveModelPath(SEGMENTATION_ONNX);
-    const embPath = this._resolveModelPath(EMBEDDING_ONNX);
+    const embPath = this._resolveModelPath(embedding);
 
     const args = [
       `--segmentation.pyannote-model=${segPath}`,
       `--embedding.model=${embPath}`,
+      ...(threads
+        ? [`--segmentation.num-threads=${threads}`, `--embedding.num-threads=${threads}`]
+        : []),
       `--clustering.num-clusters=${numSpeakers}`,
       `--clustering.cluster-threshold=${threshold}`,
       "--min-duration-on=0.2",
@@ -581,3 +613,4 @@ class DiarizationManager {
 }
 
 module.exports = DiarizationManager;
+module.exports.IN_ROOM_EMBEDDING_ONNX = IN_ROOM_EMBEDDING_ONNX;

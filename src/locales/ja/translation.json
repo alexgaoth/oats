@@ -1896,7 +1896,7 @@
       "dialogueLabel": "検出された対話",
       "dialogueWaiting": "まだ何も聞こえていません。",
       "contourLabel": "ここまでの会話のかたち",
-      "contourLegend": "太さは話された量・切れ込みは話題の変化・印は質問で、未解決なほど粒が粗くなります",
+      "contourLegend": "太さは話された量・切れ込みは話題の変化・印は質問で、未解決なほど粒が粗くなります・下の三角はマークした瞬間です",
       "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
       "contourEmpty": "まだ何も記録されていません。",
       "record": "会話を録音",
@@ -1912,6 +1912,10 @@
       "nothingHeard": "何も聞こえなかったため、会話は保存されませんでした。設定でマイクを確認してください。",
       "continuing": "{{title}} を継続中",
       "notAContinuation": "別の会話にする",
+      "mark": "マーク",
+      "marked": "マークしました",
+      "markLabel": "この瞬間をマーク",
+      "markAnnounced": "{{time}} にマークしました",
       "threadMapLabel": "これまでに出た {{count}} 件の話題のマップ",
       "threadMapNoQuote": "引用できる発言がありません"
     },
@@ -1922,6 +1926,8 @@
       "noTranscript": "文字起こしはまだありません。",
       "speakerYou": "あなた",
       "speakerRoom": "相手",
+      "speakerN": "話者{{n}}",
+      "nameSpeaker": "{{speaker}}に名前を付ける",
       "tabs": {
         "summary": "要約",
         "transcript": "文字起こし",
@@ -1940,10 +1946,13 @@
       "searchResults_other": "{{count}} 件の会話が一致",
       "match": {
         "transcript": "発言",
+        "note": "あなたのメモ",
         "summary": "要約",
         "title": "タイトル"
       },
       "matchRelated": "関連",
+      "markedCount_one": "マークした瞬間 {{count}} 件",
+      "markedCount_other": "マークした瞬間 {{count}} 件",
       "emptyHint": "どこからでも {{shortcut}} を押して、誰も答えを知らない質問をしてみてください",
       "backToList": "戻る",
       "copy": "コピー",
@@ -1961,8 +1970,22 @@
     "review": {
       "title": "未解決のまま残ったこと",
       "tally": "{{asked}} 件質問、{{answered}} 件回答",
-      "openThreads_one": "{{count}} 件のスレッドが未解決",
-      "openThreads_other": "{{count}} 件のスレッドが未解決"
+      "openThreads_one": "{{count}} 件のスレッドが未解決：{{threads}}",
+      "openThreads_other": "{{count}} 件のスレッドが未解決：{{threads}}",
+      "showAnswers": "回答を表示",
+      "hideAnswers": "回答を隠す",
+      "marked": "マークした瞬間",
+      "addNote": "メモを追加",
+      "noteLabel": "{{time}} の瞬間へのメモ",
+      "removeMark": "削除",
+      "removeMarkLabel": "{{time}} のマークを削除",
+      "markedTurn": "マーク済み。"
+    },
+    "find": {
+      "label": "この会話内を検索",
+      "count": "{{current}} / {{total}}",
+      "none": "一致なし",
+      "close": "閉じる"
     },
     "settings": {
       "title": "選択は少なく。",
@@ -2043,10 +2066,12 @@
       "untitled": "無題の会話",
       "summary": "要約",
       "openQuestions": "未解決の質問",
+      "marked": "マーク",
       "topics": "トピック",
       "transcript": "文字起こし",
       "you": "あなた",
-      "room": "部屋"
+      "room": "部屋",
+      "speaker": "話者{{n}}"
     }
   },
   "questionCard": {

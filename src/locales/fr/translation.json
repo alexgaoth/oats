@@ -1896,7 +1896,7 @@
       "dialogueLabel": "Dialogue détecté",
       "dialogueWaiting": "Rien entendu pour l'instant.",
       "contourLabel": "La forme de cette conversation jusqu'ici",
-      "contourLegend": "L'épaisseur, c'est ce qui a été dit · une encoche, un changement de sujet · une marque, une question, d'autant plus granuleuse qu'elle est ouverte",
+      "contourLegend": "L'épaisseur, c'est ce qui a été dit · une encoche, un changement de sujet · une marque, une question, d'autant plus granuleuse qu'elle est ouverte · un triangle dessous, un moment que vous avez marqué",
       "contourSummary": "{{minutes}} minutes, {{questions}} questions posées ({{unresolved}} sans réponse), le sujet a changé {{shifts}} fois et {{returns}} fils ont été repris.",
       "contourEmpty": "Rien d'enregistré pour l'instant.",
       "record": "Enregistrer la conversation",
@@ -1912,6 +1912,10 @@
       "nothingHeard": "Rien n'a été entendu, aucune conversation n'a donc été enregistrée. Vérifiez le microphone dans les réglages.",
       "continuing": "Poursuite de {{title}}",
       "notAContinuation": "Conversation distincte",
+      "mark": "Marquer",
+      "marked": "Marqué",
+      "markLabel": "Marquer ce moment",
+      "markAnnounced": "Marqué à {{time}}",
       "threadMapLabel": "Carte des {{count}} sujets abordés jusqu'ici",
       "threadMapNoQuote": "rien de récent à citer"
     },
@@ -1922,6 +1926,8 @@
       "noTranscript": "Pas encore de transcription.",
       "speakerYou": "Vous",
       "speakerRoom": "Salle",
+      "speakerN": "Intervenant {{n}}",
+      "nameSpeaker": "Nommer {{speaker}}",
       "tabs": {
         "summary": "Résumé",
         "transcript": "Transcription",
@@ -1940,10 +1946,13 @@
       "searchResults_other": "{{count}} conversations correspondent",
       "match": {
         "transcript": "dit",
+        "note": "votre note",
         "summary": "résumé",
         "title": "titre"
       },
       "matchRelated": "connexe",
+      "markedCount_one": "{{count}} moment marqué",
+      "markedCount_other": "{{count}} moments marqués",
       "emptyHint": "Appuyez sur {{shortcut}} n'importe où et posez une question dont personne ne connaît la réponse",
       "backToList": "Retour",
       "copy": "Copier",
@@ -1961,8 +1970,22 @@
     "review": {
       "title": "Ce qui reste ouvert",
       "tally": "{{asked}} posées, {{answered}} répondues",
-      "openThreads_one": "{{count}} fil encore ouvert",
-      "openThreads_other": "{{count}} fils encore ouverts"
+      "openThreads_one": "{{count}} fil encore ouvert : {{threads}}",
+      "openThreads_other": "{{count}} fils encore ouverts : {{threads}}",
+      "showAnswers": "Voir les réponses",
+      "hideAnswers": "Masquer les réponses",
+      "marked": "Ce que vous avez marqué",
+      "addNote": "Ajouter une note",
+      "noteLabel": "Note pour le moment à {{time}}",
+      "removeMark": "Retirer",
+      "removeMarkLabel": "Retirer la marque à {{time}}",
+      "markedTurn": "Marqué."
+    },
+    "find": {
+      "label": "Rechercher dans cette conversation",
+      "count": "{{current}} sur {{total}}",
+      "none": "Aucun résultat",
+      "close": "Fermer"
     },
     "settings": {
       "title": "Peu de choix.",
@@ -2043,10 +2066,12 @@
       "untitled": "Conversation sans titre",
       "summary": "Résumé",
       "openQuestions": "Questions en suspens",
+      "marked": "Marqué",
       "topics": "Sujets",
       "transcript": "Transcription",
       "you": "Vous",
-      "room": "Salle"
+      "room": "Salle",
+      "speaker": "Intervenant {{n}}"
     }
   },
   "questionCard": {

@@ -240,9 +240,13 @@ paragraph claimed a working escape for a day. The registration now survives
 until the work is actually finished (`!isRecording && !isProcessing`), and
 stopping no longer releases it.
 
-### Found while measuring, not fixed
+### Found while measuring — fixed 2026-10-03
 
-Both are on the floating oat, both pre-existing, both outside this goal:
+Both are on the floating oat. Both are fixed (`TODO.md`, "UI pass"): tooltips
+wrap inside the window and are nudged back inside it when anchored near an edge
+— measured in en/de/fr/ru/ja, every state, all within 4px of the window's sides
+— and during a conversation the tip is the action, "Finish conversation". Past
+the hour the clock reads `1h05`. As found:
 
 - **The tooltip is wider than its window.** The window is 96px and does not
   resize on hover, and the tooltip is `whitespace-nowrap`. Measured live at rest

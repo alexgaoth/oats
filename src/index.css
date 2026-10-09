@@ -580,9 +580,18 @@ h1:not(:where(.oats-surface *)) {
   font-weight: 700;
 }
 
-/* Modern Button Styling - handled by button component */
-button {
+/* Modern Button Styling - handled by button component
+ *
+ * The family is scoped out of `.oats-surface` for the same reason as the
+ * heading and input rules: unlayered, it beat every `font-mono` utility on a
+ * button, so the quiet actions (Copy, Save, Delete, Back, Map, Change) and the
+ * live thread map's subjects — all written as mono — rendered in the sans.
+ * Inside the boundary a button inherits, and its own utilities decide. */
+button:not(:where(.oats-surface *)) {
   font-family: var(--font-family-sans);
+}
+
+button {
   cursor: pointer;
 }
 
@@ -1336,6 +1345,17 @@ body:has(.agent-overlay-window) #root {
     color-mix(in oklab, var(--color-background) 45%, transparent) 29%,
     transparent 36%
   );
+}
+
+/* A scroll fade paints paper. On the ledger that is invisible; over the field
+   the reading paper is the circle above, opaque only near the column's centre,
+   so a full-width fade drew a paper bar with hard ends — measured at 1200x800
+   in Detailed, two of them, cutting the farmhouse at the column's right edge.
+   Feathered at both ends it gives way to the field the same way the paper
+   does. A mask on the fade itself, never on the scroller, which would clip the
+   focus ring of whatever is scrolled to the edge (`useScrollFade.tsx`). */
+.oats-field-mode .oats-scroll-fade {
+  mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
 }
 
 /* A sprig perched on a control. It sits until pressed, then hops off and is

@@ -1,4 +1,4 @@
-// Geometry for the live thread map (DESIGN.md §9.5, drawn while recording).
+// Geometry for the live thread map (DESIGN.md §9.3, drawn while recording).
 //
 // Pure and DOM-free so it can be pinned. Given the live topic snapshot, produce
 // the points and links to draw; the component owns pixels and nothing else.
@@ -103,6 +103,90 @@ export function buildThreadMap({
   }
 
   return { points, links, empty: false };
+}
+
+/** A point's dot in px. Area follows dwell through `r`; shared with the
+ *  renderer so the placement below and the drawing agree on where a dot ends. */
+export function dotSize(point) {
+  return 5 + (point?.r ?? 0) * 5;
+}
+
+/** Mono at 11px advances 0.6em per character in every shipped mono face. */
+const LABEL_CHAR_PX = 6.6;
+const LABEL_H_PX = 16;
+/** Dot-to-label gap beside the dot (`gap-1.5`), and above or below it (`gap-0.5`). */
+const LABEL_GAP_PX = 6;
+const LABEL_GAP_Y_PX = 2;
+
+const overlaps = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+
+/**
+ * Which side of its dot each label goes on — or whether it fits at all.
+ *
+ * The dot is the measurement and does not move; only its words do. Subjects
+ * raised close together sit at nearly the same x, and because y is quantised by
+ * state they often share a row too, so labels that all hang to the right ran
+ * into each other ("onboarding flo● investor update"). Each label tries the
+ * right of its dot, then the left, then centred above it and below it; a label
+ * with nowhere to go is hidden rather
+ * than drawn over another (§9.4: never a wall of overlapping text) and stays in
+ * the button's accessible name and title. Heavier subjects are placed first, so
+ * when two compete the one the room spent longer on keeps its words.
+ *
+ * `width`/`height` are the map's box in px. With no box yet (first render,
+ * before it is measured) every label goes right, which is the old behaviour.
+ */
+export function placeLabels(points, { width = 0, height = 0 } = {}) {
+  const list = Array.isArray(points) ? points : [];
+  if (!(width > 0 && height > 0)) {
+    return new Map(list.map((p) => [p.id, { side: "right", align: "center", hidden: false }]));
+  }
+  const dots = list.map((p) => {
+    const half = dotSize(p) / 2;
+    const cx = p.x * width;
+    const cy = p.y * height;
+    return { id: p.id, x1: cx - half, x2: cx + half, y1: cy - half, y2: cy + half, cx, cy, half };
+  });
+  const placed = [];
+  const result = new Map();
+  const byWeight = [...list].sort((a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0));
+  for (const point of byWeight) {
+    const dot = dots.find((d) => d.id === point.id);
+    const w = String(point.label ?? "").length * LABEL_CHAR_PX;
+    const y1 = dot.cy - LABEL_H_PX / 2;
+    const y2 = dot.cy + LABEL_H_PX / 2;
+    const above = dot.cy - dot.half - LABEL_GAP_Y_PX;
+    const below = dot.cy + dot.half + LABEL_GAP_Y_PX;
+    // Above and below, the words are centred on the dot, or flush with its
+    // right or left edge when centring would run them off the map.
+    const spans = [
+      { align: "center", x1: dot.cx - w / 2 },
+      { align: "end", x1: dot.cx + dot.half - w },
+      { align: "start", x1: dot.cx - dot.half },
+    ];
+    const candidates = [
+      { side: "right", align: "center", x1: dot.cx + dot.half + LABEL_GAP_PX, y1, y2 },
+      { side: "left", align: "center", x1: dot.cx - dot.half - LABEL_GAP_PX - w, y1, y2 },
+      ...spans.map((span) => ({ side: "above", ...span, y1: above - LABEL_H_PX, y2: above })),
+      ...spans.map((span) => ({ side: "below", ...span, y1: below, y2: below + LABEL_H_PX })),
+    ].map((box) => ({ ...box, x2: box.x1 + w }));
+    const fits = candidates.find(
+      (box) =>
+        box.x1 >= 0 &&
+        box.x2 <= width &&
+        box.y1 >= 0 &&
+        box.y2 <= height &&
+        !placed.some((other) => overlaps(box, other)) &&
+        !dots.some((other) => other.id !== point.id && overlaps(box, other))
+    );
+    if (fits) {
+      placed.push(fits);
+      result.set(point.id, { side: fits.side, align: fits.align, hidden: false });
+    } else {
+      result.set(point.id, { side: "right", align: "center", hidden: true });
+    }
+  }
+  return result;
 }
 
 /** The utterance to quote when a topic is pressed: the most recent one. */

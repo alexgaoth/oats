@@ -41,6 +41,47 @@ test("matches are split out of the original text, not the folded copy", async ()
   assert.equal(parts.map((part) => part.text).join(""), "Ramp and RAMP and ramp");
 });
 
+// `İ` lowercases to two code units, so offsets found in a whole-string fold
+// drifted one character per `İ` once sliced out of the original.
+test("a highlight after a character that folds longer still marks the match", async () => {
+  const { splitOnMatches } = await load();
+
+  const text = "İstanbul and İzmir asked about the seat price";
+  const parts = splitOnMatches(text, "seat price");
+  assert.deepEqual(
+    parts.filter((part) => part.match).map((part) => part.text),
+    ["seat price"]
+  );
+  assert.equal(parts.map((part) => part.text).join(""), text, "nothing lost or duplicated");
+
+  // And the folding character itself can be the match — typed plain.
+  const own = splitOnMatches("İstanbul", "istanbul");
+  assert.deepEqual(
+    own.map((part) => [part.text, part.match]),
+    [["İstanbul", true]]
+  );
+});
+
+test("a query typed without accents finds and marks the words with them", async () => {
+  const { splitOnMatches, matchTarget } = await load();
+
+  const text = "the café, then the CAFÉ again, then cafe";
+  const parts = splitOnMatches(text, "cafe");
+  assert.deepEqual(
+    parts.filter((part) => part.match).map((part) => part.text),
+    ["café", "CAFÉ", "cafe"]
+  );
+  assert.equal(parts.map((part) => part.text).join(""), text);
+  // Decomposed input — an accent stored as its own code point — is covered too.
+  const decomposed = "re\u0301sume\u0301 attached";
+  assert.equal(splitOnMatches(decomposed, "resume")[0].text, "re\u0301sume\u0301");
+
+  assert.equal(
+    matchTarget({ title: "", summary: "", transcript: "You: her résumé was strong" }, "resume"),
+    "transcript"
+  );
+});
+
 test("a query that is not a valid regular expression is still just text", async () => {
   const { splitOnMatches } = await load();
 

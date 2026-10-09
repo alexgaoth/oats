@@ -28,7 +28,7 @@ The `conversationAide` implementation still reflects a narrower earlier design. 
 
 Because of rule 2, **never write "nothing leaves your device"** in UI copy, docs, or comments. The accurate claim: audio and transcripts stay on the device; the text of questions nobody could answer is sent to the configured search host. See `docs/network-allowlist.md`.
 
-**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the _renderer_, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, default **true** since 2026-08-07; a closed gate logs to the debug logger and surfaces as the `question-cards-off` preflight line under the record button). The detection and verdict patterns cover all ten shipped locales — JS `\b` is ASCII-only, so the non-English patterns use explicit boundary classes (spaced scripts) or none (CJK); see the comment block in `conversationAide.mjs` before touching them, and change verdict patterns only with both-direction test pins (a false `denied` auto-opens a browser; `test/helpers/conversationAide.test.js` pins ~250 assertions from a 3-round critic loop, including deliberately-declined patterns — do not re-add unaccented es "no se" or whitespace-terminated CJK question endings without new evidence). Finalized segments arrive every ~5s in local mode (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards are published into `useMeetingRecordingStore.questionCards` and drawn by `conversation/ConversationSignalRail`, **docked in the Conversation surface** under the contour — but only in the Detailed composition. In Clean the rail is still mounted with `announceOnly`, drawing nothing and announcing normally, because assistive output is identical in both and a "calmer" composition that told a screen-reader user less would be a smaller product for them, not a quieter one. Until 2026-08-20 they crossed an IPC boundary into a separate always-on-top overlay window; that window, its route, its five IPC channels and its `conversation-assist-ready` handshake are all deleted. The handshake's _lesson_ still stands and is used elsewhere: an event fired right after a surface is created dies before any listener exists, so cold-start hand-offs need push-plus-pull (`consume-pending-focus-search` for the recall hotkey, `consumePendingNote` for opening a conversation from the Conversation surface).
+**Where the card pipeline lives** (tracing this cold costs an hour): the aide session runs in the _renderer_, created by `startConversationAide` in `meetingRecordingStore.ts` — gated there on `conversationAideEnabled` (localStorage, default **true** since 2026-08-07; a closed gate logs to the debug logger and surfaces as the `question-cards-off` preflight line under the record button). The detection and verdict patterns cover all ten shipped locales — JS `\b` is ASCII-only, so the non-English patterns use explicit boundary classes (spaced scripts) or none (CJK); see the comment block in `conversationAide.mjs` before touching them, and change verdict patterns only with both-direction test pins (a false `denied` auto-opens a browser; `test/helpers/conversationAide.test.js` pins ~250 assertions from a 3-round critic loop, including deliberately-declined patterns — do not re-add unaccented es "no se" or whitespace-terminated CJK question endings without new evidence). Finalized segments arrive at pauses in a room (`speechSegmenter.mjs`, ≤20s) and every ~5s on a local call (`LOCAL_MEETING_CHUNK_INTERVAL_MS`, `ipcHandlers.js`); cards are published into `useMeetingRecordingStore.questionCards` and drawn by `conversation/ConversationSignalRail`, **docked in the Conversation surface** under the contour — but only in the Detailed composition. In Clean the rail is still mounted with `announceOnly`, drawing nothing and announcing normally, because assistive output is identical in both and a "calmer" composition that told a screen-reader user less would be a smaller product for them, not a quieter one. Until 2026-08-20 they crossed an IPC boundary into a separate always-on-top overlay window; that window, its route, its five IPC channels and its `conversation-assist-ready` handshake are all deleted. The handshake's _lesson_ still stands and is used elsewhere: an event fired right after a surface is created dies before any listener exists, so cold-start hand-offs need push-plus-pull (`consume-pending-focus-search` for the recall hotkey, `consumePendingNote` for opening a conversation from the Conversation surface).
 
 `DESIGN.md` is the binding visual spec (six signature surfaces: pulse, question card, open-thread stack, conversation contour, topic graph, lifetime graph). The art direction is a **private conversation ledger** — paper and graphite, evidence made visible and never made theatrical, with the signature derived from what was actually said (§9.8).
 
@@ -58,6 +58,31 @@ subscribe` child holding the inherited listening socket, so the port accepts TCP
 and never answers (`ss -ltnp` names the holder). `npm run perf:baseline` does all
 of this — procedure and numbers in `docs/performance-baseline.md`.
 
+**Recording can be driven end to end with no microphone (2026-10-08).** Add
+`--use-fake-device-for-media-stream --use-fake-ui-for-media-stream
+--use-file-for-fake-audio-capture=/ABSOLUTE/conv.wav%noloop` (a relative path is
+silently unreadable) and press Record over CDP. Four traps: `electron .` loads
+`src/dist`, so `npm run build:renderer` first or you test the old renderer;
+wait for `document.readyState === "complete"` before any `Page.reload`, or
+`loadFile` aborts and main logs "Failed to start app" and never recovers;
+spawn it `detached` and kill the process group, or a surviving instance holds
+the staging single-instance lock and the next launch exits silently; and Oats
+resumes a conversation that ended moments ago, so back-to-back runs append to
+one note.
+
+**A renderer change can be checked with no harness file at all (2026-10-03).**
+Run the real `cd src && npx vite --port P` and a headless Chrome with
+`--remote-debugging-port`; inject `window.electronAPI` with
+`Page.addScriptToEvaluateOnNewDocument` as a Proxy (real data for `getNotes` and
+`listConversationEvents`, a callable thenable for everything else) and load
+`/?panel=true` — or `/` at 96×96 for the floating oat. Fixture conversations can
+be real tracker output: `helpers/conversationTopics.mjs` runs under plain node.
+Two traps. Seed live state by importing a store **from the URL the app loaded**
+(`performance.getEntriesByType("resource")`): once a file has been edited, Vite
+serves the app's copy as `…?t=…`, and the bare path creates a second store that
+nothing renders. And park the page on `about:blank` between runs, or an edit is
+hot-swapped into it and throws `removeChild` into the next run's log.
+
 **A screenshot harness must not live under `src/`.** `format:check` does
 `cd src && eslint . && prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"`, so
 its prettier glob covers `src/` and nothing else — but that is exactly where a
@@ -76,11 +101,17 @@ and every Oats heading rendered at the inherited 40px/700 for months, while
 `DESIGN.md` §5's type scale never shipped at all. Check a suspect property with
 `getComputedStyle` before believing a utility class; a Tailwind class in the
 markup is not evidence that it won. All four rule sets are scoped **out of any
-`.oats-surface` subtree** — the class is on each Oats
+`.oats-surface` subtree**, and so is a fifth found on 2026-10-03 — `button {
+font-family }`, which had kept every `font-mono` button (Copy, Back, Map, the
+live map's subjects) in the sans — the class is on each Oats
 surface root in `OatsWorkspace.tsx`, and deliberately _not_ on the Advanced
 Settings branch, which is the inherited app and should keep looking like itself.
 Never reach for `.input-inline` inside an Oats surface; it is the per-element
 opt-out for legacy components only.
+
+A box that must never scroll is `overflow-clip`, not `overflow-hidden`:
+`scrollIntoView` scrolls hidden ancestors too, and a hidden box has no scrollbar
+to scroll back — a search result once shifted the whole workspace and its nav 8px.
 
 ### Two interfaces, and the field is one of them (2026-08-25)
 
@@ -129,10 +160,12 @@ All three were "fails quietly at the end", which the pencil standard forbids, an
 
 `scripts/asr-eval.js` runs the real path — the app's own `buildWhisperServerArgs`, the shipped `whisper-server` binary — over LibriSpeech test-clean and reports WER and latency. Numbers and the fork/upstream comparison in `docs/dictation-accuracy.md`. Never claim a transcription change helps without a row from it.
 
-- **`--no-timestamps` is load-bearing.** whisper.cpp v1.9.x enables a 60-character segment wrap that lands on token boundaries with `split_on_word` off, so words break in half ("overh anging"). We read only `text`, so removing it costs nothing. Do not drop the flag.
+- **`--no-timestamps` is load-bearing.** whisper.cpp v1.9.x enables a 60-character segment wrap that lands on token boundaries with `split_on_word` off, so words break in half ("overh anging"). We read only `text`, so removing it costs nothing. Do not drop the flag. It has a second effect: with no timestamps whisper.cpp cannot seek, so it skips every 30s window after the first — **never send one request more than ~25s** (whole-recording WER 19% against 6%).
+- **A room is cut at pauses, never fixed chunks** (`helpers/speechSegmenter.mjs`, 20s cap). The 5s chunk the call path still uses lands mid-word about once per chunk: 15.2% WER against 6.2% on the same conversations, and pause cuts are within a point of cutting at the true turns.
+- **Who said it, in a room, is decided after Finish**: the segmenter's WAV → `diarize` with TitaNet (`IN_ROOM_EMBEDDING_ONNX`, threshold **0.85** — TitaNet's scale; CAM++'s 0.55 split everyone) → `conversation-speakers` → `applyConversationSpeakers` → `assignSpeakers` by each segment's `startMs`/`endMs`. Those offsets and the segment `id` must survive `serializeTranscriptSegments`: stored segments carried no id until 2026-10-04, so search landing and mark links silently missed on every real conversation (old ones now parse as `legacy-N`).
 - **`base.en` ships beside `base` and is chosen automatically for English** (`helpers/whisperEnglishModel.mjs`) — same size, 38% fewer errors, 4.4x faster than the old default. It is absent from the model picker on purpose (`englishOnly` in the registry): it is not a tier to weigh, and the selection falls back silently when the file is missing.
 - **`preferredLanguage` defaults to `auto` deliberately**, which forces the multilingual model. Guessing English from the OS locale is right often and catastrophic when wrong; slow is recoverable, wrong is not.
-- The pre-Oats `../oats` tree feels quicker only because it defaults `useLocalWhisper` to **false** and transcribes in the cloud. `whisperServer.js` is otherwise byte-identical. Upstream is 1.8.3; we forked 1.7.6.
+- The pre-Oats `../oats` tree and OpenWhispr itself (1.10.2, 2026-10-02, clone at `../openwhispr-upstream`) sound clearer only because they default `useLocalWhisper` to **false** and transcribe in the cloud. Locally the two are within a point of each other. We forked 1.7.6.
 
 ### Transcription scopes — the trap that broke recording
 

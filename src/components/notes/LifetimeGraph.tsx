@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForceGraph from "./ForceGraph";
 import { buildLifetimeGraph, recurringTopics } from "../../helpers/lifetimeGraph";
+import { ledgerDate } from "../../helpers/ledgerDate.mjs";
 import type { ConversationTopicSnapshot } from "../../types/conversationEvents";
 import type { NoteItem } from "../../types/electron";
 
@@ -45,7 +46,7 @@ export default function LifetimeGraph({
   notes: NoteItem[];
   onOpen: (noteId: number) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selected, setSelected] = useState<LifetimeNode | null>(null);
 
   const conversations = useMemo(
@@ -121,7 +122,7 @@ export default function LifetimeGraph({
             <div className="mx-auto w-full max-w-3xl px-8 pb-6 pt-5">
               <p className="text-sm font-medium leading-snug text-foreground">{selected.label}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {new Date(selected.createdAt).toLocaleDateString()} ·{" "}
+                {ledgerDate(selected.createdAt, { locale: i18n.language })} ·{" "}
                 {t("lifetime.topicCount", { count: selected.topicCount })}
               </p>
               <ul className="mt-4 space-y-1.5">

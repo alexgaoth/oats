@@ -549,6 +549,19 @@ class WindowManager {
     }
   }
 
+  /**
+   * Mark the moment of the running conversation, from the floating oat.
+   *
+   * Only ever to an existing panel: a conversation is recorded by the panel's
+   * renderer, so if there is no panel there is no conversation to mark, and
+   * creating one here would be a window appearing for nothing.
+   */
+  sendMarkMoment() {
+    const win = this.controlPanelWindow;
+    if (!win || win.isDestroyed() || win.webContents.isLoading()) return;
+    win.webContents.send("mark-moment");
+  }
+
   // Recall from anywhere: surface the control panel on Intelligence with the
   // cross-conversation search focused. "What did we decide about X?" should
   // cost one press, which is what makes remembering a habit.

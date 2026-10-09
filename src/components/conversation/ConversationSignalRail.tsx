@@ -17,9 +17,9 @@ interface Announcement {
 }
 
 // The question-card rail (DESIGN.md §9.2) — the help moment, and the surface the
-// spec says the product is judged on. The whole stack for a recording: newest at
-// the bottom, every re-asking nested under the question it repeats, older groups
-// behind a count chip.
+// spec says the product is judged on. The whole stack for a recording: the most
+// recently asked at the top, every re-asking nested under the question it
+// repeats, older groups behind a count chip.
 //
 // It is **docked in the Conversation surface**, and that is the whole design of
 // it. Until 2026-08-20 it was a separate always-on-top `BrowserWindow` with its
@@ -83,9 +83,16 @@ function groupCards(cards: ConversationCard[]): CardGroup[] {
     if (list) list.push(card);
     else groups.set(card.groupKey, [card]);
   }
+  // Ordered by each group's *latest* asking, not its first. A re-asking is the
+  // newest thing that happened in the room and, by §9.2, the strongest signal
+  // there is — but nested under a first asking from twenty minutes ago it sank
+  // with that group to the bottom of a band that clips, below the fold of the
+  // one surface built to catch it. The group rises when it is asked again; the
+  // repeat still nests under the first.
+  const latest = (list: ConversationCard[]) => list[list.length - 1].createdAt;
   return [...groups.entries()]
     .map(([key, list]) => ({ key, cards: list.sort((a, b) => a.createdAt - b.createdAt) }))
-    .sort((a, b) => a.cards[0].createdAt - b.cards[0].createdAt);
+    .sort((a, b) => latest(a.cards) - latest(b.cards));
 }
 
 function elapsedLabel(from: number, now: number): string {
@@ -94,14 +101,27 @@ function elapsedLabel(from: number, now: number): string {
   return `${Math.round(seconds / 60)}m`;
 }
 
-/** The §4 state mark: solid when the outcome is settled, stippled when it is not. */
-function StateMark({ state }: { state: QuestionOutcome }) {
+/**
+ * The §4 state mark: solid when the outcome is settled, stippled when it is not.
+ *
+ * Exported so the transcript's margin speaks the same vocabulary as the rail —
+ * one mark component, so the surfaces cannot drift apart (DESIGN.md §13).
+ */
+export function StateMark({
+  state,
+  className = "mt-[5px]",
+}: {
+  state: QuestionOutcome;
+  /** Placement only; the default aligns it with the rail's first line. */
+  className?: string;
+}) {
   const style = STATE_STYLE[state] ?? STATE_STYLE.asked;
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "mt-[5px] h-2 w-2 shrink-0 rounded-full",
+        "h-2 w-2 shrink-0 rounded-full",
+        className,
         style.dither && `oats-dither ${style.dither}`
       )}
       // Dithered marks paint dots in `color` over nothing; solid marks fill.

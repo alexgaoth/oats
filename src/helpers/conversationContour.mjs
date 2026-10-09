@@ -109,15 +109,28 @@ export function speechWeight(text) {
  * @param {Array<{ id?: string, label?: string, state?: string, startedAt?: number,
  *   lastTouchedAt?: number }>} [input.topics]
  *   Topic nodes from the tracker. Their starts become the trace's notches.
+ * @param {Array<{ id?: string, at?: number, note?: string }>} [input.moments]
+ *   Instants somebody pressed "Mark" (`conversationMoments.mjs`). The one
+ *   element not measured from the room: it is the person in it saying *this*.
  * @param {number} [input.now] End of the window. Defaults to the last event.
  * @param {number} [input.startedAt] Start of the window. Defaults to the first.
  * @returns {{ points: Array<{x: number, y: number, quiet: boolean}>,
  *   marks: Array<object>, shifts: Array<object>, returns: Array<object>,
- *   span: number, empty: boolean }}
+ *   moments: Array<{ id: string, x: number, at: number, note: string }>,
+ *   span: number, start: number, empty: boolean }}
+ *   `start` and `span` are the window in epoch ms, so a position on the trace
+ *   can be turned back into the moment it stands for.
  *   All coordinates are normalized 0..1: `x` is time, `y` is speech density.
  *   The renderer owns pixels; this owns meaning.
  */
-export function buildContour({ utterances = [], questions = [], topics = [], now, startedAt }) {
+export function buildContour({
+  utterances = [],
+  questions = [],
+  topics = [],
+  moments = [],
+  now,
+  startedAt,
+}) {
   const timed = utterances
     .filter((u) => Number.isFinite(u?.timestamp))
     .sort((a, b) => a.timestamp - b.timestamp);
@@ -132,7 +145,16 @@ export function buildContour({ utterances = [], questions = [], topics = [], now
   // A conversation with nothing in it yet is not an error and must not be
   // faked. The surface draws a resting baseline and waits.
   if (firstAt === null || lastAt === null || lastAt <= firstAt) {
-    return { points: [], marks: [], shifts: [], returns: [], span: 0, empty: true };
+    return {
+      points: [],
+      marks: [],
+      shifts: [],
+      returns: [],
+      moments: [],
+      span: 0,
+      start: 0,
+      empty: true,
+    };
   }
 
   const span = lastAt - firstAt;
@@ -255,7 +277,29 @@ export function buildContour({ utterances = [], questions = [], topics = [], now
       state: topic.state ?? "open",
     }));
 
-  return { points, marks, shifts, returns, span, empty: false };
+  // 5. Moments somebody marked, under the baseline. Outside the window they
+  //    are dropped, like speech, rather than piled onto an edge.
+  const marked = (Array.isArray(moments) ? moments : [])
+    .filter((moment) => Number.isFinite(moment?.at))
+    .filter((moment) => moment.at >= firstAt && moment.at <= lastAt)
+    .sort((a, b) => a.at - b.at)
+    .map((moment) => ({
+      id: moment.id ?? `m-${moment.at}`,
+      x: round(at(moment.at)),
+      at: moment.at,
+      note: moment.note ?? "",
+    }));
+
+  return {
+    points,
+    marks,
+    shifts,
+    returns,
+    moments: marked,
+    span,
+    start: firstAt,
+    empty: false,
+  };
 }
 
 /**
@@ -268,7 +312,16 @@ export function buildContour({ utterances = [], questions = [], topics = [], now
  */
 export function contourStrip(contour, buckets = 24) {
   if (!contour || contour.empty || !contour.points.length) {
-    return { points: [], marks: [], shifts: [], returns: [], span: 0, empty: true };
+    return {
+      points: [],
+      marks: [],
+      shifts: [],
+      returns: [],
+      moments: [],
+      span: 0,
+      start: 0,
+      empty: true,
+    };
   }
   const points = [];
   for (let index = 0; index < buckets; index += 1) {
@@ -295,7 +348,9 @@ export function contourStrip(contour, buckets = 24) {
     marks: contour.marks.map((mark) => ({ ...mark })),
     shifts: [],
     returns: [],
+    moments: [],
     span: contour.span,
+    start: contour.start ?? 0,
     empty: false,
   };
 }

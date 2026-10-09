@@ -190,12 +190,19 @@ export const mergeTranscriptSegments = (
   return [...preserved, ...unmatchedIncoming];
 };
 
+// `id`, `startMs` and `endMs` are saved too. Without the id nothing could find a
+// stored turn again — a search landing on it, a question's mark beside it, a
+// speaker found after Stop put on it — because every one of those looks a
+// segment up by the id it had while recording.
 export const serializeTranscriptSegments = (segments: TranscriptSegment[]) =>
   JSON.stringify(
     segments.map((segment) => ({
+      id: segment.id,
       text: segment.text,
       source: segment.source,
       timestamp: segment.timestamp,
+      startMs: segment.startMs,
+      endMs: segment.endMs,
       speaker: segment.speaker,
       speakerName: segment.speakerName,
       speakerIsPlaceholder: segment.speakerIsPlaceholder,

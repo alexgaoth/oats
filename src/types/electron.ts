@@ -62,6 +62,9 @@ export interface NoteItem {
   // JSON topic snapshot written when a recording stops — the topic graph's
   // source (see database.js: notes.conversation_topics).
   conversation_topics: string | null;
+  // Moments marked during the recording (see helpers/conversationMoments.mjs).
+  // Optional: notes written before the column existed do not carry it.
+  conversation_marks?: string | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
@@ -403,6 +406,15 @@ declare global {
       onConversationState?: (
         callback: (state: { recording: boolean; startedAt: number | null }) => void
       ) => () => void;
+      requestMarkMoment?: () => Promise<{ success: boolean }>;
+      onMarkMoment?: (callback: () => void) => () => void;
+      onConversationSpeakers?: (
+        callback: (payload: {
+          noteId: number;
+          startedAt: number;
+          turns: { start: number; end: number; speaker: string }[];
+        }) => void
+      ) => () => void;
       requestToggleConversation?: () => Promise<{ success: boolean }>;
       onToggleTranslation?: (callback: () => void) => () => void;
       onStartDictation?: (callback: () => void) => () => void;
@@ -555,6 +567,8 @@ declare global {
           participants?: string | null;
           diarization_enabled?: number | null;
           expected_speaker_count?: number | null;
+          conversation_topics?: string | null;
+          conversation_marks?: string | null;
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;

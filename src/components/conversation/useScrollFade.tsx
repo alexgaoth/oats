@@ -92,13 +92,13 @@ export function ScrollFade({ edges }: { edges: { top: boolean; bottom: boolean }
           // beneath it, which reads as a rendering fault rather than as "more
           // above". A cue may say the text continues; it may not erase a line
           // that is legibly there.
-          className="pointer-events-none absolute inset-x-0 top-0 h-3 bg-gradient-to-t from-transparent to-background/80 group-focus-within:hidden"
+          className="oats-scroll-fade pointer-events-none absolute inset-x-0 top-0 h-3 bg-gradient-to-t from-transparent to-background/80 group-focus-within:hidden"
         />
       )}
       {edges.bottom && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-b from-transparent to-background group-focus-within:hidden"
+          className="oats-scroll-fade pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-b from-transparent to-background group-focus-within:hidden"
         />
       )}
     </>

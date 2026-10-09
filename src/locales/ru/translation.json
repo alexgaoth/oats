@@ -1896,7 +1896,7 @@
       "dialogueLabel": "Распознанный диалог",
       "dialogueWaiting": "Пока ничего не услышано.",
       "contourLabel": "Форма этого разговора на данный момент",
-      "contourLegend": "Толщина — сколько сказано · зарубка — смена темы · метка — вопрос, тем зернистее, чем меньше ясности",
+      "contourLegend": "Толщина — сколько сказано · зарубка — смена темы · метка — вопрос, тем зернистее, чем меньше ясности · треугольник снизу — отмеченный момент",
       "contourSummary": "{{minutes}} минут, задано вопросов: {{questions}} (без ответа: {{unresolved}}), тема менялась {{shifts}} раз, вернулись к {{returns}} нитям.",
       "contourEmpty": "Пока ничего не записано.",
       "record": "Записать разговор",
@@ -1914,6 +1914,10 @@
       "nothingHeard": "Ничего не было услышано, поэтому разговор не сохранён. Проверьте микрофон в настройках.",
       "continuing": "Продолжение {{title}}",
       "notAContinuation": "Отдельный разговор",
+      "mark": "Отметить",
+      "marked": "Отмечено",
+      "markLabel": "Отметить этот момент",
+      "markAnnounced": "Отмечено на {{time}}",
       "threadMapLabel": "Карта тем, поднятых пока: {{count}}",
       "threadMapNoQuote": "нечего процитировать"
     },
@@ -1924,6 +1928,8 @@
       "noTranscript": "Расшифровки пока нет.",
       "speakerYou": "Вы",
       "speakerRoom": "Комната",
+      "speakerN": "Собеседник {{n}}",
+      "nameSpeaker": "Дать имя: {{speaker}}",
       "tabs": {
         "summary": "Резюме",
         "transcript": "Расшифровка",
@@ -1946,10 +1952,15 @@
       "searchResults_other": "Найдено разговоров: {{count}}",
       "match": {
         "transcript": "сказано",
+        "note": "ваша заметка",
         "summary": "сводка",
         "title": "заголовок"
       },
       "matchRelated": "связано",
+      "markedCount_one": "{{count}} отмеченный момент",
+      "markedCount_few": "{{count}} отмеченных момента",
+      "markedCount_many": "{{count}} отмеченных моментов",
+      "markedCount_other": "{{count}} отмеченного момента",
       "emptyHint": "Нажмите {{shortcut}} где угодно и задайте вопрос, на который никто не знает ответа",
       "backToList": "Назад",
       "copy": "Копировать",
@@ -1967,10 +1978,24 @@
     "review": {
       "title": "Что осталось открытым",
       "tally": "задано {{asked}}, отвечено {{answered}}",
-      "openThreads_one": "{{count}} тема всё ещё открыта",
-      "openThreads_few": "{{count}} темы всё ещё открыты",
-      "openThreads_many": "{{count}} тем всё ещё открыты",
-      "openThreads_other": "{{count}} темы всё ещё открыты"
+      "openThreads_one": "{{count}} тема всё ещё открыта: {{threads}}",
+      "openThreads_few": "{{count}} темы всё ещё открыты: {{threads}}",
+      "openThreads_many": "{{count}} тем всё ещё открыты: {{threads}}",
+      "openThreads_other": "{{count}} темы всё ещё открыты: {{threads}}",
+      "showAnswers": "Показать ответы",
+      "hideAnswers": "Скрыть ответы",
+      "marked": "Вы отметили",
+      "addNote": "Добавить заметку",
+      "noteLabel": "Заметка к моменту {{time}}",
+      "removeMark": "Убрать",
+      "removeMarkLabel": "Убрать отметку на {{time}}",
+      "markedTurn": "Отмечено."
+    },
+    "find": {
+      "label": "Найти в этом разговоре",
+      "count": "{{current}} из {{total}}",
+      "none": "Совпадений нет",
+      "close": "Закрыть"
     },
     "settings": {
       "title": "Минимум решений.",
@@ -2051,10 +2076,12 @@
       "untitled": "Разговор без названия",
       "summary": "Сводка",
       "openQuestions": "Открытые вопросы",
+      "marked": "Отмечено",
       "topics": "Темы",
       "transcript": "Расшифровка",
       "you": "Вы",
-      "room": "Комната"
+      "room": "Комната",
+      "speaker": "Собеседник {{n}}"
     }
   },
   "questionCard": {

@@ -1896,7 +1896,7 @@
       "dialogueLabel": "Dialogo rilevato",
       "dialogueWaiting": "Non è stato ancora sentito nulla.",
       "contourLabel": "La forma di questa conversazione finora",
-      "contourLegend": "Lo spessore è quanto si è detto · una tacca è un cambio di argomento · un segno è una domanda, più granulosa quanto meno risolta",
+      "contourLegend": "Lo spessore è quanto si è detto · una tacca è un cambio di argomento · un segno è una domanda, più granulosa quanto meno risolta · un triangolo sotto è un momento segnato",
       "contourSummary": "{{minutes}} minuti, {{questions}} domande ({{unresolved}} senza risposta), l'argomento è cambiato {{shifts}} volte e sono stati ripresi {{returns}} fili.",
       "contourEmpty": "Ancora nulla di registrato.",
       "record": "Registra conversazione",
@@ -1912,6 +1912,10 @@
       "nothingHeard": "Non è stato sentito nulla, quindi nessuna conversazione è stata salvata. Controlla il microfono nelle Impostazioni.",
       "continuing": "Continuazione di {{title}}",
       "notAContinuation": "Conversazione separata",
+      "mark": "Segna",
+      "marked": "Segnato",
+      "markLabel": "Segna questo momento",
+      "markAnnounced": "Segnato a {{time}}",
       "threadMapLabel": "Mappa di {{count}} temi affrontati finora",
       "threadMapNoQuote": "niente di recente da citare"
     },
@@ -1922,6 +1926,8 @@
       "noTranscript": "Nessuna trascrizione ancora.",
       "speakerYou": "Tu",
       "speakerRoom": "Stanza",
+      "speakerN": "Interlocutore {{n}}",
+      "nameSpeaker": "Dai un nome a {{speaker}}",
       "tabs": {
         "summary": "Riepilogo",
         "transcript": "Trascrizione",
@@ -1940,10 +1946,13 @@
       "searchResults_other": "{{count}} conversazioni corrispondono",
       "match": {
         "transcript": "detto",
+        "note": "la tua nota",
         "summary": "riassunto",
         "title": "titolo"
       },
       "matchRelated": "correlato",
+      "markedCount_one": "{{count}} momento segnato",
+      "markedCount_other": "{{count}} momenti segnati",
       "emptyHint": "Premi {{shortcut}} ovunque e fai una domanda a cui nessuno sa rispondere",
       "backToList": "Indietro",
       "copy": "Copia",
@@ -1961,8 +1970,22 @@
     "review": {
       "title": "Ciò che è rimasto aperto",
       "tally": "{{asked}} poste, {{answered}} risposte",
-      "openThreads_one": "{{count}} filo ancora aperto",
-      "openThreads_other": "{{count}} fili ancora aperti"
+      "openThreads_one": "{{count}} filo ancora aperto: {{threads}}",
+      "openThreads_other": "{{count}} fili ancora aperti: {{threads}}",
+      "showAnswers": "Mostra le risposte",
+      "hideAnswers": "Nascondi le risposte",
+      "marked": "Momenti segnati",
+      "addNote": "Aggiungi una nota",
+      "noteLabel": "Nota per il momento a {{time}}",
+      "removeMark": "Rimuovi",
+      "removeMarkLabel": "Rimuovi il segno a {{time}}",
+      "markedTurn": "Segnato."
+    },
+    "find": {
+      "label": "Cerca in questa conversazione",
+      "count": "{{current}} di {{total}}",
+      "none": "Nessun risultato",
+      "close": "Chiudi"
     },
     "settings": {
       "title": "Poche scelte.",
@@ -2043,10 +2066,12 @@
       "untitled": "Conversazione senza titolo",
       "summary": "Riepilogo",
       "openQuestions": "Domande aperte",
+      "marked": "Segnato",
       "topics": "Temi",
       "transcript": "Trascrizione",
       "you": "Tu",
-      "room": "Stanza"
+      "room": "Stanza",
+      "speaker": "Interlocutore {{n}}"
     }
   },
   "questionCard": {

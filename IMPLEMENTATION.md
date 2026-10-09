@@ -1,6 +1,6 @@
 # Oats — Implementation Plan
 
-**Product:** Oats · **Company:** arum · **Status:** Stages 0–6 landed; Stages 8–10 built and unit-tested but not yet exercised against real speech; Stage 7 release proof outstanding. `TODO.md` is the live tracker · **Doc owner:** (you)
+**Product:** Oats · **Status:** Stages 0–6 landed; Stages 8–10 built and unit-tested but not yet exercised against real speech; Stage 7 release proof outstanding. `TODO.md` is the live tracker · **Doc owner:** (you)
 
 > This is the build plan for `oats-arum` — a fresh repository that realizes the
 > vision in `../oats/PRODUCT.md`. It is a working document; each stage has an

@@ -111,3 +111,15 @@ test("conversation events preserve parent links, order, JSON fields, and suggest
   assert.throws(() => db.updateConversationEventMetadata(question.id, null));
   assert.throws(() => db.updateConversationEventMetadata("1", { state: "open" }));
 });
+
+// Marks are written on every press during a recording, so the column has to
+// exist on a fresh database and the update has to be allowed through.
+test("a note keeps the moments marked on it", (t) => {
+  const db = createDb(t);
+  if (!db) return;
+  const note = db.saveNote("Conversation", "", "meeting").note;
+  const marks = JSON.stringify([{ id: "m-1", at: 1_700_000_000_000, note: "the counter-example" }]);
+  const result = db.updateNote(note.id, { conversation_marks: marks });
+  assert.equal(result.success, true);
+  assert.equal(db.getNote(note.id).conversation_marks, marks);
+});
