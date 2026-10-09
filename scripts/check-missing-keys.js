@@ -36,8 +36,6 @@ const WANTED = at !== -1 && process.argv[at + 1] ? process.argv[at + 1].split(",
  * button rendered the raw key.
  */
 const DYNAMIC = {
-  // SuggestionKind — src/types/conversationEvents.ts
-  suggestions: ["unfinished", "shallow", "adjacent"],
   // QuestionOutcome — src/types/conversationEvents.ts
   "questionCard.state": ["asked", "answered", "uncertain", "silence", "denied"],
   // findExcerpt's `source` — src/helpers/conversationRecall.mjs

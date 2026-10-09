@@ -17,7 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { Arch } = require("app-builder-lib");
-const { buildLinuxWrapperScript } = require("./lib/linux-launcher");
+const { scheduleLinuxWrap } = require("./lib/linux-wrap");
 
 // ---------------------------------------------------------------------------
 // macOS resource binary signing
@@ -196,17 +196,11 @@ function stripOnnxruntimeBinaries(context) {
 // Linux XWayland wrapper
 // ---------------------------------------------------------------------------
 
-function wrapLinuxBinary(context) {
+function scheduleLinuxLauncher(context) {
   if (context.electronPlatformName !== "linux") return;
-
-  const appDir = context.appOutDir;
-  const binaryName = context.packager.executableName;
-  const binaryPath = path.join(appDir, binaryName);
-  const realBinaryPath = path.join(appDir, binaryName + "-app");
-
-  fs.renameSync(binaryPath, realBinaryPath);
-
-  fs.writeFileSync(binaryPath, buildLinuxWrapperScript(binaryName), { mode: 0o755 });
+  // Not wrapped here: electron-builder sets the fuses on the executable right
+  // after this hook, and a wrapper script in its place fails that step.
+  scheduleLinuxWrap(context.arch, context.appOutDir, context.packager.executableName);
 }
 
 function verifyMeetingAecHelper(context) {
@@ -278,7 +272,7 @@ function verifyUnpackedBinaries(context) {
 
 exports.default = async function (context) {
   stripOnnxruntimeBinaries(context);
-  wrapLinuxBinary(context);
+  scheduleLinuxLauncher(context);
   verifyMeetingAecHelper(context);
   verifyUnpackedBinaries(context);
   registerMacResourceBinariesForSigning(context);

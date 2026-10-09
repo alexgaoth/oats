@@ -278,3 +278,39 @@ test("before the map is measured every label hangs right, as it always did", () 
   const placed = placeLabels([pt({ x: 0.99 })], { width: 0, height: 0 });
   assert.deepEqual(placed.get(1), { side: "right", align: "center", hidden: false });
 });
+
+// The flow card sets labels in Inter at 12px, narrower per character than the
+// old map's mono. The width estimate is the caller's, and it decides what fits.
+test("a narrower face fits a label the mono estimate had to move", () => {
+  const point = pt({ label: "onboarding flow and pricing", x: 0.7 });
+  // 27 characters: 178px at mono's 6.6, 162px at 6.0. The dot sits at x = 420
+  // in a 600px map, which leaves 170px to the right of it.
+  assert.equal(placeLabels([point], MAP).get(1).side, "left");
+  assert.equal(placeLabels([point], { ...MAP, charPx: 6 }).get(1).side, "right");
+});
+
+test("without a per-character width the mono default still applies", () => {
+  const points = [pt({ id: 1, label: "investor update", x: 0.95 })];
+  assert.deepEqual(placeLabels(points, MAP), placeLabels(points, { ...MAP, charPx: 6.6 }));
+});
+
+test("a link says whether it was a move back to an earlier topic", () => {
+  const map = buildThreadMap({
+    snapshot: {
+      nodes: [node({ id: 1 }), node({ id: 2, firstAt: START + 1000 })],
+      edges: [
+        { from: 1, to: 2, kind: "new" },
+        { from: 2, to: 1, kind: "return" },
+      ],
+    },
+    startedAt: START,
+    now: NOW,
+  });
+  assert.deepEqual(
+    map.links.map((link) => [link.from, link.to, link.kind]),
+    [
+      [1, 2, "new"],
+      [2, 1, "return"],
+    ]
+  );
+});
