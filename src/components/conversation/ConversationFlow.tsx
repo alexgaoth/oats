@@ -49,17 +49,23 @@ import type {
 // There is no animation and no loop. Positions are a function of the data and
 // are recomputed only when the data changes.
 
-/** The tokens of the four thread states, shared by the stack and the graph. */
+/**
+ * The tokens of the four thread states, shared by the stack and the graph.
+ * Open is the normal state of a topic in a live conversation, so it is neutral:
+ * colour is for the one being spoken (brand), the ones settled (green), and a
+ * dropped one is a hollow ring. Amber would have turned every earlier topic into
+ * a warning, and sat next to the brand honey at nearly the same hue.
+ */
 const DOT: Record<ThreadState, string> = {
   live: "bg-primary ring-4 ring-primary/20",
-  open: "bg-warning",
+  open: "bg-foreground/60",
   resolved: "bg-success",
-  dropped: "bg-muted-foreground/50",
+  dropped: "border border-muted-foreground/70 bg-transparent",
 };
 
 const BADGE: Record<ThreadState, BadgeProps["variant"]> = {
   live: "brand",
-  open: "warning",
+  open: "outline",
   resolved: "success",
   dropped: "secondary",
 };
