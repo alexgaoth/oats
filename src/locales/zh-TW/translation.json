@@ -2115,7 +2115,12 @@
         "search": "搜尋對話",
         "searchHint": "開啟 Oats 並備妥搜尋欄。"
       },
-      "microphoneDescription": "Oats 用於對話與聽寫的麥克風。"
+      "microphoneDescription": "Oats 用於對話與聽寫的麥克風。",
+      "advanced": {
+        "title": "進階",
+        "fieldBackdrop": "田野背景",
+        "fieldBackdropDescription": "在應用程式後方顯示動態麥田。會持續佔用 GPU。"
+      }
     },
     "errors": {
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",

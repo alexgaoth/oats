@@ -2120,7 +2120,12 @@
         "search": "Search conversations",
         "searchHint": "Opens Oats with the search field ready."
       },
-      "microphoneDescription": "The microphone Oats uses for conversations and dictation."
+      "microphoneDescription": "The microphone Oats uses for conversations and dictation.",
+      "advanced": {
+        "title": "Advanced",
+        "fieldBackdrop": "Field backdrop",
+        "fieldBackdropDescription": "Draw the animated wheat field behind the app. It uses the GPU all the time."
+      }
     },
     "errors": {
       "noModel": "Configure Oats processing before recording a conversation.",

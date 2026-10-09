@@ -2120,7 +2120,12 @@
         "search": "Gespräche durchsuchen",
         "searchHint": "Öffnet Oats mit bereitem Suchfeld."
       },
-      "microphoneDescription": "Das Mikrofon, das Oats für Gespräche und Diktate nutzt."
+      "microphoneDescription": "Das Mikrofon, das Oats für Gespräche und Diktate nutzt.",
+      "advanced": {
+        "title": "Erweitert",
+        "fieldBackdrop": "Feld-Hintergrund",
+        "fieldBackdropDescription": "Zeigt das animierte Weizenfeld hinter der App. Es nutzt die GPU ständig."
+      }
     },
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",

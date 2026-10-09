@@ -600,6 +600,8 @@ export default function SettingsPage({
     setWhisperVadSamplesOverlap,
   } = useSettings();
 
+  const uiMode = useSettingsStore((s) => s.uiMode);
+  const setUiMode = useSettingsStore((s) => s.setUiMode);
   const chatAgentKey = useSettingsStore((s) => s.chatAgentKey);
   const voiceAgentKey = useSettingsStore((s) => s.voiceAgentKey);
   const searchKey = useSettingsStore((s) => s.searchKey);
@@ -2260,6 +2262,26 @@ EOF`,
             {/* Developer Tools */}
             <div>
               <DeveloperSection />
+            </div>
+
+            {/* Advanced. The field backdrop stays switchable here until D11
+                decides between keeping it and retiring it: without a switch,
+                anybody who had it on could not turn it off. */}
+            <div>
+              <SectionHeader title={t("oats.settings.advanced.title")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("oats.settings.advanced.fieldBackdrop")}
+                    description={t("oats.settings.advanced.fieldBackdropDescription")}
+                  >
+                    <Toggle
+                      checked={uiMode === "field"}
+                      onChange={(on: boolean) => setUiMode(on ? "field" : "work")}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
             </div>
 
             {/* Data Management */}
