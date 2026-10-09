@@ -273,12 +273,16 @@ class ConversationTopicTracker {
       if (coverage(bag, pending.bag) >= this.continueThreshold) {
         const topic = this._newTopic(pending.at);
         this._move(topic, pending.at, pending.utterance, pending.bag, pending.words, "new");
+        if (pending.resolves) topic.resolved = true;
         this._absorb(topic, at, utterance, bag, words);
         return topic;
       }
       // The aside stays with whatever was being discussed at the time.
       const host = this.topics.find((topic) => topic.id === this.currentId);
-      if (host) this._absorb(host, pending.at, pending.utterance, pending.bag, pending.words);
+      if (host) {
+        this._absorb(host, pending.at, pending.utterance, pending.bag, pending.words);
+        if (pending.resolves) host.resolved = true;
+      }
     }
 
     const current = this.topics.find((topic) => topic.id === this.currentId) || null;
@@ -337,14 +341,25 @@ class ConversationTopicTracker {
     return topic;
   }
 
-  // Folds any held-back aside into the current topic. Called before reading the
-  // stack or the graph so a trailing aside is never lost or left dangling.
+  // Folds any held-back aside into the current topic, so the record of a
+  // finished conversation never loses its last words. Only the final snapshot
+  // calls it.
+  //
+  // Reading must not decide anything. The store reads the graph and the stack
+  // after every utterance, and while those reads called this, every held turn
+  // was folded into the current topic before the next turn could confirm it:
+  // no change of subject could ever start a topic, and a live recording stayed
+  // one topic from its first word to its last. A live read now leaves the held
+  // turn held; it is placed by the next utterance, one turn late.
   _flushPending() {
     const pending = this.pending;
     if (!pending) return;
     this.pending = null;
     const host = this.topics.find((topic) => topic.id === this.currentId);
-    if (host) this._absorb(host, pending.at, pending.utterance, pending.bag, pending.words);
+    if (host) {
+      this._absorb(host, pending.at, pending.utterance, pending.bag, pending.words);
+      if (pending.resolves) host.resolved = true;
+    }
   }
 
   _absorb(topic, at, utterance, bag, words) {
@@ -393,7 +408,14 @@ class ConversationTopicTracker {
     const id = String(utteranceId ?? "");
     if (!id) return null;
     const topic = this.topics.find((candidate) => candidate.utteranceIds.includes(id));
-    if (!topic) return null;
+    if (!topic) {
+      // Asked in the turn still being held: it resolves whichever topic that
+      // turn joins once the next utterance places it.
+      if (this.pending && String(this.pending.utterance?.id ?? "") === id) {
+        this.pending.resolves = true;
+      }
+      return null;
+    }
     topic.resolved = true;
     return topic;
   }
@@ -451,7 +473,6 @@ class ConversationTopicTracker {
   // The stack's contents: what was started and never finished, most recently
   // dropped first. The live topic is never listed — you are already in it.
   openThreads(at = this.now()) {
-    this._flushPending();
     return this._condensed()
       .topics.filter((topic) => topic.id !== this.currentId && !topic.resolved)
       .map((topic) => ({
@@ -474,7 +495,7 @@ class ConversationTopicTracker {
   // subject nobody was discussing any more, and hid whether it had been
   // resolved, because `live` is decided before `resolved` is consulted.
   snapshot(at = this.now(), { final = false } = {}) {
-    this._flushPending();
+    if (final) this._flushPending();
     const { topics, edges } = this._condensed();
     const nodes = topics.map((topic) => ({
       id: topic.id,

@@ -1,4 +1,5 @@
-// Geometry for the live thread map (DESIGN.md §9.3, drawn while recording).
+// Geometry for the live thread map: the graph view of the conversation flow
+// card (`components/conversation/ConversationFlow.tsx`, drawn while recording).
 //
 // Pure and DOM-free so it can be pinned. Given the live topic snapshot, produce
 // the points and links to draw; the component owns pixels and nothing else.
@@ -21,8 +22,15 @@
 
 /** Below this a topic got a sentence, not a subject — drawing it is noise.
  *  Four seconds, not eight: at eight the map stayed empty through the opening
- *  minutes of a conversation, which is exactly when somebody looks for it. */
-const MIN_TOPIC_MS = 4000;
+ *  minutes of a conversation, which is exactly when somebody looks for it.
+ *  Shared with `conversationFlow.mjs`, so the stack, the graph and the rule
+ *  that chooses between them all count the same topics. */
+export const MIN_TOPIC_MS = 4000;
+
+/** A topic worth showing: it has a name and was talked about long enough. */
+export function isKeptTopic(node) {
+  return Boolean(node && node.label && (node.durationMs ?? 0) >= MIN_TOPIC_MS);
+}
 
 /** More than this and the map is a hairball; the rest stay in the thread list. */
 const MAX_NODES = 14;
@@ -64,7 +72,7 @@ export function buildThreadMap({
   const span = Math.max(1, now - startedAt);
 
   const kept = all
-    .filter((n) => n && n.label && (n.durationMs ?? 0) >= MIN_TOPIC_MS)
+    .filter(isKeptTopic)
     // Keep the heaviest, then restore time order so x never reshuffles.
     .sort((a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0))
     .slice(0, maxNodes)
@@ -99,7 +107,16 @@ export function buildThreadMap({
     const to = byId.get(edge?.to);
     // Both ends must have survived the filter, and a self-edge is not a move.
     if (!from || !to || from === to) continue;
-    links.push({ from: from.id, to: to.id, x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+    links.push({
+      from: from.id,
+      to: to.id,
+      // A move back to an earlier topic, which the graph draws differently.
+      kind: edge.kind === "return" ? "return" : "new",
+      x1: from.x,
+      y1: from.y,
+      x2: to.x,
+      y2: to.y,
+    });
   }
 
   return { points, links, empty: false };
@@ -111,7 +128,8 @@ export function dotSize(point) {
   return 5 + (point?.r ?? 0) * 5;
 }
 
-/** Mono at 11px advances 0.6em per character in every shipped mono face. */
+/** Mono at 11px advances 0.6em per character in every shipped mono face. The
+ *  default advance; a caller setting labels in another face passes its own. */
 const LABEL_CHAR_PX = 6.6;
 const LABEL_H_PX = 16;
 /** Dot-to-label gap beside the dot (`gap-1.5`), and above or below it (`gap-0.5`). */
@@ -135,8 +153,11 @@ const overlaps = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a
  *
  * `width`/`height` are the map's box in px. With no box yet (first render,
  * before it is measured) every label goes right, which is the old behaviour.
+ * `charPx` is the face's average advance per character at the label's size:
+ * a label's width is estimated as its length times this, so an estimate that
+ * runs short lets two labels touch.
  */
-export function placeLabels(points, { width = 0, height = 0 } = {}) {
+export function placeLabels(points, { width = 0, height = 0, charPx = LABEL_CHAR_PX } = {}) {
   const list = Array.isArray(points) ? points : [];
   if (!(width > 0 && height > 0)) {
     return new Map(list.map((p) => [p.id, { side: "right", align: "center", hidden: false }]));
@@ -152,7 +173,7 @@ export function placeLabels(points, { width = 0, height = 0 } = {}) {
   const byWeight = [...list].sort((a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0));
   for (const point of byWeight) {
     const dot = dots.find((d) => d.id === point.id);
-    const w = String(point.label ?? "").length * LABEL_CHAR_PX;
+    const w = String(point.label ?? "").length * charPx;
     const y1 = dot.cy - LABEL_H_PX / 2;
     const y2 = dot.cy + LABEL_H_PX / 2;
     const above = dot.cy - dot.half - LABEL_GAP_Y_PX;

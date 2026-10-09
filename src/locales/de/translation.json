@@ -1922,8 +1922,6 @@
       "marked": "Markiert",
       "markLabel": "Diesen Moment markieren",
       "markAnnounced": "Markiert bei {{time}}",
-      "threadMapLabel": "Karte von {{count}} bisher angesprochenen Themen",
-      "threadMapNoQuote": "nichts Aktuelles zum Zitieren",
       "recordTitle": "Gespräch aufnehmen",
       "start": "Aufnahme starten",
       "shortcutAnywhere": "aus jeder App",
@@ -1931,6 +1929,45 @@
       "stop": "Beenden",
       "recentHeading": "Letzte Gespräche",
       "viewAll": "Alle anzeigen"
+    },
+    "flow": {
+      "title": "Gesprächsverlauf",
+      "viewLabel": "Ansicht des Verlaufs",
+      "mode": {
+        "auto": "Auto",
+        "stack": "Liste",
+        "graph": "Graph"
+      },
+      "empty": "Themen erscheinen hier im Lauf des Gesprächs.",
+      "caption": {
+        "few_one": "Als Liste dargestellt: bisher erst {{count}} Thema.",
+        "few_other": "Als Liste dargestellt: bisher erst {{count}} Themen.",
+        "linear": "Als Liste dargestellt: Das Gespräch ist geradlinig verlaufen.",
+        "returns_one": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu einem früheren Thema zurückgekehrt.",
+        "returns_other": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu früheren Themen zurückgekehrt.",
+        "branching": "Als Graph dargestellt: Das Gespräch hat sich verzweigt.",
+        "stack": "Als Liste dargestellt.",
+        "graph": "Als Graph dargestellt."
+      },
+      "state": {
+        "live": "Jetzt",
+        "open": "Offen",
+        "resolved": "Geklärt",
+        "dropped": "Fallen gelassen"
+      },
+      "back_one": "{{count}}× zurück",
+      "back_other": "{{count}}× zurück",
+      "showMore_one": "{{count}} weiteres anzeigen",
+      "showMore_other": "{{count}} weitere anzeigen",
+      "showFewer": "Weniger anzeigen",
+      "stackLabel": "Themen, neueste zuerst",
+      "graphLabel_one": "Graph von {{count}} bisher angesprochenem Thema",
+      "graphLabel_other": "Graph von {{count}} bisher angesprochenen Themen",
+      "nodeName": "{{label}}, {{state}}",
+      "nodeNameBack": "{{label}}, {{state}}, {{back}}",
+      "quote": "„{{text}}“",
+      "noQuote": "Nichts Aktuelles zum Zitieren.",
+      "earlier": "Kam in früheren Gesprächen vor:"
     },
     "intelligence": {
       "empty": "Noch keine Gespräche",
@@ -2204,14 +2241,6 @@
     "announcedBatch": "{{count}} neue Fragen, zuletzt: {{question}}",
     "searchedHost": "gesucht · {{host}}"
   },
-  "openThreads": {
-    "count_one": "{{count}} offener Strang",
-    "count_other": "{{count}} offene Stränge",
-    "state": {
-      "open": "offen",
-      "dropped": "kalt"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} Sekunden",
     "seconds_one": "{{count}} s",
@@ -2220,13 +2249,6 @@
     "returned_other": "{{count}}× zurückgekehrt",
     "search": "Suchen",
     "noQuestions": "Keine Fragen in diesem Strang."
-  },
-  "suggestions": {
-    "title": "Wert anzusprechen",
-    "unfinished": "offen geblieben",
-    "shallow": "kaum berührt",
-    "adjacent_one": "kommt meist auf",
-    "adjacent_other": "kommt meist auf"
   },
   "lifetime": {
     "title": "Worauf du immer zurückkommst",

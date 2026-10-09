@@ -1922,8 +1922,6 @@
       "marked": "Marcado",
       "markLabel": "Marcar este momento",
       "markAnnounced": "Marcado em {{time}}",
-      "threadMapLabel": "Mapa de {{count}} temas abordados até agora",
-      "threadMapNoQuote": "nada recente para citar",
       "recordTitle": "Gravar uma conversa",
       "start": "Iniciar gravação",
       "shortcutAnywhere": "de qualquer app",
@@ -1931,6 +1929,45 @@
       "stop": "Parar",
       "recentHeading": "Conversas recentes",
       "viewAll": "Ver todas"
+    },
+    "flow": {
+      "title": "Fluxo da conversa",
+      "viewLabel": "Visualização do fluxo",
+      "mode": {
+        "auto": "Auto",
+        "stack": "Lista",
+        "graph": "Grafo"
+      },
+      "empty": "Os temas aparecem aqui à medida que a conversa avança.",
+      "caption": {
+        "few_one": "Mostrando a lista: até agora só {{count}} tema.",
+        "few_other": "Mostrando a lista: até agora só {{count}} temas.",
+        "linear": "Mostrando a lista: a conversa seguiu em linha reta.",
+        "returns_one": "Mostrando o grafo: até agora {{count}} retorno a um tema anterior.",
+        "returns_other": "Mostrando o grafo: até agora {{count}} retornos a temas anteriores.",
+        "branching": "Mostrando o grafo: a conversa se ramificou.",
+        "stack": "Mostrando a lista.",
+        "graph": "Mostrando o grafo."
+      },
+      "state": {
+        "live": "Agora",
+        "open": "Aberto",
+        "resolved": "Resolvido",
+        "dropped": "Abandonado"
+      },
+      "back_one": "Retomado {{count}}×",
+      "back_other": "Retomado {{count}}×",
+      "showMore_one": "Mostrar mais {{count}}",
+      "showMore_other": "Mostrar mais {{count}}",
+      "showFewer": "Mostrar menos",
+      "stackLabel": "Temas, os mais recentes primeiro",
+      "graphLabel_one": "Grafo de {{count}} tema abordado até agora",
+      "graphLabel_other": "Grafo de {{count}} temas abordados até agora",
+      "nodeName": "{{label}}, {{state}}",
+      "nodeNameBack": "{{label}}, {{state}}, {{back}}",
+      "quote": "“{{text}}”",
+      "noQuote": "Nada recente para citar.",
+      "earlier": "Surgiu em conversas anteriores:"
     },
     "intelligence": {
       "empty": "Ainda sem conversas",
@@ -2204,14 +2241,6 @@
     "announcedBatch": "{{count}} perguntas novas, a última: {{question}}",
     "searchedHost": "pesquisado · {{host}}"
   },
-  "openThreads": {
-    "count_one": "{{count}} fio aberto",
-    "count_other": "{{count}} fios abertos",
-    "state": {
-      "open": "aberto",
-      "dropped": "frio"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} segundos",
     "seconds_one": "{{count}} s",
@@ -2220,13 +2249,6 @@
     "returned_other": "retomado {{count}}×",
     "search": "Pesquisar",
     "noQuestions": "Sem perguntas neste fio."
-  },
-  "suggestions": {
-    "title": "Vale a pena levantar",
-    "unfinished": "ficou em aberto",
-    "shallow": "mal tocado",
-    "adjacent_one": "costuma surgir",
-    "adjacent_other": "costuma surgir"
   },
   "lifetime": {
     "title": "Aquilo a que volta sempre",

@@ -1922,8 +1922,6 @@
       "marked": "Marked",
       "markLabel": "Mark this moment",
       "markAnnounced": "Marked at {{time}}",
-      "threadMapLabel": "Map of {{count}} subjects raised so far",
-      "threadMapNoQuote": "nothing recent to quote",
       "recordTitle": "Record a conversation",
       "start": "Start recording",
       "shortcutAnywhere": "from any app",
@@ -1931,6 +1929,45 @@
       "stop": "Stop",
       "recentHeading": "Recent conversations",
       "viewAll": "View all"
+    },
+    "flow": {
+      "title": "Conversation flow",
+      "viewLabel": "Flow view",
+      "mode": {
+        "auto": "Auto",
+        "stack": "Stack",
+        "graph": "Graph"
+      },
+      "empty": "Topics appear here as the conversation moves.",
+      "caption": {
+        "few_one": "Showing the stack: only {{count}} topic so far.",
+        "few_other": "Showing the stack: only {{count}} topics so far.",
+        "linear": "Showing the stack: the conversation has moved in a line.",
+        "returns_one": "Showing the graph: {{count}} return to an earlier topic so far.",
+        "returns_other": "Showing the graph: {{count}} returns to earlier topics so far.",
+        "branching": "Showing the graph: the conversation has branched.",
+        "stack": "Showing the stack.",
+        "graph": "Showing the graph."
+      },
+      "state": {
+        "live": "Now",
+        "open": "Open",
+        "resolved": "Resolved",
+        "dropped": "Dropped"
+      },
+      "back_one": "Back {{count}}×",
+      "back_other": "Back {{count}}×",
+      "showMore_one": "Show {{count}} more",
+      "showMore_other": "Show {{count}} more",
+      "showFewer": "Show fewer",
+      "stackLabel": "Topics, most recent first",
+      "graphLabel_one": "Graph of {{count}} topic raised so far",
+      "graphLabel_other": "Graph of {{count}} topics raised so far",
+      "nodeName": "{{label}}, {{state}}",
+      "nodeNameBack": "{{label}}, {{state}}, {{back}}",
+      "quote": "“{{text}}”",
+      "noQuote": "Nothing recent to quote.",
+      "earlier": "Came up in earlier conversations:"
     },
     "intelligence": {
       "empty": "No conversations yet",
@@ -2204,14 +2241,6 @@
     "announcedBatch": "{{count}} new questions, latest: {{question}}",
     "searchedHost": "searched · {{host}}"
   },
-  "openThreads": {
-    "count_one": "{{count}} open thread",
-    "count_other": "{{count}} open threads",
-    "state": {
-      "open": "open",
-      "dropped": "cold"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} seconds",
     "seconds_one": "{{count}}s",
@@ -2220,13 +2249,6 @@
     "returned_other": "returned {{count}}×",
     "search": "Search",
     "noQuestions": "No questions in this thread."
-  },
-  "suggestions": {
-    "title": "Worth raising",
-    "unfinished": "left open",
-    "shallow": "barely touched",
-    "adjacent_one": "usually comes up",
-    "adjacent_other": "usually comes up"
   },
   "lifetime": {
     "title": "What you keep coming back to",
