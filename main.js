@@ -738,6 +738,9 @@ async function startApp() {
     let globeLastStopTime = 0;
     const MIN_HOLD_DURATION_MS = 150;
     const POST_STOP_COOLDOWN_MS = 300;
+    // Tap mode toggles on a quick, solitary press, decided on release
+    // (globeTap.js) — never on the way down, which made every Fn chord a toggle.
+    const globeTap = require("./src/helpers/globeTap").createGlobeTap();
 
     globeKeyManager.on("globe-down", async () => {
       const currentHotkey = hotkeyManager.getCurrentHotkey && hotkeyManager.getCurrentHotkey();
@@ -778,7 +781,7 @@ async function startApp() {
               }
             }, MIN_HOLD_DURATION_MS);
           } else {
-            windowManager.sendToggleDictation();
+            globeTap.down();
           }
         } else {
           debugLogger?.debug("[Globe] Ignored — mainWindow not live");
@@ -825,6 +828,9 @@ async function startApp() {
             debugLogger?.debug("[Globe] Stopping dictation (push release)");
             windowManager.sendStopDictation();
           }
+        } else if (globeTap.up() && isLiveWindow(windowManager.mainWindow)) {
+          debugLogger?.debug("[Globe] Tap — toggling dictation");
+          windowManager.sendToggleDictation();
         }
       }
 
@@ -838,6 +844,8 @@ async function startApp() {
     // Only the bare-Fn path uses globeKeyDownTime/globeKeyIsRecording, so compound
     // Fn-hotkey push-to-talk and tap mode are untouched.
     globeKeyManager.on("globe-interrupted", () => {
+      // In tap mode a chord is not a tap; the release will toggle nothing.
+      globeTap.interrupted();
       if (globeKeyDownTime === 0 && !globeKeyIsRecording) {
         return;
       }
