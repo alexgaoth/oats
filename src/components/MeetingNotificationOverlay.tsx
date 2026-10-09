@@ -75,6 +75,7 @@ export default function MeetingNotificationOverlay() {
         onStart={() => respond(data?.joinUrl ? "join" : "start")}
         onDismiss={() => respond("dismiss")}
         closeVisible={isHovered}
+        dismissLabel={t("common.close")}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={[

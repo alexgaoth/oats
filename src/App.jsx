@@ -558,7 +558,7 @@ export default function App() {
                   setIsCommandMenuOpen(false);
                   window.electronAPI?.hideFloatingOat?.();
                 }}
-                className="group/hide w-5 h-5 rounded-full bg-surface-2/90 hover:bg-muted border border-border flex items-center justify-center transition-colors duration-150 shadow-sm backdrop-blur-sm"
+                className="group/hide flex size-5 items-center justify-center rounded-full border border-border bg-popover shadow-sm transition-colors duration-150 hover:bg-accent"
               >
                 <X size={10} strokeWidth={2.5} className="text-muted-foreground" />
               </button>
@@ -573,7 +573,7 @@ export default function App() {
                 e.stopPropagation();
                 isRecording ? cancelRecording() : cancelProcessing();
               }}
-              className="group/cancel w-5 h-5 rounded-full bg-surface-2/90 hover:bg-destructive border border-border hover:border-destructive/70 flex items-center justify-center transition-colors duration-150 shadow-sm backdrop-blur-sm"
+              className="group/cancel flex size-5 items-center justify-center rounded-full border border-border bg-popover shadow-sm transition-colors duration-150 hover:border-destructive hover:bg-destructive"
             >
               <X
                 size={10}
@@ -679,7 +679,8 @@ export default function App() {
           {isCommandMenuOpen && (
             <div
               ref={commandMenuRef}
-              className="absolute bottom-full right-0 mb-3 w-48 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg backdrop-blur-sm"
+              role="menu"
+              className="absolute bottom-full right-0 mb-3 w-52 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
               onMouseEnter={() => {
                 setWindowInteractivity(true);
               }}
@@ -701,10 +702,11 @@ export default function App() {
                 // would silence the very state this was added to announce. The
                 // mic beside it makes the same choice.
                 aria-disabled={isProcessing && !isRecording ? true : undefined}
-                className={`w-full px-3 py-2 text-left text-sm font-medium focus:outline-none ${
+                role="menuitem"
+                className={`w-full rounded-md px-2 py-1.5 text-left text-sm font-medium outline-none ${
                   isProcessing && !isRecording
                     ? "cursor-not-allowed opacity-50"
-                    : "hover:bg-muted focus:bg-muted"
+                    : "hover:bg-accent focus-visible:bg-accent"
                 }`}
                 onClick={() => {
                   if (isProcessing && !isRecording) return;
@@ -717,9 +719,10 @@ export default function App() {
                     ? t("app.commandMenu.stopListening")
                     : t("app.commandMenu.startListening")}
               </button>
-              <div className="h-px bg-border" />
+              <div role="separator" className="-mx-1 my-1 h-px bg-border" />
               <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted focus:bg-muted focus:outline-none"
+                role="menuitem"
+                className="w-full rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent"
                 onClick={() => {
                   setIsCommandMenuOpen(false);
                   setWindowInteractivity(false);
