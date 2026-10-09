@@ -1,6 +1,7 @@
 {
   "appId": "com.arum.oats",
   "afterPack": "scripts/afterPack.js",
+  "artifactBuildStarted": "scripts/artifactBuildStarted.js",
   "productName": "Oats",
   "protocols": {
     "name": "Oats Protocol",
