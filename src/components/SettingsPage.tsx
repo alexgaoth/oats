@@ -4,31 +4,20 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import {
-  RefreshCw,
-  Download,
-  Mic,
-  Shield,
-  FolderOpen,
-  Sun,
-  Moon,
-  Monitor,
-  Key,
-  Cpu,
-  Network,
-  Sparkles,
-  Loader2,
-  Check,
+  BookOpen,
+  ChevronDown,
   CircleCheck,
   CircleX,
-  RotateCw,
-  BookOpen,
   Copy,
+  Cpu,
+  FolderOpen,
   Info,
-  MessageSquare,
-  FileAudio,
-  Wand2,
-  Upload,
-  Languages,
+  Key,
+  Loader2,
+  Mic,
+  Network,
+  RotateCw,
+  Shield,
 } from "lucide-react";
 import MicPermissionWarning from "./ui/MicPermissionWarning";
 import MicrophoneSettings from "./ui/MicrophoneSettings";
@@ -56,40 +45,44 @@ import { useClipboard } from "../hooks/useClipboard";
 import { useUpdater } from "../hooks/useUpdater";
 
 import PromptStudio from "./ui/PromptStudio";
-import { ProviderTabs } from "./ui/ProviderTabs";
 import { HotkeyListInput } from "./ui/HotkeyListInput";
 import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
-import { useLocalStorage } from "../hooks/useLocalStorage";
 import { validateHotkeyForSlot } from "../utils/hotkeyValidation";
-import { getPlatform, getCachedPlatform } from "../utils/platform";
+import { getCachedPlatform } from "../utils/platform";
 import { formatHotkeyLabel } from "../utils/hotkeys";
 import { ActivationModeSelector } from "./ui/ActivationModeSelector";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import LinuxPttSetupInfo from "./ui/LinuxPttSetupInfo";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
-import ChatAgentSettings from "./settings/ChatAgentSettings";
-import DictationAgentSettings from "./settings/DictationAgentSettings";
-import DictationTranslationSettings from "./settings/DictationTranslationSettings";
 import InferenceConfigEditor from "./settings/InferenceConfigEditor";
 import { MeetingTranscriptionPanel } from "./settings/MeetingSettings";
-import { UploadTranscriptionPanel } from "./settings/UploadSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import { useToast } from "./ui/useToast";
 import { useTheme } from "../hooks/useTheme";
 import type { GpuDevice, LocalTranscriptionProvider, InferenceMode } from "../types/electron";
 import logger from "../utils/logger";
 import { SettingsRow, InferenceModeSelector } from "./ui/SettingsSection";
+import { NativeSelect } from "./ui/native-select";
+import { SegmentedControl } from "./ui/segmented";
 import type { InferenceModeOption } from "./ui/SettingsSection";
+import type { SettingsPageId } from "./settings/settingsPages";
+import { SettingsSection } from "./settings/SettingsKit";
+import {
+  ConversationShortcutRow,
+  DictionaryEditor,
+  InAppShortcuts,
+  ProcessingCard,
+  QuestionCardSettings,
+  VaultRow,
+} from "./settings/OatsSettingsSections";
 import { useSettingsLayout } from "./ui/useSettingsLayout";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { formatBytes } from "../utils/formatBytes";
 import { useSettingsStore } from "../stores/settingsStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
 
-export type SettingsSectionType =
-  "general" | "hotkeys" | "speechToText" | "llms" | "privacyData" | "system";
+export type SettingsSectionType = SettingsPageId;
 
 interface SettingsPageProps {
   activeSection?: SettingsSectionType;
@@ -122,7 +115,7 @@ function SettingsPanel({
 }) {
   return (
     <div
-      className={`rounded-lg border border-border/50 dark:border-border-subtle/70 bg-card/50 dark:bg-surface-2/50 backdrop-blur-sm divide-y divide-border/30 dark:divide-border-subtle/50 ${className}`}
+      className={`divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs ${className}`}
     >
       {children}
     </div>
@@ -138,9 +131,7 @@ function SettingsPanelRow({
 }) {
   const { isCompact } = useSettingsLayout();
 
-  return (
-    <div className={`${isCompact ? "px-3 py-2.5" : "px-4 py-3"} ${className}`}>{children}</div>
-  );
+  return <div className={`${isCompact ? "px-4 py-3" : "px-5 py-4"} ${className}`}>{children}</div>;
 }
 
 function SectionHeader({
@@ -153,12 +144,12 @@ function SectionHeader({
   note?: string;
 }) {
   return (
-    <div className="mb-3">
-      <h3 className="text-xs font-semibold text-foreground tracking-tight">{title}</h3>
+    <div className="mb-3 px-1">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {description && (
-        <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">{description}</p>
+        <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{description}</p>
       )}
-      {note && <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">{note}</p>}
+      {note && <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{note}</p>}
     </div>
   );
 }
@@ -425,155 +416,25 @@ function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModel
   );
 }
 
-type SpeechTab = "dictation" | "noteRecording" | "upload";
-type LlmTab =
-  | "dictationCleanup"
-  | "dictationAgent"
-  | "dictationTranslation"
-  | "noteFormatting"
-  | "chatIntelligence";
-
-const SPEECH_TABS: SpeechTab[] = ["dictation", "noteRecording", "upload"];
-const LLM_TABS: LlmTab[] = [
-  "dictationCleanup",
-  "dictationAgent",
-  "dictationTranslation",
-  "noteFormatting",
-  "chatIntelligence",
-];
-
-function useSubTab<T extends string>(storageKey: string, options: readonly T[], initial?: T) {
-  const [tab, setTab] = useLocalStorage<T>(storageKey, initial ?? options[0]);
-  useEffect(() => {
-    if (initial && initial !== tab) setTab(initial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial]);
-  const safeTab = options.includes(tab) ? tab : options[0];
-  return [safeTab, setTab] as const;
-}
-
+/** A tuning field's name, with what it does one press away. */
 function VADLabelWithInfo({ label, description }: { label: string; description: string }) {
   return (
-    <div className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
+    <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
       <span>{label}</span>
       <Popover>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             aria-label={label}
           >
-            <Info className="h-3.5 w-3.5" />
+            <Info aria-hidden="true" className="size-3.5" />
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="start" className="max-w-sm p-3">
-          <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-[13px] leading-5 text-muted-foreground">{description}</p>
         </PopoverContent>
       </Popover>
-    </div>
-  );
-}
-
-function TabPanel({ active, children }: { active: boolean; children: React.ReactNode }) {
-  return active ? <>{children}</> : null;
-}
-
-function SpeechToTextTabs({
-  initialTab,
-  renderDictation,
-  renderNoteRecording,
-  renderUpload,
-}: {
-  initialTab?: SpeechTab;
-  renderDictation: () => React.ReactNode;
-  renderNoteRecording: () => React.ReactNode;
-  renderUpload: () => React.ReactNode;
-}) {
-  const { t } = useTranslation();
-  const [tab, setTab] = useSubTab<SpeechTab>("settings.speechToTextTab", SPEECH_TABS, initialTab);
-
-  const subTabs = [
-    { id: "dictation", name: t("settingsPage.speechToText.tabs.dictation") },
-    { id: "noteRecording", name: t("settingsPage.speechToText.tabs.noteRecording") },
-    { id: "upload", name: t("settingsPage.speechToText.tabs.upload") },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <SectionHeader
-        title={t("settingsPage.speechToText.title")}
-        description={t("settingsPage.speechToText.description")}
-      />
-      <ProviderTabs
-        providers={subTabs}
-        selectedId={tab}
-        onSelect={(id) => setTab(id as SpeechTab)}
-        renderIcon={(id) =>
-          id === "dictation" ? (
-            <Mic className="w-3.5 h-3.5" />
-          ) : id === "upload" ? (
-            <Upload className="w-3.5 h-3.5" />
-          ) : (
-            <FileAudio className="w-3.5 h-3.5" />
-          )
-        }
-      />
-      <TabPanel active={tab === "dictation"}>{renderDictation()}</TabPanel>
-      <TabPanel active={tab === "noteRecording"}>{renderNoteRecording()}</TabPanel>
-      <TabPanel active={tab === "upload"}>{renderUpload()}</TabPanel>
-    </div>
-  );
-}
-
-function LlmsTabs({
-  initialTab,
-  renderDictationCleanup,
-  renderDictationAgent,
-  renderDictationTranslation,
-  renderNoteFormatting,
-  renderChatIntelligence,
-}: {
-  initialTab?: LlmTab;
-  renderDictationCleanup: () => React.ReactNode;
-  renderDictationAgent: () => React.ReactNode;
-  renderDictationTranslation: () => React.ReactNode;
-  renderNoteFormatting: () => React.ReactNode;
-  renderChatIntelligence: () => React.ReactNode;
-}) {
-  const { t } = useTranslation();
-  const [tab, setTab] = useSubTab<LlmTab>("settings.llmsTab", LLM_TABS, initialTab);
-
-  const subTabs = [
-    { id: "dictationCleanup", name: t("settingsPage.llms.tabs.dictationCleanup") },
-    { id: "dictationAgent", name: t("settingsPage.llms.tabs.dictationAgent") },
-    { id: "dictationTranslation", name: t("settingsPage.llms.tabs.dictationTranslation") },
-    { id: "noteFormatting", name: t("settingsPage.llms.tabs.noteFormatting") },
-    { id: "chatIntelligence", name: t("settingsPage.llms.tabs.chatIntelligence") },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <SectionHeader
-        title={t("settingsPage.llms.title")}
-        description={t("settingsPage.llms.description")}
-      />
-      <ProviderTabs
-        providers={subTabs}
-        selectedId={tab}
-        onSelect={(id) => setTab(id as LlmTab)}
-        renderIcon={(id) => {
-          if (id === "dictationCleanup") return <Wand2 className="w-3.5 h-3.5" />;
-          if (id === "dictationAgent") return <Sparkles className="w-3.5 h-3.5" />;
-          if (id === "dictationTranslation") return <Languages className="w-3.5 h-3.5" />;
-          if (id === "noteFormatting") return <BookOpen className="w-3.5 h-3.5" />;
-          return <MessageSquare className="w-3.5 h-3.5" />;
-        }}
-      />
-      <TabPanel active={tab === "dictationCleanup"}>{renderDictationCleanup()}</TabPanel>
-      <TabPanel active={tab === "dictationAgent"}>{renderDictationAgent()}</TabPanel>
-      <TabPanel active={tab === "dictationTranslation"}>{renderDictationTranslation()}</TabPanel>
-      <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
-      <TabPanel active={tab === "chatIntelligence"}>{renderChatIntelligence()}</TabPanel>
     </div>
   );
 }
@@ -647,7 +508,6 @@ export default function SettingsPage({
   onNavigateToSection,
   initialSubTab,
 }: SettingsPageProps) {
-  const { isCompact } = useSettingsLayout();
   const {
     confirmDialog,
     alertDialog,
@@ -684,14 +544,8 @@ export default function SettingsPage({
     setCloudTranscriptionProvider,
     setCloudTranscriptionModel,
     setCloudTranscriptionBaseUrl,
-    setUseCleanupModel,
     setDictationKey,
     meetingKey,
-    setMeetingKey,
-    meetingHotkeyLayoutMode,
-    setMeetingHotkeyLayoutMode,
-    autoLearnCorrections,
-    setAutoLearnCorrections,
     updateTranscriptionSettings,
     updateCleanupSettings,
     cloudTranscriptionMode,
@@ -707,9 +561,7 @@ export default function SettingsPage({
     notifyMeetingDetection,
     setNotifyMeetingDetection,
     notifyCalendarReminders,
-    setNotifyCalendarReminders,
     notifyUpdates,
-    setNotifyUpdates,
     audioCuesEnabled,
     setAudioCuesEnabled,
     pauseMediaOnDictation,
@@ -726,24 +578,12 @@ export default function SettingsPage({
     setStartMinimized,
     panelStartPosition,
     setPanelStartPosition,
-    telemetryEnabled,
-    setTelemetryEnabled,
-    audioRetentionDays,
-    setAudioRetentionDays,
-    dataRetentionEnabled,
-    setDataRetentionEnabled,
-    saveDiscardedTranscriptions,
-    setSaveDiscardedTranscriptions,
-    customDictionary,
-    setCustomDictionary,
     noteFilesEnabled,
     setNoteFilesEnabled,
     noteFilesPath,
     setNoteFilesPath,
     dictationSileroEnabled,
     setDictationSileroEnabled,
-    noteRecordingSileroEnabled,
-    setNoteRecordingSileroEnabled,
     meetingSileroEnabled,
     setMeetingSileroEnabled,
     whisperVadThreshold,
@@ -760,14 +600,13 @@ export default function SettingsPage({
     setWhisperVadSamplesOverlap,
   } = useSettings();
 
+  const uiMode = useSettingsStore((s) => s.uiMode);
+  const setUiMode = useSettingsStore((s) => s.setUiMode);
   const chatAgentKey = useSettingsStore((s) => s.chatAgentKey);
-  const setChatAgentKey = useSettingsStore((s) => s.setChatAgentKey);
   const voiceAgentKey = useSettingsStore((s) => s.voiceAgentKey);
   const searchKey = useSettingsStore((s) => s.searchKey);
   const setSearchKey = useSettingsStore((s) => s.setSearchKey);
-  const setVoiceAgentKey = useSettingsStore((s) => s.setVoiceAgentKey);
   const translationKey = useSettingsStore((s) => s.translationKey);
-  const setTranslationKey = useSettingsStore((s) => s.setTranslationKey);
 
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -781,21 +620,11 @@ export default function SettingsPage({
 
   const {
     status: updateStatus,
-    info: updateInfo,
-    downloadProgress: updateDownloadProgress,
-    isChecking: checkingForUpdates,
-    isDownloading: downloadingUpdate,
     isInstalling: installInitiated,
-    checkForUpdates,
-    downloadUpdate,
-    installUpdate: installUpdateAction,
     getAppVersion,
     error: updateError,
     clearError: clearUpdateError,
   } = useUpdater();
-
-  const isUpdateAvailable =
-    !updateStatus.isDevelopment && (updateStatus.updateAvailable || updateStatus.updateDownloaded);
 
   const { checkWhisperInstallation } = useWhisper();
   const permissionsHook = usePermissions(showAlertDialog);
@@ -807,7 +636,7 @@ export default function SettingsPage({
   }>({ fileCount: 0, totalBytes: 0 });
 
   useEffect(() => {
-    if (activeSection !== "privacyData") return;
+    if (activeSection !== "privacy") return;
     window.electronAPI
       ?.getAudioStorageUsage?.()
       .then((usage: { fileCount: number; totalBytes: number }) => {
@@ -854,7 +683,7 @@ export default function SettingsPage({
   }, []);
 
   useEffect(() => {
-    if (activeSection !== "privacyData") return;
+    if (activeSection !== "dictation") return;
     refreshYdotoolStatus();
   }, [activeSection, refreshYdotoolStatus]);
 
@@ -870,22 +699,6 @@ export default function SettingsPage({
     showErrorToast: true,
     showAlert: showAlertDialog,
   });
-
-  const meetingRegisterFn = useCallback(async (hotkey: string) => {
-    const result = await window.electronAPI?.registerMeetingHotkey?.(hotkey);
-    return result ?? { success: false, message: "Electron API unavailable" };
-  }, []);
-
-  const { registerHotkey: registerMeetingHotkey, isRegistering: isMeetingHotkeyRegistering } =
-    useHotkeyRegistration({
-      onSuccess: (registeredHotkey) => {
-        setMeetingKey(registeredHotkey);
-      },
-      showSuccessToast: false,
-      showErrorToast: true,
-      showAlert: showAlertDialog,
-      registerFn: meetingRegisterFn,
-    });
 
   // Agent hotkey setters resolve to false when main-process registration fails;
   // surface it and return the result so HotkeyListInput rolls the row back.
@@ -909,11 +722,15 @@ export default function SettingsPage({
     [showAlertDialog, t]
   );
 
+  // The conversation shortcut is checked too: it is registered in the main
+  // process like the others, and a clash used to go unnoticed here.
+  const conversationKey = useSettingsStore((state) => state.conversationKey);
   const validateDictationHotkey = useCallback(
     (hotkey: string) =>
       validateHotkeyForSlot(
         hotkey,
         {
+          "oats.settings.conversationHotkey": conversationKey,
           "settingsPage.general.meetingHotkey.title": meetingKey,
           "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
@@ -922,71 +739,7 @@ export default function SettingsPage({
         },
         t
       ),
-    [meetingKey, chatAgentKey, voiceAgentKey, translationKey, searchKey, t]
-  );
-
-  const validateMeetingHotkey = useCallback(
-    (hotkey: string) =>
-      validateHotkeyForSlot(
-        hotkey,
-        {
-          "settingsPage.general.hotkey.title": dictationKey,
-          "agentMode.settings.hotkey": chatAgentKey,
-          "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
-          "settingsPage.general.translationHotkey.title": translationKey,
-          "settingsPage.general.searchHotkey.title": searchKey,
-        },
-        t
-      ),
-    [dictationKey, chatAgentKey, voiceAgentKey, translationKey, searchKey, t]
-  );
-
-  const validateChatAgentHotkey = useCallback(
-    (hotkey: string) =>
-      validateHotkeyForSlot(
-        hotkey,
-        {
-          "settingsPage.general.hotkey.title": dictationKey,
-          "settingsPage.general.meetingHotkey.title": meetingKey,
-          "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
-          "settingsPage.general.translationHotkey.title": translationKey,
-          "settingsPage.general.searchHotkey.title": searchKey,
-        },
-        t
-      ),
-    [dictationKey, meetingKey, voiceAgentKey, translationKey, searchKey, t]
-  );
-
-  const validateVoiceAgentHotkey = useCallback(
-    (hotkey: string) =>
-      validateHotkeyForSlot(
-        hotkey,
-        {
-          "settingsPage.general.hotkey.title": dictationKey,
-          "settingsPage.general.meetingHotkey.title": meetingKey,
-          "agentMode.settings.hotkey": chatAgentKey,
-          "settingsPage.general.translationHotkey.title": translationKey,
-          "settingsPage.general.searchHotkey.title": searchKey,
-        },
-        t
-      ),
-    [dictationKey, meetingKey, chatAgentKey, translationKey, searchKey, t]
-  );
-
-  const validateTranslationHotkey = useCallback(
-    (hotkey: string) =>
-      validateHotkeyForSlot(
-        hotkey,
-        {
-          "settingsPage.general.hotkey.title": dictationKey,
-          "settingsPage.general.meetingHotkey.title": meetingKey,
-          "agentMode.settings.hotkey": chatAgentKey,
-          "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
-          "settingsPage.general.searchHotkey.title": searchKey,
-        },
-        t
-      ),
-    [dictationKey, meetingKey, chatAgentKey, voiceAgentKey, searchKey, t]
+    [conversationKey, meetingKey, chatAgentKey, voiceAgentKey, translationKey, searchKey, t]
   );
 
   const validateSearchHotkey = useCallback(
@@ -994,6 +747,7 @@ export default function SettingsPage({
       validateHotkeyForSlot(
         hotkey,
         {
+          "oats.settings.conversationHotkey": conversationKey,
           "settingsPage.general.hotkey.title": dictationKey,
           "settingsPage.general.meetingHotkey.title": meetingKey,
           "agentMode.settings.hotkey": chatAgentKey,
@@ -1002,7 +756,7 @@ export default function SettingsPage({
         },
         t
       ),
-    [dictationKey, meetingKey, chatAgentKey, voiceAgentKey, translationKey, t]
+    [conversationKey, dictationKey, meetingKey, chatAgentKey, voiceAgentKey, translationKey, t]
   );
 
   const { isUsingNativeShortcut, isUsingHyprland, hyprlandConfigStatus, supportsPushToTalk } =
@@ -1244,126 +998,93 @@ export default function SettingsPage({
     });
   }, [isRemovingModels, cachePathHint, showConfirmDialog, showAlertDialog, t]);
 
-  const renderWhisperVadSettings = () => (
-    <div>
-      <SectionHeader
-        title={t("settingsPage.transcription.vad.title")}
-        description={t("settingsPage.transcription.vad.description")}
-      />
-      <SettingsPanel>
-        <SettingsPanelRow>
-          <SettingsRow
-            label={t("settingsPage.transcription.vad.toggles.dictation.title")}
-            description={t("settingsPage.transcription.vad.toggles.dictation.description")}
-          >
-            <Toggle checked={dictationSileroEnabled} onChange={setDictationSileroEnabled} />
-          </SettingsRow>
-        </SettingsPanelRow>
-        <SettingsPanelRow>
-          <SettingsRow
-            label={t("settingsPage.transcription.vad.toggles.noteRecording.title")}
-            description={t("settingsPage.transcription.vad.toggles.noteRecording.description")}
-          >
-            <Toggle checked={noteRecordingSileroEnabled} onChange={setNoteRecordingSileroEnabled} />
-          </SettingsRow>
-        </SettingsPanelRow>
-        <SettingsPanelRow>
-          <SettingsRow
-            label={t("settingsPage.transcription.vad.toggles.meeting.title")}
-            description={t("settingsPage.transcription.vad.toggles.meeting.description")}
-          >
-            <Toggle checked={meetingSileroEnabled} onChange={setMeetingSileroEnabled} />
-          </SettingsRow>
-        </SettingsPanelRow>
-        <SettingsPanelRow>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            <div className="space-y-1.5">
-              <VADLabelWithInfo
-                label={t("settingsPage.transcription.vad.fields.threshold.label")}
-                description={t("settingsPage.transcription.vad.fields.threshold.info")}
-              />
-              <Input
-                type="number"
-                step="0.01"
-                min="0.1"
-                max="0.95"
-                value={whisperVadThreshold}
-                onChange={(e) => setWhisperVadThreshold(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <VADLabelWithInfo
-                label={t("settingsPage.transcription.vad.fields.minSpeechDurationMs.label")}
-                description={t("settingsPage.transcription.vad.fields.minSpeechDurationMs.info")}
-              />
-              <Input
-                type="number"
-                step="10"
-                min="50"
-                max="2000"
-                value={whisperVadMinSpeechDurationMs}
-                onChange={(e) => setWhisperVadMinSpeechDurationMs(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <VADLabelWithInfo
-                label={t("settingsPage.transcription.vad.fields.minSilenceDurationMs.label")}
-                description={t("settingsPage.transcription.vad.fields.minSilenceDurationMs.info")}
-              />
-              <Input
-                type="number"
-                step="10"
-                min="50"
-                max="2000"
-                value={whisperVadMinSilenceDurationMs}
-                onChange={(e) => setWhisperVadMinSilenceDurationMs(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <VADLabelWithInfo
-                label={t("settingsPage.transcription.vad.fields.maxSpeechDurationS.label")}
-                description={t("settingsPage.transcription.vad.fields.maxSpeechDurationS.info")}
-              />
-              <Input
-                type="number"
-                step="1"
-                min="5"
-                max="120"
-                value={whisperVadMaxSpeechDurationS}
-                onChange={(e) => setWhisperVadMaxSpeechDurationS(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <VADLabelWithInfo
-                label={t("settingsPage.transcription.vad.fields.speechPadMs.label")}
-                description={t("settingsPage.transcription.vad.fields.speechPadMs.info")}
-              />
-              <Input
-                type="number"
-                step="10"
-                min="0"
-                max="1000"
-                value={whisperVadSpeechPadMs}
-                onChange={(e) => setWhisperVadSpeechPadMs(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <VADLabelWithInfo
-                label={t("settingsPage.transcription.vad.fields.samplesOverlap.label")}
-                description={t("settingsPage.transcription.vad.fields.samplesOverlap.info")}
-              />
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                max="0.95"
-                value={whisperVadSamplesOverlap}
-                onChange={(e) => setWhisperVadSamplesOverlap(Number(e.target.value))}
-              />
-            </div>
-          </div>
-        </SettingsPanelRow>
-      </SettingsPanel>
+  const [vadTuning, setVadTuning] = useState(false);
+  const renderWhisperVadFields = () => (
+    <div className="mt-3 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="space-y-1.5">
+        <VADLabelWithInfo
+          label={t("settingsPage.transcription.vad.fields.threshold.label")}
+          description={t("settingsPage.transcription.vad.fields.threshold.info")}
+        />
+        <Input
+          type="number"
+          step="0.01"
+          min="0.1"
+          max="0.95"
+          value={whisperVadThreshold}
+          onChange={(e) => setWhisperVadThreshold(Number(e.target.value))}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <VADLabelWithInfo
+          label={t("settingsPage.transcription.vad.fields.minSpeechDurationMs.label")}
+          description={t("settingsPage.transcription.vad.fields.minSpeechDurationMs.info")}
+        />
+        <Input
+          type="number"
+          step="10"
+          min="50"
+          max="2000"
+          value={whisperVadMinSpeechDurationMs}
+          onChange={(e) => setWhisperVadMinSpeechDurationMs(Number(e.target.value))}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <VADLabelWithInfo
+          label={t("settingsPage.transcription.vad.fields.minSilenceDurationMs.label")}
+          description={t("settingsPage.transcription.vad.fields.minSilenceDurationMs.info")}
+        />
+        <Input
+          type="number"
+          step="10"
+          min="50"
+          max="2000"
+          value={whisperVadMinSilenceDurationMs}
+          onChange={(e) => setWhisperVadMinSilenceDurationMs(Number(e.target.value))}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <VADLabelWithInfo
+          label={t("settingsPage.transcription.vad.fields.maxSpeechDurationS.label")}
+          description={t("settingsPage.transcription.vad.fields.maxSpeechDurationS.info")}
+        />
+        <Input
+          type="number"
+          step="1"
+          min="5"
+          max="120"
+          value={whisperVadMaxSpeechDurationS}
+          onChange={(e) => setWhisperVadMaxSpeechDurationS(Number(e.target.value))}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <VADLabelWithInfo
+          label={t("settingsPage.transcription.vad.fields.speechPadMs.label")}
+          description={t("settingsPage.transcription.vad.fields.speechPadMs.info")}
+        />
+        <Input
+          type="number"
+          step="10"
+          min="0"
+          max="1000"
+          value={whisperVadSpeechPadMs}
+          onChange={(e) => setWhisperVadSpeechPadMs(Number(e.target.value))}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <VADLabelWithInfo
+          label={t("settingsPage.transcription.vad.fields.samplesOverlap.label")}
+          description={t("settingsPage.transcription.vad.fields.samplesOverlap.info")}
+        />
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          max="0.95"
+          value={whisperVadSamplesOverlap}
+          onChange={(e) => setWhisperVadSamplesOverlap(Number(e.target.value))}
+        />
+      </div>
     </div>
   );
 
@@ -1371,61 +1092,115 @@ export default function SettingsPage({
     switch (activeSection) {
       case "general":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Appearance */}
             <div>
-              <SectionHeader
-                title={t("settingsPage.general.appearance.title")}
-                description={t("settingsPage.general.appearance.description")}
-              />
+              <SectionHeader title={t("settingsPage.general.appearance.title")} />
               <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settingsPage.general.appearance.theme")}
                     description={t("settingsPage.general.appearance.themeDescription")}
                   >
-                    <div className="inline-flex items-center gap-px p-0.5 bg-muted/60 dark:bg-surface-2 rounded-md">
-                      {(
-                        [
-                          {
-                            value: "light",
-                            icon: Sun,
-                            label: t("settingsPage.general.appearance.light"),
-                          },
-                          {
-                            value: "dark",
-                            icon: Moon,
-                            label: t("settingsPage.general.appearance.dark"),
-                          },
-                          {
-                            value: "auto",
-                            icon: Monitor,
-                            label: t("settingsPage.general.appearance.auto"),
-                          },
-                        ] as const
-                      ).map((option) => {
-                        const Icon = option.icon;
-                        const isSelected = theme === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            onClick={() => setTheme(option.value)}
-                            className={`
-                              flex items-center gap-1 px-2.5 py-1 rounded-[5px] text-xs font-medium
-                              transition-colors duration-100
-                              ${
-                                isSelected
-                                  ? "bg-background dark:bg-surface-raised text-foreground shadow-sm"
-                                  : "text-muted-foreground hover:text-foreground"
-                              }
-                            `}
-                          >
-                            <Icon className={`w-3 h-3 ${isSelected ? "text-primary" : ""}`} />
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <SegmentedControl
+                      aria-label={t("settingsPage.general.appearance.theme")}
+                      value={theme}
+                      onValueChange={(value) => setTheme(value)}
+                      options={[
+                        { value: "auto", label: t("oats.settings.themeSystem") },
+                        { value: "light", label: t("settingsPage.general.appearance.light") },
+                        { value: "dark", label: t("settingsPage.general.appearance.dark") },
+                      ]}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settings.language.uiLabel")}
+                    description={t("settings.language.uiDescription")}
+                  >
+                    <NativeSelect
+                      aria-label={t("settings.language.uiLabel")}
+                      value={uiLanguage}
+                      onChange={(event) => setUiLanguage(event.target.value)}
+                      className="w-48"
+                    >
+                      {UI_LANGUAGE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Startup */}
+            <div>
+              <SectionHeader title={t("settingsPage.general.startup.title")} />
+              <SettingsPanel>
+                {platform !== "linux" && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("settingsPage.general.startup.launchAtLogin")}
+                      description={t("settingsPage.general.startup.launchAtLoginDescription")}
+                    >
+                      <Toggle
+                        checked={autoStartEnabled}
+                        onChange={(checked: boolean) => handleAutoStartChange(checked)}
+                        disabled={autoStartLoading}
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                )}
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.startup.startMinimized")}
+                    description={t("settingsPage.general.startup.startMinimizedDescription")}
+                  >
+                    <Toggle checked={startMinimized} onChange={setStartMinimized} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Floating Icon */}
+            <div>
+              <SectionHeader title={t("settingsPage.general.floatingIcon.title")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.floatingIcon.autoHide")}
+                    description={t("settingsPage.general.floatingIcon.autoHideDescription")}
+                  >
+                    <Toggle checked={floatingIconAutoHide} onChange={setFloatingIconAutoHide} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.floatingIcon.startPosition")}
+                    description={t("settingsPage.general.floatingIcon.startPositionDescription")}
+                  >
+                    <NativeSelect
+                      value={panelStartPosition}
+                      onChange={(e) =>
+                        setPanelStartPosition(
+                          e.target.value as "bottom-right" | "center" | "bottom-left"
+                        )
+                      }
+                      className="w-48"
+                    >
+                      <option value="bottom-right">
+                        {t("settingsPage.general.floatingIcon.bottomRight")}
+                      </option>
+                      <option value="center">
+                        {t("settingsPage.general.floatingIcon.center")}
+                      </option>
+                      <option value="bottom-left">
+                        {t("settingsPage.general.floatingIcon.bottomLeft")}
+                      </option>
+                    </NativeSelect>
                   </SettingsRow>
                 </SettingsPanelRow>
               </SettingsPanel>
@@ -1486,21 +1261,199 @@ export default function SettingsPage({
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+          </div>
+        );
+
+      case "shortcuts":
+        return (
+          <div className="space-y-8">
+            {isUsingHyprland && hyprlandConfigStatus && !hyprlandConfigStatus.canWrite && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>
+                  {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningTitle")}
+                </AlertTitle>
+                <AlertDescription>
+                  {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningDescription", {
+                    path: hyprlandConfigStatus.path,
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Every shortcut that works from any app, in one card. */}
+            <SettingsSection
+              title={t("oats.settings.global.title")}
+              description={t("oats.settings.global.description")}
+            >
+              <ConversationShortcutRow />
+              <div className="flex flex-col gap-3 px-5 py-4">
+                <div className="flex items-start justify-between gap-6">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t("oats.settings.global.dictation")}
+                    </p>
+                    <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                      {isUsingHyprland
+                        ? t("settingsPage.general.hotkey.hyprlandUnbindDescription")
+                        : t("oats.settings.global.dictationHint")}
+                    </p>
+                  </div>
+                  <HotkeyListInput
+                    value={dictationKey}
+                    onChange={(list) => registerHotkey(list)}
+                    validate={validateDictationHotkey}
+                    disabled={isHotkeyRegistering}
+                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                    required
+                    footerEnd={
+                      effectiveDefaultHotkey &&
+                      dictationKey &&
+                      dictationKey !== effectiveDefaultHotkey ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => registerHotkey(effectiveDefaultHotkey)}
+                          disabled={isHotkeyRegistering}
+                          className="text-muted-foreground"
+                        >
+                          {t("settingsPage.general.hotkey.resetToDefault", {
+                            hotkey: formatHotkeyLabel(effectiveDefaultHotkey),
+                          })}
+                        </Button>
+                      ) : null
+                    }
+                  />
+                </div>
+              </div>
+              {(!isUsingNativeShortcut || getCachedPlatform() === "linux") && (
+                <div className="px-5 py-4">
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {t("oats.settings.global.activation")}
+                      </p>
+                      <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                        {t("oats.settings.global.activationHint")}
+                      </p>
+                    </div>
+                    <ActivationModeSelector value={activationMode} onChange={setActivationMode} />
+                  </div>
+                  {getCachedPlatform() === "linux" && activationMode === "push" && (
+                    <LinuxPttSetupInfo isAvailable={linuxPttAvailable} />
+                  )}
+                </div>
+              )}
+              <div className="flex items-start justify-between gap-6 px-5 py-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {t("oats.settings.global.search")}
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                    {t("oats.settings.global.searchHint")}
+                  </p>
+                </div>
+                <HotkeyListInput
+                  value={searchKey}
+                  onChange={(list) => commitAgentHotkey(setSearchKey, list)}
+                  onClear={() => commitAgentHotkey(setSearchKey, "")}
+                  validate={validateSearchHotkey}
+                  disabled={isAgentHotkeyCommitting}
+                  maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                />
+              </div>
+            </SettingsSection>
+
+            <InAppShortcuts />
+          </div>
+        );
+
+      case "recording":
+        return (
+          <div className="space-y-8">
+            {/* Microphone */}
+            <div>
+              <SectionHeader
+                title={t("settingsPage.general.microphone.title")}
+                description={t("oats.settings.microphoneDescription")}
+              />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <MicrophoneSettings
+                    preferBuiltInMic={preferBuiltInMic}
+                    selectedMicDeviceId={selectedMicDeviceId}
+                    selectedMicDeviceLabel={selectedMicDeviceLabel}
+                    onPreferBuiltInChange={setPreferBuiltInMic}
+                    onDeviceSelect={setSelectedMicDevice}
+                  />
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* What language conversations are in */}
+            <div>
+              <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
-                    label={t("settingsPage.general.notifications.updates")}
-                    description={t("settingsPage.general.notifications.updatesDescription")}
+                    label={t("settings.language.transcriptionLabel")}
+                    description={t("settings.language.transcriptionDescription")}
                   >
-                    <Toggle
-                      checked={notifyUpdates}
-                      onChange={setNotifyUpdates}
-                      disabled={!notificationsEnabled}
+                    <LanguageSelector
+                      value={preferredLanguage}
+                      onChange={(value) =>
+                        updateTranscriptionSettings({ preferredLanguage: value })
+                      }
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
               </SettingsPanel>
             </div>
 
+            <QuestionCardSettings />
+
+            {/* Voice detection for conversations, with its tuning folded away. */}
+            <div>
+              <SectionHeader
+                title={t("settingsPage.transcription.vad.title")}
+                description={t("settingsPage.transcription.vad.description")}
+              />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.transcription.vad.toggles.meeting.title")}
+                    description={t("settingsPage.transcription.vad.toggles.meeting.description")}
+                  >
+                    <Toggle checked={meetingSileroEnabled} onChange={setMeetingSileroEnabled} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-ml-2.5 text-muted-foreground"
+                    aria-expanded={vadTuning}
+                    onClick={() => setVadTuning((open) => !open)}
+                  >
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={
+                        vadTuning ? "rotate-180 transition-transform" : "transition-transform"
+                      }
+                    />
+                    {t("oats.settings.tuning")}
+                  </Button>
+                  {vadTuning && renderWhisperVadFields()}
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+          </div>
+        );
+
+      case "dictation":
+        return (
+          <div className="space-y-8">
             {/* Clipboard */}
             <div>
               <SectionHeader title={t("settingsPage.general.clipboard.title")} />
@@ -1527,210 +1480,40 @@ export default function SettingsPage({
               </SettingsPanel>
             </div>
 
-            {/* Save Notes as Files */}
-            <div>
-              <SectionHeader title={t("settings.noteFiles.title")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settings.noteFiles.title")}
-                    description={t("settings.noteFiles.description")}
-                  >
-                    <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                {noteFilesEnabled && (
-                  <>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settings.noteFiles.path")}
-                        description={noteFilesPath || noteFilesDefaultPath || "..."}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={handleNoteFilesChangePath}
-                        >
-                          {t("settings.noteFiles.changePath")}
-                        </Button>
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settings.noteFiles.rebuild")}
-                        description={t("settings.noteFiles.rebuildDescription")}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          disabled={noteFilesRebuilding}
-                          onClick={handleNoteFilesRebuild}
-                        >
-                          {noteFilesRebuilding ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            t("settings.noteFiles.rebuild")
-                          )}
-                        </Button>
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                  </>
-                )}
-              </SettingsPanel>
-            </div>
+            <DictionaryEditor />
 
-            {/* Floating Icon */}
+            {/* Cleanup: a model tidies a dictation before it is pasted. */}
             <div>
               <SectionHeader
-                title={t("settingsPage.general.floatingIcon.title")}
-                description={t("settingsPage.general.floatingIcon.description")}
+                title={t("oats.settings.cleanup")}
+                description={t("oats.settings.cleanupDescription")}
               />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.floatingIcon.autoHide")}
-                    description={t("settingsPage.general.floatingIcon.autoHideDescription")}
-                  >
-                    <Toggle checked={floatingIconAutoHide} onChange={setFloatingIconAutoHide} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.floatingIcon.startPosition")}
-                    description={t("settingsPage.general.floatingIcon.startPositionDescription")}
-                  >
-                    <select
-                      value={panelStartPosition}
-                      onChange={(e) =>
-                        setPanelStartPosition(
-                          e.target.value as "bottom-right" | "center" | "bottom-left"
-                        )
-                      }
-                      className="h-7 rounded border border-border/70 bg-surface-1/80 px-2.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:border-border-hover hover:bg-surface-2/70 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:ring-offset-1 transition-colors duration-200"
-                    >
-                      <option value="bottom-right">
-                        {t("settingsPage.general.floatingIcon.bottomRight")}
-                      </option>
-                      <option value="center">
-                        {t("settingsPage.general.floatingIcon.center")}
-                      </option>
-                      <option value="bottom-left">
-                        {t("settingsPage.general.floatingIcon.bottomLeft")}
-                      </option>
-                    </select>
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
+              <AiModelsSection
+                useCleanupModel={useCleanupModel}
+                setUseCleanupModel={(value) => {
+                  updateCleanupSettings({ useCleanupModel: value });
+                }}
+                toast={toast}
+              />
             </div>
+            {useCleanupModel && (
+              <div>
+                <SectionHeader
+                  title={t("settingsPage.prompts.title")}
+                  description={t("settingsPage.prompts.description")}
+                />
+                <PromptStudio />
+              </div>
+            )}
 
-            {/* Language */}
             <div>
-              <SectionHeader
-                title={t("settings.language.sectionTitle")}
-                description={t("settings.language.sectionDescription")}
-              />
               <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
-                    label={t("settings.language.uiLabel")}
-                    description={t("settings.language.uiDescription")}
+                    label={t("settingsPage.transcription.vad.toggles.dictation.title")}
+                    description={t("settingsPage.transcription.vad.toggles.dictation.description")}
                   >
-                    <LanguageSelector
-                      value={uiLanguage}
-                      onChange={setUiLanguage}
-                      options={UI_LANGUAGE_OPTIONS}
-                      className="min-w-32"
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settings.language.transcriptionLabel")}
-                    description={t("settings.language.transcriptionDescription")}
-                  >
-                    <LanguageSelector
-                      value={preferredLanguage}
-                      onChange={(value) =>
-                        updateTranscriptionSettings({ preferredLanguage: value })
-                      }
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Startup */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.startup.title")}
-                description={t("settingsPage.general.startup.description")}
-              />
-              <SettingsPanel>
-                {platform !== "linux" && (
-                  <SettingsPanelRow>
-                    <SettingsRow
-                      label={t("settingsPage.general.startup.launchAtLogin")}
-                      description={t("settingsPage.general.startup.launchAtLoginDescription")}
-                    >
-                      <Toggle
-                        checked={autoStartEnabled}
-                        onChange={(checked: boolean) => handleAutoStartChange(checked)}
-                        disabled={autoStartLoading}
-                      />
-                    </SettingsRow>
-                  </SettingsPanelRow>
-                )}
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.startup.startMinimized")}
-                    description={t("settingsPage.general.startup.startMinimizedDescription")}
-                  >
-                    <Toggle checked={startMinimized} onChange={setStartMinimized} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Microphone */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.microphone.title")}
-                description={t("settingsPage.general.microphone.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <MicrophoneSettings
-                    preferBuiltInMic={preferBuiltInMic}
-                    selectedMicDeviceId={selectedMicDeviceId}
-                    selectedMicDeviceLabel={selectedMicDeviceLabel}
-                    onPreferBuiltInChange={setPreferBuiltInMic}
-                    onDeviceSelect={setSelectedMicDevice}
-                  />
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Dictionary */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.dictionary.autoLearnTitle", {
-                  defaultValue: "Auto-learn from corrections",
-                })}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.dictionary.autoLearnTitle", {
-                      defaultValue: "Auto-learn from corrections",
-                    })}
-                    description={t("settingsPage.dictionary.autoLearnDescription", {
-                      defaultValue:
-                        "When you correct a transcription in the target app, the corrected word is automatically added to your dictionary.",
-                    })}
-                  >
-                    <Toggle checked={autoLearnCorrections} onChange={setAutoLearnCorrections} />
+                    <Toggle checked={dictationSileroEnabled} onChange={setDictationSileroEnabled} />
                   </SettingsRow>
                 </SettingsPanelRow>
               </SettingsPanel>
@@ -2213,323 +1996,138 @@ EOF`,
           </div>
         );
 
-      case "hotkeys":
+      case "models":
         return (
-          <div className="space-y-6">
-            {isUsingHyprland && hyprlandConfigStatus && !hyprlandConfigStatus.canWrite && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>
-                  {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningTitle")}
-                </AlertTitle>
-                <AlertDescription>
-                  {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningDescription", {
-                    path: hyprlandConfigStatus.path,
-                  })}
-                </AlertDescription>
-              </Alert>
-            )}
-            {/* Dictation Hotkey */}
+          <div className="space-y-8">
+            <ProcessingCard />
+
             <div>
               <SectionHeader
-                title={t("settingsPage.general.hotkey.title")}
-                description={t("settingsPage.general.hotkey.description")}
-                note={isUsingHyprland && t("settingsPage.general.hotkey.hyprlandUnbindDescription")}
+                title={t("oats.settings.models.conversations")}
+                description={t("oats.settings.models.conversationsDescription")}
               />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={dictationKey}
-                    onChange={(list) => registerHotkey(list)}
-                    validate={validateDictationHotkey}
-                    disabled={isHotkeyRegistering}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                    required
-                    footerEnd={
-                      effectiveDefaultHotkey &&
-                      dictationKey &&
-                      dictationKey !== effectiveDefaultHotkey ? (
-                        <button
-                          onClick={() => registerHotkey(effectiveDefaultHotkey)}
-                          disabled={isHotkeyRegistering}
-                          className="text-xs text-muted-foreground/70 hover:text-foreground transition-colors disabled:opacity-50"
-                        >
-                          {t("settingsPage.general.hotkey.resetToDefault", {
-                            hotkey: formatHotkeyLabel(effectiveDefaultHotkey),
-                          })}
-                        </button>
-                      ) : null
-                    }
-                  />
-                </SettingsPanelRow>
-
-                {(!isUsingNativeShortcut || getCachedPlatform() === "linux") && (
-                  <SettingsPanelRow>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs text-muted-foreground/80">
-                        {t("settingsPage.general.hotkey.activationMode")}
-                      </span>
-                      <ActivationModeSelector value={activationMode} onChange={setActivationMode} />
-                    </div>
-                    {getCachedPlatform() === "linux" && activationMode === "push" && (
-                      <LinuxPttSetupInfo isAvailable={linuxPttAvailable} />
-                    )}
-                  </SettingsPanelRow>
-                )}
-              </SettingsPanel>
+              <MeetingTranscriptionPanel />
             </div>
 
-            {/* Voice Agent Hotkey */}
             <div>
               <SectionHeader
-                title={t("settingsPage.general.voiceAgentHotkey.title")}
-                description={t("settingsPage.general.voiceAgentHotkey.description")}
+                title={t("oats.settings.models.summaries")}
+                description={t("oats.settings.models.summariesDescription")}
               />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={voiceAgentKey}
-                    onChange={(list) => commitAgentHotkey(setVoiceAgentKey, list)}
-                    onClear={() => commitAgentHotkey(setVoiceAgentKey, "")}
-                    validate={validateVoiceAgentHotkey}
-                    disabled={isAgentHotkeyCommitting}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-              </SettingsPanel>
+              <NoteFormattingSettings />
             </div>
 
-            {/* Translation Hotkey */}
             <div>
               <SectionHeader
-                title={t("settingsPage.general.translationHotkey.title")}
-                description={t("settingsPage.general.translationHotkey.description")}
+                title={t("oats.settings.models.dictation")}
+                description={t("oats.settings.models.dictationDescription")}
               />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={translationKey}
-                    onChange={(list) => commitAgentHotkey(setTranslationKey, list)}
-                    onClear={() => commitAgentHotkey(setTranslationKey, "")}
-                    validate={validateTranslationHotkey}
-                    disabled={isAgentHotkeyCommitting}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-              </SettingsPanel>
+              <TranscriptionSection
+                cloudTranscriptionMode={cloudTranscriptionMode}
+                setCloudTranscriptionMode={setCloudTranscriptionMode}
+                useLocalWhisper={useLocalWhisper}
+                setUseLocalWhisper={setUseLocalWhisper}
+                updateTranscriptionSettings={updateTranscriptionSettings}
+                cloudTranscriptionProvider={cloudTranscriptionProvider}
+                setCloudTranscriptionProvider={setCloudTranscriptionProvider}
+                cloudTranscriptionModel={cloudTranscriptionModel}
+                setCloudTranscriptionModel={setCloudTranscriptionModel}
+                localTranscriptionProvider={localTranscriptionProvider}
+                setLocalTranscriptionProvider={setLocalTranscriptionProvider}
+                whisperModel={whisperModel}
+                setWhisperModel={setWhisperModel}
+                parakeetModel={parakeetModel}
+                setParakeetModel={setParakeetModel}
+                cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
+                setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
+                transcriptionMode={transcriptionMode}
+                setTranscriptionMode={setTranscriptionMode}
+                remoteTranscriptionUrl={remoteTranscriptionUrl}
+                setRemoteTranscriptionUrl={setRemoteTranscriptionUrl}
+                remoteTranscriptionModel={remoteTranscriptionModel}
+                setRemoteTranscriptionModel={setRemoteTranscriptionModel}
+                showTranscriptionPreview={showTranscriptionPreview}
+                setShowTranscriptionPreview={setShowTranscriptionPreview}
+                toast={toast}
+              />
             </div>
+          </div>
+        );
 
-            {/* Search Hotkey — recall from anywhere */}
+      case "connections":
+        return (
+          <div className="space-y-8">
+            <SettingsSection
+              title={t("oats.settings.connections.vaultTitle")}
+              description={t("oats.settings.connections.vaultDescription")}
+            >
+              <VaultRow />
+            </SettingsSection>
+
+            {/* Save Notes as Files */}
             <div>
               <SectionHeader
-                title={t("settingsPage.general.searchHotkey.title")}
-                description={t("settingsPage.general.searchHotkey.description")}
+                title={t("oats.settings.connections.filesTitle")}
+                description={t("oats.settings.connections.filesDescription")}
               />
               <SettingsPanel>
                 <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={searchKey}
-                    onChange={(list) => commitAgentHotkey(setSearchKey, list)}
-                    onClear={() => commitAgentHotkey(setSearchKey, "")}
-                    validate={validateSearchHotkey}
-                    disabled={isAgentHotkeyCommitting}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Meeting Mode Hotkey */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.meetingHotkey.title")}
-                description={t("settingsPage.general.meetingHotkey.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={meetingKey}
-                    onChange={(list) => registerMeetingHotkey(list)}
-                    onClear={async () => {
-                      await window.electronAPI?.registerMeetingHotkey?.("");
-                      setMeetingKey("");
-                    }}
-                    validate={validateMeetingHotkey}
-                    disabled={isMeetingHotkeyRegistering}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
-                <SettingsPanelRow className="flex items-center justify-between gap-3 border-t border-border/40 dark:border-white/5">
-                  <span className="text-xs text-muted-foreground/80">
-                    {t("settingsPage.general.meetingHotkey.layoutLabel")}
-                  </span>
-                  <Select
-                    value={meetingHotkeyLayoutMode}
-                    onValueChange={(value) =>
-                      setMeetingHotkeyLayoutMode(value as "side-panel" | "full-width")
-                    }
+                  <SettingsRow
+                    label={t("settings.noteFiles.title")}
+                    description={t("settings.noteFiles.description")}
                   >
-                    <SelectTrigger className="h-7 w-36 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem
-                        value="full-width"
-                        className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
-                      >
-                        {t("settingsPage.general.meetingHotkey.layoutFullWidth")}
-                      </SelectItem>
-                      <SelectItem
-                        value="side-panel"
-                        className="text-xs py-1.5 pl-2.5 pr-7 rounded-md"
-                      >
-                        {t("settingsPage.general.meetingHotkey.layoutSidePanel")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
+                  </SettingsRow>
                 </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Chat Agent Hotkey */}
-            <div>
-              <SectionHeader
-                title={t("agentMode.settings.hotkey")}
-                description={t("agentMode.settings.hotkeyDescription")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <HotkeyListInput
-                    value={chatAgentKey}
-                    onChange={(list) => commitAgentHotkey(setChatAgentKey, list)}
-                    onClear={() => commitAgentHotkey(setChatAgentKey, "")}
-                    validate={validateChatAgentHotkey}
-                    disabled={isAgentHotkeyCommitting}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                  />
-                </SettingsPanelRow>
+                {noteFilesEnabled && (
+                  <>
+                    <SettingsPanelRow>
+                      <SettingsRow
+                        label={t("settings.noteFiles.path")}
+                        description={noteFilesPath || noteFilesDefaultPath || "..."}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleNoteFilesChangePath}
+                        >
+                          {t("settings.noteFiles.changePath")}
+                        </Button>
+                      </SettingsRow>
+                    </SettingsPanelRow>
+                    <SettingsPanelRow>
+                      <SettingsRow
+                        label={t("settings.noteFiles.rebuild")}
+                        description={t("settings.noteFiles.rebuildDescription")}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          disabled={noteFilesRebuilding}
+                          onClick={handleNoteFilesRebuild}
+                        >
+                          {noteFilesRebuilding ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            t("settings.noteFiles.rebuild")
+                          )}
+                        </Button>
+                      </SettingsRow>
+                    </SettingsPanelRow>
+                  </>
+                )}
               </SettingsPanel>
             </div>
           </div>
         );
 
-      case "speechToText":
-      case "llms":
-        return null;
-
-      case "privacyData":
+      case "privacy":
         return (
-          <div className="space-y-6">
-            {/* Privacy */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.privacy.title")}
-                description={t("settingsPage.privacy.description")}
-              />
-
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.usageAnalytics")}
-                    description={t("settingsPage.privacy.usageAnalyticsDescription")}
-                  >
-                    <Toggle checked={telemetryEnabled} onChange={setTelemetryEnabled} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Audio Retention */}
-            <div className="border-t border-border/40 pt-6">
-              <SectionHeader
-                title={t("settingsPage.privacy.audioRetention")}
-                description={t("settingsPage.privacy.audioRetentionDescription")}
-              />
-
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.audioRetention")}
-                    description={t("settingsPage.privacy.audioRetentionDescription")}
-                  >
-                    <select
-                      value={audioRetentionDays}
-                      onChange={(e) => setAudioRetentionDays(parseInt(e.target.value, 10))}
-                      className="h-7 rounded border border-border/70 bg-surface-1/80 px-2.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:border-border-hover hover:bg-surface-2/70 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:ring-offset-1 transition-colors duration-200"
-                    >
-                      <option value={0}>{t("settingsPage.privacy.audioRetentionDisabled")}</option>
-                      <option value={7}>
-                        {t("settingsPage.privacy.audioRetentionDays", { count: 7 })}
-                      </option>
-                      <option value={14}>
-                        {t("settingsPage.privacy.audioRetentionDays", { count: 14 })}
-                      </option>
-                      <option value={30}>
-                        {t("settingsPage.privacy.audioRetentionDays", { count: 30 })}
-                      </option>
-                      <option value={60}>
-                        {t("settingsPage.privacy.audioRetentionDays", { count: 60 })}
-                      </option>
-                      <option value={90}>
-                        {t("settingsPage.privacy.audioRetentionDays", { count: 90 })}
-                      </option>
-                    </select>
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.audioStorageUsage")}
-                    description={
-                      audioStorageUsage.fileCount > 0
-                        ? t("settingsPage.privacy.audioStorageFiles", {
-                            count: audioStorageUsage.fileCount,
-                            size: formatBytes(audioStorageUsage.totalBytes),
-                          })
-                        : t("settingsPage.privacy.audioStorageEmpty")
-                    }
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={audioStorageUsage.fileCount === 0}
-                      onClick={handleClearAllAudio}
-                    >
-                      {t("settingsPage.privacy.clearAllAudio")}
-                    </Button>
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Data Retention */}
-            <div className="border-t border-border/40 pt-6">
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.dataRetention")}
-                    description={t("settingsPage.privacy.dataRetentionDescription")}
-                  >
-                    <Toggle checked={dataRetentionEnabled} onChange={setDataRetentionEnabled} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.saveDiscarded")}
-                    description={t("settingsPage.privacy.saveDiscardedDescription")}
-                  >
-                    <Toggle
-                      checked={saveDiscardedTranscriptions}
-                      disabled={!dataRetentionEnabled || audioRetentionDays === 0}
-                      onChange={setSaveDiscardedTranscriptions}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
+          <div className="space-y-8">
             {/* Permissions */}
-            <div className="border-t border-border/40 pt-6">
+            <div>
               <SectionHeader
                 title={t("settingsPage.permissions.title")}
                 description={t("settingsPage.permissions.description")}
@@ -2557,17 +2155,6 @@ EOF`,
                         buttonText={t("settingsPage.permissions.grantAccess")}
                       />
                     )}
-                    {canManageSystemAudioInApp(systemAudio) && (
-                      <PermissionCard
-                        icon={Monitor}
-                        title={t("settingsPage.permissions.systemAudioTitle")}
-                        description={t("settingsPage.permissions.systemAudioDescription")}
-                        granted={systemAudio.granted}
-                        onRequest={systemAudio.request}
-                        buttonText={t("settingsPage.permissions.grantAccess")}
-                        badge={t("settingsPage.permissions.optional")}
-                      />
-                    )}
                   </>
                 )}
               </div>
@@ -2591,10 +2178,8 @@ EOF`,
                 )}
 
               {platform === "darwin" && (
-                <div className="mt-5">
-                  <p className="text-xs font-medium text-foreground mb-3">
-                    {t("settingsPage.permissions.troubleshootingTitle")}
-                  </p>
+                <div className="mt-8">
+                  <SectionHeader title={t("settingsPage.permissions.troubleshootingTitle")} />
                   <SettingsPanel>
                     <SettingsPanelRow>
                       <SettingsRow
@@ -2603,12 +2188,7 @@ EOF`,
                           "settingsPage.permissions.resetAccessibility.rowDescription"
                         )}
                       >
-                        <Button
-                          onClick={resetAccessibilityPermissions}
-                          variant="ghost"
-                          size="sm"
-                          className="text-foreground/70 hover:text-foreground"
-                        >
+                        <Button onClick={resetAccessibilityPermissions} variant="outline" size="sm">
                           {t("settingsPage.permissions.troubleshoot")}
                         </Button>
                       </SettingsRow>
@@ -2617,193 +2197,95 @@ EOF`,
                 </div>
               )}
             </div>
-          </div>
-        );
 
-      case "system":
-        return (
-          <div className="space-y-6">
-            {/* Software Updates */}
+            {/* Audio Retention */}
             <div>
-              <SectionHeader title={t("settingsPage.general.updates.title")} />
+              <SectionHeader
+                title={t("oats.settings.dictationAudio")}
+                description={t("oats.settings.dictationAudioDescription")}
+              />
+
               <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
-                    label={t("settingsPage.general.updates.currentVersion")}
+                    label={t("settingsPage.privacy.audioStorageUsage")}
                     description={
-                      updateStatus.isDevelopment
-                        ? t("settingsPage.general.updates.devMode")
-                        : isUpdateAvailable
-                          ? t("settingsPage.general.updates.newVersionAvailable")
-                          : t("settingsPage.general.updates.latestVersion")
+                      audioStorageUsage.fileCount > 0
+                        ? t("settingsPage.privacy.audioStorageFiles", {
+                            count: audioStorageUsage.fileCount,
+                            size: formatBytes(audioStorageUsage.totalBytes),
+                          })
+                        : t("settingsPage.privacy.audioStorageEmpty")
                     }
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xs tabular-nums text-muted-foreground font-mono">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={audioStorageUsage.fileCount === 0}
+                      onClick={handleClearAllAudio}
+                    >
+                      {t("settingsPage.privacy.clearAllAudio")}
+                    </Button>
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+          </div>
+        );
+
+      case "about":
+        return (
+          <div className="space-y-8">
+            {/* Version. Updates are off until there is a release feed (D7), so
+                nothing here claims "latest" or offers a check that cannot find
+                anything. */}
+            <div>
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow label={t("settingsPage.general.updates.currentVersion")}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm tabular-nums text-muted-foreground">
                         {currentVersion || t("settingsPage.general.updates.versionPlaceholder")}
                       </span>
-                      {updateStatus.isDevelopment ? (
+                      {updateStatus.isDevelopment && (
                         <Badge variant="warning">
                           {t("settingsPage.general.updates.badges.dev")}
-                        </Badge>
-                      ) : isUpdateAvailable ? (
-                        <Badge variant="success">
-                          {t("settingsPage.general.updates.badges.update")}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">
-                          {t("settingsPage.general.updates.badges.latest")}
                         </Badge>
                       )}
                     </div>
                   </SettingsRow>
                 </SettingsPanelRow>
-
-                <SettingsPanelRow>
-                  <div className="space-y-2.5">
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const result = await checkForUpdates();
-                          if (result && !result.updateAvailable) {
-                            toast({
-                              title: t("settingsPage.general.updates.dialogs.noUpdates.title"),
-                              description: t(
-                                "settingsPage.general.updates.dialogs.noUpdates.description"
-                              ),
-                            });
-                          }
-                        } catch {}
-                      }}
-                      disabled={checkingForUpdates || updateStatus.isDevelopment}
-                      variant="outline"
-                      className="w-full"
-                      size="sm"
-                    >
-                      <RefreshCw
-                        size={13}
-                        className={`mr-1.5 ${checkingForUpdates ? "animate-spin" : ""}`}
-                      />
-                      {checkingForUpdates
-                        ? t("settingsPage.general.updates.checking")
-                        : t("settingsPage.general.updates.checkForUpdates")}
-                    </Button>
-
-                    {isUpdateAvailable && !updateStatus.updateDownloaded && (
-                      <div className="space-y-2">
-                        <Button
-                          onClick={async () => {
-                            try {
-                              await downloadUpdate();
-                            } catch {
-                              showAlertDialog({
-                                title: t(
-                                  "settingsPage.general.updates.dialogs.downloadFailed.title"
-                                ),
-                                description: t(
-                                  "settingsPage.general.updates.dialogs.downloadFailed.description"
-                                ),
-                              });
-                            }
-                          }}
-                          disabled={downloadingUpdate}
-                          variant="success"
-                          className="w-full"
-                          size="sm"
-                        >
-                          <Download
-                            size={13}
-                            className={`mr-1.5 ${downloadingUpdate ? "animate-pulse" : ""}`}
-                          />
-                          {downloadingUpdate
-                            ? t("settingsPage.general.updates.downloading", {
-                                progress: Math.round(updateDownloadProgress),
-                              })
-                            : t("settingsPage.general.updates.downloadUpdate", {
-                                version: updateInfo?.version || "",
-                              })}
-                        </Button>
-
-                        {downloadingUpdate && (
-                          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/50">
-                            <div
-                              className="h-full bg-success transition-[width] duration-200 rounded-full"
-                              style={{
-                                width: `${Math.min(100, Math.max(0, updateDownloadProgress))}%`,
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {updateStatus.updateDownloaded && (
-                      <Button
-                        onClick={() => {
-                          showConfirmDialog({
-                            title: t("settingsPage.general.updates.dialogs.installUpdate.title"),
-                            description: t(
-                              "settingsPage.general.updates.dialogs.installUpdate.description",
-                              { version: updateInfo?.version || "" }
-                            ),
-                            confirmText: t(
-                              "settingsPage.general.updates.dialogs.installUpdate.confirmText"
-                            ),
-                            onConfirm: async () => {
-                              try {
-                                await installUpdateAction();
-                              } catch {
-                                showAlertDialog({
-                                  title: t(
-                                    "settingsPage.general.updates.dialogs.installFailed.title"
-                                  ),
-                                  description: t(
-                                    "settingsPage.general.updates.dialogs.installFailed.description"
-                                  ),
-                                });
-                              }
-                            },
-                          });
-                        }}
-                        disabled={installInitiated}
-                        className="w-full"
-                        size="sm"
-                      >
-                        <RefreshCw
-                          size={14}
-                          className={`mr-2 ${installInitiated ? "animate-spin" : ""}`}
-                        />
-                        {installInitiated
-                          ? t("settingsPage.general.updates.restarting")
-                          : t("settingsPage.general.updates.installAndRestart")}
-                      </Button>
-                    )}
-                  </div>
-
-                  {updateInfo?.releaseNotes && (
-                    <div className="mt-4 pt-4 border-t border-border/30">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                        {t("settingsPage.general.updates.whatsNew", {
-                          version: updateInfo.version,
-                        })}
-                      </p>
-                      <div
-                        className="text-xs text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:space-y-1 [&_li]:pl-1 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_a]:text-link [&_a]:underline"
-                        dangerouslySetInnerHTML={{ __html: updateInfo.releaseNotes }}
-                      />
-                    </div>
-                  )}
-                </SettingsPanelRow>
               </SettingsPanel>
             </div>
 
             {/* Developer Tools */}
-            <div className="border-t border-border/40 pt-6">
+            <div>
               <DeveloperSection />
             </div>
 
+            {/* Advanced. The field backdrop stays switchable here until D11
+                decides between keeping it and retiring it: without a switch,
+                anybody who had it on could not turn it off. */}
+            <div>
+              <SectionHeader title={t("oats.settings.advanced.title")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("oats.settings.advanced.fieldBackdrop")}
+                    description={t("oats.settings.advanced.fieldBackdropDescription")}
+                  >
+                    <Toggle
+                      checked={uiMode === "field"}
+                      onChange={(on: boolean) => setUiMode(on ? "field" : "work")}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
             {/* Data Management */}
-            <div className="border-t border-border/40 pt-6">
+            <div>
               <SectionHeader
                 title={t("settingsPage.developer.dataManagementTitle")}
                 description={t("settingsPage.developer.dataManagementDescription")}
@@ -2822,12 +2304,13 @@ EOF`,
                           size="sm"
                           onClick={() => window.electronAPI?.openWhisperModelsFolder?.()}
                         >
-                          <FolderOpen className="mr-1.5 h-3.5 w-3.5" />
+                          <FolderOpen aria-hidden="true" />
                           {t("settingsPage.developer.open")}
                         </Button>
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
+                          className="text-destructive hover:text-destructive"
                           onClick={handleRemoveModels}
                           disabled={isRemovingModels}
                         >
@@ -2916,96 +2399,6 @@ EOF`,
         onOk={() => {}}
       />
 
-      {activeSection === "speechToText" && (
-        <>
-          <SpeechToTextTabs
-            initialTab={
-              activeSection === "speechToText"
-                ? (initialSubTab as SpeechTab | undefined)
-                : undefined
-            }
-            renderDictation={() => (
-              <div className="space-y-6">
-                <TranscriptionSection
-                  cloudTranscriptionMode={cloudTranscriptionMode}
-                  setCloudTranscriptionMode={setCloudTranscriptionMode}
-                  useLocalWhisper={useLocalWhisper}
-                  setUseLocalWhisper={setUseLocalWhisper}
-                  updateTranscriptionSettings={updateTranscriptionSettings}
-                  cloudTranscriptionProvider={cloudTranscriptionProvider}
-                  setCloudTranscriptionProvider={setCloudTranscriptionProvider}
-                  cloudTranscriptionModel={cloudTranscriptionModel}
-                  setCloudTranscriptionModel={setCloudTranscriptionModel}
-                  localTranscriptionProvider={localTranscriptionProvider}
-                  setLocalTranscriptionProvider={setLocalTranscriptionProvider}
-                  whisperModel={whisperModel}
-                  setWhisperModel={setWhisperModel}
-                  parakeetModel={parakeetModel}
-                  setParakeetModel={setParakeetModel}
-                  cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
-                  setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
-                  transcriptionMode={transcriptionMode}
-                  setTranscriptionMode={setTranscriptionMode}
-                  remoteTranscriptionUrl={remoteTranscriptionUrl}
-                  setRemoteTranscriptionUrl={setRemoteTranscriptionUrl}
-                  remoteTranscriptionModel={remoteTranscriptionModel}
-                  setRemoteTranscriptionModel={setRemoteTranscriptionModel}
-                  showTranscriptionPreview={showTranscriptionPreview}
-                  setShowTranscriptionPreview={setShowTranscriptionPreview}
-                  toast={toast}
-                />
-                {transcriptionMode === "local" &&
-                  localTranscriptionProvider !== "nvidia" &&
-                  renderWhisperVadSettings()}
-              </div>
-            )}
-            renderNoteRecording={() => (
-              <div className="space-y-6">
-                <MeetingTranscriptionPanel />
-                {transcriptionMode === "local" &&
-                  localTranscriptionProvider !== "nvidia" &&
-                  renderWhisperVadSettings()}
-              </div>
-            )}
-            renderUpload={() => (
-              <div className="space-y-6">
-                <UploadTranscriptionPanel />
-              </div>
-            )}
-          />
-        </>
-      )}
-      {activeSection === "llms" && (
-        <>
-          <LlmsTabs
-            initialTab={
-              activeSection === "llms" ? (initialSubTab as LlmTab | undefined) : undefined
-            }
-            renderChatIntelligence={() => <ChatAgentSettings />}
-            renderDictationCleanup={() => (
-              <div className="space-y-6">
-                <AiModelsSection
-                  useCleanupModel={useCleanupModel}
-                  setUseCleanupModel={(value) => {
-                    updateCleanupSettings({ useCleanupModel: value });
-                  }}
-                  toast={toast}
-                />
-                <div className="border-t border-border/40 pt-6">
-                  <SectionHeader
-                    title={t("settingsPage.prompts.title")}
-                    description={t("settingsPage.prompts.description")}
-                  />
-                  <PromptStudio />
-                </div>
-              </div>
-            )}
-            renderDictationAgent={() => <DictationAgentSettings />}
-            renderDictationTranslation={() => <DictationTranslationSettings />}
-            renderNoteFormatting={() => <NoteFormattingSettings />}
-          />
-        </>
-      )}
       {renderSectionContent()}
     </>
   );

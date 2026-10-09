@@ -4,12 +4,10 @@ import { Button } from "./ui/button";
 import { FolderOpen, Copy, Check } from "lucide-react";
 import { useToast } from "./ui/useToast";
 import { Toggle } from "./ui/toggle";
-import { useSettingsLayout } from "./ui/useSettingsLayout";
 import logger from "../utils/logger";
 
 export default function DeveloperSection() {
   const { t } = useTranslation();
-  const { isCompact } = useSettingsLayout();
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [logPath, setLogPath] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,23 +110,21 @@ export default function DeveloperSection() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="mb-5">
-        <h3 className="text-[15px] font-semibold text-foreground tracking-tight">
-          {t("developerSection.title")}
-        </h3>
-        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+    <div className="space-y-3">
+      <div className="px-1">
+        <h3 className="text-sm font-semibold text-foreground">{t("developerSection.title")}</h3>
+        <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
           {t("developerSection.description")}
         </p>
       </div>
 
       {/* Debug Toggle */}
-      <div className="rounded-xl border border-border/60 dark:border-border-subtle bg-card dark:bg-surface-2 divide-y divide-border/40 dark:divide-border-subtle">
+      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs">
         <div className="px-5 py-4">
           <div className="flex items-center justify-between gap-6">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-foreground">
+                <p className="text-sm font-medium text-foreground">
                   {t("developerSection.debugMode.label")}
                 </p>
                 <div
@@ -137,7 +133,7 @@ export default function DeveloperSection() {
                   }`}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
                 {debugEnabled
                   ? t("developerSection.debugMode.enabledDescription")
                   : t("developerSection.debugMode.disabledDescription")}
@@ -156,11 +152,11 @@ export default function DeveloperSection() {
         {/* Log Path — only when active */}
         {debugEnabled && logPath && (
           <div className="px-5 py-4">
-            <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider mb-2">
+            <p className="mb-2 text-[13px] font-medium text-muted-foreground">
               {t("developerSection.currentLogFile")}
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs text-muted-foreground font-mono break-all leading-relaxed bg-muted/30 dark:bg-surface-raised/30 px-3 py-2 rounded-lg border border-border/30">
+              <code className="flex-1 text-xs text-muted-foreground font-mono break-all leading-relaxed rounded-md border border-border bg-muted/40 px-3 py-2">
                 {logPath}
               </code>
               <Button
@@ -180,51 +176,19 @@ export default function DeveloperSection() {
         )}
 
         {/* Actions */}
-        {debugEnabled && (
-          <div className="px-5 py-4">
-            <Button onClick={handleOpenLogsFolder} variant="outline" size="sm" className="w-full">
-              <FolderOpen className="mr-2 h-3.5 w-3.5" />
-              {t("developerSection.openLogsFolder")}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* What gets logged */}
-      <div>
-        <div className="mb-5">
-          <h3 className="text-[15px] font-semibold text-foreground tracking-tight">
-            {t("developerSection.whatGetsLogged.title")}
-          </h3>
-        </div>
-        <div className="rounded-xl border border-border/60 dark:border-border-subtle bg-card dark:bg-surface-2">
-          <div className="px-5 py-4">
-            <div
-              className={`grid gap-y-2 ${isCompact ? "grid-cols-1 gap-x-0" : "grid-cols-2 gap-x-6"}`}
-            >
-              {[
-                t("developerSection.whatGetsLogged.items.audioProcessing"),
-                t("developerSection.whatGetsLogged.items.apiRequests"),
-                t("developerSection.whatGetsLogged.items.ffmpegOperations"),
-                t("developerSection.whatGetsLogged.items.systemDiagnostics"),
-                t("developerSection.whatGetsLogged.items.transcriptionPipeline"),
-                t("developerSection.whatGetsLogged.items.errorDetails"),
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-2">
-                  <div className="h-1 w-1 rounded-full bg-muted-foreground/30 shrink-0" />
-                  <span className="text-xs text-muted-foreground">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="px-5 py-4">
+          <Button onClick={handleOpenLogsFolder} variant="outline" size="sm">
+            <FolderOpen aria-hidden="true" />
+            {t("developerSection.openLogsFolder")}
+          </Button>
         </div>
       </div>
 
       {/* Performance note — conditional */}
       {debugEnabled && (
-        <div className="rounded-xl border border-warning/20 bg-warning/5 dark:bg-warning/10">
-          <div className="px-5 py-4">
-            <p className="text-xs text-muted-foreground leading-relaxed">
+        <div className="rounded-lg border border-warning/25 bg-warning/5">
+          <div className="px-4 py-3">
+            <p className="text-[13px] leading-5 text-muted-foreground">
               <span className="font-medium text-warning">
                 {t("developerSection.performanceNote.label")}
               </span>{" "}
@@ -237,12 +201,12 @@ export default function DeveloperSection() {
       {/* Sharing instructions — conditional */}
       {debugEnabled && (
         <div>
-          <div className="mb-5">
-            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">
+          <div className="mb-3 px-1">
+            <h3 className="text-sm font-semibold text-foreground">
               {t("developerSection.sharing.title")}
             </h3>
           </div>
-          <div className="rounded-xl border border-border/60 dark:border-border-subtle bg-card dark:bg-surface-2">
+          <div className="rounded-xl border border-border bg-card shadow-xs">
             <div className="px-5 py-4">
               <div className="space-y-2">
                 {[
@@ -251,14 +215,14 @@ export default function DeveloperSection() {
                   t("developerSection.sharing.steps.2"),
                 ].map((step, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <span className="shrink-0 text-xs font-mono text-muted-foreground/40 mt-0.5 w-4 text-right">
+                    <span className="mt-px w-4 shrink-0 text-right text-[13px] tabular-nums text-muted-foreground">
                       {i + 1}
                     </span>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{step}</p>
+                    <p className="text-[13px] leading-5 text-muted-foreground">{step}</p>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground/40 mt-4 pt-3 border-t border-border/20">
+              <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
                 {t("developerSection.sharing.footer")}
               </p>
             </div>

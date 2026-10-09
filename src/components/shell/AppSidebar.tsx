@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { House, MessagesSquare, Search, Settings, Square } from "lucide-react";
+import { ChevronLeft, House, MessagesSquare, Search, Settings, Square } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Kbd } from "../ui/kbd";
 import { OatsMark } from "./OatsMark";
 import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
+import { SETTINGS_PAGES, type SettingsPageId } from "../settings/settingsPages";
 
 export type ShellSurface = "conversation" | "intelligence" | "settings";
 
@@ -81,11 +82,17 @@ export function AppSidebar({
   onNavigate,
   onOpenNote,
   onSearch,
+  settingsPage,
+  onSettingsPage,
+  onExitSettings,
 }: {
   surface: ShellSurface;
   onNavigate: (surface: ShellSurface) => void;
   onOpenNote: (noteId: number) => void;
   onSearch: () => void;
+  settingsPage: SettingsPageId;
+  onSettingsPage: (page: SettingsPageId) => void;
+  onExitSettings: () => void;
 }) {
   const { t } = useTranslation();
   const recording = useMeetingRecordingStore((state) => state.isRecording);
@@ -102,6 +109,44 @@ export function AppSidebar({
     onNavigate("conversation");
     void window.electronAPI?.requestToggleConversation?.();
   };
+
+  // In Settings the sidebar becomes the list of Settings pages, with the way
+  // back at the top — the frame Linear and System Settings use, so Settings
+  // needs no second column of its own.
+  if (surface === "settings") {
+    return (
+      <aside
+        aria-label={t("oats.shell.sidebar")}
+        className="flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
+      >
+        <div
+          className="h-[52px] shrink-0"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        />
+        <div className="px-3 pb-4">
+          <NavItem
+            icon={ChevronLeft}
+            label={t("oats.settings.backToApp")}
+            onClick={onExitSettings}
+          />
+        </div>
+        <div className="px-5 pb-1.5 text-xs font-medium text-muted-foreground">
+          {t("oats.nav.settings")}
+        </div>
+        <nav aria-label={t("oats.settings.navLabel")} className="flex flex-col gap-0.5 px-3">
+          {SETTINGS_PAGES.map((page) => (
+            <NavItem
+              key={page.id}
+              icon={page.icon}
+              label={t(page.title)}
+              active={settingsPage === page.id}
+              onClick={() => onSettingsPage(page.id)}
+            />
+          ))}
+        </nav>
+      </aside>
+    );
+  }
 
   return (
     <aside
@@ -200,7 +245,6 @@ export function AppSidebar({
         <NavItem
           icon={Settings}
           label={t("oats.nav.settings")}
-          active={surface === "settings"}
           disabled={recording}
           onClick={() => onNavigate("settings")}
         />

@@ -1,5 +1,4 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { useSettingsLayout } from "./useSettingsLayout";
 import type { InferenceMode } from "../../types/electron";
 
@@ -18,10 +17,10 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 }) => {
   return (
     <div className={`space-y-3 ${className}`}>
-      <div>
-        <h3 className="text-xs font-semibold text-foreground tracking-tight">{title}</h3>
+      <div className="px-1">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {description && (
-          <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">{description}</p>
+          <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{description}</p>
         )}
       </div>
       {children}
@@ -42,15 +41,15 @@ export const SettingsGroup: React.FC<SettingsGroupProps> = ({
   variant = "default",
   className = "",
 }) => {
-  const baseClasses = "space-y-3 p-3 rounded-lg border";
+  const baseClasses = "space-y-3 rounded-xl border p-4 shadow-xs";
   const variantClasses = {
-    default: "bg-card/50 dark:bg-surface-2/50 border-border/50 dark:border-border-subtle",
-    highlighted: "bg-primary/5 dark:bg-primary/10 border-primary/20 dark:border-primary/30",
+    default: "border-border bg-card",
+    highlighted: "border-primary/30 bg-primary/5",
   };
 
   return (
     <div className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
-      {title && <h4 className="text-xs font-medium text-foreground">{title}</h4>}
+      {title && <h4 className="text-sm font-medium text-foreground">{title}</h4>}
       {children}
     </div>
   );
@@ -74,13 +73,13 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
   return (
     <div
       className={`flex ${
-        isCompact ? "flex-col items-start gap-2" : "items-center justify-between gap-4"
+        isCompact ? "flex-col items-start gap-3" : "items-center justify-between gap-6"
       } ${className}`}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground">{label}</p>
         {description && (
-          <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">{description}</p>
+          <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{description}</p>
         )}
       </div>
       <div className={isCompact ? "" : "shrink-0"}>{children}</div>
@@ -91,13 +90,16 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
 export function SettingsPanel({
   children,
   className = "",
+  role,
 }: {
   children: React.ReactNode;
   className?: string;
+  role?: string;
 }) {
   return (
     <div
-      className={`rounded-lg border border-border/50 dark:border-border-subtle/70 bg-card/50 dark:bg-surface-2/50 backdrop-blur-sm divide-y divide-border/30 dark:divide-border-subtle/50 ${className}`}
+      role={role}
+      className={`divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs ${className}`}
     >
       {children}
     </div>
@@ -113,17 +115,15 @@ export function SettingsPanelRow({
 }) {
   const { isCompact } = useSettingsLayout();
 
-  return (
-    <div className={`${isCompact ? "px-3 py-2.5" : "px-4 py-3"} ${className}`}>{children}</div>
-  );
+  return <div className={`${isCompact ? "px-4 py-3" : "px-5 py-4"} ${className}`}>{children}</div>;
 }
 
 export function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="mb-3">
-      <h3 className="text-xs font-semibold text-foreground tracking-tight">{title}</h3>
+    <div className="mb-3 px-1">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {description && (
-        <p className="text-xs text-muted-foreground/80 mt-0.5 leading-relaxed">{description}</p>
+        <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{description}</p>
       )}
     </div>
   );
@@ -147,67 +147,53 @@ export function InferenceModeSelector({
   activeMode: InferenceMode;
   onSelect: (mode: InferenceMode) => void;
 }) {
-  const { t } = useTranslation();
-
   return (
-    <SettingsPanel className="overflow-hidden">
+    <SettingsPanel className="overflow-hidden" role="radiogroup">
       {modes.map((mode) => {
         const isActive = activeMode === mode.id;
         const isDisabled = !!mode.disabled;
         return (
           <SettingsPanelRow
             key={mode.id}
-            className={`transition-colors ${
-              isDisabled ? "" : "hover:bg-foreground/3 dark:hover:bg-white/3"
-            }`}
+            className={`transition-colors ${isDisabled ? "" : "hover:bg-muted/50"}`}
           >
             <button
+              type="button"
+              role="radio"
+              aria-checked={isActive}
+              disabled={isDisabled}
               onClick={() => onSelect(mode.id)}
-              className={`w-full flex items-center gap-3 text-left cursor-pointer group ${
+              className={`group flex w-full cursor-pointer items-center gap-3 rounded-md text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed ${
                 isDisabled ? "opacity-60" : ""
               }`}
             >
               <div
-                className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                  isActive
-                    ? "bg-primary/10 dark:bg-primary/15"
-                    : "bg-muted/60 dark:bg-surface-raised group-hover:bg-muted dark:group-hover:bg-surface-3"
+                className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  isActive ? "bg-primary/15 text-brand-ink" : "bg-muted text-muted-foreground"
                 }`}
               >
-                <div
-                  className={`transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`}
-                >
-                  {mode.icon}
-                </div>
+                {mode.icon}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-foreground">{mode.label}</span>
-                  {isActive && !isDisabled && (
-                    <span className="text-xs font-medium text-primary bg-primary/10 dark:bg-primary/15 px-1.5 py-px rounded-sm">
-                      {t("common.active")}
-                    </span>
-                  )}
+                  <span className="text-sm font-medium text-foreground">{mode.label}</span>
                   {isDisabled && mode.badge && (
-                    <span className="text-xs font-medium text-muted-foreground bg-muted/80 dark:bg-surface-3 px-1.5 py-px rounded-sm">
+                    <span className="rounded-md bg-muted px-1.5 py-px text-xs font-medium text-muted-foreground">
                       {mode.badge}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground/80 mt-0.5">{mode.description}</p>
+                <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                  {mode.description}
+                </p>
               </div>
               <div
-                className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
-                  isActive
-                    ? "border-primary bg-primary"
-                    : "border-border-hover dark:border-border-subtle"
+                aria-hidden="true"
+                className={`flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                  isActive ? "border-primary bg-primary" : "border-input"
                 }`}
               >
-                {isActive && (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
-                  </div>
-                )}
+                {isActive && <div className="size-1.5 rounded-full bg-primary-foreground" />}
               </div>
             </button>
           </SettingsPanelRow>

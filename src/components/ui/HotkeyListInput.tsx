@@ -106,9 +106,10 @@ export function HotkeyListInput({
   const showAdd = !adding && items.length > 0 && items.length < maxHotkeys;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-end gap-2">
       {items.map((hotkey, index) => (
         <HotkeyInput
+          variant="settings"
           key={`${hotkey}-${index}`}
           value={hotkey}
           onChange={(next) => replaceAt(index, next)}
@@ -120,6 +121,7 @@ export function HotkeyListInput({
 
       {(items.length === 0 || adding) && (
         <HotkeyInput
+          variant="settings"
           value=""
           autoFocus={adding}
           onChange={addHotkey}
@@ -130,22 +132,20 @@ export function HotkeyListInput({
       )}
 
       {(showAdd || footerEnd) && !adding && (
-        <div className="flex items-center justify-between gap-3 mt-0.5">
-          {showAdd ? (
+        <div className="flex items-center justify-end gap-3">
+          {footerEnd}
+          {showAdd && (
             <Button
               type="button"
-              variant="outline-flat"
+              variant="ghost"
               size="sm"
               onClick={() => setAdding(true)}
               disabled={disabled}
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus aria-hidden="true" />
               {t("hotkeyInput.addAnother")}
             </Button>
-          ) : (
-            <span />
           )}
-          {footerEnd}
         </div>
       )}
     </div>

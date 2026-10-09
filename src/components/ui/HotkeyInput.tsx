@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { formatHotkeyLabel, isGlobeLikeHotkey } from "../../utils/hotkeys";
 import { getPlatform } from "../../utils/platform";
 import { formatHotkey } from "../../utils/hotkeyLabel";
@@ -180,7 +180,7 @@ function mapKeyboardEventToHotkey(e: KeyboardEvent): string | null {
 }
 
 export interface HotkeyInputVariant {
-  variant?: "default" | "hero" | "ledger";
+  variant?: "default" | "hero" | "settings";
 }
 
 export function HotkeyInput({
@@ -491,69 +491,67 @@ export function HotkeyInput({
           e.stopPropagation();
           onClear();
         }}
-        className="rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:ring-2 focus-visible:ring-ring/30 transition-opacity duration-150 text-muted-foreground/50 hover:text-destructive cursor-pointer"
+        className="inline-flex size-6 cursor-pointer items-center justify-center rounded-sm text-muted-foreground opacity-0 outline-none transition-opacity duration-150 hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 group-hover:opacity-100"
       >
-        <Trash2 className="w-3.5 h-3.5" />
+        <X aria-hidden="true" className="size-3.5" />
       </button>
     ) : null;
 
-  // Ledger variant: the Oats Settings page.
-  //
-  // The shortcut written the way the Conversation screen already writes it —
-  // `Ctrl+Shift+O` in mono, the line the app uses to teach its own hotkey — and
-  // the same quiet "change" beside it that the microphone row has. The default
-  // variant drew bordered keycaps behind a "Hotkey" prefix that only repeated
-  // the row's own label: the last inherited control on the visible page, and
-  // the one place in Oats the shortcut looked like a different product's.
-  // Capture is unchanged; only the drawing differs.
-  if (variant === "ledger") {
+  // Settings variant: a shortcut recorder, the control every Mac app uses for
+  // this — a field that shows the shortcut as keys, listens when focused (with
+  // the brand focus ring), and clears with ×. Capture is unchanged; only the
+  // drawing differs.
+  if (variant === "settings") {
     const written = formatHotkey(value, platform) || displayValue;
     return (
-      <div
-        ref={containerRef}
-        tabIndex={disabled ? -1 : 0}
-        role="button"
-        aria-label={t("hotkeyInput.ariaLabel")}
-        data-capturing={isCapturing || undefined}
-        onKeyDown={handleKeyDown}
-        onKeyUp={handleKeyUp}
-        onMouseDown={handleMouseDown}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        className={[
-          "group relative flex min-h-6 w-full flex-wrap items-baseline gap-x-3 gap-y-1 rounded-sm",
-          "select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-        ].join(" ")}
-      >
-        {isCapturing ? (
-          // Listening for the new combination. The modifiers held so far are
-          // written as they will be stored; nothing pulses — a capture is a
-          // moment you are in, not a state the page has to keep announcing.
-          <span className="font-mono text-sm text-foreground">
-            {activeModifiers.size > 0
-              ? `${Array.from(activeModifiers).join("+")} ${
-                  isFnHeld ? t("hotkeyInput.fnCaptureHint") : t("hotkeyInput.keyHint")
-                }`
-              : isMac
-                ? t("hotkeyInput.tryShortcutMac")
-                : t("hotkeyInput.tryShortcut")}
-          </span>
-        ) : value ? (
-          <>
-            <span className="font-mono text-sm text-foreground">{written}</span>
-            <span className="font-mono text-xs text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] group-hover:text-foreground">
-              {t("hotkeyInput.clickToChangeLower")}
+      <div className="flex min-w-0 flex-col items-end gap-1.5">
+        <div
+          ref={containerRef}
+          tabIndex={disabled ? -1 : 0}
+          role="button"
+          aria-label={t("hotkeyInput.ariaLabel")}
+          data-capturing={isCapturing || undefined}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
+          onMouseDown={handleMouseDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          className={[
+            "group inline-flex h-9 w-48 max-w-full select-none items-center gap-2 rounded-md border border-input bg-transparent pl-3 pr-1.5 text-sm shadow-xs",
+            "outline-none transition-[color,box-shadow,border-color] dark:bg-input/20",
+            "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "data-[capturing]:border-ring data-[capturing]:ring-[3px] data-[capturing]:ring-ring/50",
+            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-accent/50",
+          ].join(" ")}
+        >
+          {isCapturing ? (
+            <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+              {activeModifiers.size > 0
+                ? `${Array.from(activeModifiers).join("+")} ${
+                    isFnHeld ? t("hotkeyInput.fnCaptureHint") : t("hotkeyInput.keyHint")
+                  }`
+                : isMac
+                  ? t("hotkeyInput.tryShortcutMac")
+                  : t("hotkeyInput.tryShortcut")}
             </span>
-            {clearButton}
-          </>
-        ) : (
-          <span className="text-sm text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] group-hover:text-foreground">
-            {t("hotkeyInput.clickToSet")}
-          </span>
-        )}
+          ) : value ? (
+            <>
+              <kbd className="inline-flex h-6 items-center rounded border border-border bg-muted px-2 font-sans text-xs font-medium text-foreground">
+                {written}
+              </kbd>
+              <span className="flex-1" />
+              {clearButton}
+            </>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+              {t("hotkeyInput.clickToSet")}
+            </span>
+          )}
+        </div>
         {validationWarning && (
-          <span className="basis-full text-xs leading-5 text-foreground">{validationWarning}</span>
+          <p className="max-w-64 text-right text-xs leading-5 text-destructive">
+            {validationWarning}
+          </p>
         )}
       </div>
     );

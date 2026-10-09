@@ -1,4 +1,4 @@
-import { Globe, Download, Trash2, X, ExternalLink } from "lucide-react";
+import { Check, Globe, Download, Loader2, Trash2, X, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./button";
 import { cn } from "../lib/utils";
@@ -20,27 +20,6 @@ export interface ModelCardOption {
   isDownloading?: boolean;
   recommended?: boolean;
 }
-
-const COLOR_CONFIG: Record<
-  ColorScheme,
-  {
-    selected: string;
-    default: string;
-  }
-> = {
-  purple: {
-    selected:
-      "border-primary/30 bg-primary/8 dark:bg-primary/6 dark:border-primary/20 shadow-[0_0_0_1px_color-mix(in_oklch,var(--color-primary)_12%,transparent),0_0_10px_-3px_color-mix(in_oklch,var(--color-primary)_18%,transparent)]",
-    default:
-      "border-border bg-surface-1 hover:border-border-hover hover:bg-muted dark:border-white/5 dark:bg-white/3 dark:hover:border-white/20 dark:hover:bg-white/8",
-  },
-  blue: {
-    selected:
-      "border-primary/30 bg-primary/10 dark:bg-primary/6 shadow-[0_0_0_1px_color-mix(in_oklch,var(--color-primary)_15%,transparent),0_0_12px_-3px_color-mix(in_oklch,var(--color-primary)_20%,transparent)]",
-    default:
-      "border-border bg-surface-1 hover:border-border-hover hover:bg-muted dark:border-white/5 dark:bg-white/3 dark:hover:border-white/20 dark:hover:bg-white/8",
-  },
-};
 
 interface ModelCardProps {
   model: ModelCardOption;
@@ -69,7 +48,6 @@ export function ModelCard({
   isCancelling = false,
 }: ModelCardProps) {
   const { t } = useTranslation();
-  const styles = COLOR_CONFIG[colorScheme];
   const isLocalMode = Boolean(onDownload);
   const isDownloaded = model.isDownloaded;
   const isDownloading = model.isDownloading;
@@ -85,110 +63,114 @@ export function ModelCard({
     }
   };
 
-  const getStatusDotClass = () => {
-    if (!isLocalMode) {
-      return isSelected
-        ? "bg-primary shadow-[0_0_6px_color-mix(in_oklch,var(--color-primary)_60%,transparent)]"
-        : "bg-muted-foreground/30";
-    }
-    if (isDownloaded) {
-      return isSelected
-        ? "bg-primary shadow-[0_0_6px_color-mix(in_oklch,var(--color-primary)_60%,transparent)]"
-        : "bg-success shadow-[0_0_4px_rgba(34,197,94,0.5)]";
-    }
-    if (isDownloading) {
-      return "bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.5)]";
-    }
-    return "bg-muted-foreground/20";
-  };
+  // Selectable once it is on this Mac (or always, for a cloud model).
+  const selectable = !isLocalMode || Boolean(isDownloaded);
 
   return (
     <div
+      role="radio"
+      aria-checked={isSelected}
+      aria-disabled={!selectable || undefined}
+      tabIndex={selectable ? 0 : -1}
       onClick={handleCardClick}
-      className={`relative w-full p-2 rounded-md border text-left transition-colors duration-200 group overflow-hidden ${
-        isSelected ? styles.selected : styles.default
-      } ${!isLocalMode || (isDownloaded && !isSelected) ? "cursor-pointer" : ""}`}
+      onKeyDown={(event) => {
+        if ((event.key === "Enter" || event.key === " ") && selectable) {
+          event.preventDefault();
+          handleCardClick();
+        }
+      }}
+      className={cn(
+        "group flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-colors",
+        "focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
+        isSelected ? "bg-primary/[0.06]" : selectable ? "hover:bg-muted/50" : "",
+        selectable && !isSelected ? "cursor-pointer" : ""
+      )}
     >
-      <div className="flex items-center gap-1.5">
-        <div
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${getStatusDotClass()} ${
-            isSelected && isDownloaded
-              ? "animate-[pulse-glow_2s_ease-in-out_infinite]"
-              : isDownloading
-                ? "animate-[spinner-rotate_1s_linear_infinite]"
-                : ""
-          }`}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+          isSelected ? "border-primary bg-primary" : "border-input",
+          !selectable && "opacity-40"
+        )}
+      >
+        {isSelected && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+      </span>
+
+      {model.icon ? (
+        <img
+          src={model.icon}
+          alt=""
+          className={`size-4 shrink-0 ${model.invertInDark ? "icon-monochrome" : ""}`}
+          aria-hidden="true"
         />
+      ) : (
+        <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      )}
 
-        {model.icon ? (
-          <img
-            src={model.icon}
-            alt=""
-            className={`w-3.5 h-3.5 shrink-0 ${model.invertInDark ? "icon-monochrome" : ""}`}
-            aria-hidden="true"
-          />
-        ) : (
-          <Globe className="w-3.5 h-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <span
+        className={cn(
+          "truncate text-sm font-medium text-foreground",
+          truncateDescription && (model.description ? "max-w-[60%] shrink-0" : "min-w-0 flex-1")
         )}
-
+      >
+        {model.label}
+      </span>
+      {model.description && (
         <span
-          className={cn(
-            "text-sm font-semibold text-foreground truncate tracking-tight",
-            truncateDescription && (model.description ? "shrink-0 max-w-[60%]" : "min-w-0 flex-1")
-          )}
+          className={
+            truncateDescription
+              ? "min-w-0 flex-1 truncate text-[13px] text-muted-foreground"
+              : "shrink-0 text-[13px] tabular-nums text-muted-foreground"
+          }
         >
-          {model.label}
+          {model.description}
         </span>
-        {model.description && (
-          <span
-            className={
-              truncateDescription
-                ? "text-xs text-muted-foreground/60 truncate min-w-0 flex-1"
-                : "text-xs text-muted-foreground/50 tabular-nums shrink-0"
-            }
-          >
-            {model.description}
-          </span>
-        )}
-        {specHref && (
-          <a
-            href={specHref}
-            onClick={createExternalLinkHandler(specHref)}
-            className="inline-flex items-center gap-0.5 text-xs text-primary/60 hover:text-primary transition-colors shrink-0"
-          >
-            {t("models.learnMore")}
-            <ExternalLink size={9} />
-          </a>
-        )}
+      )}
+      {specHref && (
+        <a
+          href={specHref}
+          onClick={createExternalLinkHandler(specHref)}
+          className="inline-flex shrink-0 items-center gap-0.5 rounded-sm text-[13px] text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {t("models.learnMore")}
+          <ExternalLink aria-hidden="true" className="size-3" />
+        </a>
+      )}
+      {model.recommended && (
+        <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-brand-ink">
+          {t("common.recommended")}
+        </span>
+      )}
 
-        {model.recommended && (
-          <span className="text-xs font-medium text-primary px-1.5 py-0.5 bg-primary/10 rounded-sm shrink-0">
-            {t("common.recommended")}
-          </span>
-        )}
-
-        <div className="ml-auto flex items-center gap-1.5 shrink-0">
-          {isSelected && (
-            <span className="text-xs font-medium text-primary px-2 py-0.5 bg-primary/10 rounded-sm">
-              {t("common.active")}
-            </span>
-          )}
-
-          {isLocalMode && (
-            <>
-              {isDownloaded ? (
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {isLocalMode && (
+          <>
+            {isDownloaded ? (
+              <>
+                <span className="flex items-center gap-1 text-[13px] text-muted-foreground">
+                  <Check aria-hidden="true" className="size-3.5 text-success" />
+                  {t("models.downloaded")}
+                </span>
                 <Button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete?.(model.value);
                   }}
-                  size="sm"
+                  size="icon-sm"
                   variant="ghost"
-                  className="h-6 w-6 p-0 text-muted-foreground/40 hover:text-destructive opacity-0 group-hover:opacity-100 transition-[color,opacity,transform] active:scale-95"
+                  aria-label={t("models.delete", { model: model.label })}
+                  className="size-7 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 aria-hidden="true" className="size-3.5" />
                 </Button>
-              ) : isDownloading ? (
+              </>
+            ) : isDownloading ? (
+              <>
+                <Loader2
+                  aria-hidden="true"
+                  className="size-4 animate-spin text-muted-foreground motion-reduce:animate-none"
+                />
                 <Button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -196,29 +178,28 @@ export function ModelCard({
                   }}
                   disabled={isCancelling}
                   size="sm"
-                  variant="outline"
-                  className="h-6 px-2.5 text-xs text-destructive border-destructive/25 hover:bg-destructive/8"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
                 >
-                  <X size={11} className="mr-0.5" />
-                  {isCancelling ? "..." : t("common.cancel")}
+                  <X aria-hidden="true" />
+                  {isCancelling ? "…" : t("common.cancel")}
                 </Button>
-              ) : (
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDownload?.(model.value);
-                  }}
-                  size="sm"
-                  variant="default"
-                  className="h-6 px-2.5 text-xs"
-                >
-                  <Download size={11} className="mr-1" />
-                  {t("common.download")}
-                </Button>
-              )}
-            </>
-          )}
-        </div>
+              </>
+            ) : (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownload?.(model.value);
+                }}
+                size="sm"
+                variant="outline"
+              >
+                <Download aria-hidden="true" />
+                {t("common.download")}
+              </Button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -257,7 +238,13 @@ export default function ModelCardList({
   }
 
   return (
-    <div className={`space-y-0.5 ${className}`}>
+    <div
+      role="radiogroup"
+      className={cn(
+        "divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs",
+        className
+      )}
+    >
       {models.map((model) => (
         <ModelCard
           key={model.value}

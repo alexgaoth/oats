@@ -125,7 +125,7 @@
     "model": "Model",
     "loading": "Loading...",
     "unknown": "Unknown",
-    "availableModels": "Available Models",
+    "availableModels": "Available models",
     "hold": "Hold",
     "tap": "Tap",
     "save": "Save",
@@ -289,8 +289,8 @@
       "keyRequiredHint": "An API key is required for inference — add one to use this provider."
     },
     "getApiKey": "Get your API key ->",
-    "selectModel": "Select Model",
-    "availableModels": "Available Models",
+    "selectModel": "Select model",
+    "availableModels": "Available models",
     "disableThinking": {
       "label": "Disable thinking output",
       "help": "Skips reasoning tokens for cleaner output. Recommended for cleanup. Some servers ignore this hint."
@@ -306,7 +306,7 @@
   },
   "transcription": {
     "deleteModel": {
-      "title": "Delete Model",
+      "title": "Delete model",
       "description": "Are you sure you want to delete this model? You'll need to re-download it if you want to use it again."
     },
     "apiKeyOptional": "API Key (Optional)",
@@ -492,7 +492,7 @@
       "label": "Debug mode"
     },
     "description": "Capture detailed logs to help diagnose issues",
-    "openLogsFolder": "Open Logs Folder",
+    "openLogsFolder": "Open logs folder",
     "performanceNote": {
       "description": "Debug logging writes to disk continuously and may slightly affect performance. Disable when not troubleshooting.",
       "label": "Note"
@@ -506,7 +506,7 @@
       },
       "title": "Sharing logs for support"
     },
-    "title": "Debug Logging",
+    "title": "Debug logging",
     "toasts": {
       "copied": {
         "description": "Log file path copied to clipboard",
@@ -518,11 +518,11 @@
       },
       "debugDisabled": {
         "description": "Debug logging has been turned off",
-        "title": "Debug Logging Disabled"
+        "title": "Debug logging disabled"
       },
       "debugEnabled": {
         "description": "Detailed logs are now being written to disk",
-        "title": "Debug Logging Enabled"
+        "title": "Debug logging enabled"
       },
       "loadFailed": {
         "description": "Something went wrong. Try reopening Settings.",
@@ -584,16 +584,16 @@
       "unableToAccess": "Unable to access microphone. Please check permissions."
     },
     "helpText": "Select a specific microphone or use the system default setting.",
-    "inputDevice": "Input Device",
+    "inputDevice": "Input device",
     "noBuiltInDetected": "No built-in microphone detected. Using system default.",
     "refresh": "Refresh device list",
     "preferBuiltIn": {
       "description": "External microphones may cause latency or reduced transcription quality",
-      "label": "Prefer Built-in Microphone"
+      "label": "Prefer the built-in microphone"
     },
     "selectPlaceholder": "Select a microphone",
-    "systemDefault": "System Default",
-    "unknownDevice": "Unknown Device",
+    "systemDefault": "System default",
+    "unknownDevice": "Unknown device",
     "using": "Using: {{device}}"
   },
   "pasteToolsInfo": {
@@ -782,9 +782,9 @@
       "billing": {
         "couldNotOpenDescription": "We had trouble opening the billing page. Please try again.",
         "couldNotOpenTitle": "Couldn't open billing",
-        "manageBilling": "Manage Billing",
+        "manageBilling": "Manage billing",
         "opening": "Opening...",
-        "updatePaymentMethod": "Update Payment Method"
+        "updatePaymentMethod": "Update payment method"
       },
       "checkout": {
         "couldNotOpenDescription": "We had trouble opening the checkout page. Please try again.",
@@ -793,7 +793,7 @@
         "upgradeToPro": "Upgrade to Pro"
       },
       "disabled": "Disabled",
-      "featuresDisabled": "Account Features Disabled",
+      "featuresDisabled": "Account features disabled",
       "featuresDisabledDescription": "Set VITE_AUTH_URL in your .env file to enable account features.",
       "notConfigured": "Authentication is not configured",
       "notSignedIn": "Not signed in",
@@ -854,7 +854,7 @@
             "Mobile app (iOS Coming Soon)",
             "Email support"
           ],
-          "cta": "Get Started",
+          "cta": "Get started",
           "switchToAnnual": "Switch to Annual"
         },
         "business": {
@@ -865,14 +865,14 @@
           "annualPeriod": "/yr",
           "annualEquivalent": "$16.67",
           "includesPrefix": "All Pro features +",
-          "badge": "Most Popular",
+          "badge": "Most popular",
           "features": [
             "Unlimited meeting recordings",
             "Agent mode",
             "Chat over your data",
             "Priority support"
           ],
-          "cta": "Get Started",
+          "cta": "Get started",
           "switchToAnnual": "Switch to Annual"
         },
         "enterprise": {
@@ -887,7 +887,7 @@
             "SSO & compliance",
             "Dedicated support"
           ],
-          "cta": "Contact Sales"
+          "cta": "Contact sales"
         },
         "currentPlan": "Current plan",
         "upgrade": "Upgrade",
@@ -912,7 +912,7 @@
       "signOut": {
         "failedDescription": "Something went wrong signing out. Please try again.",
         "failedTitle": "Couldn't sign out",
-        "signOut": "Sign Out",
+        "signOut": "Sign out",
         "signingOut": "Signing out..."
       },
       "signedIn": "Signed in",
@@ -924,35 +924,35 @@
         }
       },
       "trialCta": {
-        "button": "Create Free Account",
+        "button": "Create free account",
         "description": "Unlimited transcriptions, priority processing, and more.",
         "title": "Try Pro free for 7 days"
       },
       "signedOutPlans": {
-        "button": "Create Free Account"
+        "button": "Create free account"
       },
       "user": "User",
       "wordsRemaining": "{{remaining}} remaining",
       "deleteAccount": {
-        "label": "Delete Account",
+        "label": "Delete account",
         "labelDescription": "Permanently delete your account, all cloud data, and local data. This action cannot be undone.",
-        "button": "Delete My Account",
+        "button": "Delete my account",
         "deleting": "Deleting...",
         "title": "Delete Your Account?",
         "description": "This will permanently delete your Oats account, all cloud-synced notes, and all local data including transcriptions, audio recordings, downloaded models, calendar connections, and settings. This action cannot be undone.",
-        "confirmText": "Delete Everything",
-        "successTitle": "Account Deleted",
+        "confirmText": "Delete everything",
+        "successTitle": "Account deleted",
         "successDescription": "Your account and all data have been deleted. The app will now reload.",
-        "failedTitle": "Deletion Failed",
+        "failedTitle": "Deletion failed",
         "failedDescription": "Something went wrong deleting your account. Your local data may have been partially removed. Please try again."
       }
     },
     "agentConfig": {
-      "agentName": "Agent Name",
+      "agentName": "Agent name",
       "description": "Name your AI assistant so you can address it directly during dictation",
       "dialogs": {
         "updatedDescription": "Your agent is now named \"{{name}}\". Address it by saying \"Hey {{name}}\" followed by your instructions.",
-        "updatedTitle": "Agent Name Updated"
+        "updatedTitle": "Agent name updated"
       },
       "examplesTitle": "Examples",
       "helper": "Pick something short and natural to say aloud",
@@ -961,7 +961,7 @@
       "instructionMode": "Instruction",
       "placeholder": "e.g. Jarvis, Nova, Atlas...",
       "save": "Save",
-      "title": "Voice Agent",
+      "title": "Voice agent",
       "examples": {
         "formalEmail": "Hey {{agentName}}, write a formal email about the budget",
         "professional": "Hey {{agentName}}, make this more professional",
@@ -969,16 +969,16 @@
       }
     },
     "aiModels": {
-      "customSetup": "Custom Setup",
+      "customSetup": "Custom setup",
       "customSetupDescription": "Use your own provider and API key.",
       "description": "Clean up transcriptions, handle commands, and fix errors while preserving your tone.",
       "enableTextCleanup": "Enable text cleanup",
       "enableTextCleanupDescription": "Use AI to remove filler words, fix grammar, and polish punctuation",
       "modes": {
         "legacy": "Oats Cloud",
-        "providers": "Cloud Providers",
+        "providers": "Cloud providers",
         "local": "Local",
-        "selfHosted": "Self-Hosted",
+        "selfHosted": "Self-hosted",
         "enterprise": "Enterprise",
         "legacyDesc": "Reliable accuracy. No setup needed.",
         "providersDesc": "Bring your own API key.",
@@ -999,15 +999,15 @@
           "title": "Switched to Custom Setup"
         },
         "switchedProviders": {
-          "title": "Cloud Providers",
+          "title": "Cloud providers",
           "description": "Using your own API keys."
         },
         "switchedLocal": {
-          "title": "On Device",
+          "title": "On device",
           "description": "AI runs locally on your machine."
         },
         "switchedSelfHosted": {
-          "title": "Self-Hosted",
+          "title": "Self-hosted",
           "description": "Using your own server."
         },
         "switchedEnterprise": {
@@ -1017,13 +1017,13 @@
       }
     },
     "developer": {
-      "clearCache": "Clear Cache",
+      "clearCache": "Clear cache",
       "dataManagementDescription": "Manage cached models and app data",
-      "dataManagementTitle": "Data Management",
+      "dataManagementTitle": "Data",
       "modelCache": "Model cache",
       "open": "Open",
       "removeModels": {
-        "confirmText": "Delete Models",
+        "confirmText": "Delete models",
         "description": "This deletes all locally cached Whisper models ({{path}}) and frees disk space. You can download them again from the model picker.",
         "failedDescription": "Something went wrong removing the models. Please try again.",
         "failedDescriptionShort": "Could not remove cached models.",
@@ -1034,19 +1034,19 @@
       },
       "removing": "Removing...",
       "resetAll": {
-        "confirmText": "Delete Everything",
+        "confirmText": "Delete everything",
         "description": "This will permanently delete all local settings, transcriptions, audio recordings, downloaded AI models, calendar connections, and cached data. Cloud data and your account will not be affected. The app will reload after reset.",
         "failedDescription": "Something went wrong. Please try again or reinstall the app.",
         "failedTitle": "Couldn't reset",
         "successDescription": "Everything has been reset. The app will reload now.",
         "successTitle": "All done",
-        "title": "Reset All App Data"
+        "title": "Reset all app data"
       },
       "resetAppData": "Reset app data",
       "resetAppDataDescription": "Permanently delete all local settings, transcriptions, audio recordings, downloaded models, and cached data"
     },
     "dictionary": {
-      "title": "Custom Dictionary",
+      "title": "Custom dictionary",
       "description": "Teach the AI your vocabulary — names, jargon, and terms it might otherwise miss",
       "addWordOrPhrase": "Add word or phrase",
       "placeholder": "Add a word or phrase...",
@@ -1082,17 +1082,17 @@
         "autoHideDescription": "Keep the icon hidden until you start dictating",
         "startPosition": "Start position",
         "startPositionDescription": "Where the voice recorder panel appears on screen",
-        "bottomRight": "Bottom Right",
-        "center": "Bottom Center",
-        "bottomLeft": "Bottom Left",
+        "bottomRight": "Bottom right",
+        "center": "Bottom center",
+        "bottomLeft": "Bottom left",
         "description": "Control when the dictation icon is visible on your screen",
-        "title": "Floating Icon"
+        "title": "Floating icon"
       },
       "hotkey": {
-        "activationMode": "Activation Mode",
+        "activationMode": "Activation mode",
         "description": "The key combination that starts and stops voice dictation",
         "resetToDefault": "Reset to {{hotkey}}",
-        "title": "Dictation Hotkey",
+        "title": "Dictation hotkey",
         "linuxPttPermissionTitle": "Hold to Speak needs extra setup",
         "linuxPttPermissionDescription": "Run this command and log out/in: sudo usermod -aG input $USER",
         "linuxPttSetupTitle": "Hold to Speak needs setup",
@@ -1103,18 +1103,18 @@
         "hyprlandUnbindDescription": "On Hyprland, Oats claims the selected shortcut. Any existing Hyprland bind that uses the same key combination will be unbound when Oats registers its shortcut."
       },
       "meetingHotkey": {
-        "title": "Meeting Mode Hotkey",
+        "title": "Meeting mode hotkey",
         "description": "Start meeting mode and snap the panel to the side of the screen",
         "layoutLabel": "When triggered by hotkey, open in:",
         "layoutFullWidth": "Full width",
         "layoutSidePanel": "Side panel"
       },
       "voiceAgentHotkey": {
-        "title": "Voice Agent Hotkey",
+        "title": "Voice agent hotkey",
         "description": "Speak a request — your AI agent types the result, not your words"
       },
       "translationHotkey": {
-        "title": "Translation Hotkey",
+        "title": "Translation hotkey",
         "description": "Dictate in any language — the pasted text comes out translated"
       },
       "microphone": {
@@ -1126,7 +1126,7 @@
         "dictationSoundsDescription": "Play a tone when recording starts and stops",
         "pauseMedia": "Pause media",
         "pauseMediaDescription": "Automatically pause music when dictation starts",
-        "title": "Sound Effects"
+        "title": "Sounds"
       },
       "notifications": {
         "title": "Notifications",
@@ -1156,7 +1156,7 @@
         "startMinimizedDescription": "Launch without showing the control panel window"
       },
       "waylandPaste": {
-        "title": "Wayland Paste Setup",
+        "title": "Wayland paste setup",
         "description": "Auto-paste on Wayland requires ydotool. Check the status of each component below.",
         "allGoodDesc": "Auto-paste is ready to go.",
         "recheck": "Re-check",
@@ -1255,19 +1255,19 @@
           "installUpdate": {
             "confirmText": "Install & Restart",
             "description": "Oats will restart to apply the update.",
-            "title": "Install Update"
+            "title": "Install update"
           },
           "noUpdates": {
             "description": "You're on the latest version.",
-            "title": "No Updates"
+            "title": "No updates"
           },
           "updateAvailable": {
             "description": "Update available: v{{version}}",
-            "title": "Update Available"
+            "title": "Update available"
           },
           "updateError": {
             "description": "Something went wrong with the update. Please try again.",
-            "title": "Update Error"
+            "title": "Update error"
           }
         },
         "downloadUpdate": "Download Update {{version}}",
@@ -1282,7 +1282,7 @@
         "whatsNew": "What's new in v{{version}}"
       },
       "searchHotkey": {
-        "title": "Search Hotkey",
+        "title": "Search hotkey",
         "description": "Opens Intelligence with the conversation search focused, from any application."
       }
     },
@@ -1296,12 +1296,12 @@
         "description": "This will remove Oats from accessibility permissions. You'll need to re-grant access in System Settings > Privacy & Security > Accessibility.",
         "label": "Reset accessibility permissions",
         "rowDescription": "Fix issues after reinstalling or rebuilding the app by removing and re-adding Oats in System Settings",
-        "title": "Reset Accessibility Permissions"
+        "title": "Reset accessibility permissions"
       },
       "optional": "Optional",
-      "systemAudioTitle": "System Audio",
+      "systemAudioTitle": "System audio",
       "systemAudioDescription": "Transcribe meetings, calls, lectures, podcasts, and other system audio.",
-      "grantAccess": "Grant Access",
+      "grantAccess": "Grant access",
       "test": "Test",
       "testAndGrant": "Test & Grant",
       "title": "Permissions",
@@ -1317,17 +1317,17 @@
       "title": "Privacy",
       "usageAnalytics": "Usage analytics",
       "usageAnalyticsDescription": "Help us improve Oats by sharing anonymous performance metrics. We never send transcription content — only timing and error data.",
-      "audioRetention": "Audio Retention",
+      "audioRetention": "Audio retention",
       "audioRetentionDescription": "Store audio recordings locally for re-transcription and download. Files are automatically deleted after the retention period.",
       "audioRetentionDisabled": "Disabled",
       "audioRetentionDays": "{{count}} days",
-      "audioStorageUsage": "Storage Usage",
+      "audioStorageUsage": "Storage used",
       "audioStorageUsageDescription": "Audio files stored on this device",
       "audioStorageFiles": "{{count}} files, {{size}}",
       "audioStorageEmpty": "No audio files stored",
-      "clearAllAudio": "Clear All Audio",
+      "clearAllAudio": "Delete all audio",
       "clearAllAudioConfirm": "Delete all stored audio files? This cannot be undone.",
-      "dataRetention": "Data Retention",
+      "dataRetention": "Data retention",
       "dataRetentionDescription": "Store transcriptions and audio locally in your history. When disabled, transcriptions are pasted but not saved.",
       "hoursAgo": "{{count}}h ago",
       "justNow": "just now",
@@ -1338,26 +1338,26 @@
     },
     "prompts": {
       "description": "View, customize, and test the unified system prompt that powers text cleanup and instruction detection",
-      "title": "Prompt Studio"
+      "title": "Prompt studio"
     },
     "speechToText": {
       "title": "Speech-to-Text",
       "description": "Pick an engine for dictation and note recording",
       "tabs": {
         "dictation": "Dictation",
-        "noteRecording": "Note Recording",
-        "upload": "Audio Upload"
+        "noteRecording": "Note recording",
+        "upload": "Audio upload"
       },
       "selfHostedStreamingNote": "Requires a server that supports streaming transcription."
     },
     "llms": {
-      "title": "Language Models",
+      "title": "Language models",
       "description": "Configure models for cleanup, note formatting, and chat",
       "tabs": {
-        "dictationCleanup": "Dictation Cleanup",
-        "dictationAgent": "Voice Agent",
+        "dictationCleanup": "Dictation cleanup",
+        "dictationAgent": "Voice agent",
         "dictationTranslation": "Translation",
-        "noteFormatting": "Note Formatting",
+        "noteFormatting": "Note formatting",
         "chatIntelligence": "Chat"
       }
     },
@@ -1366,14 +1366,14 @@
       "autoGenerateTitleDescription": "Use AI to generate a short title for notes after transcription or enhancement"
     },
     "transcription": {
-      "customSetup": "Custom Setup",
+      "customSetup": "Custom setup",
       "customSetupDescription": "Use your own provider and API key.",
       "description": "Choose how Oats transcribes your voice",
       "modes": {
         "legacy": "Oats Cloud",
-        "providers": "Cloud Providers",
+        "providers": "Cloud providers",
         "local": "Local",
-        "selfHosted": "Self-Hosted",
+        "selfHosted": "Self-hosted",
         "legacyDesc": "Reliable accuracy. No setup needed.",
         "providersDesc": "Bring your own API key.",
         "localDesc": "On-device models. Fully private.",
@@ -1392,15 +1392,15 @@
           "title": "Switched to Custom Setup"
         },
         "switchedProviders": {
-          "title": "Cloud Providers",
+          "title": "Cloud providers",
           "description": "Using your own API keys."
         },
         "switchedLocal": {
-          "title": "On Device",
+          "title": "On device",
           "description": "Transcription runs locally on your machine."
         },
         "switchedSelfHosted": {
-          "title": "Self-Hosted",
+          "title": "Self-hosted",
           "description": "Using your own server."
         }
       },
@@ -1409,15 +1409,15 @@
         "description": "GPU used for local speech-to-text"
       },
       "diarization": {
-        "title": "Speaker Identification",
+        "title": "Speaker identification",
         "description": "Identify individual speakers in meeting recordings",
-        "modelsReady": "Models Ready",
-        "deleteModels": "Delete Models"
+        "modelsReady": "Models ready",
+        "deleteModels": "Delete models"
       },
-      "transcriptionPreview": "Live Transcription Preview",
+      "transcriptionPreview": "Live transcription preview",
       "transcriptionPreviewDescription": "Show transcription in a floating window before cleanup",
       "vad": {
-        "title": "Voice Activity Detection",
+        "title": "Voice activity detection",
         "description": "Configure how Silero VAD detects and segments speech for local Whisper transcription",
         "toggles": {
           "dictation": {
@@ -1591,7 +1591,9 @@
         "liquidai_lfm2_5_350m_q8_0": "Ultra-light model for fast dictation cleanup",
         "liquidai_lfm2_5_230m_q8_0": "Tiny model, instant cleanup on modest hardware"
       }
-    }
+    },
+    "downloaded": "Downloaded",
+    "delete": "Delete {{model}}"
   },
   "notes": {
     "meeting": {
@@ -2006,9 +2008,10 @@
       "deleteDescription": "Its transcript, summary and marked moments are removed from Oats. This cannot be undone.",
       "emptyDescription": "Conversations you record appear here, with a summary and a transcript you can search.",
       "noMatchesHint": "Search looks through titles, summaries, transcripts and your notes.",
-      "needsSummaryModel": "No summary: no summary model is ready on this computer. Set one up under Settings › Advanced › Language Models, then come back to summarize.",
+      "needsSummaryModel": "No summary model is ready yet, so this conversation has not been summarized.",
       "notSummarized": "This conversation has not been summarized.",
-      "summarize": "Summarize"
+      "summarize": "Summarize",
+      "setUpModel": "Set up a model"
     },
     "review": {
       "title": "What this left open",
@@ -2033,57 +2036,125 @@
       "next": "Next match"
     },
     "settings": {
-      "title": "Keep the choices small.",
-      "subtitle": "Oats writes the title, summary, and threads itself.",
       "processing": "Processing",
-      "processingHint": "One choice covers transcription and intelligence.",
-      "uiMode": "Interface",
-      "uiModeHint": "The working ledger, or the oat field.",
-      "uiModeWork": "Ledger",
-      "uiModeField": "Field",
-      "localProcessing": "On this computer",
-      "apiProcessing": "Use API key",
-      "provider": "Provider",
-      "summaryProvider": "Summaries",
-      "summaryHint": "The model that writes the title, summary and threads after a conversation.",
-      "summaryKeyPlaceholder": "API key",
-      "summaryModel": "Model",
       "vault": "Obsidian vault",
       "vaultHint": "Each conversation writes itself in as a note, with topics as [[wikilinks]].",
       "vaultChoose": "Choose folder",
       "vaultChange": "Change",
       "vaultStop": "Stop",
-      "apiKeyPlaceholder": "OpenAI API key",
-      "apiKeyFor": "{{provider}} API key",
-      "microphone": "Microphone",
-      "micBuiltIn": "Built-in microphone",
-      "micSystemDefault": "System default",
-      "micChange": "Change",
-      "micChangeLabel": "Change microphone",
-      "micError": "Oats could not read the microphone list. Check microphone permission.",
-      "language": "Conversation language",
-      "autoDetect": "Auto-detect",
       "autoSearch": "Search unanswered questions",
       "autoSearchHint": "Opens a background Google search when nobody knows. Only the question text leaves — never audio or transcript. Cards still appear when off.",
-      "data": "Your data",
-      "dataHint": "Recordings and transcripts stay on this computer.",
-      "openDataFolder": "Open data folder",
-      "advanced": "Advanced",
-      "advancedHint": "Advanced — per-feature models, providers, and diagnostics.",
       "advancedLoading": "Opening…",
-      "dictationShortcut": "Dictate with",
-      "dictationHint": "Hold or tap; types where your cursor is.",
       "hotkeyRejected": "“{{hotkey}}” could not be registered, so the previous shortcut is still in use.",
       "conversationHotkey": "Conversation shortcut",
       "conversationHotkeyHint": "Starts and stops from anywhere.",
-      "sections": {
-        "label": "Advanced sections",
-        "general": "General",
-        "hotkeys": "Shortcuts",
-        "speechToText": "Speech-to-Text",
-        "llms": "Language Models",
-        "privacyData": "Privacy",
-        "system": "System"
+      "backToApp": "Back to app",
+      "navLabel": "Settings pages",
+      "themeSystem": "System",
+      "processingDescription": "Transcription, summaries and cleanup in one choice. Each can be changed below.",
+      "processingLocal": "On this Mac",
+      "processingProviders": "With API keys",
+      "processingMixed": "Mixed: some features below use a different choice.",
+      "tuning": "Fine-tuning",
+      "dictationAudio": "Dictation audio",
+      "dictationAudioDescription": "Recordings of dictations, kept for 30 days so a failed one can be transcribed again.",
+      "cleanup": "Cleanup",
+      "cleanupDescription": "A model tidies each dictation before it is pasted.",
+      "pages": {
+        "general": {
+          "title": "General",
+          "description": "How Oats looks, starts and lets you know."
+        },
+        "shortcuts": {
+          "title": "Shortcuts",
+          "description": "Keys that work from any app, and the ones inside Oats."
+        },
+        "recording": {
+          "title": "Recording",
+          "description": "The microphone, the language, and the question cards during a conversation."
+        },
+        "dictation": {
+          "title": "Dictation",
+          "description": "Typing by voice into any app: what is pasted and how it is cleaned up."
+        },
+        "models": {
+          "title": "AI models",
+          "description": "What transcribes and summarizes, on this Mac or with your API keys."
+        },
+        "connections": {
+          "title": "Connections",
+          "description": "Where conversations go once they are recorded."
+        },
+        "privacy": {
+          "title": "Privacy & data",
+          "description": "Permissions, and the audio Oats keeps."
+        },
+        "about": {
+          "title": "About",
+          "description": "Version, logs, and starting over."
+        }
+      },
+      "inApp": {
+        "title": "In Oats",
+        "description": "These work while the Oats window is in front.",
+        "toggleConversation": "Start or stop a conversation",
+        "mark": "Mark a moment while recording",
+        "search": "Search conversations",
+        "find": "Find in a conversation",
+        "back": "Go back"
+      },
+      "questions": {
+        "title": "Question cards",
+        "description": "During a conversation, Oats notices factual questions nobody in the room could answer.",
+        "enable": "Show question cards",
+        "model": "Classifier model",
+        "modelDescription": "Optional. Runs on this Mac and makes the cards more accurate.",
+        "download": "Download",
+        "searchWith": "Search with"
+      },
+      "connections": {
+        "vaultTitle": "Obsidian",
+        "vaultDescription": "Each finished conversation writes itself into your vault as a note.",
+        "vaultFolder": "Vault folder",
+        "noVault": "No folder chosen.",
+        "filesTitle": "Markdown files",
+        "filesDescription": "A copy of every note and transcript as plain files in a folder you choose."
+      },
+      "dictionary": {
+        "title": "Dictionary",
+        "description": "Names, products and jargon Oats should hear right, in dictation and conversations.",
+        "placeholder": "Add words, separated by commas",
+        "add": "Add",
+        "remove": "Remove {{word}}",
+        "empty": "No words yet.",
+        "autoLearn": "Learn from corrections",
+        "autoLearnDescription": "When you correct a dictated word in another app, Oats adds it here."
+      },
+      "models": {
+        "conversations": "Conversations",
+        "conversationsDescription": "The speech model that transcribes a conversation.",
+        "summaries": "Summaries",
+        "summariesDescription": "The model that writes the title, the summary and the threads.",
+        "dictation": "Dictation",
+        "dictationDescription": "The speech model for dictation."
+      },
+      "global": {
+        "title": "From any app",
+        "description": "These work even when Oats is in the background.",
+        "conversation": "Start or stop a conversation",
+        "conversationHint": "Records the room, or finishes the conversation that is running.",
+        "dictation": "Dictate",
+        "dictationHint": "Types what you say where your cursor is.",
+        "activation": "Dictation key",
+        "activationHint": "Tap to start and stop, or hold while you speak.",
+        "search": "Search conversations",
+        "searchHint": "Opens Oats with the search field ready."
+      },
+      "microphoneDescription": "The microphone Oats uses for conversations and dictation.",
+      "advanced": {
+        "title": "Advanced",
+        "fieldBackdrop": "Field backdrop",
+        "fieldBackdropDescription": "Draw the animated wheat field behind the app. It uses the GPU all the time."
       }
     },
     "errors": {
