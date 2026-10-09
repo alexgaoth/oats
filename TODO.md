@@ -266,6 +266,31 @@ announcement counts _literal_ matches only, with any guesses named separately,
 because counting them together told a screen-reader user that three conversations
 matched when one did.
 
+**Done 2026-10-08: a search reaches every conversation, and what was said in
+it.** Three holes, each measured before it was closed:
+
+- `notes_fts` never indexed a transcript — a conversation's `content` is always
+  "" — so the keyword search and the hybrid FTS + vector search could not find
+  a word anybody said. It is now contentless (`contentless_delete=1`) over
+  title, content, summary, the transcript's words and mark notes, built once by
+  a guarded migration. That also ends the every-launch backfill, which re-added
+  every note to the old index and left it failing FTS5's integrity-check.
+- The list filters only the hundred conversations it holds, so nothing older
+  could be found. `db-recall-notes` runs the same literal test (`recallText`)
+  over the rest in the main process and returns only the matches.
+- The filter folded the raw transcript JSON, so a key name matched everything.
+
+Measured in the renderer (Vite, headless Chrome, 110 conversations):
+`"dolphin protocol"`, said only in the 104th, went from `Nothing matches that`
+to one `said · 1:00:` row that opens on that turn; `speakerStatus` went from 100
+rows to none. A result the list did not hold opened the newest conversation in
+its place (measured: `Conversation 0`); it opens itself now.
+
+**Still open:** the vector index embeds the title and summary only, cut at 1500
+characters (`LocalEmbeddings.noteEmbedText`), so `related` knows nothing of what
+was said. Transcript chunks want their own collection, like
+`conversation_chunks`, embedded after Finish rather than on every checkpoint.
+
 ### P2.2 Post-conversation review — the certain half done (2026-08-23)
 
 **Done: open and researched questions, with links to the exact utterance.** The

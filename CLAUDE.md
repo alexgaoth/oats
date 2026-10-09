@@ -172,6 +172,25 @@ All four were "fails quietly at the end", which the pencil standard forbids, and
 
 Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`meetingUseLocalWhisper`), and upload (`uploadUseLocalWhisper`). **Recording a conversation — the primary action — reads the _meeting_ scope**, via `selectResolvedMeetingTranscription`. The visible Settings page has one processing choice, so it must write every scope — **call `setCloudTranscriptionForAllScopes`, never a hand-picked list of setters.** This has now bitten twice: writing only `useLocalWhisper` made "On this computer" appear selected while recording still reached for OpenAI, and writing every field _but_ `meetingCloudTranscriptionMode` left it empty, which resolves to `"legacy"` and throws "OpenAI realtime requires a bring-your-own-key API key" with the key already saved. All three default to local, because Oats bundles a Whisper model and promises to work offline with no account. There is also a legacy `meetingFollows*` migration in `settingsStore.ts` that copies dictation values into meeting fields for pre-existing installs — it does not run for fresh ones, which is why the defaults themselves have to be right.
 
+### Search reaches past the list (2026-10-08)
+
+- **The Intelligence list holds only the newest 100 conversations.** Anything
+  that searches or opens a conversation must reach past it. Literal recall over
+  the rest is `db-recall-notes` (the same `recallText` as the in-memory filter),
+  and a result the store does not hold opens through `openedNote` — `selected`
+  falls back to `notes[0]`, which once opened the newest conversation instead.
+- **`notes_fts` is contentless** (`content=''`, `contentless_delete=1`); its
+  triggers compute the transcript's words with SQLite's own JSON functions. An
+  external-content table cannot: FTS5 reads its content table with virtual
+  tables disabled, so a view using `json_each` fails ("no such table:
+  main.json_each"). Never call an app-registered SQL function from a trigger on
+  `notes` — a build without it fails every note write, the checkpoint included.
+- **No every-launch `INSERT OR IGNORE INTO notes_fts ... SELECT`.** On an FTS5
+  table it ignores nothing and re-adds every row; the old one corrupted the
+  index on every launch. Change the schema in `NOTES_FTS_SCHEMA` only:
+  `_migrateNotesFts` compares the stored SQL with it and rebuilds once. Keep the
+  trigger names — older builds `CREATE ... IF NOT EXISTS` them.
+
 ## Rules
 
 - **Verify by measurement, never by reading.** Every false "fixed" claim in this codebase's history passed a re-read and failed a probe. Drive the built app (`npm run perf:baseline`, or headless Chrome over `src/dist`) and assert on `getComputedStyle` / `getBoundingClientRect`.
