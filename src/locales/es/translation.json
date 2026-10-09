@@ -2126,7 +2126,12 @@
         "search": "Buscar conversaciones",
         "searchHint": "Abre Oats con la búsqueda lista."
       },
-      "microphoneDescription": "El micrófono que usa Oats para conversaciones y dictado."
+      "microphoneDescription": "El micrófono que usa Oats para conversaciones y dictado.",
+      "advanced": {
+        "title": "Avanzado",
+        "fieldBackdrop": "Fondo de campo",
+        "fieldBackdropDescription": "Dibuja el campo de trigo animado detrás de la app. Usa la GPU todo el tiempo."
+      }
     },
     "errors": {
       "noModel": "Configura el procesamiento de Oats antes de grabar una conversación.",
