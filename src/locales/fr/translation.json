@@ -1907,8 +1907,6 @@
       "marked": "Marqué",
       "markLabel": "Marquer ce moment",
       "markAnnounced": "Marqué à {{time}}",
-      "threadMapLabel": "Carte des {{count}} sujets abordés jusqu'ici",
-      "threadMapNoQuote": "rien de récent à citer",
       "recordTitle": "Enregistrer une conversation",
       "start": "Démarrer l’enregistrement",
       "shortcutAnywhere": "depuis n’importe quelle app",
@@ -1916,6 +1914,45 @@
       "stop": "Arrêter",
       "recentHeading": "Conversations récentes",
       "viewAll": "Tout afficher"
+    },
+    "flow": {
+      "title": "Déroulé de la conversation",
+      "viewLabel": "Vue du déroulé",
+      "mode": {
+        "auto": "Auto",
+        "stack": "Liste",
+        "graph": "Graphe"
+      },
+      "empty": "Les sujets apparaissent ici au fil de la conversation.",
+      "caption": {
+        "few_one": "Affichage de la liste : seulement {{count}} sujet pour l'instant.",
+        "few_other": "Affichage de la liste : seulement {{count}} sujets pour l'instant.",
+        "linear": "Affichage de la liste : la conversation a avancé en ligne droite.",
+        "returns_one": "Affichage du graphe : {{count}} retour à un sujet précédent jusqu'ici.",
+        "returns_other": "Affichage du graphe : {{count}} retours à des sujets précédents jusqu'ici.",
+        "branching": "Affichage du graphe : la conversation s'est ramifiée.",
+        "stack": "Affichage de la liste.",
+        "graph": "Affichage du graphe."
+      },
+      "state": {
+        "live": "En cours",
+        "open": "Ouvert",
+        "resolved": "Résolu",
+        "dropped": "Abandonné"
+      },
+      "back_one": "Repris {{count}}×",
+      "back_other": "Repris {{count}}×",
+      "showMore_one": "Afficher {{count}} de plus",
+      "showMore_other": "Afficher {{count}} de plus",
+      "showFewer": "Afficher moins",
+      "stackLabel": "Sujets, du plus récent au plus ancien",
+      "graphLabel_one": "Graphe de {{count}} sujet abordé jusqu'ici",
+      "graphLabel_other": "Graphe des {{count}} sujets abordés jusqu'ici",
+      "nodeName": "{{label}}, {{state}}",
+      "nodeNameBack": "{{label}}, {{state}}, {{back}}",
+      "quote": "« {{text}} »",
+      "noQuote": "Rien de récent à citer.",
+      "earlier": "Déjà abordé dans des conversations précédentes :"
     },
     "intelligence": {
       "empty": "Aucune conversation",
@@ -2120,14 +2157,6 @@
     "announcedBatch": "{{count}} nouvelles questions, la dernière : {{question}}",
     "searchedHost": "recherché · {{host}}"
   },
-  "openThreads": {
-    "count_one": "{{count}} fil ouvert",
-    "count_other": "{{count}} fils ouverts",
-    "state": {
-      "open": "ouvert",
-      "dropped": "froid"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} secondes",
     "seconds_one": "{{count}} s",
@@ -2136,13 +2165,6 @@
     "returned_other": "repris {{count}}×",
     "search": "Rechercher",
     "noQuestions": "Aucune question dans ce fil."
-  },
-  "suggestions": {
-    "title": "À soulever",
-    "unfinished": "resté ouvert",
-    "shallow": "à peine abordé",
-    "adjacent_one": "revient souvent",
-    "adjacent_other": "revient souvent"
   },
   "lifetime": {
     "title": "Ce sur quoi vous revenez",

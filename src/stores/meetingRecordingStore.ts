@@ -95,13 +95,16 @@ interface MeetingRecordingState {
   currentMicLevel: number;
   windowWidth: number;
   recordingMode: ConversationRecordingMode;
-  // Unfinished threads, most recently dropped first. Drives the collapsed
-  // open-thread stack on the Conversation surface (DESIGN.md §9.3).
+  // Unfinished threads, most recently dropped first. The open-thread stack that
+  // drew it was replaced by the conversation flow card, which reads
+  // `topicSnapshot` instead; nothing on screen reads this list now.
   openThreads: OpenThread[];
-  /** The live topic graph, republished on every finalized utterance. */
+  /** The live topic graph, republished on every finalized utterance and when a
+   *  question's answer resolves a topic. The conversation flow card draws it. */
   topicSnapshot: ConversationTopicSnapshot | null;
   // What else is worth raising (DESIGN.md §9.6). Recomputed as the conversation
-  // moves, shown only inside the expanded stack.
+  // moves. The flow card shows the `adjacent` ones — subjects from earlier
+  // conversations — in its footer.
   suggestions: ConversationSuggestion[];
   // Set when the microphone has produced nothing but silence for long enough that
   // it is more likely broken or muted than the room being quiet.
@@ -642,6 +645,15 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
         conversationTopicTracker?.resolveTopicForUtterance(card.id);
         useMeetingRecordingStore.setState({
           openThreads: (conversationTopicTracker?.openThreads(Date.now()) ?? []) as OpenThread[],
+          // Republished so the flow card shows the topic resolved now, not at
+          // the next utterance, which may be a long pause away.
+          ...(conversationTopicTracker
+            ? {
+                topicSnapshot: conversationTopicTracker.snapshot(
+                  Date.now()
+                ) as ConversationTopicSnapshot,
+              }
+            : {}),
         });
       }
     },
@@ -695,8 +707,8 @@ function pushConversationCards() {
 }
 
 // Topic tracking runs on every finalized utterance for the whole recording, so it
-// stays lexical and local — no model call, no network. It feeds the open-thread
-// stack live and is snapshotted onto the note when recording stops.
+// stays lexical and local — no model call, no network. It feeds the conversation
+// flow card live and is snapshotted onto the note when recording stops.
 function trackConversationTopic(segment: TranscriptSegment) {
   if (!conversationTopicTracker) return;
   conversationTopicTracker.onUtterance({
@@ -709,7 +721,7 @@ function trackConversationTopic(segment: TranscriptSegment) {
   const snapshot = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
   useMeetingRecordingStore.setState({
     // Already computed on the line above for the suggestions; publishing it
-    // costs nothing and is what the live map draws.
+    // costs nothing and is what the flow card draws.
     topicSnapshot: snapshot,
     openThreads: conversationTopicTracker.openThreads(Date.now()) as OpenThread[],
     suggestions: buildSuggestions({
@@ -846,6 +858,11 @@ function stopTranscriptCheckpoints() {
   checkpointLastWritten = "";
 }
 
+/**
+ * The topics as the record keeps them, for saving onto the note when a
+ * recording finishes. It commits the tracker's held turn, so it is for the end
+ * of a conversation only; anything drawn live reads `topicSnapshot` instead.
+ */
 export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null {
   if (!conversationTopicTracker) return null;
   return conversationTopicTracker.snapshot(Date.now(), {
@@ -1289,7 +1306,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // set intersection per utterance. The tracker deliberately outlives the stop so
   // the final snapshot can still be read and saved onto the note.
   conversationTopicTracker = new ConversationTopicTracker();
-  useMeetingRecordingStore.setState({ openThreads: [], suggestions: [] });
+  // The snapshot too: it is published only when an utterance lands, so until
+  // the first one the flow card on the recording screen would otherwise draw
+  // the previous conversation's topics as if they were this one's.
+  useMeetingRecordingStore.setState({ openThreads: [], suggestions: [], topicSnapshot: null });
   void loadConversationHistory(args.noteId);
   startTranscriptCheckpoints(args.noteId);
 

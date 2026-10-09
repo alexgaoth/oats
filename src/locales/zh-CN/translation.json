@@ -1902,8 +1902,6 @@
       "marked": "已标记",
       "markLabel": "标记此刻",
       "markAnnounced": "已在 {{time}} 标记",
-      "threadMapLabel": "目前提到的 {{count}} 个话题的地图",
-      "threadMapNoQuote": "没有可引用的近期发言",
       "recordTitle": "录制对话",
       "start": "开始录音",
       "shortcutAnywhere": "在任何应用中",
@@ -1911,6 +1909,45 @@
       "stop": "停止",
       "recentHeading": "最近的对话",
       "viewAll": "查看全部"
+    },
+    "flow": {
+      "title": "对话走向",
+      "viewLabel": "显示方式",
+      "mode": {
+        "auto": "自动",
+        "stack": "列表",
+        "graph": "关系图"
+      },
+      "empty": "随着对话推进，话题会显示在这里。",
+      "caption": {
+        "few_one": "正在显示列表：目前只有 {{count}} 个话题。",
+        "few_other": "正在显示列表：目前只有 {{count}} 个话题。",
+        "linear": "正在显示列表：对话一路向前推进。",
+        "returns_one": "正在显示关系图：目前已 {{count}} 次回到之前的话题。",
+        "returns_other": "正在显示关系图：目前已 {{count}} 次回到之前的话题。",
+        "branching": "正在显示关系图：对话出现了分支。",
+        "stack": "正在显示列表。",
+        "graph": "正在显示关系图。"
+      },
+      "state": {
+        "live": "当前",
+        "open": "未完",
+        "resolved": "已解决",
+        "dropped": "已搁置"
+      },
+      "back_one": "回到 {{count}} 次",
+      "back_other": "回到 {{count}} 次",
+      "showMore_one": "再显示 {{count}} 个",
+      "showMore_other": "再显示 {{count}} 个",
+      "showFewer": "收起",
+      "stackLabel": "话题（最新在前）",
+      "graphLabel_one": "目前提到的 {{count}} 个话题的关系图",
+      "graphLabel_other": "目前提到的 {{count}} 个话题的关系图",
+      "nodeName": "{{label}}，{{state}}",
+      "nodeNameBack": "{{label}}，{{state}}，{{back}}",
+      "quote": "“{{text}}”",
+      "noQuote": "没有可引用的近期发言。",
+      "earlier": "以前的对话中出现过："
     },
     "intelligence": {
       "empty": "还没有对话",
@@ -2115,14 +2152,6 @@
     "announcedBatch": "{{count}} 个新问题，最新：{{question}}",
     "searchedHost": "已搜索 · {{host}}"
   },
-  "openThreads": {
-    "count_one": "{{count}} 条未完线索",
-    "count_other": "{{count}} 条未完线索",
-    "state": {
-      "open": "未完",
-      "dropped": "已冷"
-    }
-  },
   "topicGraph": {
     "node": "{{label}}，{{seconds}} 秒",
     "seconds_one": "{{count}} 秒",
@@ -2131,13 +2160,6 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜索",
     "noQuestions": "这条线索中没有问题。"
-  },
-  "suggestions": {
-    "title": "值得提起",
-    "unfinished": "尚未收尾",
-    "shallow": "几乎未展开",
-    "adjacent_one": "常常一起出现",
-    "adjacent_other": "常常一起出现"
   },
   "lifetime": {
     "title": "你反复回到的主题",
