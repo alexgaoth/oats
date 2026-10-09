@@ -9,4 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Lint package-lock.json
-        run: npx --yes lockfile-lint --path package-lock.json --type npm --validate-https --allowed-hosts npm --validate-integrity
+        # Pinned: an unpinned `npx lockfile-lint` runs whatever was published
+        # last. 5.1.0 (2026-10-09) depends on lockfile-lint-api@^5.10.0, which
+        # does not exist on the registry, and failed every pull request.
+        run: npx --yes lockfile-lint@5.0.1 --path package-lock.json --type npm --validate-https --allowed-hosts npm --validate-integrity

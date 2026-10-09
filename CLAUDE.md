@@ -44,6 +44,43 @@ Re-deriving these costs hours, so they are recorded here:
 - **The floating oat cannot be focused, so it fires no focus events at all.** All three overlay windows are `focusable: false` (`windowConfig.js`); measured, `document.hasFocus()` is `false` and a `focusin` listener counts zero events while `activeElement` moves under `.focus()`. Every `onFocus`/`onBlur` on that window is dead code, and any control mounted only on hover is pointer-only by construction — the escape that works without a pointer is the cancel hotkey, which `useAudioRecording.js` registers on start and unregisters the moment transcription begins.
 - **Fn cannot be a hotkey on Linux.** Most keyboards handle it in firmware and never emit `KEY_FN`, and `hotkeyManager.js` rejects `Fn`/`GLOBE` outside macOS. Right-side modifiers (`RightAlt` and friends) are the working single-key equivalent.
 
+### macOS development — hard-won facts (2026-10-08)
+
+The first Mac run of this repo (macOS 26.6, Apple M5 Pro). Re-deriving these
+costs hours:
+
+- **The Swift helpers need an SDK the compiler can read.** Command Line Tools
+  can ship a newer SDK than its own Swift: on this machine the default
+  `MacOSX.sdk` was 27.0, built with Swift 6.4, against a 6.3.3 compiler, and
+  every `compile:*` Swift step failed with "this SDK is not supported by the
+  compiler". Pin an older SDK for the session:
+  `export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`
+  (`ls /Library/Developer/CommandLineTools/SDKs/` lists what exists).
+- **Chromium's fake microphone cannot read its file under the macOS audio
+  sandbox.** `--use-file-for-fake-audio-capture` logs "Failed to read … as input
+  to the fake device. Try disabling the sandbox" and delivers nothing — no
+  frames at all, so the in-room WAV stays at its 44-byte header and the screen
+  says "Nothing heard yet." Add `--disable-features=AudioServiceSandbox` (test
+  runs only). The Linux recipe below does not need it.
+- **Quit through the main process, not the renderer.** `--inspect=PORT` exposes
+  main; evaluate `process.mainModule.require("electron").app.quit()` there to
+  take the same `before-quit` path ⌘Q takes. A port held by a previous instance
+  makes Electron log "Starting inspector … failed: address already in use" and
+  run without one — use a fresh port per launch.
+- **macOS has no `timeout`.** `perl -e 'alarm shift; exec @ARGV' 300 <cmd>` is
+  the stock substitute.
+- **Downloads through a proxy:** Hugging Face transfers through this machine's
+  proxy broke HTTP/2 framing mid-file; `curl --http1.1 -C -` resumes cleanly.
+  `scripts/download-minilm.js` finished its files and then never exited (a
+  keep-alive socket held the event loop) — check the files, not the process.
+- **Voices for a test conversation:** `say -v Samantha -o a.aiff "…"` and
+  `afconvert -f WAVE -d LEI16@16000 -c 1 a.aiff a.wav` give a 16 kHz mono turn;
+  concatenate turns with ~1.6 s of low noise between them so the segmenter
+  learns a room floor and cuts at the pauses.
+- **The Metal "error compiling source" line is benign.** whisper-server probes
+  Metal 4's tensor API, logs that it failed, disables it ("has tensor = false")
+  and runs on the embedded Metal library. Transcription is on the GPU.
+
 ### Running a second Oats to check a claim (2026-08-19)
 
 `OATS_CHANNEL=staging npx electron . --remote-debugging-port=PORT --ozone-platform=x11`

@@ -69,8 +69,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: Download yt-dlp binary
-        run: node scripts/download-yt-dlp.js --current
 
       - name: Download Qdrant binary
         run: node scripts/download-qdrant.js --current
@@ -112,113 +110,6 @@ jobs:
           VITE_AUTH_URL: ${{ vars.VITE_AUTH_URL }}
           VITE_OPENWHISPR_API_URL: ${{ vars.VITE_OPENWHISPR_API_URL }}
           VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
-
-  build-windows:
-    needs: tests
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install platform-specific native binaries
-        run: npm install @rollup/rollup-win32-x64-msvc lightningcss-win32-x64-msvc @tailwindcss/oxide-win32-x64-msvc --no-save
-
-      - name: Cache native binaries
-        uses: actions/cache@v4
-        with:
-          path: resources/bin
-          # The system-audio helper source is in the key so a republished
-          # helper binary invalidates the cached copy.
-          key: windows-x64-bin-${{ hashFiles('scripts/download-*.js', 'resources/windows-system-audio-helper.c') }}
-
-      - name: Download whisper.cpp binaries
-        run: node scripts/download-whisper-cpp.js --current
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download llama-server binaries
-        run: node scripts/download-llama-server.js --current
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download sherpa-onnx binaries
-        run: node scripts/download-sherpa-onnx.js --current
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download yt-dlp binary
-        run: node scripts/download-yt-dlp.js --current
-
-      - name: Download Qdrant binary
-        run: node scripts/download-qdrant.js --current
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download meeting AEC helper
-        run: node scripts/download-meeting-aec-helper.js --current
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download nircmd.exe
-        run: node scripts/download-nircmd.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download windows-fast-paste.exe
-        run: node scripts/download-windows-fast-paste.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download windows-key-listener.exe
-        run: node scripts/download-windows-key-listener.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download windows-mic-listener.exe
-        run: node scripts/download-windows-mic-listener.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Download windows-system-audio-helper.exe
-        run: node scripts/download-windows-system-audio-helper.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Verify windows-system-audio-helper.exe
-        shell: bash
-        run: test -f resources/bin/windows-system-audio-helper.exe
-
-      - name: Cache Electron
-        uses: actions/cache@v4
-        with:
-          path: ~/AppData/Local/electron/Cache
-          key: windows-electron-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: windows-electron-
-
-      - name: Create runtime env
-        shell: bash
-        run: |
-          echo "GOOGLE_CALENDAR_CLIENT_ID=${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}" >> .env
-          echo "GOOGLE_CALENDAR_CLIENT_SECRET=${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}" >> .env
-
-      - name: Build and Sign Application
-        run: npm run build:win -- --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          VITE_AUTH_URL: ${{ vars.VITE_AUTH_URL }}
-          VITE_OPENWHISPR_API_URL: ${{ vars.VITE_OPENWHISPR_API_URL }}
-          VITE_OPENWHISPR_OAUTH_CALLBACK_URL: ${{ vars.VITE_OPENWHISPR_OAUTH_CALLBACK_URL }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
   build-macos:
     needs: tests
@@ -278,8 +169,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: Download yt-dlp binary
-        run: node scripts/download-yt-dlp.js --current --platform darwin --arch ${{ matrix.arch }}
 
       - name: Download Qdrant binary
         run: node scripts/download-qdrant.js --current --platform darwin --arch ${{ matrix.arch }}
@@ -343,7 +232,7 @@ jobs:
 
       - name: Verify packaged macOS native binaries
         run: |
-          APP_PATH=$(ls -d dist/mac*/OpenWhispr.app | head -n1)
+          APP_PATH=$(ls -d dist/mac*/Oats.app | head -n1)
           for bin in macos-audio-tap macos-globe-listener macos-fast-paste macos-mic-listener macos-text-monitor macos-media-remote; do
             test -x "$APP_PATH/Contents/Resources/bin/$bin" || { echo "Missing in bundle: $bin"; exit 1; }
           done
