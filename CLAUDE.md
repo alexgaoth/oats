@@ -146,13 +146,14 @@ The signature mark: geometry in `src/helpers/conversationContour.mjs` (pure, DOM
 7. **Nothing may draw a contour you cannot see.** The Intelligence list gates each row's strip — and its transcript parse — on an `IntersectionObserver`; ungated, 100 conversations cost 101 canvases and 18.9MB of backing store retained for the process lifetime. Grade small CSS marks with hard-stop rules, never sub-pixel gradient radii: at the 8px state mark Chromium quantizes them to all-or-nothing, which is how the least-settled state shipped drawing 0% ink.
 8. **A `[]` or `{}` default parameter is a memo bomb.** `useContour`'s hooks take module-level `NO_TOPICS`/`NO_EVENTS` constants because a fresh literal each render defeats every downstream `useMemo`; the version with defaults cost 148–172ms per keystroke in production mode.
 
-### The recording surface's three silent failures
+### The recording surface's four silent failures
 
-All three were "fails quietly at the end", which the pencil standard forbids, and all three are now watched. Do not simplify any of them back:
+All four were "fails quietly at the end", which the pencil standard forbids, and all four are now watched. Do not simplify any of them back:
 
 1. **The checkpoint's result is read, not `void`ed.** `flushTranscriptCheckpoint` awaits `updateNote` and only advances `checkpointLastWritten` on success, so a refused write is retried by the next utterance instead of assumed done. Discarding the promise again restores an hour-long recording that fails at `stop`.
 2. **A stalled backend is not a quiet room.** `micSilentSince` watches the audio _level_, so a dead Whisper server leaves it perfectly healthy while nothing is transcribed. `transcriptionStalled()` (`helpers/recordingHealth.mjs`) compares sustained sound against `lastSegmentAt`, falling back to the recording's start so a backend that never came up is caught on the first conversation.
 3. **The grace periods are the feature, not padding.** 20s for a failed write, **90s** for a stall. A fan sits above the silence floor all meeting, and a warning that cries wolf makes somebody stop a healthy recording to check — causing the loss it exists to prevent. One problem, one warning: a dead microphone suppresses the stall notice.
+4. **Finish is capture, then main, then listeners.** `stopRecording` releases capture, awaits `meetingTranscriptionStop` with the IPC listeners still attached, and only then cleans up; the post-conversation save waits on `isTranscribing`, and `startRecording` waits on an in-flight stop. Removing listeners first (the inherited order) discarded everything main transcribed while stopping — 34s of a 72s conversation, measured.
 
 `MeetingRecordingMount`'s tick runs on `performance.now()`; anything it publishes for these checks must be `Date.now()`, or the comparison is ~0 against ~1.7e12 and the warning silently never fires.
 
