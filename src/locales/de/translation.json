@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "Verlauf konnte nicht geladen werden",
       "couldNotLoadDescription": "Beim Laden der Transkriptionen ist ein Fehler aufgetreten. Bitte schließen Sie die App und öffnen Sie sie erneut.",
-      "copiedTitle": "Kopiert!",
+      "copiedTitle": "Kopiert",
       "copiedDescription": "Text wurde in die Zwischenablage kopiert",
       "couldNotCopyTitle": "Kopieren fehlgeschlagen",
       "couldNotCopyDescription": "Beim Kopieren in die Zwischenablage ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "Modell gelöscht",
-        "descriptionWithSpace": "Modell erfolgreich gelöscht! {{sizeMb}} MB Speicherplatz freigegeben.",
-        "description": "Modell erfolgreich gelöscht!"
+        "descriptionWithSpace": "Modell erfolgreich gelöscht. {{sizeMb}} MB Speicherplatz freigegeben.",
+        "description": "Modell erfolgreich gelöscht"
       },
       "deleteFailed": {
         "title": "Löschen fehlgeschlagen",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "Mikrofon nicht verfügbar",
         "microphonePermissionRequired": "Mikrofonberechtigung erforderlich",
         "accessibilityNeeded": "Bedienungshilfen-Berechtigungen erforderlich",
-        "readyToGo": "Bereit!",
+        "readyToGo": "Bereit",
         "waylandClipboardMode": "Zwischenablage-Modus unter Wayland",
         "optionalPasteTool": "Optional: Einfüge-Tool installieren"
       },
       "descriptions": {
         "accessibilityNeeded": "Bitte gewähren Sie Bedienungshilfen-Berechtigungen in den Systemeinstellungen, um automatisches Einfügen zu ermöglichen.",
-        "windowsReady": "Windows benötigt keine speziellen Berechtigungen für automatisches Einfügen. Alles bereit!",
-        "linuxReadyWithMethod": "Automatisches Einfügen ist mit {{method}} verfügbar. Alles bereit!",
+        "windowsReady": "Windows benötigt keine speziellen Berechtigungen für automatisches Einfügen. Alles bereit",
+        "linuxReadyWithMethod": "Automatisches Einfügen ist mit {{method}} verfügbar. Alles bereit",
         "waylandClipboardMode": "Automatisches Einfügen ist in dieser Wayland-Sitzung nicht verfügbar. Oats kopiert den Text in die Zwischenablage und Sie können mit Ctrl+V einfügen.",
         "optionalPasteTool": "Für automatisches Einfügen installieren Sie {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nOhne dieses Tool können Sie Oats weiterhin nutzen – Text wird in die Zwischenablage kopiert und Sie können mit Ctrl+V einfügen."
       },
       "alerts": {
-        "accessibilityNeeded": "Bedienungshilfen-Berechtigungen erforderlich! Bitte erlauben Sie diese in den Systemeinstellungen."
+        "accessibilityNeeded": "Bedienungshilfen-Berechtigungen erforderlich. Bitte erlauben Sie diese in den Systemeinstellungen."
       },
       "notes": {
         "waylandWtype": "\n\nHinweis: Für XWayland-Apps funktioniert auch xdotool.",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "Verwendet",
     "waylandClipboardDescription": "Automatisches Einfügen ist in dieser Wayland-Sitzung nicht verfügbar. Oats kopiert den Text in Ihre Zwischenablage, damit Sie ihn manuell mit Ctrl+V einfügen können.",
     "waylandClipboardTitle": "Zwischenablage-Modus unter Wayland",
-    "windowsReady": "Windows unterstützt automatisches Einfügen direkt. Keine Einrichtung erforderlich!",
+    "windowsReady": "Windows unterstützt automatisches Einfügen direkt. Keine Einrichtung erforderlich",
     "withoutToolPrefix": "Ohne dieses Tool kopiert Oats den Text in Ihre Zwischenablage. Sie können ihn dann manuell mit Ctrl+V einfügen.",
     "xwaylandAppsOnly": "Automatisches Einfügen funktioniert nur für XWayland-Apps"
   },
@@ -1806,7 +1806,7 @@
       "listening": "Hört zu...",
       "newConversation": "Neu",
       "copyToClipboard": "In Zwischenablage kopieren",
-      "copied": "Kopiert!",
+      "copied": "Kopiert",
       "emptyState": "Frag mich alles",
       "errorPrefix": "Fehler"
     },
@@ -2168,7 +2168,7 @@
       "no-speech-engine": "Die lokale Sprach-Engine fehlt. Eine Neuinstallation von Oats stellt sie wieder her.",
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
-      "question-cards-off": "Fragekarten sind ausgeschaltet – Fragen gehen still vorbei. Schalte die Gesprächshilfe unter Erweitert wieder ein.",
+      "question-cards-off": "Fragekarten sind ausgeschaltet, Fragen gehen also still vorbei. Schalte sie in den Einstellungen unter Aufnahme ein.",
       "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Zusammenfassungsmodell bereit. Einrichten lässt es sich unter Einstellungen › Erweitert › Sprachmodelle."
     },
     "aide": {

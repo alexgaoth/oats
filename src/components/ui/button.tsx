@@ -11,7 +11,9 @@ const buttonVariants = cva(
   [
     "inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap",
     "rounded-md text-sm font-medium",
-    "transition-[color,background-color,border-color,box-shadow] duration-150",
+    "transition-[color,background-color,border-color,box-shadow,transform] duration-150",
+    // A press you can feel: a hair smaller while held. Off under reduced motion.
+    "active:scale-[0.98] motion-reduce:active:scale-100",
     "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
     "disabled:pointer-events-none disabled:opacity-50",
     "aria-invalid:border-destructive aria-invalid:ring-destructive/20",

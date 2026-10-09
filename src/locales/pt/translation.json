@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "Não foi possível carregar seu histórico",
       "couldNotLoadDescription": "Ocorreu um erro ao carregar as transcrições. Feche e abra o app novamente.",
-      "copiedTitle": "Copiado!",
+      "copiedTitle": "Copiado",
       "copiedDescription": "Texto copiado para a área de transferência",
       "couldNotCopyTitle": "Não foi possível copiar",
       "couldNotCopyDescription": "Ocorreu um erro ao copiar para a área de transferência. Tente novamente.",
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "Modelo removido",
-        "descriptionWithSpace": "Modelo removido com sucesso! {{sizeMb}}MB de espaço liberados.",
-        "description": "Modelo removido com sucesso!"
+        "descriptionWithSpace": "Modelo removido com sucesso. {{sizeMb}}MB de espaço liberados.",
+        "description": "Modelo removido com sucesso"
       },
       "deleteFailed": {
         "title": "Falha ao remover",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "Microfone indisponível",
         "microphonePermissionRequired": "Permissão de microfone obrigatória",
         "accessibilityNeeded": "Permissões de acessibilidade necessárias",
-        "readyToGo": "Tudo pronto!",
+        "readyToGo": "Tudo pronto",
         "waylandClipboardMode": "Modo área de transferência no Wayland",
         "optionalPasteTool": "Opcional: instalar ferramenta de colagem"
       },
       "descriptions": {
         "accessibilityNeeded": "Conceda permissões de acessibilidade nas configurações do sistema para habilitar colagem automática.",
-        "windowsReady": "O Windows não exige permissões especiais para colagem automática. Tudo pronto!",
-        "linuxReadyWithMethod": "A colagem automática está disponível usando {{method}}. Tudo pronto!",
+        "windowsReady": "O Windows não exige permissões especiais para colagem automática. Tudo pronto",
+        "linuxReadyWithMethod": "A colagem automática está disponível usando {{method}}. Tudo pronto",
         "waylandClipboardMode": "A colagem automática não está disponível nesta sessão Wayland. O Oats copiará o texto para a área de transferência e você poderá colar com Ctrl+V.",
         "optionalPasteTool": "Para colagem automática, instale {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nSem isso, você ainda pode usar o Oats — o texto será copiado para a área de transferência e você poderá colar com Ctrl+V."
       },
       "alerts": {
-        "accessibilityNeeded": "Permissões de acessibilidade necessárias! Conceda nas configurações do sistema."
+        "accessibilityNeeded": "Permissões de acessibilidade necessárias. Conceda nas configurações do sistema."
       },
       "notes": {
         "waylandWtype": "\n\nNota: para apps XWayland, xdotool também funciona.",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "Usando",
     "waylandClipboardDescription": "A colagem automática não está disponível nesta sessão Wayland. O Oats copiará o texto para a área de transferência para que você cole manualmente com Ctrl+V.",
     "waylandClipboardTitle": "Modo área de transferência no Wayland",
-    "windowsReady": "O Windows suporta colagem automática nativamente. Nenhuma configuração necessária!",
+    "windowsReady": "O Windows suporta colagem automática nativamente. Nenhuma configuração necessária",
     "withoutToolPrefix": "Sem essa ferramenta, o Oats copiará o texto para a área de transferência. Você poderá colar manualmente com Ctrl+V.",
     "xwaylandAppsOnly": "a colagem automática funciona apenas para apps XWayland"
   },
@@ -1806,7 +1806,7 @@
       "listening": "Ouvindo...",
       "newConversation": "Novo",
       "copyToClipboard": "Copiar para área de transferência",
-      "copied": "Copiado!",
+      "copied": "Copiado",
       "emptyState": "Pergunte-me qualquer coisa",
       "errorPrefix": "Erro"
     },
@@ -2168,7 +2168,7 @@
       "no-speech-engine": "O motor de voz local está faltando. Reinstalar o Oats o restaura.",
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
-      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue novamente o assistente de conversa em Avançado.",
+      "question-cards-off": "Os cartões de perguntas estão desativados, então as perguntas passarão em silêncio. Ative-os em Configurações, em Gravação.",
       "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de resumo está pronto. Configure um em Definições › Avançado › Modelos de linguagem."
     },
     "aide": {

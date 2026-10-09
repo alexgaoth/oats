@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "Impossible de charger votre historique",
       "couldNotLoadDescription": "Un problème est survenu lors du chargement des transcriptions. Fermez puis rouvrez l'application.",
-      "copiedTitle": "Copié !",
+      "copiedTitle": "Copié",
       "copiedDescription": "Texte copié dans le presse-papiers",
       "couldNotCopyTitle": "Impossible de copier",
       "couldNotCopyDescription": "Un problème est survenu pendant la copie. Réessayez.",
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "Modèle supprimé",
-        "descriptionWithSpace": "Modèle supprimé avec succès ! {{sizeMb}} Mo libérés.",
-        "description": "Modèle supprimé avec succès !"
+        "descriptionWithSpace": "Modèle supprimé avec succès . {{sizeMb}} Mo libérés.",
+        "description": "Modèle supprimé avec succès"
       },
       "deleteFailed": {
         "title": "Échec de la suppression",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "Microphone indisponible",
         "microphonePermissionRequired": "Autorisation microphone requise",
         "accessibilityNeeded": "Permissions d'accessibilité requises",
-        "readyToGo": "Prêt !",
+        "readyToGo": "Prêt",
         "waylandClipboardMode": "Mode presse-papiers sur Wayland",
         "optionalPasteTool": "Optionnel : installer un outil de collage"
       },
       "descriptions": {
         "accessibilityNeeded": "Accordez les permissions d'accessibilité dans les paramètres système pour activer le collage automatique.",
-        "windowsReady": "Windows ne demande pas de permissions spéciales pour le collage automatique. Tout est prêt !",
-        "linuxReadyWithMethod": "Le collage automatique est disponible via {{method}}. Tout est prêt !",
+        "windowsReady": "Windows ne demande pas de permissions spéciales pour le collage automatique. Tout est prêt",
+        "linuxReadyWithMethod": "Le collage automatique est disponible via {{method}}. Tout est prêt",
         "waylandClipboardMode": "Le collage automatique n'est pas disponible dans cette session Wayland. Oats copiera le texte dans le presse-papiers et vous pourrez coller avec Ctrl+V.",
         "optionalPasteTool": "Pour le collage automatique, installez {{tool}} :\n\n{{installCmd}}{{waylandNote}}\n\nSans cela, vous pouvez quand même utiliser Oats : le texte sera copié dans le presse-papiers et vous pourrez coller avec Ctrl+V."
       },
       "alerts": {
-        "accessibilityNeeded": "Permissions d'accessibilité requises ! Veuillez les accorder dans les paramètres système."
+        "accessibilityNeeded": "Permissions d'accessibilité requises . Veuillez les accorder dans les paramètres système."
       },
       "notes": {
         "waylandWtype": "\n\nNote : pour les apps XWayland, xdotool fonctionne aussi.",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "Utilisation de",
     "waylandClipboardDescription": "Le collage automatique n'est pas disponible dans cette session Wayland. Oats copiera le texte dans le presse-papiers et vous pourrez coller manuellement avec Ctrl+V.",
     "waylandClipboardTitle": "Mode presse-papiers sur Wayland",
-    "windowsReady": "Windows prend en charge le collage automatique nativement. Aucune configuration requise !",
+    "windowsReady": "Windows prend en charge le collage automatique nativement. Aucune configuration requise",
     "withoutToolPrefix": "Sans cet outil, Oats copiera le texte dans le presse-papiers. Vous pourrez ensuite coller manuellement avec Ctrl+V.",
     "xwaylandAppsOnly": "le collage automatique fonctionne uniquement pour les apps XWayland"
   },
@@ -1806,7 +1806,7 @@
       "listening": "Écoute...",
       "newConversation": "Nouveau",
       "copyToClipboard": "Copier dans le presse-papiers",
-      "copied": "Copié !",
+      "copied": "Copié",
       "emptyState": "Demandez-moi n'importe quoi",
       "errorPrefix": "Erreur"
     },
@@ -2168,7 +2168,7 @@
       "no-speech-engine": "Le moteur vocal local est absent. Réinstaller Oats le rétablit.",
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
-      "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Réactivez l'assistant de conversation dans Avancé.",
+      "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Activez-les dans les Réglages, section Enregistrement.",
       "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de résumé n'est prêt. Configurez-en un dans Réglages › Avancé › Modèles de langage."
     },
     "aide": {

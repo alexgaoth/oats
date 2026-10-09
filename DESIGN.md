@@ -92,6 +92,9 @@ Rules:
   `16` card titles · `22` page titles · `28` record titles. Weights 400 / 500 / 600.
 - Sentence case everywhere. No all-caps labels, no eyebrow labels above headings.
 - Times, durations and counts use `tabular-nums`. Dates go through `Intl`.
+- Headings use `text-wrap: balance`, running text `text-wrap: pretty` (base layer),
+  so no line ends on one stranded word. Reading text (summary prose, transcript
+  turns) is capped near 70 characters (`max-w-[70ch]`).
 
 ## 4. Components
 
@@ -151,12 +154,26 @@ with no decorative gradient.
 (`tw-animate-css`). No idle animation loops; the recording dot's ping is the one
 ambient motion, and it stops under `prefers-reduced-motion`.
 
+- Buttons scale to 0.98 while pressed (`active:scale-[0.98]`), off under reduced
+  motion.
+- Content that is on its way (a summary being written) shows its shape as a
+  skeleton under one status line, not a spinner. Spinners are for a control that
+  is busy (a download row), never for a page region.
+
 ## 8. Voice
 
 Plain, specific, sentence case. Buttons say what happens ("Start recording",
 "Stop", "Export"). Errors say what happened and what to do. No marketing lines on
 working screens. Brand names are not translated. Every string goes through
 i18next in all ten locales.
+
+Copy rules (from the design-taste review, 2026-10-09):
+
+- No em-dash or en-dash in a visible English string. Use a period, a comma or a
+  colon. Translations keep their own punctuation.
+- No exclamation marks, no "Oops". Say what happened and what to do.
+- At most one middle dot (`·`) in a line; a list of facts is separate elements
+  with icons, not a dotted strip.
 
 ## 9. Accessibility
 

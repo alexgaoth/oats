@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "無法載入歷史記錄",
       "couldNotLoadDescription": "載入轉錄記錄時發生錯誤。請嘗試關閉並重新開啟應用程式。",
-      "copiedTitle": "已複製！",
+      "copiedTitle": "已複製",
       "copiedDescription": "文字已複製到剪貼簿",
       "couldNotCopyTitle": "無法複製",
       "couldNotCopyDescription": "複製到剪貼簿時發生錯誤。請再試一次。",
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "模型已刪除",
-        "descriptionWithSpace": "模型已成功刪除！釋放了 {{sizeMb}}MB 的磁碟空間。",
-        "description": "模型已成功刪除！"
+        "descriptionWithSpace": "模型已成功刪除。釋放了 {{sizeMb}}MB 的磁碟空間。",
+        "description": "模型已成功刪除"
       },
       "deleteFailed": {
         "title": "刪除失敗",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "麥克風無法使用",
         "microphonePermissionRequired": "需要麥克風權限",
         "accessibilityNeeded": "需要輔助使用權限",
-        "readyToGo": "準備就緒！",
+        "readyToGo": "準備就緒",
         "waylandClipboardMode": "Wayland 剪貼簿模式",
         "optionalPasteTool": "選用：安裝貼上工具"
       },
       "descriptions": {
         "accessibilityNeeded": "請在系統設定中授予輔助使用權限，以啟用自動貼上功能。",
-        "windowsReady": "Windows 不需要特殊權限即可自動貼上。一切就緒！",
-        "linuxReadyWithMethod": "已使用 {{method}} 啟用自動貼上。一切就緒！",
+        "windowsReady": "Windows 不需要特殊權限即可自動貼上。一切就緒。",
+        "linuxReadyWithMethod": "已使用 {{method}} 啟用自動貼上。一切就緒。",
         "waylandClipboardMode": "此 Wayland 工作階段不支援自動貼上。Oats 會將文字複製到剪貼簿，你可以使用 Ctrl+V 貼上。",
         "optionalPasteTool": "如需自動貼上，請安裝 {{tool}}：\n\n{{installCmd}}{{waylandNote}}\n\n沒有安裝也可以使用 Oats，文字會複製到剪貼簿，你可以使用 Ctrl+V 貼上。"
       },
       "alerts": {
-        "accessibilityNeeded": "需要輔助使用權限！請在系統設定中授權。"
+        "accessibilityNeeded": "需要輔助使用權限。請在系統設定中授權。"
       },
       "notes": {
         "waylandWtype": "\n\n注意：XWayland 應用程式也可使用 xdotool。",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "使用",
     "waylandClipboardDescription": "此 Wayland 工作階段不支援自動貼上。Oats 會將文字複製到剪貼簿，你可以使用 Ctrl+V 手動貼上。",
     "waylandClipboardTitle": "Wayland 剪貼簿模式",
-    "windowsReady": "Windows 內建支援自動貼上。不需要額外設定！",
+    "windowsReady": "Windows 內建支援自動貼上。不需要額外設定。",
     "withoutToolPrefix": "若未安裝此工具，Oats 會將文字複製到剪貼簿。你可以使用 Ctrl+V 手動貼上。",
     "xwaylandAppsOnly": "自動貼上僅適用於 XWayland 應用程式"
   },
@@ -1801,7 +1801,7 @@
       "listening": "正在聆聽...",
       "newConversation": "新建",
       "copyToClipboard": "複製到剪貼簿",
-      "copied": "已複製！",
+      "copied": "已複製",
       "emptyState": "隨便問我",
       "errorPrefix": "錯誤"
     },
@@ -2163,7 +2163,7 @@
       "no-speech-engine": "本機語音引擎缺失。重新安裝 Oats 即可復原。",
       "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
-      "question-cards-off": "問題卡片已關閉，問題會靜靜溜走。請在進階設定中重新開啟對話助手。",
+      "question-cards-off": "問題卡片已關閉，問題會被略過。請在設定的「錄音」中開啟。",
       "no-summary-model": "摘要模型尚未就緒，對話將以無標題、無摘要的形式儲存。請在 設定 › 進階 › 語言模型 中進行設定。"
     },
     "aide": {
