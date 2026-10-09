@@ -409,7 +409,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       {/* The window is frameless, so the drag band is the only way to move it —
           and it carries the wordmark, exactly as the workspace's does. */}
       <div
-        className="relative z-20 flex h-9 shrink-0 items-center px-5"
+        className="oats-titlebar relative z-20 flex h-9 shrink-0 items-center px-5"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
         <span

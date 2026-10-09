@@ -54,8 +54,8 @@
     "closeWindow": "Close Window"
   },
   "window": {
-    "voiceRecorderTitle": "Voice Recorder",
-    "controlPanelTitle": "Control Panel",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "Agent Chat"
   },
   "dialog": {

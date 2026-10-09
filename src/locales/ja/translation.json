@@ -54,8 +54,8 @@
     "closeWindow": "ウィンドウを閉じる"
   },
   "window": {
-    "voiceRecorderTitle": "ボイスレコーダー",
-    "controlPanelTitle": "コントロールパネル",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "エージェントチャット"
   },
   "dialog": {
