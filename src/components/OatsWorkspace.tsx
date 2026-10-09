@@ -88,6 +88,7 @@ import type {
   QuestionOutcome,
 } from "../types/conversationEvents";
 import type { NoteItem } from "../types/electron";
+import type { SettingsSectionType } from "./SettingsPage";
 import type { TFunction } from "i18next";
 
 // Advanced Settings is the inherited OpenWhispr settings application: every
@@ -97,6 +98,20 @@ import type { TFunction } from "i18next";
 // conversation. Splitting it means the Oats path never pays for a room it does
 // not walk into.
 const AdvancedSettings = React.lazy(() => import("./SettingsPage"));
+
+// Advanced is the inherited settings page, which draws one section at a time and
+// used to rely on a sidebar this app deleted. Mounted with no section it showed
+// "General" and nothing else, so everything behind it — the speech model, the
+// shortcuts, the question cards, the summary model — was unreachable, including
+// the screens other messages point people to.
+const ADVANCED_SECTIONS: SettingsSectionType[] = [
+  "general",
+  "hotkeys",
+  "speechToText",
+  "llms",
+  "privacyData",
+  "system",
+];
 
 type Surface = "conversation" | "intelligence" | "settings";
 type DetailTab = "summary" | "transcript" | "connections";
@@ -3165,6 +3180,7 @@ function SettingsSurface() {
   const setMeetingUseLocalWhisper = useSettingsStore((s) => s.setMeetingUseLocalWhisper);
   const hotkeyRejection = useSettingsStore((s) => s.hotkeyRejection);
   const [advanced, setAdvanced] = useState(false);
+  const [advancedSection, setAdvancedSection] = useState<SettingsSectionType>("general");
 
   const { t } = useTranslation();
 
@@ -3214,6 +3230,14 @@ function SettingsSurface() {
   };
 
   if (advanced) {
+    const sectionLabels: Record<SettingsSectionType, string> = {
+      general: t("oats.settings.sections.general"),
+      hotkeys: t("oats.settings.sections.hotkeys"),
+      speechToText: t("oats.settings.sections.speechToText"),
+      llms: t("oats.settings.sections.llms"),
+      privacyData: t("oats.settings.sections.privacyData"),
+      system: t("oats.settings.sections.system"),
+    };
     return (
       <section className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-border/40 px-8 py-4">
@@ -3222,6 +3246,31 @@ function SettingsSurface() {
           </Button>
           <p className="text-xs text-muted-foreground">{t("oats.settings.advancedHint")}</p>
         </div>
+        {/* The same quiet links as the app's own nav: words, ink for the one
+            you are on, no chrome. */}
+        <nav
+          aria-label={t("oats.settings.sections.label")}
+          className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border/40 px-8 py-3"
+        >
+          {ADVANCED_SECTIONS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setAdvancedSection(id)}
+              aria-current={advancedSection === id ? "page" : undefined}
+              className={cn(
+                "rounded-sm text-[13px] transition-colors",
+                "[transition-duration:var(--motion-instant)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                advancedSection === id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {sectionLabels[id]}
+            </button>
+          ))}
+        </nav>
         {/* The inherited page brings its own cards but no page frame, so it ran
             edge to edge: section headings flush at x=0 and rows the full width
             of the window, with a label on one side and its toggle a thousand
@@ -3236,7 +3285,10 @@ function SettingsSurface() {
                 </p>
               }
             >
-              <AdvancedSettings />
+              <AdvancedSettings
+                activeSection={advancedSection}
+                onNavigateToSection={setAdvancedSection}
+              />
             </Suspense>
           </div>
         </div>
