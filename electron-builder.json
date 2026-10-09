@@ -94,7 +94,6 @@
     "src/workers/**/*"
   ],
   "extraResources": [
-    ".env",
     "src/assets/**/*",
     {
       "from": "resources/bin/",

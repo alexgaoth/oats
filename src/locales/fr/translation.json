@@ -195,10 +195,6 @@
       "installButton": "Installer la mise à jour",
       "availableButton": "Mise à jour disponible"
     },
-    "accessibilityMissing": {
-      "title": "Autorisations d'accessibilité nécessaires",
-      "description": "Nous avons détecté qu'Oats a besoin des autorisations d'accessibilité pour fonctionner correctement. Veuillez les activer ci-dessous."
-    },
     "history": {
       "couldNotLoadTitle": "Impossible de charger votre historique",
       "couldNotLoadDescription": "Un problème est survenu lors du chargement des transcriptions. Fermez puis rouvrez l'application.",
@@ -1864,12 +1860,6 @@
     "copied": "Copié",
     "waitingForInput": "Dites quelque chose..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "Vous",
-      "others": "Autres"
-    }
-  },
   "meetingNotification": {
     "title": "Réunion détectée",
     "body": {
@@ -1978,7 +1968,10 @@
       "vaultAction": "Enregistrer dans le coffre",
       "deleteDescription": "Sa transcription, son résumé et ses moments marqués sont supprimés d’Oats. Cette action est irréversible.",
       "emptyDescription": "Les conversations que vous enregistrez apparaissent ici, avec un résumé et une transcription dans laquelle chercher.",
-      "noMatchesHint": "La recherche porte sur les titres, les résumés, les transcriptions et vos notes."
+      "noMatchesHint": "La recherche porte sur les titres, les résumés, les transcriptions et vos notes.",
+      "needsSummaryModel": "Pas de résumé : aucun modèle de résumé n'est prêt sur cet ordinateur. Configurez-en un dans Réglages › Avancé › Modèles de langage, puis revenez pour résumer.",
+      "notSummarized": "Cette conversation n'a pas encore été résumée.",
+      "summarize": "Résumer"
     },
     "review": {
       "title": "Ce qui reste ouvert",
@@ -2067,7 +2060,8 @@
       "no-speech-engine": "Le moteur vocal local est absent. Réinstaller Oats le rétablit.",
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
-      "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Réactivez l'assistant de conversation dans Avancé."
+      "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Réactivez l'assistant de conversation dans Avancé.",
+      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de résumé n'est prêt. Configurez-en un dans Réglages › Avancé › Modèles de langage."
     },
     "aide": {
       "title": "Assistant de conversation",

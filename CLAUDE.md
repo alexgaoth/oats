@@ -198,7 +198,7 @@ All four were "fails quietly at the end", which the pencil standard forbids, and
 
 `scripts/asr-eval.js` runs the real path — the app's own `buildWhisperServerArgs`, the shipped `whisper-server` binary — over LibriSpeech test-clean and reports WER and latency. Numbers and the fork/upstream comparison in `docs/dictation-accuracy.md`. Never claim a transcription change helps without a row from it.
 
-- **`--no-timestamps` is load-bearing.** whisper.cpp v1.9.x enables a 60-character segment wrap that lands on token boundaries with `split_on_word` off, so words break in half ("overh anging"). We read only `text`, so removing it costs nothing. Do not drop the flag. It has a second effect: with no timestamps whisper.cpp cannot seek, so it skips every 30s window after the first — **never send one request more than ~25s** (whole-recording WER 19% against 6%).
+- **`--no-timestamps` is load-bearing.** whisper.cpp v1.9.x enables a 60-character segment wrap that lands on token boundaries with `split_on_word` off, so words break in half ("overh anging"). We read only `text`, so removing it costs nothing. Do not drop the flag. It has a second effect: with no timestamps whisper.cpp cannot seek, so when its decoder stops early inside a 30s window it moves on by a whole window and the rest is lost — **never send one request more than ~25s** (whole-recording WER 19% against 6%). `WhisperServerManager.transcribe` enforces this for every local request since 2026-10-08: a recording over 25s is cut at its pauses (`helpers/whisperRequestCuts.mjs`) and sent in order, and one that fits goes out as one request, byte for byte as before. Dictations of 31–89s were 13.1% WER sent whole, 4.4% cut.
 - **A room is cut at pauses, never fixed chunks** (`helpers/speechSegmenter.mjs`, 20s cap). The 5s chunk the call path still uses lands mid-word about once per chunk: 15.2% WER against 6.2% on the same conversations, and pause cuts are within a point of cutting at the true turns.
 - **Who said it, in a room, is decided after Finish**: the segmenter's WAV → `diarize` with TitaNet (`IN_ROOM_EMBEDDING_ONNX`, threshold **0.85** — TitaNet's scale; CAM++'s 0.55 split everyone) → `conversation-speakers` → `applyConversationSpeakers` → `assignSpeakers` by each segment's `startMs`/`endMs`. Those offsets and the segment `id` must survive `serializeTranscriptSegments`: stored segments carried no id until 2026-10-04, so search landing and mark links silently missed on every real conversation (old ones now parse as `legacy-N`).
 - **`base.en` ships beside `base` and is chosen automatically for English** (`helpers/whisperEnglishModel.mjs`) — same size, 38% fewer errors, 4.4x faster than the old default. It is absent from the model picker on purpose (`englishOnly` in the registry): it is not a tier to weigh, and the selection falls back silently when the file is missing.
@@ -208,6 +208,25 @@ All four were "fails quietly at the end", which the pencil standard forbids, and
 ### Transcription scopes — the trap that broke recording
 
 Transcription is configured per scope: dictation (`useLocalWhisper`), meeting (`meetingUseLocalWhisper`), and upload (`uploadUseLocalWhisper`). **Recording a conversation — the primary action — reads the _meeting_ scope**, via `selectResolvedMeetingTranscription`. The visible Settings page has one processing choice, so it must write every scope — **call `setCloudTranscriptionForAllScopes`, never a hand-picked list of setters.** This has now bitten twice: writing only `useLocalWhisper` made "On this computer" appear selected while recording still reached for OpenAI, and writing every field _but_ `meetingCloudTranscriptionMode` left it empty, which resolves to `"legacy"` and throws "OpenAI realtime requires a bring-your-own-key API key" with the key already saved. All three default to local, because Oats bundles a Whisper model and promises to work offline with no account. There is also a legacy `meetingFollows*` migration in `settingsStore.ts` that copies dictation values into meeting fields for pre-existing installs — it does not run for fresh ones, which is why the defaults themselves have to be right.
+
+### Search reaches past the list (2026-10-08)
+
+- **The Intelligence list holds only the newest 100 conversations.** Anything
+  that searches or opens a conversation must reach past it. Literal recall over
+  the rest is `db-recall-notes` (the same `recallText` as the in-memory filter),
+  and a result the store does not hold opens through `openedNote` — `selected`
+  falls back to `notes[0]`, which once opened the newest conversation instead.
+- **`notes_fts` is contentless** (`content=''`, `contentless_delete=1`); its
+  triggers compute the transcript's words with SQLite's own JSON functions. An
+  external-content table cannot: FTS5 reads its content table with virtual
+  tables disabled, so a view using `json_each` fails ("no such table:
+  main.json_each"). Never call an app-registered SQL function from a trigger on
+  `notes` — a build without it fails every note write, the checkpoint included.
+- **No every-launch `INSERT OR IGNORE INTO notes_fts ... SELECT`.** On an FTS5
+  table it ignores nothing and re-adds every row; the old one corrupted the
+  index on every launch. Change the schema in `NOTES_FTS_SCHEMA` only:
+  `_migrateNotesFts` compares the stored SQL with it and rebuilds once. Keep the
+  trigger names — older builds `CREATE ... IF NOT EXISTS` them.
 
 ## Rules
 

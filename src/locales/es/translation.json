@@ -195,10 +195,6 @@
       "installButton": "Instalar actualización",
       "availableButton": "Actualización disponible"
     },
-    "accessibilityMissing": {
-      "title": "Se necesitan permisos de accesibilidad",
-      "description": "Hemos detectado que Oats necesita permisos de accesibilidad para funcionar correctamente. Actívalos a continuación."
-    },
     "history": {
       "couldNotLoadTitle": "No se pudo cargar tu historial",
       "couldNotLoadDescription": "Ocurrió un problema al cargar tus transcripciones. Cierra y abre la app de nuevo.",
@@ -1864,12 +1860,6 @@
     "copied": "Copiado",
     "waitingForInput": "Di algo..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "Tú",
-      "others": "Otros"
-    }
-  },
   "meetingNotification": {
     "title": "Reunión detectada",
     "body": {
@@ -1978,7 +1968,10 @@
       "vaultAction": "Guardar en la bóveda",
       "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
       "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
-      "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas."
+      "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
+      "needsSummaryModel": "Sin resumen: no hay ningún modelo de resumen listo en este equipo. Configura uno en Ajustes › Avanzado › Modelos de lenguaje y vuelve para resumir.",
+      "notSummarized": "Esta conversación aún no se ha resumido.",
+      "summarize": "Resumir"
     },
     "review": {
       "title": "Lo que quedó abierto",
@@ -2067,7 +2060,8 @@
       "no-speech-engine": "Falta el motor de voz local. Reinstalar Oats lo restaura.",
       "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
-      "question-cards-off": "Las tarjetas de preguntas están desactivadas: las preguntas pasarán en silencio. Vuelve a activar el asistente de conversación en Avanzado."
+      "question-cards-off": "Las tarjetas de preguntas están desactivadas: las preguntas pasarán en silencio. Vuelve a activar el asistente de conversación en Avanzado.",
+      "no-summary-model": "Las conversaciones se guardarán sin título ni resumen: no hay ningún modelo de resumen listo. Configura uno en Ajustes › Avanzado › Modelos de lenguaje."
     },
     "aide": {
       "title": "Asistente de conversación",

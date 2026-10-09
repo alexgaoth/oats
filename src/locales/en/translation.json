@@ -195,10 +195,6 @@
       "installButton": "Install Update",
       "availableButton": "Update Available"
     },
-    "accessibilityMissing": {
-      "title": "Accessibility permissions needed",
-      "description": "We've detected that Oats needs accessibility permissions to work properly. Please enable them below."
-    },
     "history": {
       "couldNotLoadTitle": "Couldn't load your history",
       "couldNotLoadDescription": "Something went wrong loading your transcriptions. Try closing and reopening the app.",
@@ -1864,12 +1860,6 @@
     "copied": "Copied",
     "waitingForInput": "Say something..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "You",
-      "others": "Others"
-    }
-  },
   "meetingNotification": {
     "title": "Meeting detected",
     "body": {
@@ -1978,7 +1968,10 @@
       "vaultAction": "Save to vault",
       "deleteDescription": "Its transcript, summary and marked moments are removed from Oats. This cannot be undone.",
       "emptyDescription": "Conversations you record appear here, with a summary and a transcript you can search.",
-      "noMatchesHint": "Search looks through titles, summaries, transcripts and your notes."
+      "noMatchesHint": "Search looks through titles, summaries, transcripts and your notes.",
+      "needsSummaryModel": "No summary: no summary model is ready on this computer. Set one up under Settings › Advanced › Language Models, then come back to summarize.",
+      "notSummarized": "This conversation has not been summarized.",
+      "summarize": "Summarize"
     },
     "review": {
       "title": "What this left open",
@@ -2067,7 +2060,8 @@
       "no-speech-engine": "The local speech engine is missing. Reinstalling Oats restores it.",
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings.",
-      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced."
+      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced.",
+      "no-summary-model": "Conversations will be saved without a title or summary: no summary model is ready. Set one up under Settings › Advanced › Language Models."
     },
     "aide": {
       "title": "Conversation aide",

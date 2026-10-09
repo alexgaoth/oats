@@ -78,12 +78,11 @@ class EnvironmentManager {
       }
     } catch {}
 
-    const fallbackPaths = [
-      path.join(__dirname, "..", "..", ".env"), // Development
-      path.join(process.resourcesPath, ".env"),
-      path.join(process.resourcesPath, "app.asar.unpacked", ".env"),
-      path.join(process.resourcesPath, "app", ".env"), // Legacy
-    ];
+    // Development reads the checkout's .env. A packaged build reads only the
+    // user's own (above): a .env shipped inside the app was whatever the person
+    // who built it had on disk — API keys included — and every key found in it
+    // was migrated into each user's Keychain on first launch.
+    const fallbackPaths = app.isPackaged ? [] : [path.join(__dirname, "..", "..", ".env")];
 
     for (const envPath of fallbackPaths) {
       try {
