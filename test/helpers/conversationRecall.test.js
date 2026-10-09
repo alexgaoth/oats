@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 let findExcerpt;
 let mergeRecall;
 let recallText;
+let withOlderMatches;
 let foldText;
 
 test.before(async () => {
@@ -241,4 +242,36 @@ test("a transcript that is not a JSON array is searched as the words it is", () 
   // Turns that are not objects, or text that is not text, are skipped, not thrown on.
   const odd = note({ transcript: JSON.stringify([null, "loose", { text: { nested: 1 } }]) });
   assert.doesNotThrow(() => recallText(odd));
+});
+
+// Older conversations are only ever the matches for one query; the ones the
+// list already holds keep their place and are never repeated.
+test("older matches follow the held conversations, in order, and never repeat one", () => {
+  const held = [{ id: 9 }, { id: 8 }];
+  const merged = withOlderMatches(held, [{ id: 3 }, { id: 8 }, { id: 2 }, { id: 3 }, null]);
+  assert.deepEqual(
+    merged.map((n) => n.id),
+    [9, 8, 3, 2]
+  );
+  // Nothing older: the same array, so a memo on it does not rerun.
+  assert.equal(withOlderMatches(held, []), held);
+  assert.equal(withOlderMatches(held, undefined), held);
+  assert.equal(withOlderMatches(held, [{ id: 9 }]), held);
+  assert.deepEqual(withOlderMatches(undefined, [{ id: 1 }]), [{ id: 1 }]);
+});
+
+// The whole list, end to end: held matches first in their order, then older
+// literal matches, then guesses — and a guess that is literally an older match
+// is a match, not a guess.
+test("older literal matches rank with the literal results, ahead of every guess", () => {
+  const literal = [{ id: 9 }, ...withOlderMatches([], [{ id: 2 }])];
+  const merged = mergeRecall(literal, [{ id: 5 }, { id: 2 }]);
+  assert.deepEqual(
+    merged.map((m) => [m.note.id, m.related]),
+    [
+      [9, false],
+      [2, false],
+      [5, true],
+    ]
+  );
 });

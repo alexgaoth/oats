@@ -251,3 +251,119 @@ test("the index follows every write to what was said", (t) => {
   );
   assert.equal(integrity(db.db), "ok");
 });
+
+/**
+ * `count` meeting notes, newest first by updated_at: index 0 is the newest.
+ * Returns their ids in that order.
+ */
+function seedConversations(db, count, transcriptFor) {
+  const ids = [];
+  const insert = db.db.prepare(
+    "INSERT INTO notes (title, content, note_type, transcript, updated_at, client_note_id) VALUES (?, '', 'meeting', ?, datetime('now', ?), ?)"
+  );
+  db.db.transaction(() => {
+    for (let index = 0; index < count; index += 1) {
+      const result = insert.run(
+        `Conversation ${index}`,
+        transcriptFor(index),
+        `-${index} minutes`,
+        `client-${index}`
+      );
+      ids.push(Number(result.lastInsertRowid));
+    }
+  })();
+  return ids;
+}
+
+test("a search finds a conversation older than the newest hundred", async (t) => {
+  const db = openAt(t, freshDir(t));
+  if (!db) return;
+  const ids = seedConversations(db, 105, (index) =>
+    index === 103
+      ? transcript("small talk", "and then the dolphin protocol came up", "我们讨论了价格问题")
+      : transcript(`ordinary conversation number ${index}`)
+  );
+  const oldest = ids[103];
+
+  // The renderer's window: the hundred newest. The conversation is not in it,
+  // which is how it became unfindable.
+  const held = db.getNotes("meeting", 100).map((note) => note.id);
+  assert.equal(held.length, 100);
+  assert.equal(held.includes(oldest), false);
+
+  const found = await db.recallNotes("dolphin protocol", { excludeIds: held });
+  assert.deepEqual(
+    found.map((note) => note.id),
+    [oldest]
+  );
+  // A whole row, so the result can show its passage and be opened.
+  assert.equal(typeof found[0].transcript, "string");
+
+  // The same fold as the renderer's filter: case and accents.
+  assert.deepEqual(
+    (await db.recallNotes("DOLPHÍN", { excludeIds: held })).map((note) => note.id),
+    [oldest]
+  );
+  // A match inside a word, and a Chinese word inside a sentence: a scan finds
+  // both, where the word-prefix index finds neither.
+  for (const query of ["olphin protoc", "价格"]) {
+    assert.deepEqual(
+      (await db.recallNotes(query, { excludeIds: held })).map((note) => note.id),
+      [oldest],
+      query
+    );
+    assert.deepEqual(db.searchNotes(query), [], `FTS cannot: ${query}`);
+  }
+  // Key names in the stored JSON are not words anybody said.
+  assert.deepEqual(await db.recallNotes("speakerStatus", { excludeIds: held }), []);
+  assert.deepEqual(await db.recallNotes("   ", { excludeIds: held }), []);
+
+  // Soft-deleted conversations and other kinds of note are not conversations.
+  db.deleteNote(oldest);
+  assert.deepEqual(await db.recallNotes("dolphin", { excludeIds: held }), []);
+  const personal = db.saveNote("A personal note", "", "personal").note;
+  db.updateNote(personal.id, { transcript: transcript("dolphin") });
+  assert.deepEqual(await db.recallNotes("dolphin", { excludeIds: held }), []);
+});
+
+test("recall returns the newest matches first, up to its limit, skipping held ones", async (t) => {
+  const db = openAt(t, freshDir(t));
+  if (!db) return;
+  const ids = seedConversations(db, 30, (index) =>
+    transcript(index % 2 ? "the pricing question" : "nothing relevant")
+  );
+  const pricing = ids.filter((_, index) => index % 2);
+
+  assert.deepEqual(
+    (await db.recallNotes("pricing")).map((note) => note.id),
+    pricing,
+    "most recently updated first"
+  );
+  assert.deepEqual(
+    (await db.recallNotes("pricing", { limit: 3 })).map((note) => note.id),
+    pricing.slice(0, 3)
+  );
+  assert.deepEqual(
+    (await db.recallNotes("pricing", { excludeIds: pricing.slice(0, 5) })).map((note) => note.id),
+    pricing.slice(5)
+  );
+  // Junk options fall back rather than throw.
+  assert.equal((await db.recallNotes("pricing", { limit: "9", excludeIds: "x" })).length, 15);
+});
+
+test("a newer query ends an older scan at its next pause", async (t) => {
+  const db = openAt(t, freshDir(t));
+  if (!db) return;
+  // Enough transcript that one scan has to pause for the main process.
+  const turns = Array.from({ length: 400 }, (_, index) => `turn ${index} about the roadmap`);
+  seedConversations(db, 120, () => transcript(...turns));
+  let asked = 0;
+  const result = await db.recallNotes("a phrase nobody said", {
+    shouldStop: () => {
+      asked += 1;
+      return true;
+    },
+  });
+  assert.ok(asked > 0, "the scan paused at least once");
+  assert.deepEqual(result, []);
+});

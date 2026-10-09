@@ -73,6 +73,13 @@ const NOTES_FTS_SCHEMA = [
 ];
 const NOTES_FTS_OBJECTS = ["notes_fts", "notes_fts_insert", "notes_fts_update", "notes_fts_delete"];
 
+// The literal scan over conversations the renderer does not hold.
+const RECALL_LIMIT_DEFAULT = 50;
+const RECALL_LIMIT_MAX = 200;
+const RECALL_BATCH = 16;
+// Read at most this long before letting the main process serve anything else.
+const RECALL_SLICE_MS = 12;
+
 const sqlShape = (sql) =>
   String(sql ?? "")
     .replace(/\s+/g, " ")
@@ -2377,6 +2384,71 @@ class DatabaseManager {
       debugLogger.error("Error searching notes", { error: error.message }, "database");
       throw error;
     }
+  }
+
+  /**
+   * Conversations whose words contain `query`, most recently updated first.
+   *
+   * The Intelligence list holds the hundred most recently updated
+   * conversations and filters them in memory, so nothing older could be found
+   * at all. This runs the same test — `recallText` in `conversationRecall.mjs`,
+   * case- and accent-folded — over the conversations the caller does not hold
+   * (`excludeIds`), and returns whole rows so a result can show its passage and
+   * be opened.
+   *
+   * A scan, not `notes_fts`: FTS5 matches the start of a word, so it misses a
+   * match inside one — "rice" in "price", and almost every Chinese or Japanese
+   * word, which is written without spaces. It reads at most `RECALL_SLICE_MS`
+   * at a time and then yields, so the main process keeps serving a recording
+   * while it runs; `shouldStop` lets a newer query end it early.
+   *
+   * @returns {Promise<object[]>} at most `limit` rows; [] when stopped.
+   */
+  async recallNotes(query, { excludeIds = [], limit, shouldStop = () => false } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    const [{ foldText }, { recallText }] = await Promise.all([
+      import("./searchFold.mjs"),
+      import("./conversationRecall.mjs"),
+    ]);
+    const needle = foldText(String(query ?? "").trim());
+    if (!needle) return [];
+    const max = Number.isInteger(limit)
+      ? Math.min(Math.max(limit, 1), RECALL_LIMIT_MAX)
+      : RECALL_LIMIT_DEFAULT;
+    const held = new Set(
+      Array.isArray(excludeIds) ? excludeIds.filter((id) => Number.isInteger(id)) : []
+    );
+    const ids = this.db
+      .prepare(
+        "SELECT id FROM notes WHERE note_type = 'meeting' AND deleted_at IS NULL ORDER BY updated_at DESC, id DESC"
+      )
+      .all()
+      .map((row) => row.id)
+      .filter((id) => !held.has(id));
+
+    const found = [];
+    let sliceStart = Date.now();
+    for (let at = 0; at < ids.length && found.length < max; at += RECALL_BATCH) {
+      if (Date.now() - sliceStart >= RECALL_SLICE_MS) {
+        await new Promise((resolve) => setImmediate(resolve));
+        if (shouldStop()) return [];
+        sliceStart = Date.now();
+      }
+      const batch = ids.slice(at, at + RECALL_BATCH);
+      const rows = this.db
+        .prepare(
+          `SELECT * FROM notes WHERE id IN (${batch.map(() => "?").join(", ")}) AND deleted_at IS NULL`
+        )
+        .all(...batch);
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      for (const id of batch) {
+        const row = byId.get(id);
+        if (!row || !foldText(recallText(row)).includes(needle)) continue;
+        found.push(row);
+        if (found.length >= max) break;
+      }
+    }
+    return found;
   }
 
   getUpcomingEvents(windowMinutes = 1440) {

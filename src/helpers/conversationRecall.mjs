@@ -213,6 +213,29 @@ export function recallText(note) {
 }
 
 /**
+ * The conversations a literal search sees: the ones the list holds, in their
+ * order, then the older ones the main process found for this query, in theirs.
+ *
+ * The list holds the hundred most recently updated conversations, and a search
+ * used to see nothing else. The older ones are only ever the matches for a
+ * query: transcripts are not loaded wholesale to be searched. A note the list
+ * already holds is not repeated. `held` itself comes back when there is nothing
+ * to add, so a memo that depends on the result does not rerun.
+ */
+export function withOlderMatches(held, older) {
+  const list = Array.isArray(held) ? held : [];
+  if (!Array.isArray(older) || !older.length) return list;
+  const seen = new Set(list.map((note) => note.id));
+  const extra = [];
+  for (const note of older) {
+    if (!note || seen.has(note.id)) continue;
+    seen.add(note.id);
+    extra.push(note);
+  }
+  return extra.length ? [...list, ...extra] : list;
+}
+
+/**
  * Merge the literal results with what the vector index suggests.
  *
  * Literal matches come first and keep their order: they are certain, and a
