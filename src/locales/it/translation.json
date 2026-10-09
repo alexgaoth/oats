@@ -1872,9 +1872,9 @@
   "meetingNotification": {
     "title": "Riunione rilevata",
     "body": {
-      "detected": "Sembra che tu sia in riunione. Vuoi prendere appunti?",
-      "starting": "La tua riunione sta per iniziare. Vuoi prendere appunti?",
-      "underway": "Sembra che la tua riunione sia già in corso. Vuoi prendere appunti?"
+      "detected": "Vuoi prendere appunti?",
+      "starting": "Inizia ora. Prendi appunti?",
+      "underway": "In corso. Prendi appunti?"
     },
     "start": "Prendi appunti",
     "join": "Partecipa e trascrivi"

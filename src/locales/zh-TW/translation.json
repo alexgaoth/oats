@@ -1867,9 +1867,9 @@
   "meetingNotification": {
     "title": "偵測到會議",
     "body": {
-      "detected": "你似乎正在開會。要開始記錄嗎？",
-      "starting": "你的會議即將開始。要開始記錄嗎？",
-      "underway": "你的會議似乎已在進行中。要開始記錄嗎？"
+      "detected": "要開始記錄嗎？",
+      "starting": "即將開始。要記錄嗎？",
+      "underway": "正在進行。要記錄嗎？"
     },
     "start": "開始記錄",
     "join": "加入並轉錄"

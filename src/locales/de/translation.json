@@ -1872,9 +1872,9 @@
   "meetingNotification": {
     "title": "Meeting erkannt",
     "body": {
-      "detected": "Es klingt, als wärst du in einem Meeting. Notizen aufnehmen?",
-      "starting": "Dein Meeting beginnt gleich. Notizen aufnehmen?",
-      "underway": "Es klingt, als wäre dein Meeting schon im Gange. Notizen aufnehmen?"
+      "detected": "Notizen aufnehmen?",
+      "starting": "Beginnt jetzt. Notizen?",
+      "underway": "Läuft bereits. Notizen?"
     },
     "start": "Notizen aufnehmen",
     "join": "Beitreten & transkribieren"
