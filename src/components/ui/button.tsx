@@ -4,115 +4,44 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../lib/utils";
 
+// shadcn/ui (new-york) buttons. Every variant shares one height scale, one
+// radius and one focus ring, so a button reads as a button wherever it sits.
+// Variant names are kept from the inherited set so existing call sites compile.
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap",
-    "rounded text-sm font-medium cursor-pointer select-none",
-    "transition-[background-color,border-color,color,transform] duration-200 ease-out",
-    "outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-    "disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
-    "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 shrink-0",
+    "inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap",
+    "rounded-md text-sm font-medium",
+    "transition-[color,background-color,border-color,box-shadow] duration-150",
+    "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
+    "disabled:pointer-events-none disabled:opacity-50",
+    "aria-invalid:border-destructive aria-invalid:ring-destructive/20",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ].join(" "),
   {
     variants: {
       variant: {
-        // Primary CTA — ultra-premium with subtle depth
-        default: [
-          "relative text-primary-foreground font-semibold tracking-[0.005em]",
-          "bg-primary",
-          "border border-primary/60",
-          "shadow-sm",
-          "hover:bg-primary/95 hover:shadow",
-          "active:bg-primary/85 active:scale-[0.985]",
-          "transition-[background-color,border-color,color,transform] duration-200 ease-out",
-        ].join(" "),
-
-        // Success — uses design tokens
-        success: [
-          "relative text-success-foreground font-semibold tracking-[0.01em]",
-          "bg-success",
-          "border border-success/70",
-          "shadow-sm",
-          "hover:bg-success/90",
-          "active:bg-success/80 active:scale-[0.98]",
-        ].join(" "),
-
-        // Destructive — uses design tokens
-        destructive: [
-          "relative text-destructive-foreground font-semibold tracking-[0.01em]",
-          "bg-destructive",
-          "border border-destructive/70",
-          "shadow-sm",
-          "hover:bg-destructive/90",
-          "active:bg-destructive/80 active:scale-[0.98]",
-        ].join(" "),
-
-        // Outline — refined with subtle glassmorphism
-        outline: [
-          "relative font-medium",
-          "text-foreground bg-muted/70 backdrop-blur-sm",
-          "border border-border/70",
-          "shadow-sm",
-          "hover:bg-muted hover:border-border-hover",
-          "active:scale-[0.985]",
-          "dark:bg-surface-raised/90 dark:border-border-hover dark:hover:bg-surface-raised",
-          "transition-[background-color,border-color,color,transform] duration-200 ease-out",
-        ].join(" "),
-
-        // Outline flat — transparent with thin border, no fill or shadow
-        "outline-flat": [
-          "font-medium",
-          "text-muted-foreground/70 bg-transparent",
-          "border border-border/50",
-          "hover:text-foreground/80 hover:border-border hover:bg-foreground/3",
-          "active:scale-[0.98]",
-          "dark:border-white/10 dark:hover:bg-white/5 dark:hover:border-white/15",
-        ].join(" "),
-
-        // Secondary — uses design tokens
-        secondary: [
-          "relative font-medium",
-          "text-foreground bg-secondary",
-          "border border-border/50",
-          "hover:bg-muted",
-          "active:scale-[0.98]",
-          "dark:text-foreground/90 dark:bg-white/8 dark:border-white/5 dark:hover:bg-white/12",
-        ].join(" "),
-
-        // Ghost — uses design tokens
-        ghost: [
-          "font-medium",
-          "text-foreground",
-          "hover:bg-muted",
-          "active:scale-[0.98]",
-          "dark:text-foreground/90 dark:hover:bg-white/8",
-        ].join(" "),
-
-        // Link — uses design tokens
-        link: [
-          "font-medium",
-          "text-primary",
-          "hover:text-primary/80 hover:underline",
-          "underline-offset-4",
-        ].join(" "),
-
-        // Social button for auth flows - ultra-premium glassmorphism
-        social: [
-          "relative font-medium",
-          "text-foreground bg-surface-1/80 backdrop-blur-xl",
-          "border border-border/60",
-          "shadow-sm gap-2",
-          "hover:bg-surface-2/90 hover:border-border-hover hover:shadow",
-          "active:scale-[0.985] active:shadow-sm",
-          "dark:bg-surface-raised/80 dark:border-border-hover dark:hover:bg-surface-raised/95",
-          "transition-[background-color,border-color,color,transform] duration-200 ease-out",
-        ].join(" "),
+        default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/30",
+        success: "bg-success text-success-foreground shadow-xs hover:bg-success/90",
+        record:
+          "bg-recording text-recording-foreground shadow-xs hover:bg-recording/90 focus-visible:ring-recording/30",
+        outline:
+          "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/20 dark:hover:bg-input/40",
+        "outline-flat":
+          "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/60",
+        link: "h-auto px-0 text-foreground underline-offset-4 hover:underline",
+        social:
+          "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 px-3 text-xs gap-1.5",
-        lg: "h-12 px-6 text-sm",
-        icon: "size-10",
+        default: "h-9 px-4 has-[>svg]:px-3",
+        sm: "h-8 gap-1.5 px-3 text-[13px] has-[>svg]:px-2.5",
+        lg: "h-10 px-6 has-[>svg]:px-4",
+        icon: "size-9",
+        "icon-sm": "size-8",
       },
     },
     defaultVariants: {

@@ -10,6 +10,7 @@ const dockManager = require("./dockManager");
 const { i18nMain } = require("./i18nMain");
 const { DEV_SERVER_PORT } = DevServerManager;
 const { isPointInsideBounds, shouldIgnoreMouseEvents } = require("./oatInteractivity");
+const { isInternalNavigation } = require("./appNavigation");
 const {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
@@ -64,7 +65,6 @@ class WindowManager {
     this._ignoringMouseEvents = null;
     this._oatCursorWatch = null;
     this._isDictatingToggle = false;
-    this._pendingMeetingNoteNavigation = null;
 
     app.on("before-quit", () => {
       this.isQuitting = true;
@@ -821,14 +821,9 @@ class WindowManager {
     this.controlPanelWindow = new BrowserWindow(CONTROL_PANEL_CONFIG);
 
     this.controlPanelWindow.webContents.on("will-navigate", (event, url) => {
-      const appUrl = DevServerManager.getAppUrl(true);
-      const controlPanelUrl = appUrl.startsWith("http") ? appUrl : `file://${appUrl}`;
-
-      if (
-        url.startsWith(controlPanelUrl) ||
-        url.startsWith("file://") ||
-        url.startsWith("devtools://")
-      ) {
+      // getAppUrl() is null in a packaged build; appNavigation.js says why
+      // that once let a link load inside this window.
+      if (isInternalNavigation(url, DevServerManager.getAppUrl(true))) {
         return;
       }
 
@@ -1639,18 +1634,6 @@ class WindowManager {
     } else {
       win.webContents.send(channel, data);
     }
-  }
-
-  async queueMeetingNoteNavigation(payload) {
-    this._pendingMeetingNoteNavigation = payload;
-    await this.createControlPanelWindow();
-    this.sendToControlPanel("meeting-note-navigation-pending");
-  }
-
-  consumePendingMeetingNoteNavigation() {
-    const payload = this._pendingMeetingNoteNavigation;
-    this._pendingMeetingNoteNavigation = null;
-    return payload;
   }
 
   snapControlPanelToMeetingMode() {

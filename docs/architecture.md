@@ -215,6 +215,8 @@ Always-on offline semantic search that finds notes by meaning, not just keywords
 - **Embedding model**: `all-MiniLM-L6-v2` via ONNX Runtime (`localEmbeddings.js`), 384-dim vectors
 - **Vector index**: Qdrant collection management (`vectorIndex.js`), cosine distance
 - **Hybrid search**: FTS5 + Qdrant in parallel → Reciprocal Rank Fusion (K=60) with 0.3 cosine score threshold
+- **What each side reads**: FTS5 (`notes_fts`, contentless) indexes the title, content, summary, the transcript's words and the notes on marks. The vectors embed the title and summary only, cut at 1500 characters (`LocalEmbeddings.noteEmbedText`) — no transcript
+- **Literal recall** (Intelligence search): the renderer filters the 100 conversations it holds; `db-recall-notes` runs the same test (`recallText`) over the rest in the main process
 
 **Pipeline**:
 

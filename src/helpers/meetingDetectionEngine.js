@@ -27,7 +27,11 @@ class MeetingDetectionEngine {
     this.windowManager = windowManager;
     this.databaseManager = databaseManager;
     this.activeDetections = new Map();
-    this.preferences = { processDetection: true, audioDetection: true };
+    // Audio detection starts off and is switched on only by the user's own
+    // preference, synced from the renderer at startup
+    // (`sync-notification-preferences`). Starting it on meant a call in the
+    // first seconds after launch could prompt somebody who had turned it off.
+    this.preferences = { processDetection: true, audioDetection: false };
     this._userRecording = false;
     this._meetingModeActive = false;
     this._notificationQueue = [];
@@ -134,31 +138,7 @@ class MeetingDetectionEngine {
       const detection = this.activeDetections.get(detectionId);
 
       if (action === "start" && detection) {
-        const eventSummary = detection.event?.summary || "New note";
-
-        const noteResult = this.databaseManager.saveNote(eventSummary, "", "meeting");
-        const meetingsFolder = this.databaseManager.getMeetingsFolder();
-
-        if (!noteResult?.note?.id || !meetingsFolder?.id) {
-          debugLogger.error(
-            "Meeting note creation failed",
-            { noteId: noteResult?.note?.id, folderId: meetingsFolder?.id },
-            "meeting"
-          );
-          return;
-        }
-
-        this._meetingModeActive = true;
-
-        this.broadcastToWindows("note-added", noteResult.note);
-
-        await this.windowManager.queueMeetingNoteNavigation({
-          noteId: noteResult.note.id,
-          folderId: meetingsFolder.id,
-          event: detection.event,
-          trigger: "detected",
-        });
-
+        await this._startConversation("detected");
         this.audioActivityDetector.resetPrompt();
       } else if (action === "dismiss") {
         if (detection) {
@@ -181,33 +161,27 @@ class MeetingDetectionEngine {
   }
 
   async startManualMeeting() {
-    debugLogger.info("Starting manual meeting", {}, "meeting");
+    debugLogger.info("Starting a conversation from the meeting hotkey", {}, "meeting");
+    await this._startConversation("hotkey");
+  }
 
-    this._meetingModeActive = true;
-
-    const event = placeholderEvent("__manual__");
-
-    const noteResult = this.databaseManager.saveNote(event.summary, "", "meeting");
-    const meetingsFolder = this.databaseManager.getMeetingsFolder();
-
-    if (!noteResult?.note?.id || !meetingsFolder?.id) {
-      debugLogger.error(
-        "Manual meeting failed — missing note or folder",
-        { noteId: noteResult?.note?.id, folderId: meetingsFolder?.id },
-        "meeting"
-      );
-      this._meetingModeActive = false;
+  /**
+   * Start a conversation the way every other entry point does.
+   *
+   * Both the "Take notes" prompt and the meeting hotkey used to save an empty
+   * "New note" and queue a navigation that no surface listened for, so nothing
+   * recorded, an orphan note was left behind each time, and meeting mode stayed
+   * on until restart — silencing every later detection. They now go through the
+   * same toggle as the conversation hotkey, the tray and the oat, and do
+   * nothing when a conversation is already running (a toggle would stop it).
+   * The recording itself suppresses further prompts (`setUserRecording`).
+   */
+  async _startConversation(trigger) {
+    if (this.windowManager.isConversationRecording?.()) {
+      debugLogger.info("Conversation already recording; nothing to start", { trigger }, "meeting");
       return;
     }
-
-    this.broadcastToWindows("note-added", noteResult.note);
-
-    await this.windowManager.queueMeetingNoteNavigation({
-      noteId: noteResult.note.id,
-      folderId: meetingsFolder.id,
-      event,
-      trigger: "hotkey",
-    });
+    await this.windowManager.sendToggleConversation();
   }
 
   handleNotificationTimeout() {

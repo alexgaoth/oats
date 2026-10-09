@@ -51,6 +51,7 @@ const DYNAMIC = {
     "no-speech-engine",
     "no-model",
     "no-api-key",
+    "no-summary-model",
     "question-cards-off",
   ],
 };

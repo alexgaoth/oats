@@ -54,8 +54,8 @@
     "closeWindow": "Fenster schließen"
   },
   "window": {
-    "voiceRecorderTitle": "Sprachrekorder",
-    "controlPanelTitle": "Kontrollzentrum",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "Agenten-Chat"
   },
   "dialog": {
@@ -193,10 +193,6 @@
       "installing": "Wird installiert...",
       "installButton": "Update installieren",
       "availableButton": "Update verfügbar"
-    },
-    "accessibilityMissing": {
-      "title": "Bedienungshilfen-Berechtigungen benötigt",
-      "description": "Wir haben festgestellt, dass Oats Bedienungshilfen-Berechtigungen benötigt, um korrekt zu funktionieren. Bitte aktivieren Sie diese unten."
     },
     "history": {
       "couldNotLoadTitle": "Verlauf konnte nicht geladen werden",
@@ -1863,12 +1859,6 @@
     "copied": "Kopiert",
     "waitingForInput": "Sag etwas..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "Du",
-      "others": "Andere"
-    }
-  },
   "meetingNotification": {
     "title": "Meeting erkannt",
     "body": {
@@ -1917,7 +1907,14 @@
       "markLabel": "Diesen Moment markieren",
       "markAnnounced": "Markiert bei {{time}}",
       "threadMapLabel": "Karte von {{count}} bisher angesprochenen Themen",
-      "threadMapNoQuote": "nichts Aktuelles zum Zitieren"
+      "threadMapNoQuote": "nichts Aktuelles zum Zitieren",
+      "recordTitle": "Gespräch aufnehmen",
+      "start": "Aufnahme starten",
+      "shortcutAnywhere": "aus jeder App",
+      "recordingBadge": "Aufnahme",
+      "stop": "Beenden",
+      "recentHeading": "Letzte Gespräche",
+      "viewAll": "Alle anzeigen"
     },
     "intelligence": {
       "listTitle": "Gespräche",
@@ -1965,7 +1962,10 @@
       "delete": "Löschen",
       "deleteConfirm": "Diese Unterhaltung löschen?",
       "deleteYes": "Löschen",
-      "deleteCancel": "Behalten"
+      "deleteCancel": "Behalten",
+      "needsSummaryModel": "Keine Zusammenfassung: Auf diesem Computer ist kein Zusammenfassungsmodell bereit. Nach dem Einrichten unter Einstellungen › Erweitert › Sprachmodelle lässt sich das Gespräch hier zusammenfassen.",
+      "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
+      "summarize": "Zusammenfassen"
     },
     "review": {
       "title": "Was offen geblieben ist",
@@ -2052,7 +2052,8 @@
       "no-speech-engine": "Die lokale Sprach-Engine fehlt. Eine Neuinstallation von Oats stellt sie wieder her.",
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
-      "question-cards-off": "Fragekarten sind ausgeschaltet – Fragen gehen still vorbei. Schalte die Gesprächshilfe unter Erweitert wieder ein."
+      "question-cards-off": "Fragekarten sind ausgeschaltet – Fragen gehen still vorbei. Schalte die Gesprächshilfe unter Erweitert wieder ein.",
+      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Zusammenfassungsmodell bereit. Einrichten lässt es sich unter Einstellungen › Erweitert › Sprachmodelle."
     },
     "aide": {
       "title": "Gesprächshilfe",
@@ -2081,6 +2082,16 @@
       "you": "Du",
       "room": "Raum",
       "speaker": "Sprecher {{n}}"
+    },
+    "shell": {
+      "sidebar": "Seitenleiste",
+      "home": "Start",
+      "conversations": "Gespräche",
+      "search": "Suchen",
+      "recent": "Zuletzt",
+      "noRecent": "Noch keine Gespräche",
+      "record": "Neue Aufnahme",
+      "stop": "Aufnahme beenden"
     }
   },
   "questionCard": {

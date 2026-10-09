@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSettingsStore } from "../stores/settingsStore";
+import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
+import { localSummaryModelDownloaded } from "./useSummaryReadiness";
+import { summaryReadiness } from "../utils/summaryReadiness";
 import {
   blocksRecording,
   resolvePreflight,
@@ -62,6 +64,10 @@ async function transcriptionFacts(
   }
 }
 
+function readinessFact(readiness: ReturnType<typeof summaryReadiness>): boolean | null {
+  return readiness === null ? null : readiness === "ready";
+}
+
 /**
  * Everything Oats needs before the first word, checked before the first word.
  *
@@ -89,6 +95,10 @@ export function useConversationPreflight(): Preflight {
   // either in Settings clears or raises the line without a restart.
   const aideEnabled = useSettingsStore((state) => state.conversationAideEnabled);
   const aideInRoom = useSettingsStore((state) => state.conversationAideInRoomEnabled);
+  // What writes the title and summary after Finish (summaryReadiness.ts).
+  const summaryMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
+  const summaryModel = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
+  const summaryUrl = useSettingsStore((state) => selectResolvedNoteFormatting(state).remoteUrl);
 
   const check = useCallback(async (): Promise<PreflightProblem | null> => {
     const found = resolvePreflight({
@@ -97,10 +107,26 @@ export function useConversationPreflight(): Preflight {
       localProvider,
       ...(await transcriptionFacts(useLocalWhisper, localProvider)),
       questionCardsOn: aideEnabled && aideInRoom,
+      summaryReady: readinessFact(
+        summaryReadiness({
+          mode: summaryMode,
+          model: summaryModel,
+          remoteUrl: summaryUrl,
+          localModelDownloaded: await localSummaryModelDownloaded(summaryMode, summaryModel),
+        })
+      ),
     });
     setProblem(found);
     return found;
-  }, [useLocalWhisper, localProvider, aideEnabled, aideInRoom]);
+  }, [
+    useLocalWhisper,
+    localProvider,
+    aideEnabled,
+    aideInRoom,
+    summaryMode,
+    summaryModel,
+    summaryUrl,
+  ]);
 
   useEffect(() => {
     void check();

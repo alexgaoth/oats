@@ -96,26 +96,30 @@ Design consequences that follow directly:
 
 ## Review-blocking defects
 
-Each of these is checkable, and any one of them fails review.
+`DESIGN.md` (v2) is the spec: the standard shadcn/ui new-york system on neutral
+zinc, Inter, and the sidebar frame. Each of these is checkable, and any one of
+them fails review.
 
 1. **A colour or motion literal** where a token exists. Single source of truth is
    the `@theme` block in `src/index.css`.
-2. **Animating anything but `transform` and `opacity` in a loop.** `width`,
-   `top`, `filter`, `box-shadow` are defects (`DESIGN.md` §8). The one sanctioned
-   exception is the open-thread stack's expand height.
-3. **More than one animated dither layer on screen**, ever.
+2. **A hand-made control where a `src/components/ui/` primitive exists** — a text
+   link posing as a button, an underline posing as an input, a row of words
+   posing as tabs. Use Button, Input, Select, Toggle, SegmentedControl, Tabs,
+   Badge, Card, DropdownMenu.
+3. **Text off the type scale** (`DESIGN.md` §3) or `font-mono` on labels, dates,
+   buttons or transcripts. Mono is for shortcuts in prose and identifiers only.
 4. **A surface that works in only one colour mode.** Both are first-class.
-5. **No `prefers-reduced-motion` path.** Every animation needs its still
-   equivalent — not a shorter animation.
-6. **Gold as body text.** It is a mark colour and fails contrast by design.
-7. **The phrase "nothing leaves your device"** in copy, docs, or comments. It is
-   false while auto-search is on, and one overstatement kills the trust
-   argument. State what leaves, when, and how to switch it off.
-8. **A new user-facing string not added to all 10 locale files.**
-9. **A third region on a primary surface.** The budget is one heading, one
-   primary action, one content region. If it needs a third, it is two screens.
-10. **A red recording indicator, a "REC" chip, or any banner the other person
-    could read.** The listening pulse is the only recording affordance.
+5. **No visible focus** on an interactive element, or no `prefers-reduced-motion`
+   path for an animation.
+6. **A gradient, texture, glow or decorative animation.** Surfaces are flat.
+7. **Red for anything but recording or danger**; the brand yellow-orange as
+   text on a light surface (use `brand-ink`), or on more than one primary button
+   in a view.
+8. **The phrase "nothing leaves your device"** in copy, docs, or comments. It is
+   false while auto-search is on. State what leaves, when, and how to switch it off.
+9. **A new user-facing string not added to all 10 locale files.**
+10. **Changing text in the Clean recording composition** beyond the clock and the
+    contour. Nothing may compete with the person in the room.
 
 ---
 

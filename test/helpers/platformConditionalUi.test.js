@@ -18,6 +18,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 const CSS = read("src/index.css");
 const ENTRY = read("src/main.jsx");
 const WORKSPACE = read("src/components/OatsWorkspace.tsx");
+const SIDEBAR = read("src/components/shell/AppSidebar.tsx");
 const WINDOW_CONFIG = read("src/helpers/windowConfig.js");
 const FORCE_GRAPH = read("src/components/notes/ForceGraph.tsx");
 
@@ -163,24 +164,22 @@ test("macOS traffic lights have the band to themselves", () => {
   const position = WINDOW_CONFIG.match(/trafficLightPosition: \{ x: (\d+), y: (\d+) \}/);
   assert.ok(position, "expected an explicit traffic light position");
   const y = Number(position[2]);
-  // A traffic light button is 14px tall, so the group ends at y + 14.
-  const bottom = y + 14;
+  // A traffic light button row is about 16px tall, so the group ends at y + 16.
+  const bottom = y + 16;
 
-  // Match the height inside the band's class list rather than pinning the whole
-  // string: the band legitimately gained layout classes when the orientation nav
-  // moved onto it, and this test is about the traffic lights, not about which
-  // other utilities happen to sit beside `h-9`.
-  const band = WORKSPACE.match(/className="([^"]*\bz-20\b[^"]*\bshrink-0\b[^"]*)"/);
-  assert.ok(band, "expected to find the drag band's class list");
-  const height = band[1].match(/\bh-(\d+)\b/);
-  assert.ok(height, "expected the drag band to declare a Tailwind height");
-  const bandPx = Number(height[1]) * 4;
+  // The lights sit in the sidebar's drag band, the first thing in the frame's
+  // left column; nothing else is drawn there.
+  const band = SIDEBAR.match(/className="([^"]*\bh-\[(\d+)px\][^"]*\bshrink-0\b[^"]*)"\s*\n?\s*style=\{\{ WebkitAppRegion: "drag" \}/);
+  assert.ok(band, "expected the sidebar's drag band with an explicit pixel height");
+  const bandPx = Number(band[2]);
 
   assert.ok(
     bandPx >= bottom,
     `the drag band (${bandPx}px) must cover the traffic lights (to ${bottom}px), ` +
       "or macOS draws them on top of the first line of content"
   );
+  // Centred, within a pixel or two, so they sit on the band's axis.
+  assert.ok(Math.abs(y + 8 - bandPx / 2) <= 2, "the traffic lights are centred in the band");
 });
 
 test("canvas text uses the same mono token as the DOM", () => {

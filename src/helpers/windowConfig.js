@@ -45,7 +45,7 @@ const WINDOW_SIZES = {
 const MAIN_WINDOW_CONFIG = {
   width: WINDOW_SIZES.BASE.width,
   height: WINDOW_SIZES.BASE.height,
-  title: "Voice Recorder",
+  title: "Oats",
   webPreferences: {
     preload: path.join(__dirname, "..", "..", "preload.js"),
     nodeIntegration: false,
@@ -80,7 +80,13 @@ const CONTROL_PANEL_CONFIG = {
   // unreachable, so this minimum is set by recording, not by them.
   minWidth: 880,
   minHeight: 680,
-  backgroundColor: "#1c1c2e",
+  // Paper, in the system's appearance, behind the first paint — the indigo this
+  // inherited flashed before every window had drawn (index.css --color-background).
+  get backgroundColor() {
+    // Required here, not at the top: tests load this file without Electron.
+    const dark = Boolean(require("electron")?.nativeTheme?.shouldUseDarkColors);
+    return dark ? "#201d18" : "#f6f1e7";
+  },
   webPreferences: {
     preload: path.join(__dirname, "..", "..", "preload.js"),
     nodeIntegration: false,
@@ -96,13 +102,14 @@ const CONTROL_PANEL_CONFIG = {
     spellcheck: false,
     backgroundThrottling: false,
   },
-  title: "Control Panel",
+  title: "Oats",
   resizable: true,
   show: false,
   frame: false,
   ...(process.platform === "darwin" && {
     titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 20, y: 20 },
+    // Centred in the sidebar's 52px drag band (a 16px-tall button row at y 18).
+    trafficLightPosition: { x: 18, y: 18 },
   }),
   transparent: false,
   minimizable: true,

@@ -54,8 +54,8 @@
     "closeWindow": "ウィンドウを閉じる"
   },
   "window": {
-    "voiceRecorderTitle": "ボイスレコーダー",
-    "controlPanelTitle": "コントロールパネル",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "エージェントチャット"
   },
   "dialog": {
@@ -193,10 +193,6 @@
       "installing": "インストール中...",
       "installButton": "アップデートをインストール",
       "availableButton": "アップデートあり"
-    },
-    "accessibilityMissing": {
-      "title": "アクセシビリティの許可が必要です",
-      "description": "Oats が正しく動作するにはアクセシビリティの許可が必要です。以下で有効にしてください。"
     },
     "history": {
       "couldNotLoadTitle": "履歴を読み込めませんでした",
@@ -1863,12 +1859,6 @@
     "copied": "コピー済み",
     "waitingForInput": "何か話してください..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "あなた",
-      "others": "他の人"
-    }
-  },
   "meetingNotification": {
     "title": "会議を検出しました",
     "body": {
@@ -1917,7 +1907,14 @@
       "markLabel": "この瞬間をマーク",
       "markAnnounced": "{{time}} にマークしました",
       "threadMapLabel": "これまでに出た {{count}} 件の話題のマップ",
-      "threadMapNoQuote": "引用できる発言がありません"
+      "threadMapNoQuote": "引用できる発言がありません",
+      "recordTitle": "会話を録音",
+      "start": "録音を開始",
+      "shortcutAnywhere": "どのアプリからでも",
+      "recordingBadge": "録音中",
+      "stop": "停止",
+      "recentHeading": "最近の会話",
+      "viewAll": "すべて表示"
     },
     "intelligence": {
       "listTitle": "会話",
@@ -1965,7 +1962,10 @@
       "delete": "削除",
       "deleteConfirm": "この会話を削除しますか？",
       "deleteYes": "削除",
-      "deleteCancel": "残す"
+      "deleteCancel": "残す",
+      "needsSummaryModel": "要約はありません。このコンピューターで使える要約モデルがありません。設定 › 詳細設定 › 言語モデル で設定してから、もう一度要約してください。",
+      "notSummarized": "この会話はまだ要約されていません。",
+      "summarize": "要約する"
     },
     "review": {
       "title": "未解決のまま残ったこと",
@@ -2052,7 +2052,8 @@
       "no-speech-engine": "ローカル音声エンジンがありません。Oats を再インストールすると復元されます。",
       "no-model": "同梱の音声モデルがインストールされませんでした。Oats を再起動し、続く場合は再インストールしてください。",
       "no-api-key": "処理は API キーを使う設定ですが、キーが保存されていません — 設定を確認してください。",
-      "question-cards-off": "質問カードがオフです。質問は静かに通り過ぎます。詳細設定で会話アシスタントを再びオンにしてください。"
+      "question-cards-off": "質問カードがオフです。質問は静かに通り過ぎます。詳細設定で会話アシスタントを再びオンにしてください。",
+      "no-summary-model": "要約モデルが準備できていないため、会話はタイトルと要約なしで保存されます。設定 › 詳細設定 › 言語モデル で設定してください。"
     },
     "aide": {
       "title": "会話アシスタント",
@@ -2081,6 +2082,16 @@
       "you": "あなた",
       "room": "部屋",
       "speaker": "話者{{n}}"
+    },
+    "shell": {
+      "sidebar": "サイドバー",
+      "home": "ホーム",
+      "conversations": "会話",
+      "search": "検索",
+      "recent": "最近",
+      "noRecent": "まだ会話はありません",
+      "record": "新規録音",
+      "stop": "録音を停止"
     }
   },
   "questionCard": {

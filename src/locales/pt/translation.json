@@ -54,8 +54,8 @@
     "closeWindow": "Fechar janela"
   },
   "window": {
-    "voiceRecorderTitle": "Gravador de voz",
-    "controlPanelTitle": "Painel de controle",
+    "voiceRecorderTitle": "Oats",
+    "controlPanelTitle": "Oats",
     "agentChatTitle": "Chat do agente"
   },
   "dialog": {
@@ -193,10 +193,6 @@
       "installing": "Instalando...",
       "installButton": "Instalar atualização",
       "availableButton": "Atualização disponível"
-    },
-    "accessibilityMissing": {
-      "title": "Permissões de acessibilidade necessárias",
-      "description": "Detectamos que o Oats precisa de permissões de acessibilidade para funcionar corretamente. Ative-as abaixo."
     },
     "history": {
       "couldNotLoadTitle": "Não foi possível carregar seu histórico",
@@ -1863,12 +1859,6 @@
     "copied": "Copiado",
     "waitingForInput": "Diga algo..."
   },
-  "transcript": {
-    "speaker": {
-      "you": "Você",
-      "others": "Outros"
-    }
-  },
   "meetingNotification": {
     "title": "Reunião detectada",
     "body": {
@@ -1917,7 +1907,14 @@
       "markLabel": "Marcar este momento",
       "markAnnounced": "Marcado em {{time}}",
       "threadMapLabel": "Mapa de {{count}} temas abordados até agora",
-      "threadMapNoQuote": "nada recente para citar"
+      "threadMapNoQuote": "nada recente para citar",
+      "recordTitle": "Gravar uma conversa",
+      "start": "Iniciar gravação",
+      "shortcutAnywhere": "de qualquer app",
+      "recordingBadge": "Gravando",
+      "stop": "Parar",
+      "recentHeading": "Conversas recentes",
+      "viewAll": "Ver todas"
     },
     "intelligence": {
       "listTitle": "Conversas",
@@ -1965,7 +1962,10 @@
       "delete": "Excluir",
       "deleteConfirm": "Excluir esta conversa?",
       "deleteYes": "Excluir",
-      "deleteCancel": "Manter"
+      "deleteCancel": "Manter",
+      "needsSummaryModel": "Sem resumo: nenhum modelo de resumo está pronto neste computador. Configure um em Definições › Avançado › Modelos de linguagem e volte para resumir.",
+      "notSummarized": "Esta conversa ainda não foi resumida.",
+      "summarize": "Resumir"
     },
     "review": {
       "title": "O que ficou em aberto",
@@ -2052,7 +2052,8 @@
       "no-speech-engine": "O motor de voz local está faltando. Reinstalar o Oats o restaura.",
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
-      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue novamente o assistente de conversa em Avançado."
+      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue novamente o assistente de conversa em Avançado.",
+      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de resumo está pronto. Configure um em Definições › Avançado › Modelos de linguagem."
     },
     "aide": {
       "title": "Assistente de conversa",
@@ -2081,6 +2082,16 @@
       "you": "Você",
       "room": "Sala",
       "speaker": "Falante {{n}}"
+    },
+    "shell": {
+      "sidebar": "Barra lateral",
+      "home": "Início",
+      "conversations": "Conversas",
+      "search": "Pesquisar",
+      "recent": "Recentes",
+      "noRecent": "Nenhuma conversa ainda",
+      "record": "Nova gravação",
+      "stop": "Parar gravação"
     }
   },
   "questionCard": {

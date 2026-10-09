@@ -10,6 +10,81 @@ const { app } = require("electron");
 // trigger can't 400 the whole sync batch.
 const MAX_SNIPPET_TRIGGER_LENGTH = 100;
 
+// The words of a JSON array of objects, one per line: what a stored transcript
+// says (`text`), or what the reader wrote on its marks (`note`). Anything that
+// is not a JSON array — a transcript saved as plain text — is indexed as it is.
+//
+// Two rules, because this runs inside the triggers on `notes`, so it runs on
+// every recording checkpoint:
+//   - Only SQLite's own functions. A trigger that calls a function some other
+//     build of the app does not register makes every write to `notes` fail.
+//   - Nothing here can raise. `json_valid` is asked first, CASE evaluates only
+//     the branch it takes, and only object elements reach `json_extract`.
+function jsonArrayWordsSql(column, key) {
+  return (
+    `CASE WHEN json_valid(${column}) THEN CASE WHEN json_type(${column}) = 'array' THEN ` +
+    `(SELECT group_concat(json_extract(item.value, '$.${key}'), char(10)) ` +
+    `FROM json_each(${column}) AS item WHERE item.type = 'object') ` +
+    `ELSE ${column} END ELSE ${column} END`
+  );
+}
+
+// What a full-text search reads: the title, the note's own content, what Oats
+// wrote, what was said, and the reader's notes on marks.
+const NOTES_FTS_COLUMNS = "title, content, enhanced_content, transcript_text, marks_text";
+
+function notesFtsValuesSql(row) {
+  return [
+    `${row}.title`,
+    `${row}.content`,
+    `${row}.enhanced_content`,
+    jsonArrayWordsSql(`${row}.transcript`, "text"),
+    jsonArrayWordsSql(`${row}.conversation_marks`, "note"),
+  ].join(", ");
+}
+
+// `notes_fts` and the three triggers that keep it, exactly as they are created.
+//
+// Contentless (`content=''`): the transcript's words are not a column of `notes`,
+// and FTS5 reads an external content table with virtual tables disabled, so a
+// view that unpacks the JSON with `json_each` cannot be the content table
+// either. `contentless_delete=1` removes a row by its rowid: the old external-
+// content triggers had to repeat the exact old values to delete them, and the
+// index was corrupt the moment a value did not match.
+//
+// The names are the old names on purpose. An older build runs
+// `CREATE ... IF NOT EXISTS` with these names, so it keeps these triggers
+// rather than adding its own, which would drop the transcript from every row
+// it touched.
+const NOTES_FTS_SCHEMA = [
+  `CREATE VIRTUAL TABLE notes_fts USING fts5(${NOTES_FTS_COLUMNS}, content='', contentless_delete=1)`,
+  `CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts(rowid, ${NOTES_FTS_COLUMNS}) VALUES (new.id, ${notesFtsValuesSql("new")});
+  END`,
+  // Only when an indexed column is written: a checkpoint rewrites the whole
+  // transcript and pays for it, a sync flag or a moved folder does not.
+  `CREATE TRIGGER notes_fts_update AFTER UPDATE OF title, content, enhanced_content, transcript, conversation_marks ON notes BEGIN
+    DELETE FROM notes_fts WHERE rowid = old.id;
+    INSERT INTO notes_fts(rowid, ${NOTES_FTS_COLUMNS}) VALUES (new.id, ${notesFtsValuesSql("new")});
+  END`,
+  `CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
+    DELETE FROM notes_fts WHERE rowid = old.id;
+  END`,
+];
+const NOTES_FTS_OBJECTS = ["notes_fts", "notes_fts_insert", "notes_fts_update", "notes_fts_delete"];
+
+// The literal scan over conversations the renderer does not hold.
+const RECALL_LIMIT_DEFAULT = 50;
+const RECALL_LIMIT_MAX = 200;
+const RECALL_BATCH = 16;
+// Read at most this long before letting the main process serve anything else.
+const RECALL_SLICE_MS = 12;
+
+const sqlShape = (sql) =>
+  String(sql ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+
 class DatabaseManager {
   constructor() {
     this.db = null;
@@ -159,48 +234,8 @@ class DatabaseManager {
         if (!err.message.includes("duplicate column")) throw err;
       }
 
-      this.db.exec(`
-        CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
-          title,
-          content,
-          enhanced_content,
-          content='notes',
-          content_rowid='id'
-        )
-      `);
-
-      this.db.exec(`
-        CREATE TRIGGER IF NOT EXISTS notes_fts_insert AFTER INSERT ON notes BEGIN
-          INSERT INTO notes_fts(rowid, title, content, enhanced_content)
-          VALUES (new.id, new.title, new.content, new.enhanced_content);
-        END
-      `);
-
-      this.db.exec(`
-        CREATE TRIGGER IF NOT EXISTS notes_fts_update AFTER UPDATE ON notes BEGIN
-          INSERT INTO notes_fts(notes_fts, rowid, title, content, enhanced_content)
-          VALUES ('delete', old.id, old.title, old.content, old.enhanced_content);
-          INSERT INTO notes_fts(rowid, title, content, enhanced_content)
-          VALUES (new.id, new.title, new.content, new.enhanced_content);
-        END
-      `);
-
-      this.db.exec(`
-        CREATE TRIGGER IF NOT EXISTS notes_fts_delete AFTER DELETE ON notes BEGIN
-          INSERT INTO notes_fts(notes_fts, rowid, title, content, enhanced_content)
-          VALUES ('delete', old.id, old.title, old.content, old.enhanced_content);
-        END
-      `);
-
-      this.db
-        .prepare(
-          `
-        INSERT OR IGNORE INTO notes_fts(rowid, title, content, enhanced_content)
-        SELECT id, COALESCE(title, ''), COALESCE(content, ''), COALESCE(enhanced_content, '')
-        FROM notes
-      `
-        )
-        .run();
+      // The full-text index over notes is built at the end of this method, once
+      // every column it reads exists — see `_migrateNotesFts`.
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS folders (
@@ -686,11 +721,74 @@ class DatabaseManager {
         "CREATE INDEX IF NOT EXISTS idx_snippets_pending_sync ON snippets(sync_status) WHERE sync_status = 'pending'"
       );
 
+      // Last, because it reads `transcript` and `conversation_marks`, which are
+      // added above. A failure is logged, never thrown: search is worth less
+      // than a database that opens, and the transaction leaves whatever index
+      // was there before exactly as it was.
+      try {
+        const rebuilt = this._migrateNotesFts();
+        if (rebuilt?.notes) {
+          debugLogger.info("Rebuilt notes_fts", { notes: rebuilt.notes }, "database");
+        }
+      } catch (err) {
+        debugLogger.error("Migration: notes_fts", { error: err.message }, "database");
+      }
+
       return true;
     } catch (error) {
       debugLogger.error("Database initialization failed", { error: error.message }, "database");
       throw error;
     }
+  }
+
+  /** Whether `notes_fts` and its triggers are exactly `NOTES_FTS_SCHEMA`. */
+  _notesFtsIsCurrent() {
+    const placeholders = NOTES_FTS_OBJECTS.map(() => "?").join(", ");
+    const stored = new Map(
+      this.db
+        .prepare(`SELECT name, sql FROM sqlite_master WHERE name IN (${placeholders})`)
+        .all(...NOTES_FTS_OBJECTS)
+        .map((row) => [row.name, sqlShape(row.sql)])
+    );
+    return NOTES_FTS_OBJECTS.every(
+      (name, index) => stored.get(name) === sqlShape(NOTES_FTS_SCHEMA[index])
+    );
+  }
+
+  /**
+   * Make `notes_fts` index what was said, and fill it once.
+   *
+   * It indexed the title, `content` and the summary — and a conversation's
+   * `content` is always "", so no keyword search could find a word anybody
+   * said. It was also refilled on every launch: the old
+   * `INSERT OR IGNORE ... SELECT FROM notes` ignores nothing on an
+   * external-content table, so every note was added to the index again each
+   * time the app started, and FTS5's own integrity-check reported the index
+   * malformed from the second launch on.
+   *
+   * Idempotent: the stored SQL is compared with `NOTES_FTS_SCHEMA`, so this
+   * rebuilds on a database that has the old index, no index, or a different
+   * version's, and does nothing on one it already rebuilt. One transaction:
+   * a failure leaves the previous index and triggers exactly as they were.
+   *
+   * @returns {false | { notes: number }} false when nothing needed doing.
+   */
+  _migrateNotesFts() {
+    if (this._notesFtsIsCurrent()) return false;
+    let notes = 0;
+    this.db.transaction(() => {
+      for (const trigger of NOTES_FTS_OBJECTS.slice(1)) {
+        this.db.exec(`DROP TRIGGER IF EXISTS ${trigger}`);
+      }
+      this.db.exec("DROP TABLE IF EXISTS notes_fts");
+      for (const statement of NOTES_FTS_SCHEMA) this.db.exec(statement);
+      notes = this.db
+        .prepare(
+          `INSERT INTO notes_fts(rowid, ${NOTES_FTS_COLUMNS}) SELECT id, ${notesFtsValuesSql("notes")} FROM notes`
+        )
+        .run().changes;
+    })();
+    return { notes };
   }
 
   saveTranscription(
@@ -2286,6 +2384,71 @@ class DatabaseManager {
       debugLogger.error("Error searching notes", { error: error.message }, "database");
       throw error;
     }
+  }
+
+  /**
+   * Conversations whose words contain `query`, most recently updated first.
+   *
+   * The Intelligence list holds the hundred most recently updated
+   * conversations and filters them in memory, so nothing older could be found
+   * at all. This runs the same test — `recallText` in `conversationRecall.mjs`,
+   * case- and accent-folded — over the conversations the caller does not hold
+   * (`excludeIds`), and returns whole rows so a result can show its passage and
+   * be opened.
+   *
+   * A scan, not `notes_fts`: FTS5 matches the start of a word, so it misses a
+   * match inside one — "rice" in "price", and almost every Chinese or Japanese
+   * word, which is written without spaces. It reads at most `RECALL_SLICE_MS`
+   * at a time and then yields, so the main process keeps serving a recording
+   * while it runs; `shouldStop` lets a newer query end it early.
+   *
+   * @returns {Promise<object[]>} at most `limit` rows; [] when stopped.
+   */
+  async recallNotes(query, { excludeIds = [], limit, shouldStop = () => false } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    const [{ foldText }, { recallText }] = await Promise.all([
+      import("./searchFold.mjs"),
+      import("./conversationRecall.mjs"),
+    ]);
+    const needle = foldText(String(query ?? "").trim());
+    if (!needle) return [];
+    const max = Number.isInteger(limit)
+      ? Math.min(Math.max(limit, 1), RECALL_LIMIT_MAX)
+      : RECALL_LIMIT_DEFAULT;
+    const held = new Set(
+      Array.isArray(excludeIds) ? excludeIds.filter((id) => Number.isInteger(id)) : []
+    );
+    const ids = this.db
+      .prepare(
+        "SELECT id FROM notes WHERE note_type = 'meeting' AND deleted_at IS NULL ORDER BY updated_at DESC, id DESC"
+      )
+      .all()
+      .map((row) => row.id)
+      .filter((id) => !held.has(id));
+
+    const found = [];
+    let sliceStart = Date.now();
+    for (let at = 0; at < ids.length && found.length < max; at += RECALL_BATCH) {
+      if (Date.now() - sliceStart >= RECALL_SLICE_MS) {
+        await new Promise((resolve) => setImmediate(resolve));
+        if (shouldStop()) return [];
+        sliceStart = Date.now();
+      }
+      const batch = ids.slice(at, at + RECALL_BATCH);
+      const rows = this.db
+        .prepare(
+          `SELECT * FROM notes WHERE id IN (${batch.map(() => "?").join(", ")}) AND deleted_at IS NULL`
+        )
+        .all(...batch);
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      for (const id of batch) {
+        const row = byId.get(id);
+        if (!row || !foldText(recallText(row)).includes(needle)) continue;
+        found.push(row);
+        if (found.length >= max) break;
+      }
+    }
+    return found;
   }
 
   getUpcomingEvents(windowMinutes = 1440) {

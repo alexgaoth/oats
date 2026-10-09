@@ -1052,7 +1052,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   floatingIconAutoHide: readBoolean("floatingIconAutoHide", false),
   startMinimized: readBoolean("startMinimized", false),
   notificationsEnabled: readBoolean("notificationsEnabled", true),
-  notifyMeetingDetection: readBoolean("notifyMeetingDetection", true),
+  // Off until a detected call can be recorded with both sides of it: the
+  // conversation the prompt starts hears the microphone only, which on a call
+  // with headphones is half of it.
+  notifyMeetingDetection: readBoolean("notifyMeetingDetection", false),
   notifyCalendarReminders: readBoolean("notifyCalendarReminders", true),
   notifyUpdates: readBoolean("notifyUpdates", true),
   ...(() => {
@@ -1089,9 +1092,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     readString("whisperVadMaxSpeechDurationS", "30")
   ),
   whisperVadSpeechPadMs: clampVadValue("speechPadMs", readString("whisperVadSpeechPadMs", "100")),
+  // From the constants rather than a second literal: the two had to agree, and
+  // the overlap is a measured choice (docs/dictation-accuracy.md).
   whisperVadSamplesOverlap: clampVadValue(
     "samplesOverlap",
-    readString("whisperVadSamplesOverlap", "0.5")
+    readString("whisperVadSamplesOverlap", String(whisperVadConstants.DEFAULTS.samplesOverlap))
   ),
   panelStartPosition: (() => {
     const v = readString("panelStartPosition", "bottom-right");

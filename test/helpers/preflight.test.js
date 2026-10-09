@@ -14,6 +14,7 @@ const READY = {
   anyModelDownloaded: true,
   hasApiKey: null,
   questionCardsOn: true,
+  summaryReady: true,
 };
 
 test("a machine that can record is not warned about anything", async () => {
@@ -127,4 +128,31 @@ test("closed question-card gate warns without blocking — its failure mode is s
     resolvePreflight({ ...READY, anyModelDownloaded: false, questionCardsOn: false }),
     "no-model"
   );
+});
+
+test("a missing summary model is said before the first word, and does not stop the press", async () => {
+  const { resolvePreflight, blocksRecording } = await load();
+  const problem = resolvePreflight({ ...READY, summaryReady: false });
+  assert.equal(problem, "no-summary-model");
+  assert.equal(blocksRecording(problem), false, "recording itself still works");
+});
+
+test("the summary line ranks below anything that stops transcription, above question cards", async () => {
+  const { resolvePreflight } = await load();
+  assert.equal(
+    resolvePreflight({ ...READY, summaryReady: false, anyModelDownloaded: false }),
+    "no-model",
+    "no transcript is worse than no summary"
+  );
+  assert.equal(
+    resolvePreflight({ ...READY, summaryReady: false, questionCardsOn: false }),
+    "no-summary-model",
+    "no title or summary is worse than no question cards"
+  );
+});
+
+test("a summary model that could not be checked is never reported missing", async () => {
+  const { resolvePreflight } = await load();
+  assert.equal(resolvePreflight({ ...READY, summaryReady: null }), null);
+  assert.equal(resolvePreflight({ ...READY, summaryReady: undefined }), null);
 });

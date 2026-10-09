@@ -153,6 +153,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   exportTranscript: (noteId, format) => ipcRenderer.invoke("export-transcript", noteId, format),
   exportDictionary: (words) => ipcRenderer.invoke("export-dictionary", words),
   searchNotes: (query, limit) => ipcRenderer.invoke("db-search-notes", query, limit),
+  recallNotes: (query, options) => ipcRenderer.invoke("db-recall-notes", query, options),
   semanticSearchNotes: (query, limit) =>
     ipcRenderer.invoke("db-semantic-search-notes", query, limit),
   semanticReindexAll: () => ipcRenderer.invoke("db-semantic-reindex-all"),
@@ -655,11 +656,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onShowSettings: registerListener("show-settings", (callback) => () => callback()),
 
   // Accessibility permission events (macOS)
-  onAccessibilityMissing: (callback) => {
-    const listener = () => callback?.();
-    ipcRenderer.on("accessibility-missing", listener);
-    return () => ipcRenderer.removeListener("accessibility-missing", listener);
-  },
   checkAccessibilityTrusted: () => ipcRenderer.invoke("check-accessibility-trusted"),
 
   // Notify main process of activation mode changes (for Windows Push-to-Talk)
@@ -804,11 +800,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   meetingNotificationReady: () => ipcRenderer.invoke("meeting-notification-ready"),
   meetingNotificationRespond: (detectionId, action) =>
     ipcRenderer.invoke("meeting-notification-respond", detectionId, action),
-  getPendingMeetingNoteNavigation: () => ipcRenderer.invoke("get-pending-meeting-note-navigation"),
-  onMeetingNoteNavigationPending: registerListener(
-    "meeting-note-navigation-pending",
-    (callback) => () => callback()
-  ),
   onNavigateToNote: registerListener(
     "navigate-to-note",
     (callback) => (_event, data) => callback(data)

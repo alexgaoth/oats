@@ -11,6 +11,7 @@ export type PreflightProblem =
   | "no-speech-engine"
   | "no-model"
   | "no-api-key"
+  | "no-summary-model"
   | "question-cards-off";
 
 export interface PreflightFacts {
@@ -29,6 +30,9 @@ export interface PreflightFacts {
    *  silently when its gate is closed — this is the one place that says so
    *  while there is still time to change it. */
   questionCardsOn: boolean | null;
+  /** Whether the title and summary can be written after Finish. Without them
+   *  the conversation is saved untitled and is never filed to the vault. */
+  summaryReady: boolean | null;
 }
 
 /**
@@ -57,6 +61,10 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
     // while another is present still records, because the resolver falls back.
     if (facts.anyModelDownloaded === false) return "no-model";
   }
+  // Recording still works fully without a summary model, but what Oats promises
+  // after Finish — a title, a summary, the threads — will not happen, and that
+  // used to be discovered at the end, as a toast in a hidden window.
+  if (facts.summaryReady === false) return "no-summary-model";
   // Last, because recording still works fully — but the flagship surface will
   // not, and its own failure mode is silence.
   if (facts.questionCardsOn === false) return "question-cards-off";

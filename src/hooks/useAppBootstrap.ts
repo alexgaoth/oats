@@ -6,7 +6,6 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { fetchProviders as fetchStreamingProviders } from "../stores/streamingProvidersStore";
 import { initializeNotes } from "../stores/noteStore";
 import { getCachedPlatform } from "../utils/platform";
-import { isAccessibilitySkipped } from "../utils/permissions";
 
 // Application-level side effects for the control panel window.
 //
@@ -131,23 +130,6 @@ export function useAppBootstrap(onShowSettings: () => void): AppBootstrap {
     });
     return () => cleanup?.();
   }, []);
-
-  // macOS accessibility permission went missing — say so, and land the user on
-  // the surface where it can be fixed.
-  useEffect(() => {
-    const cleanup = window.electronAPI?.onAccessibilityMissing?.(async () => {
-      if (isAccessibilitySkipped()) return;
-      const migration = await window.electronAPI?.getPostMigrationState?.();
-      if (migration?.justMigrated) return;
-      showSettingsRef.current();
-      toast({
-        title: t("controlPanel.accessibilityMissing.title"),
-        description: t("controlPanel.accessibilityMissing.description"),
-        duration: 10000,
-      });
-    });
-    return () => cleanup?.();
-  }, [toast, t]);
 
   return { showPostMigration, dismissPostMigration };
 }
