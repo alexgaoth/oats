@@ -7091,10 +7091,6 @@ class IPCHandlers {
       return this.windowManager?._pendingNotificationData ?? null;
     });
 
-    ipcMain.handle("get-pending-meeting-note-navigation", async () => {
-      return this.windowManager?.consumePendingMeetingNoteNavigation() ?? null;
-    });
-
     ipcMain.handle("meeting-notification-ready", async () => {
       this.windowManager?.showNotificationWindow();
     });
