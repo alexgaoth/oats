@@ -34,3 +34,11 @@ test("resolveContextSileroEnabled prefers context value then falls back to true"
   );
   assert.equal(resolveContextSileroEnabled({}, "meeting"), true);
 });
+
+test("the shipped overlap is the measured one", () => {
+  // 0.5 s fed the start of the next phrase to whisper twice ("she said, she
+  // said"). On LibriSpeech, base.en + VAD: 5.69% → 5.34% (n=200); long
+  // dictation cut at pauses: 4.63% → 4.16% (docs/dictation-accuracy.md).
+  const constants = require("../../src/constants/whisperVad.json");
+  assert.equal(constants.DEFAULTS.samplesOverlap, 0.1);
+});
