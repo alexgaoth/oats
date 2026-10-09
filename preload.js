@@ -655,11 +655,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onShowSettings: registerListener("show-settings", (callback) => () => callback()),
 
   // Accessibility permission events (macOS)
-  onAccessibilityMissing: (callback) => {
-    const listener = () => callback?.();
-    ipcRenderer.on("accessibility-missing", listener);
-    return () => ipcRenderer.removeListener("accessibility-missing", listener);
-  },
   checkAccessibilityTrusted: () => ipcRenderer.invoke("check-accessibility-trusted"),
 
   // Notify main process of activation mode changes (for Windows Push-to-Talk)

@@ -194,10 +194,6 @@
       "installButton": "Installer la mise à jour",
       "availableButton": "Mise à jour disponible"
     },
-    "accessibilityMissing": {
-      "title": "Autorisations d'accessibilité nécessaires",
-      "description": "Nous avons détecté qu'Oats a besoin des autorisations d'accessibilité pour fonctionner correctement. Veuillez les activer ci-dessous."
-    },
     "history": {
       "couldNotLoadTitle": "Impossible de charger votre historique",
       "couldNotLoadDescription": "Un problème est survenu lors du chargement des transcriptions. Fermez puis rouvrez l'application.",

@@ -986,7 +986,6 @@ declare global {
       onShowSettings?: (callback: () => void) => () => void;
 
       // Accessibility permission events (macOS)
-      onAccessibilityMissing?: (callback: () => void) => () => void;
       checkAccessibilityTrusted?: () => Promise<boolean>;
 
       // Gemini API key management

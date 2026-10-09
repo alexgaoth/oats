@@ -194,10 +194,6 @@
       "installButton": "Install Update",
       "availableButton": "Update Available"
     },
-    "accessibilityMissing": {
-      "title": "Accessibility permissions needed",
-      "description": "We've detected that Oats needs accessibility permissions to work properly. Please enable them below."
-    },
     "history": {
       "couldNotLoadTitle": "Couldn't load your history",
       "couldNotLoadDescription": "Something went wrong loading your transcriptions. Try closing and reopening the app.",

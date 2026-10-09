@@ -194,10 +194,6 @@
       "installButton": "Update installieren",
       "availableButton": "Update verfügbar"
     },
-    "accessibilityMissing": {
-      "title": "Bedienungshilfen-Berechtigungen benötigt",
-      "description": "Wir haben festgestellt, dass Oats Bedienungshilfen-Berechtigungen benötigt, um korrekt zu funktionieren. Bitte aktivieren Sie diese unten."
-    },
     "history": {
       "couldNotLoadTitle": "Verlauf konnte nicht geladen werden",
       "couldNotLoadDescription": "Beim Laden der Transkriptionen ist ein Fehler aufgetreten. Bitte schließen Sie die App und öffnen Sie sie erneut.",

@@ -194,10 +194,6 @@
       "installButton": "安裝更新",
       "availableButton": "有可用更新"
     },
-    "accessibilityMissing": {
-      "title": "需要輔助使用權限",
-      "description": "我們偵測到 Oats 需要輔助使用權限才能正常運作。請在下方啟用。"
-    },
     "history": {
       "couldNotLoadTitle": "無法載入歷史記錄",
       "couldNotLoadDescription": "載入轉錄記錄時發生錯誤。請嘗試關閉並重新開啟應用程式。",

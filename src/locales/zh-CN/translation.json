@@ -194,10 +194,6 @@
       "installButton": "安装更新",
       "availableButton": "有可用更新"
     },
-    "accessibilityMissing": {
-      "title": "需要辅助功能权限",
-      "description": "我们检测到 Oats 需要辅助功能权限才能正常工作。请在下方启用。"
-    },
     "history": {
       "couldNotLoadTitle": "无法加载历史记录",
       "couldNotLoadDescription": "加载转录记录时出错，请尝试关闭并重新打开应用。",
