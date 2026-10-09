@@ -1965,7 +1965,10 @@
       "delete": "Delete",
       "deleteConfirm": "Delete this conversation?",
       "deleteYes": "Delete",
-      "deleteCancel": "Keep"
+      "deleteCancel": "Keep",
+      "needsSummaryModel": "No summary: no summary model is ready on this computer. Set one up under Settings › Advanced › Language Models, then come back to summarize.",
+      "notSummarized": "This conversation has not been summarized.",
+      "summarize": "Summarize"
     },
     "review": {
       "title": "What this left open",
@@ -2043,7 +2046,8 @@
       "no-speech-engine": "The local speech engine is missing. Reinstalling Oats restores it.",
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings.",
-      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced."
+      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced.",
+      "no-summary-model": "Conversations will be saved without a title or summary: no summary model is ready. Set one up under Settings › Advanced › Language Models."
     },
     "aide": {
       "title": "Conversation aide",

@@ -1965,7 +1965,10 @@
       "delete": "Excluir",
       "deleteConfirm": "Excluir esta conversa?",
       "deleteYes": "Excluir",
-      "deleteCancel": "Manter"
+      "deleteCancel": "Manter",
+      "needsSummaryModel": "Sem resumo: nenhum modelo de resumo está pronto neste computador. Configure um em Definições › Avançado › Modelos de linguagem e volte para resumir.",
+      "notSummarized": "Esta conversa ainda não foi resumida.",
+      "summarize": "Resumir"
     },
     "review": {
       "title": "O que ficou em aberto",
@@ -2043,7 +2046,8 @@
       "no-speech-engine": "O motor de voz local está faltando. Reinstalar o Oats o restaura.",
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
-      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue novamente o assistente de conversa em Avançado."
+      "question-cards-off": "Os cartões de perguntas estão desligados — as perguntas passarão em silêncio. Ligue novamente o assistente de conversa em Avançado.",
+      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de resumo está pronto. Configure um em Definições › Avançado › Modelos de linguagem."
     },
     "aide": {
       "title": "Assistente de conversa",
