@@ -2113,7 +2113,12 @@
         "search": "会話を検索",
         "searchHint": "検索欄を開いた状態で Oats を表示します。"
       },
-      "microphoneDescription": "Oats が会話と音声入力に使うマイク。"
+      "microphoneDescription": "Oats が会話と音声入力に使うマイク。",
+      "advanced": {
+        "title": "詳細設定",
+        "fieldBackdrop": "フィールド背景",
+        "fieldBackdropDescription": "アプリの背後に動く麦畑を表示します。GPU を常に使います。"
+      }
     },
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
