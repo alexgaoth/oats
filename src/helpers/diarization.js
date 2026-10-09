@@ -176,7 +176,9 @@ class DiarizationManager {
       const segArchivePath = path.join(modelsDir, `${SEGMENTATION_DIR}.tar.bz2`);
       const segModelPath = path.join(modelsDir, SEGMENTATION_ONNX);
 
-      if (!fs.existsSync(segModelPath)) {
+      // The bundled copy counts: checking only the cache path fetched a 7MB
+      // archive from GitHub that every build already ships.
+      if (!fs.existsSync(this._resolveModelPath(SEGMENTATION_ONNX))) {
         await downloadFile(SEGMENTATION_MODEL_URL, segArchivePath, {
           timeout: 600000,
           signal,
@@ -209,7 +211,7 @@ class DiarizationManager {
       // Download embedding model (.onnx directly)
       const embModelPath = path.join(modelsDir, EMBEDDING_ONNX);
 
-      if (!fs.existsSync(embModelPath)) {
+      if (!fs.existsSync(this._resolveModelPath(EMBEDDING_ONNX))) {
         await downloadFile(EMBEDDING_MODEL_URL, embModelPath, {
           timeout: 600000,
           signal,
