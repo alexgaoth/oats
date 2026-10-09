@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "履歴を読み込めませんでした",
       "couldNotLoadDescription": "文字起こし履歴の読み込み中に問題が発生しました。アプリを閉じて再度開いてください。",
-      "copiedTitle": "コピーしました！",
+      "copiedTitle": "コピーしました",
       "copiedDescription": "テキストをクリップボードにコピーしました",
       "couldNotCopyTitle": "コピーできませんでした",
       "couldNotCopyDescription": "クリップボードへのコピー中に問題が発生しました。もう一度お試しください。",
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "モデルを削除しました",
-        "descriptionWithSpace": "モデルを削除しました！{{sizeMb}}MB のディスク容量を解放しました。",
-        "description": "モデルを削除しました！"
+        "descriptionWithSpace": "モデルを削除しました。{{sizeMb}}MB のディスク容量を解放しました。",
+        "description": "モデルを削除しました"
       },
       "deleteFailed": {
         "title": "削除に失敗しました",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "マイクが利用できません",
         "microphonePermissionRequired": "マイクの権限が必要です",
         "accessibilityNeeded": "アクセシビリティの権限が必要です",
-        "readyToGo": "準備完了！",
+        "readyToGo": "準備完了",
         "waylandClipboardMode": "Wayland でのクリップボードモード",
         "optionalPasteTool": "オプション: 貼り付けツールのインストール"
       },
       "descriptions": {
         "accessibilityNeeded": "テキストの自動貼り付けを有効にするには、システム設定でアクセシビリティの権限を許可してください。",
-        "windowsReady": "Windows では自動貼り付けに特別な権限は必要ありません。準備完了です！",
-        "linuxReadyWithMethod": "{{method}} を使用した自動貼り付けが利用可能です。準備完了です！",
+        "windowsReady": "Windows では自動貼り付けに特別な権限は必要ありません。準備完了です。",
+        "linuxReadyWithMethod": "{{method}} を使用した自動貼り付けが利用可能です。準備完了です。",
         "waylandClipboardMode": "この Wayland セッションでは自動貼り付けが利用できません。Oats はテキストをクリップボードにコピーしますので、Ctrl+V で貼り付けてください。",
         "optionalPasteTool": "自動貼り付けには {{tool}} をインストールしてください:\n\n{{installCmd}}{{waylandNote}}\n\nインストールしなくても Oats は使用できます。テキストがクリップボードにコピーされるので、Ctrl+V で貼り付けてください。"
       },
       "alerts": {
-        "accessibilityNeeded": "アクセシビリティの権限が必要です！システム設定で許可してください。"
+        "accessibilityNeeded": "アクセシビリティの権限が必要です。システム設定で許可してください。"
       },
       "notes": {
         "waylandWtype": "\n\n注: XWayland アプリでは xdotool も使用できます。",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "使用中:",
     "waylandClipboardDescription": "この Wayland セッションでは自動貼り付けが利用できません。Oats はテキストをクリップボードにコピーしますので、Ctrl+V で手動で貼り付けてください。",
     "waylandClipboardTitle": "Wayland でのクリップボードモード",
-    "windowsReady": "Windows は自動貼り付けに標準対応しています。設定は不要です！",
+    "windowsReady": "Windows は自動貼り付けに標準対応しています。設定は不要です。",
     "withoutToolPrefix": "このツールがない場合、Oats はテキストをクリップボードにコピーします。Ctrl+V で手動で貼り付けてください。",
     "xwaylandAppsOnly": "自動貼り付けは XWayland アプリのみで動作します"
   },
@@ -1806,7 +1806,7 @@
       "listening": "聞いています...",
       "newConversation": "新規",
       "copyToClipboard": "クリップボードにコピー",
-      "copied": "コピーしました！",
+      "copied": "コピーしました",
       "emptyState": "なんでも聞いてください",
       "errorPrefix": "エラー"
     },
@@ -2126,7 +2126,7 @@
       "no-speech-engine": "ローカル音声エンジンがありません。Oats を再インストールすると復元されます。",
       "no-model": "同梱の音声モデルがインストールされませんでした。Oats を再起動し、続く場合は再インストールしてください。",
       "no-api-key": "処理は API キーを使う設定ですが、キーが保存されていません — 設定を確認してください。",
-      "question-cards-off": "質問カードがオフです。質問は静かに通り過ぎます。詳細設定で会話アシスタントを再びオンにしてください。",
+      "question-cards-off": "質問カードがオフのため、質問は見過ごされます。設定の「録音」でオンにしてください。",
       "no-summary-model": "要約モデルが準備できていないため、会話はタイトルと要約なしで保存されます。設定 › 詳細設定 › 言語モデル で設定してください。"
     },
     "aide": {

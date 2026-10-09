@@ -23,7 +23,6 @@ import {
   EyeOff,
   History,
   Info,
-  Loader2,
   MessageSquarePlus,
   MessagesSquare,
   Mic,
@@ -1699,27 +1698,32 @@ function IntelligenceViews({
               {summaryState === "summary" ? (
                 <MarkdownRenderer
                   content={selected.enhanced_content ?? ""}
-                  className="pt-2 text-[15px] leading-7 text-foreground"
+                  className="max-w-[70ch] pt-2 text-[15px] leading-7 text-foreground"
                 />
+              ) : summaryState === "preparing" ? (
+                // While it is written: what is happening, then the shape of the
+                // paragraph it will become. Still under reduced motion.
+                <div role="status" className="flex max-w-[70ch] flex-col gap-3 pt-2">
+                  <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                    <Sparkles aria-hidden="true" className="size-4 shrink-0 text-brand-ink" />
+                    {t("oats.intelligence.preparing")}
+                  </p>
+                  <div aria-hidden="true" className="flex flex-col gap-2.5">
+                    <div className="h-3 w-11/12 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+                    <div className="h-3 w-full animate-pulse rounded bg-muted motion-reduce:animate-none" />
+                    <div className="h-3 w-3/5 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+                  </div>
+                </div>
               ) : (
                 <div
                   role="status"
                   className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-5 text-muted-foreground"
                 >
-                  {summaryState === "preparing" ? (
-                    <Loader2
-                      aria-hidden="true"
-                      className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
-                    />
-                  ) : (
-                    <Sparkles aria-hidden="true" className="size-4 shrink-0" />
-                  )}
+                  <Sparkles aria-hidden="true" className="size-4 shrink-0" />
                   <p className="min-w-0 flex-1">
-                    {summaryState === "preparing"
-                      ? t("oats.intelligence.preparing")
-                      : summaryState === "needs-model"
-                        ? t("oats.intelligence.needsSummaryModel")
-                        : t("oats.intelligence.notSummarized")}
+                    {summaryState === "needs-model"
+                      ? t("oats.intelligence.needsSummaryModel")
+                      : t("oats.intelligence.notSummarized")}
                   </p>
                   {summaryState === "needs-model" && (
                     <Button
@@ -2430,7 +2434,10 @@ function TranscriptView({
               </span>
               <div className="min-w-0">
                 {newSpeaker && <SpeakerName note={note} segments={segments} segment={segment} />}
-                <p title={at ?? undefined} className="text-[15px] leading-7 text-foreground/90">
+                <p
+                  title={at ?? undefined}
+                  className="max-w-[70ch] text-[15px] leading-7 text-foreground/90"
+                >
                   {isMarked && <span className="sr-only">{t("oats.review.markedTurn")} </span>}
                   <Highlighted text={String(segment.text ?? "")} query={query} />
                 </p>

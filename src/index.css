@@ -472,6 +472,21 @@
     border-color: var(--color-border);
   }
 
+  /* Headings break into even lines instead of leaving one word alone on the
+     last; running text avoids a lone last word too. Both are layout only, so
+     they cost nothing at runtime and degrade to normal wrapping. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  blockquote {
+    text-wrap: pretty;
+  }
+
   /* Colour transitions belong to the things that answer you.
      Declaring them on `*` put every node in the document on Chromium's
      transition list — every row of a legacy Advanced panel, every graph label,

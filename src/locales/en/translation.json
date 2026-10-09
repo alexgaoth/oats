@@ -154,13 +154,13 @@
       "grant": "Grant",
       "grantAccess": "Grant Access",
       "accessibilityTitle": "Accessibility",
-      "accessibilityDescription": "Types the finished text straight into whatever app you're in — docs, email, chat.",
+      "accessibilityDescription": "Types the finished text straight into the app you're in: docs, email, chat.",
       "testAndGrant": "Test & Grant",
       "requiredForApp": "Required for Oats to work",
       "microphoneRequired": "Microphone access required",
       "openSystemSettings": "Open System Settings",
       "systemAudioTitle": "System Audio",
-      "systemAudioDescription": "Lets the meeting recorder hear the other side of your calls — meetings, lectures, podcasts. You can turn this on later in Settings.",
+      "systemAudioDescription": "Lets the meeting recorder hear the other side of calls, meetings, lectures and podcasts. You can turn this on later in Settings.",
       "optional": "Optional",
       "recommended": "Recommended",
       "accessibilityTroubleshooting": "In System Settings → Accessibility, switch Oats's toggle off and back on. If that doesn't work, remove Oats from the list and add it back."
@@ -171,11 +171,11 @@
       "cloudUnreachable": {
         "title": "Can't reach Oats Cloud",
         "generic": "Network request failed. Check your connection.",
-        "dnsBlocked": "DNS isn't resolving — an ad blocker or filter may be blocking it.",
-        "refused": "Connection was refused — likely a firewall or VPN.",
-        "timeout": "Network timed out — VPN, captive portal, or unstable connection.",
-        "tls": "TLS handshake failed — check your system clock or for a corporate proxy.",
-        "fallback": "Cloud unreachable — using local engine for this recording."
+        "dnsBlocked": "DNS isn't resolving. An ad blocker or filter may be blocking it.",
+        "refused": "The connection was refused, likely by a firewall or VPN.",
+        "timeout": "The network timed out. Check for a VPN, a captive portal or an unstable connection.",
+        "tls": "The TLS handshake failed. Check your system clock, or whether a corporate proxy is in the way.",
+        "fallback": "The cloud is unreachable, so this recording uses the local engine."
       }
     }
   },
@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "Couldn't load your history",
       "couldNotLoadDescription": "Something went wrong loading your transcriptions. Try closing and reopening the app.",
-      "copiedTitle": "Copied!",
+      "copiedTitle": "Copied",
       "copiedDescription": "Text copied to your clipboard",
       "couldNotCopyTitle": "Couldn't copy",
       "couldNotCopyDescription": "Something went wrong copying to your clipboard. Try again.",
@@ -285,8 +285,8 @@
       "selectedGroup": "Selected",
       "otherGroup": "Other",
       "noSearchResults": "No models match \"{{query}}\"",
-      "selectModelHint": "No model selected yet — choose one from the list below.",
-      "keyRequiredHint": "An API key is required for inference — add one to use this provider."
+      "selectModelHint": "No model selected yet. Choose one from the list below.",
+      "keyRequiredHint": "This provider needs an API key. Add one to use it."
     },
     "getApiKey": "Get your API key ->",
     "selectModel": "Select model",
@@ -388,7 +388,7 @@
         "server": "Server error ({{error}}). Please try again later.",
         "generic": "Download failed: {{error}}",
         "extractionFailed": "Model downloaded but installation failed. Click download to retry installation without re-downloading.",
-        "tlsError": "Certificate error — your network may use SSL inspection that blocks downloads. Try downloading from a different network.",
+        "tlsError": "Certificate error. Your network may use SSL inspection that blocks downloads. Try a different network.",
         "unknown": "Unknown error"
       },
       "downloadFailed": {
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "Model Deleted",
-        "descriptionWithSpace": "Model deleted successfully! Freed {{sizeMb}}MB of disk space.",
-        "description": "Model deleted successfully!"
+        "descriptionWithSpace": "Model deleted. Freed {{sizeMb}} MB of disk space.",
+        "description": "Model deleted."
       },
       "deleteFailed": {
         "title": "Delete Failed",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "Microphone Unavailable",
         "microphonePermissionRequired": "Microphone Permission Required",
         "accessibilityNeeded": "Accessibility Permissions Needed",
-        "readyToGo": "Ready to Go!",
+        "readyToGo": "Ready to go",
         "waylandClipboardMode": "Clipboard Mode on Wayland",
         "optionalPasteTool": "Optional: Install Paste Tool"
       },
       "descriptions": {
         "accessibilityNeeded": "Please grant accessibility permissions in System Settings to enable automatic text pasting.",
-        "windowsReady": "Windows does not require special permissions for automatic pasting. You're all set!",
-        "linuxReadyWithMethod": "Automatic pasting is available using {{method}}. You are all set!",
+        "windowsReady": "Windows needs no special permissions for automatic pasting.",
+        "linuxReadyWithMethod": "Automatic pasting is available using {{method}}.",
         "waylandClipboardMode": "Automatic pasting is not available on this Wayland session. Oats will copy text to your clipboard and you can paste with Ctrl+V.",
         "optionalPasteTool": "For automatic pasting, install {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nWithout this, you can still use Oats - text will be copied to your clipboard and you can paste with Ctrl+V."
       },
       "alerts": {
-        "accessibilityNeeded": "Accessibility permissions needed! Please grant them in System Settings."
+        "accessibilityNeeded": "Accessibility permission is needed. Grant it in System Settings."
       },
       "notes": {
         "waylandWtype": "\n\nNote: For XWayland apps, xdotool also works.",
@@ -616,7 +616,7 @@
     "usingMethodPrefix": "Using",
     "waylandClipboardDescription": "Automatic pasting isn't available on this Wayland session. Oats will copy text to your clipboard so you can paste manually with Ctrl+V.",
     "waylandClipboardTitle": "Clipboard Mode on Wayland",
-    "windowsReady": "Windows supports automatic pasting out of the box. No setup required!",
+    "windowsReady": "Windows supports automatic pasting with no setup.",
     "withoutToolPrefix": "Without this tool, Oats will copy text to your clipboard. You can then paste manually with Ctrl+V.",
     "xwaylandAppsOnly": "automatic pasting works for XWayland apps only"
   },
@@ -767,7 +767,7 @@
         "lastUsed": "Last used {{date}}",
         "neverUsed": "Never used",
         "keyCreatedTitle": "API key created",
-        "keyCreatedDescription": "Copy this key now — you won't be able to see it again."
+        "keyCreatedDescription": "Copy this key now. You won't be able to see it again."
       }
     },
     "account": {
@@ -956,7 +956,7 @@
       },
       "examplesTitle": "Examples",
       "helper": "Pick something short and natural to say aloud",
-      "howItWorksDescription": "When you say \"Hey {{agentName}}\" followed by an instruction, the AI executes your command — composing content, formatting text, or answering questions — instead of transcribing it verbatim.",
+      "howItWorksDescription": "When you say \"Hey {{agentName}}\" followed by an instruction, the AI carries it out (writing, formatting or answering) instead of transcribing it.",
       "howItWorksTitle": "How it works",
       "instructionMode": "Instruction",
       "placeholder": "e.g. Jarvis, Nova, Atlas...",
@@ -1047,7 +1047,7 @@
     },
     "dictionary": {
       "title": "Custom dictionary",
-      "description": "Teach the AI your vocabulary — names, jargon, and terms it might otherwise miss",
+      "description": "Teach the AI your vocabulary: names, jargon and terms it might otherwise miss",
       "addWordOrPhrase": "Add word or phrase",
       "placeholder": "Add a word or phrase...",
       "add": "Add",
@@ -1058,7 +1058,7 @@
       "clearDictionaryTitle": "Clear dictionary?",
       "clearDictionaryDescription": "This will remove all words from your custom dictionary. This action cannot be undone.",
       "clearAll": "Clear all",
-      "agentNameAutoManaged": "Auto-managed — synced from agent name",
+      "agentNameAutoManaged": "Managed automatically, synced from the agent name",
       "removeWord": "Remove word",
       "noWords": "No words yet",
       "wordsAppearHere": "Words you add will appear here",
@@ -1111,11 +1111,11 @@
       },
       "voiceAgentHotkey": {
         "title": "Voice agent hotkey",
-        "description": "Speak a request — your AI agent types the result, not your words"
+        "description": "Speak a request, and your AI agent types the result instead of your words"
       },
       "translationHotkey": {
         "title": "Translation hotkey",
-        "description": "Dictate in any language — the pasted text comes out translated"
+        "description": "Dictate in any language, and the pasted text comes out translated"
       },
       "microphone": {
         "description": "Select which input device to use for dictation",
@@ -1278,7 +1278,7 @@
         "newVersionAvailable": "New version available",
         "restarting": "Restarting...",
         "title": "Updates",
-        "versionPlaceholder": "—",
+        "versionPlaceholder": "…",
         "whatsNew": "What's new in v{{version}}"
       },
       "searchHotkey": {
@@ -1316,7 +1316,7 @@
       "description": "Control what data leaves your device. Everything is off by default.",
       "title": "Privacy",
       "usageAnalytics": "Usage analytics",
-      "usageAnalyticsDescription": "Help us improve Oats by sharing anonymous performance metrics. We never send transcription content — only timing and error data.",
+      "usageAnalyticsDescription": "Help us improve Oats by sharing anonymous performance metrics. Only timing and error data are sent, never transcription content.",
       "audioRetention": "Audio retention",
       "audioRetentionDescription": "Store audio recordings locally for re-transcription and download. Files are automatically deleted after the retention period.",
       "audioRetentionDisabled": "Disabled",
@@ -1718,10 +1718,10 @@
     "mic": {
       "hotkeyToSpeak": "{{hotkey}} to talk",
       "recording": "Recording...",
-      "recordingStop": "Recording — click to stop and transcribe",
+      "recordingStop": "Recording. Click to stop and transcribe.",
       "processing": "Processing...",
       "clickToSpeak": "Click to speak",
-      "conversation": "Recording a conversation — click to finish"
+      "conversation": "Recording a conversation. Click to finish."
     },
     "buttons": {
       "cancelRecording": "Cancel recording",
@@ -1732,7 +1732,7 @@
     "commandMenu": {
       "stopListening": "Stop listening",
       "startListening": "Start listening",
-      "processing": "Transcribing — please wait",
+      "processing": "Transcribing…",
       "hideForNow": "Hide for now"
     }
   },
@@ -1742,7 +1742,7 @@
     "enabled": "Enable Dictation Translation",
     "enabledDescription": "Dictations started with the translation hotkey are cleaned up and then translated before pasting",
     "sourceLanguage": "Spoken language",
-    "sourceLanguageDescription": "The language you dictate in — Automatic also handles mixed-language dictation",
+    "sourceLanguageDescription": "The language you dictate in. Automatic also handles mixed-language dictation.",
     "targetLanguage": "Translate to",
     "targetLanguageMissing": "Pick a target language to activate the translation hotkey",
     "prompt": {
@@ -1761,11 +1761,11 @@
     "enabledDescription": "Dictate instructions to your agent. Activate by saying \"{{agentName}}\". Configurable below.",
     "modes": {
       "legacy": "Oats Cloud",
-      "legacyDesc": "Use the Oats-managed agent — no API key needed.",
+      "legacyDesc": "Use the Oats-managed agent. No API key needed.",
       "providers": "Bring your own key",
       "providersDesc": "Connect to OpenAI, Anthropic, Gemini, or Groq with your own API key.",
       "local": "Local",
-      "localDesc": "Run a local LLM on your device — fully private.",
+      "localDesc": "Run a local LLM on your device, fully private.",
       "selfHosted": "Self-hosted",
       "selfHostedDesc": "Point at a self-hosted OpenAI-compatible endpoint.",
       "enterprise": "Enterprise",
@@ -1809,7 +1809,7 @@
       "listening": "Listening...",
       "newConversation": "New",
       "copyToClipboard": "Copy to clipboard",
-      "copied": "Copied!",
+      "copied": "Copied",
       "emptyState": "Ask me anything",
       "errorPrefix": "Error"
     },
@@ -2006,7 +2006,7 @@
       "vaultChange": "Change",
       "vaultStop": "Stop",
       "autoSearch": "Search unanswered questions",
-      "autoSearchHint": "Opens a background Google search when nobody knows. Only the question text leaves — never audio or transcript. Cards still appear when off.",
+      "autoSearchHint": "Opens a background Google search when nobody knows. Only the question text leaves this Mac, never audio or the transcript. Cards still appear when this is off.",
       "advancedLoading": "Opening…",
       "hotkeyRejected": "“{{hotkey}}” could not be registered, so the previous shortcut is still in use.",
       "conversationHotkey": "Conversation shortcut",
@@ -2125,8 +2125,8 @@
       "microphone-permission": "Oats needs permission to use the microphone. Grant it in your system settings.",
       "no-speech-engine": "The local speech engine is missing. Reinstalling Oats restores it.",
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
-      "no-api-key": "Processing is set to an API key, but none is saved yet — see Settings.",
-      "question-cards-off": "Question cards are switched off — questions will pass silently. Turn the conversation aide back on under Advanced.",
+      "no-api-key": "Processing is set to use an API key, but none is saved yet. Add one in Settings.",
+      "question-cards-off": "Question cards are off, so questions will pass silently. Turn them on in Settings, under Recording.",
       "no-summary-model": "Conversations will be saved without a title or summary: no summary model is ready. Set one up under Settings › Advanced › Language Models."
     },
     "aide": {
@@ -2134,7 +2134,7 @@
       "intro": "Locally detects unanswered factual questions and offers a user-initiated search.",
       "enable": "Enable conversation aide",
       "withModel": "Question detection is local; the downloaded model refines the verdicts.",
-      "withoutModel": "Works without a model — detection and verdicts are local pattern matching.",
+      "withoutModel": "Works without a model: detection and verdicts are local pattern matching.",
       "online": "Online meetings",
       "onlineHint": "Analyze finalized online meeting turns.",
       "inRoom": "In-person conversations",

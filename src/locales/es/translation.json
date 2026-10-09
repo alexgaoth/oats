@@ -207,7 +207,7 @@
         "recover": "Recuperar",
         "recovered": "Recuperada"
       },
-      "copiedTitle": "¡Copiado!",
+      "copiedTitle": "Copiado",
       "copiedDescription": "Texto copiado al portapapeles",
       "couldNotCopyTitle": "No se pudo copiar",
       "couldNotCopyDescription": "Ocurrió un problema al copiar al portapapeles. Inténtalo de nuevo.",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "Micrófono no disponible",
         "microphonePermissionRequired": "Permiso de micrófono requerido",
         "accessibilityNeeded": "Permisos de accesibilidad necesarios",
-        "readyToGo": "¡Listo!",
+        "readyToGo": "Listo",
         "waylandClipboardMode": "Modo portapapeles en Wayland",
         "optionalPasteTool": "Opcional: instalar herramienta de pegado"
       },
       "descriptions": {
         "accessibilityNeeded": "Concede permisos de accesibilidad en la configuración del sistema para habilitar el pegado automático.",
-        "windowsReady": "Windows no requiere permisos especiales para pegado automático. ¡Todo listo!",
-        "linuxReadyWithMethod": "El pegado automático está disponible usando {{method}}. ¡Todo listo!",
+        "windowsReady": "Windows no requiere permisos especiales para pegado automático. Todo listo",
+        "linuxReadyWithMethod": "El pegado automático está disponible usando {{method}}. Todo listo",
         "waylandClipboardMode": "El pegado automático no está disponible en esta sesión Wayland. Oats copiará el texto al portapapeles y podrás pegar con Ctrl+V.",
         "optionalPasteTool": "Para pegado automático, instala {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nSin esto, aún puedes usar Oats: el texto se copiará al portapapeles y podrás pegar con Ctrl+V."
       },
       "alerts": {
-        "accessibilityNeeded": "¡Se necesitan permisos de accesibilidad! Concédelos en la configuración del sistema."
+        "accessibilityNeeded": "Se necesitan permisos de accesibilidad. Concédelos en la configuración del sistema."
       },
       "notes": {
         "waylandWtype": "\n\nNota: para apps XWayland, xdotool también funciona.",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "Usando",
     "waylandClipboardDescription": "El pegado automático no está disponible en esta sesión Wayland. Oats copiará el texto al portapapeles para que puedas pegarlo manualmente con Ctrl+V.",
     "waylandClipboardTitle": "Modo portapapeles en Wayland",
-    "windowsReady": "Windows es compatible con el pegado automático de forma nativa. ¡No se requiere configuración!",
+    "windowsReady": "Windows es compatible con el pegado automático de forma nativa. No se requiere configuración",
     "withoutToolPrefix": "Sin esta herramienta, Oats copiará el texto al portapapeles. Luego puedes pegarlo manualmente con Ctrl+V.",
     "xwaylandAppsOnly": "el pegado automático funciona solo en apps XWayland"
   },
@@ -1806,7 +1806,7 @@
       "listening": "Escuchando...",
       "newConversation": "Nuevo",
       "copyToClipboard": "Copiar al portapapeles",
-      "copied": "¡Copiado!",
+      "copied": "Copiado",
       "emptyState": "Preguntame lo que sea",
       "errorPrefix": "Error"
     },
@@ -2126,7 +2126,7 @@
       "no-speech-engine": "Falta el motor de voz local. Reinstalar Oats lo restaura.",
       "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
-      "question-cards-off": "Las tarjetas de preguntas están desactivadas: las preguntas pasarán en silencio. Vuelve a activar el asistente de conversación en Avanzado.",
+      "question-cards-off": "Las tarjetas de preguntas están desactivadas, así que las preguntas pasarán en silencio. Actívalas en Ajustes, en Grabación.",
       "no-summary-model": "Las conversaciones se guardarán sin título ni resumen: no hay ningún modelo de resumen listo. Configura uno en Ajustes › Avanzado › Modelos de lenguaje."
     },
     "aide": {

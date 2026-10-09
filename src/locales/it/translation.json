@@ -198,7 +198,7 @@
     "history": {
       "couldNotLoadTitle": "Impossibile caricare la cronologia",
       "couldNotLoadDescription": "Si è verificato un errore nel caricamento delle trascrizioni. Chiudi e riapri l'app.",
-      "copiedTitle": "Copiato!",
+      "copiedTitle": "Copiato",
       "copiedDescription": "Testo copiato negli appunti",
       "couldNotCopyTitle": "Impossibile copiare",
       "couldNotCopyDescription": "Si è verificato un errore durante la copia. Riprova.",
@@ -403,8 +403,8 @@
       },
       "modelDeleted": {
         "title": "Modello eliminato",
-        "descriptionWithSpace": "Modello eliminato con successo! Liberati {{sizeMb}}MB di spazio.",
-        "description": "Modello eliminato con successo!"
+        "descriptionWithSpace": "Modello eliminato con successo. Liberati {{sizeMb}}MB di spazio.",
+        "description": "Modello eliminato con successo"
       },
       "deleteFailed": {
         "title": "Eliminazione non riuscita",
@@ -447,19 +447,19 @@
         "microphoneUnavailable": "Microfono non disponibile",
         "microphonePermissionRequired": "Permesso microfono richiesto",
         "accessibilityNeeded": "Permessi di accessibilità necessari",
-        "readyToGo": "Tutto pronto!",
+        "readyToGo": "Tutto pronto",
         "waylandClipboardMode": "Modalità appunti su Wayland",
         "optionalPasteTool": "Opzionale: installa strumento di incollaggio"
       },
       "descriptions": {
         "accessibilityNeeded": "Concedi i permessi di accessibilità nelle impostazioni di sistema per abilitare l'incollaggio automatico.",
-        "windowsReady": "Windows non richiede permessi speciali per l'incollaggio automatico. È tutto pronto!",
-        "linuxReadyWithMethod": "L'incollaggio automatico è disponibile tramite {{method}}. È tutto pronto!",
+        "windowsReady": "Windows non richiede permessi speciali per l'incollaggio automatico. È tutto pronto",
+        "linuxReadyWithMethod": "L'incollaggio automatico è disponibile tramite {{method}}. È tutto pronto",
         "waylandClipboardMode": "L'incollaggio automatico non è disponibile in questa sessione Wayland. Oats copierà il testo negli appunti e potrai incollare con Ctrl+V.",
         "optionalPasteTool": "Per l'incollaggio automatico, installa {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nAnche senza questo puoi usare Oats: il testo verrà copiato negli appunti e potrai incollare con Ctrl+V."
       },
       "alerts": {
-        "accessibilityNeeded": "Permessi di accessibilità necessari! Concedili nelle impostazioni di sistema."
+        "accessibilityNeeded": "Permessi di accessibilità necessari. Concedili nelle impostazioni di sistema."
       },
       "notes": {
         "waylandWtype": "\n\nNota: per le app XWayland, funziona anche xdotool.",
@@ -613,7 +613,7 @@
     "usingMethodPrefix": "In uso",
     "waylandClipboardDescription": "L'incollaggio automatico non è disponibile in questa sessione Wayland. Oats copierà il testo negli appunti, così potrai incollare manualmente con Ctrl+V.",
     "waylandClipboardTitle": "Modalità appunti su Wayland",
-    "windowsReady": "Windows supporta l'incollaggio automatico senza configurazione aggiuntiva!",
+    "windowsReady": "Windows supporta l'incollaggio automatico senza configurazione aggiuntiva",
     "withoutToolPrefix": "Senza questo strumento, Oats copierà il testo negli appunti. Potrai poi incollare manualmente con Ctrl+V.",
     "xwaylandAppsOnly": "l'incollaggio automatico funziona solo per le app XWayland"
   },
@@ -1806,7 +1806,7 @@
       "listening": "Ascoltando...",
       "newConversation": "Nuovo",
       "copyToClipboard": "Copia negli appunti",
-      "copied": "Copiato!",
+      "copied": "Copiato",
       "emptyState": "Chiedimi qualsiasi cosa",
       "errorPrefix": "Errore"
     },
@@ -2126,7 +2126,7 @@
       "no-speech-engine": "Il motore vocale locale è assente. Reinstallare Oats lo ripristina.",
       "no-model": "Il modello vocale incluso non si è installato. Riavvia Oats; se persiste, reinstalla.",
       "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni.",
-      "question-cards-off": "Le schede delle domande sono disattivate: le domande passeranno in silenzio. Riattiva l'assistente di conversazione in Avanzate.",
+      "question-cards-off": "Le schede delle domande sono disattivate, quindi le domande passeranno in silenzio. Attivale nelle Impostazioni, in Registrazione.",
       "no-summary-model": "Le conversazioni verranno salvate senza titolo né riassunto: nessun modello di riassunto è pronto. Configurane uno in Impostazioni › Avanzate › Modelli linguistici."
     },
     "aide": {
