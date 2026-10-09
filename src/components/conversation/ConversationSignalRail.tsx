@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronUp, Search, Undo2, X } from "lucide-react";
 import { cn } from "../lib/utils";
+import { Button } from "../ui/button";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { searchHostLabel } from "../../utils/searchHost";
@@ -142,34 +143,31 @@ function Asking({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-start gap-2.5">
-      <StateMark state={card.state} />
+    <div className="flex items-start gap-3">
+      <StateMark state={card.state} className="mt-1.5" />
       <div className="min-w-0 flex-1">
-        {/* Mono, and verbatim. Quoting exactly what was said is what earns the
-            trust to put a card over somebody's conversation at all. */}
+        {/* Verbatim. Quoting exactly what was said is what earns the trust to
+            put a card beside somebody's conversation at all. Inter, like the
+            transcript it quotes: mono is for machine text (DESIGN.md §3). */}
         <p
           className={cn(
-            "font-mono leading-snug text-foreground",
-            nested ? "text-[12px]" : "text-[13px]"
+            "text-pretty leading-snug text-foreground",
+            nested ? "text-[13px]" : "text-sm font-medium"
           )}
         >
           {card.question}
         </p>
-        <div className="mt-1 flex items-center gap-2 text-[11px]">
-          <span className="text-muted-foreground">{t(`questionCard.state.${card.state}`)}</span>
-          <span aria-hidden="true" className="text-muted-foreground/40">
-            ·
-          </span>
-          <span className="tabular-nums text-muted-foreground">
-            {elapsedLabel(card.createdAt, now)}
-          </span>
+        <div className="mt-1 flex min-h-6 items-center gap-2 text-xs text-muted-foreground">
+          <span>{t(`questionCard.state.${card.state}`)}</span>
+          <span aria-hidden="true">·</span>
+          <span className="tabular-nums">{elapsedLabel(card.createdAt, now)}</span>
           <span className="flex-1" />
           {card.searched ? (
             // Naming the host is the honesty requirement, not decoration. The
             // card's own `searchBaseUrl` wins over the current setting: this says
             // where this question actually went, and changing the engine later
             // must not rewrite the history of one that already left.
-            <span className="text-muted-foreground">
+            <span>
               {(() => {
                 const host = searchHostLabel(card.searchBaseUrl || "") || searchHost;
                 return host ? t("questionCard.searchedHost", { host }) : t("questionCard.searched");
@@ -178,28 +176,18 @@ function Asking({
           ) : (
             // The card's one action, offered for every outcome that did not
             // auto-search, so "the search is one click away" is true rather than
-            // aspirational.
-            //
-            // Ink at rest, gold only once you reach for it. §9.2 calls this "a
-            // single gold action", which is right for one card and wrong for the
-            // four the rail actually holds: four gold buttons stacked in the
-            // corner is four accents (§3), and it puts the rail's whole visual
-            // weight on a secondary action instead of on the questions. Reaching
-            // for it is still the one moment gold is earning something — and this
-            // rail sits beside a live conversation, where the rule that beats
-            // every other is that nothing may compete with the person in the room.
-            <button
+            // aspirational. A ghost button: four questions in the rail must not
+            // make four brand buttons beside a live conversation.
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => onSearch(card)}
-              // `focus-visible:text-foreground`, not `text-primary`: flax on
-              // paper measures 2.98:1 at 11px, so the label was least legible
-              // exactly when a keyboard user was standing on it. Hover keeps
-              // the gold — a pointer user can see where the pointer is.
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:bg-primary/10 hover:text-primary focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="-my-1 text-muted-foreground"
             >
-              <Search size={10} />
+              <Search aria-hidden="true" />
               {t("topicGraph.search")}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -241,38 +229,18 @@ function QuestionGroup({
   const [first, ...repeats] = group.cards;
 
   return (
-    // An annotation in the margin of the record, not a notification.
-    //
-    // It used to be a rounded, bordered, drop-shadowed panel stacked in the
-    // corner of the window, and it read exactly like what it was: a card
-    // borrowed from another application, floating over — and unconnected to —
-    // the trace it was talking about. What it is instead is an entry written
-    // against the conversation: a rule in the question's own state colour, the
-    // words, and nothing drawn around them.
-    <div
-      className="oats-enter relative border-l-2 pl-3"
-      style={{
-        animationDelay: `${index * STAGGER_MS}ms`,
-        borderColor: `var(${TONE_TOKEN[markTone(first.state)]})`,
-      }}
+    // A row in a list, like every other list in the app (DESIGN.md §4). The
+    // state is the mark beside the words, not a coloured bar: status is never
+    // a border.
+    <li
+      className="oats-enter relative py-3 first:pt-0 last:pb-0"
+      style={{ animationDelay: `${index * STAGGER_MS}ms` }}
       onMouseEnter={() => onFocus(group.key)}
       onMouseLeave={() => onFocus(null)}
       onFocus={() => onFocus(group.key)}
       onBlur={() => onFocus(null)}
     >
-      {/* One dismiss for the whole group: the repeats are the same question, so
-          dropping it one asking at a time would be busywork. A low-contrast
-          ghost, per §9.2 — it must never look like the point of the card. */}
-      <button
-        type="button"
-        aria-label={t("questionCard.dismiss")}
-        onClick={() => onDismiss(group.cards)}
-        className="absolute right-0 top-0 rounded-md p-1 text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <X size={13} />
-      </button>
-
-      <div className="pr-5">
+      <div className="pr-8">
         <Asking card={first} now={now} nested={false} searchHost={searchHost} onSearch={onSearch} />
       </div>
 
@@ -280,7 +248,7 @@ function QuestionGroup({
         // Indented and hairline-linked to the question they repeat. Not dimmed
         // with `opacity`: that dragged each repeat's outcome word and elapsed
         // time under AA, and a re-asking is signal, not a footnote.
-        <div className="ml-[3px] mt-2.5 space-y-2.5 border-l border-border pl-3">
+        <div className="ml-[3px] mt-2.5 space-y-2.5 border-l border-border pl-4">
           {repeats.map((card) => (
             <Asking
               key={card.id}
@@ -293,7 +261,23 @@ function QuestionGroup({
           ))}
         </div>
       )}
-    </div>
+
+      {/* One dismiss for the whole group: the repeats are the same question, so
+          dropping it one asking at a time would be busywork. */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        aria-label={t("questionCard.dismiss")}
+        onClick={() => onDismiss(group.cards)}
+        className={cn(
+          "absolute right-0 text-muted-foreground",
+          index === 0 ? "-top-0.5" : "top-2.5"
+        )}
+      >
+        <X aria-hidden="true" />
+      </Button>
+    </li>
   );
 }
 
@@ -470,32 +454,36 @@ export default function ConversationSignalRail({
               the seventh was two coloured crumbs in the gap. The fade says
               "there is more below" in the only place a reader is looking. */}
           {undoable && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={undoDismiss}
-              className="self-start rounded-sm text-[11px] text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="self-start text-muted-foreground"
             >
-              <Undo2 size={11} className="mr-1 inline" />
+              <Undo2 aria-hidden="true" />
               {t("questionCard.undo")}
-            </button>
+            </Button>
           )}
           {/* Reversible. It used to only ever expand, so a user who opened every
           group mid-conversation had no way back to the four that matter. */}
           {hidden > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => setExpanded((current) => !current)}
               aria-expanded={expanded}
-              className="self-start rounded-sm text-[11px] text-muted-foreground transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="self-start text-muted-foreground"
             >
               <ChevronUp
-                size={11}
-                className={cn("mr-1 inline transition-transform", expanded && "rotate-180")}
+                aria-hidden="true"
+                className={cn("transition-transform", expanded && "rotate-180")}
               />
               {expanded ? t("questionCard.collapse") : t("questionCard.earlier", { count: hidden })}
-            </button>
+            </Button>
           )}
-          <div className="flex flex-col gap-3.5">
+          <ol className="divide-y divide-border">
             {shown.map((group, index) => (
               <QuestionGroup
                 key={group.key}
@@ -508,7 +496,7 @@ export default function ConversationSignalRail({
                 onFocus={onFocus}
               />
             ))}
-          </div>
+          </ol>
         </>
       )}
     </div>

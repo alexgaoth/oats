@@ -283,33 +283,6 @@
   mask-composite: exclude;
 }
 
-.graph-node {
-  border-inline-start: 3px solid var(--graph-state);
-}
-
-.graph-node--answered {
-  --graph-state: var(--graph-answered);
-}
-.graph-node--uncertain {
-  --graph-state: var(--graph-uncertain);
-}
-.graph-node--silence {
-  --graph-state: var(--graph-silence);
-}
-.graph-node--open {
-  --graph-state: var(--graph-open);
-}
-
-.graph-node--uncertain .graph-node__mark {
-  opacity: 0.6;
-}
-.graph-node--silence .graph-node__mark {
-  opacity: 0.35;
-}
-.graph-node--open .graph-node__mark {
-  opacity: 0.8;
-}
-
 .oats-listening-pulse {
   position: relative;
   display: grid;

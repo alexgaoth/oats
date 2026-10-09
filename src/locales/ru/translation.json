@@ -2209,7 +2209,7 @@
     "announced": "Новый вопрос: {{question}}",
     "announcedAgain": "Задан снова, уже {{count}}×: {{question}}",
     "announcedBatch": "Новых вопросов: {{count}}, последний: {{question}}",
-    "searchedHost": "поиск · {{host}}"
+    "searchedHost": "Поиск: {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} открытая линия",

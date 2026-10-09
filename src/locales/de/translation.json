@@ -2197,7 +2197,7 @@
     "announced": "Neue Frage: {{question}}",
     "announcedAgain": "Erneut gefragt, jetzt {{count}}×: {{question}}",
     "announcedBatch": "{{count}} neue Fragen, zuletzt: {{question}}",
-    "searchedHost": "gesucht · {{host}}"
+    "searchedHost": "Gesucht auf {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} offener Strang",

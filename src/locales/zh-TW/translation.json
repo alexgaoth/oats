@@ -2192,7 +2192,7 @@
     "announced": "新問題：{{question}}",
     "announcedAgain": "再次提問，已 {{count}} 次：{{question}}",
     "announcedBatch": "{{count}} 個新問題，最新：{{question}}",
-    "searchedHost": "已搜尋 · {{host}}"
+    "searchedHost": "已在 {{host}} 搜尋"
   },
   "openThreads": {
     "count_one": "{{count}} 條未完脈絡",

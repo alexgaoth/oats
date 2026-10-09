@@ -2197,7 +2197,7 @@
     "announced": "Nova pergunta: {{question}}",
     "announcedAgain": "Perguntada de novo, {{count}} vezes já: {{question}}",
     "announcedBatch": "{{count}} perguntas novas, a última: {{question}}",
-    "searchedHost": "pesquisado · {{host}}"
+    "searchedHost": "Pesquisado em {{host}}"
   },
   "openThreads": {
     "count_one": "{{count}} fio aberto",
