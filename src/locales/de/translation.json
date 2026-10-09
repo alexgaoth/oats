@@ -1917,7 +1917,14 @@
       "markLabel": "Diesen Moment markieren",
       "markAnnounced": "Markiert bei {{time}}",
       "threadMapLabel": "Karte von {{count}} bisher angesprochenen Themen",
-      "threadMapNoQuote": "nichts Aktuelles zum Zitieren"
+      "threadMapNoQuote": "nichts Aktuelles zum Zitieren",
+      "recordTitle": "Gespräch aufnehmen",
+      "start": "Aufnahme starten",
+      "shortcutAnywhere": "aus jeder App",
+      "recordingBadge": "Aufnahme",
+      "stop": "Beenden",
+      "recentHeading": "Letzte Gespräche",
+      "viewAll": "Alle anzeigen"
     },
     "intelligence": {
       "listTitle": "Gespräche",
@@ -2081,6 +2088,16 @@
       "you": "Du",
       "room": "Raum",
       "speaker": "Sprecher {{n}}"
+    },
+    "shell": {
+      "sidebar": "Seitenleiste",
+      "home": "Start",
+      "conversations": "Gespräche",
+      "search": "Suchen",
+      "recent": "Zuletzt",
+      "noRecent": "Noch keine Gespräche",
+      "record": "Neue Aufnahme",
+      "stop": "Aufnahme beenden"
     }
   },
   "questionCard": {

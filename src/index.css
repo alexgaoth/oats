@@ -1,81 +1,79 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Oats Theme — registers color tokens with Tailwind v4. Oat milk (light) palette
-     per DESIGN.md §3; these are the defaults, .dark overrides them below with the
-     Steel-cut palette. One accent (toasted gold) — see DESIGN.md §3 rules. */
-  --color-primary: #c67b27;
-  /* Ink on gold, not cream on gold.
-     
-     Cream measured 3.14:1 against `--color-primary` — below AA for body text and
-     below SC 1.4.11 for a control's own label — while dark mode has always put
-     ink on its gold and measured 7.60:1. Light mode was simply the weaker of the
-     two. Ink here is 5.01:1, and the two modes now agree about what a gold
-     surface carries. (White does not rescue it: #ffffff is 3.35:1.) */
-  --color-primary-foreground: #201d18;
-  --color-secondary: #f1ebdd;
-  --color-secondary-foreground: #2b2620;
-  --color-muted: #f1ebdd;
-  --color-muted-foreground: #6b6459;
-  --color-accent: #c67b27;
-  --color-accent-foreground: #fbf7ef;
-  --color-destructive: #c05b3c;
-  --color-destructive-foreground: #fbf7ef;
-  --color-border: #e3d9c6;
-  --color-input: #f1ebdd;
-  /* Deliberately darker than `--color-primary` (#c67b27).
-   *
-   * The accent measures 2.98:1 against oat-milk paper — 0.02 under the 3:1 that
-   * SC 1.4.11 requires of a control's focus indicator, which is exactly the
-   * kind of miss that survives a design review and fails a real user. This is
-   * the same gold, taken down until it clears. Dark mode keeps the brighter
-   * value below (7.60:1). */
-  --color-ring: #8b5a1f;
-  --color-background: #f6f1e7;
-  --color-foreground: #2b2620;
-  --color-card: #fbf7ef;
-  --color-card-foreground: #2b2620;
-  --color-popover: #fffdf8;
-  --color-popover-foreground: #2b2620;
-  --color-link: #8b5a1f;
-  --color-success: #7c8b6f;
-  --color-success-foreground: #fbf7ef;
-  --color-warning: #c67b27;
-  --color-warning-foreground: #fbf7ef;
-  --color-info: #6b6459;
-  --color-info-foreground: #fbf7ef;
+  /* Oats design system v2 (DESIGN.md). A neutral, standard desktop palette:
+     zinc grays, ink primary actions, red reserved for recording, and the oat
+     amber only in the brand mark. Semantic names follow shadcn/ui, so every
+     primitive and every surface reads the same tokens. */
+  --color-background: #ffffff;
+  --color-foreground: #09090b;
+  --color-card: #ffffff;
+  --color-card-foreground: #09090b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #09090b;
+  --color-primary: #18181b;
+  --color-primary-foreground: #fafafa;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #18181b;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #18181b;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e4e4e7;
+  --color-input: #d4d4d8;
+  --color-ring: #a1a1aa;
+  --color-link: #18181b;
+  --color-success: #16a34a;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-foreground: #ffffff;
+  --color-info: #2563eb;
+  --color-info-foreground: #ffffff;
 
-  /* Surface hierarchy — oat-milk elevation ladder */
-  --color-surface-0: #fbf7ef;
-  --color-surface-1: #f1ebdd;
-  --color-surface-2: #ebe3d0;
-  --color-surface-3: #e5dbc4;
-  --color-surface-raised: #fffdf8;
+  /* The app frame. */
+  --color-sidebar: #fafafa;
+  --color-sidebar-foreground: #3f3f46;
+  --color-sidebar-border: #ececee;
+  --color-sidebar-accent: #efeff1;
+  --color-sidebar-accent-foreground: #09090b;
 
-  /* Border states */
-  --color-border-subtle: #e3d9c6;
-  /* The edge of a control, as distinct from the line between two rows.
-     
-     `--color-border` is 1.24:1 on paper, which is right for a divider and wrong
-     for the only thing telling you where a field is. Oats controls are a bottom
-     hairline and nothing else (`selectClass`), so that hairline *is* the
-     control's boundary and SC 1.4.11 asks 3:1 of it. This is 3.31:1 and stays a
-     hairline — an underline in a book, not a box in a dashboard. Dividers keep
-     the quiet value. */
-  --color-border-control: #948263;
-  --color-border-hover: #d3c6ac;
-  --color-border-active: #c67b27;
+  /* Recording is red everywhere a person looks for it; the brand is amber and
+     appears in the mark only. */
+  --color-recording: #ef4444;
+  --color-recording-foreground: #ffffff;
+  --color-brand: #e8a33d;
+
+  /* Surface ladder, lightest to darkest. */
+  --color-surface-0: #ffffff;
+  --color-surface-1: #fafafa;
+  --color-surface-2: #f4f4f5;
+  --color-surface-3: #e4e4e7;
+  --color-surface-raised: #ffffff;
+
+  /* Borders: a quiet divider, a control's edge, hover, and the active edge. */
+  --color-border-subtle: #ececee;
+  --color-border-control: #d4d4d8;
+  --color-border-hover: #d4d4d8;
+  --color-border-active: #18181b;
+
+  --font-sans:
+    "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
 :root {
   /* Typography — DESIGN.md §5. Sans stays the existing humanist stack; mono is
      the "machine heard this" voice (transcripts, timestamps, question text). */
   --font-family-sans:
-    "Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
-  --font-family-mono: ui-monospace, "SF Mono", "Commit Mono", monospace;
+    "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 
   /* Opacities */
   --opacity-subtle: 0.1;
@@ -83,11 +81,11 @@
   --opacity-high: 0.9;
 
   /* Border Radius — DESIGN.md §6: tight and physical, not bubbly. */
-  --radius: 0.5rem; /* 8px - default for buttons, inputs */
-  --radius-sm: 0.25rem; /* 4px - minimal rounding */
+  --radius: 0.5rem; /* 8px - buttons, inputs */
+  --radius-sm: 0.375rem; /* 6px - small controls, badges */
   --radius-md: 0.5rem; /* 8px - standard */
   --radius-lg: 0.75rem; /* 12px - cards, panels */
-  --radius-xl: 0.875rem; /* 14px - the aide card */
+  --radius-xl: 1rem; /* 16px - dialogs */
 
   /* Motion — DESIGN.md §8: smooth, slow, decelerating; never a bounce or spring.
    *
@@ -124,78 +122,77 @@
      the selected model card), so on paper they resolved to nothing and those
      surfaces rendered flat. Paper takes a shallower, warmer shadow than charcoal;
      these are the light-mode counterparts, not copies. */
-  --shadow-card: 0 1px 2px oklch(0.25 0.02 60 / 0.06), 0 1px 3px oklch(0.25 0.02 60 / 0.05);
-  --shadow-card-hover: 0 2px 6px oklch(0.25 0.02 60 / 0.09), 0 4px 12px oklch(0.25 0.02 60 / 0.06);
-  --shadow-elevated: 0 6px 20px oklch(0.25 0.02 60 / 0.12);
-  --shadow-modal: 0 20px 44px -14px oklch(0.25 0.02 60 / 0.22);
-  --shadow-selected-glow: 0 0 0 1px var(--color-primary), 0 2px 10px oklch(0.62 0.12 60 / 0.18);
-  --shadow-metallic-light: inset 0 1px 0 rgba(255, 253, 248, 0.5), 0 1px 3px rgba(43, 38, 32, 0.08);
-  --shadow-card-hover-subtle: 0 2px 8px -2px rgba(43, 38, 32, 0.1);
-  --graph-answered: #7c8b6f;
-  --graph-uncertain: var(--color-primary);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-card-hover: 0 2px 8px rgb(0 0 0 / 0.06);
+  --shadow-elevated: 0 8px 24px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);
+  --shadow-modal: 0 24px 48px -12px rgb(0 0 0 / 0.18);
+  --shadow-selected-glow: 0 0 0 1px var(--color-primary);
+  --shadow-metallic-light: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-card-hover-subtle: 0 2px 8px -2px rgb(0 0 0 / 0.08);
+  --graph-answered: var(--color-success);
+  --graph-uncertain: var(--color-warning);
   --graph-silence: var(--color-muted-foreground);
   --graph-open: var(--color-destructive);
 }
 
 .dark {
-  /* Steel-cut (dark) — DESIGN.md §3. Roasted charcoal surfaces, brighter toasted
-     gold accent for contrast. Elevation ladder anchored on the two values DESIGN.md
-     gives explicitly (surface-0 #2A261F, surface-raised #322D24); surface-2 is
-     interpolated between them. */
   color-scheme: dark;
 
-  --color-background: #201d18;
-  --color-foreground: #ede6d6;
-  --color-card: #2a261f;
-  --color-card-foreground: #ede6d6;
-  --color-popover: #322d24;
-  --color-popover-foreground: #ede6d6;
-  --color-primary: #e0a34a;
-  --color-primary-foreground: #201d18;
-  --color-secondary: #2a261f;
-  --color-secondary-foreground: #ede6d6;
-  --color-muted: #2a261f;
-  --color-muted-foreground: #a79e8c;
-  --color-accent: #e0a34a;
-  --color-accent-foreground: #201d18;
-  --color-destructive: #d07350;
-  --color-destructive-foreground: #201d18;
-  --color-border: #3b352b;
-  --color-input: #2a261f;
-  --color-ring: #e0a34a;
-  --color-success: #9fb08c;
-  --color-success-foreground: #201d18;
-  --color-warning: #e0a34a;
-  --color-warning-foreground: #201d18;
-  --color-info: #a79e8c;
-  --color-info-foreground: #201d18;
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-card: #0f0f12;
+  --color-card-foreground: #fafafa;
+  --color-popover: #131316;
+  --color-popover-foreground: #fafafa;
+  --color-primary: #fafafa;
+  --color-primary-foreground: #18181b;
+  --color-secondary: #1c1c1f;
+  --color-secondary-foreground: #fafafa;
+  --color-muted: #1c1c1f;
+  --color-muted-foreground: #a1a1aa;
+  --color-accent: #1c1c1f;
+  --color-accent-foreground: #fafafa;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #27272a;
+  --color-input: #3f3f46;
+  --color-ring: #71717a;
+  --color-link: #fafafa;
+  --color-success: #22c55e;
+  --color-success-foreground: #052e16;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #1c1003;
+  --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
 
-  /* Surface hierarchy — charcoal elevation ladder */
-  --color-surface-0: #201d18;
-  --color-surface-1: #2a261f;
-  --color-surface-2: #2e2921;
-  --color-surface-3: #322d24;
-  --color-surface-raised: #322d24;
+  --color-sidebar: #0f0f11;
+  --color-sidebar-foreground: #d4d4d8;
+  --color-sidebar-border: #1f1f23;
+  --color-sidebar-accent: #1c1c1f;
+  --color-sidebar-accent-foreground: #fafafa;
 
-  /* Border states */
-  --color-border-subtle: #3b352b;
-  --color-border-control: #7a7060;
-  --color-border-hover: #4a4335;
-  --color-border-active: #e0a34a;
-  --color-link: #e0a34a;
+  --color-recording: #ef4444;
+  --color-recording-foreground: #ffffff;
 
-  /* Card depth shadows — softer for charcoal, with top highlight for premium depth */
-  --shadow-card: 0 1px 3px oklch(0 0 0 / 0.2), inset 0 1px 0 oklch(1 0 0 / 0.03);
-  --shadow-card-hover: 0 4px 12px oklch(0 0 0 / 0.25), inset 0 1px 0 oklch(1 0 0 / 0.04);
-  --shadow-elevated: 0 8px 24px oklch(0 0 0 / 0.3);
-  --shadow-modal: 0 24px 48px -12px oklch(0 0 0 / 0.4);
+  --color-surface-0: #09090b;
+  --color-surface-1: #0f0f12;
+  --color-surface-2: #18181b;
+  --color-surface-3: #27272a;
+  --color-surface-raised: #18181b;
 
-  /* Premium effects */
-  --shadow-metallic-dark: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-selected-glow:
-    inset 0 0 0 1px oklch(0.75 0.15 75 / 0.2), 0 0 16px -4px oklch(0.75 0.15 75 / 0.2);
-  --shadow-card-hover-subtle: 0 2px 8px -2px rgba(0, 0, 0, 0.12);
-  --graph-answered: #9fb08c;
+  --color-border-subtle: #1f1f23;
+  --color-border-control: #3f3f46;
+  --color-border-hover: #3f3f46;
+  --color-border-active: #fafafa;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.35);
+  --shadow-elevated: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-modal: 0 24px 48px -12px rgb(0 0 0 / 0.6);
+  --shadow-metallic-dark: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-selected-glow: 0 0 0 1px var(--color-primary);
+  --shadow-card-hover-subtle: 0 2px 8px -2px rgb(0 0 0 / 0.3);
+  --graph-answered: var(--color-success);
 }
 
 .oats-dither {
@@ -551,7 +548,15 @@
   font-style: italic;
 }
 
-/* Inherited heading chrome, scoped out of Oats surfaces for exactly the reason
+/* Inherited element rules, layered.
+
+   Unlayered, these beat every Tailwind utility whatever its specificity — the
+   trap CLAUDE.md records, which kept every Oats heading at the inherited
+   40px/700 for months and turned the new frame's 14px header title into a
+   banner. In `@layer base` they still style bare elements in the inherited
+   screens, and any component that says otherwise wins. */
+@layer base {
+  /* Inherited heading chrome, scoped out of Oats surfaces for exactly the reason
    the input and `.card` rules above are.
    
    These are **unlayered** element rules, and Tailwind's utilities live in
@@ -563,51 +568,51 @@
    like a deliberate hero until you measure it.
    
    §5's six-step scale only ships if the component's own utilities win. */
-h1:not(:where(.oats-surface *)),
-h2:not(:where(.oats-surface *)),
-h3:not(:where(.oats-surface *)),
-h4:not(:where(.oats-surface *)),
-h5:not(:where(.oats-surface *)),
-h6:not(:where(.oats-surface *)) {
-  font-family: var(--font-family-sans);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
-}
+  h1:not(:where(.oats-surface *)),
+  h2:not(:where(.oats-surface *)),
+  h3:not(:where(.oats-surface *)),
+  h4:not(:where(.oats-surface *)),
+  h5:not(:where(.oats-surface *)),
+  h6:not(:where(.oats-surface *)) {
+    font-family: var(--font-family-sans);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
 
-h1:not(:where(.oats-surface *)) {
-  font-size: 2.5rem;
-  font-weight: 700;
-}
+  h1:not(:where(.oats-surface *)) {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
 
-/* Modern Button Styling - handled by button component
+  /* Modern Button Styling - handled by button component
  *
  * The family is scoped out of `.oats-surface` for the same reason as the
  * heading and input rules: unlayered, it beat every `font-mono` utility on a
  * button, so the quiet actions (Copy, Save, Delete, Back, Map, Change) and the
  * live thread map's subjects — all written as mono — rendered in the sans.
  * Inside the boundary a button inherits, and its own utilities decide. */
-button:not(:where(.oats-surface *)) {
-  font-family: var(--font-family-sans);
-}
+  button:not(:where(.oats-surface *)) {
+    font-family: var(--font-family-sans);
+  }
 
-button {
-  cursor: pointer;
-}
+  button {
+    cursor: pointer;
+  }
 
-/* Ensure all interactive elements have pointer cursor */
-button:hover,
-[role="button"]:hover,
-.cursor-pointer:hover,
-button svg:hover,
-[role="button"] svg:hover,
-a svg:hover,
-[data-icon]:hover,
-.icon:hover {
-  cursor: pointer;
-}
+  /* Ensure all interactive elements have pointer cursor */
+  button:hover,
+  [role="button"]:hover,
+  .cursor-pointer:hover,
+  button svg:hover,
+  [role="button"] svg:hover,
+  a svg:hover,
+  [data-icon]:hover,
+  .icon:hover {
+    cursor: pointer;
+  }
 
-/* Premium input styling with subtle depth.
+  /* Premium input styling with subtle depth.
  *
  * Inherited OpenWhispr chrome, and the seam between the two design systems.
  * It is an *element* selector, so it outranks the Tailwind utility classes a
@@ -627,64 +632,68 @@ a svg:hover,
  *   `.input-inline` stays as the per-element opt-out for legacy components
  *   (the note editor, the chat input) that want a bare field inside the
  *   inherited world. */
-input:not(.input-inline):not(:where(.oats-surface *)),
-textarea:not(.input-inline):not(:where(.oats-surface *)) {
-  border-radius: var(--radius);
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
-  font-family: var(--font-family-sans);
-  box-shadow: inset 0 1px 2px oklch(from var(--color-foreground) l c h / 0.06);
-}
+  input:not(.input-inline):not(:where(.oats-surface *)),
+  textarea:not(.input-inline):not(:where(.oats-surface *)) {
+    border-radius: var(--radius);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+    font-family: var(--font-family-sans);
+    box-shadow: inset 0 1px 2px oklch(from var(--color-foreground) l c h / 0.06);
+  }
 
-/* Light mode inputs */
-:root input:not(.input-inline):not(:where(.oats-surface *)),
-:root textarea:not(.input-inline):not(:where(.oats-surface *)) {
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-foreground);
-}
+  /* Light mode inputs */
+  :root input:not(.input-inline):not(:where(.oats-surface *)),
+  :root textarea:not(.input-inline):not(:where(.oats-surface *)) {
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-foreground);
+  }
 
-:root input:not(.input-inline):not(:where(.oats-surface *)):focus,
-:root textarea:not(.input-inline):not(:where(.oats-surface *)):focus {
-  border-color: var(--color-border-active);
-  box-shadow: 0 0 0 2px oklch(from var(--color-ring) l c h / 0.15);
-  background-color: var(--color-background);
-}
+  :root input:not(.input-inline):not(:where(.oats-surface *)):focus,
+  :root textarea:not(.input-inline):not(:where(.oats-surface *)):focus {
+    border-color: var(--color-border-active);
+    box-shadow: 0 0 0 2px oklch(from var(--color-ring) l c h / 0.15);
+    background-color: var(--color-background);
+  }
 
-/* Dark mode inputs — flat, no embossed shadow */
-.dark input:not(.input-inline):not(:where(.oats-surface *)),
-.dark textarea:not(.input-inline):not(:where(.oats-surface *)) {
-  background-color: var(--color-input);
-  border: 1px solid var(--color-border);
-  color: var(--color-foreground);
-  box-shadow: none;
-}
+  /* Dark mode inputs — flat, no embossed shadow */
+  .dark input:not(.input-inline):not(:where(.oats-surface *)),
+  .dark textarea:not(.input-inline):not(:where(.oats-surface *)) {
+    background-color: var(--color-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-foreground);
+    box-shadow: none;
+  }
 
-.dark input:not(.input-inline):not(:where(.oats-surface *)):focus,
-.dark textarea:not(.input-inline):not(:where(.oats-surface *)):focus {
-  border-color: var(--color-border-active);
-  box-shadow: 0 0 0 2px oklch(from var(--color-ring) l c h / 0.15);
-}
+  .dark input:not(.input-inline):not(:where(.oats-surface *)):focus,
+  .dark textarea:not(.input-inline):not(:where(.oats-surface *)):focus {
+    border-color: var(--color-border-active);
+    box-shadow: 0 0 0 2px oklch(from var(--color-ring) l c h / 0.15);
+  }
 
-/* Card styling - elevated parchment. Inherited, and kept out of Oats surfaces
+  /* Card styling - elevated parchment. Inherited, and kept out of Oats surfaces
    for the same reason as the input chrome above: a lifting, shadowed panel is
    the SaaS-dashboard language DESIGN.md §1 and §6 exist to refuse. */
-.card:not(:where(.oats-surface *)) {
-  background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card, 0 1px 3px oklch(from var(--color-foreground) l c h / 0.08));
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
+  .card:not(:where(.oats-surface *)) {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card, 0 1px 3px oklch(from var(--color-foreground) l c h / 0.08));
+    transition:
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
 
-.card:not(:where(.oats-surface *)):hover {
-  box-shadow: var(--shadow-card-hover, 0 4px 12px oklch(from var(--color-foreground) l c h / 0.1));
-  transform: translateY(-1px);
+  .card:not(:where(.oats-surface *)):hover {
+    box-shadow: var(
+      --shadow-card-hover,
+      0 4px 12px oklch(from var(--color-foreground) l c h / 0.1)
+    );
+    transform: translateY(-1px);
+  }
 }
 
 /* Dark mode cards — grounded, no lift, subtle border glow */
@@ -1415,13 +1424,6 @@ body:has(.agent-overlay-window) #root {
   .oats-field-chaff {
     opacity: 0.5;
   }
-}
-
-/* DESIGN.md §5: "Noto Sans … -apple-system on macOS". On a Mac the sans is the
-   system's own; Noto there read as a web page inside a native window. Mono is
-   already the system's (ui-monospace). */
-html[data-platform="darwin"] {
-  --font-family-sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 }
 
 /* macOS draws the traffic lights inside the window (hiddenInset). They sit at

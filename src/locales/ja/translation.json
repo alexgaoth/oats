@@ -1917,7 +1917,14 @@
       "markLabel": "この瞬間をマーク",
       "markAnnounced": "{{time}} にマークしました",
       "threadMapLabel": "これまでに出た {{count}} 件の話題のマップ",
-      "threadMapNoQuote": "引用できる発言がありません"
+      "threadMapNoQuote": "引用できる発言がありません",
+      "recordTitle": "会話を録音",
+      "start": "録音を開始",
+      "shortcutAnywhere": "どのアプリからでも",
+      "recordingBadge": "録音中",
+      "stop": "停止",
+      "recentHeading": "最近の会話",
+      "viewAll": "すべて表示"
     },
     "intelligence": {
       "listTitle": "会話",
@@ -2081,6 +2088,16 @@
       "you": "あなた",
       "room": "部屋",
       "speaker": "話者{{n}}"
+    },
+    "shell": {
+      "sidebar": "サイドバー",
+      "home": "ホーム",
+      "conversations": "会話",
+      "search": "検索",
+      "recent": "最近",
+      "noRecent": "まだ会話はありません",
+      "record": "新規録音",
+      "stop": "録音を停止"
     }
   },
   "questionCard": {

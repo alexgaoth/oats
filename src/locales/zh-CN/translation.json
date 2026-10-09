@@ -1912,7 +1912,14 @@
       "markLabel": "标记此刻",
       "markAnnounced": "已在 {{time}} 标记",
       "threadMapLabel": "目前提到的 {{count}} 个话题的地图",
-      "threadMapNoQuote": "没有可引用的近期发言"
+      "threadMapNoQuote": "没有可引用的近期发言",
+      "recordTitle": "录制对话",
+      "start": "开始录音",
+      "shortcutAnywhere": "在任何应用中",
+      "recordingBadge": "录音中",
+      "stop": "停止",
+      "recentHeading": "最近的对话",
+      "viewAll": "查看全部"
     },
     "intelligence": {
       "listTitle": "对话",
@@ -2076,6 +2083,16 @@
       "you": "你",
       "room": "房间",
       "speaker": "说话人 {{n}}"
+    },
+    "shell": {
+      "sidebar": "侧边栏",
+      "home": "首页",
+      "conversations": "对话",
+      "search": "搜索",
+      "recent": "最近",
+      "noRecent": "还没有对话",
+      "record": "新录音",
+      "stop": "停止录音"
     }
   },
   "questionCard": {

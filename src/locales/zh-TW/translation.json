@@ -1912,7 +1912,14 @@
       "markLabel": "標記此刻",
       "markAnnounced": "已在 {{time}} 標記",
       "threadMapLabel": "目前提到的 {{count}} 個話題的地圖",
-      "threadMapNoQuote": "沒有可引用的近期發言"
+      "threadMapNoQuote": "沒有可引用的近期發言",
+      "recordTitle": "錄製對話",
+      "start": "開始錄音",
+      "shortcutAnywhere": "在任何應用程式中",
+      "recordingBadge": "錄音中",
+      "stop": "停止",
+      "recentHeading": "最近的對話",
+      "viewAll": "查看全部"
     },
     "intelligence": {
       "listTitle": "對話",
@@ -2076,6 +2083,16 @@
       "you": "你",
       "room": "房間",
       "speaker": "說話者 {{n}}"
+    },
+    "shell": {
+      "sidebar": "側邊欄",
+      "home": "首頁",
+      "conversations": "對話",
+      "search": "搜尋",
+      "recent": "最近",
+      "noRecent": "還沒有對話",
+      "record": "新錄音",
+      "stop": "停止錄音"
     }
   },
   "questionCard": {

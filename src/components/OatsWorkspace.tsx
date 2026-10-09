@@ -7,12 +7,29 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Brain, ChevronLeft, ChevronRight, Mic, Search, Settings, Square } from "lucide-react";
+import {
+  AlertTriangle,
+  Bookmark,
+  Brain,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  History,
+  Mic,
+  Search,
+  Settings,
+  Square,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
 import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Kbd } from "./ui/kbd";
 import { Toggle } from "./ui/toggle";
 import { useNotes, initializeNotes, setActiveNoteId } from "../stores/noteStore";
+import { AppSidebar } from "./shell/AppSidebar";
 import {
   useMeetingRecordingStore,
   startRecording,
@@ -114,14 +131,15 @@ const ADVANCED_SECTIONS: SettingsSectionType[] = [
 ];
 
 type Surface = "conversation" | "intelligence" | "settings";
+
+const SURFACE_TITLES: Record<Surface, string> = {
+  conversation: "oats.shell.home",
+  intelligence: "oats.shell.conversations",
+  settings: "oats.nav.settings",
+};
 type DetailTab = "summary" | "transcript" | "connections";
 
 // Three destinations, named. No icons — see the nav comment in OatsWorkspace.
-const nav = [
-  { id: "conversation" as const },
-  { id: "intelligence" as const },
-  { id: "settings" as const },
-];
 
 // Rendering order for the stacked, always-mounted surfaces. Declared once rather
 // than branched at the call site so the three panes are unambiguously siblings
@@ -228,39 +246,75 @@ function topicOverlap(a: string[] = [], b: string[] = []): number {
 //
 // It is not a list. A list here would be the Intelligence surface drawn twice,
 // and the whole architecture rests on there being exactly three surfaces.
-function LastEntry() {
+function RecentRow({ note }: { note: NoteItem }) {
   const { t, i18n } = useTranslation();
-  const notes = useNotes();
-  const last = notes[0] ?? null;
-  const segments = useMemo(() => parseSegments(last?.transcript ?? null), [last?.transcript]);
-  const strip = useContourStrip(segments, NO_EVENTS);
+  const segments = useMemo(() => parseSegments(note.transcript ?? null), [note.transcript]);
   const span = formatSpan(conversationSpanMs(segments), { locale: i18n.language });
-
-  if (!last) return null;
-
+  const preview = note.enhanced_content
+    ? plainPreview(note.enhanced_content)
+    : transcriptText(note.transcript ?? null, t);
   return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent("oats-open-note", { detail: last.id }))}
-      className={cn(
-        "mt-14 w-full max-w-md rounded-sm border-t border-border/50 pt-4 text-left",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      )}
-    >
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="truncate text-[13px] text-foreground">
-          {last.title || t("oats.untitled")}
+    <li>
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent("oats-open-note", { detail: note.id }))}
+        className={cn(
+          "flex w-full flex-col gap-1 px-5 py-3.5 text-left transition-colors hover:bg-muted/60",
+          "outline-none focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+        )}
+      >
+        <span className="flex items-baseline gap-4">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+            {note.title || t("oats.untitled")}
+          </span>
+          <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
+            {ledgerDate(note.created_at, { locale: i18n.language })}
+          </span>
         </span>
-        <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-          {ledgerDate(last.created_at, { locale: i18n.language })}
+        <span className="flex items-baseline gap-4">
+          <span className="line-clamp-1 min-w-0 flex-1 text-[13px] text-muted-foreground">
+            {preview}
+          </span>
+          {span && (
+            <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{span}</span>
+          )}
         </span>
+      </button>
+    </li>
+  );
+}
+
+/** The few most recent conversations, one press from Home. */
+function RecentConversations() {
+  const { t } = useTranslation();
+  const notes = useNotes();
+  const recent = useMemo(
+    () => notes.filter((note) => note.note_type === "meeting").slice(0, 5),
+    [notes]
+  );
+  if (!recent.length) return null;
+  return (
+    <section aria-labelledby="oats-recent-heading">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 id="oats-recent-heading" className="text-sm font-semibold">
+          {t("oats.conversation.recentHeading")}
+        </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.dispatchEvent(new Event("oats-show-conversations"))}
+        >
+          {t("oats.conversation.viewAll")}
+        </Button>
       </div>
-      {!strip.empty && (
-        <StripWithSpan className="mt-2.5" span={span}>
-          <ConversationContour contour={strip} height={20} showMarks={false} />
-        </StripWithSpan>
-      )}
-    </button>
+      <Card className="gap-0 overflow-hidden">
+        <ul className="divide-y divide-border">
+          {recent.map((note) => (
+            <RecentRow key={note.id} note={note} />
+          ))}
+        </ul>
+      </Card>
+    </section>
   );
 }
 
@@ -632,322 +686,152 @@ function ConversationSurface() {
     return () => cleanup?.();
   }, []);
 
+  // One alert line for anything worth saying before or around a recording.
+  const notice = (tone: "warning" | "danger", text: string) => (
+    <div
+      role="note"
+      className={cn(
+        "flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-[13px] leading-5",
+        tone === "danger"
+          ? "border-destructive/30 bg-destructive/5 text-foreground"
+          : "border-warning/30 bg-warning/5 text-foreground"
+      )}
+    >
+      <AlertTriangle
+        aria-hidden="true"
+        className={cn(
+          "mt-0.5 size-4 shrink-0",
+          tone === "danger" ? "text-destructive" : "text-warning"
+        )}
+      />
+      <span>{text}</span>
+    </div>
+  );
+
   return (
     <>
-      <section
-        className={cn(
-          // `min-h-0` is load-bearing, not tidiness: a flex child's default
-          // `min-height: auto` lets it grow past its parent, so without it the
-          // recording branch's own `flex-1 overflow-y-auto` band never becomes
-          // a scroller and the pinned foot is pushed off a window that cannot
-          // scroll. Measured: the dead-microphone warning's bottom edge at
-          // y=836 in an 800px viewport.
-          "oats-surface relative mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-8",
-          // Two different compositions, not one composition with things hidden.
-          //
-          // Idle is an invitation, so it is centred and quiet. Recording is a
-          // ledger being written, so it is left-aligned on a spine and sits high
-          // — the contour needs room beneath it to grow into, and a centred
-          // column that reflows every time an utterance lands is exactly the
-          // layout shift §8 forbids while somebody is being helped.
-          recording
-            ? cn(
-                // Clean is centred; Detailed sits high on a spine.
-                //
-                // The reflow argument that put recording at the top belongs to
-                // Detailed alone: it is the *annotations and the transcript*
-                // that grow, and a centred column carrying them would move every
-                // time somebody spoke. Nothing in Clean grows — the contour is a
-                // fixed height and the clock is tabular — so Clean was paying a
-                // cost it does not incur, and paying it as 58% of the window in
-                // dead space below the mark. Three reviews called it a
-                // subtraction rather than a composition, and they were right:
-                // it was Detailed's layout with things removed.
-                //
-                // Centred, it is its own composition and it rhymes with the
-                // idle surface it comes from, so pressing record no longer
-                // throws the page upward. Switching compositions re-lays out,
-                // which is a deliberate act by the reader and not the unbidden
-                // §8 shift.
-                //
-                // Detailed's margin above the clock is small because everything
-                // below it is bidding for the same height, and the detected
-                // dialogue — the composition's reason to exist (§9.9) — gets
-                // only what is left. At 10vh it was handed 93px at the shipped
-                // 1200x800: two lines, under a band of blank paper.
-                detailed ? "justify-start pt-[4vh]" : "justify-center",
-                // Below this height the three bands do not fit, and squeezing
-                // them is worse than scrolling. Measured at 600x400 (200% zoom
-                // of the shipped default) the head and foot alone took 312 of
-                // 364px and the band was 12px — one partial turn of forty, and
-                // zero once the dead-microphone warning appeared, with no way
-                // to reach any of it. WCAG 1.4.10 asks for no *two-dimensional*
-                // scrolling and no lost content, not for no scrolling: so at
-                // small heights the surface becomes an ordinary vertical column
-                // and everything stays reachable.
-                "[@media(max-height:640px)]:overflow-y-auto"
-              )
-            : "items-center justify-center overflow-y-auto pb-[18vh]"
-        )}
-      >
+      <section className="oats-surface flex min-h-0 flex-1 flex-col overflow-y-auto">
         {recording ? (
-          // Three bands, and the middle one is the only one that grows.
-          //
-          // When the annotations were simply next in the flow they pushed the
-          // dead-microphone warning off the bottom of a window that does not
-          // scroll: measured at the shipped 1200x800 default with four
-          // questions, three of them asked twice, the warning's last line sat
-          // at y=812 and the open-thread stack was gone entirely. A surface
-          // whose whole reliability promise is "a dead microphone surfaces
-          // while it can still be fixed" cannot let a busy conversation hide
-          // that warning. The head and the foot are pinned; the annotations
-          // take what is left and scroll inside it.
-          <>
-            {/* `my-auto` in Clean is what actually centres it. `justify-center`
-                on the section had no effect while the band below claimed
-                `flex-1`: there was no free space left to distribute, and the
-                block still sat at the top with 464px of dead paper under it
-                (measured balance 0.02). Auto margins take the free space
-                symmetrically, and the foot stays pinned because it comes after
-                them. */}
-            <div className={cn("shrink-0", !detailed && "my-auto")}>
-              {/* The Conversation surface's one status channel.
-            
-                Nothing here announced anything: the record control unmounts on
-                press so focus falls to the body, and the dead-microphone
-                warning was a plain paragraph. A screen-reader user pressed
-                record, heard silence, and — twelve minutes later, when the
-                microphone went flat — heard silence again, losing the
-                conversation. That is precisely the "fails quietly at the end"
-                this surface exists to prevent. */}
-              {/* A mark is announced on its own: the status region above says
-                  whether the recording is healthy, and a mark replacing that
-                  sentence would hide a warning that was about to be read. */}
-              <p aria-live="polite" className="sr-only">
-                {markedAt !== null && sessionStartedAt !== null
-                  ? t("oats.conversation.markAnnounced", {
-                      time: clock(markedAt - sessionStartedAt),
-                    })
-                  : ""}
-              </p>
-              <p aria-live="polite" role="status" className="sr-only">
-                {atRisk.atRisk
-                  ? t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })
-                  : stalled.stalled
-                    ? t("oats.conversation.notTranscribing")
-                    : micSilentSince !== null
-                      ? t("oats.conversation.micSilent")
-                      : t("oats.conversation.statusRecording")}
-              </p>
+          <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-3 px-8 py-6">
+            {/* Announcements: a mark on its own, and the recording's health. */}
+            <p aria-live="polite" className="sr-only">
+              {markedAt !== null && sessionStartedAt !== null
+                ? t("oats.conversation.markAnnounced", {
+                    time: clock(markedAt - sessionStartedAt),
+                  })
+                : ""}
+            </p>
+            <p aria-live="polite" role="status" className="sr-only">
+              {atRisk.atRisk
+                ? t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })
+                : stalled.stalled
+                  ? t("oats.conversation.notTranscribing")
+                  : micSilentSince !== null
+                    ? t("oats.conversation.micSilent")
+                    : t("oats.conversation.statusRecording")}
+            </p>
 
-              {/* The clock is the heading here. What a person glances at mid-
-                conversation is how long they have been recording, and it is the
-                one thing on this screen that is unambiguously true. */}
-              {/* The switch between the two compositions.
-
-                    On the surface rather than in Settings, and visible in both
-                    states, because that is what keeps this from being a mode
-                    you have to remember being in: the screen shows which one
-                    you are in, and the way out is on the same screen. It is
-                    also the moment you want it — "wait, what did it just
-                    hear?" happens during a conversation, not before one.
-
-                    A text link, not a control in a box (§1), and it says what
-                    it will do rather than what is currently true, because a
-                    switch labelled with its own state is ambiguous about
-                    which.
-
-                    It rides the clock line, not the column beneath it.
-                  Sitting under the contour it put a chrome control between the
-                  trace and the annotations that annotate it — §9.2's "docked
-                  directly under the contour" was measurably false (contour
-                  bottom 332, switch 352–372, first annotation 397) and §1 calls
-                  a control inside the evidence column a cost. Up here it is
-                  beside the one other control on the surface. */}
-              <div className="flex items-baseline justify-between gap-4">
-                <div className="flex items-baseline gap-4">
-                  <button
-                    type="button"
-                    onClick={() => void stopRecording()}
-                    aria-label={t("oats.conversation.finish")}
-                    className={cn(
-                      "group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-                      "transition-transform [transition-duration:var(--motion-base)]",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    )}
-                  >
-                    <ListeningPulse state="live" size="sm" />
-                    <WheatPerch />
-                  </button>
-                  {/* An actual heading, not a paragraph a comment calls one.
-                    Every other view has an `h1`; a screen-reader user
-                    navigating the live surface by heading found nothing on the
-                    one surface the product exists for. The visible text is the
-                    clock; the name of the screen is for the a11y tree. */}
-                  <h1 className="font-mono text-2xl font-normal tabular-nums tracking-[-0.02em] text-muted-foreground">
-                    <span className="sr-only">{t("oats.conversation.listening")} </span>
-                    {clock(elapsed)}
-                  </h1>
-                  {/* Beside the clock, because a mark is a time: "this one".
-                      It carries the same ink caret it leaves under the trace,
-                      so what it did is visible where it did it. In both
-                      compositions — it is the reader's hand, not evidence to
-                      hide. */}
-                  <button
-                    type="button"
+            <Card className="shrink-0 gap-0 overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-4">
+                <span aria-hidden="true" className="relative flex size-2.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-recording opacity-60 motion-reduce:hidden" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-recording" />
+                </span>
+                {/* The clock is the heading: the one thing on this screen that is
+                    unambiguously true, and what a person glances at. */}
+                <h1 className="text-2xl font-semibold tabular-nums tracking-[-0.02em]">
+                  <span className="sr-only">{t("oats.conversation.listening")} </span>
+                  {clock(elapsed)}
+                </h1>
+                <Badge variant="recording">{t("oats.conversation.recordingBadge")}</Badge>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => void mark()}
                     aria-label={t("oats.conversation.markLabel")}
                     aria-keyshortcuts="M"
                     title={`${t("oats.conversation.markLabel")} (M)`}
-                    className={cn(
-                      "inline-flex min-h-6 items-center gap-1.5 self-center rounded-sm text-sm",
-                      "transition-colors [transition-duration:var(--motion-instant)]",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      markedAt !== null
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
                   >
-                    <svg aria-hidden="true" width="8" height="7" viewBox="0 0 8 7">
-                      <path d="M4 0 L8 7 L0 7 Z" fill="currentColor" />
-                    </svg>
+                    <Bookmark className={cn(markedAt !== null && "fill-current")} />
                     {markedAt !== null
                       ? t("oats.conversation.marked")
                       : t("oats.conversation.mark")}
-                  </button>
+                    <Kbd className="ml-0.5">M</Kbd>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => void stopRecording()}
+                    aria-label={t("oats.conversation.finish")}
+                  >
+                    <Square className="size-3.5 fill-current" />
+                    {t("oats.conversation.stop")}
+                  </Button>
                 </div>
-                {/* No `aria-pressed`.
-
-                    It was there alongside a label that states the *action*, and
-                    the two encodings contradicted each other: in detailed a
-                    screen reader said "Hide what was said, toggle button,
-                    pressed" — asserting that hiding was engaged at the moment the
-                    words were on screen. A control may say what it will do or say
-                    what is true, not both in opposite directions. The name states
-                    it: "Show what was said" is only ever offered when they are
-                    hidden, so the current value is unambiguous from the name
-                    alone, and the name is what a screen reader reads first.
-
-                    The underline is the only affordance saying this is a control
-                    rather than a sentence, so it is drawn in `muted-foreground`
-                    (5.19:1 on paper, 6.33:1 on charcoal). At `border` it measured
-                    1.24:1, under the 3:1 this project holds control indicators
-                    to. */}
-                <button
-                  type="button"
-                  onClick={() => setDetail(toggleConversationDetail(detail))}
-                  className={cn(
-                    // `text-sm`, the §5 step for secondary UI labels. At
-                    // `text-xs` this was 12px sans — not a step in the scale at
-                    // all (12/16 is the mono caption step) and the smallest text
-                    // on a surface where it is the only control label.
-                    "mt-5 self-start rounded-sm text-sm text-muted-foreground",
-                    "underline decoration-muted-foreground underline-offset-[5px]",
-                    "transition-colors [transition-duration:var(--motion-instant)]",
-                    "hover:text-foreground hover:decoration-foreground",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  )}
-                >
-                  {detailed
-                    ? t("oats.conversation.showClean")
-                    : t("oats.conversation.showDetailed")}
-                </button>
               </div>
 
-              {/* The echo line is gone. It existed to prove something had been
-                  heard, one line at a time — and the detected dialogue proves
-                  the same thing with the paragraph, verbatim. Measured with one
-                  live segment, the echo and the newest turn carried identical
-                  text on the same screen. Clean forbids it (it rewrites itself
-                  whenever anyone speaks) and Detailed no longer needs it, so it
-                  has no composition left to live in. */}
-              {/* Said plainly rather than asked. Oats resumed a recent conversation
-                instead of stopping to check, because the check would have cost
-                the first thing anybody said. */}
-              {/* And a way out of it. Resuming without asking is the right
-                  default — the question would cost the first thing anybody says
-                  — but it was silently merging into a conversation that ended up
-                  to half an hour ago with no way to say "this is a different
-                  one". The notice is the place to put that. */}
+              {/* Resumed without asking — asking would cost the opening words —
+                  so it says so, and offers the way out. */}
               {continuingFrom && (
-                <p className="mt-1.5 flex items-baseline gap-3 font-mono text-xs text-muted-foreground">
-                  <span>{t("oats.conversation.continuing", { title: continuingFrom })}</span>
-                  <QuietAction
-                    label={t("oats.conversation.notAContinuation")}
+                <div className="flex items-center gap-2 border-t border-border px-5 py-2.5 text-[13px] text-muted-foreground">
+                  <History aria-hidden="true" className="size-4 shrink-0" />
+                  <span className="min-w-0 truncate">
+                    {t("oats.conversation.continuing", { title: continuingFrom })}
+                  </span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="ml-auto text-[13px]"
                     onClick={() => {
                       void (async () => {
                         await stopRecording();
                         await startFresh();
                       })();
                     }}
-                  />
-                </p>
+                  >
+                    {t("oats.conversation.notAContinuation")}
+                  </Button>
+                </div>
               )}
 
-              {/* The contour — the record being written (DESIGN.md §9.8). Every
-                part of it is a measurement of this conversation, which is the
-                whole reason it replaced a landscape. */}
-              {/* Viewport-relative, because the head was fixed and the band
-                  was the only thing that could give. Measured at 600x400 (200%
-                  zoom of the shipped default) the band collapsed to 14px, and
-                  to 0px once the dead-microphone warning appeared, with the
-                  page unable to scroll to recover it — so at 200% the detected
-                  dialogue and the annotations did not exist. The contour is the
-                  largest thing in the head and the one that degrades
-                  gracefully: it is a shape, and a shorter shape is still the
-                  shape. Clean gets more of it because there it is the whole of
-                  the evidence. */}
-              <ConversationContour
-                contour={contour}
-                className={detailed ? "mt-8" : "mt-10"}
-                height={detailed ? "clamp(46px, 13vh, 104px)" : "clamp(56px, 17vh, 136px)"}
-                focusedGroup={focusedGroup}
-                label={contourLabel(contour, t)}
-              />
-            </div>
+              {/* The contour: every part of it measured from this conversation. */}
+              <div className="border-t border-border px-5 pb-3 pt-4">
+                <ConversationContour
+                  contour={contour}
+                  height={detailed ? "clamp(44px, 10vh, 84px)" : "clamp(56px, 16vh, 120px)"}
+                  focusedGroup={focusedGroup}
+                  label={contourLabel(contour, t)}
+                />
+              </div>
 
-            {/* The questions, written against the trace above them. No legend
-                here: a permanent key beside a live conversation is a tip that
-                never goes away, on the one surface whose whole test is that
-                nothing competes with the person in the room. The vocabulary is
-                explained once, in the reading view, where there is time.
+              <div className="flex items-center justify-end border-t border-border px-3 py-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDetail(toggleConversationDetail(detail))}
+                >
+                  {detailed ? <EyeOff /> : <Eye />}
+                  {detailed
+                    ? t("oats.conversation.showClean")
+                    : t("oats.conversation.showDetailed")}
+                </Button>
+              </div>
+            </Card>
 
-                `min-h-0` is what makes `overflow-y-auto` a scroller rather than
-                a suggestion inside a flex column. */}
-            {/* The fade is the scroll cue: the band clips, and a hard edge made
-                a sliced annotation look like a short one. `mask-image` costs no
-                element and no paint of its own. */}
-            {/* The band, and it holds two regions rather than one scroller.
+            {micSilentSince !== null && notice("danger", t("oats.conversation.micSilent"))}
+            {atRisk.atRisk &&
+              notice("danger", t("oats.conversation.notSaving", { count: atRisk.unsavedTurns }))}
+            {stalled.stalled && notice("warning", t("oats.conversation.notTranscribing"))}
 
-                Round 1 stacked an unbounded transcript above the annotations in
-                a single scroller, which un-docked the question card from the
-                contour: measured at 40 turns the first annotation's top was at
-                y=2667 and receded ~57px with every finalized segment, so §9.2's
-                "directly under the contour" — the surface the product is judged
-                on — was unreachable during a live conversation. The annotations
-                keep their place under the trace; the dialogue takes what is left
-                and scrolls inside itself.
-
-                The rail is mounted here unconditionally and in the same position
-                in both compositions. Rendering it from two branches put it at
-                two different child indices, so React unmounted and remounted it
-                on every switch, its `spoken` set came back empty, and a blind
-                user pressing the switch once was told three already-heard
-                questions had just arrived. */}
+            {/* The question rail stays mounted in both compositions — remounting
+                it on every switch re-announced every question already heard. */}
             <div
               className={cn(
                 "flex min-h-0 flex-col",
-                // Only Detailed has anything to put here, and only Detailed
-                // needs the space. In Clean the band holds the announcing rail
-                // and nothing else, so claiming `flex-1` there was what kept
-                // the composition pinned to the top.
                 detailed && "flex-1 [@media(max-height:640px)]:min-h-[13rem]"
               )}
             >
-              {/* The ceiling belongs on the wrapper, which is the flex child of
-                  the band. On the inner scroller it resolved against a wrapper
-                  of its own auto height, so "half the band" became half of
-                  itself and one card measured 35px of a 68px list. */}
               <div
                 className={cn(
                   "group relative flex min-h-0 shrink-0 flex-col",
@@ -957,197 +841,84 @@ function ConversationSurface() {
                 <div
                   ref={bandRef}
                   onScroll={measureBand}
-                  className={cn(
-                    // `shrink-0` with a ceiling, never a shrinkable box.
-                    //
-                    // Flex distributes shrink in proportion to each child's
-                    // *content* size, and the transcript's content is thousands
-                    // of pixels — so a shrinkable annotations band lost the whole
-                    // negotiation as the conversation ran. Measured before this
-                    // fix at 1200x800 with two cards: band 122px at 2 turns, 39px
-                    // at 20, 21px at 40, 7px at 120 — and **zero visible pixels**
-                    // of the first card past 40 turns, its rect sitting entirely
-                    // below a wrapper that had collapsed above it. Three minutes
-                    // into a conversation the surface silently stopped showing the
-                    // questions it had caught. The dialogue takes the *remainder*
-                    // (`flex-1 basis-0`) instead of bidding with its content.
-                    // Half the band at most (the ceiling is on the wrapper):
-                    // past that the annotations start eating the dialogue they
-                    // are supposed to sit beside.
-                    "min-h-0",
-                    // A zero-height scroller is keyboard-focusable in Chromium, so
-                    // the closed band became a tab stop in the *default*
-                    // composition — no focus ring anywhere on screen, and an AX
-                    // name read from the stale announcement text. Closed, it has
-                    // nothing to scroll, so it does not get to be a scroller.
-                    detailed ? "overflow-y-auto" : "overflow-hidden"
-                  )}
+                  className={cn("min-h-0", detailed ? "overflow-y-auto" : "overflow-hidden")}
                 >
                   <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
                 </div>
-                {/* Beside the scroller, never a mask on it: a mask clips the
-                  focus ring of whatever it is applied to. */}
                 <ScrollFade edges={detailed ? bandFaded : { top: false, bottom: false }} />
               </div>
-
               {detailed && (
                 <ConversationDialogue
                   className={cn(
                     "min-h-[4.5rem] flex-1 basis-0",
-                    // The rule separates the annotations from the transcript.
-                    // With no question asked yet there is nothing above it, and
-                    // a full-width line over 45px of blank paper separates
-                    // nothing (§1).
-                    cardCount > 0 ? "mt-5 border-t border-border/40 pt-4" : "mt-2"
+                    cardCount > 0 ? "mt-4 border-t border-border pt-4" : "mt-1"
                   )}
                 />
               )}
             </div>
 
-            {/* The foot is pinned, but it is not allowed to eat the band.
-            
-                It was `shrink-0` with no bound, so a long conversation's open
-                threads squeezed the annotations to zero — measured: twelve
-                expanded threads left the band at 0px with every question card
-                gone, and fourteen pushed the foot's own contents to y=1007 in a
-                window that does not scroll. A third of the surface is the most
-                the reminder may take, and it scrolls inside that. */}
-            <div className="flex max-h-[34%] shrink-0 flex-col overflow-y-auto pb-6">
-              {/* The microphone went flat for long enough that the room being
-                  quiet is the less likely explanation. Said once, quietly,
-                  while there is still time to fix it — not discovered at the
-                  end when the recording is already gone. It is pinned here so
-                  a busy conversation can never push it out of sight. */}
-              {micSilentSince !== null && (
-                <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
-                  {t("oats.conversation.micSilent")}
-                </p>
-              )}
-              {/* The recording is not reaching disk.
-              
-                  Same weight and same place as the dead microphone, because it
-                  is the same class of problem: something that will cost you the
-                  conversation, said while there is still time to do something
-                  about it. It says how much is at risk, because "saving failed"
-                  is a status and "the last nine minutes are not saved" is
-                  something a person can act on. */}
-              {atRisk.atRisk && (
-                <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
-                  {t("oats.conversation.notSaving", { count: atRisk.unsavedTurns })}
-                </p>
-              )}
-              {/* Sound is arriving and nothing is being transcribed. The pulse
-                  breathes and the clock runs either way, so without this the
-                  first sign is an empty transcript at the end. */}
-              {stalled.stalled && (
-                <p className="mb-4 max-w-sm text-xs leading-5 text-foreground">
-                  {t("oats.conversation.notTranscribing")}
-                </p>
-              )}
-              {/* Detailed only. The stack is a standing list of unfinished
-                  business, and reading it is thinking about the conversation
-                  rather than having it. The warning above is not optional in
-                  either composition: it is the reliability promise. */}
-              {detailed && (
-                <>
-                  {/* Beside the stack, never instead of it. The list is the
-                      readable version of the same data and the one that works
-                      under four subjects; the map is for pointing at something
-                      raised twenty minutes ago. */}
-                  <LiveThreadMap />
-                  <OpenThreadStack
-                    threads={openThreads}
-                    suggestions={suggestions}
-                    speaking={speaking}
-                  />
-                </>
-              )}
-            </div>
-          </>
+            {detailed && (
+              <div className="flex max-h-[34%] shrink-0 flex-col gap-3 overflow-y-auto pb-2">
+                <LiveThreadMap />
+                <OpenThreadStack
+                  threads={openThreads}
+                  suggestions={suggestions}
+                  speaking={speaking}
+                />
+              </div>
+            )}
+          </div>
         ) : (
-          <>
-            {/* Said once, when a recording has just finished. `wasRecording`
-                keeps it from announcing on every visit to an idle screen. */}
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">
             <p aria-live="polite" role="status" className="sr-only">
               {justStopped ? t("oats.conversation.statusStopped") : ""}
             </p>
 
-            {/* The seed is the button, and the button becomes the pulse. One
-                object in two states rather than a control and an unrelated
-                indicator: press the husked oat and it starts breathing
-                (DESIGN.md §9.1, §9.2). */}
-            <button
-              type="button"
-              disabled={starting}
-              onClick={begin}
-              aria-label={t("oats.conversation.record")}
-              className={cn(
-                "group relative flex h-28 w-28 items-center justify-center rounded-full",
-                "transition-transform [transition-duration:var(--motion-base)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-                "hover:scale-[1.04] active:scale-[0.98]"
+            <Card className="gap-0">
+              <div className="flex items-start gap-4 p-6">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-recording/10">
+                  <Mic aria-hidden="true" className="size-5 text-recording" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base font-semibold tracking-[-0.01em]">
+                    {t("oats.conversation.recordTitle")}
+                  </h1>
+                  <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+                    {starting ? t("oats.conversation.preparing") : t("oats.conversation.subtitle")}
+                  </p>
+                  <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <Button
+                      variant="record"
+                      onClick={begin}
+                      disabled={starting || preflight.blocking}
+                      aria-label={t("oats.conversation.record")}
+                    >
+                      <span aria-hidden="true" className="size-2 rounded-full bg-current" />
+                      {t("oats.conversation.start")}
+                    </Button>
+                    {shortcut && (
+                      <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <Kbd>{shortcut}</Kbd>
+                        {t("oats.conversation.shortcutAnywhere")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {(nothingHeard || preflight.problem) && (
+                <div className="border-t border-border px-6 py-4">
+                  {nothingHeard
+                    ? notice("warning", t("oats.conversation.nothingHeard"))
+                    : notice(
+                        preflight.blocking ? "danger" : "warning",
+                        t(`oats.preflight.${preflight.problem}`)
+                      )}
+                </div>
               )}
-            >
-              <ListeningPulse state="idle" size="lg" />
-              {/* Sits on the seed until you press it. Field mode only; renders
-                  null otherwise, and never intercepts the press. */}
-              <WheatPerch />
-            </button>
+            </Card>
 
-            <h1
-              className={cn(
-                "mt-9 max-w-lg text-center text-foreground",
-                "text-[2.5rem] font-medium leading-[1.1] tracking-[-0.03em]"
-              )}
-            >
-              {t("oats.conversation.title")}
-            </h1>
-            <p className="relative mt-4 max-w-md text-center text-sm leading-6 text-muted-foreground">
-              {starting ? t("oats.conversation.preparing") : t("oats.conversation.subtitle")}
-            </p>
-            {/* The app teaches its own shortcut. This is the highest-value line on
-              the screen for somebody who has not learned it yet, because after
-              they have, they will never open this window to record again. */}
-            {shortcut && (
-              <p className="relative mt-7 text-center font-mono text-xs text-muted-foreground">
-                {shortcut}
-              </p>
-            )}
-
-            {/* The last entry in the ledger.
-            
-                Without it this screen is a centred hero on cream — the field
-                used to be its whole identity, and deleting the field without
-                replacing it would leave a blank page pretending to be a
-                product. What belongs here is not decoration but the most recent
-                true thing Oats knows: what you last recorded, and its shape.
-                It is also the answer to "did that actually save?", which is the
-                question somebody actually has when they open this window. */}
-            <LastEntry />
-          </>
-        )}
-
-        {!recording && nothingHeard && (
-          <p className="relative mt-6 max-w-sm text-center text-xs leading-5 text-muted-foreground">
-            {t("oats.conversation.nothingHeard")}
-          </p>
-        )}
-
-        {/* Said before the conversation, in the place the eye already is. One line,
-          and only the first problem: a list of three is a configuration report,
-          and somebody about to sit down with another person will read one line.
-          Ink rather than husk when it blocks — this is the app failing loudly at
-          the start, which is the whole point of checking here. */}
-        {!recording && !nothingHeard && preflight.problem && (
-          <p
-            className={cn(
-              "relative mt-6 max-w-sm text-center text-xs leading-5",
-              preflight.blocking ? "text-foreground" : "text-muted-foreground"
-            )}
-          >
-            {t(`oats.preflight.${preflight.problem}`)}
-          </p>
+            <RecentConversations />
+          </div>
         )}
       </section>
     </>
@@ -3713,6 +3484,12 @@ export default function OatsWorkspace() {
     return () => window.removeEventListener("oats-open-note", onOpen);
   }, []);
 
+  useEffect(() => {
+    const onShow = () => setSurface("intelligence");
+    window.addEventListener("oats-show-conversations", onShow);
+    return () => window.removeEventListener("oats-show-conversations", onShow);
+  }, []);
+
   // The recall hotkey: from any application into cross-conversation search.
   // Refused while recording for the same reason as Cmd+, — and the focus step
   // is delegated via a DOM event so it works whether Intelligence is already
@@ -3827,7 +3604,7 @@ export default function OatsWorkspace() {
         // and the nav slid half out of the window and stayed there, because a
         // hidden box has no scrollbar to bring them back. A clip box cannot be
         // scrolled at all.
-        "relative flex h-screen flex-col overflow-clip bg-background text-foreground",
+        "relative flex h-screen flex-col overflow-clip bg-background text-foreground antialiased",
         // The field paints on the shell's own background, so in field mode the
         // background must be transparent or it would cover the sky.
         fieldMode && "bg-transparent",
@@ -3861,87 +3638,6 @@ export default function OatsWorkspace() {
         onDone={dismissPostMigration}
       />
 
-      {/* The window is frameless on every platform (windowConfig.js) and nothing
-          else provides a drag handle, so without this it cannot be moved at all —
-          including on macOS, where `titleBarStyle: "hiddenInset"` supplies the
-          traffic lights but *not* a draggable title bar.
-
-          It occupies real layout rather than floating over the top of the
-          composition. An absolutely-positioned drag strip looks free, but
-          `-webkit-app-region: drag` swallows clicks: the surfaces below scroll,
-          so every list row that passed under the strip stopped being clickable.
-          Reserving the band also keeps content clear of the macOS traffic lights,
-          which sit at y 20–34 (windowConfig.js) — inside this band, and formerly
-          6px above the Intelligence heading. */}
-      {/* The orientation band.
-      
-          Navigation used to be three labels centred along the bottom of the
-          window, which is where a consumer media app puts its tabs — and it
-          leaned on the old field's horizon to stand on. With the field gone it
-          had nothing to belong to, and it disappeared during recording, which
-          is the moment orientation matters most.
-      
-          It lives in the window's drag band now: the wordmark on the left, the
-          three destinations beside it, in the one strip that is on every
-          surface and never moves. A ledger is identified at its head. The band
-          keeps `-webkit-app-region: drag` so the frameless window can still be
-          moved; the interactive parts opt back out, because a drag region
-          swallows clicks. */}
-      <div
-        className="oats-titlebar relative z-20 flex h-9 shrink-0 items-center gap-6 px-5"
-        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-      >
-        {/* The one lowercase thing in the product (DESIGN.md §5). */}
-        <span
-          aria-hidden="true"
-          className="select-none font-mono text-[13px] tracking-[-0.01em] text-foreground"
-        >
-          oats
-        </span>
-        <nav
-          aria-label={t("oats.nav.label")}
-          inert={recording}
-          aria-hidden={recording || undefined}
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-          className={cn(
-            "flex items-center gap-5",
-            "transition-opacity [transition-duration:var(--motion-slow)]",
-            // Nothing but the record being written while somebody is talking.
-            // The tool gets out of the way.
-            recording && "pointer-events-none opacity-0"
-          )}
-        >
-          {nav.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setSurface(item.id)}
-              aria-current={surface === item.id ? "page" : undefined}
-              className={cn(
-                "relative rounded-sm text-[13px] transition-colors",
-                "[transition-duration:var(--motion-instant)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                surface === item.id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t(`oats.nav.${item.id}`)}
-              {/* Ink, not gold. This underline is on screen on *every* surface,
-                  so a gold one guaranteed a second accent competing with the
-                  seed or a selected mark — §3 allows one. */}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "absolute -bottom-1 inset-x-0 h-px origin-center bg-foreground transition-transform",
-                  "[transition-duration:var(--motion-base)]",
-                  surface === item.id ? "scale-x-100" : "scale-x-0"
-                )}
-              />
-            </button>
-          ))}
-        </nav>
-      </div>
-
       {/* All three surfaces stay mounted and cross-fade in place.
 
           This is DESIGN.md §8's "the outgoing view dims to 0 as the incoming
@@ -3957,16 +3653,46 @@ export default function OatsWorkspace() {
           global conversation hotkey — the product's primary action, documented in
           CLAUDE.md as starting a conversation "from anywhere" — did nothing at
           all on Intelligence and Settings. */}
-      <div className="oats-enter relative min-h-0 flex-1">
-        {SURFACES.map(({ id, render }) => (
-          <main
-            key={id}
-            data-active={surface === id}
-            inert={surface !== id}
-            aria-hidden={surface !== id}
-            className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-clip"
+      <div className="flex min-h-0 flex-1">
+        <AppSidebar
+          surface={surface}
+          onNavigate={(next) => {
+            // Settings stays closed while a conversation is live, as Cmd+, does.
+            if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
+            setSurface(next);
+          }}
+          onOpenNote={(noteId) =>
+            window.dispatchEvent(new CustomEvent("oats-open-note", { detail: noteId }))
+          }
+          onSearch={() => {
+            setSurface("intelligence");
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
+            });
+          }}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* The window is frameless (windowConfig.js); this band and the
+              sidebar's are what move it, so they take real layout rather than
+              floating over content a drag region would stop being clickable. */}
+          <header
+            className="flex h-[52px] shrink-0 items-center border-b border-border px-6"
+            style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
           >
-            {/* The pane element exists from the first render; its *contents* wait
+            <h1 className="text-sm font-semibold tracking-[-0.01em]">
+              {t(SURFACE_TITLES[surface])}
+            </h1>
+          </header>
+          <div className="oats-enter relative min-h-0 flex-1">
+            {SURFACES.map(({ id, render }) => (
+              <main
+                key={id}
+                data-active={surface === id}
+                inert={surface !== id}
+                aria-hidden={surface !== id}
+                className="oats-pane absolute inset-0 flex min-h-0 flex-col overflow-clip"
+              >
+                {/* The pane element exists from the first render; its *contents* wait
                 until the surface has been opened once, and then stay.
 
                 Both halves matter. Mounting the element early is what makes the
@@ -3979,9 +3705,11 @@ export default function OatsWorkspace() {
                 nothing on screen to explain it (and on macOS it pauses whatever
                 is playing). A user who never opens Settings should never pay for
                 it. */}
-            {visited.has(id) ? render() : null}
-          </main>
-        ))}
+                {visited.has(id) ? render() : null}
+              </main>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
