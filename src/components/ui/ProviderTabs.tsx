@@ -101,14 +101,14 @@ export function ProviderTabs({
               isDisabled
                 ? "text-muted-foreground/50 cursor-not-allowed ring-1 ring-border/40 dark:ring-white/5"
                 : isSelected
-                  ? "text-foreground [&_svg]:text-primary"
+                  ? "text-foreground [&_svg]:text-brand-ink"
                   : "text-muted-foreground ring-1 ring-border/60 dark:ring-white/10 hover:text-foreground hover:bg-foreground/4 dark:hover:bg-white/5"
             )}
           >
             {renderIcon ? renderIcon(provider.id) : <ProviderIcon provider={provider.id} />}
             <span>{provider.name}</span>
             {provider.recommended && (
-              <span className="text-[10px] text-primary/70 font-medium">
+              <span className="text-[10px] text-brand-ink/70 font-medium">
                 {t("common.recommended")}
               </span>
             )}

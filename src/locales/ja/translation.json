@@ -1597,7 +1597,12 @@
       }
     },
     "downloaded": "ダウンロード済み",
-    "delete": "{{model}} を削除"
+    "delete": "{{model}} を削除",
+    "progress": {
+      "downloading": "{{name}} をダウンロード中",
+      "installing": "{{name}} をインストール中",
+      "gpu": "GPU アクセラレーション"
+    }
   },
   "notes": {
     "actions": {

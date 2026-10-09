@@ -95,7 +95,7 @@ export default function DictationTranslationSettings() {
                             className={cn(
                               "inline-flex items-center gap-1 rounded-full py-0.5 pl-2 pr-1 text-xs font-medium transition-colors",
                               isActive
-                                ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                ? "bg-primary/10 text-brand-ink ring-1 ring-primary/30"
                                 : "bg-muted text-muted-foreground"
                             )}
                           >

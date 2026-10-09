@@ -188,7 +188,7 @@ export default function LanguageSelector({
         </span>
         <ChevronDown
           className={`w-3.5 h-3.5 shrink-0 text-muted-foreground transition-[color,transform] duration-200 ${
-            isOpen ? "rotate-180 text-primary" : "group-hover:text-foreground"
+            isOpen ? "rotate-180 text-brand-ink" : "group-hover:text-foreground"
           }`}
         />
       </button>
@@ -256,7 +256,7 @@ export default function LanguageSelector({
                           rounded transition-[background-color,color,transform] duration-150 ease-out
                           ${
                             isSelected
-                              ? "bg-primary/15 text-primary shadow-sm"
+                              ? "bg-primary/15 text-brand-ink shadow-sm"
                               : isHighlighted
                                 ? "bg-muted/70 text-foreground"
                                 : "text-foreground hover:bg-muted/50 active:scale-[0.98]"

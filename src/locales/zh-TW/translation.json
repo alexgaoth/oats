@@ -1592,7 +1592,12 @@
       }
     },
     "downloaded": "已下載",
-    "delete": "刪除 {{model}}"
+    "delete": "刪除 {{model}}",
+    "progress": {
+      "downloading": "正在下載 {{name}}",
+      "installing": "正在安裝 {{name}}",
+      "gpu": "GPU 加速"
+    }
   },
   "notes": {
     "meeting": {

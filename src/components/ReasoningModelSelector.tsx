@@ -281,7 +281,7 @@ function GpuStatusBadge() {
     return (
       <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
         <div className="flex items-start gap-2.5">
-          <Zap size={13} className="text-primary shrink-0 mt-0.5" />
+          <Zap size={13} className="text-brand-ink shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-foreground">{t("gpu.reasoningBanner")}</p>
             <div className="flex items-center gap-2 mt-1.5">

@@ -302,7 +302,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
                       : t("promptStudio.view.defaultPrompt")}
                   </p>
                   {isCustomPrompt && (
-                    <span className="text-xs font-semibold uppercase tracking-wider px-1.5 py-px rounded-full bg-primary/10 text-primary">
+                    <span className="text-xs font-semibold uppercase tracking-wider px-1.5 py-px rounded-full bg-primary/10 text-brand-ink">
                       {t("promptStudio.view.modified")}
                     </span>
                   )}
@@ -451,7 +451,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
                       <span
                         className={`text-xs font-medium uppercase tracking-wider px-1.5 py-px rounded ${
                           isTranslate || isAgentAddressed
-                            ? "bg-primary/10 text-primary dark:bg-primary/15"
+                            ? "bg-primary/10 text-brand-ink dark:bg-primary/15"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >

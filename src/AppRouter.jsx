@@ -5,6 +5,7 @@ import MeetingNotificationOverlay from "./components/MeetingNotificationOverlay.
 import TranscriptionPreviewOverlay from "./components/TranscriptionPreviewOverlay.tsx";
 import UpdateNotificationOverlay from "./components/UpdateNotificationOverlay.tsx";
 import { useTheme } from "./hooks/useTheme";
+import { OatsMark } from "./components/shell/OatsMark";
 
 const OatsWorkspace = React.lazy(() => import("./components/OatsWorkspace.tsx"));
 const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"));
@@ -112,28 +113,8 @@ function LoadingFallback({ message }) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 animate-[scale-in_300ms_ease-out]">
-        <svg
-          viewBox="0 0 1024 1024"
-          className="w-12 h-12 text-primary drop-shadow-[0_2px_10px_color-mix(in_oklch,var(--color-primary)_22%,transparent)]"
-          aria-label="Oats"
-          fill="currentColor"
-        >
-          {/* husked oat seed with husk seam (DESIGN.md §2) */}
-          <path d="M512 176C626 316 704 410 704 512C704 626 622 730 512 848C402 730 320 626 320 512C320 410 398 316 512 176Z" />
-          <path
-            d="M512 268C470 410 470 620 512 756"
-            stroke="var(--color-background)"
-            strokeWidth="26"
-            strokeLinecap="round"
-            fill="none"
-          />
-        </svg>
-        <div className="w-7 h-7 rounded-full border-[2.5px] border-transparent border-t-primary animate-[spinner-rotate_0.8s_cubic-bezier(0.4,0,0.2,1)_infinite] motion-reduce:animate-none motion-reduce:border-t-muted-foreground motion-reduce:opacity-50" />
-        {fallbackMessage && (
-          <p className="text-[13px] font-medium text-muted-foreground dark:text-foreground/60 tracking-[-0.01em]">
-            {fallbackMessage}
-          </p>
-        )}
+        <OatsMark className="size-12" />
+        {fallbackMessage && <p className="text-[13px] text-muted-foreground">{fallbackMessage}</p>}
       </div>
     </div>
   );

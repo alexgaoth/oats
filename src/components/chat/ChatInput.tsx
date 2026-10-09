@@ -148,7 +148,7 @@ export function ChatInput({
                   "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30",
                   "transition-colors duration-100",
                   inputText.trim()
-                    ? "text-primary hover:text-primary/80"
+                    ? "text-brand-ink hover:text-brand-ink/80"
                     : "text-muted-foreground/25 cursor-default"
                 )}
               >

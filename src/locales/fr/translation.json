@@ -1597,7 +1597,12 @@
       }
     },
     "downloaded": "Téléchargé",
-    "delete": "Supprimer {{model}}"
+    "delete": "Supprimer {{model}}",
+    "progress": {
+      "downloading": "Téléchargement de {{name}}",
+      "installing": "Installation de {{name}}",
+      "gpu": "Accélération GPU"
+    }
   },
   "notes": {
     "meeting": {

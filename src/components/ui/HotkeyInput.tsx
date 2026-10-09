@@ -594,7 +594,9 @@ export function HotkeyInput({
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-              <span className="text-xs font-medium text-primary">{t("hotkeyInput.listening")}</span>
+              <span className="text-xs font-medium text-brand-ink">
+                {t("hotkeyInput.listening")}
+              </span>
             </div>
             {activeModifiers.size > 0 ? (
               <div className="flex flex-col items-center gap-1.5">
@@ -602,12 +604,12 @@ export function HotkeyInput({
                   {Array.from(activeModifiers).map((mod) => (
                     <kbd
                       key={mod}
-                      className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-sm text-xs font-semibold text-primary"
+                      className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-sm text-xs font-semibold text-brand-ink"
                     >
                       {mod}
                     </kbd>
                   ))}
-                  <span className="text-primary/50 text-sm font-medium">+</span>
+                  <span className="text-brand-ink/50 text-sm font-medium">+</span>
                 </div>
                 {isFnHeld && (
                   <span className="text-xs text-muted-foreground">
@@ -713,12 +715,12 @@ export function HotkeyInput({
                   {Array.from(activeModifiers).map((mod) => (
                     <kbd
                       key={mod}
-                      className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-sm text-xs font-semibold text-primary"
+                      className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-sm text-xs font-semibold text-brand-ink"
                     >
                       {mod}
                     </kbd>
                   ))}
-                  <span className="text-primary/40 text-xs">
+                  <span className="text-brand-ink/40 text-xs">
                     {isFnHeld ? t("hotkeyInput.fnCaptureHint") : t("hotkeyInput.keyHint")}
                   </span>
                 </div>

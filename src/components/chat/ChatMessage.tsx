@@ -66,7 +66,7 @@ function ToolCallStep({ toolCall }: { toolCall: ToolCallInfo }) {
           size={12}
           className={cn(
             "shrink-0 transition-colors duration-300",
-            isExecuting && "text-primary/70",
+            isExecuting && "text-brand-ink/70",
             isCompleted && !isError && !isClipboard && "text-muted-foreground/50",
             isClipboard && "text-emerald-500/70",
             isError && "text-destructive/60"
@@ -152,7 +152,7 @@ function NoteCard({
       )}
     >
       <div className={cn("shrink-0 p-1 rounded", "bg-primary/10")}>
-        <FileText size={12} className="text-primary/70" />
+        <FileText size={12} className="text-brand-ink/70" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium text-foreground truncate">{title}</p>
@@ -160,7 +160,7 @@ function NoteCard({
       </div>
       <ChevronRight
         size={12}
-        className="text-muted-foreground/30 group-hover/note:text-primary/50 shrink-0 transition-colors duration-150"
+        className="text-muted-foreground/30 group-hover/note:text-brand-ink/50 shrink-0 transition-colors duration-150"
       />
     </button>
   );
