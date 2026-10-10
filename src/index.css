@@ -37,7 +37,10 @@
   --color-link: #18181b;
   --color-success: #16a34a;
   --color-success-foreground: #ffffff;
-  --color-warning: #d97706;
+  /* Orange, not amber: amber sat ΔE 1.8 from the honey brand in dark mode, so a
+     warning read as the brand. Orange-700 here, because warning is also text
+     (badges, alerts) and needs 4.5:1 on white (5.2:1). */
+  --color-warning: #c2410c;
   --color-warning-foreground: #ffffff;
   --color-info: #2563eb;
   --color-info-foreground: #ffffff;
@@ -168,7 +171,7 @@
   --color-link: #fafafa;
   --color-success: #22c55e;
   --color-success-foreground: #052e16;
-  --color-warning: #f59e0b;
+  --color-warning: #f97316;
   --color-warning-foreground: #1c1003;
   --color-info: #3b82f6;
   --color-info-foreground: #ffffff;
