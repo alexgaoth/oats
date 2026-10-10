@@ -311,7 +311,6 @@ class AudioManager {
     this.stopRequestedDuringStreamingStart = false;
     this.streamingFallbackRecorder = null;
     this.streamingFallbackChunks = [];
-    this.skipReasoning = false;
     this.voiceAgentRequested = false;
     this.translationRequested = false;
     this.context = "dictation";
@@ -396,10 +395,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   // Fail-open: translation degraded/failed but raw text is still pasted. Surface why.
   notifyTranslationFallback(reason) {
     this.onTranslationFallback?.({ reason });
-  }
-
-  setSkipReasoning(skip) {
-    this.skipReasoning = skip;
   }
 
   setVoiceAgentRequested(requested) {
@@ -1516,14 +1511,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return normalizedText;
     }
 
-    if (this.skipReasoning) {
-      logger.logReasoning("REASONING_SKIPPED_AGENT_MODE", {
-        source,
-        reason: "skipReasoning is set (agent mode) — returning raw transcription",
-      });
-      return normalizedText;
-    }
-
     logger.logReasoning("TRANSCRIPTION_RECEIVED", {
       source,
       textLength: normalizedText.length,
@@ -2629,7 +2616,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return !!model?.streaming && !!s.tinfoilApiKey;
     }
 
-    // For dictation/agent: respect sttConfig mode from the API — this allows
+    // For dictation: respect sttConfig mode from the API — this allows
     // batch mode even for realtime-capable models (e.g. gpt-4o-mini-transcribe).
     if (this.context !== "notes" && this.sttConfig?.dictation?.mode === "batch") {
       return false;
@@ -3127,7 +3114,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       getBaseLanguageCode(this.getEffectiveSttLanguage(stSettings)) || undefined;
     const streamingSttWordCount = finalText ? finalText.split(/\s+/).filter(Boolean).length : 0;
 
-    if (finalText && !this.skipReasoning) {
+    if (finalText) {
       const reasoningStart = performance.now();
       const agentName = localStorage.getItem("agentName") || null;
       const route = resolveReasoningRoute(
@@ -3262,10 +3249,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   shouldShowPreviewCleanupState() {
     const settings = getSettings();
     return (
-      (!!settings.useCleanupModel ||
-        !!settings.useDictationAgent ||
-        (this.translationRequested && !!settings.useDictationTranslation)) &&
-      !this.skipReasoning
+      !!settings.useCleanupModel ||
+      !!settings.useDictationAgent ||
+      (this.translationRequested && !!settings.useDictationTranslation)
     );
   }
 

@@ -19,7 +19,6 @@ const DEFAULT_HOTKEY = "Control+Super";
 // Slots routed through GNOME native gsettings (not globalShortcut).
 // Temporary slots like "cancel" stay on globalShortcut.
 const GNOME_NATIVE_SLOTS = new Set([
-  "agent",
   "meeting",
   "voiceAgent",
   "translation",
@@ -227,9 +226,7 @@ class HotkeyManager extends EventEmitter {
 
       this.unregisterSlot(slotName);
 
-      if (slotName === "agent") {
-        this.gnomeManager.setAgentCallback(callback);
-      } else if (slotName === "meeting") {
+      if (slotName === "meeting") {
         this.gnomeManager.setMeetingCallback(callback);
       } else if (slotName === "voiceAgent") {
         this.gnomeManager.setVoiceAgentCallback(callback);
@@ -284,10 +281,6 @@ class HotkeyManager extends EventEmitter {
     // KGlobalAccel registrations after crash (Escape would stop working system-wide).
     if (this.useKDE && this.kdeManager && slotName !== "cancel") {
       this.unregisterSlot(slotName);
-
-      if (slotName === "agent") {
-        this.kdeManager.setAgentCallback(callback);
-      }
 
       const result = await this.kdeManager.registerKeybinding(hotkey, slotName, callback);
       if (result !== true) {

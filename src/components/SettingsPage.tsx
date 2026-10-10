@@ -602,7 +602,6 @@ export default function SettingsPage({
 
   const uiMode = useSettingsStore((s) => s.uiMode);
   const setUiMode = useSettingsStore((s) => s.setUiMode);
-  const chatAgentKey = useSettingsStore((s) => s.chatAgentKey);
   const voiceAgentKey = useSettingsStore((s) => s.voiceAgentKey);
   const searchKey = useSettingsStore((s) => s.searchKey);
   const setSearchKey = useSettingsStore((s) => s.setSearchKey);
@@ -732,14 +731,13 @@ export default function SettingsPage({
         {
           "oats.settings.conversationHotkey": conversationKey,
           "settingsPage.general.meetingHotkey.title": meetingKey,
-          "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
           "settingsPage.general.translationHotkey.title": translationKey,
           "settingsPage.general.searchHotkey.title": searchKey,
         },
         t
       ),
-    [conversationKey, meetingKey, chatAgentKey, voiceAgentKey, translationKey, searchKey, t]
+    [conversationKey, meetingKey, voiceAgentKey, translationKey, searchKey, t]
   );
 
   const validateSearchHotkey = useCallback(
@@ -750,13 +748,12 @@ export default function SettingsPage({
           "oats.settings.conversationHotkey": conversationKey,
           "settingsPage.general.hotkey.title": dictationKey,
           "settingsPage.general.meetingHotkey.title": meetingKey,
-          "agentMode.settings.hotkey": chatAgentKey,
           "settingsPage.general.voiceAgentHotkey.title": voiceAgentKey,
           "settingsPage.general.translationHotkey.title": translationKey,
         },
         t
       ),
-    [conversationKey, dictationKey, meetingKey, chatAgentKey, voiceAgentKey, translationKey, t]
+    [conversationKey, dictationKey, meetingKey, voiceAgentKey, translationKey, t]
   );
 
   const { isUsingNativeShortcut, isUsingHyprland, hyprlandConfigStatus, supportsPushToTalk } =

@@ -90,17 +90,6 @@ export interface ThemeSettings {
   theme: "light" | "dark" | "auto";
 }
 
-export interface ChatAgentSettings {
-  chatAgentModel: string;
-  chatAgentProvider: string;
-  chatAgentKey: string;
-  chatAgentCloudMode: string;
-  chatAgentMode: InferenceMode;
-  chatAgentCloudBaseUrl: string;
-  chatAgentRemoteUrl: string;
-  chatAgentCustomApiKey: string;
-}
-
 function useSettingsInternal() {
   const store = useSettingsStore();
   const { setCustomDictionary, applyCustomDictionaryFromExternal, applySnippetsFromExternal } =

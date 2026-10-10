@@ -55,8 +55,7 @@
   },
   "window": {
     "voiceRecorderTitle": "Oats",
-    "controlPanelTitle": "Oats",
-    "agentChatTitle": "Chat del agente"
+    "controlPanelTitle": "Oats"
   },
   "dialog": {
     "openLink": {
@@ -1783,79 +1782,6 @@
     "prompt": {
       "title": "Prompt del agente",
       "description": "El prompt de sistema usado cuando se detecta la palabra de activación. Recurre al valor predeterminado integrado."
-    }
-  },
-  "agentMode": {
-    "settings": {
-      "hotkey": "Atajo del agente de chat",
-      "hotkeyDescription": "Abre y cierra la superposición del agente de chat",
-      "model": "Modelo del Agente",
-      "modelDescription": "Modelo de IA utilizado para conversaciones del agente",
-      "systemPrompt": "Prompt del Sistema",
-      "systemPromptDescription": "Instrucciones personalizadas para el agente",
-      "systemPromptPlaceholder": "Introduce un prompt de sistema personalizado...",
-      "modes": {
-        "legacy": "Oats Cloud",
-        "providers": "Proveedores Cloud",
-        "local": "Local",
-        "selfHosted": "Autoalojado",
-        "legacyDesc": "Resultados fiables. Sin configuración.",
-        "providersDesc": "Trae tu propia clave API.",
-        "localDesc": "Modelos en el dispositivo. Totalmente privado.",
-        "selfHostedDesc": "Tu propio servidor en tu red.",
-        "enterprise": "Empresarial",
-        "enterpriseDesc": "Usa la cuenta en la nube de tu organización (AWS, Azure, GCP)."
-      },
-      "legacyCloud": "Oats Cloud",
-      "legacyCloudDescription": "Resultados fiables. Sin configuración.",
-      "customSetup": "Configuración personalizada (BYOK)",
-      "customSetupDescription": "Usa tus propias claves API y elige tu modelo preferido"
-    },
-    "chat": {
-      "placeholder": "Presiona {{hotkey}} para hablar",
-      "thinking": "Pensando...",
-      "transcribing": "Transcribiendo...",
-      "listening": "Escuchando...",
-      "newConversation": "Nuevo",
-      "copyToClipboard": "Copiar al portapapeles",
-      "copied": "Copiado",
-      "emptyState": "Preguntame lo que sea",
-      "errorPrefix": "Error"
-    },
-    "titleBar": {
-      "label": "Agente",
-      "newChat": "Nueva conversación",
-      "close": "Cerrar"
-    },
-    "input": {
-      "holdToSpeak": "Mantén para hablar",
-      "toClose": "cerrar",
-      "listening": "Escuchando...",
-      "transcribing": "Transcribiendo...",
-      "thinking": "Pensando...",
-      "typeMessage": "Escribe un mensaje...",
-      "send": "Enviar"
-    },
-    "tools": {
-      "search_notesStatus": "Buscando notas...",
-      "web_searchStatus": "Buscando en la web...",
-      "copy_to_clipboardStatus": "Copiando al portapapeles...",
-      "get_calendar_eventsStatus": "Consultando calendario...",
-      "get_noteStatus": "Leyendo nota...",
-      "create_noteStatus": "Creando nota...",
-      "update_noteStatus": "Actualizando nota...",
-      "copiedToClipboard": "Copiado al portapapeles",
-      "foundNotes": "{{count}} nota encontrada",
-      "foundNotes_plural": "{{count}} notas encontradas",
-      "searchResults": "{{count}} resultado encontrado",
-      "searchResults_plural": "{{count}} resultados encontrados",
-      "openNote": "Abrir nota",
-      "calendarEvents": "{{count}} evento encontrado",
-      "calendarEvents_plural": "{{count}} eventos encontrados",
-      "noResults": "Sin resultados",
-      "error": "Error de herramienta",
-      "unknownTool": "Herramienta desconocida: {{name}}",
-      "invalidArgs": "Argumentos de herramienta no válidos para {{name}}"
     }
   },
   "upcoming": {

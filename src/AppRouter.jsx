@@ -9,7 +9,6 @@ import { OatsMark } from "./components/shell/OatsMark";
 
 const OatsWorkspace = React.lazy(() => import("./components/OatsWorkspace.tsx"));
 const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"));
-const AgentOverlay = React.lazy(() => import("./components/AgentOverlay.tsx"));
 
 export default function AppRouter() {
   useTheme();
@@ -34,23 +33,19 @@ function MainApp() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAgentPanel = window.location.search.includes("agent=true");
   const isControlPanel =
-    !isAgentPanel &&
-    (window.location.pathname.includes("control") || window.location.search.includes("panel=true"));
-  const isDictationPanel = !isControlPanel && !isAgentPanel;
+    window.location.pathname.includes("control") || window.location.search.includes("panel=true");
+  const isDictationPanel = !isControlPanel;
 
   useEffect(() => {
-    if (isAgentPanel) {
-      import("./components/AgentOverlay.tsx").catch(() => {});
-    } else if (isControlPanel) {
+    if (isControlPanel) {
       import("./components/OatsWorkspace.tsx").catch(() => {});
 
       if (!localStorage.getItem("onboardingCompleted")) {
         import("./components/OnboardingFlow.tsx").catch(() => {});
       }
     }
-  }, [isAgentPanel, isControlPanel]);
+  }, [isControlPanel]);
 
   useEffect(() => {
     const resolved = localStorage.getItem("onboardingCompleted") === "true";
@@ -76,14 +71,6 @@ function MainApp() {
     // every later launch shows it. It appears as onboarding ends instead.
     void window.electronAPI?.showDictationPanel?.();
   };
-
-  if (isAgentPanel) {
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        <AgentOverlay />
-      </Suspense>
-    );
-  }
 
   if (isLoading) {
     return <LoadingFallback />;

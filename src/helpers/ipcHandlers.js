@@ -1383,106 +1383,6 @@ class IPCHandlers {
       return result;
     });
 
-    // Agent conversation handlers
-    ipcMain.handle("db-create-agent-conversation", async (event, title, noteId) => {
-      return this.databaseManager.createAgentConversation(title, noteId);
-    });
-
-    ipcMain.handle("db-get-conversations-for-note", async (event, noteId, limit) => {
-      return this.databaseManager.getConversationsForNote(noteId, limit);
-    });
-
-    ipcMain.handle("db-get-agent-conversations", async (event, limit) => {
-      return this.databaseManager.getAgentConversations(limit);
-    });
-
-    ipcMain.handle("db-get-agent-conversation", async (event, id) => {
-      return this.databaseManager.getAgentConversation(id);
-    });
-
-    ipcMain.handle("db-delete-agent-conversation", async (event, id) => {
-      const result = this.databaseManager.deleteAgentConversation(id);
-      if (this.vectorIndex?.isReady?.()) {
-        this.vectorIndex.deleteConversationChunks(id).catch(() => {});
-      }
-      return result;
-    });
-
-    ipcMain.handle("db-update-agent-conversation-title", async (event, id, title) => {
-      return this.databaseManager.updateAgentConversationTitle(id, title);
-    });
-
-    ipcMain.handle(
-      "db-add-agent-message",
-      async (event, conversationId, role, content, metadata) => {
-        const result = this.databaseManager.addAgentMessage(
-          conversationId,
-          role,
-          content,
-          metadata
-        );
-        if (this.vectorIndex?.isReady?.()) {
-          const conv = this.databaseManager.getAgentConversation(conversationId);
-          if (conv && conv.messages?.length % 3 === 0) {
-            this.vectorIndex
-              .upsertConversationChunks(conversationId, conv.title, conv.messages)
-              .catch(() => {});
-          }
-        }
-        return result;
-      }
-    );
-
-    ipcMain.handle("db-get-agent-messages", async (event, conversationId) => {
-      return this.databaseManager.getAgentMessages(conversationId);
-    });
-
-    ipcMain.handle(
-      "db-get-agent-conversations-with-preview",
-      async (event, limit, offset, includeArchived) => {
-        return this.databaseManager.getAgentConversationsWithPreview(
-          limit,
-          offset,
-          includeArchived
-        );
-      }
-    );
-
-    ipcMain.handle("db-search-agent-conversations", async (event, query, limit) => {
-      return this.databaseManager.searchAgentConversations(query, limit);
-    });
-
-    ipcMain.handle("db-archive-agent-conversation", async (event, id) => {
-      return this.databaseManager.archiveAgentConversation(id);
-    });
-
-    ipcMain.handle("db-unarchive-agent-conversation", async (event, id) => {
-      return this.databaseManager.unarchiveAgentConversation(id);
-    });
-
-    ipcMain.handle("db-semantic-search-conversations", async (event, query, limit) => {
-      if (this.vectorIndex?.isReady?.()) {
-        try {
-          const vectorResults = await this.vectorIndex.searchConversations(query, limit);
-          if (vectorResults?.length > 0) {
-            const ids = vectorResults.map((r) => r.conversationId);
-            const previews = ids
-              .map((id) => this.databaseManager.getAgentConversation(id))
-              .filter(Boolean)
-              .map((c) => ({
-                ...c,
-                message_count: c.messages?.length ?? 0,
-                last_message: c.messages?.[c.messages.length - 1]?.content,
-              }));
-            if (previews.length > 0) return previews;
-          }
-        } catch {
-          // fall through to keyword search
-        }
-      }
-      return this.databaseManager.searchAgentConversations(query, limit);
-    });
-
     ipcMain.handle("export-note", async (event, noteId, format) => {
       try {
         const note = this.databaseManager.getNote(noteId);
@@ -2467,7 +2367,7 @@ class IPCHandlers {
 
       if (enabled) {
         // Entering capture mode — unregister ALL slots so none intercept keypresses.
-        // Dictation is always active; meeting and agent may or may not be set.
+        // Dictation is always active; the other slots may or may not be set.
         const allSlots = hotkeyManager.slots;
         for (const [slot, info] of allSlots) {
           // Native-listener entries (null accelerator) are handled by stopping
@@ -2584,7 +2484,7 @@ class IPCHandlers {
           }
         }
 
-        // Re-register non-dictation slots (meeting, agent) that were unregistered on capture enter
+        // Re-register non-dictation slots that were unregistered on capture enter
         for (const [slot, info] of hotkeyManager.slots) {
           const hotkeys = info?.hotkeys || [];
           if (slot === "dictation" || slot === "cancel" || hotkeys.length === 0 || !info?.callback)
@@ -6356,21 +6256,6 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("agent-open-note", async (_event, noteId) => {
-      try {
-        const note = this.databaseManager.getNote(noteId);
-        await this.windowManager.createControlPanelWindow();
-        this.windowManager.sendToControlPanel("navigate-to-note", {
-          noteId,
-          folderId: note?.folder_id ?? null,
-        });
-        return { success: true };
-      } catch (error) {
-        debugLogger.error("Failed to open note from agent:", error);
-        return { success: false, error: error.message };
-      }
-    });
-
     ipcMain.handle(
       "transcribe-audio-file-byok",
       async (
@@ -6721,36 +6606,6 @@ class IPCHandlers {
       return this.updateManager.getUpdateInfo();
     });
 
-    // Agent mode handlers
-    ipcMain.handle("update-agent-hotkey", async (_event, hotkey) => {
-      const hotkeyManager = this.windowManager.hotkeyManager;
-      const agentCallback = this.windowManager._agentHotkeyCallback;
-      if (!agentCallback) {
-        return { success: false, message: "Agent hotkey callback not initialized" };
-      }
-
-      if (!hotkey) {
-        hotkeyManager.unregisterSlot("agent");
-        this.environmentManager.saveAgentKey?.("");
-        this.windowManager.reconcileNativeKeyListeners();
-        return { success: true, message: "Agent hotkey cleared" };
-      }
-
-      const result = await hotkeyManager.registerSlot("agent", hotkey, agentCallback, {
-        atomic: true,
-      });
-      this.windowManager.reconcileNativeKeyListeners();
-      if (result.success) {
-        this.environmentManager.saveAgentKey?.(hotkey);
-        return { success: true, message: `Agent hotkey updated to: ${hotkey}` };
-      }
-
-      return {
-        success: false,
-        message: result.error || `Failed to update agent hotkey to: ${hotkey}`,
-      };
-    });
-
     // Re-registers the dictation shortcut live.
     //
     // Before this existed there was no such handler at all: changing the key
@@ -6888,38 +6743,6 @@ class IPCHandlers {
 
     ipcMain.handle("get-translation-key", async () => {
       return this.environmentManager.getTranslationKey?.() || "";
-    });
-
-    ipcMain.handle("get-agent-key", async () => {
-      return this.environmentManager.getAgentKey?.() || "";
-    });
-
-    ipcMain.handle("save-agent-key", async (_event, key) => {
-      return this.environmentManager.saveAgentKey?.(key) || { success: true };
-    });
-
-    ipcMain.handle("toggle-agent-overlay", async () => {
-      void this.windowManager.toggleAgentOverlay();
-      return { success: true };
-    });
-
-    ipcMain.handle("hide-agent-overlay", async () => {
-      this.windowManager.hideAgentOverlay();
-      return { success: true };
-    });
-
-    ipcMain.handle("resize-agent-window", async (_event, width, height) => {
-      this.windowManager.resizeAgentWindow(width, height);
-      return { success: true };
-    });
-
-    ipcMain.handle("get-agent-window-bounds", async () => {
-      return this.windowManager.getAgentWindowBounds();
-    });
-
-    ipcMain.handle("set-agent-window-bounds", async (_event, x, y, width, height) => {
-      this.windowManager.setAgentWindowBounds(x, y, width, height);
-      return { success: true };
     });
 
     ipcMain.handle("acquire-recording-lock", async (_event, pipeline) => {

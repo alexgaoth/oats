@@ -159,18 +159,6 @@ OpenWhispr tries clipboard methods in order: `wl-copy` (most reliable) → rende
 3. Ensure your meeting app (Zoom, Teams, FaceTime) is running — process detection looks for known meeting applications
 4. If auto-detection fails, you can manually start recording from the in-app meeting prompt (an always-on-top overlay card — it works even with Focus/Do Not Disturb on and never appears in screen shares)
 
-### Agent Mode Issues
-
-**Symptoms:** Agent overlay not appearing, no AI responses, streaming errors
-
-**Fix:**
-
-1. Ensure Agent Mode is enabled in Settings → Agent Mode
-2. Check that you have a valid API key for your selected provider
-3. Verify the agent hotkey doesn't conflict with other global shortcuts
-4. For local models: ensure the model is downloaded and llama-server is running
-5. For Metal OOM on macOS: try a smaller local model
-
 ### Windows-Specific Issues
 
 **No window appears (process running in Task Manager but invisible):**

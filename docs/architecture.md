@@ -73,7 +73,7 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **dragManager.js**: Window dragging functionality
 - **environment.js**: Environment variable and OpenAI API management
 - **hotkeyManager.js**: Global hotkey registration and management
-  - Named hotkey slots: `conversation` (**the primary action** — starts/stops an in-person conversation from anywhere; the only slot with a shipped default, `CommandOrControl+Shift+O`, with a fallback if that is taken), `dictation`, `agent` (chat agent overlay), `voiceAgent` (dictation routed straight to the dictation agent), `meeting`, `translation`, `search` (opens Intelligence with the cross-conversation filter focused; opt-in, no default)
+  - Named hotkey slots: `conversation` (**the primary action** — starts/stops an in-person conversation from anywhere; the only slot with a shipped default, `CommandOrControl+Shift+O`, with a fallback if that is taken), `dictation`, `voiceAgent` (dictation routed straight to the dictation agent), `meeting`, `translation`, `search` (opens Intelligence with the cross-conversation filter focused; opt-in, no default)
   - Handles platform-specific defaults (GLOBE on macOS, Control+Super on Windows/Linux)
   - Auto-fallback to F8/F9 if default hotkey is unavailable
   - Notifies renderer via IPC when hotkey registration fails
@@ -170,7 +170,7 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **ReasoningService.ts**: AI processing for agent-addressed commands
   - Detects when user addresses their named agent and removes the agent name from final output
   - Provider implementations live in a registry at `src/services/ai/inferenceProviders/index.ts` covering 8 providers (`anthropic`, `enterprise`, `gemini`, `groq`, `lan`, `local`, `openai`, `openwhispr`), each implementing the `InferenceProvider` interface from `types.ts`
-  - Per-scope LLM config: 4 scopes (`dictationCleanup`, `dictationAgent`, `noteFormatting`, `chatIntelligence`) defined in `src/config/inferenceScopes.ts`
+  - Per-scope LLM config: 4 scopes (`dictationCleanup`, `dictationAgent`, `noteFormatting`, `dictationTranslation`) defined in `src/config/inferenceScopes.ts`
   - `selectResolvedLLMConfig(state, scope)` in `settingsStore.ts` resolves provider/model per scope with fallback chains
 
 ### whisper.cpp Integration
@@ -207,7 +207,7 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 
 ### Local Semantic Search (Qdrant + MiniLM)
 
-Always-on offline semantic search that finds notes by meaning, not just keywords. Used by the AI agent's `search_notes` tool. Qdrant starts automatically on app launch; embedding model auto-downloads on first run if missing.
+Always-on offline semantic search that finds notes by meaning, not just keywords. Used by the Intelligence search (`semanticSearchNotes` in `OatsWorkspace.tsx`). Qdrant starts automatically on app launch; embedding model auto-downloads on first run if missing.
 
 **Architecture**:
 
@@ -222,9 +222,7 @@ Always-on offline semantic search that finds notes by meaning, not just keywords
 
 1. App launches → Qdrant binary starts → collection created. Embedding model auto-downloads if missing (~22MB)
 2. Note create/update/delete → SQLite write → background vector upsert/delete via `_asyncVectorUpsert()`/`_asyncVectorDelete()`
-3. Agent searches → `db-semantic-search-notes` IPC → parallel FTS5 + vector search → RRF merge → ranked results
-
-**Search fallback chain** (in `searchNotesTool.ts`): cloud search → local semantic → FTS5 keyword
+3. Intelligence search → `db-semantic-search-notes` IPC → parallel FTS5 + vector search → RRF merge → ranked results
 
 **Storage**:
 
@@ -616,7 +614,7 @@ Detects meetings via three independent sources, orchestrated by `MeetingDetectio
 
 ### 17. Voice Agent Hotkey
 
-A dedicated global hotkey that starts a dictation whose transcript is sent straight to the dictation agent as a command — no wake word ("Hey [AgentName]") needed — and that always bypasses the cleanup model. Separate from the chat agent hotkey (`CHAT_AGENT_KEY`), which toggles the agent overlay window.
+A dedicated global hotkey that starts a dictation whose transcript is sent straight to the dictation agent as a command — no wake word ("Hey [AgentName]") needed — and that always bypasses the cleanup model.
 
 **Flow**:
 
@@ -699,7 +697,7 @@ const { t } = useTranslation();
 - [ ] Verify meeting detection works with event-driven mode (check debug logs for "event-driven")
 - [ ] Test meeting notification suppression during recording
 - [ ] Test post-recording cooldown (notifications shouldn't flash immediately)
-- [ ] Create a note about "quarterly revenue projections", search via agent for "financial forecast" — should match semantically
+- [ ] Create a note about "quarterly revenue projections", search Intelligence for "financial forecast" — should match semantically
 - [ ] Verify Qdrant starts on app launch (check debug logs for "qdrant started successfully")
 - [ ] Kill Qdrant process manually — verify FTS5 keyword search still works as fallback
 
@@ -752,7 +750,7 @@ const { t } = useTranslation();
    - Run `npm run download:qdrant` and `npm run download:embedding-model` manually if missing
    - Check debug logs for "qdrant" entries (port, health check, errors)
    - If Qdrant fails to start, search still works via FTS5 keyword fallback
-   - Semantic search is only available through the AI agent's `search_notes` tool, not the manual search UI
+   - Semantic search feeds the Intelligence search (`semanticSearchNotes` in `OatsWorkspace.tsx`)
 
 ### Platform-Specific Notes
 

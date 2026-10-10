@@ -15,7 +15,7 @@ below.
 Regenerate the numbers by walking the graph again; they were last computed on
 2026-08-22, after the deletion described at the end.
 
-## The six renderer entry points
+## The five renderer entry points
 
 `AppRouter.jsx` dispatches on the query string. There is no router library and
 no route table — this list is the whole of it.
@@ -25,7 +25,6 @@ no route table — this list is the whole of it.
 | `OatsWorkspace.tsx`               | `?panel=true`                 | **Oats primary.** The three surfaces: Conversation, Intelligence, Settings.    |
 | `OnboardingFlow.tsx`              | `?panel=true`, first run      | **Oats primary.** One step: microphone permission.                             |
 | `App.jsx`                         | _(none)_                      | **Oats primary.** The floating oat — the only thing that says Oats is running. |
-| `AgentOverlay.tsx`                | `?agent=true`                 | **Compatibility.** The inherited voice-agent chat panel.                       |
 | `MeetingNotificationOverlay.tsx`  | `?meeting-notification=true`  | **Oats primary.** "A meeting started — record it?"                             |
 | `UpdateNotificationOverlay.tsx`   | `?update-notification=true`   | **Compatibility.** Inherited updater UI.                                       |
 | `TranscriptionPreviewOverlay.tsx` | `?transcription-preview=true` | **Compatibility.** Dictation preview.                                          |
@@ -66,12 +65,15 @@ largest single block of inherited surface area, and the product direction allows
 exactly one API key. Isolating it further, or deleting the enterprise cloud
 credentials path, is a product decision that has not been made.
 
-## Agent overlay — 12 components, 1,318 lines
+## Agent overlay — deleted 2026-10-10
 
-Compatibility. The inherited chat agent: `AgentOverlay`, `agent/*`, `chat/*`
-(`ChatMessage`, `ChatInput`, `ChatMessages`, `useChatStreaming`,
-`useChatPersistence`). Not one of the three surfaces, reachable only by its own
-window, and untouched by the art-direction reset.
+The inherited chat agent window (`AgentOverlay`, `agent/*`, `chat/*`, the
+`services/tools/*` registry, its `?agent=true` route, hotkey slot, IPC channels
+and the `agentMode` strings) was deleted. Nothing opened it: its shortcut
+defaulted to empty and, since the Settings rebuild, no setting could set one.
+Its stored conversations (`agent_conversations`, `agent_messages`) and the
+database and vector-index code that reads them remain until a decision on that
+data.
 
 ## Deleted — 67 files, 10,471 lines
 

@@ -694,8 +694,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAutoStartEnabled: () => ipcRenderer.invoke("get-auto-start-enabled"),
   setAutoStartEnabled: (enabled) => ipcRenderer.invoke("set-auto-start-enabled", enabled),
 
-  // Agent mode
-  updateAgentHotkey: (hotkey) => ipcRenderer.invoke("update-agent-hotkey", hotkey),
+  // Hotkey slots
   updateDictationHotkey: (hotkey) => ipcRenderer.invoke("update-dictation-hotkey", hotkey),
   updateVoiceAgentHotkey: (hotkey) => ipcRenderer.invoke("update-voice-agent-hotkey", hotkey),
   updateSearchHotkey: (hotkey) => ipcRenderer.invoke("update-search-hotkey", hotkey),
@@ -708,20 +707,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getVoiceAgentKey: () => ipcRenderer.invoke("get-voice-agent-key"),
   updateTranslationHotkey: (hotkey) => ipcRenderer.invoke("update-translation-hotkey", hotkey),
   getTranslationKey: () => ipcRenderer.invoke("get-translation-key"),
-  getAgentKey: () => ipcRenderer.invoke("get-agent-key"),
-  saveAgentKey: (key) => ipcRenderer.invoke("save-agent-key", key),
-  onAgentStartRecording: registerListener("agent-start-recording", (callback) => () => callback()),
-  onAgentStopRecording: registerListener("agent-stop-recording", (callback) => () => callback()),
-  onAgentToggleRecording: registerListener(
-    "agent-toggle-recording",
-    (callback) => () => callback()
-  ),
-  toggleAgentOverlay: () => ipcRenderer.invoke("toggle-agent-overlay"),
-  hideAgentOverlay: () => ipcRenderer.invoke("hide-agent-overlay"),
-  resizeAgentWindow: (width, height) => ipcRenderer.invoke("resize-agent-window", width, height),
-  getAgentWindowBounds: () => ipcRenderer.invoke("get-agent-window-bounds"),
-  setAgentWindowBounds: (x, y, width, height) =>
-    ipcRenderer.invoke("set-agent-window-bounds", x, y, width, height),
   onPreviewText: registerListener("preview-text", (callback) => (_event, text) => callback(text)),
   onPreviewAppend: registerListener(
     "preview-append",
@@ -746,31 +731,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sendDictationPreviewAudio: (data) => ipcRenderer.send("dictation-preview-audio", data),
   acquireRecordingLock: (pipeline) => ipcRenderer.invoke("acquire-recording-lock", pipeline),
   releaseRecordingLock: (pipeline) => ipcRenderer.invoke("release-recording-lock", pipeline),
-
-  // Agent tools
-  agentOpenNote: (noteId) => ipcRenderer.invoke("agent-open-note", noteId),
-
-  // Agent conversation persistence
-  createAgentConversation: (title, noteId) =>
-    ipcRenderer.invoke("db-create-agent-conversation", title, noteId),
-  getAgentConversations: (limit) => ipcRenderer.invoke("db-get-agent-conversations", limit),
-  getAgentConversation: (id) => ipcRenderer.invoke("db-get-agent-conversation", id),
-  deleteAgentConversation: (id) => ipcRenderer.invoke("db-delete-agent-conversation", id),
-  updateAgentConversationTitle: (id, title) =>
-    ipcRenderer.invoke("db-update-agent-conversation-title", id, title),
-  addAgentMessage: (conversationId, role, content, metadata) =>
-    ipcRenderer.invoke("db-add-agent-message", conversationId, role, content, metadata),
-  getAgentMessages: (conversationId) => ipcRenderer.invoke("db-get-agent-messages", conversationId),
-  getAgentConversationsWithPreview: (limit, offset, includeArchived) =>
-    ipcRenderer.invoke("db-get-agent-conversations-with-preview", limit, offset, includeArchived),
-  searchAgentConversations: (query, limit) =>
-    ipcRenderer.invoke("db-search-agent-conversations", query, limit),
-  getConversationsForNote: (noteId, limit) =>
-    ipcRenderer.invoke("db-get-conversations-for-note", noteId, limit),
-  archiveAgentConversation: (id) => ipcRenderer.invoke("db-archive-agent-conversation", id),
-  unarchiveAgentConversation: (id) => ipcRenderer.invoke("db-unarchive-agent-conversation", id),
-  semanticSearchConversations: (query, limit) =>
-    ipcRenderer.invoke("db-semantic-search-conversations", query, limit),
 
   broadcastDictionaryUpdated: () => ipcRenderer.invoke("db-broadcast-dictionary-updated"),
   broadcastSnippetsUpdated: () => ipcRenderer.invoke("db-broadcast-snippets-updated"),
@@ -800,10 +760,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   meetingNotificationReady: () => ipcRenderer.invoke("meeting-notification-ready"),
   meetingNotificationRespond: (detectionId, action) =>
     ipcRenderer.invoke("meeting-notification-respond", detectionId, action),
-  onNavigateToNote: registerListener(
-    "navigate-to-note",
-    (callback) => (_event, data) => callback(data)
-  ),
 
   onUpdateNotificationData: registerListener(
     "update-notification-data",
