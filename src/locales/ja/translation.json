@@ -2062,6 +2062,13 @@
       "vaultStop": "停止",
       "autoSearch": "未回答の質問を検索",
       "autoSearchHint": "誰も知らないとき、Google 検索を背後で開きます。送るのは質問文だけ。音声も文字起こしも送りません。オフでもカードは出ます。",
+      "advanced": {
+        "title": "詳細設定",
+        "dictation": "音声入力",
+        "dictationDescription": "どのアプリでも声で入力できます。フローティングボタンと、設定の「音声入力」ページが追加されます。",
+        "shortcut": "ショートカット",
+        "shortcutMode": "タップまたはホールド"
+      },
       "advancedLoading": "開いています…",
       "hotkeyRejected": "「{{hotkey}}」を登録できなかったため、以前のショートカットのままです。",
       "conversationHotkey": "会話のショートカット",
@@ -2168,9 +2175,7 @@
         "description": "Oats がバックグラウンドでも使えます。",
         "conversation": "会話を開始・停止",
         "conversationHint": "その場を録音するか、進行中の会話を終了します。",
-        "dictation": "音声入力",
         "dictationHint": "話した内容をカーソルの位置に入力します。",
-        "activation": "音声入力キー",
         "activationHint": "タップで開始・停止、または話している間押し続けます。",
         "search": "会話を検索",
         "searchHint": "検索欄を開いた状態で Oats を表示します。"

@@ -2057,6 +2057,13 @@
       "vaultStop": "停止",
       "autoSearch": "搜尋未獲解答的問題",
       "autoSearchHint": "沒人知道答案時，在背景開啟 Google 搜尋。只送出問題文字，絕不送出音訊或逐字稿。關閉後卡片仍會出現。",
+      "advanced": {
+        "title": "進階",
+        "dictation": "聽寫",
+        "dictationDescription": "在任何應用程式中以語音輸入。會新增一個浮動按鈕，並在設定中新增「聽寫」頁面。",
+        "shortcut": "快速鍵",
+        "shortcutMode": "點按或按住"
+      },
       "advancedLoading": "正在開啟…",
       "hotkeyRejected": "無法註冊「{{hotkey}}」，因此仍在使用先前的快捷鍵。",
       "conversationHotkey": "對話快速鍵",
@@ -2163,9 +2170,7 @@
         "description": "即使 Oats 在背景也能使用。",
         "conversation": "開始或停止對話",
         "conversationHint": "錄下現場，或結束進行中的對話。",
-        "dictation": "聽寫",
         "dictationHint": "在游標處輸入你說的話。",
-        "activation": "聽寫按鍵",
         "activationHint": "輕按開始與停止，或說話時按住。",
         "search": "搜尋對話",
         "searchHint": "開啟 Oats 並備妥搜尋欄。"

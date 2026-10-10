@@ -41,6 +41,7 @@ const PERSISTED_KEYS = [
   "TRANSLATION_KEY",
   "MEETING_KEY",
   "ACTIVATION_MODE",
+  "DICTATION_ENABLED",
   "FLOATING_ICON_AUTO_HIDE",
   "PANEL_START_POSITION",
   "START_MINIMIZED",
@@ -437,6 +438,25 @@ class EnvironmentManager {
     const validMode = mode === "push" ? "push" : "tap";
     const result = this._saveKey("ACTIVATION_MODE", validMode);
     this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+
+  // Off on macOS and on elsewhere until the user chooses. An unset value is the
+  // platform default, so an install that never chose keeps following it.
+  // The renderer's twin is `resolveDictationEnabled` in dictationSetting.mjs.
+  getDictationEnabled() {
+    const stored = this._getKey("DICTATION_ENABLED");
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return process.platform !== "darwin";
+  }
+
+  // Awaited by the caller: turning dictation on can bind the default key, which
+  // makes hotkeyManager build its own EnvironmentManager, and that reloads .env
+  // with override. A choice not yet on disk would be read back as the old one.
+  async saveDictationEnabled(enabled) {
+    const result = this._saveKey("DICTATION_ENABLED", String(enabled === true));
+    await this.saveAllKeysToEnvFile().catch(() => {});
     return result;
   }
 
