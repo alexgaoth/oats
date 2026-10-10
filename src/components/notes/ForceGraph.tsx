@@ -52,28 +52,20 @@ const LABEL_RADIUS = 24;
 // picture of nothing).
 const SPARSE_GRAPH_NODES = 8;
 
+// The same vocabulary as the live flow card (`ConversationFlow`): the topic
+// being talked about now is the brand, an open one is neutral, a resolved one
+// is green, and a dropped one is a hollow ring. Red is not used, because in
+// Oats red means recording or danger (DESIGN.md §2). The fill or ring carries
+// the state without colour, so it reads in greyscale.
 const STATE_VAR: Record<ThreadState, string> = {
-  live: "--graph-uncertain",
-  open: "--graph-open",
-  resolved: "--graph-answered",
-  dropped: "--graph-silence",
-};
-
-// Dither density encodes uncertainty (DESIGN.md §4): a resolved thread is solid,
-// a dropped one is barely there. Drawn as a stipple so it survives greyscale.
-//
-// The value is the share of the disc taken back to paper, quantised to the 4×4
-// Bayer matrix's sixteenths: open keeps ~69% of its ink ("dense"), dropped ~38%
-// (§4's "sparse, 40% ink").
-const STATE_DITHER: Record<ThreadState, number> = {
-  live: 0,
-  open: 0.3,
-  resolved: 0,
-  dropped: 0.6,
+  live: "--color-primary",
+  open: "--color-muted-foreground",
+  resolved: "--color-success",
+  dropped: "--color-muted-foreground",
 };
 
 function readColor(styles: CSSStyleDeclaration, name: string): string {
-  return styles.getPropertyValue(name).trim() || "#6B6459";
+  return styles.getPropertyValue(name).trim() || "#71717a";
 }
 
 // The palette is read on mount and whenever the theme changes — never inside the
@@ -86,16 +78,13 @@ interface Palette {
   ink: string;
   background: string;
   accent: string;
-  mono: string;
+  sans: string;
   state: Record<ThreadState, string>;
 }
 
-// Deliberately the *same* token the rest of the app uses for machine state
-// (DESIGN.md §C3). Canvas text does not inherit CSS, so a hard-coded stack here
-// silently diverges from the DOM: on macOS both happen to resolve to SF Mono, so
-// the divergence is invisible on the platform this mostly runs on and visible
-// everywhere else.
-const MONO_FALLBACK = 'ui-monospace, "SF Mono", monospace';
+// Canvas text does not inherit CSS, so the label font is read from the same
+// token the DOM uses. Inter, like every other label in the app (DESIGN.md §3).
+const SANS_FALLBACK = '"Inter Variable", ui-sans-serif, system-ui, sans-serif';
 
 function readPalette(element: Element): Palette {
   const styles = getComputedStyle(element);
@@ -103,7 +92,7 @@ function readPalette(element: Element): Palette {
     ink: readColor(styles, "--color-foreground"),
     background: readColor(styles, "--color-surface-0"),
     accent: readColor(styles, "--color-primary"),
-    mono: styles.getPropertyValue("--font-family-mono").trim() || MONO_FALLBACK,
+    sans: styles.getPropertyValue("--font-family-sans").trim() || SANS_FALLBACK,
     state: {
       live: readColor(styles, STATE_VAR.live),
       open: readColor(styles, STATE_VAR.open),
@@ -156,7 +145,7 @@ function truncateLabel(ctx: CanvasRenderingContext2D, label: string, maxWidth: n
 // adds either side so a hairline stops short of the first letter.
 const LABEL_GAP = 6;
 const LABEL_PAD = 5;
-const LABEL_LINE = 13;
+const LABEL_LINE = 15;
 
 interface LabelBox {
   left: number;
@@ -193,37 +182,21 @@ function overlapsNode(box: LabelBox, nodes: SimNode[], ownId: number): boolean {
   });
 }
 
-function drawDither(
+/** A dropped topic: a hollow ring, so it reads as gone without colour. */
+function drawHollow(
   ctx: CanvasRenderingContext2D,
   node: SimNode,
-  density: number,
+  color: string,
   background: string
 ) {
-  if (density <= 0) return;
   ctx.save();
   ctx.beginPath();
-  ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-  ctx.clip();
+  ctx.arc(node.x, node.y, node.radius - 0.75, 0, Math.PI * 2);
   ctx.fillStyle = background;
-  const step = 3;
-  // Ordered 4×4 Bayer thresholding — crisp and pixel-locked, never blurred noise.
-  //
-  // Each hole fills its whole cell, on a lattice fixed to the canvas. Holes
-  // used to be 2×2 in a 3×3 cell, so even the densest setting left 56% of the
-  // disc inked and "dropped" drew at ~69% — the one-off conversations on the
-  // lifetime map were its heaviest, darkest objects, the opposite of §4. The
-  // cells start on whole pixels so neighbouring holes meet without a seam, and
-  // the lattice does not travel with a dragged node.
-  const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-  const x0 = Math.floor((node.x - node.radius) / step) * step;
-  const y0 = Math.floor((node.y - node.radius) / step) * step;
-  for (let y = y0; y < node.y + node.radius; y += step) {
-    for (let x = x0; x < node.x + node.radius; x += step) {
-      const bx = (((x / step) % 4) + 4) % 4;
-      const by = (((y / step) % 4) + 4) % 4;
-      if (bayer[by * 4 + bx] / 16 < density) ctx.fillRect(x, y, step, step);
-    }
-  }
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -392,15 +365,17 @@ export default function ForceGraph<TNode extends GraphNode>({
     for (const node of nodes) {
       const color = palette.state[node.state] ?? palette.state.dropped;
       const selected = selectedId === node.id;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
-      ctx.restore();
-
-      drawDither(ctx, node, STATE_DITHER[node.state] ?? 0, background);
+      if (node.state === "dropped") {
+        drawHollow(ctx, node, color, background);
+      } else {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+        ctx.restore();
+      }
 
       if (selected || hoveredId === node.id) {
         ctx.save();
@@ -423,7 +398,7 @@ export default function ForceGraph<TNode extends GraphNode>({
     // that looks like it is floating loose over the picture rather than naming a
     // node. One pass for the structure, then one pass for the names.
     ctx.save();
-    ctx.font = `11px ${palette.mono}`;
+    ctx.font = `500 12px ${palette.sans}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
 
