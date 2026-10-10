@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { buildContour, contourStrip } from "../../helpers/conversationContour.mjs";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  LIVE_BUCKET_MS,
+  buildContour,
+  buildLiveContour,
+  contourStrip,
+} from "../../helpers/conversationContour.mjs";
 import { buildConversationGraph, responseReason } from "../../helpers/conversationGraph";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { ContourData } from "./ConversationContour";
@@ -54,57 +59,127 @@ function utterancesFor(segments: TranscriptSegment[]) {
     id: segment.id,
     text: segment.text,
     timestamp: segment.timestamp,
+    // In-room segments carry their exact place in the recording, so the live
+    // contour can draw speech for exactly as long as it lasted.
+    durationMs:
+      Number.isFinite(segment.startMs) && Number.isFinite(segment.endMs)
+        ? (segment.endMs as number) - (segment.startMs as number)
+        : undefined,
   }));
 }
 
+/** Seconds of microphone level kept for the live contour's scale. */
+const LEVEL_HISTORY_SECONDS = 660;
+
 /**
- * The live contour, during a recording.
+ * The microphone level, one peak per second, for as long as a recording runs.
  *
- * Rebuilt when a finalized utterance arrives (~5s in local mode) or a question
- * card changes — not on a timer and not per frame. The one time-driven part is
- * the trailing edge: while somebody is talking the window keeps growing, so the
- * right-hand end advances even when nothing new has been said. That is a
- * once-every-15-seconds redraw of a static canvas, not an animation.
+ * Read from the 10Hz level `MeetingRecordingMount` already publishes, through a
+ * store subscription rather than a selector: the samples feed the once-a-second
+ * redraw and must not re-render anything ten times a second themselves.
+ */
+function useLevelHistory(recording: boolean) {
+  const history = useRef<{ at: number; level: number }[]>([]);
+  useEffect(() => {
+    history.current = [];
+    if (!recording) return;
+    return useMeetingRecordingStore.subscribe((state, previous) => {
+      if (state.currentMicLevel === previous.currentMicLevel) return;
+      const second = Math.floor(Date.now() / LIVE_BUCKET_MS) * LIVE_BUCKET_MS;
+      const list = history.current;
+      const last = list[list.length - 1];
+      if (last && last.at === second) {
+        last.level = Math.max(last.level, state.currentMicLevel);
+        return;
+      }
+      list.push({ at: second, level: state.currentMicLevel });
+      if (list.length > LEVEL_HISTORY_SECONDS) list.splice(0, list.length - LEVEL_HISTORY_SECONDS);
+    });
+  }, [recording]);
+  return history;
+}
+
+/**
+ * The live contour, during a recording: the last four minutes, rolling.
+ *
+ * Rebuilt once a second, on the second boundary, so each redraw moves the
+ * trace and every pin exactly one second to the left (`buildLiveContour`).
+ * Speech still being transcribed and the microphone level count too, so the
+ * right-hand edge moves while somebody is talking, not only when a pause
+ * finalizes a segment. One redraw of a static canvas per second, not an
+ * animation loop.
  */
 export function useLiveContour(startedAt: number | null): ContourData {
   const segments = useMeetingRecordingStore((state) => state.segments);
   const cards = useMeetingRecordingStore((state) => state.questionCards);
   const moments = useMeetingRecordingStore((state) => state.moments);
   const recording = useMeetingRecordingStore((state) => state.isRecording);
+  const micPartial = useMeetingRecordingStore((state) => state.micPartial);
+  const systemPartial = useMeetingRecordingStore((state) => state.systemPartial);
   // The snapshot the store publishes after each utterance. Not the tracker's
   // final snapshot: that one commits the tracker's held turn, and taking it on
   // every utterance meant no change of subject could ever start a topic.
   const topicSnapshot = useMeetingRecordingStore((state) => state.topicSnapshot);
-  const [edge, setEdge] = useState(() => Date.now());
+  const levels = useLevelHistory(recording);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!recording) return;
-    const timer = window.setInterval(() => setEdge(Date.now()), 15000);
-    return () => window.clearInterval(timer);
+    let interval = 0;
+    // Started on the second boundary, so a redraw never lands mid-bucket.
+    const align = window.setTimeout(
+      () => {
+        setNow(Date.now());
+        interval = window.setInterval(() => setNow(Date.now()), LIVE_BUCKET_MS);
+      },
+      LIVE_BUCKET_MS - (Date.now() % LIVE_BUCKET_MS) + 15
+    );
+    return () => {
+      window.clearTimeout(align);
+      window.clearInterval(interval);
+    };
   }, [recording]);
 
   return useMemo(() => {
     const snapshot: ConversationTopicSnapshot | null = recording ? topicSnapshot : null;
-    return buildContour({
+    const topics = snapshot?.nodes ? topicsForContour(snapshot.nodes) : NO_CONTOUR_TOPICS;
+    if (!recording) {
+      return buildContour({
+        utterances: utterancesFor(segments),
+        questions: cards,
+        topics,
+        moments,
+        startedAt: startedAt ?? undefined,
+      }) as ContourData;
+    }
+    // Both the window and the label are this sitting, never the transcript.
+    // Continuing a recent conversation seeds up to half an hour of previous
+    // segments into the store; nothing before `startedAt` is drawn or counted.
+    // `Date.now()` as well as the tick: a mark is pressed *now*, past the last
+    // tick, and a window that stopped short would drop its caret.
+    const time = Math.max(now, Date.now());
+    return buildLiveContour({
       utterances: utterancesFor(segments),
+      partials: [micPartial, systemPartial].filter(Boolean),
+      levels: levels.current,
       questions: cards,
-      topics: snapshot?.nodes ? topicsForContour(snapshot.nodes) : NO_CONTOUR_TOPICS,
+      topics,
       moments,
-      // Both ends of the window are the *session*, never the transcript.
-      //
-      // Continuing a recent conversation seeds up to half an hour of previous
-      // segments into the store, and letting the trace default to the first of
-      // those made it span the old conversation plus the dead gap between them:
-      // an hour-wide window, flat for two thirds of its length, with everything
-      // said since the press crushed into a sliver at the right edge — while
-      // the clock beside it read 1:30. The contour and the clock have to be
-      // measuring the same sitting.
-      startedAt: startedAt ?? undefined,
-      // `Date.now()` as well as the edge tick: a mark is pressed *now*, past the
-      // last tick, and a window that stopped short would drop its caret.
-      now: recording ? Math.max(edge, Date.now()) : undefined,
+      now: time,
+      startedAt: startedAt ?? time,
     }) as ContourData;
-  }, [segments, cards, moments, recording, edge, startedAt, topicSnapshot]);
+  }, [
+    segments,
+    cards,
+    moments,
+    recording,
+    now,
+    startedAt,
+    topicSnapshot,
+    micPartial,
+    systemPartial,
+    levels,
+  ]);
 }
 
 /**

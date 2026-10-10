@@ -49,10 +49,14 @@ const STAGGER_MS = 24;
 // The mark's shape and colour come from `questionMarks.ts`, the vocabulary the
 // contour canvas draws in too, so the rail, the transcript margin and the trace
 // above them cannot drift apart.
-const TONE_CLASS: Record<MarkTone, { fill: string; ring: string }> = {
-  success: { fill: "bg-success", ring: "border-success" },
-  warning: { fill: "bg-warning", ring: "border-warning" },
-  muted: { fill: "bg-muted-foreground", ring: "border-muted-foreground" },
+const TONE_CLASS: Record<MarkTone, { fill: string; soft: string; ring: string }> = {
+  success: { fill: "bg-success", soft: "bg-success/35", ring: "border-success" },
+  warning: { fill: "bg-warning", soft: "bg-warning/35", ring: "border-warning" },
+  muted: {
+    fill: "bg-muted-foreground",
+    soft: "bg-muted-foreground/35",
+    ring: "border-muted-foreground",
+  },
 };
 
 // Searching is always offered by hand. Automatic search is restricted to a
@@ -91,8 +95,9 @@ function elapsedLabel(from: number, now: number): string {
 }
 
 /**
- * A question's state mark: filled when settled, half filled when the answer was
- * hedged, a ring when nobody gave a verdict.
+ * A question's state mark, always a complete circle of one size: filled when
+ * settled, a soft fill inside a ring when the answer was hedged, an empty ring
+ * when nobody gave a verdict.
  *
  * Exported so the transcript's margin speaks the same vocabulary as the rail:
  * one mark component, so the surfaces cannot drift apart.
@@ -111,13 +116,13 @@ export function StateMark({
     <span
       aria-hidden="true"
       className={cn(
-        "relative size-2 shrink-0 overflow-hidden rounded-full",
-        fill === "solid" ? tone.fill : cn("border-[1.5px]", tone.ring),
+        "size-2 shrink-0 rounded-full",
+        fill === "solid" && tone.fill,
+        fill !== "solid" && cn("border-[1.5px]", tone.ring),
+        fill === "soft" && tone.soft,
         className
       )}
-    >
-      {fill === "half" && <span className={cn("absolute inset-y-0 right-0 w-1/2", tone.fill)} />}
-    </span>
+    />
   );
 }
 

@@ -2,10 +2,11 @@ import { OUTCOME_FILL } from "../../helpers/conversationContour.mjs";
 import type { QuestionOutcome } from "../../types/conversationEvents";
 
 // One vocabulary for a question's mark, on every surface that draws one: the
-// contour canvas, the question rail and the transcript margin. The shape says
-// how settled the question is (`OUTCOME_FILL`), the colour repeats it.
+// contour canvas, the question rail and the transcript margin. Every mark is a
+// complete circle of one size. The fill says how settled the question is
+// (`OUTCOME_FILL`), the colour repeats it.
 
-export type MarkFill = "solid" | "half" | "ring";
+export type MarkFill = "solid" | "soft" | "ring";
 export type MarkTone = "success" | "warning" | "muted";
 
 /**

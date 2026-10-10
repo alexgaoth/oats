@@ -18,24 +18,27 @@ import { markFill, markTone, TONE_TOKEN, type MarkFill, type MarkTone } from "./
 //
 //   **A notch** is the subject changing.
 //
-//   **A mark above the line** is a question, at the moment it was asked. Its
-//   shape says how settled it is: filled when settled, half filled when the
-//   answer was hedged, a ring when nobody gave a verdict (`questionMarks.ts`).
-//   The shape reads in greyscale and with colour blindness. The status colour
-//   repeats it.
+//   **A pin** is a question, at the moment it was asked: a complete circle on
+//   one row along the top, with a stem down to its moment on the trace. Its
+//   fill says how settled it is: filled when settled, a soft fill inside a
+//   ring when the answer was hedged, an empty ring when nobody gave a verdict
+//   (`questionMarks.ts`). The fill reads in greyscale and with colour
+//   blindness. The status colour repeats it.
 //
 //   **An arc** is the room coming back to a thread it had left — the one thing
 //   a transcript cannot show you and a summary always flattens.
 //
-// There is no animation loop. The drawing changes when the conversation
-// changes, which during a recording is roughly once every five seconds and the
-// rest of the time never. That is the whole of its `prefers-reduced-motion`
-// story: there is no motion to reduce.
+// There is no animation loop. A stored conversation draws once. A live one
+// (`buildLiveContour`) redraws once a second and rolls: the trace and every
+// pin move one second to the left. That is a one-second step, not an
+// animation, so there is nothing for `prefers-reduced-motion` to reduce.
 
 export interface ContourPoint {
   x: number;
   y: number;
   quiet: boolean;
+  /** Live only: this second is before the sitting started, so nothing is drawn. */
+  before?: boolean;
 }
 
 export interface ContourMark {
@@ -82,12 +85,28 @@ export interface ContourData {
   /** Where the window begins, epoch ms — with `span`, a position is a time. */
   start?: number;
   empty: boolean;
+  /** A rolling live window (`buildLiveContour`), with now at the right edge. */
+  live?: boolean;
+  /** Live only: where the sitting starts, below 0 once it has rolled out. */
+  sessionX?: number;
+  /** Live only: whole minutes since the start, so the roll shows in silence. */
+  ticks?: { x: number; minute: number }[];
+  /** Live only: the whole sitting, for the label (the window is four minutes). */
+  summary?: {
+    minutes: number;
+    questions: number;
+    unresolved: number;
+    shifts: number;
+    returns: number;
+  };
 }
 
 interface Palette extends Record<MarkTone, string> {
   ink: string;
   husk: string;
   hairline: string;
+  /** The surface the contour sits on: the knockout ring around a pin. */
+  card: string;
 }
 
 /**
@@ -138,55 +157,63 @@ function readPalette(element: HTMLElement): Palette {
     ink: value("--color-foreground", "#09090b"),
     husk: value("--color-muted-foreground", "#71717a"),
     hairline: value("--color-border", "#e4e4e7"),
+    card: value("--color-card", "#ffffff"),
     success: value(TONE_TOKEN.success, "#16a34a"),
     warning: value(TONE_TOKEN.warning, "#d97706"),
     muted: value(TONE_TOKEN.muted, "#71717a"),
   };
 }
 
+/** A pin's head radius, and its radius while its question is being read. */
+const PIN_RADIUS = 4.5;
+const PIN_RADIUS_FOCUSED = 6;
+/** The band above the trace that the pins live in. */
+const PIN_BAND = 26;
+
 /**
- * A question's mark at full size: filled, half filled or a ring.
- *
- * The ring is drawn inside the radius, so the three shapes are the same size
- * and only their fill differs.
+ * A pin's head: always a complete circle of one size. A knockout ring in the
+ * surface colour keeps it crisp where it meets its stem or another pin.
  */
-function questionDisc(
+function drawPinHead(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   radius: number,
   fill: MarkFill,
-  color: string
+  color: string,
+  surface: string
 ) {
-  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = surface;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   if (fill === "solid") {
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
     ctx.fill();
     return;
   }
-  const line = 1.5;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = line;
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius - line / 2, 0, Math.PI * 2);
-  ctx.stroke();
-  if (fill === "half") {
-    // The right half: the same reading as a status icon that is part done.
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, radius, -Math.PI / 2, Math.PI / 2);
-    ctx.closePath();
+  if (fill === "soft") {
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = color;
     ctx.fill();
+    ctx.restore();
   }
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius - 0.75, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 }
 
 /**
- * At list-strip size a ring and a half disc are one blur, so the strip keeps
- * the order of the shapes as strength instead: settled is full, hedged is
- * lighter, open is faint.
+ * At list-strip size the fills blur together, so the strip keeps their order
+ * as strength instead: settled is full, hedged is lighter, open is faint.
  */
-const STRIP_ALPHA: Record<MarkFill, number> = { solid: 1, half: 0.6, ring: 0.35 };
+const STRIP_ALPHA: Record<MarkFill, number> = { solid: 1, soft: 0.6, ring: 0.35 };
 
 export default function ConversationContour({
   contour,
@@ -255,11 +282,14 @@ export default function ConversationContour({
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, width, cssHeight);
 
-      // The baseline sits low: the trace grows upward from it and the question
-      // marks live in the band above, so nothing has to overlap anything.
+      // The baseline sits low: the trace grows upward from it and the pins
+      // live in the band above it, so nothing has to overlap anything.
       const baseline = cssHeight - (showMarks ? 14 : 3);
-      const amplitude = baseline - (showMarks ? 26 : 4);
+      const amplitude = Math.max(4, baseline - (showMarks ? PIN_BAND : 4));
       const at = (point: { y: number }) => baseline - point.y * amplitude;
+      const x = (value: number) => value * (width - 1);
+      // Live, the line begins where the sitting began, and rolls left from there.
+      const left = contour.live ? Math.min(width, Math.max(0, x(contour.sessionX ?? 0))) : 0;
 
       if (contour.empty || !contour.points.length) {
         // A conversation with nothing in it draws its own resting line rather
@@ -274,7 +304,7 @@ export default function ConversationContour({
         return;
       }
 
-      const x = (value: number) => value * (width - 1);
+      const drawn = contour.live ? contour.points.filter((point) => !point.before) : contour.points;
 
       // 1. Return arcs, behind everything: they are context, not content. In
       //    the muted ink, lightened, rather than the border colour, which
@@ -299,37 +329,55 @@ export default function ConversationContour({
       // 2. The trace. Drawn as a filled ribbon around the baseline rather than a
       //    stroked path: thickness is the measurement, and a stroke of varying
       //    width cannot be expressed as one path.
-      ctx.beginPath();
-      ctx.moveTo(0, baseline);
-      for (const point of contour.points) ctx.lineTo(x(point.x), at(point));
-      ctx.lineTo(width, baseline);
-      ctx.closePath();
-      ctx.fillStyle = palette.husk;
-      ctx.globalAlpha = 0.28;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      if (drawn.length) {
+        ctx.beginPath();
+        ctx.moveTo(left, baseline);
+        for (const point of drawn) ctx.lineTo(x(point.x), at(point));
+        ctx.lineTo(width, baseline);
+        ctx.closePath();
+        ctx.fillStyle = palette.husk;
+        ctx.globalAlpha = 0.28;
+        ctx.fill();
+        ctx.globalAlpha = 1;
 
-      // Its upper edge in ink, so the shape reads as a line and not as a wash.
-      ctx.beginPath();
-      contour.points.forEach((point, index) => {
-        const px = x(point.x);
-        const py = at(point);
-        if (index === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.strokeStyle = palette.ink;
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.55;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+        // Its upper edge in ink, so the shape reads as a line and not as a wash.
+        ctx.beginPath();
+        drawn.forEach((point, index) => {
+          const px = x(point.x);
+          const py = at(point);
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.strokeStyle = palette.ink;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.55;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
 
       // The baseline itself, always — it is the ledger rule the entry sits on.
       ctx.strokeStyle = palette.hairline;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, baseline + 0.5);
+      ctx.moveTo(left, baseline + 0.5);
       ctx.lineTo(width, baseline + 0.5);
       ctx.stroke();
+
+      // Live: a small tick at each whole minute since the start. They roll with
+      // the trace, so the movement shows even while the room is quiet.
+      if (contour.live && showMarks) {
+        ctx.strokeStyle = palette.husk;
+        ctx.globalAlpha = 0.45;
+        for (const tick of contour.ticks ?? []) {
+          const px = Math.round(x(tick.x)) + 0.5;
+          if (px < left) continue;
+          ctx.beginPath();
+          ctx.moveTo(px, baseline + 1);
+          ctx.lineTo(px, baseline + 4);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
 
       // 3. Topic shifts: a notch through the baseline.
       if (showMarks) {
@@ -345,29 +393,34 @@ export default function ConversationContour({
         ctx.globalAlpha = 1;
       }
 
-      // 4. Questions: a mark over the trace, with a hairline down to it so it
-      //    is anchored to a moment rather than hovering near one.
+      // 4. Questions, as pins: every head a complete circle of one size, on one
+      //    row along the top, with a stem down to the moment it was asked. Two
+      //    pins too close to sit side by side take a second row instead of
+      //    overlapping.
       if (showMarks) {
-        for (const mark of contour.marks) {
-          const px = x(mark.x);
-          const py = at(mark);
-          const color = palette[markTone(mark.state)];
+        const gap = PIN_RADIUS * 2 + 3;
+        const rows = [-Infinity, -Infinity];
+        const ordered = [...contour.marks].sort((a, b) => a.x - b.x);
+        for (const mark of ordered) {
+          const px = Math.round(x(mark.x)) + 0.5;
+          if (px < -PIN_RADIUS || px > width + PIN_RADIUS) continue;
+          const row = px - rows[0] >= gap ? 0 : px - rows[1] >= gap ? 1 : 0;
+          rows[row] = px;
+          // Reading a question lights its own pin: the question you are
+          // reading, and where in the conversation it happened.
           const focused = focusedGroup !== null && mark.groupKey === focusedGroup;
-          // Reading an annotation lights its own moment on the line. This is
-          // the whole connection between the two halves of the surface: the
-          // question you are reading, and where in the conversation it happened.
-          const stem = focused ? 15 : 9;
+          const radius = focused ? PIN_RADIUS_FOCUSED : PIN_RADIUS;
+          const cy = PIN_RADIUS + 3 + row * gap;
+          const color = palette[markTone(mark.state)];
           ctx.strokeStyle = color;
-          ctx.globalAlpha = focused ? 0.9 : 0.35;
+          ctx.globalAlpha = focused ? 0.9 : 0.45;
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.moveTo(Math.round(px) + 0.5, py);
-          ctx.lineTo(Math.round(px) + 0.5, py - stem);
+          ctx.moveTo(px, cy + radius);
+          ctx.lineTo(px, Math.max(cy + radius, at(mark)));
           ctx.stroke();
           ctx.globalAlpha = 1;
-          // 4px at rest, the smallest radius at which a ring and a half disc
-          // still read as different shapes.
-          questionDisc(ctx, px, py - stem - 4, focused ? 6 : 4, markFill(mark.state), color);
+          drawPinHead(ctx, px, cy, radius, markFill(mark.state), color, palette.card);
         }
         // 5. Moments somebody marked: an ink caret under the baseline. Ink, not a
         //    state colour, because it is not a verdict on anything — it is the

@@ -6,6 +6,8 @@ const assert = require("node:assert/strict");
 // build step, and the test reaches it through a dynamic import.
 let CONTOUR_RESOLUTION;
 let OUTCOME_FILL;
+let LIVE_WINDOW_MS;
+let buildLiveContour;
 let QUIET_THRESHOLD;
 let buildContour;
 let contourStrip;
@@ -15,6 +17,8 @@ test.before(async () => {
   ({
     CONTOUR_RESOLUTION,
     OUTCOME_FILL,
+    LIVE_WINDOW_MS,
+    buildLiveContour,
     QUIET_THRESHOLD,
     buildContour,
     contourStrip,
@@ -164,10 +168,10 @@ test("questions become marks that sit on the trace at the moment they were asked
 
 // The shape is the accessibility story: state has to survive greyscale and
 // colour blindness, so how filled a mark is must track how settled it is.
-test("a mark is filled when settled, half when hedged, a ring when open", () => {
+test("a mark is filled when settled, soft when hedged, a ring when open", () => {
   assert.equal(OUTCOME_FILL.answered, "solid");
   assert.equal(OUTCOME_FILL.denied, "solid");
-  assert.equal(OUTCOME_FILL.uncertain, "half");
+  assert.equal(OUTCOME_FILL.uncertain, "soft");
   assert.equal(OUTCOME_FILL.asked, "ring");
   assert.equal(OUTCOME_FILL.silence, "ring");
 
@@ -367,4 +371,114 @@ test("marked moments sit at their instant, and the window can be inverted", () =
   const back = contour.start + contour.moments[0].x * contour.span;
   assert.equal(back, T0 + 15_000);
   assert.deepEqual(buildContour({}).moments, []);
+});
+
+// The live contour rolls: the last four minutes, one bucket per second, with
+// now at the right-hand edge.
+const LIVE_NOW = Date.UTC(2026, 9, 10, 12, 0, 0, 400);
+const SECOND = 1000;
+
+test("the live contour is the last four minutes, one bucket per second", () => {
+  const contour = buildLiveContour({ now: LIVE_NOW, startedAt: LIVE_NOW - 10 * MINUTE });
+  assert.equal(LIVE_WINDOW_MS, 4 * MINUTE);
+  assert.equal(contour.points.length, 240);
+  assert.equal(contour.span, 4 * MINUTE);
+  // The window ends with the current second.
+  assert.equal(contour.start + contour.span, Math.floor(LIVE_NOW / SECOND) * SECOND + SECOND);
+  assert.equal(contour.live, true);
+});
+
+test("a second later, every mark and every second of speech is one bucket to the left", () => {
+  const input = {
+    utterances: [
+      { text: SENTENCE, timestamp: LIVE_NOW - 90 * SECOND, durationMs: 6 * SECOND },
+      { text: "short answer here", timestamp: LIVE_NOW - 40 * SECOND, durationMs: 2 * SECOND },
+    ],
+    questions: [{ id: "q", state: "answered", createdAt: LIVE_NOW - 60 * SECOND }],
+    startedAt: LIVE_NOW - 10 * MINUTE,
+  };
+  const first = buildLiveContour({ ...input, now: LIVE_NOW });
+  const next = buildLiveContour({ ...input, now: LIVE_NOW + SECOND });
+  assert.ok(Math.abs(first.marks[0].x - next.marks[0].x - 1 / 240) < 0.0002);
+  // Away from the right edge, the trace is the same values moved left by one.
+  for (let index = 0; index < 230; index += 1) {
+    assert.equal(next.points[index].y, first.points[index + 1].y, `bucket ${index}`);
+  }
+});
+
+test("nothing is drawn before the sitting started", () => {
+  const contour = buildLiveContour({ now: LIVE_NOW, startedAt: LIVE_NOW - 30 * SECOND });
+  const drawn = contour.points.filter((point) => !point.before);
+  assert.equal(drawn.length, 31);
+  assert.ok(contour.sessionX > 0.86 && contour.sessionX < 0.88);
+  assert.ok(contour.points.filter((point) => point.before).every((point) => point.y === 0));
+});
+
+test("speech still being transcribed fills the seconds up to now", () => {
+  const contour = buildLiveContour({
+    partials: ["so what we are saying right now is still being heard"],
+    now: LIVE_NOW,
+    startedAt: LIVE_NOW - 5 * MINUTE,
+  });
+  const last = contour.points.slice(-3);
+  assert.ok(last.every((point) => point.y > 0));
+  assert.equal(contour.points[100].y, 0);
+});
+
+test("the microphone level moves the trace before anything is transcribed", () => {
+  const levels = [];
+  for (let second = 120; second > 0; second -= 1) {
+    // Room tone, with the last five seconds of somebody talking.
+    levels.push({ at: LIVE_NOW - second * SECOND, level: second <= 5 ? 0.08 : 0.004 });
+  }
+  const contour = buildLiveContour({ levels, now: LIVE_NOW, startedAt: LIVE_NOW - 5 * MINUTE });
+  assert.ok(contour.points[236].y > 0.5);
+  assert.equal(contour.points[200].y, 0);
+});
+
+test("the scale is fixed, so a loud moment leaving the window rescales nothing", () => {
+  const steady = {
+    text: "a steady sentence of moderate length",
+    timestamp: LIVE_NOW - 30 * SECOND,
+  };
+  const burst = {
+    text: `${SENTENCE} ${SENTENCE} ${SENTENCE}`,
+    timestamp: LIVE_NOW - 235 * SECOND,
+    durationMs: 3 * SECOND,
+  };
+  const startedAt = LIVE_NOW - 10 * MINUTE;
+  const withBurst = buildLiveContour({ utterances: [steady, burst], now: LIVE_NOW, startedAt });
+  const later = buildLiveContour({
+    utterances: [steady, burst],
+    now: LIVE_NOW + 10 * SECOND,
+    startedAt,
+  });
+  const at = (contour) => contour.points.findIndex((point) => point.y > 0 && point.x > 0.8);
+  assert.equal(later.points[at(later)].y, withBurst.points[at(withBurst)].y);
+});
+
+test("a mark leaves at the left edge when its question is four minutes old", () => {
+  const questions = [
+    { id: "old", state: "asked", createdAt: LIVE_NOW - 241 * SECOND },
+    { id: "kept", state: "asked", createdAt: LIVE_NOW - 230 * SECOND },
+  ];
+  const contour = buildLiveContour({ questions, now: LIVE_NOW, startedAt: LIVE_NOW - 10 * MINUTE });
+  assert.deepEqual(
+    contour.marks.map((mark) => mark.id),
+    ["kept"]
+  );
+  // The label still counts the whole sitting.
+  assert.equal(contour.summary.questions, 2);
+  assert.equal(contour.summary.unresolved, 2);
+});
+
+test("minute ticks fall on whole minutes since the start", () => {
+  const startedAt = LIVE_NOW - 150 * SECOND;
+  const contour = buildLiveContour({ now: LIVE_NOW, startedAt });
+  assert.deepEqual(
+    contour.ticks.map((tick) => tick.minute),
+    [1, 2]
+  );
+  const second = contour.ticks[1];
+  assert.ok(Math.abs(second.x - (startedAt + 2 * MINUTE - contour.start) / contour.span) < 0.0002);
 });
