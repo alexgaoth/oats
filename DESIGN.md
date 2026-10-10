@@ -149,10 +149,16 @@ the conversation. They draw in
 with no decorative gradient.
 
 - A question's mark has one vocabulary on every surface
-  (`conversation/questionMarks.ts`): **filled** when settled (answered in
-  `success`, nobody knew in `warning`), **half filled** when the answer was hedged
-  (`warning`), a **ring** when there is no verdict (`muted-foreground`). The shape
-  carries the meaning without colour, so there is no dither grain.
+  (`conversation/questionMarks.ts`), and it is always a complete circle of one
+  size: **filled** when settled (answered in `success`, nobody knew in
+  `warning`), a **soft fill inside a ring** when the answer was hedged
+  (`warning`), an **empty ring** when there is no verdict (`muted-foreground`).
+  The fill carries the meaning without colour. On a contour the marks are
+  **pins**: heads on one row along the top, each with a stem down to its moment.
+- The live contour rolls: it shows the last four minutes with now at the
+  right-hand edge, and redraws once a second, so the trace and every pin move one
+  second to the left. Transcript speech and the microphone level both feed it,
+  so it moves while somebody is talking. Its label describes the whole sitting.
 - The legend under a contour lists only what that contour draws, in two rows: how
   the questions ended, then the shape marks (topic change, topic revisited,
   marked moment).

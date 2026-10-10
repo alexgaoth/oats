@@ -398,6 +398,8 @@ function RecentConversations() {
  */
 function contourLabel(contour: ContourData, t: TFunction): string {
   if (contour.empty) return t("oats.conversation.contourEmpty");
+  // A live contour shows the last four minutes; its label is the whole sitting.
+  if (contour.summary) return t("oats.conversation.contourSummary", contour.summary);
   const unresolved = contour.marks.filter(
     (mark) => mark.state === "asked" || mark.state === "silence" || mark.state === "denied"
   ).length;
