@@ -1,4 +1,11 @@
-/** Returns true when all required OS permissions are granted. */
+/**
+ * Returns true when all required OS permissions are granted: the microphone.
+ *
+ * Accessibility is never required. It only pastes a dictation into another
+ * app, so with dictation off (the macOS default) it is not even shown
+ * (`needsAccessibility` in dictationSetting.mjs), and with dictation on a
+ * missing grant falls back to the clipboard.
+ */
 export function areRequiredPermissionsMet(micGranted: boolean): boolean {
   if (!micGranted) return false;
 

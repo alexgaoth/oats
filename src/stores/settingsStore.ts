@@ -30,6 +30,8 @@ import type { Snippet } from "../utils/snippets";
 import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
 import { resolveUiMode } from "../helpers/uiMode.mjs";
 import { resolveFlowMode } from "../helpers/conversationFlow.mjs";
+import { resolveDictationEnabled } from "../helpers/dictationSetting.mjs";
+import { getCachedPlatform } from "../utils/platform";
 
 /** Which interface Oats wears. See `uiMode.mjs`. */
 export type UiMode = "work" | "field";
@@ -133,6 +135,7 @@ const BOOLEAN_SETTINGS = new Set([
   "telemetryEnabled",
   "audioCuesEnabled",
   "pauseMediaOnDictation",
+  "dictationEnabled",
   "floatingIconAutoHide",
   "startMinimized",
   "meetingProcessDetection",
@@ -410,6 +413,8 @@ export interface SettingsState
   isSignedIn: boolean;
   audioCuesEnabled: boolean;
   pauseMediaOnDictation: boolean;
+  /** Dictation on or off: the oat, its keys and the Dictation page. See `dictationSetting.mjs`. */
+  dictationEnabled: boolean;
   floatingIconAutoHide: boolean;
   startMinimized: boolean;
   gcalAccounts: GoogleCalendarAccount[];
@@ -693,6 +698,7 @@ export interface SettingsState
   setSaveDiscardedTranscriptions: (value: boolean) => void;
   setAudioCuesEnabled: (value: boolean) => void;
   setPauseMediaOnDictation: (value: boolean) => void;
+  setDictationEnabled: (enabled: boolean) => void;
   setFloatingIconAutoHide: (enabled: boolean) => void;
   setStartMinimized: (enabled: boolean) => void;
   setGcalAccounts: (accounts: GoogleCalendarAccount[]) => void;
@@ -1056,6 +1062,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   saveDiscardedTranscriptions: readBoolean("saveDiscardedTranscriptions", false),
   audioCuesEnabled: readBoolean("audioCuesEnabled", true),
   pauseMediaOnDictation: readBoolean("pauseMediaOnDictation", false),
+  // Off on macOS until it is turned on in Settings › General › Advanced, on
+  // elsewhere. Main reads its own copy from .env at launch, before any window
+  // exists, and initializeSettings follows it.
+  dictationEnabled: resolveDictationEnabled(
+    isBrowser ? localStorage.getItem("dictationEnabled") : null,
+    getCachedPlatform()
+  ),
   floatingIconAutoHide: readBoolean("floatingIconAutoHide", false),
   startMinimized: readBoolean("startMinimized", false),
   notificationsEnabled: readBoolean("notificationsEnabled", true),
@@ -1649,6 +1662,33 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setSaveDiscardedTranscriptions: createBooleanSetter("saveDiscardedTranscriptions"),
   setAudioCuesEnabled: createBooleanSetter("audioCuesEnabled"),
   setPauseMediaOnDictation: createBooleanSetter("pauseMediaOnDictation"),
+
+  setDictationEnabled: (enabled: boolean) => {
+    if (get().dictationEnabled === enabled) return;
+    if (isBrowser) localStorage.setItem("dictationEnabled", String(enabled));
+    set(
+      enabled ? { dictationEnabled: true } : { dictationEnabled: false, activeDictationKey: null }
+    );
+    if (!isBrowser) return;
+    // Main binds or releases the keys and shows or hides the oat, at once. When
+    // no dictation key was ever chosen (macOS, where dictation started off), the
+    // shortcut row shows the key main bound instead of an empty field.
+    Promise.resolve(window.electronAPI?.setDictationEnabled?.(enabled))
+      .then((result) => {
+        if (!enabled || !result?.activeDictationKey) return;
+        useSettingsStore.setState({ activeDictationKey: result.activeDictationKey });
+        if (!useSettingsStore.getState().dictationKey) {
+          createStringSetter("dictationKey")(result.activeDictationKey);
+        }
+      })
+      .catch((err) => {
+        logger.warn(
+          "Failed to apply the dictation setting",
+          { enabled, error: (err as Error).message },
+          "settings"
+        );
+      });
+  },
 
   setFloatingIconAutoHide: (enabled: boolean) => {
     if (get().floatingIconAutoHide === enabled) return;
@@ -2371,6 +2411,26 @@ export async function initializeSettings(): Promise<void> {
     } catch (err) {
       logger.warn(
         "Failed to sync activation mode on startup",
+        { error: (err as Error).message },
+        "settings"
+      );
+    }
+
+    // Main decides at launch, from .env and before any window has loaded,
+    // whether the oat is shown and the dictation keys are bound. So it is the
+    // source of truth here, as it is for the activation mode.
+    try {
+      const mainDictationEnabled = await window.electronAPI.getDictationEnabled?.();
+      if (
+        typeof mainDictationEnabled === "boolean" &&
+        mainDictationEnabled !== useSettingsStore.getState().dictationEnabled
+      ) {
+        if (isBrowser) localStorage.setItem("dictationEnabled", String(mainDictationEnabled));
+        useSettingsStore.setState({ dictationEnabled: mainDictationEnabled });
+      }
+    } catch (err) {
+      logger.warn(
+        "Failed to sync the dictation setting on startup",
         { error: (err as Error).message },
         "settings"
       );

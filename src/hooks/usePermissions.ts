@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import type { PasteToolsResult } from "../types/electron";
 import { useLocalStorage } from "./useLocalStorage";
 import logger from "../utils/logger";
+import { useSettingsStore } from "../stores/settingsStore";
+import { needsAccessibility } from "../helpers/dictationSetting.mjs";
 
 export interface UsePermissionsReturn {
   // State
@@ -127,6 +129,8 @@ export const usePermissions = (
   const [isCheckingPasteTools, setIsCheckingPasteTools] = useState(false);
   const [accessibilityTroubleshooting, setAccessibilityTroubleshooting] = useState(false);
   const accessibilityPollCount = useRef(0);
+  // Accessibility only pastes a dictation, so it is not checked while dictation is off.
+  const dictationEnabled = useSettingsStore((state) => state.dictationEnabled);
 
   const openSystemSettings = useCallback(
     async (
@@ -286,15 +290,15 @@ export const usePermissions = (
   // On macOS, re-validate accessibility permission on mount to override stale
   // localStorage values (e.g. after app update changes the code signature).
   useEffect(() => {
-    if (getPlatform() !== "darwin") return;
+    if (!needsAccessibility(getPlatform(), dictationEnabled)) return;
     window.electronAPI?.checkAccessibilityPermission?.(true).then((granted) => {
       setAccessibilityPermissionGranted(granted);
     });
-  }, [setAccessibilityPermissionGranted]);
+  }, [setAccessibilityPermissionGranted, dictationEnabled]);
 
   // Poll for accessibility permission changes on macOS (e.g. user grants in System Settings)
   useEffect(() => {
-    if (getPlatform() !== "darwin") return;
+    if (!needsAccessibility(getPlatform(), dictationEnabled)) return;
     if (accessibilityPermissionGranted) {
       setAccessibilityTroubleshooting(false);
       accessibilityPollCount.current = 0;
@@ -318,7 +322,7 @@ export const usePermissions = (
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [accessibilityPermissionGranted, setAccessibilityPermissionGranted]);
+  }, [accessibilityPermissionGranted, setAccessibilityPermissionGranted, dictationEnabled]);
 
   return {
     micPermissionGranted,

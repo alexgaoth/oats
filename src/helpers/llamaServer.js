@@ -16,7 +16,9 @@ const STARTUP_TIMEOUT_MS = 120000;
 const VULKAN_STARTUP_TIMEOUT_MS = 120000;
 const HEALTH_CHECK_INTERVAL_MS = 5000;
 const HEALTH_CHECK_TIMEOUT_MS = 2000;
-const STARTUP_POLL_INTERVAL_MS = 500;
+// The same as whisper-server. At 500 ms a cleanup that started the server
+// waited up to half a second longer than the model took to load.
+const STARTUP_POLL_INTERVAL_MS = 100;
 const HEALTH_CHECK_FAILURE_THRESHOLD = 3;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_CONTEXT_SIZE = 4096;
