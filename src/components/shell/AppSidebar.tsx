@@ -160,7 +160,8 @@ export function AppSidebar({
       />
 
       <div className="flex items-center gap-2 px-4 pb-3">
-        <OatsMark />
+        {/* Spins once when the app starts, and again on a click. */}
+        <OatsMark interactive spinOnLaunch />
         <span className="text-sm font-semibold tracking-[-0.01em]">Oats</span>
       </div>
 

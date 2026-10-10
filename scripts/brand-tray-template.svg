@@ -1,0 +1,6 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+    <rect width="1024" height="1024" fill="white"/>
+    <path d="M564.4 252.0 L572.0 284.5 L577.9 317.0 L582.5 349.5 L586.1 382.0 L588.8 414.5 L590.6 447.0 L591.7 479.5 L592.0 512.0 L591.7 544.5 L590.6 577.0 L588.8 609.5 L586.1 642.0 L582.5 674.5 L577.9 707.0 L572.0 739.5 L564.4 772.0" fill="none" stroke="black" stroke-linecap="round" stroke-width="64"/></mask></defs>
+  <g transform="rotate(-18 512 512)"><path d="M512 168 C584 168 752 326 752 512 C752 700 588 856 512 856 C436 856 272 700 272 512 C272 326 440 168 512 168 Z" fill="black" mask="url(#m)"/></g>
+</svg>
