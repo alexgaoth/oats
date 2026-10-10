@@ -58,7 +58,7 @@ import { ConfirmDialog } from "./ui/dialog";
 import { useNotes, initializeNotes, setActiveNoteId } from "../stores/noteStore";
 import { AppSidebar } from "./shell/AppSidebar";
 import { useSettingsNavStore } from "../stores/settingsNavStore";
-import { isSettingsPageId, SETTINGS_PAGES } from "./settings/settingsPages";
+import { isSettingsPageId, SETTINGS_PAGES, shownSettingsPage } from "./settings/settingsPages";
 import { SettingsPageHeader } from "./settings/SettingsKit";
 import {
   useMeetingRecordingStore,
@@ -3000,7 +3000,11 @@ function IntelligenceSurface() {
 /** Settings: the page the sidebar has open, under its title. */
 function SettingsSurface() {
   const { t } = useTranslation();
-  const page = useSettingsNavStore((state) => state.page);
+  // A page that is no longer listed (Dictation, with dictation off) draws as
+  // General from the first frame; the shell then moves the sidebar there too.
+  const requested = useSettingsNavStore((state) => state.page);
+  const dictationEnabled = useSettingsStore((state) => state.dictationEnabled);
+  const page = shownSettingsPage(requested, dictationEnabled);
   const entry = SETTINGS_PAGES.find((item) => item.id === page) ?? SETTINGS_PAGES[0];
   const scroller = useRef<HTMLElement | null>(null);
   // A new page starts at its top, not where the last one was scrolled to.
@@ -3029,6 +3033,13 @@ export default function OatsWorkspace() {
   const [surface, setSurface] = useState<Surface>("conversation");
   const settingsPage = useSettingsNavStore((state) => state.page);
   const setSettingsPage = useSettingsNavStore((state) => state.setPage);
+  // Turning dictation off removes the Dictation page; if it was open, General
+  // takes its place in the sidebar as well as on screen.
+  const dictationEnabled = useSettingsStore((s) => s.dictationEnabled);
+  useEffect(() => {
+    const shown = shownSettingsPage(settingsPage, dictationEnabled);
+    if (shown !== settingsPage) setSettingsPage(shown);
+  }, [settingsPage, dictationEnabled, setSettingsPage]);
   // Where "Back to app" returns to: the last screen that was not Settings.
   const lastSurface = useRef<Exclude<Surface, "settings">>("conversation");
   useEffect(() => {

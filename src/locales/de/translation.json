@@ -2062,6 +2062,11 @@
       "vaultStop": "Beenden",
       "autoSearch": "Unbeantwortete Fragen suchen",
       "autoSearchHint": "Öffnet eine Google-Suche im Hintergrund, wenn niemand es weiß. Nur der Fragetext wird gesendet, nie Audio oder Transkript. Karten erscheinen weiterhin.",
+      "advanced": {
+        "title": "Erweitert",
+        "dictation": "Diktat",
+        "dictationDescription": "Schreib per Stimme in jede App. Fügt eine schwebende Schaltfläche und die Seite „Diktat“ zu den Einstellungen hinzu."
+      },
       "advancedLoading": "Wird geöffnet…",
       "hotkeyRejected": "„{{hotkey}}“ konnte nicht registriert werden, das vorherige Kürzel bleibt aktiv.",
       "conversationHotkey": "Konversations-Kurzbefehl",

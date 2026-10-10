@@ -487,6 +487,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getActivationMode: () => ipcRenderer.invoke("get-activation-mode"),
   saveActivationMode: (mode) => ipcRenderer.invoke("save-activation-mode", mode),
 
+  // Dictation on or off (file-based, read before any window exists)
+  getDictationEnabled: () => ipcRenderer.invoke("get-dictation-enabled"),
+  setDictationEnabled: (enabled) => ipcRenderer.invoke("set-dictation-enabled", enabled),
+
   saveAllKeysToEnv: () => ipcRenderer.invoke("save-all-keys-to-env"),
   syncStartupPreferences: (prefs) => ipcRenderer.invoke("sync-startup-preferences", prefs),
 

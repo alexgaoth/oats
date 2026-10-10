@@ -275,6 +275,26 @@ class TrayManager {
 
   buildContextMenuTemplate() {
     const dictationVisible = this.windowManager?.isDictationPanelVisible?.() ?? false;
+    // With dictation off there is no oat to show, so no item that would do nothing.
+    const dictationEnabled = this.windowManager?.isDictationEnabled?.() ?? true;
+    const dictationItems = dictationEnabled
+      ? [
+          {
+            label: dictationVisible
+              ? i18nMain.t("tray.toggleDictation.hide")
+              : i18nMain.t("tray.toggleDictation.show"),
+            click: () => {
+              if (!this.windowManager) return;
+              if (this.windowManager.isDictationPanelVisible()) {
+                this.windowManager.hideDictationPanel();
+              } else {
+                this.windowManager.showDictationPanel({ focus: true });
+              }
+              this.updateTrayMenu();
+            },
+          },
+        ]
+      : [];
 
     return [
       {
@@ -295,20 +315,7 @@ class TrayManager {
         },
       },
       { type: "separator" },
-      {
-        label: dictationVisible
-          ? i18nMain.t("tray.toggleDictation.hide")
-          : i18nMain.t("tray.toggleDictation.show"),
-        click: () => {
-          if (!this.windowManager) return;
-          if (this.windowManager.isDictationPanelVisible()) {
-            this.windowManager.hideDictationPanel();
-          } else {
-            this.windowManager.showDictationPanel({ focus: true });
-          }
-          this.updateTrayMenu();
-        },
-      },
+      ...dictationItems,
       {
         label: this.isControlPanelVisible()
           ? i18nMain.t("tray.hideControlPanel")

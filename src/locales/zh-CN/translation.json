@@ -2057,6 +2057,11 @@
       "vaultStop": "停止",
       "autoSearch": "搜索未获解答的问题",
       "autoSearchHint": "没人知道答案时，在后台打开 Google 搜索。只发送问题文本，绝不发送音频或转录。关闭后卡片依然出现。",
+      "advanced": {
+        "title": "高级",
+        "dictation": "听写",
+        "dictationDescription": "在任何应用中用语音输入。会添加一个悬浮按钮，并在设置中添加“听写”页面。"
+      },
       "advancedLoading": "正在打开…",
       "hotkeyRejected": "无法注册「{{hotkey}}」，因此仍在使用之前的快捷键。",
       "conversationHotkey": "对话快捷键",

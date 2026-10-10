@@ -88,6 +88,7 @@ import { useSettingsLayout } from "./ui/useSettingsLayout";
 import { formatBytes } from "../utils/formatBytes";
 import { useSettingsStore } from "../stores/settingsStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
+import { needsAccessibility } from "../helpers/dictationSetting.mjs";
 
 export type SettingsSectionType = SettingsPageId;
 
@@ -530,6 +531,8 @@ export default function SettingsPage({
     setAutoPasteEnabled,
     keepTranscriptionInClipboard,
     setKeepTranscriptionInClipboard,
+    dictationEnabled,
+    setDictationEnabled,
     floatingIconAutoHide,
     setFloatingIconAutoHide,
     noteFilesEnabled,
@@ -1072,89 +1075,112 @@ export default function SettingsPage({
                 </SettingsPanelRow>
               </SettingsPanel>
             </div>
+
+            {/* Advanced: dictation, a second feature beside the conversation
+                recorder, off by default on macOS. Turning it on adds the oat,
+                the Dictation page and the rows below; its shortcut and how the
+                key behaves moved here from Shortcuts, and show only while it is
+                on, because a key for something that is off does nothing. */}
+            <div>
+              <SectionHeader title={t("oats.settings.advanced.title")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("oats.settings.advanced.dictation")}
+                    description={t("oats.settings.advanced.dictationDescription")}
+                  >
+                    <Toggle
+                      checked={dictationEnabled}
+                      onChange={setDictationEnabled}
+                      aria-label={t("oats.settings.advanced.dictation")}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                {dictationEnabled && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("oats.settings.global.dictation")}
+                      description={
+                        isUsingHyprland
+                          ? t("settingsPage.general.hotkey.hyprlandUnbindDescription")
+                          : t("oats.settings.global.dictationHint")
+                      }
+                    >
+                      <HotkeyListInput
+                        value={dictationKey}
+                        onChange={(list) => registerHotkey(list)}
+                        validate={validateDictationHotkey}
+                        disabled={isHotkeyRegistering}
+                        maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                        required
+                        footerEnd={
+                          effectiveDefaultHotkey &&
+                          dictationKey &&
+                          dictationKey !== effectiveDefaultHotkey ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => registerHotkey(effectiveDefaultHotkey)}
+                              disabled={isHotkeyRegistering}
+                              className="text-muted-foreground"
+                            >
+                              {t("settingsPage.general.hotkey.resetToDefault", {
+                                hotkey: formatHotkeyLabel(effectiveDefaultHotkey),
+                              })}
+                            </Button>
+                          ) : null
+                        }
+                      />
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                )}
+                {dictationEnabled && (!isUsingNativeShortcut || platform === "linux") && (
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("oats.settings.global.activation")}
+                      description={t("oats.settings.global.activationHint")}
+                    >
+                      <ActivationModeSelector value={activationMode} onChange={setActivationMode} />
+                    </SettingsRow>
+                    {platform === "linux" && activationMode === "push" && (
+                      <LinuxPttSetupInfo isAvailable={linuxPttAvailable} />
+                    )}
+                  </SettingsPanelRow>
+                )}
+              </SettingsPanel>
+              {/* On Hyprland the dictation key is the one Hyprland bind Oats
+                  writes, so the warning that it will not persist moved with it. */}
+              {dictationEnabled &&
+                isUsingHyprland &&
+                hyprlandConfigStatus &&
+                !hyprlandConfigStatus.canWrite && (
+                  <Alert className="mt-3">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>
+                      {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningTitle")}
+                    </AlertTitle>
+                    <AlertDescription>
+                      {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningDescription", {
+                        path: hyprlandConfigStatus.path,
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
+            </div>
           </div>
         );
 
       case "shortcuts":
         return (
           <div className="space-y-8">
-            {isUsingHyprland && hyprlandConfigStatus && !hyprlandConfigStatus.canWrite && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>
-                  {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningTitle")}
-                </AlertTitle>
-                <AlertDescription>
-                  {t("settingsPage.general.hotkey.hyprlandConfigWriteWarningDescription", {
-                    path: hyprlandConfigStatus.path,
-                  })}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Every shortcut that works from any app, in one card. */}
+            {/* Every shortcut that works from any app, in one card. The
+                dictation shortcut and its tap or hold choice live under the
+                Dictation switch in General › Advanced. */}
             <SettingsSection
               title={t("oats.settings.global.title")}
               description={t("oats.settings.global.description")}
             >
               <ConversationShortcutRow />
-              <div className="flex flex-col gap-3 px-5 py-4">
-                <div className="flex items-start justify-between gap-6">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {t("oats.settings.global.dictation")}
-                    </p>
-                    <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
-                      {isUsingHyprland
-                        ? t("settingsPage.general.hotkey.hyprlandUnbindDescription")
-                        : t("oats.settings.global.dictationHint")}
-                    </p>
-                  </div>
-                  <HotkeyListInput
-                    value={dictationKey}
-                    onChange={(list) => registerHotkey(list)}
-                    validate={validateDictationHotkey}
-                    disabled={isHotkeyRegistering}
-                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                    required
-                    footerEnd={
-                      effectiveDefaultHotkey &&
-                      dictationKey &&
-                      dictationKey !== effectiveDefaultHotkey ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => registerHotkey(effectiveDefaultHotkey)}
-                          disabled={isHotkeyRegistering}
-                          className="text-muted-foreground"
-                        >
-                          {t("settingsPage.general.hotkey.resetToDefault", {
-                            hotkey: formatHotkeyLabel(effectiveDefaultHotkey),
-                          })}
-                        </Button>
-                      ) : null
-                    }
-                  />
-                </div>
-              </div>
-              {(!isUsingNativeShortcut || getCachedPlatform() === "linux") && (
-                <div className="px-5 py-4">
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {t("oats.settings.global.activation")}
-                      </p>
-                      <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
-                        {t("oats.settings.global.activationHint")}
-                      </p>
-                    </div>
-                    <ActivationModeSelector value={activationMode} onChange={setActivationMode} />
-                  </div>
-                  {getCachedPlatform() === "linux" && activationMode === "push" && (
-                    <LinuxPttSetupInfo isAvailable={linuxPttAvailable} />
-                  )}
-                </div>
-              )}
               <div className="flex items-start justify-between gap-6 px-5 py-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground">
@@ -1999,7 +2025,9 @@ EOF`,
 
                 {(platform === "darwin" || canManageSystemAudioInApp(systemAudio)) && (
                   <>
-                    {platform === "darwin" && (
+                    {/* Accessibility only pastes a dictation into another app,
+                        so with dictation off there is nothing to ask for. */}
+                    {needsAccessibility(platform, dictationEnabled) && (
                       <PermissionCard
                         icon={Shield}
                         title={t("settingsPage.permissions.accessibilityTitle")}
@@ -2031,7 +2059,8 @@ EOF`,
                   />
                 )}
 
-              {platform === "darwin" && (
+              {/* Resetting Accessibility is all this section does. */}
+              {needsAccessibility(platform, dictationEnabled) && (
                 <div className="mt-8">
                   <SectionHeader title={t("settingsPage.permissions.troubleshootingTitle")} />
                   <SettingsPanel>

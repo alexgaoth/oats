@@ -390,6 +390,10 @@ async function startApp() {
   windowManager.setActivationModeCache(environmentManager.getActivationMode());
   windowManager.setFloatingIconAutoHide(environmentManager.getFloatingIconAutoHide());
   windowManager.setPanelStartPosition(environmentManager.getPanelStartPosition());
+  // Before the oat and any key exist: with dictation off (the macOS default)
+  // the oat is never shown, and the dictation, voice agent and translation keys
+  // registered below are kept but not bound. Settings turns it on at run time.
+  await windowManager.setDictationEnabled(environmentManager.getDictationEnabled());
 
   ipcMain.on("activation-mode-changed", (_event, mode) => {
     windowManager.setActivationModeCache(mode);

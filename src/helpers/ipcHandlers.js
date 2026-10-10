@@ -3223,6 +3223,32 @@ class IPCHandlers {
       return this.environmentManager.saveActivationMode(mode);
     });
 
+    // Dictation on or off (Settings › General › Advanced). main.js reads .env at
+    // startup, before any window exists, to decide whether the oat is shown and
+    // the dictation keys are bound, so .env is the source of truth and the
+    // renderer follows it (initializeSettings).
+    ipcMain.handle("get-dictation-enabled", async () => {
+      return this.environmentManager.getDictationEnabled();
+    });
+
+    // Applied at once, with no restart: the oat and every dictation key follow
+    // the switch, and the conversation and search keys stay as they are.
+    ipcMain.handle("set-dictation-enabled", async (_event, enabled) => {
+      const next = enabled === true;
+      await this.environmentManager.saveDictationEnabled(next);
+      await this.windowManager.setDictationEnabled(next);
+      // The reset a changed dictation key gets in main.js: push-to-talk state,
+      // the native key listeners and, on macOS, the suppressed mouse buttons.
+      ipcMain.emit("hotkey-changed", null, "");
+      this.getTrayManager?.()?.updateTrayMenu?.();
+      const bound = this.windowManager.hotkeyManager?.getSlotHotkeys?.("dictation") ?? [];
+      return {
+        success: true,
+        enabled: next,
+        activeDictationKey: bound.length > 0 ? bound.join(",") : null,
+      };
+    });
+
     ipcMain.handle("get-ui-language", async () => {
       return this.environmentManager.getUiLanguage();
     });

@@ -2062,6 +2062,11 @@
       "vaultStop": "Interrompi",
       "autoSearch": "Cerca le domande senza risposta",
       "autoSearchHint": "Apre una ricerca Google in background quando nessuno lo sa. Viene inviato solo il testo della domanda, mai audio o trascrizione. Le schede restano.",
+      "advanced": {
+        "title": "Avanzate",
+        "dictation": "Dettatura",
+        "dictationDescription": "Scrivi con la voce in qualsiasi app. Aggiunge un pulsante flottante e una pagina Dettatura alle Impostazioni."
+      },
       "advancedLoading": "Apertura…",
       "hotkeyRejected": "Non è stato possibile registrare «{{hotkey}}», quindi resta attiva la scorciatoia precedente.",
       "conversationHotkey": "Scorciatoia conversazione",
