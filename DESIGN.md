@@ -67,7 +67,7 @@ semantic names (`src/index.css`, `@theme` and `.dark`).
 | `brand-ink` | `#9a5b00` | `#f5b544` | brand-coloured text and icons (5.4:1 on white) |
 | `ring` | `#f5a30f` | `#f5a30f` | focus rings and focused field edges |
 | `recording` | `#ef4444` | `#ef4444` | recording, and only recording |
-| `success` / `warning` / `destructive` / `info` | green / amber / red / blue | | status |
+| `success` / `warning` / `destructive` / `info` | green / orange `#c2410c` (light) `#f97316` (dark) / red / blue | | status |
 
 Rules:
 
@@ -78,6 +78,9 @@ Rules:
   and the states that belong to it: a switch that is on, focus, selection, the
   current section's icon. It is a fill with a dark label; never orange text on
   white (use `brand-ink`). One primary button per view.
+- **Warning is orange, not amber.** Amber sat ΔE 1.8 from the honey brand in dark
+  mode, so a warning read as the brand. Light mode uses orange-700 so warning text
+  meets 4.5:1 on white.
 - **Red means recording or danger.** It is never decoration. Idle, the record
   action is the brand; live, it turns red and says Stop.
 - Status is a soft badge (`bg-success/10 text-success`), never a colored border bar.
