@@ -2239,7 +2239,7 @@
     "announced": "新しい質問: {{question}}",
     "announcedAgain": "再度質問（{{count}} 回目）: {{question}}",
     "announcedBatch": "新しい質問 {{count}} 件、最新: {{question}}",
-    "searchedHost": "検索済み · {{host}}"
+    "searchedHost": "{{host}} で検索済み"
   },
   "topicGraph": {
     "node": "{{label}}、{{seconds}} 秒",

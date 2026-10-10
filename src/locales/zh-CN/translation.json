@@ -2234,7 +2234,7 @@
     "announced": "新问题：{{question}}",
     "announcedAgain": "再次提问，已 {{count}} 次：{{question}}",
     "announcedBatch": "{{count}} 个新问题，最新：{{question}}",
-    "searchedHost": "已搜索 · {{host}}"
+    "searchedHost": "已在 {{host}} 搜索"
   },
   "topicGraph": {
     "node": "{{label}}，{{seconds}} 秒",

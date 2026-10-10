@@ -9,9 +9,9 @@ const load = () => import("../../src/utils/searchHost.ts");
 
 test("names the host a search actually went to", async () => {
   const { searchHostLabel } = await load();
-  assert.equal(searchHostLabel("https://www.google.com/search"), "google");
-  assert.equal(searchHostLabel("https://duckduckgo.com/"), "duckduckgo");
-  assert.equal(searchHostLabel("https://search.marginalia.nu/search"), "search");
+  assert.equal(searchHostLabel("https://www.google.com/search"), "google.com");
+  assert.equal(searchHostLabel("https://duckduckgo.com/"), "duckduckgo.com");
+  assert.equal(searchHostLabel("https://search.marginalia.nu/search"), "search.marginalia.nu");
   assert.equal(searchHostLabel("http://localhost:8080/q"), "localhost");
 });
 

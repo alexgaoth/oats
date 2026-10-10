@@ -2239,7 +2239,7 @@
     "announced": "Nueva pregunta: {{question}}",
     "announcedAgain": "Preguntado de nuevo, {{count}} veces ya: {{question}}",
     "announcedBatch": "{{count}} preguntas nuevas, la última: {{question}}",
-    "searchedHost": "buscado · {{host}}"
+    "searchedHost": "Buscado en {{host}}"
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} segundos",

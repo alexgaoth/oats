@@ -2261,7 +2261,7 @@
     "announced": "Новый вопрос: {{question}}",
     "announcedAgain": "Задан снова, уже {{count}}×: {{question}}",
     "announcedBatch": "Новых вопросов: {{count}}, последний: {{question}}",
-    "searchedHost": "поиск · {{host}}"
+    "searchedHost": "Поиск: {{host}}"
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} с",
