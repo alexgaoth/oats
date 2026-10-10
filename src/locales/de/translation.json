@@ -2069,10 +2069,10 @@
       "backToApp": "Zurück zur App",
       "navLabel": "Einstellungsseiten",
       "themeSystem": "System",
-      "processingDescription": "Transkription, Zusammenfassungen und Bereinigung mit einer Wahl. Jedes lässt sich unten ändern.",
+      "processingDescription": "Wo beide Modelle laufen. Wählen Sie jedes Modell unten.",
       "processingLocal": "Auf diesem Mac",
       "processingProviders": "Mit API-Schlüsseln",
-      "processingMixed": "Gemischt: Einige Funktionen unten nutzen eine andere Wahl.",
+      "processingMixed": "Gemischt: Sprach- und Schreibmodell laufen an verschiedenen Orten.",
       "tuning": "Feinabstimmung",
       "dictationAudio": "Diktat-Audio",
       "dictationAudioDescription": "Aufnahmen von Diktaten, 30 Tage aufbewahrt, damit ein fehlgeschlagenes erneut transkribiert werden kann.",
@@ -2149,12 +2149,19 @@
         "autoLearnDescription": "Wenn du ein diktiertes Wort in einer anderen App korrigierst, fügt Oats es hier hinzu."
       },
       "models": {
-        "conversations": "Gespräche",
-        "conversationsDescription": "Das Sprachmodell, das ein Gespräch transkribiert.",
-        "summaries": "Zusammenfassungen",
-        "summariesDescription": "Das Modell, das Titel, Zusammenfassung und Themen schreibt.",
-        "dictation": "Diktat",
-        "dictationDescription": "Das Sprachmodell für das Diktat."
+        "title": "Ihre Modelle",
+        "description": "Zwei Modelle erledigen alles. Jedes dient Gesprächen und Diktat.",
+        "speech": "Sprache",
+        "speechDescription": "Transkribiert Gespräche und Diktate",
+        "writing": "Schreiben",
+        "writingDescription": "Schreibt Zusammenfassungen und bereinigt Diktate",
+        "choose": "Modell wählen",
+        "speechTitle": "Sprachmodell",
+        "speechScreen": "Ein Modell transkribiert Ihre Gespräche und Diktate. Zwei Modelle würden abwechselnd auf diesem Mac geladen.",
+        "writingTitle": "Schreibmodell",
+        "writingScreen": "Ein Modell schreibt Ihre Zusammenfassungen und bereinigt Ihre Diktate.",
+        "none": "Noch keins",
+        "selfHosted": "Ihr Server"
       },
       "global": {
         "title": "Aus jeder App",
@@ -2169,11 +2176,14 @@
         "searchHint": "Öffnet Oats mit bereitem Suchfeld."
       },
       "microphoneDescription": "Das Mikrofon, das Oats für Gespräche und Diktate nutzt.",
-      "advanced": {
-        "title": "Erweitert",
-        "fieldBackdrop": "Feld-Hintergrund",
-        "fieldBackdropDescription": "Zeigt das animierte Weizenfeld hinter der App. Es nutzt die GPU ständig."
-      }
+      "fieldBackdrop": {
+        "label": "Feld-Hintergrund",
+        "description": "Zeigt das animierte Weizenfeld hinter der App. Es nutzt die GPU ständig."
+      },
+      "dictationButton": "Beim Diktieren",
+      "instructionsDescription": "Wie das Modell jedes Diktat überarbeitet. Die Standardeinstellung passt für die meisten.",
+      "editInstructions": "Anweisungen bearbeiten",
+      "instructions": "Bereinigungsanweisungen"
     },
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",

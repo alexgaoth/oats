@@ -2069,10 +2069,10 @@
       "backToApp": "Voltar ao app",
       "navLabel": "Páginas de configurações",
       "themeSystem": "Sistema",
-      "processingDescription": "Transcrição, resumos e limpeza em uma só escolha. Cada um pode ser alterado abaixo.",
+      "processingDescription": "Onde os dois modelos rodam. Escolha cada modelo abaixo.",
       "processingLocal": "Neste Mac",
       "processingProviders": "Com chaves de API",
-      "processingMixed": "Misto: alguns recursos abaixo usam outra escolha.",
+      "processingMixed": "Misto: os modelos de fala e de escrita rodam em lugares diferentes.",
       "tuning": "Ajuste fino",
       "dictationAudio": "Áudio de ditados",
       "dictationAudioDescription": "Gravações de ditados, guardadas por 30 dias para que um que falhou possa ser transcrito de novo.",
@@ -2149,12 +2149,19 @@
         "autoLearnDescription": "Quando você corrige uma palavra ditada em outro app, o Oats a adiciona aqui."
       },
       "models": {
-        "conversations": "Conversas",
-        "conversationsDescription": "O modelo de voz que transcreve uma conversa.",
-        "summaries": "Resumos",
-        "summariesDescription": "O modelo que escreve o título, o resumo e os fios.",
-        "dictation": "Ditado",
-        "dictationDescription": "O modelo de voz do ditado."
+        "title": "Seus modelos",
+        "description": "Dois modelos fazem todo o trabalho. Cada um serve para conversas e ditado.",
+        "speech": "Fala",
+        "speechDescription": "Transcreve conversas e ditados",
+        "writing": "Escrita",
+        "writingDescription": "Escreve resumos e limpa ditados",
+        "choose": "Escolher um modelo",
+        "speechTitle": "Modelo de fala",
+        "speechScreen": "Um só modelo transcreve suas conversas e seus ditados. Dois modelos se revezariam na memória deste Mac.",
+        "writingTitle": "Modelo de escrita",
+        "writingScreen": "Um só modelo escreve seus resumos e limpa seus ditados.",
+        "none": "Nenhum ainda",
+        "selfHosted": "Seu servidor"
       },
       "global": {
         "title": "De qualquer app",
@@ -2169,11 +2176,14 @@
         "searchHint": "Abre o Oats com a pesquisa pronta."
       },
       "microphoneDescription": "O microfone que o Oats usa para conversas e ditado.",
-      "advanced": {
-        "title": "Avançado",
-        "fieldBackdrop": "Fundo de campo",
-        "fieldBackdropDescription": "Mostra o campo de trigo animado atrás do app. Usa a GPU o tempo todo."
-      }
+      "fieldBackdrop": {
+        "label": "Fundo de campo",
+        "description": "Mostra o campo de trigo animado atrás do app. Usa a GPU o tempo todo."
+      },
+      "dictationButton": "Enquanto você dita",
+      "instructionsDescription": "Como o modelo reescreve cada ditado. O padrão serve para a maioria das pessoas.",
+      "editInstructions": "Editar instruções",
+      "instructions": "Instruções de limpeza"
     },
     "errors": {
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",

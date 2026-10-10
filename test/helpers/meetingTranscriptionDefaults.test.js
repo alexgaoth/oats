@@ -42,7 +42,7 @@ test("the meeting scope is what the primary action actually reads", () => {
   // If this moves, the test below is checking the wrong field.
   assert.match(
     STORE,
-    /selectResolvedMeetingTranscription[\s\S]{0,600}useLocalWhisper: state\.meetingUseLocalWhisper/,
+    /selectResolvedMeetingTranscription[\s\S]{0,2000}useLocalWhisper: state\.meetingUseLocalWhisper/,
     "meeting transcription should resolve from meetingUseLocalWhisper"
   );
 });
@@ -70,14 +70,31 @@ test("the Settings toggle reflects the meeting scope, not just dictation", () =>
   const start = PROCESSING.indexOf("function processingMode(");
   assert.ok(start > -1, "processingMode not found");
   const body = PROCESSING.slice(start, start + 600);
-  for (const scope of [
-    "transcriptionMode",
-    "cleanupMode",
-    "noteFormattingMode",
-    "meetingTranscriptionMode",
-  ]) {
+  for (const scope of ["transcriptionMode", "cleanupMode", "meetingTranscriptionMode"]) {
     assert.ok(body.includes(`state.${scope}`), `the selected state must include ${scope}`);
   }
+});
+
+// One speech model and one writing model. Two models on one local server meant
+// a reload on every alternation, and a request in flight on the killed server
+// failed: a lost dictation or a lost conversation segment.
+test("conversations use the dictation speech model", () => {
+  const start = STORE.indexOf("export const selectResolvedMeetingTranscription");
+  const body = STORE.slice(start, start + 2000);
+  assert.match(body, /whisperModel: state\.whisperModel,/);
+  assert.match(body, /parakeetModel: state\.parakeetModel,/);
+  assert.match(body, /localTranscriptionProvider: state\.localTranscriptionProvider,/);
+  assert.match(body, /cloudTranscriptionModel: state\.cloudTranscriptionModel,/);
+  assert.doesNotMatch(body, /state\.meeting(Whisper|Parakeet)Model/);
+});
+
+test("summaries use the cleanup scope's whole configuration", () => {
+  const start = STORE.indexOf("export const selectResolvedLLMConfig");
+  const body = STORE.slice(start, start + 1200);
+  assert.match(
+    body,
+    /if \(scope === "noteFormatting"\) \{\s*return \{ \.\.\.selectResolvedLLMConfig\(state, "dictationCleanup"\), scope \};/
+  );
 });
 
 test("switching processing does not leave the other mode's model behind", () => {
@@ -85,7 +102,13 @@ test("switching processing does not leave the other mode's model behind", () => 
   // going to the provider while the switch read "On this Mac".
   const start = PROCESSING.indexOf("export function setProcessing(");
   const body = PROCESSING.slice(start, start + 2000);
-  assert.match(body, /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_LOCAL_MODEL\)/);
-  assert.match(body, /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_CLOUD_MODEL\)/);
+  assert.match(
+    body,
+    /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_LOCAL_MODEL\)/
+  );
+  assert.match(
+    body,
+    /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_CLOUD_MODEL\)/
+  );
   assert.match(body, /setCleanupModel\(remembered\?\.cleanupModel \|\| DEFAULT_LOCAL_MODEL\)/);
 });

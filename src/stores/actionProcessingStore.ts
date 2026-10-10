@@ -138,7 +138,7 @@ export function runBackgroundAction(
       const providerOverrides = buildNoteFormattingOverrides(
         noteFormatting,
         options.isCloudMode,
-        settings.noteFormattingCustomApiKey
+        noteFormatting.customApiKey
       );
       const systemPrompt = appendDictionarySuffix(
         basePrompt + action.prompt,
@@ -148,7 +148,7 @@ export function runBackgroundAction(
       const enhanced = await reasoningService.processText(noteContent, modelId, null, {
         systemPrompt,
         temperature: 0.3,
-        disableThinking: settings.noteFormattingDisableThinking,
+        disableThinking: noteFormatting.disableThinking,
         ...providerOverrides,
       });
 

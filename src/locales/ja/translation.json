@@ -2069,10 +2069,10 @@
       "backToApp": "アプリに戻る",
       "navLabel": "設定のページ",
       "themeSystem": "システム",
-      "processingDescription": "文字起こし・要約・整形をひとつの選択で。それぞれ下で変更できます。",
+      "processingDescription": "2つのモデルを動かす場所。各モデルは下で選べます。",
       "processingLocal": "この Mac で",
       "processingProviders": "API キーで",
-      "processingMixed": "混在：下の一部の機能は別の設定を使っています。",
+      "processingMixed": "混在：音声モデルと文章モデルが別々の場所で動いています。",
       "tuning": "詳細な調整",
       "dictationAudio": "音声入力の音声",
       "dictationAudioDescription": "音声入力の録音は 30 日間保存され、失敗したものを文字起こしし直せます。",
@@ -2149,12 +2149,19 @@
         "autoLearnDescription": "ほかのアプリで音声入力の単語を修正すると、Oats がここに追加します。"
       },
       "models": {
-        "conversations": "会話",
-        "conversationsDescription": "会話を文字起こしする音声モデル。",
-        "summaries": "要約",
-        "summariesDescription": "タイトル、要約、スレッドを書くモデル。",
-        "dictation": "音声入力",
-        "dictationDescription": "音声入力用の音声モデル。"
+        "title": "使用中のモデル",
+        "description": "2つのモデルがすべてを担います。どちらも会話とディクテーションの両方に使われます。",
+        "speech": "音声",
+        "speechDescription": "会話とディクテーションを文字起こし",
+        "writing": "文章",
+        "writingDescription": "要約を書き、ディクテーションを整える",
+        "choose": "モデルを選ぶ",
+        "speechTitle": "音声モデル",
+        "speechScreen": "1つのモデルで会話とディクテーションの両方を文字起こしします。2つのモデルだと、このMacで交互に読み込まれます。",
+        "writingTitle": "文章モデル",
+        "writingScreen": "1つのモデルで要約を書き、ディクテーションを整えます。",
+        "none": "まだありません",
+        "selfHosted": "自分のサーバー"
       },
       "global": {
         "title": "どのアプリからでも",
@@ -2169,11 +2176,14 @@
         "searchHint": "検索欄を開いた状態で Oats を表示します。"
       },
       "microphoneDescription": "Oats が会話と音声入力に使うマイク。",
-      "advanced": {
-        "title": "詳細設定",
-        "fieldBackdrop": "フィールド背景",
-        "fieldBackdropDescription": "アプリの背後に動く麦畑を表示します。GPU を常に使います。"
-      }
+      "fieldBackdrop": {
+        "label": "フィールド背景",
+        "description": "アプリの背後に動く麦畑を表示します。GPU を常に使います。"
+      },
+      "dictationButton": "ディクテーション中",
+      "instructionsDescription": "モデルが各ディクテーションをどう書き直すか。ほとんどの人は既定のままで問題ありません。",
+      "editInstructions": "指示を編集",
+      "instructions": "整形の指示"
     },
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",

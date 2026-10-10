@@ -2069,10 +2069,10 @@
       "backToApp": "Back to app",
       "navLabel": "Settings pages",
       "themeSystem": "System",
-      "processingDescription": "Transcription, summaries and cleanup in one choice. Each can be changed below.",
+      "processingDescription": "Where both models run. Choose each model below.",
       "processingLocal": "On this Mac",
       "processingProviders": "With API keys",
-      "processingMixed": "Mixed: some features below use a different choice.",
+      "processingMixed": "Mixed: the speech and writing models run in different places.",
       "tuning": "Fine-tuning",
       "dictationAudio": "Dictation audio",
       "dictationAudioDescription": "Recordings of dictations, kept for 30 days so a failed one can be transcribed again.",
@@ -2149,12 +2149,19 @@
         "autoLearnDescription": "When you correct a dictated word in another app, Oats adds it here."
       },
       "models": {
-        "conversations": "Conversations",
-        "conversationsDescription": "The speech model that transcribes a conversation.",
-        "summaries": "Summaries",
-        "summariesDescription": "The model that writes the title, the summary and the threads.",
-        "dictation": "Dictation",
-        "dictationDescription": "The speech model for dictation."
+        "title": "Your models",
+        "description": "Two models do all the work. Each one serves conversations and dictation.",
+        "speech": "Speech",
+        "speechDescription": "Transcribes conversations and dictation",
+        "writing": "Writing",
+        "writingDescription": "Writes summaries and tidies dictation",
+        "choose": "Choose a model",
+        "speechTitle": "Speech model",
+        "speechScreen": "One model transcribes your conversations and your dictation. Two models would take turns loading on this Mac.",
+        "writingTitle": "Writing model",
+        "writingScreen": "One model writes your summaries and tidies your dictation.",
+        "none": "None yet",
+        "selfHosted": "Your server"
       },
       "global": {
         "title": "From any app",
@@ -2169,11 +2176,14 @@
         "searchHint": "Opens Oats with the search field ready."
       },
       "microphoneDescription": "The microphone Oats uses for conversations and dictation.",
-      "advanced": {
-        "title": "Advanced",
-        "fieldBackdrop": "Field backdrop",
-        "fieldBackdropDescription": "Draw the animated wheat field behind the app. It uses the GPU all the time."
-      }
+      "fieldBackdrop": {
+        "label": "Field backdrop",
+        "description": "Draw the animated wheat field behind the app. It uses the GPU all the time."
+      },
+      "dictationButton": "While you dictate",
+      "instructionsDescription": "How the model rewrites each dictation. The default works for most people.",
+      "editInstructions": "Edit instructions",
+      "instructions": "Cleanup instructions"
     },
     "errors": {
       "noModel": "Configure Oats processing before recording a conversation.",
