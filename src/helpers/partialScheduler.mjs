@@ -31,6 +31,15 @@
 //      with none, or one that failed, does not, so the caller sends an empty
 //      partial.
 //
+// Measured (2026-10-10, `base`, the app's server arguments, two conversations
+// and a monologue replayed in real time): the first words of a turn appeared
+// 1.1–1.3 s after they were said, against 4.0–6.0 s, and 1.5 s into a 33 s
+// monologue against 20.2 s. Finals were not slower in conversation (every turn
+// within ±0.08 s); the one cost is a final that waits behind a partial already
+// on the server, at most one partial long — 0.15–0.25 s at Stop in the
+// monologue. Partials kept the server busy for 8–10% of the time somebody was
+// talking, 16% in the monologue, where each re-reads up to 20 s.
+//
 // Pure: time and the server's state come in as arguments. Pinned by
 // test/helpers/partialScheduler.test.js.
 
