@@ -9,6 +9,7 @@ import {
   TextCursorInput,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import { isSettingsPageShown } from "../../helpers/dictationSetting.mjs";
 
 /** The pages of Settings, in the order the sidebar lists them. */
 export type SettingsPageId =
@@ -82,4 +83,14 @@ export const SETTINGS_PAGES: SettingsPageEntry[] = [
 
 export function isSettingsPageId(value: unknown): value is SettingsPageId {
   return SETTINGS_PAGES.some((page) => page.id === value);
+}
+
+/** The pages the sidebar lists now: Dictation only while dictation is on. */
+export function visibleSettingsPages(dictationEnabled: boolean): SettingsPageEntry[] {
+  return SETTINGS_PAGES.filter((page) => isSettingsPageShown(page.id, dictationEnabled));
+}
+
+/** The page to draw for `page`: itself while it is listed, General once it is not. */
+export function shownSettingsPage(page: SettingsPageId, dictationEnabled: boolean): SettingsPageId {
+  return isSettingsPageShown(page, dictationEnabled) ? page : "general";
 }

@@ -6,7 +6,8 @@ import { Kbd } from "../ui/kbd";
 import { OatsMark } from "./OatsMark";
 import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
-import { SETTINGS_PAGES, type SettingsPageId } from "../settings/settingsPages";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { visibleSettingsPages, type SettingsPageId } from "../settings/settingsPages";
 
 export type ShellSurface = "conversation" | "intelligence" | "settings";
 
@@ -97,6 +98,8 @@ export function AppSidebar({
   const { t } = useTranslation();
   const recording = useMeetingRecordingStore((state) => state.isRecording);
   const clock = useRecordingClock(recording);
+  // The Dictation page is listed only while dictation is on (General › Advanced).
+  const dictationEnabled = useSettingsStore((state) => state.dictationEnabled);
   const notes = useNotes();
   const recent = useMemo(
     () => notes.filter((note) => note.note_type === "meeting").slice(0, 6),
@@ -134,7 +137,7 @@ export function AppSidebar({
           {t("oats.nav.settings")}
         </div>
         <nav aria-label={t("oats.settings.navLabel")} className="flex flex-col gap-0.5 px-3">
-          {SETTINGS_PAGES.map((page) => (
+          {visibleSettingsPages(dictationEnabled).map((page) => (
             <NavItem
               key={page.id}
               icon={page.icon}

@@ -1089,6 +1089,14 @@ declare global {
       getActivationMode?: () => Promise<"tap" | "push">;
       saveActivationMode?: (mode: "tap" | "push") => Promise<void>;
 
+      // Dictation on or off (file-based, read before any window exists)
+      getDictationEnabled?: () => Promise<boolean>;
+      setDictationEnabled?: (enabled: boolean) => Promise<{
+        success: boolean;
+        enabled: boolean;
+        activeDictationKey: string | null;
+      }>;
+
       // Debug logging
       getLogLevel?: () => Promise<string>;
       log?: (entry: {

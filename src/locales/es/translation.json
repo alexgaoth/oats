@@ -2062,6 +2062,11 @@
       "vaultStop": "Detener",
       "autoSearch": "Buscar preguntas sin responder",
       "autoSearchHint": "Abre una búsqueda de Google en segundo plano cuando nadie lo sabe. Solo se envía el texto de la pregunta, nunca audio ni transcripción. Las tarjetas siguen apareciendo.",
+      "advanced": {
+        "title": "Avanzado",
+        "dictation": "Dictado",
+        "dictationDescription": "Escribe con la voz en cualquier app. Añade un botón flotante y una página de Dictado en Ajustes."
+      },
       "advancedLoading": "Abriendo…",
       "hotkeyRejected": "No se pudo registrar «{{hotkey}}», así que sigue en uso el atajo anterior.",
       "conversationHotkey": "Atajo de conversación",

@@ -75,6 +75,7 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **hotkeyManager.js**: Global hotkey registration and management
   - Named hotkey slots: `conversation` (**the primary action** — starts/stops an in-person conversation from anywhere; the only slot with a shipped default, `CommandOrControl+Shift+O`, with a fallback if that is taken), `dictation`, `agent` (chat agent overlay), `voiceAgent` (dictation routed straight to the dictation agent), `meeting`, `translation`, `search` (opens Intelligence with the cross-conversation filter focused; opt-in, no default)
   - Handles platform-specific defaults (GLOBE on macOS, Control+Super on Windows/Linux)
+  - Dictation is a setting (`DICTATION_ENABLED`, Settings › General › Advanced): off by default on macOS, on elsewhere. While it is off the `dictation`, `voiceAgent` and `translation` slots (`DICTATION_SLOTS`) are kept but not bound, and the floating oat is not shown. `setDictationEnabled` binds or releases them at run time, on every backend
   - Auto-fallback to F8/F9 if default hotkey is unavailable
   - Notifies renderer via IPC when hotkey registration fails
   - Integrates with GnomeShortcutManager for GNOME Wayland support
@@ -324,6 +325,7 @@ Non-secret env vars persisted to `.env` (via `saveAllKeysToEnvFile()`):
 
 - `LOCAL_TRANSCRIPTION_PROVIDER`: Transcription engine (`nvidia` for Parakeet)
 - `PARAKEET_MODEL`: Selected Parakeet model name (e.g., `parakeet-tdt-0.6b-v3`)
+- `DICTATION_ENABLED`: `true` or `false` once chosen in Settings; unset means the platform default (off on macOS, on elsewhere). Read by the main process before any window exists; the renderer's `dictationEnabled` follows it
 
 ### 6. Language Support
 

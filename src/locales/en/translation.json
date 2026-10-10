@@ -2062,6 +2062,11 @@
       "vaultStop": "Stop",
       "autoSearch": "Search unanswered questions",
       "autoSearchHint": "Opens a background Google search when nobody knows. Only the question text leaves this Mac, never audio or the transcript. Cards still appear when this is off.",
+      "advanced": {
+        "title": "Advanced",
+        "dictation": "Dictation",
+        "dictationDescription": "Type with your voice in any app. Adds a floating button and a Dictation page to Settings."
+      },
       "advancedLoading": "Opening…",
       "hotkeyRejected": "“{{hotkey}}” could not be registered, so the previous shortcut is still in use.",
       "conversationHotkey": "Conversation shortcut",

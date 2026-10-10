@@ -27,6 +27,11 @@ const GNOME_NATIVE_SLOTS = new Set([
   "search",
 ]);
 
+// Slots whose key starts a dictation in the floating oat. None of them is bound
+// while dictation is off (Settings › General › Advanced); the conversation and
+// search keys never depend on it.
+const DICTATION_SLOTS = new Set(["dictation", "voiceAgent", "translation"]);
+
 // KDE registration failure reasons — reuse existing i18n keys
 const KDE_FAILURE_REASONS = {
   conflict: (hotkey) => i18nMain.t("hotkey.errors.alreadyRegistered", { hotkey }),
@@ -95,6 +100,14 @@ class HotkeyManager extends EventEmitter {
     this.slots = new Map();
     const defaultDictation = process.platform === "darwin" ? "GLOBE" : "Control+Super";
     this.slots.set("dictation", { hotkeys: [defaultDictation], callback: null, accelerators: [] });
+    // On until main.js says otherwise at startup, so a manager nobody configured
+    // behaves as it always did. See setDictationEnabled.
+    this.dictationEnabled = true;
+    // How this desktop binds the saved dictation key, kept by initializeHotkey
+    // so turning dictation on later can run it again.
+    this._registerDictation = null;
+    // The voice agent and translation keys, kept here while dictation is off.
+    this._parkedSlots = new Map();
     this.isInitialized = false;
     this.isListeningMode = false;
     this.gnomeManager = null;
@@ -198,6 +211,12 @@ class HotkeyManager extends EventEmitter {
           hotkey: String(hotkeyInput ?? ""),
         }),
       };
+    }
+    // Every caller (startup, the Settings update handlers, the re-registration
+    // after hotkey capture) comes through here, so this is the one place a
+    // dictation key is refused while dictation is off.
+    if (!this.dictationEnabled && DICTATION_SLOTS.has(slotName)) {
+      return this._parkSlot(slotName, hotkeys, callback);
     }
     // GNOME/KDE/Hyprland bind one accelerator per slot, so they use the primary
     // (first) hotkey; the globalShortcut path below registers the whole list.
@@ -321,6 +340,9 @@ class HotkeyManager extends EventEmitter {
   }
 
   unregisterSlot(slotName) {
+    // Clearing a key while dictation is off must not bring it back when it is
+    // turned on.
+    this._parkedSlots.delete(slotName);
     const slot = this.slots.get(slotName);
     if (!slot || !(slot.hotkeys && slot.hotkeys.length)) return;
 
@@ -738,6 +760,119 @@ class HotkeyManager extends EventEmitter {
     return false;
   }
 
+  /**
+   * Bind or release every dictation key: the dictation list, and the voice agent
+   * and translation keys, which start a dictation too.
+   *
+   * Off releases them on whichever backend holds them (globalShortcut, GNOME,
+   * KDE, Hyprland) and leaves the slots empty, so the macOS Globe, right-modifier
+   * and mouse-button listeners and the Windows and Linux native listeners, which
+   * all read the slots, see nothing to dispatch. On binds the saved dictation key
+   * the way startup does, then the other two. Called by main.js before any
+   * window exists, and by Settings at run time.
+   */
+  async setDictationEnabled(enabled) {
+    const next = Boolean(enabled);
+    if (next === this.dictationEnabled) return;
+    this.dictationEnabled = next;
+
+    if (!next) {
+      for (const slotName of DICTATION_SLOTS) {
+        if (slotName === "dictation") continue;
+        const slot = this.slots.get(slotName);
+        const hotkeys = [...(slot?.hotkeys ?? [])];
+        if (hotkeys.length === 0 || !slot?.callback) continue;
+        this.unregisterSlot(slotName);
+        this._parkedSlots.set(slotName, { hotkeys, callback: slot.callback });
+      }
+      this._releaseDictationSlot();
+      return;
+    }
+
+    // Before initializeHotkey has run there is nothing to bind yet: it reads
+    // `dictationEnabled` itself.
+    if (this.isInitialized && this._registerDictation) {
+      try {
+        await this._registerDictation();
+      } catch (error) {
+        debugLogger.warn("[HotkeyManager] Could not bind the dictation key", error?.message);
+      }
+    }
+    const parked = [...this._parkedSlots];
+    this._parkedSlots.clear();
+    for (const [slotName, { hotkeys, callback }] of parked) {
+      const result = await this.registerSlot(slotName, hotkeys, callback);
+      if (!result.success) {
+        debugLogger.warn(`[HotkeyManager] Could not restore slot "${slotName}"`, result.error);
+      }
+    }
+  }
+
+  // Dictation is off: keep the key and bind nothing. The dictation key itself
+  // comes back from its saved preference (`_registerDictation`); the voice agent
+  // and translation keys come back from here.
+  _parkSlot(slotName, hotkeys, callback) {
+    if (slotName !== "dictation" && callback) {
+      this._parkedSlots.set(slotName, { hotkeys, callback });
+    }
+    debugLogger.log(`[HotkeyManager] Dictation is off; slot "${slotName}" kept, not registered`);
+    return { success: true, hotkey: hotkeys[0], hotkeys, parked: true };
+  }
+
+  // The dictation key can be held by GNOME or Hyprland outside the slot's own
+  // bookkeeping, so each backend is released explicitly. KDE and globalShortcut
+  // release through unregisterSlot.
+  _releaseDictationSlot() {
+    if (this.gnomeManager?.registeredSlots?.has("dictation")) {
+      this.gnomeManager.unregisterKeybinding("dictation").catch((err) => {
+        debugLogger.warn("[HotkeyManager] Error releasing the GNOME dictation key:", err.message);
+      });
+    }
+    if (this.useHyprland && this.hyprlandManager) {
+      this.hyprlandManager.unregisterKeybinding().catch((err) => {
+        debugLogger.warn(
+          "[HotkeyManager] Error releasing the Hyprland dictation key:",
+          err.message
+        );
+      });
+    }
+    this.unregisterSlot("dictation");
+    // Also clears the constructor's platform default, which no backend holds.
+    const slot = this._ensureSlot("dictation");
+    slot.hotkeys = [];
+    slot.accelerators = [];
+  }
+
+  /**
+   * Keep this desktop's way of binding the saved dictation key, and run it now
+   * only if dictation is on. Turning dictation on later runs it again.
+   */
+  _armDictation(register, delayMs = 0) {
+    this._registerDictation = register;
+    if (!this.dictationEnabled) {
+      this._releaseDictationSlot();
+      return;
+    }
+    const warn = (error) => {
+      debugLogger.warn("[HotkeyManager] Could not bind the dictation key", error?.message);
+    };
+    const run = () => {
+      // Turned off during the delay.
+      if (!this.dictationEnabled) return;
+      // Called synchronously, as startup always did; only its failure is async.
+      try {
+        Promise.resolve(register()).catch(warn);
+      } catch (error) {
+        warn(error);
+      }
+    };
+    if (delayMs > 0) {
+      setTimeout(run, delayMs);
+    } else {
+      run();
+    }
+  }
+
   async initializeHotkey(mainWindow, callback) {
     if (!mainWindow || !callback) {
       throw new Error("mainWindow and callback are required");
@@ -784,7 +919,7 @@ class HotkeyManager extends EventEmitter {
           }
         };
 
-        setTimeout(registerGnomeHotkey, HOTKEY_REGISTRATION_DELAY_MS);
+        this._armDictation(registerGnomeHotkey, HOTKEY_REGISTRATION_DELAY_MS);
         this.isInitialized = true;
         return;
       }
@@ -830,7 +965,7 @@ class HotkeyManager extends EventEmitter {
           }
         };
 
-        setTimeout(registerHyprlandHotkey, HOTKEY_REGISTRATION_DELAY_MS);
+        this._armDictation(registerHyprlandHotkey, HOTKEY_REGISTRATION_DELAY_MS);
         this.isInitialized = true;
         return;
       }
@@ -884,7 +1019,7 @@ class HotkeyManager extends EventEmitter {
           }
         };
 
-        setTimeout(registerKDEHotkey, HOTKEY_REGISTRATION_DELAY_MS);
+        this._armDictation(registerKDEHotkey, HOTKEY_REGISTRATION_DELAY_MS);
         this.isInitialized = true;
         return;
       }
@@ -895,30 +1030,37 @@ class HotkeyManager extends EventEmitter {
     }
 
     // Register from env var immediately if available, otherwise wait for page load.
-    const envHotkey = process.env.DICTATION_KEY || "";
-    if (envHotkey) {
-      const result = this.setupShortcuts(envHotkey, callback);
-      if (result.success) {
-        this._notifyStartupRegistration(envHotkey, result);
-        debugLogger.log(`[HotkeyManager] Hotkey "${envHotkey}" registered from env`);
-      } else {
-        debugLogger.log(`[HotkeyManager] Env hotkey "${envHotkey}" failed, waiting for page`);
-        this.loadSavedHotkeyOrDefault(mainWindow, callback);
+    const registerSavedHotkey = async () => {
+      const envHotkey = process.env.DICTATION_KEY || "";
+      if (envHotkey) {
+        const result = this.setupShortcuts(envHotkey, callback);
+        if (result.success) {
+          this._notifyStartupRegistration(envHotkey, result);
+          debugLogger.log(`[HotkeyManager] Hotkey "${envHotkey}" registered from env`);
+        } else {
+          debugLogger.log(`[HotkeyManager] Env hotkey "${envHotkey}" failed, waiting for page`);
+          await this.loadSavedHotkeyOrDefault(mainWindow, callback);
+        }
+        return;
       }
-    } else {
       const loadHotkey = () => this.loadSavedHotkeyOrDefault(mainWindow, callback);
       if (mainWindow.webContents.isLoading()) {
         mainWindow.webContents.once("did-finish-load", loadHotkey);
       } else {
-        loadHotkey();
+        await loadHotkey();
       }
-    }
+    };
+    this._armDictation(registerSavedHotkey);
 
     this.isInitialized = true;
   }
 
   async loadSavedHotkeyOrDefault(mainWindow, callback) {
     try {
+      // Reached late by the page-load wait and by the desktop backends' fallback,
+      // either of which can outlast dictation being turned off.
+      if (!this.dictationEnabled) return;
+
       // First check file-based storage (environment variable) - more reliable
       let savedHotkey = process.env.DICTATION_KEY || "";
 
@@ -1175,6 +1317,12 @@ class HotkeyManager extends EventEmitter {
         }
       }
 
+      if (!this.dictationEnabled) {
+        // Kept for when dictation is turned on, which binds the saved key.
+        await this.saveHotkeyToRenderer(hotkeyStr);
+        return { success: true, message: `Hotkey saved: ${hotkeyStr} (dictation is off)` };
+      }
+
       if (this.useGnome && this.gnomeManager) {
         debugLogger.log(`[HotkeyManager] Updating GNOME hotkey to "${primary}"`);
         const gnomeHotkey = GnomeShortcutManager.convertToGnomeFormat(primary);
@@ -1332,6 +1480,7 @@ class HotkeyManager extends EventEmitter {
         slot.accelerators = [];
       }
     }
+    this._parkedSlots.clear();
     globalShortcut.unregisterAll();
   }
 
@@ -1367,3 +1516,4 @@ module.exports.isModifierOnlyHotkey = isModifierOnlyHotkey;
 module.exports.isRightSideModifier = isRightSideModifier;
 module.exports.isMouseButtonHotkey = isMouseButtonHotkey;
 module.exports.GNOME_NATIVE_SLOTS = GNOME_NATIVE_SLOTS;
+module.exports.DICTATION_SLOTS = DICTATION_SLOTS;

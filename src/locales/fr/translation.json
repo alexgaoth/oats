@@ -2062,6 +2062,11 @@
       "vaultStop": "Arrêter",
       "autoSearch": "Rechercher les questions sans réponse",
       "autoSearchHint": "Ouvre une recherche Google en arrière-plan quand personne ne sait. Seul le texte de la question est envoyé, jamais l'audio ni la transcription. Les cartes restent.",
+      "advanced": {
+        "title": "Avancé",
+        "dictation": "Dictée",
+        "dictationDescription": "Écrivez à la voix dans n’importe quelle app. Ajoute un bouton flottant et une page Dictée aux Réglages."
+      },
       "advancedLoading": "Ouverture…",
       "hotkeyRejected": "« {{hotkey}} » n'a pas pu être enregistré, le raccourci précédent reste actif.",
       "conversationHotkey": "Raccourci de conversation",

@@ -2057,6 +2057,11 @@
       "vaultStop": "停止",
       "autoSearch": "搜尋未獲解答的問題",
       "autoSearchHint": "沒人知道答案時，在背景開啟 Google 搜尋。只送出問題文字，絕不送出音訊或逐字稿。關閉後卡片仍會出現。",
+      "advanced": {
+        "title": "進階",
+        "dictation": "聽寫",
+        "dictationDescription": "在任何應用程式中以語音輸入。會新增一個浮動按鈕，並在設定中新增「聽寫」頁面。"
+      },
       "advancedLoading": "正在開啟…",
       "hotkeyRejected": "無法註冊「{{hotkey}}」，因此仍在使用先前的快捷鍵。",
       "conversationHotkey": "對話快速鍵",

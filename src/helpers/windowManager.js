@@ -51,6 +51,10 @@ class WindowManager {
     this.macCompoundPushState = null;
     this.winPushState = null;
     this._cachedActivationMode = "tap";
+    // Dictation on or off (Settings › General › Advanced). Off means no oat on
+    // screen and no dictation started from anywhere. main.js sets it from .env
+    // before the oat is created; see setDictationEnabled.
+    this._dictationEnabled = true;
     this._floatingIconAutoHide = false;
     this._agentAnimationState = null;
     this._panelStartPosition = "bottom-right";
@@ -323,7 +327,7 @@ class WindowManager {
   }
 
   startMacCompoundPushToTalk(hotkey) {
-    if (this.macCompoundPushState?.active) {
+    if (!this._dictationEnabled || this.macCompoundPushState?.active) {
       return;
     }
 
@@ -454,7 +458,7 @@ class WindowManager {
   }
 
   startWindowsPushToTalk(key) {
-    if (this.winPushState?.active) {
+    if (!this._dictationEnabled || this.winPushState?.active) {
       return;
     }
 
@@ -510,8 +514,12 @@ class WindowManager {
     this.handleWindowsPushKeyUp();
   }
 
+  // Every way a dictation starts (the dictation, voice agent and translation
+  // keys, Globe, a held key, a desktop shortcut that outlived a crash) ends at
+  // this method or sendStartDictation, so dictation being off is enforced here
+  // as well as by the keys being released.
   _sendDictationToggle(channel) {
-    if (this.hotkeyManager.isInListeningMode()) {
+    if (!this._dictationEnabled || this.hotkeyManager.isInListeningMode()) {
       return;
     }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -602,7 +610,7 @@ class WindowManager {
   }
 
   sendStartDictation() {
-    if (this.hotkeyManager.isInListeningMode()) {
+    if (!this._dictationEnabled || this.hotkeyManager.isInListeningMode()) {
       return;
     }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
@@ -640,6 +648,38 @@ class WindowManager {
 
   setActivationModeCache(mode) {
     this._cachedActivationMode = mode === "push" ? "push" : "tap";
+  }
+
+  isDictationEnabled() {
+    return this._dictationEnabled;
+  }
+
+  /**
+   * Dictation on or off, applied at once: no restart.
+   *
+   * Off hides the oat and releases every dictation key (the dictation list, and
+   * the voice agent and translation keys, which start a dictation too). On binds
+   * the keys again and brings the oat back, unless auto-hide keeps it out of
+   * sight until a dictation starts. The conversation and search keys are never
+   * touched. Safe before any window exists: main.js calls it at startup so the
+   * oat is never shown and no dictation key is bound when dictation is off.
+   */
+  async setDictationEnabled(enabled) {
+    const next = Boolean(enabled);
+    this._dictationEnabled = next;
+    if (!next) {
+      this.hideDictationPanel();
+      // A dictation still recording is cancelled by the oat itself (App.jsx).
+      if (this._isDictatingToggle) {
+        this._isDictatingToggle = false;
+        this.meetingDetectionEngine?.setUserRecording(false);
+      }
+    }
+    await this.hotkeyManager.setDictationEnabled(next);
+    if (next && !this._floatingIconAutoHide) {
+      this.showDictationPanel();
+    }
+    this.reconcileNativeKeyListeners();
   }
 
   /**
@@ -1274,6 +1314,10 @@ class WindowManager {
   }
 
   showDictationPanel(options = {}) {
+    // Dictation off means no oat at all. Every caller (a dictation key, the
+    // tray, the end of onboarding, a learned correction, a conversation
+    // starting) comes through here, so this is the one gate.
+    if (!this._dictationEnabled) return;
     const { focus = false } = options;
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this._repositionToCursorDisplay();
@@ -1404,7 +1448,9 @@ class WindowManager {
     this.mainWindow.once("ready-to-show", () => {
       clearTimeout(showTimeout);
       this.enforceMainWindowOnTop();
-      if (!this.mainWindow.isVisible() && !this._floatingIconAutoHide) {
+      // The oat's renderer is created either way, so turning dictation on later
+      // needs no restart; it is only shown when dictation is on.
+      if (!this.mainWindow.isVisible() && !this._floatingIconAutoHide && this._dictationEnabled) {
         if (typeof this.mainWindow.showInactive === "function") {
           this.mainWindow.showInactive();
         } else {
