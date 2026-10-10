@@ -2065,7 +2065,9 @@
       "advanced": {
         "title": "Avanzate",
         "dictation": "Dettatura",
-        "dictationDescription": "Scrivi con la voce in qualsiasi app. Aggiunge un pulsante flottante e una pagina Dettatura alle Impostazioni."
+        "dictationDescription": "Scrivi con la voce in qualsiasi app. Aggiunge un pulsante flottante e una pagina Dettatura alle Impostazioni.",
+        "shortcut": "Scorciatoia",
+        "shortcutMode": "Tocca o tieni premuto"
       },
       "advancedLoading": "Apertura…",
       "hotkeyRejected": "Non è stato possibile registrare «{{hotkey}}», quindi resta attiva la scorciatoia precedente.",
@@ -2173,9 +2175,7 @@
         "description": "Funzionano anche quando Oats è in background.",
         "conversation": "Avvia o ferma una conversazione",
         "conversationHint": "Registra la stanza o conclude la conversazione in corso.",
-        "dictation": "Detta",
         "dictationHint": "Scrive quello che dici dove si trova il cursore.",
-        "activation": "Tasto di dettatura",
         "activationHint": "Tocca per avviare e fermare, o tieni premuto mentre parli.",
         "search": "Cerca nelle conversazioni",
         "searchHint": "Apre Oats con la ricerca pronta."

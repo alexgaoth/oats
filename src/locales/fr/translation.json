@@ -2065,7 +2065,9 @@
       "advanced": {
         "title": "Avancé",
         "dictation": "Dictée",
-        "dictationDescription": "Écrivez à la voix dans n’importe quelle app. Ajoute un bouton flottant et une page Dictée aux Réglages."
+        "dictationDescription": "Écrivez à la voix dans n’importe quelle app. Ajoute un bouton flottant et une page Dictée aux Réglages.",
+        "shortcut": "Raccourci",
+        "shortcutMode": "Appui ou maintien"
       },
       "advancedLoading": "Ouverture…",
       "hotkeyRejected": "« {{hotkey}} » n'a pas pu être enregistré, le raccourci précédent reste actif.",
@@ -2173,9 +2175,7 @@
         "description": "Ils marchent même quand Oats est en arrière-plan.",
         "conversation": "Démarrer ou arrêter une conversation",
         "conversationHint": "Enregistre la pièce, ou termine la conversation en cours.",
-        "dictation": "Dicter",
         "dictationHint": "Écrit ce que vous dites là où se trouve le curseur.",
-        "activation": "Touche de dictée",
         "activationHint": "Appuyez pour démarrer et arrêter, ou maintenez pendant que vous parlez.",
         "search": "Rechercher dans les conversations",
         "searchHint": "Ouvre Oats avec la recherche prête."

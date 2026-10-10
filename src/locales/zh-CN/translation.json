@@ -2060,7 +2060,9 @@
       "advanced": {
         "title": "高级",
         "dictation": "听写",
-        "dictationDescription": "在任何应用中用语音输入。会添加一个悬浮按钮，并在设置中添加“听写”页面。"
+        "dictationDescription": "在任何应用中用语音输入。会添加一个悬浮按钮，并在设置中添加“听写”页面。",
+        "shortcut": "快捷键",
+        "shortcutMode": "点按或按住"
       },
       "advancedLoading": "正在打开…",
       "hotkeyRejected": "无法注册「{{hotkey}}」，因此仍在使用之前的快捷键。",
@@ -2168,9 +2170,7 @@
         "description": "即使 Oats 在后台也能使用。",
         "conversation": "开始或停止对话",
         "conversationHint": "录下现场，或结束正在进行的对话。",
-        "dictation": "听写",
         "dictationHint": "在光标处输入你说的话。",
-        "activation": "听写按键",
         "activationHint": "轻按开始和停止，或说话时按住。",
         "search": "搜索对话",
         "searchHint": "打开 Oats 并准备好搜索框。"

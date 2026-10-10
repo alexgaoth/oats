@@ -397,7 +397,7 @@ test("the dictation shortcut and tap or hold moved under the switch, not copied"
   const advanced = general.slice(general.indexOf("oats.settings.advanced.title"));
   assert.match(
     advanced,
-    /\{dictationEnabled && \(\s*<SettingsPanelRow>\s*<SettingsRow\s+label=\{t\("oats\.settings\.global\.dictation"\)\}/
+    /\{dictationEnabled && \(\s*<SettingsPanelRow>\s*<SettingsRow\s+label=\{t\("oats\.settings\.advanced\.shortcut"\)\}/
   );
   assert.match(
     advanced,
@@ -406,7 +406,7 @@ test("the dictation shortcut and tap or hold moved under the switch, not copied"
   assert.match(advanced, /<ActivationModeSelector/);
   assert.match(advanced, /registerHotkey\(effectiveDefaultHotkey\)/, "the reset button moved too");
 
-  assert.doesNotMatch(shortcuts, /registerHotkey\(|ActivationModeSelector|global\.dictation/);
+  assert.doesNotMatch(shortcuts, /registerHotkey\(|ActivationModeSelector|global\.dictationHint/);
   assert.match(shortcuts, /<ConversationShortcutRow \/>/, "the conversation key stays");
   assert.match(shortcuts, /value=\{searchKey\}/, "the search key stays");
 

@@ -1099,7 +1099,7 @@ export default function SettingsPage({
                 {dictationEnabled && (
                   <SettingsPanelRow>
                     <SettingsRow
-                      label={t("oats.settings.global.dictation")}
+                      label={t("oats.settings.advanced.shortcut")}
                       description={
                         isUsingHyprland
                           ? t("settingsPage.general.hotkey.hyprlandUnbindDescription")
@@ -1137,7 +1137,7 @@ export default function SettingsPage({
                 {dictationEnabled && (!isUsingNativeShortcut || platform === "linux") && (
                   <SettingsPanelRow>
                     <SettingsRow
-                      label={t("oats.settings.global.activation")}
+                      label={t("oats.settings.advanced.shortcutMode")}
                       description={t("oats.settings.global.activationHint")}
                     >
                       <ActivationModeSelector value={activationMode} onChange={setActivationMode} />

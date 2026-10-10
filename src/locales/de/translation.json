@@ -2065,7 +2065,9 @@
       "advanced": {
         "title": "Erweitert",
         "dictation": "Diktat",
-        "dictationDescription": "Schreib per Stimme in jede App. Fügt eine schwebende Schaltfläche und die Seite „Diktat“ zu den Einstellungen hinzu."
+        "dictationDescription": "Schreib per Stimme in jede App. Fügt eine schwebende Schaltfläche und die Seite „Diktat“ zu den Einstellungen hinzu.",
+        "shortcut": "Tastenkürzel",
+        "shortcutMode": "Tippen oder halten"
       },
       "advancedLoading": "Wird geöffnet…",
       "hotkeyRejected": "„{{hotkey}}“ konnte nicht registriert werden, das vorherige Kürzel bleibt aktiv.",
@@ -2173,9 +2175,7 @@
         "description": "Sie funktionieren auch, wenn Oats im Hintergrund läuft.",
         "conversation": "Gespräch starten oder beenden",
         "conversationHint": "Nimmt den Raum auf oder beendet das laufende Gespräch.",
-        "dictation": "Diktieren",
         "dictationHint": "Schreibt, was du sagst, an die Stelle des Cursors.",
-        "activation": "Diktiertaste",
         "activationHint": "Tippen zum Starten und Stoppen, oder gedrückt halten, während du sprichst.",
         "search": "Gespräche durchsuchen",
         "searchHint": "Öffnet Oats mit bereitem Suchfeld."

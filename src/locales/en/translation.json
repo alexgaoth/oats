@@ -2065,7 +2065,9 @@
       "advanced": {
         "title": "Advanced",
         "dictation": "Dictation",
-        "dictationDescription": "Type with your voice in any app. Adds a floating button and a Dictation page to Settings."
+        "dictationDescription": "Type with your voice in any app. Adds a floating button and a Dictation page to Settings.",
+        "shortcut": "Shortcut",
+        "shortcutMode": "Tap or hold"
       },
       "advancedLoading": "Opening…",
       "hotkeyRejected": "“{{hotkey}}” could not be registered, so the previous shortcut is still in use.",
@@ -2173,9 +2175,7 @@
         "description": "These work even when Oats is in the background.",
         "conversation": "Start or stop a conversation",
         "conversationHint": "Records the room, or finishes the conversation that is running.",
-        "dictation": "Dictate",
         "dictationHint": "Types what you say where your cursor is.",
-        "activation": "Dictation key",
         "activationHint": "Tap to start and stop, or hold while you speak.",
         "search": "Search conversations",
         "searchHint": "Opens Oats with the search field ready."
