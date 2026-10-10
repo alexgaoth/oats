@@ -5298,9 +5298,13 @@ class IPCHandlers {
      * goes out with its exact place in the recording (`startMs`/`endMs`), and
      * the 16 kHz audio is kept in a temporary file so the speakers can be told
      * apart over the whole conversation once it stops.
+     *
+     * While a segment is still open, its words so far go out as `partial`s
+     * between the finals, never in their way (partialScheduler.mjs).
      */
     const startInRoomSegmenting = async () => {
       const { SpeechSegmenter } = await import("./speechSegmenter.mjs");
+      const { PartialScheduler } = await import("./partialScheduler.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
       const stream = fs.createWriteStream(audioPath);
@@ -5308,6 +5312,9 @@ class IPCHandlers {
       stream.write(pcm16ToWav(Buffer.alloc(0)));
       meetingInRoom = {
         segmenter: new SpeechSegmenter(),
+        // Whisper only: the default, and the path measured with a second
+        // request on its server. Parakeet keeps finals only until it is.
+        partials: meetingLocalProvider === "nvidia" ? null : new PartialScheduler(),
         startedAt: Date.now(),
         queue: [],
         draining: null,
@@ -5322,6 +5329,67 @@ class IPCHandlers {
       session.audio.bytes += pcm16k.length;
       const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
       for (const segment of session.segmenter.push(samples)) enqueueInRoomSegment(session, segment);
+      try {
+        startInRoomPartial(session);
+      } catch (error) {
+        // A preview must never break the audio path: partials stop for this
+        // recording, and the finals carry on.
+        session.partials = null;
+        debugLogger.warn("In-room partials stopped", { error: error.message });
+      }
+    };
+
+    // Finals and partials both go through this, so a partial is read with
+    // exactly the model and options its final will be. Async, so whatever
+    // goes wrong arrives as a rejection, never as a throw into the audio path.
+    const transcribeInRoomAudio = async (pcm) =>
+      meetingLocalProvider === "nvidia"
+        ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
+            model: meetingLocalModel,
+          })
+        : this.whisperManager.transcribeLocalWhisper(pcm16ToWav(pcm), {
+            model: meetingLocalModel,
+            language: meetingLocalLanguage,
+            ...this._resolveWhisperVadOptions("meeting"),
+          });
+
+    const sendInRoomPartial = (session, text) => {
+      const win = meetingLocalWin;
+      if (meetingInRoom !== session || !win || win.isDestroyed()) return;
+      win.webContents.send("meeting-transcription-segment", {
+        text,
+        source: "mic",
+        type: "partial",
+      });
+    };
+
+    /**
+     * The open segment's words so far. Asked on every chunk of audio; the
+     * scheduler decides, from the finals and the server, whether now is a
+     * moment a partial may take.
+     */
+    const startInRoomPartial = (session) => {
+      const scheduler = session.partials;
+      if (!scheduler) return;
+      const decision = scheduler.tick({
+        now: performance.now(),
+        open: session.segmenter.open,
+        finalsPending: session.queue.length + (session.draining ? 1 : 0),
+        serverBusy: !this.whisperManager.serverManager.isIdle(),
+      });
+      if (!decision.start) return;
+      const samples = session.segmenter.openSamples();
+      transcribeInRoomAudio(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength))
+        .then((result) => (result?.success ? result.text : ""))
+        .catch((error) => {
+          // A partial is only a preview; its final reports any real failure.
+          debugLogger.debug("In-room partial transcription failed", { error: error.message });
+          return "";
+        })
+        .then((text) => {
+          const words = scheduler.settle(decision.id, text, session.segmenter.open);
+          if (words !== null) sendInRoomPartial(session, words);
+        });
     };
 
     const enqueueInRoomSegment = (session, segment) => {
@@ -5340,19 +5408,9 @@ class IPCHandlers {
         segment.samples.byteOffset,
         segment.samples.byteLength
       );
+      let sent = false;
       try {
-        let result;
-        if (meetingLocalProvider === "nvidia") {
-          result = await this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
-            model: meetingLocalModel,
-          });
-        } else {
-          result = await this.whisperManager.transcribeLocalWhisper(pcm16ToWav(pcm), {
-            model: meetingLocalModel,
-            language: meetingLocalLanguage,
-            ...this._resolveWhisperVadOptions("meeting"),
-          });
-        }
+        const result = await transcribeInRoomAudio(pcm);
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
         meetingLocalTranscript = meetingLocalTranscript
@@ -5369,12 +5427,17 @@ class IPCHandlers {
             startMs: segment.startMs,
             endMs: segment.endMs,
           });
+          sent = true;
         }
       } catch (error) {
         debugLogger.error("In-room segment transcription failed", { error: error.message });
         if (meetingLocalWin && !meetingLocalWin.isDestroyed()) {
           meetingLocalWin.webContents.send("meeting-transcription-error", error.message);
         }
+      } finally {
+        // The renderer empties the live line on a final with words. One with
+        // none, or one that failed, would leave this segment's partial there.
+        if (session.partials?.finalSettled(sent)) sendInRoomPartial(session, "");
       }
     };
 

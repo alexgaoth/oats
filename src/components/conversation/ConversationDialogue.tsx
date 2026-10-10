@@ -90,10 +90,11 @@ export default function ConversationDialogue({ className }: { className?: string
   // words and waiting for the next ~5s commit. Rendered, the line grows as the
   // sentence is spoken and is replaced by the final when it lands.
   //
-  // Only the streaming providers produce these (`attachMeetingStreamingHandlers`
-  // in ipcHandlers.js). Local Whisper transcribes whole segments and emits finals
-  // only, so on the default local path this stays empty and the log behaves as
-  // it did — chunked, not word by word.
+  // The streaming providers produce these (`attachMeetingStreamingHandlers` in
+  // ipcHandlers.js), and so does local Whisper in a room, which reads the
+  // segment still being spoken again every 1.2s (`helpers/partialScheduler.mjs`).
+  // A call on local Whisper emits finals only, so there this stays empty and
+  // the log behaves as it did — chunked, not word by word.
   const micPartial = useMeetingRecordingStore((state) => state.micPartial);
   const systemPartial = useMeetingRecordingStore((state) => state.systemPartial);
   const partial = (micPartial || systemPartial || "").trim();

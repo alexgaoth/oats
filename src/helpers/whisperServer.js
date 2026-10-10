@@ -18,6 +18,8 @@ const { pcm16ToWav } = require("../utils/audioUtils");
 let requestCutsModule = null;
 const loadRequestCuts = () => (requestCutsModule ??= import("./whisperRequestCuts.mjs"));
 
+let wavConversionCount = 0;
+
 const PORT_RANGE_START = 8178;
 const PORT_RANGE_END = 8199;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -248,6 +250,17 @@ class WhisperServerManager extends EventEmitter {
     this.vadSignature = "vad:off";
     this.threadSignature = "threads:default";
     this.lastStartOptions = {};
+    this.inFlight = 0; // requests being answered, for isIdle()
+  }
+
+  /**
+   * Up, and answering nobody. The server answers one request at a time, so
+   * anything sent now would wait behind another; optional work — a live
+   * partial in a room (partialScheduler.mjs) — goes only when this is true,
+   * and never starts the server itself.
+   */
+  isIdle() {
+    return this.ready && !this.startupPromise && this.inFlight === 0;
   }
 
   getFFmpegPath() {
@@ -737,7 +750,16 @@ class WhisperServerManager extends EventEmitter {
     if (!this.ready || (!this.process && !this.isRemote)) {
       throw new Error("whisper-server is not running");
     }
+    // Counted from the conversion to the answer, for isIdle().
+    this.inFlight += 1;
+    try {
+      return await this._transcribeAudio(audioBuffer, options);
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
 
+  async _transcribeAudio(audioBuffer, options) {
     // Debug: Log audio buffer info
     debugLogger.debug("whisper-server transcribe called", {
       bufferLength: audioBuffer?.length || 0,
@@ -973,7 +995,10 @@ class WhisperServerManager extends EventEmitter {
 
   async _convertToWav(audioBuffer) {
     const tempDir = getSafeTempDir();
-    const timestamp = Date.now();
+    // Unique per request, not per millisecond: a room's live partial and its
+    // final can be converted at once, and one must not read or delete the
+    // other's audio.
+    const timestamp = `${process.pid}-${Date.now()}-${++wavConversionCount}`;
     const tempInputPath = path.join(tempDir, `whisper-input-${timestamp}.webm`);
     const tempWavPath = path.join(tempDir, `whisper-output-${timestamp}.wav`);
 

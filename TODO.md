@@ -891,6 +891,17 @@ method in `docs/dictation-accuracy.md`.
   saved 0.5s after Finish, speakers 4.6s after Finish on an idle CPU.
 - **Stored segments had no ids — fixed.** Search landing and mark links
   silently missed on every real conversation.
+- **Live words in a room — done (2026-10-10).** A segment went to Whisper
+  only when it closed, so the first words of a turn appeared 4–6s after they
+  were said and ~20s into a monologue, though `base` answers in 60–200ms.
+  While a segment is open it is now re-read every 1.2s and sent as the live
+  line (`helpers/partialScheduler.mjs`), never ahead of a final or a
+  dictation. Measured with the app's server and a real-time replay: first
+  words 1.3s after they were said on `conv.wav` (was 4.0s), 1.1s on
+  `flow-conv.wav` (was 6.0s), 1.5s into a 33s monologue (was 20.2s); finals
+  unchanged; partials use 8–10% of the talking time on the server. Checked in
+  the real app with the fake microphone: each final replaces the live line in
+  one step.
 
 Still open:
 
@@ -905,6 +916,8 @@ Still open:
 - **TitaNet-small is trained on English.** Other languages are untested.
 - **Speakers are known only after Finish**, so the live dialogue in a room has
   no labels. Live diarization is a different product decision.
+- **Parakeet in a room has no live line.** Partials run on Whisper only; the
+  Parakeet server has not been measured with a second request in flight.
 
 ## Verification gates
 
