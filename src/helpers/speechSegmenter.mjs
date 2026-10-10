@@ -171,6 +171,33 @@ export class SpeechSegmenter {
     }
   }
 
+  /**
+   * The segment still being spoken, as far as it has got — what a live partial
+   * transcript reads (partialScheduler.mjs). Null while nobody is speaking.
+   * `startSample` names the segment: the next one, a monologue's carry-over
+   * included, starts later.
+   *
+   * @returns {{ startSample: number, startMs: number, speechMs: number,
+   *   lengthMs: number } | null}
+   */
+  get open() {
+    if (!this.speaking) return null;
+    return {
+      startSample: this.segmentStart,
+      startMs: Math.round((this.segmentStart / SAMPLE_RATE) * 1000),
+      speechMs: this.speechFrames * FRAME_MS,
+      lengthMs: this.frames.length * FRAME_MS,
+    };
+  }
+
+  /** The open segment's audio so far, 16 kHz mono; empty while nobody is speaking. */
+  openSamples() {
+    if (!this.speaking) return new Int16Array(0);
+    const samples = new Int16Array(this.buffer.length * FRAME);
+    this.buffer.forEach((piece, i) => samples.set(piece, i * FRAME));
+    return samples;
+  }
+
   _close(keepFrames, carryOn = false) {
     const kept = this.buffer.slice(0, keepFrames);
     const samples = new Int16Array(kept.length * FRAME);
