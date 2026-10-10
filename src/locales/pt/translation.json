@@ -1896,7 +1896,13 @@
       "dialogueLabel": "Diálogo detetado",
       "dialogueWaiting": "Ainda não se ouviu nada.",
       "contourLabel": "O formato desta conversa até agora",
-      "contourLegend": "A espessura é o quanto se falou · um entalhe é a mudança de assunto · uma marca é uma pergunta, mais granulada quanto menos resolvida · um triângulo abaixo é um momento marcado",
+      "legend": {
+        "label": "O que as marcas significam",
+        "open": "Ainda sem resposta",
+        "topic": "Mudança de assunto",
+        "return": "Volta a um assunto anterior",
+        "marked": "Momento marcado"
+      },
       "contourSummary": "{{minutes}} minutos, {{questions}} perguntas ({{unresolved}} sem resposta), o assunto mudou {{shifts}} vezes e {{returns}} fios foram retomados.",
       "contourEmpty": "Nada gravado ainda.",
       "record": "Gravar conversa",

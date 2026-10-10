@@ -1896,7 +1896,13 @@
       "dialogueLabel": "検出された対話",
       "dialogueWaiting": "まだ何も聞こえていません。",
       "contourLabel": "ここまでの会話のかたち",
-      "contourLegend": "太さは話された量・切れ込みは話題の変化・印は質問で、未解決なほど粒が粗くなります・下の三角はマークした瞬間です",
+      "legend": {
+        "label": "マークの意味",
+        "open": "まだ回答なし",
+        "topic": "話題の切り替え",
+        "return": "前の話題に戻った",
+        "marked": "マークした瞬間"
+      },
       "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
       "contourEmpty": "まだ何も記録されていません。",
       "record": "会話を録音",

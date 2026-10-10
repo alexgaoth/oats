@@ -1896,7 +1896,13 @@
       "dialogueLabel": "Dialogue détecté",
       "dialogueWaiting": "Rien entendu pour l'instant.",
       "contourLabel": "La forme de cette conversation jusqu'ici",
-      "contourLegend": "L'épaisseur, c'est ce qui a été dit · une encoche, un changement de sujet · une marque, une question, d'autant plus granuleuse qu'elle est ouverte · un triangle dessous, un moment que vous avez marqué",
+      "legend": {
+        "label": "Signification des marques",
+        "open": "Pas encore de réponse",
+        "topic": "Changement de sujet",
+        "return": "Retour à un sujet précédent",
+        "marked": "Moment marqué"
+      },
       "contourSummary": "{{minutes}} minutes, {{questions}} questions posées ({{unresolved}} sans réponse), le sujet a changé {{shifts}} fois et {{returns}} fils ont été repris.",
       "contourEmpty": "Rien d'enregistré pour l'instant.",
       "record": "Enregistrer la conversation",

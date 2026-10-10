@@ -148,6 +148,15 @@ the conversation. They draw in
 `muted-foreground` with status colors for question marks, on the card surface,
 with no decorative gradient.
 
+- A question's mark has one vocabulary on every surface
+  (`conversation/questionMarks.ts`): **filled** when settled (answered in
+  `success`, nobody knew in `warning`), **half filled** when the answer was hedged
+  (`warning`), a **ring** when there is no verdict (`muted-foreground`). The shape
+  carries the meaning without colour, so there is no dither grain.
+- The legend under a contour lists only what that contour draws, in two rows: how
+  the questions ended, then the shape marks (topic change, topic revisited,
+  marked moment).
+
 ## 7. Motion
 
 150ms ease-out for hover, focus and press; 200ms for menus and dialogs

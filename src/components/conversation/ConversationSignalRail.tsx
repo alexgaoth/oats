@@ -7,6 +7,7 @@ import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { searchHostLabel } from "../../utils/searchHost";
 import type { ConversationCard, QuestionOutcome } from "../../types/conversationEvents";
 import { nextAnnouncement } from "../../helpers/questionAnnouncement.mjs";
+import { markFill, markTone, TONE_TOKEN, type MarkTone } from "./questionMarks";
 
 /** What the live region is currently saying. See `questionAnnouncement.mjs`. */
 interface Announcement {
@@ -44,26 +45,13 @@ const VISIBLE_GROUPS = 4;
 // as a sequence rather than a slab (§9.2).
 const STAGGER_MS = 24;
 
-// Ink-only state marks. Colour comes from the `--graph-*` tokens so the rail, the
-// thread list, and the topic graph cannot drift apart (DESIGN.md §4).
-//
-// `dither` is §4's uncertainty encoding: the less settled an outcome, the
-// grainier its mark, so state survives greyscale and colour-blindness.
-//
-// Graded, not boolean. A `true|false` stipple made `asked`, `silence`,
-// `uncertain` and `denied` identical in the one channel that is not hue —
-// while the contour two inches above graded all five by
-// `OUTCOME_DITHER`. The four surfaces are supposed to speak one vocabulary.
-//
-// It has to be drawn as *gaps in* the colour: an earlier version set the dot's
-// background-color to the same `currentColor` the dither dots are painted in,
-// so every mark rendered solid and the whole vocabulary was invisible.
-const STATE_STYLE: Record<QuestionOutcome, { token: string; dither: string | null }> = {
-  answered: { token: "var(--graph-answered)", dither: null }, // settled — solid
-  denied: { token: "var(--graph-open)", dither: "oats-dither--fine" }, // settled, and acted on
-  uncertain: { token: "var(--graph-uncertain)", dither: "oats-dither--medium" }, // hedged
-  asked: { token: "var(--graph-silence)", dither: "oats-dither--sparse" }, // no verdict yet
-  silence: { token: "var(--graph-silence)", dither: "oats-dither--sparse" }, // an absence
+// The mark's shape and colour come from `questionMarks.ts`, the vocabulary the
+// contour canvas draws in too, so the rail, the transcript margin and the trace
+// above them cannot drift apart.
+const TONE_CLASS: Record<MarkTone, { fill: string; ring: string }> = {
+  success: { fill: "bg-success", ring: "border-success" },
+  warning: { fill: "bg-warning", ring: "border-warning" },
+  muted: { fill: "bg-muted-foreground", ring: "border-muted-foreground" },
 };
 
 // Searching is always offered by hand. Automatic search is restricted to a
@@ -102,10 +90,11 @@ function elapsedLabel(from: number, now: number): string {
 }
 
 /**
- * The §4 state mark: solid when the outcome is settled, stippled when it is not.
+ * A question's state mark: filled when settled, half filled when the answer was
+ * hedged, a ring when nobody gave a verdict.
  *
- * Exported so the transcript's margin speaks the same vocabulary as the rail —
- * one mark component, so the surfaces cannot drift apart (DESIGN.md §13).
+ * Exported so the transcript's margin speaks the same vocabulary as the rail:
+ * one mark component, so the surfaces cannot drift apart.
  */
 export function StateMark({
   state,
@@ -115,18 +104,19 @@ export function StateMark({
   /** Placement only; the default aligns it with the rail's first line. */
   className?: string;
 }) {
-  const style = STATE_STYLE[state] ?? STATE_STYLE.asked;
+  const fill = markFill(state);
+  const tone = TONE_CLASS[markTone(state)];
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "h-2 w-2 shrink-0 rounded-full",
-        className,
-        style.dither && `oats-dither ${style.dither}`
+        "relative size-2 shrink-0 overflow-hidden rounded-full",
+        fill === "solid" ? tone.fill : cn("border-[1.5px]", tone.ring),
+        className
       )}
-      // Dithered marks paint dots in `color` over nothing; solid marks fill.
-      style={style.dither ? { color: style.token } : { backgroundColor: style.token }}
-    />
+    >
+      {fill === "half" && <span className={cn("absolute inset-y-0 right-0 w-1/2", tone.fill)} />}
+    </span>
   );
 }
 
@@ -263,7 +253,7 @@ function QuestionGroup({
       className="oats-enter relative border-l-2 pl-3"
       style={{
         animationDelay: `${index * STAGGER_MS}ms`,
-        borderColor: STATE_STYLE[first.state]?.token ?? STATE_STYLE.asked.token,
+        borderColor: `var(${TONE_TOKEN[markTone(first.state)]})`,
       }}
       onMouseEnter={() => onFocus(group.key)}
       onMouseLeave={() => onFocus(null)}

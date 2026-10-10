@@ -1891,7 +1891,13 @@
       "dialogueLabel": "偵測到的對話",
       "dialogueWaiting": "尚未聽到任何內容。",
       "contourLabel": "這場對話到目前為止的形狀",
-      "contourLegend": "粗細代表說了多少 · 缺口代表話題轉變 · 標記代表問題，越未解決顆粒越粗 · 下方的三角代表標記的時刻",
+      "legend": {
+        "label": "標記的含義",
+        "open": "尚無回答",
+        "topic": "話題切換",
+        "return": "回到先前的話題",
+        "marked": "標記時刻"
+      },
       "contourSummary": "{{minutes}} 分鐘，提出 {{questions}} 個問題（{{unresolved}} 個仍未解答），話題轉變 {{shifts}} 次，回到 {{returns}} 條脈絡。",
       "contourEmpty": "尚未錄製任何內容。",
       "record": "錄製對話",

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { CONTOUR_RESOLUTION, QUIET_THRESHOLD } from "../../helpers/conversationContour.mjs";
+import { markFill, markTone, TONE_TOKEN, type MarkFill, type MarkTone } from "./questionMarks";
 
 // The conversation contour (DESIGN.md §9.8) — Oats' signature mark.
 //
@@ -17,10 +18,11 @@ import { CONTOUR_RESOLUTION, QUIET_THRESHOLD } from "../../helpers/conversationC
 //
 //   **A notch** is the subject changing.
 //
-//   **A mark above the line** is a question, at the moment it was asked, in the
-//   §4 state colour, with a dither density that says how settled it is. Solid
-//   means answered; the grainier it is, the less anybody knows. That reading
-//   survives greyscale and colour-blindness, which hue alone does not.
+//   **A mark above the line** is a question, at the moment it was asked. Its
+//   shape says how settled it is: filled when settled, half filled when the
+//   answer was hedged, a ring when nobody gave a verdict (`questionMarks.ts`).
+//   The shape reads in greyscale and with colour blindness. The status colour
+//   repeats it.
 //
 //   **An arc** is the room coming back to a thread it had left — the one thing
 //   a transcript cannot show you and a summary always flattens.
@@ -41,7 +43,7 @@ export interface ContourMark {
   x: number;
   y: number;
   state: string;
-  dither: number;
+  fill: string;
   groupKey?: string;
   question?: string;
   occurrence?: number;
@@ -82,22 +84,11 @@ export interface ContourData {
   empty: boolean;
 }
 
-interface Palette {
+interface Palette extends Record<MarkTone, string> {
   ink: string;
   husk: string;
   hairline: string;
-  flax: string;
-  moss: string;
-  oxide: string;
 }
-
-const STATE_COLOR: Record<string, keyof Palette> = {
-  answered: "moss",
-  denied: "oxide",
-  uncertain: "flax",
-  asked: "husk",
-  silence: "husk",
-};
 
 /**
  * One theme observer for the whole application, not one per contour.
@@ -144,57 +135,58 @@ function readPalette(element: HTMLElement): Palette {
   const value = (name: string, fallback: string) =>
     styles.getPropertyValue(name).trim() || fallback;
   return {
-    ink: value("--color-foreground", "#2b2620"),
-    husk: value("--color-muted-foreground", "#6b6459"),
-    hairline: value("--color-border", "#e3d9c6"),
-    flax: value("--graph-uncertain", "#d97706"),
-    moss: value("--graph-answered", "#16a34a"),
-    oxide: value("--color-destructive", "#c05b3c"),
+    ink: value("--color-foreground", "#09090b"),
+    husk: value("--color-muted-foreground", "#71717a"),
+    hairline: value("--color-border", "#e4e4e7"),
+    success: value(TONE_TOKEN.success, "#16a34a"),
+    warning: value(TONE_TOKEN.warning, "#d97706"),
+    muted: value(TONE_TOKEN.muted, "#71717a"),
   };
 }
 
 /**
- * A stippled disc.
+ * A question's mark at full size: filled, half filled or a ring.
  *
- * `density` is the model's dither value: 0 paints every cell (solid), 1 paints
- * almost none. The cells are a fixed 1px lattice rather than random dots — §7
- * is explicit that the grain is ordered, and a random spray reads as noise or
- * as a rendering fault rather than as a deliberate mark.
+ * The ring is drawn inside the radius, so the three shapes are the same size
+ * and only their fill differs.
  */
-function stippleDisc(
+function questionDisc(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   radius: number,
-  density: number,
+  fill: MarkFill,
   color: string
 ) {
   ctx.fillStyle = color;
-  if (density <= 0.001) {
+  if (fill === "solid") {
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
     return;
   }
-  // 4x4 ordered (Bayer) thresholds, the same lattice as the CSS dither utility.
-  const bayer = [
-    [0, 8, 2, 10],
-    [12, 4, 14, 6],
-    [3, 11, 1, 9],
-    [15, 7, 13, 5],
-  ];
-  const step = 1;
-  const keep = 1 - density;
-  for (let dy = -radius; dy <= radius; dy += step) {
-    for (let dx = -radius; dx <= radius; dx += step) {
-      if (dx * dx + dy * dy > radius * radius) continue;
-      const gx = Math.abs(Math.round(cx + dx)) % 4;
-      const gy = Math.abs(Math.round(cy + dy)) % 4;
-      if (bayer[gy][gx] / 16 >= keep) continue;
-      ctx.fillRect(Math.round(cx + dx), Math.round(cy + dy), step, step);
-    }
+  const line = 1.5;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = line;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius - line / 2, 0, Math.PI * 2);
+  ctx.stroke();
+  if (fill === "half") {
+    // The right half: the same reading as a status icon that is part done.
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, -Math.PI / 2, Math.PI / 2);
+    ctx.closePath();
+    ctx.fill();
   }
 }
+
+/**
+ * At list-strip size a ring and a half disc are one blur, so the strip keeps
+ * the order of the shapes as strength instead: settled is full, hedged is
+ * lighter, open is faint.
+ */
+const STRIP_ALPHA: Record<MarkFill, number> = { solid: 1, half: 0.6, ring: 0.35 };
 
 export default function ConversationContour({
   contour,
@@ -284,9 +276,13 @@ export default function ConversationContour({
 
       const x = (value: number) => value * (width - 1);
 
-      // 1. Return arcs, behind everything — they are context, not content.
+      // 1. Return arcs, behind everything: they are context, not content. In
+      //    the muted ink, lightened, rather than the border colour, which
+      //    measured 1.25:1 on the card and hid the one thing a transcript
+      //    cannot show.
       if (showMarks) {
-        ctx.strokeStyle = palette.hairline;
+        ctx.strokeStyle = palette.husk;
+        ctx.globalAlpha = 0.4;
         ctx.lineWidth = 1;
         for (const arc of contour.returns) {
           const from = x(arc.from);
@@ -297,6 +293,7 @@ export default function ConversationContour({
           ctx.bezierCurveTo(from, baseline - lift, to, baseline - lift, to, baseline);
           ctx.stroke();
         }
+        ctx.globalAlpha = 1;
       }
 
       // 2. The trace. Drawn as a filled ribbon around the baseline rather than a
@@ -348,13 +345,13 @@ export default function ConversationContour({
         ctx.globalAlpha = 1;
       }
 
-      // 4. Questions: a stippled mark on the trace, with a hairline down to the
-      //    baseline so it is anchored to a moment rather than hovering near one.
+      // 4. Questions: a mark over the trace, with a hairline down to it so it
+      //    is anchored to a moment rather than hovering near one.
       if (showMarks) {
         for (const mark of contour.marks) {
           const px = x(mark.x);
           const py = at(mark);
-          const color = palette[STATE_COLOR[mark.state] ?? "husk"];
+          const color = palette[markTone(mark.state)];
           const focused = focusedGroup !== null && mark.groupKey === focusedGroup;
           // Reading an annotation lights its own moment on the line. This is
           // the whole connection between the two halves of the surface: the
@@ -368,10 +365,9 @@ export default function ConversationContour({
           ctx.lineTo(Math.round(px) + 0.5, py - stem);
           ctx.stroke();
           ctx.globalAlpha = 1;
-          // Marks are 4px at rest rather than 3: at 3 the stipple had only a
-          // handful of lattice cells to work with, so the density that carries
-          // the outcome was barely resolvable.
-          stippleDisc(ctx, px, py - stem - 4, focused ? 6 : 4, mark.dither, color);
+          // 4px at rest, the smallest radius at which a ring and a half disc
+          // still read as different shapes.
+          questionDisc(ctx, px, py - stem - 4, focused ? 6 : 4, markFill(mark.state), color);
         }
         // 5. Moments somebody marked: an ink caret under the baseline. Ink, not a
         //    state colour, because it is not a verdict on anything — it is the
@@ -396,9 +392,13 @@ export default function ConversationContour({
         // last third" is exactly what a list is scanned for — but drops the
         // stems, which at this size only thicken the line.
         for (const mark of contour.marks) {
-          const color = palette[STATE_COLOR[mark.state] ?? "husk"];
-          stippleDisc(ctx, x(mark.x), baseline - amplitude - 1, 1.5, mark.dither, color);
+          ctx.fillStyle = palette[markTone(mark.state)];
+          ctx.globalAlpha = STRIP_ALPHA[markFill(mark.state)];
+          ctx.beginPath();
+          ctx.arc(x(mark.x), baseline - amplitude - 1, 1.75, 0, Math.PI * 2);
+          ctx.fill();
         }
+        ctx.globalAlpha = 1;
       }
     };
 

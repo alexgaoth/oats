@@ -1891,7 +1891,13 @@
       "dialogueLabel": "检测到的对话",
       "dialogueWaiting": "尚未听到任何内容。",
       "contourLabel": "这场对话到目前为止的形状",
-      "contourLegend": "粗细代表说了多少 · 缺口代表话题转变 · 标记代表问题，越未解决颗粒越粗 · 下方的三角代表标记的时刻",
+      "legend": {
+        "label": "标记的含义",
+        "open": "尚无回答",
+        "topic": "话题切换",
+        "return": "回到之前的话题",
+        "marked": "标记时刻"
+      },
       "contourSummary": "{{minutes}} 分钟，提出 {{questions}} 个问题（{{unresolved}} 个仍未解答），话题转变 {{shifts}} 次，回到 {{returns}} 条线索。",
       "contourEmpty": "尚未录制任何内容。",
       "record": "录制对话",

@@ -1896,7 +1896,13 @@
       "dialogueLabel": "Erkannter Dialog",
       "dialogueWaiting": "Noch nichts gehört.",
       "contourLabel": "Die Form dieses Gesprächs bis jetzt",
-      "contourLegend": "Dicke ist, wie viel gesagt wurde · eine Kerbe ist ein Themenwechsel · eine Marke ist eine Frage, körniger je offener · ein Dreieck darunter ist ein markierter Moment",
+      "legend": {
+        "label": "Bedeutung der Markierungen",
+        "open": "Noch keine Antwort",
+        "topic": "Themenwechsel",
+        "return": "Zurück zu einem früheren Thema",
+        "marked": "Markierter Moment"
+      },
       "contourSummary": "{{minutes}} Minuten, {{questions}} Fragen ({{unresolved}} unbeantwortet), das Thema wechselte {{shifts}}-mal, und {{returns}} Stränge wurden wieder aufgegriffen.",
       "contourEmpty": "Noch nichts aufgezeichnet.",
       "record": "Gespräch aufnehmen",
