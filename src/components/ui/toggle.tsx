@@ -39,14 +39,18 @@ export const Toggle = ({
       aria-labelledby={ariaLabelledBy}
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      className={`peer inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${track} ${
+      // Geometry: a 36x20 track with 2px padding and a 16px knob that travels
+      // exactly 16px, so the gap round the knob is 2px on every side in both
+      // states. The track was once widened from shadcn's 32px without changing
+      // the travel, which left the knob 1px from one end and 5px from the other.
+      className={`peer inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 shadow-xs transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${track} ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
     >
       <span
         aria-hidden="true"
         className={`pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform dark:bg-foreground ${
-          checked ? "translate-x-[calc(100%-2px)] dark:bg-primary-foreground" : "translate-x-0"
+          checked ? "translate-x-4 dark:bg-primary-foreground" : "translate-x-0"
         }`}
       />
     </button>
