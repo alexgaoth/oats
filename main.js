@@ -640,6 +640,7 @@ async function startApp() {
   const whisperSettings = {
     localTranscriptionProvider: process.env.LOCAL_TRANSCRIPTION_PROVIDER || "",
     whisperModel: process.env.LOCAL_WHISPER_MODEL,
+    language: process.env.LOCAL_WHISPER_LANGUAGE || null,
     useCuda,
     useVulkan:
       !useCuda &&
