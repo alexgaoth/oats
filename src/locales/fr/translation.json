@@ -164,6 +164,13 @@
       "optional": "Facultatif",
       "recommended": "Recommandé",
       "accessibilityTroubleshooting": "Dans Réglages Système → Accessibilité, désactivez le bouton d'Oats puis réactivez-le. Si ça ne marche pas, supprimez Oats de la liste et rajoutez-le."
+    },
+    "welcome": {
+      "allow": "Autoriser",
+      "allowed": "Autorisé",
+      "shortcutTitle": "Démarrez depuis n’importe quelle app",
+      "shortcutDescription": "Appuyez de nouveau pour terminer la conversation.",
+      "getStarted": "Commencer"
     }
   },
   "streaming": {
@@ -1865,9 +1872,9 @@
   "meetingNotification": {
     "title": "Réunion détectée",
     "body": {
-      "detected": "On dirait que vous êtes en réunion. Vous voulez prendre des notes ?",
-      "starting": "Votre réunion va commencer. Vous voulez prendre des notes ?",
-      "underway": "On dirait que votre réunion est déjà en cours. Vous voulez prendre des notes ?"
+      "detected": "Prendre des notes ?",
+      "starting": "Ça commence.",
+      "underway": "Déjà en cours."
     },
     "start": "Prendre des notes",
     "join": "Rejoindre et transcrire"

@@ -164,6 +164,13 @@
       "optional": "Facoltativo",
       "recommended": "Consigliato",
       "accessibilityTroubleshooting": "In Impostazioni di Sistema → Accessibilità, disattiva l'interruttore di Oats e riattivalo. Se non funziona, rimuovi Oats dall'elenco e aggiungilo di nuovo."
+    },
+    "welcome": {
+      "allow": "Consenti",
+      "allowed": "Consentito",
+      "shortcutTitle": "Avvia da qualsiasi app",
+      "shortcutDescription": "Premilo di nuovo per concludere la conversazione.",
+      "getStarted": "Inizia"
     }
   },
   "streaming": {
@@ -1865,9 +1872,9 @@
   "meetingNotification": {
     "title": "Riunione rilevata",
     "body": {
-      "detected": "Sembra che tu sia in riunione. Vuoi prendere appunti?",
-      "starting": "La tua riunione sta per iniziare. Vuoi prendere appunti?",
-      "underway": "Sembra che la tua riunione sia già in corso. Vuoi prendere appunti?"
+      "detected": "Vuoi prendere appunti?",
+      "starting": "Inizia ora. Prendi appunti?",
+      "underway": "In corso. Prendi appunti?"
     },
     "start": "Prendi appunti",
     "join": "Partecipa e trascrivi"

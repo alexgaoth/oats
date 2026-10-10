@@ -164,6 +164,13 @@
       "optional": "Optional",
       "recommended": "Empfohlen",
       "accessibilityTroubleshooting": "Schalte in Systemeinstellungen → Bedienungshilfen den Schalter für Oats aus und wieder ein. Wenn das nicht hilft, entferne Oats aus der Liste und füge es erneut hinzu."
+    },
+    "welcome": {
+      "allow": "Erlauben",
+      "allowed": "Erlaubt",
+      "shortcutTitle": "Aus jeder App starten",
+      "shortcutDescription": "Drück sie erneut, um das Gespräch zu beenden.",
+      "getStarted": "Los geht’s"
     }
   },
   "streaming": {
@@ -1865,9 +1872,9 @@
   "meetingNotification": {
     "title": "Meeting erkannt",
     "body": {
-      "detected": "Es klingt, als wärst du in einem Meeting. Notizen aufnehmen?",
-      "starting": "Dein Meeting beginnt gleich. Notizen aufnehmen?",
-      "underway": "Es klingt, als wäre dein Meeting schon im Gange. Notizen aufnehmen?"
+      "detected": "Notizen aufnehmen?",
+      "starting": "Beginnt jetzt. Notizen?",
+      "underway": "Läuft bereits. Notizen?"
     },
     "start": "Notizen aufnehmen",
     "join": "Beitreten & transkribieren"

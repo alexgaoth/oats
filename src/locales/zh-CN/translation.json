@@ -164,6 +164,13 @@
       "optional": "可选",
       "recommended": "推荐",
       "accessibilityTroubleshooting": "在系统设置 → 辅助功能中，将 Oats 的开关关闭再重新打开。如果无效，请将 Oats 从列表中移除后重新添加。"
+    },
+    "welcome": {
+      "allow": "允许",
+      "allowed": "已允许",
+      "shortcutTitle": "在任何应用中开始",
+      "shortcutDescription": "再按一次即可结束对话。",
+      "getStarted": "开始使用"
     }
   },
   "streaming": {
@@ -1860,9 +1867,9 @@
   "meetingNotification": {
     "title": "检测到会议",
     "body": {
-      "detected": "你似乎正在开会。要开始记录吗？",
-      "starting": "你的会议即将开始。要开始记录吗？",
-      "underway": "你的会议似乎已在进行中。要开始记录吗？"
+      "detected": "要开始记录吗？",
+      "starting": "即将开始。要记录吗？",
+      "underway": "正在进行。要记录吗？"
     },
     "start": "开始记录",
     "join": "加入并转录"

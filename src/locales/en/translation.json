@@ -164,6 +164,13 @@
       "optional": "Optional",
       "recommended": "Recommended",
       "accessibilityTroubleshooting": "In System Settings → Accessibility, switch Oats's toggle off and back on. If that doesn't work, remove Oats from the list and add it back."
+    },
+    "welcome": {
+      "allow": "Allow",
+      "allowed": "Allowed",
+      "shortcutTitle": "Start from any app",
+      "shortcutDescription": "Press it again to finish the conversation.",
+      "getStarted": "Get started"
     }
   },
   "streaming": {
@@ -1865,9 +1872,9 @@
   "meetingNotification": {
     "title": "Meeting detected",
     "body": {
-      "detected": "It sounds like you're in a meeting. Want to take notes?",
-      "starting": "Your meeting is starting. Want to take notes?",
-      "underway": "It sounds like your meeting is underway. Want to take notes?"
+      "detected": "Want to take notes?",
+      "starting": "Starting now. Take notes?",
+      "underway": "In progress. Take notes?"
     },
     "start": "Take notes",
     "join": "Join & transcribe"

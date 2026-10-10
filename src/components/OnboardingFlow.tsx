@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
-import { Shield } from "lucide-react";
+import { AlertTriangle, Check, Keyboard, Mic, Shield } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Kbd } from "./ui/kbd";
+import { OatsMark } from "./shell/OatsMark";
+import { formatHotkey } from "../utils/hotkeyLabel";
+import { getCachedPlatform } from "../utils/platform";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useDialogs } from "../hooks/useDialogs";
 import { usePermissions } from "../hooks/usePermissions";
@@ -226,6 +231,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   // Focus moves to the only remaining action the moment permission lands, so
   // the keyboard is where the user needs it without hunting.
   const doneRef = useRef<HTMLButtonElement | null>(null);
+  // The conversation shortcut, shown as keys so the first thing learned is how
+  // to start one from anywhere.
+  const conversationKey = useSettingsStore((state) => state.conversationKey);
+  const shortcut = useMemo(
+    () => formatHotkey(conversationKey, getCachedPlatform()),
+    [conversationKey]
+  );
   useEffect(() => {
     if (permissionsHook.micPermissionGranted) doneRef.current?.focus();
   }, [permissionsHook.micPermissionGranted]);
@@ -254,83 +266,95 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const renderStep = () => {
     switch (currentStepId) {
       case "permissions": {
-        const platform = permissionsHook.pasteToolsInfo?.platform;
-        const isMacOS = platform === "darwin";
-
+        const granted = permissionsHook.micPermissionGranted;
         return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-[2rem] font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
-                {t("onboarding.permissions.title")}
-              </h1>
-              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-                {isMacOS
-                  ? t("onboarding.permissions.requiredForApp")
-                  : t("onboarding.permissions.microphoneRequired")}
-              </p>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <OatsMark className="size-10" />
+            <h1 className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-foreground">
+              {t("onboarding.permissions.title")}
+            </h1>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              {t("onboarding.permissions.microphoneDescription")}
+            </p>
 
-            {/* The microphone, and nothing else.
-            
-                `PermissionsSection` is the inherited permissions UI — a bordered
-                card, a gold-tinted icon tile, a pill badge and a solid-gold
-                "ultra-premium with subtle depth" CTA. Measured on this screen it
-                spent 0.285% of the window on saturated gold, more than double
-                what the product spends on its own live-recording mark, on the
-                first screen anybody ever sees. It stays where it belongs
-                (`PostMigrationOnboarding`, which walks back through three
-                permissions); first run states the one thing that actually
-                blocks a conversation, in the ledger's own voice.
-            
-                Ink, not gold: the accent is reserved for the live pulse and the
-                selected thing, and a permission request is neither. */}
-            <div className="border-t border-border/60 pt-5">
-              <p className="text-sm text-foreground">
-                {t("onboarding.permissions.microphoneTitle")}
-              </p>
-              <p className="mt-1.5 max-w-md text-xs leading-5 text-muted-foreground">
-                {t("onboarding.permissions.microphoneDescription")}
-              </p>
-              {/* Granting used to unmount the focused button and replace it with
-                  static text while "Done" silently became enabled: focus fell
-                  to the body and nothing was spoken, so a blind first-run user
-                  heard nothing and had to hunt for the way forward. */}
-              <p aria-live="polite" role="status" className="sr-only">
-                {permissionsHook.micPermissionGranted
-                  ? t("onboarding.permissions.microphoneGranted")
-                  : ""}
-              </p>
-              <div className="mt-4 flex items-center gap-5">
-                {permissionsHook.micPermissionGranted ? (
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {t("onboarding.permissions.microphoneReady")}
+            {/* Granting used to unmount the focused button and replace it with
+                static text while "Get started" silently became enabled, so a
+                screen-reader user heard nothing. The grant is announced, and
+                focus moves to the way forward (see the effect above). */}
+            <p aria-live="polite" role="status" className="sr-only">
+              {granted ? t("onboarding.permissions.microphoneGranted") : ""}
+            </p>
+
+            <div className="mt-8 w-full divide-y divide-border overflow-hidden rounded-xl border border-border bg-card text-left shadow-xs">
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div
+                  className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                    granted ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {granted ? (
+                    <Check aria-hidden="true" className="size-4" strokeWidth={2.5} />
+                  ) : (
+                    <Mic aria-hidden="true" className="size-4" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {t("onboarding.permissions.microphoneTitle")}
                   </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                    {t("onboarding.permissions.requiredForApp")}
+                  </p>
+                </div>
+                {granted ? (
+                  <span className="text-[13px] text-success">
+                    {t("onboarding.welcome.allowed")}
+                  </span>
                 ) : (
-                  <button
-                    type="button"
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => void permissionsHook.requestMicPermission()}
-                    className="rounded-sm text-sm text-foreground underline underline-offset-4 transition-opacity [transition-duration:var(--motion-instant)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    {t("onboarding.permissions.grant")}
-                  </button>
-                )}
-                {/* Only once the browser prompt cannot help any more. */}
-                {permissionsHook.micPermissionError && (
-                  <button
-                    type="button"
-                    onClick={() => void permissionsHook.openMicPrivacySettings()}
-                    className="rounded-sm text-xs text-muted-foreground underline underline-offset-4 transition-colors [transition-duration:var(--motion-instant)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {t("onboarding.permissions.openSystemSettings")}
-                  </button>
+                    {t("onboarding.welcome.allow")}
+                  </Button>
                 )}
               </div>
-              {permissionsHook.micPermissionError && (
-                <p className="mt-3 max-w-md text-xs leading-5 text-foreground">
-                  {permissionsHook.micPermissionError}
-                </p>
+              {shortcut && (
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <Keyboard aria-hidden="true" className="size-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t("onboarding.welcome.shortcutTitle")}
+                    </p>
+                    <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                      {t("onboarding.welcome.shortcutDescription")}
+                    </p>
+                  </div>
+                  <Kbd>{shortcut}</Kbd>
+                </div>
               )}
             </div>
+
+            {/* Only once the system prompt cannot help any more. */}
+            {permissionsHook.micPermissionError && (
+              <div className="mt-4 flex w-full items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-left">
+                <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+                <p className="min-w-0 flex-1 text-[13px] leading-5 text-foreground">
+                  {permissionsHook.micPermissionError}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void permissionsHook.openMicPrivacySettings()}
+                >
+                  {t("onboarding.permissions.openSystemSettings")}
+                </Button>
+              </div>
+            )}
           </div>
         );
       }
@@ -385,7 +409,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     // it, on the first screen anybody sees. There is one thing to do here, so
     // there is one column, one heading, and one action.
     <div
-      className="oats-surface flex h-screen flex-col bg-background"
+      className="oats-surface flex h-screen flex-col bg-background antialiased"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <ConfirmDialog
@@ -406,41 +430,25 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         onOk={() => {}}
       />
 
-      {/* The window is frameless, so the drag band is the only way to move it —
-          and it carries the wordmark, exactly as the workspace's does. */}
+      {/* The window is frameless; this band moves it and holds the traffic
+          lights, at the same height as the app's own. */}
       <div
-        className="oats-titlebar relative z-20 flex h-9 shrink-0 items-center px-5"
+        className="h-[52px] shrink-0"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-      >
-        <span
-          aria-hidden="true"
-          className="select-none font-mono text-[13px] tracking-[-0.01em] text-foreground"
-        >
-          oats
-        </span>
-      </div>
+      />
 
-      <div className="flex min-h-0 flex-1 items-center overflow-y-auto px-8">
-        <div className="mx-auto w-full max-w-xl pb-10">{renderStep()}</div>
-      </div>
-
-      <div className="shrink-0 px-8 pb-8">
-        <div className="mx-auto w-full max-w-xl">
-          <button
+      <div className="flex min-h-0 flex-1 items-center overflow-y-auto px-8 pb-8">
+        <div className="mx-auto flex w-full max-w-md flex-col items-stretch">
+          {renderStep()}
+          <Button
             ref={doneRef}
-            type="button"
+            size="lg"
+            className="mt-8 w-full"
             onClick={() => void finishOnboarding()}
             disabled={!canProceed() || isFinishing}
-            className={cn(
-              "rounded-sm text-sm transition-colors [transition-duration:var(--motion-instant)]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              canProceed() && !isFinishing
-                ? "text-foreground hover:opacity-80"
-                : "cursor-not-allowed text-muted-foreground"
-            )}
           >
-            {t("common.done")}
-          </button>
+            {t("onboarding.welcome.getStarted")}
+          </Button>
         </div>
       </div>
     </div>

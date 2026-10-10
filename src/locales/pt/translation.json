@@ -164,6 +164,13 @@
       "optional": "Opcional",
       "recommended": "Recomendado",
       "accessibilityTroubleshooting": "Em Configurações do Sistema → Acessibilidade, desative o interruptor do Oats e ative-o novamente. Se isso não funcionar, remova o Oats da lista e adicione-o de volta."
+    },
+    "welcome": {
+      "allow": "Permitir",
+      "allowed": "Permitido",
+      "shortcutTitle": "Comece de qualquer app",
+      "shortcutDescription": "Pressione de novo para encerrar a conversa.",
+      "getStarted": "Começar"
     }
   },
   "streaming": {
@@ -1865,9 +1872,9 @@
   "meetingNotification": {
     "title": "Reunião detectada",
     "body": {
-      "detected": "Parece que você está em uma reunião. Quer fazer anotações?",
-      "starting": "Sua reunião está começando. Quer fazer anotações?",
-      "underway": "Parece que sua reunião já está em andamento. Quer fazer anotações?"
+      "detected": "Quer fazer anotações?",
+      "starting": "Começa agora. Anotar?",
+      "underway": "Em andamento. Anotar?"
     },
     "start": "Fazer anotações",
     "join": "Entrar e transcrever"

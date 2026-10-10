@@ -1,5 +1,6 @@
 import * as React from "react";
-import { X, Copy, Check } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Copy, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { ToastContext, type ToastProps } from "./useToast";
 import { isDictationPanelWindow } from "../../utils/windowContext";
@@ -143,19 +144,13 @@ const ToastViewport: React.FC<{
   );
 };
 
-const variantConfig = {
-  default: {
-    accentClass: "bg-muted-foreground/40",
-    progressClass: "bg-muted-foreground/25",
-  },
-  destructive: {
-    accentClass: "bg-destructive",
-    progressClass: "bg-destructive/30",
-  },
-  success: {
-    accentClass: "bg-success",
-    progressClass: "bg-success/30",
-  },
+// Status is an icon, as in every standard toast; the default toast has none.
+const variantIcon = {
+  default: null,
+  destructive: (
+    <AlertCircle aria-hidden="true" className="mt-px size-4 shrink-0 text-destructive" />
+  ),
+  success: <CheckCircle2 aria-hidden="true" className="mt-px size-4 shrink-0 text-success" />,
 };
 
 const Toast: React.FC<
@@ -176,7 +171,8 @@ const Toast: React.FC<
   onPauseTimer,
   onResumeTimer,
 }) => {
-  const config = variantConfig[variant];
+  const { t } = useTranslation();
+  const icon = variantIcon[variant];
   const pausedAtRef = React.useRef<number | null>(null);
   const [copied, setCopied] = React.useState(false);
   const isDestructive = variant === "destructive";
@@ -198,7 +194,7 @@ const Toast: React.FC<
   const handleCopyError = async () => {
     if (!description) return;
     try {
-      await navigator.clipboard.writeText(description);
+      await navigator.clipboard.writeText([title, description].filter(Boolean).join("\n"));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}
@@ -209,86 +205,55 @@ const Toast: React.FC<
 
   return (
     <div
+      role={isDestructive ? "alert" : "status"}
       className={cn(
-        "group toast-surface pointer-events-auto relative flex w-75",
-        "rounded-[5px]",
+        "group pointer-events-auto relative flex w-[340px] items-start gap-3 rounded-xl border border-border bg-popover p-3.5 text-popover-foreground shadow-lg",
         "transition-[opacity,transform] duration-200 ease-out",
         isExiting
-          ? "opacity-0 translate-y-1 scale-[0.98]"
-          : "opacity-100 translate-x-0 scale-100 animate-in slide-in-from-bottom-2 fade-in-0 duration-300"
+          ? "translate-y-1 scale-[0.98] opacity-0"
+          : "animate-in fade-in-0 slide-in-from-bottom-2 opacity-100 duration-200 motion-reduce:animate-none"
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className={cn("w-0.5 shrink-0", config.accentClass)} />
-
-      <div className="flex items-start gap-2 flex-1 min-w-0 px-2.5 py-2">
-        <div className="flex-1 min-w-0">
-          {message && (
-            <div className="text-xs font-medium leading-tight text-popover-foreground">
-              {message}
-            </div>
-          )}
-          {detail &&
-            (isDestructive ? (
-              <div
-                className={cn(
-                  "text-xs leading-snug mt-1 px-1.5 py-1 rounded-[3px] font-mono",
-                  "border border-border/60 bg-surface-1",
-                  "text-destructive"
-                )}
-              >
-                <div className="flex items-start justify-between gap-1.5">
-                  <span className="select-all wrap-break-word min-w-0">{detail}</span>
-                  <button
-                    onClick={handleCopyError}
-                    className={cn(
-                      "shrink-0 p-0.5 rounded-xs mt-px",
-                      "text-muted-foreground hover:text-foreground",
-                      "hover:bg-surface-2",
-                      "transition-colors duration-150"
-                    )}
-                    aria-label="Copy error"
-                  >
-                    {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-0.5 text-xs leading-snug text-muted-foreground">{detail}</div>
-            ))}
-        </div>
-
-        {action && <div className="shrink-0 self-center">{action}</div>}
+      {icon}
+      <div className="min-w-0 flex-1">
+        {message && <p className="text-sm font-medium leading-5 text-foreground">{message}</p>}
+        {detail && (
+          // Plain text for every variant: most error toasts carry a translated
+          // sentence, and mono is for machine text (DESIGN.md §3).
+          <p className="mt-0.5 break-words text-[13px] leading-5 text-muted-foreground">{detail}</p>
+        )}
+        {action && <div className="mt-2.5">{action}</div>}
       </div>
-
-      {onClose && (
+      {isDestructive && detail && (
+        // An error's words are what a bug report needs, so they can be copied.
         <button
-          onClick={onClose}
-          className={cn(
-            "absolute -left-2 -top-2 size-6 rounded-full",
-            "flex items-center justify-center",
-            "border border-border bg-surface-2 backdrop-blur-sm",
-            "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
-            "opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100",
-            "transition-all duration-150",
-            "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          )}
+          type="button"
+          onClick={handleCopyError}
+          aria-label={t("common.copy")}
+          className="-mr-1 -mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
-          <X className="size-3" />
-          <span className="sr-only">Close</span>
+          {copied ? (
+            <Check aria-hidden="true" className="size-3.5" />
+          ) : (
+            <Copy aria-hidden="true" className="size-3.5" />
+          )}
         </button>
       )}
 
-      {duration > 0 && !isExiting && (
-        <div className="absolute bottom-0 left-0.5 right-0 h-px overflow-hidden">
-          <div
-            className={cn("h-full w-full origin-left", config.progressClass)}
-            style={{
-              animation: `toast-progress ${duration}ms linear forwards`,
-            }}
-          />
-        </div>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("common.close")}
+          className={cn(
+            "absolute -left-2 -top-2 flex size-6 items-center justify-center rounded-full border border-border bg-popover text-muted-foreground shadow-sm outline-none",
+            "opacity-0 transition-opacity duration-150 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          )}
+        >
+          <X aria-hidden="true" className="size-3" />
+        </button>
       )}
     </div>
   );
