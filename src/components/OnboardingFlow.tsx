@@ -269,7 +269,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         const granted = permissionsHook.micPermissionGranted;
         return (
           <div className="flex flex-col items-center text-center">
-            <OatsMark className="size-10" />
+            <OatsMark className="size-12" shadow spinOnMount />
             <h1 className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-foreground">
               {t("onboarding.permissions.title")}
             </h1>
