@@ -1,10 +1,5 @@
 import { en as enPrompts, type PromptBundle } from "../../locales/prompts";
 
-const DEFAULT_CHAT_AGENT_PROMPT =
-  "You are a helpful voice assistant. Respond concisely and conversationally. " +
-  "Keep answers brief unless the user asks for detail. " +
-  "You may be given a transcription of spoken input, so handle informal phrasing gracefully.";
-
 export const PROMPT_KINDS = {
   cleanup: {
     i18nKey: "cleanupPrompt" as const,
@@ -17,10 +12,6 @@ export const PROMPT_KINDS = {
   translate: {
     i18nKey: "translatePrompt" as const,
     fallback: enPrompts.translatePrompt,
-  },
-  chatAgent: {
-    i18nKey: null,
-    fallback: DEFAULT_CHAT_AGENT_PROMPT,
   },
 } as const satisfies Record<string, { i18nKey: keyof PromptBundle | null; fallback: string }>;
 

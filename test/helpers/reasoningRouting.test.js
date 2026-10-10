@@ -18,15 +18,9 @@ test("local mode maps to local", async () => {
   assert.equal(deriveReasoningMode("local", "openai"), "local");
 });
 
-test("fan-out routes provider, model and mode to all five scopes", async () => {
+test("fan-out routes provider, model and mode to all four scopes", async () => {
   const { buildReasoningScopePatches } = await load();
-  const {
-    dictationCleanup,
-    noteFormatting,
-    dictationAgent,
-    chatIntelligence,
-    dictationTranslation,
-  } = buildReasoningScopePatches(
+  const patches = buildReasoningScopePatches(
     {
       useCleanupModel: true,
       cleanupProvider: "openai",
@@ -35,12 +29,19 @@ test("fan-out routes provider, model and mode to all five scopes", async () => {
     },
     "providers"
   );
+  const { dictationCleanup, noteFormatting, dictationAgent, dictationTranslation } = patches;
 
+  assert.deepEqual(Object.keys(patches).sort(), [
+    "dictationAgent",
+    "dictationCleanup",
+    "dictationTranslation",
+    "noteFormatting",
+  ]);
   assert.equal(dictationCleanup.cleanupProvider, "openai");
   assert.equal(dictationCleanup.cleanupModel, "gpt-4o-mini");
   assert.equal(dictationCleanup.cleanupMode, "providers");
 
-  for (const scope of [noteFormatting, dictationAgent, chatIntelligence, dictationTranslation]) {
+  for (const scope of [noteFormatting, dictationAgent, dictationTranslation]) {
     assert.equal(scope.provider, "openai");
     assert.equal(scope.model, "gpt-4o-mini");
     assert.equal(scope.cloudMode, "byok");
@@ -50,19 +51,14 @@ test("fan-out routes provider, model and mode to all five scopes", async () => {
 
 test("fan-out with partial settings only mirrors the provided routing fields", async () => {
   const { buildReasoningScopePatches } = await load();
-  const {
-    dictationCleanup,
-    noteFormatting,
-    dictationAgent,
-    chatIntelligence,
-    dictationTranslation,
-  } = buildReasoningScopePatches({ useCleanupModel: true }, "local");
+  const { dictationCleanup, noteFormatting, dictationAgent, dictationTranslation } =
+    buildReasoningScopePatches({ useCleanupModel: true }, "local");
 
   assert.equal(dictationCleanup.useCleanupModel, true);
   assert.equal(dictationCleanup.cleanupMode, "local");
   assert.equal("cleanupProvider" in dictationCleanup, false);
 
-  for (const scope of [noteFormatting, dictationAgent, chatIntelligence, dictationTranslation]) {
+  for (const scope of [noteFormatting, dictationAgent, dictationTranslation]) {
     assert.equal(scope.mode, "local");
     assert.equal("provider" in scope, false);
     assert.equal("model" in scope, false);

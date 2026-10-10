@@ -55,8 +55,7 @@
   },
   "window": {
     "voiceRecorderTitle": "Oats",
-    "controlPanelTitle": "Oats",
-    "agentChatTitle": "智能助手聊天"
+    "controlPanelTitle": "Oats"
   },
   "dialog": {
     "openLink": {
@@ -1778,79 +1777,6 @@
     "prompt": {
       "title": "代理提示詞",
       "description": "偵測到喚醒詞時使用的系統提示詞。若未設定則使用內建預設值。"
-    }
-  },
-  "agentMode": {
-    "settings": {
-      "hotkey": "聊天助手快捷鍵",
-      "hotkeyDescription": "開啟或關閉聊天助手視窗",
-      "model": "助手模型",
-      "modelDescription": "用於助手對話的AI模型",
-      "systemPrompt": "系統提示詞",
-      "systemPromptDescription": "助手的自訂指令",
-      "systemPromptPlaceholder": "輸入自訂系統提示詞...",
-      "modes": {
-        "legacy": "Oats Cloud",
-        "providers": "雲端供應商",
-        "local": "本機",
-        "selfHosted": "自架主機",
-        "legacyDesc": "準確可靠，無需設定。",
-        "providersDesc": "使用自己的 API 金鑰。",
-        "localDesc": "裝置端模型，完全私密。",
-        "selfHostedDesc": "你自己網路上的伺服器。",
-        "enterprise": "企業級",
-        "enterpriseDesc": "使用你組織的雲端帳號（AWS、Azure、GCP）。"
-      },
-      "legacyCloud": "Oats Cloud",
-      "legacyCloudDescription": "準確可靠，無需設定。",
-      "customSetup": "自訂配置 (BYOK)",
-      "customSetupDescription": "使用自己的 API 金鑰並選擇偏好的模型"
-    },
-    "chat": {
-      "placeholder": "按 {{hotkey}} 開始說話",
-      "thinking": "思考中...",
-      "transcribing": "轉錄中...",
-      "listening": "正在聆聽...",
-      "newConversation": "新建",
-      "copyToClipboard": "複製到剪貼簿",
-      "copied": "已複製",
-      "emptyState": "隨便問我",
-      "errorPrefix": "錯誤"
-    },
-    "titleBar": {
-      "label": "助手",
-      "newChat": "新對話",
-      "close": "關閉"
-    },
-    "input": {
-      "holdToSpeak": "按住說話",
-      "toClose": "關閉",
-      "listening": "正在聆聽...",
-      "transcribing": "正在轉錄...",
-      "thinking": "正在思考...",
-      "typeMessage": "輸入訊息...",
-      "send": "傳送"
-    },
-    "tools": {
-      "search_notesStatus": "正在搜尋筆記...",
-      "web_searchStatus": "正在搜尋網頁...",
-      "copy_to_clipboardStatus": "正在複製到剪貼簿...",
-      "get_calendar_eventsStatus": "正在查看行事曆...",
-      "get_noteStatus": "正在讀取筆記...",
-      "create_noteStatus": "正在建立筆記...",
-      "update_noteStatus": "正在更新筆記...",
-      "copiedToClipboard": "已複製到剪貼簿",
-      "foundNotes": "找到 {{count}} 則筆記",
-      "foundNotes_plural": "找到 {{count}} 則筆記",
-      "searchResults": "找到 {{count}} 項結果",
-      "searchResults_plural": "找到 {{count}} 項結果",
-      "openNote": "開啟筆記",
-      "calendarEvents": "找到 {{count}} 個行程",
-      "calendarEvents_plural": "找到 {{count}} 個行程",
-      "noResults": "未找到結果",
-      "error": "工具錯誤",
-      "unknownTool": "未知工具：{{name}}",
-      "invalidArgs": "{{name}} 的工具參數無效"
     }
   },
   "upcoming": {

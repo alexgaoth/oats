@@ -368,21 +368,6 @@ export interface LlamaVulkanDownloadProgress {
   percentage: number;
 }
 
-export interface ConversationPreview {
-  id: number;
-  title: string;
-  created_at: string;
-  updated_at: string;
-  archived_at?: string | null;
-  cloud_id?: string | null;
-  client_conversation_id?: string;
-  sync_status?: "synced" | "pending" | "error";
-  deleted_at?: string | null;
-  message_count: number;
-  last_message?: string | null;
-  last_message_role?: "user" | "assistant" | "system" | null;
-}
-
 declare global {
   interface Window {
     electronAPI: {
@@ -1171,8 +1156,7 @@ declare global {
         diarized?: boolean;
       }>;
 
-      // Agent Mode
-      updateAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
+      // Hotkey slots
       updateVoiceAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getVoiceAgentKey?: () => Promise<string>;
       updateSearchHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
@@ -1182,110 +1166,6 @@ declare global {
       updateDictationHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       updateTranslationHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getTranslationKey?: () => Promise<string>;
-      getAgentKey?: () => Promise<string>;
-      saveAgentKey?: (key: string) => Promise<void>;
-      createAgentConversation?: (
-        title: string,
-        noteId?: number
-      ) => Promise<{
-        id: number;
-        title: string;
-        note_id?: number | null;
-        created_at: string;
-        updated_at: string;
-      }>;
-      getConversationsForNote?: (
-        noteId: number,
-        limit?: number
-      ) => Promise<
-        Array<{
-          id: number;
-          title: string;
-          created_at: string;
-          updated_at: string;
-          message_count: number;
-        }>
-      >;
-      getAgentConversations?: (limit?: number) => Promise<
-        Array<{
-          id: number;
-          title: string;
-          archived_at?: string;
-          cloud_id?: string;
-          client_conversation_id?: string;
-          created_at: string;
-          updated_at: string;
-        }>
-      >;
-      getAgentConversation?: (id: number) => Promise<{
-        id: number;
-        title: string;
-        archived_at?: string;
-        cloud_id?: string;
-        created_at: string;
-        updated_at: string;
-        messages: Array<{
-          id: number;
-          conversation_id: number;
-          role: "user" | "assistant" | "system";
-          content: string;
-          metadata?: string;
-          created_at: string;
-        }>;
-      } | null>;
-      deleteAgentConversation?: (id: number) => Promise<{ success: boolean }>;
-      updateAgentConversationTitle?: (id: number, title: string) => Promise<{ success: boolean }>;
-      addAgentMessage?: (
-        conversationId: number,
-        role: "user" | "assistant" | "system",
-        content: string,
-        metadata?: Record<string, unknown>
-      ) => Promise<{
-        id: number;
-        conversation_id: number;
-        role: string;
-        content: string;
-        metadata?: string;
-        created_at: string;
-      }>;
-      getAgentMessages?: (conversationId: number) => Promise<
-        Array<{
-          id: number;
-          conversation_id: number;
-          role: "user" | "assistant" | "system";
-          content: string;
-          metadata?: string;
-          created_at: string;
-        }>
-      >;
-      getAgentConversationsWithPreview?: (
-        limit?: number,
-        offset?: number,
-        includeArchived?: boolean
-      ) => Promise<ConversationPreview[]>;
-      searchAgentConversations?: (query: string, limit?: number) => Promise<ConversationPreview[]>;
-      archiveAgentConversation?: (id: number) => Promise<{ success: boolean }>;
-      unarchiveAgentConversation?: (id: number) => Promise<{ success: boolean }>;
-      semanticSearchConversations?: (
-        query: string,
-        limit?: number
-      ) => Promise<ConversationPreview[]>;
-
-      // Agent overlay
-      resizeAgentWindow?: (width: number, height: number) => Promise<void>;
-      getAgentWindowBounds?: () => Promise<{
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      } | null>;
-      setAgentWindowBounds?: (x: number, y: number, width: number, height: number) => Promise<void>;
-      hideAgentOverlay?: () => Promise<void>;
-      onAgentStartRecording?: (callback: () => void) => () => void;
-      onAgentStopRecording?: (callback: () => void) => () => void;
-      onAgentToggleRecording?: (callback: () => void) => () => void;
-
-      agentOpenNote?: (noteId: number) => Promise<{ success: boolean; error?: string }>;
 
       // Google Calendar
       gcalStartOAuth?: () => Promise<{ success: boolean; email?: string; error?: string }>;
@@ -1546,9 +1426,6 @@ declare global {
         action: string
       ) => Promise<{ success: boolean }>;
       joinCalendarMeeting?: (eventId: string) => Promise<{ success: boolean }>;
-      onNavigateToNote?: (
-        callback: (data: { noteId: number; folderId: number | null }) => void
-      ) => () => void;
       onUpdateNotificationData?: (
         callback: (data: { version: string; releaseDate?: string }) => void
       ) => () => void;

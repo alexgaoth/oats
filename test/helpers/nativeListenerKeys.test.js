@@ -20,7 +20,7 @@ test("tap mode watches modifier-only hotkeys for every slot", () => {
   const mgr = makeManager({
     dictation: "Control+Super",
     voiceAgent: "Control+Alt",
-    agent: "Alt+Super",
+    search: "Alt+Super",
   });
   assert.deepEqual(mgr.getNativeListenerKeys("tap").sort(), [
     "Alt+Super",
@@ -40,7 +40,7 @@ test("push mode watches the dictation key even when it is a regular key", () => 
 });
 
 test("push mode does not push-enable non-dictation slots", () => {
-  const mgr = makeManager({ dictation: "Control+Super", agent: "F9" });
+  const mgr = makeManager({ dictation: "Control+Super", search: "F9" });
   assert.deepEqual(mgr.getNativeListenerKeys("push"), ["Control+Super"]);
 });
 
@@ -48,7 +48,7 @@ test("right-side modifiers use the native listener; globe/empty slots do not", (
   const mgr = makeManager({
     dictation: "GLOBE",
     voiceAgent: "RightControl",
-    agent: "",
+    search: "",
   });
   assert.deepEqual(mgr.getNativeListenerKeys("tap"), ["RightControl"]);
 });
@@ -67,12 +67,12 @@ test("push mode watches every dictation hotkey, including regular keys", () => {
 test("membership and lookup helpers work across multi-hotkey slots", () => {
   const mgr = makeManager({
     dictation: ["GLOBE", "Control+Shift+R"],
-    agent: "Control+Alt",
+    search: "Control+Alt",
   });
   assert.equal(mgr.slotHasHotkey("dictation", "Control+Shift+R"), true);
   assert.equal(mgr.slotHasHotkey("dictation", "F12"), false);
   assert.equal(mgr.findSlotByHotkey("Control+Shift+R"), "dictation");
-  assert.equal(mgr.findSlotByHotkey("Control+Alt"), "agent");
+  assert.equal(mgr.findSlotByHotkey("Control+Alt"), "search");
   assert.equal(mgr.findSlotByHotkey("Nope"), null);
   assert.deepEqual(mgr.getSlotHotkeys("dictation"), ["GLOBE", "Control+Shift+R"]);
   assert.equal(mgr.getSlotHotkey("dictation"), "GLOBE");
@@ -81,14 +81,14 @@ test("membership and lookup helpers work across multi-hotkey slots", () => {
 test("_findSlotConflict detects a hotkey already bound to another slot's list", () => {
   const mgr = makeManager({
     dictation: ["GLOBE", "Control+Shift+R"],
-    agent: "Control+Alt",
+    search: "Control+Alt",
   });
-  // Re-using a dictation hotkey for the agent slot should conflict.
-  const conflict = mgr._findSlotConflict("agent", "Control+Shift+R");
+  // Re-using a dictation hotkey for the search slot should conflict.
+  const conflict = mgr._findSlotConflict("search", "Control+Shift+R");
   assert.equal(conflict?.reason, "slot_conflict");
   assert.equal(conflict?.conflictSlot, "dictation");
   // A fresh hotkey does not conflict.
-  assert.equal(mgr._findSlotConflict("agent", "F7"), null);
+  assert.equal(mgr._findSlotConflict("search", "F7"), null);
   // Re-checking a slot against its own hotkey is not a conflict.
   assert.equal(mgr._findSlotConflict("dictation", "GLOBE"), null);
 });
@@ -99,7 +99,7 @@ test("translation slot conflicts are detected and it is never push-enabled", () 
     translation: "Control+Shift+T",
   });
   // Cross-slot conflict: reusing the translation hotkey on another slot.
-  const conflict = mgr._findSlotConflict("agent", "Control+Shift+T");
+  const conflict = mgr._findSlotConflict("search", "Control+Shift+T");
   assert.equal(conflict?.reason, "slot_conflict");
   assert.equal(conflict?.conflictSlot, "translation");
   // Push mode only push-enables the dictation slot, never translation.

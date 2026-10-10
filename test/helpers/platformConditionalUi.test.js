@@ -124,9 +124,6 @@ test("macOS keeps its overlay scrollbars", () => {
   assert.ok(rules.length > 0, "expected scrollbar rules to exist at all");
 
   for (const rule of rules) {
-    // `.agent-chat-scroll` is the agent overlay, a separate always-scrolling
-    // surface where a visible track is intentional.
-    if (rule.includes(".agent-chat-scroll")) continue;
     assert.match(
       rule,
       /html:not\(\[data-platform="darwin"\]\)/,

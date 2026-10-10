@@ -14,7 +14,6 @@ const { isInternalNavigation } = require("./appNavigation");
 const {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
-  AGENT_OVERLAY_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,
@@ -31,7 +30,6 @@ class WindowManager {
   constructor() {
     this.mainWindow = null;
     this.controlPanelWindow = null;
-    this.agentWindow = null;
     this.notificationWindow = null;
     this._notificationTimeout = null;
     this.transcriptionPreviewWindow = null;
@@ -52,7 +50,6 @@ class WindowManager {
     this.winPushState = null;
     this._cachedActivationMode = "tap";
     this._floatingIconAutoHide = false;
-    this._agentAnimationState = null;
     this._panelStartPosition = "bottom-right";
     // Set once the user drags the oat; until then the corner preset wins.
     this._floatingOatPosition = null;
@@ -245,22 +242,15 @@ class WindowManager {
     return { success: true, bounds: { x: newX, y: newY, ...newSize } };
   }
 
-  async loadWindowContent(window, isControlPanel = false, isAgent = false) {
+  async loadWindowContent(window, isControlPanel = false) {
     if (process.env.NODE_ENV === "development") {
-      let appUrl = DevServerManager.getAppUrl(isControlPanel);
-      if (isAgent) {
-        appUrl = `${DevServerManager.getAppUrl(false)}?agent=true`;
-      }
+      const appUrl = DevServerManager.getAppUrl(isControlPanel);
       await DevServerManager.waitForDevServer();
       await window.loadURL(appUrl);
     } else {
       const fileInfo = DevServerManager.getAppFilePath(isControlPanel);
       if (!fileInfo) {
         throw new Error("Failed to get app file path");
-      }
-
-      if (isAgent) {
-        fileInfo.query = { agent: "true" };
       }
 
       const fs = require("fs");
@@ -930,94 +920,6 @@ class WindowManager {
     await this.loadWindowContent(this.controlPanelWindow, true);
   }
 
-  async createAgentWindow() {
-    if (this.agentWindow && !this.agentWindow.isDestroyed()) {
-      return;
-    }
-
-    this.agentWindow = new BrowserWindow(AGENT_OVERLAY_CONFIG);
-
-    this.agentWindow.once("ready-to-show", () => {
-      WindowPositionUtil.setupAlwaysOnTop(this.agentWindow);
-    });
-
-    this.agentWindow.webContents.on("did-finish-load", () => {
-      this.agentWindow.setTitle(i18nMain.t("window.agentChatTitle"));
-    });
-
-    this.agentWindow.on("closed", () => {
-      this.agentWindow = null;
-    });
-
-    await this.loadWindowContent(this.agentWindow, false, true);
-  }
-
-  /**
-   * Created on demand rather than at launch.
-   *
-   * The agent overlay is a whole hidden renderer process, and it is not one of
-   * Oats' three surfaces — most sessions never open it. Building it eagerly on
-   * every start cost a process and a React bundle for nothing.
-   */
-  async toggleAgentOverlay() {
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) {
-      await this.createAgentWindow();
-    }
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
-
-    if (this.agentWindow.isVisible()) {
-      this.agentWindow.webContents.send("agent-toggle-recording");
-    } else {
-      this.showAgentOverlay();
-    }
-  }
-
-  showAgentOverlay() {
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
-
-    this._clearAgentAnimation();
-
-    // Get work area to fill full screen height
-    const mainBounds =
-      this.mainWindow && !this.mainWindow.isDestroyed() ? this.mainWindow.getBounds() : null;
-    const refPoint = mainBounds || { x: 0, y: 0 };
-    const display = screen.getDisplayNearestPoint({ x: refPoint.x, y: refPoint.y });
-    const workArea = display.workArea || display.bounds;
-
-    const width = AGENT_OVERLAY_CONFIG.width;
-    const height = workArea.height;
-
-    // Center horizontally relative to main window, fill work area height
-    let x = workArea.x;
-    if (mainBounds) {
-      x = mainBounds.x + Math.round((mainBounds.width - width) / 2);
-      x = Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - width));
-    }
-
-    this.agentWindow.setBounds({
-      x,
-      y: workArea.y,
-      width,
-      height,
-    });
-
-    WindowPositionUtil.setupAlwaysOnTop(this.agentWindow);
-
-    if (typeof this.agentWindow.showInactive === "function") {
-      this.agentWindow.showInactive();
-    } else {
-      this.agentWindow.show();
-    }
-  }
-
-  hideAgentOverlay() {
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
-
-    this._clearAgentAnimation();
-    this.agentWindow.webContents.send("agent-stop-recording");
-    this.agentWindow.hide();
-  }
-
   async ensureTranscriptionPreviewWindow() {
     if (this.transcriptionPreviewWindow && !this.transcriptionPreviewWindow.isDestroyed()) {
       return;
@@ -1130,121 +1032,6 @@ class WindowManager {
 
     this.transcriptionPreviewWindow.setBounds(bounds);
     return { success: true, bounds };
-  }
-
-  resizeAgentWindow(width, height) {
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
-
-    const ANIMATION_DURATION_MS = 250;
-    const TICK_MS = 16;
-
-    const targetWidth = Math.max(
-      AGENT_OVERLAY_CONFIG.minWidth,
-      Math.min(width, AGENT_OVERLAY_CONFIG.maxWidth)
-    );
-    const targetHeight = Math.max(
-      AGENT_OVERLAY_CONFIG.minHeight,
-      Math.min(height, AGENT_OVERLAY_CONFIG.maxHeight)
-    );
-
-    const currentBounds = this.agentWindow.getBounds();
-
-    if (currentBounds.height === targetHeight && currentBounds.width === targetWidth) {
-      this._clearAgentAnimation();
-      return;
-    }
-
-    // If animation already running, retarget from current position
-    if (this._agentAnimationState) {
-      this._agentAnimationState.targetHeight = targetHeight;
-      this._agentAnimationState.targetWidth = targetWidth;
-      this._agentAnimationState.startHeight = currentBounds.height;
-      this._agentAnimationState.startWidth = currentBounds.width;
-      this._agentAnimationState.startTime = Date.now();
-      return;
-    }
-
-    this._agentAnimationState = {
-      startHeight: currentBounds.height,
-      startWidth: currentBounds.width,
-      targetHeight,
-      targetWidth,
-      startTime: Date.now(),
-      intervalId: null,
-    };
-
-    this._agentAnimationState.intervalId = setInterval(() => {
-      if (!this.agentWindow || this.agentWindow.isDestroyed()) {
-        this._clearAgentAnimation();
-        return;
-      }
-
-      const state = this._agentAnimationState;
-      if (!state) return;
-
-      const elapsed = Date.now() - state.startTime;
-      const rawT = Math.min(elapsed / ANIMATION_DURATION_MS, 1);
-      // Ease-out quadratic
-      const t = 1 - (1 - rawT) * (1 - rawT);
-
-      const newHeight = Math.round(
-        state.startHeight + (state.targetHeight - state.startHeight) * t
-      );
-      const newWidth = Math.round(state.startWidth + (state.targetWidth - state.startWidth) * t);
-
-      const bounds = this.agentWindow.getBounds();
-
-      // Clamp to screen work area
-      const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
-      const workArea = display.workArea || display.bounds;
-      const clampedHeight = Math.min(newHeight, workArea.y + workArea.height - bounds.y);
-
-      this.agentWindow.setBounds({
-        x: bounds.x,
-        y: bounds.y,
-        width: newWidth,
-        height: Math.max(AGENT_OVERLAY_CONFIG.minHeight, clampedHeight),
-      });
-
-      if (rawT >= 1) {
-        this._clearAgentAnimation();
-      }
-    }, TICK_MS);
-  }
-
-  _clearAgentAnimation() {
-    if (this._agentAnimationState?.intervalId) {
-      clearInterval(this._agentAnimationState.intervalId);
-    }
-    this._agentAnimationState = null;
-  }
-
-  getAgentWindowBounds() {
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) return null;
-    return this.agentWindow.getBounds();
-  }
-
-  setAgentWindowBounds(x, y, width, height) {
-    if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
-
-    const bounds = {
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(width),
-      height: Math.round(height),
-    };
-
-    // Enforce minimums
-    bounds.width = Math.max(AGENT_OVERLAY_CONFIG.minWidth, bounds.width);
-    bounds.height = Math.max(AGENT_OVERLAY_CONFIG.minHeight, bounds.height);
-
-    // Clamp to screen work area
-    const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
-    const workArea = display.workArea || display.bounds;
-    bounds.width = Math.min(bounds.width, workArea.width);
-    bounds.height = Math.min(bounds.height, workArea.y + workArea.height - bounds.y);
-
-    this.agentWindow.setBounds(bounds);
   }
 
   _repositionToCursorDisplay() {
@@ -1624,18 +1411,6 @@ class WindowManager {
     this.updateNotificationWindow = null;
   }
 
-  sendToControlPanel(channel, data) {
-    const win = this.controlPanelWindow;
-    if (!win || win.isDestroyed()) return;
-    if (win.webContents.isLoading()) {
-      win.webContents.once("did-finish-load", () => {
-        if (!win.isDestroyed()) win.webContents.send(channel, data);
-      });
-    } else {
-      win.webContents.send(channel, data);
-    }
-  }
-
   snapControlPanelToMeetingMode() {
     const win = this.controlPanelWindow;
     if (!win || win.isDestroyed()) return;
@@ -1675,10 +1450,6 @@ class WindowManager {
 
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.setTitle(i18nMain.t("window.voiceRecorderTitle"));
-    }
-
-    if (this.agentWindow && !this.agentWindow.isDestroyed()) {
-      this.agentWindow.setTitle(i18nMain.t("window.agentChatTitle"));
     }
   }
 

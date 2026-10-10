@@ -1,14 +1,11 @@
-import type { LanguageModel } from "ai";
 import type { TinfoilAI } from "tinfoil";
 import { refreshTinfoilModels } from "../../models/tinfoilModels";
 
 type TinfoilModule = typeof import("tinfoil");
-type TinfoilAISDKProvider = Awaited<ReturnType<TinfoilModule["createTinfoilAI"]>>;
 
 let tinfoilModulePromise: Promise<TinfoilModule> | null = null;
 
 const chatClientCache = new Map<string, Promise<TinfoilAI>>();
-const aiSdkProviderCache = new Map<string, Promise<TinfoilAISDKProvider>>();
 
 function loadTinfoil(): Promise<TinfoilModule> {
   if (!tinfoilModulePromise) {
@@ -55,31 +52,6 @@ export async function getTinfoilChatClient(apiKey: string): Promise<TinfoilAI> {
   return clientPromise;
 }
 
-async function getTinfoilAISDKProvider(apiKey: string): Promise<TinfoilAISDKProvider> {
-  const key = normalizeApiKey(apiKey);
-  syncTinfoilCatalog();
-  const cached = aiSdkProviderCache.get(key);
-  if (cached) return cached;
-
-  const providerPromise = loadTinfoil()
-    .then(({ createTinfoilAI }) => createTinfoilAI(key))
-    .catch((error) => {
-      aiSdkProviderCache.delete(key);
-      throw error;
-    });
-  aiSdkProviderCache.set(key, providerPromise);
-  return providerPromise;
-}
-
-export async function getTinfoilLanguageModel(
-  apiKey: string,
-  model: string
-): Promise<LanguageModel> {
-  const provider = await getTinfoilAISDKProvider(apiKey);
-  return provider(model);
-}
-
 export function clearTinfoilClientCache(): void {
   chatClientCache.clear();
-  aiSdkProviderCache.clear();
 }
