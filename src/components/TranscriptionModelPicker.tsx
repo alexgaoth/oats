@@ -968,7 +968,7 @@ export default function TranscriptionModelPicker({
                         <GetApiKeyLink
                           url={providerCredentials.consoleUrl}
                           labelKey="transcription.getKey"
-                          className="text-xs text-primary/70 hover:text-primary transition-colors cursor-pointer"
+                          className="text-xs text-brand-ink/70 hover:text-brand-ink transition-colors cursor-pointer"
                         />
                       )}
                     </div>
@@ -1020,7 +1020,7 @@ export default function TranscriptionModelPicker({
                       <a
                         href={TINFOIL_AUDIO_DOCS_URL}
                         onClick={createExternalLinkHandler(TINFOIL_AUDIO_DOCS_URL)}
-                        className="text-primary/70 hover:text-primary transition-colors"
+                        className="text-brand-ink/70 hover:text-brand-ink transition-colors"
                       >
                         {t("transcription.tinfoil.docsLink")}
                       </a>
@@ -1044,7 +1044,7 @@ export default function TranscriptionModelPicker({
 
           {gpuDownloading && internalLocalProvider === "whisper" && (
             <div>
-              <DownloadProgressBar modelName="GPU acceleration" progress={gpuProgress} />
+              <DownloadProgressBar modelName={t("models.progress.gpu")} progress={gpuProgress} />
               <div className="px-2.5 pb-1 flex justify-end">
                 <button
                   onClick={handleGpuCancel}
@@ -1078,7 +1078,7 @@ export default function TranscriptionModelPicker({
                   </div>
                 ) : (
                   <div className="flex items-start gap-2.5">
-                    <Zap size={13} className="text-primary shrink-0 mt-0.5" />
+                    <Zap size={13} className="text-brand-ink shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground">
                         {t("gpu.transcriptionBanner")}

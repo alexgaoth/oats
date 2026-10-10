@@ -1597,7 +1597,12 @@
       }
     },
     "downloaded": "Geladen",
-    "delete": "{{model}} löschen"
+    "delete": "{{model}} löschen",
+    "progress": {
+      "downloading": "{{name}} wird heruntergeladen",
+      "installing": "{{name}} wird installiert",
+      "gpu": "GPU-Beschleunigung"
+    }
   },
   "notes": {
     "meeting": {

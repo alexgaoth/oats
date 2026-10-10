@@ -21,7 +21,7 @@ export default function PasteToolsInfo({
       <div className="border border-border rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Terminal className="w-6 h-6 text-primary" />
+            <Terminal className="w-6 h-6 text-brand-ink" />
             <div>
               <h3 className="font-semibold text-foreground">{t("pasteToolsInfo.title")}</h3>
               <p className="text-sm text-muted-foreground">{t("pasteToolsInfo.checking")}</p>

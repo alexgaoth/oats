@@ -1597,7 +1597,12 @@
       }
     },
     "downloaded": "Baixado",
-    "delete": "Excluir {{model}}"
+    "delete": "Excluir {{model}}",
+    "progress": {
+      "downloading": "Baixando {{name}}",
+      "installing": "Instalando {{name}}",
+      "gpu": "Aceleração por GPU"
+    }
   },
   "notes": {
     "meeting": {

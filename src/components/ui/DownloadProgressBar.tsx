@@ -1,4 +1,7 @@
+import { useId } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
+import { cn } from "../lib/utils";
 import { formatETA, type DownloadProgress } from "../../hooks/useModelDownload";
 
 interface DownloadProgressBarProps {
@@ -13,75 +16,71 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1_000_000_000).toFixed(2)}GB`;
 }
 
+/**
+ * One download row: what is downloading, how far it is, and how fast. A
+ * spinner only while the size is unknown or the files are being installed,
+ * because then there is no percentage to show (DESIGN.md §7).
+ */
 export function DownloadProgressBar({
   modelName,
   progress,
   isInstalling,
 }: DownloadProgressBarProps) {
+  const { t } = useTranslation();
+  const labelId = useId();
   const { percentage, downloadedBytes, totalBytes, speed, eta } = progress;
   const pct = Math.round(percentage);
   const speedText = speed ? `${speed.toFixed(1)} MB/s` : "";
   const etaText = eta ? formatETA(eta) : "";
   const indeterminate = !isInstalling && totalBytes === 0 && downloadedBytes > 0;
+  const busy = isInstalling || indeterminate;
+  const detail = isInstalling
+    ? ""
+    : [indeterminate ? formatBytes(downloadedBytes) : "", speedText, etaText]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
-    <div className="px-2.5 py-2 border-b border-white/5 dark:border-border-subtle">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="relative flex items-center justify-center h-6 min-w-6 px-1.5 shrink-0">
-          <div
-            className={`absolute inset-0 rounded-md bg-primary/15 ${isInstalling || indeterminate ? "animate-pulse" : ""}`}
+    <div className="border-b border-border px-3 py-2.5">
+      <div className="mb-2 flex items-center gap-2">
+        {busy && (
+          <Loader2
+            aria-hidden="true"
+            className="size-3.5 shrink-0 animate-spin text-muted-foreground"
           />
-          {isInstalling ? (
-            <Loader2 className="relative w-3.5 h-3.5 text-primary animate-spin" />
-          ) : (
-            <span className="relative text-xs font-bold text-primary tabular-nums">
-              {indeterminate ? "···" : `${pct}%`}
-            </span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-foreground truncate">
-            {isInstalling ? `Installing ${modelName}` : `Downloading ${modelName}`}
-          </p>
-          {!isInstalling && (indeterminate || speedText || etaText) && (
-            <div className="flex items-center gap-1.5 mt-0.5">
-              {indeterminate && (
-                <span className="text-xs text-muted-foreground/70 tabular-nums">
-                  {formatBytes(downloadedBytes)}
-                </span>
-              )}
-              {speedText && (
-                <span className="text-xs text-muted-foreground/70 tabular-nums">{speedText}</span>
-              )}
-              {etaText && (
-                <>
-                  <span className="text-xs text-muted-foreground/30">·</span>
-                  <span className="text-xs text-muted-foreground/70 tabular-nums">{etaText}</span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        )}
+        <p id={labelId} className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+          {isInstalling
+            ? t("models.progress.installing", { name: modelName })
+            : t("models.progress.downloading", { name: modelName })}
+        </p>
+        {!busy && (
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{pct}%</span>
+        )}
       </div>
 
       <div
-        className="w-full rounded-full overflow-hidden bg-white/5 dark:bg-white/3"
-        style={{ height: 4 }}
+        role="progressbar"
+        aria-labelledby={labelId}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={busy ? undefined : pct}
+        className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
       >
         {indeterminate ? (
-          <div className="h-full w-1/3 rounded-full bg-primary shadow-[0_0_8px_color-mix(in_oklch,var(--color-primary)_40%,transparent)] animate-[indeterminate_1.5s_ease-in-out_infinite]" />
+          <div className="h-full w-1/3 animate-[indeterminate_1.5s_ease-in-out_infinite] rounded-full bg-primary motion-reduce:animate-none" />
         ) : (
           <div
-            className={`${isInstalling ? "animate-pulse" : ""} bg-primary shadow-[0_0_8px_color-mix(in_oklch,var(--color-primary)_40%,transparent)]`}
-            style={{
-              height: "100%",
-              width: `${isInstalling ? 100 : Math.min(percentage, 100)}%`,
-              borderRadius: 9999,
-              transition: "width 300ms ease-out",
-            }}
+            className={cn(
+              "h-full rounded-full bg-primary transition-[width] duration-300 ease-out",
+              isInstalling && "animate-pulse motion-reduce:animate-none"
+            )}
+            style={{ width: `${isInstalling ? 100 : Math.min(percentage, 100)}%` }}
           />
         )}
       </div>
+
+      {detail && <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{detail}</p>}
     </div>
   );
 }

@@ -1600,7 +1600,12 @@
       }
     },
     "downloaded": "Downloaded",
-    "delete": "Delete {{model}}"
+    "delete": "Delete {{model}}",
+    "progress": {
+      "downloading": "Downloading {{name}}",
+      "installing": "Installing {{name}}",
+      "gpu": "GPU acceleration"
+    }
   },
   "notes": {
     "meeting": {

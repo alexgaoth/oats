@@ -111,7 +111,7 @@ export default function DictationAgentSettings() {
             <div className="space-y-2.5">
               {examples.map((input, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <span className="shrink-0 mt-0.5 text-xs font-medium uppercase tracking-wider px-1.5 py-px rounded bg-primary/10 text-primary dark:bg-primary/15">
+                  <span className="shrink-0 mt-0.5 text-xs font-medium uppercase tracking-wider px-1.5 py-px rounded bg-primary/10 text-brand-ink dark:bg-primary/15">
                     {instructionMode}
                   </span>
                   <p className="text-xs text-muted-foreground leading-relaxed">"{input}"</p>
