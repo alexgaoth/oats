@@ -692,6 +692,7 @@ declare global {
         useLocalWhisper: boolean;
         localTranscriptionProvider: LocalTranscriptionProvider;
         model?: string;
+        language?: string;
         cleanupProvider: string;
         cleanupModel?: string;
         dictationAgentProvider: string;

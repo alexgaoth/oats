@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { useSettingsStore, initializeSettings } from "../stores/settingsStore";
 import logger from "../utils/logger";
+import { getBaseLanguageCode } from "../utils/languageSupport";
 import { useLocalStorage } from "./useLocalStorage";
 import type { LocalTranscriptionProvider, InferenceMode, SelfHostedType } from "../types/electron";
 import type { Snippet } from "../utils/snippets";
@@ -174,6 +175,7 @@ function useSettingsInternal() {
     localTranscriptionProvider,
     whisperModel,
     parakeetModel,
+    preferredLanguage,
     cleanupProvider,
     cleanupModel,
     dictationAgentProvider,
@@ -189,6 +191,8 @@ function useSettingsInternal() {
         useLocalWhisper,
         localTranscriptionProvider,
         model: model || undefined,
+        // Sent the way requests send it, so the pre-warm loads the same model.
+        language: getBaseLanguageCode(preferredLanguage),
         cleanupProvider,
         cleanupModel: cleanupProvider === "local" ? cleanupModel : undefined,
         dictationAgentProvider,
@@ -206,6 +210,7 @@ function useSettingsInternal() {
     localTranscriptionProvider,
     whisperModel,
     parakeetModel,
+    preferredLanguage,
     cleanupProvider,
     cleanupModel,
     dictationAgentProvider,

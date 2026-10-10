@@ -3279,7 +3279,7 @@ class IPCHandlers {
         setVars.LOCAL_TRANSCRIPTION_PROVIDER = prefs.localTranscriptionProvider;
         if (prefs.localTranscriptionProvider === "nvidia") {
           setVars.PARAKEET_MODEL = prefs.model;
-          clearVars.push("LOCAL_WHISPER_MODEL");
+          clearVars.push("LOCAL_WHISPER_MODEL", "LOCAL_WHISPER_LANGUAGE");
           this.whisperManager.stopServer().catch((err) => {
             debugLogger.error("Failed to stop whisper-server on provider switch", {
               error: err.message,
@@ -3288,6 +3288,13 @@ class IPCHandlers {
         } else {
           setVars.LOCAL_WHISPER_MODEL = prefs.model;
           clearVars.push("PARAKEET_MODEL");
+          // The pre-warm needs the language to warm the English model when
+          // requests will ask for it.
+          if (prefs.language) {
+            setVars.LOCAL_WHISPER_LANGUAGE = prefs.language;
+          } else {
+            clearVars.push("LOCAL_WHISPER_LANGUAGE");
+          }
           this.parakeetManager.stopServer().catch((err) => {
             debugLogger.error("Failed to stop parakeet-server on provider switch", {
               error: err.message,
@@ -3296,10 +3303,20 @@ class IPCHandlers {
         }
       } else if (prefs.useLocalWhisper) {
         // Local mode enabled but no model selected - clear pre-warming vars
-        clearVars.push("LOCAL_TRANSCRIPTION_PROVIDER", "PARAKEET_MODEL", "LOCAL_WHISPER_MODEL");
+        clearVars.push(
+          "LOCAL_TRANSCRIPTION_PROVIDER",
+          "PARAKEET_MODEL",
+          "LOCAL_WHISPER_MODEL",
+          "LOCAL_WHISPER_LANGUAGE"
+        );
       } else {
         // Cloud mode - stop local servers to free RAM
-        clearVars.push("LOCAL_TRANSCRIPTION_PROVIDER", "PARAKEET_MODEL", "LOCAL_WHISPER_MODEL");
+        clearVars.push(
+          "LOCAL_TRANSCRIPTION_PROVIDER",
+          "PARAKEET_MODEL",
+          "LOCAL_WHISPER_MODEL",
+          "LOCAL_WHISPER_LANGUAGE"
+        );
         this.whisperManager.stopServer().catch((err) => {
           debugLogger.error("Failed to stop whisper-server on cloud switch", {
             error: err.message,
@@ -4619,8 +4636,6 @@ class IPCHandlers {
       return { mode, strategy: "unsupported" };
     };
 
-    const hasNativeMeetingSystemAudio = () => getMeetingSystemAudioMode() === "native";
-
     const isMeetingStreamingConnected = (systemAudioMode = getMeetingSystemAudioCapabilityMode()) =>
       !!this._meetingMicStreaming?.isConnected &&
       (systemAudioMode === "unsupported" || !!this._meetingSystemStreaming?.isConnected);
@@ -4734,6 +4749,11 @@ class IPCHandlers {
     // Stop. Null for every other kind of recording.
     let meetingInRoom = null;
     let meetingPendingMicChunks = [];
+    // True only while this recording captures native system audio. The mic
+    // then waits MEETING_MIC_REFERENCE_ALIGNMENT_MS so the echo check can see
+    // the matching system audio. A room recording has no system audio, so a
+    // wait there only delays the transcript.
+    let meetingMicWaitsForSystem = false;
     let meetingPendingMicFinals = [];
     let meetingPendingMicFinalTimer = null;
     let meetingAecEnabled = false;
@@ -4937,6 +4957,14 @@ class IPCHandlers {
         }
 
         dispatchMeetingAudioBuffer(next.buffer, "mic");
+      }
+    };
+
+    const setMeetingMicWaitsForSystem = (systemAudioMode) => {
+      meetingMicWaitsForSystem = systemAudioMode === "native";
+      if (!meetingMicWaitsForSystem) {
+        // Release anything still held, so it goes out before newer chunks.
+        flushPendingMeetingMicChunks(true);
       }
     };
 
@@ -5459,6 +5487,7 @@ class IPCHandlers {
       meetingLocalLanguage = null;
       meetingLocalTranscribing = false;
       meetingPendingMicChunks = [];
+      meetingMicWaitsForSystem = false;
       resetPendingMicFinals();
       meetingAecEnabled = false;
       meetingStartedAt = null;
@@ -5574,6 +5603,7 @@ class IPCHandlers {
       meetingSendCounts = { mic: 0, system: 0 };
       meetingLiveSpeakerStartedAt = null;
       meetingPendingMicChunks = [];
+      meetingMicWaitsForSystem = false;
       resetPendingMicFinals();
       meetingAecEnabled = false;
       meetingEchoLeakDetector.reset();
@@ -5796,6 +5826,7 @@ class IPCHandlers {
           ? { mode: "unsupported", strategy: "unsupported" }
           : await getMeetingSystemAudioPlan();
         let { mode: systemAudioMode, strategy: systemAudioStrategy } = systemAudioPlan;
+        setMeetingMicWaitsForSystem(systemAudioMode);
         meetingEchoLeakDetector.reset();
         meetingOneOnOneAttendee = isInRoom ? null : resolveOneOnOneAttendeeForNote(options.noteId);
         meetingOneOnOneProfileBound = false;
@@ -5949,7 +5980,7 @@ class IPCHandlers {
           return;
         }
 
-        if (!hasNativeMeetingSystemAudio()) {
+        if (!meetingMicWaitsForSystem) {
           const analysis = meetingEchoLeakDetector.analyzeMicChunk(outboundBuffer);
           if (analysis?.shouldMute && !meetingAecEnabled) {
             if (!meetingLocalMode) {
@@ -6027,6 +6058,7 @@ class IPCHandlers {
             "meeting"
           );
           await fallBackToMicOnly("native");
+          setMeetingMicWaitsForSystem("unsupported");
           return { systemAudioMode: "unsupported", systemAudioStrategy: "unsupported" };
         }
       }
@@ -6090,7 +6122,7 @@ class IPCHandlers {
           await this.windowsLoopbackAudioManager.stop().catch(() => {});
         }
 
-        flushPendingMeetingMicChunks(true);
+        setMeetingMicWaitsForSystem("unsupported");
         await stopMeetingAec();
 
         const liveSpeakerState = await stopLiveSpeakerIdentification().catch(() => null);

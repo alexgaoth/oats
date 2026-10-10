@@ -5,7 +5,20 @@ import { ScrollFade, useScrollFade } from "./useScrollFade";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 import { speakerText } from "../../utils/speakerLabel";
-import { revealRate, revealedCount, revealedText, splitWords } from "../../helpers/wordReveal.mjs";
+import {
+  revealRate,
+  revealStart,
+  revealedCount,
+  revealedText,
+  splitWords,
+} from "../../helpers/wordReveal.mjs";
+
+/**
+ * How long the live line's words stay owed to the next final. A final lands
+ * well within this of the last live update. Older words belong to a live line
+ * that was dropped, not finished.
+ */
+const CARRY_WINDOW_MS = 4000;
 
 // The detected dialogue — what Oats has actually heard, while it is hearing it.
 //
@@ -91,17 +104,42 @@ export default function ConversationDialogue({ className }: { className?: string
     t
   );
 
-  // Pay the newest turn out at the pace it was said.
+  // Type the newest turn on, quickly.
   //
-  // Local Whisper — the default — hands over finished ~5s chunks, so without
-  // this a paragraph appears at once and then nothing happens for five seconds.
-  // The words are the point of this surface; they should arrive like words.
-  // Only the newest turn is revealed; everything above it is already read.
+  // Finals land whole, so without this a paragraph appears at once and then
+  // nothing happens. The reveal is bounded (wordReveal.mjs): the first word
+  // shows at once and the turn is complete within 0.7 s, so it adds motion
+  // and almost no delay. Only the newest turn is revealed; everything above
+  // it is already read.
   const newest = turns.length ? turns[turns.length - 1] : null;
   const newestId = newest?.id ?? "";
   const newestText = newest?.text ?? "";
-  const reveal = useRef({ id: "", from: 0, at: 0, rate: 0 });
+  const newestSource = newest?.source ?? "mic";
+  const reveal = useRef<{ id: string; from: number; at: number; rate: number; total: number }>(
+    null!
+  );
+  if (reveal.current === null) {
+    // What is already there when the view opens was said before it opened.
+    // It shows whole, rather than typing out a long turn again.
+    const total = splitWords(newestText).length;
+    reveal.current = { id: newestId, from: total, at: 0, rate: 0, total };
+  }
   const [, setTick] = useState(0);
+
+  // The words the live line last showed, per source. The store clears the live
+  // line in the same update that adds the final, so this keeps what the reader
+  // saw until the reveal below takes it.
+  const liveWords = useRef({ mic: { words: 0, at: 0 }, system: { words: 0, at: 0 } });
+  useEffect(() => {
+    if (micPartial.trim()) {
+      liveWords.current.mic = { words: splitWords(micPartial).length, at: Date.now() };
+    }
+  }, [micPartial]);
+  useEffect(() => {
+    if (systemPartial.trim()) {
+      liveWords.current.system = { words: splitWords(systemPartial).length, at: Date.now() };
+    }
+  }, [systemPartial]);
 
   // In an effect, never in the render body: React 19's StrictMode deliberately
   // double-invokes render, and a ref mutated there would advance the reveal
@@ -109,39 +147,43 @@ export default function ConversationDialogue({ className }: { className?: string
   useEffect(() => {
     const total = splitWords(newestText).length;
     if (!total) return;
-    if (reveal.current.id !== newestId) {
-      reveal.current = { id: newestId, from: 0, at: Date.now(), rate: revealRate(total) };
+    const now = Date.now();
+    const live = liveWords.current[newestSource];
+    liveWords.current[newestSource] = { words: 0, at: 0 };
+    const carried = now - live.at <= CARRY_WINDOW_MS ? live.words : 0;
+
+    const current = reveal.current;
+    if (current.id !== newestId) {
+      const from = revealStart({ total, carried });
+      reveal.current = { id: newestId, from, at: now, rate: revealRate(total - from), total };
       setTick((n) => n + 1);
       return;
     }
-    const shown = revealedCount({
-      total,
-      from: reveal.current.from,
-      elapsedMs: Date.now() - reveal.current.at,
-      rate: reveal.current.rate,
-    });
+    if (total <= current.total) return;
     // The same turn grew: continue from what is on screen rather than retyping
-    // the paragraph, and re-price the rate against the new backlog.
-    if (total > reveal.current.from && shown < total) {
-      reveal.current = {
-        id: newestId,
-        from: shown,
-        at: Date.now(),
-        rate: revealRate(total - shown),
-      };
-      setTick((n) => n + 1);
-    }
-  }, [newestId, newestText]);
+    // the paragraph, and price the rate against what is left.
+    const shown = revealedCount({
+      total: current.total,
+      from: current.from,
+      elapsedMs: now - current.at,
+      rate: current.rate,
+    });
+    const from = revealStart({ total, shown, before: current.total, carried });
+    reveal.current = { id: newestId, from, at: now, rate: revealRate(total - from), total };
+    setTick((n) => n + 1);
+  }, [newestId, newestText, newestSource]);
 
   const newestVisible = newest
     ? revealedText(
         newestText,
-        revealedCount({
-          total: splitWords(newestText).length,
-          from: reveal.current.id === newestId ? reveal.current.from : 0,
-          elapsedMs: reveal.current.id === newestId ? Date.now() - reveal.current.at : 0,
-          rate: reveal.current.rate,
-        })
+        reveal.current.id === newestId
+          ? revealedCount({
+              total: splitWords(newestText).length,
+              from: reveal.current.from,
+              elapsedMs: Date.now() - reveal.current.at,
+              rate: reveal.current.rate,
+            })
+          : 0
       )
     : null;
 
@@ -151,7 +193,8 @@ export default function ConversationDialogue({ className }: { className?: string
   const revealing = Boolean(newestVisible && !newestVisible.done);
   useEffect(() => {
     if (!revealing) return undefined;
-    const timer = window.setInterval(() => setTick((n) => n + 1), 90);
+    // About one word per tick at the typing pace.
+    const timer = window.setInterval(() => setTick((n) => n + 1), 45);
     return () => window.clearInterval(timer);
   }, [revealing]);
 
