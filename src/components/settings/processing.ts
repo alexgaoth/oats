@@ -13,12 +13,9 @@ export type ProcessingMode = "local" | "providers";
 
 /** "local" or "providers" when every feature agrees, "mixed" when they differ. */
 export function processingMode(state: ReturnType<typeof useSettingsStore.getState>) {
-  const modes = [
-    state.transcriptionMode,
-    state.cleanupMode,
-    state.noteFormattingMode,
-    state.meetingTranscriptionMode,
-  ];
+  // Summaries follow the cleanup scope (`selectResolvedLLMConfig`), so their
+  // own mode no longer decides anything and is left out.
+  const modes = [state.transcriptionMode, state.cleanupMode, state.meetingTranscriptionMode];
   if (modes.every((mode) => mode === "local")) return "local";
   if (modes.every((mode) => mode === "providers")) return "providers";
   return "mixed";

@@ -1985,13 +1985,23 @@ export const selectResolvedMeetingTranscription = (
   // When a second is added, resolve as `meetingCloudTranscriptionProvider || cloudTranscriptionProvider || catalog[0]?.id`, then validate against catalog.
   const cloudTranscriptionProvider = catalog?.[0]?.id ?? "";
 
+  // One speech model for conversations and dictation. The two paths share one
+  // whisper-server (and one Parakeet server), which holds one model: with two
+  // models, every alternation killed and reloaded it, and a request in flight
+  // on the killed server failed, losing a dictation or a conversation segment.
+  // The meeting-specific model keys are no longer read. The local/cloud switch
+  // stays per scope; the processing choice sets both together.
+  //
+  // A cloud model still has to stream for a conversation:
+  // `meetingRecordingStore` keeps OpenAI's realtime default when the chosen
+  // model cannot, and Settings offers only models that can.
   return {
     useLocalWhisper: state.meetingUseLocalWhisper,
-    whisperModel: state.meetingWhisperModel || state.whisperModel,
-    localTranscriptionProvider: state.meetingLocalTranscriptionProvider,
-    parakeetModel: state.meetingParakeetModel || state.parakeetModel,
+    whisperModel: state.whisperModel,
+    localTranscriptionProvider: state.localTranscriptionProvider,
+    parakeetModel: state.parakeetModel,
     cloudTranscriptionProvider,
-    cloudTranscriptionModel: state.meetingCloudTranscriptionModel || state.cloudTranscriptionModel,
+    cloudTranscriptionModel: state.cloudTranscriptionModel,
     cloudTranscriptionBaseUrl:
       state.meetingCloudTranscriptionBaseUrl || state.cloudTranscriptionBaseUrl || "",
     cloudTranscriptionMode: state.meetingCloudTranscriptionMode || state.cloudTranscriptionMode,
@@ -2038,6 +2048,8 @@ export interface ResolvedNoteFormatting {
   cloudMode: string;
   cloudBaseUrl: string;
   remoteUrl: string;
+  customApiKey: string;
+  disableThinking: boolean;
 }
 
 export const selectResolvedNoteFormatting = (state: SettingsState): ResolvedNoteFormatting => {
@@ -2049,6 +2061,8 @@ export const selectResolvedNoteFormatting = (state: SettingsState): ResolvedNote
     cloudMode: cfg.cloudMode || "",
     cloudBaseUrl: cfg.cloudBaseUrl || "",
     remoteUrl: cfg.remoteUrl || "",
+    customApiKey: cfg.customApiKey || "",
+    disableThinking: cfg.disableThinking,
   };
 };
 
@@ -2068,6 +2082,13 @@ export const selectResolvedLLMConfig = (
   state: SettingsState,
   scope: InferenceScope
 ): ResolvedLLMConfig => {
+  // One writing model for summaries and dictation cleanup. Both ran on the one
+  // llama-server, which holds one model, and nothing needed them to differ, so
+  // summaries now take the whole cleanup configuration: mode, provider, model,
+  // URLs, key (kept in the secure store) and thinking switch.
+  if (scope === "noteFormatting") {
+    return { ...selectResolvedLLMConfig(state, "dictationCleanup"), scope };
+  }
   const def: InferenceScopeDefinition = INFERENCE_SCOPES[scope];
   const fallback = def.fallbackScope
     ? selectResolvedLLMConfig(state, def.fallbackScope as InferenceScope)

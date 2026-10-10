@@ -1,12 +1,11 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Cpu, Download, FolderOpen, KeyRound, Plus, X } from "lucide-react";
+import { Cpu, Download, FolderOpen, KeyRound, Plus, X } from "lucide-react";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useSettings } from "../../hooks/useSettings";
 import { formatHotkey } from "../../utils/hotkeyLabel";
 import { getCachedPlatform } from "../../utils/platform";
-import { cn } from "../lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -146,29 +145,24 @@ export function QuestionCardSettings() {
     setInRoom(value);
   };
   const model = useSettingsStore((state) => state.conversationAideModel);
-  const setModel = useSettingsStore((state) => state.setConversationAideModel);
-  const confidence = useSettingsStore((state) => state.conversationAideConfidence);
-  const setConfidence = useSettingsStore((state) => state.setConversationAideConfidence);
-  const silence = useSettingsStore((state) => state.conversationAideSilenceSeconds);
-  const setSilence = useSettingsStore((state) => state.setConversationAideSilenceSeconds);
   const searchUrl = useSettingsStore((state) => state.conversationAideSearchBaseUrl);
   const setSearchUrl = useSettingsStore((state) => state.setConversationAideSearchBaseUrl);
   const autoSearch = useSettingsStore((state) => state.conversationAutoSearchEnabled);
   const setAutoSearch = useSettingsStore((state) => state.setConversationAutoSearchEnabled);
 
-  const [models, setModels] = useState<
-    Array<{ id: string; name?: string; isDownloaded?: boolean }>
-  >([]);
-  const [downloading, setDownloading] = useState(false);
-  const [tuning, setTuning] = useState(false);
-  const refresh = useCallback(() => {
+  // The optional classifier is chosen in the model screen with the other
+  // models. Here it only decides which of two honest sentences to show.
+  const [downloaded, setDownloaded] = useState(false);
+  useEffect(() => {
     void Promise.resolve(window.electronAPI?.modelGetAll?.()).then((items) =>
-      setModels(Array.isArray(items) ? items : [])
+      setDownloaded(
+        Array.isArray(items) && items.some((item) => item.id === model && item.isDownloaded)
+      )
     );
-  }, []);
-  useEffect(refresh, [refresh]);
-  const downloaded = models.some((item) => item.id === model && item.isDownloaded);
+  }, [model]);
 
+  // The confidence and silence thresholds are gone from here: their defaults
+  // are pinned by tests, and a person in a meeting should never tune them.
   return (
     <SettingsSection
       title={t("oats.settings.questions.title")}
@@ -183,41 +177,6 @@ export function QuestionCardSettings() {
       </SettingRow>
       {on && (
         <>
-          <SettingRow
-            label={t("oats.settings.questions.model")}
-            description={t("oats.settings.questions.modelDescription")}
-          >
-            <NativeSelect
-              aria-label={t("oats.settings.questions.model")}
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              className="w-56"
-            >
-              {models.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name || item.id}
-                </option>
-              ))}
-              {models.length === 0 && <option value={model}>{model}</option>}
-            </NativeSelect>
-            {!downloaded && model && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={downloading}
-                onClick={() => {
-                  setDownloading(true);
-                  void Promise.resolve(window.electronAPI?.modelDownload?.(model)).finally(() => {
-                    setDownloading(false);
-                    refresh();
-                  });
-                }}
-              >
-                <Download aria-hidden="true" />
-                {t("oats.settings.questions.download")}
-              </Button>
-            )}
-          </SettingRow>
           <SettingRow
             label={t("oats.settings.autoSearch")}
             description={t("oats.settings.autoSearchHint")}
@@ -234,50 +193,71 @@ export function QuestionCardSettings() {
               spellCheck={false}
             />
           </SettingRow>
-          <div className="px-5 py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-ml-2.5 text-muted-foreground"
-              aria-expanded={tuning}
-              onClick={() => setTuning((open) => !open)}
-            >
-              <ChevronDown
-                aria-hidden="true"
-                className={cn("transition-transform", tuning && "rotate-180")}
-              />
-              {t("oats.settings.tuning")}
-            </Button>
-            {tuning && (
-              <div className="mt-3 grid grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1.5 text-[13px] text-muted-foreground">
-                  {t("oats.aide.confidence")}
-                  <Input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={confidence}
-                    onChange={(event) =>
-                      setConfidence(Math.max(0, Math.min(1, Number(event.target.value))))
-                    }
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5 text-[13px] text-muted-foreground">
-                  {t("oats.aide.silence")}
-                  <Input
-                    type="number"
-                    min="1"
-                    max="60"
-                    value={silence}
-                    onChange={(event) => setSilence(Number(event.target.value))}
-                  />
-                </label>
-              </div>
-            )}
-          </div>
         </>
       )}
+    </SettingsSection>
+  );
+}
+
+/**
+ * The optional model that refines question cards, shown in the writing-model
+ * screen with the other models. Detection works without it (local pattern
+ * matching), so it is a download offered, never a requirement.
+ */
+export function QuestionModelSettings() {
+  const { t } = useTranslation();
+  const model = useSettingsStore((state) => state.conversationAideModel);
+  const setModel = useSettingsStore((state) => state.setConversationAideModel);
+  const [models, setModels] = useState<
+    Array<{ id: string; name?: string; isDownloaded?: boolean }>
+  >([]);
+  const [downloading, setDownloading] = useState(false);
+  const refresh = useCallback(() => {
+    void Promise.resolve(window.electronAPI?.modelGetAll?.()).then((items) =>
+      setModels(Array.isArray(items) ? items : [])
+    );
+  }, []);
+  useEffect(refresh, [refresh]);
+  const downloaded = models.some((item) => item.id === model && item.isDownloaded);
+
+  return (
+    <SettingsSection
+      title={t("oats.settings.questions.title")}
+      description={t("oats.settings.questions.modelDescription")}
+      className="mt-6"
+    >
+      <SettingRow label={t("oats.settings.questions.model")}>
+        <NativeSelect
+          aria-label={t("oats.settings.questions.model")}
+          value={model}
+          onChange={(event) => setModel(event.target.value)}
+          className="w-48"
+        >
+          {models.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name || item.id}
+            </option>
+          ))}
+          {models.length === 0 && <option value={model}>{model}</option>}
+        </NativeSelect>
+        {!downloaded && model && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={downloading}
+            onClick={() => {
+              setDownloading(true);
+              void Promise.resolve(window.electronAPI?.modelDownload?.(model)).finally(() => {
+                setDownloading(false);
+                refresh();
+              });
+            }}
+          >
+            <Download aria-hidden="true" />
+            {t("oats.settings.questions.download")}
+          </Button>
+        )}
+      </SettingRow>
     </SettingsSection>
   );
 }

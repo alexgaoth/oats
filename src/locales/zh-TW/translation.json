@@ -2064,10 +2064,10 @@
       "backToApp": "返回應用程式",
       "navLabel": "設定頁面",
       "themeSystem": "跟隨系統",
-      "processingDescription": "轉錄、摘要與整理一次選好。每一項都能在下方個別更改。",
+      "processingDescription": "兩個模型在哪裡執行。每個模型在下方選擇。",
       "processingLocal": "在這台 Mac 上",
       "processingProviders": "使用 API 金鑰",
-      "processingMixed": "混合：下方部分功能使用了不同的選擇。",
+      "processingMixed": "混合：語音模型與寫作模型在不同位置執行。",
       "tuning": "微調",
       "dictationAudio": "聽寫音訊",
       "dictationAudioDescription": "聽寫錄音會保留 30 天，以便重新轉錄失敗的那一段。",
@@ -2144,12 +2144,19 @@
         "autoLearnDescription": "你在其他應用程式更正聽寫的詞語時，Oats 會把它加到這裡。"
       },
       "models": {
-        "conversations": "對話",
-        "conversationsDescription": "轉錄對話的語音模型。",
-        "summaries": "摘要",
-        "summariesDescription": "撰寫標題、摘要與主線的模型。",
-        "dictation": "聽寫",
-        "dictationDescription": "聽寫使用的語音模型。"
+        "title": "你的模型",
+        "description": "兩個模型完成所有工作，每個都同時用於對話與聽寫。",
+        "speech": "語音",
+        "speechDescription": "轉寫對話與聽寫",
+        "writing": "寫作",
+        "writingDescription": "撰寫摘要並整理聽寫",
+        "choose": "選擇模型",
+        "speechTitle": "語音模型",
+        "speechScreen": "一個模型同時轉寫你的對話與聽寫。兩個模型會在這台 Mac 上輪流載入。",
+        "writingTitle": "寫作模型",
+        "writingScreen": "一個模型撰寫摘要並整理聽寫。",
+        "none": "尚無",
+        "selfHosted": "你的伺服器"
       },
       "global": {
         "title": "在任何應用程式中",
@@ -2164,11 +2171,14 @@
         "searchHint": "開啟 Oats 並備妥搜尋欄。"
       },
       "microphoneDescription": "Oats 用於對話與聽寫的麥克風。",
-      "advanced": {
-        "title": "進階",
-        "fieldBackdrop": "田野背景",
-        "fieldBackdropDescription": "在應用程式後方顯示動態麥田。會持續佔用 GPU。"
-      }
+      "fieldBackdrop": {
+        "label": "田野背景",
+        "description": "在應用程式後方顯示動態麥田。會持續佔用 GPU。"
+      },
+      "dictationButton": "聽寫時",
+      "instructionsDescription": "模型如何改寫每段聽寫。預設設定適合大多數人。",
+      "editInstructions": "編輯指令",
+      "instructions": "整理指令"
     },
     "errors": {
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",

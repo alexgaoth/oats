@@ -2069,10 +2069,10 @@
       "backToApp": "Torna all’app",
       "navLabel": "Pagine delle impostazioni",
       "themeSystem": "Sistema",
-      "processingDescription": "Trascrizione, riepiloghi e pulizia con un’unica scelta. Ognuno si può cambiare qui sotto.",
+      "processingDescription": "Dove funzionano i due modelli. Scegli ogni modello qui sotto.",
       "processingLocal": "Su questo Mac",
       "processingProviders": "Con chiavi API",
-      "processingMixed": "Misto: alcune funzioni qui sotto usano una scelta diversa.",
+      "processingMixed": "Misto: i modelli vocale e di scrittura funzionano in posti diversi.",
       "tuning": "Regolazione fine",
       "dictationAudio": "Audio delle dettature",
       "dictationAudioDescription": "Le registrazioni delle dettature, tenute 30 giorni per poter ritrascrivere quella non riuscita.",
@@ -2149,12 +2149,19 @@
         "autoLearnDescription": "Quando correggi una parola dettata in un’altra app, Oats la aggiunge qui."
       },
       "models": {
-        "conversations": "Conversazioni",
-        "conversationsDescription": "Il modello vocale che trascrive una conversazione.",
-        "summaries": "Riepiloghi",
-        "summariesDescription": "Il modello che scrive il titolo, il riepilogo e i filoni.",
-        "dictation": "Dettatura",
-        "dictationDescription": "Il modello vocale per la dettatura."
+        "title": "I tuoi modelli",
+        "description": "Due modelli fanno tutto il lavoro. Ognuno serve conversazioni e dettatura.",
+        "speech": "Voce",
+        "speechDescription": "Trascrive conversazioni e dettature",
+        "writing": "Scrittura",
+        "writingDescription": "Scrive i riassunti e ripulisce le dettature",
+        "choose": "Scegli un modello",
+        "speechTitle": "Modello vocale",
+        "speechScreen": "Un solo modello trascrive le tue conversazioni e le tue dettature. Due modelli si alternerebbero in memoria su questo Mac.",
+        "writingTitle": "Modello di scrittura",
+        "writingScreen": "Un solo modello scrive i tuoi riassunti e ripulisce le tue dettature.",
+        "none": "Nessuno per ora",
+        "selfHosted": "Il tuo server"
       },
       "global": {
         "title": "Da qualsiasi app",
@@ -2169,11 +2176,14 @@
         "searchHint": "Apre Oats con la ricerca pronta."
       },
       "microphoneDescription": "Il microfono che Oats usa per conversazioni e dettatura.",
-      "advanced": {
-        "title": "Avanzate",
-        "fieldBackdrop": "Sfondo campo",
-        "fieldBackdropDescription": "Mostra il campo di grano animato dietro l'app. Usa la GPU di continuo."
-      }
+      "fieldBackdrop": {
+        "label": "Sfondo campo",
+        "description": "Mostra il campo di grano animato dietro l'app. Usa la GPU di continuo."
+      },
+      "dictationButton": "Durante la dettatura",
+      "instructionsDescription": "Come il modello riscrive ogni dettatura. L'impostazione predefinita va bene per quasi tutti.",
+      "editInstructions": "Modifica istruzioni",
+      "instructions": "Istruzioni di pulizia"
     },
     "errors": {
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",

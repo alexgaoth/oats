@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import {
   BookOpen,
-  ChevronDown,
   CircleCheck,
   CircleX,
   Copy,
@@ -56,7 +54,6 @@ import LinuxPttSetupInfo from "./ui/LinuxPttSetupInfo";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
 import InferenceConfigEditor from "./settings/InferenceConfigEditor";
-import { MeetingTranscriptionPanel } from "./settings/MeetingSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import { useToast } from "./ui/useToast";
 import { useTheme } from "../hooks/useTheme";
@@ -67,17 +64,27 @@ import { NativeSelect } from "./ui/native-select";
 import { SegmentedControl } from "./ui/segmented";
 import type { InferenceModeOption } from "./ui/SettingsSection";
 import type { SettingsPageId } from "./settings/settingsPages";
-import { SettingsSection } from "./settings/SettingsKit";
+import { SettingRow, SettingsSection } from "./settings/SettingsKit";
+import { useShallow } from "zustand/react/shallow";
+import { selectResolvedLLMConfig } from "../stores/settingsStore";
+import {
+  getLocalModel,
+  getParakeetModelInfo,
+  getProviderDisplayName,
+  getReasoningModelLabel,
+  getTranscriptionProviders,
+  getWhisperModelInfo,
+} from "../models/ModelRegistry";
 import {
   ConversationShortcutRow,
   DictionaryEditor,
   InAppShortcuts,
   ProcessingCard,
   QuestionCardSettings,
+  QuestionModelSettings,
   VaultRow,
 } from "./settings/OatsSettingsSections";
 import { useSettingsLayout } from "./ui/useSettingsLayout";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { formatBytes } from "../utils/formatBytes";
 import { useSettingsStore } from "../stores/settingsStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
@@ -178,6 +185,11 @@ interface TranscriptionSectionProps {
   setRemoteTranscriptionUrl: (url: string) => void;
   remoteTranscriptionModel: string;
   setRemoteTranscriptionModel: (model: string) => void;
+  /** In the model screen the processing switch decides where speech runs, so
+   *  its own local/cloud/self-hosted selector is hidden. */
+  hideModeSelector?: boolean;
+  /** Offer only cloud models that stream, the ones conversations can use. */
+  streamingOnly?: boolean;
   showTranscriptionPreview: boolean;
   setShowTranscriptionPreview: (value: boolean) => void;
   toast: (opts: {
@@ -212,8 +224,8 @@ function TranscriptionSection({
   setRemoteTranscriptionUrl,
   remoteTranscriptionModel,
   setRemoteTranscriptionModel,
-  showTranscriptionPreview,
-  setShowTranscriptionPreview,
+  hideModeSelector = false,
+  streamingOnly = false,
   toast,
 }: TranscriptionSectionProps) {
   const { t } = useTranslation();
@@ -270,19 +282,6 @@ function TranscriptionSection({
     [localTranscriptionProvider, setParakeetModel, setWhisperModel]
   );
 
-  const renderPreviewToggle = () => (
-    <SettingsPanel>
-      <SettingsPanelRow>
-        <SettingsRow
-          label={t("settingsPage.transcription.transcriptionPreview")}
-          description={t("settingsPage.transcription.transcriptionPreviewDescription")}
-        >
-          <Toggle checked={showTranscriptionPreview} onChange={setShowTranscriptionPreview} />
-        </SettingsRow>
-      </SettingsPanelRow>
-    </SettingsPanel>
-  );
-
   const renderTranscriptionPicker = (mode?: "cloud" | "local") => (
     <TranscriptionModelPicker
       selectedCloudProvider={cloudTranscriptionProvider}
@@ -306,25 +305,23 @@ function TranscriptionSection({
       mode={mode}
       cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
       setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
+      streamingOnly={streamingOnly}
       variant="settings"
     />
   );
 
   return (
     <div className="space-y-4">
-      <InferenceModeSelector
-        modes={transcriptionModes}
-        activeMode={transcriptionMode}
-        onSelect={handleTranscriptionModeSelect}
-      />
+      {!hideModeSelector && (
+        <InferenceModeSelector
+          modes={transcriptionModes}
+          activeMode={transcriptionMode}
+          onSelect={handleTranscriptionModeSelect}
+        />
+      )}
 
       {transcriptionMode === "providers" && renderTranscriptionPicker("cloud")}
-      {transcriptionMode === "local" && (
-        <>
-          {renderTranscriptionPicker("local")}
-          {renderPreviewToggle()}
-        </>
-      )}
+      {transcriptionMode === "local" && renderTranscriptionPicker("local")}
 
       {transcriptionMode === "self-hosted" && (
         <SelfHostedPanel
@@ -358,40 +355,8 @@ const CLEANUP_MODE_TOAST_KEY: Record<InferenceMode, string> = {
   "self-hosted": "switchedSelfHosted",
 };
 
-function NoteFormattingSettings() {
-  const { t } = useTranslation();
-  const autoGenerateNoteTitle = useSettingsStore((s) => s.autoGenerateNoteTitle);
-  const setAutoGenerateNoteTitle = useSettingsStore((s) => s.setAutoGenerateNoteTitle);
-
-  return (
-    <div className="space-y-4">
-      <SettingsPanel>
-        <SettingsPanelRow>
-          <SettingsRow
-            label={t("settingsPage.noteFormatting.autoGenerateTitle")}
-            description={t("settingsPage.noteFormatting.autoGenerateTitleDescription")}
-          >
-            <Toggle checked={autoGenerateNoteTitle} onChange={setAutoGenerateNoteTitle} />
-          </SettingsRow>
-        </SettingsPanelRow>
-      </SettingsPanel>
-      <InferenceConfigEditor scope="noteFormatting" />
-    </div>
-  );
-}
-
 function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModelsSectionProps) {
   const { t } = useTranslation();
-
-  const handleCleanupModeChange = (mode: InferenceMode) => {
-    const toastKey = CLEANUP_MODE_TOAST_KEY[mode];
-    toast({
-      title: t(`settingsPage.aiModels.toasts.${toastKey}.title`),
-      description: t(`settingsPage.aiModels.toasts.${toastKey}.description`),
-      variant: "success",
-      duration: 3000,
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -405,36 +370,29 @@ function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModel
           </SettingsRow>
         </SettingsPanelRow>
       </SettingsPanel>
-
-      {useCleanupModel && (
-        <>
-          <InferenceConfigEditor scope="dictationCleanup" onModeChange={handleCleanupModeChange} />
-          <GpuDeviceSelector purpose="intelligence" />
-        </>
-      )}
     </div>
   );
 }
 
-/** A tuning field's name, with what it does one press away. */
-function VADLabelWithInfo({ label, description }: { label: string; description: string }) {
+/**
+ * The writing model: one language model for summaries and dictation cleanup
+ * (`selectResolvedLLMConfig` resolves summaries from the cleanup scope).
+ */
+function WritingModelEditor({ toast }: { toast: AiModelsSectionProps["toast"] }) {
+  const { t } = useTranslation();
+  const handleModeChange = (mode: InferenceMode) => {
+    const toastKey = CLEANUP_MODE_TOAST_KEY[mode];
+    toast({
+      title: t(`settingsPage.aiModels.toasts.${toastKey}.title`),
+      description: t(`settingsPage.aiModels.toasts.${toastKey}.description`),
+      variant: "success",
+      duration: 3000,
+    });
+  };
   return (
-    <div className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-      <span>{label}</span>
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            aria-label={label}
-          >
-            <Info aria-hidden="true" className="size-3.5" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="start" className="max-w-sm p-3">
-          <p className="text-[13px] leading-5 text-muted-foreground">{description}</p>
-        </PopoverContent>
-      </Popover>
+    <div className="space-y-4">
+      <InferenceConfigEditor scope="dictationCleanup" onModeChange={handleModeChange} />
+      <GpuDeviceSelector purpose="intelligence" />
     </div>
   );
 }
@@ -574,30 +532,10 @@ export default function SettingsPage({
     setKeepTranscriptionInClipboard,
     floatingIconAutoHide,
     setFloatingIconAutoHide,
-    startMinimized,
-    setStartMinimized,
-    panelStartPosition,
-    setPanelStartPosition,
     noteFilesEnabled,
     setNoteFilesEnabled,
     noteFilesPath,
     setNoteFilesPath,
-    dictationSileroEnabled,
-    setDictationSileroEnabled,
-    meetingSileroEnabled,
-    setMeetingSileroEnabled,
-    whisperVadThreshold,
-    setWhisperVadThreshold,
-    whisperVadMinSpeechDurationMs,
-    setWhisperVadMinSpeechDurationMs,
-    whisperVadMinSilenceDurationMs,
-    setWhisperVadMinSilenceDurationMs,
-    whisperVadMaxSpeechDurationS,
-    setWhisperVadMaxSpeechDurationS,
-    whisperVadSpeechPadMs,
-    setWhisperVadSpeechPadMs,
-    whisperVadSamplesOverlap,
-    setWhisperVadSamplesOverlap,
   } = useSettings();
 
   const uiMode = useSettingsStore((s) => s.uiMode);
@@ -613,6 +551,35 @@ export default function SettingsPage({
 
   const [currentVersion, setCurrentVersion] = useState<string>("");
   const [isRemovingModels, setIsRemovingModels] = useState(false);
+  const [promptsOpen, setPromptsOpen] = useState(false);
+  const [modelScreen, setModelScreen] = useState<"speech" | "writing" | null>(null);
+  const writing = useSettingsStore(
+    useShallow((state) => selectResolvedLLMConfig(state, "dictationCleanup"))
+  );
+  // What each model is called, for its row on the Models page. Where it runs
+  // is the processing switch above it, so a local model is just its name.
+  const speechModelLabel = (() => {
+    if (transcriptionMode === "self-hosted") return t("oats.settings.models.selfHosted");
+    if (transcriptionMode === "providers") {
+      const provider = getTranscriptionProviders().find(
+        (item) => item.id === cloudTranscriptionProvider
+      );
+      const model = provider?.models.find((item) => item.id === cloudTranscriptionModel);
+      return `${model?.name ?? cloudTranscriptionModel} · ${provider?.name ?? cloudTranscriptionProvider}`;
+    }
+    if (localTranscriptionProvider === "nvidia") {
+      const id = parakeetModel || "parakeet-tdt-0.6b-v3";
+      return getParakeetModelInfo(id)?.name ?? id;
+    }
+    const info = getWhisperModelInfo(whisperModel);
+    return info ? `Whisper ${info.name}` : whisperModel;
+  })();
+  const writingModelLabel = (() => {
+    if (writing.mode === "self-hosted") return t("oats.settings.models.selfHosted");
+    if (!writing.model) return t("oats.settings.models.none");
+    if (writing.mode === "local") return getLocalModel(writing.model)?.name ?? writing.model;
+    return `${getReasoningModelLabel(writing.model)} · ${getProviderDisplayName(writing.provider)}`;
+  })();
   const cachePathHint =
     typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent)
       ? "%USERPROFILE%\\.cache\\oats"
@@ -998,102 +965,13 @@ export default function SettingsPage({
     });
   }, [isRemovingModels, cachePathHint, showConfirmDialog, showAlertDialog, t]);
 
-  const [vadTuning, setVadTuning] = useState(false);
-  const renderWhisperVadFields = () => (
-    <div className="mt-3 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
-      <div className="space-y-1.5">
-        <VADLabelWithInfo
-          label={t("settingsPage.transcription.vad.fields.threshold.label")}
-          description={t("settingsPage.transcription.vad.fields.threshold.info")}
-        />
-        <Input
-          type="number"
-          step="0.01"
-          min="0.1"
-          max="0.95"
-          value={whisperVadThreshold}
-          onChange={(e) => setWhisperVadThreshold(Number(e.target.value))}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <VADLabelWithInfo
-          label={t("settingsPage.transcription.vad.fields.minSpeechDurationMs.label")}
-          description={t("settingsPage.transcription.vad.fields.minSpeechDurationMs.info")}
-        />
-        <Input
-          type="number"
-          step="10"
-          min="50"
-          max="2000"
-          value={whisperVadMinSpeechDurationMs}
-          onChange={(e) => setWhisperVadMinSpeechDurationMs(Number(e.target.value))}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <VADLabelWithInfo
-          label={t("settingsPage.transcription.vad.fields.minSilenceDurationMs.label")}
-          description={t("settingsPage.transcription.vad.fields.minSilenceDurationMs.info")}
-        />
-        <Input
-          type="number"
-          step="10"
-          min="50"
-          max="2000"
-          value={whisperVadMinSilenceDurationMs}
-          onChange={(e) => setWhisperVadMinSilenceDurationMs(Number(e.target.value))}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <VADLabelWithInfo
-          label={t("settingsPage.transcription.vad.fields.maxSpeechDurationS.label")}
-          description={t("settingsPage.transcription.vad.fields.maxSpeechDurationS.info")}
-        />
-        <Input
-          type="number"
-          step="1"
-          min="5"
-          max="120"
-          value={whisperVadMaxSpeechDurationS}
-          onChange={(e) => setWhisperVadMaxSpeechDurationS(Number(e.target.value))}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <VADLabelWithInfo
-          label={t("settingsPage.transcription.vad.fields.speechPadMs.label")}
-          description={t("settingsPage.transcription.vad.fields.speechPadMs.info")}
-        />
-        <Input
-          type="number"
-          step="10"
-          min="0"
-          max="1000"
-          value={whisperVadSpeechPadMs}
-          onChange={(e) => setWhisperVadSpeechPadMs(Number(e.target.value))}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <VADLabelWithInfo
-          label={t("settingsPage.transcription.vad.fields.samplesOverlap.label")}
-          description={t("settingsPage.transcription.vad.fields.samplesOverlap.info")}
-        />
-        <Input
-          type="number"
-          step="0.01"
-          min="0"
-          max="0.95"
-          value={whisperVadSamplesOverlap}
-          onChange={(e) => setWhisperVadSamplesOverlap(Number(e.target.value))}
-        />
-      </div>
-    </div>
-  );
-
   const renderSectionContent = () => {
     switch (activeSection) {
       case "general":
         return (
           <div className="space-y-8">
-            {/* Appearance */}
+            {/* Appearance: how Oats looks, including the field behind it (D11:
+                a one-click switch, not a setting hidden on the About page). */}
             <div>
               <SectionHeader title={t("settingsPage.general.appearance.title")} />
               <SettingsPanel>
@@ -1111,6 +989,17 @@ export default function SettingsPage({
                         { value: "light", label: t("settingsPage.general.appearance.light") },
                         { value: "dark", label: t("settingsPage.general.appearance.dark") },
                       ]}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("oats.settings.fieldBackdrop.label")}
+                    description={t("oats.settings.fieldBackdrop.description")}
+                  >
+                    <Toggle
+                      checked={uiMode === "field"}
+                      onChange={(on: boolean) => setUiMode(on ? "field" : "work")}
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
@@ -1136,11 +1025,14 @@ export default function SettingsPage({
               </SettingsPanel>
             </div>
 
-            {/* Startup */}
-            <div>
-              <SectionHeader title={t("settingsPage.general.startup.title")} />
-              <SettingsPanel>
-                {platform !== "linux" && (
+            {/* "Start minimized", the panel's start position and "Disable all
+                notifications" are gone: macOS already has a switch for an app's
+                notifications, and the other two are defaults nobody needs to
+                choose. */}
+            {platform !== "linux" && (
+              <div>
+                <SectionHeader title={t("settingsPage.general.startup.title")} />
+                <SettingsPanel>
                   <SettingsPanelRow>
                     <SettingsRow
                       label={t("settingsPage.general.startup.launchAtLogin")}
@@ -1153,100 +1045,13 @@ export default function SettingsPage({
                       />
                     </SettingsRow>
                   </SettingsPanelRow>
-                )}
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.startup.startMinimized")}
-                    description={t("settingsPage.general.startup.startMinimizedDescription")}
-                  >
-                    <Toggle checked={startMinimized} onChange={setStartMinimized} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
+                </SettingsPanel>
+              </div>
+            )}
 
-            {/* Floating Icon */}
             <div>
-              <SectionHeader title={t("settingsPage.general.floatingIcon.title")} />
+              <SectionHeader title={t("settingsPage.general.notifications.title")} />
               <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.floatingIcon.autoHide")}
-                    description={t("settingsPage.general.floatingIcon.autoHideDescription")}
-                  >
-                    <Toggle checked={floatingIconAutoHide} onChange={setFloatingIconAutoHide} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.floatingIcon.startPosition")}
-                    description={t("settingsPage.general.floatingIcon.startPositionDescription")}
-                  >
-                    <NativeSelect
-                      value={panelStartPosition}
-                      onChange={(e) =>
-                        setPanelStartPosition(
-                          e.target.value as "bottom-right" | "center" | "bottom-left"
-                        )
-                      }
-                      className="w-48"
-                    >
-                      <option value="bottom-right">
-                        {t("settingsPage.general.floatingIcon.bottomRight")}
-                      </option>
-                      <option value="center">
-                        {t("settingsPage.general.floatingIcon.center")}
-                      </option>
-                      <option value="bottom-left">
-                        {t("settingsPage.general.floatingIcon.bottomLeft")}
-                      </option>
-                    </NativeSelect>
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Sound Effects */}
-            <div>
-              <SectionHeader title={t("settingsPage.general.soundEffects.title")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.soundEffects.dictationSounds")}
-                    description={t("settingsPage.general.soundEffects.dictationSoundsDescription")}
-                  >
-                    <Toggle checked={audioCuesEnabled} onChange={setAudioCuesEnabled} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.soundEffects.pauseMedia")}
-                    description={t("settingsPage.general.soundEffects.pauseMediaDescription")}
-                  >
-                    <Toggle checked={pauseMediaOnDictation} onChange={setPauseMediaOnDictation} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Notifications */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.general.notifications.title")}
-                description={t("settingsPage.general.notifications.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.general.notifications.disableAll")}
-                    description={t("settingsPage.general.notifications.disableAllDescription")}
-                  >
-                    <Toggle
-                      checked={!notificationsEnabled}
-                      onChange={(v) => setNotificationsEnabled(!v)}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settingsPage.general.notifications.meetingDetection")}
@@ -1254,10 +1059,14 @@ export default function SettingsPage({
                       "settingsPage.general.notifications.meetingDetectionDescription"
                     )}
                   >
+                    {/* Turning it on also lifts an old "disable all", which no
+                        longer has a switch, so nobody is left unable to. */}
                     <Toggle
-                      checked={notifyMeetingDetection}
-                      onChange={setNotifyMeetingDetection}
-                      disabled={!notificationsEnabled}
+                      checked={notificationsEnabled && notifyMeetingDetection}
+                      onChange={(on: boolean) => {
+                        if (on && !notificationsEnabled) setNotificationsEnabled(true);
+                        setNotifyMeetingDetection(on);
+                      }}
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
@@ -1389,12 +1198,6 @@ export default function SettingsPage({
                     onDeviceSelect={setSelectedMicDevice}
                   />
                 </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* What language conversations are in */}
-            <div>
-              <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settings.language.transcriptionLabel")}
@@ -1412,42 +1215,6 @@ export default function SettingsPage({
             </div>
 
             <QuestionCardSettings />
-
-            {/* Voice detection for conversations, with its tuning folded away. */}
-            <div>
-              <SectionHeader
-                title={t("settingsPage.transcription.vad.title")}
-                description={t("settingsPage.transcription.vad.description")}
-              />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.transcription.vad.toggles.meeting.title")}
-                    description={t("settingsPage.transcription.vad.toggles.meeting.description")}
-                  >
-                    <Toggle checked={meetingSileroEnabled} onChange={setMeetingSileroEnabled} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-2.5 text-muted-foreground"
-                    aria-expanded={vadTuning}
-                    onClick={() => setVadTuning((open) => !open)}
-                  >
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={
-                        vadTuning ? "rotate-180 transition-transform" : "transition-transform"
-                      }
-                    />
-                    {t("oats.settings.tuning")}
-                  </Button>
-                  {vadTuning && renderWhisperVadFields()}
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
           </div>
         );
 
@@ -1480,6 +1247,50 @@ export default function SettingsPage({
               </SettingsPanel>
             </div>
 
+            {/* What happens while you dictate: the button, the live preview and
+                the sounds, moved from General and Models. They only ever
+                concern dictation. */}
+            <div>
+              <SectionHeader title={t("oats.settings.dictationButton")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.floatingIcon.autoHide")}
+                    description={t("settingsPage.general.floatingIcon.autoHideDescription")}
+                  >
+                    <Toggle checked={floatingIconAutoHide} onChange={setFloatingIconAutoHide} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.transcription.transcriptionPreview")}
+                    description={t("settingsPage.transcription.transcriptionPreviewDescription")}
+                  >
+                    <Toggle
+                      checked={showTranscriptionPreview}
+                      onChange={setShowTranscriptionPreview}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.soundEffects.dictationSounds")}
+                    description={t("settingsPage.general.soundEffects.dictationSoundsDescription")}
+                  >
+                    <Toggle checked={audioCuesEnabled} onChange={setAudioCuesEnabled} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.soundEffects.pauseMedia")}
+                    description={t("settingsPage.general.soundEffects.pauseMediaDescription")}
+                  >
+                    <Toggle checked={pauseMediaOnDictation} onChange={setPauseMediaOnDictation} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
             <DictionaryEditor />
 
             {/* Cleanup: a model tidies a dictation before it is pasted. */}
@@ -1496,28 +1307,35 @@ export default function SettingsPage({
                 toast={toast}
               />
             </div>
+            {/* The instructions the cleanup model follows. Most people never
+                change them, so they open in a dialog instead of filling the page
+                with the whole prompt. Voice-activity tuning is gone from here:
+                its default is measured (D13) and nobody needs the switch. */}
             {useCleanupModel && (
               <div>
-                <SectionHeader
-                  title={t("settingsPage.prompts.title")}
-                  description={t("settingsPage.prompts.description")}
-                />
-                <PromptStudio />
+                <SettingsPanel>
+                  <SettingsPanelRow>
+                    <SettingsRow
+                      label={t("oats.settings.instructions")}
+                      description={t("oats.settings.instructionsDescription")}
+                    >
+                      <Button variant="outline" size="sm" onClick={() => setPromptsOpen(true)}>
+                        {t("oats.settings.editInstructions")}
+                      </Button>
+                    </SettingsRow>
+                  </SettingsPanelRow>
+                </SettingsPanel>
+                <Dialog open={promptsOpen} onOpenChange={setPromptsOpen}>
+                  <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>{t("oats.settings.instructions")}</DialogTitle>
+                      <DialogDescription>{t("settingsPage.prompts.description")}</DialogDescription>
+                    </DialogHeader>
+                    <PromptStudio />
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
-
-            <div>
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.transcription.vad.toggles.dictation.title")}
-                    description={t("settingsPage.transcription.vad.toggles.dictation.description")}
-                  >
-                    <Toggle checked={dictationSileroEnabled} onChange={setDictationSileroEnabled} />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
 
             {/* Wayland Paste Diagnostics — only on Linux + Wayland */}
             {ydotoolStatus?.isLinux && ydotoolStatus?.isWayland && (
@@ -2001,56 +1819,92 @@ EOF`,
           <div className="space-y-8">
             <ProcessingCard />
 
-            <div>
-              <SectionHeader
-                title={t("oats.settings.models.conversations")}
-                description={t("oats.settings.models.conversationsDescription")}
-              />
-              <MeetingTranscriptionPanel />
-            </div>
+            {/* Two models, each behind its own screen. The lists of every
+                model Oats can run are useful once, when choosing; on the page
+                they were three long lists, two of them the same. */}
+            <SettingsSection
+              title={t("oats.settings.models.title")}
+              description={t("oats.settings.models.description")}
+            >
+              <SettingRow
+                label={t("oats.settings.models.speech")}
+                description={t("oats.settings.models.speechDescription")}
+              >
+                <span className="max-w-48 truncate text-[13px] text-muted-foreground">
+                  {speechModelLabel}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setModelScreen("speech")}>
+                  {t("oats.settings.models.choose")}
+                </Button>
+              </SettingRow>
+              <SettingRow
+                label={t("oats.settings.models.writing")}
+                description={t("oats.settings.models.writingDescription")}
+              >
+                <span className="max-w-48 truncate text-[13px] text-muted-foreground">
+                  {writingModelLabel}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setModelScreen("writing")}>
+                  {t("oats.settings.models.choose")}
+                </Button>
+              </SettingRow>
+            </SettingsSection>
 
-            <div>
-              <SectionHeader
-                title={t("oats.settings.models.summaries")}
-                description={t("oats.settings.models.summariesDescription")}
-              />
-              <NoteFormattingSettings />
-            </div>
+            <Dialog
+              open={modelScreen === "speech"}
+              onOpenChange={(open) => setModelScreen(open ? "speech" : null)}
+            >
+              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{t("oats.settings.models.speechTitle")}</DialogTitle>
+                  <DialogDescription>{t("oats.settings.models.speechScreen")}</DialogDescription>
+                </DialogHeader>
+                <TranscriptionSection
+                  cloudTranscriptionMode={cloudTranscriptionMode}
+                  setCloudTranscriptionMode={setCloudTranscriptionMode}
+                  useLocalWhisper={useLocalWhisper}
+                  setUseLocalWhisper={setUseLocalWhisper}
+                  updateTranscriptionSettings={updateTranscriptionSettings}
+                  cloudTranscriptionProvider={cloudTranscriptionProvider}
+                  setCloudTranscriptionProvider={setCloudTranscriptionProvider}
+                  cloudTranscriptionModel={cloudTranscriptionModel}
+                  setCloudTranscriptionModel={setCloudTranscriptionModel}
+                  localTranscriptionProvider={localTranscriptionProvider}
+                  setLocalTranscriptionProvider={setLocalTranscriptionProvider}
+                  whisperModel={whisperModel}
+                  setWhisperModel={setWhisperModel}
+                  parakeetModel={parakeetModel}
+                  setParakeetModel={setParakeetModel}
+                  cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
+                  setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
+                  transcriptionMode={transcriptionMode}
+                  setTranscriptionMode={setTranscriptionMode}
+                  remoteTranscriptionUrl={remoteTranscriptionUrl}
+                  setRemoteTranscriptionUrl={setRemoteTranscriptionUrl}
+                  remoteTranscriptionModel={remoteTranscriptionModel}
+                  setRemoteTranscriptionModel={setRemoteTranscriptionModel}
+                  showTranscriptionPreview={showTranscriptionPreview}
+                  setShowTranscriptionPreview={setShowTranscriptionPreview}
+                  hideModeSelector
+                  streamingOnly
+                  toast={toast}
+                />
+              </DialogContent>
+            </Dialog>
 
-            <div>
-              <SectionHeader
-                title={t("oats.settings.models.dictation")}
-                description={t("oats.settings.models.dictationDescription")}
-              />
-              <TranscriptionSection
-                cloudTranscriptionMode={cloudTranscriptionMode}
-                setCloudTranscriptionMode={setCloudTranscriptionMode}
-                useLocalWhisper={useLocalWhisper}
-                setUseLocalWhisper={setUseLocalWhisper}
-                updateTranscriptionSettings={updateTranscriptionSettings}
-                cloudTranscriptionProvider={cloudTranscriptionProvider}
-                setCloudTranscriptionProvider={setCloudTranscriptionProvider}
-                cloudTranscriptionModel={cloudTranscriptionModel}
-                setCloudTranscriptionModel={setCloudTranscriptionModel}
-                localTranscriptionProvider={localTranscriptionProvider}
-                setLocalTranscriptionProvider={setLocalTranscriptionProvider}
-                whisperModel={whisperModel}
-                setWhisperModel={setWhisperModel}
-                parakeetModel={parakeetModel}
-                setParakeetModel={setParakeetModel}
-                cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
-                setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
-                transcriptionMode={transcriptionMode}
-                setTranscriptionMode={setTranscriptionMode}
-                remoteTranscriptionUrl={remoteTranscriptionUrl}
-                setRemoteTranscriptionUrl={setRemoteTranscriptionUrl}
-                remoteTranscriptionModel={remoteTranscriptionModel}
-                setRemoteTranscriptionModel={setRemoteTranscriptionModel}
-                showTranscriptionPreview={showTranscriptionPreview}
-                setShowTranscriptionPreview={setShowTranscriptionPreview}
-                toast={toast}
-              />
-            </div>
+            <Dialog
+              open={modelScreen === "writing"}
+              onOpenChange={(open) => setModelScreen(open ? "writing" : null)}
+            >
+              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{t("oats.settings.models.writingTitle")}</DialogTitle>
+                  <DialogDescription>{t("oats.settings.models.writingScreen")}</DialogDescription>
+                </DialogHeader>
+                <WritingModelEditor toast={toast} />
+                <QuestionModelSettings />
+              </DialogContent>
+            </Dialog>
           </div>
         );
 
@@ -2262,26 +2116,6 @@ EOF`,
             {/* Developer Tools */}
             <div>
               <DeveloperSection />
-            </div>
-
-            {/* Advanced. The field backdrop stays switchable here until D11
-                decides between keeping it and retiring it: without a switch,
-                anybody who had it on could not turn it off. */}
-            <div>
-              <SectionHeader title={t("oats.settings.advanced.title")} />
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("oats.settings.advanced.fieldBackdrop")}
-                    description={t("oats.settings.advanced.fieldBackdropDescription")}
-                  >
-                    <Toggle
-                      checked={uiMode === "field"}
-                      onChange={(on: boolean) => setUiMode(on ? "field" : "work")}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
             </div>
 
             {/* Data Management */}

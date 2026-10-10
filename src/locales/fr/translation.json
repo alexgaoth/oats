@@ -2069,10 +2069,10 @@
       "backToApp": "Retour à l’app",
       "navLabel": "Pages des réglages",
       "themeSystem": "Système",
-      "processingDescription": "Transcription, résumés et nettoyage en un seul choix. Chacun peut être modifié ci-dessous.",
+      "processingDescription": "Où les deux modèles s'exécutent. Choisissez chaque modèle ci-dessous.",
       "processingLocal": "Sur ce Mac",
       "processingProviders": "Avec des clés d’API",
-      "processingMixed": "Mixte : certaines fonctions ci-dessous utilisent un autre choix.",
+      "processingMixed": "Mixte : les modèles de parole et d'écriture s'exécutent à des endroits différents.",
       "tuning": "Réglages fins",
       "dictationAudio": "Audio des dictées",
       "dictationAudioDescription": "Les enregistrements des dictées, gardés 30 jours pour pouvoir retranscrire une dictée qui a échoué.",
@@ -2149,12 +2149,19 @@
         "autoLearnDescription": "Quand vous corrigez un mot dicté dans une autre app, Oats l’ajoute ici."
       },
       "models": {
-        "conversations": "Conversations",
-        "conversationsDescription": "Le modèle vocal qui transcrit une conversation.",
-        "summaries": "Résumés",
-        "summariesDescription": "Le modèle qui rédige le titre, le résumé et les fils.",
-        "dictation": "Dictée",
-        "dictationDescription": "Le modèle vocal de la dictée."
+        "title": "Vos modèles",
+        "description": "Deux modèles font tout le travail. Chacun sert aux conversations et à la dictée.",
+        "speech": "Parole",
+        "speechDescription": "Transcrit les conversations et la dictée",
+        "writing": "Écriture",
+        "writingDescription": "Rédige les résumés et nettoie la dictée",
+        "choose": "Choisir un modèle",
+        "speechTitle": "Modèle de parole",
+        "speechScreen": "Un seul modèle transcrit vos conversations et votre dictée. Deux modèles se relaieraient en mémoire sur ce Mac.",
+        "writingTitle": "Modèle d'écriture",
+        "writingScreen": "Un seul modèle rédige vos résumés et nettoie votre dictée.",
+        "none": "Aucun pour l'instant",
+        "selfHosted": "Votre serveur"
       },
       "global": {
         "title": "Depuis n’importe quelle app",
@@ -2169,11 +2176,14 @@
         "searchHint": "Ouvre Oats avec la recherche prête."
       },
       "microphoneDescription": "Le micro qu’Oats utilise pour les conversations et la dictée.",
-      "advanced": {
-        "title": "Avancé",
-        "fieldBackdrop": "Arrière-plan champ",
-        "fieldBackdropDescription": "Affiche le champ de blé animé derrière l'app. Il utilise le GPU en permanence."
-      }
+      "fieldBackdrop": {
+        "label": "Arrière-plan champ",
+        "description": "Affiche le champ de blé animé derrière l'app. Il utilise le GPU en permanence."
+      },
+      "dictationButton": "Pendant la dictée",
+      "instructionsDescription": "Comment le modèle réécrit chaque dictée. Le réglage par défaut convient à la plupart des gens.",
+      "editInstructions": "Modifier les instructions",
+      "instructions": "Instructions de nettoyage"
     },
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
