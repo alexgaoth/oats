@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils";
-import { CONTOUR_RESOLUTION, QUIET_THRESHOLD } from "../../helpers/conversationContour.mjs";
+import {
+  CONTOUR_RESOLUTION,
+  LIVE_BUCKET_MS,
+  QUIET_THRESHOLD,
+} from "../../helpers/conversationContour.mjs";
 import { markFill, markTone, TONE_TOKEN, type MarkFill, type MarkTone } from "./questionMarks";
 
 // The conversation contour (DESIGN.md §9.8) — Oats' signature mark.
@@ -268,19 +272,46 @@ export default function ConversationContour({
     const canvas = canvasRef.current;
     if (!canvas || !palette) return;
 
+    // The glide. Data arrive once a second, so the drawing would move in
+    // one-second steps. Instead each redraw starts the canvas at the part of
+    // the second already gone and lets the compositor slide it one bucket
+    // left by the next tick: continuous motion at the display's frame rate
+    // with no animation loop in JavaScript. A redraw mid-second (a segment
+    // arriving) picks up where the slide is, so nothing jumps. Under reduced
+    // motion it stays still and moves in steps.
+    const glide = (bucketPx: number) => {
+      canvas.style.transition = "none";
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (!contour.live || reduce || !contour.span) {
+        canvas.style.transform = "";
+        return;
+      }
+      const secondStart = (contour.start ?? 0) + contour.span - LIVE_BUCKET_MS;
+      const gone = Math.min(1, Math.max(0, (Date.now() - secondStart) / LIVE_BUCKET_MS));
+      canvas.style.transform = `translateX(${(-gone * bucketPx).toFixed(2)}px)`;
+      void canvas.offsetWidth;
+      canvas.style.transition = `transform ${Math.round((1 - gone) * LIVE_BUCKET_MS)}ms linear`;
+      canvas.style.transform = `translateX(${(-bucketPx).toFixed(2)}px)`;
+    };
+
     const draw = () => {
-      const width = canvas.clientWidth;
+      const canvasWidth = canvas.clientWidth;
       const cssHeight = canvas.clientHeight;
+      // Live, the canvas is one bucket wider than the window it plots, so it
+      // can glide left by that bucket between once-a-second redraws (below).
+      const buckets = contour.live ? Math.max(1, contour.points.length) : 0;
+      const width = contour.live ? canvasWidth * (buckets / (buckets + 1)) : canvasWidth;
       if (!width || !cssHeight) return;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      if (canvas.width !== width * ratio || canvas.height !== cssHeight * ratio) {
-        canvas.width = width * ratio;
+      if (canvas.width !== canvasWidth * ratio || canvas.height !== cssHeight * ratio) {
+        canvas.width = canvasWidth * ratio;
         canvas.height = cssHeight * ratio;
       }
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      ctx.clearRect(0, 0, width, cssHeight);
+      ctx.clearRect(0, 0, canvasWidth, cssHeight);
+      glide(width / Math.max(1, buckets));
 
       // The baseline sits low: the trace grows upward from it and the pins
       // live in the band above it, so nothing has to overlap anything.
@@ -360,7 +391,7 @@ export default function ConversationContour({
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(left, baseline + 0.5);
-      ctx.lineTo(width, baseline + 0.5);
+      ctx.lineTo(canvasWidth, baseline + 0.5);
       ctx.stroke();
 
       // Live: a small tick at each whole minute since the start. They roll with
@@ -473,9 +504,17 @@ export default function ConversationContour({
       className={cn(
         "block w-full",
         pickable ? "cursor-pointer" : undefined,
-        !pickable && className
+        !pickable && !contour.live && className
       )}
-      style={{ height }}
+      style={
+        contour.live
+          ? {
+              height,
+              width: `calc(100% * ${(contour.points.length + 1) / Math.max(1, contour.points.length)})`,
+              willChange: "transform",
+            }
+          : { height }
+      }
       onPointerMove={
         pickable
           ? (event) => {
@@ -497,6 +536,9 @@ export default function ConversationContour({
     />
   );
 
+  // Live, a clipping frame round the wider canvas, so the bucket sliding in
+  // from the right and the one leaving on the left are never seen past it.
+  if (contour.live) return <div className={cn("overflow-hidden", className)}>{canvas}</div>;
   if (!pickable) return canvas;
 
   return (
