@@ -48,6 +48,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   pasteText: (text, options) => ipcRenderer.invoke("paste-text", text, options),
   hideWindow: () => ipcRenderer.invoke("hide-window"),
   showDictationPanel: () => ipcRenderer.invoke("show-dictation-panel"),
+  // Whether anybody can see this window. backgroundThrottling: false pins
+  // document.visibilityState to "visible", so main reports it instead: pushed
+  // on change, pulled once on mount (windowVisibility.js).
+  onWindowVisibility: registerListener(
+    "window-visibility",
+    (callback) => (_event, visible) => callback(visible)
+  ),
+  getWindowVisibility: () => ipcRenderer.invoke("get-window-visibility"),
   onToggleDictation: registerListener("toggle-dictation", (callback) => () => callback()),
   onToggleVoiceAgent: registerListener("toggle-voice-agent", (callback) => () => callback()),
   onToggleConversation: registerListener("toggle-conversation", (callback) => () => callback()),
