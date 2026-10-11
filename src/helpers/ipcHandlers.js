@@ -3223,6 +3223,32 @@ class IPCHandlers {
       return this.environmentManager.saveActivationMode(mode);
     });
 
+    // Dictation on or off (Settings › General › Advanced). main.js reads .env at
+    // startup, before any window exists, to decide whether the oat is shown and
+    // the dictation keys are bound, so .env is the source of truth and the
+    // renderer follows it (initializeSettings).
+    ipcMain.handle("get-dictation-enabled", async () => {
+      return this.environmentManager.getDictationEnabled();
+    });
+
+    // Applied at once, with no restart: the oat and every dictation key follow
+    // the switch, and the conversation and search keys stay as they are.
+    ipcMain.handle("set-dictation-enabled", async (_event, enabled) => {
+      const next = enabled === true;
+      await this.environmentManager.saveDictationEnabled(next);
+      await this.windowManager.setDictationEnabled(next);
+      // The reset a changed dictation key gets in main.js: push-to-talk state,
+      // the native key listeners and, on macOS, the suppressed mouse buttons.
+      ipcMain.emit("hotkey-changed", null, "");
+      this.getTrayManager?.()?.updateTrayMenu?.();
+      const bound = this.windowManager.hotkeyManager?.getSlotHotkeys?.("dictation") ?? [];
+      return {
+        success: true,
+        enabled: next,
+        activeDictationKey: bound.length > 0 ? bound.join(",") : null,
+      };
+    });
+
     ipcMain.handle("get-ui-language", async () => {
       return this.environmentManager.getUiLanguage();
     });
@@ -3253,7 +3279,7 @@ class IPCHandlers {
         setVars.LOCAL_TRANSCRIPTION_PROVIDER = prefs.localTranscriptionProvider;
         if (prefs.localTranscriptionProvider === "nvidia") {
           setVars.PARAKEET_MODEL = prefs.model;
-          clearVars.push("LOCAL_WHISPER_MODEL");
+          clearVars.push("LOCAL_WHISPER_MODEL", "LOCAL_WHISPER_LANGUAGE");
           this.whisperManager.stopServer().catch((err) => {
             debugLogger.error("Failed to stop whisper-server on provider switch", {
               error: err.message,
@@ -3262,6 +3288,13 @@ class IPCHandlers {
         } else {
           setVars.LOCAL_WHISPER_MODEL = prefs.model;
           clearVars.push("PARAKEET_MODEL");
+          // The pre-warm needs the language to warm the English model when
+          // requests will ask for it.
+          if (prefs.language) {
+            setVars.LOCAL_WHISPER_LANGUAGE = prefs.language;
+          } else {
+            clearVars.push("LOCAL_WHISPER_LANGUAGE");
+          }
           this.parakeetManager.stopServer().catch((err) => {
             debugLogger.error("Failed to stop parakeet-server on provider switch", {
               error: err.message,
@@ -3270,10 +3303,20 @@ class IPCHandlers {
         }
       } else if (prefs.useLocalWhisper) {
         // Local mode enabled but no model selected - clear pre-warming vars
-        clearVars.push("LOCAL_TRANSCRIPTION_PROVIDER", "PARAKEET_MODEL", "LOCAL_WHISPER_MODEL");
+        clearVars.push(
+          "LOCAL_TRANSCRIPTION_PROVIDER",
+          "PARAKEET_MODEL",
+          "LOCAL_WHISPER_MODEL",
+          "LOCAL_WHISPER_LANGUAGE"
+        );
       } else {
         // Cloud mode - stop local servers to free RAM
-        clearVars.push("LOCAL_TRANSCRIPTION_PROVIDER", "PARAKEET_MODEL", "LOCAL_WHISPER_MODEL");
+        clearVars.push(
+          "LOCAL_TRANSCRIPTION_PROVIDER",
+          "PARAKEET_MODEL",
+          "LOCAL_WHISPER_MODEL",
+          "LOCAL_WHISPER_LANGUAGE"
+        );
         this.whisperManager.stopServer().catch((err) => {
           debugLogger.error("Failed to stop whisper-server on cloud switch", {
             error: err.message,
@@ -4593,8 +4636,6 @@ class IPCHandlers {
       return { mode, strategy: "unsupported" };
     };
 
-    const hasNativeMeetingSystemAudio = () => getMeetingSystemAudioMode() === "native";
-
     const isMeetingStreamingConnected = (systemAudioMode = getMeetingSystemAudioCapabilityMode()) =>
       !!this._meetingMicStreaming?.isConnected &&
       (systemAudioMode === "unsupported" || !!this._meetingSystemStreaming?.isConnected);
@@ -4708,6 +4749,11 @@ class IPCHandlers {
     // Stop. Null for every other kind of recording.
     let meetingInRoom = null;
     let meetingPendingMicChunks = [];
+    // True only while this recording captures native system audio. The mic
+    // then waits MEETING_MIC_REFERENCE_ALIGNMENT_MS so the echo check can see
+    // the matching system audio. A room recording has no system audio, so a
+    // wait there only delays the transcript.
+    let meetingMicWaitsForSystem = false;
     let meetingPendingMicFinals = [];
     let meetingPendingMicFinalTimer = null;
     let meetingAecEnabled = false;
@@ -4911,6 +4957,14 @@ class IPCHandlers {
         }
 
         dispatchMeetingAudioBuffer(next.buffer, "mic");
+      }
+    };
+
+    const setMeetingMicWaitsForSystem = (systemAudioMode) => {
+      meetingMicWaitsForSystem = systemAudioMode === "native";
+      if (!meetingMicWaitsForSystem) {
+        // Release anything still held, so it goes out before newer chunks.
+        flushPendingMeetingMicChunks(true);
       }
     };
 
@@ -5244,9 +5298,13 @@ class IPCHandlers {
      * goes out with its exact place in the recording (`startMs`/`endMs`), and
      * the 16 kHz audio is kept in a temporary file so the speakers can be told
      * apart over the whole conversation once it stops.
+     *
+     * While a segment is still open, its words so far go out as `partial`s
+     * between the finals, never in their way (partialScheduler.mjs).
      */
     const startInRoomSegmenting = async () => {
       const { SpeechSegmenter } = await import("./speechSegmenter.mjs");
+      const { PartialScheduler } = await import("./partialScheduler.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
       const stream = fs.createWriteStream(audioPath);
@@ -5254,6 +5312,9 @@ class IPCHandlers {
       stream.write(pcm16ToWav(Buffer.alloc(0)));
       meetingInRoom = {
         segmenter: new SpeechSegmenter(),
+        // Whisper only: the default, and the path measured with a second
+        // request on its server. Parakeet keeps finals only until it is.
+        partials: meetingLocalProvider === "nvidia" ? null : new PartialScheduler(),
         startedAt: Date.now(),
         queue: [],
         draining: null,
@@ -5268,6 +5329,67 @@ class IPCHandlers {
       session.audio.bytes += pcm16k.length;
       const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
       for (const segment of session.segmenter.push(samples)) enqueueInRoomSegment(session, segment);
+      try {
+        startInRoomPartial(session);
+      } catch (error) {
+        // A preview must never break the audio path: partials stop for this
+        // recording, and the finals carry on.
+        session.partials = null;
+        debugLogger.warn("In-room partials stopped", { error: error.message });
+      }
+    };
+
+    // Finals and partials both go through this, so a partial is read with
+    // exactly the model and options its final will be. Async, so whatever
+    // goes wrong arrives as a rejection, never as a throw into the audio path.
+    const transcribeInRoomAudio = async (pcm) =>
+      meetingLocalProvider === "nvidia"
+        ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
+            model: meetingLocalModel,
+          })
+        : this.whisperManager.transcribeLocalWhisper(pcm16ToWav(pcm), {
+            model: meetingLocalModel,
+            language: meetingLocalLanguage,
+            ...this._resolveWhisperVadOptions("meeting"),
+          });
+
+    const sendInRoomPartial = (session, text) => {
+      const win = meetingLocalWin;
+      if (meetingInRoom !== session || !win || win.isDestroyed()) return;
+      win.webContents.send("meeting-transcription-segment", {
+        text,
+        source: "mic",
+        type: "partial",
+      });
+    };
+
+    /**
+     * The open segment's words so far. Asked on every chunk of audio; the
+     * scheduler decides, from the finals and the server, whether now is a
+     * moment a partial may take.
+     */
+    const startInRoomPartial = (session) => {
+      const scheduler = session.partials;
+      if (!scheduler) return;
+      const decision = scheduler.tick({
+        now: performance.now(),
+        open: session.segmenter.open,
+        finalsPending: session.queue.length + (session.draining ? 1 : 0),
+        serverBusy: !this.whisperManager.serverManager.isIdle(),
+      });
+      if (!decision.start) return;
+      const samples = session.segmenter.openSamples();
+      transcribeInRoomAudio(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength))
+        .then((result) => (result?.success ? result.text : ""))
+        .catch((error) => {
+          // A partial is only a preview; its final reports any real failure.
+          debugLogger.debug("In-room partial transcription failed", { error: error.message });
+          return "";
+        })
+        .then((text) => {
+          const words = scheduler.settle(decision.id, text, session.segmenter.open);
+          if (words !== null) sendInRoomPartial(session, words);
+        });
     };
 
     const enqueueInRoomSegment = (session, segment) => {
@@ -5286,19 +5408,9 @@ class IPCHandlers {
         segment.samples.byteOffset,
         segment.samples.byteLength
       );
+      let sent = false;
       try {
-        let result;
-        if (meetingLocalProvider === "nvidia") {
-          result = await this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
-            model: meetingLocalModel,
-          });
-        } else {
-          result = await this.whisperManager.transcribeLocalWhisper(pcm16ToWav(pcm), {
-            model: meetingLocalModel,
-            language: meetingLocalLanguage,
-            ...this._resolveWhisperVadOptions("meeting"),
-          });
-        }
+        const result = await transcribeInRoomAudio(pcm);
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
         meetingLocalTranscript = meetingLocalTranscript
@@ -5315,12 +5427,17 @@ class IPCHandlers {
             startMs: segment.startMs,
             endMs: segment.endMs,
           });
+          sent = true;
         }
       } catch (error) {
         debugLogger.error("In-room segment transcription failed", { error: error.message });
         if (meetingLocalWin && !meetingLocalWin.isDestroyed()) {
           meetingLocalWin.webContents.send("meeting-transcription-error", error.message);
         }
+      } finally {
+        // The renderer empties the live line on a final with words. One with
+        // none, or one that failed, would leave this segment's partial there.
+        if (session.partials?.finalSettled(sent)) sendInRoomPartial(session, "");
       }
     };
 
@@ -5433,6 +5550,7 @@ class IPCHandlers {
       meetingLocalLanguage = null;
       meetingLocalTranscribing = false;
       meetingPendingMicChunks = [];
+      meetingMicWaitsForSystem = false;
       resetPendingMicFinals();
       meetingAecEnabled = false;
       meetingStartedAt = null;
@@ -5548,6 +5666,7 @@ class IPCHandlers {
       meetingSendCounts = { mic: 0, system: 0 };
       meetingLiveSpeakerStartedAt = null;
       meetingPendingMicChunks = [];
+      meetingMicWaitsForSystem = false;
       resetPendingMicFinals();
       meetingAecEnabled = false;
       meetingEchoLeakDetector.reset();
@@ -5770,6 +5889,7 @@ class IPCHandlers {
           ? { mode: "unsupported", strategy: "unsupported" }
           : await getMeetingSystemAudioPlan();
         let { mode: systemAudioMode, strategy: systemAudioStrategy } = systemAudioPlan;
+        setMeetingMicWaitsForSystem(systemAudioMode);
         meetingEchoLeakDetector.reset();
         meetingOneOnOneAttendee = isInRoom ? null : resolveOneOnOneAttendeeForNote(options.noteId);
         meetingOneOnOneProfileBound = false;
@@ -5923,7 +6043,7 @@ class IPCHandlers {
           return;
         }
 
-        if (!hasNativeMeetingSystemAudio()) {
+        if (!meetingMicWaitsForSystem) {
           const analysis = meetingEchoLeakDetector.analyzeMicChunk(outboundBuffer);
           if (analysis?.shouldMute && !meetingAecEnabled) {
             if (!meetingLocalMode) {
@@ -6001,6 +6121,7 @@ class IPCHandlers {
             "meeting"
           );
           await fallBackToMicOnly("native");
+          setMeetingMicWaitsForSystem("unsupported");
           return { systemAudioMode: "unsupported", systemAudioStrategy: "unsupported" };
         }
       }
@@ -6064,7 +6185,7 @@ class IPCHandlers {
           await this.windowsLoopbackAudioManager.stop().catch(() => {});
         }
 
-        flushPendingMeetingMicChunks(true);
+        setMeetingMicWaitsForSystem("unsupported");
         await stopMeetingAec();
 
         const liveSpeakerState = await stopLiveSpeakerIdentification().catch(() => null);

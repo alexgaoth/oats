@@ -2062,6 +2062,13 @@
       "vaultStop": "Parar",
       "autoSearch": "Pesquisar perguntas sem resposta",
       "autoSearchHint": "Abre uma busca no Google em segundo plano quando ninguém sabe. Só o texto da pergunta é enviado, nunca áudio ou transcrição. Os cartões continuam aparecendo.",
+      "advanced": {
+        "title": "Avançado",
+        "dictation": "Ditado",
+        "dictationDescription": "Escreva com a voz em qualquer app. Adiciona um botão flutuante e uma página de Ditado às Definições.",
+        "shortcut": "Atalho",
+        "shortcutMode": "Tocar ou segurar"
+      },
       "advancedLoading": "Abrindo…",
       "hotkeyRejected": "Não foi possível registar “{{hotkey}}”, por isso o atalho anterior continua em uso.",
       "conversationHotkey": "Atalho de conversa",
@@ -2168,9 +2175,7 @@
         "description": "Funcionam mesmo com o Oats em segundo plano.",
         "conversation": "Iniciar ou parar uma conversa",
         "conversationHint": "Grava a sala ou encerra a conversa em andamento.",
-        "dictation": "Ditar",
         "dictationHint": "Escreve o que você diz onde está o cursor.",
-        "activation": "Tecla de ditado",
         "activationHint": "Toque para iniciar e parar, ou segure enquanto fala.",
         "search": "Pesquisar conversas",
         "searchHint": "Abre o Oats com a pesquisa pronta."

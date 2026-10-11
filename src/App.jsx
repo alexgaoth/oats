@@ -317,6 +317,14 @@ export default function App() {
     return () => unsubscribe?.();
   }, [cancelRecording, cancelProcessing]);
 
+  // Dictation turned off in Settings while one is being recorded. The oat is
+  // then hidden and every dictation key released, so nothing could stop it and
+  // the microphone would stay open: cancel it. One already transcribing finishes.
+  const dictationEnabled = useSettingsStore((s) => s.dictationEnabled);
+  useEffect(() => {
+    if (!dictationEnabled && isRecordingRef.current) void cancelRecording();
+  }, [dictationEnabled, cancelRecording]);
+
   // Auto-hide the floating icon when idle (setting enabled or dictation cycle completed)
   useEffect(() => {
     let hideTimeout;

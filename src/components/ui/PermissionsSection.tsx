@@ -6,6 +6,8 @@ import PasteToolsInfo from "./PasteToolsInfo";
 import type { UsePermissionsReturn } from "../../hooks/usePermissions";
 import type { SystemAudioAccessResult } from "../../types/electron";
 import { canManageSystemAudioInApp } from "../../utils/systemAudioAccess";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { needsAccessibility } from "../../helpers/dictationSetting.mjs";
 
 interface PermissionsSectionProps {
   permissions: UsePermissionsReturn;
@@ -23,7 +25,9 @@ export default function PermissionsSection({
 }: PermissionsSectionProps) {
   const { t } = useTranslation();
   const platform = permissions.pasteToolsInfo?.platform;
-  const isMacOS = platform === "darwin";
+  // Accessibility only pastes a dictation, so it is offered only while dictation is on.
+  const dictationEnabled = useSettingsStore((state) => state.dictationEnabled);
+  const showAccessibility = needsAccessibility(platform, dictationEnabled);
   const shouldShowSystemAudioPermission = canManageSystemAudioInApp(systemAudio);
 
   return (
@@ -38,7 +42,7 @@ export default function PermissionsSection({
           buttonText={t("onboarding.permissions.grantAccess")}
         />
 
-        {isMacOS && (
+        {showAccessibility && (
           <PermissionCard
             icon={Shield}
             title={t("onboarding.permissions.accessibilityTitle")}

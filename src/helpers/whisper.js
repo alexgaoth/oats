@@ -10,6 +10,7 @@ const {
   checkDiskSpace,
 } = require("./downloadUtils");
 const WhisperServerManager = require("./whisperServer");
+const { DEFAULT_WHISPER_VAD_CONFIG } = require("./whisperVadConfig");
 // A dynamic import kept in a promise: `whisperEnglishModel.mjs` is ESM so it can
 // be unit-tested with `node:test` without a build step, and this file is CJS.
 let englishModelModule = null;
@@ -46,6 +47,25 @@ function shouldRewarmOnWake({
   // VRAM. Skip remote/CPU servers, and skip while a transcription (already warming
   // the server) or another re-warm is in flight. See #766.
   return !isRemote && !!(useCuda || useVulkan) && !!modelName && !transcribing && !rewarmInFlight;
+}
+
+/**
+ * The options a pre-warm starts whisper-server with.
+ *
+ * They must give the same signature as a real request (`_runServerTranscription`
+ * with the VAD options from `_resolveWhisperVadOptions`). A different signature
+ * makes the first request restart the server it was meant to find warm, which
+ * cost 245-274 ms on an M-series Mac. Requests run with voice detection on by
+ * default in every context, so the pre-warm turns it on too.
+ */
+function getPrewarmStartOptions({ useCuda, useVulkan, vadModelPath }) {
+  return {
+    useCuda: !!useCuda,
+    useVulkan: !!useVulkan,
+    vadEnabled: true,
+    vadModelPath: vadModelPath || null,
+    vadConfig: { ...DEFAULT_WHISPER_VAD_CONFIG },
+  };
 }
 
 class WhisperManager {
@@ -113,6 +133,25 @@ class WhisperManager {
     return true;
   }
 
+  /**
+   * The model a request loads: the English-only twin when the speaker is
+   * speaking English and it is on disk. It has the same size, roughly a fifth
+   * fewer errors, and it is faster. Decided here rather than in the renderer
+   * because only this process knows what is installed, and it falls back
+   * silently: an upgrade that is not there must never turn into a model that
+   * fails to load. The pre-warm uses it too, so it warms the same model.
+   */
+  async resolveRequestModel(model, language) {
+    const { resolveWhisperModel } = await loadEnglishModel();
+    return resolveWhisperModel(model, language || null, (id) => {
+      try {
+        return fs.existsSync(this.getModelPath(id));
+      } catch {
+        return false;
+      }
+    });
+  }
+
   getModelPath(modelName) {
     this.validateModelName(modelName);
     const config = getWhisperModelConfig(modelName);
@@ -145,18 +184,21 @@ class WhisperManager {
       await this.ensureBundledDefaultModel();
 
       // Pre-warm whisper-server if local mode enabled (eliminates 2-5s cold-start delay)
-      const { localTranscriptionProvider, whisperModel, useCuda, useVulkan } = settings;
+      const { localTranscriptionProvider, whisperModel, language, useCuda, useVulkan } = settings;
 
       if (
         localTranscriptionProvider === "whisper" &&
         whisperModel &&
         this.serverManager.isAvailable()
       ) {
-        const modelPath = this.getModelPath(whisperModel);
+        // Warm the model a request will ask for: the English twin when the
+        // speaker speaks English (see transcribeLocalWhisper).
+        const model = await this.resolveRequestModel(whisperModel, language);
+        const modelPath = this.getModelPath(model);
 
         if (fs.existsSync(modelPath)) {
           debugLogger.info("Pre-warming whisper-server", {
-            model: whisperModel,
+            model,
             modelPath,
             cuda: !!useCuda,
             vulkan: !!useVulkan,
@@ -164,27 +206,31 @@ class WhisperManager {
 
           try {
             const serverStartTime = Date.now();
-            await this.serverManager.start(modelPath, {
-              useCuda: !!useCuda,
-              useVulkan: !!useVulkan,
-            });
-            this.currentServerModel = whisperModel;
+            await this.serverManager.start(
+              modelPath,
+              getPrewarmStartOptions({
+                useCuda,
+                useVulkan,
+                vadModelPath: this.getVadModelPath(),
+              })
+            );
+            this.currentServerModel = model;
 
             debugLogger.info("whisper-server pre-warmed successfully", {
-              model: whisperModel,
+              model,
               startupTimeMs: Date.now() - serverStartTime,
               port: this.serverManager.port,
             });
           } catch (err) {
             debugLogger.warn("Server pre-warm failed (will start on first use)", {
               error: err.message,
-              model: whisperModel,
+              model,
             });
             // Non-fatal: server will start on first transcription
           }
         } else {
           debugLogger.debug("Skipping server pre-warm: model not downloaded", {
-            model: whisperModel,
+            model,
             modelPath,
           });
         }
@@ -368,19 +414,7 @@ class WhisperManager {
     }
 
     const language = options.language || null;
-    // The English-only twin when the speaker is speaking English and it is on
-    // disk — same size, roughly a fifth fewer errors, and faster. Decided here
-    // rather than in the renderer because only this process knows what is
-    // installed, and it falls back silently: an upgrade that is not there must
-    // never turn into a model that fails to load.
-    const { resolveWhisperModel } = await loadEnglishModel();
-    const model = resolveWhisperModel(options.model || "base", language, (id) => {
-      try {
-        return fs.existsSync(this.getModelPath(id));
-      } catch {
-        return false;
-      }
-    });
+    const model = await this.resolveRequestModel(options.model || "base", language);
     const initialPrompt = options.initialPrompt || null;
     const vadEnabled = options.vadEnabled === true;
     const vadConfig = options.vadConfig || null;
@@ -893,3 +927,4 @@ class WhisperManager {
 
 module.exports = WhisperManager;
 module.exports.shouldRewarmOnWake = shouldRewarmOnWake;
+module.exports.getPrewarmStartOptions = getPrewarmStartOptions;

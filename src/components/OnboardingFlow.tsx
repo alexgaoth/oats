@@ -65,6 +65,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     mistralApiKey,
     tinfoilApiKey,
     dictationKey,
+    dictationEnabled,
     setActivationMode,
     setDictationKey,
     updateTranscriptionSettings,
@@ -194,8 +195,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [hotkey, withExtraDictationHotkeys]);
 
   const saveSettings = useCallback(async () => {
-    await tryRegisterHotkey();
-    setDictationKey(withExtraDictationHotkeys(hotkey));
+    // With dictation off (the macOS default) first run binds no dictation key.
+    // Turning dictation on in Settings binds the saved key, or the platform
+    // default when there is none.
+    if (dictationEnabled) {
+      await tryRegisterHotkey();
+      setDictationKey(withExtraDictationHotkeys(hotkey));
+    }
     saveAgentName(agentName);
 
     localStorage.setItem("onboardingCompleted", "true");
@@ -219,6 +225,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
     return true;
   }, [
+    dictationEnabled,
     hotkey,
     withExtraDictationHotkeys,
     agentName,

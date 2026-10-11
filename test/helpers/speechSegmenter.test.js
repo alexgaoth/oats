@@ -134,3 +134,63 @@ test("the last thing said is not lost at stop", () => {
   assert.equal(segments.length, 1);
   assert.ok(segments[0].endMs >= 1900);
 });
+
+// A live partial (partialScheduler.mjs) reads the segment still being spoken.
+test("the open segment is what will close, as far as it has got", () => {
+  const samples = signal([
+    ["quiet", 1],
+    ["speech", 2],
+    ["quiet", 1],
+  ]);
+  const segmenter = new SpeechSegmenter();
+  const step = SAMPLE_RATE / 10;
+  const seen = [];
+  let closed = null;
+  for (let i = 0; i < samples.length && !closed; i += step) {
+    [closed = null] = segmenter.push(samples.subarray(i, i + step));
+    if (!closed && segmenter.open) seen.push({ ...segmenter.open, audio: segmenter.openSamples() });
+  }
+  assert.ok(closed, "the pause closed it");
+  assert.ok(seen.length >= 15, `${seen.length} looks while it was open`);
+  for (const look of seen) {
+    // One segment, named by where it starts, and its audio so far is the
+    // start of what the final sends.
+    assert.equal(look.startSample, closed.startSample);
+    assert.equal(look.startMs, closed.startMs);
+    assert.equal(look.audio.length, (look.lengthMs / 1000) * SAMPLE_RATE);
+    // (A look inside the closing pause holds more of it than the final keeps.)
+    const n = Math.min(look.audio.length, closed.samples.length);
+    assert.deepEqual(look.audio.subarray(0, n), closed.samples.subarray(0, n));
+  }
+  // Speech accumulates while it is said, and is never more than the segment.
+  const speech = seen.map((look) => look.speechMs);
+  assert.deepEqual(
+    speech,
+    [...speech].sort((a, b) => a - b)
+  );
+  assert.ok(speech[speech.length - 1] >= 1500, `${speech[speech.length - 1]} ms of speech`);
+  assert.ok(seen.every((look) => look.speechMs <= look.lengthMs));
+  // Closed, nothing is open.
+  assert.equal(segmenter.open, null);
+  assert.equal(segmenter.openSamples().length, 0);
+});
+
+test("nothing is open in a quiet room", () => {
+  const segmenter = new SpeechSegmenter();
+  segmenter.push(signal([["quiet", 2]], { room: 0.01 }));
+  assert.equal(segmenter.open, null);
+});
+
+test("a monologue's carry-over after a cut is a new open segment", () => {
+  const segmenter = new SpeechSegmenter({ maxSegmentMs: 20_000 });
+  const samples = signal([["speech", 25]]);
+  const step = SAMPLE_RATE / 10;
+  let cut = null;
+  for (let i = 0; i < samples.length && !cut; i += step) {
+    [cut = null] = segmenter.push(samples.subarray(i, i + step));
+  }
+  assert.ok(cut, "cut at the cap");
+  const open = segmenter.open;
+  assert.equal(open.startSample, cut.endSample);
+  assert.ok(open.speechMs > 0, "what was carried over is already speech");
+});

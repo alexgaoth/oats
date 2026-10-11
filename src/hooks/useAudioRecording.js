@@ -227,7 +227,9 @@ export const useAudioRecording = (toast, options = {}) => {
     window.electronAPI?.getSttConfig?.().then((config) => {
       if (config?.success && audioManagerRef.current) {
         audioManagerRef.current.setSttConfig(config);
-        if (audioManagerRef.current.shouldUseStreaming()) {
+        // No cloud connection is opened at launch for dictation while it is
+        // off; the first dictation after it is turned on connects as it starts.
+        if (getSettings().dictationEnabled && audioManagerRef.current.shouldUseStreaming()) {
           audioManagerRef.current.warmupStreamingConnection();
         }
       }
