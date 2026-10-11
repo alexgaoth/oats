@@ -113,7 +113,7 @@ function LoadingFallback({ message }) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 animate-[scale-in_300ms_ease-out]">
-        <OatsMark className="size-12" />
+        <OatsMark className="size-12" shadow spinOnMount />
         {fallbackMessage && <p className="text-[13px] text-muted-foreground">{fallbackMessage}</p>}
       </div>
     </div>

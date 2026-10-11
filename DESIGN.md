@@ -81,6 +81,13 @@ Rules:
 - **Warning is orange, not amber.** Amber sat ΔE 1.8 from the honey brand in dark
   mode, so a warning read as the brand. Light mode uses orange-700 so warning text
   meets 4.5:1 on white.
+- **The symbol is the honey oat grain** (`shell/OatsMark.tsx`): a small 3D grain,
+  the same in light and dark mode, with no tile behind it. It spins once when the
+  app starts and again when the sidebar mark is clicked: the grain rolls on its
+  long axis, so only its groove travels while the light stays put, with a small
+  hop. No spin under reduced motion. The app icon is the same grain on a light
+  neutral tile; every icon file comes from `src/assets/logo.svg` and the masters
+  in `scripts/` via `scripts/build-brand-icons.sh`.
 - **Red means recording or danger.** It is never decoration. Idle, the record
   action is the brand; live, it turns red and says Stop.
 - Status is a soft badge (`bg-success/10 text-success`), never a colored border bar.

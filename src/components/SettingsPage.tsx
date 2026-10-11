@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { OatsMark } from "./shell/OatsMark";
 import {
   BookOpen,
   CircleCheck,
@@ -2120,26 +2121,29 @@ EOF`,
       case "about":
         return (
           <div className="space-y-8">
-            {/* Version. Updates are off until there is a release feed (D7), so
-                nothing here claims "latest" or offers a check that cannot find
+            {/* Who this is: the symbol, the name and the version, as a Mac
+                app's About window shows them. The symbol spins when clicked.
+                Updates are off until there is a release feed (D7), so nothing
+                here claims "latest" or offers a check that cannot find
                 anything. */}
-            <div>
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow label={t("settingsPage.general.updates.currentVersion")}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm tabular-nums text-muted-foreground">
-                        {currentVersion || t("settingsPage.general.updates.versionPlaceholder")}
-                      </span>
-                      {updateStatus.isDevelopment && (
-                        <Badge variant="warning">
-                          {t("settingsPage.general.updates.badges.dev")}
-                        </Badge>
-                      )}
-                    </div>
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
+            <div className="flex items-center gap-4">
+              <OatsMark interactive shadow className="size-14" label={t("menu.appLabel")} />
+              <div className="min-w-0">
+                <p className="text-base font-semibold tracking-tight text-foreground">
+                  {t("menu.appLabel")}
+                </p>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <span
+                    className="text-sm tabular-nums text-muted-foreground"
+                    aria-label={`${t("settingsPage.general.updates.currentVersion")} ${currentVersion}`}
+                  >
+                    {currentVersion || t("settingsPage.general.updates.versionPlaceholder")}
+                  </span>
+                  {updateStatus.isDevelopment && (
+                    <Badge variant="warning">{t("settingsPage.general.updates.badges.dev")}</Badge>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Developer Tools */}
