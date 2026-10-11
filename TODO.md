@@ -65,6 +65,33 @@ recording 376 draws/3s → receding still animating → settled back to 0.
 `prefers-reduced-motion` is unchanged (it was already a single still frame, and
 now also repaints on a theme change, which it previously did not).
 
+**Recording: capped, and stopped while nobody can see it (2026-10-11).** P0.1
+left one state uncapped: the wind while a conversation records drew on every
+vsync, 120 frames a second on ProMotion, and `document.hidden` never stopped it,
+because `backgroundThrottling: false` keeps the page "visible" minimized and in
+the tray. Now (`field/fieldLoop.ts`) it draws at most 30 frames a second, paced
+by a timer, and nothing while main reports the window unseen
+(`helpers/windowVisibility.js`; on macOS "show"/"hide" are occlusion events).
+Its clock stops too, so it resumes where it was. Measured on an M5 Pro in a
+gallery page in Electron 41 (1200x800 at 2x; medians of 3 interleaved runs; %
+of one core):
+
+| Recording, field mode                          | before      | after      |
+| ---------------------------------------------- | ----------- | ---------- |
+| visible: frames a second                       | 120         | 30         |
+| visible: GPU process / renderer                | 20.4 / 16.4 | 11.6 / 8.7 |
+| visible: GPU busy                              | 24%         | 7%         |
+| minimized, in the tray, covered: frames        | 120         | 0          |
+| minimized, in the tray, covered: GPU + rend    | 31–38       | 9–13       |
+| same view, field still (the floor): GPU + rend | 8.2         | 8.3        |
+
+Screenshots at the same moment of the wind are pixel-identical. Declined after
+measuring: rendering at 1x (more CPU, not less, and the dither grain doubles),
+and an IntersectionObserver for "off screen" (~40ms of main thread a second
+while the listening pulse breathes). Still open: `MeetingRecordingMount` re-arms
+`requestAnimationFrame` on every vsync for the whole recording, to sample the
+microphone at 10 Hz.
+
 ### P0.2 Measure the regression before declaring it fixed — done for Fedora, open for macOS
 
 `scripts/perf-baseline.js` (`npm run perf:baseline`) launches an isolated Oats on

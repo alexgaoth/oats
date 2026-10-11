@@ -2183,7 +2183,7 @@
       "microphoneDescription": "The microphone Oats uses for conversations and dictation.",
       "fieldBackdrop": {
         "label": "Field backdrop",
-        "description": "Draw the animated wheat field behind the app. It uses the GPU all the time."
+        "description": "Draw the animated wheat field behind the app."
       },
       "dictationButton": "While you dictate",
       "instructionsDescription": "How the model rewrites each dictation. The default works for most people.",

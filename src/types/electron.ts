@@ -397,6 +397,11 @@ declare global {
       ) => Promise<void>;
       hideWindow: () => Promise<void>;
       showDictationPanel: () => Promise<void>;
+      // Whether anybody can see this window (minimized, closed to the tray or
+      // covered counts as no). The page cannot tell for itself: the window runs
+      // with backgroundThrottling off, which pins document.visibilityState.
+      onWindowVisibility?: (callback: (visible: boolean) => void) => () => void;
+      getWindowVisibility?: () => Promise<boolean>;
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
       onToggleConversation?: (callback: () => void) => () => void;

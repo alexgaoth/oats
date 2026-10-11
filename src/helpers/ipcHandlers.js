@@ -27,6 +27,7 @@ const MeetingEchoLeakDetector = require("./meetingEchoLeakDetector");
 const { partitionPendingMicFinals, isWithinRetractWindow } = require("./meetingMicHoldback");
 const { applySmartSpacing } = require("./smartSpacing");
 const { applyAutoLearnSetting } = require("./autoLearnSetting");
+const { isWindowSeen } = require("./windowVisibility");
 const {
   transcriptsOverlap,
   transcriptsLooselyOverlap,
@@ -803,6 +804,12 @@ class IPCHandlers {
     ipcMain.handle("show-dictation-panel", () => {
       this.windowManager.showDictationPanel();
     });
+
+    // The page's first look at whether anybody can see its window; changes
+    // arrive as "window-visibility" pushes (windowVisibility.js).
+    ipcMain.handle("get-window-visibility", (event) =>
+      isWindowSeen(BrowserWindow.fromWebContents(event.sender))
+    );
 
     ipcMain.handle("force-stop-dictation", () => {
       if (this.windowManager?.forceStopMacCompoundPush) {

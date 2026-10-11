@@ -11,6 +11,7 @@ const { i18nMain } = require("./i18nMain");
 const { DEV_SERVER_PORT } = DevServerManager;
 const { isPointInsideBounds, shouldIgnoreMouseEvents } = require("./oatInteractivity");
 const { isInternalNavigation } = require("./appNavigation");
+const { trackWindowVisibility } = require("./windowVisibility");
 const {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
@@ -859,6 +860,9 @@ class WindowManager {
     }
 
     this.controlPanelWindow = new BrowserWindow(CONTROL_PANEL_CONFIG);
+    // The page cannot see its own visibility under backgroundThrottling: false,
+    // and the field backdrop stops drawing on it (windowVisibility.js).
+    trackWindowVisibility(this.controlPanelWindow);
 
     this.controlPanelWindow.webContents.on("will-navigate", (event, url) => {
       // getAppUrl() is null in a packaged build; appNavigation.js says why

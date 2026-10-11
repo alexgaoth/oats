@@ -15,6 +15,15 @@ import {
   type Rgb,
 } from "./fieldModel";
 import {
+  FRAME_BUDGET_MS,
+  FRAME_INTERVAL_MS,
+  createFieldClock,
+  easeToward,
+  fieldLoopState,
+  frameDelay,
+  frameDue,
+} from "./fieldLoop";
+import {
   BACKDROP_FRAGMENT,
   BACKDROP_VERTEX,
   CHAFF_FRAGMENT,
@@ -45,14 +54,22 @@ import {
 // Measured on the Linux target (Intel ARL via ANGLE, under Oats'
 // --disable-gpu-compositing): ~0ms blocking cost on the CPU, and readback costs
 // about 1.8ms/frame at 2x DPR.
+//
+// What it costs is how many frames it draws, so it draws as few as the picture
+// allows (`fieldLoop.ts`): one frame per change while the world is still, at
+// most 30 a second while the wind blows, and none at all while nobody can see
+// the window. Measured on an M5 Pro while recording, that took the field from
+// 120 frames a second to 30, and from 120 to 0 minimized, in the tray or covered.
 
 /** Blades at full density. Stepped down automatically if frames start slipping. */
 const BLADE_COUNT = 3600;
 
-/** Frame budget. Above this for a sustained stretch, the field thins itself. */
-const FRAME_BUDGET_MS = 20.5;
+/** Frames sampled before deciding the device is not keeping up (FRAME_BUDGET_MS). */
 const SAMPLE_WINDOW = 120;
 const MIN_DENSITY = 0.35;
+
+/** How far the pointer's parting closes per 60 Hz frame (see `easeToward`). */
+const POINTER_EASE = 0.18;
 
 /** How long the wheat takes to withdraw when a conversation ends. Slower than it
  *  grew: arriving should feel like weather, leaving like settling. */
@@ -192,6 +209,7 @@ export default function FieldGL({
   live,
   intensity,
   animate,
+  visible,
   scene,
   reduced,
   onFailure,
@@ -206,6 +224,12 @@ export default function FieldGL({
    * entirely rather than holding vsync open for a backdrop nobody is watching.
    */
   animate: boolean;
+  /**
+   * Whether anybody can see the field. While they cannot, a moving field draws
+   * nothing and schedules nothing, and its clock stops, so it resumes exactly
+   * where it was left rather than a jump further on.
+   */
+  visible: boolean;
   /** Which scenery accompanies recording (DESIGN.md §9.9). */
   scene: FieldScene;
   reduced: boolean;
@@ -225,6 +249,8 @@ export default function FieldGL({
   intensityRef.current = intensity;
   const animateRef = useRef(animate);
   animateRef.current = animate;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   // Set by the GL effect below. Anything that changes what a settled frame
   // should look like calls it: the loop is not running to notice for itself.
@@ -235,7 +261,7 @@ export default function FieldGL({
   // also means a change to either draws nothing until the loop is woken.
   useEffect(() => {
     wakeRef.current?.();
-  }, [animate, intensity, live]);
+  }, [animate, intensity, live, visible]);
 
   useEffect(() => {
     if (reduced) return;
@@ -261,6 +287,7 @@ export default function FieldGL({
     if (!canvas || failedRef.current) return;
 
     let raf = 0;
+    let timer = 0;
     let disposed = false;
 
     const fail = (reason: string) => {
@@ -390,26 +417,30 @@ export default function FieldGL({
       });
       cleanupFns.push(() => themeObserver.disconnect());
 
-      let width = 0;
-      let height = 0;
-      const resize = () => {
+      // The canvas's CSS size, kept by the observer rather than read every
+      // frame: a layout read inside a frame forces layout whenever anything else
+      // on the page changed first. Read here once so the first frame can draw.
+      let width = canvas.clientWidth;
+      let height = canvas.clientHeight;
+      // Applied in the frame that draws, not in the observer: resizing the
+      // backing store clears it, and a cleared canvas left for a frame flickers.
+      const applySize = () => {
+        if (!width || !height) return false;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const cssW = canvas.clientWidth;
-        const cssH = canvas.clientHeight;
-        if (!cssW || !cssH) return false;
-        width = cssW;
-        height = cssH;
-        const pixelW = Math.round(cssW * dpr);
-        const pixelH = Math.round(cssH * dpr);
+        const pixelW = Math.round(width * dpr);
+        const pixelH = Math.round(height * dpr);
         if (canvas.width !== pixelW || canvas.height !== pixelH) {
           canvas.width = pixelW;
           canvas.height = pixelH;
+          gl.viewport(0, 0, pixelW, pixelH);
         }
-        gl.viewport(0, 0, pixelW, pixelH);
         return true;
       };
       const resizeObserver = new ResizeObserver(() => {
-        if (resize()) wakeRef.current?.();
+        // Layout is fresh inside an observer callback, so this read is free.
+        width = canvas.clientWidth;
+        height = canvas.clientHeight;
+        wakeRef.current?.();
       });
       resizeObserver.observe(canvas);
       cleanupFns.push(() => resizeObserver.disconnect());
@@ -429,16 +460,24 @@ export default function FieldGL({
       // The countryside rides `grow` itself — no timing of its own.
       const sceneId = SCENE_IDS[scene];
 
-      // The world only moves on the Conversation surface, and only for a user
-      // who wants motion. Everywhere else it is a photograph of itself.
-      const settled = () => reduced || !animateRef.current;
+      // Animation time: the wall clock, less any time spent paused.
+      const clock = createFieldClock(performance.now());
+      let lastElapsed = 0;
 
-      const drawFrame = (elapsedMs: number) => {
-        if (!resize()) return;
+      // The world only moves on the Conversation surface, for a user who wants
+      // motion, and while somebody can see it.
+      const loopState = () =>
+        fieldLoopState({
+          animate: animateRef.current,
+          reduced,
+          visible: visibleRef.current,
+        });
+
+      const drawFrame = (elapsedMs: number, still: boolean) => {
+        if (!applySize()) return;
         const palette = paletteRef.current;
         if (!palette) return;
 
-        const still = settled();
         const isLive = liveRef.current;
         if (isLive !== lastLive) {
           lastLive = isLive;
@@ -458,6 +497,9 @@ export default function FieldGL({
 
         const time = still ? 0 : elapsedMs / 1000;
         const pointer = still ? null : pointerRef.current;
+        // At most one frame's worth: across a stop, the parting moves one step.
+        const dt = Math.min(FRAME_INTERVAL_MS, Math.max(0, elapsedMs - lastElapsed));
+        lastElapsed = elapsedMs;
 
         gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -486,8 +528,13 @@ export default function FieldGL({
           // dropped between two frames when the cursor left, which reads as a
           // twitch in whatever it was next to. Holding the last position means
           // the wheat closes where it was opened rather than snapping shut.
+          // Eased by time, not per frame, so the frame rate cannot change it;
+          // and a still frame has no parting at all, since at rest the cursor
+          // does nothing.
           if (pointer) pointerLastRef.current = pointer;
-          pointerFadeRef.current += ((pointer ? 1 : 0) - pointerFadeRef.current) * 0.18;
+          pointerFadeRef.current = still
+            ? 0
+            : easeToward(pointerFadeRef.current, pointer ? 1 : 0, dt, POINTER_EASE);
           if (pointerFadeRef.current < 0.002) pointerFadeRef.current = 0;
           const held = pointer ?? pointerLastRef.current;
           gl.uniform2f(bladeU.pointer, held?.x ?? 0, held?.y ?? 0);
@@ -533,35 +580,49 @@ export default function FieldGL({
         gl.bindVertexArray(null);
       };
 
-      const startedAt = performance.now();
-      let lastFrame = startedAt;
-      let running = false;
+      /** rAF timestamp of the last moving frame, for the cap and the density sample. */
+      let lastDrawAt = -Infinity;
+      let sampling = false;
+
+      const requestFrame = () => {
+        timer = 0;
+        if (!disposed && !raf) raf = requestAnimationFrame(tick);
+      };
 
       const tick = (now: number) => {
+        raf = 0;
         if (disposed) return;
+        const state = loopState();
+
+        // Nobody can see it: nothing drawn, nothing scheduled. `wake` brings
+        // it back when that changes.
+        if (state === "paused") return;
 
         // Settled: draw the frame the world rests at, then stop scheduling.
         // Returning without re-arming is the whole point — an rAF callback that
         // does nothing still holds the compositor at vsync, which is the cost
         // this is here to avoid.
-        if (settled()) {
-          running = false;
-          drawFrame(now - startedAt);
+        if (state === "still") {
+          drawFrame(clock.elapsed(now), true);
           return;
         }
 
-        raf = requestAnimationFrame(tick);
+        // A zero-size canvas has nothing to draw; the resize observer wakes
+        // the loop when it has.
+        if (!width || !height) return;
 
-        // CONTROL_PANEL_CONFIG sets backgroundThrottling: false, so Chromium
-        // will happily run this loop for an hour behind another window.
-        if (document.hidden) return;
+        // At most FIELD_FPS: between frames the loop sleeps on a timer and asks
+        // for no vsync at all.
+        if (!frameDue(now, lastDrawAt)) {
+          timer = window.setTimeout(requestFrame, frameDelay(now, lastDrawAt));
+          return;
+        }
 
-        const delta = now - lastFrame;
-        lastFrame = now;
-        drawFrame(now - startedAt);
+        const elapsed = clock.elapsed(now);
+        drawFrame(elapsed, false);
 
-        if (now - startedAt > INTRO_MS && reductions < 2) {
-          frameTimes.push(delta);
+        if (sampling && elapsed > INTRO_MS && reductions < 2) {
+          frameTimes.push(now - lastDrawAt);
           if (frameTimes.length >= SAMPLE_WINDOW) {
             const sorted = frameTimes.slice().sort((a, b) => a - b);
             const median = sorted[Math.floor(sorted.length / 2)];
@@ -572,6 +633,8 @@ export default function FieldGL({
             }
           }
         }
+        sampling = true;
+        lastDrawAt = now;
 
         // The world at rest, on the Conversation surface, with no conversation
         // running: the wheat is gone, the chaff and the blades are gated on
@@ -584,22 +647,37 @@ export default function FieldGL({
         // sixty times a second is not the beautiful moment §9.8 asks for; it is
         // a laptop battery. `wake` brings it straight back when someone
         // presses record.
-        if (!liveRef.current && grow <= AT_REST) {
-          cancelAnimationFrame(raf);
-          running = false;
-        }
+        if (!liveRef.current && grow <= AT_REST) return;
+
+        timer = window.setTimeout(requestFrame, frameDelay(performance.now(), lastDrawAt));
       };
 
-      // Wakes a stopped loop for one frame, or for good if the world is moving
-      // again. Also the only way a settled field ever redraws.
+      // Something changed: the loop decides what that means. Starts a stopped
+      // loop for one frame, or for good if the world is moving again; stops it,
+      // and its clock, when nobody can see it. Also the only way a settled
+      // field ever redraws.
       const wake = () => {
-        if (disposed || running) return;
-        running = true;
-        // A frame delta measured across a pause is not a frame that was slow;
-        // left unreset it would thin the field on the first frame back.
-        lastFrame = performance.now();
+        if (disposed) return;
+        const now = performance.now();
+        const state = loopState();
+        if (state === "paused") {
+          clock.pause(now);
+          cancelAnimationFrame(raf);
+          window.clearTimeout(timer);
+          raf = 0;
+          timer = 0;
+          return;
+        }
+        clock.resume(now);
+        // Already moving: the next frame picks the change up.
+        if (state === "moving" && (raf || timer)) return;
+        // A frame interval measured across a stop is not a frame that was
+        // slow; left in, it would thin the field on the first frame back.
+        sampling = false;
         frameTimes.length = 0;
-        raf = requestAnimationFrame(tick);
+        window.clearTimeout(timer);
+        timer = 0;
+        if (!raf) raf = requestAnimationFrame(tick);
       };
       wakeRef.current = wake;
       cleanupFns.push(() => {
@@ -616,6 +694,7 @@ export default function FieldGL({
       return () => {
         disposed = true;
         cancelAnimationFrame(raf);
+        window.clearTimeout(timer);
         canvas.removeEventListener("webglcontextlost", onContextLost);
         cleanupFns.forEach((fn) => fn());
         gl.deleteBuffer(quadBuffer);
