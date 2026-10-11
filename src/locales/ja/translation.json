@@ -2249,7 +2249,7 @@
       "answered": "回答済み",
       "uncertain": "あいまい",
       "silence": "応答なし",
-      "denied": "誰も知らなかった"
+      "denied": "不明"
     },
     "searched": "検索済み",
     "dismiss": "質問を閉じる",

@@ -2244,7 +2244,7 @@
       "answered": "已解答",
       "uncertain": "不确定",
       "silence": "无人应答",
-      "denied": "无人知晓"
+      "denied": "未知"
     },
     "searched": "已搜索",
     "dismiss": "忽略该问题",
