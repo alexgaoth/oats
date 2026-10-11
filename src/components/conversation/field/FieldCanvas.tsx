@@ -18,9 +18,19 @@ import {
   parseHexColor,
   rgbToCss,
   windAt,
+  type Field,
   type FieldScene,
   type Rgb,
 } from "./fieldModel";
+import {
+  FRAME_INTERVAL_MS,
+  createFieldClock,
+  easeToward,
+  fieldLoopState,
+  frameDelay,
+  frameDue,
+  type FieldClock,
+} from "./fieldLoop";
 
 // 2D canvas fallback for the oat field (DESIGN.md §9.8), used when WebGL2 is
 // unavailable or is only offered in software.
@@ -31,9 +41,15 @@ import {
 // is dither: ordered dithering per pixel is not affordable here, and §7 is
 // explicit that faking the grain with noise or blur looks cheap rather than
 // intentional. Better to omit the texture than to counterfeit it.
+//
+// It keeps the GPU path's frame rules (`fieldLoop.ts`): one frame per change
+// while still, at most 30 a second while the wind blows, none while nobody can
+// see it.
 
 const BLADE_COUNT = 1700;
-const FRAME_MS = 1000 / 30;
+
+/** How far the pointer's parting closes per 60 Hz frame (see `easeToward`). */
+const POINTER_EASE = 0.18;
 
 const FALLBACK_GOLD: Rgb = [198 / 255, 123 / 255, 39 / 255];
 const FALLBACK_HAZE: Rgb = [107 / 255, 100 / 255, 89 / 255];
@@ -66,6 +82,7 @@ export default function FieldCanvas({
   live,
   intensity,
   animate,
+  visible,
   scene,
   reduced,
 }: {
@@ -74,6 +91,9 @@ export default function FieldCanvas({
   /** Whether the world moves. False on the reading surfaces: one settled frame
    *  and no loop at all. */
   animate: boolean;
+  /** Whether anybody can see it. A moving field with nobody watching draws
+   *  nothing, and its clock stops until somebody is. */
+  visible: boolean;
   /** Which scenery accompanies recording. Drawn smooth here — §7 forbids
    *  counterfeiting the grain, so the fallback omits the dither, as it does
    *  for the blades. */
@@ -91,12 +111,20 @@ export default function FieldCanvas({
   // effect's deps, so the closure is torn down on every transition — exactly
   // the moment the recede needs its history.
   const motionRef = useRef({
-    startedAt: -1,
     grown: 0,
     growFrom: 0,
     growAt: 0,
     wasLive: false,
+    /** Animation time of the last frame drawn, for the pointer's easing. */
+    lastElapsed: 0,
   });
+  // One clock for the component's whole life: the effect re-runs on every
+  // `live` transition, and a clock that restarted at zero would invalidate the
+  // growAt timestamps `motionRef` carries across runs. Created by the first
+  // frame that moves, and stopped while nobody can see the field.
+  const clockRef = useRef<FieldClock | null>(null);
+  // The field never changes; built once rather than on every re-run.
+  const fieldRef = useRef<Field | null>(null);
 
   useEffect(() => {
     if (reduced) return;
@@ -122,10 +150,12 @@ export default function FieldCanvas({
     if (!canvas) return;
 
     // See FieldGL: the world only moves on Conversation, for a user who wants
-    // motion. Everywhere else it is a photograph of itself.
-    const still = reduced || !animate;
+    // motion, while somebody can see it. Everywhere else it is a photograph of
+    // itself.
+    const state = fieldLoopState({ animate, reduced, visible });
+    const still = state === "still";
 
-    const field = createField(BLADE_COUNT);
+    const field = (fieldRef.current ??= createField(BLADE_COUNT));
     const styles = Array.from({ length: BANDS }, (_, b) => bandStyle(b));
     const spreads = Array.from({ length: BANDS }, (_, b) => bandSpread(b));
 
@@ -134,7 +164,8 @@ export default function FieldCanvas({
     const themeObserver = new MutationObserver(() => {
       paletteRef.current = readCanvasPalette(canvas);
       // Nothing is looping to pick the new palette up on a still surface, and
-      // the theme switch lives on one of them (Advanced Settings).
+      // the theme switch lives on one of them (Advanced Settings). A paused
+      // field draws with it when it moves again.
       if (still) draw(INTRO_MS);
     });
     themeObserver.observe(document.documentElement, {
@@ -184,8 +215,14 @@ export default function FieldCanvas({
       const live_pointer = still ? null : pointerRef.current;
       // Eased, and holding the last position while it fades — as a flag the
       // parting dropped between two frames when the cursor left the window.
+      // Eased by time rather than per frame, so the frame rate cannot change
+      // it, and never in a still frame: at rest the cursor does nothing.
+      const dt = Math.min(FRAME_INTERVAL_MS, Math.max(0, elapsed - motion.lastElapsed));
+      motion.lastElapsed = elapsed;
       if (live_pointer) pointerLastRef.current = live_pointer;
-      pointerFadeRef.current += ((live_pointer ? 1 : 0) - pointerFadeRef.current) * 0.18;
+      pointerFadeRef.current = still
+        ? 0
+        : easeToward(pointerFadeRef.current, live_pointer ? 1 : 0, dt, POINTER_EASE);
       if (pointerFadeRef.current < 0.002) pointerFadeRef.current = 0;
       const pointer = pointerFadeRef.current > 0 ? (live_pointer ?? pointerLastRef.current) : null;
       const pointerFade = pointerFadeRef.current;
@@ -352,32 +389,48 @@ export default function FieldCanvas({
       return () => themeObserver.disconnect();
     }
 
+    // Nobody can see it: no frames, no timers, and the clock stops, so the
+    // wind resumes where it was left. The effect re-runs when that changes.
+    if (state === "paused") {
+      clockRef.current?.pause(performance.now());
+      return () => themeObserver.disconnect();
+    }
+
+    const clock = (clockRef.current ??= createFieldClock(performance.now()));
+    clock.resume(performance.now());
+
     let raf = 0;
-    // One clock for the component's whole life: the effect re-runs on every
-    // `live` transition, and a clock that restarted at zero would invalidate
-    // the growAt/stoppedAt timestamps `motionRef` carries across runs.
-    if (motion.startedAt < 0) motion.startedAt = performance.now();
-    const startedAt = motion.startedAt;
-    let lastFrame = 0;
-    const tick = (now: number) => {
+    let timer = 0;
+    let lastDrawAt = -Infinity;
+    const requestFrame = () => {
+      timer = 0;
       raf = requestAnimationFrame(tick);
-      if (document.hidden) return;
-      if (now - lastFrame < FRAME_MS) return;
-      lastFrame = now;
-      draw(now - startedAt);
+    };
+    const tick = (now: number) => {
+      raf = 0;
+      // At most FIELD_FPS: between frames the loop sleeps on a timer and asks
+      // for no vsync at all.
+      if (!frameDue(now, lastDrawAt)) {
+        timer = window.setTimeout(requestFrame, frameDelay(now, lastDrawAt));
+        return;
+      }
+      lastDrawAt = now;
+      draw(clock.elapsed(now));
 
       // Mirrors FieldGL: with no conversation running and the wheat withdrawn,
       // every remaining draw paints the identical picture. The effect re-runs
       // on the next `live` transition, which is what starts it again.
-      if (!live && motion.grown <= 0.001) cancelAnimationFrame(raf);
+      if (!live && motion.grown <= 0.001) return;
+      timer = window.setTimeout(requestFrame, frameDelay(performance.now(), lastDrawAt));
     };
     raf = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
       themeObserver.disconnect();
     };
-  }, [live, intensity, animate, scene, reduced]);
+  }, [live, intensity, animate, visible, scene, reduced]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

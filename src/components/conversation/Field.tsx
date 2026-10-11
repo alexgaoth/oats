@@ -82,6 +82,51 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+function useDocumentVisible(): boolean {
+  const [visible, setVisible] = useState(() => document.visibilityState !== "hidden");
+  useEffect(() => {
+    const onChange = () => setVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
+  return visible;
+}
+
+/**
+ * Whether anybody can see the window, as main reports it.
+ *
+ * The Oats window runs with `backgroundThrottling: false`, which pins
+ * `document.visibilityState` to "visible": minimized, closed to the tray or
+ * covered, the page is told nothing, and the field drew at the display's full
+ * rate for nobody. Main knows (`helpers/windowVisibility.js`), so it pushes each
+ * change, and the first value is pulled because a push sent before this
+ * listener existed is lost.
+ */
+function useWindowSeen(): boolean {
+  const [seen, setSeen] = useState(true);
+  useEffect(() => {
+    const api = window.electronAPI;
+    let pushed = false;
+    let disposed = false;
+    const unsubscribe = api?.onWindowVisibility?.((visible) => {
+      pushed = true;
+      setSeen(visible);
+    });
+    api
+      ?.getWindowVisibility?.()
+      .then((visible) => {
+        // A push that arrived while this was in flight is the newer answer.
+        if (!disposed && !pushed && typeof visible === "boolean") setSeen(visible);
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+    };
+  }, []);
+  return seen;
+}
+
 export default function Field({
   live,
   intensity = 1,
@@ -106,6 +151,14 @@ export default function Field({
   className?: string;
 }) {
   const reduced = usePrefersReducedMotion();
+  // Nobody to see it, nothing to draw: the wind waits, and resumes where it
+  // was. Deliberately no IntersectionObserver: the backdrop is fixed to the
+  // window, so it is never scrolled away, and an observer is not free. With
+  // the listening pulse breathing, one on this element added ~40ms of main
+  // thread a second, measured, field still or not.
+  const documentVisible = useDocumentVisible();
+  const windowSeen = useWindowSeen();
+  const visible = documentVisible && windowSeen;
   const [gpuFailed, setGpuFailed] = useState(false);
   const onFailure = useCallback(() => setGpuFailed(true), []);
 
@@ -124,6 +177,7 @@ export default function Field({
           live={live}
           intensity={intensity}
           animate={animate}
+          visible={visible}
           scene={scene}
           reduced={reduced}
           onFailure={onFailure}
@@ -133,6 +187,7 @@ export default function Field({
           live={live}
           intensity={intensity}
           animate={animate}
+          visible={visible}
           scene={scene}
           reduced={reduced}
         />
