@@ -361,9 +361,30 @@ export default function ConversationContour({
       //    stroked path: thickness is the measurement, and a stroke of varying
       //    width cannot be expressed as one path.
       if (drawn.length) {
+        // A curve through the points rather than straight segments between
+        // them: each piece ends halfway to the next point, bent by the point it
+        // passes. Every rise and fall stays; the corners go, so the line reads
+        // as a voice and not as a bar chart.
+        const path = drawn.map((point) => ({ px: x(point.x), py: at(point) }));
+        const curve = () => {
+          for (let index = 1; index < path.length - 1; index += 1) {
+            const here = path[index];
+            const next = path[index + 1];
+            ctx.quadraticCurveTo(
+              here.px,
+              here.py,
+              (here.px + next.px) / 2,
+              (here.py + next.py) / 2
+            );
+          }
+          const last = path[path.length - 1];
+          ctx.lineTo(last.px, last.py);
+        };
+
         ctx.beginPath();
         ctx.moveTo(left, baseline);
-        for (const point of drawn) ctx.lineTo(x(point.x), at(point));
+        ctx.lineTo(path[0].px, path[0].py);
+        curve();
         ctx.lineTo(width, baseline);
         ctx.closePath();
         ctx.fillStyle = palette.husk;
@@ -373,12 +394,8 @@ export default function ConversationContour({
 
         // Its upper edge in ink, so the shape reads as a line and not as a wash.
         ctx.beginPath();
-        drawn.forEach((point, index) => {
-          const px = x(point.x);
-          const py = at(point);
-          if (index === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
+        ctx.moveTo(path[0].px, path[0].py);
+        curve();
         ctx.strokeStyle = palette.ink;
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.55;
