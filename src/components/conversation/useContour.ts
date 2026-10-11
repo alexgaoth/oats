@@ -72,27 +72,34 @@ function utterancesFor(segments: TranscriptSegment[]) {
 const LEVEL_HISTORY_SECONDS = 660;
 
 /**
- * The microphone level, one peak per second, for as long as a recording runs.
+ * The microphone level, one RMS per second, for as long as a recording runs.
+ *
+ * The RMS rather than the peak: the peak of a spoken second is nearly always
+ * near the top, so the live line drew every turn as a flat block. The RMS
+ * drops for a second that holds a pause or a soft word.
  *
  * Read from the 10Hz level `MeetingRecordingMount` already publishes, through a
  * store subscription rather than a selector: the samples feed the once-a-second
  * redraw and must not re-render anything ten times a second themselves.
  */
 function useLevelHistory(recording: boolean) {
-  const history = useRef<{ at: number; level: number }[]>([]);
+  const history = useRef<{ at: number; level: number; sumSq: number; n: number }[]>([]);
   useEffect(() => {
     history.current = [];
     if (!recording) return;
     return useMeetingRecordingStore.subscribe((state, previous) => {
       if (state.currentMicLevel === previous.currentMicLevel) return;
+      const level = state.currentMicLevel;
       const second = Math.floor(Date.now() / LIVE_BUCKET_MS) * LIVE_BUCKET_MS;
       const list = history.current;
       const last = list[list.length - 1];
       if (last && last.at === second) {
-        last.level = Math.max(last.level, state.currentMicLevel);
+        last.sumSq += level * level;
+        last.n += 1;
+        last.level = Math.sqrt(last.sumSq / last.n);
         return;
       }
-      list.push({ at: second, level: state.currentMicLevel });
+      list.push({ at: second, level, sumSq: level * level, n: 1 });
       if (list.length > LEVEL_HISTORY_SECONDS) list.splice(0, list.length - LEVEL_HISTORY_SECONDS);
     });
   }, [recording]);

@@ -398,9 +398,11 @@ function percentile(values, p) {
 }
 
 /**
- * The microphone's range in this room: its quiet (20th percentile) and its
- * talking (90th), learned from the session's recent history. A fixed scale
- * draws a quiet microphone as silence and a hot one as a solid block.
+ * The microphone's range in this room: its quiet (20th percentile, the room
+ * tone) and its loudest speech (97th), learned from the session's recent
+ * history. A fixed scale draws a quiet microphone as silence and a hot one as
+ * a solid block. The top is the loudest speech rather than typical speech, so
+ * ordinary talking sits in the middle of the range and has room to move.
  */
 export function levelScale(levels) {
   const recent = (Array.isArray(levels) ? levels : [])
@@ -408,10 +410,22 @@ export function levelScale(levels) {
     .map((sample) => sample?.level)
     .filter((level) => Number.isFinite(level));
   const floor = percentile(recent, 0.2);
-  const loud = percentile(recent, 0.9);
+  const loud = percentile(recent, 0.97);
   // A minimum range, so a session of pure room tone stays flat.
   return { floor, range: Math.max(loud - floor, 0.01) };
 }
+
+/**
+ * The least a second with words in it draws at, above QUIET_THRESHOLD: a far
+ * or soft voice is still speech, and must not read as a silence.
+ */
+const LIVE_SPEECH_FLOOR = 0.22;
+
+/**
+ * Loudness above the room tone, raised to this power. Under 1 it lifts soft
+ * speech a little, the way hearing does, without flattening the loud end.
+ */
+const LOUDNESS_CURVE = 0.8;
 
 /**
  * The live contour: the last four minutes of a recording, one bucket per
@@ -502,30 +516,46 @@ export function buildLiveContour({
     spread(now - durationMs, weight, durationMs);
   }
 
-  // 2. The microphone, as a share of the room's range.
+  // 2. The microphone: how loud each second was, as its RMS above the room
+  //    tone. The mean, not the peak: a second that holds a pause or a soft
+  //    word draws lower than one of full speech, which is what makes the line
+  //    look like the conversation. The peak of a second filled nearly every
+  //    spoken second to the top, so a turn drew as a flat block.
   const { floor, range } = levelScale(levels);
-  const loud = new Array(count).fill(0);
+  const power = new Array(count).fill(0);
+  const heard = new Array(count).fill(0);
   for (const sample of Array.isArray(levels) ? levels : []) {
     if (!Number.isFinite(sample?.at) || !Number.isFinite(sample?.level)) continue;
     if (sample.at < session) continue;
     const index = bucketOf(sample.at);
     if (index < 0 || index >= count) continue;
-    loud[index] = Math.max(loud[index], clamp01((sample.level - floor) / range));
+    power[index] += sample.level * sample.level;
+    heard[index] += 1;
   }
 
-  // 3. The larger of the two per second, smoothed over its neighbours.
+  // 3. Each second's height. Where the microphone was heard, its loudness is
+  //    the height and the transcript only keeps speech from reading as a
+  //    silence. Words spread evenly over a segment have no shape of their own:
+  //    as the height they drew every turn as the same flat block. Where there
+  //    is no level (a transcript alone), words per second are the height.
   const bucketSeconds = LIVE_BUCKET_MS / 1000;
-  const combined = words.map((total, index) =>
-    Math.max(clamp01(total / bucketSeconds / LIVE_FULL_SCALE_WPS), loud[index])
-  );
+  const combined = words.map((total, index) => {
+    const spoken = clamp01(total / bucketSeconds / LIVE_FULL_SCALE_WPS);
+    if (!heard[index]) return spoken;
+    const rms = Math.sqrt(power[index] / heard[index]);
+    const loudness = Math.pow(clamp01((rms - floor) / range), LOUDNESS_CURVE);
+    return total > 0 ? Math.max(loudness, Math.min(spoken, LIVE_SPEECH_FLOOR)) : loudness;
+  });
+  // Lightly smoothed (1-2-1), so phrases keep their shape.
   const points = combined.map((_, index) => {
     let total = 0;
     let used = 0;
-    for (let offset = -SMOOTHING; offset <= SMOOTHING; offset += 1) {
+    for (let offset = -1; offset <= 1; offset += 1) {
       const neighbour = index + offset;
       if (neighbour < 0 || neighbour >= count || before(neighbour)) continue;
-      total += combined[neighbour];
-      used += 1;
+      const weight = offset === 0 ? 2 : 1;
+      total += combined[neighbour] * weight;
+      used += weight;
     }
     const value = used ? total / used : 0;
     return {

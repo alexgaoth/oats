@@ -436,6 +436,82 @@ test("the microphone level moves the trace before anything is transcribed", () =
   assert.equal(contour.points[200].y, 0);
 });
 
+// The live line's height is how loud each second was. Words spread evenly over
+// a segment have no shape of their own: as the height they drew every turn as
+// the same flat block, which read as a machine and not as a conversation.
+const ROOM_TONE = 0.004;
+function talking(loudness) {
+  // Two minutes of room tone, then one level per second for the talk.
+  const levels = [];
+  for (let second = 120; second > loudness.length; second -= 1) {
+    levels.push({ at: LIVE_NOW - second * SECOND, level: ROOM_TONE });
+  }
+  loudness.forEach((level, index) => {
+    levels.push({ at: LIVE_NOW - (loudness.length - index) * SECOND, level });
+  });
+  return levels;
+}
+const STEADY_TALK = {
+  // 26 words over 10 s: an even 2.6 words a second, the rate the old line drew flat.
+  text: Array.from({ length: 26 }, () => "word").join(" "),
+  timestamp: LIVE_NOW - 10 * SECOND,
+  durationMs: 10 * SECOND,
+};
+
+test("with the microphone, loudness sets the height, so a turn is not a flat block", () => {
+  // Two phrases: each rises, peaks and falls away, with a breath between.
+  const loudness = [0.06, 0.12, 0.2, 0.15, 0.07, 0.03, 0.09, 0.18, 0.13, 0.06];
+  const contour = buildLiveContour({
+    utterances: [STEADY_TALK],
+    levels: talking(loudness),
+    now: LIVE_NOW,
+    startedAt: LIVE_NOW - 5 * MINUTE,
+  });
+  const turn = contour.points.slice(230, 239).map((point) => point.y);
+  const mean = turn.reduce((a, b) => a + b, 0) / turn.length;
+  const spread = Math.sqrt(turn.reduce((a, b) => a + (b - mean) ** 2, 0) / turn.length);
+  assert.ok(spread > 0.08, `the turn should rise and fall, spread ${spread.toFixed(3)}`);
+  assert.ok(Math.max(...turn) - Math.min(...turn) > 0.2);
+});
+
+test("a louder second draws higher than a softer one with the same words", () => {
+  const soft = buildLiveContour({
+    utterances: [STEADY_TALK],
+    levels: talking(Array(10).fill(0.05)),
+    now: LIVE_NOW,
+    startedAt: LIVE_NOW - 5 * MINUTE,
+  });
+  const loud = buildLiveContour({
+    utterances: [STEADY_TALK],
+    levels: talking([...Array(5).fill(0.05), ...Array(5).fill(0.2)]),
+    now: LIVE_NOW,
+    startedAt: LIVE_NOW - 5 * MINUTE,
+  });
+  assert.ok(loud.points[237].y > loud.points[232].y + 0.2);
+  // The scale is the room's own: the soft half is not the top of the range.
+  assert.ok(loud.points[232].y < soft.points[232].y);
+});
+
+test("a spoken second never draws as a silence, however quiet the microphone", () => {
+  const contour = buildLiveContour({
+    utterances: [STEADY_TALK],
+    levels: talking(Array(10).fill(ROOM_TONE)),
+    now: LIVE_NOW,
+    startedAt: LIVE_NOW - 5 * MINUTE,
+  });
+  const inside = contour.points.slice(232, 238);
+  assert.ok(inside.every((point) => point.y > QUIET_THRESHOLD && !point.quiet));
+});
+
+test("room tone with nobody talking draws flat", () => {
+  const contour = buildLiveContour({
+    levels: talking([]),
+    now: LIVE_NOW,
+    startedAt: LIVE_NOW - 5 * MINUTE,
+  });
+  assert.ok(contour.points.every((point) => point.y === 0));
+});
+
 test("the scale is fixed, so a loud moment leaving the window rescales nothing", () => {
   const steady = {
     text: "a steady sentence of moderate length",
