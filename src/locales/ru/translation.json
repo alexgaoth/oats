@@ -2025,6 +2025,16 @@
       "markedCount_few": "{{count}} отмеченных момента",
       "markedCount_many": "{{count}} отмеченных моментов",
       "markedCount_other": "{{count}} отмеченного момента",
+      "outcomes": {
+        "questions_one": "{{count}} вопрос",
+        "questions_few": "{{count}} вопроса",
+        "questions_many": "{{count}} вопросов",
+        "questions_other": "{{count}} вопроса",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_few": "{{outcome}}: {{count}}",
+        "item_many": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Копировать",
       "copied": "Скопировано",
       "vaultSaved": "В хранилище",

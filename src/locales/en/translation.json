@@ -2007,6 +2007,12 @@
       "matchRelated": "Related",
       "markedCount_one": "{{count}} marked moment",
       "markedCount_other": "{{count}} marked moments",
+      "outcomes": {
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions",
+        "item_one": "{{count}} {{outcome, lowercase}}",
+        "item_other": "{{count}} {{outcome, lowercase}}"
+      },
       "copy": "Copy",
       "copied": "Copied",
       "vaultSaved": "In vault",

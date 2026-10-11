@@ -2007,6 +2007,12 @@
       "matchRelated": "Connexe",
       "markedCount_one": "{{count}} moment marqué",
       "markedCount_other": "{{count}} moments marqués",
+      "outcomes": {
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions",
+        "item_one": "{{outcome}} : {{count}}",
+        "item_other": "{{outcome}} : {{count}}"
+      },
       "copy": "Copier",
       "copied": "Copié",
       "vaultSaved": "Dans le coffre",

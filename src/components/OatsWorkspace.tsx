@@ -93,7 +93,7 @@ import {
 } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { speakerText } from "../utils/speakerLabel";
-import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
+import { buildReview, questionOutcomes, questionTurns } from "../helpers/conversationReview.mjs";
 import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
   momentSegment,
@@ -1615,6 +1615,9 @@ function IntelligenceViews({
                 </MetaItem>
               )}
             </div>
+            {/* What was asked and how it came out, in the marks the transcript's
+                margin draws. */}
+            <QuestionOutcomes events={events} />
           </div>
 
           {/* What the last conversation on this subject left unfinished. Shown
@@ -2748,6 +2751,38 @@ function MetaItem({
       <Icon aria-hidden="true" className="size-4 shrink-0" />
       {children}
     </span>
+  );
+}
+
+/**
+ * How the questions came out: how many were asked, then each outcome that
+ * occurred with its count and its mark. Counted from the stored events by the
+ * rule the transcript's margin marks use, so the line and the marks agree.
+ * A conversation with no questions shows nothing, not "0 questions".
+ */
+function QuestionOutcomes({ events }: { events: ConversationEvent[] }) {
+  const { t } = useTranslation();
+  const tally = useMemo(() => questionOutcomes(events), [events]);
+  if (!tally.total) return null;
+  return (
+    <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] tabular-nums text-muted-foreground">
+      <li className="font-medium text-foreground">
+        {t("oats.intelligence.outcomes.questions", { count: tally.total })}
+      </li>
+      {tally.outcomes.map(({ outcome, count }) => {
+        // No verdict is the transcript's `asked`: an empty ring.
+        const state = (outcome === "open" ? "asked" : outcome) as QuestionOutcome;
+        return (
+          <li key={outcome} className="flex items-center gap-1.5">
+            <StateMark state={state} className="" />
+            {t("oats.intelligence.outcomes.item", {
+              count,
+              outcome: t(`questionCard.state.${state}`),
+            })}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

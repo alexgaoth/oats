@@ -2007,6 +2007,12 @@
       "matchRelated": "Verwandt",
       "markedCount_one": "{{count}} markierter Moment",
       "markedCount_other": "{{count}} markierte Momente",
+      "outcomes": {
+        "questions_one": "{{count}} Frage",
+        "questions_other": "{{count}} Fragen",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Kopieren",
       "copied": "Kopiert",
       "vaultSaved": "Im Tresor",
