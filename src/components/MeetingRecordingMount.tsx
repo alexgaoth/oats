@@ -42,28 +42,29 @@ export default function MeetingRecordingMount(): null {
   useEffect(() => {
     if (!isRecording) return;
 
-    let rafId = 0;
+    let timer = 0;
     let smoothed = 0;
     let buf = new Float32Array(256);
     let lastSoundAt = performance.now();
     let lastSoundPublishedAt = 0;
-    let lastSampleAt = 0;
 
-    const tick = (now: number) => {
-      rafId = requestAnimationFrame(tick);
-
-      // Sampled, not run flat out.
-      //
-      // This used to read the analyser and push `currentMicLevel` into the
-      // store on **every frame** — 60 store writes a second for the whole of a
-      // conversation, waking every subscriber's selector each time, on the one
-      // surface whose premise is that nothing competes with the person in the
-      // room. Nothing renders that level any more (the meter it fed went with
-      // `ControlPanel`); its one live consumer is the dead-microphone warning,
-      // which is judged against a 30-second grace period. 10Hz is six times
-      // more resolution than that needs and a sixth of the cost.
-      if (now - lastSampleAt < MIC_SAMPLE_INTERVAL_MS) return;
-      lastSampleAt = now;
+    // Sampled, not run flat out.
+    //
+    // This used to read the analyser and push `currentMicLevel` into the
+    // store on **every frame** — 60 store writes a second for the whole of a
+    // conversation, waking every subscriber's selector each time, on the one
+    // surface whose premise is that nothing competes with the person in the
+    // room. Its consumers are the dead-microphone warning, which is judged
+    // against a 30-second grace period, and the live contour, which draws
+    // once a second. 10Hz is plenty for both.
+    //
+    // On a timer, not a requestAnimationFrame loop that skips frames: that loop
+    // still woke the page on every vsync, 120 times a second on a ProMotion
+    // display, for the whole recording. The window runs with
+    // backgroundThrottling off, so it went on doing so minimized or closed to
+    // the tray, where nobody sees a frame.
+    const sample = () => {
+      const now = performance.now();
 
       const analyser = getMicAnalyser();
       if (analyser) {
@@ -112,10 +113,10 @@ export default function MeetingRecordingMount(): null {
       }
     };
 
-    rafId = requestAnimationFrame(tick);
+    timer = window.setInterval(sample, MIC_SAMPLE_INTERVAL_MS);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      window.clearInterval(timer);
       useMeetingRecordingStore.setState({ currentMicLevel: 0, micSilentSince: null });
     };
   }, [isRecording]);
