@@ -1998,6 +1998,13 @@
       "plusRelated_other": "{{count}} más podrían estar relacionadas",
       "searchResults_one": "{{count}} conversación coincide",
       "searchResults_other": "{{count}} conversaciones coinciden",
+      "search": {
+        "matches_one": "{{count}} coincidencia",
+        "matches_other": "{{count}} coincidencias",
+        "conversations_one": "{{count}} conversación",
+        "conversations_other": "{{count}} conversaciones",
+        "receipt": "{{matches}} en {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Dicho",
         "note": "Tu nota",

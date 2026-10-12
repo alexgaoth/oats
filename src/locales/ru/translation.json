@@ -2014,6 +2014,17 @@
       "searchResults_few": "Найдено разговора: {{count}}",
       "searchResults_many": "Найдено разговоров: {{count}}",
       "searchResults_other": "Найдено разговоров: {{count}}",
+      "search": {
+        "matches_one": "{{count}} совпадение",
+        "matches_few": "{{count}} совпадения",
+        "matches_many": "{{count}} совпадений",
+        "matches_other": "{{count}} совпадения",
+        "conversations_one": "{{count}} разговоре",
+        "conversations_few": "{{count}} разговорах",
+        "conversations_many": "{{count}} разговорах",
+        "conversations_other": "{{count}} разговорах",
+        "receipt": "{{matches}} в {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Сказано",
         "note": "Ваша заметка",

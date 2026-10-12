@@ -92,6 +92,7 @@ import {
   withOlderMatches,
 } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
+import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import { buildReview, questionTurns } from "../helpers/conversationReview.mjs";
 import { readingExport } from "../helpers/obsidianNote.mjs";
@@ -1318,6 +1319,10 @@ function IntelligenceViews({
   const [olderNotes, setOlderNotes] = useState<NoteItem[]>([]);
   // Until the scan for this query answers, "nothing matches" is not yet true.
   const [olderPending, setOlderPending] = useState(false);
+  // How long that scan took, from the request to its answer: the main
+  // process's half of the search, for the receipt under the box. `complete`
+  // is false when the scan failed, so a count would leave the older ones out.
+  const olderScan = useRef<{ needle: string; ms: number; complete: boolean } | null>(null);
   useEffect(() => {
     const needle = query.trim();
     if (!needle) {
@@ -1331,14 +1336,18 @@ function IntelligenceViews({
     // transcript. A newer call also ends the older one's scan in main.
     const timer = window.setTimeout(() => {
       const excludeIds = heldIds ? heldIds.split(",").map(Number) : [];
+      const startedAt = performance.now();
       void Promise.resolve(window.electronAPI?.recallNotes?.(needle, { excludeIds }))
         .then((found) => {
           if (cancelled) return;
-          setOlderNotes(Array.isArray(found) ? found : []);
+          const complete = Array.isArray(found);
+          olderScan.current = { needle, ms: performance.now() - startedAt, complete };
+          setOlderNotes(complete ? found : []);
           setOlderPending(false);
         })
         .catch(() => {
           if (cancelled) return;
+          olderScan.current = { needle, ms: performance.now() - startedAt, complete: false };
           setOlderNotes([]);
           setOlderPending(false);
         });
@@ -1354,12 +1363,41 @@ function IntelligenceViews({
   // again here, so the matches for a previous query that this one no longer
   // matches drop out on the keystroke, not when the next answer lands.
   const searchable = useMemo(() => withOlderMatches(notes, olderNotes), [notes, olderNotes]);
-  const literalNotes = useMemo(() => {
+  // Timed, as the renderer's half of the search: the filter pass that made
+  // the list on screen.
+  const literal = useMemo(() => {
+    const startedAt = performance.now();
     const needle = foldText(query.trim());
-    if (!needle) return notes;
-    return searchable.filter((note) => foldedNote(note).includes(needle));
+    const matched = needle ? searchable.filter((note) => foldedNote(note).includes(needle)) : notes;
+    return { notes: matched, ms: performance.now() - startedAt };
   }, [notes, searchable, query]);
+  const literalNotes = literal.notes;
   const awaitingOlder = olderPending && query.trim().length > 0;
+
+  // The receipt under the search box: "12 matches in 4 conversations · 9 ms".
+  // It counts the literal matches the list shows and times the search that
+  // found them: the older conversations' scan in main, then the filter pass
+  // here. Related results are not matches and are not counted. It changes
+  // only when a search settles (the scan has answered for this query), so it
+  // holds still while somebody types, and it is gone once the box is empty.
+  const [receipt, setReceipt] = useState<{
+    matches: number;
+    conversations: number;
+    ms: number;
+  } | null>(null);
+  const searched = query.trim();
+  useEffect(() => {
+    if (!searched) {
+      setReceipt(null);
+      return;
+    }
+    const scan = olderScan.current;
+    if (olderPending || !scan || scan.needle !== searched) return;
+    const tally = tallyMatches(literalNotes.map(foldedNote), foldText(searched));
+    setReceipt(
+      scan.complete && tally.conversations > 0 ? { ...tally, ms: scan.ms + literal.ms } : null
+    );
+  }, [searched, olderPending, literalNotes, literal.ms]);
 
   // What the local vector index thinks the question is about.
   //
@@ -1897,6 +1935,21 @@ function IntelligenceViews({
           )}
         </div>
 
+        {/* Its line is kept while there is a query, so the list below does not
+            move when a receipt arrives or changes. */}
+        {searched && (
+          <p className="mt-2 h-4 px-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
+            {receipt &&
+              t("oats.intelligence.search.receipt", {
+                matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
+                conversations: t("oats.intelligence.search.conversations", {
+                  count: receipt.conversations,
+                }),
+                duration: formatSearchDuration(receipt.ms, i18n.language),
+              })}
+          </p>
+        )}
+
         {/* The result, announced. A screen-reader user who types should not have
             to tab into the list to learn whether anything matched. */}
         <p aria-live="polite" role="status" className="sr-only">
@@ -1926,7 +1979,7 @@ function IntelligenceViews({
         {/* With no literal hit, every row below is the index's guess, and the
             page says so before the reader takes them as findings. */}
         {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
-          <p className="mt-5 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
+          <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
             <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             {t("oats.intelligence.onlyRelated")}
           </p>
@@ -1952,7 +2005,7 @@ function IntelligenceViews({
         ) : query.trim() ? (
           // Ranked, not dated: literal matches first, then the related ones, and
           // a date heading between them would break that order.
-          <Card className="mt-5 gap-0 overflow-hidden">
+          <Card className="mt-3 gap-0 overflow-hidden">
             <ul className="divide-y divide-border">
               {recalled.map(({ note, related }) => (
                 <ConversationRow
