@@ -1998,6 +1998,13 @@
       "plusRelated_other": "{{count}} more may be related",
       "searchResults_one": "{{count}} conversation matches",
       "searchResults_other": "{{count}} conversations match",
+      "search": {
+        "matches_one": "{{count}} match",
+        "matches_other": "{{count}} matches",
+        "conversations_one": "{{count}} conversation",
+        "conversations_other": "{{count}} conversations",
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Said",
         "note": "Your note",

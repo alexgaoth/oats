@@ -1998,6 +1998,13 @@
       "plusRelated_other": "他に {{count}} 件が関連の可能性",
       "searchResults_one": "{{count}} 件の会話が一致",
       "searchResults_other": "{{count}} 件の会話が一致",
+      "search": {
+        "matches_one": "{{count}} 件の一致",
+        "matches_other": "{{count}} 件の一致",
+        "conversations_one": "{{count}} 件の会話",
+        "conversations_other": "{{count}} 件の会話",
+        "receipt": "{{conversations}}で {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "発言",
         "note": "あなたのメモ",

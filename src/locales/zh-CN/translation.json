@@ -1993,6 +1993,13 @@
       "plusRelated_other": "另有 {{count}} 个可能相关",
       "searchResults_one": "{{count}} 个对话匹配",
       "searchResults_other": "{{count}} 个对话匹配",
+      "search": {
+        "matches_one": "{{count}} 处匹配",
+        "matches_other": "{{count}} 处匹配",
+        "conversations_one": "{{count}} 个对话",
+        "conversations_other": "{{count}} 个对话",
+        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "说过",
         "note": "你的备注",

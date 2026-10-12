@@ -1998,6 +1998,13 @@
       "plusRelated_other": "{{count}} altre forse correlate",
       "searchResults_one": "{{count}} conversazione corrisponde",
       "searchResults_other": "{{count}} conversazioni corrispondono",
+      "search": {
+        "matches_one": "{{count}} corrispondenza",
+        "matches_other": "{{count}} corrispondenze",
+        "conversations_one": "{{count}} conversazione",
+        "conversations_other": "{{count}} conversazioni",
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Detto",
         "note": "La tua nota",
