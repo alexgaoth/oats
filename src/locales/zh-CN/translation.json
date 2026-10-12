@@ -1898,7 +1898,7 @@
       "contourLabel": "这场对话到目前为止的形状",
       "legend": {
         "label": "标记的含义",
-        "open": "尚无回答",
+        "open": "未解决",
         "topic": "话题切换",
         "return": "回到之前的话题",
         "marked": "标记时刻"
@@ -1977,6 +1977,13 @@
       "speakerRoom": "对方",
       "speakerN": "说话人 {{n}}",
       "nameSpeaker": "为{{speaker}}命名",
+      "talkTime": {
+        "label": "发言时长",
+        "show": "只显示{{speaker}}的发言",
+        "only": "仅{{speaker}}的发言",
+        "everyone": "显示所有人",
+        "unattributed": "未识别"
+      },
       "tabs": {
         "summary": "摘要",
         "transcript": "转录",
@@ -1993,6 +2000,13 @@
       "plusRelated_other": "另有 {{count}} 个可能相关",
       "searchResults_one": "{{count}} 个对话匹配",
       "searchResults_other": "{{count}} 个对话匹配",
+      "search": {
+        "matches_one": "{{count}} 处匹配",
+        "matches_other": "{{count}} 处匹配",
+        "conversations_one": "{{count}} 个对话",
+        "conversations_other": "{{count}} 个对话",
+        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "说过",
         "note": "你的备注",
@@ -2002,6 +2016,12 @@
       "matchRelated": "相关",
       "markedCount_one": "{{count}} 个标记时刻",
       "markedCount_other": "{{count}} 个标记时刻",
+      "outcomes": {
+        "questions_one": "{{count}} 个问题",
+        "questions_other": "{{count}} 个问题",
+        "item_one": "{{outcome}} {{count}}",
+        "item_other": "{{outcome}} {{count}}"
+      },
       "copy": "复制",
       "copied": "已复制",
       "vaultSaved": "已存入仓库",
@@ -2236,11 +2256,22 @@
       "noRecent": "还没有对话",
       "record": "新录音",
       "stop": "停止录音"
+    },
+    "trust": {
+      "onThisMac": "在这台 Mac 上",
+      "onThisComputer": "在这台电脑上",
+      "speechAndWriting": "语音和写作：{{names}}",
+      "speech": "语音：{{names}}",
+      "writing": "写作：{{names}}",
+      "yourServer": "你的服务器",
+      "modelOn": "{{model}} 运行于 {{backend}}",
+      "requests_one": "启动以来 {{count}} 次网络请求",
+      "requests_other": "启动以来 {{count}} 次网络请求"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "已提出",
+      "asked": "未解决",
       "answered": "已解答",
       "uncertain": "不确定",
       "silence": "无人应答",

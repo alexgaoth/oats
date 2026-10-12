@@ -1903,7 +1903,7 @@
       "contourLabel": "The shape of this conversation so far",
       "legend": {
         "label": "What the marks mean",
-        "open": "No answer yet",
+        "open": "Open",
         "topic": "Topic change",
         "return": "Topic revisited",
         "marked": "Marked moment"
@@ -1982,6 +1982,13 @@
       "speakerRoom": "Room",
       "speakerN": "Speaker {{n}}",
       "nameSpeaker": "Name {{speaker}}",
+      "talkTime": {
+        "label": "Talk time",
+        "show": "Show only what {{speaker}} said",
+        "only": "Only what {{speaker}} said",
+        "everyone": "Show everyone",
+        "unattributed": "Not attributed"
+      },
       "tabs": {
         "summary": "Summary",
         "transcript": "Transcript",
@@ -1998,6 +2005,13 @@
       "plusRelated_other": "{{count}} more may be related",
       "searchResults_one": "{{count}} conversation matches",
       "searchResults_other": "{{count}} conversations match",
+      "search": {
+        "matches_one": "{{count}} match",
+        "matches_other": "{{count}} matches",
+        "conversations_one": "{{count}} conversation",
+        "conversations_other": "{{count}} conversations",
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Said",
         "note": "Your note",
@@ -2007,6 +2021,12 @@
       "matchRelated": "Related",
       "markedCount_one": "{{count}} marked moment",
       "markedCount_other": "{{count}} marked moments",
+      "outcomes": {
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions",
+        "item_one": "{{count}} {{outcome, lowercase}}",
+        "item_other": "{{count}} {{outcome, lowercase}}"
+      },
       "copy": "Copy",
       "copied": "Copied",
       "vaultSaved": "In vault",
@@ -2241,11 +2261,22 @@
       "noRecent": "No conversations yet",
       "record": "New recording",
       "stop": "Stop recording"
+    },
+    "trust": {
+      "onThisMac": "On this Mac",
+      "onThisComputer": "On this computer",
+      "speechAndWriting": "Speech and writing: {{names}}",
+      "speech": "Speech: {{names}}",
+      "writing": "Writing: {{names}}",
+      "yourServer": "your server",
+      "modelOn": "{{model}} on {{backend}}",
+      "requests_one": "{{count}} network request since launch",
+      "requests_other": "{{count}} network requests since launch"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "Asked",
+      "asked": "Open",
       "answered": "Answered",
       "uncertain": "Uncertain",
       "silence": "Unanswered",

@@ -512,6 +512,15 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // How loud each second of the recording was, one byte a second as JSON
+      // (`helpers/conversationLoudness.mjs`), written at Finish so the finished
+      // contour keeps the shape the live line had: about 4.8 KB an hour.
+      // Nullable, and a note without it is drawn from its words as before.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN conversation_loudness TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS contacts (
@@ -1746,6 +1755,7 @@ class DatabaseManager {
         "expected_speaker_count",
         "conversation_topics",
         "conversation_marks",
+        "conversation_loudness",
         "sync_status",
         "deleted_at",
         "client_note_id",

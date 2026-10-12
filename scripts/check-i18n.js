@@ -27,10 +27,14 @@ function flatten(obj, prefix = "") {
   return out;
 }
 
+// By name, with any format dropped: `{{outcome, lowercase}}` and `{{outcome}}`
+// are the same value, and a language may want it lowercased where another does
+// not. A formatted placeholder used to be invisible here, so a locale could
+// lose it without a failure.
 function getPlaceholders(value) {
   if (typeof value !== "string") return [];
-  const matches = value.match(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g) || [];
-  return [...new Set(matches.map((match) => match.replace(/\{\{|\}\}/g, "").trim()))].sort();
+  const matches = value.matchAll(/\{\{\s*([a-zA-Z0-9_.-]+)\s*(?:,[^}]*)?\}\}/g);
+  return [...new Set([...matches].map((match) => match[1]))].sort();
 }
 
 function arraysEqual(a, b) {

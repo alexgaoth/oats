@@ -781,8 +781,14 @@ class ConversationAideSession {
     this.confidenceThreshold = options.confidenceThreshold ?? 0.75;
     this.silenceDelayMs = options.silenceDelayMs ?? 8000;
     this.now = options.now || Date.now;
-    this.setTimer = options.setTimer || setTimeout;
-    this.clearTimer = options.clearTimer || clearTimeout;
+    // Wrapped, never stored bare: Chromium's timers throw "Illegal invocation"
+    // when called with any `this` but the window, and these are called as
+    // methods of the session. Stored bare, every question final threw out of
+    // the store's segment handler in the app, skipping its topic tracking and
+    // checkpoint, and the silence verdict never fired. Node's timers ignore
+    // `this`, so only the app ever saw it.
+    this.setTimer = options.setTimer || ((callback, ms) => setTimeout(callback, ms));
+    this.clearTimer = options.clearTimer || ((id) => clearTimeout(id));
     this.staged = null;
     this.timer = null;
     this.utterances = [];
