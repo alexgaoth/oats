@@ -4,6 +4,7 @@ import { ChevronLeft, House, MessagesSquare, Search, Settings, Square } from "lu
 import { cn } from "../lib/utils";
 import { Kbd } from "../ui/kbd";
 import { OatsMark } from "./OatsMark";
+import { OnDeviceFooter } from "./OnDeviceFooter";
 import { SidebarGrain } from "./SidebarGrain";
 import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
@@ -151,6 +152,9 @@ export function AppSidebar({
             />
           ))}
         </nav>
+        <div className="mt-auto border-t border-sidebar-border py-3 pl-5 pr-3">
+          <OnDeviceFooter />
+        </div>
       </aside>
     );
   }
@@ -259,6 +263,7 @@ export function AppSidebar({
           disabled={recording}
           onClick={() => onNavigate("settings")}
         />
+        <OnDeviceFooter className="mt-2 pl-2" />
       </div>
     </aside>
   );
