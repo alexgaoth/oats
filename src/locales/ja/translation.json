@@ -2258,6 +2258,8 @@
     },
     "shell": {
       "sidebar": "サイドバー",
+      "showSidebar": "サイドバーを表示",
+      "hideSidebar": "サイドバーを非表示",
       "home": "ホーム",
       "conversations": "会話",
       "search": "検索",

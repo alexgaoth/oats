@@ -2258,6 +2258,8 @@
     },
     "shell": {
       "sidebar": "Barre latérale",
+      "showSidebar": "Afficher la barre latérale",
+      "hideSidebar": "Masquer la barre latérale",
       "home": "Accueil",
       "conversations": "Conversations",
       "search": "Rechercher",

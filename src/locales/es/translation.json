@@ -2258,6 +2258,8 @@
     },
     "shell": {
       "sidebar": "Barra lateral",
+      "showSidebar": "Mostrar barra lateral",
+      "hideSidebar": "Ocultar barra lateral",
       "home": "Inicio",
       "conversations": "Conversaciones",
       "search": "Buscar",
