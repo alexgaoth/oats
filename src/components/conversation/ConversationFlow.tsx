@@ -1,11 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Network, Rows3, Wand } from "lucide-react";
 import { Badge, type BadgeProps } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
-import { SegmentedControl } from "../ui/segmented";
+import { ViewSwitch } from "../ui/view-switch";
 import { cn } from "../lib/utils";
 import {
   buildThreadMap,
@@ -334,15 +334,17 @@ export default function ConversationFlow({
           {caption && <p className="text-[13px] text-muted-foreground">{caption}</p>}
           {empty && <p className="text-sm text-muted-foreground">{t("oats.flow.empty")}</p>}
         </div>
-        <SegmentedControl<ConversationFlowView>
+        {/* How topics are drawn changes what this card shows, so it is one of
+            the few choices drawn with character (DESIGN.md §2). */}
+        <ViewSwitch<ConversationFlowView>
           className="h-8"
           aria-label={t("oats.flow.viewLabel")}
           value={mode}
           onValueChange={setMode}
           options={[
-            { value: "auto", label: t("oats.flow.mode.auto") },
-            { value: "stack", label: t("oats.flow.mode.stack") },
-            { value: "graph", label: t("oats.flow.mode.graph") },
+            { value: "auto", label: t("oats.flow.mode.auto"), icon: Wand },
+            { value: "stack", label: t("oats.flow.mode.stack"), icon: Rows3 },
+            { value: "graph", label: t("oats.flow.mode.graph"), icon: Network },
           ]}
         />
       </CardHeader>

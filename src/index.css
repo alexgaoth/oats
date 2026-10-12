@@ -371,6 +371,59 @@
   }
 }
 
+/* A ViewSwitch's choice (ui/view-switch.tsx): a honey indicator that slides to
+   the chosen view. Only the choices that change what you see get one (DESIGN.md
+   §2); it moves when you choose, never at rest. */
+.oats-view-indicator {
+  background-image: linear-gradient(180deg, #f8b52e 0%, var(--color-primary) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    0 1px 2px rgb(154 91 0 / 0.3);
+  transition:
+    transform var(--motion-base) var(--ease-oats),
+    width var(--motion-base) var(--ease-oats);
+}
+
+/* The chosen view's drawing arrives once, its parts one after another. */
+.oats-view-glyph > * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: oats-glyph-in var(--motion-base) var(--ease-oats) both;
+}
+
+.oats-view-glyph > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.oats-view-glyph > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.oats-view-glyph > :nth-child(n + 4) {
+  animation-delay: 120ms;
+}
+
+@keyframes oats-glyph-in {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-view-indicator {
+    transition: none;
+  }
+
+  .oats-view-glyph > * {
+    animation: none;
+  }
+}
+
 /* One of the three stacked surfaces (§8: "the outgoing view dims to 0 as the
    incoming rises"). All three stay mounted, so the crossing is a genuine overlap
    of two live views rather than a copy of one of them — see OatsWorkspace.tsx.
