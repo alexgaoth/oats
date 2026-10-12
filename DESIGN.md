@@ -169,6 +169,10 @@ with no decorative gradient.
   right-hand edge, and redraws once a second, so the trace and every pin move one
   second to the left. Transcript speech and the microphone level both feed it,
   so it moves while somebody is talking. Its label describes the whole sitting.
+- A finished contour keeps the shape the live one had: the recording keeps how
+  loud each second was (one byte a second, `helpers/conversationLoudness.mjs`),
+  and the record and every list strip take their height from it by the live
+  rule. Conversations recorded before it was kept draw from their words.
 - The legend under a contour lists only what that contour draws, in two rows: how
   the questions ended, then the shape marks (topic change, topic revisited,
   marked moment).

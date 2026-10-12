@@ -73,6 +73,9 @@ export interface NoteItem {
   // Moments marked during the recording (see helpers/conversationMoments.mjs).
   // Optional: notes written before the column existed do not carry it.
   conversation_marks?: string | null;
+  // How loud each second was, written at Finish (helpers/conversationLoudness.mjs).
+  // Optional: absent for conversations recorded before it was kept.
+  conversation_loudness?: string | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
@@ -589,6 +592,7 @@ declare global {
           expected_speaker_count?: number | null;
           conversation_topics?: string | null;
           conversation_marks?: string | null;
+          conversation_loudness?: string | null;
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;
