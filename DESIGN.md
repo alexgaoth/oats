@@ -153,7 +153,7 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 
 ## 5. Recording surface
 
-- **Clean (default):** a status card — pulsing red dot, the elapsed time as the
+- **Clean (default):** a status card — listening red dot, the elapsed time as the
   heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
   (`M`) and **Stop** — then the contour in its own card section, then "Show what
   was said". Below it, the **conversation flow** card. Nothing on screen changes
@@ -218,8 +218,11 @@ with no decorative gradient.
 (`tw-animate-css`). Nothing moves at rest. Motion answers an action and runs once,
 in 150 to 300ms with ease-out; the grain toss and a contour drawing itself are the
 longer ones. While recording, the record dot follows the voice and the field may
-sway, capped at 30 fps and stopped when the window is unseen. Everything is still
-under `prefers-reduced-motion`.
+sway, capped at 30 fps and stopped when the window is unseen. The dot's ring is
+measured: it grows with the microphone level, read against the room's own range
+(`helpers/listeningRing.mjs`), and rests while nobody speaks. It is written to the
+element from a store subscription, never through React state. Everything is still
+under `prefers-reduced-motion`: the dot has no ring.
 
 - Buttons scale to 0.98 while pressed (`active:scale-[0.98]`), off under reduced
   motion.
