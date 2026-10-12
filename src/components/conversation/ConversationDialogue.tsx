@@ -278,9 +278,12 @@ export default function ConversationDialogue({ className }: { className?: string
               {t("oats.conversation.dialogueWaiting")}
             </p>
           )}
+          {/* Each turn is capped near 70 characters, like all reading text
+              (DESIGN.md §3). The column widens while the sidebar steps aside,
+              and a 130-character line is hard to follow back to its start. */}
           <ol className="space-y-3.5">
             {turns.map((turn) => (
-              <li key={turn.id} className="text-pretty text-sm leading-6">
+              <li key={turn.id} className="max-w-[70ch] text-pretty text-sm leading-6">
                 {/* Inter, like the record view's transcript: one transcript must
                   not have two voices on two surfaces, and mono is for machine
                   text (DESIGN.md §3). 24px leading at 14px keeps a wrapped line
@@ -310,7 +313,7 @@ export default function ConversationDialogue({ className }: { className?: string
               // browser updates the line instead of remounting it every frame.
               <li
                 key="in-progress"
-                className="text-pretty text-sm leading-6"
+                className="max-w-[70ch] text-pretty text-sm leading-6"
                 data-state="in-progress"
               >
                 {partialLabel && (
