@@ -17,6 +17,11 @@ The product rules from v1 still hold and still win over taste:
   (Clean) composition shows status and controls, not changing text.
 - **Evidence before inference.** What Oats knows for certain (marks, questions and
   how they ended) is shown above what a model wrote.
+- **Alive, not busy** (Alex, 2026-10-11). Life comes from the oat world used as
+  material (grain, field, honey, daylight) and from motion that answers what you
+  did. Nothing moves at rest, content stays plain, and character goes only to the
+  few things that matter: the frame, the main action, and the choices that change
+  what you see.
 
 ---
 
@@ -36,11 +41,14 @@ The product rules from v1 still hold and still win over taste:
 └───────────┴────────────────────────────────────────┘
 ```
 
-- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border. Top
-  52px band holds the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`)
-  and moves the window. Then the brand row, the Record button (becomes a red
-  **Stop recording** with elapsed time while live), Home / Conversations / Search,
-  the six most recent conversations, and Settings pinned at the foot.
+- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with a
+  faded texture of scattered oat grains behind it (`shell/SidebarGrain.tsx`: a
+  static pattern at 7%, brown in light mode, honey in dark). Top 52px band holds
+  the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`) and moves the
+  window. Then the brand row, the Record button (honey with depth; a red **Stop
+  recording** with elapsed time while live), Home / Conversations / Search, the six
+  most recent conversations, and Settings pinned at the foot. The page you are on
+  is a soft honey pill (`bg-primary/15`, `text-brand-ink`) with a honey icon.
 - **Header**, 52px, bottom border, the section title at `text-sm font-semibold`.
   It is a drag region; anything interactive inside it opts out.
 - **Content** scrolls inside the main column. Reading width `max-w-3xl`, gutters
@@ -71,8 +79,17 @@ semantic names (`src/index.css`, `@theme` and `.dark`).
 
 Rules:
 
-- **No gradients, no textures, no glows.** Surfaces are flat; depth comes from a
-  border and at most `shadow-xs`/`shadow-sm`.
+- **Content is flat; the frame may carry the oat world.** Cards, lists and reading
+  surfaces stay flat, with depth from a border and at most `shadow-xs`/`shadow-sm`,
+  and no glows. The oat world may dress the frame where it never sits under words:
+  the sidebar's grain texture, the field at the sidebar's foot, empty states.
+- **The main action has depth.** New recording and Start recording are honey with
+  an inner highlight and a soft honey shadow, and they sink 1px when pressed
+  (`.oats-cta` in `index.css`). They are the only controls with depth.
+- **Character for the choices that matter.** The few choices that change what you
+  see (how topics are drawn, what the recording view shows, how Intelligence lays
+  out conversations) carry a small drawing of each view and a honey indicator that
+  slides to the choice. Every other control keeps the plain shadcn look.
 - **The brand is one warm yellow-orange** (`primary`, "honey"). It marks the
   important action on a screen — New recording, Start recording, Save, Download —
   and the states that belong to it: a switch that is on, focus, selection, the
@@ -82,10 +99,10 @@ Rules:
   mode, so a warning read as the brand. Light mode uses orange-700 so warning text
   meets 4.5:1 on white.
 - **The symbol is the honey oat grain** (`shell/OatsMark.tsx`): a small 3D grain,
-  the same in light and dark mode, with no tile behind it. It spins once when the
-  app starts and again when the sidebar mark is clicked: the grain rolls on its
-  long axis, so only its groove travels while the light stays put, with a small
-  hop. No spin under reduced motion. The app icon is the same grain on a light
+  the same in light and dark mode, with no tile behind it. It is tossed once when
+  the app first comes into view and again when the sidebar mark is clicked: it
+  hops, tumbles end over end twice and lands with a small squash, while the light
+  stays put (`helpers/oatsMarkMotion.mjs`). No toss under reduced motion. The app icon is the same grain on a light
   neutral tile; every icon file comes from `src/assets/logo.svg` and the masters
   in `scripts/` via `scripts/build-brand-icons.sh`.
 - **Red means recording or danger.** It is never decoration. Idle, the record
@@ -176,8 +193,11 @@ with no decorative gradient.
 ## 7. Motion
 
 150ms ease-out for hover, focus and press; 200ms for menus and dialogs
-(`tw-animate-css`). No idle animation loops; the recording dot's ping is the one
-ambient motion, and it stops under `prefers-reduced-motion`.
+(`tw-animate-css`). Nothing moves at rest. Motion answers an action and runs once,
+in 150 to 300ms with ease-out; the grain toss and a contour drawing itself are the
+longer ones. While recording, the record dot follows the voice and the field may
+sway, capped at 30 fps and stopped when the window is unseen. Everything is still
+under `prefers-reduced-motion`.
 
 - Buttons scale to 0.98 while pressed (`active:scale-[0.98]`), off under reduced
   motion.

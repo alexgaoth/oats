@@ -2761,7 +2761,10 @@ function StartRecordingButton() {
   );
   return (
     <div className="flex flex-col items-center gap-3">
-      <Button onClick={() => void window.electronAPI?.requestToggleConversation?.()}>
+      <Button
+        className="oats-cta"
+        onClick={() => void window.electronAPI?.requestToggleConversation?.()}
+      >
         <span aria-hidden="true" className="size-2 rounded-full bg-current" />
         {t("oats.conversation.start")}
       </Button>
