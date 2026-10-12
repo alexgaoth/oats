@@ -2014,6 +2014,12 @@
       "matchRelated": "Correlato",
       "markedCount_one": "{{count}} momento segnato",
       "markedCount_other": "{{count}} momenti segnati",
+      "outcomes": {
+        "questions_one": "{{count}} domanda",
+        "questions_other": "{{count}} domande",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Copia",
       "copied": "Copiato",
       "vaultSaved": "Nel vault",

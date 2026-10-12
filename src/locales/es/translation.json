@@ -2014,6 +2014,12 @@
       "matchRelated": "Relacionado",
       "markedCount_one": "{{count}} momento marcado",
       "markedCount_other": "{{count}} momentos marcados",
+      "outcomes": {
+        "questions_one": "{{count}} pregunta",
+        "questions_other": "{{count}} preguntas",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Copiar",
       "copied": "Copiado",
       "vaultSaved": "En la bóveda",

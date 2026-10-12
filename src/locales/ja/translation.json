@@ -2014,6 +2014,12 @@
       "matchRelated": "関連",
       "markedCount_one": "マークした瞬間 {{count}} 件",
       "markedCount_other": "マークした瞬間 {{count}} 件",
+      "outcomes": {
+        "questions_one": "質問 {{count}} 件",
+        "questions_other": "質問 {{count}} 件",
+        "item_one": "{{outcome}} {{count}} 件",
+        "item_other": "{{outcome}} {{count}} 件"
+      },
       "copy": "コピー",
       "copied": "コピーしました",
       "vaultSaved": "保存しました",

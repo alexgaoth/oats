@@ -2009,6 +2009,12 @@
       "matchRelated": "相關",
       "markedCount_one": "{{count}} 個標記時刻",
       "markedCount_other": "{{count}} 個標記時刻",
+      "outcomes": {
+        "questions_one": "{{count}} 個問題",
+        "questions_other": "{{count}} 個問題",
+        "item_one": "{{outcome}} {{count}}",
+        "item_other": "{{outcome}} {{count}}"
+      },
       "copy": "複製",
       "copied": "已複製",
       "vaultSaved": "已存入儲存庫",

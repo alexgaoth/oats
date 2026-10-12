@@ -110,6 +110,37 @@ export function buildReview({ events, topics } = {}) {
   };
 }
 
+/** Settled first, open last: the order a reader scans for, and the legend's. */
+const OUTCOME_ORDER = ["answered", "denied", "uncertain", "silence", "open"];
+
+/**
+ * How the questions came out, counted: for the line under a record's title.
+ *
+ * Each question is read by `outcomeOf`, the reading the transcript's margin
+ * marks and the review use, so the counts and the marks on the same page
+ * cannot disagree. Only outcomes that occurred are listed, in a fixed order.
+ *
+ * @returns {{ total: number, outcomes: Array<{ outcome: string, count: number }> }}
+ *   `outcome` is "answered" | "denied" | "uncertain" | "silence" | "open".
+ */
+export function questionOutcomes(events) {
+  const counts = new Map();
+  let total = 0;
+  for (const node of buildConversationGraph(Array.isArray(events) ? events : [])) {
+    if (!node.question) continue;
+    total += 1;
+    const outcome = outcomeOf(node);
+    counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
+  }
+  return {
+    total,
+    outcomes: OUTCOME_ORDER.filter((outcome) => counts.has(outcome)).map((outcome) => ({
+      outcome,
+      count: counts.get(outcome),
+    })),
+  };
+}
+
 /**
  * Which turns asked a question, and how each came out — for the transcript's
  * margin. Keyed by the segment the question started in.

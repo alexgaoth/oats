@@ -100,6 +100,15 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 });
 
+// A label read inside a phrase rather than on its own: "Answered" as a status,
+// "3 answered" in a count. A string opts in with `{{outcome, lowercase}}`, so a
+// language whose word order or grammar wants the label as it is keeps it.
+// Lowercasing every label in code would misspell German, where nouns keep
+// their capital.
+i18n.services.formatter?.add("lowercase", (value, lng) =>
+  typeof value === "string" ? value.toLocaleLowerCase(lng) : value
+);
+
 // Keep <html lang> in step with the UI language. It ships as lang="en" and
 // nothing else touches it, so a screen reader read every locale with English
 // phonemes — "F8 で話す" and "F8 для записи" in an English voice. That only
