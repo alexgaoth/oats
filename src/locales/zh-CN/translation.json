@@ -1977,6 +1977,13 @@
       "speakerRoom": "对方",
       "speakerN": "说话人 {{n}}",
       "nameSpeaker": "为{{speaker}}命名",
+      "talkTime": {
+        "label": "发言时长",
+        "show": "只显示{{speaker}}的发言",
+        "only": "仅{{speaker}}的发言",
+        "everyone": "显示所有人",
+        "unattributed": "未识别"
+      },
       "tabs": {
         "summary": "摘要",
         "transcript": "转录",
@@ -1993,6 +2000,13 @@
       "plusRelated_other": "另有 {{count}} 个可能相关",
       "searchResults_one": "{{count}} 个对话匹配",
       "searchResults_other": "{{count}} 个对话匹配",
+      "search": {
+        "matches_one": "{{count}} 处匹配",
+        "matches_other": "{{count}} 处匹配",
+        "conversations_one": "{{count}} 个对话",
+        "conversations_other": "{{count}} 个对话",
+        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "说过",
         "note": "你的备注",
@@ -2002,6 +2016,12 @@
       "matchRelated": "相关",
       "markedCount_one": "{{count}} 个标记时刻",
       "markedCount_other": "{{count}} 个标记时刻",
+      "outcomes": {
+        "questions_one": "{{count}} 个问题",
+        "questions_other": "{{count}} 个问题",
+        "item_one": "{{outcome}} {{count}}",
+        "item_other": "{{outcome}} {{count}}"
+      },
       "copy": "复制",
       "copied": "已复制",
       "vaultSaved": "已存入仓库",

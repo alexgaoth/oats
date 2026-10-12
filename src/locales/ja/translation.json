@@ -1982,6 +1982,13 @@
       "speakerRoom": "相手",
       "speakerN": "話者{{n}}",
       "nameSpeaker": "{{speaker}}に名前を付ける",
+      "talkTime": {
+        "label": "発言時間",
+        "show": "{{speaker}}の発言だけを表示",
+        "only": "{{speaker}}の発言のみ",
+        "everyone": "全員を表示",
+        "unattributed": "話者未特定"
+      },
       "tabs": {
         "summary": "要約",
         "transcript": "文字起こし",
@@ -1998,6 +2005,13 @@
       "plusRelated_other": "他に {{count}} 件が関連の可能性",
       "searchResults_one": "{{count}} 件の会話が一致",
       "searchResults_other": "{{count}} 件の会話が一致",
+      "search": {
+        "matches_one": "{{count}} 件の一致",
+        "matches_other": "{{count}} 件の一致",
+        "conversations_one": "{{count}} 件の会話",
+        "conversations_other": "{{count}} 件の会話",
+        "receipt": "{{conversations}}で {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "発言",
         "note": "あなたのメモ",
@@ -2007,6 +2021,12 @@
       "matchRelated": "関連",
       "markedCount_one": "マークした瞬間 {{count}} 件",
       "markedCount_other": "マークした瞬間 {{count}} 件",
+      "outcomes": {
+        "questions_one": "質問 {{count}} 件",
+        "questions_other": "質問 {{count}} 件",
+        "item_one": "{{outcome}} {{count}} 件",
+        "item_other": "{{outcome}} {{count}} 件"
+      },
       "copy": "コピー",
       "copied": "コピーしました",
       "vaultSaved": "保存しました",

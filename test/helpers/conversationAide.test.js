@@ -989,3 +989,29 @@ test("post-loop: the final round's remaining findings, pinned", () => {
   // CJK-punctuated backchannel chains are still silence.
   assert.equal(outcome("はい。なるほど"), "silence");
 });
+
+test("the default timers are called as plain functions, as Chromium requires", () => {
+  // Chromium's setTimeout and clearTimeout throw "Illegal invocation" unless
+  // `this` is the window. These stand-ins throw the same way, so the test sees
+  // what the app saw: a question final that threw before its timer was armed.
+  const realSet = globalThis.setTimeout;
+  const realClear = globalThis.clearTimeout;
+  const strict = (real) =>
+    function (...args) {
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      return real(...args);
+    };
+  globalThis.setTimeout = strict(realSet);
+  globalThis.clearTimeout = strict(realClear);
+  try {
+    const { session } = harness();
+    assert.doesNotThrow(() => session.onFinalized({ id: "q1", text: "What is Kubernetes?" }));
+    // The next utterance clears the staged question's timer.
+    assert.doesNotThrow(() => session.onFinalized({ id: "a1", text: "I am not sure." }));
+    assert.doesNotThrow(() => session.onFinalized({ id: "q2", text: "Who designed the bridge?" }));
+    assert.doesNotThrow(() => session.onRetracted("q2"));
+  } finally {
+    globalThis.setTimeout = realSet;
+    globalThis.clearTimeout = realClear;
+  }
+});

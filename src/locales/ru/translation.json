@@ -1994,6 +1994,13 @@
       "speakerRoom": "Комната",
       "speakerN": "Собеседник {{n}}",
       "nameSpeaker": "Дать имя: {{speaker}}",
+      "talkTime": {
+        "label": "Время речи",
+        "show": "Показать только реплики: {{speaker}}",
+        "only": "Только реплики: {{speaker}}",
+        "everyone": "Показать всех",
+        "unattributed": "Не определено"
+      },
       "tabs": {
         "summary": "Резюме",
         "transcript": "Расшифровка",
@@ -2014,6 +2021,17 @@
       "searchResults_few": "Найдено разговора: {{count}}",
       "searchResults_many": "Найдено разговоров: {{count}}",
       "searchResults_other": "Найдено разговоров: {{count}}",
+      "search": {
+        "matches_one": "{{count}} совпадение",
+        "matches_few": "{{count}} совпадения",
+        "matches_many": "{{count}} совпадений",
+        "matches_other": "{{count}} совпадения",
+        "conversations_one": "{{count}} разговоре",
+        "conversations_few": "{{count}} разговорах",
+        "conversations_many": "{{count}} разговорах",
+        "conversations_other": "{{count}} разговорах",
+        "receipt": "{{matches}} в {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Сказано",
         "note": "Ваша заметка",
@@ -2025,6 +2043,16 @@
       "markedCount_few": "{{count}} отмеченных момента",
       "markedCount_many": "{{count}} отмеченных моментов",
       "markedCount_other": "{{count}} отмеченного момента",
+      "outcomes": {
+        "questions_one": "{{count}} вопрос",
+        "questions_few": "{{count}} вопроса",
+        "questions_many": "{{count}} вопросов",
+        "questions_other": "{{count}} вопроса",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_few": "{{outcome}}: {{count}}",
+        "item_many": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Копировать",
       "copied": "Скопировано",
       "vaultSaved": "В хранилище",

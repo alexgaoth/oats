@@ -195,3 +195,61 @@ test("an answered question carries its reply, verbatim, and where it was said", 
   );
   assert.equal(review.unresolved.length, 0);
 });
+
+// The line under a record's title counts what the transcript's margin marks:
+// the same reading of each question, so the two cannot disagree.
+test("question outcomes count each outcome that occurred, settled first", async () => {
+  const { questionOutcomes, questionTurns } = await import(
+    "../../src/helpers/conversationReview.mjs"
+  );
+  const a = question("who owns the migration?");
+  const b = question("what does it cost?");
+  const c = question("when does it land?");
+  const d = question("is that the median?");
+  const e = question("anyone benchmarked it?");
+  const f = question("is the board aware?");
+  const events = [
+    e,
+    a,
+    response(a, "answered"),
+    b,
+    response(b, "answered"),
+    c,
+    response(c, "denied_knowledge"),
+    d,
+    response(d, "silence"),
+    f,
+    response(f, "uncertain_response"),
+    suggestion(f),
+  ];
+  const tally = questionOutcomes(events);
+  assert.equal(tally.total, 6);
+  assert.deepEqual(tally.outcomes, [
+    { outcome: "answered", count: 2 },
+    { outcome: "denied", count: 1 },
+    { outcome: "uncertain", count: 1 },
+    { outcome: "silence", count: 1 },
+    { outcome: "open", count: 1 },
+  ]);
+  // One count per margin mark, outcome for outcome.
+  const marks = {};
+  for (const outcome of questionTurns(events).values()) marks[outcome] = (marks[outcome] ?? 0) + 1;
+  assert.deepEqual(
+    Object.fromEntries(tally.outcomes.map(({ outcome, count }) => [outcome, count])),
+    marks
+  );
+});
+
+test("question outcomes list only what occurred, and nothing for no questions", async () => {
+  const { questionOutcomes } = await import("../../src/helpers/conversationReview.mjs");
+  const a = question("who owns the migration?");
+  const b = question("what does it cost?");
+  assert.deepEqual(questionOutcomes([a, response(a, "answered"), b, response(b, "answered")]), {
+    total: 2,
+    outcomes: [{ outcome: "answered", count: 2 }],
+  });
+  // A response with no question is not a question.
+  const orphan = { ...response(a, "answered"), parentEventId: 999 };
+  assert.deepEqual(questionOutcomes([orphan]), { total: 0, outcomes: [] });
+  assert.deepEqual(questionOutcomes(null), { total: 0, outcomes: [] });
+});

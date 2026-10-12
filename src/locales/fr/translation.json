@@ -1982,6 +1982,13 @@
       "speakerRoom": "Salle",
       "speakerN": "Intervenant {{n}}",
       "nameSpeaker": "Nommer {{speaker}}",
+      "talkTime": {
+        "label": "Temps de parole",
+        "show": "Afficher seulement ce qu'a dit {{speaker}}",
+        "only": "Seulement ce qu'a dit {{speaker}}",
+        "everyone": "Afficher tout le monde",
+        "unattributed": "Non attribué"
+      },
       "tabs": {
         "summary": "Résumé",
         "transcript": "Transcription",
@@ -1998,6 +2005,13 @@
       "plusRelated_other": "{{count}} autres peut-être liées",
       "searchResults_one": "{{count}} conversation correspond",
       "searchResults_other": "{{count}} conversations correspondent",
+      "search": {
+        "matches_one": "{{count}} occurrence",
+        "matches_other": "{{count}} occurrences",
+        "conversations_one": "{{count}} conversation",
+        "conversations_other": "{{count}} conversations",
+        "receipt": "{{matches}} dans {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Dit",
         "note": "Votre note",
@@ -2007,6 +2021,12 @@
       "matchRelated": "Connexe",
       "markedCount_one": "{{count}} moment marqué",
       "markedCount_other": "{{count}} moments marqués",
+      "outcomes": {
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions",
+        "item_one": "{{outcome}} : {{count}}",
+        "item_other": "{{outcome}} : {{count}}"
+      },
       "copy": "Copier",
       "copied": "Copié",
       "vaultSaved": "Dans le coffre",
