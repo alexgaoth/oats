@@ -428,13 +428,21 @@ export default function ConversationFlow({
               <div className={cn("px-5 pb-1", compact ? "pt-3" : "pt-4")}>
                 <div ref={box} className={cn("relative w-full", compact ? "h-28" : "h-56")}>
                   {/* Edges only, in real pixels so the bow is a bow. The words
-                      are HTML: SVG text in a stretched box scales with it. */}
+                      are HTML: SVG text in a stretched box scales with it.
+
+                      Drawn at the size last measured and stretched to the box,
+                      which is the same thing at rest. While the box is still
+                      changing (the frame glides for a recording), the measure
+                      lands a frame late: at a fixed size the edges trailed the
+                      topics by a frame of the glide, tens of pixels. Stretched,
+                      their ends stay on the dots. */}
                   {size.width > 0 && (
                     <svg
                       aria-hidden="true"
-                      width={size.width}
-                      height={size.height}
+                      width="100%"
+                      height="100%"
                       viewBox={`0 0 ${size.width} ${size.height}`}
+                      preserveAspectRatio="none"
                       className="absolute inset-0 overflow-visible"
                     >
                       {[...map.links]
