@@ -348,22 +348,28 @@ test("recall returns the newest matches first, up to its limit, skipping held on
     pricing.slice(5)
   );
   // Junk options fall back rather than throw.
-  assert.equal((await db.recallNotes("pricing", { limit: "9", excludeIds: "x" })).length, 15);
+  assert.equal(
+    (await db.recallNotes("pricing", { limit: "9", excludeIds: "x", sliceMs: -1 })).length,
+    15
+  );
 });
 
 test("a newer query ends an older scan at its next pause", async (t) => {
   const db = openAt(t, freshDir(t));
   if (!db) return;
-  // Enough transcript that one scan has to pause for the main process.
-  const turns = Array.from({ length: 400 }, (_, index) => `turn ${index} about the roadmap`);
-  seedConversations(db, 120, () => transcript(...turns));
+  // A scan pauses once its time budget is spent. With no budget it pauses
+  // before every batch, so the test does not depend on how fast this machine
+  // reads: 40 conversations are three batches, so three pauses at most.
+  seedConversations(db, 40, () => transcript("turn about the roadmap"));
   let asked = 0;
   const result = await db.recallNotes("a phrase nobody said", {
+    sliceMs: 0,
+    // The first pause lets the scan read on; the second ends it.
     shouldStop: () => {
       asked += 1;
-      return true;
+      return asked >= 2;
     },
   });
-  assert.ok(asked > 0, "the scan paused at least once");
+  assert.equal(asked, 2, "the scan read on after one pause and stopped at the next");
   assert.deepEqual(result, []);
 });
