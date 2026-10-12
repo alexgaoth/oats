@@ -110,6 +110,7 @@ import {
   ledgerTime,
 } from "../helpers/ledgerDate.mjs";
 import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
+import { speakerKey, talkTime } from "../helpers/talkTime.mjs";
 import { findResumableConversation } from "../helpers/conversationResume.mjs";
 import { parseDbTimestamp } from "../helpers/dbTime.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
@@ -1274,6 +1275,12 @@ function IntelligenceViews({
   }, [selectedId, reading]);
   useEffect(() => setFindAt(0), [finding]);
 
+  // Whose turns the transcript shows, chosen in the talk-time legend: a speaker
+  // key (`talkTime.mjs`), or null for everyone. Another conversation, or the
+  // list, starts from everyone again.
+  const [speakerFilter, setSpeakerFilter] = useState<string | null>(null);
+  useEffect(() => setSpeakerFilter(null), [selectedId, reading]);
+
   // Escape: one step back towards the list, which is where every path in here
   // starts — and an open find line is the nearest step. Read from refs so the
   // listeners are registered once.
@@ -1510,6 +1517,29 @@ function IntelligenceViews({
   const storedContour = useStoredContour(selectedSegments, events, selectedTopics, selectedMoments);
   const selectedSpan = formatSpan(conversationSpanMs(selectedSegments), { locale: i18n.language });
 
+  // Who spoke for how long, and whose turns the transcript shows. The filter
+  // holds only while its speaker is still in the transcript: naming a speaker
+  // changes their key, and a filter that matched nobody would empty the page.
+  const talk = useMemo(() => talkTime(selectedSegments), [selectedSegments]);
+  const shownSpeaker = talk.speakers.find((speaker) => speaker.key === speakerFilter) ?? null;
+  const shownSegments = useMemo(
+    () =>
+      shownSpeaker
+        ? selectedSegments.filter((segment) => speakerKey(segment) === shownSpeaker.key)
+        : selectedSegments,
+    [selectedSegments, shownSpeaker]
+  );
+  // The find line counts what the transcript shows: one speaker's turns, when
+  // that is what is showing.
+  const shownFindCount = useMemo(() => {
+    if (!shownSpeaker) return findCount;
+    if (!findQuery) return 0;
+    return shownSegments.reduce(
+      (total, segment) => total + findMatches(String(segment.text ?? ""), findQuery).length,
+      0
+    );
+  }, [shownSpeaker, findCount, findQuery, shownSegments]);
+
   // Three regions — rail, list, detail — is a mail client, and DESIGN.md §1 is
   // explicit that a surface needing a third region is really two screens. So the
   // list *is* the screen until you open something, and then the reading view
@@ -1541,6 +1571,18 @@ function IntelligenceViews({
       .size;
     const openTurn = (segmentId: string | null) => {
       setLandedOnSegment(segmentId);
+      setTab("transcript");
+      // A turn somebody else said would be filtered out of the page it opens.
+      setSpeakerFilter(null);
+    };
+    // One speaker's turns, and the same press again for everyone's. Shown on
+    // the transcript, since that is what it changes.
+    const selectSpeaker = (key: string) => {
+      if (key === shownSpeaker?.key) {
+        setSpeakerFilter(null);
+        return;
+      }
+      setSpeakerFilter(key);
       setTab("transcript");
     };
     return (
@@ -1660,6 +1702,14 @@ function IntelligenceViews({
               pickLabel={(time) => clock(Math.max(0, time - (storedContour.start ?? time)))}
             />
             <ContourLegend contour={storedContour} className="mt-4" />
+            {/* Who did the talking, once Finish has told the voices apart. A
+                speaker in its legend is also the way into their turns. */}
+            <TalkTime
+              talk={talk}
+              selected={shownSpeaker?.key ?? null}
+              onSelect={selectSpeaker}
+              className="mt-4"
+            />
           </Card>
 
           <Tabs
@@ -1752,6 +1802,25 @@ function IntelligenceViews({
             </TabsContent>
 
             <TabsContent value="transcript">
+              {shownSpeaker && (
+                // Why the other turns are missing, and the way back to them.
+                <div className="mb-4 flex items-center gap-2 text-[13px] text-muted-foreground">
+                  <Users aria-hidden="true" className="size-4 shrink-0" />
+                  <span className="min-w-0 truncate">
+                    {t("oats.intelligence.talkTime.only", {
+                      speaker: speakerText(shownSpeaker.segment, t),
+                    })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-my-1 ml-auto shrink-0"
+                    onClick={() => setSpeakerFilter(null)}
+                  >
+                    {t("oats.intelligence.talkTime.everyone")}
+                  </Button>
+                </div>
+              )}
               {finding !== null && (
                 // Find in this conversation. It stays at the top of the scroll
                 // while you step through the matches.
@@ -1771,10 +1840,11 @@ function IntelligenceViews({
                         if (event.key === "Escape") {
                           event.preventDefault();
                           setFinding(null);
-                        } else if (event.key === "Enter" && findCount > 0) {
+                        } else if (event.key === "Enter" && shownFindCount > 0) {
                           event.preventDefault();
                           setFindAt(
-                            (at) => (at + (event.shiftKey ? findCount - 1 : 1)) % findCount
+                            (at) =>
+                              (at + (event.shiftKey ? shownFindCount - 1 : 1)) % shownFindCount
                           );
                         }
                       }}
@@ -1789,8 +1859,8 @@ function IntelligenceViews({
                       className="shrink-0 px-1.5 text-xs tabular-nums text-muted-foreground"
                     >
                       {findQuery
-                        ? findCount
-                          ? t("oats.find.count", { current: findAt + 1, total: findCount })
+                        ? shownFindCount
+                          ? t("oats.find.count", { current: findAt + 1, total: shownFindCount })
                           : t("oats.find.none")
                         : ""}
                     </span>
@@ -1799,8 +1869,8 @@ function IntelligenceViews({
                       size="icon-sm"
                       className="size-7"
                       aria-label={t("oats.find.previous")}
-                      disabled={!findCount}
-                      onClick={() => setFindAt((at) => (at + findCount - 1) % findCount)}
+                      disabled={!shownFindCount}
+                      onClick={() => setFindAt((at) => (at + shownFindCount - 1) % shownFindCount)}
                     >
                       <ChevronUp aria-hidden="true" />
                     </Button>
@@ -1809,8 +1879,8 @@ function IntelligenceViews({
                       size="icon-sm"
                       className="size-7"
                       aria-label={t("oats.find.next")}
-                      disabled={!findCount}
-                      onClick={() => setFindAt((at) => (at + 1) % findCount)}
+                      disabled={!shownFindCount}
+                      onClick={() => setFindAt((at) => (at + 1) % shownFindCount)}
                     >
                       <ChevronDown aria-hidden="true" />
                     </Button>
@@ -1832,7 +1902,8 @@ function IntelligenceViews({
                 scrollToId={landedOnSegment}
                 events={events}
                 moments={selectedMoments}
-                currentMatch={findQuery && findCount ? findAt : null}
+                currentMatch={findQuery && shownFindCount ? findAt : null}
+                speaker={shownSpeaker?.key ?? null}
               />
             </TabsContent>
 
@@ -2324,6 +2395,7 @@ function TranscriptView({
   events,
   moments,
   currentMatch = null,
+  speaker = null,
 }: {
   note: NoteItem;
   query: string;
@@ -2333,6 +2405,8 @@ function TranscriptView({
   moments: { id: string; at: number; note: string }[];
   /** Which highlighted match the find bar is on, or null when it is not open. */
   currentMatch?: number | null;
+  /** Only this speaker's turns (a `talkTime.mjs` key), or everyone's. */
+  speaker?: string | null;
 }) {
   const { t } = useTranslation();
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
@@ -2383,11 +2457,17 @@ function TranscriptView({
   }
 
   const startedAt = segments.find((segment) => Number.isFinite(segment.timestamp))?.timestamp;
+  // With one speaker showing, their runs keep their breaks: a turn after
+  // somebody else's starts a new run under their name, as it would unfiltered.
+  let shown = 0;
 
   return (
     <div ref={transcriptRef}>
       <ol>
         {segments.map((segment, index) => {
+          if (speaker && speakerKey(segment) !== speaker) return null;
+          const first = shown === 0;
+          shown += 1;
           const at =
             Number.isFinite(segment.timestamp) && Number.isFinite(startedAt)
               ? clock(Math.max(0, (segment.timestamp as number) - (startedAt as number)))
@@ -2403,7 +2483,7 @@ function TranscriptView({
               ref={matched ? target : undefined}
               className={cn(
                 "grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-4 rounded-md",
-                index > 0 && (newSpeaker ? "mt-5" : "mt-1.5"),
+                !first && (newSpeaker ? "mt-5" : "mt-1.5"),
                 // The turn a search landed on. Not a highlight — a semantic match
                 // has no span to highlight — but "this is the one".
                 matched && "-mx-2 bg-muted/70 px-2 py-1"
@@ -2439,6 +2519,135 @@ function TranscriptView({
           );
         })}
       </ol>
+    </div>
+  );
+}
+
+/**
+ * Neutral tones by rank, the most talk darkest. No hue: a colour here would be
+ * read as a status, and nothing about how long somebody spoke is one.
+ */
+const TALK_TONES = [
+  "bg-foreground/70",
+  "bg-muted-foreground/55",
+  "bg-muted-foreground/35",
+  "bg-muted-foreground/20",
+];
+
+/**
+ * Who did the talking: each voice's share of the speaking time as a 6px bar,
+ * and a legend of who and how much that is also the transcript's filter.
+ *
+ * Measured from each turn's place in the recording (`talkTime.mjs`) and
+ * labelled the way the transcript labels speakers, names included. One voice,
+ * or a room whose voices were never told apart, draws nothing: a bar with one
+ * part says less than no bar. Speech no voice was put on is shown apart, in
+ * the faintest tone, and is not a filter.
+ */
+function TalkTime({
+  talk,
+  selected,
+  onSelect,
+  className,
+}: {
+  talk: ReturnType<typeof talkTime>;
+  /** The speaker whose turns the transcript shows, or null for everyone. */
+  selected: string | null;
+  onSelect: (key: string) => void;
+  className?: string;
+}) {
+  const { t, i18n } = useTranslation();
+  const percent = useMemo(
+    () => new Intl.NumberFormat(i18n.language, { style: "percent" }),
+    [i18n.language]
+  );
+  if (talk.speakers.length < 2) return null;
+  const parts = [
+    ...talk.speakers.map((speaker, rank) => ({
+      key: speaker.key as string | null,
+      ms: speaker.ms,
+      percent: speaker.percent,
+      label: speakerText(speaker.segment, t) ?? "",
+      tone: TALK_TONES[Math.min(rank, TALK_TONES.length - 1)],
+    })),
+    ...(talk.unattributedMs > 0
+      ? [
+          {
+            key: null,
+            ms: talk.unattributedMs,
+            percent: talk.unattributedPercent,
+            label: t("oats.intelligence.talkTime.unattributed"),
+            tone: "bg-border",
+          },
+        ]
+      : []),
+  ];
+  return (
+    <div
+      role="group"
+      aria-label={t("oats.intelligence.talkTime.label")}
+      className={cn("space-y-2.5", className)}
+    >
+      <div aria-hidden="true" className="flex h-1.5 gap-px overflow-hidden rounded-full">
+        {parts.map((part) => (
+          <span
+            key={part.key ?? "unattributed"}
+            style={{ flexGrow: part.ms, flexBasis: 0 }}
+            className={cn(
+              "h-full min-w-px transition-opacity duration-150",
+              part.tone,
+              selected && part.key !== selected && "opacity-30"
+            )}
+          />
+        ))}
+      </div>
+      <ul className="-mx-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+        {parts.map((part) => {
+          const content = (
+            <>
+              <span
+                aria-hidden="true"
+                className={cn("h-1.5 w-3 shrink-0 rounded-full", part.tone)}
+              />
+              <span className="min-w-0 truncate">{part.label}</span>
+              {/* The measurement, set apart from a label that may end in a number. */}
+              <span className="ml-0.5 font-medium tabular-nums text-foreground">
+                {percent.format(part.percent / 100)}
+              </span>
+            </>
+          );
+          if (!part.key) {
+            return (
+              <li key="unattributed" className="flex items-center gap-1.5 px-1.5 py-0.5">
+                {content}
+              </li>
+            );
+          }
+          const key = part.key;
+          const pressed = selected === key;
+          return (
+            <li key={key}>
+              <button
+                type="button"
+                aria-pressed={pressed}
+                title={
+                  pressed
+                    ? t("oats.intelligence.talkTime.everyone")
+                    : t("oats.intelligence.talkTime.show", { speaker: part.label })
+                }
+                onClick={() => onSelect(key)}
+                className={cn(
+                  "flex max-w-60 items-center gap-1.5 rounded-md px-1.5 py-0.5 outline-none transition-colors",
+                  "hover:bg-muted/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  pressed && "bg-muted text-foreground"
+                )}
+              >
+                {content}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

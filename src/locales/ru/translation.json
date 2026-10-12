@@ -1994,6 +1994,13 @@
       "speakerRoom": "Комната",
       "speakerN": "Собеседник {{n}}",
       "nameSpeaker": "Дать имя: {{speaker}}",
+      "talkTime": {
+        "label": "Время речи",
+        "show": "Показать только реплики: {{speaker}}",
+        "only": "Только реплики: {{speaker}}",
+        "everyone": "Показать всех",
+        "unattributed": "Не определено"
+      },
       "tabs": {
         "summary": "Резюме",
         "transcript": "Расшифровка",

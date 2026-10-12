@@ -1977,6 +1977,13 @@
       "speakerRoom": "對方",
       "speakerN": "說話者 {{n}}",
       "nameSpeaker": "為{{speaker}}命名",
+      "talkTime": {
+        "label": "發言時長",
+        "show": "只顯示{{speaker}}的發言",
+        "only": "僅{{speaker}}的發言",
+        "everyone": "顯示所有人",
+        "unattributed": "未識別"
+      },
       "tabs": {
         "summary": "摘要",
         "transcript": "逐字稿",
