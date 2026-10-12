@@ -2,8 +2,10 @@ import React, {
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -28,6 +30,7 @@ import {
   MessagesSquare,
   Mic,
   MoreHorizontal,
+  PanelLeft,
   Search,
   SearchX,
   Sparkles,
@@ -89,6 +92,13 @@ import ConversationDialogue from "./conversation/ConversationDialogue";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import {
+  FOCUS_AT_REST,
+  focusApplies,
+  focusStep,
+  isSidebarKey,
+  sidebarHidden,
+} from "../helpers/recordingFocus.mjs";
+import {
   findExcerpt,
   mergeRecall,
   recallText,
@@ -97,7 +107,12 @@ import {
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
-import { buildReview, questionOutcomes, questionTurns } from "../helpers/conversationReview.mjs";
+import {
+  buildReview,
+  openQuestionCount,
+  questionOutcomes,
+  questionTurns,
+} from "../helpers/conversationReview.mjs";
 import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
   momentSegment,
@@ -299,6 +314,20 @@ async function summarizeConversation(
   );
 }
 
+/**
+ * How many questions a conversation left open, from its stored events, or null
+ * when they cannot be read. Never throws: the transcript's own write must not
+ * fail on it.
+ */
+async function countOpenQuestions(noteId: number): Promise<number | null> {
+  try {
+    const events = await window.electronAPI?.listConversationEvents?.(noteId);
+    return Array.isArray(events) ? openQuestionCount(events) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Same forgiving fingerprint comparison the lifetime graph uses; kept local here
 // rather than imported so this stays a pure view concern.
 const CARRY_OVER_THRESHOLD = 0.3;
@@ -334,8 +363,9 @@ function RecentRow({ note }: { note: NoteItem }) {
         )}
       >
         <span className="flex items-baseline gap-4">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {note.title || t("oats.untitled")}
+          <span className="flex min-w-0 flex-1 items-baseline gap-2">
+            <span className="truncate text-sm font-medium">{note.title || t("oats.untitled")}</span>
+            <OpenQuestions count={note.open_questions} />
           </span>
           <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
             {ledgerDate(note.created_at, { locale: i18n.language })}
@@ -579,7 +609,11 @@ function ConversationSurface() {
     const loudness = sittingLoudness();
     void (async () => {
       try {
+        // For the lists' open-question count. Every question has landed by
+        // now: Stop waits for the aide to write its last verdict.
+        const openQuestions = await countOpenQuestions(recordingNoteId);
         await window.electronAPI?.updateNote(recordingNoteId, {
+          ...(openQuestions === null ? {} : { open_questions: openQuestions }),
           transcript: finalTranscript,
           ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
           // Written on every press already; once more here so a press whose
@@ -765,7 +799,8 @@ function ConversationSurface() {
     <>
       <section className="oats-surface flex min-h-0 flex-1 flex-col overflow-y-auto">
         {recording ? (
-          <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-3 px-8 py-6">
+          // Capped in index.css, where the frame widens it (focus on record).
+          <div className="oats-record-column mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 px-8 py-6">
             {/* Announcements: a mark on its own, and the recording's health. */}
             <p aria-live="polite" className="sr-only">
               {markedAt !== null && sessionStartedAt !== null
@@ -3169,6 +3204,7 @@ function ConversationRow({
             <span className="truncate text-sm font-medium text-foreground">
               {note.title || t("oats.untitled")}
             </span>
+            <OpenQuestions count={note.open_questions} />
             {marked > 0 && (
               <span className="flex shrink-0 items-center gap-1 self-center text-xs tabular-nums text-muted-foreground">
                 <Bookmark aria-hidden="true" className="size-3" />
@@ -3187,6 +3223,29 @@ function ConversationRow({
         </span>
       </button>
     </li>
+  );
+}
+
+/**
+ * How many questions a conversation left open, beside its title: the empty
+ * ring the question marks use for no verdict, and a count. Stored at Finish
+ * (`notes.open_questions`), so a row draws it without reading the events.
+ * Nothing when none were left open, or for a conversation finished before the
+ * count was kept.
+ */
+function OpenQuestions({ count }: { count: number | null | undefined }) {
+  const { t } = useTranslation();
+  if (!count || count < 1) return null;
+  const said = t("oats.intelligence.openQuestions", { count });
+  return (
+    <span
+      title={said}
+      className="flex shrink-0 items-center gap-1 self-center text-xs tabular-nums text-muted-foreground"
+    >
+      <StateMark state="asked" className="" />
+      <span aria-hidden="true">{t("oats.intelligence.openCount", { count })}</span>
+      <span className="sr-only">{said}</span>
+    </span>
   );
 }
 
@@ -3349,6 +3408,67 @@ function SettingsSurface() {
         </Suspense>
       </div>
     </section>
+  );
+}
+
+/**
+ * The header's sidebar button, offered while focus on record applies
+ * (`helpers/recordingFocus.mjs`). Its own component, so a tooltip opening
+ * re-renders this button and not the whole frame, and the tooltip's state ends
+ * with the recording.
+ */
+function SidebarButton({
+  hidden,
+  sidebar,
+  sidebarId,
+  onToggle,
+}: {
+  hidden: boolean;
+  sidebar: React.RefObject<HTMLDivElement | null>;
+  sidebarId: string;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  const mac = getCachedPlatform() === "darwin";
+  const shortcut = useMemo(() => formatHotkey("CommandOrControl+\\", getCachedPlatform()), []);
+  const button = useRef<HTMLButtonElement | null>(null);
+  const [tip, setTip] = useState(false);
+  // An inert subtree cannot hold focus, so a sidebar that steps aside while it
+  // has the keyboard (Enter on New recording) would drop it on the page. This
+  // button takes it instead, quietly: the tooltip stays shut for that one
+  // focus, so nothing is said or shown beyond the button itself.
+  const handingFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (!hidden) return;
+    const active = document.activeElement;
+    if (!active || !sidebar.current?.contains(active)) return;
+    handingFocus.current = true;
+    button.current?.focus();
+    handingFocus.current = false;
+  }, [hidden, sidebar]);
+  return (
+    <Tooltip open={tip} onOpenChange={(open) => setTip(open && !handingFocus.current)}>
+      <TooltipTrigger asChild>
+        <Button
+          ref={button}
+          variant="ghost"
+          size="icon-sm"
+          className="mr-2 text-muted-foreground"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          aria-label={t("oats.shell.sidebar")}
+          aria-expanded={!hidden}
+          aria-controls={sidebarId}
+          aria-keyshortcuts={mac ? "Meta+\\" : "Control+\\"}
+          onClick={onToggle}
+        >
+          <PanelLeft aria-hidden="true" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="start">
+        {hidden ? t("oats.shell.showSidebar") : t("oats.shell.hideSidebar")}
+        <span className="ml-2 opacity-70">{shortcut}</span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -3553,6 +3673,33 @@ export default function OatsWorkspace() {
     if (recording) setSurface("conversation");
   }, [recording]);
 
+  // Focus on record: while a conversation is recorded, the sidebar steps aside
+  // and the conversation takes the window. The rules are in
+  // `helpers/recordingFocus.mjs`, and the movement is `.oats-frame` in
+  // `index.css`. The state lives here, not in a store: it lasts one recording,
+  // and nothing outside the frame needs it.
+  const [focus, dispatchFocus] = useReducer(focusStep, FOCUS_AT_REST);
+  useEffect(() => {
+    dispatchFocus({ type: "recording", recording });
+  }, [recording]);
+  const sidebarAway = sidebarHidden(focus, surface);
+  // The sidebar button and its key exist only where focus applies.
+  const sidebarToggle = focusApplies(focus, surface);
+  const toggleSidebar = useCallback(() => dispatchFocus({ type: "toggle", surface }), [surface]);
+  useEffect(() => {
+    if (!sidebarToggle) return undefined;
+    const platform = getCachedPlatform();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isSidebarKey(event, platform)) return;
+      event.preventDefault();
+      toggleSidebar();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarToggle, toggleSidebar]);
+  const sidebarId = useId();
+  const sidebarCell = useRef<HTMLDivElement | null>(null);
+
   return (
     <TooltipProvider>
       <div
@@ -3612,35 +3759,55 @@ export default function OatsWorkspace() {
           global conversation hotkey — the product's primary action, documented in
           CLAUDE.md as starting a conversation "from anywhere" — did nothing at
           all on Intelligence and Settings. */}
-        <div className="flex min-h-0 flex-1">
-          <AppSidebar
-            surface={surface}
-            settingsPage={settingsPage}
-            onSettingsPage={setSettingsPage}
-            onExitSettings={() => setSurface(lastSurface.current)}
-            onNavigate={(next) => {
-              // Settings stays closed while a conversation is live, as Cmd+, does.
-              if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
-              setSurface(next);
-            }}
-            onOpenNote={(noteId) =>
-              window.dispatchEvent(new CustomEvent("oats-open-note", { detail: noteId }))
-            }
-            onSearch={() => {
-              setSurface("intelligence");
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
-              });
-            }}
-          />
-          <div className="flex min-w-0 flex-1 flex-col">
+        <div
+          className="oats-frame min-h-0 flex-1"
+          data-sidebar={sidebarAway ? "hidden" : "shown"}
+          data-sidebar-toggle={sidebarToggle ? "" : undefined}
+        >
+          {/* Inert while it is away, so Tab cannot reach a sidebar nobody can see. */}
+          <div ref={sidebarCell} id={sidebarId} className="oats-frame-sidebar" inert={sidebarAway}>
+            <AppSidebar
+              surface={surface}
+              settingsPage={settingsPage}
+              onSettingsPage={setSettingsPage}
+              onExitSettings={() => setSurface(lastSurface.current)}
+              onNavigate={(next) => {
+                // Settings stays closed while a conversation is live, as Cmd+, does.
+                if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
+                setSurface(next);
+              }}
+              onOpenNote={(noteId) =>
+                window.dispatchEvent(new CustomEvent("oats-open-note", { detail: noteId }))
+              }
+              onSearch={() => {
+                setSurface("intelligence");
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
+                });
+              }}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col">
             {/* The window is frameless (windowConfig.js); this band and the
               sidebar's are what move it, so they take real layout rather than
               floating over content a drag region would stop being clickable. */}
             <header
-              className="flex h-[52px] shrink-0 items-center border-b border-border px-6"
+              className="flex h-[52px] shrink-0 items-center border-b border-border pr-6"
               style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
             >
+              {/* The leading inset. It holds the sidebar button while focus
+                applies, and on macOS it keeps clear of the traffic lights
+                whenever the sidebar is not under them. */}
+              <div className="oats-frame-lead">
+                {sidebarToggle && (
+                  <SidebarButton
+                    hidden={sidebarAway}
+                    sidebar={sidebarCell}
+                    sidebarId={sidebarId}
+                    onToggle={toggleSidebar}
+                  />
+                )}
+              </div>
               <h1 className="text-sm font-semibold tracking-[-0.01em]">
                 {t(SURFACE_TITLES[surface])}
               </h1>

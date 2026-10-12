@@ -67,6 +67,9 @@ export interface NoteItem {
   participants: string | null;
   diarization_enabled: number | null;
   expected_speaker_count: number | null;
+  // Questions the conversation left open, counted at Finish
+  // (helpers/conversationReview.mjs). Absent or null before it was counted.
+  open_questions?: number | null;
   // JSON topic snapshot written when a recording stops — the topic graph's
   // source (see database.js: notes.conversation_topics).
   conversation_topics: string | null;
@@ -590,6 +593,7 @@ declare global {
           participants?: string | null;
           diarization_enabled?: number | null;
           expected_speaker_count?: number | null;
+          open_questions?: number | null;
           conversation_topics?: string | null;
           conversation_marks?: string | null;
           conversation_loudness?: string | null;
