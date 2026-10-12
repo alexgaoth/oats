@@ -95,7 +95,12 @@ import {
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
-import { buildReview, questionOutcomes, questionTurns } from "../helpers/conversationReview.mjs";
+import {
+  buildReview,
+  openQuestionCount,
+  questionOutcomes,
+  questionTurns,
+} from "../helpers/conversationReview.mjs";
 import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
   momentSegment,
@@ -297,6 +302,20 @@ async function summarizeConversation(
   );
 }
 
+/**
+ * How many questions a conversation left open, from its stored events, or null
+ * when they cannot be read. Never throws: the transcript's own write must not
+ * fail on it.
+ */
+async function countOpenQuestions(noteId: number): Promise<number | null> {
+  try {
+    const events = await window.electronAPI?.listConversationEvents?.(noteId);
+    return Array.isArray(events) ? openQuestionCount(events) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Same forgiving fingerprint comparison the lifetime graph uses; kept local here
 // rather than imported so this stays a pure view concern.
 const CARRY_OVER_THRESHOLD = 0.3;
@@ -332,8 +351,9 @@ function RecentRow({ note }: { note: NoteItem }) {
         )}
       >
         <span className="flex items-baseline gap-4">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {note.title || t("oats.untitled")}
+          <span className="flex min-w-0 flex-1 items-baseline gap-2">
+            <span className="truncate text-sm font-medium">{note.title || t("oats.untitled")}</span>
+            <OpenQuestions count={note.open_questions} />
           </span>
           <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
             {ledgerDate(note.created_at, { locale: i18n.language })}
@@ -577,7 +597,11 @@ function ConversationSurface() {
     const loudness = sittingLoudness();
     void (async () => {
       try {
+        // For the lists' open-question count. Every question has landed by
+        // now: Stop waits for the aide to write its last verdict.
+        const openQuestions = await countOpenQuestions(recordingNoteId);
         await window.electronAPI?.updateNote(recordingNoteId, {
+          ...(openQuestions === null ? {} : { open_questions: openQuestions }),
           transcript: finalTranscript,
           ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
           // Written on every press already; once more here so a press whose
@@ -3154,6 +3178,7 @@ function ConversationRow({
             <span className="truncate text-sm font-medium text-foreground">
               {note.title || t("oats.untitled")}
             </span>
+            <OpenQuestions count={note.open_questions} />
             {marked > 0 && (
               <span className="flex shrink-0 items-center gap-1 self-center text-xs tabular-nums text-muted-foreground">
                 <Bookmark aria-hidden="true" className="size-3" />
@@ -3172,6 +3197,29 @@ function ConversationRow({
         </span>
       </button>
     </li>
+  );
+}
+
+/**
+ * How many questions a conversation left open, beside its title: the empty
+ * ring the question marks use for no verdict, and a count. Stored at Finish
+ * (`notes.open_questions`), so a row draws it without reading the events.
+ * Nothing when none were left open, or for a conversation finished before the
+ * count was kept.
+ */
+function OpenQuestions({ count }: { count: number | null | undefined }) {
+  const { t } = useTranslation();
+  if (!count || count < 1) return null;
+  const said = t("oats.intelligence.openQuestions", { count });
+  return (
+    <span
+      title={said}
+      className="flex shrink-0 items-center gap-1 self-center text-xs tabular-nums text-muted-foreground"
+    >
+      <StateMark state="asked" className="" />
+      <span aria-hidden="true">{t("oats.intelligence.openCount", { count })}</span>
+      <span className="sr-only">{said}</span>
+    </span>
   );
 }
 
