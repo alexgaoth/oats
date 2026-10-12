@@ -1931,6 +1931,12 @@
       "start": "Avvia registrazione",
       "shortcutAnywhere": "da qualsiasi app",
       "recordingBadge": "In registrazione",
+      "counters": {
+        "words_one": "{{count}} parola",
+        "words_other": "{{count}} parole",
+        "questions_one": "{{count}} domanda",
+        "questions_other": "{{count}} domande"
+      },
       "stop": "Interrompi",
       "recentHeading": "Conversazioni recenti",
       "viewAll": "Vedi tutte"

@@ -1933,6 +1933,16 @@
       "start": "Начать запись",
       "shortcutAnywhere": "из любого приложения",
       "recordingBadge": "Запись",
+      "counters": {
+        "words_one": "{{count}} слово",
+        "words_few": "{{count}} слова",
+        "words_many": "{{count}} слов",
+        "words_other": "{{count}} слова",
+        "questions_one": "{{count}} вопрос",
+        "questions_few": "{{count}} вопроса",
+        "questions_many": "{{count}} вопросов",
+        "questions_other": "{{count}} вопроса"
+      },
       "stop": "Остановить",
       "recentHeading": "Недавние разговоры",
       "viewAll": "Показать все"

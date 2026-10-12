@@ -304,6 +304,30 @@
   }
 }
 
+/* A counter under the recording clock that just changed: the new number rises
+   into place and fades in, once (RecordingCounters.tsx). Never on the first
+   value, and not at all under reduced motion. */
+@keyframes oats-roll {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.45em, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.oats-roll {
+  animation: oats-roll var(--motion-base) var(--ease-oats) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-roll {
+    animation: none;
+  }
+}
+
 /* The main action: honey with a little depth, and it sinks when pressed. New
    recording and Start recording are the only controls with depth (DESIGN.md §2,
    "Alive, not busy"); everything else stays flat. Unlayered, so the gradient and

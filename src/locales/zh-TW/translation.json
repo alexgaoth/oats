@@ -1926,6 +1926,12 @@
       "start": "開始錄音",
       "shortcutAnywhere": "在任何應用程式中",
       "recordingBadge": "錄音中",
+      "counters": {
+        "words_one": "{{count}} 個詞",
+        "words_other": "{{count}} 個詞",
+        "questions_one": "{{count}} 個問題",
+        "questions_other": "{{count}} 個問題"
+      },
       "stop": "停止",
       "recentHeading": "最近的對話",
       "viewAll": "查看全部"

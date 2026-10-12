@@ -157,9 +157,18 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
   (`M`) and **Stop** — then the contour in its own card section, then "Show what
   was said". Below it, the **conversation flow** card. Nothing on screen changes
-  while somebody speaks except the clock, the contour and the flow card — and the
-  flow card shows topics, not words, so it changes every few minutes, when the
-  subject does.
+  while somebody speaks except the clock, the two counters under it, the contour
+  and the flow card — and the flow card shows topics, not words, so it changes
+  every few minutes, when the subject does.
+- **Counters** (`conversation/RecordingCounters.tsx`): one muted line under the
+  clock, `13px` and `tabular-nums`: the words captured so far and the questions
+  heard so far, in this sitting (`helpers/recordingCounters.mjs`). Words are the
+  finalized segments' text, counted with `Intl.Segmenter` so Japanese and Chinese
+  count words; questions are the question cards, one per asking. Each changes only
+  when something lands, never mid-word. A number that changes rolls up once
+  (`oats-roll`, `--motion-base`), never on its first value and not under reduced
+  motion. The questions count is left out while question cards are off: a zero
+  there would be a guess.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
   talked about so far, as a **stack** (the topic now, then the most recent: state
   dot, label, state badge, returns, minutes) or a **graph** (x is when a topic was
