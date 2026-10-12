@@ -160,7 +160,7 @@ with no decorative gradient.
 
 - A question's mark has one vocabulary on every surface
   (`conversation/questionMarks.ts`), and it is always a complete circle of one
-  size: **filled** when settled (answered in `success`, nobody knew in
+  size: **filled** when settled (answered in `success`, unknown in
   `warning`), a **soft fill inside a ring** when the answer was hedged
   (`warning`), an **empty ring** when there is no verdict (`muted-foreground`).
   The fill carries the meaning without colour. On a contour the marks are

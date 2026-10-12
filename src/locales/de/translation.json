@@ -2258,8 +2258,8 @@
       "asked": "Gefragt",
       "answered": "Beantwortet",
       "uncertain": "Unsicher",
-      "silence": "Keine Antwort",
-      "denied": "Niemand wusste es"
+      "silence": "Unbeantwortet",
+      "denied": "Unbekannt"
     },
     "searched": "Gesucht",
     "dismiss": "Frage verwerfen",
