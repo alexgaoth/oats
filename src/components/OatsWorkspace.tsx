@@ -134,6 +134,7 @@ import TranscriptLagBadge from "./conversation/TranscriptLagBadge";
 import { speakerKey, talkTime } from "../helpers/talkTime.mjs";
 import { findResumableConversation } from "../helpers/conversationResume.mjs";
 import { parseDbTimestamp } from "../helpers/dbTime.mjs";
+import { newestUnlessSelected } from "../helpers/noteSelection.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
 import {
   NO_EVENTS,
@@ -1379,8 +1380,11 @@ function IntelligenceViews({
       window.removeEventListener("oats-find", find);
     };
   }, [setReading, setView]);
+  // The most recent conversation until one is chosen. An updater, not a value:
+  // on the first visit this runs in the same pass that selects the parked id,
+  // and a value would replace it (`helpers/noteSelection.mjs`).
   useEffect(() => {
-    if (notes.length && selectedId == null) setSelectedId(notes[0].id);
+    if (notes.length && selectedId == null) setSelectedId(newestUnlessSelected(notes));
   }, [notes, selectedId]);
 
   // What the list does not hold. It holds the hundred most recently updated
