@@ -1903,7 +1903,7 @@
       "contourLabel": "O formato desta conversa até agora",
       "legend": {
         "label": "O que as marcas significam",
-        "open": "Ainda sem resposta",
+        "open": "Aberta",
         "topic": "Mudança de assunto",
         "return": "Volta a um assunto anterior",
         "marked": "Momento marcado"
@@ -2276,7 +2276,7 @@
   },
   "questionCard": {
     "state": {
-      "asked": "Perguntada",
+      "asked": "Aberta",
       "answered": "Respondida",
       "uncertain": "Incerta",
       "silence": "Sem resposta",

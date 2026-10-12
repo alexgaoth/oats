@@ -1903,7 +1903,7 @@
       "contourLabel": "Die Form dieses Gesprächs bis jetzt",
       "legend": {
         "label": "Bedeutung der Markierungen",
-        "open": "Noch keine Antwort",
+        "open": "Offen",
         "topic": "Themenwechsel",
         "return": "Zurück zu einem früheren Thema",
         "marked": "Markierter Moment"
@@ -2276,7 +2276,7 @@
   },
   "questionCard": {
     "state": {
-      "asked": "Gefragt",
+      "asked": "Offen",
       "answered": "Beantwortet",
       "uncertain": "Unsicher",
       "silence": "Unbeantwortet",

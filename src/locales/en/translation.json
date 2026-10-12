@@ -1903,7 +1903,7 @@
       "contourLabel": "The shape of this conversation so far",
       "legend": {
         "label": "What the marks mean",
-        "open": "No answer yet",
+        "open": "Open",
         "topic": "Topic change",
         "return": "Topic revisited",
         "marked": "Marked moment"
@@ -2276,7 +2276,7 @@
   },
   "questionCard": {
     "state": {
-      "asked": "Asked",
+      "asked": "Open",
       "answered": "Answered",
       "uncertain": "Uncertain",
       "silence": "Unanswered",
