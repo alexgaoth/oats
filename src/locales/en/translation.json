@@ -2304,6 +2304,8 @@
   "lifetime": {
     "title": "What you keep coming back to",
     "viewMap": "Map",
+    "viewList": "List",
+    "viewLabel": "Conversations view",
     "recurring": "Recurring:",
     "inCount_one": "{{count}} conversation",
     "inCount_other": "{{count}} conversations",

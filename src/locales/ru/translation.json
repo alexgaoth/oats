@@ -2340,6 +2340,8 @@
   "lifetime": {
     "title": "К чему вы возвращаетесь",
     "viewMap": "Карта",
+    "viewList": "Список",
+    "viewLabel": "Вид разговоров",
     "recurring": "Повторяется:",
     "inCount_one": "{{count}} разговор",
     "inCount_few": "{{count}} разговора",

@@ -2299,6 +2299,8 @@
   "lifetime": {
     "title": "你反覆回到的主題",
     "viewMap": "圖譜",
+    "viewList": "列表",
+    "viewLabel": "對話顯示方式",
     "recurring": "反覆出現：",
     "inCount_one": "{{count}} 場對話",
     "inCount_other": "{{count}} 場對話",

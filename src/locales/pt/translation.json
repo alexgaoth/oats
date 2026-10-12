@@ -2304,6 +2304,8 @@
   "lifetime": {
     "title": "Aquilo a que volta sempre",
     "viewMap": "Mapa",
+    "viewList": "Lista",
+    "viewLabel": "Visualização das conversas",
     "recurring": "Recorrente:",
     "inCount_one": "{{count}} conversa",
     "inCount_other": "{{count}} conversas",

@@ -2304,6 +2304,8 @@
   "lifetime": {
     "title": "Ce sur quoi vous revenez",
     "viewMap": "Carte",
+    "viewList": "Liste",
+    "viewLabel": "Vue des conversations",
     "recurring": "Récurrent :",
     "inCount_one": "{{count}} conversation",
     "inCount_other": "{{count}} conversations",

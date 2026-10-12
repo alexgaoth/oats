@@ -2299,6 +2299,8 @@
   "lifetime": {
     "title": "你反复回到的主题",
     "viewMap": "图谱",
+    "viewList": "列表",
+    "viewLabel": "对话显示方式",
     "recurring": "反复出现：",
     "inCount_one": "{{count}} 场对话",
     "inCount_other": "{{count}} 场对话",

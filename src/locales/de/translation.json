@@ -2304,6 +2304,8 @@
   "lifetime": {
     "title": "Worauf du immer zurückkommst",
     "viewMap": "Karte",
+    "viewList": "Liste",
+    "viewLabel": "Ansicht der Gespräche",
     "recurring": "Wiederkehrend:",
     "inCount_one": "{{count}} Gespräch",
     "inCount_other": "{{count}} Gespräche",

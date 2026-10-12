@@ -2304,6 +2304,8 @@
   "lifetime": {
     "title": "Ciò a cui torni sempre",
     "viewMap": "Mappa",
+    "viewList": "Elenco",
+    "viewLabel": "Vista delle conversazioni",
     "recurring": "Ricorrente:",
     "inCount_one": "{{count}} conversazione",
     "inCount_other": "{{count}} conversazioni",
