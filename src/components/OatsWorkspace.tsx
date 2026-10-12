@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Bookmark,
   CalendarDays,
+  Captions,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -21,8 +22,6 @@ import {
   Clock,
   Copy,
   Download,
-  Eye,
-  EyeOff,
   History,
   Info,
   MessageSquarePlus,
@@ -38,6 +37,7 @@ import {
   Trash2,
   Users,
   Vault,
+  WavesHorizontal,
   Waypoints,
   X,
 } from "lucide-react";
@@ -50,6 +50,7 @@ import { Kbd } from "./ui/kbd";
 import { Input } from "./ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { ViewSwitch } from "./ui/view-switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +73,7 @@ import {
   applyConversationSpeakers,
   sittingLoudness,
 } from "../stores/meetingRecordingStore";
-import { useSettingsStore } from "../stores/settingsStore";
+import { useSettingsStore, type ConversationDetail } from "../stores/settingsStore";
 import {
   selectIsCloudNoteFormattingMode,
   selectResolvedNoteFormatting,
@@ -90,7 +91,6 @@ import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import RecordingCounters from "./conversation/RecordingCounters";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
-import { toggleConversationDetail } from "../helpers/conversationDetail.mjs";
 import {
   FOCUS_AT_REST,
   focusApplies,
@@ -908,17 +908,27 @@ function ConversationSurface() {
                 />
               </div>
 
+              {/* What the recording view shows changes the whole surface, so it is
+                  one of the few choices drawn with character (DESIGN.md §2). */}
               <div className="flex items-center justify-end border-t border-border px-3 py-1.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDetail(toggleConversationDetail(detail))}
-                >
-                  {detailed ? <EyeOff /> : <Eye />}
-                  {detailed
-                    ? t("oats.conversation.showClean")
-                    : t("oats.conversation.showDetailed")}
-                </Button>
+                <ViewSwitch<ConversationDetail>
+                  className="h-8"
+                  aria-label={t("oats.conversation.view.label")}
+                  value={detail}
+                  onValueChange={setDetail}
+                  options={[
+                    {
+                      value: "clean",
+                      label: t("oats.conversation.view.calm"),
+                      icon: WavesHorizontal,
+                    },
+                    {
+                      value: "detailed",
+                      label: t("oats.conversation.view.words"),
+                      icon: Captions,
+                    },
+                  ]}
+                />
               </div>
             </Card>
 

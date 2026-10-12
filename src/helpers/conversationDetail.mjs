@@ -23,8 +23,3 @@ export const CONVERSATION_DETAIL_VALUES = ["clean", "detailed"];
 export function resolveConversationDetail(stored) {
   return CONVERSATION_DETAIL_VALUES.includes(stored) ? stored : DEFAULT_CONVERSATION_DETAIL;
 }
-
-/** The value to store when the switch is pressed. */
-export function toggleConversationDetail(current) {
-  return resolveConversationDetail(current) === "clean" ? "detailed" : "clean";
-}

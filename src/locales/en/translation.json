@@ -1896,8 +1896,11 @@
       "title": "Make room for the conversation.",
       "subtitle": "Oats records the room, then gives you the title, summary, and threads automatically.",
       "listening": "Listening.",
-      "showDetailed": "Show what was said",
-      "showClean": "Hide what was said",
+      "view": {
+        "label": "What the recording shows",
+        "calm": "Calm",
+        "words": "Words"
+      },
       "dialogueLabel": "Detected dialogue",
       "dialogueWaiting": "Nothing heard yet.",
       "contourLabel": "The shape of this conversation so far",

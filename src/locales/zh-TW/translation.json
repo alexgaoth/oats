@@ -1891,8 +1891,11 @@
       "title": "為對話騰出空間。",
       "subtitle": "Oats 記錄現場，然後自動給出標題、摘要與話題脈絡。",
       "listening": "正在聆聽。",
-      "showDetailed": "顯示說了什麼",
-      "showClean": "隱藏說了什麼",
+      "view": {
+        "label": "錄音時顯示的內容",
+        "calm": "安靜",
+        "words": "文字"
+      },
       "dialogueLabel": "偵測到的對話",
       "dialogueWaiting": "尚未聽到任何內容。",
       "contourLabel": "這場對話到目前為止的形狀",
