@@ -2241,6 +2241,17 @@
       "noRecent": "No conversations yet",
       "record": "New recording",
       "stop": "Stop recording"
+    },
+    "trust": {
+      "onThisMac": "On this Mac",
+      "onThisComputer": "On this computer",
+      "speechAndWriting": "Speech and writing: {{names}}",
+      "speech": "Speech: {{names}}",
+      "writing": "Writing: {{names}}",
+      "yourServer": "your server",
+      "modelOn": "{{model}} on {{backend}}",
+      "requests_one": "{{count}} network request since launch",
+      "requests_other": "{{count}} network requests since launch"
     }
   },
   "questionCard": {

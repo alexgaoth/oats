@@ -2241,6 +2241,17 @@
       "noRecent": "まだ会話はありません",
       "record": "新規録音",
       "stop": "録音を停止"
+    },
+    "trust": {
+      "onThisMac": "この Mac で",
+      "onThisComputer": "このコンピューターで",
+      "speechAndWriting": "音声と文章：{{names}}",
+      "speech": "音声：{{names}}",
+      "writing": "文章：{{names}}",
+      "yourServer": "自分のサーバー",
+      "modelOn": "{{backend}} で {{model}}",
+      "requests_one": "起動後のネットワーク要求 {{count}} 件",
+      "requests_other": "起動後のネットワーク要求 {{count}} 件"
     }
   },
   "questionCard": {

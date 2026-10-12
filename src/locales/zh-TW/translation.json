@@ -2236,6 +2236,17 @@
       "noRecent": "還沒有對話",
       "record": "新錄音",
       "stop": "停止錄音"
+    },
+    "trust": {
+      "onThisMac": "在這台 Mac 上",
+      "onThisComputer": "在這台電腦上",
+      "speechAndWriting": "語音與寫作：{{names}}",
+      "speech": "語音：{{names}}",
+      "writing": "寫作：{{names}}",
+      "yourServer": "你的伺服器",
+      "modelOn": "{{model}} 執行於 {{backend}}",
+      "requests_one": "啟動以來 {{count}} 次網路請求",
+      "requests_other": "啟動以來 {{count}} 次網路請求"
     }
   },
   "questionCard": {
