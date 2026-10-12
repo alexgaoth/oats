@@ -1931,6 +1931,12 @@
       "start": "Démarrer l’enregistrement",
       "shortcutAnywhere": "depuis n’importe quelle app",
       "recordingBadge": "Enregistrement",
+      "counters": {
+        "words_one": "{{count}} mot",
+        "words_other": "{{count}} mots",
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions"
+      },
       "stop": "Arrêter",
       "recentHeading": "Conversations récentes",
       "viewAll": "Tout afficher"
