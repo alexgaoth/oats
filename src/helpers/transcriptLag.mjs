@@ -37,10 +37,12 @@
 // into the pause, the renderer counts the turn as still going. The badge's
 // smoothing (below) makes that worth a few milliseconds.
 //
-// Where it is off: a provider that streams to the cloud reports no audio
-// positions this can anchor, and Parakeet sends finals only, so its text is
-// behind by a whole turn by design. Neither sends these fields, and with no
-// measurements the badge shows nothing.
+// Where it is off. The cloud providers: OpenAI's partials carry no audio
+// position at all, and Deepgram's and AssemblyAI's are in the provider's own
+// stream clock, which would each need a map back to wall time that nothing
+// here has measured. And Parakeet, which sends finals only, so its text trails
+// a whole turn by design and a lag would measure the turn. None of them sends
+// these fields, and with no measurements the badge shows nothing.
 //
 // Pure: time comes in as arguments. Pinned by test/helpers/transcriptLag.test.js.
 
