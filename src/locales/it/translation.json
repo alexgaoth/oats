@@ -1896,8 +1896,11 @@
       "title": "Fai spazio alla conversazione.",
       "subtitle": "Oats registra la stanza, poi ti dà titolo, riepilogo e fili automaticamente.",
       "listening": "In ascolto.",
-      "showDetailed": "Mostra ciò che è stato detto",
-      "showClean": "Nascondi ciò che è stato detto",
+      "view": {
+        "label": "Cosa mostra la registrazione",
+        "calm": "Calma",
+        "words": "Parole"
+      },
       "dialogueLabel": "Dialogo rilevato",
       "dialogueWaiting": "Non è stato ancora sentito nulla.",
       "contourLabel": "La forma di questa conversazione finora",

@@ -146,16 +146,16 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 
 - **Clean (default):** a status card — pulsing red dot, the elapsed time as the
   heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
-  (`M`) and **Stop** — then the contour in its own card section, then "Show what
-  was said". Below it, the **conversation flow** card. Nothing on screen changes
-  while somebody speaks except the clock, the contour and the flow card — and the
-  flow card shows topics, not words, so it changes every few minutes, when the
-  subject does.
+  (`M`) and **Stop** — then the contour in its own card section, then the
+  **Calm / Words** view switch. Below it, the **conversation flow** card. Nothing
+  on screen changes while somebody speaks except the clock, the contour and the
+  flow card — and the flow card shows topics, not words, so it changes every few
+  minutes, when the subject does.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
   talked about so far, as a **stack** (the topic now, then the most recent: state
   dot, label, state badge, returns, minutes) or a **graph** (x is when a topic was
   first raised, y how unsettled it still is; a dashed honey curve is a return to
-  an earlier topic). A segmented control chooses Auto / Stack / Graph, and the
+  an earlier topic). A view switch chooses Auto / Stack / Graph, and the
   choice persists. Auto shows the graph only when a list would hide the shape —
   four or more topics, with two returns to earlier topics or a topic that
   branches — and says why in a one-line caption. It changes view only when two

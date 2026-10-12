@@ -1896,8 +1896,11 @@
       "title": "会話のための余白をつくる。",
       "subtitle": "Oats が場を録音し、タイトル・要約・話の筋を自動でまとめます。",
       "listening": "聞いています。",
-      "showDetailed": "発話内容を表示",
-      "showClean": "発話内容を隠す",
+      "view": {
+        "label": "録音中の表示",
+        "calm": "静か",
+        "words": "発言"
+      },
       "dialogueLabel": "検出された対話",
       "dialogueWaiting": "まだ何も聞こえていません。",
       "contourLabel": "ここまでの会話のかたち",
