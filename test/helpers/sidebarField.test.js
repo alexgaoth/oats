@@ -11,9 +11,15 @@ const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf
 const FIELD = read("src/components/shell/SidebarField.tsx");
 const SIDEBAR = read("src/components/shell/AppSidebar.tsx");
 const CSS = read("src/index.css");
+const WORKSPACE = read("src/components/OatsWorkspace.tsx");
 
-test("it sways only while a conversation is recording", () => {
-  assert.match(FIELD, /<Field live intensity=\{[\d.]+\} animate=\{recording\}/);
+test("it sways only while a conversation is recording and the sidebar is in view", () => {
+  assert.match(FIELD, /<Field live intensity=\{[\d.]+\} animate=\{recording && !away\}/);
+});
+
+test("the shell says when the sidebar has stepped aside (focus on record)", () => {
+  assert.match(WORKSPACE, /<AppSidebar[^>]*\saway=\{sidebarAway\}/);
+  assert.match(SIDEBAR, /<SidebarField away=\{away\} \/>/);
 });
 
 test("it is not drawn while the full field backdrop is on", () => {
@@ -27,5 +33,5 @@ test("it gives its height back on short windows", () => {
 
 test("it sits at the foot of the app's sidebar, under Settings", () => {
   const settings = SIDEBAR.lastIndexOf("<OnDeviceFooter");
-  assert.ok(settings > 0 && SIDEBAR.indexOf("<SidebarField />") > settings);
+  assert.ok(settings > 0 && SIDEBAR.indexOf("<SidebarField away={away} />") > settings);
 });

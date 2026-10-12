@@ -91,6 +91,7 @@ export function AppSidebar({
   settingsPage,
   onSettingsPage,
   onExitSettings,
+  away = false,
 }: {
   surface: ShellSurface;
   onNavigate: (surface: ShellSurface) => void;
@@ -99,6 +100,8 @@ export function AppSidebar({
   settingsPage: SettingsPageId;
   onSettingsPage: (page: SettingsPageId) => void;
   onExitSettings: () => void;
+  /** The sidebar has stepped aside for a recording (focus on record). */
+  away?: boolean;
 }) {
   const { t } = useTranslation();
   const recording = useMeetingRecordingStore((state) => state.isRecording);
@@ -267,8 +270,9 @@ export function AppSidebar({
         <OnDeviceFooter className="mt-2 pl-2" />
       </div>
 
-      {/* The field at the foot: still at rest, swaying while recording. */}
-      <SidebarField />
+      {/* The field at the foot: still at rest, swaying while recording, and
+          still again while the sidebar is aside, where nobody can see it. */}
+      <SidebarField away={away} />
     </aside>
   );
 }
