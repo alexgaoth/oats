@@ -1982,6 +1982,13 @@
       "speakerRoom": "相手",
       "speakerN": "話者{{n}}",
       "nameSpeaker": "{{speaker}}に名前を付ける",
+      "talkTime": {
+        "label": "発言時間",
+        "show": "{{speaker}}の発言だけを表示",
+        "only": "{{speaker}}の発言のみ",
+        "everyone": "全員を表示",
+        "unattributed": "話者未特定"
+      },
       "tabs": {
         "summary": "要約",
         "transcript": "文字起こし",
@@ -1998,6 +2005,13 @@
       "plusRelated_other": "他に {{count}} 件が関連の可能性",
       "searchResults_one": "{{count}} 件の会話が一致",
       "searchResults_other": "{{count}} 件の会話が一致",
+      "search": {
+        "matches_one": "{{count}} 件の一致",
+        "matches_other": "{{count}} 件の一致",
+        "conversations_one": "{{count}} 件の会話",
+        "conversations_other": "{{count}} 件の会話",
+        "receipt": "{{conversations}}で {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "発言",
         "note": "あなたのメモ",
@@ -2251,6 +2265,17 @@
       "noRecent": "まだ会話はありません",
       "record": "新規録音",
       "stop": "録音を停止"
+    },
+    "trust": {
+      "onThisMac": "この Mac で",
+      "onThisComputer": "このコンピューターで",
+      "speechAndWriting": "音声と文章：{{names}}",
+      "speech": "音声：{{names}}",
+      "writing": "文章：{{names}}",
+      "yourServer": "自分のサーバー",
+      "modelOn": "{{backend}} で {{model}}",
+      "requests_one": "起動後のネットワーク要求 {{count}} 件",
+      "requests_other": "起動後のネットワーク要求 {{count}} 件"
     }
   },
   "questionCard": {

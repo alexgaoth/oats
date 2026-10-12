@@ -1982,6 +1982,13 @@
       "speakerRoom": "Salle",
       "speakerN": "Intervenant {{n}}",
       "nameSpeaker": "Nommer {{speaker}}",
+      "talkTime": {
+        "label": "Temps de parole",
+        "show": "Afficher seulement ce qu'a dit {{speaker}}",
+        "only": "Seulement ce qu'a dit {{speaker}}",
+        "everyone": "Afficher tout le monde",
+        "unattributed": "Non attribué"
+      },
       "tabs": {
         "summary": "Résumé",
         "transcript": "Transcription",
@@ -1998,6 +2005,13 @@
       "plusRelated_other": "{{count}} autres peut-être liées",
       "searchResults_one": "{{count}} conversation correspond",
       "searchResults_other": "{{count}} conversations correspondent",
+      "search": {
+        "matches_one": "{{count}} occurrence",
+        "matches_other": "{{count}} occurrences",
+        "conversations_one": "{{count}} conversation",
+        "conversations_other": "{{count}} conversations",
+        "receipt": "{{matches}} dans {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Dit",
         "note": "Votre note",
@@ -2251,6 +2265,17 @@
       "noRecent": "Aucune conversation pour l’instant",
       "record": "Nouvel enregistrement",
       "stop": "Arrêter l’enregistrement"
+    },
+    "trust": {
+      "onThisMac": "Sur ce Mac",
+      "onThisComputer": "Sur cet ordinateur",
+      "speechAndWriting": "Parole et écriture : {{names}}",
+      "speech": "Parole : {{names}}",
+      "writing": "Écriture : {{names}}",
+      "yourServer": "votre serveur",
+      "modelOn": "{{model}} sur {{backend}}",
+      "requests_one": "{{count}} requête réseau depuis le lancement",
+      "requests_other": "{{count}} requêtes réseau depuis le lancement"
     }
   },
   "questionCard": {

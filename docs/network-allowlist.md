@@ -54,6 +54,38 @@ Scope limits that make this safe to state plainly:
 The exact provider hostname is controlled by that provider or by the user's
 custom endpoint. Local, LAN, and bundled-model paths do not require this access.
 
+## How the sidebar counts what leaves
+
+The foot of the sidebar shows how many requests Oats sent to another computer
+since it launched ("0 network requests since launch"). A number that misses a
+path is worse than no number, so it is shown only because every path below is
+either counted or zero by construction. `src/helpers/networkLedger.js` counts;
+`test/helpers/networkLedger.test.js` and `test/helpers/networkBoundary.test.js`
+pin the counting and the construction.
+
+Not counted, because none of it reaches another computer: loopback (127.0.0.0/8,
+`::1`, `localhost`: the local whisper, llama and Qdrant servers), unix sockets,
+and schemes that are not network requests (`file://`, `devtools://`, `data:`,
+`blob:`, `mailto:`). A LAN address is another computer and is counted.
+
+| Path                                                                                              | What uses it                                                                    | How it is counted                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Renderer requests: fetch, WebSockets, images                                                      | Provider calls made from the renderer                                           | `webRequest.onSendHeaders` on every session, attached as each session is created                                                                                                  |
+| Main-process `net.request` and `net.fetch`                                                        | Model and helper downloads (`downloadUtils.js`), proxied transcription requests | The same hook. Measured on Electron 41: these pass through the session's webRequest, once per redirect hop, and before a connection that then fails                               |
+| The updater, off unless `OATS_ENABLE_AUTO_UPDATES=true`                                           | Update checks                                                                   | The same hook, on the updater's own session                                                                                                                                       |
+| Chromium downloads                                                                                | Nothing today                                                                   | `will-download`. `session.downloadURL` is pinned unused, because webRequest does not see it                                                                                       |
+| Spellcheck dictionaries (Linux and Windows; macOS uses its own spellchecker)                      | Chromium, for a window with spellcheck on                                       | `spellcheck-dictionary-download-begin`                                                                                                                                            |
+| Node `http` and `https` in the main process                                                       | Realtime transcription sockets (`ws`), Tinfoil, the AWS SDK                     | The `http.client.request.created` diagnostics channel                                                                                                                             |
+| Node `fetch` in the main process                                                                  | AI SDK providers (Bedrock, Azure, Vertex), Tinfoil attestation                  | The `undici:request:create` diagnostics channel                                                                                                                                   |
+| A link opened in the browser                                                                      | The question search, links in Settings                                          | `shell.openExternal` is wrapped; the Linux new-window launch records itself. One link is one request: the browser makes it, but Oats chose what it carries                        |
+| Sidecars: whisper-server, llama-server, Qdrant, sherpa-onnx, ffmpeg, the echo-cancellation helper | Speech, writing, search, speakers                                               | Zero by construction: they listen on loopback and read local files. llama-server runs with `LLAMA_ARG_OFFLINE=1`, so its own downloader cannot run, and Qdrant's telemetry is off |
+| The ONNX utility process                                                                          | Embeddings and speaker models                                                   | Zero by construction: it loads only `fs`, `os`, `path` and `onnxruntime-node`                                                                                                     |
+| Raw sockets, HTTP/2, UDP, WebRTC                                                                  | Nothing                                                                         | Pinned unused, because none of the hooks above would see them                                                                                                                     |
+
+Not counted separately: the DNS lookups, proxy auto-config fetches and
+certificate checks that a counted request causes. The count lives in memory and
+starts again at zero when Oats launches.
+
 ## Release verification
 
 Before a release, capture a fresh-offline session and an online session with no

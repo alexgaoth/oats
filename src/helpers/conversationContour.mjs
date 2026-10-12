@@ -98,85 +98,16 @@ export function speechWeight(text) {
 }
 
 /**
- * Build the contour.
+ * The trace's height from words alone: speech density, with each utterance
+ * occupying the time it plausibly took to say rather than a single instant,
+ * smoothed across neighbours and scaled to the busiest moment.
  *
- * @param {object} input
- * @param {Array<{ id?: string, text?: string, timestamp?: number }>} input.utterances
- *   Finalized speech, in order.
- * @param {Array<{ id?: string, question?: string, state?: string, createdAt?: number,
- *   groupKey?: string, occurrence?: number }>} [input.questions]
- *   Question cards. Repeats keep their own entry — a re-asking is the signal.
- * @param {Array<{ id?: string, label?: string, state?: string, startedAt?: number,
- *   lastTouchedAt?: number }>} [input.topics]
- *   Topic nodes from the tracker. Their starts become the trace's notches.
- * @param {Array<{ id?: string, at?: number, note?: string }>} [input.moments]
- *   Instants somebody pressed "Mark" (`conversationMoments.mjs`). The one
- *   element not measured from the room: it is the person in it saying *this*.
- * @param {number} [input.now] End of the window. Defaults to the last event.
- * @param {number} [input.startedAt] Start of the window. Defaults to the first.
- * @returns {{ points: Array<{x: number, y: number, quiet: boolean}>,
- *   marks: Array<object>, shifts: Array<object>, returns: Array<object>,
- *   moments: Array<{ id: string, x: number, at: number, note: string }>,
- *   span: number, start: number, empty: boolean }}
- *   `start` and `span` are the window in epoch ms, so a position on the trace
- *   can be turned back into the moment it stands for.
- *   All coordinates are normalized 0..1: `x` is time, `y` is speech density.
- *   The renderer owns pixels; this owns meaning.
+ * What a conversation recorded before loudness was kept is drawn from.
  */
-export function buildContour({
-  utterances = [],
-  questions = [],
-  topics = [],
-  moments = [],
-  now,
-  startedAt,
-}) {
-  const timed = utterances
-    .filter((u) => Number.isFinite(u?.timestamp))
-    .sort((a, b) => a.timestamp - b.timestamp);
-
-  const firstAt = Number.isFinite(startedAt) ? startedAt : timed.length ? timed[0].timestamp : null;
-  const lastAt = Number.isFinite(now)
-    ? now
-    : timed.length
-      ? timed[timed.length - 1].timestamp
-      : null;
-
-  // A conversation with nothing in it yet is not an error and must not be
-  // faked. The surface draws a resting baseline and waits.
-  if (firstAt === null || lastAt === null || lastAt <= firstAt) {
-    return {
-      points: [],
-      marks: [],
-      shifts: [],
-      returns: [],
-      moments: [],
-      span: 0,
-      start: 0,
-      empty: true,
-    };
-  }
-
-  const span = lastAt - firstAt;
-  const at = (timestamp) => clamp01((timestamp - firstAt) / span);
-
-  // Speech from outside the window is dropped, not clamped onto its edge.
-  //
-  // Continuing a recent conversation seeds up to half an hour of the previous
-  // sitting's utterances into the store. With an explicit window starting at
-  // the press, clamping piled every one of them onto x=0 — and because each
-  // utterance is spread across the time it took to say, the pile then smeared
-  // across the whole trace and drew a solid slab. Questions were already
-  // dropped this way; speech has to agree with them.
-  const inWindow = timed.filter(
-    (utterance) => utterance.timestamp >= firstAt && utterance.timestamp <= lastAt
-  );
-
-  // 1. Speech density — words per unit time, with each utterance occupying the
-  //    time it plausibly took to say rather than a single instant.
+function wordPoints({ utterances, at, span }) {
   const raw = new Array(CONTOUR_RESOLUTION).fill(0);
   const bucketMs = span / CONTOUR_RESOLUTION;
-  for (const utterance of inWindow) {
+  for (const utterance of utterances) {
     const weight = speechWeight(utterance.text);
     if (weight <= 0) continue;
     const start = at(utterance.timestamp) * CONTOUR_RESOLUTION;
@@ -221,6 +152,195 @@ export function buildContour({
       quiet: normalized <= QUIET_THRESHOLD,
     };
   });
+  return points;
+}
+
+/**
+ * Each bucket of `buckets` (of `bucketMs`, from `firstAt`) that `from..to`
+ * overlaps, with how many milliseconds of it.
+ */
+function eachOverlap(firstAt, bucketMs, buckets, from, to, visit) {
+  if (!(to > from) || !(bucketMs > 0)) return;
+  const first = Math.max(0, Math.floor((from - firstAt) / bucketMs));
+  for (let index = first; index < buckets; index += 1) {
+    const bucketStart = firstAt + index * bucketMs;
+    if (bucketStart >= to) break;
+    const overlap = Math.min(bucketStart + bucketMs, to) - Math.max(bucketStart, from);
+    if (overlap > 0) visit(index, overlap);
+  }
+}
+
+/**
+ * The trace's height from how loud the recording was, by the live line's own
+ * rule (`bucketHeight`) at this contour's resolution: loudness above the room's
+ * floor is the height, words only keep speech from reading as a silence, and a
+ * stretch the microphone has no level for is drawn from its words. Lightly
+ * smoothed (1-2-1), and on a fixed scale rather than the busiest moment's.
+ *
+ * Each stored level stands for its whole second, so a bucket's loudness is the
+ * RMS over the time it covers, whatever the bucket's width: the same RMS the
+ * live line takes over a second's samples.
+ */
+function loudnessPoints({ utterances, levels, firstAt, span }) {
+  const count = CONTOUR_RESOLUTION;
+  const bucketMs = span / count;
+  const words = new Array(count).fill(0);
+  for (const utterance of utterances) {
+    const weight = speechWeight(utterance.text);
+    if (weight <= 0) continue;
+    // In-room speech carries its exact length; otherwise it took as long as
+    // its words take to say.
+    const durationMs =
+      Number.isFinite(utterance.durationMs) && utterance.durationMs > 0
+        ? utterance.durationMs
+        : (weight / WORDS_PER_SECOND) * 1000;
+    const perMs = weight / durationMs;
+    eachOverlap(
+      firstAt,
+      bucketMs,
+      count,
+      utterance.timestamp,
+      utterance.timestamp + durationMs,
+      (index, ms) => {
+        words[index] += perMs * ms;
+      }
+    );
+  }
+  const power = new Array(count).fill(0);
+  const heardMs = new Array(count).fill(0);
+  for (const sample of levels) {
+    if (!Number.isFinite(sample?.at) || !Number.isFinite(sample?.level)) continue;
+    const from = sample.at;
+    const to = sample.at + LIVE_BUCKET_MS;
+    const squared = sample.level * sample.level;
+    for (
+      let index = Math.max(0, Math.floor((from - firstAt) / bucketMs));
+      index < count;
+      index += 1
+    ) {
+      const bucketStart = firstAt + index * bucketMs;
+      if (bucketStart >= to) break;
+      const overlap = Math.min(bucketStart + bucketMs, to) - Math.max(bucketStart, from);
+      if (overlap > 0) {
+        power[index] += squared * overlap;
+        heardMs[index] += overlap;
+      }
+    }
+  }
+  // The room's range over the whole recording, not the last ten minutes.
+  const scale = levelScale(levels, Infinity);
+  const bucketSeconds = bucketMs / 1000;
+  const heights = smooth121(
+    words.map((total, index) =>
+      bucketHeight(
+        total,
+        bucketSeconds,
+        heardMs[index] ? Math.sqrt(power[index] / heardMs[index]) : null,
+        scale
+      )
+    )
+  );
+  return heights.map((value, index) => ({
+    x: round(index / (count - 1)),
+    y: round(value),
+    quiet: value <= QUIET_THRESHOLD,
+  }));
+}
+
+/**
+ * Build the contour.
+ *
+ * @param {object} input
+ * @param {Array<{ id?: string, text?: string, timestamp?: number }>} input.utterances
+ *   Finalized speech, in order.
+ * @param {Array<{ id?: string, question?: string, state?: string, createdAt?: number,
+ *   groupKey?: string, occurrence?: number }>} [input.questions]
+ *   Question cards. Repeats keep their own entry — a re-asking is the signal.
+ * @param {Array<{ id?: string, label?: string, state?: string, startedAt?: number,
+ *   lastTouchedAt?: number }>} [input.topics]
+ *   Topic nodes from the tracker. Their starts become the trace's notches.
+ * @param {Array<{ id?: string, at?: number, note?: string }>} [input.moments]
+ *   Instants somebody pressed "Mark" (`conversationMoments.mjs`). The one
+ *   element not measured from the room: it is the person in it saying *this*.
+ * @param {Array<{ at: number, level: number }>} [input.levels]
+ *   How loud each second of the recording was, as kept at Finish
+ *   (`conversationLoudness.mjs`). With them the height is loudness, the way the
+ *   live line draws it; without them (a conversation recorded before they were
+ *   kept) it is words.
+ * @param {number} [input.now] End of the window. Defaults to the last event.
+ * @param {number} [input.startedAt] Start of the window. Defaults to the first.
+ * @returns {{ points: Array<{x: number, y: number, quiet: boolean}>,
+ *   marks: Array<object>, shifts: Array<object>, returns: Array<object>,
+ *   moments: Array<{ id: string, x: number, at: number, note: string }>,
+ *   span: number, start: number, empty: boolean }}
+ *   `start` and `span` are the window in epoch ms, so a position on the trace
+ *   can be turned back into the moment it stands for.
+ *   All coordinates are normalized 0..1: `x` is time, `y` is speech density.
+ *   The renderer owns pixels; this owns meaning.
+ */
+export function buildContour({
+  utterances = [],
+  questions = [],
+  topics = [],
+  moments = [],
+  levels = [],
+  now,
+  startedAt,
+}) {
+  const timed = utterances
+    .filter((u) => Number.isFinite(u?.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const firstAt = Number.isFinite(startedAt) ? startedAt : timed.length ? timed[0].timestamp : null;
+  const lastAt = Number.isFinite(now)
+    ? now
+    : timed.length
+      ? timed[timed.length - 1].timestamp
+      : null;
+
+  // A conversation with nothing in it yet is not an error and must not be
+  // faked. The surface draws a resting baseline and waits.
+  if (firstAt === null || lastAt === null || lastAt <= firstAt) {
+    return {
+      points: [],
+      marks: [],
+      shifts: [],
+      returns: [],
+      moments: [],
+      span: 0,
+      start: 0,
+      empty: true,
+    };
+  }
+
+  const span = lastAt - firstAt;
+  const at = (timestamp) => clamp01((timestamp - firstAt) / span);
+
+  // Speech from outside the window is dropped, not clamped onto its edge.
+  //
+  // Continuing a recent conversation seeds up to half an hour of the previous
+  // sitting's utterances into the store. With an explicit window starting at
+  // the press, clamping piled every one of them onto x=0 — and because each
+  // utterance is spread across the time it took to say, the pile then smeared
+  // across the whole trace and drew a solid slab. Questions were already
+  // dropped this way; speech has to agree with them.
+  const inWindow = timed.filter(
+    (utterance) => utterance.timestamp >= firstAt && utterance.timestamp <= lastAt
+  );
+
+  // 1. The trace's height. Loudness where the recording kept it, the way the
+  //    live line draws it; words alone for a conversation recorded before
+  //    loudness was kept.
+  const heard = (Array.isArray(levels) ? levels : []).filter(
+    (sample) =>
+      Number.isFinite(sample?.at) &&
+      Number.isFinite(sample?.level) &&
+      sample.at + LIVE_BUCKET_MS > firstAt &&
+      sample.at < lastAt
+  );
+  const points = heard.length
+    ? loudnessPoints({ utterances: inWindow, levels, firstAt, span })
+    : wordPoints({ utterances: inWindow, at, span });
 
   // 2. Questions, as marks above the trace.
   const marks = questions
@@ -390,9 +510,8 @@ const LIVE_FULL_SCALE_WPS = 3;
 const LEVEL_HISTORY_SECONDS = 600;
 
 /** The p-th percentile (0..1) of a list of numbers, or 0 for none. */
-function percentile(values, p) {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
+function percentile(sorted, p) {
+  if (!sorted.length) return 0;
   const index = Math.round(p * (sorted.length - 1));
   return sorted[Math.min(sorted.length - 1, Math.max(0, index))];
 }
@@ -403,14 +522,19 @@ function percentile(values, p) {
  * history. A fixed scale draws a quiet microphone as silence and a hot one as
  * a solid block. The top is the loudest speech rather than typical speech, so
  * ordinary talking sits in the middle of the range and has room to move.
+ *
+ * A finished conversation learns it from the whole recording (`seconds`
+ * Infinity); live, from the last ten minutes.
  */
-export function levelScale(levels) {
+export function levelScale(levels, seconds = LEVEL_HISTORY_SECONDS) {
   const recent = (Array.isArray(levels) ? levels : [])
-    .slice(-LEVEL_HISTORY_SECONDS)
+    .slice(-seconds)
     .map((sample) => sample?.level)
     .filter((level) => Number.isFinite(level));
-  const floor = percentile(recent, 0.2);
-  const loud = percentile(recent, 0.97);
+  // Sorted once, numerically: a finished hour is 3600 values, not 600.
+  const sorted = Float64Array.from(recent).sort();
+  const floor = percentile(sorted, 0.2);
+  const loud = percentile(sorted, 0.97);
   // A minimum range, so a session of pure room tone stays flat.
   return { floor, range: Math.max(loud - floor, 0.01) };
 }
@@ -426,6 +550,41 @@ const LIVE_SPEECH_FLOOR = 0.22;
  * speech a little, the way hearing does, without flattening the loud end.
  */
 const LOUDNESS_CURVE = 0.8;
+
+/**
+ * One bucket's height, the live line's rule: where the microphone was heard,
+ * its loudness above the room's floor, and words only keep speech from reading
+ * as a silence; where it was not, words per second. Words spread evenly over a
+ * segment have no shape of their own: as the height they drew every turn as
+ * the same flat block.
+ *
+ * @param {number} words Words said in the bucket.
+ * @param {number} seconds The bucket's length.
+ * @param {number | null} rms The bucket's RMS level, or null when none was heard.
+ * @param {{ floor: number, range: number }} scale From `levelScale`.
+ */
+function bucketHeight(words, seconds, rms, { floor, range }) {
+  const spoken = clamp01(words / seconds / LIVE_FULL_SCALE_WPS);
+  if (rms === null) return spoken;
+  const loudness = Math.pow(clamp01((rms - floor) / range), LOUDNESS_CURVE);
+  return words > 0 ? Math.max(loudness, Math.min(spoken, LIVE_SPEECH_FLOOR)) : loudness;
+}
+
+/** Lightly smoothed (1-2-1), so phrases keep their shape. `skip` leaves a bucket out. */
+function smooth121(values, skip = () => false) {
+  return values.map((_, index) => {
+    let total = 0;
+    let used = 0;
+    for (let offset = -1; offset <= 1; offset += 1) {
+      const neighbour = index + offset;
+      if (neighbour < 0 || neighbour >= values.length || skip(neighbour)) continue;
+      const weight = offset === 0 ? 2 : 1;
+      total += values[neighbour] * weight;
+      used += weight;
+    }
+    return used ? total / used : 0;
+  });
+}
 
 /**
  * The live contour: the last four minutes of a recording, one bucket per
@@ -521,7 +680,7 @@ export function buildLiveContour({
   //    word draws lower than one of full speech, which is what makes the line
   //    look like the conversation. The peak of a second filled nearly every
   //    spoken second to the top, so a turn drew as a flat block.
-  const { floor, range } = levelScale(levels);
+  const scale = levelScale(levels);
   const power = new Array(count).fill(0);
   const heard = new Array(count).fill(0);
   for (const sample of Array.isArray(levels) ? levels : []) {
@@ -533,39 +692,24 @@ export function buildLiveContour({
     heard[index] += 1;
   }
 
-  // 3. Each second's height. Where the microphone was heard, its loudness is
-  //    the height and the transcript only keeps speech from reading as a
-  //    silence. Words spread evenly over a segment have no shape of their own:
-  //    as the height they drew every turn as the same flat block. Where there
-  //    is no level (a transcript alone), words per second are the height.
+  // 3. Each second's height (`bucketHeight`): its loudness where the
+  //    microphone was heard, words per second where it was not.
   const bucketSeconds = LIVE_BUCKET_MS / 1000;
-  const combined = words.map((total, index) => {
-    const spoken = clamp01(total / bucketSeconds / LIVE_FULL_SCALE_WPS);
-    if (!heard[index]) return spoken;
-    const rms = Math.sqrt(power[index] / heard[index]);
-    const loudness = Math.pow(clamp01((rms - floor) / range), LOUDNESS_CURVE);
-    return total > 0 ? Math.max(loudness, Math.min(spoken, LIVE_SPEECH_FLOOR)) : loudness;
-  });
-  // Lightly smoothed (1-2-1), so phrases keep their shape.
-  const points = combined.map((_, index) => {
-    let total = 0;
-    let used = 0;
-    for (let offset = -1; offset <= 1; offset += 1) {
-      const neighbour = index + offset;
-      if (neighbour < 0 || neighbour >= count || before(neighbour)) continue;
-      const weight = offset === 0 ? 2 : 1;
-      total += combined[neighbour] * weight;
-      used += weight;
-    }
-    const value = used ? total / used : 0;
-    return {
-      // The centre of the second, in the same time coordinates as the marks.
-      x: round((index + 0.5) / count),
-      y: round(value),
-      quiet: value <= QUIET_THRESHOLD,
-      before: before(index),
-    };
-  });
+  const combined = words.map((total, index) =>
+    bucketHeight(
+      total,
+      bucketSeconds,
+      heard[index] ? Math.sqrt(power[index] / heard[index]) : null,
+      scale
+    )
+  );
+  const points = smooth121(combined, before).map((value, index) => ({
+    // The centre of the second, in the same time coordinates as the marks.
+    x: round((index + 0.5) / count),
+    y: round(value),
+    quiet: value <= QUIET_THRESHOLD,
+    before: before(index),
+  }));
 
   const inWindow = (timestamp) =>
     Number.isFinite(timestamp) && timestamp >= Math.max(firstAt, session) && timestamp <= now;
