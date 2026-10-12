@@ -338,6 +338,14 @@
   }
 }
 
+/* The field at the sidebar's foot gives its height back on short windows, so
+   the recent conversations above it never have to scroll for it. */
+@media (max-height: 760px) {
+  .oats-sidebar-field {
+    display: none;
+  }
+}
+
 /* One of the three stacked surfaces (§8: "the outgoing view dims to 0 as the
    incoming rises"). All three stay mounted, so the crossing is a genuine overlap
    of two live views rather than a copy of one of them — see OatsWorkspace.tsx.
