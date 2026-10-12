@@ -16,9 +16,11 @@ the app: Whisper `base` and `base.en`, the Silero VAD, pyannote segmentation,
 TitaNet for speakers, and MiniLM for search. A development checkout fetches the
 ones it is missing; a packaged build never does. The local vector store (Qdrant)
 listens on 127.0.0.1 only and runs with its anonymous usage statistics turned
-off, by config and by flag (`src/helpers/qdrantManager.js`). Nothing of the
-builder's machine is packed into the app — in particular no `.env`. All of this
-is pinned in `test/helpers/networkBoundary.test.js`.
+off, by config and by flag (`src/helpers/qdrantManager.js`). Spellcheck is off
+in every window and every session, so on Linux and Windows Chromium never
+downloads its Hunspell dictionaries from Google (`src/helpers/spellcheckOff.js`).
+Nothing of the builder's machine is packed into the app — in particular no
+`.env`. All of this is pinned in `test/helpers/networkBoundary.test.js`.
 
 ## Default-on
 
@@ -74,7 +76,7 @@ and schemes that are not network requests (`file://`, `devtools://`, `data:`,
 | Main-process `net.request` and `net.fetch`                                                        | Model and helper downloads (`downloadUtils.js`), proxied transcription requests | The same hook. Measured on Electron 41: these pass through the session's webRequest, once per redirect hop, and before a connection that then fails                               |
 | The updater, off unless `OATS_ENABLE_AUTO_UPDATES=true`                                           | Update checks                                                                   | The same hook, on the updater's own session                                                                                                                                       |
 | Chromium downloads                                                                                | Nothing today                                                                   | `will-download`. `session.downloadURL` is pinned unused, because webRequest does not see it                                                                                       |
-| Spellcheck dictionaries (Linux and Windows; macOS uses its own spellchecker)                      | Chromium, for a window with spellcheck on                                       | `spellcheck-dictionary-download-begin`                                                                                                                                            |
+| Spellcheck dictionaries (Linux and Windows; macOS uses its own spellchecker)                      | Nothing: spellcheck is off in every window and every session                    | `spellcheck-dictionary-download-begin`, if one begins. A session loads dictionaries as it is created, whatever its windows say, so `spellcheckOff.js` empties its list then       |
 | Node `http` and `https` in the main process                                                       | Realtime transcription sockets (`ws`), Tinfoil, the AWS SDK                     | The `http.client.request.created` diagnostics channel                                                                                                                             |
 | Node `fetch` in the main process                                                                  | AI SDK providers (Bedrock, Azure, Vertex), Tinfoil attestation                  | The `undici:request:create` diagnostics channel                                                                                                                                   |
 | A link opened in the browser                                                                      | The question search, links in Settings                                          | `shell.openExternal` is wrapped; the Linux new-window launch records itself. One link is one request: the browser makes it, but Oats chose what it carries                        |
