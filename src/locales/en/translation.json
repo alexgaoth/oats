@@ -1934,6 +1934,12 @@
       "start": "Start recording",
       "shortcutAnywhere": "from any app",
       "recordingBadge": "Recording",
+      "counters": {
+        "words_one": "{{count}} word",
+        "words_other": "{{count}} words",
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions"
+      },
       "stop": "Stop",
       "recentHeading": "Recent conversations",
       "viewAll": "View all"

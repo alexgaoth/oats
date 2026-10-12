@@ -1934,6 +1934,12 @@
       "start": "Iniciar gravação",
       "shortcutAnywhere": "de qualquer app",
       "recordingBadge": "Gravando",
+      "counters": {
+        "words_one": "{{count}} palavra",
+        "words_other": "{{count}} palavras",
+        "questions_one": "{{count}} pergunta",
+        "questions_other": "{{count}} perguntas"
+      },
       "stop": "Parar",
       "recentHeading": "Conversas recentes",
       "viewAll": "Ver todas"

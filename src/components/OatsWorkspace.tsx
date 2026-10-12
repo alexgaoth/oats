@@ -86,8 +86,10 @@ import FieldBackdrop from "./field/FieldBackdrop";
 import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
+import ListeningRing from "./conversation/ListeningRing";
 import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
+import RecordingCounters from "./conversation/RecordingCounters";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import {
   FOCUS_AT_REST,
@@ -818,9 +820,9 @@ function ConversationSurface() {
             </p>
 
             <Card className="shrink-0 gap-0 overflow-hidden">
-              <div className="flex items-center gap-3 px-5 py-4">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-5 py-4">
                 <span aria-hidden="true" className="relative flex size-2.5">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-recording opacity-60 motion-reduce:hidden" />
+                  <ListeningRing />
                   <span className="relative inline-flex size-2.5 rounded-full bg-recording" />
                 </span>
                 {/* The clock is the heading: the one thing on this screen that is
@@ -829,6 +831,10 @@ function ConversationSurface() {
                   <span className="sr-only">{t("oats.conversation.listening")} </span>
                   {clock(elapsed)}
                 </h1>
+                {/* Under the clock, on a line of its own (order-last, full width),
+                    indented to the clock's edge: the dot's 10 px and the 12 px
+                    gap. Read straight after the clock. */}
+                <RecordingCounters className="order-last basis-full pl-5.5" />
                 <Badge variant="recording">{t("oats.conversation.recordingBadge")}</Badge>
                 <div className="ml-auto flex items-center gap-2">
                   <Button

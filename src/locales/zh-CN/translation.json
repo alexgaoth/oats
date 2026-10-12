@@ -1929,6 +1929,12 @@
       "start": "开始录音",
       "shortcutAnywhere": "在任何应用中",
       "recordingBadge": "录音中",
+      "counters": {
+        "words_one": "{{count}} 个词",
+        "words_other": "{{count}} 个词",
+        "questions_one": "{{count}} 个问题",
+        "questions_other": "{{count}} 个问题"
+      },
       "stop": "停止",
       "recentHeading": "最近的对话",
       "viewAll": "查看全部"
