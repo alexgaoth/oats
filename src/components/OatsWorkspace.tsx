@@ -318,8 +318,6 @@ function topicOverlap(a: string[] = [], b: string[] = []): number {
 // and the whole architecture rests on there being exactly three surfaces.
 function RecentRow({ note }: { note: NoteItem }) {
   const { t, i18n } = useTranslation();
-  const segments = useMemo(() => parseSegments(note.transcript ?? null), [note.transcript]);
-  const span = formatSpan(conversationSpanMs(segments), { locale: i18n.language });
   const preview = note.enhanced_content
     ? plainPreview(note.enhanced_content)
     : transcriptText(note.transcript ?? null, t);
@@ -341,13 +339,13 @@ function RecentRow({ note }: { note: NoteItem }) {
             {ledgerDate(note.created_at, { locale: i18n.language })}
           </span>
         </span>
-        <span className="flex items-baseline gap-4">
+        <span className="flex items-center gap-6">
           <span className="line-clamp-1 min-w-0 flex-1 text-[13px] text-muted-foreground">
             {preview}
           </span>
-          {span && (
-            <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{span}</span>
-          )}
+          {/* Its shape beside its length: the strip the Intelligence list
+              draws, so a conversation looks the same in both places. */}
+          <NoteContourStrip note={note} />
         </span>
       </button>
     </li>
