@@ -3769,6 +3769,7 @@ export default function OatsWorkspace() {
           <div ref={sidebarCell} id={sidebarId} className="oats-frame-sidebar" inert={sidebarAway}>
             <AppSidebar
               surface={surface}
+              away={sidebarAway}
               settingsPage={settingsPage}
               onSettingsPage={setSettingsPage}
               onExitSettings={() => setSurface(lastSurface.current)}
