@@ -590,6 +590,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     "meeting-transcription-segment",
     (callback) => (_event, data) => callback(data)
   ),
+  // When speech starts and stops in a room recorded locally, for how far behind
+  // the text is (helpers/transcriptLag.mjs).
+  onMeetingTranscriptionSpeech: registerListener(
+    "meeting-transcription-speech",
+    (callback) => (_event, data) => callback(data)
+  ),
   onMeetingSpeakerIdentified: registerListener(
     "meeting-speaker-identified",
     (callback) => (_event, data) => callback(data)

@@ -111,6 +111,7 @@ import {
   ledgerTime,
 } from "../helpers/ledgerDate.mjs";
 import { checkpointRisk, transcriptionStalled } from "../helpers/recordingHealth.mjs";
+import TranscriptLagBadge from "./conversation/TranscriptLagBadge";
 import { findResumableConversation } from "../helpers/conversationResume.mjs";
 import { parseDbTimestamp } from "../helpers/dbTime.mjs";
 import type { ContourData } from "./conversation/ConversationContour";
@@ -794,6 +795,9 @@ function ConversationSurface() {
                     gap. Read straight after the clock. */}
                 <RecordingCounters className="order-last basis-full pl-5.5" />
                 <Badge variant="recording">{t("oats.conversation.recordingBadge")}</Badge>
+                {/* How far behind the text is, once it trails by more than 2 s.
+                    Not beside the "not transcribing" warning, which says it. */}
+                <TranscriptLagBadge hidden={stalled.stalled} />
                 <div className="ml-auto flex items-center gap-2">
                   <Button
                     variant="outline"

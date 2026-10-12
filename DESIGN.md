@@ -158,6 +158,18 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   them (at most 40% of the column) and scrolls inside.
 - Health warnings (silent microphone, not saving, not transcribing) are alerts
   directly under the status card, so a busy conversation can never push them away.
+- **Lag** (`conversation/TranscriptLagBadge.tsx`): nothing while the text keeps
+  up. Once the transcript trails the speech by more than 2 s, a quiet outline badge
+  beside the clock says how far ("3.2 s behind"); past 5 s it takes the warning
+  tone. It is measured (`helpers/transcriptLag.mjs`): main stamps each partial and
+  final with the moment its audio was heard, counted back from when that audio
+  reached main, so a moment can come out late but never early, and reports when
+  the segmenter's speech starts and stops. The lag is the speech heard and not yet
+  on screen, so it cannot grow in a silence. Smoothed (up with speech time, down
+  with wall time, never above the last second's peak) with hysteresis at 2 s and
+  5 s, so it does not flicker. Only for a room transcribed locally with partials:
+  a cloud provider and Parakeet send no audio positions, and it never shows. It
+  steps aside for the "not transcribing" warning, which says the same thing.
 
 ## 6. Data visualisation
 

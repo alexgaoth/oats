@@ -5308,10 +5308,17 @@ class IPCHandlers {
      *
      * While a segment is still open, its words so far go out as `partial`s
      * between the finals, never in their way (partialScheduler.mjs).
+     *
+     * Every partial and final also says where its audio ended, as the moment
+     * that audio was heard (`audioEndedAt`), and main says when speech starts
+     * and stops, so the renderer can show how far behind the text is
+     * (transcriptLag.mjs). Only with partials: finals alone trail a whole turn
+     * by design.
      */
     const startInRoomSegmenting = async () => {
-      const { SpeechSegmenter } = await import("./speechSegmenter.mjs");
+      const { SpeechSegmenter, SAMPLE_RATE } = await import("./speechSegmenter.mjs");
       const { PartialScheduler } = await import("./partialScheduler.mjs");
+      const { AudioClock, speechChanges } = await import("./transcriptLag.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
       const stream = fs.createWriteStream(audioPath);
@@ -5326,7 +5333,11 @@ class IPCHandlers {
         queue: [],
         draining: null,
         audio: { path: audioPath, stream, bytes: 0 },
+        clock: new AudioClock(SAMPLE_RATE),
+        speechChanges,
+        speechOpen: null,
       };
+      meetingInRoom.lag = meetingInRoom.partials !== null;
     };
 
     const feedInRoomAudio = (buffer24k) => {
@@ -5335,15 +5346,49 @@ class IPCHandlers {
       session.audio.stream.write(pcm16k);
       session.audio.bytes += pcm16k.length;
       const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
-      for (const segment of session.segmenter.push(samples)) enqueueInRoomSegment(session, segment);
+      const closed = session.segmenter.push(samples);
+      // When this audio reached main: what every moment sent below is counted
+      // back from, so a moment can come out late but never early.
+      session.clock.arrived(samples.length, Date.now());
+      for (const segment of closed) enqueueInRoomSegment(session, segment);
+      reportInRoomSpeech(session, closed);
       try {
         startInRoomPartial(session);
       } catch (error) {
         // A preview must never break the audio path: partials stop for this
-        // recording, and the finals carry on.
+        // recording, and the finals carry on. So does the lag, which without
+        // partials would only measure the length of each turn.
         session.partials = null;
+        stopInRoomLag(session);
         debugLogger.warn("In-room partials stopped", { error: error.message });
       }
+    };
+
+    const sendInRoomSpeech = (session, change) => {
+      const win = meetingLocalWin;
+      if (meetingInRoom !== session || !win || win.isDestroyed()) return;
+      win.webContents.send("meeting-transcription-speech", change);
+    };
+
+    /** Speech started or stopped in what the segmenter just took (transcriptLag.mjs). */
+    const reportInRoomSpeech = (session, closed) => {
+      const open = session.segmenter.open;
+      if (session.lag) {
+        for (const change of session.speechChanges(session.speechOpen, closed, open)) {
+          sendInRoomSpeech(session, {
+            speaking: change.speaking,
+            at: session.clock.wallAt(change.sample),
+            ...(change.dropped ? { dropped: true } : {}),
+          });
+        }
+      }
+      session.speechOpen = open ? open.startSample : null;
+    };
+
+    const stopInRoomLag = (session) => {
+      if (!session.lag) return;
+      session.lag = false;
+      sendInRoomSpeech(session, { off: true });
     };
 
     // Finals and partials both go through this, so a partial is read with
@@ -5360,13 +5405,14 @@ class IPCHandlers {
             ...this._resolveWhisperVadOptions("meeting"),
           });
 
-    const sendInRoomPartial = (session, text) => {
+    const sendInRoomPartial = (session, text, audioEndedAt = null) => {
       const win = meetingLocalWin;
       if (meetingInRoom !== session || !win || win.isDestroyed()) return;
       win.webContents.send("meeting-transcription-segment", {
         text,
         source: "mic",
         type: "partial",
+        ...(session.lag && Number.isFinite(audioEndedAt) ? { audioEndedAt } : {}),
       });
     };
 
@@ -5386,8 +5432,15 @@ class IPCHandlers {
       });
       if (!decision.start) return;
       const samples = session.segmenter.openSamples();
+      const openAt = session.segmenter.open?.startSample ?? null;
+      // Where this partial's audio ends, as the moment it was heard.
+      const audioEndedAt = session.clock.wallAt((openAt ?? 0) + samples.length);
+      let read = false;
       transcribeInRoomAudio(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength))
-        .then((result) => (result?.success ? result.text : ""))
+        .then((result) => {
+          read = Boolean(result?.success);
+          return read ? result.text : "";
+        })
         .catch((error) => {
           // A partial is only a preview; its final reports any real failure.
           debugLogger.debug("In-room partial transcription failed", { error: error.message });
@@ -5395,11 +5448,20 @@ class IPCHandlers {
         })
         .then((text) => {
           const words = scheduler.settle(decision.id, text, session.segmenter.open);
-          if (words !== null) sendInRoomPartial(session, words);
+          if (words !== null) {
+            sendInRoomPartial(session, words, audioEndedAt);
+          } else if (read && session.lag && session.segmenter.open?.startSample === openAt) {
+            // Read, and nothing new in it (a breath, the same words): the line
+            // on screen is current up to here, so the lag must not wait on it.
+            sendInRoomPartial(session, scheduler.shown, audioEndedAt);
+          }
         });
     };
 
     const enqueueInRoomSegment = (session, segment) => {
+      // Where its audio ended, as the moment it was heard, fixed now: the
+      // segment closes as its last audio arrives.
+      segment.audioEndedAt = session.clock.wallAt(segment.endSample);
       session.queue.push(segment);
       if (session.draining) return;
       session.draining = (async () => {
@@ -5433,6 +5495,9 @@ class IPCHandlers {
             timestamp: session.startedAt + segment.startMs,
             startMs: segment.startMs,
             endMs: segment.endMs,
+            ...(session.lag && Number.isFinite(segment.audioEndedAt)
+              ? { audioEndedAt: segment.audioEndedAt }
+              : {}),
           });
           sent = true;
         }
@@ -5444,7 +5509,12 @@ class IPCHandlers {
       } finally {
         // The renderer empties the live line on a final with words. One with
         // none, or one that failed, would leave this segment's partial there.
-        if (session.partials?.finalSettled(sent)) sendInRoomPartial(session, "");
+        // Either way its audio is settled: nothing more will be shown for it,
+        // so the lag must not wait on it.
+        const stranded = session.partials?.finalSettled(sent);
+        if (stranded || (!sent && session.lag)) {
+          sendInRoomPartial(session, "", segment.audioEndedAt);
+        }
       }
     };
 
@@ -5455,7 +5525,9 @@ class IPCHandlers {
     const finishInRoomSegmenting = async () => {
       const session = meetingInRoom;
       if (!session) return null;
-      for (const segment of session.segmenter.flush()) enqueueInRoomSegment(session, segment);
+      const flushed = session.segmenter.flush();
+      for (const segment of flushed) enqueueInRoomSegment(session, segment);
+      reportInRoomSpeech(session, flushed);
       while (session.draining) await session.draining;
       await new Promise((resolve) => session.audio.stream.end(resolve));
       meetingInRoom = null;

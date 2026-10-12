@@ -1378,6 +1378,17 @@ declare global {
           source: "mic" | "system";
           type: "partial" | "final" | "retract";
           timestamp?: number;
+          /** Where the text's audio ended, as the wall-clock moment it was heard. */
+          audioEndedAt?: number;
+        }) => void
+      ) => () => void;
+      /** Speech started or stopped, or main stopped measuring (`off`). */
+      onMeetingTranscriptionSpeech?: (
+        callback: (data: {
+          speaking?: boolean;
+          at?: number | null;
+          dropped?: boolean;
+          off?: boolean;
         }) => void
       ) => () => void;
       onMeetingSpeakerIdentified?: (
