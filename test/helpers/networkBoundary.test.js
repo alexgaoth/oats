@@ -65,3 +65,139 @@ test("the vector store runs on loopback with its telemetry off", () => {
     "--disable-telemetry",
   ]);
 });
+
+// The sidebar's "N network requests since launch" (networkLedger.js) counts at
+// the hooks every request passes through. These pin the paths those hooks
+// cannot see, so each stays at zero by construction, and the hooks themselves.
+
+function sourcesUnder(dir, pattern) {
+  const out = [];
+  const walk = (current) => {
+    for (const entry of fs.readdirSync(path.join(root, current), { withFileTypes: true })) {
+      const relative = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (!["dist", "node_modules", "locales", "assets"].includes(entry.name)) walk(relative);
+      } else if (pattern.test(entry.name)) {
+        out.push(relative);
+      }
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
+const MAIN_SOURCES = [
+  "main.js",
+  "preload.js",
+  "src/updater.js",
+  ...sourcesUnder("src/helpers", /\.(js|mjs|cjs)$/),
+  ...sourcesUnder("src/utils", /\.(js|mjs|cjs)$/),
+  ...sourcesUnder("src/workers", /\.(js|mjs|cjs)$/),
+];
+const ALL_SOURCES = ["main.js", "preload.js", ...sourcesUnder("src", /\.(js|mjs|cjs|jsx|ts|tsx)$/)];
+
+test("the ledger is installed before main.js loads anything that could connect", () => {
+  const main = read("main.js");
+  const install = main.indexOf('require("./src/helpers/networkLedger").install(');
+  assert.ok(install > 0, "main.js installs the ledger");
+  // Before it: electron itself, and the Linux relaunch's child_process, which
+  // spawns this same app and exits.
+  const before = [...main.slice(0, install).matchAll(/require\("([^"]+)"\)/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(before)].sort(), ["child_process", "electron"]);
+  assert.ok(install < main.indexOf("app.whenReady()"));
+});
+
+test("no main-process code opens a socket, HTTP/2 or UDP connection the hooks cannot see", () => {
+  const raw =
+    /require\(["'](node:)?(http2|dgram)["']\)|\bnet\.(connect|createConnection)\(|\btls\.connect\(|new net\.Socket\(/;
+  for (const file of MAIN_SOURCES) {
+    assert.doesNotMatch(read(file), raw, `${file}: a raw connection bypasses networkLedger.js`);
+  }
+});
+
+test("nothing downloads through session.downloadURL, which webRequest does not see", () => {
+  for (const file of MAIN_SOURCES) {
+    assert.doesNotMatch(
+      read(file),
+      /\.downloadURL\(/,
+      `${file}: use downloadUtils.js (net.request)`
+    );
+  }
+});
+
+test("webRequest.onSendHeaders is the ledger's alone", () => {
+  // Electron keeps one listener per event per session: a second one would
+  // silently replace the counter.
+  for (const file of ALL_SOURCES) {
+    if (file.endsWith(path.join("helpers", "networkLedger.js"))) continue;
+    assert.doesNotMatch(read(file), /onSendHeaders/, `${file} would replace the request counter`);
+  }
+});
+
+test("every shell.openExternal call goes through the counted property", () => {
+  for (const file of MAIN_SOURCES) {
+    // The ledger itself is what wraps the property.
+    if (file.endsWith(path.join("helpers", "networkLedger.js"))) continue;
+    const source = read(file);
+    assert.doesNotMatch(
+      source,
+      /\{[^}]*\bopenExternal\b[^}]*\}\s*=\s*(require\(["']electron["']\)\.)?shell\b/,
+      file
+    );
+    assert.doesNotMatch(source, /=\s*shell\.openExternal\b(?!\()/, file);
+    assert.doesNotMatch(source, /shell\.openExternal\.(bind|call|apply)\b/, file);
+  }
+});
+
+test("the Linux new-window search launch counts itself", () => {
+  const handlers = read("src/helpers/ipcHandlers.js");
+  const launch = handlers.indexOf("newWindowCommand(entry, url)");
+  const recorded = handlers.indexOf('getNetworkLedger().recordUrl("browser", url)');
+  assert.ok(
+    launch > 0 && recorded > launch,
+    "the spawned browser is recorded after it is launched"
+  );
+});
+
+test("the only utility process is the ONNX worker, and it has no way to the network", () => {
+  for (const file of MAIN_SOURCES) {
+    if (file.endsWith("onnxWorkerClient.js")) continue;
+    assert.doesNotMatch(
+      read(file),
+      /utilityProcess\.fork\(|new Worker\(|require\(["'](node:)?worker_threads["']\)/,
+      `${file}: a new process needs its own count`
+    );
+  }
+  const worker = read("src/workers/onnxWorker.js");
+  const required = [...worker.matchAll(/require\(["']([^"']+)["']\)/g)].map((m) => m[1]).sort();
+  assert.deepEqual(required, ["fs", "onnxruntime-node", "os", "path"]);
+  assert.doesNotMatch(worker, /\bfetch\(|\bimport\(|electron/);
+});
+
+test("the renderer opens no WebRTC connection, which webRequest does not see", () => {
+  for (const file of ALL_SOURCES) {
+    assert.doesNotMatch(read(file), /RTCPeerConnection/, file);
+  }
+});
+
+test("llama-server runs offline, so it never fetches a model itself", () => {
+  const LlamaServerManager = require("../../src/helpers/llamaServer");
+  const saved = process.env.LLAMA_ARG_HF_REPO;
+  process.env.LLAMA_ARG_HF_REPO = "someone/some-model-GGUF";
+  try {
+    const env = new LlamaServerManager()._buildEnv("/opt/oats/bin/llama-server");
+    assert.equal(env.LLAMA_ARG_OFFLINE, "1");
+  } finally {
+    if (saved === undefined) delete process.env.LLAMA_ARG_HF_REPO;
+    else process.env.LLAMA_ARG_HF_REPO = saved;
+  }
+});
+
+test("whisper-server listens on loopback and loads a model file", () => {
+  const { buildWhisperServerArgs } = require("../../src/helpers/whisperServer");
+  const args = buildWhisperServerArgs({ modelPath: "/models/ggml-base.en.bin", port: 8178 });
+  assert.equal(args[args.indexOf("--host") + 1], "127.0.0.1");
+  assert.equal(args[args.indexOf("--model") + 1], "/models/ggml-base.en.bin");
+  assert.ok(!args.some((arg) => /^(https?|wss?):\/\//.test(String(arg))));
+});

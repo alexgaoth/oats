@@ -558,3 +558,121 @@ test("minute ticks fall on whole minutes since the start", () => {
   const second = contour.ticks[1];
   assert.ok(Math.abs(second.x - (startedAt + 2 * MINUTE - contour.start) / contour.span) < 0.0002);
 });
+
+// A finished conversation keeps how loud each second was (one value a second,
+// conversationLoudness.mjs), so its contour is drawn the way the live line was:
+// height from loudness above the room's floor, not from words spread evenly.
+const T_FINISHED = Date.UTC(2026, 9, 10, 15, 0, 0);
+
+/** Ten minutes of turns: 20 s of steady talk, then 10 s of room tone, repeated. */
+function finishedTalk() {
+  const utterances = [];
+  for (let turn = 0; turn < 20; turn += 1) {
+    utterances.push({
+      id: `t${turn}`,
+      // An even 2.6 words a second: what the words-only path draws flat.
+      text: Array.from({ length: 52 }, () => "word").join(" "),
+      timestamp: T_FINISHED + turn * 30 * SECOND,
+      durationMs: 20 * SECOND,
+    });
+  }
+  return utterances;
+}
+
+/** One level a second: each turn rises and falls, the pauses are room tone. */
+function finishedLevels(loudness = (turn, second) => 0.04 + 0.16 * Math.sin((second / 20) * Math.PI)) {
+  const levels = [];
+  for (let second = 0; second < 600; second += 1) {
+    const turn = Math.floor(second / 30);
+    const into = second % 30;
+    levels.push({
+      at: T_FINISHED + second * SECOND,
+      level: into < 20 ? loudness(turn, into) : 0.003,
+    });
+  }
+  return levels;
+}
+
+function spreadOf(values) {
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  return Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length);
+}
+
+test("with the loudness kept, a finished conversation is not a flat block", () => {
+  const utterances = finishedTalk();
+  const words = buildContour({ utterances });
+  const kept = buildContour({ utterances, levels: finishedLevels() });
+  const louder = buildContour({
+    utterances,
+    // Every other turn spoken louder: the words are the same.
+    levels: finishedLevels((turn, second) =>
+      (turn % 2 ? 0.08 : 0.03) + 0.12 * Math.sin((second / 20) * Math.PI)
+    ),
+  });
+  const ys = (contour) => contour.points.map((point) => point.y);
+  assert.ok(
+    spreadOf(ys(kept)) > spreadOf(ys(words)),
+    `kept ${spreadOf(ys(kept)).toFixed(3)} against words ${spreadOf(ys(words)).toFixed(3)}`
+  );
+  // Same words, different loudness: different lines.
+  assert.notDeepEqual(ys(kept), ys(louder));
+  // Same window as the words-only contour, so marks and picks land alike.
+  assert.equal(kept.start, words.start);
+  assert.equal(kept.span, words.span);
+  assert.equal(kept.points.length, CONTOUR_RESOLUTION);
+});
+
+/** Each bucket with the time its middle stands for, in seconds into the window. */
+function bucketsOf(contour) {
+  const bucketMs = contour.span / CONTOUR_RESOLUTION;
+  return contour.points.map((point, index) => ({ point, second: ((index + 0.5) * bucketMs) / SECOND }));
+}
+
+test("a turn stands above the pause after it", () => {
+  const contour = buildContour({ utterances: finishedTalk(), levels: finishedLevels() });
+  const buckets = bucketsOf(contour);
+  const pause = buckets.filter(({ second }) => second % 30 > 21 && second % 30 < 29);
+  const turn = buckets.filter(({ second }) => second % 30 > 7 && second % 30 < 13);
+  const mean = (list) => list.reduce((total, { point }) => total + point.y, 0) / list.length;
+  assert.ok(mean(turn) > 0.6, `turn ${mean(turn).toFixed(2)}`);
+  assert.ok(mean(pause) < 0.3, `pause ${mean(pause).toFixed(2)}`);
+});
+
+test("a spoken stretch never reads as a silence, however quiet the microphone", () => {
+  const contour = buildContour({
+    utterances: finishedTalk(),
+    levels: finishedLevels(() => 0.003),
+  });
+  const turn = bucketsOf(contour).filter(({ second }) => second % 30 > 5 && second % 30 < 15);
+  assert.ok(turn.length > 20);
+  assert.ok(turn.every(({ point }) => !point.quiet));
+});
+
+test("a stretch with no level kept is drawn from its words", () => {
+  const levels = finishedLevels().filter((sample) => sample.at < T_FINISHED + 300 * SECOND);
+  const contour = buildContour({ utterances: finishedTalk(), levels });
+  const late = contour.points.filter((point) => point.x > 0.6);
+  // Words alone, at 2.6 words a second of a 3 w/s scale, inside a turn.
+  assert.ok(late.some((point) => point.y > 0.6));
+});
+
+test("a conversation recorded before loudness was kept draws exactly as before", () => {
+  const utterances = finishedTalk();
+  const before = buildContour({ utterances });
+  assert.deepEqual(buildContour({ utterances, levels: [] }), before);
+  assert.deepEqual(buildContour({ utterances, levels: null }), before);
+  // Levels from outside the window are not this conversation's.
+  assert.deepEqual(
+    buildContour({ utterances, levels: [{ at: T_FINISHED - 3_600_000, level: 0.2 }] }),
+    before
+  );
+});
+
+test("the list strip keeps the loudness shape", () => {
+  const utterances = finishedTalk();
+  const strip = contourStrip(buildContour({ utterances, levels: finishedLevels() }), 24);
+  const flat = contourStrip(buildContour({ utterances }), 24);
+  const ys = (contour) => contour.points.map((point) => point.y);
+  assert.equal(strip.points.length, 24);
+  assert.ok(spreadOf(ys(strip)) > spreadOf(ys(flat)));
+});

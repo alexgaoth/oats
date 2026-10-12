@@ -4,6 +4,8 @@ import { ChevronLeft, House, MessagesSquare, Search, Settings, Square } from "lu
 import { cn } from "../lib/utils";
 import { Kbd } from "../ui/kbd";
 import { OatsMark } from "./OatsMark";
+import { OnDeviceFooter } from "./OnDeviceFooter";
+import { SidebarGrain } from "./SidebarGrain";
 import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -61,12 +63,14 @@ function NavItem({
         "group flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm",
         "outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
         "disabled:pointer-events-none disabled:opacity-40",
+        // The page you are on is a soft honey pill with a honey icon: the brand
+        // marks where you are, as DESIGN.md §2 allows for the current section.
         active
-          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+          ? "bg-primary/15 font-medium text-brand-ink"
           : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
       )}
     >
-      <Icon className="size-4 shrink-0 text-muted-foreground group-aria-[current=page]:text-brand-ink" />
+      <Icon className="size-4 shrink-0 text-muted-foreground group-aria-[current=page]:text-primary" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {trailing}
     </button>
@@ -120,8 +124,9 @@ export function AppSidebar({
     return (
       <aside
         aria-label={t("oats.shell.sidebar")}
-        className="flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
+        className="relative isolate flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
       >
+        <SidebarGrain />
         <div
           className="h-[52px] shrink-0"
           style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
@@ -147,6 +152,9 @@ export function AppSidebar({
             />
           ))}
         </nav>
+        <div className="mt-auto border-t border-sidebar-border py-3 pl-5 pr-3">
+          <OnDeviceFooter />
+        </div>
       </aside>
     );
   }
@@ -154,8 +162,9 @@ export function AppSidebar({
   return (
     <aside
       aria-label={t("oats.shell.sidebar")}
-      className="flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
+      className="relative isolate flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
     >
+      <SidebarGrain />
       {/* The traffic lights live here on macOS; the band moves the window. */}
       <div
         className="h-[52px] shrink-0"
@@ -175,9 +184,11 @@ export function AppSidebar({
           className={cn(
             "flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium shadow-xs",
             "outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            // Idle, the main action: honey with a little depth (`.oats-cta`).
+            // Live, it is red and says Stop.
             recording
               ? "bg-recording text-recording-foreground hover:bg-recording/90"
-              : "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "oats-cta bg-primary text-primary-foreground"
           )}
         >
           {recording ? (
@@ -252,6 +263,7 @@ export function AppSidebar({
           disabled={recording}
           onClick={() => onNavigate("settings")}
         />
+        <OnDeviceFooter className="mt-2 pl-2" />
       </div>
     </aside>
   );

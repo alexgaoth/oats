@@ -1903,7 +1903,7 @@
       "contourLabel": "La forma di questa conversazione finora",
       "legend": {
         "label": "Cosa significano i segni",
-        "open": "Ancora nessuna risposta",
+        "open": "Aperta",
         "topic": "Cambio di argomento",
         "return": "Ritorno a un argomento precedente",
         "marked": "Momento segnato"
@@ -1988,6 +1988,13 @@
       "speakerRoom": "Stanza",
       "speakerN": "Interlocutore {{n}}",
       "nameSpeaker": "Dai un nome a {{speaker}}",
+      "talkTime": {
+        "label": "Tempo di parola",
+        "show": "Mostra solo ciò che ha detto {{speaker}}",
+        "only": "Solo ciò che ha detto {{speaker}}",
+        "everyone": "Mostra tutti",
+        "unattributed": "Non attribuito"
+      },
       "tabs": {
         "summary": "Riepilogo",
         "transcript": "Trascrizione",
@@ -2004,6 +2011,13 @@
       "plusRelated_other": "{{count}} altre forse correlate",
       "searchResults_one": "{{count}} conversazione corrisponde",
       "searchResults_other": "{{count}} conversazioni corrispondono",
+      "search": {
+        "matches_one": "{{count}} corrispondenza",
+        "matches_other": "{{count}} corrispondenze",
+        "conversations_one": "{{count}} conversazione",
+        "conversations_other": "{{count}} conversazioni",
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Detto",
         "note": "La tua nota",
@@ -2013,6 +2027,12 @@
       "matchRelated": "Correlato",
       "markedCount_one": "{{count}} momento segnato",
       "markedCount_other": "{{count}} momenti segnati",
+      "outcomes": {
+        "questions_one": "{{count}} domanda",
+        "questions_other": "{{count}} domande",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Copia",
       "copied": "Copiato",
       "vaultSaved": "Nel vault",
@@ -2247,15 +2267,26 @@
       "noRecent": "Ancora nessuna conversazione",
       "record": "Nuova registrazione",
       "stop": "Interrompi registrazione"
+    },
+    "trust": {
+      "onThisMac": "Su questo Mac",
+      "onThisComputer": "Su questo computer",
+      "speechAndWriting": "Voce e scrittura: {{names}}",
+      "speech": "Voce: {{names}}",
+      "writing": "Scrittura: {{names}}",
+      "yourServer": "il tuo server",
+      "modelOn": "{{model}} su {{backend}}",
+      "requests_one": "{{count}} richiesta di rete dall'avvio",
+      "requests_other": "{{count}} richieste di rete dall'avvio"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "Posta",
+      "asked": "Aperta",
       "answered": "Risposta",
       "uncertain": "Incerta",
       "silence": "Nessuna risposta",
-      "denied": "Nessuno lo sapeva"
+      "denied": "Sconosciuto"
     },
     "searched": "Cercata",
     "dismiss": "Ignora domanda",

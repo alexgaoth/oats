@@ -1903,7 +1903,7 @@
       "contourLabel": "O formato desta conversa até agora",
       "legend": {
         "label": "O que as marcas significam",
-        "open": "Ainda sem resposta",
+        "open": "Aberta",
         "topic": "Mudança de assunto",
         "return": "Volta a um assunto anterior",
         "marked": "Momento marcado"
@@ -1988,6 +1988,13 @@
       "speakerRoom": "Sala",
       "speakerN": "Falante {{n}}",
       "nameSpeaker": "Dar nome a {{speaker}}",
+      "talkTime": {
+        "label": "Tempo de fala",
+        "show": "Mostrar só o que {{speaker}} disse",
+        "only": "Só o que {{speaker}} disse",
+        "everyone": "Mostrar todos",
+        "unattributed": "Não atribuído"
+      },
       "tabs": {
         "summary": "Resumo",
         "transcript": "Transcrição",
@@ -2004,6 +2011,13 @@
       "plusRelated_other": "mais {{count}} talvez relacionadas",
       "searchResults_one": "{{count}} conversa corresponde",
       "searchResults_other": "{{count}} conversas correspondem",
+      "search": {
+        "matches_one": "{{count}} ocorrência",
+        "matches_other": "{{count}} ocorrências",
+        "conversations_one": "{{count}} conversa",
+        "conversations_other": "{{count}} conversas",
+        "receipt": "{{matches}} em {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Dito",
         "note": "Sua nota",
@@ -2013,6 +2027,12 @@
       "matchRelated": "Relacionado",
       "markedCount_one": "{{count}} momento marcado",
       "markedCount_other": "{{count}} momentos marcados",
+      "outcomes": {
+        "questions_one": "{{count}} pergunta",
+        "questions_other": "{{count}} perguntas",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Copiar",
       "copied": "Copiado",
       "vaultSaved": "No cofre",
@@ -2247,15 +2267,26 @@
       "noRecent": "Nenhuma conversa ainda",
       "record": "Nova gravação",
       "stop": "Parar gravação"
+    },
+    "trust": {
+      "onThisMac": "Neste Mac",
+      "onThisComputer": "Neste computador",
+      "speechAndWriting": "Fala e escrita: {{names}}",
+      "speech": "Fala: {{names}}",
+      "writing": "Escrita: {{names}}",
+      "yourServer": "seu servidor",
+      "modelOn": "{{model}} em {{backend}}",
+      "requests_one": "{{count}} solicitação de rede desde a inicialização",
+      "requests_other": "{{count}} solicitações de rede desde a inicialização"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "Perguntada",
+      "asked": "Aberta",
       "answered": "Respondida",
       "uncertain": "Incerta",
       "silence": "Sem resposta",
-      "denied": "Ninguém sabia"
+      "denied": "Desconhecido"
     },
     "searched": "Pesquisada",
     "dismiss": "Dispensar pergunta",
