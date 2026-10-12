@@ -779,7 +779,11 @@ function ConversationSurface() {
             </p>
 
             <Card className="shrink-0 gap-0 overflow-hidden">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-5 py-4">
+              {/* Two lines: the clock's, then the counters'. The `after:` box is the
+                  break between them, so the counters line can hold the lag badge
+                  too when the clock's line has no room for it (a narrow window in
+                  a long language): it moves down rather than pushing Stop off. */}
+              <div className="@container flex flex-wrap items-center gap-x-3 gap-y-px px-5 py-4 after:order-1 after:basis-full after:content-['']">
                 <span aria-hidden="true" className="relative flex size-2.5">
                   <span className="absolute inline-flex size-full animate-ping rounded-full bg-recording opacity-60 motion-reduce:hidden" />
                   <span className="relative inline-flex size-2.5 rounded-full bg-recording" />
@@ -790,14 +794,17 @@ function ConversationSurface() {
                   <span className="sr-only">{t("oats.conversation.listening")} </span>
                   {clock(elapsed)}
                 </h1>
-                {/* Under the clock, on a line of its own (order-last, full width),
-                    indented to the clock's edge: the dot's 10 px and the 12 px
-                    gap. Read straight after the clock. */}
-                <RecordingCounters className="order-last basis-full pl-5.5" />
+                {/* Under the clock, on the second line, indented to the clock's
+                    edge: the dot's 10 px and the 12 px gap. Read straight after
+                    the clock. */}
+                <RecordingCounters className="order-2 pl-5.5" />
                 <Badge variant="recording">{t("oats.conversation.recordingBadge")}</Badge>
                 {/* How far behind the text is, once it trails by more than 2 s.
                     Not beside the "not transcribing" warning, which says it. */}
-                <TranscriptLagBadge hidden={stalled.stalled} />
+                <TranscriptLagBadge
+                  hidden={stalled.stalled}
+                  className="@max-[40rem]:order-3 @max-[40rem]:-my-px"
+                />
                 <div className="ml-auto flex items-center gap-2">
                   <Button
                     variant="outline"

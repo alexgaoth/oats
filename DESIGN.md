@@ -170,6 +170,9 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   5 s, so it does not flicker. Only for a room transcribed locally with partials:
   a cloud provider and Parakeet send no audio positions, and it never shows. It
   steps aside for the "not transcribing" warning, which says the same thing.
+  Where the clock's line has no room for it (a row under 40rem, a narrow window
+  in a long language), it sits at the end of the counters' line instead, so it
+  never pushes Mark and Stop off the card.
 
 ## 6. Data visualisation
 

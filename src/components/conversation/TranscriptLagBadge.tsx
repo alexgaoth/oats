@@ -20,7 +20,7 @@ const NOTHING: LagView = { visible: false, behindMs: 0, warning: false };
  * transcript has stopped, a growing number beside the clock would say the same
  * thing twice.
  */
-function TranscriptLagBadge({ hidden }: { hidden: boolean }) {
+function TranscriptLagBadge({ hidden, className }: { hidden: boolean; className?: string }) {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<LagView>(NOTHING);
 
@@ -54,7 +54,7 @@ function TranscriptLagBadge({ hidden }: { hidden: boolean }) {
   return (
     <Badge
       variant={view.warning ? "warning" : "outline"}
-      className={cn("tabular-nums", !view.warning && "text-muted-foreground")}
+      className={cn("tabular-nums", !view.warning && "text-muted-foreground", className)}
       title={described}
     >
       <span aria-hidden="true">{t("oats.conversation.lag.behind", { seconds })}</span>
