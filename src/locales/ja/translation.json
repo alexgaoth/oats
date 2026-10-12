@@ -1931,6 +1931,12 @@
       "start": "録音を開始",
       "shortcutAnywhere": "どのアプリからでも",
       "recordingBadge": "録音中",
+      "counters": {
+        "words_one": "{{count}} 語",
+        "words_other": "{{count}} 語",
+        "questions_one": "質問 {{count}} 件",
+        "questions_other": "質問 {{count}} 件"
+      },
       "stop": "停止",
       "recentHeading": "最近の会話",
       "viewAll": "すべて表示"

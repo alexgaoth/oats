@@ -303,6 +303,30 @@
   }
 }
 
+/* A counter under the recording clock that just changed: the new number rises
+   into place and fades in, once (RecordingCounters.tsx). Never on the first
+   value, and not at all under reduced motion. */
+@keyframes oats-roll {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.45em, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.oats-roll {
+  animation: oats-roll var(--motion-base) var(--ease-oats) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-roll {
+    animation: none;
+  }
+}
+
 /* One of the three stacked surfaces (§8: "the outgoing view dims to 0 as the
    incoming rises"). All three stay mounted, so the crossing is a genuine overlap
    of two live views rather than a copy of one of them — see OatsWorkspace.tsx.
