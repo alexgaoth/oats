@@ -6,6 +6,7 @@ import {
   contourStrip,
 } from "../../helpers/conversationContour.mjs";
 import { buildConversationGraph, responseReason } from "../../helpers/conversationGraph";
+import { addLevelSample, decodeLoudness } from "../../helpers/conversationLoudness.mjs";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { ContourData } from "./ConversationContour";
 import type {
@@ -89,17 +90,9 @@ function useLevelHistory(recording: boolean) {
     if (!recording) return;
     return useMeetingRecordingStore.subscribe((state, previous) => {
       if (state.currentMicLevel === previous.currentMicLevel) return;
-      const level = state.currentMicLevel;
-      const second = Math.floor(Date.now() / LIVE_BUCKET_MS) * LIVE_BUCKET_MS;
+      // The same rule the store keeps the whole recording by, for Finish.
       const list = history.current;
-      const last = list[list.length - 1];
-      if (last && last.at === second) {
-        last.sumSq += level * level;
-        last.n += 1;
-        last.level = Math.sqrt(last.sumSq / last.n);
-        return;
-      }
-      list.push({ at: second, level, sumSq: level * level, n: 1 });
+      addLevelSample(list, Date.now(), state.currentMicLevel);
       if (list.length > LEVEL_HISTORY_SECONDS) list.splice(0, list.length - LEVEL_HISTORY_SECONDS);
     });
   }, [recording]);
@@ -210,12 +203,19 @@ function storedOutcome(reason: string | null, hasResponse: boolean): string {
  *
  * Questions come from the persisted event graph rather than from live cards,
  * because the cards do not outlive the recording — the record does.
+ *
+ * `loudness` is the note's stored per-second loudness
+ * (`notes.conversation_loudness`). It is passed as the stored string, a value
+ * that compares equal across renders, and decoded inside the memo, so the
+ * decoded seconds are not kept once the contour is built. Without it the
+ * height comes from words, as it did before loudness was kept.
  */
 export function useStoredContour(
   segments: TranscriptSegment[],
   events: ConversationEvent[],
   topics: ConversationTopicNode[] = NO_TOPICS,
-  moments: { id: string; at: number; note: string }[] = NO_MOMENTS
+  moments: { id: string; at: number; note: string }[] = NO_MOMENTS,
+  loudness: string | null = null
 ): ContourData {
   return useMemo(() => {
     const questions = buildConversationGraph(events)
@@ -234,12 +234,17 @@ export function useStoredContour(
       questions,
       topics: topicsForContour(topics),
       moments,
+      levels: decodeLoudness(loudness),
     }) as ContourData;
-  }, [segments, events, topics, moments]);
+  }, [segments, events, topics, moments, loudness]);
 }
 
 /** The miniature beside a conversation in the Intelligence list. */
-export function useContourStrip(segments: TranscriptSegment[], events: ConversationEvent[]) {
-  const contour = useStoredContour(segments, events);
+export function useContourStrip(
+  segments: TranscriptSegment[],
+  events: ConversationEvent[],
+  loudness: string | null = null
+) {
+  const contour = useStoredContour(segments, events, NO_TOPICS, NO_MOMENTS, loudness);
   return useMemo(() => contourStrip(contour, 24) as ContourData, [contour]);
 }

@@ -67,6 +67,7 @@ import {
   getConversationTopicSnapshot,
   markMoment,
   applyConversationSpeakers,
+  sittingLoudness,
 } from "../stores/meetingRecordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import {
@@ -571,6 +572,9 @@ function ConversationSurface() {
     // renderer state, and the graph in Intelligence reads only what is persisted.
     const topics = getConversationTopicSnapshot();
     const moments = state.moments;
+    // How loud each second was, so the finished contour keeps the shape the
+    // live line had. Taken now, with the topics, before anything awaits.
+    const loudness = sittingLoudness();
     void (async () => {
       try {
         await window.electronAPI?.updateNote(recordingNoteId, {
@@ -579,6 +583,7 @@ function ConversationSurface() {
           // Written on every press already; once more here so a press whose
           // write was refused still lands with the transcript it belongs to.
           ...(moments.length ? { conversation_marks: JSON.stringify(moments) } : {}),
+          ...(loudness ? { conversation_loudness: loudness } : {}),
         });
       } finally {
         finishSaved();
@@ -628,6 +633,7 @@ function ConversationSurface() {
         mode: "in_room",
         seedSegments: parseSegments(note.transcript),
         seedMoments: note.conversation_marks,
+        seedLoudness: note.conversation_loudness ?? null,
       });
     } finally {
       setStarting(false);
@@ -1507,7 +1513,13 @@ function IntelligenceViews({
       0
     );
   }, [findQuery, selectedSegments, selected?.transcript, t]);
-  const storedContour = useStoredContour(selectedSegments, events, selectedTopics, selectedMoments);
+  const storedContour = useStoredContour(
+    selectedSegments,
+    events,
+    selectedTopics,
+    selectedMoments,
+    selected?.conversation_loudness ?? null
+  );
   const selectedSpan = formatSpan(conversationSpanMs(selectedSegments), { locale: i18n.language });
 
   // Three regions — rail, list, detail — is a mail client, and DESIGN.md §1 is
@@ -2968,7 +2980,7 @@ function NoteContourStrip({ note }: { note: NoteItem }) {
 function LoadedContourStrip({ note }: { note: NoteItem }) {
   const { i18n } = useTranslation();
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
-  const strip = useContourStrip(segments, NO_EVENTS);
+  const strip = useContourStrip(segments, NO_EVENTS, note.conversation_loudness ?? null);
   if (strip.empty) return null;
   const span = formatSpan(conversationSpanMs(segments), { locale: i18n.language });
   return (
