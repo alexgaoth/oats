@@ -1903,7 +1903,7 @@
       "contourLabel": "La forme de cette conversation jusqu'ici",
       "legend": {
         "label": "Signification des marques",
-        "open": "Pas encore de réponse",
+        "open": "Ouverte",
         "topic": "Changement de sujet",
         "return": "Retour à un sujet précédent",
         "marked": "Moment marqué"
@@ -1982,6 +1982,13 @@
       "speakerRoom": "Salle",
       "speakerN": "Intervenant {{n}}",
       "nameSpeaker": "Nommer {{speaker}}",
+      "talkTime": {
+        "label": "Temps de parole",
+        "show": "Afficher seulement ce qu'a dit {{speaker}}",
+        "only": "Seulement ce qu'a dit {{speaker}}",
+        "everyone": "Afficher tout le monde",
+        "unattributed": "Non attribué"
+      },
       "tabs": {
         "summary": "Résumé",
         "transcript": "Transcription",
@@ -1998,6 +2005,13 @@
       "plusRelated_other": "{{count}} autres peut-être liées",
       "searchResults_one": "{{count}} conversation correspond",
       "searchResults_other": "{{count}} conversations correspondent",
+      "search": {
+        "matches_one": "{{count}} occurrence",
+        "matches_other": "{{count}} occurrences",
+        "conversations_one": "{{count}} conversation",
+        "conversations_other": "{{count}} conversations",
+        "receipt": "{{matches}} dans {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Dit",
         "note": "Votre note",
@@ -2007,6 +2021,12 @@
       "matchRelated": "Connexe",
       "markedCount_one": "{{count}} moment marqué",
       "markedCount_other": "{{count}} moments marqués",
+      "outcomes": {
+        "questions_one": "{{count}} question",
+        "questions_other": "{{count}} questions",
+        "item_one": "{{outcome}} : {{count}}",
+        "item_other": "{{outcome}} : {{count}}"
+      },
       "copy": "Copier",
       "copied": "Copié",
       "vaultSaved": "Dans le coffre",
@@ -2016,6 +2036,10 @@
       "deleteYes": "Supprimer",
       "speakerCount_one": "{{count}} intervenant",
       "speakerCount_other": "{{count}} intervenants",
+      "openCount_one": "{{count}} ouverte",
+      "openCount_other": "{{count}} ouvertes",
+      "openQuestions_one": "{{count}} question restée ouverte",
+      "openQuestions_other": "{{count}} questions restées ouvertes",
       "copySummary": "Copier le résumé",
       "copyTranscript": "Copier la transcription",
       "export": "Exporter",
@@ -2234,6 +2258,8 @@
     },
     "shell": {
       "sidebar": "Barre latérale",
+      "showSidebar": "Afficher la barre latérale",
+      "hideSidebar": "Masquer la barre latérale",
       "home": "Accueil",
       "conversations": "Conversations",
       "search": "Rechercher",
@@ -2241,15 +2267,26 @@
       "noRecent": "Aucune conversation pour l’instant",
       "record": "Nouvel enregistrement",
       "stop": "Arrêter l’enregistrement"
+    },
+    "trust": {
+      "onThisMac": "Sur ce Mac",
+      "onThisComputer": "Sur cet ordinateur",
+      "speechAndWriting": "Parole et écriture : {{names}}",
+      "speech": "Parole : {{names}}",
+      "writing": "Écriture : {{names}}",
+      "yourServer": "votre serveur",
+      "modelOn": "{{model}} sur {{backend}}",
+      "requests_one": "{{count}} requête réseau depuis le lancement",
+      "requests_other": "{{count}} requêtes réseau depuis le lancement"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "Posée",
+      "asked": "Ouverte",
       "answered": "Répondue",
       "uncertain": "Incertaine",
       "silence": "Sans réponse",
-      "denied": "Personne ne savait"
+      "denied": "Inconnu"
     },
     "searched": "Recherchée",
     "dismiss": "Ignorer la question",

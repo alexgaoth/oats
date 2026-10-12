@@ -494,6 +494,14 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // How many questions the conversation left open, counted from its
+      // events at Finish, so a list row can show it without reading them.
+      // Null for conversations finished before it was counted.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN open_questions INTEGER");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
       // The topic snapshot written when a recording stops: nodes (topics with the
       // time each held) and edges (the transitions between them, including the
       // return-to-an-earlier-thread edges). Read back by the Intelligence topic
@@ -509,6 +517,15 @@ class DatabaseManager {
       // the same reason: events are per-question and CHECK-constrained.
       try {
         this.db.exec("ALTER TABLE notes ADD COLUMN conversation_marks TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
+      // How loud each second of the recording was, one byte a second as JSON
+      // (`helpers/conversationLoudness.mjs`), written at Finish so the finished
+      // contour keeps the shape the live line had: about 4.8 KB an hour.
+      // Nullable, and a note without it is drawn from its words as before.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN conversation_loudness TEXT");
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
@@ -1744,8 +1761,10 @@ class DatabaseManager {
         "participants",
         "diarization_enabled",
         "expected_speaker_count",
+        "open_questions",
         "conversation_topics",
         "conversation_marks",
+        "conversation_loudness",
         "sync_status",
         "deleted_at",
         "client_note_id",

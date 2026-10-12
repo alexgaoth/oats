@@ -17,6 +17,11 @@ The product rules from v1 still hold and still win over taste:
   (Clean) composition shows status and controls, not changing text.
 - **Evidence before inference.** What Oats knows for certain (marks, questions and
   how they ended) is shown above what a model wrote.
+- **Alive, not busy** (Alex, 2026-10-11). Life comes from the oat world used as
+  material (grain, field, honey, daylight) and from motion that answers what you
+  did. Nothing moves at rest, content stays plain, and character goes only to the
+  few things that matter: the frame, the main action, and the choices that change
+  what you see.
 
 ---
 
@@ -36,17 +41,29 @@ The product rules from v1 still hold and still win over taste:
 └───────────┴────────────────────────────────────────┘
 ```
 
-- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border. Top
-  52px band holds the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`)
-  and moves the window. Then the brand row, the Record button (becomes a red
-  **Stop recording** with elapsed time while live), Home / Conversations / Search,
-  the six most recent conversations, and Settings pinned at the foot.
+- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with a
+  faded texture of scattered oat grains behind it (`shell/SidebarGrain.tsx`: a
+  static pattern at 7%, brown in light mode, honey in dark). Top 52px band holds
+  the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`) and moves the
+  window. Then the brand row, the Record button (honey with depth; a red **Stop
+  recording** with elapsed time while live), Home / Conversations / Search, the six
+  most recent conversations, and Settings pinned at the foot. The page you are on
+  is a soft honey pill (`bg-primary/15`, `text-brand-ink`) with a honey icon.
 - **Header**, 52px, bottom border, the section title at `text-sm font-semibold`.
   It is a drag region; anything interactive inside it opts out.
 - **Content** scrolls inside the main column. Reading width `max-w-3xl`, gutters
   `px-8`, vertical rhythm on a 4px grid (8 / 12 / 16 / 24 / 32).
 - Navigation stays available while recording; Settings is the one destination
   closed during a recording (as ⌘, is).
+- **Focus on record.** While a conversation is recorded, Home gives it the
+  window: the sidebar steps aside, and the recording column grows by the
+  sidebar's width, so the live line gets the room and the column's right edge,
+  where Stop is, does not move. The sidebar comes back when the recording stops.
+  A sidebar button (`PanelLeft`) after the traffic lights, or `⌘\` (`Ctrl+\`),
+  brings it back for the rest of that recording and hides it again.
+  Conversations and Settings keep their sidebar, because it is the way back.
+  Nothing is saved: the next recording starts focused
+  (`helpers/recordingFocus.mjs`).
 
 ## 2. Color
 
@@ -71,8 +88,17 @@ semantic names (`src/index.css`, `@theme` and `.dark`).
 
 Rules:
 
-- **No gradients, no textures, no glows.** Surfaces are flat; depth comes from a
-  border and at most `shadow-xs`/`shadow-sm`.
+- **Content is flat; the frame may carry the oat world.** Cards, lists and reading
+  surfaces stay flat, with depth from a border and at most `shadow-xs`/`shadow-sm`,
+  and no glows. The oat world may dress the frame where it never sits under words:
+  the sidebar's grain texture, the field at the sidebar's foot, empty states.
+- **The main action has depth.** New recording and Start recording are honey with
+  an inner highlight and a soft honey shadow, and they sink 1px when pressed
+  (`.oats-cta` in `index.css`). They are the only controls with depth.
+- **Character for the choices that matter.** The few choices that change what you
+  see (how topics are drawn, what the recording view shows, how Intelligence lays
+  out conversations) carry a small drawing of each view and a honey indicator that
+  slides to the choice. Every other control keeps the plain shadcn look.
 - **The brand is one warm yellow-orange** (`primary`, "honey"). It marks the
   important action on a screen — New recording, Start recording, Save, Download —
   and the states that belong to it: a switch that is on, focus, selection, the
@@ -82,10 +108,10 @@ Rules:
   mode, so a warning read as the brand. Light mode uses orange-700 so warning text
   meets 4.5:1 on white.
 - **The symbol is the honey oat grain** (`shell/OatsMark.tsx`): a small 3D grain,
-  the same in light and dark mode, with no tile behind it. It spins once when the
-  app starts and again when the sidebar mark is clicked: the grain rolls on its
-  long axis, so only its groove travels while the light stays put, with a small
-  hop. No spin under reduced motion. The app icon is the same grain on a light
+  the same in light and dark mode, with no tile behind it. It is tossed once when
+  the app first comes into view and again when the sidebar mark is clicked: it
+  hops, tumbles end over end twice and lands with a small squash, while the light
+  stays put (`helpers/oatsMarkMotion.mjs`). No toss under reduced motion. The app icon is the same grain on a light
   neutral tile; every icon file comes from `src/assets/logo.svg` and the masters
   in `scripts/` via `scripts/build-brand-icons.sh`.
 - **Red means recording or danger.** It is never decoration. Idle, the record
@@ -160,7 +186,7 @@ with no decorative gradient.
 
 - A question's mark has one vocabulary on every surface
   (`conversation/questionMarks.ts`), and it is always a complete circle of one
-  size: **filled** when settled (answered in `success`, nobody knew in
+  size: **filled** when settled (answered in `success`, unknown in
   `warning`), a **soft fill inside a ring** when the answer was hedged
   (`warning`), an **empty ring** when there is no verdict (`muted-foreground`).
   The fill carries the meaning without colour. On a contour the marks are
@@ -169,6 +195,10 @@ with no decorative gradient.
   right-hand edge, and redraws once a second, so the trace and every pin move one
   second to the left. Transcript speech and the microphone level both feed it,
   so it moves while somebody is talking. Its label describes the whole sitting.
+- A finished contour keeps the shape the live one had: the recording keeps how
+  loud each second was (one byte a second, `helpers/conversationLoudness.mjs`),
+  and the record and every list strip take their height from it by the live
+  rule. Conversations recorded before it was kept draw from their words.
 - The legend under a contour lists only what that contour draws, in two rows: how
   the questions ended, then the shape marks (topic change, topic revisited,
   marked moment).
@@ -176,18 +206,25 @@ with no decorative gradient.
 ## 7. Motion
 
 150ms ease-out for hover, focus and press; 200ms for menus and dialogs
-(`tw-animate-css`). No idle animation loops. The one ambient motion is the ring
-behind the recording dot, and it is measured: it grows with the microphone level,
-read against the room's own range (`helpers/listeningRing.mjs`), and rests while
-nobody speaks. It is written to the element from a store subscription, never
-through React state. Under `prefers-reduced-motion` the dot is still and has no
-ring.
+(`tw-animate-css`). Nothing moves at rest. Motion answers an action and runs once,
+in 150 to 300ms with ease-out; the grain toss and a contour drawing itself are the
+longer ones. While recording, the record dot follows the voice and the field may
+sway, capped at 30 fps and stopped when the window is unseen. The dot's ring is
+measured: it grows with the microphone level, read against the room's own range
+(`helpers/listeningRing.mjs`), and rests while nobody speaks. It is written to the
+element from a store subscription, never through React state. Everything is still
+under `prefers-reduced-motion`: the dot has no ring.
 
 - Buttons scale to 0.98 while pressed (`active:scale-[0.98]`), off under reduced
   motion.
 - Content that is on its way (a summary being written) shows its shape as a
   skeleton under one status line, not a spinner. Spinners are for a control that
   is busy (a download row), never for a page region.
+- The frame moves when a recording starts and when it stops: the sidebar glides
+  out and back in 280ms (`--motion-frame`, `--ease-oats`). It is one transition
+  of the frame's grid columns, so the conversation reflows into the room as it
+  moves, with no animation code. Under reduced motion the sidebar goes and
+  comes back at once.
 
 ## 8. Voice
 

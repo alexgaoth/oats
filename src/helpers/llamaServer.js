@@ -225,6 +225,13 @@ class LlamaServerManager {
     // so builds without --fit ignore it instead of erroring. See LLAMA_ARG_FIT.
     env.LLAMA_ARG_FIT = process.env.LLAMA_ARG_FIT || "off";
 
+    // llama-server can download a model itself (-hf, --model-url, or their
+    // LLAMA_ARG_* variables in an inherited environment). Offline mode forbids
+    // it, so this sidecar never reaches the network and the sidebar's request
+    // count stays complete (docs/network-allowlist.md). Builds that predate the
+    // option ignore the variable.
+    env.LLAMA_ARG_OFFLINE = "1";
+
     return env;
   }
 

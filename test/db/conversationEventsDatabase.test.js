@@ -112,6 +112,19 @@ test("conversation events preserve parent links, order, JSON fields, and suggest
   assert.throws(() => db.updateConversationEventMetadata("1", { state: "open" }));
 });
 
+// Finish writes how many questions were left open; the lists read it back
+// with the note, so the column has to exist and the update has to go through.
+test("a note keeps how many questions it left open", (t) => {
+  const db = createDb(t);
+  if (!db) return;
+  const note = db.saveNote("Conversation", "", "meeting").note;
+  assert.equal(db.getNote(note.id).open_questions, null);
+  const result = db.updateNote(note.id, { open_questions: 2 });
+  assert.equal(result.success, true);
+  assert.equal(db.getNote(note.id).open_questions, 2);
+  assert.equal(db.getNotes("meeting").find((row) => row.id === note.id).open_questions, 2);
+});
+
 // Marks are written on every press during a recording, so the column has to
 // exist on a fresh database and the update has to be allowed through.
 test("a note keeps the moments marked on it", (t) => {
@@ -122,4 +135,21 @@ test("a note keeps the moments marked on it", (t) => {
   const result = db.updateNote(note.id, { conversation_marks: marks });
   assert.equal(result.success, true);
   assert.equal(db.getNote(note.id).conversation_marks, marks);
+});
+
+// The loudness is written at Finish and with every checkpoint, so the column
+// has to exist on a fresh database and the update has to be allowed through.
+test("a note keeps how loud each second of it was", (t) => {
+  const db = createDb(t);
+  if (!db) return;
+  const note = db.saveNote("Conversation", "", "meeting").note;
+  assert.equal(db.getNote(note.id).conversation_loudness, null);
+  const loudness = JSON.stringify({ v: 1, runs: [{ at: 1_700_000_000_000, b: "AQID" }] });
+  const result = db.updateNote(note.id, { conversation_loudness: loudness });
+  assert.equal(result.success, true);
+  assert.equal(db.getNote(note.id).conversation_loudness, loudness);
+  assert.equal(
+    db.getNotes("meeting").find((row) => row.id === note.id).conversation_loudness,
+    loudness
+  );
 });
