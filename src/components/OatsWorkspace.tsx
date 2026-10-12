@@ -52,11 +52,13 @@ import { Input } from "./ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { ViewSwitch } from "./ui/view-switch";
+import { ShortcutTooltip } from "./ui/shortcut-tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { ConfirmDialog } from "./ui/dialog";
@@ -148,7 +150,7 @@ import PostMigrationOnboarding from "./PostMigrationOnboarding";
 import { useAppBootstrap } from "../hooks/useAppBootstrap";
 import { useConversationPreflight } from "../hooks/useConversationPreflight";
 import { getCachedPlatform } from "../utils/platform";
-import { formatHotkey } from "../utils/hotkeyLabel";
+import { ariaKeyShortcuts, formatHotkey } from "../utils/hotkeyLabel";
 import { initializeActions } from "../stores/actionStore";
 import { runBackgroundAction, useActionProcessingStore } from "../stores/actionProcessingStore";
 import { useSummaryReadiness } from "../hooks/useSummaryReadiness";
@@ -502,6 +504,10 @@ function ConversationSurface() {
   const conversationKey = useSettingsStore((state) => state.conversationKey);
   const shortcut = useMemo(
     () => formatHotkey(conversationKey, getCachedPlatform()),
+    [conversationKey]
+  );
+  const shortcutAria = useMemo(
+    () => ariaKeyShortcuts(conversationKey, getCachedPlatform()),
     [conversationKey]
   );
   const micSilentSince = useMeetingRecordingStore((s) => s.micSilentSince);
@@ -863,14 +869,22 @@ function ConversationSurface() {
                       : t("oats.conversation.mark")}
                     <Kbd className="ml-0.5">M</Kbd>
                   </Button>
+                  {/* Stop wears its key, as Mark does: the one shortcut that ends
+                      the conversation from any app. */}
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => void stopRecording()}
                     aria-label={t("oats.conversation.finish")}
+                    aria-keyshortcuts={shortcutAria || undefined}
                   >
                     <Square className="size-3.5 fill-current" />
                     {t("oats.conversation.stop")}
+                    {shortcut && (
+                      <Kbd className="ml-0.5 border-destructive-foreground/30 bg-destructive-foreground/15 text-destructive-foreground">
+                        {shortcut}
+                      </Kbd>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -2952,6 +2966,17 @@ function ConversationActions({
   const exportLabel = transcript
     ? t("oats.intelligence.exportTranscript")
     : t("oats.intelligence.exportSummary");
+  // Find has a key and no button, so the menu names it, the way macOS menus do.
+  // Chosen here, the menu leaves the focus to the find line it opens instead of
+  // taking it back to its own button.
+  const findKeys = useMemo(() => {
+    const platform = getCachedPlatform();
+    return {
+      label: formatHotkey("CommandOrControl+F", platform),
+      aria: ariaKeyShortcuts("CommandOrControl+F", platform),
+    };
+  }, []);
+  const findChosen = useRef(false);
 
   // Whatever is being read is what leaves. The transcript tab copies the
   // transcript with the screen's speaker labels; the other two copy exactly what
@@ -3034,7 +3059,27 @@ function ConversationActions({
             <MoreHorizontal aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-48">
+        <DropdownMenuContent
+          align="end"
+          className="min-w-48"
+          onCloseAutoFocus={(event) => {
+            if (!findChosen.current) return;
+            findChosen.current = false;
+            event.preventDefault();
+          }}
+        >
+          <DropdownMenuItem
+            aria-keyshortcuts={findKeys.aria}
+            onSelect={() => {
+              findChosen.current = true;
+              window.dispatchEvent(new Event("oats-find"));
+            }}
+          >
+            <Search aria-hidden="true" />
+            {t("oats.find.label")}
+            <DropdownMenuShortcut>{findKeys.label}</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           {vaultPath && (
             <>
               <DropdownMenuItem onSelect={() => void file()}>
@@ -3073,16 +3118,21 @@ function ConversationActions({
 
 /** Back to where the reader came from, named, the way a desktop app says it. */
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
+  const { t } = useTranslation();
+  // Escape steps back on this surface (the Intelligence keys), and says so here.
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
-      className="-ml-2.5 text-muted-foreground hover:text-foreground"
-    >
-      <ChevronLeft aria-hidden="true" />
-      {label}
-    </Button>
+    <ShortcutTooltip label={t("oats.shell.back")} keys="Esc" align="start">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClick}
+        aria-keyshortcuts="Escape"
+        className="-ml-2.5 text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft aria-hidden="true" />
+        {label}
+      </Button>
+    </ShortcutTooltip>
   );
 }
 
