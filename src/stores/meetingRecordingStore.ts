@@ -28,6 +28,7 @@ import { ConversationTopicTracker } from "../helpers/conversationTopics";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
 import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
+import { TranscriptLag } from "../helpers/transcriptLag.mjs";
 import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
   ConversationCard,
@@ -910,6 +911,22 @@ async function stopConversationAide() {
 
 export const getMicAnalyser = (): AnalyserNode | null => micAnalyser;
 
+/**
+ * How far behind the conversation the transcript is (`helpers/transcriptLag.mjs`).
+ * Fed by main's speech changes and by the audio position on each partial and
+ * final; read once a second by the badge beside the clock, which moves its
+ * smoothing on. Outside React state: it changes with every partial.
+ */
+const transcriptLag = new TranscriptLag();
+
+export function readTranscriptLag(now: number): {
+  visible: boolean;
+  behindMs: number;
+  warning: boolean;
+} {
+  return transcriptLag.read(now);
+}
+
 function pushConfig(enabled: boolean, expectedCount: number) {
   if (pushConfigTimeout) clearTimeout(pushConfigTimeout);
   pushConfigTimeout = setTimeout(() => {
@@ -1300,6 +1317,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   }
 
   segmentsRefValue = seed;
+  transcriptLag.reset();
   sittingLevels = [];
   sittingLoudnessSeed = args.seedLoudness ?? null;
   speakerIdentifications = [];
@@ -1480,7 +1498,11 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         timestamp?: number;
         startMs?: number;
         endMs?: number;
+        audioEndedAt?: number;
       }) => {
+        // Text for the audio up to here is on screen now (a final with no
+        // words included: its audio is settled all the same).
+        if (data.type !== "retract") transcriptLag.text({ audioEndedAt: data.audioEndedAt });
         if (data.type === "retract") {
           const current = useMeetingRecordingStore.getState().segments;
           const removed = current.filter(
@@ -1594,6 +1616,17 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       }
     );
     if (segmentCleanup) ipcCleanups.push(segmentCleanup);
+
+    const speechCleanup = window.electronAPI?.onMeetingTranscriptionSpeech?.((data) => {
+      if (data.off) transcriptLag.off();
+      else
+        transcriptLag.speech({
+          speaking: Boolean(data.speaking),
+          at: data.at,
+          dropped: data.dropped,
+        });
+    });
+    if (speechCleanup) ipcCleanups.push(speechCleanup);
 
     const speakerCleanup = window.electronAPI?.onMeetingSpeakerIdentified?.((data) => {
       reserveSpeakerIndex(data.speakerId);

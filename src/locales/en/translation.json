@@ -1918,6 +1918,10 @@
       "notSaving_one": "The last turn has not been saved. Check disk space, then finish and reopen the conversation.",
       "notSaving_other": "The last {{count}} turns have not been saved. Check disk space, then finish and reopen the conversation.",
       "notTranscribing": "Sound is arriving but nothing has been transcribed for a while. Finish the conversation and reopen it to restart transcription.",
+      "lag": {
+        "behind": "{{seconds}} s behind",
+        "described": "The transcript is {{seconds}} s behind what is being said."
+      },
       "statusRecording": "Recording. Audio and transcripts stay on this device.",
       "statusStopped": "Recording finished. Oats is writing the summary.",
       "nothingHeard": "Nothing was heard, so no conversation was saved. Check the microphone in Settings.",

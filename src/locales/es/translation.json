@@ -1918,6 +1918,10 @@
       "notSaving_one": "El último turno no se ha guardado. Comprueba el espacio en disco, luego finaliza y vuelve a abrir la conversación.",
       "notSaving_other": "Los últimos {{count}} turnos no se han guardado. Comprueba el espacio en disco, luego finaliza y vuelve a abrir la conversación.",
       "notTranscribing": "Está llegando sonido pero hace un rato que no se transcribe nada. Finaliza la conversación y vuelve a abrirla para reiniciar la transcripción.",
+      "lag": {
+        "behind": "{{seconds}} s de retraso",
+        "described": "La transcripción va {{seconds}} s por detrás de lo que se dice."
+      },
       "statusRecording": "Grabando. El audio y las transcripciones no salen de este equipo.",
       "statusStopped": "Grabación finalizada. Oats está escribiendo el resumen.",
       "nothingHeard": "No se oyó nada, así que no se guardó ninguna conversación. Revisa el micrófono en Ajustes.",
