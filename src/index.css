@@ -327,6 +327,41 @@
   }
 }
 
+/* The main action: honey with a little depth, and it sinks when pressed. New
+   recording and Start recording are the only controls with depth (DESIGN.md §2,
+   "Alive, not busy"); everything else stays flat. Unlayered, so the gradient and
+   shadow win over the button's own utilities. */
+.oats-cta {
+  background-image: linear-gradient(180deg, #f8b52e 0%, var(--color-primary) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 1px 2px rgb(154 91 0 / 0.35),
+    0 4px 10px -4px rgb(245 163 15 / 0.6);
+  transition:
+    transform var(--motion-instant) var(--ease-oats),
+    box-shadow var(--motion-instant) var(--ease-oats),
+    filter var(--motion-instant) var(--ease-oats);
+}
+
+.oats-cta:hover {
+  filter: brightness(1.04);
+}
+
+.oats-cta:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 1px 1px rgb(154 91 0 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-cta,
+  .oats-cta:active {
+    transition: none;
+    transform: none;
+  }
+}
+
 /* One of the three stacked surfaces (§8: "the outgoing view dims to 0 as the
    incoming rises"). All three stay mounted, so the crossing is a genuine overlap
    of two live views rather than a copy of one of them — see OatsWorkspace.tsx.

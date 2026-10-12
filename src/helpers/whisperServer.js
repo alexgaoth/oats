@@ -11,6 +11,7 @@ const { isPortAvailable } = require("../utils/serverUtils");
 const { getSafeTempDir } = require("./safeTempDir");
 const { convertToWav } = require("./ffmpegUtils");
 const sidecarPidFile = require("./sidecarPidFile");
+const { parseWhisperBackend } = require("./whisperBackend");
 const { sanitizeWhisperVadConfig, DEFAULT_WHISPER_VAD_CONFIG } = require("./whisperVadConfig");
 const { pcm16ToWav } = require("../utils/audioUtils");
 // A dynamic import kept in a promise: `whisperRequestCuts.mjs` is ESM so it can
@@ -245,6 +246,9 @@ class WhisperServerManager extends EventEmitter {
     this.canConvert = false;
     this.useCuda = false;
     this.useVulkan = false;
+    // The backend the server said it loaded on (whisperBackend.js), for the
+    // sidebar's footer. Null until it has said.
+    this.backend = null;
     this.startGeneration = 0;
     this._stopRequested = false;
     this.vadSignature = "vad:off";
@@ -507,6 +511,7 @@ class WhisperServerManager extends EventEmitter {
     this.modelPath = modelPath;
     this.useCuda = usingCuda;
     this.useVulkan = usingVulkan;
+    this.backend = null;
 
     // Check for FFmpeg first - only use --convert flag if FFmpeg is available
     const ffmpegPath = this.getFFmpegPath();
@@ -581,6 +586,8 @@ class WhisperServerManager extends EventEmitter {
 
     this.process.stderr.on("data", (data) => {
       stderrBuffer += data.toString();
+      // The backend is reported while the model loads, before the port answers.
+      if (!this.ready) this.backend = parseWhisperBackend(stderrBuffer);
       debugLogger.debug("whisper-server stderr", { data: data.toString().trim() });
     });
 
@@ -597,6 +604,7 @@ class WhisperServerManager extends EventEmitter {
       this.process = null;
       this.stopHealthCheck();
       sidecarPidFile.clear("whisper");
+      this.emit("status");
     });
 
     try {
@@ -649,10 +657,13 @@ class WhisperServerManager extends EventEmitter {
     }
 
     this.startHealthCheck();
+    // Up, with this model on this backend: the footer reads it from getStatus().
+    this.emit("status");
 
     debugLogger.info("whisper-server started successfully", {
       port: this.port,
       model: path.basename(modelPath),
+      backend: this.backend,
       cuda: this.useCuda,
       vulkan: this.useVulkan,
       threads: threadResolution.threads || DEFAULT_WHISPER_THREADS,
@@ -735,6 +746,7 @@ class WhisperServerManager extends EventEmitter {
       if (!(await this.checkHealth())) {
         debugLogger.warn("whisper-server health check failed");
         this.ready = false;
+        this.emit("status");
       }
     }, HEALTH_CHECK_INTERVAL_MS);
   }
@@ -1066,6 +1078,7 @@ class WhisperServerManager extends EventEmitter {
     this.ready = false;
     this.port = null;
     this.modelPath = null;
+    this.emit("status");
   }
 
   getStatus() {
@@ -1077,6 +1090,7 @@ class WhisperServerManager extends EventEmitter {
       isRemote: this.isRemote,
       modelPath: this.modelPath,
       modelName: this.modelPath ? path.basename(this.modelPath, ".bin").replace("ggml-", "") : null,
+      backend: this.isRemote ? null : this.backend,
     };
   }
 }

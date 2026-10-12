@@ -29,6 +29,7 @@ import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
 import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
 import { TranscriptLag } from "../helpers/transcriptLag.mjs";
+import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
   ConversationCard,
   ConversationSuggestion,
@@ -768,6 +769,28 @@ async function loadConversationHistory(currentNoteId: number | null) {
 // Until this existed the transcript lived only in renderer memory until stop, so
 // a crash, an OOM kill, or a closed laptop lost the entire conversation — the one
 // failure in this product that cannot be retried, because the room has gone home.
+// How loud each second of this sitting was: the per-second RMS of the
+// microphone level the live line draws from (`useLevelHistory` keeps its last
+// ten minutes; this keeps the whole sitting). Written to the note at Finish, so
+// the finished contour keeps the shape the live line had
+// (`conversationLoudness.mjs`). `sittingLoudnessSeed` is what a resumed
+// conversation already held, kept ahead of this sitting.
+let sittingLevels: { at: number; level: number; sumSq: number; n: number }[] = [];
+let sittingLoudnessSeed: string | null = null;
+
+useMeetingRecordingStore.subscribe((state, previous) => {
+  if (!state.isRecording || state.currentMicLevel === previous.currentMicLevel) return;
+  addLevelSample(sittingLevels, Date.now(), state.currentMicLevel);
+});
+
+/**
+ * This conversation's loudness in its stored form, for the Finish write: the
+ * sittings it already held and this one. Null when nothing was measured.
+ */
+export function sittingLoudness(): string | null {
+  return encodeLoudness(sittingLoudnessSeed, sittingLevels);
+}
+
 // Checkpoints are cheap (one UPDATE of text already in hand) and idempotent.
 //
 // This used to run on a blind 20-second interval, which meant a crash could take
@@ -810,6 +833,8 @@ function flushTranscriptCheckpoint() {
   if (serialized === checkpointLastWritten) return;
   const attemptedCount = state.segments.length;
   const topics = conversationTopicTracker?.snapshot(Date.now());
+  // With the words, so a crash keeps the loudness up to the last turn written.
+  const loudness = sittingLoudness();
   // The result is read now instead of thrown away with `void`.
   //
   // Checkpointing already bounded what a crash could take. The other failure —
@@ -824,6 +849,7 @@ function flushTranscriptCheckpoint() {
     window.electronAPI?.updateNote?.(noteId, {
       transcript: serialized,
       ...(topics ? { conversation_topics: JSON.stringify(topics) } : {}),
+      ...(loudness ? { conversation_loudness: loudness } : {}),
     })
   )
     .then((result) => {
@@ -1152,6 +1178,8 @@ export interface StartRecordingArgs {
   seedSegments?: TranscriptSegment[];
   /** The marks a continued conversation already carries, stored form. */
   seedMoments?: unknown;
+  /** The loudness a continued conversation already carries, stored form. */
+  seedLoudness?: string | null;
   diarizationEnabled?: boolean | null;
   expectedCount?: number | null;
   mode?: ConversationRecordingMode;
@@ -1290,6 +1318,8 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
 
   segmentsRefValue = seed;
   transcriptLag.reset();
+  sittingLevels = [];
+  sittingLoudnessSeed = args.seedLoudness ?? null;
   speakerIdentifications = [];
   nextPlaceholderSpeakerIndex = maxSpeakerIndex + 1;
   recentSystemSpeaker = null;

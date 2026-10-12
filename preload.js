@@ -292,6 +292,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),
   whisperServerStatus: () => ipcRenderer.invoke("whisper-server-status"),
 
+  // The sidebar's footer (onDeviceStatus.js): requests that left this machine
+  // since launch and the running speech model. Pulled once, then pushed.
+  getOnDeviceStatus: () => ipcRenderer.invoke("get-on-device-status"),
+  onOnDeviceStatus: registerListener(
+    "on-device-status",
+    (callback) => (_event, status) => callback(status)
+  ),
+
   // CUDA GPU acceleration
   listGpus: () => ipcRenderer.invoke("list-gpus"),
   setGpuDeviceIndex: (purpose, uuid) => ipcRenderer.invoke("set-gpu-device-index", purpose, uuid),

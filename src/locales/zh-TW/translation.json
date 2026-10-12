@@ -1898,7 +1898,7 @@
       "contourLabel": "這場對話到目前為止的形狀",
       "legend": {
         "label": "標記的含義",
-        "open": "尚無回答",
+        "open": "未解決",
         "topic": "話題切換",
         "return": "回到先前的話題",
         "marked": "標記時刻"
@@ -1987,6 +1987,13 @@
       "speakerRoom": "對方",
       "speakerN": "說話者 {{n}}",
       "nameSpeaker": "為{{speaker}}命名",
+      "talkTime": {
+        "label": "發言時長",
+        "show": "只顯示{{speaker}}的發言",
+        "only": "僅{{speaker}}的發言",
+        "everyone": "顯示所有人",
+        "unattributed": "未識別"
+      },
       "tabs": {
         "summary": "摘要",
         "transcript": "逐字稿",
@@ -2003,6 +2010,13 @@
       "plusRelated_other": "另有 {{count}} 個可能相關",
       "searchResults_one": "{{count}} 個對話符合",
       "searchResults_other": "{{count}} 個對話符合",
+      "search": {
+        "matches_one": "{{count}} 處相符",
+        "matches_other": "{{count}} 處相符",
+        "conversations_one": "{{count}} 個對話",
+        "conversations_other": "{{count}} 個對話",
+        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}"
+      },
       "match": {
         "transcript": "說過",
         "note": "你的備註",
@@ -2012,6 +2026,12 @@
       "matchRelated": "相關",
       "markedCount_one": "{{count}} 個標記時刻",
       "markedCount_other": "{{count}} 個標記時刻",
+      "outcomes": {
+        "questions_one": "{{count}} 個問題",
+        "questions_other": "{{count}} 個問題",
+        "item_one": "{{outcome}} {{count}}",
+        "item_other": "{{outcome}} {{count}}"
+      },
       "copy": "複製",
       "copied": "已複製",
       "vaultSaved": "已存入儲存庫",
@@ -2246,15 +2266,26 @@
       "noRecent": "還沒有對話",
       "record": "新錄音",
       "stop": "停止錄音"
+    },
+    "trust": {
+      "onThisMac": "在這台 Mac 上",
+      "onThisComputer": "在這台電腦上",
+      "speechAndWriting": "語音與寫作：{{names}}",
+      "speech": "語音：{{names}}",
+      "writing": "寫作：{{names}}",
+      "yourServer": "你的伺服器",
+      "modelOn": "{{model}} 執行於 {{backend}}",
+      "requests_one": "啟動以來 {{count}} 次網路請求",
+      "requests_other": "啟動以來 {{count}} 次網路請求"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "已提出",
+      "asked": "未解決",
       "answered": "已解答",
       "uncertain": "不確定",
       "silence": "無人回應",
-      "denied": "無人知曉"
+      "denied": "未知"
     },
     "searched": "已搜尋",
     "dismiss": "忽略此問題",

@@ -9,6 +9,14 @@ export type SelfHostedType = "openai-compatible" | "lan";
 
 export type TranscriptionStatus = "completed" | "failed" | "pending" | "discarded";
 
+/** What the sidebar's footer reads from the main process (onDeviceStatus.js). */
+export interface OnDeviceStatus {
+  /** Requests that left this machine since launch (networkLedger.js). */
+  requests: { outbound: number; since: number };
+  /** The model the running whisper-server loaded, on the backend it reported. */
+  speech: { model: string; backend: string | null } | null;
+}
+
 export type TranscriptionErrorCode =
   | "TIMEOUT"
   | "NETWORK"
@@ -65,6 +73,9 @@ export interface NoteItem {
   // Moments marked during the recording (see helpers/conversationMoments.mjs).
   // Optional: notes written before the column existed do not carry it.
   conversation_marks?: string | null;
+  // How loud each second was, written at Finish (helpers/conversationLoudness.mjs).
+  // Optional: absent for conversations recorded before it was kept.
+  conversation_loudness?: string | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
@@ -402,6 +413,9 @@ declare global {
       // with backgroundThrottling off, which pins document.visibilityState.
       onWindowVisibility?: (callback: (visible: boolean) => void) => () => void;
       getWindowVisibility?: () => Promise<boolean>;
+      // The sidebar's footer: pulled once on mount, then pushed on every change.
+      getOnDeviceStatus?: () => Promise<OnDeviceStatus>;
+      onOnDeviceStatus?: (callback: (status: OnDeviceStatus) => void) => () => void;
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
       onToggleConversation?: (callback: () => void) => () => void;
@@ -578,6 +592,7 @@ declare global {
           expected_speaker_count?: number | null;
           conversation_topics?: string | null;
           conversation_marks?: string | null;
+          conversation_loudness?: string | null;
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;

@@ -1903,7 +1903,7 @@
       "contourLabel": "Форма этого разговора на данный момент",
       "legend": {
         "label": "Что означают отметки",
-        "open": "Пока без ответа",
+        "open": "Открыт",
         "topic": "Смена темы",
         "return": "Возврат к прежней теме",
         "marked": "Отмеченный момент"
@@ -2008,6 +2008,13 @@
       "speakerRoom": "Комната",
       "speakerN": "Собеседник {{n}}",
       "nameSpeaker": "Дать имя: {{speaker}}",
+      "talkTime": {
+        "label": "Время речи",
+        "show": "Показать только реплики: {{speaker}}",
+        "only": "Только реплики: {{speaker}}",
+        "everyone": "Показать всех",
+        "unattributed": "Не определено"
+      },
       "tabs": {
         "summary": "Резюме",
         "transcript": "Расшифровка",
@@ -2028,6 +2035,17 @@
       "searchResults_few": "Найдено разговора: {{count}}",
       "searchResults_many": "Найдено разговоров: {{count}}",
       "searchResults_other": "Найдено разговоров: {{count}}",
+      "search": {
+        "matches_one": "{{count}} совпадение",
+        "matches_few": "{{count}} совпадения",
+        "matches_many": "{{count}} совпадений",
+        "matches_other": "{{count}} совпадения",
+        "conversations_one": "{{count}} разговоре",
+        "conversations_few": "{{count}} разговорах",
+        "conversations_many": "{{count}} разговорах",
+        "conversations_other": "{{count}} разговорах",
+        "receipt": "{{matches}} в {{conversations}} · {{duration}}"
+      },
       "match": {
         "transcript": "Сказано",
         "note": "Ваша заметка",
@@ -2039,6 +2057,16 @@
       "markedCount_few": "{{count}} отмеченных момента",
       "markedCount_many": "{{count}} отмеченных моментов",
       "markedCount_other": "{{count}} отмеченного момента",
+      "outcomes": {
+        "questions_one": "{{count}} вопрос",
+        "questions_few": "{{count}} вопроса",
+        "questions_many": "{{count}} вопросов",
+        "questions_other": "{{count}} вопроса",
+        "item_one": "{{outcome}}: {{count}}",
+        "item_few": "{{outcome}}: {{count}}",
+        "item_many": "{{outcome}}: {{count}}",
+        "item_other": "{{outcome}}: {{count}}"
+      },
       "copy": "Копировать",
       "copied": "Скопировано",
       "vaultSaved": "В хранилище",
@@ -2277,15 +2305,28 @@
       "noRecent": "Пока нет разговоров",
       "record": "Новая запись",
       "stop": "Остановить запись"
+    },
+    "trust": {
+      "onThisMac": "На этом Mac",
+      "onThisComputer": "На этом компьютере",
+      "speechAndWriting": "Речь и текст: {{names}}",
+      "speech": "Речь: {{names}}",
+      "writing": "Текст: {{names}}",
+      "yourServer": "ваш сервер",
+      "modelOn": "{{model}} на {{backend}}",
+      "requests_one": "{{count}} сетевой запрос с момента запуска",
+      "requests_few": "{{count}} сетевых запроса с момента запуска",
+      "requests_many": "{{count}} сетевых запросов с момента запуска",
+      "requests_other": "{{count}} сетевого запроса с момента запуска"
     }
   },
   "questionCard": {
     "state": {
-      "asked": "Задан",
+      "asked": "Открыт",
       "answered": "Отвечен",
       "uncertain": "Неуверенно",
       "silence": "Нет ответа",
-      "denied": "Никто не знал"
+      "denied": "Неизвестно"
     },
     "searched": "Найдено",
     "dismiss": "Скрыть вопрос",

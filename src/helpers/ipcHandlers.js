@@ -17,6 +17,8 @@ const { createTinfoilRealtimeSocket } = require("./tinfoilSecureClient");
 const { getTinfoilChatModels } = require("./tinfoilCatalog");
 const { transcribeWithTinfoil } = require("./tinfoilTranscription");
 const AudioStorageManager = require("./audioStorage");
+const { getNetworkLedger } = require("./networkLedger");
+const { createOnDeviceStatus } = require("./onDeviceStatus");
 
 // Tinfoil's only realtime STT model — fallback when the renderer omits one.
 const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
@@ -316,6 +318,13 @@ class IPCHandlers {
     this._setupTextEditMonitor();
     this._setupAudioCleanup();
     this._logDetectedGpus();
+    // The sidebar's footer: requests that left this machine since launch, and
+    // the speech model the running whisper-server loaded (onDeviceStatus.js).
+    this._onDeviceStatus = createOnDeviceStatus({
+      ledger: getNetworkLedger(),
+      speechServer: this.whisperManager?.serverManager,
+      publish: (status) => this.broadcastToWindows("on-device-status", status),
+    });
     this.setupHandlers();
 
     if (this.whisperManager?.serverManager) {
@@ -888,6 +897,9 @@ class IPCHandlers {
               stdio: "ignore",
             });
             child.unref();
+            // The browser makes this request, not Oats, so no hook sees it;
+            // shell.openExternal below is counted by networkLedger.js itself.
+            getNetworkLedger().recordUrl("browser", url);
             return;
           }
         } catch (error) {
@@ -1913,6 +1925,10 @@ class IPCHandlers {
     ipcMain.handle("whisper-server-status", async () => {
       return this.whisperManager.getServerStatus();
     });
+
+    // Pulled once by the sidebar's footer on mount; changes are pushed as
+    // `on-device-status`.
+    ipcMain.handle("get-on-device-status", () => this._onDeviceStatus.snapshot());
 
     ipcMain.handle("detect-gpu", async () => {
       const { detectNvidiaGpu } = require("../utils/gpuDetection");
