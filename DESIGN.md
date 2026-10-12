@@ -55,6 +55,15 @@ The product rules from v1 still hold and still win over taste:
   `px-8`, vertical rhythm on a 4px grid (8 / 12 / 16 / 24 / 32).
 - Navigation stays available while recording; Settings is the one destination
   closed during a recording (as ⌘, is).
+- **Focus on record.** While a conversation is recorded, Home gives it the
+  window: the sidebar steps aside, and the recording column grows by the
+  sidebar's width, so the live line gets the room and the column's right edge,
+  where Stop is, does not move. The sidebar comes back when the recording stops.
+  A sidebar button (`PanelLeft`) after the traffic lights, or `⌘\` (`Ctrl+\`),
+  brings it back for the rest of that recording and hides it again.
+  Conversations and Settings keep their sidebar, because it is the way back.
+  Nothing is saved: the next recording starts focused
+  (`helpers/recordingFocus.mjs`).
 
 ## 2. Color
 
@@ -232,6 +241,11 @@ under `prefers-reduced-motion`.
 - Content that is on its way (a summary being written) shows its shape as a
   skeleton under one status line, not a spinner. Spinners are for a control that
   is busy (a download row), never for a page region.
+- The frame moves when a recording starts and when it stops: the sidebar glides
+  out and back in 280ms (`--motion-frame`, `--ease-oats`). It is one transition
+  of the frame's grid columns, so the conversation reflows into the room as it
+  moves, with no animation code. Under reduced motion the sidebar goes and
+  comes back at once.
 
 ## 8. Voice
 

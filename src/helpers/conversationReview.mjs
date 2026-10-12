@@ -142,6 +142,25 @@ export function questionOutcomes(events) {
 }
 
 /**
+ * Outcomes that leave a question open: no verdict, nobody answered, nobody
+ * knew. The contour's label counts the same three as "still unanswered"; a
+ * hedged answer is an answer of a kind, and is not counted.
+ */
+const LEFT_OPEN = new Set(["open", "silence", "denied"]);
+
+/**
+ * How many questions a conversation left open, for the lists: stored on the
+ * note at Finish (`notes.open_questions`), so a row shows it without loading
+ * the conversation's events. Counted from `questionOutcomes`, so it agrees with
+ * the line under the record's title.
+ */
+export function openQuestionCount(events) {
+  return questionOutcomes(events)
+    .outcomes.filter(({ outcome }) => LEFT_OPEN.has(outcome))
+    .reduce((total, { count }) => total + count, 0);
+}
+
+/**
  * Which turns asked a question, and how each came out — for the transcript's
  * margin. Keyed by the segment the question started in.
  *

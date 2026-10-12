@@ -119,6 +119,7 @@
   --motion-instant: 120ms; /* hover, focus, press */
   --motion-base: 220ms; /* cards in/out, view swaps */
   --motion-slow: 380ms; /* onboarding steps, Graph reveal */
+  --motion-frame: 280ms; /* the frame: the sidebar stepping aside for a recording */
   --motion-ambient: 2400ms; /* the listening pulse breath — pair with ease-in-out infinite */
 
   /* So a bare `transition-colors` or `transition-opacity` is already on the Oats
@@ -359,6 +360,14 @@
   .oats-cta:active {
     transition: none;
     transform: none;
+  }
+}
+
+/* The field at the sidebar's foot gives its height back on short windows, so
+   the recent conversations above it never have to scroll for it. */
+@media (max-height: 760px) {
+  .oats-sidebar-field {
+    display: none;
   }
 }
 
@@ -1412,4 +1421,80 @@ body:has(.agent-overlay-window) #root {
    buttons. */
 html[data-platform="darwin"] .oats-titlebar {
   padding-left: 88px;
+}
+
+/* Focus on record (OatsWorkspace.tsx; the rules are helpers/recordingFocus.mjs).
+   While a conversation is recorded, the sidebar steps aside and the
+   conversation takes the window. It comes back when the recording stops, or
+   when the header's sidebar button or ⌘\ asks for it.
+
+   One layout transition, on purpose: the conversation has to reflow into the
+   room, which a transform cannot do. The frame's first column glides to zero,
+   and the sidebar, pinned to that column's right edge, leaves with it, so the
+   two can never drift apart and no script runs per frame. */
+.oats-frame {
+  /* AppSidebar draws itself at this width (DESIGN.md §1). */
+  --oats-sidebar-width: 232px;
+  display: grid;
+  grid-template-columns: var(--oats-sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  transition: grid-template-columns var(--motion-frame) var(--ease-oats);
+}
+
+.oats-frame[data-sidebar="hidden"] {
+  grid-template-columns: 0px minmax(0, 1fr);
+}
+
+/* The sidebar keeps its width and sits at its cell's right edge, so a
+   narrowing cell carries it out to the left. Clipped rather than hidden, for
+   the reason the shell's root is (scrollIntoView). */
+.oats-frame-sidebar {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: clip;
+}
+
+/* The header's leading inset. It widens to hold the sidebar button, and on
+   macOS it keeps clear of the traffic lights (x 16–70) whenever the sidebar is
+   not under them. It moves with the frame, so the title glides and never
+   jumps. Clipped, so the button is uncovered as the inset opens. */
+.oats-frame-lead {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  align-self: stretch;
+  justify-content: flex-end;
+  width: 24px;
+  overflow: clip;
+  transition: width var(--motion-frame) var(--ease-oats);
+}
+
+.oats-frame[data-sidebar-toggle] .oats-frame-lead {
+  /* The 24px inset, the 32px button, and 8px to the title. */
+  width: 64px;
+}
+
+html[data-platform="darwin"] .oats-frame[data-sidebar="hidden"] .oats-frame-lead {
+  /* 84px clears the traffic lights; then the button and the gap. */
+  width: 124px;
+}
+
+/* The recording column's cap is the reading width plus whatever width the
+   sidebar has given up: 100vw - 100% is the width its column still takes. So
+   the column grows by exactly the sidebar's width, frame by frame, with no
+   transition of its own to keep in step. Centred, it grows leftward into the
+   place the sidebar leaves, and its right edge, where Stop is, stays put.
+   Never below the reading width, which a classic scrollbar would otherwise
+   take from it. */
+.oats-record-column {
+  max-width: max(48rem, calc(48rem + var(--oats-sidebar-width) - (100vw - 100%)));
+}
+
+/* No glide: the sidebar goes and comes back at once. */
+@media (prefers-reduced-motion: reduce) {
+  .oats-frame,
+  .oats-frame-lead {
+    transition: none;
+  }
 }

@@ -5,6 +5,7 @@ import { cn } from "../lib/utils";
 import { Kbd } from "../ui/kbd";
 import { OatsMark } from "./OatsMark";
 import { OnDeviceFooter } from "./OnDeviceFooter";
+import { SidebarField } from "./SidebarField";
 import { SidebarGrain } from "./SidebarGrain";
 import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
@@ -265,6 +266,9 @@ export function AppSidebar({
         />
         <OnDeviceFooter className="mt-2 pl-2" />
       </div>
+
+      {/* The field at the foot: still at rest, swaying while recording. */}
+      <SidebarField />
     </aside>
   );
 }
