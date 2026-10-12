@@ -8,9 +8,8 @@ const path = require("node:path");
 let ListeningRing, RING_DEFAULTS, ringRange, ringScale;
 
 test.before(async () => {
-  ({ ListeningRing, RING_DEFAULTS, ringRange, ringScale } = await import(
-    "../../src/helpers/listeningRing.mjs"
-  ));
+  ({ ListeningRing, RING_DEFAULTS, ringRange, ringScale } =
+    await import("../../src/helpers/listeningRing.mjs"));
 });
 
 /** A deterministic wobble in [-1, 1], so no test depends on Math.random. */
