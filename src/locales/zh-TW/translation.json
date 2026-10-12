@@ -1898,7 +1898,7 @@
       "contourLabel": "這場對話到目前為止的形狀",
       "legend": {
         "label": "標記的含義",
-        "open": "尚無回答",
+        "open": "未解決",
         "topic": "話題切換",
         "return": "回到先前的話題",
         "marked": "標記時刻"
@@ -2251,7 +2251,7 @@
   },
   "questionCard": {
     "state": {
-      "asked": "已提出",
+      "asked": "未解決",
       "answered": "已解答",
       "uncertain": "不確定",
       "silence": "無人回應",

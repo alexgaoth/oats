@@ -1903,7 +1903,7 @@
       "contourLabel": "ここまでの会話のかたち",
       "legend": {
         "label": "マークの意味",
-        "open": "まだ回答なし",
+        "open": "未解決",
         "topic": "話題の切り替え",
         "return": "前の話題に戻った",
         "marked": "マークした瞬間"
@@ -2256,7 +2256,7 @@
   },
   "questionCard": {
     "state": {
-      "asked": "質問",
+      "asked": "未解決",
       "answered": "回答済み",
       "uncertain": "あいまい",
       "silence": "応答なし",

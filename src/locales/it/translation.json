@@ -1903,7 +1903,7 @@
       "contourLabel": "La forma di questa conversazione finora",
       "legend": {
         "label": "Cosa significano i segni",
-        "open": "Ancora nessuna risposta",
+        "open": "Aperta",
         "topic": "Cambio di argomento",
         "return": "Ritorno a un argomento precedente",
         "marked": "Momento segnato"
@@ -2256,7 +2256,7 @@
   },
   "questionCard": {
     "state": {
-      "asked": "Posta",
+      "asked": "Aperta",
       "answered": "Risposta",
       "uncertain": "Incerta",
       "silence": "Nessuna risposta",
