@@ -2241,6 +2241,17 @@
       "noRecent": "Noch keine Gespräche",
       "record": "Neue Aufnahme",
       "stop": "Aufnahme beenden"
+    },
+    "trust": {
+      "onThisMac": "Auf diesem Mac",
+      "onThisComputer": "Auf diesem Computer",
+      "speechAndWriting": "Sprach- und Schreibmodell: {{names}}",
+      "speech": "Sprachmodell: {{names}}",
+      "writing": "Schreibmodell: {{names}}",
+      "yourServer": "Ihr Server",
+      "modelOn": "{{model}} auf {{backend}}",
+      "requests_one": "{{count}} Netzwerkanfrage seit dem Start",
+      "requests_other": "{{count}} Netzwerkanfragen seit dem Start"
     }
   },
   "questionCard": {

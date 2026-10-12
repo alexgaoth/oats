@@ -2236,6 +2236,17 @@
       "noRecent": "还没有对话",
       "record": "新录音",
       "stop": "停止录音"
+    },
+    "trust": {
+      "onThisMac": "在这台 Mac 上",
+      "onThisComputer": "在这台电脑上",
+      "speechAndWriting": "语音和写作：{{names}}",
+      "speech": "语音：{{names}}",
+      "writing": "写作：{{names}}",
+      "yourServer": "你的服务器",
+      "modelOn": "{{model}} 运行于 {{backend}}",
+      "requests_one": "启动以来 {{count}} 次网络请求",
+      "requests_other": "启动以来 {{count}} 次网络请求"
     }
   },
   "questionCard": {

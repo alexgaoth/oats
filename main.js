@@ -24,8 +24,14 @@ const {
   dialog,
   ipcMain,
   session,
+  shell,
   systemPreferences,
 } = require("electron");
+
+// First, before anything can open a connection: the sidebar's count of requests
+// that left this machine must see every one (networkLedger.js says where).
+require("./src/helpers/networkLedger").install({ app, session, shell });
+
 const path = require("path");
 const tls = require("tls");
 require("dotenv").config({ path: path.join(__dirname, ".env") });

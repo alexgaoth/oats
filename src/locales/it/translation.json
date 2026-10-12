@@ -2241,6 +2241,17 @@
       "noRecent": "Ancora nessuna conversazione",
       "record": "Nuova registrazione",
       "stop": "Interrompi registrazione"
+    },
+    "trust": {
+      "onThisMac": "Su questo Mac",
+      "onThisComputer": "Su questo computer",
+      "speechAndWriting": "Voce e scrittura: {{names}}",
+      "speech": "Voce: {{names}}",
+      "writing": "Scrittura: {{names}}",
+      "yourServer": "il tuo server",
+      "modelOn": "{{model}} su {{backend}}",
+      "requests_one": "{{count}} richiesta di rete dall'avvio",
+      "requests_other": "{{count}} richieste di rete dall'avvio"
     }
   },
   "questionCard": {

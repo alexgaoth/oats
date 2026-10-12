@@ -9,6 +9,14 @@ export type SelfHostedType = "openai-compatible" | "lan";
 
 export type TranscriptionStatus = "completed" | "failed" | "pending" | "discarded";
 
+/** What the sidebar's footer reads from the main process (onDeviceStatus.js). */
+export interface OnDeviceStatus {
+  /** Requests that left this machine since launch (networkLedger.js). */
+  requests: { outbound: number; since: number };
+  /** The model the running whisper-server loaded, on the backend it reported. */
+  speech: { model: string; backend: string | null } | null;
+}
+
 export type TranscriptionErrorCode =
   | "TIMEOUT"
   | "NETWORK"
@@ -402,6 +410,9 @@ declare global {
       // with backgroundThrottling off, which pins document.visibilityState.
       onWindowVisibility?: (callback: (visible: boolean) => void) => () => void;
       getWindowVisibility?: () => Promise<boolean>;
+      // The sidebar's footer: pulled once on mount, then pushed on every change.
+      getOnDeviceStatus?: () => Promise<OnDeviceStatus>;
+      onOnDeviceStatus?: (callback: (status: OnDeviceStatus) => void) => () => void;
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
       onToggleConversation?: (callback: () => void) => () => void;
