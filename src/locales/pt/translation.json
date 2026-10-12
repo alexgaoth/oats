@@ -2255,7 +2255,7 @@
       "answered": "Respondida",
       "uncertain": "Incerta",
       "silence": "Sem resposta",
-      "denied": "Ninguém sabia"
+      "denied": "Desconhecido"
     },
     "searched": "Pesquisada",
     "dismiss": "Dispensar pergunta",

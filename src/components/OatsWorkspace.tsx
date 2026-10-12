@@ -2162,7 +2162,7 @@ function MarkedMoments({
 
 /**
  * How a question came out, as a status badge. Amber for the ones worth chasing
- * (nobody knew, or nobody was sure); red is for recording and danger only.
+ * (unknown, or uncertain); red is for recording and danger only.
  */
 const OUTCOME_BADGE: Record<string, BadgeProps["variant"]> = {
   asked: "secondary",

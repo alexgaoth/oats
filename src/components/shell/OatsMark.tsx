@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef } from "react";
 import { cn } from "../lib/utils";
+import { HOP, SPIN_MS, tossFrame, tumbleHeight } from "../../helpers/oatsMarkMotion.mjs";
 
 /**
  * The Oats symbol: a plump honey oat grain, shaded as a small 3D object.
@@ -8,12 +9,15 @@ import { cn } from "../lib/utils";
  * mark was a tile filled with the foreground colour, so it turned black on the
  * light app and white on the dark one, the opposite of the app every time.
  *
- * It can spin. A grain is round about its long axis, so spinning it on that
- * axis leaves its outline where it is: only the groove travels across the
- * surface, and the light stays put. Drawing exactly that reads as a real roll,
- * where turning a flat shape like a coin would not. The spin runs once when
- * the app starts (`spinOnLaunch`) and when the mark is clicked
- * (`interactive`), and not at all under prefers-reduced-motion.
+ * It flips. A grain is nearly round about its long axis, so turning it that
+ * way changes nothing but the crease: at sidebar size the first version's roll
+ * read as no animation at all. So the spin is a toss instead. The grain hops,
+ * tumbles end over end twice, and lands with a small squash. Tumbling
+ * foreshortens it towards its end-on shape, and its crease turns away and comes
+ * back, which is what reads as a solid object turning. The light stays where
+ * it is. It runs once when the app first comes into view (`spinOnLaunch`) and
+ * when the mark is clicked (`interactive`), and not at all under
+ * prefers-reduced-motion.
  */
 
 // The grain in a 1024 box: centred, 688 tall, 480 wide at its widest.
@@ -25,16 +29,12 @@ const OUTLINE =
   "M512 168 C584 168 752 326 752 512 C752 700 588 856 512 856 C436 856 272 700 272 512 C272 326 440 168 512 168 Z";
 /** The tilt that gives it some life. */
 const TILT = -18;
-/** Where the groove rests, as an angle round the long axis (0 is the middle). */
+/** Where the crease sits, as an angle round the long axis (0 is the middle). */
 const REST = 0.34;
 const GROOVE_FROM = 252;
 const GROOVE_TO = 772;
-const SPIN_MS = 1200;
-/** Two full turns. */
-const SPIN_TURNS = 2;
-
-/** The groove at angle `theta`: its path, and how directly it faces us. */
-function groove(theta: number): { d: string; lip: string; facing: number } {
+/** The crease at its resting place: its path, and its catch-light lip. */
+function groove(theta: number): { d: string; lip: string } {
   const across = Math.sin(theta);
   const facing = Math.cos(theta);
   const points: [number, number][] = [];
@@ -49,17 +49,15 @@ function groove(theta: number): { d: string; lip: string; facing: number } {
       .map(([x, y], index) => `${index === 0 ? "M" : "L"}${(x + shift).toFixed(1)} ${y.toFixed(1)}`)
       .join(" ");
   // The lip catches the light, which comes from the upper left.
-  return { d: path(0), lip: path(-13 * Math.max(0, facing)), facing };
+  return { d: path(0), lip: path(-13 * Math.max(0, facing)) };
 }
 
-/** 0 when the groove is round the back, 1 once it faces us properly. */
+const REST_GROOVE = groove(REST);
+
+/** 0 when the crease faces away, 1 once it faces us properly. */
 function visibility(facing: number) {
   const x = Math.min(1, Math.max(0, facing / 0.35));
   return x * x * (3 - 2 * x);
-}
-
-function easeInOutCubic(p: number) {
-  return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 }
 
 let launchSpun = false;
@@ -73,11 +71,11 @@ export function OatsMark({
   label = "Oats",
 }: {
   className?: string;
-  /** Spin once, the first time any mark with this set appears after launch. */
+  /** Toss once, the first time any mark with this set is seen after launch. */
   spinOnLaunch?: boolean;
-  /** Spin every time this mark appears (a loading screen, a welcome). */
+  /** Toss every time this mark appears (a loading screen, a welcome). */
   spinOnMount?: boolean;
-  /** Render as a button that spins when clicked. */
+  /** Render as a button that tosses the grain when clicked. */
   interactive?: boolean;
   /** A soft contact shadow under the grain, for large sizes. */
   shadow?: boolean;
@@ -88,30 +86,38 @@ export function OatsMark({
   const grooveRef = useRef<SVGPathElement | null>(null);
   const lipRef = useRef<SVGPathElement | null>(null);
   const bodyRef = useRef<SVGGElement | null>(null);
+  const tiltRef = useRef<SVGGElement | null>(null);
+  const tumbleRef = useRef<SVGGElement | null>(null);
+  const groundRef = useRef<SVGEllipseElement | null>(null);
   const frame = useRef(0);
 
-  const paint = useCallback((theta: number, hop = 0, squash = 0) => {
-    const { d, lip, facing } = groove(theta);
-    const seen = visibility(facing);
-    const width = 0.35 + 0.65 * Math.abs(facing);
-    if (grooveRef.current) {
-      grooveRef.current.setAttribute("d", d);
-      grooveRef.current.setAttribute("opacity", (0.62 * seen).toFixed(3));
-      grooveRef.current.setAttribute("stroke-width", (30 * width).toFixed(1));
-    }
-    if (lipRef.current) {
-      lipRef.current.setAttribute("d", lip);
-      lipRef.current.setAttribute("opacity", (0.75 * seen).toFixed(3));
-      lipRef.current.setAttribute("stroke-width", (10 * width).toFixed(1));
-    }
+  const paint = useCallback((phi: number, hop = 0, squash = 0, lean = 0) => {
+    // The crease is on the front: it turns away as the grain tumbles over.
+    const seen = visibility(Math.cos(phi));
+    grooveRef.current?.setAttribute("opacity", (0.55 * seen).toFixed(3));
+    lipRef.current?.setAttribute("opacity", (0.55 * seen).toFixed(3));
+    tumbleRef.current?.setAttribute(
+      "transform",
+      `translate(${CX} ${CY}) scale(1 ${tumbleHeight(phi).toFixed(4)}) translate(${-CX} ${-CY})`
+    );
+    tiltRef.current?.setAttribute("transform", `rotate(${(TILT + lean).toFixed(2)} ${CX} ${CY})`);
     if (bodyRef.current) {
-      // A hop while it spins, and a small squash where it lands.
-      const sx = 1 + 0.05 * squash;
-      const sy = 1 - 0.07 * squash;
+      // A small squash where it lands, from the bottom of the grain.
+      const sx = 1 + 0.06 * squash;
+      const sy = 1 - 0.08 * squash;
       bodyRef.current.setAttribute(
         "transform",
         `translate(0 ${(-hop).toFixed(1)}) translate(512 880) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-512 -880)`
       );
+    }
+    if (groundRef.current) {
+      // The shadow shrinks and fades while the grain is in the air.
+      const lift = Math.min(1, hop / HOP);
+      groundRef.current.setAttribute(
+        "transform",
+        `translate(512 920) scale(${(1 - 0.35 * lift).toFixed(3)}) translate(-512 -920)`
+      );
+      groundRef.current.setAttribute("opacity", (1 - 0.55 * lift).toFixed(3));
     }
   }, []);
 
@@ -121,28 +127,52 @@ export function OatsMark({
     const start = performance.now();
     const step = (now: number) => {
       const p = Math.min(1, (now - start) / SPIN_MS);
-      const theta = REST + SPIN_TURNS * 2 * Math.PI * easeInOutCubic(p);
-      const hop = p < 0.72 ? 70 * Math.sin((Math.PI * p) / 0.72) : 0;
-      const squash = p >= 0.72 && p < 0.92 ? Math.sin((Math.PI * (p - 0.72)) / 0.2) : 0;
-      paint(theta, hop, squash);
+      const { phi, hop, squash, lean } = tossFrame(p);
+      paint(phi, hop, squash, lean);
       if (p < 1) frame.current = requestAnimationFrame(step);
     };
     frame.current = requestAnimationFrame(step);
   }, [paint]);
 
   useEffect(() => {
-    paint(REST);
-    const wanted = spinOnMount || (spinOnLaunch && !launchSpun);
-    if (!wanted) return () => cancelAnimationFrame(frame.current);
-    if (spinOnLaunch) launchSpun = true;
-    const timer = window.setTimeout(spin, 250);
+    paint(0);
+    let timer = 0;
+    let unsubscribe: (() => void) | undefined;
+    const toss = (delay: number) => {
+      timer = window.setTimeout(spin, delay);
+    };
+    if (spinOnMount) {
+      toss(120);
+    } else if (spinOnLaunch && !launchSpun) {
+      // Once per launch, and only when somebody can see it: the window can
+      // open hidden, and a toss nobody saw is the animation never happening.
+      const api = window.electronAPI;
+      const firstLook = () => {
+        if (launchSpun) return;
+        launchSpun = true;
+        toss(350);
+      };
+      if (!api?.getWindowVisibility) {
+        firstLook();
+      } else {
+        unsubscribe = api.onWindowVisibility?.((visible: boolean) => {
+          if (visible) firstLook();
+        });
+        api
+          .getWindowVisibility()
+          .then((visible: boolean) => {
+            if (visible) firstLook();
+          })
+          .catch(() => firstLook());
+      }
+    }
     return () => {
       window.clearTimeout(timer);
+      unsubscribe?.();
       cancelAnimationFrame(frame.current);
     };
   }, [paint, spin, spinOnLaunch, spinOnMount]);
 
-  const rest = groove(REST);
   const svg = (
     <svg
       viewBox="0 0 1024 1024"
@@ -154,27 +184,29 @@ export function OatsMark({
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <radialGradient id={`${uid}-body`} cx="0.36" cy="0.26" r="0.82" fx="0.32" fy="0.2">
-          <stop offset="0" stopColor="#FFE6A8" />
-          <stop offset="0.32" stopColor="#FBBE45" />
-          <stop offset="0.68" stopColor="#F5A30F" />
-          <stop offset="1" stopColor="#B9610A" />
+        {/* Honey, lit from the upper left. Softer than the first version:
+            its near-white top and bright spot read as plastic. */}
+        <radialGradient id={`${uid}-body`} cx="0.36" cy="0.26" r="0.84" fx="0.33" fy="0.22">
+          <stop offset="0" stopColor="#FCD27C" />
+          <stop offset="0.36" stopColor="#F7B53A" />
+          <stop offset="0.72" stopColor="#EC9810" />
+          <stop offset="1" stopColor="#A9590A" />
         </radialGradient>
         <linearGradient id={`${uid}-shade`} x1="0.15" y1="0.1" x2="0.95" y2="0.92">
           <stop offset="0.45" stopColor="#7A3A00" stopOpacity="0" />
-          <stop offset="1" stopColor="#7A3A00" stopOpacity="0.32" />
+          <stop offset="1" stopColor="#7A3A00" stopOpacity="0.34" />
         </linearGradient>
         <radialGradient id={`${uid}-spec`}>
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.9" />
-          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="0" stopColor="#FFF4DC" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#FFF4DC" stopOpacity="0" />
         </radialGradient>
         <radialGradient id={`${uid}-ground`}>
           <stop offset="0" stopColor="#3A1C00" stopOpacity="0.3" />
           <stop offset="1" stopColor="#3A1C00" stopOpacity="0" />
         </radialGradient>
         <linearGradient id={`${uid}-bounce`} x1="0" y1="1" x2="0.75" y2="0.25">
-          <stop offset="0" stopColor="#FFF1CF" stopOpacity="0.55" />
-          <stop offset="0.55" stopColor="#FFF1CF" stopOpacity="0" />
+          <stop offset="0" stopColor="#FFE9B8" stopOpacity="0.32" />
+          <stop offset="0.55" stopColor="#FFE9B8" stopOpacity="0" />
         </linearGradient>
         <filter id={`${uid}-soft`} x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="4" />
@@ -183,49 +215,59 @@ export function OatsMark({
           <path d={OUTLINE} />
         </clipPath>
       </defs>
-      {shadow && <ellipse cx="512" cy="920" rx="236" ry="36" fill={`url(#${uid}-ground)`} />}
+      {shadow && (
+        <ellipse ref={groundRef} cx="512" cy="920" rx="236" ry="36" fill={`url(#${uid}-ground)`} />
+      )}
       <g ref={bodyRef}>
-        <g transform={`rotate(${TILT} ${CX} ${CY})`}>
-          <path d={OUTLINE} fill={`url(#${uid}-body)`} />
-          <path d={OUTLINE} fill={`url(#${uid}-shade)`} />
-          <g clipPath={`url(#${uid}-clip)`}>
-            {/* Light bounced back onto the lower edge: the depth cue that makes
-                it read as a soft object rather than a flat shape. */}
-            <path d={OUTLINE} fill="none" stroke={`url(#${uid}-bounce)`} strokeWidth="44" />
-            <g filter={`url(#${uid}-soft)`}>
-              <path
-                ref={grooveRef}
-                d={rest.d}
-                fill="none"
-                stroke="#9A4F05"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={30}
-                opacity={0.62}
+        <g ref={tiltRef} transform={`rotate(${TILT} ${CX} ${CY})`}>
+          <g ref={tumbleRef}>
+            <path d={OUTLINE} fill={`url(#${uid}-body)`} />
+            <path d={OUTLINE} fill={`url(#${uid}-shade)`} />
+            <g clipPath={`url(#${uid}-clip)`}>
+              {/* Light bounced back onto the lower edge: the depth cue that
+                  makes it read as a soft object rather than a flat shape. */}
+              <path d={OUTLINE} fill="none" stroke={`url(#${uid}-bounce)`} strokeWidth="44" />
+              <g filter={`url(#${uid}-soft)`}>
+                <path
+                  ref={grooveRef}
+                  d={REST_GROOVE.d}
+                  fill="none"
+                  stroke="#9A4F05"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={30}
+                  opacity={0.55}
+                />
+                <path
+                  ref={lipRef}
+                  d={REST_GROOVE.lip}
+                  fill="none"
+                  stroke="#FFE2A0"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={10}
+                  opacity={0.55}
+                />
+              </g>
+              <ellipse
+                cx="420"
+                cy="324"
+                rx="56"
+                ry="92"
+                transform="rotate(-22 420 324)"
+                fill={`url(#${uid}-spec)`}
               />
+              <circle cx="402" cy="290" r="11" fill="#FFF6E2" opacity="0.38" />
+              {/* A faint rim inside the edge, so the grain holds its shape on a
+                  light page without a halo outside it. */}
               <path
-                ref={lipRef}
-                d={rest.lip}
+                d={OUTLINE}
                 fill="none"
-                stroke="#FFE7AE"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={10}
-                opacity={0.75}
+                stroke="#7A3A00"
+                strokeOpacity="0.28"
+                strokeWidth="12"
               />
             </g>
-            <ellipse
-              cx="418"
-              cy="318"
-              rx="64"
-              ry="108"
-              transform="rotate(-22 418 318)"
-              fill={`url(#${uid}-spec)`}
-            />
-            <circle cx="398" cy="282" r="17" fill="#FFFFFF" opacity="0.85" />
-            {/* A faint rim inside the edge, so the grain holds its shape on a
-                light page without a halo outside it. */}
-            <path d={OUTLINE} fill="none" stroke="#7A3A00" strokeOpacity="0.28" strokeWidth="12" />
           </g>
         </g>
       </g>

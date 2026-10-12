@@ -2254,8 +2254,8 @@
       "asked": "Asked",
       "answered": "Answered",
       "uncertain": "Uncertain",
-      "silence": "No answer",
-      "denied": "Nobody knew"
+      "silence": "Unanswered",
+      "denied": "Unknown"
     },
     "searched": "Searched",
     "dismiss": "Dismiss question",
