@@ -66,3 +66,37 @@ export function formatHotkey(accelerator: string | null | undefined, platform: s
   const keys = rendered.filter((part) => rank(part) < 0);
   return [...modifiers, ...keys].join("");
 }
+
+const ARIA_MODIFIERS: Record<string, string> = {
+  cmd: "Meta",
+  command: "Meta",
+  super: "Meta",
+  meta: "Meta",
+  control: "Control",
+  ctrl: "Control",
+  alt: "Alt",
+  option: "Alt",
+  shift: "Shift",
+};
+
+/**
+ * The same accelerator as `aria-keyshortcuts` wants it (`Shift+Meta+O`), so a
+ * control that shows its key also tells assistive technology what it is.
+ * `CommandOrControl` is Meta on macOS and Control everywhere else, as Electron
+ * reads it.
+ */
+export function ariaKeyShortcuts(accelerator: string | null | undefined, platform: string): string {
+  if (!accelerator) return "";
+  const parts = accelerator
+    .split("+")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts
+    .map((part) => {
+      const key = part.toLowerCase();
+      if (key === "commandorcontrol") return platform === "darwin" ? "Meta" : "Control";
+      if (ARIA_MODIFIERS[key]) return ARIA_MODIFIERS[key];
+      return part.length === 1 ? part.toUpperCase() : part;
+    })
+    .join("+");
+}

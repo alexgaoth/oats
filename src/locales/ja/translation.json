@@ -2279,7 +2279,8 @@
       "recent": "最近",
       "noRecent": "まだ会話はありません",
       "record": "新規録音",
-      "stop": "録音を停止"
+      "stop": "録音を停止",
+      "back": "戻る"
     },
     "trust": {
       "onThisMac": "この Mac で",

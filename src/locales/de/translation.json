@@ -2279,7 +2279,8 @@
       "recent": "Zuletzt",
       "noRecent": "Noch keine Gespräche",
       "record": "Neue Aufnahme",
-      "stop": "Aufnahme beenden"
+      "stop": "Aufnahme beenden",
+      "back": "Zurück"
     },
     "trust": {
       "onThisMac": "Auf diesem Mac",

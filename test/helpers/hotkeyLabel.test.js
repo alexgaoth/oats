@@ -52,3 +52,14 @@ test("macOS writes modifiers in the menu order, whatever order they were stored 
   // Order is a Mac convention only; Linux keeps the stored order.
   assert.equal(formatHotkey("Shift+Control+O", "linux"), "Shift+Ctrl+O");
 });
+
+test("aria-keyshortcuts gets the same key in ARIA's words", async () => {
+  const { ariaKeyShortcuts } = await load();
+  assert.equal(ariaKeyShortcuts("CommandOrControl+Shift+O", "darwin"), "Meta+Shift+O");
+  assert.equal(ariaKeyShortcuts("CommandOrControl+Shift+O", "linux"), "Control+Shift+O");
+  assert.equal(ariaKeyShortcuts("CommandOrControl+,", "darwin"), "Meta+,");
+  assert.equal(ariaKeyShortcuts("Alt+Space", "win32"), "Alt+Space");
+  assert.equal(ariaKeyShortcuts("Control+o", "linux"), "Control+O");
+  assert.equal(ariaKeyShortcuts("", "darwin"), "");
+  assert.equal(ariaKeyShortcuts(null, "darwin"), "");
+});

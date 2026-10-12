@@ -68,10 +68,22 @@ function DropdownMenuSeparator({
   );
 }
 
+// An item's keyboard shortcut, at its right edge, the way macOS menus set it.
+function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="dropdown-menu-shortcut"
+      className={cn("ml-auto pl-4 text-xs tracking-wide text-muted-foreground", className)}
+      {...props}
+    />
+  );
+}
+
 export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
 };

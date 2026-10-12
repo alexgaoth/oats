@@ -2274,7 +2274,8 @@
       "recent": "最近",
       "noRecent": "还没有对话",
       "record": "新录音",
-      "stop": "停止录音"
+      "stop": "停止录音",
+      "back": "返回"
     },
     "trust": {
       "onThisMac": "在这台 Mac 上",

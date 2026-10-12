@@ -2279,7 +2279,8 @@
       "recent": "Recentes",
       "noRecent": "Nenhuma conversa ainda",
       "record": "Nova gravação",
-      "stop": "Parar gravação"
+      "stop": "Parar gravação",
+      "back": "Voltar"
     },
     "trust": {
       "onThisMac": "Neste Mac",

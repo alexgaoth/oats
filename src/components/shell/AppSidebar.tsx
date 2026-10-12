@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, House, MessagesSquare, Search, Settings, Square } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Kbd } from "../ui/kbd";
+import { ShortcutTooltip } from "../ui/shortcut-tooltip";
 import { OatsMark } from "./OatsMark";
 import { OnDeviceFooter } from "./OnDeviceFooter";
 import { SidebarField } from "./SidebarField";
@@ -11,6 +12,8 @@ import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { visibleSettingsPages, type SettingsPageId } from "../settings/settingsPages";
+import { ariaKeyShortcuts, formatHotkey } from "../../utils/hotkeyLabel";
+import { getCachedPlatform } from "../../utils/platform";
 
 export type ShellSurface = "conversation" | "intelligence" | "settings";
 
@@ -46,6 +49,7 @@ function NavItem({
   disabled,
   onClick,
   trailing,
+  ...props
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -53,9 +57,12 @@ function NavItem({
   disabled?: boolean;
   onClick: () => void;
   trailing?: React.ReactNode;
-}) {
+} & Omit<React.ComponentProps<"button">, "onClick" | "children">) {
+  // The rest goes to the button, so a tooltip can wrap an item (its trigger
+  // passes a ref, handlers and the tooltip's description).
   return (
     <button
+      {...props}
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -106,6 +113,17 @@ export function AppSidebar({
   const { t } = useTranslation();
   const recording = useMeetingRecordingStore((state) => state.isRecording);
   const clock = useRecordingClock(recording);
+  // Named in tooltips: the record button's key is the one set in Settings.
+  const conversationKey = useSettingsStore((state) => state.conversationKey);
+  const keys = useMemo(() => {
+    const platform = getCachedPlatform();
+    return {
+      record: formatHotkey(conversationKey, platform),
+      recordAria: ariaKeyShortcuts(conversationKey, platform),
+      settings: formatHotkey("CommandOrControl+,", platform),
+      settingsAria: ariaKeyShortcuts("CommandOrControl+,", platform),
+    };
+  }, [conversationKey]);
   // The Dictation page is listed only while dictation is on (General › Advanced).
   const dictationEnabled = useSettingsStore((state) => state.dictationEnabled);
   const notes = useNotes();
@@ -182,31 +200,38 @@ export function AppSidebar({
       </div>
 
       <div className="px-3 pb-3">
-        <button
-          type="button"
-          onClick={toggleRecording}
-          className={cn(
-            "flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium shadow-xs",
-            "outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
-            // Idle, the main action: honey with a little depth (`.oats-cta`).
-            // Live, it is red and says Stop.
-            recording
-              ? "bg-recording text-recording-foreground hover:bg-recording/90"
-              : "oats-cta bg-primary text-primary-foreground"
-          )}
+        <ShortcutTooltip
+          label={recording ? t("oats.shell.stop") : t("oats.shell.record")}
+          keys={keys.record}
+          side="right"
         >
-          {recording ? (
-            <Square className="size-3.5 fill-current" aria-hidden="true" />
-          ) : (
-            <span aria-hidden="true" className="size-2.5 rounded-full bg-current" />
-          )}
-          <span className="flex-1 text-left">
-            {recording ? t("oats.shell.stop") : t("oats.shell.record")}
-          </span>
-          {recording && clock && (
-            <span className="text-[13px] tabular-nums opacity-90">{clock}</span>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={toggleRecording}
+            aria-keyshortcuts={keys.recordAria || undefined}
+            className={cn(
+              "flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium shadow-xs",
+              "outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              // Idle, the main action: honey with a little depth (`.oats-cta`).
+              // Live, it is red and says Stop.
+              recording
+                ? "bg-recording text-recording-foreground hover:bg-recording/90"
+                : "oats-cta bg-primary text-primary-foreground"
+            )}
+          >
+            {recording ? (
+              <Square className="size-3.5 fill-current" aria-hidden="true" />
+            ) : (
+              <span aria-hidden="true" className="size-2.5 rounded-full bg-current" />
+            )}
+            <span className="flex-1 text-left">
+              {recording ? t("oats.shell.stop") : t("oats.shell.record")}
+            </span>
+            {recording && clock && (
+              <span className="text-[13px] tabular-nums opacity-90">{clock}</span>
+            )}
+          </button>
+        </ShortcutTooltip>
       </div>
 
       <nav aria-label={t("oats.nav.label")} className="flex flex-col gap-0.5 px-3">
@@ -261,12 +286,15 @@ export function AppSidebar({
       </div>
 
       <div className="border-t border-sidebar-border px-3 py-3">
-        <NavItem
-          icon={Settings}
-          label={t("oats.nav.settings")}
-          disabled={recording}
-          onClick={() => onNavigate("settings")}
-        />
+        <ShortcutTooltip label={t("oats.nav.settings")} keys={keys.settings} side="right">
+          <NavItem
+            icon={Settings}
+            label={t("oats.nav.settings")}
+            disabled={recording}
+            aria-keyshortcuts={keys.settingsAria}
+            onClick={() => onNavigate("settings")}
+          />
+        </ShortcutTooltip>
         <OnDeviceFooter className="mt-2 pl-2" />
       </div>
 
