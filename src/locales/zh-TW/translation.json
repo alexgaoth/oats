@@ -2249,6 +2249,8 @@
     },
     "shell": {
       "sidebar": "側邊欄",
+      "showSidebar": "顯示側邊欄",
+      "hideSidebar": "隱藏側邊欄",
       "home": "首頁",
       "conversations": "對話",
       "search": "搜尋",

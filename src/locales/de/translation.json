@@ -2254,6 +2254,8 @@
     },
     "shell": {
       "sidebar": "Seitenleiste",
+      "showSidebar": "Seitenleiste einblenden",
+      "hideSidebar": "Seitenleiste ausblenden",
       "home": "Start",
       "conversations": "Gespräche",
       "search": "Suchen",

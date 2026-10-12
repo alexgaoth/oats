@@ -2249,6 +2249,8 @@
     },
     "shell": {
       "sidebar": "侧边栏",
+      "showSidebar": "显示侧边栏",
+      "hideSidebar": "隐藏侧边栏",
       "home": "首页",
       "conversations": "对话",
       "search": "搜索",

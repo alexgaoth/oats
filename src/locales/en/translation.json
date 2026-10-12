@@ -2254,6 +2254,8 @@
     },
     "shell": {
       "sidebar": "Sidebar",
+      "showSidebar": "Show sidebar",
+      "hideSidebar": "Hide sidebar",
       "home": "Home",
       "conversations": "Conversations",
       "search": "Search",

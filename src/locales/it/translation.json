@@ -2254,6 +2254,8 @@
     },
     "shell": {
       "sidebar": "Barra laterale",
+      "showSidebar": "Mostra barra laterale",
+      "hideSidebar": "Nascondi barra laterale",
       "home": "Home",
       "conversations": "Conversazioni",
       "search": "Cerca",
