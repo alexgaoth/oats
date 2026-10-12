@@ -2419,11 +2419,16 @@ class DatabaseManager {
    * match inside one — "rice" in "price", and almost every Chinese or Japanese
    * word, which is written without spaces. It reads at most `RECALL_SLICE_MS`
    * at a time and then yields, so the main process keeps serving a recording
-   * while it runs; `shouldStop` lets a newer query end it early.
+   * while it runs; `shouldStop` lets a newer query end it early. `sliceMs`
+   * changes that budget for tests (0 pauses before every batch); a value that
+   * is not a number of 0 or more falls back to `RECALL_SLICE_MS`.
    *
    * @returns {Promise<object[]>} at most `limit` rows; [] when stopped.
    */
-  async recallNotes(query, { excludeIds = [], limit, shouldStop = () => false } = {}) {
+  async recallNotes(
+    query,
+    { excludeIds = [], limit, shouldStop = () => false, sliceMs = RECALL_SLICE_MS } = {}
+  ) {
     if (!this.db) throw new Error("Database not initialized");
     const [{ foldText }, { recallText }] = await Promise.all([
       import("./searchFold.mjs"),
@@ -2445,10 +2450,11 @@ class DatabaseManager {
       .map((row) => row.id)
       .filter((id) => !held.has(id));
 
+    const slice = Number.isFinite(sliceMs) && sliceMs >= 0 ? sliceMs : RECALL_SLICE_MS;
     const found = [];
     let sliceStart = Date.now();
     for (let at = 0; at < ids.length && found.length < max; at += RECALL_BATCH) {
-      if (Date.now() - sliceStart >= RECALL_SLICE_MS) {
+      if (Date.now() - sliceStart >= slice) {
         await new Promise((resolve) => setImmediate(resolve));
         if (shouldStop()) return [];
         sliceStart = Date.now();
