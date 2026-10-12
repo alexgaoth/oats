@@ -2323,6 +2323,8 @@
   "lifetime": {
     "title": "繰り返し戻ってくるもの",
     "viewMap": "マップ",
+    "viewList": "リスト",
+    "viewLabel": "会話の表示方法",
     "recurring": "繰り返し:",
     "inCount_one": "{{count}} 件の会話",
     "inCount_other": "{{count}} 件の会話",

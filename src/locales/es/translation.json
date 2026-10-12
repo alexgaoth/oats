@@ -2323,6 +2323,8 @@
   "lifetime": {
     "title": "A lo que siempre vuelves",
     "viewMap": "Mapa",
+    "viewList": "Lista",
+    "viewLabel": "Vista de las conversaciones",
     "recurring": "Recurrente:",
     "inCount_one": "{{count}} conversación",
     "inCount_other": "{{count}} conversaciones",

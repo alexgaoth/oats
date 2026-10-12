@@ -24,6 +24,7 @@ import {
   Download,
   History,
   Info,
+  List,
   MessageSquarePlus,
   MessagesSquare,
   Mic,
@@ -1654,29 +1655,8 @@ function IntelligenceViews({
   // explicit that a surface needing a third region is really two screens. So the
   // list *is* the screen until you open something, and then the reading view
   // replaces it. Nothing is ever half-visible in a column you are not using.
-  if (view === "map") {
-    return (
-      <section key="map" className="oats-surface oats-enter relative flex min-h-0 flex-1 flex-col">
-        <header className="mx-auto flex w-full max-w-3xl shrink-0 flex-col items-start gap-3 px-8 pt-6">
-          <BackButton onClick={() => setView("list")} label={t("oats.shell.conversations")} />
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{t("lifetime.title")}</h1>
-        </header>
-        <div className="relative mt-4 min-h-0 flex-1">
-          <LifetimeGraph
-            notes={notes}
-            onOpen={(noteId) => {
-              setSelectedId(noteId);
-              setTab("summary");
-              setView("list");
-              setReading(true);
-            }}
-          />
-        </div>
-      </section>
-    );
-  }
-
-  if (reading && selected) {
+  // The map is the list seen another way, so it has no reading view of its own.
+  if (view === "list" && reading && selected) {
     const speakerCount = new Set(selectedSegments.map((segment) => segment.speaker).filter(Boolean))
       .size;
     const openTurn = (segmentId: string | null) => {
@@ -2044,12 +2024,23 @@ function IntelligenceViews({
     setReading(true);
   };
 
+  // List and Map are two ways to see the same conversations, and the choice
+  // between them is one of the few drawn with character (DESIGN.md §2). Its row
+  // stays while the view under it changes, so the indicator slides from one
+  // choice to the other, and only the view under it arrives again.
   return (
-    <section key="list" className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
-        {/* Search is always here, from the first conversation: "what did that
-            candidate say about equity?" is the reason to keep a record at all. */}
-        <div className="flex items-center gap-2">
+    <section
+      key="browse"
+      className="oats-surface relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
+      <div className="oats-enter mx-auto flex w-full max-w-3xl shrink-0 items-center gap-2 px-8 pt-6">
+        {view === "map" ? (
+          <h1 className="min-w-0 flex-1 truncate text-[22px] font-semibold tracking-[-0.02em]">
+            {t("lifetime.title")}
+          </h1>
+        ) : (
+          // Search is always here, from the first conversation: "what did that
+          // candidate say about equity?" is the reason to keep a record at all.
           <div className="relative min-w-0 flex-1">
             <Search
               aria-hidden="true"
@@ -2073,119 +2064,142 @@ function IntelligenceViews({
               </Kbd>
             )}
           </div>
-          {notes.length > 0 && (
-            <Button variant="outline" onClick={() => setView("map")}>
-              <Waypoints aria-hidden="true" />
-              {t("lifetime.viewMap")}
-            </Button>
-          )}
-        </div>
-
-        {/* Its line is kept while there is a query, so the list below does not
-            move when a receipt arrives or changes. */}
-        {searched && (
-          <p className="mt-2 h-4 px-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
-            {receipt &&
-              t("oats.intelligence.search.receipt", {
-                matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
-                conversations: t("oats.intelligence.search.conversations", {
-                  count: receipt.conversations,
-                }),
-                duration: formatSearchDuration(receipt.ms, i18n.language),
-              })}
-          </p>
         )}
-
-        {/* The result, announced. A screen-reader user who types should not have
-            to tab into the list to learn whether anything matched. */}
-        <p aria-live="polite" role="status" className="sr-only">
-          {/* Literal matches first, then the related ones; "only related" only
-              when there are related results to speak of, so assistive output
-              never claims a match the screen does not show. */}
-          {!query.trim()
-            ? ""
-            : literalNotes.length
-              ? // The count is the *literal* matches, not the row count.
-                `${t("oats.intelligence.searchResults", { count: literalNotes.length })}.${
-                  recalled.length > literalNotes.length
-                    ? ` ${t("oats.intelligence.plusRelated", {
-                        count: recalled.length - literalNotes.length,
-                      })}.`
-                    : ""
-                }`
-              : // Older conversations are still being read: saying nothing
-                // matches now would be a claim the next moment may take back.
-                awaitingOlder
-                ? ""
-                : recalled.length
-                  ? t("oats.intelligence.onlyRelated")
-                  : t("oats.intelligence.noMatches")}
-        </p>
-
-        {/* With no literal hit, every row below is the index's guess, and the
-            page says so before the reader takes them as findings. */}
-        {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
-          <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
-            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            {t("oats.intelligence.onlyRelated")}
-          </p>
-        )}
-
-        {!visibleNotes.length ? (
-          // Older conversations are still being read: say nothing yet, rather
-          // than "Nothing matches that" a moment before a match arrives.
-          awaitingOlder ? null : query.trim() ? (
-            <EmptyState
-              icon={SearchX}
-              title={t("oats.intelligence.noMatches")}
-              description={t("oats.intelligence.noMatchesHint")}
-            />
-          ) : (
-            <EmptyState
-              icon={MessagesSquare}
-              title={t("oats.intelligence.empty")}
-              description={t("oats.intelligence.emptyDescription")}
-              action={<StartRecordingButton />}
-            />
-          )
-        ) : query.trim() ? (
-          // Ranked, not dated: literal matches first, then the related ones, and
-          // a date heading between them would break that order.
-          <Card className="mt-3 gap-0 overflow-hidden">
-            <ul className="divide-y divide-border">
-              {recalled.map(({ note, related }) => (
-                <ConversationRow
-                  key={note.id}
-                  note={note}
-                  query={query}
-                  related={related}
-                  onOpen={() => openResult(note)}
-                />
-              ))}
-            </ul>
-          </Card>
-        ) : (
-          dayGroups.map((group) => (
-            <section key={group.key} aria-label={group.label} className="mt-6">
-              <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">{group.label}</h2>
-              <Card className="gap-0 overflow-hidden">
-                <ul className="divide-y divide-border">
-                  {group.notes.map((note) => (
-                    <ConversationRow
-                      key={note.id}
-                      note={note}
-                      query=""
-                      related={false}
-                      timeOnly
-                      onOpen={() => openResult(note)}
-                    />
-                  ))}
-                </ul>
-              </Card>
-            </section>
-          ))
+        {notes.length > 0 && (
+          <ViewSwitch<"list" | "map">
+            aria-label={t("lifetime.viewLabel")}
+            value={view}
+            onValueChange={setView}
+            options={[
+              { value: "list", label: t("lifetime.viewList"), icon: List },
+              { value: "map", label: t("lifetime.viewMap"), icon: Waypoints },
+            ]}
+          />
         )}
       </div>
+
+      {view === "map" ? (
+        <div key="map" className="oats-enter relative mt-4 min-h-0 flex-1">
+          <LifetimeGraph
+            notes={notes}
+            onOpen={(noteId) => {
+              setSelectedId(noteId);
+              setTab("summary");
+              setView("list");
+              setReading(true);
+            }}
+          />
+        </div>
+      ) : (
+        <div key="list" className="oats-enter mx-auto w-full max-w-3xl px-8 pb-16">
+          {/* Its line is kept while there is a query, so the list below does not
+              move when a receipt arrives or changes. */}
+          {searched && (
+            <p className="mt-2 h-4 px-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
+              {receipt &&
+                t("oats.intelligence.search.receipt", {
+                  matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
+                  conversations: t("oats.intelligence.search.conversations", {
+                    count: receipt.conversations,
+                  }),
+                  duration: formatSearchDuration(receipt.ms, i18n.language),
+                })}
+            </p>
+          )}
+
+          {/* The result, announced. A screen-reader user who types should not have
+              to tab into the list to learn whether anything matched. */}
+          <p aria-live="polite" role="status" className="sr-only">
+            {/* Literal matches first, then the related ones; "only related" only
+                when there are related results to speak of, so assistive output
+                never claims a match the screen does not show. */}
+            {!query.trim()
+              ? ""
+              : literalNotes.length
+                ? // The count is the *literal* matches, not the row count.
+                  `${t("oats.intelligence.searchResults", { count: literalNotes.length })}.${
+                    recalled.length > literalNotes.length
+                      ? ` ${t("oats.intelligence.plusRelated", {
+                          count: recalled.length - literalNotes.length,
+                        })}.`
+                      : ""
+                  }`
+                : // Older conversations are still being read: saying nothing
+                  // matches now would be a claim the next moment may take back.
+                  awaitingOlder
+                  ? ""
+                  : recalled.length
+                    ? t("oats.intelligence.onlyRelated")
+                    : t("oats.intelligence.noMatches")}
+          </p>
+
+          {/* With no literal hit, every row below is the index's guess, and the
+              page says so before the reader takes them as findings. */}
+          {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
+            <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
+              <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              {t("oats.intelligence.onlyRelated")}
+            </p>
+          )}
+
+          {!visibleNotes.length ? (
+            // Older conversations are still being read: say nothing yet, rather
+            // than "Nothing matches that" a moment before a match arrives.
+            awaitingOlder ? null : query.trim() ? (
+              <EmptyState
+                icon={SearchX}
+                title={t("oats.intelligence.noMatches")}
+                description={t("oats.intelligence.noMatchesHint")}
+              />
+            ) : (
+              <EmptyState
+                icon={MessagesSquare}
+                title={t("oats.intelligence.empty")}
+                description={t("oats.intelligence.emptyDescription")}
+                action={<StartRecordingButton />}
+              />
+            )
+          ) : query.trim() ? (
+            // Ranked, not dated: literal matches first, then the related ones, and
+            // a date heading between them would break that order.
+            <Card className="mt-3 gap-0 overflow-hidden">
+              <ul className="divide-y divide-border">
+                {recalled.map(({ note, related }) => (
+                  <ConversationRow
+                    key={note.id}
+                    note={note}
+                    query={query}
+                    related={related}
+                    onOpen={() => openResult(note)}
+                  />
+                ))}
+              </ul>
+            </Card>
+          ) : (
+            dayGroups.map((group) => (
+              <section key={group.key} aria-label={group.label} className="mt-6">
+                <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">
+                  {group.label}
+                </h2>
+                <Card className="gap-0 overflow-hidden">
+                  <ul className="divide-y divide-border">
+                    {group.notes.map((note) => (
+                      <ConversationRow
+                        key={note.id}
+                        note={note}
+                        query=""
+                        related={false}
+                        timeOnly
+                        onOpen={() => openResult(note)}
+                      />
+                    ))}
+                  </ul>
+                </Card>
+              </section>
+            ))
+          )}
+        </div>
+      )}
     </section>
   );
 }
