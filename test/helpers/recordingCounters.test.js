@@ -8,9 +8,8 @@ const path = require("node:path");
 let countWords, sittingWordCount, sittingQuestionCount, splitAroundCount;
 
 test.before(async () => {
-  ({ countWords, sittingWordCount, sittingQuestionCount, splitAroundCount } = await import(
-    "../../src/helpers/recordingCounters.mjs"
-  ));
+  ({ countWords, sittingWordCount, sittingQuestionCount, splitAroundCount } =
+    await import("../../src/helpers/recordingCounters.mjs"));
 });
 
 const T0 = 1_700_000_000_000;
