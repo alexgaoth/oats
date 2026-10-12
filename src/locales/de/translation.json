@@ -1982,6 +1982,13 @@
       "speakerRoom": "Raum",
       "speakerN": "Sprecher {{n}}",
       "nameSpeaker": "{{speaker}} benennen",
+      "talkTime": {
+        "label": "Redezeit",
+        "show": "Nur zeigen, was {{speaker}} gesagt hat",
+        "only": "Nur, was {{speaker}} gesagt hat",
+        "everyone": "Alle zeigen",
+        "unattributed": "Nicht zugeordnet"
+      },
       "tabs": {
         "summary": "Zusammenfassung",
         "transcript": "Transkript",

@@ -1982,6 +1982,13 @@
       "speakerRoom": "Stanza",
       "speakerN": "Interlocutore {{n}}",
       "nameSpeaker": "Dai un nome a {{speaker}}",
+      "talkTime": {
+        "label": "Tempo di parola",
+        "show": "Mostra solo ciò che ha detto {{speaker}}",
+        "only": "Solo ciò che ha detto {{speaker}}",
+        "everyone": "Mostra tutti",
+        "unattributed": "Non attribuito"
+      },
       "tabs": {
         "summary": "Riepilogo",
         "transcript": "Trascrizione",

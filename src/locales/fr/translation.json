@@ -1982,6 +1982,13 @@
       "speakerRoom": "Salle",
       "speakerN": "Intervenant {{n}}",
       "nameSpeaker": "Nommer {{speaker}}",
+      "talkTime": {
+        "label": "Temps de parole",
+        "show": "Afficher seulement ce qu'a dit {{speaker}}",
+        "only": "Seulement ce qu'a dit {{speaker}}",
+        "everyone": "Afficher tout le monde",
+        "unattributed": "Non attribué"
+      },
       "tabs": {
         "summary": "Résumé",
         "transcript": "Transcription",

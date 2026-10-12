@@ -1982,6 +1982,13 @@
       "speakerRoom": "Room",
       "speakerN": "Speaker {{n}}",
       "nameSpeaker": "Name {{speaker}}",
+      "talkTime": {
+        "label": "Talk time",
+        "show": "Show only what {{speaker}} said",
+        "only": "Only what {{speaker}} said",
+        "everyone": "Show everyone",
+        "unattributed": "Not attributed"
+      },
       "tabs": {
         "summary": "Summary",
         "transcript": "Transcript",
