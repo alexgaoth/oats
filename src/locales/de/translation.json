@@ -2269,6 +2269,13 @@
       "room": "Raum",
       "speaker": "Sprecher {{n}}"
     },
+    "example": {
+      "open": "Beispielgespräch öffnen",
+      "note": "Eine Launch-Besprechung mit neun Personen zum Erkunden. Du kannst sie jederzeit löschen.",
+      "badge": "Beispiel",
+      "failed": "Das Beispielgespräch konnte nicht geöffnet werden",
+      "failedHint": "Es wurde nichts hinzugefügt. Versuche es noch einmal."
+    },
     "shell": {
       "sidebar": "Seitenleiste",
       "showSidebar": "Seitenleiste einblenden",
