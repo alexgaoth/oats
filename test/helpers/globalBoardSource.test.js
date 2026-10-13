@@ -134,8 +134,11 @@ test("the subjects and the open questions light with the rest of the board", () 
   // A question's ring takes honey from the board's one highlight, so a day or
   // a subject pointed at elsewhere lights it too.
   const questions = read("src/components/global/OpenQuestionsWidget.tsx");
-  assert.match(questions, /useSyncExternalStore\(highlight\.subscribe, highlight\.get\)/);
-  assert.match(questions, /markTone\(lit, row\.noteId\) === "focus"/);
+  assert.match(questions, /useSyncExternalStore\(\s*highlight\.subscribe,/);
+  assert.match(questions, /markTone\(highlight\.get\(\), id\) === "focus"/);
+  // Each row holds its own subscription: pointing re-renders only the rows
+  // whose ring changes, never the whole list.
+  assert.match(questions, /const QuestionRow = memo\(function QuestionRow/);
 });
 
 test("a label forced on top covers the labels it lands on whole, never leaving a fragment", () => {

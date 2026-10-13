@@ -98,6 +98,13 @@ export default function ActivityWidget({
     [grid]
   );
 
+  // Everything a highlight does not change, drawn once per calendar, size and
+  // theme: the grid, its labels, today's ring, and every busy day in each of
+  // its two tones. Pointing at something blits one layer and fills the few
+  // days it lights, rather than dithering every day again.
+  const layersRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
+  useEffect(() => layersRef.current.clear(), [calendar, grid, palette, size, months, weekdays]);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !palette || !size.width || !size.height) return;
@@ -107,78 +114,101 @@ export default function ActivityWidget({
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
       canvas.width = pixelWidth;
       canvas.height = pixelHeight;
+      layersRef.current.clear();
     }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size.width, size.height);
 
-    const lit = highlight.get();
-    const pointedDay = useGlobalHighlight.getState().hoveredDay;
-    const tone = (day: CalendarDay) => {
-      if (day.key === pointedDay) return "focus";
-      if (day.ids.some((id) => markTone(lit, id) === "focus")) return "focus";
-      if (lit.active && !day.ids.some((id) => markTone(lit, id) === "rest")) return "recede";
-      return "rest";
+    const busy = calendar.days.filter((day) => day.ids.length && !day.future);
+    const fillDay = (target: CanvasRenderingContext2D, day: CalendarDay, tone: string) => {
+      const { x, y, side } = cellAt(day);
+      const cell = (path: CanvasRenderingContext2D) => path.roundRect(x, y, side, side, 2);
+      if (tone === palette.honey) {
+        target.beginPath();
+        cell(target);
+        target.fillStyle = palette.honey;
+        target.fill();
+        return;
+      }
+      // A mass (rule 7): the shared dither, as dense as the day was busy.
+      ditherFill(target, cell, tone, densityFor(day.ids.length));
+    };
+    const paintGrid = (target: CanvasRenderingContext2D, dayTone: string) => {
+      // An empty day is its outline: the grid stays legible with nothing in it.
+      target.beginPath();
+      for (const day of calendar.days) {
+        if (day.future || day.ids.length) continue;
+        const { x, y, side } = cellAt(day);
+        target.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 2);
+      }
+      target.lineWidth = CHART.rule;
+      target.strokeStyle = palette.rule;
+      target.stroke();
+      for (const day of busy) fillDay(target, day, dayTone);
+      // Today, in honey: a ring around its cell.
+      const today = calendar.days.find((day) => day.today);
+      if (today) {
+        const { x, y, side } = cellAt(today);
+        target.beginPath();
+        target.roundRect(x - 2, y - 2, side + 4, side + 4, 3);
+        target.lineWidth = CHART.line;
+        target.strokeStyle = palette.honey;
+        target.stroke();
+      }
+      // Months along the top, weekdays down the side, in the quiet grey.
+      // Nothing is drawn across them.
+      target.fillStyle = palette.quiet;
+      target.font = `400 12px ${palette.sans}`;
+      target.textBaseline = "alphabetic";
+      target.textAlign = "left";
+      for (const month of calendar.months) {
+        target.fillText(
+          months.format(new Date(month.start)),
+          grid.left + month.column * grid.cell,
+          MONTH_BAND - 2
+        );
+      }
+      target.textAlign = "right";
+      target.textBaseline = "middle";
+      for (const day of calendar.days.slice(0, 7)) {
+        if (day.row % 2) continue;
+        const { y, side } = cellAt(day);
+        target.fillText(weekdays.format(new Date(day.start)), grid.left - 6, y + side / 2 + 0.5);
+      }
+    };
+    const layer = (name: string, dayTone: string) => {
+      let image = layersRef.current.get(name);
+      if (!image) {
+        image = document.createElement("canvas");
+        image.width = canvas.width;
+        image.height = canvas.height;
+        const target = image.getContext("2d");
+        if (target) {
+          target.setTransform(ratio, 0, 0, ratio, 0, 0);
+          paintGrid(target, dayTone);
+        }
+        layersRef.current.set(name, image);
+      }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(image, 0, 0);
+      ctx.restore();
     };
 
-    for (const day of calendar.days) {
-      if (day.future) continue;
-      const { x, y, side } = cellAt(day);
-      const count = day.ids.length;
-      if (!count) {
-        // An empty day is its outline: the grid stays legible with nothing in it.
-        ctx.beginPath();
-        ctx.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 2);
-        ctx.lineWidth = CHART.rule;
-        ctx.strokeStyle = palette.rule;
-        ctx.stroke();
-        continue;
-      }
-      const cell = (target: CanvasRenderingContext2D) => target.roundRect(x, y, side, side, 2);
-      const kind = tone(day);
-      if (kind === "focus") {
-        ctx.beginPath();
-        cell(ctx);
-        ctx.fillStyle = palette.honey;
-        ctx.fill();
-      } else {
-        // A mass (rule 7): the shared dither, as dense as the day was busy.
-        ditherFill(ctx, cell, kind === "recede" ? palette.rule : palette.quiet, densityFor(count));
-      }
+    const lit = highlight.get();
+    const pointedDay = useGlobalHighlight.getState().hoveredDay;
+    const focus = (day: CalendarDay) =>
+      day.key === pointedDay || day.ids.some((id) => markTone(lit, id) === "focus");
+    const rest = (day: CalendarDay) => day.ids.some((id) => markTone(lit, id) === "rest");
+    if (!lit.active && !pointedDay) {
+      layer("rest", palette.quiet);
+    } else {
+      layer("recede", palette.rule);
+      for (const day of busy) if (!focus(day) && rest(day)) fillDay(ctx, day, palette.quiet);
     }
-
-    // Today, in honey: a ring around its cell.
-    const today = calendar.days.find((day) => day.today);
-    if (today) {
-      const { x, y, side } = cellAt(today);
-      ctx.beginPath();
-      ctx.roundRect(x - 2, y - 2, side + 4, side + 4, 3);
-      ctx.lineWidth = CHART.line;
-      ctx.strokeStyle = palette.honey;
-      ctx.stroke();
-    }
-
-    // Months along the top, weekdays down the side, in the quiet grey. Nothing
-    // is drawn across them.
-    ctx.fillStyle = palette.quiet;
-    ctx.font = `400 12px ${palette.sans}`;
-    ctx.textBaseline = "alphabetic";
-    ctx.textAlign = "left";
-    for (const month of calendar.months) {
-      ctx.fillText(
-        months.format(new Date(month.start)),
-        grid.left + month.column * grid.cell,
-        MONTH_BAND - 2
-      );
-    }
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-    for (const day of calendar.days.slice(0, 7)) {
-      if (day.row % 2) continue;
-      const { y, side } = cellAt(day);
-      ctx.fillText(weekdays.format(new Date(day.start)), grid.left - 6, y + side / 2 + 0.5);
-    }
+    for (const day of busy) if (focus(day)) fillDay(ctx, day, palette.honey);
   }, [calendar, cellAt, grid, highlight, months, palette, size, weekdays]);
 
   const drawRef = useRef(draw);

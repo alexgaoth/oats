@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { ledgerDate } from "../../helpers/ledgerDate.mjs";
 import { cn } from "../lib/utils";
@@ -8,6 +8,7 @@ import { useGlobalHighlight } from "./highlightStore";
 import type { HighlightSource } from "./highlightStore";
 import { markTone } from "./linkedHighlight";
 import { openQuestionRows } from "./openQuestions";
+import type { OpenQuestionRow } from "./openQuestions";
 import { WidgetEmpty } from "./widgets";
 
 // Open questions: every question in this tab's conversations that has no
@@ -64,6 +65,72 @@ function useOpenQuestionEvents(conversations: BoardConversation[]): Map<number, 
   }, [candidates, version]);
 }
 
+/**
+ * One question. Its own subscription decides whether its ring is honey, so
+ * pointing at something re-renders only the rows whose ring changes, not the
+ * whole list: a hundred rows re-rendered on every move of the pointer cost
+ * more than every chart on the board redrawn.
+ */
+const QuestionRow = memo(function QuestionRow({
+  row,
+  where,
+  highlight,
+  onOpenAt,
+}: {
+  row: OpenQuestionRow;
+  where: string | null;
+  highlight: HighlightSource;
+  onOpenAt: (noteId: number, segmentId: string | null) => void;
+}) {
+  const id = row.noteId;
+  // Lit with every widget, so a day or a subject pointed at elsewhere lights
+  // its questions too. A conversation with questions but no topics is on no
+  // chart, so the board's highlight does not hold it: the row still lights
+  // while it is pointed at.
+  const lit = useSyncExternalStore(
+    highlight.subscribe,
+    () => markTone(highlight.get(), id) === "focus"
+  );
+  const pointed = useGlobalHighlight((state) => state.hoveredConversationId === id);
+  const honey = lit || pointed;
+  const point = () => useGlobalHighlight.getState().pointAtConversation(id);
+  const leave = () => useGlobalHighlight.getState().leaveConversation(id);
+  return (
+    <li>
+      <button
+        type="button"
+        onPointerEnter={point}
+        onPointerLeave={leave}
+        onFocus={point}
+        onBlur={leave}
+        onClick={() => onOpenAt(id, row.segmentId)}
+        className={cn(
+          "flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left outline-none transition-colors",
+          "hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        )}
+      >
+        {/* The mark a question with no verdict has everywhere: an empty ring.
+            Honey while its conversation is pointed at. */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-[5px] size-2.5 shrink-0 rounded-full border-[1.5px]",
+            honey ? "border-primary bg-primary" : "border-muted-foreground"
+          )}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="line-clamp-2 text-pretty text-sm leading-snug text-foreground">
+            {row.question}
+          </span>
+          {where && (
+            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{where}</span>
+          )}
+        </span>
+      </button>
+    </li>
+  );
+});
+
 export default function OpenQuestionsWidget({
   conversations,
   highlight,
@@ -76,72 +143,43 @@ export default function OpenQuestionsWidget({
   const { t, i18n } = useTranslation();
   const events = useOpenQuestionEvents(conversations);
   const rows = useMemo(() => openQuestionRows(events), [events]);
-  const byId = useMemo(
-    () => new Map(conversations.map((conversation) => [conversation.id, conversation])),
-    [conversations]
-  );
-  // What every widget lights, so a day or a subject pointed at elsewhere
-  // lights its questions here too.
-  const lit = useSyncExternalStore(highlight.subscribe, highlight.get);
-  // A conversation with questions but no topics is on no chart, so the board's
-  // highlight does not hold it; the row still lights while it is pointed at.
-  const pointed = useGlobalHighlight((state) => state.hoveredConversationId);
+  // Where each question was asked, worded once per list, not on every render.
+  const where = useMemo(() => {
+    const byId = new Map(conversations.map((conversation) => [conversation.id, conversation]));
+    return new Map(
+      rows.map((row) => {
+        const conversation = byId.get(row.noteId);
+        return [
+          row.key,
+          conversation
+            ? t("oats.global.widgets.questions.where", {
+                title: shortTitle(conversation.title),
+                date: ledgerDate(row.at || conversation.createdAt, { locale: i18n.language }),
+              })
+            : null,
+        ];
+      })
+    );
+  }, [rows, conversations, t, i18n.language]);
 
   if (!rows.length) {
     return <WidgetEmpty>{t("oats.global.widgets.questions.empty")}</WidgetEmpty>;
   }
-
-  const point = (id: number) => useGlobalHighlight.getState().pointAtConversation(id);
-  const leave = (id: number) => useGlobalHighlight.getState().leaveConversation(id);
 
   return (
     <ul
       aria-label={t("oats.global.widgets.questions.name")}
       className="h-full divide-y divide-border overflow-y-auto px-1.5 pb-1.5"
     >
-      {rows.map((row) => {
-        const conversation = byId.get(row.noteId);
-        const honey = markTone(lit, row.noteId) === "focus" || row.noteId === pointed;
-        return (
-          <li key={row.key}>
-            <button
-              type="button"
-              onPointerEnter={() => point(row.noteId)}
-              onPointerLeave={() => leave(row.noteId)}
-              onFocus={() => point(row.noteId)}
-              onBlur={() => leave(row.noteId)}
-              onClick={() => onOpenAt(row.noteId, row.segmentId)}
-              className={cn(
-                "flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left outline-none transition-colors",
-                "hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              )}
-            >
-              {/* The mark a question with no verdict has everywhere: an empty
-                  ring. Honey while its conversation is pointed at. */}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "mt-[5px] size-2.5 shrink-0 rounded-full border-[1.5px]",
-                  honey ? "border-primary bg-primary" : "border-muted-foreground"
-                )}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 text-pretty text-sm leading-snug text-foreground">
-                  {row.question}
-                </span>
-                {conversation && (
-                  <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-                    {t("oats.global.widgets.questions.where", {
-                      title: shortTitle(conversation.title),
-                      date: ledgerDate(row.at || conversation.createdAt, { locale: i18n.language }),
-                    })}
-                  </span>
-                )}
-              </span>
-            </button>
-          </li>
-        );
-      })}
+      {rows.map((row) => (
+        <QuestionRow
+          key={row.key}
+          row={row}
+          where={where.get(row.key) ?? null}
+          highlight={highlight}
+          onOpenAt={onOpenAt}
+        />
+      ))}
     </ul>
   );
 }
