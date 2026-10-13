@@ -14,6 +14,7 @@
     "endedAt": 1791392532663,
     "summarizedAt": 1791392573663,
     "placement": { "daysAgo": 5, "at": "10:00", "weekdays": true },
+    "group": "work",
     "generatedBy": "demo/build-fixtures.mjs"
   },
   "note": {

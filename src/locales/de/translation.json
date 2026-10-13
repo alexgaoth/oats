@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Bedeutung der Markierungen",
         "open": "Offen",
-        "topic": "Themenwechsel",
-        "return": "Zurück zu einem früheren Thema",
-        "marked": "Markierter Moment"
+        "topic": "Neues Thema",
+        "marked": "Markiert"
       },
       "contourSummary": "{{minutes}} Minuten, {{questions}} Fragen ({{unresolved}} unbeantwortet), das Thema wechselte {{shifts}}-mal, und {{returns}} Stränge wurden wieder aufgegriffen.",
       "contourEmpty": "Noch nichts aufgezeichnet.",
@@ -1952,20 +1951,16 @@
       "title": "Gesprächsverlauf",
       "viewLabel": "Ansicht des Verlaufs",
       "mode": {
-        "auto": "Auto",
-        "stack": "Liste",
+        "lanes": "Bahnen",
         "graph": "Graph"
       },
       "empty": "Themen erscheinen hier im Lauf des Gesprächs.",
       "caption": {
-        "few_one": "Als Liste dargestellt: bisher erst {{count}} Thema.",
-        "few_other": "Als Liste dargestellt: bisher erst {{count}} Themen.",
-        "linear": "Als Liste dargestellt: Das Gespräch ist geradlinig verlaufen.",
-        "returns_one": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu einem früheren Thema zurückgekehrt.",
-        "returns_other": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu früheren Themen zurückgekehrt.",
-        "branching": "Als Graph dargestellt: Das Gespräch hat sich verzweigt.",
-        "stack": "Als Liste dargestellt.",
-        "graph": "Als Graph dargestellt."
+        "topics_one": "{{count}} Thema",
+        "topics_other": "{{count}} Themen",
+        "returns_one": "{{count}}-mal zu einem früheren Thema zurückgekehrt",
+        "returns_other": "{{count}}-mal zu früheren Themen zurückgekehrt",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Jetzt",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "{{count}}× zurück",
       "back_other": "{{count}}× zurück",
-      "showMore_one": "{{count}} weiteres anzeigen",
-      "showMore_other": "{{count}} weitere anzeigen",
-      "showFewer": "Weniger anzeigen",
-      "stackLabel": "Themen, neueste zuerst",
+      "lanesLabel": "Themen in der Reihenfolge, in der sie aufkamen",
       "graphLabel_one": "Graph von {{count}} bisher angesprochenem Thema",
       "graphLabel_other": "Graph von {{count}} bisher angesprochenen Themen",
       "nodeName": "{{label}}, {{state}}",
@@ -2275,6 +2267,29 @@
       "badge": "Beispiel",
       "failed": "Das Beispielgespräch konnte nicht geöffnet werden",
       "failedHint": "Es wurde nichts hinzugefügt. Versuche es noch einmal."
+    },
+    "groups": {
+      "seed": {
+        "work": "Arbeit",
+        "personal": "Privat"
+      },
+      "moveTo": "In Gruppe verschieben",
+      "none": "Keine Gruppe",
+      "new": "Neue Gruppe…",
+      "newTitle": "Neue Gruppe",
+      "newDescription": "Gib der Gruppe einen Namen. Dieses Gespräch kommt hinein.",
+      "nameLabel": "Name",
+      "create": "Erstellen",
+      "movedTo": "Verschoben nach {{group}}",
+      "movedOut": "In keiner Gruppe",
+      "moveFailed": "Nicht verschoben",
+      "sorting": "Sortiere {{current}} von {{total}}",
+      "errors": {
+        "nameRequired": "Gib der Gruppe einen Namen.",
+        "nameTooLong": "Höchstens {{max}} Zeichen.",
+        "nameTaken": "Eine Gruppe mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+        "failed": "Die Gruppe wurde nicht gespeichert. Versuche es noch einmal."
+      }
     },
     "shell": {
       "sidebar": "Seitenleiste",

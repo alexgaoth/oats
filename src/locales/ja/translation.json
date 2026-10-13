@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "マークの意味",
         "open": "未解決",
-        "topic": "話題の切り替え",
-        "return": "前の話題に戻った",
-        "marked": "マークした瞬間"
+        "topic": "新しい話題",
+        "marked": "マーク済み"
       },
       "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
       "contourEmpty": "まだ何も記録されていません。",
@@ -1952,20 +1951,16 @@
       "title": "会話の流れ",
       "viewLabel": "表示方法",
       "mode": {
-        "auto": "自動",
-        "stack": "リスト",
+        "lanes": "レーン",
         "graph": "グラフ"
       },
       "empty": "会話が進むと、ここに話題が表示されます。",
       "caption": {
-        "few_one": "リストを表示中：まだ話題は {{count}} 件だけです。",
-        "few_other": "リストを表示中：まだ話題は {{count}} 件だけです。",
-        "linear": "リストを表示中：会話は一直線に進んでいます。",
-        "returns_one": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
-        "returns_other": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
-        "branching": "グラフを表示中：会話が枝分かれしています。",
-        "stack": "リストを表示中。",
-        "graph": "グラフを表示中。"
+        "topics_one": "話題 {{count}} 件",
+        "topics_other": "話題 {{count}} 件",
+        "returns_one": "以前の話題へ {{count}} 回戻った",
+        "returns_other": "以前の話題へ {{count}} 回戻った",
+        "topicsReturns": "{{topics}}、{{returns}}"
       },
       "state": {
         "live": "現在",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "{{count}} 回戻った",
       "back_other": "{{count}} 回戻った",
-      "showMore_one": "さらに {{count}} 件表示",
-      "showMore_other": "さらに {{count}} 件表示",
-      "showFewer": "表示を減らす",
-      "stackLabel": "話題（新しい順）",
+      "lanesLabel": "話題（出た順）",
       "graphLabel_one": "これまでに出た {{count}} 件の話題のグラフ",
       "graphLabel_other": "これまでに出た {{count}} 件の話題のグラフ",
       "nodeName": "{{label}}、{{state}}",
@@ -2275,6 +2267,29 @@
       "badge": "サンプル",
       "failed": "サンプルの会話を開けませんでした",
       "failedHint": "何も追加されていません。もう一度お試しください。"
+    },
+    "groups": {
+      "seed": {
+        "work": "仕事",
+        "personal": "プライベート"
+      },
+      "moveTo": "グループに移動",
+      "none": "グループなし",
+      "new": "新しいグループ…",
+      "newTitle": "新しいグループ",
+      "newDescription": "グループに名前を付けてください。この会話はそのグループに移動します。",
+      "nameLabel": "名前",
+      "create": "作成",
+      "movedTo": "{{group}}に移動しました",
+      "movedOut": "グループなし",
+      "moveFailed": "移動できませんでした",
+      "sorting": "{{total}}件中{{current}}件目を分類中",
+      "errors": {
+        "nameRequired": "グループ名を入力してください。",
+        "nameTooLong": "{{max}}文字以内で入力してください。",
+        "nameTaken": "同じ名前のグループがすでにあります。別の名前にしてください。",
+        "failed": "グループを保存できませんでした。もう一度お試しください。"
+      }
     },
     "shell": {
       "sidebar": "サイドバー",

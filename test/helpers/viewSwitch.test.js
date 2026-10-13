@@ -11,6 +11,7 @@ const path = require("node:path");
 const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 const SWITCH = read("src/components/ui/view-switch.tsx");
 const FLOW = read("src/components/conversation/ConversationFlow.tsx");
+const FLOW_TEXT = read("src/components/conversation/flowText.ts");
 const WORKSPACE = read("src/components/OatsWorkspace.tsx");
 const CSS = read("src/index.css");
 
@@ -39,8 +40,9 @@ test("nothing moves under reduced motion", () => {
 
 test("how topics are drawn is one of the choices with character", () => {
   assert.match(FLOW, /<ViewSwitch<ConversationFlowView>/);
-  for (const icon of ["Wand", "Rows3", "Network"]) {
-    assert.ok(FLOW.includes(`icon: ${icon}`), icon);
+  assert.match(FLOW, /options=\{flowViewOptions\(t\)\}/);
+  for (const icon of ["LanesGlyph", "Network"]) {
+    assert.ok(FLOW_TEXT.includes(`icon: ${icon}`), icon);
   }
   assert.doesNotMatch(FLOW, /SegmentedControl/);
 });
@@ -49,7 +51,11 @@ test("list or map is one of the choices with character, and the switch stays whi
   assert.match(WORKSPACE, /<ViewSwitch<"list" \| "map">/);
   assert.ok(WORKSPACE.includes("icon: List"), "List");
   assert.ok(WORKSPACE.includes("icon: Waypoints"), "Map");
-  assert.doesNotMatch(WORKSPACE, /onClick=\{\(\) => setView\("map"\)\}/, "the old Map button is gone");
+  assert.doesNotMatch(
+    WORKSPACE,
+    /onClick=\{\(\) => setView\("map"\)\}/,
+    "the old Map button is gone"
+  );
   // The switch is in the row above the keyed views, not inside one of them: a
   // view that remounts would take the switch with it, and its indicator could
   // not slide.

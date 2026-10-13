@@ -41,9 +41,9 @@ The product rules from v1 still hold and still win over taste:
 └───────────┴────────────────────────────────────────┘
 ```
 
-- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with a
-  faded texture of scattered oat grains behind it (`shell/SidebarGrain.tsx`: a
-  static pattern at 7%, brown in light mode, honey in dark). Top 52px band holds
+- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with
+  the wheat field at its foot (`shell/SidebarField.tsx`: the room the list leaves,
+  120 to 240px, none in less; taller is more sky). Top 52px band holds
   the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`) and moves the
   window. Then the brand row, the Record button (honey with depth; a red **Stop
   recording** with elapsed time while live), Home / Conversations / Search, the six
@@ -91,7 +91,8 @@ Rules:
 - **Content is flat; the frame may carry the oat world.** Cards, lists and reading
   surfaces stay flat, with depth from a border and at most `shadow-xs`/`shadow-sm`,
   and no glows. The oat world may dress the frame where it never sits under words:
-  the sidebar's grain texture, the field at the sidebar's foot, empty states.
+  the field at the sidebar's foot, empty states.
+  The one exception in content: a chart's areas carry the field's dither (§6).
 - **The main action has depth.** New recording and Start recording are honey with
   an inner highlight and a soft honey shadow, and they sink 1px when pressed
   (`.oats-cta` in `index.css`). They are the only controls with depth.
@@ -179,15 +180,18 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   motion. The questions count is left out while question cards are off: a zero
   there would be a guess.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
-  talked about so far, as a **stack** (the topic now, then the most recent: state
-  dot, label, state badge, returns, minutes) or a **graph** (x is when a topic was
-  first raised, y how unsettled it still is; a dashed honey curve is a return to
-  an earlier topic). A view switch chooses Auto / Stack / Graph, and the
-  choice persists. Auto shows the graph only when a list would hide the shape —
-  four or more topics, with two returns to earlier topics or a topic that
-  branches — and says why in a one-line caption. It changes view only when two
-  snapshots in a row agree and 20 s after its last change, so it never
-  flip-flops (`helpers/conversationFlow.mjs`).
+  talked about so far, as **lanes** (the default) or a **graph**. A view switch
+  chooses Lanes / Graph, and the choice persists. The lanes
+  (`conversation/TopicLanes.tsx`, `helpers/topicLanes.mjs`) are one row per
+  topic in the order raised, with its minutes, and one line for the room: it
+  runs along a topic's row while the room is on it, bends to the next row when
+  the room moves, climbs back to an earlier row on a return, and ends at now
+  with a honey dot. The topic now has a medium label and the Now badge; a
+  pressed row is selected and quotes the topic. Past eight rows the card
+  scrolls inside. The graph keeps its axes (x is when a topic was first raised,
+  y how unsettled it still is); a return is an ink curve, a move on a quiet one,
+  and the labels sit on plates. A one-line caption states the facts of the view
+  shown: "8 topics, 3 returns to earlier topics".
 - **Detailed:** adds the question cards and the live transcript below the flow
   card, each in standard card/list styling. The flow card then yields height to
   them (at most 40% of the column) and scrolls inside.
@@ -213,28 +217,50 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 
 The conversation contour (`helpers/conversationContour.mjs`), the flow card's
 graph and the topic/lifetime graphs stay: every value in them is measured from
-the conversation. They draw in
-`muted-foreground` with status colors for question marks, on the card surface,
-with no decorative gradient.
+the conversation. Every chart draws through one module
+(`components/charts/chartStyle.ts`), by seven rules:
+
+1. **Two line weights.** Data lines are 1.5 px, with round caps and joins.
+   Rules (baselines, row dividers, ticks) are 1 px. No dashes anywhere.
+2. **Three greys.** Ink (`foreground`) is for words and emphasis, quiet
+   (`muted-foreground`) for data lines and marks, rule (`border`) for rules. No
+   other opacities, except the fill.
+3. **One accent.** Honey (`primary`) marks only "now" and "selected or hovered".
+4. **Status colours only for question verdicts:** answered is filled
+   `success`, unknown is filled `warning`, hedged is a soft `warning` fill
+   inside a ring, and open (no verdict) is a ring in quiet.
+5. **One dot:** radius 4, with a 2 px ring in `card`, so it stays clear on a
+   line or on another dot.
+6. **Nothing crosses a word.** Labels sit in a column, or on a plate in the card
+   colour.
+7. **Fill.** An area or mass is an ordered 4×4 Bayer dither of the quiet grey,
+   locked to device pixels, with the field's matrix (`helpers/chartDither.mjs`).
+   A fade under about 24 px tall (the list strips) is a 12% wash instead. This
+   is the one exception to "content is flat" (§2): charts carry the dither.
 
 - A question's mark has one vocabulary on every surface
   (`conversation/questionMarks.ts`), and it is always a complete circle of one
   size: **filled** when settled (answered in `success`, unknown in
   `warning`), a **soft fill inside a ring** when the answer was hedged
   (`warning`), an **empty ring** when there is no verdict (`muted-foreground`).
-  The fill carries the meaning without colour. On a contour the marks are
-  **pins**: heads on one row along the top, each with a stem down to its moment.
+  The fill carries the meaning without colour. On a contour a question is a
+  **dot on the line** at the moment it was asked; the one being read is a size
+  up, ringed in honey.
 - The live contour rolls: it shows the last four minutes with now at the
-  right-hand edge, and redraws once a second, so the trace and every pin move one
+  right-hand edge, and redraws once a second, so the trace and every dot move one
   second to the left. Transcript speech and the microphone level both feed it,
   so it moves while somebody is talking. Its label describes the whole sitting.
 - A finished contour keeps the shape the live one had: the recording keeps how
   loud each second was (one byte a second, `helpers/conversationLoudness.mjs`),
   and the record and every list strip take their height from it by the live
   rule. Conversations recorded before it was kept draw from their words.
-- The legend under a contour lists only what that contour draws, in two rows: how
-  the questions ended, then the shape marks (topic change, topic revisited,
-  marked moment).
+- The legend under a contour lists only what that contour draws, in one row: how
+  the questions ended, then the shape marks (new topic, marked).
+- Talk time is a list of bars under the contour: each voice's name, a 6 px bar
+  as long as its share against the voice that talked most, dithered at half
+  density, and the share. Two columns from 420 px. Pressing a voice shows only
+  its turns: its bar turns honey and its name medium. Unattributed speech is the
+  last row, with a rule-grey bar.
 
 ## 7. Motion
 

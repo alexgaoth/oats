@@ -80,8 +80,6 @@ export function buildThreadMap({
 
   if (!kept.length) return { points: [], links: [], empty: true };
 
-  const heaviest = Math.max(...kept.map((n) => n.durationMs ?? 0), 1);
-
   const points = kept.map((node) => {
     const elapsed = (node.firstAt ?? startedAt) - startedAt;
     return {
@@ -94,9 +92,6 @@ export function buildThreadMap({
       x: PAD + clamp01(elapsed / span) * (1 - PAD * 2),
       // Screen coordinates: unsettled is *up*, so it subtracts.
       y: PAD + (1 - unsettled(node)) * (1 - PAD * 2),
-      // Area, not radius, tracks dwell — a radius proportional to time makes a
-      // subject twice as long look four times as big.
-      r: 0.2 + Math.sqrt((node.durationMs ?? 0) / heaviest) * 0.8,
     };
   });
 
@@ -122,10 +117,16 @@ export function buildThreadMap({
   return { points, links, empty: false };
 }
 
-/** A point's dot in px. Area follows dwell through `r`; shared with the
- *  renderer so the placement below and the drawing agree on where a dot ends. */
-export function dotSize(point) {
-  return 5 + (point?.r ?? 0) * 5;
+/** Every dot is one size (DESIGN.md §6): 8px across, in a 2px ring of the
+ *  card colour that keeps it clear where it meets a line or another dot. */
+export const DOT_PX = 8;
+export const DOT_RING_PX = 2;
+
+/** The room a dot takes, ring included: where a line stops and a label may
+ *  start. Shared with the renderer so the placement below and the drawing
+ *  agree on where a dot ends. One size for every point. */
+export function dotSize() {
+  return DOT_PX + DOT_RING_PX * 2;
 }
 
 /** Mono at 11px advances 0.6em per character in every shipped mono face. The
@@ -156,8 +157,16 @@ const overlaps = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a
  * `charPx` is the face's average advance per character at the label's size:
  * a label's width is estimated as its length times this, so an estimate that
  * runs short lets two labels touch.
+ *
+ * `plateX`/`plateY` are the padding of the plate a label sits on: a box in the
+ * card colour that hides the lines under its words (DESIGN.md §6, nothing
+ * crosses a word). A plate must not cover another label's words or another
+ * topic's dot, so a label keeps that much clear of both.
  */
-export function placeLabels(points, { width = 0, height = 0, charPx = LABEL_CHAR_PX } = {}) {
+export function placeLabels(
+  points,
+  { width = 0, height = 0, charPx = LABEL_CHAR_PX, plateX = 0, plateY = 0 } = {}
+) {
   const list = Array.isArray(points) ? points : [];
   if (!(width > 0 && height > 0)) {
     return new Map(list.map((p) => [p.id, { side: "right", align: "center", hidden: false }]));
@@ -191,14 +200,20 @@ export function placeLabels(points, { width = 0, height = 0, charPx = LABEL_CHAR
       ...spans.map((span) => ({ side: "above", ...span, y1: above - LABEL_H_PX, y2: above })),
       ...spans.map((span) => ({ side: "below", ...span, y1: below, y2: below + LABEL_H_PX })),
     ].map((box) => ({ ...box, x2: box.x1 + w }));
+    const plate = (box) => ({
+      x1: box.x1 - plateX,
+      x2: box.x2 + plateX,
+      y1: box.y1 - plateY,
+      y2: box.y2 + plateY,
+    });
     const fits = candidates.find(
       (box) =>
         box.x1 >= 0 &&
         box.x2 <= width &&
         box.y1 >= 0 &&
         box.y2 <= height &&
-        !placed.some((other) => overlaps(box, other)) &&
-        !dots.some((other) => other.id !== point.id && overlaps(box, other))
+        !placed.some((other) => overlaps(plate(box), other)) &&
+        !dots.some((other) => other.id !== point.id && overlaps(plate(box), other))
     );
     if (fits) {
       placed.push(fits);

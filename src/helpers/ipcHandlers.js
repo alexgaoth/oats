@@ -510,6 +510,27 @@ class IPCHandlers {
     });
   }
 
+  /** How each seeded conversation group is named in the current language, by seed key. */
+  _conversationGroupSeedNames() {
+    const names = {};
+    for (const group of this.databaseManager.getConversationGroups()) {
+      if (!group.seed_key) continue;
+      names[group.seed_key] = i18nMain.t(`oats.groups.seed.${group.seed_key}`, {
+        defaultValue: group.name,
+      });
+    }
+    return names;
+  }
+
+  /**
+   * Tell every window the groups changed: the whole list, and the notes whose
+   * group changed with them (a deleted group's conversations).
+   */
+  _announceConversationGroups(notes = []) {
+    const change = { groups: this.databaseManager.getConversationGroups(), notes };
+    setImmediate(() => this.broadcastToWindows("conversation-groups-changed", change));
+  }
+
   _buildFolderMap() {
     const folders = this.databaseManager.getFolders();
     const map = {};
@@ -1388,6 +1409,65 @@ class IPCHandlers {
 
     ipcMain.handle("db-get-folder-note-counts", async () => {
       return this.databaseManager.getFolderNoteCounts();
+    });
+
+    // Conversation groups (database.js). Every change to the groups is
+    // broadcast whole as `conversation-groups-changed`, with the notes whose
+    // group changed with it; moving one conversation is a `note-updated`.
+    ipcMain.handle("db-get-conversation-groups", async () => {
+      return this.databaseManager.getConversationGroups();
+    });
+
+    ipcMain.handle("db-create-conversation-group", async (event, name) => {
+      const result = this.databaseManager.createConversationGroup(name, {
+        seedNames: this._conversationGroupSeedNames(),
+      });
+      if (result?.success) this._announceConversationGroups();
+      return result;
+    });
+
+    ipcMain.handle("db-rename-conversation-group", async (event, id, name) => {
+      const result = this.databaseManager.renameConversationGroup(id, name, {
+        seedNames: this._conversationGroupSeedNames(),
+      });
+      if (result?.success && result.changed) this._announceConversationGroups();
+      return result;
+    });
+
+    ipcMain.handle("db-delete-conversation-group", async (event, id) => {
+      const result = this.databaseManager.deleteConversationGroup(id);
+      if (result?.success) this._announceConversationGroups(result.notes);
+      return result;
+    });
+
+    ipcMain.handle("db-reorder-conversation-groups", async (event, ids) => {
+      const result = this.databaseManager.reorderConversationGroups(ids);
+      if (result?.success) this._announceConversationGroups();
+      return result;
+    });
+
+    // A person's choice: from then on the writing model leaves it alone.
+    ipcMain.handle("db-set-conversation-group", async (event, noteId, groupId) => {
+      const result = this.databaseManager.setConversationGroup(noteId, groupId ?? null);
+      if (result?.success && result.note) {
+        setImmediate(() => this.broadcastToWindows("note-updated", result.note));
+      }
+      return result;
+    });
+
+    // The writing model's choice (stores/conversationGroupSortStore.ts). The
+    // model ran in the renderer, through the summary's own route; this only
+    // writes what it chose, and never over a person's choice.
+    ipcMain.handle("db-set-conversation-group-from-model", async (event, noteId, groupId) => {
+      const result = this.databaseManager.setConversationGroupFromModel(noteId, groupId ?? null);
+      if (result?.success && result.note) {
+        setImmediate(() => this.broadcastToWindows("note-updated", result.note));
+      }
+      return result;
+    });
+
+    ipcMain.handle("db-list-unsorted-conversations", async () => {
+      return this.databaseManager.listUnsortedConversations();
     });
 
     ipcMain.handle("db-get-actions", async () => {

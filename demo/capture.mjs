@@ -37,13 +37,13 @@ const SHOTS = [
     script: "await demo.press('Open an example conversation'); await demo.wait(600)",
   },
   {
-    name: "live-calm-stack",
+    name: "live-calm-lanes",
     query: "demo=live&from=560&end=hold&view=calm",
     script: "await demo.untilSeconds(563)",
   },
   {
     name: "live-calm-graph",
-    query: "demo=live&from=1062&end=hold&view=calm",
+    query: "demo=live&from=1062&end=hold&view=calm&flow=graph",
     script: "await demo.untilSeconds(1066)",
   },
   {

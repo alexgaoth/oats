@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Qué significan las marcas",
         "open": "Abierta",
-        "topic": "Cambio de tema",
-        "return": "Vuelta a un tema anterior",
-        "marked": "Momento marcado"
+        "topic": "Tema nuevo",
+        "marked": "Marcado"
       },
       "contourSummary": "{{minutes}} minutos, {{questions}} preguntas ({{unresolved}} sin responder), el tema cambió {{shifts}} veces y se volvió a {{returns}} hilos.",
       "contourEmpty": "Todavía no se ha grabado nada.",
@@ -1952,20 +1951,16 @@
       "title": "Flujo de la conversación",
       "viewLabel": "Vista del flujo",
       "mode": {
-        "auto": "Auto",
-        "stack": "Lista",
+        "lanes": "Carriles",
         "graph": "Grafo"
       },
       "empty": "Los temas aparecen aquí a medida que avanza la conversación.",
       "caption": {
-        "few_one": "Mostrando la lista: por ahora solo {{count}} tema.",
-        "few_other": "Mostrando la lista: por ahora solo {{count}} temas.",
-        "linear": "Mostrando la lista: la conversación ha avanzado en línea recta.",
-        "returns_one": "Mostrando el grafo: por ahora {{count}} regreso a un tema anterior.",
-        "returns_other": "Mostrando el grafo: por ahora {{count}} regresos a temas anteriores.",
-        "branching": "Mostrando el grafo: la conversación se ha ramificado.",
-        "stack": "Mostrando la lista.",
-        "graph": "Mostrando el grafo."
+        "topics_one": "{{count}} tema",
+        "topics_other": "{{count}} temas",
+        "returns_one": "{{count}} regreso a un tema anterior",
+        "returns_other": "{{count}} regresos a temas anteriores",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Ahora",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "Retomado {{count}}×",
       "back_other": "Retomado {{count}}×",
-      "showMore_one": "Mostrar {{count}} más",
-      "showMore_other": "Mostrar {{count}} más",
-      "showFewer": "Mostrar menos",
-      "stackLabel": "Temas, los más recientes primero",
+      "lanesLabel": "Temas en el orden en que surgieron",
       "graphLabel_one": "Grafo de {{count}} tema planteado hasta ahora",
       "graphLabel_other": "Grafo de {{count}} temas planteados hasta ahora",
       "nodeName": "{{label}}, {{state}}",
@@ -2275,6 +2267,29 @@
       "badge": "Ejemplo",
       "failed": "No se pudo abrir la conversación de ejemplo",
       "failedHint": "No se añadió nada. Inténtalo de nuevo."
+    },
+    "groups": {
+      "seed": {
+        "work": "Trabajo",
+        "personal": "Personal"
+      },
+      "moveTo": "Mover a un grupo",
+      "none": "Sin grupo",
+      "new": "Nuevo grupo…",
+      "newTitle": "Nuevo grupo",
+      "newDescription": "Ponle un nombre al grupo. Esta conversación pasa a él.",
+      "nameLabel": "Nombre",
+      "create": "Crear",
+      "movedTo": "Movida a {{group}}",
+      "movedOut": "Sin grupo",
+      "moveFailed": "No se movió",
+      "sorting": "Ordenando {{current}} de {{total}}",
+      "errors": {
+        "nameRequired": "Ponle un nombre al grupo.",
+        "nameTooLong": "Usa {{max}} caracteres como máximo.",
+        "nameTaken": "Ya hay un grupo con ese nombre. Elige otro.",
+        "failed": "El grupo no se guardó. Inténtalo de nuevo."
+      }
     },
     "shell": {
       "sidebar": "Barra lateral",

@@ -76,7 +76,11 @@ import {
   applyConversationSpeakers,
   sittingLoudness,
 } from "../stores/meetingRecordingStore";
-import { useSettingsStore, type ConversationDetail } from "../stores/settingsStore";
+import {
+  useSettingsStore,
+  type ConversationDetail,
+  type ConversationFlowView,
+} from "../stores/settingsStore";
 import {
   selectIsCloudNoteFormattingMode,
   selectResolvedNoteFormatting,
@@ -84,16 +88,21 @@ import {
 import { useConversationEvents } from "../hooks/useConversationEvents";
 import ConversationGraph from "./notes/ConversationGraph";
 import TopicGraph from "./notes/TopicGraph";
+import TopicLanes, { type LaneQuestion, type Lanes } from "./conversation/TopicLanes";
+import { flowCaption, flowViewOptions } from "./conversation/flowText";
+import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import LifetimeGraph from "./notes/LifetimeGraph";
 import FieldBackdrop from "./field/FieldBackdrop";
 import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
+import DitherBar from "./charts/DitherBar";
 import ListeningRing from "./conversation/ListeningRing";
 import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import RecordingCounters from "./conversation/RecordingCounters";
 import { ExampleBadge, ExampleOffer } from "./conversation/ExampleConversation";
+import { MoveToGroupMenu, NewGroupDialog, type GroupMove } from "./conversation/MoveToGroup";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import {
   FOCUS_AT_REST,
@@ -114,6 +123,7 @@ import { speakerText } from "../utils/speakerLabel";
 import {
   buildReview,
   openQuestionCount,
+  questionMoments,
   questionOutcomes,
   questionTurns,
 } from "../helpers/conversationReview.mjs";
@@ -1083,6 +1093,7 @@ function ConversationStateBridge() {
 // Under four topics there is no graph worth drawing — a three-node graph looks
 // broken, not minimal — so the linear thread list stands in. It is also the
 // keyboard-and-screen-reader equivalent view, not a degraded one (DESIGN.md §9.4).
+// The lanes have no such floor: one topic is one row.
 const MIN_GRAPH_TOPICS = 4;
 
 function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
@@ -1100,13 +1111,14 @@ function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
   }
 }
 
-// The secondary lens, deliberately.
+// How the conversation moved between its topics, after it.
 //
-// A force-directed graph is a good answer to "how did this conversation move?"
-// and a bad default payoff for opening a record — it is the shape of the tool
-// rather than the shape of what was said. The contour at the head of the
-// document carries the everyday reading; this is here for the question that
-// genuinely needs a graph.
+// The contour at the head of the document carries the everyday reading; this
+// tab is for the question "how did this conversation move?". The lanes are the
+// default: one row per topic in the order raised, one line for the room, and
+// each question on the line where it was asked, so a dropped topic shows its
+// unanswered questions. The force-directed graph is the alternative. Both
+// select the same topic, whose questions are listed below.
 function ConnectionsView({
   note,
   events,
@@ -1116,14 +1128,33 @@ function ConnectionsView({
   events: ConversationEvent[];
   onReload: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selectedTopic, setSelectedTopic] = useState<ConversationTopicNode | null>(null);
   const searchBaseUrl = useSettingsStore((s) => s.conversationAideSearchBaseUrl);
+  const view = useSettingsStore((s) => s.connectionsView);
+  const setView = useSettingsStore((s) => s.setConnectionsView);
   const snapshot = useMemo(() => readTopicSnapshot(note.conversation_topics), [note]);
-  const graphBox = useRef<HTMLDivElement | null>(null);
-  const graphHeight = useRoomBelow(graphBox);
+  const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
+  const lanes = useMemo(() => topicLanes({ snapshot, segments }) as Lanes, [snapshot, segments]);
+  // Each question at the turn it was asked in, read as the counts under the
+  // title and the transcript's margin read it, and the topic it belongs to:
+  // the row its mark sits on, so the list below names the marks on that row.
+  const moments = useMemo(() => questionMoments(events, segments), [events, segments]);
+  const questions = useMemo<LaneQuestion[]>(
+    () =>
+      moments.map((moment) => ({
+        id: moment.key,
+        at: moment.at,
+        state: (moment.outcome === "open" ? "asked" : moment.outcome) as QuestionOutcome,
+      })),
+    [moments]
+  );
+  const topicOfQuestion = useMemo(
+    () => questionTopics(lanes, moments, snapshot),
+    [lanes, moments, snapshot]
+  );
 
-  if (!snapshot || snapshot.nodes.length < MIN_GRAPH_TOPICS) {
+  if (!snapshot || lanes.empty) {
     return (
       <ConversationGraph
         events={events}
@@ -1133,11 +1164,27 @@ function ConnectionsView({
     );
   }
 
+  const graphable = snapshot.nodes.length >= MIN_GRAPH_TOPICS;
+  const caption =
+    view === "lanes"
+      ? flowCaption(t, { topics: lanes.rows.length, returns: lanes.returns.length })
+      : graphable
+        ? flowCaption(t, {
+            topics: snapshot.nodes.length,
+            returns: snapshot.edges.filter((edge) => edge.kind === "return").length,
+          })
+        : null;
+
+  // Pressing a row selects its topic, and pressing it again lets it go: the
+  // same selection the graph makes, so it survives a change of view.
+  const selectTopic = (id: number) =>
+    setSelectedTopic((current) =>
+      current?.id === id ? null : (snapshot.nodes.find((node) => node.id === id) ?? null)
+    );
+
   const topicQuestions = selectedTopic
     ? events.filter(
-        (event) =>
-          event.kind === "question" &&
-          event.segmentIds.some((id) => selectedTopic.utteranceIds.includes(id))
+        (event) => event.kind === "question" && topicOfQuestion.get(event.id) === selectedTopic.id
       )
     : [];
 
@@ -1148,30 +1195,46 @@ function ConnectionsView({
 
   return (
     <div className="mt-7">
-      {/* No box. The graph is the content, not a widget inside a panel, and a
-          rounded border around it is exactly the chrome §1 rules out. Full
-          column width so labels have somewhere to sit.
-
-          Sized to the room left rather than to a constant. A fixed 26rem put the
-          graph at 452–868 in an 800px window: 68px of it below the fold, on the
-          one tab whose entire payload is a picture, and it is a picture you drag
-          nodes around in — so the fix for "I cannot see the bottom" was to
-          scroll the page out from under your own cursor.
-
-          The room is measured, not estimated. `calc(100vh - 29rem)` assumed a
-          head of one known height, and a title that wraps to two lines or a
-          "left open last time" line made it taller: measured at 1200x800 the
-          graph ended 16px below the window and cut its lowest label in half.
-          The bounds keep it usable in a short window and stop it becoming a
-          field in a tall one. */}
-      <div ref={graphBox} className="w-full" style={{ height: graphHeight }}>
-        <TopicGraph
+      {/* How the topics are drawn is one of the choices with character
+          (DESIGN.md §2), and it sits above the views so its indicator can
+          slide between them. */}
+      <div className="flex min-h-8 items-center justify-between gap-4">
+        <p className="min-w-0 text-[13px] text-muted-foreground">{caption}</p>
+        <ViewSwitch<ConversationFlowView>
+          className="h-8"
+          aria-label={t("oats.flow.viewLabel")}
+          value={view}
+          onValueChange={setView}
+          options={flowViewOptions(t)}
+        />
+      </div>
+      {view === "lanes" ? (
+        // No box, as for the graph: the rows are the content. Their hover runs
+        // a little past the column so the words line up with the text above.
+        <TopicLanes
+          className="-mx-2 mt-4 border-y border-border"
+          inset="px-2"
+          lanes={lanes}
+          selected={selectedTopic?.id ?? null}
+          onSelect={selectTopic}
+          questions={questions}
+        />
+      ) : graphable ? (
+        <ConnectionsGraph
           snapshot={snapshot}
           selectedId={selectedTopic?.id ?? null}
           onSelect={setSelectedTopic}
           layoutKey={`oats:topic-layout:${note.id}`}
         />
-      </div>
+      ) : (
+        <div className="mt-4">
+          <ConversationGraph
+            events={events}
+            searchBaseUrl="https://www.google.com/search?q="
+            onReload={onReload}
+          />
+        </div>
+      )}
       {/* The panel's *space* is permanent even though its content is not.
           
           Rendering it only on selection meant the first click inserted a block
@@ -1181,46 +1244,98 @@ function ConnectionsView({
           band is a fixed height that scrolls inside itself, so selecting
           anything moves nothing. Still no "select a topic to see…" placeholder:
           empty space is not an instruction. */}
-      <div className="mt-6 h-44 overflow-y-auto border-t border-border pt-5">
-        {selectedTopic && (
-          <aside>
-            <h3 className="text-sm font-semibold text-foreground">{selectedTopic.label}</h3>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {t("topicGraph.seconds", {
-                count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
-              })}
-              {selectedTopic.returns > 0 &&
-                ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
-            </p>
-            <ul className="mt-3 divide-y divide-border">
-              {topicQuestions.map((question) => (
-                <li key={question.id} className="flex items-start gap-3 py-2.5">
-                  <p className="min-w-0 flex-1 text-pretty text-sm leading-snug text-foreground">
-                    {question.text}
-                  </p>
-                  {/* A ghost button, not the brand: the selected node keeps the
-                      brand colour, and one row per question would multiply it. */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => research(question.text)}
-                    className="-my-0.5 shrink-0 text-muted-foreground"
-                  >
-                    <Search aria-hidden="true" />
-                    {t("topicGraph.search")}
-                  </Button>
-                </li>
-              ))}
-              {!topicQuestions.length && (
-                <li className="py-2.5 text-[13px] text-muted-foreground">
-                  {t("topicGraph.noQuestions")}
-                </li>
-              )}
-            </ul>
-          </aside>
-        )}
-      </div>
+      {(view === "lanes" || graphable) && (
+        <div className="mt-6 h-44 overflow-y-auto border-t border-border pt-5">
+          {selectedTopic && (
+            <aside>
+              <h3 className="text-sm font-semibold text-foreground">{selectedTopic.label}</h3>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {/* In minutes, as its row says: the panel said "174s" beside a row that said "3 min". */}
+                {[
+                  formatSpan(selectedTopic.durationMs, { locale: i18n.language }),
+                  selectedTopic.returns > 0
+                    ? t("topicGraph.returned", { count: selectedTopic.returns })
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              <ul className="mt-3 divide-y divide-border">
+                {topicQuestions.map((question) => (
+                  <li key={question.id} className="flex items-start gap-3 py-2.5">
+                    <p className="min-w-0 flex-1 text-pretty text-sm leading-snug text-foreground">
+                      {question.text}
+                    </p>
+                    {/* A ghost button, not the brand: the selected node keeps the
+                        brand colour, and one row per question would multiply it. */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => research(question.text)}
+                      className="-my-0.5 shrink-0 text-muted-foreground"
+                    >
+                      <Search aria-hidden="true" />
+                      {t("topicGraph.search")}
+                    </Button>
+                  </li>
+                ))}
+                {!topicQuestions.length && (
+                  <li className="py-2.5 text-[13px] text-muted-foreground">
+                    {t("topicGraph.noQuestions")}
+                  </li>
+                )}
+              </ul>
+            </aside>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The topic graph, sized to the room left below it.
+ *
+ * Its own component so it measures when it appears: the lanes are the default,
+ * and a box measured while the lanes were showing would have no room to give.
+ */
+function ConnectionsGraph({
+  snapshot,
+  selectedId,
+  onSelect,
+  layoutKey,
+}: {
+  snapshot: ConversationTopicSnapshot;
+  selectedId: number | null;
+  onSelect: (node: ConversationTopicNode | null) => void;
+  layoutKey: string;
+}) {
+  const graphBox = useRef<HTMLDivElement | null>(null);
+  const graphHeight = useRoomBelow(graphBox);
+  // No box. The graph is the content, not a widget inside a panel, and a
+  // rounded border around it is exactly the chrome §1 rules out. Full column
+  // width so labels have somewhere to sit.
+  //
+  // Sized to the room left rather than to a constant. A fixed 26rem put the
+  // graph at 452–868 in an 800px window: 68px of it below the fold, on the one
+  // tab whose entire payload is a picture, and it is a picture you drag nodes
+  // around in — so the fix for "I cannot see the bottom" was to scroll the page
+  // out from under your own cursor.
+  //
+  // The room is measured, not estimated. `calc(100vh - 29rem)` assumed a head
+  // of one known height, and a title that wraps to two lines or a "left open
+  // last time" line made it taller: measured at 1200x800 the graph ended 16px
+  // below the window and cut its lowest label in half. The bounds keep it
+  // usable in a short window and stop it becoming a field in a tall one.
+  return (
+    <div ref={graphBox} className="mt-4 w-full" style={{ height: graphHeight }}>
+      <TopicGraph
+        snapshot={snapshot}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        layoutKey={layoutKey}
+      />
     </div>
   );
 }
@@ -2694,25 +2809,21 @@ function TranscriptView({
 }
 
 /**
- * Neutral tones by rank, the most talk darkest. No hue: a colour here would be
- * read as a status, and nothing about how long somebody spoke is one.
- */
-const TALK_TONES = [
-  "bg-foreground/70",
-  "bg-muted-foreground/55",
-  "bg-muted-foreground/35",
-  "bg-muted-foreground/20",
-];
-
-/**
- * Who did the talking: each voice's share of the speaking time as a 6px bar,
- * and a legend of who and how much that is also the transcript's filter.
+ * Who did the talking: one row per voice, with its name, a bar as long as its
+ * share against the voice that talked most, and the share. A row is also the
+ * transcript's filter: pressing a voice shows only its turns, and pressing it
+ * again shows everyone.
  *
  * Measured from each turn's place in the recording (`talkTime.mjs`) and
  * labelled the way the transcript labels speakers, names included. One voice,
- * or a room whose voices were never told apart, draws nothing: a bar with one
- * part says less than no bar. Speech no voice was put on is shown apart, in
- * the faintest tone, and is not a filter.
+ * or a room whose voices were never told apart, draws nothing: a list of one
+ * says nothing. Speech no voice was put on is the last row, with a rule-grey
+ * bar, and is not a filter.
+ *
+ * The bars are the chart fill (DESIGN.md §6): the dither of the quiet grey,
+ * and honey for the voice being shown. Two columns when the card has room
+ * (420px), filled down the first column first, so the reading order and the
+ * tab order are the same.
  */
 function TalkTime({
   talk,
@@ -2732,13 +2843,12 @@ function TalkTime({
     [i18n.language]
   );
   if (talk.speakers.length < 2) return null;
-  const parts = [
-    ...talk.speakers.map((speaker, rank) => ({
+  const rows = [
+    ...talk.speakers.map((speaker) => ({
       key: speaker.key as string | null,
       ms: speaker.ms,
       percent: speaker.percent,
       label: speakerText(speaker.segment, t) ?? "",
-      tone: TALK_TONES[Math.min(rank, TALK_TONES.length - 1)],
     })),
     ...(talk.unattributedMs > 0
       ? [
@@ -2747,69 +2857,74 @@ function TalkTime({
             ms: talk.unattributedMs,
             percent: talk.unattributedPercent,
             label: t("oats.intelligence.talkTime.unattributed"),
-            tone: "bg-border",
           },
         ]
       : []),
   ];
+  // The longest bar is the voice that talked most (or the unattributed speech,
+  // when there was more of it): every other bar is a share of that one.
+  const longest = Math.max(...rows.map((entry) => entry.ms));
+  const firstColumn = Math.ceil(rows.length / 2);
+  // Each row spans the list's three columns (name, bar, share) through
+  // subgrid, so the bars in a column start on one line.
+  const row = "col-span-3 grid grid-cols-subgrid items-center px-1.5 py-1";
   return (
     <div
       role="group"
       aria-label={t("oats.intelligence.talkTime.label")}
-      className={cn("space-y-2.5", className)}
+      className={cn("@container", className)}
     >
-      <div aria-hidden="true" className="flex h-1.5 gap-px overflow-hidden rounded-full">
-        {parts.map((part) => (
-          <span
-            key={part.key ?? "unattributed"}
-            style={{ flexGrow: part.ms, flexBasis: 0 }}
-            className={cn(
-              "h-full min-w-px transition-opacity duration-150",
-              part.tone,
-              selected && part.key !== selected && "opacity-30"
-            )}
-          />
-        ))}
-      </div>
-      <ul className="-mx-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-        {parts.map((part) => {
+      <ul className="-mx-1.5 grid grid-flow-row-dense grid-cols-[minmax(0,max-content)_minmax(0,1fr)_auto] gap-x-3 text-[13px] text-foreground @min-[420px]:grid-cols-[minmax(0,max-content)_minmax(0,1fr)_auto_0.25rem_minmax(0,max-content)_minmax(0,1fr)_auto]">
+        {rows.map((entry, index) => {
+          const pressed = entry.key !== null && selected === entry.key;
           const content = (
             <>
-              <span
-                aria-hidden="true"
-                className={cn("h-1.5 w-3 shrink-0 rounded-full", part.tone)}
-              />
-              <span className="min-w-0 truncate">{part.label}</span>
+              <span className={cn("max-w-40 truncate", pressed && "font-medium")}>
+                {entry.label}
+              </span>
+              <span aria-hidden="true" className="flex h-1.5 min-w-0">
+                <span
+                  className={cn(
+                    "h-1.5 min-w-1.5 overflow-hidden rounded-[3px]",
+                    entry.key === null && "bg-border",
+                    pressed && "bg-primary"
+                  )}
+                  style={{ width: `${(entry.ms / longest) * 100}%` }}
+                >
+                  {entry.key !== null && !pressed && <DitherBar />}
+                </span>
+              </span>
               {/* The measurement, set apart from a label that may end in a number. */}
-              <span className="ml-0.5 font-medium tabular-nums text-foreground">
-                {percent.format(part.percent / 100)}
+              <span className="text-right font-medium tabular-nums">
+                {percent.format(entry.percent / 100)}
               </span>
             </>
           );
-          if (!part.key) {
+          const column =
+            index < firstColumn ? "@min-[420px]:col-start-1" : "@min-[420px]:col-start-5";
+          if (entry.key === null) {
             return (
-              <li key="unattributed" className="flex items-center gap-1.5 px-1.5 py-0.5">
+              <li key="unattributed" className={cn(row, column)}>
                 {content}
               </li>
             );
           }
-          const key = part.key;
-          const pressed = selected === key;
+          const key = entry.key;
           return (
-            <li key={key}>
+            <li key={key} className={cn("col-span-3 grid grid-cols-subgrid", column)}>
               <button
                 type="button"
                 aria-pressed={pressed}
                 title={
                   pressed
                     ? t("oats.intelligence.talkTime.everyone")
-                    : t("oats.intelligence.talkTime.show", { speaker: part.label })
+                    : t("oats.intelligence.talkTime.show", { speaker: entry.label })
                 }
                 onClick={() => onSelect(key)}
                 className={cn(
-                  "flex max-w-60 items-center gap-1.5 rounded-md px-1.5 py-0.5 outline-none transition-colors",
-                  "hover:bg-muted/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  pressed && "bg-muted text-foreground"
+                  row,
+                  "rounded-md text-left outline-none transition-colors",
+                  "hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 )}
               >
                 {content}
@@ -2953,7 +3068,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
  *
  * Saving to the vault appears only once a vault folder has been chosen, and it
  * says whether it worked — a write that quietly did nothing is the failure this
- * product does not accept.
+ * product does not accept. Moving it to a group says so the same way.
  */
 function ConversationActions({
   note,
@@ -2973,6 +3088,10 @@ function ConversationActions({
   const vaultPath = useSettingsStore((state) => state.obsidianVaultPath);
   // null when idle, true once it landed, false when the write was refused.
   const [filed, setFiled] = useState<boolean | null>(null);
+  // "New group…" names a group in a dialog, opened as Delete's is; a move says
+  // where the conversation went, the way the vault says it saved.
+  const [naming, setNaming] = useState(false);
+  const [moved, setMoved] = useState<GroupMove | null>(null);
   const transcript = tab === "transcript";
   const copyLabel = transcript
     ? t("oats.intelligence.copyTranscript")
@@ -2991,6 +3110,12 @@ function ConversationActions({
     };
   }, []);
   const findChosen = useRef(false);
+  // Delete asks in a dialog, opened once the menu has closed (see
+  // ui/dropdown-menu.tsx). When the dialog closes, the focus goes back to the
+  // menu's button. The menu takes a moment to close, so the dialog opens only if
+  // the same conversation is still on screen.
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const shownId = useRef(note.id);
 
   // Whatever is being read is what leaves. The transcript tab copies the
   // transcript with the screen's speaker labels; the other two copy exactly what
@@ -2999,13 +3124,23 @@ function ConversationActions({
   const payload = () =>
     transcript ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
 
-  useEffect(() => setConfirming(false), [note.id]);
+  useEffect(() => {
+    shownId.current = note.id;
+    setConfirming(false);
+    setNaming(false);
+  }, [note.id]);
   useEffect(() => setFiled(null), [note.id]);
+  useEffect(() => setMoved(null), [note.id]);
   useEffect(() => {
     if (!copied) return undefined;
     const timer = setTimeout(() => setCopied(false), 2000);
     return () => clearTimeout(timer);
   }, [copied]);
+  useEffect(() => {
+    if (moved === null) return undefined;
+    const timer = setTimeout(() => setMoved(null), 2500);
+    return () => clearTimeout(timer);
+  }, [moved]);
   useEffect(() => {
     if (filed === null) return undefined;
     const timer = setTimeout(() => setFiled(null), 2500);
@@ -3049,6 +3184,28 @@ function ConversationActions({
           {filed ? t("oats.intelligence.vaultSaved") : t("oats.intelligence.vaultFailed")}
         </span>
       )}
+      {moved !== null && (
+        <span
+          role="status"
+          className={cn(
+            "flex min-w-0 items-center gap-1.5 text-[13px]",
+            moved.ok ? "text-muted-foreground" : "text-destructive"
+          )}
+        >
+          {moved.ok ? (
+            <Check aria-hidden="true" className="size-4 shrink-0" />
+          ) : (
+            <AlertTriangle aria-hidden="true" className="size-4 shrink-0" />
+          )}
+          <span className="max-w-48 truncate">
+            {!moved.ok
+              ? t("oats.groups.moveFailed")
+              : moved.group
+                ? t("oats.groups.movedTo", { group: moved.group })
+                : t("oats.groups.movedOut")}
+          </span>
+        </span>
+      )}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="outline" size="sm" aria-label={copyLabel} onClick={() => void copy()}>
@@ -3069,7 +3226,12 @@ function ConversationActions({
       </Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label={t("oats.intelligence.more")}>
+          <Button
+            ref={moreButton}
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("oats.intelligence.more")}
+          >
             <MoreHorizontal aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
@@ -3094,16 +3256,26 @@ function ConversationActions({
             <DropdownMenuShortcut>{findKeys.label}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <MoveToGroupMenu
+            note={note}
+            onMoved={setMoved}
+            onNewGroup={() => {
+              if (shownId.current === note.id) setNaming(true);
+            }}
+          />
           {vaultPath && (
-            <>
-              <DropdownMenuItem onSelect={() => void file()}>
-                <Vault aria-hidden="true" />
-                {t("oats.intelligence.vaultAction")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
+            <DropdownMenuItem onSelect={() => void file()}>
+              <Vault aria-hidden="true" />
+              {t("oats.intelligence.vaultAction")}
+            </DropdownMenuItem>
           )}
-          <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onSelectAfterClose={() => {
+              if (shownId.current === note.id) setConfirming(true);
+            }}
+          >
             <Trash2 aria-hidden="true" />
             {t("oats.intelligence.delete")}
           </DropdownMenuItem>
@@ -3119,11 +3291,25 @@ function ConversationActions({
         confirmText={t("oats.intelligence.deleteYes")}
         cancelText={t("common.cancel")}
         variant="destructive"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          moreButton.current?.focus();
+        }}
         onConfirm={() => {
           void (async () => {
             await window.electronAPI?.deleteNote?.(note.id);
             await onDeleted();
           })();
+        }}
+      />
+      <NewGroupDialog
+        open={naming}
+        onOpenChange={setNaming}
+        noteId={note.id}
+        onMoved={setMoved}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          moreButton.current?.focus();
         }}
       />
     </div>

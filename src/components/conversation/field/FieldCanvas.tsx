@@ -17,6 +17,7 @@ import {
   mixRgb,
   parseHexColor,
   rgbToCss,
+  sceneFrame,
   windAt,
   type Field,
   type FieldScene,
@@ -31,6 +32,7 @@ import {
   frameDue,
   type FieldClock,
 } from "./fieldLoop";
+import { backingSize, observeDevicePixels, watchPixelRatio } from "./canvasSize";
 
 // 2D canvas fallback for the oat field (DESIGN.md §9.8), used when WebGL2 is
 // unavailable or is only offered in software.
@@ -84,6 +86,7 @@ export default function FieldCanvas({
   animate,
   visible,
   scene,
+  sceneHeight,
   reduced,
 }: {
   live: boolean;
@@ -98,6 +101,9 @@ export default function FieldCanvas({
    *  counterfeiting the grain, so the fallback omits the dither, as it does
    *  for the blades. */
   scene: FieldScene;
+  /** The scene's own height in CSS px, standing on the canvas's bottom edge;
+   *  by default the canvas's height (`sceneFrame` in fieldModel.ts). */
+  sceneHeight?: number;
   reduced: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -125,6 +131,35 @@ export default function FieldCanvas({
   const clockRef = useRef<FieldClock | null>(null);
   // The field never changes; built once rather than on every re-run.
   const fieldRef = useRef<Field | null>(null);
+  // The canvas's size as the observer last measured it: CSS px, and the device
+  // pixels it covers (0 until measured). See FieldGL.
+  const sizeRef = useRef({ width: 0, height: 0, deviceWidth: 0, deviceHeight: 0 });
+  // Set by the drawing effect while the field is still: a still frame is drawn
+  // once, so a resize has to draw it again or the old frame is stretched.
+  const redrawRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      const css = entry?.contentBoxSize?.[0];
+      const device = entry?.devicePixelContentBoxSize?.[0];
+      sizeRef.current = {
+        width: css ? css.inlineSize : canvas.clientWidth,
+        height: css ? css.blockSize : canvas.clientHeight,
+        deviceWidth: device ? device.inlineSize : 0,
+        deviceHeight: device ? device.blockSize : 0,
+      };
+      redrawRef.current?.();
+    });
+    observeDevicePixels(observer, canvas);
+    const stopWatching = watchPixelRatio(() => redrawRef.current?.());
+    return () => {
+      observer.disconnect();
+      stopWatching();
+    };
+  }, []);
 
   useEffect(() => {
     if (reduced) return;
@@ -197,16 +232,24 @@ export default function FieldCanvas({
       if (!ctx || !palette) return;
       const colors = palette.colors;
 
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
+      // Before the observer's first measurement, the layout's own numbers.
+      const measured = sizeRef.current;
+      const width = measured.width || canvas.clientWidth;
+      const height = measured.height || canvas.clientHeight;
       if (!width || !height) return;
 
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      if (canvas.width !== width * ratio || canvas.height !== height * ratio) {
-        canvas.width = width * ratio;
-        canvas.height = height * ratio;
+      const backing = backingSize(
+        width,
+        height,
+        measured.deviceWidth,
+        measured.deviceHeight,
+        window.devicePixelRatio || 1
+      );
+      if (canvas.width !== backing.w || canvas.height !== backing.h) {
+        canvas.width = backing.w;
+        canvas.height = backing.h;
       }
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.setTransform(backing.w / width, 0, 0, backing.h / height, 0, 0);
       ctx.clearRect(0, 0, width, height);
 
       // The wheat follows `live`; the world below does not.
@@ -234,7 +277,10 @@ export default function FieldCanvas({
       // dither — ordered dithering per pixel is not affordable here, and §7 is
       // explicit that faking the grain with noise looks cheap rather than
       // intentional. Better to omit the texture than to counterfeit it.
-      const horizonY = HORIZON * height;
+      // The scene stands on the canvas's bottom edge at its own scale.
+      const frame = sceneFrame(height, sceneHeight);
+      const sceneH = frame.scale;
+      const horizonY = frame.y(HORIZON);
 
       // The recording's cleared sky (scenes "sky" and "scene"): a slate-blue
       // wash blooming from the top of the frame down toward the horizon,
@@ -283,15 +329,15 @@ export default function FieldCanvas({
         // Up the right side, across the top, down the left.
         for (let i = 0; i <= steps; i += 1) {
           const yy = (i / steps) * top;
-          const hw = minkaHalfWidthAt(Math.min(yy, top - 1e-5)) * height;
-          const py = horizonY - yy * height;
+          const hw = minkaHalfWidthAt(Math.min(yy, top - 1e-5)) * sceneH;
+          const py = horizonY - yy * sceneH;
           if (i === 0) ctx.moveTo(cx + hw, py);
           else ctx.lineTo(cx + hw, py);
         }
         for (let i = steps; i >= 0; i -= 1) {
           const yy = (i / steps) * top;
-          const hw = minkaHalfWidthAt(Math.min(yy, top - 1e-5)) * height;
-          ctx.lineTo(cx - hw, horizonY - yy * height);
+          const hw = minkaHalfWidthAt(Math.min(yy, top - 1e-5)) * sceneH;
+          ctx.lineTo(cx - hw, horizonY - yy * sceneH);
         }
         ctx.closePath();
         ctx.fill();
@@ -308,7 +354,8 @@ export default function FieldCanvas({
           const phase = (i * 0.618 + 0.21) % 1;
           const bx = (1.1 - ((time * BIRDS.speed + phase) % 1) * 1.2) * width;
           const byTop = BIRDS.yMin + ((phase * 7.31) % 1) * (BIRDS.yMax - BIRDS.yMin);
-          const by = byTop * height + Math.sin(time * 0.7 + i) * 0.006 * height;
+          // As high above the horizon as they fly in a scene the canvas's size.
+          const by = horizonY - (HORIZON - byTop - Math.sin(time * 0.7 + i) * 0.006) * sceneH;
           const wing = 3.2;
           const beat = 1.6 * Math.sin(time * 9 + i * 2.4);
           ctx.beginPath();
@@ -350,11 +397,11 @@ export default function FieldCanvas({
           if (growth <= 0) continue;
 
           const bladeHeight =
-            style.height * (0.86 + blade.spread * 0.28) * height * blade.height * growth;
+            style.height * (0.86 + blade.spread * 0.28) * sceneH * blade.height * growth;
           if (bladeHeight < 1.5) continue;
 
           const baseX = blade.x * width + parallax * style.parallax;
-          const baseY = (style.baseY + blade.spread * spreads[band]) * height;
+          const baseY = frame.y(style.baseY + blade.spread * spreads[band]);
 
           let bend = windAt(blade, time, growth) * bladeHeight * style.windScale * 0.3;
 
@@ -386,7 +433,11 @@ export default function FieldCanvas({
 
     if (still) {
       draw(INTRO_MS);
-      return () => themeObserver.disconnect();
+      redrawRef.current = () => draw(INTRO_MS);
+      return () => {
+        redrawRef.current = null;
+        themeObserver.disconnect();
+      };
     }
 
     // Nobody can see it: no frames, no timers, and the clock stops, so the
@@ -430,7 +481,7 @@ export default function FieldCanvas({
       window.clearTimeout(timer);
       themeObserver.disconnect();
     };
-  }, [live, intensity, animate, visible, scene, reduced]);
+  }, [live, intensity, animate, visible, scene, sceneHeight, reduced]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }

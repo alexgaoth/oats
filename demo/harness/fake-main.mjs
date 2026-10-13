@@ -35,6 +35,19 @@ const UPDATABLE = new Set([
 
 const MEETINGS_FOLDER_ID = 2;
 
+// The conversation groups a new database starts with
+// (`CONVERSATION_GROUP_SEEDS` in database.js), and the longest name.
+const SEEDED_GROUPS = [
+  { name: "Work", seed_key: "work" },
+  { name: "Personal", seed_key: "personal" },
+];
+const GROUP_NAME_MAX = 40;
+
+/** A group name as database.js stores it, and the key two names compare by. */
+const cleanGroupName = (name) =>
+  typeof name === "string" ? name.replace(/\s+/gu, " ").trim() : "";
+const groupNameKey = (name) => cleanGroupName(name).normalize("NFC").toLowerCase();
+
 const BUILTIN_ACTION = {
   id: 1,
   name: "Generate Notes",
@@ -80,6 +93,8 @@ function noteRow(id, fields) {
     conversation_marks: null,
     conversation_loudness: null,
     sample_id: null,
+    group_id: null,
+    group_source: null,
     cloud_id: null,
     created_at: sqlTime(),
     updated_at: sqlTime(),
@@ -99,10 +114,18 @@ function noteRow(id, fields) {
 export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
   const notes = [];
   const events = [];
+  const groups = SEEDED_GROUPS.map((group, index) => ({
+    id: index + 1,
+    name: group.name,
+    seed_key: group.seed_key,
+    sort_order: index,
+    created_at: sqlTime(now),
+  }));
   const listeners = new Map();
   const hooks = {};
   let nextNoteId = 1;
   let nextEventId = 1;
+  let nextGroupId = groups.length + 1;
 
   const listen = (name, callback) => {
     if (typeof callback !== "function") return () => {};
@@ -141,11 +164,17 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
     return { ...event, metadata: { ...event.metadata } };
   };
 
-  // A fixture, placed and stored the way `insertSampleConversations` does.
+  // A fixture, placed and stored the way `insertSampleConversations` does,
+  // filed in its seeded group as `markSampleNote` files it.
   const storeFixture = (fixture, at) => {
     const placed = placeSampleConversation(fixture, { now: at });
     const id = nextNoteId++;
-    const note = noteRow(id, { ...placed.note, sample_id: placed.sampleId });
+    const filed = placed.group ? groups.find((group) => group.seed_key === placed.group) : null;
+    const note = noteRow(id, {
+      ...placed.note,
+      sample_id: placed.sampleId,
+      ...(filed ? { group_id: filed.id, group_source: "model" } : {}),
+    });
     notes.push(note);
     const ids = new Map();
     for (const event of placed.events) {
@@ -185,6 +214,120 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
       broadcast("onNoteUpdated", copy);
       return { success: true, note: copy };
     },
+    groups,
+    /** The groups in their order, as `getConversationGroups` answers. */
+    orderedGroups: () =>
+      [...groups].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id).map((g) => ({ ...g })),
+    /** Put a note in a group as database.js does: no `updated_at`, who chose recorded. */
+    placeNote(noteId, groupId, source) {
+      const note = notes.find((item) => item.id === Number(noteId));
+      if (!note) return null;
+      note.group_id = groupId;
+      note.group_source = source;
+      return { ...note };
+    },
+  };
+
+  // Conversation groups, by database.js's rules: names trimmed, not empty, at
+  // most 40 characters and unique whatever their case. The harness is in
+  // English, so a seeded group's shown name is its stored one.
+  const checkGroupName = (name, exceptId = null) => {
+    const clean = cleanGroupName(name);
+    if (!clean) return { error: "name-required" };
+    if (Array.from(clean).length > GROUP_NAME_MAX) return { error: "name-too-long" };
+    const key = groupNameKey(clean);
+    const taken = groups.some((group) => group.id !== exceptId && groupNameKey(group.name) === key);
+    return taken ? { error: "name-taken" } : { name: clean };
+  };
+  const findGroup = (id) => groups.find((group) => group.id === id) ?? null;
+  const announceGroups = (changedNotes = []) =>
+    broadcast("onConversationGroupsChanged", { groups: db.orderedGroups(), notes: changedNotes });
+  const groupApi = {
+    getConversationGroups: async () => db.orderedGroups(),
+    createConversationGroup: async (name) => {
+      const checked = checkGroupName(name);
+      if (checked.error) return { success: false, error: checked.error };
+      const group = {
+        id: nextGroupId++,
+        name: checked.name,
+        seed_key: null,
+        sort_order: groups.reduce((max, item) => Math.max(max, item.sort_order), -1) + 1,
+        created_at: sqlTime(),
+      };
+      groups.push(group);
+      announceGroups();
+      return { success: true, group: { ...group } };
+    },
+    renameConversationGroup: async (id, name) => {
+      const group = findGroup(id);
+      if (!group) return { success: false, error: "not-found" };
+      if (cleanGroupName(name) === group.name) {
+        return { success: true, group: { ...group }, changed: false };
+      }
+      const checked = checkGroupName(name, id);
+      if (checked.error) return { success: false, error: checked.error };
+      group.name = checked.name;
+      group.seed_key = null;
+      announceGroups();
+      return { success: true, group: { ...group }, changed: true };
+    },
+    deleteConversationGroup: async (id) => {
+      const group = findGroup(id);
+      if (!group) return { success: false, error: "not-found" };
+      const changed = notes
+        .filter((note) => note.group_id === id)
+        .map((note) => {
+          note.group_id = null;
+          return { id: note.id, group_id: null, group_source: note.group_source };
+        });
+      groups.splice(groups.indexOf(group), 1);
+      announceGroups(changed);
+      return { success: true, id, notes: changed };
+    },
+    reorderConversationGroups: async (ids) => {
+      if (!Array.isArray(ids) || !ids.every(Number.isInteger) || new Set(ids).size !== ids.length) {
+        return { success: false, error: "invalid" };
+      }
+      const current = db.orderedGroups().map((group) => group.id);
+      if (!ids.every((id) => current.includes(id))) return { success: false, error: "not-found" };
+      [...ids, ...current.filter((id) => !ids.includes(id))].forEach((id, index) => {
+        findGroup(id).sort_order = index;
+      });
+      announceGroups();
+      return { success: true, groups: db.orderedGroups() };
+    },
+    setConversationGroup: async (noteId, groupId) => {
+      const note = findNote(noteId);
+      if (!note) return { success: false, error: "not-found" };
+      if (groupId !== null && !findGroup(groupId)) return { success: false, error: "not-found" };
+      const placed = db.placeNote(note.id, groupId, "user");
+      broadcast("onNoteUpdated", placed);
+      return { success: true, note: placed };
+    },
+    // The writing model's choice: never over a person's.
+    setConversationGroupFromModel: async (noteId, groupId) => {
+      if (!Number.isInteger(noteId) || (groupId !== null && !Number.isInteger(groupId))) {
+        return { success: false, error: "invalid" };
+      }
+      const note = findNote(noteId);
+      if (!note) return { success: false, error: "not-found" };
+      if (note.group_source === "user") return { success: false, error: "chosen" };
+      if (groupId !== null && !findGroup(groupId)) return { success: false, error: "not-found" };
+      const placed = db.placeNote(note.id, groupId, "model");
+      broadcast("onNoteUpdated", placed);
+      return { success: true, note: placed };
+    },
+    listUnsortedConversations: async () =>
+      notes
+        .filter(
+          (note) =>
+            !note.deleted_at &&
+            note.note_type === "meeting" &&
+            note.group_source == null &&
+            String(note.enhanced_content ?? "").trim()
+        )
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id)
+        .map((note) => note.id),
   };
 
   const explicit = {
@@ -281,6 +424,9 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
     // The one way out to the network: in the demo it goes nowhere.
     openConversationSearch: async () => ({ success: true }),
     dismissConversationCard: async () => ({ success: true }),
+
+    // --- Conversation groups.
+    ...groupApi,
 
     // --- The summary: the built-in action, and the local model behind it.
     getActions: async () => [{ ...BUILTIN_ACTION }],
