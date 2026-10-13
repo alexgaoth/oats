@@ -101,6 +101,7 @@ import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import RecordingCounters from "./conversation/RecordingCounters";
 import { ExampleBadge, ExampleOffer } from "./conversation/ExampleConversation";
+import { MoveToGroupMenu, NewGroupDialog, type GroupMove } from "./conversation/MoveToGroup";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import {
   FOCUS_AT_REST,
@@ -3062,7 +3063,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
  *
  * Saving to the vault appears only once a vault folder has been chosen, and it
  * says whether it worked — a write that quietly did nothing is the failure this
- * product does not accept.
+ * product does not accept. Moving it to a group says so the same way.
  */
 function ConversationActions({
   note,
@@ -3082,6 +3083,10 @@ function ConversationActions({
   const vaultPath = useSettingsStore((state) => state.obsidianVaultPath);
   // null when idle, true once it landed, false when the write was refused.
   const [filed, setFiled] = useState<boolean | null>(null);
+  // "New group…" names a group in a dialog, opened as Delete's is; a move says
+  // where the conversation went, the way the vault says it saved.
+  const [naming, setNaming] = useState(false);
+  const [moved, setMoved] = useState<GroupMove | null>(null);
   const transcript = tab === "transcript";
   const copyLabel = transcript
     ? t("oats.intelligence.copyTranscript")
@@ -3117,13 +3122,20 @@ function ConversationActions({
   useEffect(() => {
     shownId.current = note.id;
     setConfirming(false);
+    setNaming(false);
   }, [note.id]);
   useEffect(() => setFiled(null), [note.id]);
+  useEffect(() => setMoved(null), [note.id]);
   useEffect(() => {
     if (!copied) return undefined;
     const timer = setTimeout(() => setCopied(false), 2000);
     return () => clearTimeout(timer);
   }, [copied]);
+  useEffect(() => {
+    if (moved === null) return undefined;
+    const timer = setTimeout(() => setMoved(null), 2500);
+    return () => clearTimeout(timer);
+  }, [moved]);
   useEffect(() => {
     if (filed === null) return undefined;
     const timer = setTimeout(() => setFiled(null), 2500);
@@ -3165,6 +3177,28 @@ function ConversationActions({
             <AlertTriangle aria-hidden="true" className="size-4" />
           )}
           {filed ? t("oats.intelligence.vaultSaved") : t("oats.intelligence.vaultFailed")}
+        </span>
+      )}
+      {moved !== null && (
+        <span
+          role="status"
+          className={cn(
+            "flex min-w-0 items-center gap-1.5 text-[13px]",
+            moved.ok ? "text-muted-foreground" : "text-destructive"
+          )}
+        >
+          {moved.ok ? (
+            <Check aria-hidden="true" className="size-4 shrink-0" />
+          ) : (
+            <AlertTriangle aria-hidden="true" className="size-4 shrink-0" />
+          )}
+          <span className="max-w-48 truncate">
+            {!moved.ok
+              ? t("oats.groups.moveFailed")
+              : moved.group
+                ? t("oats.groups.movedTo", { group: moved.group })
+                : t("oats.groups.movedOut")}
+          </span>
         </span>
       )}
       <Tooltip>
@@ -3217,15 +3251,20 @@ function ConversationActions({
             <DropdownMenuShortcut>{findKeys.label}</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <MoveToGroupMenu
+            note={note}
+            onMoved={setMoved}
+            onNewGroup={() => {
+              if (shownId.current === note.id) setNaming(true);
+            }}
+          />
           {vaultPath && (
-            <>
-              <DropdownMenuItem onSelect={() => void file()}>
-                <Vault aria-hidden="true" />
-                {t("oats.intelligence.vaultAction")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
+            <DropdownMenuItem onSelect={() => void file()}>
+              <Vault aria-hidden="true" />
+              {t("oats.intelligence.vaultAction")}
+            </DropdownMenuItem>
           )}
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
             onSelectAfterClose={() => {
@@ -3256,6 +3295,16 @@ function ConversationActions({
             await window.electronAPI?.deleteNote?.(note.id);
             await onDeleted();
           })();
+        }}
+      />
+      <NewGroupDialog
+        open={naming}
+        onOpenChange={setNaming}
+        noteId={note.id}
+        onMoved={setMoved}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          moreButton.current?.focus();
         }}
       />
     </div>

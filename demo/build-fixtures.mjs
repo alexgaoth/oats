@@ -338,6 +338,11 @@ async function record(script) {
       endedAt: startedAt + stopAt,
       summarizedAt,
       placement: script.placement,
+      // The conversation group it is filed in, by seed key ("work",
+      // "personal"), standing in for the writing model's choice as the title
+      // and the summary stand in for its writing. Left out when the script
+      // names none; such a sample is sorted like any conversation.
+      ...(script.group ? { group: script.group } : {}),
       generatedBy: "demo/build-fixtures.mjs",
     },
     note: {
@@ -488,12 +493,13 @@ async function main() {
   const args = new Set(process.argv.slice(2));
   const { default: main } = await import("./script/launch-readiness-review.mjs");
   const { default: supporting } = await import("./script/supporting.mjs");
+  const { default: personal } = await import("./script/personal.mjs");
   const outputs = [
     {
       script: main,
       file: path.join(root, "src/helpers/sampleConversations", `${main.id}.json`),
     },
-    ...supporting.map((script) => ({
+    ...[...supporting, ...personal].map((script) => ({
       script,
       file: path.join(root, "demo/fixtures", `${script.id}.json`),
     })),
