@@ -7,18 +7,19 @@ it is invented.
 
 ## What is in it
 
-| Path                                                              | What it is                                                                                                                                                          |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `script/launch-readiness-review.mjs`                              | The main sample, as written: a 29-minute launch readiness review at Pellwood, a fictional 40-person software company. Nine people, eight topics, fifteen questions. |
-| `script/supporting.mjs`                                           | Six shorter conversations over the two weeks before it: a hiring sync, a customer call, a design crit, two 1:1s and an SSO check-in, all on weekdays.               |
-| `build-fixtures.mjs`                                              | Records the scripts through the app's own pipeline and writes the fixtures.                                                                                         |
-| `../src/helpers/sampleConversations/launch-readiness-review.json` | The main sample as the app stores it. Packaged with the app, for the in-app example.                                                                                |
-| `fixtures/*.json`                                                 | The six supporting conversations. Demo profiles only.                                                                                                               |
-| `../src/helpers/sampleConversations.mjs`                          | Placing a sample in time, and inserting or removing samples through `DatabaseManager`. Used by the seed script and by the app.                                      |
-| `../scripts/demo-seed.mjs`                                        | Seeds a demo profile's database.                                                                                                                                    |
-| `harness/`                                                        | The browser harness: a fake main process, a fake microphone, a clock that can pause, and the live replay. Dev-only.                                                 |
-| `lib/conversation.mjs`                                            | Timing and loudness, shared by the builder and the replay, so both play the same conversation.                                                                      |
-| `capture.mjs`                                                     | 2x PNG screenshots of the harness, light and dark, with headless Chrome.                                                                                            |
+| Path                                                              | What it is                                                                                                                                                           |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `script/launch-readiness-review.mjs`                              | The main sample, as written: a 29-minute launch readiness review at Pellwood, a fictional 40-person software company. Nine people, eight topics, fifteen questions.  |
+| `script/supporting.mjs`                                           | Six shorter conversations over the two weeks before it: a hiring sync, a customer call, a design crit, two 1:1s and an SSO check-in, all on weekdays. Filed in Work. |
+| `script/personal.mjs`                                             | Two short personal conversations: a family planning a weekend at a lake, and a call with a letting agent about a flat viewing. Filed in Personal.                    |
+| `build-fixtures.mjs`                                              | Records the scripts through the app's own pipeline and writes the fixtures.                                                                                          |
+| `../src/helpers/sampleConversations/launch-readiness-review.json` | The main sample as the app stores it. Packaged with the app, for the in-app example.                                                                                 |
+| `fixtures/*.json`                                                 | The six work and two personal conversations. Demo profiles only.                                                                                                     |
+| `../src/helpers/sampleConversations.mjs`                          | Placing a sample in time, and inserting or removing samples through `DatabaseManager`. Used by the seed script and by the app.                                       |
+| `../scripts/demo-seed.mjs`                                        | Seeds a demo profile's database.                                                                                                                                     |
+| `harness/`                                                        | The browser harness: a fake main process, a fake microphone, a clock that can pause, and the live replay. Dev-only.                                                  |
+| `lib/conversation.mjs`                                            | Timing and loudness, shared by the builder and the replay, so both play the same conversation.                                                                       |
+| `capture.mjs`                                                     | 2x PNG screenshots of the harness, light and dark, with headless Chrome.                                                                                             |
 
 ## The fixtures are recorded, not written
 
@@ -52,10 +53,30 @@ of `script/launch-readiness-review.mjs` explains each):
 - A topic opens with two turns that share its nouns, and each longer turn in a
   topic carries some of them. `--report` shows the tracker's scores per turn.
 
+## Groups
+
+Every conversation is in one group or in none: Work, Personal, or one the
+person makes. A script names its group by seed key (`group: "work"`), and the
+builder writes it into the fixture as `meta.group`. Inserting a fixture
+(`insertSampleConversations`, and the harness's fake main) files the note in
+the seeded group with that key. It is recorded as the writing model's choice
+(`group_source = 'model'`), because the fixture stands in for what the model
+would have chosen, as its title and summary stand in for what the model would
+have written. A person can move it like any conversation.
+
+- The six Pellwood conversations are in Work, and the two personal ones are in
+  Personal.
+- The review names no group. The film depends on its timeline, so its fixture
+  is not changed, and in the app it is sorted like any conversation.
+- If the seeded group was renamed (its seed key is cleared) or deleted, the
+  sample stays unsorted.
+- The personal conversations share no subjects with Pellwood, so on the map
+  they are not linked to the review.
+
 ## Seed a demo profile
 
 ```sh
-npm run demo:seed -- --profile ~/oats-demo-profile            # all seven conversations
+npm run demo:seed -- --profile ~/oats-demo-profile            # all nine conversations
 npm run demo:seed -- --profile ~/oats-demo-profile --reset    # remove the samples, insert again
 npm run demo:seed -- --profile ~/oats-demo-profile --only-main
 npm run demo:seed -- --profile ~/oats-demo-profile --dev      # transcriptions-dev.db, as `npm run dev` opens
@@ -117,13 +138,13 @@ const { noteId, inserted, note } = insertExampleConversation(databaseManager, fi
 npm run demo:harness        # Vite on http://127.0.0.1:5391 (another port if that one is taken)
 ```
 
-| URL                                                    | What it shows                                                         |
-| ------------------------------------------------------ | --------------------------------------------------------------------- |
-| `/demo.html?panel=true`                                | Home with all seven samples.                                          |
-| `/demo.html?panel=true&theme=dark`                     | The same, dark.                                                       |
-| `/demo.html?panel=true&demo=live`                      | The review, recorded live from 0:00. The other six are already there. |
-| `/demo.html?panel=true&demo=live&from=1062&view=words` | Live, from 17:42, in the Words view.                                  |
-| `/demo.html?panel=true&profile=empty`                  | Nothing recorded yet: Home offers the example conversation.           |
+| URL                                                    | What it shows                                                           |
+| ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `/demo.html?panel=true`                                | Home with all nine samples.                                             |
+| `/demo.html?panel=true&theme=dark`                     | The same, dark.                                                         |
+| `/demo.html?panel=true&demo=live`                      | The review, recorded live from 0:00. The other eight are already there. |
+| `/demo.html?panel=true&demo=live&from=1062&view=words` | Live, from 17:42, in the Words view.                                    |
+| `/demo.html?panel=true&profile=empty`                  | Nothing recorded yet: Home offers the example conversation.             |
 
 Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last

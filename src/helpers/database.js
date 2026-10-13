@@ -2096,15 +2096,21 @@ class DatabaseManager {
   }
 
   /**
-   * Stamp a note as a bundled example conversation: which one, and when it
-   * took place. `saveNote` and `updateNote` stamp the current time, and an
-   * example keeps the moment it was placed at (`helpers/sampleConversations.mjs`).
+   * Stamp a note as a bundled example conversation: which one, when it took
+   * place, and the group it is filed in. `saveNote` and `updateNote` stamp the
+   * current time, and an example keeps the moment it was placed at
+   * (`helpers/sampleConversations.mjs`).
+   *
+   * The group is a seed key ("work", "personal"). It stands in for the writing
+   * model's choice, as the sample's title and summary stand in for its
+   * writing, so it is recorded as the model's: a person can still move it.
+   * With no group of that key (renamed or deleted), the note stays unsorted.
    *
    * @param {number} id
-   * @param {{ sampleId: string, createdAt: string, updatedAt: string }} sample
+   * @param {{ sampleId: string, createdAt: string, updatedAt: string, group?: string | null }} sample
    *   The timestamps in SQLite's own form, "YYYY-MM-DD HH:MM:SS" in UTC.
    */
-  markSampleNote(id, { sampleId, createdAt, updatedAt }) {
+  markSampleNote(id, { sampleId, createdAt, updatedAt, group = null }) {
     const stamp = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
     if (!Number.isInteger(id) || typeof sampleId !== "string" || !sampleId.trim()) {
       throw new Error("Invalid sample note");
@@ -2115,6 +2121,15 @@ class DatabaseManager {
     this.db
       .prepare("UPDATE notes SET sample_id = ?, created_at = ?, updated_at = ? WHERE id = ?")
       .run(sampleId.trim(), createdAt, updatedAt, id);
+    const filed =
+      typeof group === "string" && group
+        ? this.db.prepare("SELECT id FROM conversation_groups WHERE seed_key = ?").get(group)
+        : null;
+    if (filed) {
+      this.db
+        .prepare("UPDATE notes SET group_id = ?, group_source = 'model' WHERE id = ?")
+        .run(filed.id, id);
+    }
     return this.getNote(id);
   }
 
