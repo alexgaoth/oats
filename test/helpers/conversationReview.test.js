@@ -68,7 +68,7 @@ test("an answered question leaves the list; an unanswered one stays", () => {
 test("a question with no response at all is open, not answered", () => {
   const asked = question("did anybody check the invoice?");
   const review = buildReview({ events: [asked] });
-  assert.equal(review.unresolved[0].outcome, "open");
+  assert.equal(review.unresolved[0].outcome, "asked");
   assert.equal(review.answered, 0);
 });
 
@@ -169,7 +169,7 @@ test("question turns map the asking turn to its outcome", async () => {
   assert.deepEqual(Object.fromEntries(turns), {
     "turn-4": "denied",
     "turn-9": "answered",
-    "turn-12": "open",
+    "turn-12": "asked",
   });
   assert.equal(questionTurns(null).size, 0);
 });
@@ -229,7 +229,7 @@ test("question outcomes count each outcome that occurred, settled first", async 
     { outcome: "denied", count: 1 },
     { outcome: "uncertain", count: 1 },
     { outcome: "silence", count: 1 },
-    { outcome: "open", count: 1 },
+    { outcome: "asked", count: 1 },
   ]);
   // One count per margin mark, outcome for outcome.
   const marks = {};

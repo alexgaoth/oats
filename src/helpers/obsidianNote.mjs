@@ -12,7 +12,8 @@
 // that structure to a tool the reader already uses, instead of asking them to
 // come back here to see it.
 
-import { buildConversationGraph, responseReason } from "./conversationGraph.mjs";
+import { buildConversationGraph } from "./conversationGraph.mjs";
+import { questionOutcome } from "./questionOutcome.mjs";
 import { momentSegment, parseMoments } from "./conversationMoments.mjs";
 import { speakerLabelKind } from "./speakerTurns.mjs";
 import { parseDbTimestamp } from "./dbTime.mjs";
@@ -97,13 +98,14 @@ export function linkableTopics(snapshot, limit = 12) {
 /**
  * The questions nobody answered.
  *
- * The verdict comes from the same place the Intelligence surface's "what this
- * left open" panel reads it — the question's own `response` event, through
- * `buildConversationGraph`. It used to be read from `metadata.outcome` on the
- * *question*, which nothing writes there: the aide inserts a question as
- * `{ state: "asked" }` and merges `{ state: <outcome> }` over it, while
- * `outcome` belongs to responses and suggestions. So the filter matched every
- * question ever asked and the section listed the answered ones too.
+ * The verdict is read the way the Intelligence surface's "what this left open"
+ * panel reads it: from the question's own `response` event, through
+ * `buildConversationGraph`, by `questionOutcome`. It used to be read from
+ * `metadata.outcome` on the *question*, which nothing writes there: the aide
+ * inserts a question as `{ state: "asked" }` and merges `{ state: <outcome> }`
+ * over it, while `outcome` belongs to responses and suggestions. So the filter
+ * matched every question ever asked and the section listed the answered ones
+ * too.
  *
  * Going through the graph rather than that `state` is deliberate even now that
  * both are written: two lists of what a conversation left open — one on screen,
@@ -121,7 +123,7 @@ export function openQuestions(events) {
     const text = String(node.question.text || "").trim();
     if (!text) continue;
     const key = node.question.metadata?.groupKey || text.toLowerCase();
-    const answered = responseReason(node.response) === "answered";
+    const answered = questionOutcome(node) === "answered";
     const seen = groups.get(key);
     if (seen) seen.answered = seen.answered || answered;
     else groups.set(key, { text, answered });
