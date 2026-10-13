@@ -1,0 +1,416 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "support-planning-1on1",
+    "sample": true,
+    "description": "Sample conversation: a support planning 1:1 at Pellwood. Invented people.",
+    "company": "Pellwood (fictional)",
+    "participants": [
+      { "name": "Maya", "role": "Product lead" },
+      { "name": "Grace", "role": "Support lead" }
+    ],
+    "startedAt": 1791392400000,
+    "endedAt": 1791392532663,
+    "summarizedAt": 1791392573663,
+    "placement": { "daysAgo": 5, "at": "10:00", "weekdays": true },
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Support planning: two agents short",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-muycq3dk-1",
+        "text": "Okay, support staffing for the launch week.",
+        "source": "mic",
+        "timestamp": 1791392403415,
+        "startMs": 3415,
+        "endMs": 6938,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-2",
+        "text": "Support staffing first. Two of my four support agents are out the week of the 3rd.",
+        "source": "mic",
+        "timestamp": 1791392407752,
+        "startMs": 7752,
+        "endMs": 16234,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-3",
+        "text": "One support agent is on parental leave, one at a wedding.",
+        "source": "mic",
+        "timestamp": 1791392416880,
+        "startMs": 16880,
+        "endMs": 22442,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-4",
+        "text": "Can we borrow someone from sales for the support queue?",
+        "source": "mic",
+        "timestamp": 1791392423156,
+        "startMs": 23156,
+        "endMs": 28112,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-5",
+        "text": "Sales is slammed that week too.",
+        "source": "mic",
+        "timestamp": 1791392429440,
+        "startMs": 29440,
+        "endMs": 32642,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-6",
+        "text": "So support staffing stays at two agents, unless engineering helps.",
+        "source": "mic",
+        "timestamp": 1791392433296,
+        "startMs": 33296,
+        "endMs": 38681,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-7",
+        "text": "Last launch we got three hundred and forty support tickets in two days.",
+        "source": "mic",
+        "timestamp": 1791392439366,
+        "startMs": 39366,
+        "endMs": 46286,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-8",
+        "text": "Then support staffing is the real launch risk on my list.",
+        "source": "mic",
+        "timestamp": 1791392447597,
+        "startMs": 47597,
+        "endMs": 53288,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-9",
+        "text": "I'll ask Theo about engineers for support staffing.",
+        "source": "mic",
+        "timestamp": 1791392454276,
+        "startMs": 54276,
+        "endMs": 58414,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-10",
+        "text": "And I'll draft the support schedule for that week tonight.",
+        "source": "mic",
+        "timestamp": 1791392459594,
+        "startMs": 59594,
+        "endMs": 64788,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-11",
+        "text": "Second thing. The import bug is already our top ticket category.",
+        "source": "mic",
+        "timestamp": 1791392465532,
+        "startMs": 65532,
+        "endMs": 71329,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-12",
+        "text": "Forty-one import tickets this month, mostly from beta accounts with big CSV files.",
+        "source": "mic",
+        "timestamp": 1791392472063,
+        "startMs": 72063,
+        "endMs": 78917,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-13",
+        "text": "The import fix ships in the next release, so the import tickets should drop.",
+        "source": "mic",
+        "timestamp": 1791392480171,
+        "startMs": 80171,
+        "endMs": 87038,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-14",
+        "text": "Then I want a support macro for the import bug, with the workaround, until the fix ships.",
+        "source": "mic",
+        "timestamp": 1791392488207,
+        "startMs": 88207,
+        "endMs": 96517,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-15",
+        "text": "Did any of those import tickets mention lost data?",
+        "source": "mic",
+        "timestamp": 1791392497137,
+        "startMs": 97137,
+        "endMs": 101632,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-16",
+        "text": "I don't know. The import tickets only show the error.",
+        "source": "mic",
+        "timestamp": 1791392502511,
+        "startMs": 102511,
+        "endMs": 107720,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-17",
+        "text": "Half of the import tickets come from the same three beta accounts.",
+        "source": "mic",
+        "timestamp": 1791392508526,
+        "startMs": 108526,
+        "endMs": 114966,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-18",
+        "text": "Ask Omar for the beta account list, so support can check the big imports.",
+        "source": "mic",
+        "timestamp": 1791392516191,
+        "startMs": 116191,
+        "endMs": 122994,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muycq3dk-19",
+        "text": "Will do. And the import macro goes live before the release.",
+        "source": "mic",
+        "timestamp": 1791392524523,
+        "startMs": 124523,
+        "endMs": 130063,
+        "speaker": "speaker_2",
+        "speakerName": "Grace",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Grace and Maya planned support for the launch week: staffing is two agents short, and the import bug already leads the ticket queue.\n\n## Threads\n- **Staffing.** Two of four support agents are out the week of the 3rd, and sales cannot lend anyone, so coverage depends on engineering.\n- **Import tickets.** 41 import tickets this month, mostly from beta accounts with large CSV files. Whether any customer lost data is unknown.\n\n## Action Items\n- [ ] Maya: ask Theo about engineers for support staffing.\n- [ ] Grace: support macro for the import bug, live before the release.\n- [ ] Grace: get the beta account list from Omar to check large imports.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "5551-[{\"id\":\"seg-muycq3dk-1\",\"text\":\"Okay, support staf",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "support staffing",
+          "words": ["support", "staffing", "week", "agent", "launch", "two", "i'll", "sale"],
+          "durationMs": 56179,
+          "utteranceIds": [
+            "seg-muycq3dk-1",
+            "seg-muycq3dk-2",
+            "seg-muycq3dk-3",
+            "seg-muycq3dk-4",
+            "seg-muycq3dk-5",
+            "seg-muycq3dk-6",
+            "seg-muycq3dk-7",
+            "seg-muycq3dk-8",
+            "seg-muycq3dk-9",
+            "seg-muycq3dk-10"
+          ],
+          "firstAt": 1791392403415,
+          "lastAt": 1791392459594,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "import ticket",
+          "words": ["import", "ticket", "account", "beta", "big", "bug", "fix", "macro"],
+          "durationMs": 58991,
+          "utteranceIds": [
+            "seg-muycq3dk-11",
+            "seg-muycq3dk-12",
+            "seg-muycq3dk-13",
+            "seg-muycq3dk-14",
+            "seg-muycq3dk-15",
+            "seg-muycq3dk-16",
+            "seg-muycq3dk-17",
+            "seg-muycq3dk-18",
+            "seg-muycq3dk-19"
+          ],
+          "firstAt": 1791392465532,
+          "lastAt": 1791392524523,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791392400000,
+          "b": "goKForGwr5Koqqquq6ytr5ynsK6rrKKlsa+usZugrquloqyvqqqoo6ypp6utraCarKugmKGepa2vrKSXrKuqqaydrLCjpbClrq2rq62urIumrK2vr7GskqisrKyqq62mn6musa6mmqypq62pna2qqqyuqoqnqqqtr66vj6CqrK6oqpKChw=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muycq3dk-4"],
+      "text": "Can we borrow someone from sales for the support queue?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "borrow queue sale someone support",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791392429045
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-muycq3dk-5"],
+      "text": "Sales is slammed that week too.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791392433496
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muycq3dk-15"],
+      "text": "Did any of those import tickets mention lost data?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "data import lost mention ticket",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1791392502544
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muycq3dk-16"],
+      "text": "I don't know. The import tickets only show the error.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1791392508664
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muycq3dk-15"],
+      "text": "Did any of those import tickets mention lost data?",
+      "metadata": {
+        "query": "Did any of those import tickets mention lost data?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791392508664
+    }
+  ],
+  "replay": {
+    "voices": { "Maya": { "gain": 1.04 }, "Grace": { "gain": 0.95 } },
+    "loud": {},
+    "stopAtMs": 132663
+  }
+}

@@ -529,6 +529,18 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // Which bundled example conversation a note is, or null for every
+      // conversation somebody recorded (`helpers/sampleConversations.mjs`). A
+      // column of its own because no existing one means "example":
+      // `client_note_id` is the sync identity, `source_file` a path and
+      // `folder_id` the user's own filing, and a marker in any of them would be
+      // misread by the code that reads them. Nullable, so an older build simply
+      // carries it, and `updateNote` cannot write it.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN sample_id TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS contacts (
@@ -1997,6 +2009,67 @@ class DatabaseManager {
       debugLogger.error("Error deleting note", { error: error.message }, "notes");
       throw error;
     }
+  }
+
+  /**
+   * Stamp a note as a bundled example conversation: which one, and when it
+   * took place. `saveNote` and `updateNote` stamp the current time, and an
+   * example keeps the moment it was placed at (`helpers/sampleConversations.mjs`).
+   *
+   * @param {number} id
+   * @param {{ sampleId: string, createdAt: string, updatedAt: string }} sample
+   *   The timestamps in SQLite's own form, "YYYY-MM-DD HH:MM:SS" in UTC.
+   */
+  markSampleNote(id, { sampleId, createdAt, updatedAt }) {
+    const stamp = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+    if (!Number.isInteger(id) || typeof sampleId !== "string" || !sampleId.trim()) {
+      throw new Error("Invalid sample note");
+    }
+    if (!stamp.test(String(createdAt)) || !stamp.test(String(updatedAt))) {
+      throw new Error("Invalid sample note timestamps");
+    }
+    this.db
+      .prepare("UPDATE notes SET sample_id = ?, created_at = ?, updated_at = ? WHERE id = ?")
+      .run(sampleId.trim(), createdAt, updatedAt, id);
+    return this.getNote(id);
+  }
+
+  /**
+   * The bundled example conversations in this database. A deleted one is
+   * still a row (`deleteNote` only hides it), so it is listed when asked for.
+   */
+  listSampleNotes({ includeDeleted = false } = {}) {
+    return this.db
+      .prepare(
+        `SELECT id, sample_id, created_at, deleted_at FROM notes WHERE sample_id IS NOT NULL${
+          includeDeleted ? "" : " AND deleted_at IS NULL"
+        } ORDER BY id`
+      )
+      .all();
+  }
+
+  /**
+   * Remove bundled example conversations for good, deleted ones included, with
+   * their question events: every example, or the ones with these sample ids.
+   * The events go explicitly because foreign keys are not enforced here.
+   *
+   * @param {string[] | null} [sampleIds]
+   * @returns {{ removed: number, ids: number[] }}
+   */
+  removeSampleNotes(sampleIds = null) {
+    const wanted = Array.isArray(sampleIds) ? sampleIds.map(String) : null;
+    const ids = this.listSampleNotes({ includeDeleted: true })
+      .filter((row) => !wanted || wanted.includes(row.sample_id))
+      .map((row) => row.id);
+    const deleteEvents = this.db.prepare("DELETE FROM conversation_events WHERE note_id = ?");
+    const deleteNote = this.db.prepare("DELETE FROM notes WHERE id = ?");
+    this.db.transaction(() => {
+      for (const id of ids) {
+        deleteEvents.run(id);
+        deleteNote.run(id);
+      }
+    })();
+    return { removed: ids.length, ids };
   }
 
   createAgentConversation(title = "Untitled", noteId = null) {

@@ -1,0 +1,581 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "backend-hiring-sync",
+    "sample": true,
+    "description": "Sample conversation: a backend hiring sync at Pellwood. Invented people.",
+    "company": "Pellwood (fictional)",
+    "participants": [
+      { "name": "Maya", "role": "Product lead" },
+      { "name": "Theo", "role": "Engineering lead" },
+      { "name": "Priya", "role": "Recruiter" }
+    ],
+    "startedAt": 1790802000000,
+    "endedAt": 1790802182705,
+    "summarizedAt": 1790802223705,
+    "placement": { "daysAgo": 12, "at": "14:00", "weekdays": true },
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Backend hiring: finalists and the migration gap",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-muol7rtk-1",
+        "text": "Okay, backend hiring. Priya, you have the hiring numbers.",
+        "source": "mic",
+        "timestamp": 1790802003109,
+        "startMs": 3109,
+        "endMs": 7570,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-2",
+        "text": "Yes. Backend hiring is down to the final round, with two finalists.",
+        "source": "mic",
+        "timestamp": 1790802008815,
+        "startMs": 8815,
+        "endMs": 14393,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-3",
+        "text": "Thirty-one backend applicants made it into the hiring funnel, and six got phone screens.",
+        "source": "mic",
+        "timestamp": 1790802015195,
+        "startMs": 15195,
+        "endMs": 22009,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-4",
+        "text": "Both finalists are strong on the API side. The difference is database work.",
+        "source": "mic",
+        "timestamp": 1790802022943,
+        "startMs": 22943,
+        "endMs": 29913,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-5",
+        "text": "How many of them have run a big schema change?",
+        "source": "mic",
+        "timestamp": 1790802031239,
+        "startMs": 31239,
+        "endMs": 36364,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-6",
+        "text": "Only one of the two finalists.",
+        "source": "mic",
+        "timestamp": 1790802037122,
+        "startMs": 37122,
+        "endMs": 40564,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-7",
+        "text": "The first one moved a payments company onto a new ledger schema. Two hundred million rows, zero downtime.",
+        "source": "mic",
+        "timestamp": 1790802041183,
+        "startMs": 41183,
+        "endMs": 51076,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-8",
+        "text": "She wants a decision by Friday. She has another offer on the table.",
+        "source": "mic",
+        "timestamp": 1790802051794,
+        "startMs": 51794,
+        "endMs": 57815,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-9",
+        "text": "Then we move fast on her. That's the hiring decision for this week.",
+        "source": "mic",
+        "timestamp": 1790802059215,
+        "startMs": 59215,
+        "endMs": 65789,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-10",
+        "text": "That's exactly the experience we're short on right now.",
+        "source": "mic",
+        "timestamp": 1790802066676,
+        "startMs": 66676,
+        "endMs": 71268,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-11",
+        "text": "On the interview loop, the take-home is losing people.",
+        "source": "mic",
+        "timestamp": 1790802072324,
+        "startMs": 72324,
+        "endMs": 76520,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-12",
+        "text": "Three of the six candidates dropped at the take-home stage of the interview loop.",
+        "source": "mic",
+        "timestamp": 1790802077426,
+        "startMs": 77426,
+        "endMs": 83867,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-13",
+        "text": "The take-home is four hours, honestly. Senior people won't do four hours of unpaid work.",
+        "source": "mic",
+        "timestamp": 1790802085005,
+        "startMs": 85005,
+        "endMs": 93239,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-14",
+        "text": "Then replace the take-home with a paired session in the interview loop.",
+        "source": "mic",
+        "timestamp": 1790802094400,
+        "startMs": 94400,
+        "endMs": 100320,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-15",
+        "text": "A ninety-minute paired session on a real migration bug. Better signal, shorter interview loop.",
+        "source": "mic",
+        "timestamp": 1790802101666,
+        "startMs": 101666,
+        "endMs": 109486,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-16",
+        "text": "Can we change the interview loop before the final round?",
+        "source": "mic",
+        "timestamp": 1790802110753,
+        "startMs": 110753,
+        "endMs": 115476,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-17",
+        "text": "Yes, starting this week.",
+        "source": "mic",
+        "timestamp": 1790802116370,
+        "startMs": 116370,
+        "endMs": 118478,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-18",
+        "text": "Good. I'll tell both final candidates about the new interview loop today.",
+        "source": "mic",
+        "timestamp": 1790802119027,
+        "startMs": 119027,
+        "endMs": 124506,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-19",
+        "text": "Whoever joins owns the data migration from week one.",
+        "source": "mic",
+        "timestamp": 1790802125374,
+        "startMs": 125374,
+        "endMs": 130461,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-20",
+        "text": "The data migration needs an owner before the launch, so that works for me.",
+        "source": "mic",
+        "timestamp": 1790802131736,
+        "startMs": 131736,
+        "endMs": 138640,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-21",
+        "text": "Ines carries the data migration alone at the moment, and that's the real risk.",
+        "source": "mic",
+        "timestamp": 1790802140037,
+        "startMs": 140037,
+        "endMs": 147660,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-22",
+        "text": "Did the second finalist ever own a data migration?",
+        "source": "mic",
+        "timestamp": 1790802148859,
+        "startMs": 148859,
+        "endMs": 153415,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-23",
+        "text": "No idea, honestly.",
+        "source": "mic",
+        "timestamp": 1790802155002,
+        "startMs": 155002,
+        "endMs": 156753,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-24",
+        "text": "I'll ask him on Thursday.",
+        "source": "mic",
+        "timestamp": 1790802157797,
+        "startMs": 157797,
+        "endMs": 160533,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-25",
+        "text": "The data migration also needs a second reviewer before the launch, whoever we hire.",
+        "source": "mic",
+        "timestamp": 1790802162027,
+        "startMs": 162027,
+        "endMs": 168752,
+        "speaker": "speaker_1",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-26",
+        "text": "Ruth can review the data migration rollback with Ines.",
+        "source": "mic",
+        "timestamp": 1790802169968,
+        "startMs": 169968,
+        "endMs": 174679,
+        "speaker": "speaker_3",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muol7rtk-27",
+        "text": "And I'll send both finalists the new schedule tonight.",
+        "source": "mic",
+        "timestamp": 1790802176003,
+        "startMs": 176003,
+        "endMs": 180105,
+        "speaker": "speaker_2",
+        "speakerName": "Priya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Theo, Maya and Priya reviewed the senior backend search: two finalists remain, and the take-home is losing candidates.\n\n## Threads\n- **Finalists.** Of 31 applicants, two reached the final round. Only one has run a large data migration (200 million rows, zero downtime).\n- **Interview loop.** Three of six candidates dropped at the four-hour take-home. It is replaced by a 90-minute paired session on a real migration bug, starting this week.\n- **Migration ownership.** Ines carries the data migration alone; whoever joins owns it from week one. Whether the second finalist has done one is unknown.\n\n## Decisions Made\n- Replace the take-home with a paired session, starting this week.\n\n## Action Items\n- [ ] Priya: tell both finalists about the new loop today.\n- [ ] Theo: ask both finalists about data migration ownership in the paired session.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "7912-[{\"id\":\"seg-muol7rtk-1\",\"text\":\"Okay, backend hiri",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "backend hiring",
+          "words": ["hiring", "backend", "both", "final", "finalist", "new", "change", "decision"],
+          "durationMs": 172894,
+          "utteranceIds": [
+            "seg-muol7rtk-1",
+            "seg-muol7rtk-2",
+            "seg-muol7rtk-3",
+            "seg-muol7rtk-4",
+            "seg-muol7rtk-5",
+            "seg-muol7rtk-7",
+            "seg-muol7rtk-8",
+            "seg-muol7rtk-9",
+            "seg-muol7rtk-10",
+            "seg-muol7rtk-16",
+            "seg-muol7rtk-18",
+            "seg-muol7rtk-27"
+          ],
+          "firstAt": 1790802003109,
+          "lastAt": 1790802176003,
+          "returns": 2,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "interview loop",
+          "words": [
+            "interview",
+            "loop",
+            "take-home",
+            "paired",
+            "people",
+            "session",
+            "better",
+            "bug"
+          ],
+          "durationMs": 29342,
+          "utteranceIds": [
+            "seg-muol7rtk-11",
+            "seg-muol7rtk-12",
+            "seg-muol7rtk-13",
+            "seg-muol7rtk-14",
+            "seg-muol7rtk-15"
+          ],
+          "firstAt": 1790802072324,
+          "lastAt": 1790802101666,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 3,
+          "label": "data migration",
+          "words": ["data", "migration", "ines", "launch", "need", "second", "whoever", "alone"],
+          "durationMs": 44594,
+          "utteranceIds": [
+            "seg-muol7rtk-19",
+            "seg-muol7rtk-20",
+            "seg-muol7rtk-21",
+            "seg-muol7rtk-22",
+            "seg-muol7rtk-24",
+            "seg-muol7rtk-25",
+            "seg-muol7rtk-26"
+          ],
+          "firstAt": 1790802125374,
+          "lastAt": 1790802169968,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" },
+        { "from": 1, "to": 3, "weight": 1, "kind": "new" },
+        { "from": 3, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1790802000000,
+          "b": "goWFqq2uraqLpqqprK2hqa6srrCwrI2rsbGvrquniqKoqa2vpKersaSrs7Csramsqamll6mqrK2tqoiusq+ssKyvmauqra6cp6+nraWira+hraytjKuwr62srKyrn6KwsbClqaGKl5eVmaSvraCSrK6rqaSgrKOcq62tp6ekrayjp6WRrK2tra2vqoaqrq+tq7Kwp4asraypoYanqo6nrKGCqq+vr7GurIeqrqurqIWssK6wl4aD"
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muol7rtk-5"],
+      "text": "How many of them have run a big schema change?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "big change many run schema",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1790802037305
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-muol7rtk-6"],
+      "text": "Only one of the two finalists.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1790802041429
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muol7rtk-16"],
+      "text": "Can we change the interview loop before the final round?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "before change final interview loop round",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1790802116399
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muol7rtk-17"],
+      "text": "Yes, starting this week.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1790802119283
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muol7rtk-22"],
+      "text": "Did the second finalist ever own a data migration?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "data ever finalist migration own second",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1790802154330
+    },
+    {
+      "id": 6,
+      "kind": "response",
+      "parentEventId": 5,
+      "segmentIds": ["seg-muol7rtk-23"],
+      "text": "No idea, honestly.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1790802157542
+    },
+    {
+      "id": 7,
+      "kind": "search_suggestion",
+      "parentEventId": 5,
+      "segmentIds": ["seg-muol7rtk-22"],
+      "text": "Did the second finalist ever own a data migration?",
+      "metadata": {
+        "query": "Did the second finalist ever own a data migration?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1790802157542
+    }
+  ],
+  "replay": {
+    "voices": { "Maya": { "gain": 1.04 }, "Theo": { "gain": 1 }, "Priya": { "gain": 0.96 } },
+    "loud": {},
+    "stopAtMs": 182705
+  }
+}
