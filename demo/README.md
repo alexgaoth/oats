@@ -111,7 +111,9 @@ npm run demo:harness        # Vite on http://127.0.0.1:5391 (another port if tha
 | `/demo.html?panel=true&demo=live`                      | The review, recorded live from 0:00. The other six are already there. |
 | `/demo.html?panel=true&demo=live&from=1062&view=words` | Live, from 17:42, in the Words view.                                  |
 
-Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
+Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `start=click`
+(wait for Record to be pressed: the app's own button or shortcut starts the replay,
+and pressing again stops it), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last
 words), `edits=0` (leave the voices unnamed after Stop), `theme=light|dark`,
 `view=calm|words`, `flow=auto|stack|graph`. `panel=true` is the app's own

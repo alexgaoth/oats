@@ -29,7 +29,7 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 
 const log = { cursor: [], cues: [], frames: [] };
 let recordingSince = null;
-let cursor = { x: viewport.width * 0.62, y: viewport.height * 0.58 };
+let cursor = scene.cursorStart ? { ...scene.cursorStart } : { x: viewport.width * 0.62, y: viewport.height * 0.58 };
 
 const director = {
   viewport,
@@ -92,6 +92,25 @@ const director = {
     await browser.page("Input.dispatchMouseEvent", { type: "mouseReleased", ...at });
     log.cursor.push({ t: now(), ...cursor, kind: "up" });
   },
+  /** Scroll the page under the cursor by `deltaY` CSS pixels, eased over `duration`. */
+  async scroll(deltaY, { duration = 1200 } = {}) {
+    const steps = Math.max(2, Math.round(duration / 16));
+    let done = 0;
+    for (let i = 1; i <= steps; i += 1) {
+      const target = deltaY * easeInOut(i / steps);
+      const delta = target - done;
+      done = target;
+      await browser.page("Input.dispatchMouseEvent", {
+        type: "mouseWheel",
+        x: cursor.x,
+        y: cursor.y,
+        deltaX: 0,
+        deltaY: delta,
+      });
+      await sleep(duration / steps);
+    }
+    log.cues.push({ t: now(), name: "scroll", deltaY });
+  },
   async type(text, { perChar = 55 } = {}) {
     for (const char of text) {
       await browser.page("Input.insertText", { text: char });
@@ -122,8 +141,8 @@ const director = {
     });
     await browser.page("Page.startScreencast", {
       format: "jpeg",
-      quality: 100,
-      everyNthFrame: 1,
+      quality: scene.capture?.quality ?? 100,
+      everyNthFrame: scene.capture?.everyNthFrame ?? 1,
       maxWidth: viewport.width * viewport.scale,
       maxHeight: viewport.height * viewport.scale,
     });

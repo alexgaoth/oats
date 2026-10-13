@@ -3,3 +3,4 @@ out/
 # Captured clips and frames are large and are re-made by the director script.
 public/clips/
 public/frames/
+public/stills/

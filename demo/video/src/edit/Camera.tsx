@@ -43,10 +43,14 @@ export const Camera: React.FC<{
   const b = rectOf(to);
   const mix = (p: number, q: number) => p + (q - p) * progress;
   const rect = { x: mix(a.x, b.x), y: mix(a.y, b.y), w: mix(a.w, b.w), h: mix(a.h, b.h) };
-  // Fit the region in the window frame, keeping the aspect ratio.
-  const zoom = Math.min(viewport.width / rect.w, viewport.height / rect.h);
-  const cx = rect.x + rect.w / 2;
-  const cy = rect.y + rect.h / 2;
+  // Fit the region in the window frame, keeping the aspect ratio, and keep
+  // what is shown inside the window: a region near an edge slides inwards.
+  const zoom = Math.max(1, Math.min(viewport.width / rect.w, viewport.height / rect.h));
+  const halfW = viewport.width / zoom / 2;
+  const halfH = viewport.height / zoom / 2;
+  const clamp = (value: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, value));
+  const cx = clamp(rect.x + rect.w / 2, halfW, viewport.width - halfW);
+  const cy = clamp(rect.y + rect.h / 2, halfH, viewport.height - halfH);
   const k = width / viewport.width;
   const tx = (viewport.width / 2 - cx * zoom) * k;
   const ty = (viewport.height / 2 - cy * zoom) * k;
