@@ -175,6 +175,7 @@ oatsDemo.status(); // { phase, seconds, lengthSeconds, paused, speed, noteId, ..
 await oatsDemo.open("launch-readiness-review", { tab: "connections" });
 await oatsDemo.tab("transcript");
 await oatsDemo.show("global"); // "home", "conversations" or "global" (Global conversations)
+await oatsDemo.point(noteId); // point at a conversation on the board (null: at nothing)
 oatsDemo.samples();
 ```
 
