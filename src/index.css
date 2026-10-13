@@ -363,12 +363,26 @@
   }
 }
 
-/* The field at the sidebar's foot gives its height back on short windows, so
-   the recent conversations above it never have to scroll for it. */
-@media (max-height: 760px) {
-  .oats-sidebar-field {
-    display: none;
-  }
+/* The sky over the field at the sidebar's foot (shell/SidebarField.tsx) fades
+   into the sidebar, so the field rises out of it with no edge: opaque at the
+   top, clear well before the horizon, and eased at both ends so neither end
+   shows as a line. It is measured on the sky, the field's height less the
+   ground the field sets, so it covers the same part of the sky at every
+   height. */
+.oats-sidebar-sky {
+  --sky: calc(100% - var(--oats-field-ground, 52px));
+  background: linear-gradient(
+    180deg,
+    var(--color-sidebar) 0%,
+    color-mix(in srgb, var(--color-sidebar) 96%, transparent) calc(var(--sky) * 0.0875),
+    color-mix(in srgb, var(--color-sidebar) 84%, transparent) calc(var(--sky) * 0.175),
+    color-mix(in srgb, var(--color-sidebar) 68%, transparent) calc(var(--sky) * 0.2625),
+    color-mix(in srgb, var(--color-sidebar) 50%, transparent) calc(var(--sky) * 0.35),
+    color-mix(in srgb, var(--color-sidebar) 32%, transparent) calc(var(--sky) * 0.4375),
+    color-mix(in srgb, var(--color-sidebar) 16%, transparent) calc(var(--sky) * 0.525),
+    color-mix(in srgb, var(--color-sidebar) 4%, transparent) calc(var(--sky) * 0.6125),
+    transparent calc(var(--sky) * 0.7)
+  );
 }
 
 /* A ViewSwitch's choice (ui/view-switch.tsx): a honey indicator that slides to

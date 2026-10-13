@@ -41,9 +41,9 @@ The product rules from v1 still hold and still win over taste:
 └───────────┴────────────────────────────────────────┘
 ```
 
-- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with a
-  faded texture of scattered oat grains behind it (`shell/SidebarGrain.tsx`: a
-  static pattern at 7%, brown in light mode, honey in dark). Top 52px band holds
+- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with
+  the wheat field at its foot (`shell/SidebarField.tsx`: the room the list leaves,
+  120 to 240px, none in less; taller is more sky). Top 52px band holds
   the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`) and moves the
   window. Then the brand row, the Record button (honey with depth; a red **Stop
   recording** with elapsed time while live), Home / Conversations / Search, the six
@@ -91,7 +91,7 @@ Rules:
 - **Content is flat; the frame may carry the oat world.** Cards, lists and reading
   surfaces stay flat, with depth from a border and at most `shadow-xs`/`shadow-sm`,
   and no glows. The oat world may dress the frame where it never sits under words:
-  the sidebar's grain texture, the field at the sidebar's foot, empty states.
+  the field at the sidebar's foot, empty states.
 - **The main action has depth.** New recording and Start recording are honey with
   an inner highlight and a soft honey shadow, and they sink 1px when pressed
   (`.oats-cta` in `index.css`). They are the only controls with depth.

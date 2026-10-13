@@ -64,12 +64,16 @@ uniform float uWarmScale;    // gold is darker than paper and lighter than charc
 uniform float uSkyStrength;
 uniform float uTime;         // seconds — only the scenery's birds read it
 uniform int   uScene;        // 0 off, 1 clear sky, 2 minka, 3 full dithered scene
+uniform float uSceneH;       // the scene's height, CSS px (see sceneFrame in fieldModel.ts)
 
 out vec4 fragColor;
 ${BAYER}
 
 void main() {
-  float horizon = 1.0 - ${f(HORIZON)};   // measured from the bottom here
+  // The scene stands on the canvas's bottom edge at its own scale. Where the
+  // canvas is taller than the scene, the extra height is more sky.
+  float k = uSceneH / max(uResolution.y, 1.0);
+  float horizon = (1.0 - ${f(HORIZON)}) * k;   // measured from the bottom here
   float y = vUv.y;
 
   // Light on this surface is a wash, not a disc.
@@ -84,7 +88,8 @@ void main() {
   float above = clamp((y - horizon) / (1.0 - horizon), 0.0, 1.0);
   float glow = pow(1.0 - above, 2.6) * step(horizon, y);
 
-  float aspect = uResolution.x / max(uResolution.y, 1.0);
+  // Horizontal distances in units of the scene's height, as the scene's own are.
+  float aspect = uResolution.x / max(uSceneH, 1.0);
   float dx = (vUv.x - ${f(SUN_X)}) * aspect;
   // Never fully dark on the far side — this is one light source in an open
   // field, not a spotlight.
@@ -151,9 +156,9 @@ void main() {
   // constants. The concave roof sweep is the cultural cue; straight edges
   // read as a barn.
   if (uScene >= 2 && uGrow > 0.001) {
-    float hy = y - horizon;                        // height units above the horizon
+    float hy = (y - horizon) / k;                  // scene heights above the horizon
     float hx = abs((vUv.x - ${f(MINKA.x)}) * aspect);
-    float px = 1.5 / max(uResolution.y, 1.0);      // soften edges by ~1.5 CSS px
+    float px = 1.5 / max(uSceneH, 1.0);            // soften edges by ~1.5 CSS px
 
     float halfW = 0.0;
     if (hy >= 0.0) {
@@ -194,10 +199,11 @@ void main() {
       float bphase = fract(fi * 0.618 + 0.21);
       float bx = 1.1 - fract(uTime * ${f(BIRDS.speed)} + bphase) * 1.2;
       float byTop = ${f(BIRDS.yMin)} + fract(bphase * 7.31) * ${f(BIRDS.yMax - BIRDS.yMin)};
-      float by = 1.0 - byTop + sin(uTime * 0.7 + fi) * 0.006;
+      // As high above the horizon as they fly in a scene the canvas's size.
+      float by = horizon + (${f(HORIZON)} - byTop + sin(uTime * 0.7 + fi) * 0.006) * k;
 
-      vec2 d = vec2((vUv.x - bx) * aspect, vUv.y - by);
-      float r = length(d) * uResolution.y;
+      vec2 d = vec2((vUv.x - bx) * uResolution.x, (vUv.y - by) * uResolution.y);
+      float r = length(d);
       float size = 1.6 + 0.9 * sin(uTime * 9.0 + fi * 2.4);
       birdCoverage = max(birdCoverage, smoothstep(size + 1.0, size - 0.5, r));
     }
@@ -225,6 +231,7 @@ layout(location = 1) in vec4 aMote;     // x, y, size, phase
 uniform vec2  uResolution;
 uniform float uTime;
 uniform float uGrow;
+uniform float uSceneH;   // the scene's height, CSS px; the canvas may be taller
 
 out float vFade;
 
@@ -241,7 +248,8 @@ void main() {
   vFade = sin(x * 3.14159) * uGrow;
 
   float px = aMote.z * (1.4 + aMote.z * 2.2);
-  vec2 pos = vec2(x * uResolution.x, (1.0 - y) * uResolution.y) + aCorner * px;
+  // y is a fraction of the scene's height, up from the canvas's bottom edge.
+  vec2 pos = vec2(x * uResolution.x, uResolution.y - y * uSceneH) + aCorner * px;
 
   gl_Position = vec4(
     pos.x / uResolution.x * 2.0 - 1.0,
@@ -277,6 +285,7 @@ layout(location = 1) in vec4 aBladeA;   // x, spread within band, heightMul, lea
 layout(location = 2) in vec4 aBladeB;   // phase, growDelay, growSpan, droop
 
 uniform vec2  uResolution;     // CSS pixels
+uniform float uSceneH;         // the scene's height, CSS pixels; the canvas may be taller
 uniform float uTime;           // seconds since the field started
 uniform float uIntro;          // 0..1 growth progress
 uniform vec2  uPointer;        // CSS pixels
@@ -333,10 +342,11 @@ void main() {
   // Spread the band's blades across the gap to the next one, and let the ones
   // that land nearer the front stand slightly taller, so neither the roots nor
   // the tops line up into a seam.
+  // Fractions of the scene's height, which stands on the canvas's bottom edge.
   float bandDepth = uBaseY + spread * uBandSpread;
-  float bladeH = uHeight * (0.86 + spread * 0.28) * uResolution.y * heightMul * growth;
+  float bladeH = uHeight * (0.86 + spread * 0.28) * uSceneH * heightMul * growth;
   float baseX  = x * uResolution.x;
-  float baseY  = bandDepth * uResolution.y;
+  float baseY  = uResolution.y - (1.0 - bandDepth) * uSceneH;
 
   // No depth parallax. It shifted *every* blade by the cursor's offset from
   // centre, so moving the mouse slid the whole field sideways and leaving it
