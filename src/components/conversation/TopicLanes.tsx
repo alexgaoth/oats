@@ -64,6 +64,7 @@ export default function TopicLanes({
   onSelect,
   live = false,
   questions,
+  inset = "px-5",
   className,
 }: {
   lanes: Lanes;
@@ -73,6 +74,8 @@ export default function TopicLanes({
   live?: boolean;
   /** Questions to mark on the line, each on the topic the room was on. */
   questions?: LaneQuestion[];
+  /** A row's side padding: the card's in a card, less on a page. */
+  inset?: string;
   className?: string;
 }) {
   const { t, i18n } = useTranslation();
@@ -188,7 +191,8 @@ export default function TopicLanes({
               aria-pressed={isSelected}
               onClick={() => onSelect(row.id)}
               className={cn(
-                "group col-span-full grid grid-cols-subgrid items-center px-5 text-left outline-none",
+                "group col-span-full grid grid-cols-subgrid items-center text-left outline-none",
+                inset,
                 "transition-colors duration-150 hover:bg-muted/60 motion-reduce:transition-none",
                 "focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
                 isSelected && "bg-muted hover:bg-muted"

@@ -76,7 +76,11 @@ import {
   applyConversationSpeakers,
   sittingLoudness,
 } from "../stores/meetingRecordingStore";
-import { useSettingsStore, type ConversationDetail } from "../stores/settingsStore";
+import {
+  useSettingsStore,
+  type ConversationDetail,
+  type ConversationFlowView,
+} from "../stores/settingsStore";
 import {
   selectIsCloudNoteFormattingMode,
   selectResolvedNoteFormatting,
@@ -84,6 +88,9 @@ import {
 import { useConversationEvents } from "../hooks/useConversationEvents";
 import ConversationGraph from "./notes/ConversationGraph";
 import TopicGraph from "./notes/TopicGraph";
+import TopicLanes, { type LaneQuestion, type Lanes } from "./conversation/TopicLanes";
+import { flowCaption, flowViewOptions } from "./conversation/flowText";
+import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import GlobalConversations from "./global/GlobalConversations";
 import FieldBackdrop from "./field/FieldBackdrop";
 import ConversationFlow from "./conversation/ConversationFlow";
@@ -116,6 +123,7 @@ import { speakerText } from "../utils/speakerLabel";
 import {
   buildReview,
   openQuestionCount,
+  questionMoments,
   questionOutcomes,
   questionTurns,
 } from "../helpers/conversationReview.mjs";
@@ -1085,6 +1093,7 @@ function ConversationStateBridge() {
 // Under four topics there is no graph worth drawing — a three-node graph looks
 // broken, not minimal — so the linear thread list stands in. It is also the
 // keyboard-and-screen-reader equivalent view, not a degraded one (DESIGN.md §9.4).
+// The lanes have no such floor: one topic is one row.
 const MIN_GRAPH_TOPICS = 4;
 
 function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
@@ -1102,13 +1111,14 @@ function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
   }
 }
 
-// The secondary lens, deliberately.
+// How the conversation moved between its topics, after it.
 //
-// A force-directed graph is a good answer to "how did this conversation move?"
-// and a bad default payoff for opening a record — it is the shape of the tool
-// rather than the shape of what was said. The contour at the head of the
-// document carries the everyday reading; this is here for the question that
-// genuinely needs a graph.
+// The contour at the head of the document carries the everyday reading; this
+// tab is for the question "how did this conversation move?". The lanes are the
+// default: one row per topic in the order raised, one line for the room, and
+// each question on the line where it was asked, so a dropped topic shows its
+// unanswered questions. The force-directed graph is the alternative. Both
+// select the same topic, whose questions are listed below.
 function ConnectionsView({
   note,
   events,
@@ -1121,11 +1131,30 @@ function ConnectionsView({
   const { t } = useTranslation();
   const [selectedTopic, setSelectedTopic] = useState<ConversationTopicNode | null>(null);
   const searchBaseUrl = useSettingsStore((s) => s.conversationAideSearchBaseUrl);
+  const view = useSettingsStore((s) => s.connectionsView);
+  const setView = useSettingsStore((s) => s.setConnectionsView);
   const snapshot = useMemo(() => readTopicSnapshot(note.conversation_topics), [note]);
-  const graphBox = useRef<HTMLDivElement | null>(null);
-  const graphHeight = useRoomBelow(graphBox);
+  const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
+  const lanes = useMemo(() => topicLanes({ snapshot, segments }) as Lanes, [snapshot, segments]);
+  // Each question at the turn it was asked in, read as the counts under the
+  // title and the transcript's margin read it, and the topic it belongs to:
+  // the row its mark sits on, so the list below names the marks on that row.
+  const moments = useMemo(() => questionMoments(events, segments), [events, segments]);
+  const questions = useMemo<LaneQuestion[]>(
+    () =>
+      moments.map((moment) => ({
+        id: moment.key,
+        at: moment.at,
+        state: (moment.outcome === "open" ? "asked" : moment.outcome) as QuestionOutcome,
+      })),
+    [moments]
+  );
+  const topicOfQuestion = useMemo(
+    () => questionTopics(lanes, moments, snapshot),
+    [lanes, moments, snapshot]
+  );
 
-  if (!snapshot || snapshot.nodes.length < MIN_GRAPH_TOPICS) {
+  if (!snapshot || lanes.empty) {
     return (
       <ConversationGraph
         events={events}
@@ -1135,11 +1164,27 @@ function ConnectionsView({
     );
   }
 
+  const graphable = snapshot.nodes.length >= MIN_GRAPH_TOPICS;
+  const caption =
+    view === "lanes"
+      ? flowCaption(t, { topics: lanes.rows.length, returns: lanes.returns.length })
+      : graphable
+        ? flowCaption(t, {
+            topics: snapshot.nodes.length,
+            returns: snapshot.edges.filter((edge) => edge.kind === "return").length,
+          })
+        : null;
+
+  // Pressing a row selects its topic, and pressing it again lets it go: the
+  // same selection the graph makes, so it survives a change of view.
+  const selectTopic = (id: number) =>
+    setSelectedTopic((current) =>
+      current?.id === id ? null : (snapshot.nodes.find((node) => node.id === id) ?? null)
+    );
+
   const topicQuestions = selectedTopic
     ? events.filter(
-        (event) =>
-          event.kind === "question" &&
-          event.segmentIds.some((id) => selectedTopic.utteranceIds.includes(id))
+        (event) => event.kind === "question" && topicOfQuestion.get(event.id) === selectedTopic.id
       )
     : [];
 
@@ -1150,30 +1195,46 @@ function ConnectionsView({
 
   return (
     <div className="mt-7">
-      {/* No box. The graph is the content, not a widget inside a panel, and a
-          rounded border around it is exactly the chrome §1 rules out. Full
-          column width so labels have somewhere to sit.
-
-          Sized to the room left rather than to a constant. A fixed 26rem put the
-          graph at 452–868 in an 800px window: 68px of it below the fold, on the
-          one tab whose entire payload is a picture, and it is a picture you drag
-          nodes around in — so the fix for "I cannot see the bottom" was to
-          scroll the page out from under your own cursor.
-
-          The room is measured, not estimated. `calc(100vh - 29rem)` assumed a
-          head of one known height, and a title that wraps to two lines or a
-          "left open last time" line made it taller: measured at 1200x800 the
-          graph ended 16px below the window and cut its lowest label in half.
-          The bounds keep it usable in a short window and stop it becoming a
-          field in a tall one. */}
-      <div ref={graphBox} className="w-full" style={{ height: graphHeight }}>
-        <TopicGraph
+      {/* How the topics are drawn is one of the choices with character
+          (DESIGN.md §2), and it sits above the views so its indicator can
+          slide between them. */}
+      <div className="flex min-h-8 items-center justify-between gap-4">
+        <p className="min-w-0 text-[13px] text-muted-foreground">{caption}</p>
+        <ViewSwitch<ConversationFlowView>
+          className="h-8"
+          aria-label={t("oats.flow.viewLabel")}
+          value={view}
+          onValueChange={setView}
+          options={flowViewOptions(t)}
+        />
+      </div>
+      {view === "lanes" ? (
+        // No box, as for the graph: the rows are the content. Their hover runs
+        // a little past the column so the words line up with the text above.
+        <TopicLanes
+          className="-mx-2 mt-4 border-y border-border"
+          inset="px-2"
+          lanes={lanes}
+          selected={selectedTopic?.id ?? null}
+          onSelect={selectTopic}
+          questions={questions}
+        />
+      ) : graphable ? (
+        <ConnectionsGraph
           snapshot={snapshot}
           selectedId={selectedTopic?.id ?? null}
           onSelect={setSelectedTopic}
           layoutKey={`oats:topic-layout:${note.id}`}
         />
-      </div>
+      ) : (
+        <div className="mt-4">
+          <ConversationGraph
+            events={events}
+            searchBaseUrl="https://www.google.com/search?q="
+            onReload={onReload}
+          />
+        </div>
+      )}
       {/* The panel's *space* is permanent even though its content is not.
           
           Rendering it only on selection meant the first click inserted a block
@@ -1183,46 +1244,94 @@ function ConnectionsView({
           band is a fixed height that scrolls inside itself, so selecting
           anything moves nothing. Still no "select a topic to see…" placeholder:
           empty space is not an instruction. */}
-      <div className="mt-6 h-44 overflow-y-auto border-t border-border pt-5">
-        {selectedTopic && (
-          <aside>
-            <h3 className="text-sm font-semibold text-foreground">{selectedTopic.label}</h3>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {t("topicGraph.seconds", {
-                count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
-              })}
-              {selectedTopic.returns > 0 &&
-                ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
-            </p>
-            <ul className="mt-3 divide-y divide-border">
-              {topicQuestions.map((question) => (
-                <li key={question.id} className="flex items-start gap-3 py-2.5">
-                  <p className="min-w-0 flex-1 text-pretty text-sm leading-snug text-foreground">
-                    {question.text}
-                  </p>
-                  {/* A ghost button, not the brand: the selected node keeps the
-                      brand colour, and one row per question would multiply it. */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => research(question.text)}
-                    className="-my-0.5 shrink-0 text-muted-foreground"
-                  >
-                    <Search aria-hidden="true" />
-                    {t("topicGraph.search")}
-                  </Button>
-                </li>
-              ))}
-              {!topicQuestions.length && (
-                <li className="py-2.5 text-[13px] text-muted-foreground">
-                  {t("topicGraph.noQuestions")}
-                </li>
-              )}
-            </ul>
-          </aside>
-        )}
-      </div>
+      {(view === "lanes" || graphable) && (
+        <div className="mt-6 h-44 overflow-y-auto border-t border-border pt-5">
+          {selectedTopic && (
+            <aside>
+              <h3 className="text-sm font-semibold text-foreground">{selectedTopic.label}</h3>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {t("topicGraph.seconds", {
+                  count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
+                })}
+                {selectedTopic.returns > 0 &&
+                  ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
+              </p>
+              <ul className="mt-3 divide-y divide-border">
+                {topicQuestions.map((question) => (
+                  <li key={question.id} className="flex items-start gap-3 py-2.5">
+                    <p className="min-w-0 flex-1 text-pretty text-sm leading-snug text-foreground">
+                      {question.text}
+                    </p>
+                    {/* A ghost button, not the brand: the selected node keeps the
+                        brand colour, and one row per question would multiply it. */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => research(question.text)}
+                      className="-my-0.5 shrink-0 text-muted-foreground"
+                    >
+                      <Search aria-hidden="true" />
+                      {t("topicGraph.search")}
+                    </Button>
+                  </li>
+                ))}
+                {!topicQuestions.length && (
+                  <li className="py-2.5 text-[13px] text-muted-foreground">
+                    {t("topicGraph.noQuestions")}
+                  </li>
+                )}
+              </ul>
+            </aside>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The topic graph, sized to the room left below it.
+ *
+ * Its own component so it measures when it appears: the lanes are the default,
+ * and a box measured while the lanes were showing would have no room to give.
+ */
+function ConnectionsGraph({
+  snapshot,
+  selectedId,
+  onSelect,
+  layoutKey,
+}: {
+  snapshot: ConversationTopicSnapshot;
+  selectedId: number | null;
+  onSelect: (node: ConversationTopicNode | null) => void;
+  layoutKey: string;
+}) {
+  const graphBox = useRef<HTMLDivElement | null>(null);
+  const graphHeight = useRoomBelow(graphBox);
+  // No box. The graph is the content, not a widget inside a panel, and a
+  // rounded border around it is exactly the chrome §1 rules out. Full column
+  // width so labels have somewhere to sit.
+  //
+  // Sized to the room left rather than to a constant. A fixed 26rem put the
+  // graph at 452–868 in an 800px window: 68px of it below the fold, on the one
+  // tab whose entire payload is a picture, and it is a picture you drag nodes
+  // around in — so the fix for "I cannot see the bottom" was to scroll the page
+  // out from under your own cursor.
+  //
+  // The room is measured, not estimated. `calc(100vh - 29rem)` assumed a head
+  // of one known height, and a title that wraps to two lines or a "left open
+  // last time" line made it taller: measured at 1200x800 the graph ended 16px
+  // below the window and cut its lowest label in half. The bounds keep it
+  // usable in a short window and stop it becoming a field in a tall one.
+  return (
+    <div ref={graphBox} className="mt-4 w-full" style={{ height: graphHeight }}>
+      <TopicGraph
+        snapshot={snapshot}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        layoutKey={layoutKey}
+      />
     </div>
   );
 }
