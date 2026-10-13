@@ -144,6 +144,28 @@ test("returning to an earlier subject produces the back-edge the graph is for", 
   assert.equal(nodes[0].state, "live");
 });
 
+// A topic's time is the time the room spent on it. A return used to add the
+// whole gap since the topic was last discussed, so a topic revisited at the end
+// of a meeting claimed the entire meeting.
+test("time spent on other topics is not counted when the room returns", () => {
+  const tracker = new ConversationTopicTracker();
+  const at = (minutes) => minutes * 60000;
+  const say = (id, text, minutes) => tracker.onUtterance({ id, text, at: at(minutes) });
+  say("p1", "The pricing model is broken for enterprise", 0);
+  say("p2", "Enterprise pricing needs a rethink this quarter", 2);
+  say("h1", "Separately, hiring the research engineer is urgent", 3);
+  say("h2", "The research engineer role has been open for months", 7);
+  say("h3", "Hiring a research engineer needs a better job post", 13);
+  say("p3", "Coming back to enterprise pricing though, it is broken", 14);
+  say("p4", "Enterprise pricing should change before the renewal", 15);
+  const { nodes } = tracker.snapshot(at(15));
+  const pricing = nodes.find((node) => node.label.includes("pricing"));
+  const hiring = nodes.find((node) => node.label.includes("research") || node.label.includes("hiring"));
+  assert.equal(pricing.returns, 1);
+  assert.equal(pricing.durationMs, at(3), "2 minutes before, 1 minute after the return");
+  assert.equal(hiring.durationMs, at(10));
+});
+
 test("the stack lists what was left open and never the topic being spoken", () => {
   const tracker = new ConversationTopicTracker();
   feed(tracker, [

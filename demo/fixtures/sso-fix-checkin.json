@@ -292,7 +292,7 @@
           "id": 1,
           "label": "sso saml",
           "words": ["saml", "sso", "fix", "clock", "library", "review", "security", "failure"],
-          "durationMs": 117395,
+          "durationMs": 63323,
           "utteranceIds": [
             "seg-mv4ik7dk-1",
             "seg-mv4ik7dk-2",
