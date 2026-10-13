@@ -116,6 +116,17 @@ window.oatsDemo = {
     }
     await frame();
   },
+  /**
+   * Point at a conversation on the Global conversations board, as the pointer
+   * would, through the board's own highlight store; `null` points at nothing.
+   */
+  async point(id) {
+    const { useGlobalHighlight } = await import("/components/global/highlightStore.ts");
+    const store = useGlobalHighlight.getState();
+    if (id === null) store.clear();
+    else store.pointAtConversation(id);
+    await frame();
+  },
   /** The ids of the sample conversations held, newest first. */
   samples: () =>
     main.db.notes

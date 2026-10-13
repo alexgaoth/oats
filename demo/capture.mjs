@@ -109,14 +109,9 @@ window.demo = {
     await demo.wait(300);
   },
   // Point at a conversation on the Global conversations board, as the pointer
-  // would: through the board's own highlight store, from the URL the app loaded.
+  // would (oatsDemo.point, in the harness).
   async point(id) {
-    const url = performance
-      .getEntriesByType("resource")
-      .map((entry) => entry.name)
-      .find((name) => name.includes("/components/global/highlightStore"));
-    const { useGlobalHighlight } = await import(url);
-    useGlobalHighlight.getState().pointAtConversation(id);
+    await oatsDemo.point(id);
     await demo.wait(200);
   },
   async scrollTo(text, role) {
