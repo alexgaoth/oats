@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Cosa significano i segni",
         "open": "Aperta",
-        "topic": "Cambio di argomento",
-        "return": "Ritorno a un argomento precedente",
-        "marked": "Momento segnato"
+        "topic": "Nuovo argomento",
+        "marked": "Segnato"
       },
       "contourSummary": "{{minutes}} minuti, {{questions}} domande ({{unresolved}} senza risposta), l'argomento è cambiato {{shifts}} volte e sono stati ripresi {{returns}} fili.",
       "contourEmpty": "Ancora nulla di registrato.",

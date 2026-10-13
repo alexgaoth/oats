@@ -200,14 +200,18 @@ test("canvas text uses the same sans token as the DOM", () => {
 });
 
 test("canvas backing stores are clamped, so a Retina Mac is not 4x the work", () => {
-  for (const [name, source] of [
-    ["ForceGraph", FORCE_GRAPH],
-    ["ConversationContour", read("src/components/conversation/ConversationContour.tsx")],
-  ]) {
-    assert.match(
-      source,
-      /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/,
-      `${name} must clamp devicePixelRatio`
-    );
-  }
+  assert.match(
+    FORCE_GRAPH,
+    /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/,
+    "ForceGraph must clamp devicePixelRatio"
+  );
+  // The charts size their canvases through the chart style's one helper.
+  const CHART_STYLE = read("src/components/charts/chartStyle.ts");
+  assert.match(CHART_STYLE, /export const MAX_CHART_RATIO = 2;/);
+  assert.match(CHART_STYLE, /Math\.min\(native, MAX_CHART_RATIO\)/);
+  assert.match(
+    read("src/components/conversation/ConversationContour.tsx"),
+    /return observeCanvas\(canvas, draw\);/,
+    "ConversationContour must size its canvas through observeCanvas"
+  );
 });

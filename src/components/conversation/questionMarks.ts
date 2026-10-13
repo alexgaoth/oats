@@ -30,6 +30,21 @@ export function markTone(state: string): MarkTone {
   return OUTCOME_TONE[state as QuestionOutcome] ?? "muted";
 }
 
+/**
+ * A question's dot on a chart (DESIGN.md §6): answered is filled success,
+ * unknown is filled warning, hedged is a soft warning fill inside a ring, and
+ * open (no verdict) is a ring. Read from the fill and the tone above, so a
+ * chart and the rail cannot disagree.
+ */
+export type MarkKind = "answered" | "unknown" | "hedged" | "open";
+
+export function markKind(state: string): MarkKind {
+  const fill = markFill(state);
+  if (fill === "ring") return "open";
+  if (fill === "soft") return "hedged";
+  return markTone(state) === "success" ? "answered" : "unknown";
+}
+
 /** The CSS colour token per tone, for code that styles inline or reads it. */
 export const TONE_TOKEN: Record<MarkTone, string> = {
   success: "--color-success",
