@@ -14,6 +14,7 @@ const LANES = read("src/components/conversation/TopicLanes.tsx");
 const TEXT = read("src/components/conversation/flowText.ts");
 const CSS = read("src/index.css");
 const STORE = read("src/stores/settingsStore.ts");
+const CHART_STYLE = read("src/components/charts/chartStyle.ts");
 
 const locales = fs
   .readdirSync(path.join(__dirname, "../../src/locales"), { withFileTypes: true })
@@ -89,7 +90,11 @@ test("one 1.5px quiet line over the rows' middle column, kept on them while the 
   assert.match(LANES, /grid-cols-\[fit-content\(min\(13rem,30%\)\)_minmax\(0,1fr\)_max-content\]/);
   assert.match(LANES, /col-span-full grid grid-cols-subgrid/);
   assert.match(LANES, /className="pointer-events-none relative col-start-2"/);
-  assert.match(LANES, /const LINE_PX = 1\.5;/);
+  // The chart module's weights (DESIGN.md §6), not a number of its own.
+  assert.match(CHART_STYLE, /export const CHART = \{ line: 1\.5, rule: 1, dot: 4, ring: 2,/);
+  assert.match(LANES, /import \{ CHART \} from "\.\.\/charts\/chartStyle";/);
+  assert.match(LANES, /strokeWidth=\{CHART\.line\}/);
+  assert.doesNotMatch(LANES, /LINE_PX/);
   assert.match(LANES, /stroke="var\(--color-muted-foreground\)"/);
   assert.match(LANES, /strokeLinecap="round"/);
   assert.match(LANES, /vectorEffect="non-scaling-stroke"/);
@@ -104,9 +109,14 @@ test("the line ends at now in honey, and questions sit on their topic in the sha
     LANES,
     /const now =\s*live && last && rowOf\.has\(last\.topic\) \? \{ x: last\.to, row: rowOf\.get\(last\.topic\) \} : null;/
   );
-  assert.match(LANES, /rounded-full bg-primary ring-2 ring-card/);
+  // The one dot: `CHART.dot` across in a `CHART.ring` ring of the card colour.
+  assert.match(LANES, /rounded-full bg-primary"/);
+  assert.match(LANES, /width: CHART\.dot \* 2,\s*height: CHART\.dot \* 2,/);
+  assert.match(LANES, /boxShadow: `0 0 0 \$\{CHART\.ring\}px var\(--color-card\)`/);
   assert.match(LANES, /const run = runAt\(lanes, question\.at\);/);
-  assert.match(LANES, /rounded-full bg-card p-0\.5"[\s\S]*?<StateMark state=\{mark\.state\}/);
+  // A mark sits on a disc of the card colour, so the line never runs through
+  // an open ring.
+  assert.match(LANES, /rounded-full bg-card"[\s\S]*?padding: CHART\.ring \}\}[\s\S]*?<StateMark/);
 });
 
 test("past eight rows the card scrolls inside, and the topic now stays in view", () => {
@@ -130,8 +140,9 @@ test("the line draws itself once, and not under reduced motion", () => {
 // ------------------------------------------------------------ the graph
 
 test("every link is 1.5px and solid: a return in ink, a move on in the quiet grey", () => {
-  assert.match(FLOW, /const LINE_PX = 1\.5;/);
-  assert.match(FLOW, /strokeWidth=\{LINE_PX\}/);
+  assert.match(FLOW, /strokeWidth=\{CHART\.line\}/);
+  assert.doesNotMatch(FLOW, /LINE_PX/);
+  assert.match(FLOW, /const reach = CHART\.dot \+ CHART\.ring \+ EDGE_GAP_PX;/);
   assert.match(
     FLOW,
     /link\.kind === "return"\s*\? "var\(--color-foreground\)"\s*: "var\(--color-muted-foreground\)"/
@@ -144,8 +155,19 @@ test("every dot is one size in a card ring: honey now, a ring when dropped, quie
   assert.match(FLOW, /open: "bg-muted-foreground",/);
   assert.match(FLOW, /resolved: "bg-muted-foreground",/);
   assert.match(FLOW, /dropped: "border-\[1\.5px\] border-muted-foreground bg-card",/);
-  assert.match(FLOW, /"inline-block size-2 shrink-0 rounded-full ring-2"/);
+  assert.match(FLOW, /"inline-block shrink-0 rounded-full ring-2"/);
+  assert.match(FLOW, /style=\{\{ width: CHART\.dot \* 2, height: CHART\.dot \* 2 \}\}/);
   assert.doesNotMatch(FLOW, /bg-success|ring-primary\/20|dotSize\(point\)/);
+});
+
+// A ResizeObserver's first report waits for the page to render, so a window
+// that is not being drawn never sent it and the graph drew no edges at all.
+test("the graph measures its box before the first paint, then on resize", () => {
+  const graph = FLOW.slice(FLOW.indexOf("function FlowGraph("));
+  assert.match(
+    graph,
+    /useLayoutEffect\(\(\) => \{\s*const element = box\.current;[\s\S]*?element\.getBoundingClientRect\(\);\s*measure\(width, height\);\s*const observer = new ResizeObserver/
+  );
 });
 
 test("labels sit on plates in the card colour, placed clear of each other's words", () => {

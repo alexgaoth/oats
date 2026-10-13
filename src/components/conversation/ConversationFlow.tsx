@@ -1,16 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../ui/badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { ViewSwitch } from "../ui/view-switch";
+import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
-import {
-  DOT_PX,
-  DOT_RING_PX,
-  buildThreadMap,
-  placeLabels,
-  quotedUtterance,
-} from "../../helpers/liveThreadMap.mjs";
+import { buildThreadMap, placeLabels, quotedUtterance } from "../../helpers/liveThreadMap.mjs";
 import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
 import { LANE_ROW_PX, topicLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
@@ -54,9 +49,6 @@ const DOT: Record<ThreadState, string> = {
   dropped: "border-[1.5px] border-muted-foreground bg-card",
 };
 
-/** Data lines are 1.5px (DESIGN.md §6). */
-const LINE_PX = 1.5;
-
 /**
  * Inter at 13px, per character of a topic label. Measured over real labels:
  * 6.4 on average and 7.0 for the widest, and the estimate must not run short,
@@ -81,8 +73,8 @@ const NO_SUGGESTIONS: ConversationSuggestion[] = [];
  * place `placeLabels` can put the words.
  */
 function anchorTransform(side: string, align: string): string {
-  const x = BUTTON_PAD_X_PX + DOT_PX / 2;
-  const y = BUTTON_PAD_Y_PX + DOT_PX / 2;
+  const x = BUTTON_PAD_X_PX + CHART.dot;
+  const y = BUTTON_PAD_Y_PX + CHART.dot;
   if (side === "left") return `translate(calc(-100% + ${x}px), -50%)`;
   if (side === "right") return `translate(${-x}px, -50%)`;
   const dx = align === "start" ? `${-x}px` : align === "end" ? `calc(-100% + ${x}px)` : "-50%";
@@ -356,15 +348,21 @@ function FlowGraph({
   // edges drawn in real pixels. Measured on resize only; nothing runs per frame.
   const box = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  useEffect(() => {
+  // Measured once before the first paint, as the lanes are: a ResizeObserver's
+  // first report waits for the page to render, and a window that is not being
+  // drawn (hidden, or behind another) never sends it, so the edges never came.
+  useLayoutEffect(() => {
     const element = box.current;
     if (!element) return undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
+    const measure = (width: number, height: number) =>
       setSize((previous) =>
         previous.width === width && previous.height === height ? previous : { width, height }
       );
-    });
+    const { width, height } = element.getBoundingClientRect();
+    measure(width, height);
+    const observer = new ResizeObserver(([entry]) =>
+      measure(entry.contentRect.width, entry.contentRect.height)
+    );
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -380,7 +378,7 @@ function FlowGraph({
   );
 
   // Where an edge stops short of a dot: its ring, and a little air.
-  const reach = DOT_PX / 2 + DOT_RING_PX + EDGE_GAP_PX;
+  const reach = CHART.dot + CHART.ring + EDGE_GAP_PX;
 
   return (
     <div className={cn("px-5 pb-1", compact ? "pt-3" : "pt-4")}>
@@ -425,7 +423,7 @@ function FlowGraph({
                         ? "var(--color-foreground)"
                         : "var(--color-muted-foreground)"
                     }
-                    strokeWidth={LINE_PX}
+                    strokeWidth={CHART.line}
                     strokeLinecap="round"
                     vectorEffect="non-scaling-stroke"
                   />
@@ -485,15 +483,17 @@ function FlowGraph({
                     isSelected && isLive && "font-medium"
                   )}
                 >
-                  {/* The ring is the plate's colour, so it shows only where
-                      the dot meets something else. */}
+                  {/* The chart's one dot: `CHART.dot` across, in a ring
+                      (`ring-2`, `CHART.ring`) of the plate's colour, so the
+                      ring shows only where the dot meets something else. */}
                   <span
                     aria-hidden="true"
                     className={cn(
-                      "inline-block size-2 shrink-0 rounded-full ring-2",
+                      "inline-block shrink-0 rounded-full ring-2",
                       isSelected ? "ring-muted" : "ring-card group-hover:ring-muted",
                       DOT[point.state] ?? DOT.dropped
                     )}
+                    style={{ width: CHART.dot * 2, height: CHART.dot * 2 }}
                   />
                   {/* Hidden when it has nowhere to go without covering another
                       topic's words; still the button's title. */}
