@@ -106,12 +106,12 @@ function noteRow(id, fields) {
 }
 
 /**
- * @param {{ fixtures: object[], example?: object, now?: number }} options The
+ * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean }} options The
  *   sample fixtures to hold, placed relative to `now` exactly as
  *   `insertSampleConversations` places them, and the one the app ships as its
  *   in-app example (`insertExampleConversation`).
  */
-export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
+export function createFakeMain({ fixtures, example = null, now = Date.now(), badges = false }) {
   const notes = [];
   const events = [];
   const groups = SEEDED_GROUPS.map((group, index) => ({
@@ -166,13 +166,19 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
 
   // A fixture, placed and stored the way `insertSampleConversations` does,
   // filed in its seeded group as `markSampleNote` files it.
-  const storeFixture = (fixture, at) => {
+  //
+  // The demo's own conversations stand for somebody's real ones, so they carry
+  // no `sample_id` and no "Example" badge (`badges` brings it back). The
+  // harness still finds them by `demo_sample`. The example a person opens from
+  // an empty Home is the app's real in-app example, badge and all.
+  const storeFixture = (fixture, at, { example: inApp = false } = {}) => {
     const placed = placeSampleConversation(fixture, { now: at });
     const id = nextNoteId++;
     const filed = placed.group ? groups.find((group) => group.seed_key === placed.group) : null;
     const note = noteRow(id, {
       ...placed.note,
-      sample_id: placed.sampleId,
+      sample_id: inApp || badges ? placed.sampleId : null,
+      demo_sample: placed.sampleId,
       ...(filed ? { group_id: filed.id, group_source: "model" } : {}),
     });
     notes.push(note);
@@ -196,7 +202,7 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
     events,
     findNote,
     noteBySample: (sampleId) =>
-      notes.find((note) => note.sample_id === sampleId && !note.deleted_at) ?? null,
+      notes.find((note) => note.demo_sample === sampleId && !note.deleted_at) ?? null,
     updateNote(id, updates) {
       const note = notes.find((item) => item.id === Number(id));
       if (!note) return { success: false };
@@ -390,7 +396,7 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
       if (present) {
         return { success: true, noteId: present.id, inserted: false, note: { ...present } };
       }
-      const note = storeFixture(example, Date.now());
+      const note = storeFixture(example, Date.now(), { example: true });
       broadcast("onNoteAdded", { ...note });
       return { success: true, noteId: note.id, inserted: true, note: { ...note } };
     },

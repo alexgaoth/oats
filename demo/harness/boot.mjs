@@ -37,6 +37,9 @@ installFakeMicrophone();
 const main = createFakeMain({
   fixtures: empty ? [] : live ? supporting : [mainFixture, ...supporting],
   example: mainFixture,
+  // The demo's conversations stand for somebody's own: no "Example" badge
+  // unless `badges=1` asks for it.
+  badges: params.get("badges") === "1",
 });
 window.electronAPI = main.api;
 
@@ -104,8 +107,8 @@ window.oatsDemo = {
   /** The ids of the sample conversations held, newest first. */
   samples: () =>
     main.db.notes
-      .filter((note) => note.sample_id && !note.deleted_at)
-      .map((note) => ({ id: note.id, sampleId: note.sample_id, title: note.title })),
+      .filter((note) => note.demo_sample && !note.deleted_at)
+      .map((note) => ({ id: note.id, sampleId: note.demo_sample, title: note.title })),
 };
 
 await import("/main.jsx");

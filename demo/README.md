@@ -124,8 +124,9 @@ const { noteId, inserted, note } = insertExampleConversation(databaseManager, fi
   answer, and nothing is added or announced.
 - Every note with a `sample_id` carries a muted **Example** badge beside its
   title: on Home, in the list and in the reading view. In a seeded demo profile
-  and in the harness's default profile, that is every conversation;
-  `profile=empty` shows the app as a new install sees it.
+  that is every conversation. The harness's conversations stand for somebody's
+  own, so they carry no badge (`badges=1` shows it); the example opened from an
+  empty Home (`profile=empty`) keeps it, as a new install sees it.
 - Times are placed relative to `now`: the review ends two hours earlier, never
   closer than 45 minutes, so Record does not continue it.
 - Each sample note carries `notes.sample_id` (`"launch-readiness-review"`), a
@@ -155,7 +156,8 @@ Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
 words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
 it is asked), `theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
-`connections=lanes|graph`.
+`connections=lanes|graph`, `badges=1` (show the "Example" badge on the demo's
+conversations).
 `panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,
