@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Signification des marques",
         "open": "Ouverte",
-        "topic": "Changement de sujet",
-        "return": "Retour à un sujet précédent",
-        "marked": "Moment marqué"
+        "topic": "Nouveau sujet",
+        "marked": "Marqué"
       },
       "contourSummary": "{{minutes}} minutes, {{questions}} questions posées ({{unresolved}} sans réponse), le sujet a changé {{shifts}} fois et {{returns}} fils ont été repris.",
       "contourEmpty": "Rien d'enregistré pour l'instant.",
