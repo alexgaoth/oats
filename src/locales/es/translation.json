@@ -2269,6 +2269,13 @@
       "room": "Sala",
       "speaker": "Hablante {{n}}"
     },
+    "example": {
+      "open": "Abrir una conversación de ejemplo",
+      "note": "Una revisión de lanzamiento con nueve personas para explorar. Puedes eliminarla cuando quieras.",
+      "badge": "Ejemplo",
+      "failed": "No se pudo abrir la conversación de ejemplo",
+      "failedHint": "No se añadió nada. Inténtalo de nuevo."
+    },
     "shell": {
       "sidebar": "Barra lateral",
       "showSidebar": "Mostrar barra lateral",

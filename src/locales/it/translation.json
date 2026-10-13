@@ -2269,6 +2269,13 @@
       "room": "Stanza",
       "speaker": "Interlocutore {{n}}"
     },
+    "example": {
+      "open": "Apri una conversazione di esempio",
+      "note": "Una revisione di lancio con nove persone da esplorare. Puoi eliminarla quando vuoi.",
+      "badge": "Esempio",
+      "failed": "Impossibile aprire la conversazione di esempio",
+      "failedHint": "Non è stato aggiunto nulla. Riprova."
+    },
     "shell": {
       "sidebar": "Barra laterale",
       "showSidebar": "Mostra barra laterale",

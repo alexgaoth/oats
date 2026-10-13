@@ -376,6 +376,17 @@ class IPCHandlers {
     };
   }
 
+  /**
+   * Tell everything that keeps a copy of the notes about a new one: every
+   * window (`note-added`), the vector index and the note files. A saved note
+   * and the inserted example conversation take this same path.
+   */
+  _announceNoteAdded(note) {
+    setImmediate(() => this.broadcastToWindows("note-added", note));
+    this._asyncVectorUpsert(note);
+    this._asyncMirrorWrite(note);
+  }
+
   _asyncVectorUpsert(note) {
     setImmediate(() => {
       const vectorIndex = require("./vectorIndex");
@@ -1197,14 +1208,29 @@ class IPCHandlers {
           audioDuration,
           folderId
         );
-        if (result?.success && result?.note) {
-          setImmediate(() => this.broadcastToWindows("note-added", result.note));
-          this._asyncVectorUpsert(result.note);
-          this._asyncMirrorWrite(result.note);
-        }
+        if (result?.success && result?.note) this._announceNoteAdded(result.note);
         return result;
       }
     );
+
+    // The bundled example conversation (helpers/exampleConversation.mjs), from
+    // Home or the empty Conversations page. A new copy is announced as a saved
+    // note is; while a copy is there, that copy is the answer and nothing is
+    // added.
+    ipcMain.handle("db-insert-example-conversation", async () => {
+      try {
+        const { insertExampleConversation } = await import("./exampleConversation.mjs");
+        const fixture = require("./sampleConversations/launch-readiness-review.json");
+        const example = insertExampleConversation(this.databaseManager, fixture, {
+          now: Date.now(),
+          announce: (note) => this._announceNoteAdded(note),
+        });
+        return { success: true, ...example };
+      } catch (error) {
+        debugLogger.error("Example conversation failed", { error: error.message }, "notes");
+        return { success: false, error: error.message };
+      }
+    });
 
     ipcMain.handle("db-get-note", async (event, id) => {
       return this.databaseManager.getNote(id);

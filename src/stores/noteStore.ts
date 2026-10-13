@@ -3,12 +3,16 @@ import type { NoteItem } from "../types/electron";
 
 interface NoteState {
   notes: NoteItem[];
+  // True once the list has been read from the database. Until then an empty
+  // list means "not known yet", not "no conversations".
+  loaded: boolean;
   activeNoteId: number | null;
   activeFolderId: number | null;
 }
 
 const useNoteStore = create<NoteState>()(() => ({
   notes: [],
+  loaded: false,
   activeNoteId: null,
   activeFolderId: null,
 }));
@@ -73,7 +77,7 @@ export async function initializeNotes(
   ensureIpcListeners();
   const items = (await window.electronAPI?.getNotes(noteType, limit, folderId)) ?? [];
   if (gen !== loadGeneration) return items;
-  useNoteStore.setState({ notes: items });
+  useNoteStore.setState({ notes: items, loaded: true });
   return items;
 }
 
@@ -127,6 +131,11 @@ export function getActiveFolderIdValue(): number | null {
 
 export function useNotes(): NoteItem[] {
   return useNoteStore((state) => state.notes);
+}
+
+/** Whether the list has been read from the database yet (see `loaded`). */
+export function useNotesLoaded(): boolean {
+  return useNoteStore((state) => state.loaded);
 }
 
 export function useActiveNoteId(): number | null {

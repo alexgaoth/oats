@@ -603,6 +603,12 @@ declare global {
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;
+      // The bundled example conversation (helpers/exampleConversation.mjs):
+      // inserted, or the copy already there (`inserted: false`).
+      insertExampleConversation?: () => Promise<
+        | { success: true; noteId: number; inserted: boolean; note: NoteItem }
+        | { success: false; error?: string }
+      >;
       exportNote: (
         noteId: number,
         format: "txt" | "md"

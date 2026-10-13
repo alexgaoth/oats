@@ -78,16 +78,29 @@ launch shows onboarding.
 
 ## The in-app example
 
-The main sample ships with the app. The main process can insert it at any time:
+The main sample ships with the app. With nothing recorded, Home (under the
+record card) and the empty Conversations page (under Start recording) offer it:
+**Open an example conversation**. The press asks main for it over
+`db-insert-example-conversation`, which runs `insertExampleConversation`
+(`src/helpers/exampleConversation.mjs`) and opens what comes back the way a
+Recent row opens a conversation:
 
 ```js
-const { insertSampleConversations } = await import("./sampleConversations.mjs");
-const example = require("./sampleConversations/launch-readiness-review.json");
-const [{ noteId, inserted, note }] = insertSampleConversations(databaseManager, [example], {
+const { insertExampleConversation } = await import("./exampleConversation.mjs");
+const fixture = require("./sampleConversations/launch-readiness-review.json");
+const { noteId, inserted, note } = insertExampleConversation(databaseManager, fixture, {
   now: Date.now(),
+  announce: (note) => this._announceNoteAdded(note), // as db-save-note does
 });
 ```
 
+- A new copy is announced as a saved note is: `note-added` to every window,
+  the vector index and the note files. While a copy is there, that copy is the
+  answer, and nothing is added or announced.
+- Every note with a `sample_id` carries a muted **Example** badge beside its
+  title: on Home, in the list and in the reading view. In a seeded demo profile
+  and in the harness's default profile, that is every conversation;
+  `profile=empty` shows the app as a new install sees it.
 - Times are placed relative to `now`: the review ends two hours earlier, never
   closer than 45 minutes, so Record does not continue it.
 - Each sample note carries `notes.sample_id` (`"launch-readiness-review"`), a
@@ -110,12 +123,14 @@ npm run demo:harness        # Vite on http://127.0.0.1:5391 (another port if tha
 | `/demo.html?panel=true&theme=dark`                     | The same, dark.                                                       |
 | `/demo.html?panel=true&demo=live`                      | The review, recorded live from 0:00. The other six are already there. |
 | `/demo.html?panel=true&demo=live&from=1062&view=words` | Live, from 17:42, in the Words view.                                  |
+| `/demo.html?panel=true&profile=empty`                  | Nothing recorded yet: Home offers the example conversation.           |
 
 Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last
-words), `edits=0` (leave the voices unnamed after Stop), `theme=light|dark`,
-`view=calm|words`, `flow=auto|stack|graph`. `panel=true` is the app's own
-parameter for the workspace window.
+words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
+conversations at all, as a new install; the fake main inserts the example when
+it is asked), `theme=light|dark`, `view=calm|words`, `flow=auto|stack|graph`.
+`panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,
 question cards on and read locally (no classifier model), auto-search off, and

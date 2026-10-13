@@ -91,10 +91,12 @@ function noteRow(id, fields) {
 }
 
 /**
- * @param {{ fixtures: object[], now?: number }} options The sample fixtures to
- *   hold, placed relative to `now` exactly as `insertSampleConversations` places them.
+ * @param {{ fixtures: object[], example?: object, now?: number }} options The
+ *   sample fixtures to hold, placed relative to `now` exactly as
+ *   `insertSampleConversations` places them, and the one the app ships as its
+ *   in-app example (`insertExampleConversation`).
  */
-export function createFakeMain({ fixtures, now = Date.now() }) {
+export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
   const notes = [];
   const events = [];
   const listeners = new Map();
@@ -139,11 +141,12 @@ export function createFakeMain({ fixtures, now = Date.now() }) {
     return { ...event, metadata: { ...event.metadata } };
   };
 
-  // The fixtures, placed and stored the way `insertSampleConversations` does.
-  for (const fixture of fixtures) {
-    const placed = placeSampleConversation(fixture, { now });
+  // A fixture, placed and stored the way `insertSampleConversations` does.
+  const storeFixture = (fixture, at) => {
+    const placed = placeSampleConversation(fixture, { now: at });
     const id = nextNoteId++;
-    notes.push(noteRow(id, { ...placed.note, sample_id: placed.sampleId }));
+    const note = noteRow(id, { ...placed.note, sample_id: placed.sampleId });
+    notes.push(note);
     const ids = new Map();
     for (const event of placed.events) {
       const stored = insertEvent({
@@ -153,7 +156,9 @@ export function createFakeMain({ fixtures, now = Date.now() }) {
       });
       ids.set(event.id, stored.id);
     }
-  }
+    return note;
+  };
+  for (const fixture of fixtures) storeFixture(fixture, now);
 
   const findNote = (id) => notes.find((note) => note.id === Number(id) && !note.deleted_at) ?? null;
 
@@ -233,6 +238,18 @@ export function createFakeMain({ fixtures, now = Date.now() }) {
       note.updated_at = sqlTime();
       broadcast("onNoteDeleted", { id: note.id });
       return { success: true, id: note.id };
+    },
+    // The in-app example (`db-insert-example-conversation`): the copy that is
+    // there, or a new one, announced as main announces a saved note.
+    insertExampleConversation: async () => {
+      if (!example) return { success: false, error: "The demo has no example conversation." };
+      const present = db.noteBySample(example.meta.id);
+      if (present) {
+        return { success: true, noteId: present.id, inserted: false, note: { ...present } };
+      }
+      const note = storeFixture(example, Date.now());
+      broadcast("onNoteAdded", { ...note });
+      return { success: true, noteId: note.id, inserted: true, note: { ...note } };
     },
     // Everything is held, so nothing older is left to recall, and there is
     // no vector index in a browser.
