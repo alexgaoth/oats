@@ -237,6 +237,39 @@ export function runAt(lanes, time) {
   return nearest;
 }
 
+/**
+ * Which topic each question belongs to: the one the room was on when it was
+ * asked, which is the row its mark sits on. A question the tracker placed
+ * nowhere (a short turn) still belongs to the stretch it was asked in. With no
+ * line to read (a transcript whose turns match no topic), a question belongs
+ * to the topic its turn was placed in, as the graph has always read it.
+ *
+ * @param {{ runs?: Array<{ topic: number, from: number, to: number }>, start?: number,
+ *   span?: number } | null | undefined} lanes
+ * @param {Array<{ id: unknown, at: number, segmentIds?: unknown[] }> | null | undefined} moments
+ *   From `questionMoments`.
+ * @param {{ nodes?: any[] } | null | undefined} snapshot
+ * @returns {Map<unknown, number>} question id → topic id
+ */
+export function questionTopics(lanes, moments, snapshot) {
+  const placed = new Map();
+  for (const node of Array.isArray(snapshot?.nodes) ? snapshot.nodes : []) {
+    for (const id of Array.isArray(node?.utteranceIds) ? node.utteranceIds : []) {
+      placed.set(String(id), node.id);
+    }
+  }
+  const line = Array.isArray(lanes?.runs) && lanes.runs.length > 0;
+  const topics = new Map();
+  for (const moment of Array.isArray(moments) ? moments : []) {
+    const topic = line
+      ? (runAt(lanes, moment.at)?.topic ?? null)
+      : ((moment.segmentIds ?? []).map((id) => placed.get(String(id))).find((id) => id != null) ??
+        null);
+    if (topic != null) topics.set(moment.id, topic);
+  }
+  return topics;
+}
+
 const round = (n) => Math.round(n * 10) / 10;
 
 /**

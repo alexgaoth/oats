@@ -465,6 +465,9 @@ export interface SettingsState
   conversationDetail: ConversationDetail;
   /** Lanes or the graph. See `conversationFlow.mjs`. */
   conversationFlowView: ConversationFlowView;
+  /** Lanes or the graph in the reading view's Connections tab, chosen apart
+   *  from the flow card's. */
+  connectionsView: ConversationFlowView;
   /** The ledger, or the oat field. See `uiMode.mjs`. */
   uiMode: UiMode;
   conversationAideEnabled: boolean;
@@ -554,6 +557,7 @@ export interface SettingsState
   setMeetingRemoteTranscriptionUrl: (url: string) => void;
   setConversationDetail: (value: ConversationDetail) => void;
   setConversationFlowView: (value: ConversationFlowView) => void;
+  setConnectionsView: (value: ConversationFlowView) => void;
   setUiMode: (value: UiMode) => void;
   setConversationAideEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
@@ -1190,6 +1194,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   conversationFlowView: resolveFlowView(
     isBrowser ? localStorage.getItem("conversationFlowView") : null
   ) as ConversationFlowView,
+  // The same two views and the same reading, kept apart: the room's flow and a
+  // finished conversation's connections are read for different things.
+  connectionsView: resolveFlowView(
+    isBrowser ? localStorage.getItem("connectionsView") : null
+  ) as ConversationFlowView,
   uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
@@ -1291,6 +1300,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     value: ConversationDetail
   ) => void,
   setConversationFlowView: createStringSetter("conversationFlowView") as (
+    value: ConversationFlowView
+  ) => void,
+  setConnectionsView: createStringSetter("connectionsView") as (
     value: ConversationFlowView
   ) => void,
   setConversationAideEnabled: createBooleanSetter("conversationAideEnabled"),

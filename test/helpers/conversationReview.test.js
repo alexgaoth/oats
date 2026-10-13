@@ -199,9 +199,8 @@ test("an answered question carries its reply, verbatim, and where it was said", 
 // The line under a record's title counts what the transcript's margin marks:
 // the same reading of each question, so the two cannot disagree.
 test("question outcomes count each outcome that occurred, settled first", async () => {
-  const { questionOutcomes, questionTurns } = await import(
-    "../../src/helpers/conversationReview.mjs"
-  );
+  const { questionOutcomes, questionTurns } =
+    await import("../../src/helpers/conversationReview.mjs");
   const a = question("who owns the migration?");
   const b = question("what does it cost?");
   const c = question("when does it land?");
@@ -252,4 +251,33 @@ test("question outcomes list only what occurred, and nothing for no questions", 
   const orphan = { ...response(a, "answered"), parentEventId: 999 };
   assert.deepEqual(questionOutcomes([orphan]), { total: 0, outcomes: [] });
   assert.deepEqual(questionOutcomes(null), { total: 0, outcomes: [] });
+});
+
+// The lanes in the Connections tab put each question on the line at the moment
+// it was asked: the turn it started in, with the outcome the review reports.
+test("question moments place each asking at its turn, with its outcome", async () => {
+  const { questionMoments } = await import("../../src/helpers/conversationReview.mjs");
+  const asked = question("what is the median seat price?", "turn-4");
+  const known = question("who owns the migration?", "turn-9");
+  const lost = question("anyone benchmarked it?", "legacy-12");
+  const segments = [
+    { id: "turn-4", timestamp: 50_000 },
+    { id: "turn-9", timestamp: 90_000 },
+  ];
+  const moments = questionMoments(
+    [asked, response(asked, "denied_knowledge"), known, response(known, "answered"), lost],
+    segments
+  );
+  assert.deepEqual(
+    moments.map(({ id, at, outcome, segmentIds }) => ({ id, at, outcome, segmentIds })),
+    [
+      { id: asked.id, at: 50_000, outcome: "denied", segmentIds: ["turn-4"] },
+      { id: known.id, at: 90_000, outcome: "answered", segmentIds: ["turn-9"] },
+      // Its turn is not in the transcript: when its event was written.
+      { id: lost.id, at: lost.createdAt, outcome: "open", segmentIds: ["legacy-12"] },
+    ]
+  );
+  const nowhere = { ...question("when?"), createdAt: Number.NaN, segmentIds: [] };
+  assert.deepEqual(questionMoments([nowhere], segments), [], "no moment, no mark");
+  assert.deepEqual(questionMoments(null), []);
 });
