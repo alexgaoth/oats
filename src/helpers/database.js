@@ -85,6 +85,31 @@ const sqlShape = (sql) =>
     .replace(/\s+/g, " ")
     .trim();
 
+// Conversation groups: Work, Personal, and any the person adds. A conversation
+// is in one group or in none. The writing model chooses after the summary
+// (`group_source = 'model'`), or a person moves it (`'user'`), and a person's
+// choice is never changed by the model. Not the legacy `folders` table, which
+// comes from the dictation app and files every note under "Personal".
+//
+// The groups a new database starts with. Their names show through i18n by
+// `seed_key` (`oats.groups.seed.<key>`); renaming one clears its key, and from
+// then on the name is the person's.
+const CONVERSATION_GROUP_SEEDS = [
+  { seedKey: "work", name: "Work" },
+  { seedKey: "personal", name: "Personal" },
+];
+const CONVERSATION_GROUP_NAME_MAX = 40;
+
+/** A group name as it is stored: runs of whitespace made one space, ends trimmed. */
+function cleanGroupName(name) {
+  return typeof name === "string" ? name.replace(/\s+/gu, " ").trim() : "";
+}
+
+/** What two group names are compared by: the same text, whatever its case. */
+function groupNameKey(name) {
+  return cleanGroupName(name).normalize("NFC").toLowerCase();
+}
+
 class DatabaseManager {
   constructor() {
     this.db = null;
@@ -542,6 +567,14 @@ class DatabaseManager {
         if (!err.message.includes("duplicate column")) throw err;
       }
 
+      // Logged, never thrown: grouping is worth less than a database that
+      // opens, and the transaction leaves the schema as it was.
+      try {
+        this._migrateConversationGroups();
+      } catch (err) {
+        debugLogger.error("Migration: conversation_groups", { error: err.message }, "database");
+      }
+
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS contacts (
           email TEXT PRIMARY KEY,
@@ -818,6 +851,57 @@ class DatabaseManager {
         .run().changes;
     })();
     return { notes };
+  }
+
+  /**
+   * The conversation groups table and each note's group.
+   *
+   * The table is seeded with Work and Personal once: when this creates it.
+   * A database that already has the table keeps the groups it has, so a
+   * seeded group the person deleted stays deleted. Safe to run on every
+   * launch, and one transaction.
+   *
+   * `notes.group_id` is the group, or null. `notes.group_source` says who
+   * chose: 'model' (the writing model, after the summary) or 'user' (a
+   * person). Null means nobody has chosen yet. A note with a source and no
+   * group was looked at and left out: the model answered "none", or a person
+   * chose "No group", or its group was deleted.
+   */
+  _migrateConversationGroups() {
+    const addNoteColumn = (definition) => {
+      try {
+        this.db.exec(`ALTER TABLE notes ADD COLUMN ${definition}`);
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
+    };
+    this.db.transaction(() => {
+      const exists = this.db
+        .prepare(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'conversation_groups'"
+        )
+        .get();
+      if (!exists) {
+        this.db.exec(`
+          CREATE TABLE conversation_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            seed_key TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        const seed = this.db.prepare(
+          "INSERT INTO conversation_groups (name, seed_key, sort_order) VALUES (?, ?, ?)"
+        );
+        CONVERSATION_GROUP_SEEDS.forEach((group, index) =>
+          seed.run(group.name, group.seedKey, index)
+        );
+      }
+      addNoteColumn("group_id INTEGER REFERENCES conversation_groups(id) ON DELETE SET NULL");
+      addNoteColumn("group_source TEXT");
+      this.db.exec("CREATE INDEX IF NOT EXISTS idx_notes_group_id ON notes(group_id)");
+    })();
   }
 
   saveTranscription(
@@ -2070,6 +2154,148 @@ class DatabaseManager {
       }
     })();
     return { removed: ids.length, ids };
+  }
+
+  /** The conversation groups, in the order the person put them. */
+  getConversationGroups() {
+    return this.db
+      .prepare(
+        "SELECT id, name, seed_key, sort_order, created_at FROM conversation_groups ORDER BY sort_order ASC, id ASC"
+      )
+      .all();
+  }
+
+  getConversationGroup(id) {
+    if (!Number.isInteger(id)) return null;
+    return (
+      this.db
+        .prepare(
+          "SELECT id, name, seed_key, sort_order, created_at FROM conversation_groups WHERE id = ?"
+        )
+        .get(id) ?? null
+    );
+  }
+
+  /**
+   * A group name, checked: trimmed, not empty, at most 40 characters, and not
+   * the name of another group, whatever its case. A seeded group answers to
+   * its stored name and to the name it shows in the current language
+   * (`seedNames`, seed key to name), so neither can be taken twice.
+   *
+   * @returns {{ name: string } | { error: "name-required" | "name-too-long" | "name-taken" }}
+   */
+  _checkConversationGroupName(name, { seedNames = {}, exceptId = null } = {}) {
+    const clean = cleanGroupName(name);
+    if (!clean) return { error: "name-required" };
+    if (Array.from(clean).length > CONVERSATION_GROUP_NAME_MAX) return { error: "name-too-long" };
+    const key = groupNameKey(clean);
+    for (const group of this.getConversationGroups()) {
+      if (group.id === exceptId) continue;
+      const shown = group.seed_key ? seedNames?.[group.seed_key] : null;
+      if (groupNameKey(group.name) === key || (shown && groupNameKey(shown) === key)) {
+        return { error: "name-taken" };
+      }
+    }
+    return { name: clean };
+  }
+
+  /**
+   * Add a group after the others.
+   *
+   * @param {string} name
+   * @param {{ seedNames?: Record<string, string> }} [options] How the seeded
+   *   groups are named in the current language.
+   */
+  createConversationGroup(name, { seedNames = {} } = {}) {
+    const checked = this._checkConversationGroupName(name, { seedNames });
+    if (checked.error) return { success: false, error: checked.error };
+    const { next } = this.db
+      .prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM conversation_groups")
+      .get();
+    const result = this.db
+      .prepare("INSERT INTO conversation_groups (name, sort_order) VALUES (?, ?)")
+      .run(checked.name, next);
+    return { success: true, group: this.getConversationGroup(Number(result.lastInsertRowid)) };
+  }
+
+  /**
+   * Rename a group. A seeded group loses its seed key, so its name is the
+   * person's from then on and no longer follows the language. The name it
+   * already shows changes nothing (`changed: false`).
+   */
+  renameConversationGroup(id, name, { seedNames = {} } = {}) {
+    const group = this.getConversationGroup(id);
+    if (!group) return { success: false, error: "not-found" };
+    const shown = group.seed_key ? (seedNames?.[group.seed_key] ?? group.name) : group.name;
+    if (cleanGroupName(name) === shown) return { success: true, group, changed: false };
+    const checked = this._checkConversationGroupName(name, { seedNames, exceptId: id });
+    if (checked.error) return { success: false, error: checked.error };
+    this.db
+      .prepare("UPDATE conversation_groups SET name = ?, seed_key = NULL WHERE id = ?")
+      .run(checked.name, id);
+    return { success: true, group: this.getConversationGroup(id), changed: true };
+  }
+
+  /**
+   * Delete a group. Its conversations are left in no group, and stay there:
+   * who chose stays recorded, so the model does not sort them again, and a
+   * person moves them on.
+   *
+   * @returns {{ success: true, id: number, notes: Array<{ id: number,
+   *   group_id: null, group_source: string | null }> } | { success: false, error: "not-found" }}
+   *   `notes` are the conversations that were in it, as they are now.
+   */
+  deleteConversationGroup(id) {
+    const group = this.getConversationGroup(id);
+    if (!group) return { success: false, error: "not-found" };
+    let members = [];
+    this.db.transaction(() => {
+      members = this.db.prepare("SELECT id, group_source FROM notes WHERE group_id = ?").all(id);
+      this.db.prepare("UPDATE notes SET group_id = NULL WHERE group_id = ?").run(id);
+      this.db.prepare("DELETE FROM conversation_groups WHERE id = ?").run(id);
+    })();
+    const notes = members.map((row) => ({
+      id: row.id,
+      group_id: null,
+      group_source: row.group_source,
+    }));
+    return { success: true, id, notes };
+  }
+
+  /**
+   * Put the groups in this order. Groups not named keep their order, after
+   * the ones named.
+   */
+  reorderConversationGroups(ids) {
+    if (!Array.isArray(ids) || !ids.every(Number.isInteger) || new Set(ids).size !== ids.length) {
+      return { success: false, error: "invalid" };
+    }
+    const current = this.getConversationGroups().map((group) => group.id);
+    if (!ids.every((id) => current.includes(id))) return { success: false, error: "not-found" };
+    const order = [...ids, ...current.filter((id) => !ids.includes(id))];
+    const place = this.db.prepare("UPDATE conversation_groups SET sort_order = ? WHERE id = ?");
+    this.db.transaction(() => order.forEach((id, index) => place.run(index, id)))();
+    return { success: true, groups: this.getConversationGroups() };
+  }
+
+  /**
+   * A person puts a conversation in a group, or in none (`groupId` null).
+   * From then on the model leaves it where it is.
+   *
+   * The note's `updated_at` is not touched, on purpose: the lists are in the
+   * order conversations were last changed, and filing one is not a change to
+   * it.
+   */
+  setConversationGroup(noteId, groupId) {
+    const note = Number.isInteger(noteId) ? this.getNote(noteId) : null;
+    if (!note || note.deleted_at) return { success: false, error: "not-found" };
+    if (groupId !== null && !this.getConversationGroup(groupId)) {
+      return { success: false, error: "not-found" };
+    }
+    this.db
+      .prepare("UPDATE notes SET group_id = ?, group_source = 'user' WHERE id = ?")
+      .run(groupId, noteId);
+    return { success: true, note: this.getNote(noteId) };
   }
 
   createAgentConversation(title = "Untitled", noteId = null) {

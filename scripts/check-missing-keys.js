@@ -42,6 +42,8 @@ const DYNAMIC = {
   "oats.intelligence.match": ["transcript", "note", "summary", "title"],
   // DetailTab — src/components/OatsWorkspace.tsx
   "oats.intelligence.tabs": ["summary", "transcript", "connections"],
+  // A seeded conversation group's seed_key — CONVERSATION_GROUP_SEEDS in src/helpers/database.js
+  "oats.groups.seed": ["work", "personal"],
   // PreflightProblem — src/utils/preflight.ts
   "oats.preflight": [
     "no-microphone",
