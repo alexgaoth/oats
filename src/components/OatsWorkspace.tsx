@@ -2977,6 +2977,12 @@ function ConversationActions({
     };
   }, []);
   const findChosen = useRef(false);
+  // Delete asks in a dialog, opened once the menu has closed (see
+  // ui/dropdown-menu.tsx). When the dialog closes, the focus goes back to the
+  // menu's button. The menu takes a moment to close, so the dialog opens only if
+  // the same conversation is still on screen.
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const shownId = useRef(note.id);
 
   // Whatever is being read is what leaves. The transcript tab copies the
   // transcript with the screen's speaker labels; the other two copy exactly what
@@ -2985,7 +2991,10 @@ function ConversationActions({
   const payload = () =>
     transcript ? transcriptText(note.transcript, t) : readingExport({ note, events, t });
 
-  useEffect(() => setConfirming(false), [note.id]);
+  useEffect(() => {
+    shownId.current = note.id;
+    setConfirming(false);
+  }, [note.id]);
   useEffect(() => setFiled(null), [note.id]);
   useEffect(() => {
     if (!copied) return undefined;
@@ -3055,7 +3064,12 @@ function ConversationActions({
       </Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label={t("oats.intelligence.more")}>
+          <Button
+            ref={moreButton}
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("oats.intelligence.more")}
+          >
             <MoreHorizontal aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
@@ -3089,7 +3103,12 @@ function ConversationActions({
               <DropdownMenuSeparator />
             </>
           )}
-          <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelectAfterClose={() => {
+              if (shownId.current === note.id) setConfirming(true);
+            }}
+          >
             <Trash2 aria-hidden="true" />
             {t("oats.intelligence.delete")}
           </DropdownMenuItem>
@@ -3105,6 +3124,10 @@ function ConversationActions({
         confirmText={t("oats.intelligence.deleteYes")}
         cancelText={t("common.cancel")}
         variant="destructive"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          moreButton.current?.focus();
+        }}
         onConfirm={() => {
           void (async () => {
             await window.electronAPI?.deleteNote?.(note.id);
