@@ -131,6 +131,7 @@ export default function Field({
   live,
   intensity = 1,
   animate = true,
+  sceneHeight,
   className,
 }: {
   live: boolean;
@@ -148,6 +149,13 @@ export default function Field({
    * looking at.
    */
   animate?: boolean;
+  /**
+   * The scene's own height, in CSS px. By default the scene fills the canvas.
+   * Given one, the ground keeps that scale on the canvas's bottom edge and a
+   * taller canvas shows more sky, so a band whose height follows the layout
+   * (the sidebar's foot) never stretches or moves its field.
+   */
+  sceneHeight?: number;
   className?: string;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -179,6 +187,7 @@ export default function Field({
           animate={animate}
           visible={visible}
           scene={scene}
+          sceneHeight={sceneHeight}
           reduced={reduced}
           onFailure={onFailure}
         />
@@ -189,6 +198,7 @@ export default function Field({
           animate={animate}
           visible={visible}
           scene={scene}
+          sceneHeight={sceneHeight}
           reduced={reduced}
         />
       )}

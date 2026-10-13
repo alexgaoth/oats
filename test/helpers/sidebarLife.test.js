@@ -7,24 +7,17 @@ const path = require("node:path");
 // action has depth, and nothing moves at rest. Source-level: these components
 // need a browser.
 
-const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
-const GRAIN = read("src/components/shell/SidebarGrain.tsx");
+const file = (name) => path.join(__dirname, "../..", name);
+const read = (name) => fs.readFileSync(file(name), "utf8");
 const SIDEBAR = read("src/components/shell/AppSidebar.tsx");
 const CSS = read("src/index.css");
 
-const code = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-
-test("the sidebar's grain texture is static", () => {
-  assert.doesNotMatch(
-    code(GRAIN),
-    /requestAnimationFrame|setInterval|setTimeout|<animate|animate-|animation|transition/
-  );
-  assert.match(GRAIN, /<pattern /, "drawn once as a pattern");
-  assert.match(GRAIN, /pointer-events-none/, "never in the way of a click");
-});
-
-test("both sidebars, the app's and Settings', carry the grain", () => {
-  assert.equal(SIDEBAR.split("<SidebarGrain />").length - 1, 2);
+// The scattered oat grains behind both sidebars were taken out (Alex,
+// 2026-10-12): the field at the foot is the sidebar's one piece of the oat
+// world, and the grains showed through its sky.
+test("the sidebar has no texture of scattered grains", () => {
+  assert.equal(fs.existsSync(file("src/components/shell/SidebarGrain.tsx")), false);
+  assert.doesNotMatch(SIDEBAR, /SidebarGrain|<pattern|-z-10/);
 });
 
 test("the page you are on is a honey pill, and only that item", () => {

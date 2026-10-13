@@ -10,6 +10,7 @@ import {
   createField,
   mixRgb,
   parseHexColor,
+  sceneFrame,
   type Field,
   type FieldScene,
   type Rgb,
@@ -23,6 +24,7 @@ import {
   frameDelay,
   frameDue,
 } from "./fieldLoop";
+import { backingSize, observeDevicePixels, watchPixelRatio } from "./canvasSize";
 import {
   BACKDROP_FRAGMENT,
   BACKDROP_VERTEX,
@@ -187,7 +189,7 @@ function instanceData(field: Field): Float32Array {
   return data;
 }
 
-/** Motes of chaff: x, y (from the top), size, phase. Deterministic like the field. */
+/** Motes of chaff: x, y (up from the bottom), size, phase. Deterministic like the field. */
 function chaffData(): Float32Array {
   let seed = 981173;
   const random = () => {
@@ -211,6 +213,7 @@ export default function FieldGL({
   animate,
   visible,
   scene,
+  sceneHeight,
   reduced,
   onFailure,
 }: {
@@ -232,6 +235,9 @@ export default function FieldGL({
   visible: boolean;
   /** Which scenery accompanies recording (DESIGN.md §9.9). */
   scene: FieldScene;
+  /** The scene's own height in CSS px, standing on the canvas's bottom edge;
+   *  by default the canvas's height (`sceneFrame` in fieldModel.ts). */
+  sceneHeight?: number;
   reduced: boolean;
   onFailure: () => void;
 }) {
@@ -251,6 +257,8 @@ export default function FieldGL({
   animateRef.current = animate;
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
+  const sceneHeightRef = useRef(sceneHeight);
+  sceneHeightRef.current = sceneHeight;
 
   // Set by the GL effect below. Anything that changes what a settled frame
   // should look like calls it: the loop is not running to notice for itself.
@@ -261,7 +269,7 @@ export default function FieldGL({
   // also means a change to either draws nothing until the loop is woken.
   useEffect(() => {
     wakeRef.current?.();
-  }, [animate, intensity, live, visible]);
+  }, [animate, intensity, live, visible, sceneHeight]);
 
   useEffect(() => {
     if (reduced) return;
@@ -332,9 +340,11 @@ export default function FieldGL({
         skyStrength: u(backdrop, "uSkyStrength"),
         time: u(backdrop, "uTime"),
         scene: u(backdrop, "uScene"),
+        sceneH: u(backdrop, "uSceneH"),
       };
       const bladeU = {
         resolution: u(blades, "uResolution"),
+        sceneH: u(blades, "uSceneH"),
         time: u(blades, "uTime"),
         intro: u(blades, "uIntro"),
         pointer: u(blades, "uPointer"),
@@ -351,6 +361,7 @@ export default function FieldGL({
       };
       const chaffU = {
         resolution: u(chaff, "uResolution"),
+        sceneH: u(chaff, "uSceneH"),
         time: u(chaff, "uTime"),
         grow: u(chaff, "uGrow"),
         color: u(chaff, "uColor"),
@@ -417,18 +428,26 @@ export default function FieldGL({
       });
       cleanupFns.push(() => themeObserver.disconnect());
 
-      // The canvas's CSS size, kept by the observer rather than read every
+      // The canvas's size, kept by the observer rather than read every
       // frame: a layout read inside a frame forces layout whenever anything else
       // on the page changed first. Read here once so the first frame can draw.
+      // CSS px for the scene, and the device pixels the canvas covers for the
+      // backing store (0 until the observer has measured them).
       let width = canvas.clientWidth;
       let height = canvas.clientHeight;
+      let deviceWidth = 0;
+      let deviceHeight = 0;
       // Applied in the frame that draws, not in the observer: resizing the
       // backing store clears it, and a cleared canvas left for a frame flickers.
       const applySize = () => {
         if (!width || !height) return false;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const pixelW = Math.round(width * dpr);
-        const pixelH = Math.round(height * dpr);
+        const { w: pixelW, h: pixelH } = backingSize(
+          width,
+          height,
+          deviceWidth,
+          deviceHeight,
+          window.devicePixelRatio || 1
+        );
         if (canvas.width !== pixelW || canvas.height !== pixelH) {
           canvas.width = pixelW;
           canvas.height = pixelH;
@@ -436,14 +455,20 @@ export default function FieldGL({
         }
         return true;
       };
-      const resizeObserver = new ResizeObserver(() => {
-        // Layout is fresh inside an observer callback, so this read is free.
-        width = canvas.clientWidth;
-        height = canvas.clientHeight;
+      const resizeObserver = new ResizeObserver((entries) => {
+        // Layout is fresh inside an observer callback, so these reads are free.
+        const entry = entries[entries.length - 1];
+        const css = entry?.contentBoxSize?.[0];
+        const device = entry?.devicePixelContentBoxSize?.[0];
+        width = css ? css.inlineSize : canvas.clientWidth;
+        height = css ? css.blockSize : canvas.clientHeight;
+        deviceWidth = device ? device.inlineSize : 0;
+        deviceHeight = device ? device.blockSize : 0;
         wakeRef.current?.();
       });
-      resizeObserver.observe(canvas);
+      observeDevicePixels(resizeObserver, canvas);
       cleanupFns.push(() => resizeObserver.disconnect());
+      cleanupFns.push(watchPixelRatio(() => wakeRef.current?.()));
 
       const vertexCount = (BLADE_SEGMENTS + 1) * 2;
       let density = 1;
@@ -502,6 +527,7 @@ export default function FieldGL({
         lastElapsed = elapsedMs;
 
         gl.clear(gl.COLOR_BUFFER_BIT);
+        const sceneH = sceneFrame(height, sceneHeightRef.current).scale;
 
         // 1. Backdrop — the world.
         gl.useProgram(backdrop);
@@ -514,6 +540,7 @@ export default function FieldGL({
         gl.uniform1f(backdropU.skyStrength, intensityRef.current);
         gl.uniform1f(backdropU.time, time);
         gl.uniform1i(backdropU.scene, sceneId);
+        gl.uniform1f(backdropU.sceneH, sceneH);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
         // 2. Blades — far to near, so nearer ones draw over the ones behind.
@@ -522,6 +549,7 @@ export default function FieldGL({
           gl.useProgram(blades);
           gl.bindVertexArray(bladeVao);
           gl.uniform2f(bladeU.resolution, width, height);
+          gl.uniform1f(bladeU.sceneH, sceneH);
           gl.uniform1f(bladeU.time, time);
           gl.uniform1f(bladeU.intro, grow);
           // Ease toward presence rather than switching. As a flag the parting
@@ -571,6 +599,7 @@ export default function FieldGL({
           gl.useProgram(chaff);
           gl.bindVertexArray(chaffVao);
           gl.uniform2f(chaffU.resolution, width, height);
+          gl.uniform1f(chaffU.sceneH, sceneH);
           gl.uniform1f(chaffU.time, time);
           gl.uniform1f(chaffU.grow, grow);
           gl.uniform3f(chaffU.color, palette.gold[0], palette.gold[1], palette.gold[2]);
