@@ -66,3 +66,9 @@ test("the panel lists the questions on the selected topic's row", () => {
   );
   assert.doesNotMatch(VIEW, /selectedTopic\.utteranceIds\.includes/);
 });
+
+test("the panel gives the selected topic's time in minutes, as its row does", () => {
+  // It said "174s" beside a row that said "3 min".
+  assert.match(VIEW, /formatSpan\(selectedTopic\.durationMs, \{ locale: i18n\.language \}\)/);
+  assert.doesNotMatch(VIEW, /topicGraph\.seconds/);
+});

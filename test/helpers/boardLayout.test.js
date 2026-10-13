@@ -192,3 +192,36 @@ test("the arrow keys move a card a cell, and with shift resize it, pushing other
   );
   assert.equal(nudge(board, "nothing", 1, 1, 40), board);
 });
+
+test("the cards keep two cells of dotted board on every side, the same at both ends", () => {
+  const { boardRoom, GRID, MARGIN } = layout;
+  assert.equal(MARGIN, 2);
+  for (let width = 400; width <= 2600; width += 7) {
+    for (const height of [500, 641, 731, 900, 1300]) {
+      const room = boardRoom(width, height);
+      const left = room.inset;
+      const right = width - room.inset - room.cols * GRID;
+      assert.ok(left >= 2 * GRID && right >= 2 * GRID, `margins ${left}, ${right} at ${width}`);
+      assert.ok(Math.abs(left - right) <= 1, `centred at ${width}: ${left} against ${right}`);
+      assert.ok(left + right < 5 * GRID, `no whole cell left over across at ${width}`);
+      const spare = height - room.rows * GRID;
+      assert.ok(spare >= 4 * GRID && spare < 5 * GRID, `two cells above and below at ${height}`);
+    }
+  }
+});
+
+test("the dots fill whole cells around the cards, so none is cut and none touches a card", () => {
+  const { boardRoom, dotField, GRID } = layout;
+  for (let width = 400; width <= 2600; width += 7) {
+    const room = boardRoom(width, 900);
+    const field = dotField(room);
+    assert.ok(field.left >= 0 && field.left + field.width <= width, `on the board at ${width}`);
+    assert.equal(field.width % GRID, 0, "whole cells only, so no dot is cut at either end");
+    // The field's cells are the cards' cells: with the dot in the middle of a
+    // cell and a card covering whole cells, every dot is half a cell from the
+    // nearest card edge.
+    assert.equal((room.inset - field.left) % GRID, 0, `cells line up at ${width}`);
+    assert.equal(room.inset - field.left, 2 * GRID, "two columns of dots left of the cards");
+    assert.equal(field.left + field.width - room.inset - room.cols * GRID, 2 * GRID, "and right");
+  }
+});
