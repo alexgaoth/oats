@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Bedeutung der Markierungen",
         "open": "Offen",
-        "topic": "Themenwechsel",
-        "return": "Zurück zu einem früheren Thema",
-        "marked": "Markierter Moment"
+        "topic": "Neues Thema",
+        "marked": "Markiert"
       },
       "contourSummary": "{{minutes}} Minuten, {{questions}} Fragen ({{unresolved}} unbeantwortet), das Thema wechselte {{shifts}}-mal, und {{returns}} Stränge wurden wieder aufgegriffen.",
       "contourEmpty": "Noch nichts aufgezeichnet.",
