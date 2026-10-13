@@ -1,0 +1,459 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "sso-fix-checkin",
+    "sample": true,
+    "description": "Sample conversation: an SSO check-in at Pellwood. Invented people.",
+    "company": "Pellwood (fictional)",
+    "participants": [
+      { "name": "Theo", "role": "Engineering lead" },
+      { "name": "Ines", "role": "Backend engineer" },
+      { "name": "Ruth", "role": "Security lead" }
+    ],
+    "startedAt": 1791765000000,
+    "endedAt": 1791765133193,
+    "summarizedAt": 1791765174193,
+    "placement": { "daysAgo": 1, "at": "17:30", "weekdays": true },
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "SSO fix: clock skew and the security review",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv4ik7dk-1",
+        "text": "Quick one on SSO. Ines found the SAML failure.",
+        "source": "mic",
+        "timestamp": 1791765003823,
+        "startMs": 3823,
+        "endMs": 8959,
+        "speaker": "speaker_1",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-2",
+        "text": "The SSO failure is clock skew. Their SAML assertions arrive a few seconds early.",
+        "source": "mic",
+        "timestamp": 1791765010357,
+        "startMs": 10357,
+        "endMs": 17035,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-3",
+        "text": "Our SAML library rejects anything stamped in the future, so the SSO login fails.",
+        "source": "mic",
+        "timestamp": 1791765017863,
+        "startMs": 17863,
+        "endMs": 24170,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-4",
+        "text": "The SAML fix is a clock tolerance setting. Twelve lines.",
+        "source": "mic",
+        "timestamp": 1791765025174,
+        "startMs": 25174,
+        "endMs": 30591,
+        "speaker": "speaker_1",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-5",
+        "text": "One test tenant drifted forty seconds, but that was their misconfigured clock, not the SAML library.",
+        "source": "mic",
+        "timestamp": 1791765032223,
+        "startMs": 32223,
+        "endMs": 39372,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-6",
+        "text": "How much tolerance are you thinking?",
+        "source": "mic",
+        "timestamp": 1791765040575,
+        "startMs": 40575,
+        "endMs": 43977,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-7",
+        "text": "Two minutes, like the SAML library default.",
+        "source": "mic",
+        "timestamp": 1791765044994,
+        "startMs": 44994,
+        "endMs": 48988,
+        "speaker": "speaker_1",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-8",
+        "text": "Two minutes opens a replay window on SSO logins. I want it logged and alerted.",
+        "source": "mic",
+        "timestamp": 1791765049930,
+        "startMs": 49930,
+        "endMs": 58014,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-9",
+        "text": "And the SSO fix needs a full security review before it ships.",
+        "source": "mic",
+        "timestamp": 1791765059047,
+        "startMs": 59047,
+        "endMs": 65543,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-10",
+        "text": "Can the security review start before the fix merges?",
+        "source": "mic",
+        "timestamp": 1791765067146,
+        "startMs": 67146,
+        "endMs": 72263,
+        "speaker": "speaker_1",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-11",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791765073832,
+        "startMs": 73832,
+        "endMs": 74596,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-12",
+        "text": "Separately, the SOC 2 audit window closes on the 31st.",
+        "source": "mic",
+        "timestamp": 1791765075626,
+        "startMs": 75626,
+        "endMs": 81113,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-13",
+        "text": "SSO is in the SOC 2 audit scope, so the auditors will want the SSO login events.",
+        "source": "mic",
+        "timestamp": 1791765081830,
+        "startMs": 81830,
+        "endMs": 91096,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-14",
+        "text": "The SSO login events already go to the activity log.",
+        "source": "mic",
+        "timestamp": 1791765091834,
+        "startMs": 91834,
+        "endMs": 97482,
+        "speaker": "speaker_1",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-15",
+        "text": "Good. Then the SOC 2 audit evidence is mostly there.",
+        "source": "mic",
+        "timestamp": 1791765098644,
+        "startMs": 98644,
+        "endMs": 104285,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-16",
+        "text": "Do we know when the auditors start fieldwork?",
+        "source": "mic",
+        "timestamp": 1791765105409,
+        "startMs": 105409,
+        "endMs": 109505,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-17",
+        "text": "Not yet. Still waiting on Kestrel.",
+        "source": "mic",
+        "timestamp": 1791765110880,
+        "startMs": 110880,
+        "endMs": 114334,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-18",
+        "text": "Kestrel hasn't confirmed the SOC 2 audit dates.",
+        "source": "mic",
+        "timestamp": 1791765115386,
+        "startMs": 115386,
+        "endMs": 119882,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-19",
+        "text": "Then the SSO fix lands Thursday, and the security review starts Friday.",
+        "source": "mic",
+        "timestamp": 1791765121218,
+        "startMs": 121218,
+        "endMs": 127920,
+        "speaker": "speaker_1",
+        "speakerName": "Theo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4ik7dk-20",
+        "text": "Works for me.",
+        "source": "mic",
+        "timestamp": 1791765128796,
+        "startMs": 128796,
+        "endMs": 130593,
+        "speaker": "speaker_3",
+        "speakerName": "Ruth",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Theo, Ines and Ruth went through the SSO failure and what the fix needs before the launch.\n\n## Threads\n- **SSO failure.** SAML assertions from one identity provider arrive a few seconds early and are rejected as future-dated. The fix is a clock tolerance setting; two minutes is the proposal.\n- **Security review.** Ruth wants the tolerance logged and alerted, and a full security review before the fix ships. Whether the review can start before the merge was left open.\n- **SOC 2 scope.** SSO is in audit scope, and SSO login events already go to the activity log. Kestrel has not confirmed fieldwork dates.\n\n## Decisions Made\n- Two-minute clock tolerance, logged and alerted.\n\n## Action Items\n- [ ] Theo: land the SSO fix by Thursday.\n- [ ] Ruth: start the security review on Friday.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "5685-[{\"id\":\"seg-mv4ik7dk-1\",\"text\":\"Quick one on SSO. ",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "sso saml",
+          "words": ["saml", "sso", "fix", "clock", "library", "review", "security", "failure"],
+          "durationMs": 117395,
+          "utteranceIds": [
+            "seg-mv4ik7dk-1",
+            "seg-mv4ik7dk-2",
+            "seg-mv4ik7dk-3",
+            "seg-mv4ik7dk-4",
+            "seg-mv4ik7dk-5",
+            "seg-mv4ik7dk-7",
+            "seg-mv4ik7dk-8",
+            "seg-mv4ik7dk-9",
+            "seg-mv4ik7dk-10",
+            "seg-mv4ik7dk-19"
+          ],
+          "firstAt": 1791765003823,
+          "lastAt": 1791765121218,
+          "returns": 1,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "soc audit",
+          "words": ["audit", "soc", "auditor", "event", "login", "sso", "31st", "activity"],
+          "durationMs": 39760,
+          "utteranceIds": [
+            "seg-mv4ik7dk-12",
+            "seg-mv4ik7dk-13",
+            "seg-mv4ik7dk-14",
+            "seg-mv4ik7dk-15",
+            "seg-mv4ik7dk-16",
+            "seg-mv4ik7dk-18"
+          ],
+          "firstAt": 1791765075626,
+          "lastAt": 1791765115386,
+          "returns": 0,
+          "state": "resolved"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791765000000,
+          "b": "hIWHi6mtr6urjqKtqqipqaqPlqmvrqqYl6qvrbCrqYWgrq6qrKuroZusqqqKp6qprpCnqaapp6utr5Gnrqyrpqylhaarr6+uoIukmqurq6mpmKitraqnrK6nppSspZmksaeaq6+sqaucn6yrq6WIq6+soKWvqKuqipOmq7CtnJiNqKiEhoc="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv4ik7dk-6"],
+      "text": "How much tolerance are you thinking?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "thinking tolerance",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791765044840
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv4ik7dk-7"],
+      "text": "Two minutes, like the SAML library default.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791765049878
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv4ik7dk-10"],
+      "text": "Can the security review start before the fix merges?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "before fix merge review security start",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791765073203
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv4ik7dk-11"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791765075340
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv4ik7dk-10"],
+      "text": "Can the security review start before the fix merges?",
+      "metadata": {
+        "query": "Can the security review start before the fix merges?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791765075340
+    },
+    {
+      "id": 6,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv4ik7dk-16"],
+      "text": "Do we know when the auditors start fieldwork?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "auditor fieldwork start",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791765110399
+    },
+    {
+      "id": 7,
+      "kind": "response",
+      "parentEventId": 6,
+      "segmentIds": ["seg-mv4ik7dk-17"],
+      "text": "Not yet. Still waiting on Kestrel.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791765115199
+    }
+  ],
+  "replay": {
+    "voices": { "Theo": { "gain": 1 }, "Ines": { "gain": 0.92 }, "Ruth": { "gain": 0.9 } },
+    "loud": {},
+    "stopAtMs": 133193
+  }
+}
