@@ -2102,7 +2102,7 @@
         },
         "questions": {
           "name": "Open questions",
-          "empty": "No open questions here. Every question has an answer or a verdict.",
+          "empty": "No open questions here. Every question has an answer.",
           "where": "{{title}}, {{date}}"
         },
         "activity": {

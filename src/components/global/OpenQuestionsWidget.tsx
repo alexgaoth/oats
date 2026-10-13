@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "react-i18next";
 import { ledgerDate } from "../../helpers/ledgerDate.mjs";
 import { cn } from "../lib/utils";
+import { StateMark } from "../conversation/ConversationSignalRail";
 import { shortTitle } from "./boardData";
 import type { BoardConversation } from "./boardData";
 import { useGlobalHighlight } from "./highlightStore";
@@ -11,10 +12,11 @@ import { openQuestionRows } from "./openQuestions";
 import type { OpenQuestionRow } from "./openQuestions";
 import { WidgetEmpty } from "./widgets";
 
-// Open questions: every question in this tab's conversations that has no
-// verdict, newest first. Each row is a place, not just a sentence: a click
-// opens its conversation at the turn it was asked in, and pointing at a row
-// lights its conversation everywhere on the board.
+// Open questions: every question in this tab's conversations that was left
+// open, newest first: no verdict, or nobody knew, as Home counts them. Each
+// row is a place, not just a sentence: a click opens its conversation at the
+// turn it was asked in, and pointing at a row lights its conversation
+// everywhere on the board.
 
 // A conversation's events, once read, by id. Kept for the session: a finished
 // conversation's questions change only when its count does.
@@ -66,19 +68,22 @@ function useOpenQuestionEvents(conversations: BoardConversation[]): Map<number, 
 }
 
 /**
- * One question. Its own subscription decides whether its ring is honey, so
- * pointing at something re-renders only the rows whose ring changes, not the
- * whole list: a hundred rows re-rendered on every move of the pointer cost
- * more than every chart on the board redrawn.
+ * One question. Its own subscription decides whether its mark is ringed in
+ * honey, so pointing at something re-renders only the rows whose mark changes,
+ * not the whole list: a hundred rows re-rendered on every move of the pointer
+ * cost more than every chart on the board redrawn.
  */
 const QuestionRow = memo(function QuestionRow({
   row,
   where,
+  unknownLabel,
   highlight,
   onOpenAt,
 }: {
   row: OpenQuestionRow;
   where: string | null;
+  /** The name of the mark for a question nobody knew, said before it. */
+  unknownLabel: string;
   highlight: HighlightSource;
   onOpenAt: (noteId: number, segmentId: string | null) => void;
 }) {
@@ -109,17 +114,19 @@ const QuestionRow = memo(function QuestionRow({
           "hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
         )}
       >
-        {/* The mark a question with no verdict has everywhere: an empty ring.
-            Honey while its conversation is pointed at. */}
+        {/* The question's mark, the one every surface draws (`StateMark`): an
+            empty ring with no verdict, the filled warning mark when nobody
+            knew. Ringed in honey while its conversation is pointed at, as a
+            chart rings a dot. */}
         <span
           aria-hidden="true"
-          className={cn(
-            "mt-[5px] size-2.5 shrink-0 rounded-full border-[1.5px]",
-            honey ? "border-primary bg-primary" : "border-muted-foreground"
-          )}
-        />
+          className={cn("mt-[6px] flex shrink-0 rounded-full", honey && "ring-2 ring-primary")}
+        >
+          <StateMark state={row.state} className="" />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="line-clamp-2 text-pretty text-sm leading-snug text-foreground">
+            {row.state === "denied" && <span className="sr-only">{`${unknownLabel}: `}</span>}
             {row.question}
           </span>
           {where && (
@@ -176,6 +183,7 @@ export default function OpenQuestionsWidget({
           key={row.key}
           row={row}
           where={where.get(row.key) ?? null}
+          unknownLabel={t("questionCard.state.denied")}
           highlight={highlight}
           onOpenAt={onOpenAt}
         />

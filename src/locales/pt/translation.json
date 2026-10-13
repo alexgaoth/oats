@@ -2102,7 +2102,7 @@
         },
         "questions": {
           "name": "Perguntas em aberto",
-          "empty": "Não há perguntas em aberto aqui. Cada pergunta tem uma resposta ou um veredicto.",
+          "empty": "Não há perguntas em aberto aqui. Cada pergunta tem uma resposta.",
           "where": "{{title}}, {{date}}"
         },
         "activity": {

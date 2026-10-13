@@ -273,8 +273,9 @@ the conversation. Every chart draws through one module
   card's remove button shows on hover or focus. Add, at the top right, puts any
   widget that is not on the board yet where it first fits and takes the focus
   to it: the force graph, the arc timeline, the subjects that come back, the
-  open questions (every question with no verdict, newest first; a click opens
-  its conversation at that turn) and the activity of the last twelve weeks (a
+  open questions (every question Home counts as open: no verdict, or nobody
+  knew, each with its mark; newest first; a click opens its conversation at
+  that turn) and the activity of the last twelve weeks (a
   cell a day, dithered by how many conversations it held, today ringed in
   honey). A focused card moves a cell with the arrow keys and resizes with
   shift. Each tab keeps its arrangement; Reset layout, in the board's menu, puts

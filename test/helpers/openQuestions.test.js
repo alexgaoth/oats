@@ -2,9 +2,13 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 let questions;
+let review;
+let marks;
 
 test.before(async () => {
   questions = await import("../../src/components/global/openQuestions.ts");
+  review = await import("../../src/helpers/conversationReview.mjs");
+  marks = await import("../../src/components/conversation/questionMarks.ts");
 });
 
 let nextId = 1;
@@ -27,7 +31,7 @@ const response = (parent, reason, createdAt) => ({
   createdAt,
 });
 
-test("only questions with no verdict, newest first, each with the turn it was asked in", () => {
+test("every question Home counts as open, newest first, each with its mark and turn", () => {
   const { openQuestionRows } = questions;
   const open = question("Who owns the rollout?", 1000, "s-1");
   const answered = question("Is Tuesday the date?", 2000, "s-2");
@@ -55,17 +59,37 @@ test("only questions with no verdict, newest first, each with the turn it was as
   const rows = openQuestionRows(events);
   assert.deepEqual(
     rows.map((row) => row.question),
-    ["Are we doing the webinar?", "Can we ship on Friday?", "Who owns the rollout?"],
-    "asked and never answered, or met with silence; not answered, not 'did not know', not hedged"
+    [
+      "Are we doing the webinar?",
+      "What does the audit need?",
+      "Can we ship on Friday?",
+      "Who owns the rollout?",
+    ],
+    "asked and never answered, met with silence, or nobody knew; not answered, not hedged"
   );
   assert.deepEqual(
     rows.map((row) => [row.noteId, row.segmentId]),
     [
       [12, "s-9"],
+      [11, "s-4"],
       [11, "s-3"],
       [11, "s-1"],
     ]
   );
+  // The marks every surface draws: an empty ring with no verdict, the filled
+  // warning mark when nobody knew.
+  assert.deepEqual(
+    rows.map((row) => marks.markKind(row.state)),
+    ["open", "unknown", "open", "open"]
+  );
+  // The count Home shows ("N open", `notes.open_questions`) is the same count.
+  for (const [noteId, list] of events) {
+    assert.equal(
+      rows.filter((row) => row.noteId === noteId).length,
+      review.openQuestionCount(list),
+      `conversation ${noteId}`
+    );
+  }
 });
 
 test("no conversations, or none with questions, make no rows", () => {

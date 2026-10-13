@@ -2102,7 +2102,7 @@
         },
         "questions": {
           "name": "Domande aperte",
-          "empty": "Nessuna domanda aperta qui. Ogni domanda ha una risposta o un esito.",
+          "empty": "Nessuna domanda aperta qui. Ogni domanda ha una risposta.",
           "where": "{{title}}, {{date}}"
         },
         "activity": {

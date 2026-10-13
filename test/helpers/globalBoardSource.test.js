@@ -32,6 +32,14 @@ test("the board's dots are 2 px squares in the middle of each cell, crisp on dev
   assert.match(board, /top: MARGIN \* GRID/, "the cards start two cells down");
 });
 
+test("an open question is drawn with the one question mark, ringed in honey when lit", () => {
+  const widget = read("src/components/global/OpenQuestionsWidget.tsx");
+  assert.match(widget, /import \{ StateMark \} from "\.\.\/conversation\/ConversationSignalRail";/);
+  assert.match(widget, /<StateMark state=\{row\.state\} className="" \/>/);
+  assert.match(widget, /honey && "ring-2 ring-primary"/, "lit as a chart lights a dot: a honey ring");
+  assert.match(widget, /t\("questionCard\.state\.denied"\)/, "nobody knew is said, not only drawn");
+});
+
 test("a conversation opened from the board comes back to the board", () => {
   const workspace = read("src/components/OatsWorkspace.tsx");
   // The reading view opens from either view, so Escape returns to the one it
