@@ -86,5 +86,10 @@ test("the tabs are the conversation groups, read from the one group store", () =
 test("labels sit on plates in the surface colour, never cut at the canvas edge", () => {
   const graph = read("src/components/notes/ForceGraph.tsx");
   assert.match(graph, /const x = Math\.min\(width - half, Math\.max\(half, node\.x\)\);/);
-  assert.match(graph, /ctx\.fillStyle = surface;\s*ctx\.beginPath\(\);\s*ctx\.roundRect\(/);
+  // Drawn by the chart style's plate, in the colour of what the canvas sits on.
+  assert.match(
+    graph,
+    /const plated = surface === palette\.card \? palette : \{ \.\.\.palette, card: surface \};/
+  );
+  assert.match(graph, /drawPlateText\(ctx, label\.text, label\.x, label\.y, plated,/);
 });
