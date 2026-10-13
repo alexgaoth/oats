@@ -22,10 +22,13 @@
 // **Blips merge into their neighbours.** The tracker can place a turn or two on
 // another topic and come straight back. Drawn, that is a spike in the line that
 // says nothing, so a run shorter than `MIN_RUN_MS` gives its time to the run
-// before it. Two exceptions keep the picture honest: a topic's longest run is
-// never a blip (its row would otherwise have no line through it), and the run
-// the room is on now is never a blip while recording (it is short because it
-// has only just started).
+// before it. Three exceptions keep the picture honest: a topic's longest run is
+// never a blip (its row would otherwise have no line through it); the run the
+// room is on now is never a blip while recording (it is short because it has
+// only just started); and a return the tracker counted is never a blip. A
+// two-minute conversation returns in a few seconds, and the line must show
+// every return the tracker saw: for a topic it came back to `returns` times,
+// that many of its returning runs (the longest) are kept.
 
 import { isKeptTopic } from "./liveThreadMap.mjs";
 
@@ -144,6 +147,23 @@ export function topicLanes({
       longest.set(stretch.topic, stretch);
     }
   }
+  // The returns the tracker counted: for each topic, that many of the stretches
+  // that come back to it, the longest first.
+  const counted = new Map(nodes.map((node) => [node.id, Math.max(0, node.returns ?? 0)]));
+  const comebacks = new Map();
+  const reached = new Set();
+  for (const stretch of stretches) {
+    if (reached.has(stretch.topic)) {
+      comebacks.set(stretch.topic, [...(comebacks.get(stretch.topic) ?? []), stretch]);
+    }
+    reached.add(stretch.topic);
+  }
+  const counts = new Set();
+  for (const [topic, list] of comebacks) {
+    const byLength = [...list].sort((a, b) => b.endAt - b.startAt - (a.endAt - a.startAt));
+    for (const stretch of byLength.slice(0, counted.get(topic) ?? 0)) counts.add(stretch);
+  }
+
   const merged = [];
   let carried = null;
   for (const [index, stretch] of stretches.entries()) {
@@ -157,6 +177,7 @@ export function topicLanes({
     const blip =
       run.endAt - run.startAt < minRunMs &&
       longest.get(stretch.topic) !== stretch &&
+      !counts.has(stretch) &&
       !(live && index === stretches.length - 1);
     if (blip) {
       if (previous) previous.endAt = run.endAt;

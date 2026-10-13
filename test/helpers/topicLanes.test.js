@@ -328,6 +328,64 @@ test("a blip gives its time to the run before it, so no false return is drawn", 
   assert.equal(lanes.runs[1].to, 1);
 });
 
+test("a short return the tracker counted is kept, however short", () => {
+  const { snapshot, segments } = conversation(
+    [
+      [1, 0],
+      [1, 60],
+      [2, 120],
+      [2, 180],
+      [1, 240], // ten seconds back on pricing, which the tracker counted
+      [2, 250],
+      [2, 300],
+    ],
+    [node(1, "pricing", { returns: 1 }), node(2, "hiring")]
+  );
+  const lanes = topicLanes({ snapshot, segments });
+  assert.ok(10 * S < MIN_RUN_MS);
+  assert.deepEqual(
+    lanes.runs.map((run) => run.topic),
+    [1, 2, 1, 2]
+  );
+  assert.deepEqual(
+    lanes.returns.map((item) => item.topic),
+    [1, 2]
+  );
+});
+
+test("of several short returns, only as many as the tracker counted are kept, the longest", () => {
+  const { snapshot, segments } = conversation(
+    [
+      [1, 0],
+      [1, 60],
+      [2, 120],
+      [1, 150], // five seconds back on pricing
+      [2, 155],
+      [1, 200], // twelve seconds back on pricing: the one the tracker counted
+      [2, 212],
+      [2, 260],
+    ],
+    [node(1, "pricing", { returns: 1 }), node(2, "hiring")]
+  );
+  const lanes = topicLanes({ snapshot, segments });
+  const back = lanes.runs.filter((run, index) => run.topic === 1 && index > 0);
+  assert.equal(back.length, 1);
+  assert.ok(Math.abs(back[0].from - 200 / 264) < 1e-9);
+});
+
+test("every demo conversation's lanes show the returns its tracker counted", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const dir = path.join(__dirname, "../../demo/fixtures");
+  const fixtures = [example, ...fs.readdirSync(dir).map((file) => require(path.join(dir, file)))];
+  for (const fixture of fixtures) {
+    const snapshot = fixture.note.conversation_topics;
+    const counted = snapshot.nodes.reduce((sum, item) => sum + (item.returns ?? 0), 0);
+    const lanes = topicLanes({ snapshot, segments: fixture.note.transcript });
+    assert.equal(lanes.returns.length, counted, fixture.note.title);
+  }
+});
+
 test("a short run that is all its topic has is kept, so its row has a line", () => {
   const { snapshot, segments } = conversation(
     [
