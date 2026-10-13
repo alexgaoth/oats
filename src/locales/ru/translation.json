@@ -2329,6 +2329,7 @@
       "movedTo": "Перемещено в «{{group}}»",
       "movedOut": "Без группы",
       "moveFailed": "Не перемещено",
+      "sorting": "Сортировка: {{current}} из {{total}}",
       "errors": {
         "nameRequired": "Назовите группу.",
         "nameTooLong": "Не больше {{max}} символов.",

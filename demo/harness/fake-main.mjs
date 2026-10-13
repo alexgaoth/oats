@@ -298,6 +298,30 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
       broadcast("onNoteUpdated", placed);
       return { success: true, note: placed };
     },
+    // The writing model's choice: never over a person's.
+    setConversationGroupFromModel: async (noteId, groupId) => {
+      if (!Number.isInteger(noteId) || (groupId !== null && !Number.isInteger(groupId))) {
+        return { success: false, error: "invalid" };
+      }
+      const note = findNote(noteId);
+      if (!note) return { success: false, error: "not-found" };
+      if (note.group_source === "user") return { success: false, error: "chosen" };
+      if (groupId !== null && !findGroup(groupId)) return { success: false, error: "not-found" };
+      const placed = db.placeNote(note.id, groupId, "model");
+      broadcast("onNoteUpdated", placed);
+      return { success: true, note: placed };
+    },
+    listUnsortedConversations: async () =>
+      notes
+        .filter(
+          (note) =>
+            !note.deleted_at &&
+            note.note_type === "meeting" &&
+            note.group_source == null &&
+            String(note.enhanced_content ?? "").trim()
+        )
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id)
+        .map((note) => note.id),
   };
 
   const explicit = {

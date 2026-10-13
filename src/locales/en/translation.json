@@ -2291,6 +2291,7 @@
       "movedTo": "Moved to {{group}}",
       "movedOut": "Not in a group",
       "moveFailed": "Not moved",
+      "sorting": "Sorting {{current}} of {{total}}",
       "errors": {
         "nameRequired": "Give the group a name.",
         "nameTooLong": "Use {{max}} characters or fewer.",

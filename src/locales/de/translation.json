@@ -2291,6 +2291,7 @@
       "movedTo": "Verschoben nach {{group}}",
       "movedOut": "In keiner Gruppe",
       "moveFailed": "Nicht verschoben",
+      "sorting": "Sortiere {{current}} von {{total}}",
       "errors": {
         "nameRequired": "Gib der Gruppe einen Namen.",
         "nameTooLong": "Höchstens {{max}} Zeichen.",
