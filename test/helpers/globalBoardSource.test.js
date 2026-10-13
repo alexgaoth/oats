@@ -93,3 +93,14 @@ test("labels sit on plates in the surface colour, never cut at the canvas edge",
   );
   assert.match(graph, /drawPlateText\(ctx, label\.text, label\.x, label\.y, plated,/);
 });
+
+test("a label forced on top covers the labels it lands on whole, never leaving a fragment", () => {
+  const graph = read("src/components/notes/ForceGraph.tsx");
+  const named = graph.slice(graph.indexOf("const named = focusNodes.map("));
+  assert.match(named, /if \(scene\.labels\.get\(label\.id\) === label\) continue;/);
+  assert.match(named, /boxesOverlap\(label\.box, other\.box\)/);
+  assert.ok(
+    named.indexOf("coverLabel(") < named.indexOf("paintLabels(ctx, named"),
+    "the labels underneath are covered before the forced one is drawn"
+  );
+});
