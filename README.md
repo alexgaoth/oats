@@ -11,9 +11,10 @@
 </p>
 
 <p align="center">
-  <a href="docs/media/oats-demo.mp4">
-    <img src="docs/media/hero.png" width="880" alt="Oats recording a nine-person launch review: the live line of the conversation, counters under the clock, and the topics drawn as a graph after the room returned to the launch date">
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.jpg">
+    <img src="docs/media/hero-light.jpg" width="880" alt="Oats recording a nine-person launch review: the live line of the conversation, counters under the clock, and the topics drawn as a graph after the room returned to the launch date">
+  </picture>
 </p>
 
 <p align="center">
@@ -30,37 +31,67 @@ The conversations that matter happen around a table. Taking notes pulls you out 
 
 Press **⇧⌘O** from any app. The sidebar steps aside, the record dot follows the voices, and one line draws the conversation: taller where people spoke louder, notched where the subject turned, marked wherever someone asked a question. Under the clock, two quiet counters show the words and questions so far. Choose **Words** to add the live transcript and the question cards.
 
-<p align="center"><img src="docs/media/recording.png" width="820" alt="The recording view in the middle of a meeting: the clock, the word and question counts, the live line with question marks above it, and the Calm / Words switch"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/recording-dark.jpg">
+    <img src="docs/media/recording-light.jpg" width="820" alt="The recording view in the middle of a meeting: the clock, the word and question counts, the live line with question marks above it, and the Calm / Words switch">
+  </picture>
+</p>
 
 ### Draws the topics as they move
 
 Oats follows the topics from the words themselves, with no model and no network. The stack shows the topic now and the ones before it, with how long each held the room. When the room keeps coming back to a subject, **Auto** turns the stack into a graph and draws each return as a curve.
 
-<p align="center"><img src="docs/media/topics.png" width="820" alt="The conversation flow card as a graph: topics placed by when they were first raised and how unsettled they are, with a dashed curve where the room returned to the launch date"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/topics-dark.jpg">
+    <img src="docs/media/topics-light.jpg" width="820" alt="The conversation flow card as a graph: topics placed by when they were first raised and how unsettled they are, with a dashed curve where the room returned to the launch date">
+  </picture>
+</p>
 
 ### Catches every question
 
 A card appears the moment someone asks a question, before anyone answers. When the reply comes, the card settles in place: **Answered**, **Unknown** when the room said it did not know, **Unanswered** when the room moved on, or still **Open**. Asking again is kept as a signal, not dropped as a repeat.
 
-<p align="center"><img src="docs/media/questions.png" width="820" alt="Question cards from the meeting, each with its outcome: answered, unknown or open"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/questions-dark.jpg">
+    <img src="docs/media/questions-light.jpg" width="820" alt="Question cards from the meeting, each with its outcome: answered, unknown or open">
+  </picture>
+</p>
 
 ### Writes it up when you stop
 
 Stop, and the conversation comes back with a title, a summary, the threads that developed, how much each person spoke, every question with its outcome, and the shape of the whole conversation. The transcript is kept beside it, with the speakers told apart. The summary needs a local model or your own API key; the transcript, speakers, questions and shape need neither.
 
-<p align="center"><img src="docs/media/reading.png" width="820" alt="A finished conversation: title, summary with threads, talk time per person, question outcomes and the stored shape of the conversation"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/reading-dark.jpg">
+    <img src="docs/media/reading-light.jpg" width="820" alt="A finished conversation: title, summary with threads, talk time per person, question outcomes and the stored shape of the conversation">
+  </picture>
+</p>
 
 ### Finds anything anyone said
 
 Search reads every transcript on your Mac, including the oldest. It finds a word inside a longer one, so "rice" finds "price", and it works in Chinese and Japanese, which are written without spaces. Each search says how many matches it found and how long it took.
 
-<p align="center"><img src="docs/media/search.png" width="820" alt="Searching every conversation for the import bug, with the count of matches and the time taken"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/search-dark.jpg">
+    <img src="docs/media/search-light.jpg" width="820" alt="Searching every conversation for the import bug, with the count of matches and the time taken">
+  </picture>
+</p>
 
 ### Shows what you keep coming back to
 
 **Map** joins conversations that covered the same subject and names the subjects that recur, so the pattern you cannot see from inside one meeting becomes visible across all of them.
 
-<p align="center"><img src="docs/media/map.png" width="820" alt="The map of conversations, joined where they shared a subject"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/map-dark.jpg">
+    <img src="docs/media/map-light.jpg" width="820" alt="The map of conversations, joined where they shared a subject">
+  </picture>
+</p>
 
 ## Private by design
 
