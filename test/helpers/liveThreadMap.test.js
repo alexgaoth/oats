@@ -1,10 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-let buildThreadMap, quotedUtterance, unsettled, placeLabels, dotSize;
+let buildThreadMap, quotedUtterance, unsettled, placeLabels, dotSize, DOT_PX, DOT_RING_PX;
 
 test.before(async () => {
-  ({ buildThreadMap, quotedUtterance, unsettled, placeLabels, dotSize } =
+  ({ buildThreadMap, quotedUtterance, unsettled, placeLabels, dotSize, DOT_PX, DOT_RING_PX } =
     await import("../../src/helpers/liveThreadMap.mjs"));
 });
 
@@ -99,6 +99,21 @@ test("every dot is one size, whatever the room spent on it", () => {
   assert.equal(dotSize(big), dotSize(small));
   assert.equal(dotSize(big), 12, "8px and a 2px ring on each side");
   assert.equal("r" in big, false, "no radius is computed for a dot that does not use one");
+});
+
+// The placement's dot is the drawing's dot: the chart module draws it, and a
+// label placed against another size would land on the ring or leave a gap.
+test("the dot the labels are placed around is the chart module's dot", () => {
+  const source = require("node:fs").readFileSync(
+    require("node:path").join(__dirname, "../../src/components/charts/chartStyle.ts"),
+    "utf8"
+  );
+  const chart = /export const CHART = \{[^}]*\bdot: (\d+(?:\.\d+)?), ring: (\d+(?:\.\d+)?)/.exec(
+    source
+  );
+  assert.ok(chart, "CHART names its dot and ring");
+  assert.equal(DOT_PX, Number(chart[1]) * 2, "the dot is CHART.dot across");
+  assert.equal(DOT_RING_PX, Number(chart[2]), "the ring is CHART.ring");
 });
 
 test("every point stays inside the canvas, padding included", () => {

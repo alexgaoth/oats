@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../ui/badge";
+import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { formatSpan } from "../../helpers/ledgerDate.mjs";
 import { LANE_ROW_PX, lanePath, runAt } from "../../helpers/topicLanes.mjs";
@@ -23,9 +24,6 @@ import type { QuestionOutcome } from "../../types/conversationEvents";
 //
 // Nothing moves at rest. The line draws itself once when the lanes appear
 // (not under reduced motion) and is redrawn only when the data changes.
-
-/** The chart rules (DESIGN.md §6): data lines are 1.5px in the quiet grey. */
-const LINE_PX = 1.5;
 
 /** Rows shown before the lanes scroll inside their card. */
 export const LANE_ROWS_SHOWN = 8;
@@ -239,29 +237,37 @@ export default function TopicLanes({
                 d={d}
                 fill="none"
                 stroke="var(--color-muted-foreground)"
-                strokeWidth={LINE_PX}
+                strokeWidth={CHART.line}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
               />
             </svg>
           )}
+          {/* The chart's one dot (DESIGN.md §6): `CHART.dot` across in a
+              `CHART.ring` ring of the card colour. A question's mark sits on
+              a disc of the card colour that wide, so the line stops at its
+              edge and never runs through an open ring, and two marks side by
+              side stay apart. */}
           {marks.map((mark) => (
             <span
               key={mark.id}
-              className="absolute"
-              style={{ left: `${mark.x * 100}%`, top: centre(mark.row) }}
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 rounded-full bg-card"
+              style={{ left: `${mark.x * 100}%`, top: centre(mark.row), padding: CHART.ring }}
             >
-              <StateMark
-                state={mark.state}
-                className="block -translate-x-1/2 -translate-y-1/2 ring-2 ring-card"
-              />
+              <StateMark state={mark.state} className="block" />
             </span>
           ))}
           {now && (
             <span
-              className="absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-card"
-              style={{ left: `${now.x * 100}%`, top: centre(now.row) }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
+              style={{
+                left: `${now.x * 100}%`,
+                top: centre(now.row),
+                width: CHART.dot * 2,
+                height: CHART.dot * 2,
+                boxShadow: `0 0 0 ${CHART.ring}px var(--color-card)`,
+              }}
             />
           )}
         </div>
