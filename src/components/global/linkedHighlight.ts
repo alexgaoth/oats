@@ -5,7 +5,8 @@
 // arcs that join it to others (ink) and the conversations at their far ends
 // (kept at their resting tone); everything else recedes to the rule grey.
 // Pointing at a subject lights the conversations that carry it and the edges
-// and arcs that carry it. A selected conversation stays honey whether or not
+// and arcs that carry it; pointing at a day lights that day's conversations
+// and the links among them. A selected conversation stays honey whether or not
 // anything is pointed at, but on its own it makes nothing recede.
 //
 // Every widget asks this one function, so the force graph and the arc
@@ -17,6 +18,8 @@ export interface HighlightState {
   hoveredConversationId: number | null;
   hoveredSubject: string | null;
   selectedConversationId: number | null;
+  /** A day on the Activity calendar, `YYYY-MM-DD`. */
+  hoveredDay?: string | null;
 }
 
 export interface Subject {
@@ -42,6 +45,8 @@ export const NO_HIGHLIGHT: Highlight = {
   edges: new Set(),
 };
 
+const NO_DAYS: ReadonlyMap<string, number[]> = new Map();
+
 interface GraphShape {
   nodes: { id: number }[];
   /** `topics`: the subjects an edge carries. Without them, an edge carries a
@@ -52,7 +57,8 @@ interface GraphShape {
 export function linkedHighlight(
   graph: GraphShape,
   subjects: Subject[],
-  state: HighlightState
+  state: HighlightState,
+  days: ReadonlyMap<string, number[]> = NO_DAYS
 ): Highlight {
   const present = new Set(graph.nodes.map((node) => node.id));
   const focus = new Set<number>();
@@ -85,6 +91,15 @@ export function linkedHighlight(
           ? edge.topics.includes(label)
           : members.has(edge.from) && members.has(edge.to);
         if (carries) edges.add(edgeKey(edge.from, edge.to));
+      }
+    }
+  } else if (state.hoveredDay) {
+    const members = new Set((days.get(state.hoveredDay) ?? []).filter((id) => present.has(id)));
+    if (members.size) {
+      active = true;
+      for (const id of members) focus.add(id);
+      for (const edge of graph.edges) {
+        if (members.has(edge.from) && members.has(edge.to)) edges.add(edgeKey(edge.from, edge.to));
       }
     }
   }

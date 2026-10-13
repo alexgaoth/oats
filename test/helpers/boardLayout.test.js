@@ -149,3 +149,46 @@ test("the default layout stays within its minimums in a small window", () => {
   }
   assertNoCollisions(widgets);
 });
+
+test("a new card goes in the first place it fits, at its added size", () => {
+  const { findSpot, addWidget, WIDGET_SIZE } = layout;
+  const board = [card("force", 0, 0, 30, 16), card("arcs", 0, 17, 30, 11)];
+  const spot = findSpot(board, "subjects", 48);
+  assert.deepEqual(
+    { x: spot.x, y: spot.y, w: spot.w, h: spot.h },
+    { x: 31, y: 0, ...WIDGET_SIZE.subjects },
+    "beside the graph, where there is room"
+  );
+  const full = [card("force", 0, 0, 48, 16), card("arcs", 0, 17, 48, 11)];
+  const under = findSpot(full, "activity", 48);
+  assert.equal(under.x, 0);
+  assert.equal(under.y, 29, "under everything, one cell clear, when nothing above has room");
+  const added = addWidget(full, "questions", 48);
+  assert.equal(added.length, 3);
+  assertNoCollisions(added);
+  assert.equal(
+    addWidget(added, "questions", 48),
+    added,
+    "a widget already there is not added twice"
+  );
+});
+
+test("the arrow keys move a card a cell, and with shift resize it, pushing others aside", () => {
+  const { nudge, grow, WIDGET_MIN } = layout;
+  const board = [card("force", 0, 0, 20, 10), card("arcs", 0, 11, 20, 9)];
+  const right = nudge(board, "force", 1, 0, 40);
+  assert.deepEqual({ x: right[0].x, y: right[0].y }, { x: 1, y: 0 });
+  const left = nudge(board, "force", -1, 0, 40);
+  assert.equal(left[0].x, 0, "never off the board's left edge");
+  const taller = grow(board, "force", 0, 1, 40);
+  assert.equal(taller[0].h, 11);
+  assert.equal(taller[1].y, 12, "the card below steps down");
+  assertNoCollisions(taller);
+  const smaller = grow(board, "arcs", -20, -20, 40);
+  assert.deepEqual(
+    { w: smaller[1].w, h: smaller[1].h },
+    WIDGET_MIN.arcs,
+    "never below its minimum"
+  );
+  assert.equal(nudge(board, "nothing", 1, 1, 40), board);
+});

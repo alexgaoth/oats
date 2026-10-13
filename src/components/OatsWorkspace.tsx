@@ -2114,10 +2114,11 @@ function IntelligenceViews({
       {view === "global" ? (
         <div key="global" className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col">
           <GlobalConversations
-            onOpen={(noteId) => {
+            onOpen={(noteId, segmentId) => {
               setSelectedId(noteId);
-              setTab("summary");
-              setLandedOnSegment(null);
+              // An open question opens its conversation at the turn it was asked.
+              setTab(segmentId ? "transcript" : "summary");
+              setLandedOnSegment(segmentId ?? null);
               setReading(true);
             }}
           />

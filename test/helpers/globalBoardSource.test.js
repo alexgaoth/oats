@@ -88,3 +88,35 @@ test("labels sit on plates in the surface colour, never cut at the canvas edge",
   assert.match(graph, /const x = Math\.min\(width - half, Math\.max\(half, node\.x\)\);/);
   assert.match(graph, /ctx\.fillStyle = surface;\s*ctx\.beginPath\(\);\s*ctx\.roundRect\(/);
 });
+
+test("a focused card moves with the arrow keys and resizes with shift, and only the card itself", () => {
+  const board = read("src/components/global/Board.tsx");
+  assert.match(board, /if \(event\.target !== event\.currentTarget \|\| !room\.cols\) return;/);
+  assert.match(board, /event\.shiftKey\s*\? grow\(/);
+  assert.match(board, /: nudge\(/);
+  assert.match(board, /tabIndex=\{0\}\s*onKeyDown=\{\(event\) => onCardKey\(event, widget\)\}/);
+  // Said aloud, since a card that moved makes no sound.
+  assert.match(board, /aria-live="polite" role="status"/);
+});
+
+test("Add lists every widget, disables those on the board, and the new card takes the focus", () => {
+  const view = read("src/components/global/GlobalConversations.tsx");
+  assert.match(view, /WIDGET_TYPES\.map\(\(type\) =>/);
+  assert.match(view, /disabled=\{there\}/);
+  assert.match(
+    view,
+    /onSelectAfterClose=\{\(event\) => \{\s*event\.preventDefault\(\);\s*board\.current\?\.add\(type\);/
+  );
+  const board = read("src/components/global/Board.tsx");
+  assert.match(board, /card\.focus\(\{ preventScroll: true \}\)/);
+});
+
+test("an open question opens its conversation at the turn it was asked in", () => {
+  const workspace = read("src/components/OatsWorkspace.tsx");
+  const opened = workspace.slice(
+    workspace.indexOf("<GlobalConversations"),
+    workspace.indexOf("<GlobalConversations") + 500
+  );
+  assert.match(opened, /setTab\(segmentId \? "transcript" : "summary"\)/);
+  assert.match(opened, /setLandedOnSegment\(segmentId \?\? null\)/);
+});

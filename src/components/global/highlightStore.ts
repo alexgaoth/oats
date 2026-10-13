@@ -11,37 +11,59 @@ import type { Highlight, HighlightState, Subject } from "./linkedHighlight";
 // pointing at something redraws the pictures and re-renders nothing.
 
 interface HighlightStore extends HighlightState {
+  hoveredDay: string | null;
   pointAtConversation: (id: number) => void;
   pointAtSubject: (label: string) => void;
+  pointAtDay: (key: string) => void;
   /** Leaving only clears what is still the one pointed at: the next widget's
       enter can arrive before the last one's leave. */
   leaveConversation: (id: number) => void;
   leaveSubject: (label: string) => void;
+  leaveDay: (key: string) => void;
   select: (id: number | null) => void;
   clear: () => void;
 }
 
-const NOTHING: HighlightState = {
+const NOTHING = {
   hoveredConversationId: null,
   hoveredSubject: null,
   selectedConversationId: null,
+  hoveredDay: null,
 };
 
 export const useGlobalHighlight = create<HighlightStore>()((set, get) => ({
   ...NOTHING,
   pointAtConversation: (id) => {
-    if (get().hoveredConversationId === id && get().hoveredSubject === null) return;
-    set({ hoveredConversationId: id, hoveredSubject: null });
+    const state = get();
+    if (state.hoveredConversationId === id && !state.hoveredSubject && !state.hoveredDay) return;
+    set({ hoveredConversationId: id, hoveredSubject: null, hoveredDay: null });
   },
   pointAtSubject: (label) => {
-    if (get().hoveredSubject === label && get().hoveredConversationId === null) return;
-    set({ hoveredSubject: label, hoveredConversationId: null });
+    const state = get();
+    if (
+      state.hoveredSubject === label &&
+      state.hoveredConversationId === null &&
+      !state.hoveredDay
+    ) {
+      return;
+    }
+    set({ hoveredSubject: label, hoveredConversationId: null, hoveredDay: null });
+  },
+  pointAtDay: (key) => {
+    const state = get();
+    if (state.hoveredDay === key && state.hoveredConversationId === null && !state.hoveredSubject) {
+      return;
+    }
+    set({ hoveredDay: key, hoveredConversationId: null, hoveredSubject: null });
   },
   leaveConversation: (id) => {
     if (get().hoveredConversationId === id) set({ hoveredConversationId: null });
   },
   leaveSubject: (label) => {
     if (get().hoveredSubject === label) set({ hoveredSubject: null });
+  },
+  leaveDay: (key) => {
+    if (get().hoveredDay === key) set({ hoveredDay: null });
   },
   select: (id) => {
     if (get().selectedConversationId !== id) set({ selectedConversationId: id });
@@ -61,25 +83,27 @@ export interface HighlightSource {
  * that asks for the same graph.
  */
 export function highlightSource(
-  graph: { nodes: { id: number }[]; edges: { from: number; to: number }[] },
-  subjects: Subject[]
+  graph: { nodes: { id: number }[]; edges: { from: number; to: number; topics?: string[] }[] },
+  subjects: Subject[],
+  days?: ReadonlyMap<string, number[]>
 ): HighlightSource {
   let last: HighlightState | null = null;
   let cached: Highlight = NO_HIGHLIGHT;
+  const changed = (a: HighlightState, b: HighlightState) =>
+    a.hoveredConversationId !== b.hoveredConversationId ||
+    a.hoveredSubject !== b.hoveredSubject ||
+    a.selectedConversationId !== b.selectedConversationId ||
+    (a.hoveredDay ?? null) !== (b.hoveredDay ?? null);
   const get = () => {
     const state = useGlobalHighlight.getState();
-    if (
-      !last ||
-      last.hoveredConversationId !== state.hoveredConversationId ||
-      last.hoveredSubject !== state.hoveredSubject ||
-      last.selectedConversationId !== state.selectedConversationId
-    ) {
+    if (!last || changed(last, state)) {
       last = {
         hoveredConversationId: state.hoveredConversationId,
         hoveredSubject: state.hoveredSubject,
         selectedConversationId: state.selectedConversationId,
+        hoveredDay: state.hoveredDay,
       };
-      cached = linkedHighlight(graph, subjects, last);
+      cached = linkedHighlight(graph, subjects, last, days);
     }
     return cached;
   };
@@ -87,13 +111,7 @@ export function highlightSource(
     get,
     subscribe: (onChange) =>
       useGlobalHighlight.subscribe((state, previous) => {
-        if (
-          state.hoveredConversationId !== previous.hoveredConversationId ||
-          state.hoveredSubject !== previous.hoveredSubject ||
-          state.selectedConversationId !== previous.selectedConversationId
-        ) {
-          onChange();
-        }
+        if (changed(state, previous)) onChange();
       }),
   };
 }

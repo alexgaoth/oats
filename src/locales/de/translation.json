@@ -2080,13 +2080,20 @@
         "all": "Alle"
       },
       "boardLabel": "Board: {{tab}}",
+      "add": {
+        "label": "Hinzufügen",
+        "there": "Schon auf dem Board"
+      },
       "menu": {
         "label": "Board-Optionen",
         "reset": "Anordnung zurücksetzen"
       },
       "cleared": "Auf diesem Board ist nichts.",
       "widget": {
-        "remove": "{{name}} entfernen"
+        "remove": "{{name}} entfernen",
+        "role": "Karte",
+        "keys": "Die Pfeiltasten verschieben sie. Umschalt und die Pfeiltasten ändern ihre Größe.",
+        "place": "{{name}}: Spalte {{column}}, Zeile {{row}}, {{width}} mal {{height}}"
       },
       "widgets": {
         "force": {
@@ -2096,6 +2103,20 @@
         "arcs": {
           "name": "Bogen-Zeitleiste",
           "empty": "Die Zeitleiste erscheint, sobald {{count}} Gespräche hier Themen haben."
+        },
+        "subjects": {
+          "name": "Themen, die wiederkommen",
+          "empty": "Noch ist nichts wiedergekommen. Ein Thema erscheint hier, sobald zwei Gespräche es teilen."
+        },
+        "questions": {
+          "name": "Offene Fragen",
+          "empty": "Hier gibt es keine offenen Fragen. Jede Frage hat eine Antwort oder ein Ergebnis.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Aktivität",
+          "day_one": "{{date}}: {{count}} Gespräch",
+          "day_other": "{{date}}: {{count}} Gespräche"
         }
       },
       "subjects": {

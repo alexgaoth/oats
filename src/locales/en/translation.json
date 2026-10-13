@@ -2080,13 +2080,20 @@
         "all": "All"
       },
       "boardLabel": "{{tab}} board",
+      "add": {
+        "label": "Add",
+        "there": "On the board"
+      },
       "menu": {
         "label": "Board options",
         "reset": "Reset layout"
       },
       "cleared": "Nothing on this board.",
       "widget": {
-        "remove": "Remove {{name}}"
+        "remove": "Remove {{name}}",
+        "role": "card",
+        "keys": "Arrow keys move it. Shift and the arrow keys resize it.",
+        "place": "{{name}}: column {{column}}, row {{row}}, {{width}} by {{height}}"
       },
       "widgets": {
         "force": {
@@ -2096,6 +2103,20 @@
         "arcs": {
           "name": "Arc timeline",
           "empty": "The timeline appears once {{count}} conversations here have topics."
+        },
+        "subjects": {
+          "name": "Subjects that come back",
+          "empty": "Nothing has come back yet. A subject shows here once two conversations share it."
+        },
+        "questions": {
+          "name": "Open questions",
+          "empty": "No open questions here. Every question has an answer or a verdict.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Activity",
+          "day_one": "{{date}}: {{count}} conversation",
+          "day_other": "{{date}}: {{count}} conversations"
         }
       },
       "subjects": {

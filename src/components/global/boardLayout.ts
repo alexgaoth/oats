@@ -15,9 +15,16 @@ export const GRID = 24;
 /** The board kept clear between two cards, in cells. */
 export const GAP = 1;
 
-export type WidgetType = "force" | "arcs";
+export type WidgetType = "force" | "arcs" | "subjects" | "questions" | "activity";
 
-export const WIDGET_TYPES: readonly WidgetType[] = ["force", "arcs"];
+/** Every widget a board can hold, in the order the Add menu lists them. */
+export const WIDGET_TYPES: readonly WidgetType[] = [
+  "force",
+  "arcs",
+  "subjects",
+  "questions",
+  "activity",
+];
 
 export interface BoardWidget {
   /** Stable within a tab. One widget of each type, so the type is the id. */
@@ -39,6 +46,18 @@ export interface BoardWidget {
 export const WIDGET_MIN: Record<WidgetType, { w: number; h: number }> = {
   force: { w: 12, h: 10 },
   arcs: { w: 14, h: 9 },
+  subjects: { w: 8, h: 5 },
+  questions: { w: 10, h: 7 },
+  activity: { w: 12, h: 7 },
+};
+
+/** The size a card is added at, in cells: room for what it shows at a glance. */
+export const WIDGET_SIZE: Record<WidgetType, { w: number; h: number }> = {
+  force: { w: 24, h: 14 },
+  arcs: { w: 32, h: 11 },
+  subjects: { w: 16, h: 6 },
+  questions: { w: 16, h: 11 },
+  activity: { w: 14, h: 9 },
 };
 
 export function isWidgetType(value: unknown): value is WidgetType {
@@ -156,4 +175,54 @@ export function defaultLayout(cols: number, rows: number): BoardWidget[] {
     { id: "force", type: "force", x: 0, y: 0, w: width, h: forceHeight },
     { id: "arcs", type: "arcs", x: 0, y: forceHeight + GAP, w: width, h: arcsHeight },
   ];
+}
+
+/**
+ * Where a new card of `type` goes: the first place it fits, scanning the board
+ * row by row from the top left the way you look for room on a desk, at its
+ * added size, or at as much of the board's width as there is. Under every
+ * other card when nothing above has room.
+ */
+export function findSpot(widgets: BoardWidget[], type: WidgetType, cols: number): BoardWidget {
+  const probe = clampToBoard({ id: type, type, x: 0, y: 0, ...WIDGET_SIZE[type] }, cols);
+  const bottom = layoutBottom(widgets);
+  for (let y = 0; y <= bottom; y += 1) {
+    for (let x = 0; x + probe.w <= Math.max(probe.w, cols); x += 1) {
+      const candidate = { ...probe, x, y };
+      if (!widgets.some((other) => collides(candidate, other))) return candidate;
+    }
+  }
+  return { ...probe, x: 0, y: bottom + (widgets.length ? GAP : 0) };
+}
+
+/** Add a card of `type` where it fits; a type already on the board is not added twice. */
+export function addWidget(widgets: BoardWidget[], type: WidgetType, cols: number): BoardWidget[] {
+  if (widgets.some((widget) => widget.type === type)) return widgets;
+  return [...widgets, findSpot(widgets, type, cols)];
+}
+
+/** Move a card by whole cells: the arrow keys on a focused card. */
+export function nudge(
+  widgets: BoardWidget[],
+  id: string,
+  dx: number,
+  dy: number,
+  cols: number
+): BoardWidget[] {
+  const widget = widgets.find((item) => item.id === id);
+  if (!widget) return widgets;
+  return placeWidget(widgets, { ...widget, x: widget.x + dx, y: widget.y + dy }, cols);
+}
+
+/** Resize a card by whole cells: shift and the arrow keys on a focused card. */
+export function grow(
+  widgets: BoardWidget[],
+  id: string,
+  dw: number,
+  dh: number,
+  cols: number
+): BoardWidget[] {
+  const widget = widgets.find((item) => item.id === id);
+  if (!widget) return widgets;
+  return placeWidget(widgets, { ...widget, w: widget.w + dw, h: widget.h + dh }, cols);
 }

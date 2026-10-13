@@ -2080,13 +2080,20 @@
         "all": "Tutte"
       },
       "boardLabel": "Bacheca: {{tab}}",
+      "add": {
+        "label": "Aggiungi",
+        "there": "Già sulla bacheca"
+      },
       "menu": {
         "label": "Opzioni della bacheca",
         "reset": "Ripristina disposizione"
       },
       "cleared": "Questa bacheca è vuota.",
       "widget": {
-        "remove": "Rimuovi {{name}}"
+        "remove": "Rimuovi {{name}}",
+        "role": "scheda",
+        "keys": "Le frecce la spostano. Maiuscole e le frecce la ridimensionano.",
+        "place": "{{name}}: colonna {{column}}, riga {{row}}, {{width}} per {{height}}"
       },
       "widgets": {
         "force": {
@@ -2096,6 +2103,20 @@
         "arcs": {
           "name": "Linea temporale ad archi",
           "empty": "La linea temporale compare quando {{count}} conversazioni qui hanno argomenti."
+        },
+        "subjects": {
+          "name": "Argomenti che ritornano",
+          "empty": "Non è ancora tornato niente. Un argomento compare qui quando due conversazioni lo condividono."
+        },
+        "questions": {
+          "name": "Domande aperte",
+          "empty": "Nessuna domanda aperta qui. Ogni domanda ha una risposta o un esito.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Attività",
+          "day_one": "{{date}}: {{count}} conversazione",
+          "day_other": "{{date}}: {{count}} conversazioni"
         }
       },
       "subjects": {

@@ -241,14 +241,21 @@ with no decorative gradient.
   border, `rounded-xl`, `shadow-xs`) that snaps to the dots, moves by its
   header, resizes by its bottom-right corner and keeps one cell of board around
   it; the cards it would land on step down out of its way. Its remove button
-  shows on hover or focus. Each tab keeps its arrangement; Reset layout, in the
-  board's menu, puts back the default: the force graph above the arc timeline,
-  filling the view.
+  shows on hover or focus. Add, at the top right, puts any widget that is not
+  on the board yet where it first fits and takes the focus to it: the force
+  graph, the arc timeline, the subjects that come back, the open questions
+  (every question with no verdict, newest first; a click opens its
+  conversation at that turn) and the activity of the last twelve weeks (a cell
+  a day, dithered by how many conversations it held, today ringed in honey). A
+  focused card moves a cell with the arrow keys and resizes with shift. Each
+  tab keeps its arrangement; Reset layout, in the board's menu, puts back the
+  default: the force graph above the arc timeline, filling the view.
 - The board's charts share one highlight (`highlightStore.ts`,
   `linkedHighlight.ts`). Pointing at a conversation, or focusing it, lights it
   honey in every chart and its links ink, and everything else recedes to the
   rule grey (words recede only to the quiet grey, so they stay readable).
-  Pointing at a subject lights the conversations and the links that carry it.
+  Pointing at a subject lights the conversations and the links that carry it,
+  and pointing at a day lights that day's conversations.
   A click opens the conversation, which stays selected, in honey, when you come
   back to the board.
 - A subject's links are a thread: each conversation on it joins the one on it

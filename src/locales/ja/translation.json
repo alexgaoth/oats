@@ -2080,13 +2080,20 @@
         "all": "すべて"
       },
       "boardLabel": "ボード: {{tab}}",
+      "add": {
+        "label": "追加",
+        "there": "ボードにあります"
+      },
       "menu": {
         "label": "ボードのオプション",
         "reset": "配置をリセット"
       },
       "cleared": "このボードには何もありません。",
       "widget": {
-        "remove": "{{name}} を削除"
+        "remove": "{{name}} を削除",
+        "role": "カード",
+        "keys": "矢印キーで移動します。Shift と矢印キーでサイズを変えます。",
+        "place": "{{name}}: {{column}} 列目、{{row}} 行目、{{width}} × {{height}}"
       },
       "widgets": {
         "force": {
@@ -2096,6 +2103,20 @@
         "arcs": {
           "name": "アークタイムライン",
           "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、タイムラインが表示されます。"
+        },
+        "subjects": {
+          "name": "繰り返し出てくる話題",
+          "empty": "まだ繰り返し出てきた話題はありません。2 つの会話で共有されると、ここに表示されます。"
+        },
+        "questions": {
+          "name": "未解決の質問",
+          "empty": "ここには未解決の質問はありません。どの質問にも答えか結果があります。",
+          "where": "{{title}}、{{date}}"
+        },
+        "activity": {
+          "name": "アクティビティ",
+          "day_one": "{{date}}: 会話 {{count}} 件",
+          "day_other": "{{date}}: 会話 {{count}} 件"
         }
       },
       "subjects": {
