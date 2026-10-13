@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { NoteItem } from "../types/electron";
+import type { NoteGroupPatch, NoteItem } from "../types/electron";
 
 interface NoteState {
   notes: NoteItem[];
@@ -95,6 +95,24 @@ export function updateNoteInStore(note: NoteItem): void {
   useNoteStore.setState({
     notes: notes.map((existing) => (existing.id === note.id ? note : existing)),
   });
+}
+
+/**
+ * Many notes' groups at once, in one update: a deleted group's conversations
+ * (`conversation-groups-changed`). Notes this store does not hold are skipped.
+ */
+export function patchNoteGroups(patches: NoteGroupPatch[]): void {
+  if (!Array.isArray(patches) || !patches.length) return;
+  const byId = new Map(patches.map((patch) => [patch.id, patch]));
+  const { notes } = useNoteStore.getState();
+  let changed = false;
+  const next = notes.map((note) => {
+    const patch = byId.get(note.id);
+    if (!patch) return note;
+    changed = true;
+    return { ...note, group_id: patch.group_id, group_source: patch.group_source };
+  });
+  if (changed) useNoteStore.setState({ notes: next });
 }
 
 export function removeNote(id: number): void {

@@ -23,7 +23,8 @@ const MENU_ITEMS = [
   "ContextMenuItem",
   "MenubarItem",
 ];
-const DIALOGS = ["Dialog", "ConfirmDialog", "AlertDialog", "Sheet"];
+// Any component named `...Dialog` (Dialog, ConfirmDialog, NewGroupDialog), and Sheet.
+const DIALOGS = ["\\w*Dialog", "Sheet"];
 
 function components(dir = "src") {
   return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
@@ -125,6 +126,10 @@ test("no menu item opens a dialog from onSelect", () => {
     dialogSetters(read("src/components/OatsWorkspace.tsx")).has("setConfirming"),
     "the scan no longer finds the state that opens the Delete dialog"
   );
+  assert.ok(
+    dialogSetters(read("src/components/OatsWorkspace.tsx")).has("setNaming"),
+    "the scan no longer finds the state that opens the New group dialog"
+  );
 });
 
 test("the menu runs an item's after-close action once it has closed", () => {
@@ -157,6 +162,31 @@ test("Delete asks after the menu has closed and gives the focus back to the menu
   // ConfirmDialog hands it to the dialog.
   assert.match(
     read("src/components/ui/dialog.tsx"),
+    /<DialogContent className="sm:max-w-\[425px\]" onCloseAutoFocus=\{onCloseAutoFocus\}>/
+  );
+});
+
+test("New group… names the group after the menu has closed, and gives the focus back", () => {
+  // The item is in the "Move to group" submenu. Choosing it closes the whole
+  // menu, and the root content runs the action once it has.
+  const MENU = read("src/components/conversation/MoveToGroup.tsx");
+  assert.match(
+    MENU,
+    /<DropdownMenuItem onSelectAfterClose=\{onNewGroup\}>\s*<Plus aria-hidden="true" \/>/
+  );
+  const WORKSPACE = read("src/components/OatsWorkspace.tsx");
+  const actions = WORKSPACE.slice(WORKSPACE.indexOf("function ConversationActions"));
+  assert.match(
+    actions,
+    /onNewGroup=\{\(\) => \{\s*if \(shownId\.current === note\.id\) setNaming\(true\);/
+  );
+  assert.match(
+    actions,
+    /<NewGroupDialog\s+open=\{naming\}[\s\S]*?onCloseAutoFocus=\{\(event\) => \{\s*event\.preventDefault\(\);\s*moreButton\.current\?\.focus\(\);/
+  );
+  // The dialog hands it to its content.
+  assert.match(
+    MENU,
     /<DialogContent className="sm:max-w-\[425px\]" onCloseAutoFocus=\{onCloseAutoFocus\}>/
   );
 });

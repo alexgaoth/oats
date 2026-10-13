@@ -2276,6 +2276,28 @@
       "failed": "Das Beispielgespräch konnte nicht geöffnet werden",
       "failedHint": "Es wurde nichts hinzugefügt. Versuche es noch einmal."
     },
+    "groups": {
+      "seed": {
+        "work": "Arbeit",
+        "personal": "Privat"
+      },
+      "moveTo": "In Gruppe verschieben",
+      "none": "Keine Gruppe",
+      "new": "Neue Gruppe…",
+      "newTitle": "Neue Gruppe",
+      "newDescription": "Gib der Gruppe einen Namen. Dieses Gespräch kommt hinein.",
+      "nameLabel": "Name",
+      "create": "Erstellen",
+      "movedTo": "Verschoben nach {{group}}",
+      "movedOut": "In keiner Gruppe",
+      "moveFailed": "Nicht verschoben",
+      "errors": {
+        "nameRequired": "Gib der Gruppe einen Namen.",
+        "nameTooLong": "Höchstens {{max}} Zeichen.",
+        "nameTaken": "Eine Gruppe mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+        "failed": "Die Gruppe wurde nicht gespeichert. Versuche es noch einmal."
+      }
+    },
     "shell": {
       "sidebar": "Seitenleiste",
       "showSidebar": "Seitenleiste einblenden",
