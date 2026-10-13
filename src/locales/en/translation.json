@@ -2269,6 +2269,13 @@
       "room": "Room",
       "speaker": "Speaker {{n}}"
     },
+    "example": {
+      "open": "Open an example conversation",
+      "note": "A nine-person launch review to explore. Delete it whenever you like.",
+      "badge": "Example",
+      "failed": "Could not open the example conversation",
+      "failedHint": "Nothing was added. Try again."
+    },
     "shell": {
       "sidebar": "Sidebar",
       "showSidebar": "Show sidebar",

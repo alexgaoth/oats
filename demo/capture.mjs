@@ -24,6 +24,18 @@ import path from "node:path";
 
 const SHOTS = [
   { name: "home", query: "", script: "" },
+  // Nothing recorded yet: the offer of the example, then the example opened.
+  { name: "first-run", query: "profile=empty", script: "" },
+  {
+    name: "first-run-conversations",
+    query: "profile=empty",
+    script: "await oatsDemo.show('conversations')",
+  },
+  {
+    name: "example-opened",
+    query: "profile=empty",
+    script: "await demo.press('Open an example conversation'); await demo.wait(600)",
+  },
   {
     name: "live-calm-stack",
     query: "demo=live&from=560&end=hold&view=calm",
