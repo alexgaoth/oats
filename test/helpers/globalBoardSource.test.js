@@ -22,6 +22,16 @@ test("Conversations switches between List and Global, and the old map's name is 
   assert.ok(!JSON.stringify(english).includes("keep coming back to"));
 });
 
+test("the board's dots are 2 px squares in the middle of each cell, crisp on device pixels", () => {
+  const board = read("src/components/global/Board.tsx");
+  assert.match(board, /shape-rendering='crispEdges'/);
+  assert.match(board, /%3Crect x='11' y='11' width='2' height='2'\/%3E/);
+  assert.match(board, /backgroundColor: "var\(--color-border\)"/, "in the rule grey, both themes");
+  assert.match(board, /boardRoom\(width, height\)/, "the room is the tested helper's");
+  assert.match(board, /dotField\(room\)/, "and so is where the dots go");
+  assert.match(board, /top: MARGIN \* GRID/, "the cards start two cells down");
+});
+
 test("a conversation opened from the board comes back to the board", () => {
   const workspace = read("src/components/OatsWorkspace.tsx");
   // The reading view opens from either view, so Escape returns to the one it

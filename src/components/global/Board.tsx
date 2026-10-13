@@ -4,27 +4,38 @@ import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../lib/utils";
-import { GRID, defaultLayout, fitToBoard, layoutBottom, placeWidget } from "./boardLayout";
+import {
+  GRID,
+  MARGIN,
+  boardRoom,
+  defaultLayout,
+  dotField,
+  fitToBoard,
+  layoutBottom,
+  placeWidget,
+} from "./boardLayout";
 import type { BoardWidget } from "./boardLayout";
 
-// The board: a canvas with a dot every 24 px, and the widgets on it as cards
-// that snap to those dots. A card moves by its header and resizes by its
-// bottom-right corner; the cards it would land on step down out of its way,
-// and it is saved where it was let go.
+// The board: a canvas of 24 px cells with a dot in the middle of each, and the
+// widgets on it as cards that snap to the cells. A card moves by its header and
+// resizes by its bottom-right corner; the cards it would land on step down out
+// of its way, and it is saved where it was let go. Two cells of dotted board
+// are kept around the cards and one between them, so it reads as a board.
 //
 // Calm by construction: nothing on it moves at rest, the cards pushed aside
-// glide 150 ms to their place (not under reduced motion), and the dots are one
-// pixel in the rule grey.
+// glide 150 ms to their place (not under reduced motion), and the dots are
+// small squares in the rule grey.
 
 /** A card's header, which is also the handle it is moved by. */
 export const HEADER = 36;
 
-// The dots: a one-pixel square at every grid corner, in the rule grey, drawn by
-// masking a fill of the token so the colour follows the theme. A mask, not a
-// radial gradient: a gradient with a sub-pixel radius quantizes to all or
-// nothing (CLAUDE.md, the contour's rule 7).
+// The dots: a 2 px square in the middle of every cell, in the rule grey, drawn
+// by masking a fill of the token so the colour follows the theme. Whole pixels
+// on a whole-pixel grid, so a dot is 2 device pixels at 1x and 4 at 2x, crisp
+// at both. A mask, not a radial gradient: a gradient with a sub-pixel radius
+// quantizes to all or nothing (CLAUDE.md, the contour's rule 7).
 const DOT =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect width='1' height='1'/%3E%3C/svg%3E\")";
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' shape-rendering='crispEdges'%3E%3Crect x='11' y='11' width='2' height='2'/%3E%3C/svg%3E\")";
 const DOTS_STYLE: React.CSSProperties = {
   backgroundColor: "var(--color-border)",
   WebkitMaskImage: DOT,
@@ -72,7 +83,7 @@ export default function Board({
 }) {
   const { t } = useTranslation();
   const area = useRef<HTMLDivElement | null>(null);
-  const [room, setRoom] = useState({ cols: 0, rows: 0, inset: GRID });
+  const [room, setRoom] = useState({ cols: 0, rows: 0, inset: MARGIN * GRID });
 
   // The board is as wide as the page and at least as tall as the window
   // leaves it, so the dots reach every edge and the default layout fills the
@@ -93,12 +104,7 @@ export default function Board({
         (scroller?.getBoundingClientRect().top ?? 0) +
         (scroller?.scrollTop ?? 0);
       const height = (scroller?.clientHeight ?? window.innerHeight) - top;
-      const cols = Math.max(1, Math.floor((width - GRID * 2) / GRID));
-      const next = {
-        cols,
-        rows: Math.max(1, Math.floor((height - GRID * 2) / GRID)),
-        inset: Math.max(GRID, Math.floor((width - cols * GRID) / 2)),
-      };
+      const next = boardRoom(width, height);
       scroller?.style.setProperty("--board-inset", `${next.inset}px`);
       setRoom((previous) =>
         previous.cols === next.cols && previous.rows === next.rows && previous.inset === next.inset
@@ -129,6 +135,7 @@ export default function Board({
   );
   const shown = gesture?.preview ?? committed;
   const rows = Math.max(room.rows, layoutBottom(shown));
+  const dots = dotField(room);
 
   const begin = useCallback(
     (event: React.PointerEvent<HTMLElement>, widget: BoardWidget, kind: Gesture["kind"]) => {
@@ -205,23 +212,26 @@ export default function Board({
       role="region"
       aria-label={ariaLabel}
       className="relative w-full overflow-x-clip"
-      style={{ height: (rows + 2) * GRID }}
+      style={{ height: (rows + MARGIN * 2) * GRID }}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          ...DOTS_STYLE,
-          WebkitMaskPosition: `${room.inset % GRID}px 0`,
-          maskPosition: `${room.inset % GRID}px 0`,
-        }}
-      />
+      {room.cols > 0 && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0"
+          style={{ ...DOTS_STYLE, left: dots.left, width: dots.width }}
+        />
+      )}
       {room.cols > 0 && !shown.length && empty && (
         <div className="absolute inset-x-0 top-1/3 flex justify-center px-6">{empty}</div>
       )}
       <div
         className="absolute"
-        style={{ left: room.inset, top: GRID, width: room.cols * GRID, height: rows * GRID }}
+        style={{
+          left: room.inset,
+          top: MARGIN * GRID,
+          width: room.cols * GRID,
+          height: rows * GRID,
+        }}
       >
         {shown.map((widget) => {
           const held = gesture?.id === widget.id;

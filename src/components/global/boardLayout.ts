@@ -1,9 +1,11 @@
 // Where the cards sit on the Global conversations board.
 //
-// The board is a canvas of 24 px cells. Every card is a whole number of cells
-// wide and tall and starts on a cell corner, so it snaps to the dot grid. Two
-// cards never overlap and always keep one cell of board between them, so the
-// dots show around every card and no two borders touch.
+// The board is a canvas of 24 px cells with a dot in the middle of each. Every
+// card is a whole number of cells wide and tall and starts on a cell corner,
+// so it snaps to the grid and covers its cells' dots. Two cards never overlap
+// and always keep one cell of board between them, and the layout keeps two
+// cells clear around it, so a row of dots shows between every two cards and
+// two rows around them all, and no two borders touch.
 //
 // Pure and DOM-free, like `graphPhysics.ts`: the claims worth checking (a drop
 // lands on the grid, a card pushed aside does not land on another, a narrow
@@ -136,6 +138,43 @@ export function fitToBoard(widgets: BoardWidget[], cols: number): BoardWidget[] 
 /** How many rows the cards reach down to. */
 export function layoutBottom(widgets: BoardWidget[]): number {
   return widgets.reduce((bottom, widget) => Math.max(bottom, widget.y + widget.h), 0);
+}
+
+/**
+ * The bare board kept around the cards, in cells: two rows of dots on every
+ * side, so the cards sit on a dotted board instead of covering it.
+ */
+export const MARGIN = 2;
+
+/** The room a board gives its cards. */
+export interface BoardRoom {
+  /** Whole cells across and down for the cards. */
+  cols: number;
+  rows: number;
+  /** From the board's left edge to the cards' first column, in CSS pixels. */
+  inset: number;
+}
+
+/**
+ * The cells a board `width` × `height` CSS pixels holds for its cards: whole
+ * cells only, `MARGIN` cells of board kept clear on every side, and the cards
+ * centred across, so the margin is the same at both ends.
+ */
+export function boardRoom(width: number, height: number): BoardRoom {
+  const margin = MARGIN * GRID;
+  const cols = Math.max(1, Math.floor((width - margin * 2) / GRID));
+  const rows = Math.max(1, Math.floor((height - margin * 2) / GRID));
+  return { cols, rows, inset: Math.max(margin, Math.floor((width - cols * GRID) / 2)) };
+}
+
+/**
+ * Where the dots are drawn across the board, in CSS pixels: the cards' columns
+ * and the `MARGIN` cells either side, whole cells only. A dot sits in the
+ * middle of its cell, so no edge cuts one, and a card, which covers whole
+ * cells, never touches one: the dots run down the middle of the gaps.
+ */
+export function dotField(room: BoardRoom): { left: number; width: number } {
+  return { left: room.inset - MARGIN * GRID, width: (room.cols + MARGIN * 2) * GRID };
 }
 
 /**

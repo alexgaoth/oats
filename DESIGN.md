@@ -262,14 +262,17 @@ the conversation. Every chart draws through one module
   last row, with a rule-grey bar.
 - **Global conversations** (`components/global/`), the Conversations page's
   Global view: a board of charts across every conversation, one tab per
-  conversation group, All first. The board is the background with a 1 px dot
-  in the rule grey every 24 px. Each chart is a card on it (card colour, 1 px
-  border, `rounded-xl`, `shadow-xs`) that snaps to the dots, moves by its
-  header, resizes by its bottom-right corner and keeps one cell of board around
-  it; the cards it would land on step down out of its way. Its remove button
-  shows on hover or focus. Each tab keeps its arrangement; Reset layout, in the
-  board's menu, puts back the default: the force graph above the arc timeline,
-  filling the view.
+  conversation group, All first. The board is the background in 24 px cells,
+  with a 2 px dot in the rule grey in the middle of each (2 device pixels at
+  1x, 4 at 2x: crisp at both). Each chart is a card on it (card colour, 1 px
+  border, `rounded-xl`, `shadow-xs`) that covers whole cells and snaps to them,
+  moves by its header, resizes by its bottom-right corner and keeps one cell of
+  board to the next card; the cards it would land on step down out of its way.
+  Two cells of board stay clear around the cards, so a row of dots runs between
+  every two cards and two rows around them all, and no dot touches a card. A
+  card's remove button shows on hover or focus. Each tab keeps its arrangement;
+  Reset layout, in the board's menu, puts back the default: the force graph
+  above the arc timeline, filling the view.
 - The board's charts share one highlight (`highlightStore.ts`,
   `linkedHighlight.ts`). Pointing at a conversation, or focusing it, lights it
   honey in every chart and its links ink, and everything else recedes to the
