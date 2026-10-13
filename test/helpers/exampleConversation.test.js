@@ -29,9 +29,11 @@ const en = require("../../src/locales/en/translation.json");
 
 let offersExample;
 let isExampleNote;
+let createFakeMain;
 
 test.before(async () => {
   ({ offersExample, isExampleNote } = await import("../../src/helpers/exampleConversation.mjs"));
+  ({ createFakeMain } = await import("../../demo/harness/fake-main.mjs"));
 });
 
 const meeting = (id) => ({ id, note_type: "meeting" });
@@ -187,3 +189,21 @@ test("the note under the offer describes the example that ships", () => {
   assert.match(fixture.note.title, /launch review/i);
 });
 
+test("the demo harness answers the channel as main does", async () => {
+  const main = createFakeMain({ fixtures: [], example: fixture, now: Date.UTC(2027, 2, 15, 18) });
+  const added = [];
+  main.api.onNoteAdded((note) => added.push(note.id));
+  assert.deepEqual(await main.api.getNotes("meeting"), []);
+
+  const first = await main.api.insertExampleConversation();
+  assert.equal(first.success, true);
+  assert.equal(first.inserted, true);
+  assert.equal(first.note.sample_id, "launch-readiness-review");
+  const again = await main.api.insertExampleConversation();
+  assert.equal(again.inserted, false);
+  assert.equal(again.noteId, first.noteId);
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepEqual(added, [first.noteId]);
+  assert.equal((await main.api.getNotes("meeting")).length, 1);
+});
