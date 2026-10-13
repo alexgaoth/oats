@@ -98,6 +98,25 @@ test("the example's topics return to the launch date twice and to SSO once, and 
   assert.equal(drawn.returns.length, 3);
 });
 
+// The Connections tab draws each question on the topic the room was on when it
+// was asked. In the example that shows why the SOC audit was dropped: neither of
+// its two questions was answered.
+test("on the example's lanes, the SOC audit's two questions were never answered", () => {
+  const drawn = lanes.topicLanes({
+    snapshot: example.note.conversation_topics,
+    segments: example.note.transcript,
+  });
+  const moments = review.questionMoments(example.events, example.note.transcript);
+  assert.equal(moments.length, review.questionOutcomes(example.events).total);
+  const soc = drawn.rows.find((row) => row.label === "soc audit");
+  const topicOf = lanes.questionTopics(drawn, moments, example.note.conversation_topics);
+  const asked = moments.filter((moment) => topicOf.get(moment.id) === soc.id);
+  assert.deepEqual(
+    asked.map((moment) => moment.outcome),
+    ["denied", "silence"]
+  );
+});
+
 test("the example's marks and loudness read back", () => {
   const marks = moments.parseMoments(example.note.conversation_marks);
   assert.ok(marks.length >= 2 && marks.length <= 3);

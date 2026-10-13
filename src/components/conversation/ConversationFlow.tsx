@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Network } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { ViewSwitch } from "../ui/view-switch";
@@ -15,7 +14,7 @@ import {
 import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
 import { LANE_ROW_PX, topicLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
-import { LanesGlyph, flowCaption, stateLabel } from "./flowText";
+import { flowCaption, flowViewOptions, stateLabel } from "./flowText";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 import { useSettingsStore, type ConversationFlowView } from "../../stores/settingsStore";
@@ -270,10 +269,7 @@ export default function ConversationFlow({
           aria-label={t("oats.flow.viewLabel")}
           value={view}
           onValueChange={setView}
-          options={[
-            { value: "lanes", label: t("oats.flow.mode.lanes"), icon: LanesGlyph },
-            { value: "graph", label: t("oats.flow.mode.graph"), icon: Network },
-          ]}
+          options={flowViewOptions(t)}
         />
       </CardHeader>
 

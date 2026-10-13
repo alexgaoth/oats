@@ -6,10 +6,10 @@ const assert = require("node:assert/strict");
 
 const example = require("../../src/helpers/sampleConversations/launch-readiness-review.json");
 
-let topicLanes, runAt, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX;
+let topicLanes, runAt, questionTopics, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX;
 
 test.before(async () => {
-  ({ topicLanes, runAt, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX } =
+  ({ topicLanes, runAt, questionTopics, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX } =
     await import("../../src/helpers/topicLanes.mjs"));
 });
 
@@ -422,6 +422,54 @@ test("a moment on a switch belongs to the run it starts", () => {
   const lanes = topicLanes({ snapshot, segments });
   assert.equal(runAt(lanes, START + 100 * S).topic, 2);
   assert.equal(runAt(lanes, START + lanes.span).topic, 2, "the end of the last run is its own");
+});
+
+// ------------------------------------------------------------ questionTopics
+
+// The list under the lanes names the marks on the selected row, so a question
+// belongs to the topic its mark sits on: the stretch it was asked in.
+test("a question belongs to the stretch it was asked in, placed or not", () => {
+  const { snapshot, segments } = conversation(
+    [
+      [1, 0],
+      [1, 50],
+      [null, 70], // "When?": too short for the tracker to place
+      [2, 100],
+      [2, 150],
+    ],
+    [node(1, "pricing"), node(2, "hiring")]
+  );
+  const lanes = topicLanes({ snapshot, segments });
+  const moments = [
+    { id: 7, at: START + 70 * S, segmentIds: ["u2"] },
+    { id: 8, at: START + 150 * S, segmentIds: ["u4"] },
+  ];
+  assert.deepEqual(
+    [...questionTopics(lanes, moments, snapshot)],
+    [
+      [7, 1],
+      [8, 2],
+    ]
+  );
+});
+
+test("with no line, a question belongs to the topic its turn was placed in", () => {
+  const snapshot = {
+    nodes: [
+      node(1, "pricing", { utteranceIds: ["live-1", "live-2"] }),
+      node(2, "hiring", { utteranceIds: ["live-3", "live-4"] }),
+    ],
+  };
+  // A transcript stored before segments kept their ids: no line can be read.
+  const segments = [{ id: "legacy-0", text: "x", timestamp: START }];
+  const lanes = topicLanes({ snapshot, segments });
+  assert.deepEqual(lanes.runs, []);
+  const moments = [
+    { id: 1, at: START, segmentIds: ["live-4"] },
+    { id: 2, at: START, segmentIds: ["live-9"] },
+  ];
+  assert.deepEqual([...questionTopics(lanes, moments, snapshot)], [[1, 2]]);
+  assert.equal(questionTopics(null, null, null).size, 0);
 });
 
 // ------------------------------------------------------------ lanePath

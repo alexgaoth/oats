@@ -21,12 +21,13 @@ const locales = fs
   .map((entry) => entry.name);
 
 test("the card offers Lanes and Graph, and nothing chooses for the person", () => {
+  assert.match(FLOW, /options=\{flowViewOptions\(t\)\}/);
   assert.match(
-    FLOW,
+    TEXT,
     /\{ value: "lanes", label: t\("oats\.flow\.mode\.lanes"\), icon: LanesGlyph \}/
   );
-  assert.match(FLOW, /\{ value: "graph", label: t\("oats\.flow\.mode\.graph"\), icon: Network \}/);
-  assert.doesNotMatch(FLOW, /value: "auto"|value: "stack"/);
+  assert.match(TEXT, /\{ value: "graph", label: t\("oats\.flow\.mode\.graph"\), icon: Network \}/);
+  assert.doesNotMatch(FLOW + TEXT, /value: "auto"|value: "stack"/);
   // Auto's rule, its hysteresis and its captions are gone, and so is the stack.
   for (const gone of ["chooseFlowView", "suitableView", "flowShape", "stackItems", "captionFor"]) {
     assert.ok(!FLOW.includes(gone), gone);
@@ -105,7 +106,7 @@ test("the line ends at now in honey, and questions sit on their topic in the sha
   );
   assert.match(LANES, /rounded-full bg-primary ring-2 ring-card/);
   assert.match(LANES, /const run = runAt\(lanes, question\.at\);/);
-  assert.match(LANES, /<StateMark[\s\S]*?ring-2 ring-card/);
+  assert.match(LANES, /rounded-full bg-card p-0\.5"[\s\S]*?<StateMark state=\{mark\.state\}/);
 });
 
 test("past eight rows the card scrolls inside, and the topic now stays in view", () => {

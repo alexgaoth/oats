@@ -66,6 +66,7 @@ export default function TopicLanes({
   onSelect,
   live = false,
   questions,
+  inset = "px-5",
   className,
 }: {
   lanes: Lanes;
@@ -75,6 +76,8 @@ export default function TopicLanes({
   live?: boolean;
   /** Questions to mark on the line, each on the topic the room was on. */
   questions?: LaneQuestion[];
+  /** A row's side padding: the card's in a card, less on a page. */
+  inset?: string;
   className?: string;
 }) {
   const { t, i18n } = useTranslation();
@@ -190,7 +193,8 @@ export default function TopicLanes({
               aria-pressed={isSelected}
               onClick={() => onSelect(row.id)}
               className={cn(
-                "group col-span-full grid grid-cols-subgrid items-center px-5 text-left outline-none",
+                "group col-span-full grid grid-cols-subgrid items-center text-left outline-none",
+                inset,
                 "transition-colors duration-150 hover:bg-muted/60 motion-reduce:transition-none",
                 "focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
                 isSelected && "bg-muted hover:bg-muted"
@@ -246,16 +250,16 @@ export default function TopicLanes({
               />
             </svg>
           )}
+          {/* Each mark sits on a disc of the card colour 2px wider than it,
+              so the line stops at its edge and never runs through an open
+              ring, and two marks side by side stay apart. */}
           {marks.map((mark) => (
             <span
               key={mark.id}
-              className="absolute"
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 rounded-full bg-card p-0.5"
               style={{ left: `${mark.x * 100}%`, top: centre(mark.row) }}
             >
-              <StateMark
-                state={mark.state}
-                className="block -translate-x-1/2 -translate-y-1/2 ring-2 ring-card"
-              />
+              <StateMark state={mark.state} className="block" />
             </span>
           ))}
           {now && (
