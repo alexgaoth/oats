@@ -150,12 +150,15 @@ npm run demo:harness        # Vite on http://127.0.0.1:5391 (another port if tha
 | `/demo.html?panel=true&demo=live`                      | The review, recorded live from 0:00. The other eight are already there. |
 | `/demo.html?panel=true&demo=live&from=1062&view=words` | Live, from 17:42, in the Words view.                                    |
 | `/demo.html?panel=true&profile=empty`                  | Nothing recorded yet: Home offers the example conversation.             |
+| `/demo.html?panel=true&profile=many`                   | 200 synthetic conversations in three groups, for Global at size.        |
 
 Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last
 words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
-it is asked), `theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
+it is asked), `profile=many` (two hundred synthetic conversations over a year,
+in three conversation groups, instead of the samples: `harness/many.mjs`),
+`theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
 `connections=lanes|graph`, `badges=1` (show the "Example" badge on the demo's
 conversations).
 `panel=true` is the app's own parameter for the workspace window.
@@ -178,7 +181,8 @@ oatsDemo.status(); // { phase, seconds, lengthSeconds, paused, speed, noteId, ..
 
 await oatsDemo.open("launch-readiness-review", { tab: "connections" });
 await oatsDemo.tab("transcript");
-await oatsDemo.show("map"); // "home", "conversations" or "map"
+await oatsDemo.show("global"); // "home", "conversations" or "global" (Global conversations)
+await oatsDemo.point(noteId); // point at a conversation on the board (null: at nothing)
 oatsDemo.samples();
 ```
 
@@ -222,7 +226,7 @@ where the main process and the microphone stand:
 ```sh
 npm run demo:harness &
 node demo/capture.mjs --out ~/oats-screens                      # every shot, light and dark
-node demo/capture.mjs --out ~/oats-screens --only home,map --themes dark
+node demo/capture.mjs --out ~/oats-screens --only home,global --themes dark
 ```
 
 `capture.mjs` drives the system Chrome headless over the DevTools protocol with

@@ -12,13 +12,16 @@
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
 // `edits=0` leaves the voices unnamed after Stop; `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
-// offer the example; `theme`, `view` and `flow` as in `settings.mjs`.
+// offer the example; `profile=many` holds two hundred synthetic conversations
+// in three groups instead of the samples (`many.mjs`), to measure Global
+// conversations at size; `theme`, `view` and `flow` as in `settings.mjs`.
 // `panel=true` is the app's own: the workspace window.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { installFakeMicrophone } from "./media.mjs";
+import { manyConversations } from "./many.mjs";
 import { createReplay } from "./replay.mjs";
 import { applyDemoSettings } from "./settings.mjs";
 
@@ -29,18 +32,30 @@ const supporting = Object.values(
 const params = new URLSearchParams(window.location.search);
 const live = params.get("demo") === "live";
 const empty = params.get("profile") === "empty";
+const many = params.get("profile") === "many";
 
 installClock();
 applyDemoSettings(params);
 installFakeMicrophone();
 
 const main = createFakeMain({
-  fixtures: empty ? [] : live ? supporting : [mainFixture, ...supporting],
+  fixtures: empty || many ? [] : live ? supporting : [mainFixture, ...supporting],
   example: mainFixture,
   // The demo's conversations stand for somebody's own: no "Example" badge
   // unless `badges=1` asks for it.
   badges: params.get("badges") === "1",
 });
+if (many) {
+  // Work and Personal are seeded; Research is one the person made, between them.
+  const seeded = Object.fromEntries(main.db.groups.map((group) => [group.seed_key, group]));
+  const research = await main.api.createConversationGroup("Research");
+  await main.api.reorderConversationGroups([seeded.work.id, research.group.id, seeded.personal.id]);
+  const { notes, questions } = manyConversations({
+    groups: { work: seeded.work.id, research: research.group.id, personal: seeded.personal.id },
+  });
+  main.db.notes.push(...notes);
+  for (const question of questions) main.insertEvent(question);
+}
 window.electronAPI = main.api;
 
 const replay = createReplay({
@@ -91,7 +106,7 @@ window.oatsDemo = {
     pressTab(name);
     await frame();
   },
-  /** Go to "home", "conversations" or "map". */
+  /** Go to "home", "conversations" or "global" (Global conversations; "map" is its old name). */
   async show(view) {
     if (view === "home") {
       pressButton("Home");
@@ -100,8 +115,19 @@ window.oatsDemo = {
       await frame();
       window.dispatchEvent(new Event("oats-intelligence-back"));
       await frame();
-      pressButton(view === "map" ? "Map" : "List");
+      pressButton(view === "global" || view === "map" ? "Global" : "List");
     }
+    await frame();
+  },
+  /**
+   * Point at a conversation on the Global conversations board, as the pointer
+   * would, through the board's own highlight store; `null` points at nothing.
+   */
+  async point(id) {
+    const { useGlobalHighlight } = await import("/components/global/highlightStore.ts");
+    const store = useGlobalHighlight.getState();
+    if (id === null) store.clear();
+    else store.pointAtConversation(id);
     await frame();
   },
   /** The ids of the sample conversations held, newest first. */
