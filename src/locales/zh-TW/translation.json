@@ -1946,20 +1946,16 @@
       "title": "對話走向",
       "viewLabel": "顯示方式",
       "mode": {
-        "auto": "自動",
-        "stack": "列表",
+        "lanes": "泳道",
         "graph": "關係圖"
       },
       "empty": "隨著對話推進，話題會顯示在這裡。",
       "caption": {
-        "few_one": "正在顯示列表：目前只有 {{count}} 個話題。",
-        "few_other": "正在顯示列表：目前只有 {{count}} 個話題。",
-        "linear": "正在顯示列表：對話一路向前推進。",
-        "returns_one": "正在顯示關係圖：目前已 {{count}} 次回到之前的話題。",
-        "returns_other": "正在顯示關係圖：目前已 {{count}} 次回到之前的話題。",
-        "branching": "正在顯示關係圖：對話出現了分支。",
-        "stack": "正在顯示列表。",
-        "graph": "正在顯示關係圖。"
+        "topics_one": "{{count}} 個話題",
+        "topics_other": "{{count}} 個話題",
+        "returns_one": "{{count}} 次回到之前的話題",
+        "returns_other": "{{count}} 次回到之前的話題",
+        "topicsReturns": "{{topics}}，{{returns}}"
       },
       "state": {
         "live": "目前",
@@ -1969,10 +1965,7 @@
       },
       "back_one": "回到 {{count}} 次",
       "back_other": "回到 {{count}} 次",
-      "showMore_one": "再顯示 {{count}} 個",
-      "showMore_other": "再顯示 {{count}} 個",
-      "showFewer": "收起",
-      "stackLabel": "話題（最新在前）",
+      "lanesLabel": "話題（依提出順序）",
       "graphLabel_one": "目前提到的 {{count}} 個話題的關係圖",
       "graphLabel_other": "目前提到的 {{count}} 個話題的關係圖",
       "nodeName": "{{label}}，{{state}}",

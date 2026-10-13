@@ -6,7 +6,7 @@
 //   a local summary model, so Finish writes a title and a summary
 //
 // Page parameters choose the rest: `theme=light|dark`, `view=calm|words`
-// (the recording view), `flow=auto|stack|graph` (the flow card).
+// (the recording view), `flow=lanes|graph` (the flow card).
 
 const VIEWS = { calm: "clean", words: "detailed", clean: "clean", detailed: "detailed" };
 
@@ -17,10 +17,7 @@ export function applyDemoSettings(params) {
   set("uiMode", "work");
   set("theme", params.get("theme") === "dark" ? "dark" : "light");
   set("conversationDetail", VIEWS[params.get("view")] ?? "clean");
-  set(
-    "conversationFlowView",
-    ["auto", "stack", "graph"].includes(params.get("flow")) ? params.get("flow") : "auto"
-  );
+  set("conversationFlowView", params.get("flow") === "graph" ? "graph" : "lanes");
   set("conversationAideEnabled", "true");
   set("conversationAideInRoomEnabled", "true");
   set("conversationAideModel", "");
