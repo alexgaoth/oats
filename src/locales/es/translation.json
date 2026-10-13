@@ -2314,6 +2314,28 @@
       "failed": "No se pudo abrir la conversación de ejemplo",
       "failedHint": "No se añadió nada. Inténtalo de nuevo."
     },
+    "groups": {
+      "seed": {
+        "work": "Trabajo",
+        "personal": "Personal"
+      },
+      "moveTo": "Mover a un grupo",
+      "none": "Sin grupo",
+      "new": "Nuevo grupo…",
+      "newTitle": "Nuevo grupo",
+      "newDescription": "Ponle un nombre al grupo. Esta conversación pasa a él.",
+      "nameLabel": "Nombre",
+      "create": "Crear",
+      "movedTo": "Movida a {{group}}",
+      "movedOut": "Sin grupo",
+      "moveFailed": "No se movió",
+      "errors": {
+        "nameRequired": "Ponle un nombre al grupo.",
+        "nameTooLong": "Usa {{max}} caracteres como máximo.",
+        "nameTaken": "Ya hay un grupo con ese nombre. Elige otro.",
+        "failed": "El grupo no se guardó. Inténtalo de nuevo."
+      }
+    },
     "shell": {
       "sidebar": "Barra lateral",
       "showSidebar": "Mostrar barra lateral",

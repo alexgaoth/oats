@@ -82,6 +82,11 @@ export interface NoteItem {
   // Which bundled example conversation this is (helpers/sampleConversations.mjs),
   // or null for a conversation somebody recorded.
   sample_id?: string | null;
+  // The conversation group it is in (ConversationGroup.id), or null, and who
+  // chose: the writing model or a person. A source with no group means it was
+  // looked at and left out; no source means nobody has chosen yet.
+  group_id?: number | null;
+  group_source?: ConversationGroupSource | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
@@ -90,6 +95,43 @@ export interface NoteItem {
   deleted_at: string | null;
   workspace_id?: string | null;
   team_id?: string | null;
+}
+
+/** Who put a conversation in its group: the writing model, or a person. */
+export type ConversationGroupSource = "model" | "user";
+
+/**
+ * A conversation group: Work, Personal, or one the person made. A seeded
+ * group shows its name through i18n by `seed_key` (`oats.groups.seed.<key>`)
+ * until it is renamed, which clears the key.
+ */
+export interface ConversationGroup {
+  id: number;
+  name: string;
+  seed_key: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+/** Why a group could not be created, renamed, deleted, ordered or used. */
+export type ConversationGroupError =
+  "name-required" | "name-too-long" | "name-taken" | "not-found" | "invalid";
+
+export type ConversationGroupResult =
+  | { success: true; group: ConversationGroup; changed?: boolean }
+  | { success: false; error: ConversationGroupError };
+
+/** A note's group after a change to the groups, e.g. its group was deleted. */
+export interface NoteGroupPatch {
+  id: number;
+  group_id: number | null;
+  group_source: ConversationGroupSource | null;
+}
+
+/** Sent to every window after a group is created, renamed, ordered or deleted. */
+export interface ConversationGroupsChange {
+  groups: ConversationGroup[];
+  notes: NoteGroupPatch[];
 }
 
 export interface FolderItem {
@@ -643,6 +685,38 @@ declare global {
         name: string
       ) => Promise<{ success: boolean; folder?: FolderItem; error?: string }>;
       getFolderNoteCounts: () => Promise<Array<{ folder_id: number; count: number }>>;
+
+      // Conversation groups (database.js). Names are trimmed, not empty, at
+      // most 40 characters and unique whatever their case.
+      getConversationGroups?: () => Promise<ConversationGroup[]>;
+      createConversationGroup?: (name: string) => Promise<ConversationGroupResult>;
+      // `changed: false` when the name is the one it already shows.
+      renameConversationGroup?: (id: number, name: string) => Promise<ConversationGroupResult>;
+      // Its conversations are left in no group.
+      deleteConversationGroup?: (
+        id: number
+      ) => Promise<
+        | { success: true; id: number; notes: NoteGroupPatch[] }
+        | { success: false; error: ConversationGroupError }
+      >;
+      // Groups not named keep their order, after the ones named.
+      reorderConversationGroups?: (
+        ids: number[]
+      ) => Promise<
+        | { success: true; groups: ConversationGroup[] }
+        | { success: false; error: ConversationGroupError }
+      >;
+      // A person's choice (`group_source: "user"`), which the model never
+      // changes. null is "No group". Broadcast as `note-updated`.
+      setConversationGroup?: (
+        noteId: number,
+        groupId: number | null
+      ) => Promise<
+        { success: true; note: NoteItem } | { success: false; error: ConversationGroupError }
+      >;
+      onConversationGroupsChanged?: (
+        callback: (change: ConversationGroupsChange) => void
+      ) => () => void;
 
       // Note files (markdown mirror)
       noteFilesSetEnabled?: (

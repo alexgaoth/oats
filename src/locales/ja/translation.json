@@ -2314,6 +2314,28 @@
       "failed": "サンプルの会話を開けませんでした",
       "failedHint": "何も追加されていません。もう一度お試しください。"
     },
+    "groups": {
+      "seed": {
+        "work": "仕事",
+        "personal": "プライベート"
+      },
+      "moveTo": "グループに移動",
+      "none": "グループなし",
+      "new": "新しいグループ…",
+      "newTitle": "新しいグループ",
+      "newDescription": "グループに名前を付けてください。この会話はそのグループに移動します。",
+      "nameLabel": "名前",
+      "create": "作成",
+      "movedTo": "{{group}}に移動しました",
+      "movedOut": "グループなし",
+      "moveFailed": "移動できませんでした",
+      "errors": {
+        "nameRequired": "グループ名を入力してください。",
+        "nameTooLong": "{{max}}文字以内で入力してください。",
+        "nameTaken": "同じ名前のグループがすでにあります。別の名前にしてください。",
+        "failed": "グループを保存できませんでした。もう一度お試しください。"
+      }
+    },
     "shell": {
       "sidebar": "サイドバー",
       "showSidebar": "サイドバーを表示",

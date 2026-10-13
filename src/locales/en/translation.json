@@ -2314,6 +2314,28 @@
       "failed": "Could not open the example conversation",
       "failedHint": "Nothing was added. Try again."
     },
+    "groups": {
+      "seed": {
+        "work": "Work",
+        "personal": "Personal"
+      },
+      "moveTo": "Move to group",
+      "none": "No group",
+      "new": "New group…",
+      "newTitle": "New group",
+      "newDescription": "Name the group. This conversation moves into it.",
+      "nameLabel": "Name",
+      "create": "Create",
+      "movedTo": "Moved to {{group}}",
+      "movedOut": "Not in a group",
+      "moveFailed": "Not moved",
+      "errors": {
+        "nameRequired": "Give the group a name.",
+        "nameTooLong": "Use {{max}} characters or fewer.",
+        "nameTaken": "A group with that name already exists. Choose another name.",
+        "failed": "The group was not saved. Try again."
+      }
+    },
     "shell": {
       "sidebar": "Sidebar",
       "showSidebar": "Show sidebar",
