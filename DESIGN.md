@@ -231,8 +231,8 @@ the conversation. Every chart draws through one module
    colour.
 7. **Fill.** An area or mass is an ordered 4×4 Bayer dither of the quiet grey,
    locked to device pixels, with the field's matrix (`helpers/chartDither.mjs`).
-   Under about 24 px tall (the list strips) it is a 12% wash instead. This is
-   the one exception to "content is flat" (§2): charts carry the dither.
+   A fade under about 24 px tall (the list strips) is a 12% wash instead. This
+   is the one exception to "content is flat" (§2): charts carry the dither.
 
 - A question's mark has one vocabulary on every surface
   (`conversation/questionMarks.ts`), and it is always a complete circle of one
@@ -252,6 +252,11 @@ the conversation. Every chart draws through one module
   rule. Conversations recorded before it was kept draw from their words.
 - The legend under a contour lists only what that contour draws, in one row: how
   the questions ended, then the shape marks (new topic, marked).
+- Talk time is a list of bars under the contour: each voice's name, a 6 px bar
+  as long as its share against the voice that talked most, dithered at half
+  density, and the share. Two columns from 420 px. Pressing a voice shows only
+  its turns: its bar turns honey and its name medium. Unattributed speech is the
+  last row, with a rule-grey bar.
 
 ## 7. Motion
 
