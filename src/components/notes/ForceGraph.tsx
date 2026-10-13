@@ -106,6 +106,14 @@ function boxesOverlap(a: PlateBox, b: PlateBox): boolean {
   return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 }
 
+/** A placed label hidden under its own plate, edge to edge. */
+function coverLabel(ctx: CanvasRenderingContext2D, box: PlateBox, surface: string) {
+  ctx.beginPath();
+  ctx.roundRect(box.left, box.top, box.right - box.left, box.bottom - box.top, 4);
+  ctx.fillStyle = surface;
+  ctx.fill();
+}
+
 // A hand-arranged layout is a preference, not conversation data, so it lives in
 // localStorage rather than on the note. Stored as fractions of the canvas so a
 // resized window does not scatter it.
@@ -553,18 +561,21 @@ export default function ForceGraph<TNode extends GraphNode>({
         paintLabels(target, scene.labels.values(), palette.quiet, palette, plate);
       });
     } else {
-      // Structure first, the marks over it, the names over those: a lit edge
-      // passes under a receded disc's plate rather than through its words.
-      // Every edge, receded; the lit ones are drawn over their own receded
-      // stroke, so the layer is the same whatever is pointed at.
-      layer("recede-edges", (target) => strokeEdges(target, scene.pairs, palette.rule));
+      // What recedes goes behind what is lit, and every name goes over both:
+      // a lit edge runs unbroken across a receded disc, which a dash would
+      // otherwise make of it, and under every plate, so it crosses no word.
+      // Each layer holds everything in its receded tone, so it is the same
+      // whatever is pointed at; a lit edge is drawn over its own receded stroke.
+      layer("recede-edges", (target) => {
+        strokeEdges(target, scene.pairs, palette.rule);
+        paintDiscs(target, nodes, "recede", palette, plate);
+      });
       strokeEdges(
         ctx,
         scene.pairs.filter((pair) => lineTone(current, pair.key) === "lit"),
         palette.ink
       );
-      layer("recede-marks", (target) => {
-        paintDiscs(target, nodes, "recede", palette, plate);
+      layer("recede-labels", (target) => {
         paintLabels(target, scene.labels.values(), palette.quiet, palette, plate);
       });
       paintDiscs(
@@ -578,11 +589,20 @@ export default function ForceGraph<TNode extends GraphNode>({
 
     paintDiscs(ctx, focusNodes, "focus", palette, plate);
     // Whatever is pointed at or chosen is named, last and therefore on top,
-    // even where the layout found no room for its label.
+    // even where the layout found no room for its label. A label it lands on
+    // is covered whole rather than in part: a fragment of a word is worse than
+    // no word, and the hidden one comes back when the pointer moves on.
     ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
     const named = focusNodes.map(
       (node) => scene.labels.get(node.id) ?? labelCandidates(ctx, node, size.width, size.height)[0]
     );
+    for (const label of named) {
+      if (scene.labels.get(label.id) === label) continue;
+      for (const other of scene.labels.values()) {
+        if (other.id === label.id || !boxesOverlap(label.box, other.box)) continue;
+        coverLabel(ctx, other.box, plate);
+      }
+    }
     paintLabels(ctx, named, palette.ink, palette, plate);
   }, [edges, size, palette, surface, currentHighlight]);
 
