@@ -2950,7 +2950,7 @@
           "id": 1,
           "label": "launch date",
           "words": ["launch", "date", "3rd", "move", "customer", "kickoff", "monday", "i'll"],
-          "durationMs": 1740538,
+          "durationMs": 296365,
           "utteranceIds": [
             "seg-mv5fs6xk-1",
             "seg-mv5fs6xk-2",
@@ -3000,7 +3000,7 @@
           "id": 2,
           "label": "sso saml",
           "words": ["sso", "saml", "identity", "provider", "login", "clock", "review", "fix"],
-          "durationMs": 819194,
+          "durationMs": 318570,
           "utteranceIds": [
             "seg-mv5fs6xk-21",
             "seg-mv5fs6xk-22",
