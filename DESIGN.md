@@ -109,6 +109,7 @@ Rules:
   mode, so a warning read as the brand. Light mode uses orange-700 so warning text
   meets 4.5:1 on white.
 - **The symbol is the honey oat grain** (`shell/OatsMark.tsx`): a small 3D grain,
+  dithered like the field's sky (four honey tones in ordered dither on device pixels, no glow; `helpers/grainDither.mjs`),
   the same in light and dark mode, with no tile behind it. It is tossed once when
   the app first comes into view and again when the sidebar mark is clicked: it
   hops, tumbles end over end twice and lands with a small squash, while the light
