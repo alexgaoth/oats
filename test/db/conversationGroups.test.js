@@ -343,3 +343,86 @@ test("updateNote cannot write a note's group", (t) => {
   assert.equal(after.group_id, null);
   assert.equal(after.group_source, null);
 });
+
+test("the model's choice is written only where no person has chosen", (t) => {
+  const db = openAt(t, freshDir(t));
+  if (!db) return;
+  const [work, personal] = db.getConversationGroups();
+  const fresh = conversation(db, "Pricing call");
+  const chosen = conversation(db, "Weekend trip");
+  db.db.prepare("UPDATE notes SET updated_at = '2026-09-04 09:00:00' WHERE id = ?").run(fresh.id);
+  db.setConversationGroup(chosen.id, personal.id);
+
+  const sorted = db.setConversationGroupFromModel(fresh.id, work.id);
+  assert.equal(sorted.success, true);
+  assert.deepEqual([sorted.note.group_id, sorted.note.group_source], [work.id, "model"]);
+  assert.equal(sorted.note.updated_at, "2026-09-04 09:00:00", "sorting is not a change to it");
+
+  // The model may change its own mind (a resumed conversation, summarized again)...
+  const again = db.setConversationGroupFromModel(fresh.id, null);
+  assert.deepEqual([again.note.group_id, again.note.group_source], [null, "model"]);
+
+  // ...but never a person's.
+  assert.deepEqual(db.setConversationGroupFromModel(chosen.id, work.id), {
+    success: false,
+    error: "chosen",
+  });
+  assert.deepEqual(db.setConversationGroupFromModel(chosen.id, null), {
+    success: false,
+    error: "chosen",
+  });
+  assert.deepEqual(
+    [db.getNote(chosen.id).group_id, db.getNote(chosen.id).group_source],
+    [personal.id, "user"]
+  );
+
+  // A group deleted while the model was answering, a deleted conversation, nonsense.
+  assert.deepEqual(db.setConversationGroupFromModel(fresh.id, 999), {
+    success: false,
+    error: "not-found",
+  });
+  assert.equal(db.getNote(fresh.id).group_source, "model");
+  db.deleteNote(fresh.id);
+  assert.deepEqual(db.setConversationGroupFromModel(fresh.id, work.id), {
+    success: false,
+    error: "not-found",
+  });
+  assert.deepEqual(db.setConversationGroupFromModel("1", work.id), {
+    success: false,
+    error: "invalid",
+  });
+  assert.deepEqual(db.setConversationGroupFromModel(chosen.id, "2"), {
+    success: false,
+    error: "invalid",
+  });
+});
+
+test("the conversations left to sort: finished, summarized, and chosen by nobody", (t) => {
+  const db = openAt(t, freshDir(t));
+  if (!db) return;
+  const [work] = db.getConversationGroups();
+  const at = (note, stamp) =>
+    db.db.prepare("UPDATE notes SET updated_at = ? WHERE id = ?").run(stamp, note.id);
+  const older = conversation(db, "Hiring sync", { enhanced_content: "Two finalists remain." });
+  const newer = conversation(db, "Design crit", { enhanced_content: "The import screen." });
+  const noSummary = conversation(db, "Still recording");
+  const blank = conversation(db, "Blank", { enhanced_content: "   " });
+  const byModel = conversation(db, "Pricing", { enhanced_content: "Thirty percent." });
+  const byHand = conversation(db, "Flat viewing", { enhanced_content: "Two rooms." });
+  const leftOut = conversation(db, "Standup", { enhanced_content: "Nothing new." });
+  const deleted = conversation(db, "Old", { enhanced_content: "Gone." });
+  const dictation = db.saveNote("A dictation", "", "personal").note;
+  db.updateNote(dictation.id, { enhanced_content: "Words." });
+  at(older, "2026-09-01 10:00:00");
+  at(newer, "2026-09-02 10:00:00");
+  db.setConversationGroupFromModel(byModel.id, work.id);
+  db.setConversationGroup(byHand.id, work.id);
+  db.setConversationGroupFromModel(leftOut.id, null);
+  db.deleteNote(deleted.id);
+
+  assert.deepEqual(db.listUnsortedConversations(), [newer.id, older.id]);
+  assert.deepEqual(db.listUnsortedConversations({ limit: 1 }), [newer.id]);
+  for (const note of [noSummary, blank, byModel, byHand, leftOut, deleted, dictation]) {
+    assert.ok(!db.listUnsortedConversations().includes(note.id), note.title);
+  }
+});

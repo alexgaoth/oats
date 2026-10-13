@@ -39,7 +39,7 @@ test("nothing moves under reduced motion", () => {
 
 test("how topics are drawn is one of the choices with character", () => {
   assert.match(FLOW, /<ViewSwitch<ConversationFlowView>/);
-  for (const icon of ["Wand", "Rows3", "Network"]) {
+  for (const icon of ["LanesGlyph", "Network"]) {
     assert.ok(FLOW.includes(`icon: ${icon}`), icon);
   }
   assert.doesNotMatch(FLOW, /SegmentedControl/);

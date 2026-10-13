@@ -29,7 +29,7 @@ import type {
 import type { Snippet } from "../utils/snippets";
 import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
 import { resolveUiMode } from "../helpers/uiMode.mjs";
-import { resolveFlowMode } from "../helpers/conversationFlow.mjs";
+import { resolveFlowView } from "../helpers/conversationFlow.mjs";
 import { resolveDictationEnabled } from "../helpers/dictationSetting.mjs";
 import { getCachedPlatform } from "../utils/platform";
 
@@ -40,7 +40,7 @@ export type UiMode = "work" | "field";
 export type ConversationDetail = "clean" | "detailed";
 
 /** How the conversation flow card draws its topics. See `conversationFlow.mjs`. */
-export type ConversationFlowView = "auto" | "stack" | "graph";
+export type ConversationFlowView = "lanes" | "graph";
 
 let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
 
@@ -463,7 +463,7 @@ export interface SettingsState
   meetingRemoteTranscriptionUrl: string;
   /** Which composition the Conversation surface draws. See `conversationDetail.mjs`. */
   conversationDetail: ConversationDetail;
-  /** Stack, graph, or Auto choosing by the flow's shape. See `conversationFlow.mjs`. */
+  /** Lanes or the graph. See `conversationFlow.mjs`. */
   conversationFlowView: ConversationFlowView;
   /** The ledger, or the oat field. See `uiMode.mjs`. */
   uiMode: UiMode;
@@ -1185,8 +1185,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   conversationDetail: resolveConversationDetail(
     isBrowser ? localStorage.getItem("conversationDetail") : null
   ) as ConversationDetail,
-  // Auto unless the person chose otherwise; an unknown stored value is Auto too.
-  conversationFlowView: resolveFlowMode(
+  // Lanes unless the person chose the graph. A stored Auto or Stack, the views
+  // the lanes replaced, reads as Lanes, and so does anything unknown.
+  conversationFlowView: resolveFlowView(
     isBrowser ? localStorage.getItem("conversationFlowView") : null
   ) as ConversationFlowView,
   uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,

@@ -140,3 +140,97 @@ test("the harness keeps groups by the database's rules", async () => {
   assert.equal(changes.length, 4, "create, rename, delete and order are each announced");
   assert.deepEqual(changes[2].notes, deleted.notes);
 });
+
+// --- Sorting with the writing model (stores/conversationGroupSortStore.ts).
+
+const SORTER = read("src/stores/conversationGroupSortStore.ts");
+const ACTIONS = read("src/stores/actionProcessingStore.ts");
+
+test("the model's choice and the conversations left to sort reach the main process", () => {
+  for (const [method, channel, args] of [
+    ["setConversationGroupFromModel", "db-set-conversation-group-from-model", "noteId, groupId"],
+    ["listUnsortedConversations", "db-list-unsorted-conversations", ""],
+  ]) {
+    const invoke = args
+      ? `ipcRenderer.invoke("${channel}", ${args})`
+      : `ipcRenderer.invoke("${channel}")`;
+    assert.ok(
+      PRELOAD.replace(/\s+/g, " ").includes(`${method}: (${args}) => ${invoke}`),
+      `preload.js exposes ${method}`
+    );
+    assert.ok(
+      HANDLERS.includes(`ipcMain.handle("${channel}"`),
+      `ipcHandlers.js handles ${channel}`
+    );
+    assert.match(TYPES, new RegExp(`\\b${method}\\?: \\(`), `electron.ts types ${method}`);
+  }
+});
+
+test("the summary sorts its conversation by the same model and route, after it is written", () => {
+  const body = ACTIONS.slice(ACTIONS.indexOf("export function runBackgroundAction"));
+  const claim = body.indexOf("await claimWritingModel()");
+  const summary = body.indexOf("reasoningService.processText(noteContent, modelId");
+  const written = body.indexOf("await window.electronAPI.updateNote(noteId, updates)");
+  const sorted = body.indexOf("await sortConversationIntoGroup(noteId, {");
+  assert.ok(
+    claim > 0 && claim < summary,
+    "the background sort steps aside before the summary asks"
+  );
+  assert.ok(
+    written > summary && sorted > written,
+    "the group is chosen after the summary is saved"
+  );
+  assert.match(
+    body.slice(sorted, sorted + 260),
+    /modelId,\s*mode: noteFormatting\.mode,\s*config: \{ \.\.\.providerOverrides, disableThinking: noteFormatting\.disableThinking \},\s*\}\)\.catch\(/
+  );
+  assert.match(body, /finally \{\s*cancelledFlags\.delete\(noteId\);\s*release\(\);/);
+});
+
+test("sorting opens no connection of its own: its one request is the reasoning service's", () => {
+  const code = SORTER.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const forbidden of [/\bfetch\(/, /XMLHttpRequest/, /WebSocket/, /openExternal/, /\bnet\./]) {
+    assert.doesNotMatch(code, forbidden);
+  }
+  assert.equal((code.match(/reasoningService\.processText\(/g) ?? []).length, 1);
+  assert.match(
+    code,
+    /reasoningService\.processText\(prompt\.text, route\.modelId, null, \{\s*\.\.\.route\.config,/
+  );
+  // The background route is the summary's, built the same way.
+  assert.match(
+    code,
+    /buildNoteFormattingOverrides\(noteFormatting, isCloudMode, noteFormatting\.customApiKey\)/
+  );
+  assert.match(
+    ACTIONS,
+    /buildNoteFormattingOverrides\(\s*noteFormatting,\s*options\.isCloudMode,\s*noteFormatting\.customApiKey\s*\)/
+  );
+  // In the background, only on this computer or the person's own server.
+  assert.match(code, /const BACKGROUND_MODES = new Set\(\["local", "self-hosted"\]\);/);
+});
+
+test("the harness writes the model's choice by the database's rules", async () => {
+  const main = createFakeMain({ fixtures: [] });
+  const { api, db } = main;
+  const [work, personal] = await api.getConversationGroups();
+  const make = async (title, summary) => {
+    const { note } = await api.saveNote(title, "", "meeting");
+    if (summary) db.updateNote(note.id, { enhanced_content: summary });
+    return note;
+  };
+  const one = await make("Pricing call", "Thirty percent off.");
+  const two = await make("Flat viewing", "Two rooms and a balcony.");
+  const three = await make("Still recording", null);
+  assert.deepEqual((await api.listUnsortedConversations()).sort(), [one.id, two.id].sort());
+
+  await api.setConversationGroup(two.id, personal.id);
+  assert.deepEqual(await api.setConversationGroupFromModel(two.id, work.id), {
+    success: false,
+    error: "chosen",
+  });
+  const sorted = await api.setConversationGroupFromModel(one.id, work.id);
+  assert.deepEqual([sorted.note.group_id, sorted.note.group_source], [work.id, "model"]);
+  assert.deepEqual(await api.listUnsortedConversations(), []);
+  assert.equal(three.group_source, null);
+});
