@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "O que as marcas significam",
         "open": "Aberta",
-        "topic": "Mudança de assunto",
-        "return": "Volta a um assunto anterior",
-        "marked": "Momento marcado"
+        "topic": "Novo assunto",
+        "marked": "Marcado"
       },
       "contourSummary": "{{minutes}} minutos, {{questions}} perguntas ({{unresolved}} sem resposta), o assunto mudou {{shifts}} vezes e {{returns}} fios foram retomados.",
       "contourEmpty": "Nada gravado ainda.",

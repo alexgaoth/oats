@@ -5,37 +5,52 @@ import {
   LIVE_BUCKET_MS,
   QUIET_THRESHOLD,
 } from "../../helpers/conversationContour.mjs";
-import { markFill, markTone, TONE_TOKEN, type MarkFill, type MarkTone } from "./questionMarks";
+import { monotoneAt, monotoneTangents } from "../../helpers/chartCurve.mjs";
+import {
+  CHART,
+  DITHER_MIN_HEIGHT,
+  ditherFade,
+  drawDot,
+  observeCanvas,
+  subscribeChartPalette,
+  traceMonotone,
+  washFill,
+  type ChartFrame,
+  type ChartPalette,
+} from "../charts/chartStyle";
+import { markKind } from "./questionMarks";
 
-// The conversation contour (DESIGN.md §9.8) — Oats' signature mark.
+// The conversation contour (DESIGN.md §6) — Oats' signature mark.
 //
 // Everything drawn here is a measurement of the conversation it belongs to. The
 // geometry comes from `helpers/conversationContour.mjs`, which is pure and
 // pinned by `test/helpers/conversationContour.test.js`; this file owns pixels
 // and nothing else, so the meaning of the mark cannot drift from its drawing.
+// The pixels follow the chart rules (`components/charts/chartStyle.ts`).
 //
 // Four things are on screen and each one is a fact:
 //
-//   **The trace** is time, left to right, thick where people spoke and thin
-//   where they did not. A silence is a thinning, never a gap — the line does not
-//   break, because the conversation did not.
+//   **The line** is time, left to right, high where people spoke and low where
+//   they did not. A silence is a dip, never a gap: the line does not break,
+//   because the conversation did not. Under it, the fill thins from the line
+//   to the baseline.
 //
-//   **A notch** is the subject changing.
+//   **A tick** through the baseline is the subject changing.
 //
-//   **A pin** is a question, at the moment it was asked: a complete circle on
-//   one row along the top, with a stem down to its moment on the trace. Its
-//   fill says how settled it is: filled when settled, a soft fill inside a
-//   ring when the answer was hedged, an empty ring when nobody gave a verdict
-//   (`questionMarks.ts`). The fill reads in greyscale and with colour
-//   blindness. The status colour repeats it.
+//   **A dot** is a question, on the line at the moment it was asked. Its fill
+//   says how it ended: filled when settled, a soft fill inside a ring when the
+//   answer was hedged, a ring when nobody gave a verdict (`questionMarks.ts`).
+//   The fill reads in greyscale and with colour blindness; the status colour
+//   repeats it.
 //
-//   **An arc** is the room coming back to a thread it had left — the one thing
-//   a transcript cannot show you and a summary always flattens.
+//   **A caret** under the baseline is a moment somebody marked.
+//
+// Returns to an earlier topic are not drawn here: the flow card's lanes show
+// them.
 //
 // There is no animation loop. A stored conversation draws once. A live one
-// (`buildLiveContour`) redraws once a second and rolls: the trace and every
-// pin move one second to the left. That is a one-second step, not an
-// animation, so there is nothing for `prefers-reduced-motion` to reduce.
+// (`buildLiveContour`) redraws once a second and rolls: the line and every dot
+// move one second to the left, and the canvas glides between the redraws.
 
 export interface ContourPoint {
   x: number;
@@ -82,6 +97,7 @@ export interface ContourData {
   points: ContourPoint[];
   marks: ContourMark[];
   shifts: ContourShift[];
+  /** Counted in the label; not drawn (the lanes show returns). */
   returns: ContourReturn[];
   /** Instants somebody pressed "Mark". Optional: older callers build none. */
   moments?: ContourMoment[];
@@ -105,119 +121,47 @@ export interface ContourData {
   };
 }
 
-interface Palette extends Record<MarkTone, string> {
-  ink: string;
-  husk: string;
-  hairline: string;
-  /** The surface the contour sits on: the knockout ring around a pin. */
-  card: string;
-}
+/** The fill's density just under the line, and at the baseline (rule 7). */
+const FILL_UNDER_LINE = 0.5;
+const FILL_AT_BASELINE = 0.08;
+
+/** Room above the highest point for a focused dot and its ring. */
+const DOT_ROOM = CHART.focusDot + CHART.ring + 1;
+
+/** How narrow a dip (CSS px either side) the fill bridges rather than follows. */
+const FILL_REACH = 10;
+
+type Point = { x: number; y: number };
 
 /**
- * One theme observer for the whole application, not one per contour.
+ * The top the fill thins down from: the line's highest point within
+ * `FILL_REACH` either side, averaged over the same reach so it has no corners.
  *
- * Each instance used to install its own `MutationObserver` on
- * `document.documentElement` and do its own `getComputedStyle` read. With the
- * Intelligence list showing a hundred conversations, a single dark-mode toggle
- * fired a hundred observers, forced a hundred style recalculations and pushed a
- * hundred fresh palette objects into state — measured at ~100–170ms. The
- * palette is a property of the document, so it is read once and published.
+ * The fill thins from the line to the baseline in every column. Thinned from
+ * the line itself, every narrow dip (a breath, live) pulled the dense band down
+ * to the baseline and drew a dark streak under each silence. From this top, a
+ * broad stretch still has its densest grain right under the line, and a dip
+ * only cuts into the mass, sparse, as a silence should be.
  */
-const paletteSubscribers = new Set<(palette: Palette) => void>();
-let sharedPalette: Palette | null = null;
-let themeObserver: MutationObserver | null = null;
-
-function subscribeToPalette(element: HTMLElement, notify: (palette: Palette) => void): () => void {
-  if (!sharedPalette) sharedPalette = readPalette(element);
-  notify(sharedPalette);
-  paletteSubscribers.add(notify);
-  if (!themeObserver) {
-    themeObserver = new MutationObserver(() => {
-      sharedPalette = readPalette(document.documentElement);
-      for (const subscriber of paletteSubscribers) subscriber(sharedPalette);
-    });
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-  }
-  return () => {
-    paletteSubscribers.delete(notify);
-    if (paletteSubscribers.size === 0) {
-      themeObserver?.disconnect();
-      themeObserver = null;
-      // Dropped so the next mount re-reads rather than trusting a palette from
-      // before a theme change nobody was subscribed to observe.
-      sharedPalette = null;
-    }
-  };
+function fillTop(line: Point[]): number[] {
+  const count = line.length;
+  if (count < 2) return line.map((point) => point.y);
+  const spacing = (line[count - 1].x - line[0].x) / (count - 1) || 1;
+  const reach = Math.max(1, Math.round(FILL_REACH / spacing));
+  const from = (index: number) => Math.max(0, index - reach);
+  const to = (index: number) => Math.min(count - 1, index + reach);
+  // Highest is the smallest y: the canvas counts down.
+  const highest = line.map((_, index) => {
+    let top = Infinity;
+    for (let at = from(index); at <= to(index); at += 1) top = Math.min(top, line[at].y);
+    return top;
+  });
+  return highest.map((_, index) => {
+    let total = 0;
+    for (let at = from(index); at <= to(index); at += 1) total += highest[at];
+    return total / (to(index) - from(index) + 1);
+  });
 }
-
-function readPalette(element: HTMLElement): Palette {
-  const styles = getComputedStyle(element);
-  const value = (name: string, fallback: string) =>
-    styles.getPropertyValue(name).trim() || fallback;
-  return {
-    ink: value("--color-foreground", "#09090b"),
-    husk: value("--color-muted-foreground", "#71717a"),
-    hairline: value("--color-border", "#e4e4e7"),
-    card: value("--color-card", "#ffffff"),
-    success: value(TONE_TOKEN.success, "#16a34a"),
-    warning: value(TONE_TOKEN.warning, "#d97706"),
-    muted: value(TONE_TOKEN.muted, "#71717a"),
-  };
-}
-
-/** A pin's head radius, and its radius while its question is being read. */
-const PIN_RADIUS = 4.5;
-const PIN_RADIUS_FOCUSED = 6;
-/** The band above the trace that the pins live in. */
-const PIN_BAND = 26;
-
-/**
- * A pin's head: always a complete circle of one size. A knockout ring in the
- * surface colour keeps it crisp where it meets its stem or another pin.
- */
-function drawPinHead(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  fill: MarkFill,
-  color: string,
-  surface: string
-) {
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius + 1.5, 0, Math.PI * 2);
-  ctx.fillStyle = surface;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  if (fill === "solid") {
-    ctx.fillStyle = color;
-    ctx.fill();
-    return;
-  }
-  if (fill === "soft") {
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.restore();
-  }
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius - 0.75, 0, Math.PI * 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-}
-
-/**
- * At list-strip size the fills blur together, so the strip keeps their order
- * as strength instead: settled is full, hedged is lighter, open is faint.
- */
-const STRIP_ALPHA: Record<MarkFill, number> = { solid: 1, soft: 0.6, ring: 0.35 };
 
 export default function ConversationContour({
   contour,
@@ -233,14 +177,14 @@ export default function ConversationContour({
   className?: string;
   /** CSS length. A string so a caller can hand it a `clamp()`. */
   height?: number | string;
-  /** The list strip omits notches and arcs — at 40px they are a smudge. */
+  /** The list strip omits ticks, carets and dots: at 16px they are a smudge. */
   showMarks?: boolean;
   /** Read out instead of the drawing, which is decorative to a screen reader. */
   label?: string;
   /**
    * The question group the reader is currently on, from the annotations below.
-   * Its mark is raised so a question and its place in the conversation are
-   * visibly the same thing.
+   * Its dot is raised and ringed in honey, so a question and its place in the
+   * conversation are visibly the same thing.
    */
   focusedGroup?: string | null;
   /**
@@ -253,7 +197,7 @@ export default function ConversationContour({
   pickLabel?: (time: number) => string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [palette, setPalette] = useState<Palette | null>(null);
+  const [palette, setPalette] = useState<ChartPalette | null>(null);
   // Where the pointer is over a pickable trace, as a fraction of its width.
   // A DOM hairline rather than a redraw: hovering must not repaint the canvas.
   const [hover, setHover] = useState<number | null>(null);
@@ -265,7 +209,7 @@ export default function ConversationContour({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    return subscribeToPalette(canvas, setPalette);
+    return subscribeChartPalette(canvas, setPalette);
   }, []);
 
   useEffect(() => {
@@ -294,222 +238,176 @@ export default function ConversationContour({
       canvas.style.transform = `translateX(${(-bucketPx).toFixed(2)}px)`;
     };
 
-    const draw = () => {
-      const canvasWidth = canvas.clientWidth;
-      const cssHeight = canvas.clientHeight;
+    const draw = ({ ctx, width: canvasWidth, height: cssHeight }: ChartFrame) => {
       // Live, the canvas is one bucket wider than the window it plots, so it
-      // can glide left by that bucket between once-a-second redraws (below).
+      // can glide left by that bucket between once-a-second redraws (above).
       const buckets = contour.live ? Math.max(1, contour.points.length) : 0;
       const width = contour.live ? canvasWidth * (buckets / (buckets + 1)) : canvasWidth;
       if (!width || !cssHeight) return;
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      if (canvas.width !== canvasWidth * ratio || canvas.height !== cssHeight * ratio) {
-        canvas.width = canvasWidth * ratio;
-        canvas.height = cssHeight * ratio;
-      }
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      ctx.clearRect(0, 0, canvasWidth, cssHeight);
       glide(width / Math.max(1, buckets));
 
-      // The baseline sits low: the trace grows upward from it and the pins
-      // live in the band above it, so nothing has to overlap anything.
-      const baseline = cssHeight - (showMarks ? 14 : 3);
-      const amplitude = Math.max(4, baseline - (showMarks ? PIN_BAND : 4));
-      const at = (point: { y: number }) => baseline - point.y * amplitude;
+      // The baseline sits low and on a whole pixel, so the 1px rule is crisp:
+      // the line grows up from it, and ticks and carets hang under it.
+      const baseline = Math.round(cssHeight - (showMarks ? 14 : 3));
+      const amplitude = Math.max(4, baseline - (showMarks ? DOT_ROOM : 3));
+      const at = (value: number) => baseline - value * amplitude;
       const x = (value: number) => value * (width - 1);
       // Live, the line begins where the sitting began, and rolls left from there.
       const left = contour.live ? Math.min(width, Math.max(0, x(contour.sessionX ?? 0))) : 0;
 
-      if (contour.empty || !contour.points.length) {
-        // A conversation with nothing in it draws its own resting line rather
-        // than an invented one. It is the ledger before anybody has written in
-        // it, which is a true thing to show.
-        ctx.strokeStyle = palette.hairline;
-        ctx.lineWidth = 1;
+      const rule = (from: number) => {
         ctx.beginPath();
-        ctx.moveTo(0, baseline);
-        ctx.lineTo(width, baseline);
+        ctx.moveTo(from, baseline + 0.5);
+        ctx.lineTo(canvasWidth, baseline + 0.5);
+        ctx.lineWidth = CHART.rule;
+        ctx.lineCap = "butt";
+        ctx.strokeStyle = palette.rule;
         ctx.stroke();
+      };
+
+      if (contour.empty || !contour.points.length) {
+        // A conversation with nothing in it draws its own resting baseline
+        // rather than an invented line: a true thing to show.
+        rule(0);
         return;
       }
 
       const drawn = contour.live ? contour.points.filter((point) => !point.before) : contour.points;
+      const line = drawn.map((point) => ({ x: x(point.x), y: at(point.y) }));
+      const tangents = monotoneTangents(line);
+      const first = line[0];
+      const last = line[line.length - 1];
 
-      // 1. Return arcs, behind everything: they are context, not content. In
-      //    the muted ink, lightened, rather than the border colour, which
-      //    measured 1.25:1 on the card and hid the one thing a transcript
-      //    cannot show.
-      if (showMarks) {
-        ctx.strokeStyle = palette.husk;
-        ctx.globalAlpha = 0.4;
-        ctx.lineWidth = 1;
-        for (const arc of contour.returns) {
-          const from = x(arc.from);
-          const to = x(arc.to);
-          const lift = Math.min(amplitude * 0.8, (to - from) * 0.28);
-          ctx.beginPath();
-          ctx.moveTo(from, baseline);
-          ctx.bezierCurveTo(from, baseline - lift, to, baseline - lift, to, baseline);
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
+      // 1. The fill under the line: a dither thinning to the baseline, or a
+      //    wash where the strip is too small for the grain. Live, the grain is
+      //    pinned to the start of the sitting, so it rolls with the line
+      //    instead of shimmering under it.
+      const area = (c: CanvasRenderingContext2D) => {
+        c.moveTo(first.x, baseline);
+        c.lineTo(first.x, first.y);
+        traceMonotone(c, line, tangents);
+        c.lineTo(last.x, baseline);
+        c.closePath();
+      };
+      if (line.length > 1 && cssHeight < DITHER_MIN_HEIGHT) {
+        washFill(ctx, area, palette.quiet);
+      } else if (line.length > 1) {
+        const top = fillTop(line);
+        // `share` of the way down from the fill's top to the baseline.
+        const down = (share: number, index: number) => top[index] + share * (baseline - top[index]);
+        ctx.save();
+        ctx.beginPath();
+        area(ctx);
+        ctx.clip();
+        ditherFade(
+          ctx,
+          // The part of the fill between `start` and `end` of the way down;
+          // the clip keeps it under the line.
+          (c, start, end) => {
+            if (start <= 0) {
+              c.moveTo(first.x, 0);
+              c.lineTo(last.x, 0);
+            } else {
+              line.forEach((point, index) => c.lineTo(point.x, down(start, index)));
+            }
+            if (end >= 1) {
+              c.lineTo(last.x, baseline);
+              c.lineTo(first.x, baseline);
+            } else {
+              for (let index = line.length - 1; index >= 0; index -= 1) {
+                c.lineTo(line[index].x, down(end, index));
+              }
+            }
+            c.closePath();
+          },
+          palette.quiet,
+          FILL_UNDER_LINE,
+          FILL_AT_BASELINE,
+          contour.live ? { origin: { x: x(contour.sessionX ?? 0), y: 0 } } : {}
+        );
+        ctx.restore();
       }
 
-      // 2. The trace. Drawn as a filled ribbon around the baseline rather than a
-      //    stroked path: thickness is the measurement, and a stroke of varying
-      //    width cannot be expressed as one path.
-      if (drawn.length) {
-        // A curve through the points rather than straight segments between
-        // them: each piece ends halfway to the next point, bent by the point it
-        // passes. Every rise and fall stays; the corners go, so the line reads
-        // as a voice and not as a bar chart.
-        const path = drawn.map((point) => ({ px: x(point.x), py: at(point) }));
-        const curve = () => {
-          for (let index = 1; index < path.length - 1; index += 1) {
-            const here = path[index];
-            const next = path[index + 1];
-            ctx.quadraticCurveTo(
-              here.px,
-              here.py,
-              (here.px + next.px) / 2,
-              (here.py + next.py) / 2
-            );
-          }
-          const last = path[path.length - 1];
-          ctx.lineTo(last.px, last.py);
-        };
+      // 2. The baseline, always: the rule the line stands on.
+      rule(left);
 
-        ctx.beginPath();
-        ctx.moveTo(left, baseline);
-        ctx.lineTo(path[0].px, path[0].py);
-        curve();
-        ctx.lineTo(width, baseline);
-        ctx.closePath();
-        ctx.fillStyle = palette.husk;
-        ctx.globalAlpha = 0.28;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Its upper edge in ink, so the shape reads as a line and not as a wash.
-        ctx.beginPath();
-        ctx.moveTo(path[0].px, path[0].py);
-        curve();
-        ctx.strokeStyle = palette.ink;
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.55;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-
-      // The baseline itself, always — it is the ledger rule the entry sits on.
-      ctx.strokeStyle = palette.hairline;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(left, baseline + 0.5);
-      ctx.lineTo(canvasWidth, baseline + 0.5);
-      ctx.stroke();
-
-      // Live: a small tick at each whole minute since the start. They roll with
-      // the trace, so the movement shows even while the room is quiet.
+      // 3. Live: a tick under the baseline at each whole minute since the
+      //    start. They roll with the line, so the movement shows in a silence.
+      ctx.lineWidth = CHART.rule;
+      ctx.lineCap = "butt";
       if (contour.live && showMarks) {
-        ctx.strokeStyle = palette.husk;
-        ctx.globalAlpha = 0.45;
+        ctx.strokeStyle = palette.rule;
+        ctx.beginPath();
         for (const tick of contour.ticks ?? []) {
           const px = Math.round(x(tick.x)) + 0.5;
           if (px < left) continue;
-          ctx.beginPath();
           ctx.moveTo(px, baseline + 1);
           ctx.lineTo(px, baseline + 4);
-          ctx.stroke();
         }
-        ctx.globalAlpha = 1;
+        ctx.stroke();
       }
 
-      // 3. Topic shifts: a notch through the baseline.
+      // 4. A topic change: a tick through the baseline.
       if (showMarks) {
-        ctx.strokeStyle = palette.husk;
-        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = palette.quiet;
+        ctx.beginPath();
         for (const shift of contour.shifts) {
           const px = Math.round(x(shift.x)) + 0.5;
-          ctx.beginPath();
           ctx.moveTo(px, baseline - 3);
-          ctx.lineTo(px, baseline + 5);
-          ctx.stroke();
+          ctx.lineTo(px, baseline + 4);
         }
-        ctx.globalAlpha = 1;
+        ctx.stroke();
       }
 
-      // 4. Questions, as pins: every head a complete circle of one size, on one
-      //    row along the top, with a stem down to the moment it was asked. Two
-      //    pins too close to sit side by side take a second row instead of
-      //    overlapping.
-      if (showMarks) {
-        const gap = PIN_RADIUS * 2 + 3;
-        const rows = [-Infinity, -Infinity];
-        const ordered = [...contour.marks].sort((a, b) => a.x - b.x);
-        for (const mark of ordered) {
-          const px = Math.round(x(mark.x)) + 0.5;
-          if (px < -PIN_RADIUS || px > width + PIN_RADIUS) continue;
-          const row = px - rows[0] >= gap ? 0 : px - rows[1] >= gap ? 1 : 0;
-          rows[row] = px;
-          // Reading a question lights its own pin: the question you are
-          // reading, and where in the conversation it happened.
-          const focused = focusedGroup !== null && mark.groupKey === focusedGroup;
-          const radius = focused ? PIN_RADIUS_FOCUSED : PIN_RADIUS;
-          const cy = PIN_RADIUS + 3 + row * gap;
-          const color = palette[markTone(mark.state)];
-          ctx.strokeStyle = color;
-          ctx.globalAlpha = focused ? 0.9 : 0.45;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(px, cy + radius);
-          ctx.lineTo(px, Math.max(cy + radius, at(mark)));
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-          drawPinHead(ctx, px, cy, radius, markFill(mark.state), color, palette.card);
-        }
-        // 5. Moments somebody marked: an ink caret under the baseline. Ink, not a
-        //    state colour, because it is not a verdict on anything — it is the
-        //    reader's own hand in the margin.
-        ctx.fillStyle = palette.ink;
-        ctx.globalAlpha = 0.8;
-        for (const moment of contour.moments ?? []) {
-          // Held inside the canvas: a mark made live is made *now*, which is
-          // the right-hand edge, and an unclamped caret there drew half a
-          // triangle — on the one press whose feedback is that triangle.
-          const px = Math.min(width - 4, Math.max(4, Math.round(x(moment.x)))) + 0.5;
-          ctx.beginPath();
-          ctx.moveTo(px, baseline + 5);
-          ctx.lineTo(px + 3.5, baseline + 11);
-          ctx.lineTo(px - 3.5, baseline + 11);
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-      } else {
-        // The list strip keeps the marks — "three unanswered questions in the
-        // last third" is exactly what a list is scanned for — but drops the
-        // stems, which at this size only thicken the line.
-        for (const mark of contour.marks) {
-          ctx.fillStyle = palette[markTone(mark.state)];
-          ctx.globalAlpha = STRIP_ALPHA[markFill(mark.state)];
-          ctx.beginPath();
-          ctx.arc(x(mark.x), baseline - amplitude - 1, 1.75, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
+      // 5. The line.
+      if (line.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(first.x, first.y);
+        traceMonotone(ctx, line, tangents);
+        ctx.lineWidth = CHART.line;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = palette.quiet;
+        ctx.stroke();
+      }
+
+      if (!showMarks) return;
+
+      // 6. Moments somebody marked: an ink caret under the baseline. Ink, not a
+      //    status colour: it is not a verdict, it is the reader's own hand.
+      ctx.fillStyle = palette.ink;
+      for (const moment of contour.moments ?? []) {
+        // Held inside the canvas: a mark made live is made *now*, at the
+        // right-hand edge, and an unclamped caret there drew half a triangle.
+        const px = Math.min(width - 4, Math.max(4, Math.round(x(moment.x)))) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(px, baseline + 5);
+        ctx.lineTo(px + 3.5, baseline + 11);
+        ctx.lineTo(px - 3.5, baseline + 11);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 7. Questions: a dot on the line at the moment each was asked. Open
+      //    ones go under settled ones, and the one being read goes on top, a
+      //    size up and ringed in honey. A dot near an edge is held inside, on
+      //    the line where it is drawn, rather than cut in half.
+      const focused = (mark: ContourMark) =>
+        focusedGroup !== null && mark.groupKey === focusedGroup;
+      const rank = (mark: ContourMark) =>
+        focused(mark) ? 2 : markKind(mark.state) === "open" ? 0 : 1;
+      const ordered = [...contour.marks].sort((a, b) => rank(a) - rank(b) || a.x - b.x);
+      for (const mark of ordered) {
+        const lit = focused(mark);
+        const radius = lit ? CHART.focusDot : CHART.dot;
+        const inset = radius + CHART.ring;
+        const px = Math.min(width - inset, Math.max(inset, x(mark.x)));
+        const py = line.length ? monotoneAt(line, tangents, px) : baseline;
+        drawDot(ctx, px, py, markKind(mark.state), palette, radius, { focus: lit });
       }
     };
 
-    // No standalone `draw()` before this: `observe()` delivers an initial
-    // callback with the element's current size, so calling both drew every
-    // contour in the app exactly twice — 202 canvas clears to mount a 101-canvas
-    // list, and another 202 on every theme change.
-    const observer = new ResizeObserver(() => draw());
-    observer.observe(canvas);
-    return () => observer.disconnect();
+    return observeCanvas(canvas, draw);
   }, [contour, palette, showMarks, focusedGroup]);
 
   const canvas = (
@@ -562,14 +460,15 @@ export default function ConversationContour({
     <div className={cn("relative", className)}>
       {canvas}
       {hover !== null && (
-        // Where a click would land, and when that was.
+        // Where a click would land, and when that was: hovered, so honey
+        // (rule 3). The time sits above the canvas, clear of the line.
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 w-px bg-foreground/30"
+          className="pointer-events-none absolute inset-y-0 w-px bg-primary"
           style={{ left: `${hover * 100}%` }}
         >
           {pickLabel && (
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] tabular-nums text-muted-foreground">
+            <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
               {pickLabel(timeAt(hover))}
             </span>
           )}

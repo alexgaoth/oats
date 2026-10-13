@@ -1902,9 +1902,8 @@
       "legend": {
         "label": "标记的含义",
         "open": "未解决",
-        "topic": "话题切换",
-        "return": "回到之前的话题",
-        "marked": "标记时刻"
+        "topic": "新话题",
+        "marked": "已标记"
       },
       "contourSummary": "{{minutes}} 分钟，提出 {{questions}} 个问题（{{unresolved}} 个仍未解答），话题转变 {{shifts}} 次，回到 {{returns}} 条线索。",
       "contourEmpty": "尚未录制任何内容。",
