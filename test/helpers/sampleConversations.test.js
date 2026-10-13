@@ -155,7 +155,7 @@ test("a days-ago placement lands on that day at that local time, on a weekday", 
   assert.equal(friday.getDate(), 18);
 });
 
-test("the demo conversations are samples too, and the map links each to the example", () => {
+test("the demo conversations are samples too, and the map links each work one to the example", () => {
   assert.ok(demoFixtures.length >= 5);
   const all = [example, ...demoFixtures];
   const conversations = all.map((fixture, index) => {
@@ -168,14 +168,81 @@ test("the demo conversations are samples too, and the map links each to the exam
     };
   });
   const { edges } = lifetime.buildLifetimeGraph(conversations);
+  const linked = (id) =>
+    edges.some(
+      (edge) => (edge.from === 1 && edge.to === id) || (edge.from === id && edge.to === 1)
+    );
   for (let id = 2; id <= all.length; id += 1) {
-    assert.ok(
-      edges.some(
-        (edge) => (edge.from === 1 && edge.to === id) || (edge.from === id && edge.to === 1)
-      ),
-      `${all[id - 1].meta.id} is not linked to the example`
+    // A family weekend shares no subject with a launch review, and the map
+    // should not pretend it does.
+    if (all[id - 1].meta.group === "personal") {
+      assert.ok(!linked(id), `${all[id - 1].meta.id} is linked to the example`);
+      continue;
+    }
+    assert.ok(linked(id), `${all[id - 1].meta.id} is not linked to the example`);
+  }
+});
+
+test("the work conversations are filed in Work, the personal ones in Personal, the example in none", () => {
+  const groupOf = Object.fromEntries(
+    demoFixtures.map((fixture) => [fixture.meta.id, fixture.meta.group])
+  );
+  assert.deepEqual(groupOf, {
+    "backend-hiring-sync": "work",
+    "corbel-pricing-call": "work",
+    "design-crit-import-sso": "work",
+    "support-planning-1on1": "work",
+    "launch-comms-1on1": "work",
+    "sso-fix-checkin": "work",
+    "family-weekend-trip": "personal",
+    "flat-viewing-call": "personal",
+  });
+  // The film depends on the example's timeline, so it carries no group: in
+  // the app it is sorted like any conversation.
+  assert.equal("group" in example.meta, false);
+  assert.equal(samples.placeSampleConversation(example, { now: NOW }).group, null);
+  for (const fixture of demoFixtures) {
+    assert.equal(samples.placeSampleConversation(fixture, { now: NOW }).group, fixture.meta.group);
+  }
+});
+
+test("the personal conversations are short, with every kind of answer between them", () => {
+  const personal = demoFixtures.filter((fixture) => fixture.meta.group === "personal");
+  assert.equal(personal.length, 2);
+  const outcomes = new Set();
+  for (const fixture of personal) {
+    samples.assertSampleFixture(fixture);
+    assert.match(fixture.meta.description, /Invented people/);
+    assert.ok(fixture.meta.endedAt - fixture.meta.startedAt < 4 * 60_000, fixture.meta.id);
+    assert.ok(fixture.note.conversation_topics.nodes.length >= 3, fixture.meta.id);
+    for (const item of review.questionOutcomes(fixture.events).outcomes) outcomes.add(item.outcome);
+    // No Pellwood person turns up in somebody's weekend.
+    const names = fixture.meta.participants.map((person) => person.name);
+    const pellwood = example.meta.participants.map((person) => person.name);
+    assert.deepEqual(
+      names.filter((name) => pellwood.includes(name)),
+      [],
+      fixture.meta.id
     );
   }
+  // Answered, unknown ("No idea"), unanswered ("Hmm.") and left open.
+  assert.deepEqual([...outcomes].sort(), ["answered", "denied", "open", "silence"]);
+});
+
+test("the harness files each demo conversation in its group", async () => {
+  const { createFakeMain } = await import("../../demo/harness/fake-main.mjs");
+  const main = createFakeMain({ fixtures: [example, ...demoFixtures], now: NOW });
+  const groups = await main.api.getConversationGroups();
+  const name = (id) => groups.find((group) => group.id === id)?.name ?? null;
+  const filed = { Work: 0, Personal: 0, none: 0 };
+  for (const note of main.db.notes) {
+    const fixture = [example, ...demoFixtures].find((item) => item.meta.id === note.sample_id);
+    const expected = { work: "Work", personal: "Personal" }[fixture.meta.group] ?? null;
+    assert.equal(name(note.group_id), expected, note.sample_id);
+    assert.equal(note.group_source, expected ? "model" : null, note.sample_id);
+    filed[expected ?? "none"] += 1;
+  }
+  assert.deepEqual(filed, { Work: 6, Personal: 2, none: 1 });
 });
 
 test("anything that is not a sample fixture is refused", () => {
