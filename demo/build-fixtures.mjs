@@ -42,7 +42,7 @@ const { addMoment } = await fromApp("helpers/conversationMoments.mjs");
 const { addLevelSample, encodeLoudness } = await fromApp("helpers/conversationLoudness.mjs");
 const { assignSpeakers, speakerNumber } = await fromApp("helpers/speakerTurns.mjs");
 const { openQuestionCount, questionOutcomes } = await fromApp("helpers/conversationReview.mjs");
-const { chooseFlowView, flowShape } = await fromApp("helpers/conversationFlow.mjs");
+const { topicLanes } = await fromApp("helpers/topicLanes.mjs");
 const { talkTime } = await fromApp("helpers/talkTime.mjs");
 const { SAMPLE_FIXTURE_KIND, SAMPLE_FIXTURE_VERSION } = await fromApp(
   "helpers/sampleConversations.mjs"
@@ -157,23 +157,22 @@ async function record(script) {
   };
 
   const tracker = new ConversationTopicTracker({ now: () => clock });
-  // The flow card's Auto choice, advanced once per published snapshot, as
-  // `ConversationFlow` advances it.
-  let flow = null;
-  const flowLog = [];
+  // The flow card's lanes, drawn from each published snapshot as
+  // `ConversationFlow` draws them: logged each time the room's path changes.
+  const lanesLog = [];
   const publish = () => {
     const snapshot = tracker.snapshot(clock);
-    const shape = flowShape(snapshot);
-    const chosen = chooseFlowView({
-      mode: "auto",
-      previous: flow?.state ?? null,
-      shape,
-      now: clock,
+    const lanes = topicLanes({
+      snapshot,
+      segments: live,
+      start: startedAt,
+      end: clock,
+      live: true,
     });
-    if (!flow || chosen.view !== flow.view) {
-      flowLog.push({ at: clock - startedAt, view: chosen.view, reason: chosen.reason, shape });
+    const path = lanes.runs.map((run) => run.topic).join(">");
+    if (lanesLog.at(-1)?.path !== path) {
+      lanesLog.push({ at: clock - startedAt, path, returns: lanes.returns.length });
     }
-    flow = chosen;
   };
   const cards = new Map();
   const aide = new ConversationAideSession({
@@ -379,7 +378,7 @@ async function record(script) {
     placed,
     events,
     topics,
-    flowLog,
+    lanesLog,
     stopAt,
     cards: [...cards.values()],
     talk: talkTime(segments),
@@ -400,7 +399,7 @@ function printReport({
   placed,
   events,
   topics,
-  flowLog,
+  lanesLog,
   stopAt,
   talk,
 }) {
@@ -464,8 +463,10 @@ function printReport({
       .join(" ")
   );
   console.log(
-    "Flow (Auto):",
-    flowLog.map((entry) => `${clockText(entry.at)} ${entry.view}/${entry.reason}`).join(", ")
+    "Lanes:",
+    lanesLog
+      .map((entry) => `${clockText(entry.at)} ${entry.path || "-"} (${entry.returns} back)`)
+      .join(", ")
   );
   const outcomes = questionOutcomes(events);
   console.log(

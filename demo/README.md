@@ -67,7 +67,11 @@ have written. A person can move it like any conversation.
 - The six Pellwood conversations are in Work, and the two personal ones are in
   Personal.
 - The review names no group. The film depends on its timeline, so its fixture
-  is not changed, and in the app it is sorted like any conversation.
+  is not changed, and in the app it is sorted like any conversation. In the
+  harness, the stub model answers the sort prompt (`harness/replay.mjs`):
+  Personal for a weekend, a trip, family or a flat, and Work for anything else.
+  A background run starts with `window.dispatchEvent(new
+Event("oats-sort-conversations"))`.
 - If the seeded group was renamed (its seed key is cleared) or deleted, the
   sample stays unsorted.
 - The personal conversations share no subjects with Pellwood, so on the map
@@ -153,7 +157,7 @@ words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
 it is asked), `profile=many` (two hundred synthetic conversations over a year,
 in three conversation groups, instead of the samples: `harness/many.mjs`),
-`theme=light|dark`, `view=calm|words`, `flow=auto|stack|graph`.
+`theme=light|dark`, `view=calm|words`, `flow=lanes|graph`.
 `panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,

@@ -1,203 +1,32 @@
-// The conversation flow card: what has been talked about so far, drawn as a
-// stack or as a graph (`components/conversation/ConversationFlow.tsx`).
+// The conversation flow card: what has been talked about so far, drawn as
+// lanes or as a graph (`components/conversation/ConversationFlow.tsx`).
 //
-// Pure and DOM-free so the rule that chooses the view can be pinned. The card
-// owns pixels and nothing else.
+// Pure and DOM-free so it can be pinned. The card owns pixels and nothing else.
 //
-// **Two views of one thing.** A conversation that moves in a line reads best as
-// a list: the topic now, then the ones before it, newest first. A list hides
-// one thing, the shape. When the room comes back to earlier topics, or one
-// topic leads in several directions, the order of a list says nothing about it
-// and a graph does. So Auto shows the graph only when the flow is non-linear
-// enough that the list would hide it, and says why in a caption.
-//
-// **Auto never flip-flops.** The snapshot is republished on every finalized
-// utterance, and the tracker folds one-sentence stubs into their neighbours, so
-// a count can step down and back up between two utterances. A view that
-// followed every step would be motion on the default recording screen — the
-// thing that competes with the person in the room. Auto therefore changes view
-// only when two snapshots in a row ask for the same change, and never twice
-// within `SWITCH_HOLD_MS`.
+// **Two views of one thing.** The lanes (`topicLanes.mjs`) are the default: one
+// row per topic in the order raised, the minutes on each, and one line for the
+// room that climbs back to an earlier row when the conversation returns to it.
+// They are the old stack's rows with the graph's shape drawn over them, so the
+// card no longer has to choose between a list and a picture, and Auto, which
+// chose, is gone. The graph (`liveThreadMap.mjs`) stays as the alternative: x
+// is when a topic was first raised, y how unsettled it still is.
 
-import { isKeptTopic } from "./liveThreadMap.mjs";
+/** The choices of the card's view switch. */
+export const FLOW_VIEWS = ["lanes", "graph"];
 
-/** The choices of the card's segmented control. */
-export const FLOW_MODES = ["auto", "stack", "graph"];
-
-/** Auto is the default: the person should not have to decide. */
-export const DEFAULT_FLOW_MODE = "auto";
-
-/** Under this many topics there is no shape yet; a list says everything. */
-export const GRAPH_MIN_TOPICS = 4;
-
-/** This many returns to earlier topics and the order of a list misleads. */
-export const GRAPH_MIN_RETURNS = 2;
-
-/** The shortest time between two changes of view in Auto. */
-export const SWITCH_HOLD_MS = 20_000;
+/** Lanes are the default. */
+export const DEFAULT_FLOW_VIEW = "lanes";
 
 /**
- * Read a stored mode. Anything unknown — an older build's value, a hand-edited
- * localStorage, `null` on a fresh install — is Auto.
+ * Read a stored view. The graph is the graph; anything else is the lanes:
+ * `auto` and `stack`, the views the lanes replaced, an unknown value from a
+ * hand-edited localStorage, and `null` on a fresh install.
  *
  * @param {unknown} stored
- * @returns {"auto" | "stack" | "graph"}
+ * @returns {"lanes" | "graph"}
  */
-export function resolveFlowMode(stored) {
-  return FLOW_MODES.includes(stored) ? /** @type {any} */ (stored) : DEFAULT_FLOW_MODE;
-}
-
-/**
- * The shape of the flow, counted over the topics the card shows (the ones
- * `isKeptTopic` keeps). An edge counts only when both of its ends are shown:
- * a line to a topic that is not drawn is not part of the shape anyone can see.
- *
- *   topics    — how many topics are shown
- *   returns   — `return` edges between them: moves back to an earlier topic
- *   branching — topics that lead to two or more others, or are reached from
- *               two or more others
- *   live      — the id of the topic being talked about, when it is shown
- *
- * @param {{ nodes?: any[], edges?: any[] } | null | undefined} snapshot
- * @returns {{ topics: number, returns: number, branching: number, live: number | null }}
- */
-export function flowShape(snapshot) {
-  const nodes = Array.isArray(snapshot?.nodes) ? snapshot.nodes.filter(isKeptTopic) : [];
-  const kept = new Set(nodes.map((node) => node.id));
-  const outgoing = new Map();
-  const incoming = new Map();
-  const returns = new Set();
-  for (const edge of Array.isArray(snapshot?.edges) ? snapshot.edges : []) {
-    if (!edge || edge.from === edge.to || !kept.has(edge.from) || !kept.has(edge.to)) continue;
-    // Keyed by the pair, so a malformed snapshot that lists one move twice
-    // does not count it twice.
-    if (edge.kind === "return") returns.add(`${edge.from}>${edge.to}`);
-    if (!outgoing.has(edge.from)) outgoing.set(edge.from, new Set());
-    outgoing.get(edge.from).add(edge.to);
-    if (!incoming.has(edge.to)) incoming.set(edge.to, new Set());
-    incoming.get(edge.to).add(edge.from);
-  }
-  let branching = 0;
-  for (const id of kept) {
-    if ((outgoing.get(id)?.size ?? 0) >= 2 || (incoming.get(id)?.size ?? 0) >= 2) branching += 1;
-  }
-  const live = nodes.find((node) => node.state === "live");
-  return { topics: nodes.length, returns: returns.size, branching, live: live ? live.id : null };
-}
-
-/**
- * The view that suits a shape, and the reason, which the card shows as its
- * caption in Auto:
- *
- *   few       — under `GRAPH_MIN_TOPICS` topics: the stack
- *   returns   — `GRAPH_MIN_RETURNS` or more returns: the graph
- *   branching — a topic branches or is reached from two places: the graph
- *   linear    — enough topics, but one after another: the stack
- *
- * @param {{ topics?: number, returns?: number, branching?: number } | null | undefined} shape
- * @returns {{ view: "stack" | "graph", reason: "few" | "linear" | "returns" | "branching" }}
- */
-export function suitableView(shape) {
-  if ((shape?.topics ?? 0) < GRAPH_MIN_TOPICS) return { view: "stack", reason: "few" };
-  if ((shape.returns ?? 0) >= GRAPH_MIN_RETURNS) return { view: "graph", reason: "returns" };
-  if ((shape.branching ?? 0) >= 1) return { view: "graph", reason: "branching" };
-  return { view: "stack", reason: "linear" };
-}
-
-/**
- * @typedef {{ view: "stack" | "graph" | null, pending: "stack" | "graph" | null,
- *   lastSwitchAt: number }} FlowState
- */
-
-/** Auto's state after it shows `suggestion` at `now`. */
-function adopt(suggestion, now) {
-  return {
-    view: suggestion.view,
-    reason: suggestion.reason,
-    state: { view: suggestion.view, pending: null, lastSwitchAt: now },
-  };
-}
-
-/**
- * The view to draw for one snapshot. Call it once per snapshot, and pass the
- * returned `state` back as `previous` on the next call.
- *
- * A manual mode returns its own view at once. It also clears Auto's state, so
- * choosing Auto again shows Auto's view at once instead of holding a view for
- * a reason the person never saw.
- *
- * In Auto, with nothing shown yet, the suitable view is adopted at once. After
- * that the view changes only when the suitable view differs from the one shown
- * **and** was also the suggestion on the previous call **and** at least
- * `SWITCH_HOLD_MS` have passed since the last change. While a change is held,
- * the reason is `"held"`: no reason for the shown view is true any more (the
- * stack's "only three topics" with four on screen, say), so the caption names
- * the view and claims nothing about why.
- *
- * `reason` is null in a manual mode: nothing was chosen automatically.
- *
- * @param {{ mode?: string, previous?: FlowState | null,
- *   shape?: { topics?: number, returns?: number, branching?: number } | null, now?: number }} [input]
- * @returns {{ view: "stack" | "graph", reason: string | null, state: FlowState }}
- */
-export function chooseFlowView({
-  mode = DEFAULT_FLOW_MODE,
-  previous = null,
-  shape = null,
-  now = 0,
-} = {}) {
-  const resolved = resolveFlowMode(mode);
-  if (resolved !== "auto") {
-    return { view: resolved, reason: null, state: { view: null, pending: null, lastSwitchAt: 0 } };
-  }
-  const suggestion = suitableView(shape);
-  const shown =
-    previous && (previous.view === "stack" || previous.view === "graph") ? previous : null;
-  if (!shown) return adopt(suggestion, now);
-  if (suggestion.view === shown.view) {
-    // Same view; the reason can still move on, from "few" to "linear".
-    return {
-      view: shown.view,
-      reason: suggestion.reason,
-      state: { view: shown.view, pending: null, lastSwitchAt: shown.lastSwitchAt ?? 0 },
-    };
-  }
-  const confirmed = shown.pending === suggestion.view;
-  const rested = now - (shown.lastSwitchAt ?? 0) >= SWITCH_HOLD_MS;
-  if (confirmed && rested) return adopt(suggestion, now);
-  return {
-    view: shown.view,
-    reason: "held",
-    state: { view: shown.view, pending: suggestion.view, lastSwitchAt: shown.lastSwitchAt ?? 0 },
-  };
-}
-
-/**
- * The stack: the shown topics, the one being talked about first, then the most
- * recently touched. No clock is needed: each state was decided by the tracker
- * at the moment the snapshot was taken.
- *
- * @param {{ nodes?: any[] } | null | undefined} snapshot
- * @returns {Array<{ id: number, label: string, state: "live" | "open" | "resolved" | "dropped",
- *   durationMs: number, returns: number, lastAt: number }>}
- */
-export function stackItems(snapshot) {
-  const nodes = Array.isArray(snapshot?.nodes) ? snapshot.nodes.filter(isKeptTopic) : [];
-  return nodes
-    .map((node) => ({
-      id: node.id,
-      label: node.label,
-      state: node.state,
-      durationMs: node.durationMs ?? 0,
-      returns: node.returns ?? 0,
-      lastAt: node.lastAt ?? 0,
-    }))
-    .sort(
-      (a, b) =>
-        Number(b.state === "live") - Number(a.state === "live") ||
-        b.lastAt - a.lastAt ||
-        b.id - a.id
-    );
+export function resolveFlowView(stored) {
+  return FLOW_VIEWS.includes(stored) ? /** @type {any} */ (stored) : DEFAULT_FLOW_VIEW;
 }
 
 const round = (n) => Math.round(n * 10) / 10;

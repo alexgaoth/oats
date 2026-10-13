@@ -1455,6 +1455,21 @@ class IPCHandlers {
       return result;
     });
 
+    // The writing model's choice (stores/conversationGroupSortStore.ts). The
+    // model ran in the renderer, through the summary's own route; this only
+    // writes what it chose, and never over a person's choice.
+    ipcMain.handle("db-set-conversation-group-from-model", async (event, noteId, groupId) => {
+      const result = this.databaseManager.setConversationGroupFromModel(noteId, groupId ?? null);
+      if (result?.success && result.note) {
+        setImmediate(() => this.broadcastToWindows("note-updated", result.note));
+      }
+      return result;
+    });
+
+    ipcMain.handle("db-list-unsorted-conversations", async () => {
+      return this.databaseManager.listUnsortedConversations();
+    });
+
     ipcMain.handle("db-get-actions", async () => {
       return this.databaseManager.getActions();
     });

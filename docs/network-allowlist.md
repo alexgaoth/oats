@@ -54,6 +54,15 @@ Scope limits that make this safe to state plainly:
 The exact provider hostname is controlled by that provider or by the user's
 custom endpoint. Local, LAN, and bundled-model paths do not require this access.
 
+Choosing a conversation's group (Work, Personal, or the person's own) uses the
+writing model that wrote its summary, by the same route, so it adds no
+destination. After each summary, the model gets one more short request: the
+title, the topic labels and the opening of the summary, never the transcript
+(`src/helpers/conversationGroupSort.mjs`). Conversations from before are sorted
+in the background only by a model on this computer or the user's own server.
+With a cloud provider selected, they are not sent: they may have been
+summarized on this computer, before that provider was chosen.
+
 ## How the sidebar counts what leaves
 
 The foot of the sidebar shows how many requests Oats sent to another computer

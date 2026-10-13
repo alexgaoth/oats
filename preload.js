@@ -188,6 +188,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   reorderConversationGroups: (ids) => ipcRenderer.invoke("db-reorder-conversation-groups", ids),
   setConversationGroup: (noteId, groupId) =>
     ipcRenderer.invoke("db-set-conversation-group", noteId, groupId),
+  // The writing model's choice, and the conversations it has yet to sort.
+  setConversationGroupFromModel: (noteId, groupId) =>
+    ipcRenderer.invoke("db-set-conversation-group-from-model", noteId, groupId),
+  listUnsortedConversations: () => ipcRenderer.invoke("db-list-unsorted-conversations"),
   onConversationGroupsChanged: registerListener(
     "conversation-groups-changed",
     (callback) => (_event, change) => callback(change)

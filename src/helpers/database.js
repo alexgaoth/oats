@@ -2313,6 +2313,59 @@ class DatabaseManager {
     return { success: true, note: this.getNote(noteId) };
   }
 
+  /**
+   * The writing model puts a conversation in a group, or in none (`groupId`
+   * null: it answered "none", or an answer nobody could read).
+   *
+   * Never over a person's choice: the condition is in the UPDATE itself, so a
+   * move made while the model was answering wins. The model may replace its
+   * own earlier choice, as when a resumed conversation is summarized again.
+   * Like a person's move, it leaves `updated_at` alone.
+   *
+   * @returns {{ success: true, note: object } | { success: false,
+   *   error: "invalid" | "not-found" | "chosen" }} "chosen": a person chose.
+   */
+  setConversationGroupFromModel(noteId, groupId) {
+    if (!Number.isInteger(noteId) || (groupId !== null && !Number.isInteger(groupId))) {
+      return { success: false, error: "invalid" };
+    }
+    const written = this.db
+      .prepare(
+        `UPDATE notes SET group_id = ?, group_source = 'model'
+         WHERE id = ? AND deleted_at IS NULL
+           AND (group_source IS NULL OR group_source = 'model')
+           AND (? IS NULL OR EXISTS (SELECT 1 FROM conversation_groups WHERE id = ?))`
+      )
+      .run(groupId, noteId, groupId, groupId).changes;
+    if (written) return { success: true, note: this.getNote(noteId) };
+    const note = this.getNote(noteId);
+    if (note && !note.deleted_at && note.group_source === "user") {
+      return { success: false, error: "chosen" };
+    }
+    return { success: false, error: "not-found" };
+  }
+
+  /**
+   * The conversations nobody has put in a group yet and the model can sort:
+   * finished ones, with a summary to read. The most recently changed first.
+   *
+   * @param {{ limit?: number }} [options]
+   * @returns {number[]} note ids
+   */
+  listUnsortedConversations({ limit = 10000 } = {}) {
+    const cap = Number.isInteger(limit) && limit > 0 ? limit : 10000;
+    return this.db
+      .prepare(
+        `SELECT id FROM notes
+         WHERE deleted_at IS NULL AND note_type = 'meeting' AND group_source IS NULL
+           AND enhanced_content IS NOT NULL AND TRIM(enhanced_content) != ''
+         ORDER BY updated_at DESC, id DESC
+         LIMIT ?`
+      )
+      .all(cap)
+      .map((row) => row.id);
+  }
+
   createAgentConversation(title = "Untitled", noteId = null) {
     try {
       if (!this.db) throw new Error("Database not initialized");
