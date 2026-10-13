@@ -1,0 +1,16 @@
+{
+  "name": "oats-demo-video",
+  "private": true,
+  "description": "The Oats demo film: Remotion compositions over clips captured from the real app.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts OatsDemo out/oats-demo.mp4",
+    "still": "remotion still src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.529",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.529"
+  }
+}

@@ -1,0 +1,53 @@
+import React from "react";
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { Backdrop } from "../brand/Backdrop";
+import { Grain } from "../brand/Grain";
+import { theme } from "../brand/theme";
+
+/** The cold open and the end card: the grain is tossed, lands, and the name settles beside it. */
+export const TitleCard: React.FC<{ line?: string; tossAt?: number }> = ({ line, tossAt = 0.25 }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const tossFrames = Math.round(1.15 * fps); // SPIN_MS in the app
+  const start = Math.round(tossAt * fps);
+  const progress = Math.min(1, Math.max(0, (frame - start) / tossFrames));
+  const settle = spring({ frame: frame - start - Math.round(tossFrames * 0.7), fps, config: { damping: 200 } });
+  const lineIn = spring({ frame: frame - start - tossFrames, fps, config: { damping: 200 } });
+  return (
+    <Backdrop>
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", fontFamily: theme.font }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
+          <Grain id="title-grain" size={220} progress={progress} />
+          <div
+            style={{
+              fontSize: 168,
+              fontWeight: 650,
+              letterSpacing: "-0.035em",
+              color: theme.ink,
+              opacity: settle,
+              transform: `translateX(${interpolate(settle, [0, 1], [-24, 0])}px)`,
+            }}
+          >
+            Oats
+          </div>
+        </div>
+        {line && (
+          <div
+            style={{
+              position: "absolute",
+              top: "68%",
+              fontSize: 40,
+              fontWeight: 500,
+              color: theme.brandInk,
+              letterSpacing: "-0.01em",
+              opacity: lineIn,
+              transform: `translateY(${interpolate(lineIn, [0, 1], [12, 0])}px)`,
+            }}
+          >
+            {line}
+          </div>
+        )}
+      </AbsoluteFill>
+    </Backdrop>
+  );
+};
