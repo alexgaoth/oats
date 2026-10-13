@@ -2264,6 +2264,28 @@
       "failed": "无法打开示例对话",
       "failedHint": "没有添加任何内容。请重试。"
     },
+    "groups": {
+      "seed": {
+        "work": "工作",
+        "personal": "个人"
+      },
+      "moveTo": "移到分组",
+      "none": "无分组",
+      "new": "新建分组…",
+      "newTitle": "新建分组",
+      "newDescription": "为分组命名。此对话将移入该分组。",
+      "nameLabel": "名称",
+      "create": "创建",
+      "movedTo": "已移到{{group}}",
+      "movedOut": "不在任何分组中",
+      "moveFailed": "未能移动",
+      "errors": {
+        "nameRequired": "请为分组命名。",
+        "nameTooLong": "最多 {{max}} 个字符。",
+        "nameTaken": "已有同名分组。请换一个名称。",
+        "failed": "分组未能保存。请重试。"
+      }
+    },
     "shell": {
       "sidebar": "侧边栏",
       "showSidebar": "显示侧边栏",

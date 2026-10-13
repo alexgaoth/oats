@@ -2264,6 +2264,28 @@
       "failed": "無法開啟範例對話",
       "failedHint": "沒有新增任何內容。請再試一次。"
     },
+    "groups": {
+      "seed": {
+        "work": "工作",
+        "personal": "個人"
+      },
+      "moveTo": "移到群組",
+      "none": "無群組",
+      "new": "新增群組…",
+      "newTitle": "新增群組",
+      "newDescription": "為群組命名。此對話將移入該群組。",
+      "nameLabel": "名稱",
+      "create": "建立",
+      "movedTo": "已移到{{group}}",
+      "movedOut": "不在任何群組中",
+      "moveFailed": "未能移動",
+      "errors": {
+        "nameRequired": "請為群組命名。",
+        "nameTooLong": "最多 {{max}} 個字元。",
+        "nameTaken": "已有同名群組。請換一個名稱。",
+        "failed": "群組未能儲存。請再試一次。"
+      }
+    },
     "shell": {
       "sidebar": "側邊欄",
       "showSidebar": "顯示側邊欄",
