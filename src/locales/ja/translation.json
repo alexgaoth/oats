@@ -2283,6 +2283,7 @@
       "movedTo": "{{group}}に移動しました",
       "movedOut": "グループなし",
       "moveFailed": "移動できませんでした",
+      "sorting": "{{total}}件中{{current}}件目を分類中",
       "errors": {
         "nameRequired": "グループ名を入力してください。",
         "nameTooLong": "{{max}}文字以内で入力してください。",

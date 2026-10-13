@@ -4,6 +4,7 @@ import { getSettings, selectResolvedNoteFormatting } from "./settingsStore";
 import { appendDictionarySuffix } from "../config/prompts";
 import { generateNoteTitle } from "../utils/generateTitle";
 import { buildNoteFormattingOverrides } from "../helpers/noteFormattingOverrides";
+import { claimWritingModel, sortConversationIntoGroup } from "./conversationGroupSortStore";
 import type { ActionItem } from "../types/electron";
 
 export type ActionProcessingStatus = "idle" | "processing" | "success";
@@ -133,6 +134,9 @@ export function runBackgroundAction(
   setNoteState(noteId, { status: "processing", actionName: action.name });
 
   (async () => {
+    // The model on this computer answers one request at a time, so the
+    // background group sort steps aside before the summary asks.
+    const release = await claimWritingModel().catch(() => () => {});
     try {
       const basePrompt = options.isMeetingNote ? MEETING_SYSTEM_PROMPT : BASE_SYSTEM_PROMPT;
       const providerOverrides = buildNoteFormattingOverrides(
@@ -178,6 +182,17 @@ export function runBackgroundAction(
         successTimers.delete(noteId);
       }, 600);
       successTimers.set(noteId, timer);
+
+      // Then its group, by the same model and the same route. The summary is
+      // done whatever happens here: a failed sort leaves the conversation
+      // unsorted, for the background run to try again, and is not an error.
+      if (options.isMeetingNote && !cancelledFlags.get(noteId)) {
+        await sortConversationIntoGroup(noteId, {
+          modelId,
+          mode: noteFormatting.mode,
+          config: { ...providerOverrides, disableThinking: noteFormatting.disableThinking },
+        }).catch(() => undefined);
+      }
     } catch (err) {
       if (cancelledFlags.get(noteId)) return;
       processingFlags.set(noteId, false);
@@ -186,6 +201,7 @@ export function runBackgroundAction(
       pushErrorEvent({ noteId, message });
     } finally {
       cancelledFlags.delete(noteId);
+      release();
     }
   })();
 }

@@ -190,13 +190,21 @@ export function createReplay({ main, fixture, options = {} }) {
   // The local model behind the built-in "Generate Notes" action: after Finish
   // it is asked for the notes, then for a title (`actionProcessingStore.ts`,
   // `generateTitle.ts`). It answers with the sample's own, which were written
-  // in the format the action asks for, a little slower than instantly.
-  main.hooks.reason = ({ prompt }) => {
+  // in the format the action asks for, a little slower than instantly. Then it
+  // is asked which group the conversation belongs in
+  // (`conversationGroupSort.mjs`), here and for the background sort: a stub
+  // that reads the words it was given and answers with one name, as a model
+  // is asked to.
+  main.hooks.reason = ({ text, prompt }) => {
     if (/meeting notes assistant/i.test(prompt)) {
       return { text: fixture.note.enhanced_content, delayMs: 4200 };
     }
     if (/concise 3-8 word title/i.test(prompt)) {
       return { text: fixture.note.title, delayMs: 900 };
+    }
+    if (/sort conversations into groups/i.test(prompt)) {
+      const personal = /\b(weekend|holiday|trip|family|flat|landlord|rent|kids|birthday)\b/i;
+      return { text: personal.test(text) ? "Personal" : "Work", delayMs: 700 };
     }
     return null;
   };

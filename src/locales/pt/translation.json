@@ -2283,6 +2283,7 @@
       "movedTo": "Movida para {{group}}",
       "movedOut": "Sem grupo",
       "moveFailed": "Não movida",
+      "sorting": "Organizando {{current}} de {{total}}",
       "errors": {
         "nameRequired": "Dê um nome ao grupo.",
         "nameTooLong": "Use no máximo {{max}} caracteres.",

@@ -113,9 +113,12 @@ export interface ConversationGroup {
   created_at: string;
 }
 
-/** Why a group could not be created, renamed, deleted, ordered or used. */
+/**
+ * Why a group could not be created, renamed, deleted, ordered or used.
+ * "chosen": the model's choice was not written because a person chose.
+ */
 export type ConversationGroupError =
-  "name-required" | "name-too-long" | "name-taken" | "not-found" | "invalid";
+  "name-required" | "name-too-long" | "name-taken" | "not-found" | "invalid" | "chosen";
 
 export type ConversationGroupResult =
   | { success: true; group: ConversationGroup; changed?: boolean }
@@ -714,6 +717,17 @@ declare global {
       ) => Promise<
         { success: true; note: NoteItem } | { success: false; error: ConversationGroupError }
       >;
+      // The writing model's choice (`group_source: "model"`): written only
+      // where no person has chosen ("chosen" otherwise). null is "none".
+      setConversationGroupFromModel?: (
+        noteId: number,
+        groupId: number | null
+      ) => Promise<
+        { success: true; note: NoteItem } | { success: false; error: ConversationGroupError }
+      >;
+      // Finished conversations with a summary that nobody has sorted yet,
+      // the most recently changed first.
+      listUnsortedConversations?: () => Promise<number[]>;
       onConversationGroupsChanged?: (
         callback: (change: ConversationGroupsChange) => void
       ) => () => void;

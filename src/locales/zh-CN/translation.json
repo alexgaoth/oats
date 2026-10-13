@@ -2278,6 +2278,7 @@
       "movedTo": "已移到{{group}}",
       "movedOut": "不在任何分组中",
       "moveFailed": "未能移动",
+      "sorting": "正在分组：第 {{current}} 个，共 {{total}} 个",
       "errors": {
         "nameRequired": "请为分组命名。",
         "nameTooLong": "最多 {{max}} 个字符。",
