@@ -391,6 +391,11 @@ class ConversationTopicTracker {
       if (existing) existing.weight += 1;
       else this.transitions.push({ from, to: topic.id, weight: 1, kind });
       if (kind === "return") topic.returns += 1;
+      // A topic's time is the time the room spent on it. On a return, the gap
+      // since it was last discussed belonged to the other topics, so the clock
+      // restarts here; without this, a topic revisited at the end of a meeting
+      // claimed the whole meeting as its own.
+      topic.lastAt = Math.max(topic.lastAt, at);
     }
     this.currentId = topic.id;
     this._absorb(topic, at, utterance, bag, words);
