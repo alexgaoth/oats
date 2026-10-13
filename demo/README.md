@@ -157,7 +157,8 @@ words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
 it is asked), `profile=many` (two hundred synthetic conversations over a year,
 in three conversation groups, instead of the samples: `harness/many.mjs`),
-`theme=light|dark`, `view=calm|words`, `flow=lanes|graph`.
+`theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
+`connections=lanes|graph`.
 `panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,
