@@ -1,8 +1,15 @@
 import React from "react";
 import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme } from "../brand/theme";
+import { BAND_HEIGHT, WINDOW_LEFT } from "./layout";
 
-/** "▸▸ 70×" in the corner while time runs fast, so a time-lapse never reads as real time. */
+const CHIP_HEIGHT = 52;
+
+/**
+ * "▸▸ 56×" while time runs fast, so a time-lapse never reads as real time. It
+ * sits in the caption band, lined up with the window's right edge, never on
+ * the app.
+ */
 export const SpeedChip: React.FC<{ label: string; from?: number; to?: number }> = ({ label, from = 0.2, to }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -16,12 +23,14 @@ export const SpeedChip: React.FC<{ label: string; from?: number; to?: number }> 
     <div
       style={{
         position: "absolute",
-        top: 44,
-        right: 64,
+        top: (BAND_HEIGHT - CHIP_HEIGHT) / 2,
+        right: WINDOW_LEFT,
+        height: CHIP_HEIGHT,
+        boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
         gap: 10,
-        padding: "10px 18px",
+        padding: "0 18px",
         borderRadius: 999,
         background: theme.ink,
         color: "#fafaf9",

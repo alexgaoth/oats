@@ -1,14 +1,14 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
 import { AppShot, cueAt } from "../edit/AppShot";
-import { Caption } from "../edit/Caption";
+import { CaptionTrack, type Cue } from "../edit/Caption";
 import { Fade } from "../edit/Fade";
 import { SpeedChip } from "../edit/SpeedChip";
 import { TitleCard } from "../scenes/TitleCard";
 import type { Rect } from "../edit/types";
 
 /**
- * The demo film: 90 seconds, twelve scenes, captions only. The storyboard is
+ * The demo film: about 88 seconds, twelve scenes, captions only. The storyboard is
  * https://claude.ai/artifact/XcnMd4dEkEaDXENkSHcSSo. Every app shot is the real
  * renderer, captured by director/capture.mjs from the demo kit's sample
  * launch review; regions are in the app's CSS pixels (1440×900).
@@ -16,6 +16,13 @@ import type { Rect } from "../edit/types";
 
 export const FPS = 60;
 const s = (seconds: number) => Math.round(seconds * FPS);
+
+/**
+ * Each scene dissolves in over the one before it. The scenes share one
+ * backdrop, so only the app changes. A dip through the background between
+ * scenes flashed at every cut.
+ */
+const OVERLAP = 8;
 
 /** Regions of the app the camera moves to. */
 const R: Record<string, Rect> = {
@@ -37,32 +44,29 @@ const R: Record<string, Rect> = {
   footer: { x: 0, y: 600, w: 480, h: 300 },
 };
 
-/** A caption over a shot that has its own, for a second line within one scene. */
-const CaptionOnly: React.FC<{ text: string; from: number; to: number; instant?: boolean }> = ({
-  text,
-  from,
-  to,
-  instant,
-}) => (
-  <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 54 }}>
-    <Caption text={text} from={instant ? -1 : from} to={to} />
-  </AbsoluteFill>
-);
-
-type SceneProps = { seconds: number; children: React.ReactNode; fadeIn?: number; fadeOut?: number };
-
-/** One scene of the film; OatsDemo places each after the one before it. */
+/**
+ * One scene of the film; OatsDemo places each after the one before it.
+ * `captions` are in seconds from the scene's start. A caption may run past its
+ * scene: the film's caption track does not end at a cut.
+ */
+type SceneProps = { seconds: number; captions?: Cue[]; children: React.ReactNode };
 const Scene: React.FC<SceneProps> = ({ children }) => <>{children}</>;
 
 const SCENES = (
   <>
       {/* 1. Cold open: the grain is tossed, lands, and the name settles. */}
-      <Scene seconds={4} fadeIn={0}>
+      <Scene seconds={4}>
         <TitleCard tossAt={0.35} />
       </Scene>
 
       {/* 2–3. Home; New recording; the sidebar steps aside and the clock starts. */}
-      <Scene seconds={12}>
+      <Scene
+        seconds={12}
+        captions={[
+          { text: "Nine people. Thirty minutes. One laptop on the table.", from: 0.4, to: 3.6 },
+          { text: "Press record. Then look up.", from: 5.4, to: 11.2 },
+        ]}
+      >
         <AppShot
           clip="a-record"
           from={0}
@@ -71,58 +75,44 @@ const SCENES = (
             { at: 5.6, rect: "full" },
             { at: 7.2, rect: R.status, ease: 1.4 },
           ]}
-          caption={{ text: "Nine people. Thirty minutes. One laptop on the table.", from: 0.4, to: 3.6 }}
         />
-        <CaptionOnly text="Press record. Then look up." from={5.4} to={11.2} />
       </Scene>
 
       {/* 4. The first eleven minutes as a time-lapse. */}
-      <Scene seconds={12}>
-        <AppShot
-          clip="b-timelapse"
-          rate={9.4}
-          cursor={false}
-          shots={[{ at: 0, rect: R.live }]}
-          caption={{ text: "No transcript racing past. Just the shape of the room.", from: 0.6, to: 10.8 }}
-        />
+      <Scene seconds={12} captions={[{ text: "No transcript racing past. Just the shape of the room.", from: 0.6, to: 10.8 }]}>
+        <AppShot clip="b-timelapse" rate={9.4} cursor={false} shots={[{ at: 0, rect: R.live }]} />
         <SpeedChip label="56×" />
       </Scene>
 
       {/* 5. The room returns to the launch date and Auto draws the graph. */}
-      <Scene seconds={10}>
+      <Scene seconds={10} captions={[{ text: "When the room circles back, Oats draws the loop.", from: 1.2, to: 9.0 }]}>
         <AppShot
           clip="c-graph"
           from={14}
           cursor={false}
           shots={[{ at: 0, rect: R.live }, { at: 2.2, rect: R.flow, ease: 1.6 }]}
-          caption={{ text: "When the room circles back, Oats draws the loop.", from: 1.2, to: 9.0 }}
         />
       </Scene>
 
-      {/* 6. Words, and two questions settle: answered, then unknown. */}
-      <Scene seconds={4}>
-        <AppShot
-          clip="d-questions"
-          from={(capture) => cueAt(capture, "words") - 1.6}
-          shots={[{ at: 0, rect: R.status }]}
-          caption={{ text: "Every question asked, and whether anyone answered.", from: 0.5, to: 12 }}
-        />
+      {/* 6. Words, and two questions settle: answered, then unknown. One
+          caption across both shots. */}
+      <Scene seconds={4} captions={[{ text: "Every question asked, and whether anyone answered.", from: 0.5, to: 11.2 }]}>
+        <AppShot clip="d-questions" from={(capture) => cueAt(capture, "words") - 1.6} shots={[{ at: 0, rect: R.status }]} />
       </Scene>
-      <Scene seconds={8} fadeIn={0}>
+      <Scene seconds={8}>
         <AppShot
           clip="d-questions"
           from={(capture) => cueAt(capture, "words") + 12.5}
           rate={5}
           cursor={false}
           shots={[{ at: 0, rect: R.questions }]}
-          caption={{ text: "Every question asked, and whether anyone answered.", from: -1, to: 7.4, at: "top" }}
         />
         <SpeedChip label="5×" />
       </Scene>
 
       {/* 7. Stop, with its key; the sidebar comes back; the conversation gets its
           title and summary a few seconds later (Stop + 5.4 s in the capture). */}
-      <Scene seconds={8}>
+      <Scene seconds={8} captions={[{ text: "Stop. It's already written up.", from: 3.4, to: 7.8 }]}>
         <AppShot
           clip="e-stop"
           from={(capture) => cueAt(capture, "stopped") - 1.6}
@@ -133,77 +123,70 @@ const SCENES = (
             { at: 4.2, rect: "full" },
             { at: 5.6, rect: R.recent, ease: 1.2 },
           ]}
-          caption={{ text: "Stop. It's already written up.", from: 3.4, to: 7.8 }}
         />
       </Scene>
 
       {/* 8. The finished review, read top to bottom. */}
-      <Scene seconds={10}>
-        <AppShot
-          clip="f-reading"
-          from={(capture) => cueAt(capture, "opened") - 0.6}
-          rate={1.8}
-          shots={[{ at: 0, rect: "full" }]}
-          caption={{ text: "Summary, threads, who spoke, and what's still open.", from: 1.4, to: 9.3 }}
-        />
+      <Scene seconds={10} captions={[{ text: "Summary, threads, who spoke, and what's still open.", from: 1.4, to: 9.3 }]}>
+        <AppShot clip="f-reading" from={(capture) => cueAt(capture, "opened") - 0.6} rate={1.8} shots={[{ at: 0, rect: "full" }]} />
       </Scene>
 
       {/* 9. Search: every conversation, in a fraction of a millisecond. */}
-      <Scene seconds={8}>
+      <Scene seconds={8} captions={[{ text: "Find anything anyone said, in milliseconds.", from: 0.8, to: 7.4 }]}>
         <AppShot
           clip="g-search"
           from={(capture) => cueAt(capture, "search") - 1.2}
           shots={[{ at: 0, rect: "full" }, { at: 3.6, rect: R.search, ease: 1.2 }]}
-          caption={{ text: "Find anything anyone said, in milliseconds.", from: 0.8, to: 7.4 }}
         />
       </Scene>
 
       {/* 10. List / Map. */}
-      <Scene seconds={6}>
-        <AppShot
-          clip="h-map"
-          from={(capture) => cueAt(capture, "map") - 1.4}
-          shots={[{ at: 0, rect: "full" }]}
-          caption={{ text: "See what keeps coming back.", from: 1.4, to: 5.6 }}
-        />
+      <Scene seconds={6} captions={[{ text: "See what keeps coming back.", from: 1.4, to: 5.6 }]}>
+        <AppShot clip="h-map" from={(capture) => cueAt(capture, "map") - 1.4} shots={[{ at: 0, rect: "full" }]} />
       </Scene>
 
       {/* 11. On this Mac. */}
-      <Scene seconds={4}>
+      <Scene seconds={4} captions={[{ text: "Audio and transcripts never leave your Mac.", from: 0.6, to: 3.8 }]}>
         <AppShot
           clip="h-map"
           from={(capture) => cueAt(capture, "footer") - 0.2}
           shots={[{ at: 0, rect: "full" }, { at: 1.2, rect: R.footer, ease: 1.1 }]}
-          caption={{ text: "Audio and transcripts never leave your Mac.", from: 0.6, to: 3.8 }}
         />
       </Scene>
 
       {/* 12. End card. */}
-      <Scene seconds={4} fadeOut={0}>
+      <Scene seconds={4}>
         <TitleCard line="github.com/alexgaoth/oats" tossAt={0.1} />
       </Scene>
   </>
 );
 
-export const OatsDemo: React.FC = () => {
-  let from = 0;
-  const scenes = React.Children.toArray((SCENES as React.ReactElement<{ children: React.ReactNode }>).props.children);
-  return (
-    <AbsoluteFill style={{ background: "#fafaf9" }}>
-      {scenes.map((scene, index) => {
-        const { seconds, fadeIn = 8, fadeOut = 8, children } = (scene as React.ReactElement<SceneProps>).props;
-        const start = from;
-        from += s(seconds);
-        return (
-          <Sequence key={index} from={start} durationInFrames={s(seconds)}>
-            <Fade inFrames={fadeIn} outFrames={fadeOut}>
-              {children}
-            </Fade>
-          </Sequence>
-        );
-      })}
-    </AbsoluteFill>
-  );
-};
+const scenes = React.Children.toArray((SCENES as React.ReactElement<{ children: React.ReactNode }>).props.children).map(
+  (scene) => (scene as React.ReactElement<SceneProps>).props
+);
 
-export const DURATION = s(4 + 12 + 12 + 10 + 4 + 8 + 8 + 10 + 8 + 6 + 4 + 4);
+/** Where each scene starts, in frames: right after the one before, less the dissolve. */
+const starts = scenes.reduce<number[]>((list, scene, index) => {
+  list.push(index === 0 ? 0 : list[index - 1] + s(scenes[index - 1].seconds) - OVERLAP);
+  return list;
+}, []);
+
+/** Every caption on the film's own clock. */
+const cues: Cue[] = scenes.flatMap((scene, index) =>
+  (scene.captions ?? []).map((cue) => ({ ...cue, from: starts[index] / FPS + cue.from, to: starts[index] / FPS + cue.to }))
+);
+
+export const OatsDemo: React.FC = () => (
+  <AbsoluteFill style={{ background: "#fafaf9" }}>
+    {scenes.map((scene, index) => (
+      <Sequence key={index} from={starts[index]} durationInFrames={s(scene.seconds)}>
+        <Fade inFrames={index === 0 ? 0 : OVERLAP} outFrames={0}>
+          {scene.children}
+        </Fade>
+      </Sequence>
+    ))}
+    <CaptionTrack cues={cues} />
+  </AbsoluteFill>
+);
+
+export const DURATION = starts[starts.length - 1] + s(scenes[scenes.length - 1].seconds);
