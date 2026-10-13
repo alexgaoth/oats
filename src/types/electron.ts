@@ -79,6 +79,9 @@ export interface NoteItem {
   // How loud each second was, written at Finish (helpers/conversationLoudness.mjs).
   // Optional: absent for conversations recorded before it was kept.
   conversation_loudness?: string | null;
+  // Which bundled example conversation this is (helpers/sampleConversations.mjs),
+  // or null for a conversation somebody recorded.
+  sample_id?: string | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
