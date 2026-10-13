@@ -89,6 +89,7 @@ import FieldBackdrop from "./field/FieldBackdrop";
 import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
+import DitherBar from "./charts/DitherBar";
 import ListeningRing from "./conversation/ListeningRing";
 import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
@@ -2703,25 +2704,21 @@ function TranscriptView({
 }
 
 /**
- * Neutral tones by rank, the most talk darkest. No hue: a colour here would be
- * read as a status, and nothing about how long somebody spoke is one.
- */
-const TALK_TONES = [
-  "bg-foreground/70",
-  "bg-muted-foreground/55",
-  "bg-muted-foreground/35",
-  "bg-muted-foreground/20",
-];
-
-/**
- * Who did the talking: each voice's share of the speaking time as a 6px bar,
- * and a legend of who and how much that is also the transcript's filter.
+ * Who did the talking: one row per voice, with its name, a bar as long as its
+ * share against the voice that talked most, and the share. A row is also the
+ * transcript's filter: pressing a voice shows only its turns, and pressing it
+ * again shows everyone.
  *
  * Measured from each turn's place in the recording (`talkTime.mjs`) and
  * labelled the way the transcript labels speakers, names included. One voice,
- * or a room whose voices were never told apart, draws nothing: a bar with one
- * part says less than no bar. Speech no voice was put on is shown apart, in
- * the faintest tone, and is not a filter.
+ * or a room whose voices were never told apart, draws nothing: a list of one
+ * says nothing. Speech no voice was put on is the last row, with a rule-grey
+ * bar, and is not a filter.
+ *
+ * The bars are the chart fill (DESIGN.md §6): the dither of the quiet grey,
+ * and honey for the voice being shown. Two columns when the card has room
+ * (420px), filled down the first column first, so the reading order and the
+ * tab order are the same.
  */
 function TalkTime({
   talk,
@@ -2741,13 +2738,12 @@ function TalkTime({
     [i18n.language]
   );
   if (talk.speakers.length < 2) return null;
-  const parts = [
-    ...talk.speakers.map((speaker, rank) => ({
+  const rows = [
+    ...talk.speakers.map((speaker) => ({
       key: speaker.key as string | null,
       ms: speaker.ms,
       percent: speaker.percent,
       label: speakerText(speaker.segment, t) ?? "",
-      tone: TALK_TONES[Math.min(rank, TALK_TONES.length - 1)],
     })),
     ...(talk.unattributedMs > 0
       ? [
@@ -2756,69 +2752,74 @@ function TalkTime({
             ms: talk.unattributedMs,
             percent: talk.unattributedPercent,
             label: t("oats.intelligence.talkTime.unattributed"),
-            tone: "bg-border",
           },
         ]
       : []),
   ];
+  // The longest bar is the voice that talked most (or the unattributed speech,
+  // when there was more of it): every other bar is a share of that one.
+  const longest = Math.max(...rows.map((entry) => entry.ms));
+  const firstColumn = Math.ceil(rows.length / 2);
+  // Each row spans the list's three columns (name, bar, share) through
+  // subgrid, so the bars in a column start on one line.
+  const row = "col-span-3 grid grid-cols-subgrid items-center px-1.5 py-1";
   return (
     <div
       role="group"
       aria-label={t("oats.intelligence.talkTime.label")}
-      className={cn("space-y-2.5", className)}
+      className={cn("@container", className)}
     >
-      <div aria-hidden="true" className="flex h-1.5 gap-px overflow-hidden rounded-full">
-        {parts.map((part) => (
-          <span
-            key={part.key ?? "unattributed"}
-            style={{ flexGrow: part.ms, flexBasis: 0 }}
-            className={cn(
-              "h-full min-w-px transition-opacity duration-150",
-              part.tone,
-              selected && part.key !== selected && "opacity-30"
-            )}
-          />
-        ))}
-      </div>
-      <ul className="-mx-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-        {parts.map((part) => {
+      <ul className="-mx-1.5 grid grid-flow-row-dense grid-cols-[minmax(0,max-content)_minmax(0,1fr)_auto] gap-x-3 text-[13px] text-foreground @min-[420px]:grid-cols-[minmax(0,max-content)_minmax(0,1fr)_auto_0.25rem_minmax(0,max-content)_minmax(0,1fr)_auto]">
+        {rows.map((entry, index) => {
+          const pressed = entry.key !== null && selected === entry.key;
           const content = (
             <>
-              <span
-                aria-hidden="true"
-                className={cn("h-1.5 w-3 shrink-0 rounded-full", part.tone)}
-              />
-              <span className="min-w-0 truncate">{part.label}</span>
+              <span className={cn("max-w-40 truncate", pressed && "font-medium")}>
+                {entry.label}
+              </span>
+              <span aria-hidden="true" className="flex h-1.5 min-w-0">
+                <span
+                  className={cn(
+                    "h-1.5 min-w-1.5 overflow-hidden rounded-[3px]",
+                    entry.key === null && "bg-border",
+                    pressed && "bg-primary"
+                  )}
+                  style={{ width: `${(entry.ms / longest) * 100}%` }}
+                >
+                  {entry.key !== null && !pressed && <DitherBar />}
+                </span>
+              </span>
               {/* The measurement, set apart from a label that may end in a number. */}
-              <span className="ml-0.5 font-medium tabular-nums text-foreground">
-                {percent.format(part.percent / 100)}
+              <span className="text-right font-medium tabular-nums">
+                {percent.format(entry.percent / 100)}
               </span>
             </>
           );
-          if (!part.key) {
+          const column =
+            index < firstColumn ? "@min-[420px]:col-start-1" : "@min-[420px]:col-start-5";
+          if (entry.key === null) {
             return (
-              <li key="unattributed" className="flex items-center gap-1.5 px-1.5 py-0.5">
+              <li key="unattributed" className={cn(row, column)}>
                 {content}
               </li>
             );
           }
-          const key = part.key;
-          const pressed = selected === key;
+          const key = entry.key;
           return (
-            <li key={key}>
+            <li key={key} className={cn("col-span-3 grid grid-cols-subgrid", column)}>
               <button
                 type="button"
                 aria-pressed={pressed}
                 title={
                   pressed
                     ? t("oats.intelligence.talkTime.everyone")
-                    : t("oats.intelligence.talkTime.show", { speaker: part.label })
+                    : t("oats.intelligence.talkTime.show", { speaker: entry.label })
                 }
                 onClick={() => onSelect(key)}
                 className={cn(
-                  "flex max-w-60 items-center gap-1.5 rounded-md px-1.5 py-0.5 outline-none transition-colors",
-                  "hover:bg-muted/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  pressed && "bg-muted text-foreground"
+                  row,
+                  "rounded-md text-left outline-none transition-colors",
+                  "hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 )}
               >
                 {content}
