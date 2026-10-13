@@ -12,13 +12,16 @@
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
 // `edits=0` leaves the voices unnamed after Stop; `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
-// offer the example; `theme`, `view` and `flow` as in `settings.mjs`.
+// offer the example; `profile=many` holds two hundred synthetic conversations
+// in three groups instead of the samples (`many.mjs`), to measure Global
+// conversations at size; `theme`, `view` and `flow` as in `settings.mjs`.
 // `panel=true` is the app's own: the workspace window.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { installFakeMicrophone } from "./media.mjs";
+import { MANY_GROUPS, manyConversations } from "./many.mjs";
 import { createReplay } from "./replay.mjs";
 import { applyDemoSettings } from "./settings.mjs";
 
@@ -29,15 +32,23 @@ const supporting = Object.values(
 const params = new URLSearchParams(window.location.search);
 const live = params.get("demo") === "live";
 const empty = params.get("profile") === "empty";
+const many = params.get("profile") === "many";
 
 installClock();
 applyDemoSettings(params);
 installFakeMicrophone();
 
 const main = createFakeMain({
-  fixtures: empty ? [] : live ? supporting : [mainFixture, ...supporting],
+  fixtures: empty || many ? [] : live ? supporting : [mainFixture, ...supporting],
   example: mainFixture,
 });
+if (many) {
+  const { notes, questions } = manyConversations();
+  main.db.notes.push(...notes);
+  for (const question of questions) main.insertEvent(question);
+  // Conversation groups, as the main process will offer them.
+  main.api.getConversationGroups = async () => MANY_GROUPS.map((group) => ({ ...group }));
+}
 window.electronAPI = main.api;
 
 const replay = createReplay({
@@ -88,7 +99,7 @@ window.oatsDemo = {
     pressTab(name);
     await frame();
   },
-  /** Go to "home", "conversations" or "map". */
+  /** Go to "home", "conversations" or "global" (Global conversations; "map" is its old name). */
   async show(view) {
     if (view === "home") {
       pressButton("Home");
@@ -97,7 +108,7 @@ window.oatsDemo = {
       await frame();
       window.dispatchEvent(new Event("oats-intelligence-back"));
       await frame();
-      pressButton(view === "map" ? "Map" : "List");
+      pressButton(view === "global" || view === "map" ? "Global" : "List");
     }
     await frame();
   },

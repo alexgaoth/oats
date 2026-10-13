@@ -4,7 +4,7 @@
 // installed for it. Start the harness first (`npm run demo:harness`).
 //
 //   node demo/capture.mjs --out ~/oats-screens
-//   node demo/capture.mjs --out ~/oats-screens --only home,map --themes dark
+//   node demo/capture.mjs --out ~/oats-screens --only home,global --themes dark
 //
 //   --url <origin>    the harness (default http://127.0.0.1:5391)
 //   --out <dir>       where the PNGs go (required)
@@ -76,7 +76,19 @@ const SHOTS = [
       "await oatsDemo.open(undefined, { tab: 'connections' }); await demo.scrollTo('Summary', 'tab'); await demo.wait(2500)",
   },
   { name: "conversations", query: "", script: "await oatsDemo.show('conversations')" },
-  { name: "map", query: "", script: "await oatsDemo.show('map'); await demo.wait(3500)" },
+  { name: "global", query: "", script: "await oatsDemo.show('global'); await demo.wait(1500)" },
+  {
+    // Pointing at the newest conversation lights it in both charts.
+    name: "global-highlight",
+    query: "",
+    script:
+      "await oatsDemo.show('global'); await demo.wait(1500); await demo.point(oatsDemo.samples()[0].id)",
+  },
+  {
+    name: "global-many",
+    query: "profile=many",
+    script: "await oatsDemo.show('global'); await demo.wait(2500)",
+  },
 ];
 
 // Page helpers, evaluated in the page before each shot's script.
@@ -95,6 +107,17 @@ window.demo = {
     button?.click();
     button?.blur();
     await demo.wait(300);
+  },
+  // Point at a conversation on the Global conversations board, as the pointer
+  // would: through the board's own highlight store, from the URL the app loaded.
+  async point(id) {
+    const url = performance
+      .getEntriesByType("resource")
+      .map((entry) => entry.name)
+      .find((name) => name.includes("/components/global/highlightStore"));
+    const { useGlobalHighlight } = await import(url);
+    useGlobalHighlight.getState().pointAtConversation(id);
+    await demo.wait(200);
   },
   async scrollTo(text, role) {
     const candidates = role

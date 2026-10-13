@@ -33,6 +33,10 @@ export interface SimNode extends GraphNode {
 }
 
 export const MAX_TICKS = 300;
+// How far repulsion reaches, in multiples of the room each node has.
+export const REPULSION_REACH = 3;
+// Up to this many nodes, centre gravity is what it always was.
+export const CROWD = 16;
 export const ALPHA_DECAY = 0.985;
 export const ALPHA_MIN = 0.005;
 
@@ -53,8 +57,11 @@ export const SETTLE_REFERENCE_FRAME_MS = 1000 / 60;
 // off-canvas, not enough to re-solve the layout.
 export const SETTLE_GRAVITY_SCALE = 0.08;
 
-export const MIN_RADIUS = 14;
-export const MAX_RADIUS = 42;
+// A disc's radius is the one size that carries data on these charts: the square
+// root of the time it stands for, between 5 and 14 px. The old 14 to 42 drew a
+// long conversation as a dinner plate that outweighed every label near it.
+export const MIN_RADIUS = 5;
+export const MAX_RADIUS = 14;
 
 // The air two discs must keep between them. Enforced as a constraint by
 // `separate`, not as a force — see the note there.
@@ -70,8 +77,8 @@ export const MAX_FIT_SCALE = 2.6;
 export const LABEL_CLEARANCE_X = 68;
 export const LABEL_CLEARANCE_Y = 26;
 
-// Radius scales with the square root of time spent, clamped to a 3× range so one
-// long tangent cannot swallow the map.
+// Radius scales with the square root of time spent, clamped to a 2.8× range so
+// one long tangent cannot swallow the map.
 export function radiusFor(node: GraphNode, maxDuration: number): number {
   if (maxDuration <= 0) return MIN_RADIUS;
   const ratio = Math.sqrt(Math.max(node.durationMs, 0) / maxDuration);
@@ -158,6 +165,13 @@ export function simulationStep(
   pinned: number | null,
   gravityScale = 1
 ): void {
+  // The room each node has on this canvas (Fruchterman and Reingold's k). The
+  // spacings below were set for a conversation's dozen topics, where k is far
+  // larger than they are and changes nothing. On a board of two hundred
+  // conversations k is the smaller, and holding the spacing to it is what lets
+  // the graph settle as a cloud inside its card instead of a wall of discs
+  // pressed against every edge.
+  const room = Math.sqrt((width * height) / Math.max(1, nodes.length));
   // Repulsion between every pair — n is small (topics, not utterances), so the
   // naive O(n²) pass is cheaper than building a quadtree.
   for (let i = 0; i < nodes.length; i += 1) {
@@ -167,7 +181,10 @@ export function simulationStep(
       let dx = b.x - a.x;
       let dy = b.y - a.y;
       const distance = Math.hypot(dx, dy) || 0.01;
-      const minimum = a.radius + b.radius + 28;
+      // Beyond a few nodes' room, a node is not a neighbour: without this the
+      // whole crowd pushes the outer discs of a busy graph against the edge.
+      if (distance > room * REPULSION_REACH) continue;
+      const minimum = Math.min(a.radius + b.radius + 28, room * 0.7);
       const force = ((minimum * minimum) / (distance * distance)) * alpha * 0.9;
       dx /= distance;
       dy /= distance;
@@ -184,13 +201,24 @@ export function simulationStep(
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const distance = Math.hypot(dx, dy) || 0.01;
-    const rest = a.radius + b.radius + 90;
+    const rest = Math.min(a.radius + b.radius + 90, room * 1.4);
     const force = ((distance - rest) / distance) * alpha * 0.08 * Math.min(edge.weight, 4);
     a.vx += dx * force;
     a.vy += dy * force;
     b.vx -= dx * force;
     b.vy -= dy * force;
   }
+  // Centre gravity follows the canvas's shape: on a wide card the pull across
+  // is weaker than the pull down, so the graph settles as wide as its card
+  // rather than as a round knot in the middle of it. Squared, because a crowd
+  // held by a pull that grows with distance spreads as the square root of the
+  // pull's ratio: a 3:1 card needs a ninth of the pull across to fill it.
+  // A crowd is held harder than a handful: with more nodes there are more
+  // neighbours pushing the outer ones out, so the pull grows with the count's
+  // square root past a conversation's dozen topics, where it changes nothing.
+  const crowd = Math.sqrt(Math.max(1, nodes.length / CROWD));
+  const pullX = (width > height ? (height / width) ** 2 : 1) * crowd;
+  const pullY = (height > width ? (width / height) ** 2 : 1) * crowd;
   for (const node of nodes) {
     if (node.id === pinned) {
       // The user's hand is the authority on this one: it pushes, nothing pushes it.
@@ -198,8 +226,8 @@ export function simulationStep(
       node.vy = 0;
       continue;
     }
-    node.vx += (width / 2 - node.x) * alpha * 0.012 * gravityScale;
-    node.vy += (height / 2 - node.y) * alpha * 0.012 * gravityScale;
+    node.vx += (width / 2 - node.x) * alpha * 0.012 * gravityScale * pullX;
+    node.vy += (height / 2 - node.y) * alpha * 0.012 * gravityScale * pullY;
     node.vx *= 0.82;
     node.vy *= 0.82;
     const clamped = clampToCanvas(node, node.x + node.vx, node.y + node.vy, width, height);

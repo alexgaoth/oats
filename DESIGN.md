@@ -234,6 +234,28 @@ with no decorative gradient.
 - The legend under a contour lists only what that contour draws, in two rows: how
   the questions ended, then the shape marks (topic change, topic revisited,
   marked moment).
+- **Global conversations** (`components/global/`), the Conversations page's
+  Global view: a board of charts across every conversation, one tab per
+  conversation group, All first. The board is the background with a 1 px dot
+  in the rule grey every 24 px. Each chart is a card on it (card colour, 1 px
+  border, `rounded-xl`, `shadow-xs`) that snaps to the dots, moves by its
+  header, resizes by its bottom-right corner and keeps one cell of board around
+  it; the cards it would land on step down out of its way. Its remove button
+  shows on hover or focus. Each tab keeps its arrangement; Reset layout, in the
+  board's menu, puts back the default: the force graph above the arc timeline,
+  filling the view.
+- The board's charts share one highlight (`highlightStore.ts`,
+  `linkedHighlight.ts`). Pointing at a conversation, or focusing it, lights it
+  honey in every chart and its links ink, and everything else recedes to the
+  rule grey (words recede only to the quiet grey, so they stay readable).
+  Pointing at a subject lights the conversations and the links that carry it.
+  A click opens the conversation, which stays selected, in honey, when you come
+  back to the board.
+- A subject's links are a thread: each conversation on it joins the one on it
+  before (`subjectThreads`), not every other one. Joining every pair made 1,500
+  links at 200 conversations, a solid mass in both charts.
+- Pointing redraws only the canvases, from layers cached until the data, the
+  size or the theme changes: nothing re-renders and nothing moves at rest.
 
 ## 7. Motion
 

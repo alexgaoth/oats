@@ -20,20 +20,39 @@ import {
   simulationStep,
 } from "./graphPhysics";
 import type { DragLifecycle, GraphEdge, GraphNode, SimNode } from "./graphPhysics";
+import {
+  DATA_LINE,
+  LABEL_SIZE,
+  PLATE_PAD,
+  boxesOverlap,
+  ditherFill,
+  plateBox,
+  truncateText,
+} from "../global/chartPaint";
+import type { PlateBox } from "../global/chartPaint";
+import { edgeKey } from "../global/arcGeometry";
+import { NO_HIGHLIGHT, lineTone, markTone } from "../global/linkedHighlight";
+import type { Highlight } from "../global/linkedHighlight";
+import type { HighlightSource } from "../global/highlightStore";
 
 // The shapes are defined next to the simulation that consumes them, and
 // re-exported here because this component is what every caller imports.
 export type { GraphEdge, GraphNode };
 
-// The Obsidian-style force-directed canvas shared by both graph surfaces: the
-// topic graph inside one conversation (DESIGN.md §9.4) and the lifetime graph
-// across all of them (§9.7). They differ only in what a node and an edge mean,
-// so they differ only in the data handed to this component — one simulation, one
-// set of interaction rules, one accessibility path.
+// The force-directed canvas shared by both graph surfaces: the topic graph
+// inside one conversation and the force graph of Global conversations across
+// all of them. They differ only in what a node and an edge mean, so they
+// differ only in the data handed to this component: one simulation, one set
+// of interaction rules, one accessibility path.
 //
-// The simulation is capped and comes to rest (DESIGN.md §8): ~300 ticks with an
-// alpha decay, then the canvas goes idle. No permanent jitter, no CPU burn
-// behind a window somebody is reading. Dragging a node wakes it briefly.
+// Drawn by the chart rules: discs of 5 to 14 px dithered in the quiet grey,
+// edges 1.5 px and straight, labels on plates in the surface colour, and honey
+// only for the disc that is pointed at or selected.
+//
+// The simulation is capped and comes to rest (DESIGN.md §7): ~300 ticks with an
+// alpha decay, then the canvas goes idle. Dragging a node wakes it briefly.
+// Nothing else redraws it but a change of data, size, theme or highlight, and
+// a highlight redraw composites cached layers rather than repainting the graph.
 
 /** Read live rather than cached: the OS setting can change while the app runs. */
 function reducedMotion(): boolean {
@@ -42,44 +61,42 @@ function reducedMotion(): boolean {
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
   );
 }
-// Below this radius a node is too small to carry a label without the label
-// becoming the node. A drawing rule, not a physical one, so it stays here.
-const LABEL_RADIUS = 24;
 
-// At or below this many nodes the graph is sparse enough that every node can be
-// named without the map becoming text (DESIGN.md §9.4 wants whitespace over
-// density — but a handful of unlabelled circles is not whitespace, it is a
-// picture of nothing).
-const SPARSE_GRAPH_NODES = 8;
-
-// The same vocabulary as the live flow card (`ConversationFlow`): the topic
-// being talked about now is the brand, an open one is neutral, a resolved one
-// is green, and a dropped one is a hollow ring. Red is not used, because in
-// Oats red means recording or danger (DESIGN.md §2). The fill or ring carries
-// the state without colour, so it reads in greyscale.
-const STATE_VAR: Record<ThreadState, string> = {
-  live: "--color-primary",
-  open: "--color-muted-foreground",
-  resolved: "--color-success",
-  dropped: "--color-muted-foreground",
+// How dense a disc's dither is says how settled its topic is, so the state
+// survives greyscale: an open topic is half ink, a resolved one nearly solid, a
+// dropped one an empty ring. The topic being talked about now is honey (it is
+// "now"). A conversation on the board is always `open`: its size is its data.
+const DENSITY: Record<ThreadState, number> = {
+  live: 1,
+  open: 0.62,
+  resolved: 0.9,
+  dropped: 0,
 };
+
+// A press that moves less than this is a click, not a drag.
+const DRAG_SLOP = 4;
+// Discs are small; the pointer may land this far outside one and still have it.
+const HIT_SLOP = 4;
+// Edges stop this far short of the discs they join.
+const EDGE_GAP = 3;
+// Under a disc, the gap between its rim and its label's plate.
+const LABEL_GAP = 4;
 
 function readColor(styles: CSSStyleDeclaration, name: string): string {
   return styles.getPropertyValue(name).trim() || "#71717a";
 }
 
-// The palette is read on mount and whenever the theme changes — never inside the
-// draw loop. `getComputedStyle` forces a style recalculation, and `draw` runs on
-// every frame of a settle (~73 of them per drag), so reading it there billed a
-// full recalc per frame for the length of every drag. CLAUDE.md records this
-// exact mistake as a hard-won lesson from the retired field renderer; this is the same
-// mistake in a different file.
+// The palette is read on mount and whenever the theme changes, never inside a
+// draw: `getComputedStyle` forces a style recalculation, and a settle draws on
+// every frame.
 interface Palette {
   ink: string;
+  quiet: string;
+  rule: string;
+  honey: string;
+  card: string;
   background: string;
-  accent: string;
   sans: string;
-  state: Record<ThreadState, string>;
 }
 
 // Canvas text does not inherit CSS, so the label font is read from the same
@@ -90,15 +107,12 @@ function readPalette(element: Element): Palette {
   const styles = getComputedStyle(element);
   return {
     ink: readColor(styles, "--color-foreground"),
-    background: readColor(styles, "--color-surface-0"),
-    accent: readColor(styles, "--color-primary"),
+    quiet: readColor(styles, "--color-muted-foreground"),
+    rule: readColor(styles, "--color-border"),
+    honey: readColor(styles, "--color-primary"),
+    card: readColor(styles, "--color-card"),
+    background: readColor(styles, "--color-background"),
     sans: styles.getPropertyValue("--font-family-sans").trim() || SANS_FALLBACK,
-    state: {
-      live: readColor(styles, STATE_VAR.live),
-      open: readColor(styles, STATE_VAR.open),
-      resolved: readColor(styles, STATE_VAR.resolved),
-      dropped: readColor(styles, STATE_VAR.dropped),
-    },
   };
 }
 
@@ -130,92 +144,253 @@ function saveLayout(key: string | null, nodes: SimNode[], width: number, height:
   }
 }
 
-/** Cuts a label to fit, ending in an ellipsis. */
-function truncateLabel(ctx: CanvasRenderingContext2D, label: string, maxWidth: number): string {
-  if (ctx.measureText(label).width <= maxWidth) return label;
-  let text = label;
-  while (text.length > 1 && ctx.measureText(`${text}…`).width > maxWidth) {
-    text = text.slice(0, -1);
-  }
-  return `${text.trimEnd()}…`;
-}
-
-// Where a label sits under its node, and how much air it claims around itself.
-// The gap is measured from the disc's edge; the pad is what the knockout plate
-// adds either side so a hairline stops short of the first letter.
-const LABEL_GAP = 6;
-const LABEL_PAD = 5;
-const LABEL_LINE = 15;
-
-interface LabelBox {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-/** Where a line leaving `node` toward (`x`, `y`) crosses the node's rim. */
-function pointOnRim(node: SimNode, x: number, y: number): { x: number; y: number } {
+/** Where a line leaving `node` toward (`x`, `y`) passes `gap` px outside its rim. */
+function pointOnRim(node: SimNode, x: number, y: number, gap = 0): { x: number; y: number } {
   const dx = x - node.x;
   const dy = y - node.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= node.radius) return { x: node.x, y: node.y };
-  return {
-    x: node.x + (dx / distance) * node.radius,
-    y: node.y + (dy / distance) * node.radius,
-  };
+  const distance = Math.hypot(dx, dy) || 1;
+  const reach = node.radius + gap;
+  return { x: node.x + (dx / distance) * reach, y: node.y + (dy / distance) * reach };
 }
 
-function overlaps(a: LabelBox, b: LabelBox): boolean {
-  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-}
-
-/** Would this label land on some *other* node's disc? */
-function overlapsNode(box: LabelBox, nodes: SimNode[], ownId: number): boolean {
+/** Would this plate land on some *other* node's disc? */
+function overlapsNode(box: PlateBox, nodes: SimNode[], ownId: number): boolean {
   return nodes.some((other) => {
     if (other.id === ownId) return false;
-    // Nearest point of the box to the node's centre — a circle/rect test, so a
-    // label passing beside a large disc is not rejected for being level with it.
+    // The nearest point of the box to the disc's centre: a circle and box test,
+    // so a label passing beside a disc is not rejected for being level with it.
     const nearestX = Math.max(box.left, Math.min(other.x, box.right));
     const nearestY = Math.max(box.top, Math.min(other.y, box.bottom));
     return Math.hypot(other.x - nearestX, other.y - nearestY) < other.radius + 2;
   });
 }
 
-/** A dropped topic: a hollow ring, so it reads as gone without colour. */
-function drawHollow(
+interface EdgePair {
+  key: string;
+  a: SimNode;
+  b: SimNode;
+}
+
+interface PlacedLabel {
+  id: number;
+  text: string;
+  x: number;
+  y: number;
+  box: PlateBox;
+}
+
+/** Everything a highlight does not change: drawn once per layout, size or theme. */
+interface Scene {
+  byId: Map<number, SimNode>;
+  pairs: EdgePair[];
+  labels: Map<number, PlacedLabel>;
+  layers: Map<string, HTMLCanvasElement>;
+}
+
+function traceEdges(ctx: CanvasRenderingContext2D, pairs: EdgePair[]) {
+  ctx.beginPath();
+  for (const { a, b } of pairs) {
+    // Two discs too close for a line between their gaps: nothing to draw.
+    if (Math.hypot(b.x - a.x, b.y - a.y) <= a.radius + b.radius + EDGE_GAP * 2 + 1) continue;
+    const start = pointOnRim(a, b.x, b.y, EDGE_GAP);
+    const end = pointOnRim(b, a.x, a.y, EDGE_GAP);
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+  }
+}
+
+function strokeEdges(ctx: CanvasRenderingContext2D, pairs: EdgePair[], color: string) {
+  if (!pairs.length) return;
+  traceEdges(ctx, pairs);
+  ctx.lineWidth = DATA_LINE;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+function traceDiscs(ctx: CanvasRenderingContext2D, nodes: SimNode[], inset = 0) {
+  ctx.beginPath();
+  for (const node of nodes) {
+    ctx.moveTo(node.x + node.radius - inset, node.y);
+    ctx.arc(node.x, node.y, node.radius - inset, 0, Math.PI * 2);
+  }
+}
+
+type DiscTone = "rest" | "recede" | "focus";
+
+/** Discs, one fill per kind: the dither for a mass, a ring for a dropped topic. */
+function paintDiscs(
+  ctx: CanvasRenderingContext2D,
+  nodes: SimNode[],
+  tone: DiscTone,
+  palette: Palette,
+  surface: string,
+  ratio: number
+) {
+  if (!nodes.length) return;
+  if (tone === "focus") {
+    traceDiscs(ctx, nodes);
+    ctx.fillStyle = palette.honey;
+    ctx.fill();
+    return;
+  }
+  const color = tone === "rest" ? palette.quiet : palette.rule;
+  const byDensity = new Map<number, SimNode[]>();
+  const rings: SimNode[] = [];
+  const now: SimNode[] = [];
+  for (const node of nodes) {
+    if (node.state === "dropped") rings.push(node);
+    else if (node.state === "live") now.push(node);
+    else {
+      const density = DENSITY[node.state] ?? DENSITY.open;
+      const group = byDensity.get(density);
+      if (group) group.push(node);
+      else byDensity.set(density, [node]);
+    }
+  }
+  for (const [density, group] of byDensity) {
+    traceDiscs(ctx, group);
+    ctx.fillStyle = ditherFill(ctx, color, density, ratio);
+    ctx.fill();
+  }
+  if (rings.length) {
+    traceDiscs(ctx, rings, 0.75);
+    ctx.fillStyle = surface;
+    ctx.fill();
+    ctx.lineWidth = DATA_LINE;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+  if (now.length) {
+    traceDiscs(ctx, now);
+    ctx.fillStyle = palette.honey;
+    ctx.fill();
+  }
+}
+
+function paintLabels(
+  ctx: CanvasRenderingContext2D,
+  labels: Iterable<PlacedLabel>,
+  color: string,
+  palette: Palette,
+  surface: string
+) {
+  ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const label of labels) {
+    const { box } = label;
+    ctx.fillStyle = surface;
+    ctx.beginPath();
+    ctx.roundRect(box.left, box.top, box.right - box.left, box.bottom - box.top, 4);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.fillText(label.text, label.x, label.y + 0.5);
+  }
+}
+
+/** The widest a label may run before its ellipsis. */
+function labelWidth(canvasWidth: number): number {
+  return Math.min(180, Math.max(96, canvasWidth / 5));
+}
+
+/**
+ * Where a node's label goes: under its disc by preference, above if that is
+ * where the room is, always held inside the canvas so it is never cut at the
+ * card's edge. Returns both candidates, best first; a candidate that would
+ * leave the canvas vertically is left out.
+ */
+function labelCandidates(
   ctx: CanvasRenderingContext2D,
   node: SimNode,
-  color: string,
-  background: string
-) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(node.x, node.y, node.radius - 0.75, 0, Math.PI * 2);
-  ctx.fillStyle = background;
-  ctx.fill();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.restore();
+  width: number,
+  height: number
+): PlacedLabel[] {
+  const text = truncateText(ctx, node.label, labelWidth(width));
+  const textWidth = ctx.measureText(text).width;
+  const half = textWidth / 2 + PLATE_PAD + 2;
+  const x = Math.min(width - half, Math.max(half, node.x));
+  const offset = node.radius + LABEL_GAP + LABEL_SIZE / 2 + 3;
+  const out: PlacedLabel[] = [];
+  for (const y of [node.y + offset, node.y - offset]) {
+    const box = plateBox(x, y, textWidth);
+    if (box.top < 1 || box.bottom > height - 1) continue;
+    out.push({ id: node.id, text, x, y, box });
+  }
+  if (!out.length) {
+    // A disc hard against the top or bottom: the label sits inside the canvas
+    // beside it rather than off the edge.
+    const y = Math.min(height - LABEL_SIZE, Math.max(LABEL_SIZE, node.y + offset));
+    out.push({ id: node.id, text, x, y, box: plateBox(x, y, textWidth) });
+  }
+  return out;
+}
+
+/**
+ * Every label that fits, biggest disc first, so when two compete for the same
+ * strip of canvas the more important conversation is named. A label that would
+ * land on another label or on another disc is left out: worse than no label at
+ * all. Whatever is pointed at is named anyway, on top (`forcedLabel`).
+ */
+function placeLabels(
+  ctx: CanvasRenderingContext2D,
+  nodes: SimNode[],
+  width: number,
+  height: number,
+  palette: Palette
+): Map<number, PlacedLabel> {
+  ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
+  const placed = new Map<number, PlacedLabel>();
+  const claimed: PlateBox[] = [];
+  const byImportance = [...nodes].sort((a, b) => b.radius - a.radius || a.id - b.id);
+  for (const node of byImportance) {
+    for (const candidate of labelCandidates(ctx, node, width, height)) {
+      if (overlapsNode(candidate.box, nodes, node.id)) continue;
+      if (claimed.some((box) => boxesOverlap(candidate.box, box))) continue;
+      placed.set(node.id, candidate);
+      claimed.push(candidate.box);
+      break;
+    }
+  }
+  return placed;
 }
 
 export default function ForceGraph<TNode extends GraphNode>({
   nodes: inputNodes,
   edges,
   onSelect,
-  selectedId,
+  selectedId = null,
   layoutKey = null,
   nodeDescription,
   className,
+  highlight,
+  onHoverChange,
+  onActivate,
+  onBackgroundPress,
+  surface = "background",
+  roving = false,
+  "aria-label": ariaLabel,
 }: {
   nodes: TNode[];
   edges: GraphEdge[];
+  /** The topic graph's selection: called on press, and with null on empty canvas. */
   onSelect?: (node: TNode | null) => void;
   selectedId?: number | null;
   layoutKey?: string | null;
   nodeDescription?: (node: TNode) => string;
   className?: string;
+  /** What to light, from outside: the board's shared highlight. */
+  highlight?: HighlightSource;
+  /** The pointer or the keyboard reached a node, or left it (`id` null). */
+  onHoverChange?: (id: number | null, previous: number | null) => void;
+  /** A click that did not drag, or Enter on a node's button. */
+  onActivate?: (node: TNode) => void;
+  /** A press on the canvas between nodes. */
+  onBackgroundPress?: () => void;
+  /** The colour behind the canvas, which every label's plate is filled with. */
+  surface?: "background" | "card";
+  /** One tab stop for the whole graph, with the arrow keys between nodes. */
+  roving?: boolean;
+  "aria-label"?: string;
 }) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -224,21 +399,31 @@ export default function ForceGraph<TNode extends GraphNode>({
   // Grab offset and pin, as one value whose transitions live in `graphPhysics`.
   // The pin deliberately outlives the pointer; that rule is `releaseDrag`.
   const dragRef = useRef<DragLifecycle>(NOT_DRAGGING);
+  // A press, until it has moved far enough to be a drag rather than a click.
+  const pressRef = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  // What this graph's own pointer or keyboard is on. Kept out of React state:
+  // pointing redraws the canvas and re-renders nothing.
+  const hoverRef = useRef<number | null>(null);
+  const sceneRef = useRef<Scene | null>(null);
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+  const highlightRef = useRef(highlight);
+  highlightRef.current = highlight;
+  const settleRef = useRef<{ raf: number; alpha: number; last: number } | null>(null);
   // Mirrors node positions into React state purely so the accessible overlay
   // buttons can be positioned; the canvas itself never renders from this.
   const [placed, setPlaced] = useState<SimNode[]>([]);
+  // The node that holds the graph's one tab stop, when `roving`.
+  const [current, setCurrent] = useState<number | null>(null);
+  const buttonRefs = useRef(new Map<number, HTMLButtonElement>());
 
   const maxDuration = useMemo(
     () => Math.max(...inputNodes.map((node) => node.durationMs), 1),
     [inputNodes]
   );
 
-  // Read once on mount, then only when the theme actually changes. State rather
-  // than a ref because `draw` genuinely has to be rebuilt when it changes — the
-  // point is that it changes about twice in a session instead of 60 times a
-  // second.
+  // Read once on mount, then only when the theme actually changes.
   const [palette, setPalette] = useState<Palette | null>(null);
   useEffect(() => {
     const target = canvasRef.current ?? document.documentElement;
@@ -276,201 +461,153 @@ export default function ForceGraph<TNode extends GraphNode>({
     const golden = Math.PI * (3 - Math.sqrt(5));
     nodesRef.current = inputNodes.map((node, index) => {
       const angle = index * golden;
-      const spread = Math.min(size.width, size.height) * 0.3;
-      const offset = spread * Math.sqrt(index / inputNodes.length);
+      // Seeded in an ellipse the shape of the canvas, so a wide card starts the
+      // solve wide rather than round, and the graph uses its width.
+      const offset = 0.3 * Math.sqrt(index / inputNodes.length);
       const stored = saved?.[node.id];
       return {
         ...node,
         radius: radiusFor(node, maxDuration),
-        x: stored ? stored.x * size.width : size.width / 2 + Math.cos(angle) * offset,
-        y: stored ? stored.y * size.height : size.height / 2 + Math.sin(angle) * offset,
+        x: stored ? stored.x * size.width : size.width / 2 + Math.cos(angle) * offset * size.width,
+        y: stored
+          ? stored.y * size.height
+          : size.height / 2 + Math.sin(angle) * offset * size.height,
         vx: 0,
         vy: 0,
       };
     });
     if (!saved) layout(nodesRef.current, edges, size.width, size.height);
     fitToCanvas(nodesRef.current, size.width, size.height);
+    sceneRef.current = null;
     setPlaced(nodesRef.current.map((node) => ({ ...node })));
   }, [inputNodes, edges, size, maxDuration, layoutKey]);
 
+  /** The highlight to draw: the board's, or this graph's own pointer and selection. */
+  const currentHighlight = useCallback((): Highlight => {
+    const source = highlightRef.current;
+    if (source) return source.get();
+    const focus = new Set<number>();
+    if (hoverRef.current !== null) focus.add(hoverRef.current);
+    if (selectedRef.current !== null && selectedRef.current !== undefined) {
+      focus.add(selectedRef.current);
+    }
+    return focus.size ? { ...NO_HIGHLIGHT, focus } : NO_HIGHLIGHT;
+  }, []);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx || !size.width || !size.height) return;
-    if (!palette) return;
+    if (!canvas || !palette || !size.width || !size.height) return;
 
-    // Clamped to 2 for the same reason the field clamps it: a 3× display turns a
-    // full-width graph into ~9× the fragments for no visible gain on a 14px disc.
-    // Assigning `width`/`height` *reallocates and clears* the backing store, so it
-    // is done only when the size has actually changed — this used to run on every
-    // frame of every settle, which on a Retina Mac is four times the pixels of the
-    // Linux machine this was developed on.
+    // Clamped to 2: a 3x display turns a full-width graph into ~9x the fragments
+    // for no visible gain on a 14 px disc. Assigning `width`/`height`
+    // reallocates and clears the backing store, so only on a real change.
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     const pixelWidth = Math.round(size.width * ratio);
     const pixelHeight = Math.round(size.height * ratio);
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
       canvas.width = pixelWidth;
       canvas.height = pixelHeight;
+      sceneRef.current = null;
     }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size.width, size.height);
+    ctx.lineCap = "round";
 
-    const { ink, background, accent } = palette;
     const nodes = nodesRef.current;
-    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const plate = surface === "card" ? palette.card : palette.background;
 
-    // Edges first, as hairline structure beneath the nodes.
-    //
-    // Every edge stops at the rim of the discs it joins rather than running to
-    // their centres. A disc is drawn at 0.85 alpha and the uncertain states are
-    // stippled, so a centre-to-centre line stayed visible *inside* the node as a
-    // stub pointing at nothing — the picture read as circles with whiskers.
-    for (const edge of edges) {
-      const a = byId.get(edge.from);
-      const b = byId.get(edge.to);
-      if (!a || !b) continue;
-      ctx.save();
-      ctx.strokeStyle = ink;
-      const recurring = edge.kind === "return" || edge.kind === "shared";
-      ctx.globalAlpha = recurring ? 0.4 : 0.16;
-      ctx.lineWidth = Math.min(1 + edge.weight * 0.4, 3);
-      ctx.beginPath();
-      if (recurring) {
-        // Drawn as an arc so "this came back" reads as a distinct gesture rather
-        // than just another line — in the topic graph a returned-to thread, in
-        // the lifetime graph a subject two conversations shared.
-        const mx = (a.x + b.x) / 2;
-        const my = (a.y + b.y) / 2;
-        const nx = -(b.y - a.y);
-        const ny = b.x - a.x;
-        const length = Math.hypot(nx, ny) || 1;
-        const cx = mx + (nx / length) * 34;
-        const cy = my + (ny / length) * 34;
-        // An arc leaves and arrives along the direction of its control point, so
-        // trimming toward the control point is where it actually crosses the rim.
-        const start = pointOnRim(a, cx, cy);
-        const end = pointOnRim(b, cx, cy);
-        ctx.moveTo(start.x, start.y);
-        ctx.quadraticCurveTo(cx, cy, end.x, end.y);
-      } else {
-        const start = pointOnRim(a, b.x, b.y);
-        const end = pointOnRim(b, a.x, a.y);
-        ctx.moveTo(start.x, start.y);
-        ctx.lineTo(end.x, end.y);
+    let scene = sceneRef.current;
+    if (!scene) {
+      const byId = new Map(nodes.map((node) => [node.id, node]));
+      const pairs: EdgePair[] = [];
+      for (const edge of edges) {
+        const a = byId.get(edge.from);
+        const b = byId.get(edge.to);
+        if (a && b && a !== b) pairs.push({ key: edgeKey(edge.from, edge.to), a, b });
       }
-      ctx.stroke();
-      ctx.restore();
+      scene = {
+        byId,
+        pairs,
+        labels: placeLabels(ctx, nodes, size.width, size.height, palette),
+        layers: new Map(),
+      };
+      sceneRef.current = scene;
     }
 
-    for (const node of nodes) {
-      const color = palette.state[node.state] ?? palette.state.dropped;
-      const selected = selectedId === node.id;
-      if (node.state === "dropped") {
-        drawHollow(ctx, node, color, background);
-      } else {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.85;
-        ctx.fill();
-        ctx.restore();
+    const current = currentHighlight();
+    const focusNodes = nodes.filter((node) => markTone(current, node.id) === "focus");
+
+    // A layer is a picture of the graph in one tone, cached until the layout,
+    // the size or the theme changes. Pointing at something composites layers
+    // and draws only what it lights, so it costs a few draws, not the graph.
+    // While a settle moves every node each frame, there is nothing to cache.
+    const moving = settleRef.current !== null || dragRef.current.grab !== null;
+    const layer = (name: string, paint: (target: CanvasRenderingContext2D) => void) => {
+      if (moving) {
+        paint(ctx);
+        return;
       }
-
-      if (selected || hoveredId === node.id) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = selected ? 2 : 1;
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-
-    // Labels are a *second* pass over the same nodes, and everything about how
-    // they read depends on that.
-    //
-    // Drawn inside the node loop, a label was painted before the discs that come
-    // after it in the array, so any node overlapping it covered half its letters;
-    // and every edge hairline ran straight through the glyphs, because edges are
-    // painted first and text has no plate. Both produced the same symptom — text
-    // that looks like it is floating loose over the picture rather than naming a
-    // node. One pass for the structure, then one pass for the names.
-    ctx.save();
-    ctx.font = `500 12px ${palette.sans}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-
-    const claimed: LabelBox[] = [];
-    const paintLabel = (node: SimNode, forced: boolean) => {
-      // Truncate rather than pass a maxWidth: canvas *condenses* text to fit,
-      // which turns a long conversation title into an illegible squeeze instead
-      // of an honest ellipsis. How much survives depends on how much canvas
-      // there is — the reading column keeps the old allowance, and the
-      // full-bleed map, whose labels are conversation titles rather than
-      // two-word topics, gets more of the title before the ellipsis.
-      const text = truncateLabel(ctx, node.label, Math.min(240, Math.max(168, size.width / 6)));
-      const width = ctx.measureText(text).width;
-      const boxAt = (top: number): LabelBox => ({
-        left: node.x - width / 2 - LABEL_PAD,
-        top: top - 2,
-        right: node.x + width / 2 + LABEL_PAD,
-        bottom: top + LABEL_LINE,
-      });
-      // Under the node by preference, above it if that is where the room is. A
-      // label that lands on another node's disc, or on a label already placed, is
-      // worse than no label at all — but on a busy graph "below only" left most
-      // of the map anonymous when a second position would have fit. Hovering or
-      // selecting forces one through regardless, so nothing is unreachable.
-      const below = node.y + node.radius + LABEL_GAP;
-      const above = node.y - node.radius - LABEL_GAP - LABEL_LINE;
-      const fits = (candidate: LabelBox) =>
-        !overlapsNode(candidate, nodes, node.id) && !claimed.some((c) => overlaps(candidate, c));
-      let top = below;
-      let box = boxAt(below);
-      if (!fits(box)) {
-        const upper = boxAt(above);
-        if (fits(upper)) {
-          top = above;
-          box = upper;
-        } else if (!forced) {
-          return;
+      let image = scene.layers.get(name);
+      if (!image) {
+        image = document.createElement("canvas");
+        image.width = canvas.width;
+        image.height = canvas.height;
+        const target = image.getContext("2d");
+        if (target) {
+          target.setTransform(ratio, 0, 0, ratio, 0, 0);
+          target.lineCap = "round";
+          paint(target);
         }
+        scene.layers.set(name, image);
       }
-      // The knockout: the hairlines beneath are structure, but a line crossing a
-      // word is dirt. Painting the surface colour behind the text at just under
-      // full strength keeps the edge legible as it approaches without letting it
-      // cut the letters.
-      ctx.globalAlpha = 0.88;
-      ctx.fillStyle = background;
-      ctx.fillRect(box.left, box.top, box.right - box.left, box.bottom - box.top);
-      ctx.globalAlpha = forced ? 1 : 0.85;
-      ctx.fillStyle = ink;
-      ctx.fillText(text, node.x, top);
-      claimed.push(box);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(image, 0, 0);
+      ctx.restore();
     };
 
-    // The radius threshold exists to stop a dense graph turning into a wall of
-    // text. On a small one there is no wall to prevent, and suppressing labels
-    // there just makes the map unreadable — a four-topic conversation was
-    // rendering two anonymous discs. Below this count every node is named;
-    // above it, only the ones big enough to have earned it.
-    const alwaysNamed = nodes.length <= SPARSE_GRAPH_NODES;
-    // Biggest first, so when two labels compete for the same strip of canvas the
-    // one belonging to the more important node wins rather than whichever
-    // happened to be earlier in the array.
-    const byImportance = [...nodes].sort((a, b) => b.radius - a.radius);
-    for (const node of byImportance) {
-      if (selectedId === node.id || hoveredId === node.id) continue;
-      if (alwaysNamed || node.radius >= LABEL_RADIUS) paintLabel(node, false);
+    if (!current.active) {
+      layer("rest", (target) => {
+        strokeEdges(target, scene.pairs, palette.quiet);
+        paintDiscs(target, nodes, "rest", palette, plate, ratio);
+        paintLabels(target, scene.labels.values(), palette.quiet, palette, plate);
+      });
+    } else {
+      // Structure first, the marks over it, the names over those: a lit edge
+      // passes under a receded disc's plate rather than through its words.
+      // Every edge, receded; the lit ones are drawn over their own receded
+      // stroke, so the layer is the same whatever is pointed at.
+      layer("recede-edges", (target) => strokeEdges(target, scene.pairs, palette.rule));
+      strokeEdges(
+        ctx,
+        scene.pairs.filter((pair) => lineTone(current, pair.key) === "lit"),
+        palette.ink
+      );
+      layer("recede-marks", (target) => {
+        paintDiscs(target, nodes, "recede", palette, plate, ratio);
+        paintLabels(target, scene.labels.values(), palette.quiet, palette, plate);
+      });
+      paintDiscs(
+        ctx,
+        nodes.filter((node) => markTone(current, node.id) === "rest"),
+        "rest",
+        palette,
+        plate,
+        ratio
+      );
     }
-    // Last, and therefore on top: whatever the user is pointing at or has chosen.
-    for (const node of nodes) {
-      if (selectedId === node.id || hoveredId === node.id) paintLabel(node, true);
-    }
-    ctx.restore();
-  }, [edges, size, selectedId, hoveredId, palette]);
+
+    paintDiscs(ctx, focusNodes, "focus", palette, plate, ratio);
+    // Whatever is pointed at or chosen is named, last and therefore on top,
+    // even where the layout found no room for its label.
+    ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
+    const named = focusNodes.map(
+      (node) => scene.labels.get(node.id) ?? labelCandidates(ctx, node, size.width, size.height)[0]
+    );
+    paintLabels(ctx, named, palette.ink, palette, plate);
+  }, [edges, size, palette, surface, currentHighlight]);
 
   // The running settle captured `draw` once, so a hover during a settle had its
   // highlight painted by React and immediately overwritten by the next tick's
@@ -479,17 +616,38 @@ export default function ForceGraph<TNode extends GraphNode>({
   useEffect(() => {
     drawRef.current = draw;
     draw();
-  }, [draw]);
+  }, [draw, placed, selectedId]);
+
+  // The board's highlight redraws the canvas directly: no React render.
+  useEffect(() => {
+    if (!highlight) return undefined;
+    drawRef.current();
+    return highlight.subscribe(() => drawRef.current());
+  }, [highlight]);
+
+  const setHover = useCallback(
+    (id: number | null) => {
+      const previous = hoverRef.current;
+      if (previous === id) return;
+      hoverRef.current = id;
+      const canvas = canvasRef.current;
+      if (canvas && !dragRef.current.grab) {
+        canvas.style.cursor = id !== null && (onActivate || onSelect) ? "pointer" : "";
+      }
+      onHoverChange?.(id, previous);
+      // The board redraws from its own store; a graph on its own redraws here.
+      if (!highlightRef.current) drawRef.current();
+    },
+    [onActivate, onSelect, onHoverChange]
+  );
 
   // Wake-and-settle.
   //
   // The simulation is otherwise a one-shot solve, which left dragging feeling
-  // dead: the held node moved and every neighbour stayed frozen, so edges
-  // stretched like rubber bands tied to statues. §8 asks for the opposite —
-  // give, and then rest. This runs the same `simulationStep` as the initial
-  // solve, reheated to DRAG_ALPHA and decaying to ALPHA_MIN, and then it
-  // **stops**: no permanent jitter, and nothing running behind an idle window.
-  const settleRef = useRef<{ raf: number; alpha: number; last: number } | null>(null);
+  // dead: the held node moved and every neighbour stayed frozen. This runs the
+  // same `simulationStep` as the initial solve, reheated to DRAG_ALPHA and
+  // decaying to ALPHA_MIN, and then it **stops**: no permanent jitter, and
+  // nothing running behind an idle window.
   // Persisting is deferred until the graph actually stops, so what gets saved is
   // where it came to rest rather than wherever the pointer left it mid-settle.
   const onRestRef = useRef<(() => void) | null>(null);
@@ -503,22 +661,21 @@ export default function ForceGraph<TNode extends GraphNode>({
   const settle = useCallback(
     (onRest?: () => void) => {
       if (onRest) onRestRef.current = onRest;
+      sceneRef.current = null;
 
       // Reduced motion gets the *destination*, not the absence of the
       // behaviour: the same steps run synchronously so neighbours still give
-      // way, only the journey is skipped (§8, §12).
+      // way, only the journey is skipped.
       //
       // `onRest` is what distinguishes a drag *move* from a drag *end*. Solving
-      // on every move would run up to 300 ticks per pointer event — on the
-      // lifetime graph that is millions of force evaluations a second, making
-      // the accessible path the slowest one — and would re-solve to rest
-      // continuously, ending somewhere different from the animated path.
+      // on every move would run up to 300 ticks per pointer event.
       if (reducedMotion()) {
         if (!onRest) {
           drawRef.current();
           return;
         }
         settleToRest(nodesRef.current, edges, size.width, size.height, dragRef.current.pinned);
+        sceneRef.current = null;
         drawRef.current();
         const rest = onRestRef.current;
         onRestRef.current = null;
@@ -537,6 +694,7 @@ export default function ForceGraph<TNode extends GraphNode>({
 
         if (state.alpha <= ALPHA_MIN) {
           stopSettling();
+          sceneRef.current = null;
           drawRef.current();
           const rest = onRestRef.current;
           onRestRef.current = null;
@@ -546,8 +704,7 @@ export default function ForceGraph<TNode extends GraphNode>({
 
         // Rebuilt every tick: the layout effect replaces nodesRef.current
         // whenever the inputs or the canvas size change, and a map captured once
-        // would leave the spring forces acting on detached former nodes while
-        // repulsion acted on the live ones — the graph collapses inward.
+        // would leave the spring forces acting on detached former nodes.
         const byId = new Map(nodesRef.current.map((node) => [node.id, node]));
         const delta = Math.min(now - state.last, 64);
         state.last = now;
@@ -563,6 +720,7 @@ export default function ForceGraph<TNode extends GraphNode>({
           SETTLE_GRAVITY_SCALE
         );
         state.alpha *= Math.pow(SETTLE_DECAY, delta / SETTLE_REFERENCE_FRAME_MS);
+        sceneRef.current = null;
         drawRef.current();
         state.raf = requestAnimationFrame(tick);
       };
@@ -586,10 +744,18 @@ export default function ForceGraph<TNode extends GraphNode>({
     [stopSettling]
   );
 
+  /** The disc under a point: the nearest one within reach, small discs included. */
   const nodeAt = useCallback((x: number, y: number) => {
-    return (
-      nodesRef.current.find((node) => Math.hypot(node.x - x, node.y - y) <= node.radius) ?? null
-    );
+    let best: SimNode | null = null;
+    let bestDistance = Infinity;
+    for (const node of nodesRef.current) {
+      const distance = Math.hypot(node.x - x, node.y - y);
+      if (distance <= node.radius + HIT_SLOP && distance < bestDistance) {
+        best = node;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }, []);
 
   const pointAt = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -601,12 +767,17 @@ export default function ForceGraph<TNode extends GraphNode>({
     (event: React.PointerEvent<HTMLCanvasElement>) => {
       const { x, y } = pointAt(event);
       const node = nodeAt(x, y);
-      onSelect?.((node as unknown as TNode) ?? null);
-      if (!node) return;
+      // The topic graph selects on press; the board opens on a click instead.
+      if (!onActivate) onSelect?.((node as unknown as TNode) ?? null);
+      if (!node) {
+        onBackgroundPress?.();
+        return;
+      }
+      pressRef.current = { id: node.id, x, y, moved: false };
       dragRef.current = beginDrag(node.id, node.x - x, node.y - y);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [nodeAt, onSelect]
+    [nodeAt, onSelect, onActivate, onBackgroundPress]
   );
 
   const onPointerMove = useCallback(
@@ -614,8 +785,14 @@ export default function ForceGraph<TNode extends GraphNode>({
       const { x, y } = pointAt(event);
       const drag = dragRef.current.grab;
       if (!drag) {
-        setHoveredId(nodeAt(x, y)?.id ?? null);
+        setHover(nodeAt(x, y)?.id ?? null);
         return;
+      }
+      const press = pressRef.current;
+      if (press && !press.moved) {
+        if (Math.hypot(x - press.x, y - press.y) < DRAG_SLOP) return;
+        press.moved = true;
+        event.currentTarget.style.cursor = "grabbing";
       }
       const node = nodesRef.current.find((candidate) => candidate.id === drag.id);
       if (!node) return;
@@ -628,7 +805,7 @@ export default function ForceGraph<TNode extends GraphNode>({
       node.y = clamped.y;
       settle();
     },
-    [nodeAt, size, settle]
+    [nodeAt, size, settle, setHover]
   );
 
   const endDrag = useCallback(() => {
@@ -639,16 +816,48 @@ export default function ForceGraph<TNode extends GraphNode>({
     //
     // Releasing it at let-go was the rubber-banding: during the drag its
     // neighbours are pushed away, and the instant it stopped being pinned all of
-    // that stored repulsion pushed straight back into it, undoing ~74% of the
-    // displacement the hand had just made. Keeping it pinned means the drop
-    // point is final and only the neighbours give way — which is what §9.4
-    // promises when it says the map a user has arranged stays arranged.
+    // that stored repulsion pushed straight back into it. Keeping it pinned
+    // means the drop point is final and only the neighbours give way.
     settle(() => {
       dragRef.current = restDrag();
       saveLayout(layoutKey, nodesRef.current, size.width, size.height);
       setPlaced(nodesRef.current.map((node) => ({ ...node })));
     });
   }, [layoutKey, size, settle]);
+
+  const onPointerUp = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      const press = pressRef.current;
+      pressRef.current = null;
+      event.currentTarget.style.cursor = hoverRef.current !== null ? "pointer" : "";
+      if (press && !press.moved) {
+        // A press that never became a drag is a click: nothing moves, nothing
+        // settles, and nothing is saved.
+        dragRef.current = restDrag();
+        const node = nodesRef.current.find((candidate) => candidate.id === press.id);
+        if (node) onActivate?.(node as unknown as TNode);
+        return;
+      }
+      endDrag();
+    },
+    [endDrag, onActivate]
+  );
+
+  const ordered = placed;
+  const tabStop = roving ? (current ?? ordered[0]?.id ?? null) : null;
+  const moveFocus = (step: number | "first" | "last") => {
+    if (!ordered.length) return;
+    const index = ordered.findIndex((node) => node.id === tabStop);
+    const next =
+      step === "first"
+        ? 0
+        : step === "last"
+          ? ordered.length - 1
+          : (Math.max(0, index) + step + ordered.length) % ordered.length;
+    const id = ordered[next].id;
+    setCurrent(id);
+    buttonRefs.current.get(id)?.focus();
+  };
 
   return (
     <div ref={containerRef} className={cn("relative h-full w-full", className)}>
@@ -659,36 +868,66 @@ export default function ForceGraph<TNode extends GraphNode>({
         aria-hidden="true"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
+        onPointerUp={onPointerUp}
         onPointerCancel={endDrag}
-        onPointerLeave={() => setHoveredId(null)}
+        onPointerLeave={() => {
+          if (!dragRef.current.grab) setHover(null);
+        }}
       />
-      {/* The canvas cannot hold focusable children, so each topic also gets a
+      {/* The canvas cannot hold focusable children, so each node also gets a
           transparent button over it. This is the keyboard and screen-reader path
-          into the graph (DESIGN.md §12) — not a decorative duplicate. */}
-      <ul className="pointer-events-none absolute inset-0 m-0 list-none p-0">
-        {placed.map((node) => (
+          into the graph, not a decorative duplicate. */}
+      <ul
+        aria-label={ariaLabel}
+        className="pointer-events-none absolute inset-0 m-0 list-none p-0"
+        onKeyDown={(event) => {
+          if (!roving) return;
+          const step =
+            event.key === "ArrowRight" || event.key === "ArrowDown"
+              ? 1
+              : event.key === "ArrowLeft" || event.key === "ArrowUp"
+                ? -1
+                : event.key === "Home"
+                  ? "first"
+                  : event.key === "End"
+                    ? "last"
+                    : null;
+          if (step === null) return;
+          event.preventDefault();
+          moveFocus(step);
+        }}
+      >
+        {ordered.map((node) => (
           <li key={node.id}>
             <button
+              ref={(element) => {
+                if (element) buttonRefs.current.set(node.id, element);
+                else buttonRefs.current.delete(node.id);
+              }}
               type="button"
-              onClick={() => onSelect?.(node as unknown as TNode)}
-              onFocus={() => setHoveredId(node.id)}
-              onBlur={() => setHoveredId(null)}
-              aria-pressed={selectedId === node.id}
+              tabIndex={roving ? (node.id === tabStop ? 0 : -1) : undefined}
+              onClick={() => {
+                if (onActivate) onActivate(node as unknown as TNode);
+                else onSelect?.(node as unknown as TNode);
+              }}
+              onFocus={() => {
+                if (roving) setCurrent(node.id);
+                setHover(node.id);
+              }}
+              onBlur={() => setHover(null)}
+              aria-pressed={onActivate ? undefined : selectedId === node.id}
               // Deliberately NOT pointer-events-auto. These buttons sit exactly
               // over their node discs, so accepting pointer events made them
-              // swallow every press before it reached the canvas — which meant
-              // the canvas's onPointerDown never fired and dragging a node was
-              // impossible with a mouse. The canvas already handles pointer
-              // selection and dragging; this layer exists purely so the graph is
-              // reachable by keyboard and legible to a screen reader, and it
+              // swallow every press before it reached the canvas, and dragging a
+              // node was impossible with a mouse. This layer exists so the graph
+              // is reachable by keyboard and legible to a screen reader, and it
               // still receives focus, Enter/Space, and its focus ring.
               className="pointer-events-none absolute rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               style={{
-                left: node.x - node.radius,
-                top: node.y - node.radius,
-                width: node.radius * 2,
-                height: node.radius * 2,
+                left: node.x - node.radius - 3,
+                top: node.y - node.radius - 3,
+                width: node.radius * 2 + 6,
+                height: node.radius * 2 + 6,
               }}
             >
               <span className="sr-only">

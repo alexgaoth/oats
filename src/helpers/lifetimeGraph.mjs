@@ -113,12 +113,10 @@ function buildLifetimeGraph(conversations, { matchThreshold = 0.3 } = {}) {
   return { nodes, edges };
 }
 
-// The subjects that recur across the most conversations. Used to caption the
-// lifetime view, which is otherwise a shape without a summary.
-function recurringTopics(conversations, { matchThreshold = 0.3, limit = 5 } = {}) {
-  const list = (Array.isArray(conversations) ? conversations : []).filter((item) =>
-    Array.isArray(item?.snapshot?.nodes)
-  );
+// Topics grouped into subjects across conversations: each cluster keeps its
+// first member's fingerprint rather than absorbing every variant, because a bag
+// that grows with each match drifts until unrelated subjects start joining it.
+function clusterTopics(list, matchThreshold) {
   const clusters = [];
   for (const conversation of list) {
     for (const node of conversation.snapshot.nodes) {
@@ -126,9 +124,6 @@ function recurringTopics(conversations, { matchThreshold = 0.3, limit = 5 } = {}
       if (!bag.size) continue;
       const cluster = clusters.find((item) => overlap(item.bag, bag) >= matchThreshold);
       if (cluster) {
-        // The cluster keeps its first member's fingerprint rather than absorbing
-        // every variant: a bag that grows with each match drifts until unrelated
-        // subjects start joining it.
         cluster.conversations.add(conversation.id);
       } else {
         clusters.push({
@@ -139,11 +134,71 @@ function recurringTopics(conversations, { matchThreshold = 0.3, limit = 5 } = {}
       }
     }
   }
-  return clusters
-    .map((cluster) => ({ label: cluster.label, conversations: cluster.conversations.size }))
+  return clusters;
+}
+
+// The subjects that recur across the most conversations, each with the ids of
+// the conversations that carry it. Global conversations names them above its
+// arc timeline, and pointing at one lights those conversations on the board.
+function recurringTopics(conversations, { matchThreshold = 0.3, limit = 5 } = {}) {
+  const list = (Array.isArray(conversations) ? conversations : []).filter((item) =>
+    Array.isArray(item?.snapshot?.nodes)
+  );
+  return clusterTopics(list, matchThreshold)
+    .map((cluster) => ({
+      label: cluster.label,
+      conversations: cluster.conversations.size,
+      conversationIds: [...cluster.conversations],
+    }))
     .filter((cluster) => cluster.conversations > 1)
     .sort((a, b) => b.conversations - a.conversations || a.label.localeCompare(b.label))
     .slice(0, limit);
 }
 
-export { buildLifetimeGraph, recurringTopics };
+// Every subject that came back, as a thread through time: each conversation on
+// it is joined to the one on it before, so "SSO came back three times" is three
+// links in a row, not the six pairs four conversations make. An edge names the
+// subjects it carries; two conversations that are next to each other on two
+// subjects share one edge that carries both.
+//
+// Joining every pair instead is what the single map did, and it does not scale:
+// two hundred conversations made over fifteen hundred edges, a solid mass in a
+// force graph and in an arc timeline alike. A thread is also the better answer
+// to the question these views ask, which is when a subject came back.
+function subjectThreads(conversations, { matchThreshold = 0.3 } = {}) {
+  const list = (Array.isArray(conversations) ? conversations : [])
+    .filter((item) => item && Array.isArray(item.snapshot?.nodes) && item.snapshot.nodes.length)
+    .map((item, index) => ({ item, index }))
+    .sort(
+      (a, b) =>
+        (Number(a.item.createdAt) || 0) - (Number(b.item.createdAt) || 0) ||
+        Number(a.item.id) - Number(b.item.id) ||
+        a.index - b.index
+    )
+    .map(({ item }) => item);
+  const subjects = clusterTopics(list, matchThreshold)
+    .filter((cluster) => cluster.conversations.size > 1)
+    .map((cluster) => ({ label: cluster.label, conversationIds: [...cluster.conversations] }));
+  const edges = new Map();
+  for (const subject of subjects) {
+    const ids = subject.conversationIds;
+    for (let index = 1; index < ids.length; index += 1) {
+      const from = ids[index - 1];
+      const to = ids[index];
+      const key = `${from}-${to}`;
+      const edge = edges.get(key);
+      if (edge) {
+        if (!edge.topics.includes(subject.label)) edge.topics.push(subject.label);
+        edge.weight = edge.topics.length;
+      } else {
+        edges.set(key, { from, to, weight: 1, kind: "shared", topics: [subject.label] });
+      }
+    }
+  }
+  subjects.sort(
+    (a, b) => b.conversationIds.length - a.conversationIds.length || a.label.localeCompare(b.label)
+  );
+  return { subjects, edges: [...edges.values()] };
+}
+
+export { buildLifetimeGraph, recurringTopics, subjectThreads };

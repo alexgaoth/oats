@@ -2068,6 +2068,44 @@
       "summarize": "Zusammenfassen",
       "setUpModel": "Modell einrichten"
     },
+    "global": {
+      "title": "Globale Gespräche",
+      "view": {
+        "label": "Ansicht der Gespräche",
+        "list": "Liste",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Gesprächsgruppen",
+        "all": "Alle"
+      },
+      "boardLabel": "Board: {{tab}}",
+      "menu": {
+        "label": "Board-Optionen",
+        "reset": "Anordnung zurücksetzen"
+      },
+      "cleared": "Auf diesem Board ist nichts.",
+      "widget": {
+        "remove": "{{name}} entfernen"
+      },
+      "widgets": {
+        "force": {
+          "name": "Kräftegraph",
+          "empty": "Der Graph erscheint, sobald {{count}} Gespräche hier Themen haben, die sich verbinden lassen."
+        },
+        "arcs": {
+          "name": "Bogen-Zeitleiste",
+          "empty": "Die Zeitleiste erscheint, sobald {{count}} Gespräche hier Themen haben."
+        }
+      },
+      "subjects": {
+        "caption": "Kommt wieder:",
+        "chip_one": "{{label}}, in {{count}} Gespräch",
+        "chip_other": "{{label}}, in {{count}} Gesprächen"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} Thema",
+      "node_other": "{{title}}, {{date}}, {{count}} Themen"
+    },
     "review": {
       "title": "Was offen geblieben ist",
       "tally": "{{asked}} gefragt, {{answered}} beantwortet",
@@ -2327,19 +2365,5 @@
     "returned_other": "{{count}}× zurückgekehrt",
     "search": "Suchen",
     "noQuestions": "Keine Fragen in diesem Strang."
-  },
-  "lifetime": {
-    "title": "Worauf du immer zurückkommst",
-    "viewMap": "Karte",
-    "viewList": "Liste",
-    "viewLabel": "Ansicht der Gespräche",
-    "recurring": "Wiederkehrend:",
-    "inCount_one": "{{count}} Gespräch",
-    "inCount_other": "{{count}} Gespräche",
-    "node": "{{label}}, {{count}} Themen",
-    "topicCount_one": "{{count}} Thema",
-    "topicCount_other": "{{count}} Themen",
-    "open": "Dieses Gespräch öffnen",
-    "empty": "Die Karte erscheint, sobald {{count}} aufgezeichnete Gespräche verbunden werden können."
   }
 }

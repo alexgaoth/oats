@@ -2063,6 +2063,44 @@
       "summarize": "生成摘要",
       "setUpModel": "设置模型"
     },
+    "global": {
+      "title": "全局对话",
+      "view": {
+        "label": "对话显示方式",
+        "list": "列表",
+        "global": "全局"
+      },
+      "tabs": {
+        "label": "对话分组",
+        "all": "全部"
+      },
+      "boardLabel": "看板：{{tab}}",
+      "menu": {
+        "label": "看板选项",
+        "reset": "重置布局"
+      },
+      "cleared": "这个看板上什么也没有。",
+      "widget": {
+        "remove": "移除{{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "力导向图",
+          "empty": "这里有 {{count}} 场对话带有可以连接的话题时，图就会出现。"
+        },
+        "arcs": {
+          "name": "弧线时间轴",
+          "empty": "这里有 {{count}} 场对话带有话题时，时间轴就会出现。"
+        }
+      },
+      "subjects": {
+        "caption": "反复出现：",
+        "chip_one": "{{label}}，{{count}} 场对话",
+        "chip_other": "{{label}}，{{count}} 场对话"
+      },
+      "node_one": "{{title}}，{{date}}，{{count}} 个话题",
+      "node_other": "{{title}}，{{date}}，{{count}} 个话题"
+    },
     "review": {
       "title": "尚未解决的内容",
       "tally": "提问 {{asked}}，回答 {{answered}}",
@@ -2322,19 +2360,5 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜索",
     "noQuestions": "这条线索中没有问题。"
-  },
-  "lifetime": {
-    "title": "你反复回到的主题",
-    "viewMap": "图谱",
-    "viewList": "列表",
-    "viewLabel": "对话显示方式",
-    "recurring": "反复出现：",
-    "inCount_one": "{{count}} 场对话",
-    "inCount_other": "{{count}} 场对话",
-    "node": "{{label}}，{{count}} 个话题",
-    "topicCount_one": "{{count}} 个话题",
-    "topicCount_other": "{{count}} 个话题",
-    "open": "打开这场对话",
-    "empty": "当你有 {{count}} 场录制的对话可以连接时，图谱就会出现。"
   }
 }

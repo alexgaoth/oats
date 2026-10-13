@@ -2068,6 +2068,44 @@
       "summarize": "Resumir",
       "setUpModel": "Configurar um modelo"
     },
+    "global": {
+      "title": "Conversas globais",
+      "view": {
+        "label": "Visualização das conversas",
+        "list": "Lista",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Grupos de conversas",
+        "all": "Todas"
+      },
+      "boardLabel": "Quadro: {{tab}}",
+      "menu": {
+        "label": "Opções do quadro",
+        "reset": "Repor disposição"
+      },
+      "cleared": "Não há nada neste quadro.",
+      "widget": {
+        "remove": "Remover {{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Grafo de forças",
+          "empty": "O grafo aparece quando {{count}} conversas aqui tiverem temas para ligar."
+        },
+        "arcs": {
+          "name": "Linha do tempo de arcos",
+          "empty": "A linha do tempo aparece quando {{count}} conversas aqui tiverem temas."
+        }
+      },
+      "subjects": {
+        "caption": "Volta:",
+        "chip_one": "{{label}}, em {{count}} conversa",
+        "chip_other": "{{label}}, em {{count}} conversas"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} tópico",
+      "node_other": "{{title}}, {{date}}, {{count}} tópicos"
+    },
     "review": {
       "title": "O que ficou em aberto",
       "tally": "{{asked}} perguntadas, {{answered}} respondidas",
@@ -2327,19 +2365,5 @@
     "returned_other": "retomado {{count}}×",
     "search": "Pesquisar",
     "noQuestions": "Sem perguntas neste fio."
-  },
-  "lifetime": {
-    "title": "Aquilo a que volta sempre",
-    "viewMap": "Mapa",
-    "viewList": "Lista",
-    "viewLabel": "Visualização das conversas",
-    "recurring": "Recorrente:",
-    "inCount_one": "{{count}} conversa",
-    "inCount_other": "{{count}} conversas",
-    "node": "{{label}}, {{count}} tópicos",
-    "topicCount_one": "{{count}} tópico",
-    "topicCount_other": "{{count}} tópicos",
-    "open": "Abrir esta conversa",
-    "empty": "O mapa aparece quando tiver {{count}} conversas gravadas para ligar."
   }
 }

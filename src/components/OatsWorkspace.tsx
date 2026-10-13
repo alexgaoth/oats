@@ -84,7 +84,7 @@ import {
 import { useConversationEvents } from "../hooks/useConversationEvents";
 import ConversationGraph from "./notes/ConversationGraph";
 import TopicGraph from "./notes/TopicGraph";
-import LifetimeGraph from "./notes/LifetimeGraph";
+import GlobalConversations from "./global/GlobalConversations";
 import FieldBackdrop from "./field/FieldBackdrop";
 import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
@@ -1257,7 +1257,7 @@ function useRoomBelow(
 }
 
 // Which of the three Intelligence views is showing. Drives the cross-fade key.
-type IntelligenceView = "list" | "reading" | "map";
+type IntelligenceView = "list" | "reading" | "global";
 
 function IntelligenceViews({
   view,
@@ -1265,8 +1265,8 @@ function IntelligenceViews({
   reading,
   setReading,
 }: {
-  view: "list" | "map";
-  setView: (view: "list" | "map") => void;
+  view: "list" | "global";
+  setView: (view: "list" | "global") => void;
   reading: boolean;
   setReading: (reading: boolean) => void;
 }) {
@@ -1274,9 +1274,9 @@ function IntelligenceViews({
   const notes = useNotes();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [tab, setTab] = useState<DetailTab>("summary");
-  // The lifetime graph is a lens on the same list, not a fourth surface — the
-  // product has exactly three, and "what do I keep coming back to?" is a question
-  // about your conversations, so it belongs in Intelligence.
+  // Global conversations is a lens on the same conversations, not a fourth
+  // surface: the product has exactly three, and a board of charts across them
+  // is a question about your conversations, so it belongs in Intelligence.
   const [query, setQuery] = useState("");
   // The auto-generated title is usually right and occasionally wrong. Editing it
   // in place beats making the user hunt for where a title can be changed.
@@ -1377,7 +1377,7 @@ function IntelligenceViews({
     const back = () => {
       if (backState.current.finding !== null) setFinding(null);
       else if (backState.current.reading) setReading(false);
-      else if (backState.current.view === "map") setView("list");
+      else if (backState.current.view === "global") setView("list");
     };
     const find = () => {
       if (!backState.current.reading) {
@@ -1674,8 +1674,9 @@ function IntelligenceViews({
   // explicit that a surface needing a third region is really two screens. So the
   // list *is* the screen until you open something, and then the reading view
   // replaces it. Nothing is ever half-visible in a column you are not using.
-  // The map is the list seen another way, so it has no reading view of its own.
-  if (view === "list" && reading && selected) {
+  // The board is the list seen another way, so it has no reading view of its
+  // own: it opens this one, and Escape goes back to whichever view opened it.
+  if (reading && selected) {
     const speakerCount = new Set(selectedSegments.map((segment) => segment.speaker).filter(Boolean))
       .size;
     const openTurn = (segmentId: string | null) => {
@@ -2047,19 +2048,27 @@ function IntelligenceViews({
     setReading(true);
   };
 
-  // List and Map are two ways to see the same conversations, and the choice
+  // List and Global are two ways to see the same conversations, and the choice
   // between them is one of the few drawn with character (DESIGN.md §2). Its row
   // stays while the view under it changes, so the indicator slides from one
-  // choice to the other, and only the view under it arrives again.
+  // choice to the other, and only the view under it arrives again. The board is
+  // as wide as the window, so in Global the row widens with it and its edges
+  // line up with the board's, in the frame's own 280 ms.
   return (
     <section
       key="browse"
       className="oats-surface relative flex min-h-0 flex-1 flex-col overflow-y-auto"
     >
-      <div className="oats-enter mx-auto flex w-full max-w-3xl shrink-0 items-center gap-2 px-8 pt-6">
-        {view === "map" ? (
+      <div
+        className={cn(
+          "oats-enter mx-auto flex w-full shrink-0 items-center gap-2 pt-6",
+          "transition-[max-width,padding] duration-[var(--motion-frame)] ease-[var(--ease-oats)] motion-reduce:transition-none",
+          view === "global" ? "max-w-full px-[var(--board-inset,24px)]" : "max-w-3xl px-8"
+        )}
+      >
+        {view === "global" ? (
           <h1 className="min-w-0 flex-1 truncate text-[22px] font-semibold tracking-[-0.02em]">
-            {t("lifetime.title")}
+            {t("oats.global.title")}
           </h1>
         ) : (
           // Search is always here, from the first conversation: "what did that
@@ -2089,26 +2098,25 @@ function IntelligenceViews({
           </div>
         )}
         {notes.length > 0 && (
-          <ViewSwitch<"list" | "map">
-            aria-label={t("lifetime.viewLabel")}
+          <ViewSwitch<"list" | "global">
+            aria-label={t("oats.global.view.label")}
             value={view}
             onValueChange={setView}
             options={[
-              { value: "list", label: t("lifetime.viewList"), icon: List },
-              { value: "map", label: t("lifetime.viewMap"), icon: Waypoints },
+              { value: "list", label: t("oats.global.view.list"), icon: List },
+              { value: "global", label: t("oats.global.view.global"), icon: Waypoints },
             ]}
           />
         )}
       </div>
 
-      {view === "map" ? (
-        <div key="map" className="oats-enter relative mt-4 min-h-0 flex-1">
-          <LifetimeGraph
-            notes={notes}
+      {view === "global" ? (
+        <div key="global" className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col">
+          <GlobalConversations
             onOpen={(noteId) => {
               setSelectedId(noteId);
               setTab("summary");
-              setView("list");
+              setLandedOnSegment(null);
               setReading(true);
             }}
           />
@@ -3488,7 +3496,7 @@ function IntelligenceSurface() {
   // The view state lives here rather than inside IntelligenceViews so the branch
   // that is showing is owned in one place; the three branches are keyed, so each
   // change remounts and replays the enter animation.
-  const [view, setView] = useState<"list" | "map">("list");
+  const [view, setView] = useState<"list" | "global">("list");
   const [reading, setReading] = useState(false);
   return (
     <IntelligenceViews view={view} setView={setView} reading={reading} setReading={setReading} />
