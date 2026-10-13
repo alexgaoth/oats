@@ -7,12 +7,18 @@ const MARK = fs.readFileSync(
   path.join(__dirname, "../../src/components/shell/OatsMark.tsx"),
   "utf8"
 );
+const PAINTER = fs.readFileSync(
+  path.join(__dirname, "../../src/components/shell/grainCanvas.ts"),
+  "utf8"
+);
 
 // The old mark filled its tile with the foreground colour, so it turned black
 // on the light app and white on the dark one. The symbol is the same in both.
 test("the brand mark uses no theme colours", () => {
-  assert.doesNotMatch(MARK, /(fill|stroke)-(foreground|background|brand|primary)/);
-  assert.doesNotMatch(MARK, /var\(--color-/);
+  for (const source of [MARK, PAINTER]) {
+    assert.doesNotMatch(source, /(fill|stroke)-(foreground|background|brand|primary)/);
+    assert.doesNotMatch(source, /var\(--color-|getComputedStyle/);
+  }
 });
 
 test("the brand mark does not spin under reduced motion", () => {
