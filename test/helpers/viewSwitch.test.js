@@ -47,10 +47,10 @@ test("how topics are drawn is one of the choices with character", () => {
   assert.doesNotMatch(FLOW, /SegmentedControl/);
 });
 
-test("list or map is one of the choices with character, and the switch stays while the view changes", () => {
-  assert.match(WORKSPACE, /<ViewSwitch<"list" \| "map">/);
+test("list or global is one of the choices with character, and the switch stays while the view changes", () => {
+  assert.match(WORKSPACE, /<ViewSwitch<"list" \| "global">/);
   assert.ok(WORKSPACE.includes("icon: List"), "List");
-  assert.ok(WORKSPACE.includes("icon: Waypoints"), "Map");
+  assert.ok(WORKSPACE.includes("icon: Waypoints"), "Global");
   assert.doesNotMatch(
     WORKSPACE,
     /onClick=\{\(\) => setView\("map"\)\}/,
@@ -60,9 +60,9 @@ test("list or map is one of the choices with character, and the switch stays whi
   // view that remounts would take the switch with it, and its indicator could
   // not slide.
   const browse = WORKSPACE.indexOf('key="browse"');
-  const control = WORKSPACE.indexOf('<ViewSwitch<"list" | "map">');
-  const map = WORKSPACE.indexOf('key="map"');
+  const control = WORKSPACE.indexOf('<ViewSwitch<"list" | "global">');
+  const global = WORKSPACE.indexOf('key="global"');
   const list = WORKSPACE.indexOf('key="list"');
   assert.ok(browse > 0 && browse < control, "the switch is in the browse section");
-  assert.ok(control < map && control < list, "the switch is outside the keyed views");
+  assert.ok(control < global && control < list, "the switch is outside the keyed views");
 });

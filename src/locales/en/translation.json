@@ -2060,6 +2060,44 @@
       "summarize": "Summarize",
       "setUpModel": "Set up a model"
     },
+    "global": {
+      "title": "Global conversations",
+      "view": {
+        "label": "Conversations view",
+        "list": "List",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Conversation groups",
+        "all": "All"
+      },
+      "boardLabel": "{{tab}} board",
+      "menu": {
+        "label": "Board options",
+        "reset": "Reset layout"
+      },
+      "cleared": "Nothing on this board.",
+      "widget": {
+        "remove": "Remove {{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Force graph",
+          "empty": "The graph appears once {{count}} conversations here have topics to connect."
+        },
+        "arcs": {
+          "name": "Arc timeline",
+          "empty": "The timeline appears once {{count}} conversations here have topics."
+        }
+      },
+      "subjects": {
+        "caption": "Comes back:",
+        "chip_one": "{{label}}, in {{count}} conversation",
+        "chip_other": "{{label}}, in {{count}} conversations"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} topic",
+      "node_other": "{{title}}, {{date}}, {{count}} topics"
+    },
     "review": {
       "title": "What this left open",
       "tally": "{{asked}} asked, {{answered}} answered",
@@ -2342,19 +2380,5 @@
     "returned_other": "returned {{count}}×",
     "search": "Search",
     "noQuestions": "No questions in this thread."
-  },
-  "lifetime": {
-    "title": "What you keep coming back to",
-    "viewMap": "Map",
-    "viewList": "List",
-    "viewLabel": "Conversations view",
-    "recurring": "Recurring:",
-    "inCount_one": "{{count}} conversation",
-    "inCount_other": "{{count}} conversations",
-    "node": "{{label}}, {{count}} topics",
-    "topicCount_one": "{{count}} topic",
-    "topicCount_other": "{{count}} topics",
-    "open": "Open this conversation",
-    "empty": "The map appears once you have {{count}} recorded conversations to connect."
   }
 }

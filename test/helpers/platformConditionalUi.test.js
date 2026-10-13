@@ -169,7 +169,9 @@ test("macOS traffic lights have the band to themselves", () => {
 
   // The lights sit in the sidebar's drag band, the first thing in the frame's
   // left column; nothing else is drawn there.
-  const band = SIDEBAR.match(/className="([^"]*\bh-\[(\d+)px\][^"]*\bshrink-0\b[^"]*)"\s*\n?\s*style=\{\{ WebkitAppRegion: "drag" \}/);
+  const band = SIDEBAR.match(
+    /className="([^"]*\bh-\[(\d+)px\][^"]*\bshrink-0\b[^"]*)"\s*\n?\s*style=\{\{ WebkitAppRegion: "drag" \}/
+  );
   assert.ok(band, "expected the sidebar's drag band with an explicit pixel height");
   const bandPx = Number(band[2]);
 
@@ -187,11 +189,18 @@ test("canvas text uses the same sans token as the DOM", () => {
   // macOS and to something else everywhere else, so the divergence is invisible
   // on the platform this mostly ships to. Labels are Inter, like every other
   // label in the app (DESIGN.md §3).
+  // The graph takes the charts' one palette, whose `sans` is that token.
   assert.match(
     FORCE_GRAPH,
-    /getPropertyValue\("--font-family-sans"\)/,
-    "graph labels should read the app's sans token"
+    /subscribeChartPalette\(/,
+    "graph labels should take the charts' palette"
   );
+  assert.match(
+    read("src/components/charts/chartStyle.ts"),
+    /sans: value\("--font-family-sans", SANS_FALLBACK\)/,
+    "the charts' palette should read the app's sans token"
+  );
+  assert.match(FORCE_GRAPH, /px \$\{palette\.sans\}/, "graph labels should be set in it");
   assert.doesNotMatch(
     FORCE_GRAPH,
     /ctx\.font = ['"`][^'"`]*\d+px (ui-monospace|ui-sans-serif|"?Inter)/,

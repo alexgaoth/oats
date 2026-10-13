@@ -2060,6 +2060,44 @@
       "summarize": "要約する",
       "setUpModel": "モデルを設定"
     },
+    "global": {
+      "title": "会話の全体像",
+      "view": {
+        "label": "会話の表示方法",
+        "list": "リスト",
+        "global": "全体"
+      },
+      "tabs": {
+        "label": "会話のグループ",
+        "all": "すべて"
+      },
+      "boardLabel": "ボード: {{tab}}",
+      "menu": {
+        "label": "ボードのオプション",
+        "reset": "配置をリセット"
+      },
+      "cleared": "このボードには何もありません。",
+      "widget": {
+        "remove": "{{name}} を削除"
+      },
+      "widgets": {
+        "force": {
+          "name": "フォースグラフ",
+          "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、グラフが表示されます。"
+        },
+        "arcs": {
+          "name": "アークタイムライン",
+          "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、タイムラインが表示されます。"
+        }
+      },
+      "subjects": {
+        "caption": "繰り返し:",
+        "chip_one": "{{label}}、{{count}} 件の会話",
+        "chip_other": "{{label}}、{{count}} 件の会話"
+      },
+      "node_one": "{{title}}、{{date}}、トピック {{count}} 件",
+      "node_other": "{{title}}、{{date}}、トピック {{count}} 件"
+    },
     "review": {
       "title": "未解決のまま残ったこと",
       "tally": "{{asked}} 件質問、{{answered}} 件回答",
@@ -2342,19 +2380,5 @@
     "returned_other": "{{count}} 回戻った",
     "search": "検索",
     "noQuestions": "この話の筋に質問はありません。"
-  },
-  "lifetime": {
-    "title": "繰り返し戻ってくるもの",
-    "viewMap": "マップ",
-    "viewList": "リスト",
-    "viewLabel": "会話の表示方法",
-    "recurring": "繰り返し:",
-    "inCount_one": "{{count}} 件の会話",
-    "inCount_other": "{{count}} 件の会話",
-    "node": "{{label}}、トピック {{count}} 件",
-    "topicCount_one": "トピック {{count}} 件",
-    "topicCount_other": "トピック {{count}} 件",
-    "open": "この会話を開く",
-    "empty": "録音した会話が {{count}} 件たまるとマップが表示されます。"
   }
 }

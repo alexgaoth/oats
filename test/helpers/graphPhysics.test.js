@@ -395,3 +395,101 @@ test("separation gives way to the hand, not the other way round", async () => {
   assert.equal(held.y, 300);
   assert.ok(other.x > 450, `the neighbour takes the whole correction; it ended at ${other.x}`);
 });
+
+test("a disc's radius runs from 5 to 14 px, by the square root of its length", async () => {
+  // The chart rules (DESIGN.md §6): size carries data only on the force graph's
+  // disc, and within 5 to 14 px so the longest conversation does not outweigh
+  // every label near it. It was 14 to 42.
+  const { radiusFor, MIN_RADIUS, MAX_RADIUS } = await load();
+  assert.equal(MIN_RADIUS, 5);
+  assert.equal(MAX_RADIUS, 14);
+  const node = (durationMs) => ({ id: 1, label: "x", durationMs, state: "open" });
+  assert.equal(radiusFor(node(0), 3600000), 5);
+  assert.equal(radiusFor(node(3600000), 3600000), 14);
+  // A quarter of the time is half the way, not a quarter of it.
+  assert.equal(radiusFor(node(900000), 3600000), 5 + 9 * 0.5);
+});
+
+test("on a wide canvas the graph settles wide, not as a round knot in the middle", async () => {
+  // Centre gravity follows the canvas's shape. Pulled equally on both axes, a
+  // ten-conversation ring settled about as tall as it was wide in a 3:1 card on
+  // the Global conversations board, leaving two thirds of the card empty.
+  const { layout, radiusFor } = await load();
+  const width = 1150;
+  const height = 380;
+  const nodes = Array.from({ length: 10 }, (_, index) => ({
+    id: index,
+    label: `c${index}`,
+    durationMs: 60000 + index * 30000,
+    state: "open",
+  }));
+  const edges = nodes.map((node, index) => ({
+    from: index,
+    to: (index + 1) % nodes.length,
+    weight: 1,
+    kind: "shared",
+  }));
+  const maxDuration = Math.max(...nodes.map((node) => node.durationMs));
+  const sim = nodes.map((node, index) => ({
+    ...node,
+    radius: radiusFor(node, maxDuration),
+    x: width / 2 + Math.cos(index) * 60,
+    y: height / 2 + Math.sin(index) * 60,
+    vx: 0,
+    vy: 0,
+  }));
+  layout(sim, edges, width, height);
+  const xs = sim.map((node) => node.x);
+  const ys = sim.map((node) => node.y);
+  const spanX = Math.max(...xs) - Math.min(...xs);
+  const spanY = Math.max(...ys) - Math.min(...ys);
+  assert.ok(
+    spanX > spanY * 1.5,
+    `settled ${spanX.toFixed(0)} px wide and ${spanY.toFixed(0)} px tall in a 3:1 canvas`
+  );
+});
+
+test("two hundred conversations settle as a cloud inside the card, not against its edges", async () => {
+  // The spacings were set for a dozen topics. Held to them, two hundred discs
+  // in a board card pressed against all four edges in rows, a wall rather than
+  // a graph. Held to the room each node has, they settle inside.
+  const { layout, radiusFor, clampToCanvas } = await load();
+  const width = 1150;
+  const height = 350;
+  const count = 200;
+  const nodes = Array.from({ length: count }, (_, index) => ({
+    id: index,
+    label: `c${index}`,
+    durationMs: 300000 + ((index * 7919) % 13) * 200000,
+    state: "open",
+  }));
+  // Threads: every fifth conversation on one subject, in time order.
+  const edges = nodes
+    .filter((node) => node.id >= 5)
+    .map((node) => ({ from: node.id - 5, to: node.id, weight: 1, kind: "shared" }));
+  const maxDuration = Math.max(...nodes.map((node) => node.durationMs));
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const sim = nodes.map((node, index) => ({
+    ...node,
+    radius: radiusFor(node, maxDuration),
+    x: width / 2 + Math.cos(index * golden) * 0.3 * Math.sqrt(index / count) * width,
+    y: height / 2 + Math.sin(index * golden) * 0.3 * Math.sqrt(index / count) * height,
+    vx: 0,
+    vy: 0,
+  }));
+  layout(sim, edges, width, height);
+  const atEdge = sim.filter((node) => {
+    const held = clampToCanvas(node, node.x + 1e6, node.y + 1e6, width, height);
+    const low = clampToCanvas(node, -1e6, -1e6, width, height);
+    return (
+      Math.abs(node.x - held.x) < 1 ||
+      Math.abs(node.y - held.y) < 1 ||
+      Math.abs(node.x - low.x) < 1 ||
+      Math.abs(node.y - low.y) < 1
+    );
+  });
+  assert.ok(
+    atEdge.length <= count * 0.05,
+    `${atEdge.length} of ${count} discs ended pressed against the edge of the canvas`
+  );
+});

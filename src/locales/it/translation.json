@@ -2060,6 +2060,44 @@
       "summarize": "Riassumi",
       "setUpModel": "Configura un modello"
     },
+    "global": {
+      "title": "Conversazioni globali",
+      "view": {
+        "label": "Vista delle conversazioni",
+        "list": "Elenco",
+        "global": "Globale"
+      },
+      "tabs": {
+        "label": "Gruppi di conversazioni",
+        "all": "Tutte"
+      },
+      "boardLabel": "Bacheca: {{tab}}",
+      "menu": {
+        "label": "Opzioni della bacheca",
+        "reset": "Ripristina disposizione"
+      },
+      "cleared": "Questa bacheca è vuota.",
+      "widget": {
+        "remove": "Rimuovi {{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Grafo di forze",
+          "empty": "Il grafo compare quando {{count}} conversazioni qui hanno argomenti da collegare."
+        },
+        "arcs": {
+          "name": "Linea temporale ad archi",
+          "empty": "La linea temporale compare quando {{count}} conversazioni qui hanno argomenti."
+        }
+      },
+      "subjects": {
+        "caption": "Ritorna:",
+        "chip_one": "{{label}}, in {{count}} conversazione",
+        "chip_other": "{{label}}, in {{count}} conversazioni"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} argomento",
+      "node_other": "{{title}}, {{date}}, {{count}} argomenti"
+    },
     "review": {
       "title": "Ciò che è rimasto aperto",
       "tally": "{{asked}} poste, {{answered}} risposte",
@@ -2342,19 +2380,5 @@
     "returned_other": "ripreso {{count}}×",
     "search": "Cerca",
     "noQuestions": "Nessuna domanda in questo filo."
-  },
-  "lifetime": {
-    "title": "Ciò a cui torni sempre",
-    "viewMap": "Mappa",
-    "viewList": "Elenco",
-    "viewLabel": "Vista delle conversazioni",
-    "recurring": "Ricorrente:",
-    "inCount_one": "{{count}} conversazione",
-    "inCount_other": "{{count}} conversazioni",
-    "node": "{{label}}, {{count}} argomenti",
-    "topicCount_one": "{{count}} argomento",
-    "topicCount_other": "{{count}} argomenti",
-    "open": "Apri questa conversazione",
-    "empty": "La mappa compare quando avrai {{count}} conversazioni registrate da collegare."
   }
 }

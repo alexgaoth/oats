@@ -2094,6 +2094,48 @@
       "summarize": "Составить сводку",
       "setUpModel": "Настроить модель"
     },
+    "global": {
+      "title": "Глобальные разговоры",
+      "view": {
+        "label": "Вид разговоров",
+        "list": "Список",
+        "global": "Глобально"
+      },
+      "tabs": {
+        "label": "Группы разговоров",
+        "all": "Все"
+      },
+      "boardLabel": "Доска: {{tab}}",
+      "menu": {
+        "label": "Параметры доски",
+        "reset": "Сбросить расположение"
+      },
+      "cleared": "На этой доске ничего нет.",
+      "widget": {
+        "remove": "Убрать: {{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Граф связей",
+          "empty": "Граф появится, когда у {{count}} разговоров здесь будут темы, которые можно связать."
+        },
+        "arcs": {
+          "name": "Хронология с дугами",
+          "empty": "Хронология появится, когда у {{count}} разговоров здесь будут темы."
+        }
+      },
+      "subjects": {
+        "caption": "Возвращается:",
+        "chip_one": "{{label}}, в {{count}} разговоре",
+        "chip_few": "{{label}}, в {{count}} разговорах",
+        "chip_many": "{{label}}, в {{count}} разговорах",
+        "chip_other": "{{label}}, в {{count}} разговорах"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} тема",
+      "node_few": "{{title}}, {{date}}, {{count}} темы",
+      "node_many": "{{title}}, {{date}}, {{count}} тем",
+      "node_other": "{{title}}, {{date}}, {{count}} тем"
+    },
     "review": {
       "title": "Что осталось открытым",
       "tally": "задано {{asked}}, отвечено {{answered}}",
@@ -2384,23 +2426,5 @@
     "returned_other": "возврат {{count}}×",
     "search": "Искать",
     "noQuestions": "В этой линии нет вопросов."
-  },
-  "lifetime": {
-    "title": "К чему вы возвращаетесь",
-    "viewMap": "Карта",
-    "viewList": "Список",
-    "viewLabel": "Вид разговоров",
-    "recurring": "Повторяется:",
-    "inCount_one": "{{count}} разговор",
-    "inCount_few": "{{count}} разговора",
-    "inCount_many": "{{count}} разговоров",
-    "inCount_other": "{{count}} разговоров",
-    "node": "{{label}}, тем: {{count}}",
-    "topicCount_one": "{{count}} тема",
-    "topicCount_few": "{{count}} темы",
-    "topicCount_many": "{{count}} тем",
-    "topicCount_other": "{{count}} тем",
-    "open": "Открыть этот разговор",
-    "empty": "Карта появится, когда наберётся {{count}} записанных разговора для связи."
   }
 }

@@ -2055,6 +2055,44 @@
       "summarize": "產生摘要",
       "setUpModel": "設定模型"
     },
+    "global": {
+      "title": "全域對話",
+      "view": {
+        "label": "對話顯示方式",
+        "list": "列表",
+        "global": "全域"
+      },
+      "tabs": {
+        "label": "對話分組",
+        "all": "全部"
+      },
+      "boardLabel": "看板：{{tab}}",
+      "menu": {
+        "label": "看板選項",
+        "reset": "重設版面配置"
+      },
+      "cleared": "這個看板上什麼也沒有。",
+      "widget": {
+        "remove": "移除{{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "力導向圖",
+          "empty": "這裡有 {{count}} 場對話帶有可以連結的話題時，圖就會出現。"
+        },
+        "arcs": {
+          "name": "弧線時間軸",
+          "empty": "這裡有 {{count}} 場對話帶有話題時，時間軸就會出現。"
+        }
+      },
+      "subjects": {
+        "caption": "反覆出現：",
+        "chip_one": "{{label}}，{{count}} 場對話",
+        "chip_other": "{{label}}，{{count}} 場對話"
+      },
+      "node_one": "{{title}}，{{date}}，{{count}} 個主題",
+      "node_other": "{{title}}，{{date}}，{{count}} 個主題"
+    },
     "review": {
       "title": "尚未解決的內容",
       "tally": "提問 {{asked}}，回答 {{answered}}",
@@ -2337,19 +2375,5 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜尋",
     "noQuestions": "這條脈絡中沒有問題。"
-  },
-  "lifetime": {
-    "title": "你反覆回到的主題",
-    "viewMap": "圖譜",
-    "viewList": "列表",
-    "viewLabel": "對話顯示方式",
-    "recurring": "反覆出現：",
-    "inCount_one": "{{count}} 場對話",
-    "inCount_other": "{{count}} 場對話",
-    "node": "{{label}}，{{count}} 個主題",
-    "topicCount_one": "{{count}} 個主題",
-    "topicCount_other": "{{count}} 個主題",
-    "open": "開啟這場對話",
-    "empty": "當你有 {{count}} 場錄製的對話可以連接時，圖譜就會出現。"
   }
 }

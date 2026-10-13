@@ -2060,6 +2060,44 @@
       "summarize": "Résumer",
       "setUpModel": "Configurer un modèle"
     },
+    "global": {
+      "title": "Conversations globales",
+      "view": {
+        "label": "Vue des conversations",
+        "list": "Liste",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Groupes de conversations",
+        "all": "Toutes"
+      },
+      "boardLabel": "Tableau : {{tab}}",
+      "menu": {
+        "label": "Options du tableau",
+        "reset": "Réinitialiser la disposition"
+      },
+      "cleared": "Ce tableau est vide.",
+      "widget": {
+        "remove": "Retirer {{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Graphe de forces",
+          "empty": "Le graphe apparaît dès que {{count}} conversations ici ont des sujets à relier."
+        },
+        "arcs": {
+          "name": "Frise à arcs",
+          "empty": "La frise apparaît dès que {{count}} conversations ici ont des sujets."
+        }
+      },
+      "subjects": {
+        "caption": "Revient :",
+        "chip_one": "{{label}}, dans {{count}} conversation",
+        "chip_other": "{{label}}, dans {{count}} conversations"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} sujet",
+      "node_other": "{{title}}, {{date}}, {{count}} sujets"
+    },
     "review": {
       "title": "Ce qui reste ouvert",
       "tally": "{{asked}} posées, {{answered}} répondues",
@@ -2342,19 +2380,5 @@
     "returned_other": "repris {{count}}×",
     "search": "Rechercher",
     "noQuestions": "Aucune question dans ce fil."
-  },
-  "lifetime": {
-    "title": "Ce sur quoi vous revenez",
-    "viewMap": "Carte",
-    "viewList": "Liste",
-    "viewLabel": "Vue des conversations",
-    "recurring": "Récurrent :",
-    "inCount_one": "{{count}} conversation",
-    "inCount_other": "{{count}} conversations",
-    "node": "{{label}}, {{count}} sujets",
-    "topicCount_one": "{{count}} sujet",
-    "topicCount_other": "{{count}} sujets",
-    "open": "Ouvrir cette conversation",
-    "empty": "La carte apparaît dès que vous avez {{count}} conversations enregistrées à relier."
   }
 }
