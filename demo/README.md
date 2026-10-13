@@ -67,7 +67,11 @@ have written. A person can move it like any conversation.
 - The six Pellwood conversations are in Work, and the two personal ones are in
   Personal.
 - The review names no group. The film depends on its timeline, so its fixture
-  is not changed, and in the app it is sorted like any conversation.
+  is not changed, and in the app it is sorted like any conversation. In the
+  harness, the stub model answers the sort prompt (`harness/replay.mjs`):
+  Personal for a weekend, a trip, family or a flat, and Work for anything else.
+  A background run starts with `window.dispatchEvent(new
+Event("oats-sort-conversations"))`.
 - If the seeded group was renamed (its seed key is cleared) or deleted, the
   sample stays unsorted.
 - The personal conversations share no subjects with Pellwood, so on the map
