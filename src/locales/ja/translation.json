@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "マークの意味",
         "open": "未解決",
-        "topic": "話題の切り替え",
-        "return": "前の話題に戻った",
-        "marked": "マークした瞬間"
+        "topic": "新しい話題",
+        "marked": "マーク済み"
       },
       "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
       "contourEmpty": "まだ何も記録されていません。",

@@ -112,6 +112,7 @@ them fails review.
 5. **No visible focus** on an interactive element, or no `prefers-reduced-motion`
    path for an animation.
 6. **A gradient, texture, glow or decorative animation.** Surfaces are flat.
+   The one exception is a chart's fill, the dither of `DESIGN.md` §6.
 7. **Red for anything but recording or danger**; the brand yellow-orange as
    text on a light surface (use `brand-ink`), or on more than one primary button
    in a view.
