@@ -148,6 +148,14 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 - Settings are grouped cards of rows: label and description on the left, the
   control on the right.
 - Alerts are a bordered row with an icon, tinted by tone (`warning`, `danger`).
+- **The example conversation** (`helpers/exampleConversation.mjs`). With nothing
+  recorded, Home (under the record card) and the empty Conversations page
+  (under Start recording) offer the bundled sample: a ghost button and one muted
+  line, never honey, because Start recording is the main action on both. An
+  example has a muted outline **Example** badge beside its title on Home, in the
+  list and in the reading view. The sidebar's Recent list has none: at 232px
+  the badge would take half of the title. Delete removes the example like any
+  conversation, and the offer comes back when nothing is left.
 - Radius: `rounded-md` (8px) for controls, `rounded-xl` (12px) for cards and
   panels. Focus: `ring-[3px] ring-ring/50` on every interactive element.
 

@@ -2264,6 +2264,13 @@
       "room": "房间",
       "speaker": "说话人 {{n}}"
     },
+    "example": {
+      "open": "打开示例对话",
+      "note": "一场九人参加的发布评审，供你随意浏览。随时可以删除。",
+      "badge": "示例",
+      "failed": "无法打开示例对话",
+      "failedHint": "没有添加任何内容。请重试。"
+    },
     "shell": {
       "sidebar": "侧边栏",
       "showSidebar": "显示侧边栏",

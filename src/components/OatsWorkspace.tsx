@@ -93,6 +93,7 @@ import ListeningRing from "./conversation/ListeningRing";
 import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
 import RecordingCounters from "./conversation/RecordingCounters";
+import { ExampleBadge, ExampleOffer } from "./conversation/ExampleConversation";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import {
   FOCUS_AT_REST,
@@ -369,6 +370,7 @@ function RecentRow({ note }: { note: NoteItem }) {
         <span className="flex items-baseline gap-4">
           <span className="flex min-w-0 flex-1 items-baseline gap-2">
             <span className="truncate text-sm font-medium">{note.title || t("oats.untitled")}</span>
+            <ExampleBadge note={note} />
             <OpenQuestions count={note.open_questions} />
           </span>
           <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
@@ -1042,6 +1044,9 @@ function ConversationSurface() {
               )}
             </Card>
 
+            {/* Only while nothing has been recorded: a finished conversation to
+                explore first. The recent list takes this place afterwards. */}
+            <ExampleOffer />
             <RecentConversations />
           </div>
         )}
@@ -1727,20 +1732,24 @@ function IntelligenceViews({
             ) : (
               // A heading you can rename is still a heading; the control that
               // makes it operable goes inside it, so it has focus, Enter, and a
-              // role a screen reader announces.
-              <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em]">
-                <button
-                  type="button"
-                  title={t("oats.intelligence.renameHint")}
-                  onClick={() => {
-                    setDraftTitle(selected.title || "");
-                    setRenaming(true);
-                  }}
-                  className="-mx-2 block max-w-[calc(100%+1rem)] cursor-text rounded-md border border-transparent px-2 py-0.5 text-left outline-none transition-colors hover:bg-accent/70 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                >
-                  {selected.title || t("oats.untitled")}
-                </button>
-              </h1>
+              // role a screen reader announces. An example says so beside it,
+              // on the title's first line.
+              <div className="flex items-start gap-3">
+                <h1 className="min-w-0 flex-1 text-[28px] font-semibold leading-tight tracking-[-0.02em]">
+                  <button
+                    type="button"
+                    title={t("oats.intelligence.renameHint")}
+                    onClick={() => {
+                      setDraftTitle(selected.title || "");
+                      setRenaming(true);
+                    }}
+                    className="-mx-2 block max-w-[calc(100%+1rem)] cursor-text rounded-md border border-transparent px-2 py-0.5 text-left outline-none transition-colors hover:bg-accent/70 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    {selected.title || t("oats.untitled")}
+                  </button>
+                </h1>
+                <ExampleBadge note={selected} className="mt-2 py-0.5" />
+              </div>
             )}
 
             {/* When, for how long, with how many voices: the bearings a record is
@@ -2170,7 +2179,12 @@ function IntelligenceViews({
                 icon={MessagesSquare}
                 title={t("oats.intelligence.empty")}
                 description={t("oats.intelligence.emptyDescription")}
-                action={<StartRecordingButton />}
+                action={
+                  <div className="flex flex-col items-center gap-6">
+                    <StartRecordingButton />
+                    <ExampleOffer layout="stacked" />
+                  </div>
+                }
               />
             )
           ) : query.trim() ? (
@@ -3280,6 +3294,7 @@ function ConversationRow({
             <span className="truncate text-sm font-medium text-foreground">
               {note.title || t("oats.untitled")}
             </span>
+            <ExampleBadge note={note} />
             <OpenQuestions count={note.open_questions} />
             {marked > 0 && (
               <span className="flex shrink-0 items-center gap-1 self-center text-xs tabular-nums text-muted-foreground">
