@@ -10,18 +10,9 @@ import {
   layoutArcTimeline,
 } from "./arcGeometry";
 import type { ArcTimelineLayout } from "./arcGeometry";
-import {
-  DATA_LINE,
-  DOT_RADIUS,
-  DOT_RING,
-  LABEL_SIZE,
-  RULE_LINE,
-  chartRatio,
-  drawDot,
-  labelFont,
-  truncateText,
-  useChartPalette,
-} from "./chartPaint";
+import { CHART, MAX_CHART_RATIO, drawDot, fitText } from "../charts/chartStyle";
+import type { ChartPalette } from "../charts/chartStyle";
+import { useChartPalette } from "./useChartPalette";
 import { lineTone, markTone } from "./linkedHighlight";
 import type { Highlight } from "./linkedHighlight";
 import type { HighlightSource } from "./highlightStore";
@@ -40,6 +31,30 @@ export interface TimelineConversation {
   id: number;
   title: string;
   createdAt: number;
+}
+
+/** Labels under the line: 12 px, the date a weight heavier than the title. */
+const LABEL_SIZE = 12;
+const font = (palette: ChartPalette, weight = 400) => `${weight} ${LABEL_SIZE}px ${palette.sans}`;
+
+/**
+ * A dot that recedes while something else is pointed at: the one dot (rule 5)
+ * filled in the rule grey, which `drawDot`'s kinds do not include.
+ */
+function drawRecededDot(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  palette: ChartPalette
+) {
+  ctx.beginPath();
+  ctx.arc(x, y, CHART.dot + CHART.ring, 0, Math.PI * 2);
+  ctx.fillStyle = palette.card;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x, y, CHART.dot, 0, Math.PI * 2);
+  ctx.fillStyle = palette.rule;
+  ctx.fill();
 }
 
 interface Labelled {
@@ -64,8 +79,8 @@ function titleLines(ctx: CanvasRenderingContext2D, title: string, width: number)
     line = word;
   }
   if (line) lines.push(line);
-  if (lines.length <= 2) return lines.map((text) => truncateText(ctx, text, width));
-  return [truncateText(ctx, lines[0], width), truncateText(ctx, `${lines[1]}…`, width)];
+  if (lines.length <= 2) return lines.map((text) => fitText(ctx, text, width));
+  return [fitText(ctx, lines[0], width), fitText(ctx, `${lines[1]}…`, width)];
 }
 
 export default function ArcTimeline({
@@ -142,7 +157,7 @@ export default function ArcTimeline({
     if (!palette || typeof document === "undefined") return map;
     const measure = document.createElement("canvas").getContext("2d");
     if (!measure) return map;
-    measure.font = labelFont(palette);
+    measure.font = font(palette);
     for (const id of layout.order) {
       const conversation = byId.get(id);
       const x = layout.x.get(id);
@@ -160,7 +175,7 @@ export default function ArcTimeline({
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !palette || !size.width || !size.height) return;
-    const ratio = chartRatio();
+    const ratio = Math.min(window.devicePixelRatio || 1, MAX_CHART_RATIO);
     const pixelWidth = Math.round(size.width * ratio);
     const pixelHeight = Math.round(size.height * ratio);
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
@@ -190,7 +205,7 @@ export default function ArcTimeline({
         target.moveTo(arc.left - left, baseline);
         target.ellipse(arc.cx - left, baseline, arc.rx, arc.ry, 0, Math.PI, Math.PI * 2);
       }
-      target.lineWidth = DATA_LINE;
+      target.lineWidth = CHART.line;
       target.strokeStyle = color;
       target.stroke();
     };
@@ -198,13 +213,14 @@ export default function ArcTimeline({
     const paintMarks = (
       target: CanvasRenderingContext2D,
       ids: number[],
-      fill: (id: number) => string,
+      dot: "plain" | "selected" | "recede",
       dateColor: (id: number) => string,
       titleColor: (id: number) => string
     ) => {
       for (const id of ids) {
         const x = (layout.x.get(id) ?? 0) - left;
-        drawDot(target, x, baseline, fill(id), palette);
+        if (dot === "recede") drawRecededDot(target, x, baseline, palette);
+        else drawDot(target, x, baseline, dot, palette);
       }
       target.textAlign = "center";
       target.textBaseline = "top";
@@ -212,10 +228,10 @@ export default function ArcTimeline({
         const label = labels.get(id);
         if (!label) continue;
         const x = label.x - left;
-        target.font = labelFont(palette, 500);
+        target.font = font(palette, 500);
         target.fillStyle = dateColor(id);
         target.fillText(label.date, x, baseline + DATE_OFFSET);
-        target.font = labelFont(palette);
+        target.font = font(palette);
         target.fillStyle = titleColor(id);
         label.lines.forEach((line, index) =>
           target.fillText(line, x, baseline + TITLE_OFFSET + index * TITLE_LINE)
@@ -230,7 +246,7 @@ export default function ArcTimeline({
         Math.min(size.width, layout.contentWidth - layout.margin - left),
         baseline + 0.5
       );
-      target.lineWidth = RULE_LINE;
+      target.lineWidth = CHART.rule;
       target.strokeStyle = palette.rule;
       target.stroke();
     };
@@ -263,7 +279,7 @@ export default function ArcTimeline({
         paintMarks(
           target,
           visible,
-          () => palette.quiet,
+          "plain",
           () => palette.quiet,
           () => palette.ink
         );
@@ -284,7 +300,7 @@ export default function ArcTimeline({
         paintMarks(
           target,
           visible,
-          () => palette.rule,
+          "recede",
           () => palette.quiet,
           () => palette.quiet
         )
@@ -292,7 +308,7 @@ export default function ArcTimeline({
       paintMarks(
         ctx,
         visible.filter((id) => markTone(current, id) === "rest"),
-        () => palette.quiet,
+        "plain",
         () => palette.quiet,
         () => palette.ink
       );
@@ -300,7 +316,7 @@ export default function ArcTimeline({
     paintMarks(
       ctx,
       focus,
-      () => palette.honey,
+      "selected",
       () => palette.ink,
       () => palette.ink
     );
@@ -365,7 +381,7 @@ export default function ArcTimeline({
   };
 
   const order = layout.order;
-  const buttonTop = layout.baseline - DOT_RADIUS - DOT_RING - 4;
+  const buttonTop = layout.baseline - CHART.dot - CHART.ring - 4;
   const tabStop =
     current !== null && byId.has(current) ? current : (order[order.length - 1] ?? null);
   const move = (step: number | "first" | "last") => {

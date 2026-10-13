@@ -92,6 +92,7 @@ Rules:
   surfaces stay flat, with depth from a border and at most `shadow-xs`/`shadow-sm`,
   and no glows. The oat world may dress the frame where it never sits under words:
   the field at the sidebar's foot, empty states.
+  The one exception in content: a chart's areas carry the field's dither (§6).
 - **The main action has depth.** New recording and Start recording are honey with
   an inner highlight and a soft honey shadow, and they sink 1px when pressed
   (`.oats-cta` in `index.css`). They are the only controls with depth.
@@ -211,29 +212,46 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 ## 6. Data visualisation
 
 The conversation contour (`helpers/conversationContour.mjs`), the flow card's
-graph and the topic/lifetime graphs stay: every value in them is measured from
-the conversation. They draw in
-`muted-foreground` with status colors for question marks, on the card surface,
-with no decorative gradient.
+graph, the topic graph and the Global conversations board stay: every value in them is measured from
+the conversation. Every chart draws through one module
+(`components/charts/chartStyle.ts`), by seven rules:
+
+1. **Two line weights.** Data lines are 1.5 px, with round caps and joins.
+   Rules (baselines, row dividers, ticks) are 1 px. No dashes anywhere.
+2. **Three greys.** Ink (`foreground`) is for words and emphasis, quiet
+   (`muted-foreground`) for data lines and marks, rule (`border`) for rules. No
+   other opacities, except the fill.
+3. **One accent.** Honey (`primary`) marks only "now" and "selected or hovered".
+4. **Status colours only for question verdicts:** answered is filled
+   `success`, unknown is filled `warning`, hedged is a soft `warning` fill
+   inside a ring, and open (no verdict) is a ring in quiet.
+5. **One dot:** radius 4, with a 2 px ring in `card`, so it stays clear on a
+   line or on another dot.
+6. **Nothing crosses a word.** Labels sit in a column, or on a plate in the card
+   colour.
+7. **Fill.** An area or mass is an ordered 4×4 Bayer dither of the quiet grey,
+   locked to device pixels, with the field's matrix (`helpers/chartDither.mjs`).
+   Under about 24 px tall (the list strips) it is a 12% wash instead. This is
+   the one exception to "content is flat" (§2): charts carry the dither.
 
 - A question's mark has one vocabulary on every surface
   (`conversation/questionMarks.ts`), and it is always a complete circle of one
   size: **filled** when settled (answered in `success`, unknown in
   `warning`), a **soft fill inside a ring** when the answer was hedged
   (`warning`), an **empty ring** when there is no verdict (`muted-foreground`).
-  The fill carries the meaning without colour. On a contour the marks are
-  **pins**: heads on one row along the top, each with a stem down to its moment.
+  The fill carries the meaning without colour. On a contour a question is a
+  **dot on the line** at the moment it was asked; the one being read is a size
+  up, ringed in honey.
 - The live contour rolls: it shows the last four minutes with now at the
-  right-hand edge, and redraws once a second, so the trace and every pin move one
+  right-hand edge, and redraws once a second, so the trace and every dot move one
   second to the left. Transcript speech and the microphone level both feed it,
   so it moves while somebody is talking. Its label describes the whole sitting.
 - A finished contour keeps the shape the live one had: the recording keeps how
   loud each second was (one byte a second, `helpers/conversationLoudness.mjs`),
   and the record and every list strip take their height from it by the live
   rule. Conversations recorded before it was kept draw from their words.
-- The legend under a contour lists only what that contour draws, in two rows: how
-  the questions ended, then the shape marks (topic change, topic revisited,
-  marked moment).
+- The legend under a contour lists only what that contour draws, in one row: how
+  the questions ended, then the shape marks (new topic, marked).
 - **Global conversations** (`components/global/`), the Conversations page's
   Global view: a board of charts across every conversation, one tab per
   conversation group, All first. The board is the background with a 1 px dot

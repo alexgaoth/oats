@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "What the marks mean",
         "open": "Open",
-        "topic": "Topic change",
-        "return": "Topic revisited",
-        "marked": "Marked moment"
+        "topic": "New topic",
+        "marked": "Marked"
       },
       "contourSummary": "{{minutes}} minutes, {{questions}} questions asked ({{unresolved}} still unanswered), the subject turned {{shifts}} times, and the room came back to {{returns}} threads.",
       "contourEmpty": "Nothing recorded yet.",

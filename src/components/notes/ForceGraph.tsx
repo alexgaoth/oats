@@ -21,15 +21,13 @@ import {
 } from "./graphPhysics";
 import type { DragLifecycle, GraphEdge, GraphNode, SimNode } from "./graphPhysics";
 import {
-  DATA_LINE,
-  LABEL_SIZE,
-  PLATE_PAD,
-  boxesOverlap,
+  CHART,
   ditherFill,
-  plateBox,
-  truncateText,
-} from "../global/chartPaint";
-import type { PlateBox } from "../global/chartPaint";
+  drawPlateText,
+  fitText,
+  subscribeChartPalette,
+} from "../charts/chartStyle";
+import type { ChartPalette, PlateBox } from "../charts/chartStyle";
 import { edgeKey } from "../global/arcGeometry";
 import { NO_HIGHLIGHT, lineTone, markTone } from "../global/linkedHighlight";
 import type { Highlight } from "../global/linkedHighlight";
@@ -45,9 +43,10 @@ export type { GraphEdge, GraphNode };
 // differ only in the data handed to this component: one simulation, one set
 // of interaction rules, one accessibility path.
 //
-// Drawn by the chart rules: discs of 5 to 14 px dithered in the quiet grey,
-// edges 1.5 px and straight, labels on plates in the surface colour, and honey
-// only for the disc that is pointed at or selected.
+// Drawn by the chart rules (DESIGN.md §6, `charts/chartStyle.ts`): discs of 5
+// to 14 px dithered in the quiet grey, edges 1.5 px and straight, labels on
+// plates in the surface colour, and honey only for the disc that is pointed at
+// or selected.
 //
 // The simulation is capped and comes to rest (DESIGN.md §7): ~300 ticks with an
 // alpha decay, then the canvas goes idle. Dragging a node wakes it briefly.
@@ -81,39 +80,30 @@ const HIT_SLOP = 4;
 const EDGE_GAP = 3;
 // Under a disc, the gap between its rim and its label's plate.
 const LABEL_GAP = 4;
+// A label: 12 px, on a plate 4 px wider each side and 3 px taller each way, as
+// `drawPlateText` draws it, so a label can be placed before it is drawn.
+const LABEL_SIZE = 12;
+const PLATE_PAD_X = 4;
+const PLATE_PAD_Y = 3;
 
-function readColor(styles: CSSStyleDeclaration, name: string): string {
-  return styles.getPropertyValue(name).trim() || "#71717a";
-}
+// The palette is the charts' one palette (`subscribeChartPalette`), read on
+// mount and on a theme change, never inside a draw: a settle draws every frame.
+// Canvas text does not inherit CSS, so labels are set in its `sans`, the app's
+// own token (DESIGN.md §3).
+type Palette = ChartPalette;
 
-// The palette is read on mount and whenever the theme changes, never inside a
-// draw: `getComputedStyle` forces a style recalculation, and a settle draws on
-// every frame.
-interface Palette {
-  ink: string;
-  quiet: string;
-  rule: string;
-  honey: string;
-  card: string;
-  background: string;
-  sans: string;
-}
-
-// Canvas text does not inherit CSS, so the label font is read from the same
-// token the DOM uses. Inter, like every other label in the app (DESIGN.md §3).
-const SANS_FALLBACK = '"Inter Variable", ui-sans-serif, system-ui, sans-serif';
-
-function readPalette(element: Element): Palette {
-  const styles = getComputedStyle(element);
+/** The plate a label of `width` centred on (x, y) takes. */
+function plateBox(x: number, y: number, width: number): PlateBox {
   return {
-    ink: readColor(styles, "--color-foreground"),
-    quiet: readColor(styles, "--color-muted-foreground"),
-    rule: readColor(styles, "--color-border"),
-    honey: readColor(styles, "--color-primary"),
-    card: readColor(styles, "--color-card"),
-    background: readColor(styles, "--color-background"),
-    sans: styles.getPropertyValue("--font-family-sans").trim() || SANS_FALLBACK,
+    left: x - width / 2 - PLATE_PAD_X,
+    right: x + width / 2 + PLATE_PAD_X,
+    top: y - LABEL_SIZE / 2 - PLATE_PAD_Y,
+    bottom: y + LABEL_SIZE / 2 + PLATE_PAD_Y,
   };
+}
+
+function boxesOverlap(a: PlateBox, b: PlateBox): boolean {
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 }
 
 // A hand-arranged layout is a preference, not conversation data, so it lives in
@@ -202,7 +192,7 @@ function traceEdges(ctx: CanvasRenderingContext2D, pairs: EdgePair[]) {
 function strokeEdges(ctx: CanvasRenderingContext2D, pairs: EdgePair[], color: string) {
   if (!pairs.length) return;
   traceEdges(ctx, pairs);
-  ctx.lineWidth = DATA_LINE;
+  ctx.lineWidth = CHART.line;
   ctx.strokeStyle = color;
   ctx.stroke();
 }
@@ -223,8 +213,7 @@ function paintDiscs(
   nodes: SimNode[],
   tone: DiscTone,
   palette: Palette,
-  surface: string,
-  ratio: number
+  surface: string
 ) {
   if (!nodes.length) return;
   if (tone === "focus") {
@@ -248,15 +237,13 @@ function paintDiscs(
     }
   }
   for (const [density, group] of byDensity) {
-    traceDiscs(ctx, group);
-    ctx.fillStyle = ditherFill(ctx, color, density, ratio);
-    ctx.fill();
+    ditherFill(ctx, (target) => traceDiscs(target, group), color, density);
   }
   if (rings.length) {
     traceDiscs(ctx, rings, 0.75);
     ctx.fillStyle = surface;
     ctx.fill();
-    ctx.lineWidth = DATA_LINE;
+    ctx.lineWidth = CHART.line;
     ctx.strokeStyle = color;
     ctx.stroke();
   }
@@ -274,17 +261,15 @@ function paintLabels(
   palette: Palette,
   surface: string
 ) {
-  ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // The plate is the colour of what the canvas sits on: a card on the board,
+  // the page in a conversation's Connections tab.
+  const plated = surface === palette.card ? palette : { ...palette, card: surface };
   for (const label of labels) {
-    const { box } = label;
-    ctx.fillStyle = surface;
-    ctx.beginPath();
-    ctx.roundRect(box.left, box.top, box.right - box.left, box.bottom - box.top, 4);
-    ctx.fill();
-    ctx.fillStyle = color;
-    ctx.fillText(label.text, label.x, label.y + 0.5);
+    drawPlateText(ctx, label.text, label.x, label.y, plated, {
+      align: "center",
+      color,
+      size: LABEL_SIZE,
+    });
   }
 }
 
@@ -305,9 +290,9 @@ function labelCandidates(
   width: number,
   height: number
 ): PlacedLabel[] {
-  const text = truncateText(ctx, node.label, labelWidth(width));
+  const text = fitText(ctx, node.label, labelWidth(width));
   const textWidth = ctx.measureText(text).width;
-  const half = textWidth / 2 + PLATE_PAD + 2;
+  const half = textWidth / 2 + PLATE_PAD_X + 2;
   const x = Math.min(width - half, Math.max(half, node.x));
   const offset = node.radius + LABEL_GAP + LABEL_SIZE / 2 + 3;
   const out: PlacedLabel[] = [];
@@ -425,17 +410,10 @@ export default function ForceGraph<TNode extends GraphNode>({
 
   // Read once on mount, then only when the theme actually changes.
   const [palette, setPalette] = useState<Palette | null>(null);
-  useEffect(() => {
-    const target = canvasRef.current ?? document.documentElement;
-    const reread = () => setPalette(readPalette(target));
-    reread();
-    const observer = new MutationObserver(reread);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-    return () => observer.disconnect();
-  }, []);
+  useEffect(
+    () => subscribeChartPalette(canvasRef.current ?? document.documentElement, setPalette),
+    []
+  );
 
   useEffect(() => {
     const element = containerRef.current;
@@ -571,7 +549,7 @@ export default function ForceGraph<TNode extends GraphNode>({
     if (!current.active) {
       layer("rest", (target) => {
         strokeEdges(target, scene.pairs, palette.quiet);
-        paintDiscs(target, nodes, "rest", palette, plate, ratio);
+        paintDiscs(target, nodes, "rest", palette, plate);
         paintLabels(target, scene.labels.values(), palette.quiet, palette, plate);
       });
     } else {
@@ -586,7 +564,7 @@ export default function ForceGraph<TNode extends GraphNode>({
         palette.ink
       );
       layer("recede-marks", (target) => {
-        paintDiscs(target, nodes, "recede", palette, plate, ratio);
+        paintDiscs(target, nodes, "recede", palette, plate);
         paintLabels(target, scene.labels.values(), palette.quiet, palette, plate);
       });
       paintDiscs(
@@ -594,12 +572,11 @@ export default function ForceGraph<TNode extends GraphNode>({
         nodes.filter((node) => markTone(current, node.id) === "rest"),
         "rest",
         palette,
-        plate,
-        ratio
+        plate
       );
     }
 
-    paintDiscs(ctx, focusNodes, "focus", palette, plate, ratio);
+    paintDiscs(ctx, focusNodes, "focus", palette, plate);
     // Whatever is pointed at or chosen is named, last and therefore on top,
     // even where the layout found no room for its label.
     ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
