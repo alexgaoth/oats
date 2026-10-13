@@ -1952,20 +1952,16 @@
       "title": "Fluxo da conversa",
       "viewLabel": "Visualização do fluxo",
       "mode": {
-        "auto": "Auto",
-        "stack": "Lista",
+        "lanes": "Faixas",
         "graph": "Grafo"
       },
       "empty": "Os temas aparecem aqui à medida que a conversa avança.",
       "caption": {
-        "few_one": "Mostrando a lista: até agora só {{count}} tema.",
-        "few_other": "Mostrando a lista: até agora só {{count}} temas.",
-        "linear": "Mostrando a lista: a conversa seguiu em linha reta.",
-        "returns_one": "Mostrando o grafo: até agora {{count}} retorno a um tema anterior.",
-        "returns_other": "Mostrando o grafo: até agora {{count}} retornos a temas anteriores.",
-        "branching": "Mostrando o grafo: a conversa se ramificou.",
-        "stack": "Mostrando a lista.",
-        "graph": "Mostrando o grafo."
+        "topics_one": "{{count}} tema",
+        "topics_other": "{{count}} temas",
+        "returns_one": "{{count}} retorno a um tema anterior",
+        "returns_other": "{{count}} retornos a temas anteriores",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Agora",
@@ -1975,10 +1971,7 @@
       },
       "back_one": "Retomado {{count}}×",
       "back_other": "Retomado {{count}}×",
-      "showMore_one": "Mostrar mais {{count}}",
-      "showMore_other": "Mostrar mais {{count}}",
-      "showFewer": "Mostrar menos",
-      "stackLabel": "Temas, os mais recentes primeiro",
+      "lanesLabel": "Temas na ordem em que surgiram",
       "graphLabel_one": "Grafo de {{count}} tema abordado até agora",
       "graphLabel_other": "Grafo de {{count}} temas abordados até agora",
       "nodeName": "{{label}}, {{state}}",

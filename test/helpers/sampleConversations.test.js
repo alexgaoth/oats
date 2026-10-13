@@ -22,7 +22,7 @@ let review;
 let talk;
 let moments;
 let loudness;
-let flow;
+let lanes;
 let resume;
 let lifetime;
 
@@ -32,7 +32,7 @@ test.before(async () => {
   talk = await import("../../src/helpers/talkTime.mjs");
   moments = await import("../../src/helpers/conversationMoments.mjs");
   loudness = await import("../../src/helpers/conversationLoudness.mjs");
-  flow = await import("../../src/helpers/conversationFlow.mjs");
+  lanes = await import("../../src/helpers/topicLanes.mjs");
   resume = await import("../../src/helpers/conversationResume.mjs");
   lifetime = await import("../../src/helpers/lifetimeGraph.mjs");
 });
@@ -87,14 +87,15 @@ test("the example's questions come out every way a question can", () => {
   }
 });
 
-test("the example's topics return to the launch date twice and to SSO once, so Auto draws the graph", () => {
+test("the example's topics return to the launch date twice and to SSO once, and the lanes draw all three", () => {
   const snapshot = example.note.conversation_topics;
   assert.ok(snapshot.nodes.length >= 6);
   const returns = Object.fromEntries(snapshot.nodes.map((node) => [node.label, node.returns]));
   assert.equal(returns["launch date"], 2);
   assert.equal(returns["sso saml"], 1);
   assert.equal(snapshot.edges.filter((edge) => edge.kind === "return").length, 3);
-  assert.equal(flow.suitableView(flow.flowShape(snapshot)).view, "graph");
+  const drawn = lanes.topicLanes({ snapshot, segments: example.note.transcript });
+  assert.equal(drawn.returns.length, 3);
 });
 
 test("the example's marks and loudness read back", () => {

@@ -1952,20 +1952,16 @@
       "title": "Gesprächsverlauf",
       "viewLabel": "Ansicht des Verlaufs",
       "mode": {
-        "auto": "Auto",
-        "stack": "Liste",
+        "lanes": "Bahnen",
         "graph": "Graph"
       },
       "empty": "Themen erscheinen hier im Lauf des Gesprächs.",
       "caption": {
-        "few_one": "Als Liste dargestellt: bisher erst {{count}} Thema.",
-        "few_other": "Als Liste dargestellt: bisher erst {{count}} Themen.",
-        "linear": "Als Liste dargestellt: Das Gespräch ist geradlinig verlaufen.",
-        "returns_one": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu einem früheren Thema zurückgekehrt.",
-        "returns_other": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu früheren Themen zurückgekehrt.",
-        "branching": "Als Graph dargestellt: Das Gespräch hat sich verzweigt.",
-        "stack": "Als Liste dargestellt.",
-        "graph": "Als Graph dargestellt."
+        "topics_one": "{{count}} Thema",
+        "topics_other": "{{count}} Themen",
+        "returns_one": "{{count}}-mal zu einem früheren Thema zurückgekehrt",
+        "returns_other": "{{count}}-mal zu früheren Themen zurückgekehrt",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Jetzt",
@@ -1975,10 +1971,7 @@
       },
       "back_one": "{{count}}× zurück",
       "back_other": "{{count}}× zurück",
-      "showMore_one": "{{count}} weiteres anzeigen",
-      "showMore_other": "{{count}} weitere anzeigen",
-      "showFewer": "Weniger anzeigen",
-      "stackLabel": "Themen, neueste zuerst",
+      "lanesLabel": "Themen in der Reihenfolge, in der sie aufkamen",
       "graphLabel_one": "Graph von {{count}} bisher angesprochenem Thema",
       "graphLabel_other": "Graph von {{count}} bisher angesprochenen Themen",
       "nodeName": "{{label}}, {{state}}",

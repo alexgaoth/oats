@@ -84,18 +84,21 @@ test("coming back to a subject lifts it, but cannot push it off the canvas", () 
   assert.ok(often <= 1);
 });
 
-test("radius follows area, not time, so twice as long is not four times as big", () => {
+// DESIGN.md §6: one dot, 8px with a 2px ring in the card colour. Size used to
+// carry dwell; the minutes are in the lanes now, and a dot of one size never
+// hides a neighbour's label.
+test("every dot is one size, whatever the room spent on it", () => {
   const map = buildThreadMap({
     snapshot: {
-      nodes: [node({ id: 1, durationMs: 400_000 }), node({ id: 2, durationMs: 100_000 })],
+      nodes: [node({ id: 1, durationMs: 400_000 }), node({ id: 2, durationMs: 5_000 })],
     },
     startedAt: START,
     now: NOW,
   });
-  const big = map.points.find((p) => p.id === 1);
-  const small = map.points.find((p) => p.id === 2);
-  // 4x the dwell is 2x the radius, before the 0.2 floor.
-  assert.ok(Math.abs((big.r - 0.2) / (small.r - 0.2) - 2) < 0.01);
+  const [big, small] = map.points;
+  assert.equal(dotSize(big), dotSize(small));
+  assert.equal(dotSize(big), 12, "8px and a 2px ring on each side");
+  assert.equal("r" in big, false, "no radius is computed for a dot that does not use one");
 });
 
 test("every point stays inside the canvas, padding included", () => {
@@ -272,6 +275,30 @@ test("a crowded row moves a label above or below its dot before hiding it", () =
       boxes[i].y1 >= 0 && boxes[i].y2 <= MAP.height && boxes[i].x1 >= 0 && boxes[i].x2 <= MAP.width
     );
   }
+});
+
+// A label sits on a plate in the card colour, so the links under it never cross
+// its words. The plate is wider than the words, so two labels that only just
+// clear each other would have one plate over the other's letters.
+test("a plate never covers another label's words or another topic's dot", () => {
+  // Two subjects raised together, one row apart: hung right, their words are
+  // 2px apart, so a plate 4px taller than its words would cover the other's.
+  const points = [
+    pt({ id: 1, label: "pricing", x: 0.2, y: 0.5, durationMs: 9 }),
+    pt({ id: 2, label: "hiring", x: 0.2, y: 0.5 + 18 / MAP.height, durationMs: 1 }),
+  ];
+  const bare = placeLabels(points, MAP);
+  assert.equal(bare.get(1).side, "right");
+  assert.equal(bare.get(2).side, "right", "without a plate both hang right");
+  const plated = placeLabels(points, { ...MAP, plateX: 6, plateY: 4 });
+  assert.equal(plated.get(1).side, "right");
+  assert.notEqual(plated.get(2).side, "right");
+  assert.equal(plated.get(2).hidden, false, "it moves rather than disappears");
+  const grown = (box) => ({ x1: box.x1 - 6, x2: box.x2 + 6, y1: box.y1 - 4, y2: box.y2 + 4 });
+  const first = labelBox(points[0], plated.get(1));
+  const second = labelBox(points[1], plated.get(2));
+  assert.ok(disjoint(grown(second), first), "the second plate clears the first label's words");
+  assert.ok(disjoint(grown(first), second), "and the first plate clears the second's");
 });
 
 test("before the map is measured every label hangs right, as it always did", () => {

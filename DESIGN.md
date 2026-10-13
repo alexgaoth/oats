@@ -178,15 +178,18 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   motion. The questions count is left out while question cards are off: a zero
   there would be a guess.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
-  talked about so far, as a **stack** (the topic now, then the most recent: state
-  dot, label, state badge, returns, minutes) or a **graph** (x is when a topic was
-  first raised, y how unsettled it still is; a dashed honey curve is a return to
-  an earlier topic). A view switch chooses Auto / Stack / Graph, and the
-  choice persists. Auto shows the graph only when a list would hide the shape —
-  four or more topics, with two returns to earlier topics or a topic that
-  branches — and says why in a one-line caption. It changes view only when two
-  snapshots in a row agree and 20 s after its last change, so it never
-  flip-flops (`helpers/conversationFlow.mjs`).
+  talked about so far, as **lanes** (the default) or a **graph**. A view switch
+  chooses Lanes / Graph, and the choice persists. The lanes
+  (`conversation/TopicLanes.tsx`, `helpers/topicLanes.mjs`) are one row per
+  topic in the order raised, with its minutes, and one line for the room: it
+  runs along a topic's row while the room is on it, bends to the next row when
+  the room moves, climbs back to an earlier row on a return, and ends at now
+  with a honey dot. The topic now has a medium label and the Now badge; a
+  pressed row is selected and quotes the topic. Past eight rows the card
+  scrolls inside. The graph keeps its axes (x is when a topic was first raised,
+  y how unsettled it still is); a return is an ink curve, a move on a quiet one,
+  and the labels sit on plates. A one-line caption states the facts of the view
+  shown: "8 topics, 3 returns to earlier topics".
 - **Detailed:** adds the question cards and the live transcript below the flow
   card, each in standard card/list styling. The flow card then yields height to
   them (at most 40% of the column) and scrolls inside.

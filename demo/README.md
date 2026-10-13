@@ -129,7 +129,7 @@ Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last
 words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
-it is asked), `theme=light|dark`, `view=calm|words`, `flow=auto|stack|graph`.
+it is asked), `theme=light|dark`, `view=calm|words`, `flow=lanes|graph`.
 `panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,

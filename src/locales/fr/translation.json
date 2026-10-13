@@ -1952,20 +1952,16 @@
       "title": "Déroulé de la conversation",
       "viewLabel": "Vue du déroulé",
       "mode": {
-        "auto": "Auto",
-        "stack": "Liste",
+        "lanes": "Couloirs",
         "graph": "Graphe"
       },
       "empty": "Les sujets apparaissent ici au fil de la conversation.",
       "caption": {
-        "few_one": "Affichage de la liste : seulement {{count}} sujet pour l'instant.",
-        "few_other": "Affichage de la liste : seulement {{count}} sujets pour l'instant.",
-        "linear": "Affichage de la liste : la conversation a avancé en ligne droite.",
-        "returns_one": "Affichage du graphe : {{count}} retour à un sujet précédent jusqu'ici.",
-        "returns_other": "Affichage du graphe : {{count}} retours à des sujets précédents jusqu'ici.",
-        "branching": "Affichage du graphe : la conversation s'est ramifiée.",
-        "stack": "Affichage de la liste.",
-        "graph": "Affichage du graphe."
+        "topics_one": "{{count}} sujet",
+        "topics_other": "{{count}} sujets",
+        "returns_one": "{{count}} retour à un sujet précédent",
+        "returns_other": "{{count}} retours à des sujets précédents",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "En cours",
@@ -1975,10 +1971,7 @@
       },
       "back_one": "Repris {{count}}×",
       "back_other": "Repris {{count}}×",
-      "showMore_one": "Afficher {{count}} de plus",
-      "showMore_other": "Afficher {{count}} de plus",
-      "showFewer": "Afficher moins",
-      "stackLabel": "Sujets, du plus récent au plus ancien",
+      "lanesLabel": "Sujets dans l'ordre où ils ont été abordés",
       "graphLabel_one": "Graphe de {{count}} sujet abordé jusqu'ici",
       "graphLabel_other": "Graphe des {{count}} sujets abordés jusqu'ici",
       "nodeName": "{{label}}, {{state}}",
