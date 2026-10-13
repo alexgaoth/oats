@@ -4,13 +4,16 @@
 //   /demo.html?panel=true                          the samples, to look around
 //   /demo.html?panel=true&demo=live                the review, recorded live
 //   /demo.html?panel=true&demo=live&from=720&speed=1&view=words&theme=dark
+//   /demo.html?panel=true&profile=empty            nothing recorded yet
 //
 // Parameters: `demo=live` replays the launch review as a live recording (the
 // other samples are already there; the review is the one being recorded);
 // `from` seeks there once recording starts (seconds); `speed` is the replay
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
-// `edits=0` leaves the voices unnamed after Stop; `theme`, `view` and `flow`
-// as in `settings.mjs`. `panel=true` is the app's own: the workspace window.
+// `edits=0` leaves the voices unnamed after Stop; `profile=empty` starts with
+// no conversations at all, as a new install does, so Home and Conversations
+// offer the example; `theme`, `view` and `flow` as in `settings.mjs`.
+// `panel=true` is the app's own: the workspace window.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
@@ -25,12 +28,16 @@ const supporting = Object.values(
 
 const params = new URLSearchParams(window.location.search);
 const live = params.get("demo") === "live";
+const empty = params.get("profile") === "empty";
 
 installClock();
 applyDemoSettings(params);
 installFakeMicrophone();
 
-const main = createFakeMain({ fixtures: live ? supporting : [mainFixture, ...supporting] });
+const main = createFakeMain({
+  fixtures: empty ? [] : live ? supporting : [mainFixture, ...supporting],
+  example: mainFixture,
+});
 window.electronAPI = main.api;
 
 const replay = createReplay({

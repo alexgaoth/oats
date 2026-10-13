@@ -2264,6 +2264,13 @@
       "room": "房間",
       "speaker": "說話者 {{n}}"
     },
+    "example": {
+      "open": "開啟範例對話",
+      "note": "一場九人參與的發布審查，供你隨意瀏覽。隨時都能刪除。",
+      "badge": "範例",
+      "failed": "無法開啟範例對話",
+      "failedHint": "沒有新增任何內容。請再試一次。"
+    },
     "shell": {
       "sidebar": "側邊欄",
       "showSidebar": "顯示側邊欄",
