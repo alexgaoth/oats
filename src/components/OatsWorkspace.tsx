@@ -1128,7 +1128,7 @@ function ConnectionsView({
   events: ConversationEvent[];
   onReload: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selectedTopic, setSelectedTopic] = useState<ConversationTopicNode | null>(null);
   const searchBaseUrl = useSettingsStore((s) => s.conversationAideSearchBaseUrl);
   const view = useSettingsStore((s) => s.connectionsView);
@@ -1250,11 +1250,15 @@ function ConnectionsView({
             <aside>
               <h3 className="text-sm font-semibold text-foreground">{selectedTopic.label}</h3>
               <p className="mt-0.5 text-[13px] text-muted-foreground">
-                {t("topicGraph.seconds", {
-                  count: Math.max(1, Math.round(selectedTopic.durationMs / 1000)),
-                })}
-                {selectedTopic.returns > 0 &&
-                  ` · ${t("topicGraph.returned", { count: selectedTopic.returns })}`}
+                {/* In minutes, as its row says: the panel said "174s" beside a row that said "3 min". */}
+                {[
+                  formatSpan(selectedTopic.durationMs, { locale: i18n.language }),
+                  selectedTopic.returns > 0
+                    ? t("topicGraph.returned", { count: selectedTopic.returns })
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
               <ul className="mt-3 divide-y divide-border">
                 {topicQuestions.map((question) => (
