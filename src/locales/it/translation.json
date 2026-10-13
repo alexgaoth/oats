@@ -2290,6 +2290,7 @@
       "movedTo": "Spostata in {{group}}",
       "movedOut": "In nessun gruppo",
       "moveFailed": "Non spostata",
+      "sorting": "Ordinamento: {{current}} di {{total}}",
       "errors": {
         "nameRequired": "Dai un nome al gruppo.",
         "nameTooLong": "Usa al massimo {{max}} caratteri.",
