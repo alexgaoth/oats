@@ -3,6 +3,28 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
 import { cn } from "../lib/utils";
 
+/*
+ * A menu item that opens a dialog opens it after the menu has closed.
+ *
+ * Radix calls an item's `onSelect` while the menu is still open. A dialog opened
+ * there mounts while the menu still holds `pointer-events: none` on <body> and
+ * still traps the focus. `react-menu` brings its own copy of
+ * `@radix-ui/react-dismissable-layer`, so the dialog cannot see the menu's lock:
+ * it records "none" as the page's own value and puts it back when it closes,
+ * and the window takes no clicks until a reload. The two focus traps also pull
+ * the focus between them, and it ends outside the dialog.
+ *
+ * So such an item gives its action to `onSelectAfterClose`, not `onSelect`, and
+ * the content runs it from `onCloseAutoFocus`. By then the menu has unmounted
+ * and given the pointer back, and the focus is about to return to its trigger,
+ * so the dialog opens from there. Render the dialog outside the menu, open it
+ * from state, and give it an `onCloseAutoFocus` that puts the focus back on the
+ * menu's trigger: the item that opened it is gone, and a Radix Dialog returns
+ * the focus only to its own DialogTrigger.
+ */
+type AfterClose = (event: Event) => void;
+const AfterCloseContext = React.createContext<React.RefObject<AfterClose | null> | null>(null);
+
 function DropdownMenu(props: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
@@ -14,8 +36,12 @@ function DropdownMenuTrigger(props: React.ComponentProps<typeof DropdownMenuPrim
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  onCloseAutoFocus,
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  // What the chosen item does once the menu has closed (see above).
+  const afterClose = React.useRef<AfterClose | null>(null);
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -27,7 +53,15 @@ function DropdownMenuContent({
           className
         )}
         {...props}
-      />
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          const action = afterClose.current;
+          afterClose.current = null;
+          action?.(event);
+        }}
+      >
+        <AfterCloseContext.Provider value={afterClose}>{children}</AfterCloseContext.Provider>
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   );
 }
@@ -35,10 +69,15 @@ function DropdownMenuContent({
 function DropdownMenuItem({
   className,
   variant = "default",
+  onSelect,
+  onSelectAfterClose,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   variant?: "default" | "destructive";
+  /** For an item that opens a dialog: its action, run once the menu has closed (see above). */
+  onSelectAfterClose?: AfterClose;
 }) {
+  const afterClose = React.useContext(AfterCloseContext);
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -51,6 +90,13 @@ function DropdownMenuItem({
         className
       )}
       {...props}
+      onSelect={(event) => {
+        onSelect?.(event);
+        // An `onSelect` that keeps the menu open has not chosen yet.
+        if (onSelectAfterClose && afterClose && !event.defaultPrevented) {
+          afterClose.current = onSelectAfterClose;
+        }
+      }}
     />
   );
 }
