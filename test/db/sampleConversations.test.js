@@ -146,3 +146,48 @@ test("the sample marker cannot be written through updateNote", (t) => {
     db.markSampleNote(note.id, { sampleId: "x", createdAt: "yesterday", updatedAt: "today" })
   );
 });
+
+test("a sample is filed in the group its fixture names, as the model's choice", (t) => {
+  const db = createDb(t);
+  if (!db) return;
+  const read = (name) =>
+    JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "demo", "fixtures", name), "utf8"));
+  const work = read("backend-hiring-sync.json");
+  const personal = read("flat-viewing-call.json");
+  const results = samples.insertSampleConversations(db, [example, work, personal], { now: NOW });
+  const [workGroup, personalGroup] = db.getConversationGroups();
+  const byId = (sampleId) => db.getNote(results.find((r) => r.sampleId === sampleId).noteId);
+
+  assert.deepEqual(
+    [byId("backend-hiring-sync").group_id, byId("backend-hiring-sync").group_source],
+    [workGroup.id, "model"]
+  );
+  assert.deepEqual(
+    [byId("flat-viewing-call").group_id, byId("flat-viewing-call").group_source],
+    [personalGroup.id, "model"]
+  );
+  // The example names no group: it is left for the writing model to sort.
+  assert.deepEqual(
+    [byId("launch-readiness-review").group_id, byId("launch-readiness-review").group_source],
+    [null, null]
+  );
+});
+
+test("a sample whose seeded group was renamed or deleted stays unsorted", (t) => {
+  const db = createDb(t);
+  if (!db) return;
+  const read = (name) =>
+    JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "demo", "fixtures", name), "utf8"));
+  const [workGroup, personalGroup] = db.getConversationGroups();
+  db.renameConversationGroup(workGroup.id, "Pellwood");
+  db.deleteConversationGroup(personalGroup.id);
+  const results = samples.insertSampleConversations(
+    db,
+    [read("sso-fix-checkin.json"), read("family-weekend-trip.json")],
+    { now: NOW }
+  );
+  for (const { noteId } of results) {
+    const note = db.getNote(noteId);
+    assert.deepEqual([note.group_id, note.group_source], [null, null], note.title);
+  }
+});
