@@ -14,7 +14,8 @@ import type { BoardWidget, WidgetType } from "./boardLayout";
 import { boardTabs, conversationsInTab } from "./boardData";
 import { useBoardStore } from "./boardStore";
 import { highlightSource, useGlobalHighlight } from "./highlightStore";
-import { useBoardConversations, useConversationGroups, useTabGraph } from "./useBoardData";
+import { useBoardConversations, useTabGraph } from "./useBoardData";
+import { groupDisplayName, useConversationGroups } from "../../stores/conversationGroupStore";
 import { ArcTimelineWidget, ForceGraphWidget } from "./widgets";
 
 // Global conversations: a board of charts across every conversation, one tab
@@ -32,8 +33,13 @@ const NAME_KEY: Record<WidgetType, string> = {
 export default function GlobalConversations({ onOpen }: { onOpen: (noteId: number) => void }) {
   const { t } = useTranslation();
   const conversations = useBoardConversations(t("oats.untitled"));
-  const groups = useConversationGroups();
+  const { groups } = useConversationGroups();
   const tabs = useMemo(() => boardTabs(groups), [groups]);
+  const tabName = useCallback(
+    (item: (typeof tabs)[number]) =>
+      item.group ? groupDisplayName(item.group, t) : t("oats.global.tabs.all"),
+    [t]
+  );
   const activeTab = useBoardStore((state) => state.activeTab);
   const setActiveTab = useBoardStore((state) => state.setActiveTab);
   // A group that was removed takes its tab with it, and the board shows All.
@@ -94,7 +100,7 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
           <TabsList aria-label={t("oats.global.tabs.label")}>
             {tabs.map((item) => (
               <TabsTrigger key={item.id} value={item.id} className="flex-none">
-                {item.group ? item.group.name : t("oats.global.tabs.all")}
+                {tabName(item)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -135,9 +141,7 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
               </Button>
             </div>
           }
-          aria-label={t("oats.global.boardLabel", {
-            tab: tab.group ? tab.group.name : t("oats.global.tabs.all"),
-          })}
+          aria-label={t("oats.global.boardLabel", { tab: tabName(tab) })}
         />
       </TabsContent>
     </Tabs>

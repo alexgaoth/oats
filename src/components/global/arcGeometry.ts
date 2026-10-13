@@ -63,6 +63,8 @@ export interface TimelineArc {
 export interface ArcTimelineLayout {
   /** Conversation ids in date order, oldest first. */
   order: number[];
+  /** Kept clear at either end: none when the timeline scrolls. */
+  margin: number;
   /** Each conversation's centre along the line. */
   x: Map<number, number>;
   /** Room per conversation. */
@@ -98,15 +100,18 @@ export function layoutArcTimeline({
     .sort((a, b) => a.createdAt - b.createdAt || a.id - b.id)
     .map((conversation) => conversation.id);
   const count = order.length;
-  const room = Math.max(0, width - MARGIN * 2);
   // Every conversation gets one column of the same width: "evenly spaced". A
-  // timeline too long for the card gets as many whole columns as fit its width
-  // exactly, so a scroll that stops on a column (`ArcTimeline` snaps to them)
-  // shows every date and title whole, never cut at the card's edge.
+  // timeline too long for the card gets as many whole columns as fill its width
+  // exactly, edge to edge, so a scroll that stops on a column (`ArcTimeline`
+  // snaps to them) shows every date and title whole, never cut at the card's
+  // edge. One that fits keeps a margin at either end.
+  const fits = count * MIN_STEP <= Math.max(0, width - MARGIN * 2);
+  const margin = fits ? MARGIN : 0;
+  const room = Math.max(0, width - margin * 2);
   const visible = Math.max(1, Math.floor(room / MIN_STEP));
-  const step = !count ? MIN_STEP : count <= visible ? room / count : room / visible;
-  const contentWidth = Math.max(width, MARGIN * 2 + step * count);
-  const x = new Map(order.map((id, index) => [id, MARGIN + step * (index + 0.5)]));
+  const step = !count ? MIN_STEP : fits ? room / count : room / visible;
+  const contentWidth = Math.max(width, margin * 2 + step * count);
+  const x = new Map(order.map((id, index) => [id, margin + step * (index + 0.5)]));
   const baseline = Math.max(TOP + 24, height - LABEL_BAND);
   const titleWidth = Math.max(0, Math.min(MAX_TITLE_WIDTH, step - 12));
 
@@ -133,6 +138,7 @@ export function layoutArcTimeline({
 
   return {
     order,
+    margin,
     x,
     step,
     contentWidth,
@@ -154,7 +160,7 @@ export function arcsBetween(arcs: TimelineArc[], left: number, right: number): T
  */
 export function conversationAt(layout: ArcTimelineLayout, px: number, py: number): number | null {
   if (!layout.order.length || py < layout.baseline - 14) return null;
-  const index = Math.floor((px - MARGIN) / layout.step);
+  const index = Math.floor((px - layout.margin) / layout.step);
   if (index < 0 || index >= layout.order.length) return null;
   return layout.order[index];
 }

@@ -47,11 +47,13 @@ test("under 56 px a conversation, the card scrolls sideways instead of squeezing
   });
   assert.ok(many.step >= MIN_STEP && many.step < MIN_STEP * 1.1);
   assert.equal(many.scrolls, true);
-  assert.equal(many.contentWidth, MARGIN * 2 + many.step * 200);
-  // Whole columns fill the card exactly, so a scroll stopped on a column shows
-  // every date and title whole.
-  const columns = (900 - MARGIN * 2) / many.step;
+  assert.equal(many.margin, 0, "a scrolling timeline has no margin outside its columns");
+  assert.ok(Math.abs(many.contentWidth - many.step * 200) < 1e-6);
+  // Whole columns fill the card exactly, edge to edge, so a scroll stopped on
+  // a column shows every date and title whole and no sliver of the next.
+  const columns = 900 / many.step;
   assert.ok(Math.abs(columns - Math.round(columns)) < 1e-9, `${columns} columns in view`);
+  assert.ok(roomy.margin === MARGIN, "a timeline that fits keeps its margin");
   const last = many.x.get(200);
   assert.ok(last < many.contentWidth, "the last conversation is inside the scrolled width");
 });

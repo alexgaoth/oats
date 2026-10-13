@@ -2,9 +2,10 @@
 // the few fields the board needs, split into one tab per conversation group.
 //
 // Pure, so the tab rules are tested: "All" holds every conversation, a group's
-// tab holds only that group's, and a group list that is missing or malformed
-// leaves just "All".
+// tab holds only that group's, and the groups keep the order the person gave
+// them (`stores/conversationGroupStore.ts` reads and orders them).
 
+import type { ConversationGroup } from "../../types/electron";
 import { ALL_TAB, groupTab } from "./boardPersistence.ts";
 
 export interface TopicSnapshot {
@@ -24,15 +25,9 @@ export interface BoardConversation {
   openQuestions: number | null;
 }
 
-export interface ConversationGroup {
-  id: number;
-  name: string;
-  seedKey: string | null;
-}
-
 export interface BoardTab {
   id: string;
-  /** Null for "All", which the caller names in the reader's language. */
+  /** Null for "All". The caller names every tab in the reader's language. */
   group: ConversationGroup | null;
 }
 
@@ -50,22 +45,6 @@ export function readSnapshot(raw: unknown): TopicSnapshot | null {
   if (!value || typeof value !== "object") return null;
   const nodes = (value as { nodes?: unknown }).nodes;
   return Array.isArray(nodes) ? (value as TopicSnapshot) : null;
-}
-
-/** The groups the main process reported, in its order, with anything unusable left out. */
-export function sanitizeGroups(raw: unknown): ConversationGroup[] {
-  if (!Array.isArray(raw)) return [];
-  const seen = new Set<number>();
-  const groups: ConversationGroup[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const { id, name, seed_key: seedKey } = item as Record<string, unknown>;
-    if (typeof id !== "number" || !Number.isFinite(id) || seen.has(id)) continue;
-    if (typeof name !== "string" || !name.trim()) continue;
-    seen.add(id);
-    groups.push({ id, name: name.trim(), seedKey: typeof seedKey === "string" ? seedKey : null });
-  }
-  return groups;
 }
 
 /** "All", then one tab per group in the groups' own order. */

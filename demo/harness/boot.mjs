@@ -21,7 +21,7 @@ import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-
 import { installClock } from "./clock.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { installFakeMicrophone } from "./media.mjs";
-import { MANY_GROUPS, manyConversations } from "./many.mjs";
+import { manyConversations } from "./many.mjs";
 import { createReplay } from "./replay.mjs";
 import { applyDemoSettings } from "./settings.mjs";
 
@@ -43,11 +43,15 @@ const main = createFakeMain({
   example: mainFixture,
 });
 if (many) {
-  const { notes, questions } = manyConversations();
+  // Work and Personal are seeded; Research is one the person made, between them.
+  const seeded = Object.fromEntries(main.db.groups.map((group) => [group.seed_key, group]));
+  const research = await main.api.createConversationGroup("Research");
+  await main.api.reorderConversationGroups([seeded.work.id, research.group.id, seeded.personal.id]);
+  const { notes, questions } = manyConversations({
+    groups: { work: seeded.work.id, research: research.group.id, personal: seeded.personal.id },
+  });
   main.db.notes.push(...notes);
   for (const question of questions) main.insertEvent(question);
-  // Conversation groups, as the main process will offer them.
-  main.api.getConversationGroups = async () => MANY_GROUPS.map((group) => ({ ...group }));
 }
 window.electronAPI = main.api;
 

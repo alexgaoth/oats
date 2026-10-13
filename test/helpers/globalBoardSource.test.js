@@ -71,12 +71,16 @@ test("keyboard focus points at a conversation the way the pointer does", () => {
   }
 });
 
-test("conversation groups are used only when the main process offers them", () => {
-  const data = read("src/components/global/useBoardData.ts");
-  assert.match(data, /typeof api\?\.getConversationGroups !== "function"\) return undefined;/);
-  assert.match(data, /conversation-groups-changed/);
+test("the tabs are the conversation groups, read from the one group store", () => {
   const board = read("src/components/global/GlobalConversations.tsx");
+  assert.match(board, /const \{ groups \} = useConversationGroups\(\);/);
+  assert.match(board, /from "\.\.\/\.\.\/stores\/conversationGroupStore"/);
   assert.match(board, /boardTabs\(groups\)/, "the tabs are made from the groups as data");
+  // A seeded group is named in the reader's language, as everywhere else.
+  assert.match(board, /groupDisplayName\(item\.group, t\)/);
+  // An older conversation the note store does not hold follows a deleted group.
+  const data = read("src/components/global/useBoardData.ts");
+  assert.match(data, /onConversationGroupsChanged/);
 });
 
 test("labels sit on plates in the surface colour, never cut at the canvas edge", () => {

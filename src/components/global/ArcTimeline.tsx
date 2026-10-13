@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import {
   DATE_OFFSET,
-  MARGIN,
   TITLE_LINE,
   TITLE_OFFSET,
   arcsBetween,
@@ -226,8 +225,11 @@ export default function ArcTimeline({
 
     const baselineRule = (target: CanvasRenderingContext2D) => {
       target.beginPath();
-      target.moveTo(Math.max(0, MARGIN - left), baseline + 0.5);
-      target.lineTo(Math.min(size.width, layout.contentWidth - MARGIN - left), baseline + 0.5);
+      target.moveTo(Math.max(0, layout.margin - left), baseline + 0.5);
+      target.lineTo(
+        Math.min(size.width, layout.contentWidth - layout.margin - left),
+        baseline + 0.5
+      );
       target.lineWidth = RULE_LINE;
       target.strokeStyle = palette.rule;
       target.stroke();
@@ -449,7 +451,7 @@ export default function ArcTimeline({
                     "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   )}
                   style={{
-                    scrollMarginLeft: MARGIN + 2,
+                    scrollMarginLeft: 2,
                     left: x - layout.step / 2 + 2,
                     width: layout.step - 4,
                     top: buttonTop,

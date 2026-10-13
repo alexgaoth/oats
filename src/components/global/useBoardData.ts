@@ -3,8 +3,8 @@ import { useNotes } from "../../stores/noteStore";
 import { parseDbTimestamp } from "../../helpers/dbTime.mjs";
 import { subjectThreads } from "../../helpers/lifetimeGraph";
 import type { NoteItem } from "../../types/electron";
-import { readSnapshot, sanitizeGroups } from "./boardData";
-import type { BoardConversation, ConversationGroup } from "./boardData";
+import { readSnapshot } from "./boardData";
+import type { BoardConversation } from "./boardData";
 import type { Subject } from "./linkedHighlight";
 
 // The board's data, kept current without rebuilding anything that did not
@@ -16,9 +16,7 @@ const HELD_LIMIT = 100;
 /** How many the board reads when the store does not hold them all. */
 const BOARD_LIMIT = 1000;
 
-type BoardNote = NoteItem & { group_id?: number | null };
-
-function toBoardConversation(note: BoardNote, untitled: string): BoardConversation {
+function toBoardConversation(note: NoteItem, untitled: string): BoardConversation {
   const createdAt = parseDbTimestamp(note.created_at);
   return {
     id: note.id,
@@ -31,7 +29,7 @@ function toBoardConversation(note: BoardNote, untitled: string): BoardConversati
 }
 
 /** What, of a note, the board draws. Equal keys mean an unchanged conversation. */
-function boardKey(note: BoardNote): string {
+function boardKey(note: NoteItem): string {
   return [
     note.title,
     note.created_at,
@@ -49,7 +47,7 @@ function boardKey(note: BoardNote): string {
  * current from the same note events the store listens to.
  */
 export function useBoardConversations(untitled: string): BoardConversation[] {
-  const held = useNotes() as BoardNote[];
+  const held = useNotes();
   const needOlder = held.length >= HELD_LIMIT;
   const [older, setOlder] = useState<BoardConversation[]>([]);
   const cache = useRef(new Map<number, { key: string; conversation: BoardConversation }>());
@@ -60,7 +58,7 @@ export function useBoardConversations(untitled: string): BoardConversation[] {
     void Promise.resolve(window.electronAPI?.getNotes?.("meeting", BOARD_LIMIT))
       .then((notes) => {
         if (cancelled || !Array.isArray(notes)) return;
-        setOlder((notes as BoardNote[]).map((note) => toBoardConversation(note, untitled)));
+        setOlder(notes.map((note) => toBoardConversation(note, untitled)));
       })
       .catch(() => {
         // The held conversations are still drawn; an older one is missing.
@@ -70,7 +68,7 @@ export function useBoardConversations(untitled: string): BoardConversation[] {
       setOlder((previous) =>
         previous.some((item) => item.id === note.id)
           ? previous.map((item) =>
-              item.id === note.id ? toBoardConversation(note as BoardNote, untitled) : item
+              item.id === note.id ? toBoardConversation(note, untitled) : item
             )
           : previous
       );
@@ -78,10 +76,24 @@ export function useBoardConversations(untitled: string): BoardConversation[] {
     const offDeleted = window.electronAPI?.onNoteDeleted?.((payload) => {
       setOlder((previous) => previous.filter((item) => item.id !== payload?.id));
     });
+    // A deleted group leaves its conversations in none: the store patches the
+    // ones it holds, and the board the older ones.
+    const offGroups = window.electronAPI?.onConversationGroupsChanged?.((change) => {
+      const patches = new Map((change?.notes ?? []).map((patch) => [patch.id, patch.group_id]));
+      if (!patches.size) return;
+      setOlder((previous) =>
+        previous.some((item) => patches.has(item.id))
+          ? previous.map((item) =>
+              patches.has(item.id) ? { ...item, groupId: patches.get(item.id) ?? null } : item
+            )
+          : previous
+      );
+    });
     return () => {
       cancelled = true;
       offUpdated?.();
       offDeleted?.();
+      offGroups?.();
     };
   }, [needOlder, untitled]);
 
@@ -110,46 +122,6 @@ export function useBoardConversations(untitled: string): BoardConversation[] {
     previous.current = next;
     return next;
   }, [held, older, untitled]);
-}
-
-interface GroupsApi {
-  getConversationGroups?: () => Promise<unknown> | unknown;
-  onConversationGroupsChanged?: (callback: () => void) => (() => void) | void;
-}
-
-/**
- * The conversation groups, when this build has them. Until the main process
- * offers `getConversationGroups`, there are none and the board shows "All".
- */
-export function useConversationGroups(): ConversationGroup[] {
-  const [groups, setGroups] = useState<ConversationGroup[]>([]);
-  useEffect(() => {
-    const api = window.electronAPI as unknown as GroupsApi | undefined;
-    if (typeof api?.getConversationGroups !== "function") return undefined;
-    let cancelled = false;
-    const load = () => {
-      void Promise.resolve()
-        .then(() => api.getConversationGroups?.())
-        .then((list) => {
-          if (!cancelled) setGroups(sanitizeGroups(list));
-        })
-        .catch(() => {
-          // No groups is a board with one tab, not an error worth showing.
-        });
-    };
-    load();
-    const off =
-      typeof api.onConversationGroupsChanged === "function"
-        ? api.onConversationGroupsChanged(load)
-        : undefined;
-    window.addEventListener("conversation-groups-changed", load);
-    return () => {
-      cancelled = true;
-      if (typeof off === "function") off();
-      window.removeEventListener("conversation-groups-changed", load);
-    };
-  }, []);
-  return groups;
 }
 
 export interface BoardNode {

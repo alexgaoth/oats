@@ -90,13 +90,13 @@ const ONE_OFF = [
   "sailing",
 ];
 
-export const MANY_GROUPS = [
-  { id: 1, name: "Work", seed_key: "work" },
-  { id: 2, name: "Research", seed_key: null },
-  { id: 3, name: "Personal", seed_key: "personal" },
-];
-// Which subjects belong to which group, by index into SUBJECTS.
-const GROUP_SUBJECTS = { 1: [0, 13, 23, 28], 2: [14, 17, 29, 30], 3: [18, 22, 31, 32] };
+// The groups: the two a new database is seeded with, and one the person made.
+// Which subjects belong to which, by index into SUBJECTS.
+const GROUP_SUBJECTS = {
+  work: [0, 13, 23, 28],
+  research: [14, 17, 29, 30],
+  personal: [18, 22, 31, 32],
+};
 
 /** A small seeded generator, so the profile is the same on every load. */
 function random(seed) {
@@ -115,15 +115,16 @@ const sqlTime = (ms) => new Date(ms).toISOString().slice(0, 19).replace("T", " "
 
 /**
  * The profile's notes and the questions they left open, ready for the fake
- * main process's in-memory database.
+ * main process's in-memory database. `groups` maps work, research and personal
+ * to the ids of those groups there.
  */
-export function manyConversations({ now = Date.now(), count = 200, firstId = 1000 } = {}) {
+export function manyConversations({ groups, now = Date.now(), count = 200, firstId = 1000 } = {}) {
   const next = random(2026);
   const pick = (list) => list[Math.floor(next() * list.length)];
   // Earlier subjects of a group come up more often: a few subjects come back
   // a dozen times or more, the tail a few times.
-  const subjectFor = (groupId) => {
-    const [from, to, extraFrom, extraTo] = GROUP_SUBJECTS[groupId];
+  const subjectFor = (group) => {
+    const [from, to, extraFrom, extraTo] = GROUP_SUBJECTS[group];
     const pool = [];
     for (let at = from; at <= to; at += 1) pool.push(at);
     for (let at = extraFrom; at <= extraTo; at += 1) pool.push(at);
@@ -133,10 +134,10 @@ export function manyConversations({ now = Date.now(), count = 200, firstId = 100
   const notes = [];
   const questions = [];
   for (let index = 0; index < count; index += 1) {
-    const groupId = next() < 0.6 ? 1 : next() < 0.5 ? 2 : 3;
+    const group = next() < 0.6 ? "work" : next() < 0.5 ? "research" : "personal";
     const chosen = new Set();
     const recurring = next() < 0.35 ? 2 : 1;
-    while (chosen.size < recurring) chosen.add(subjectFor(groupId));
+    while (chosen.size < recurring) chosen.add(subjectFor(group));
     const subjects = [...chosen].map((at) => SUBJECTS[at]);
     const ownCount = 1 + Math.floor(next() * 3);
     for (let own = 0; own < ownCount; own += 1) {
@@ -196,8 +197,8 @@ export function manyConversations({ now = Date.now(), count = 200, firstId = 100
       conversation_marks: null,
       conversation_loudness: null,
       sample_id: null,
-      group_id: groupId,
-      group_source: "auto",
+      group_id: groups?.[group] ?? null,
+      group_source: groups ? "model" : null,
       cloud_id: null,
       created_at: sqlTime(createdAt),
       updated_at: sqlTime(createdAt + minutes * 60000),
