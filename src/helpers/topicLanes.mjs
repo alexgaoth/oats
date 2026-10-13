@@ -209,8 +209,11 @@ export function topicLanes({
 
 /**
  * The run that holds a moment (epoch ms), so a question can sit on the topic
- * the room was on when it was asked. A moment before the line starts or after
- * it ends belongs to the nearest run. Null when there is no line.
+ * the room was on when it was asked. A run holds its start and not its end,
+ * because the turn that starts a run is that run's first words: a question
+ * that moves the room to a topic sits on the topic it moved to. A moment
+ * before the line starts or after it ends belongs to the nearest run. Null
+ * when there is no line.
  *
  * @param {{ runs?: Array<{ topic: number, from: number, to: number }>, start?: number,
  *   span?: number } | null | undefined} lanes
@@ -222,8 +225,9 @@ export function runAt(lanes, time) {
   const x = (time - lanes.start) / lanes.span;
   let nearest = runs[0];
   let distance = Infinity;
-  for (const run of runs) {
-    if (x >= run.from && x <= run.to) return run;
+  for (const [index, run] of runs.entries()) {
+    const last = index === runs.length - 1;
+    if (x >= run.from && (x < run.to || (last && x === run.to))) return run;
     const gap = x < run.from ? run.from - x : x - run.to;
     if (gap < distance) {
       nearest = run;

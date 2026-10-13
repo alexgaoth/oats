@@ -407,6 +407,23 @@ test("a moment belongs to the run that holds it, or to the nearest one", () => {
   assert.equal(runAt(null, START), null);
 });
 
+// The turn that moves the room to a topic is that topic's first words, so a
+// question asked in it belongs to the topic it moved to, not the one it left.
+test("a moment on a switch belongs to the run it starts", () => {
+  const { snapshot, segments } = conversation(
+    [
+      [1, 0],
+      [1, 50],
+      [2, 100],
+      [2, 150],
+    ],
+    [node(1, "pricing"), node(2, "hiring")]
+  );
+  const lanes = topicLanes({ snapshot, segments });
+  assert.equal(runAt(lanes, START + 100 * S).topic, 2);
+  assert.equal(runAt(lanes, START + lanes.span).topic, 2, "the end of the last run is its own");
+});
+
 // ------------------------------------------------------------ lanePath
 
 const numbers = (d) => d.match(/-?\d+(\.\d+)?/g).map(Number);
