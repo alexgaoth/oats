@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { ledgerDate } from "../../helpers/ledgerDate.mjs";
 import { cn } from "../lib/utils";
 import { shortTitle } from "./boardData";
 import type { BoardConversation } from "./boardData";
 import { useGlobalHighlight } from "./highlightStore";
+import type { HighlightSource } from "./highlightStore";
+import { markTone } from "./linkedHighlight";
 import { openQuestionRows } from "./openQuestions";
 import { WidgetEmpty } from "./widgets";
 
@@ -64,9 +66,11 @@ function useOpenQuestionEvents(conversations: BoardConversation[]): Map<number, 
 
 export default function OpenQuestionsWidget({
   conversations,
+  highlight,
   onOpenAt,
 }: {
   conversations: BoardConversation[];
+  highlight: HighlightSource;
   onOpenAt: (noteId: number, segmentId: string | null) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -76,8 +80,12 @@ export default function OpenQuestionsWidget({
     () => new Map(conversations.map((conversation) => [conversation.id, conversation])),
     [conversations]
   );
-  const lit = useGlobalHighlight((state) => state.hoveredConversationId);
-  const selected = useGlobalHighlight((state) => state.selectedConversationId);
+  // What every widget lights, so a day or a subject pointed at elsewhere
+  // lights its questions here too.
+  const lit = useSyncExternalStore(highlight.subscribe, highlight.get);
+  // A conversation with questions but no topics is on no chart, so the board's
+  // highlight does not hold it; the row still lights while it is pointed at.
+  const pointed = useGlobalHighlight((state) => state.hoveredConversationId);
 
   if (!rows.length) {
     return <WidgetEmpty>{t("oats.global.widgets.questions.empty")}</WidgetEmpty>;
@@ -93,7 +101,7 @@ export default function OpenQuestionsWidget({
     >
       {rows.map((row) => {
         const conversation = byId.get(row.noteId);
-        const honey = row.noteId === lit || row.noteId === selected;
+        const honey = markTone(lit, row.noteId) === "focus" || row.noteId === pointed;
         return (
           <li key={row.key}>
             <button

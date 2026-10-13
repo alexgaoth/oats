@@ -136,7 +136,7 @@ export default function GlobalConversations({
       case "subjects":
         return <SubjectsWidget subjects={graph.subjects} />;
       case "questions":
-        return <OpenQuestionsWidget conversations={inTab} onOpenAt={open} />;
+        return <OpenQuestionsWidget conversations={inTab} highlight={highlight} onOpenAt={open} />;
       case "activity":
         return <ActivityWidget conversations={inTab} highlight={highlight} />;
     }

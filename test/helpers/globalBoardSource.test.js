@@ -125,3 +125,15 @@ test("an open question opens its conversation at the turn it was asked in", () =
   assert.match(opened, /setTab\(segmentId \? "transcript" : "summary"\)/);
   assert.match(opened, /setLandedOnSegment\(segmentId \?\? null\)/);
 });
+
+test("the subjects and the open questions light with the rest of the board", () => {
+  const widgets = read("src/components/global/widgets.tsx");
+  // A chip lights for its own subject and for a conversation that carries it.
+  assert.match(widgets, /state\.hoveredSubject === subject\.label \|\|/);
+  assert.match(widgets, /subject\.conversationIds\.includes\(state\.hoveredConversationId\)/);
+  // A question's ring takes honey from the board's one highlight, so a day or
+  // a subject pointed at elsewhere lights it too.
+  const questions = read("src/components/global/OpenQuestionsWidget.tsx");
+  assert.match(questions, /useSyncExternalStore\(highlight\.subscribe, highlight\.get\)/);
+  assert.match(questions, /markTone\(lit, row\.noteId\) === "focus"/);
+});

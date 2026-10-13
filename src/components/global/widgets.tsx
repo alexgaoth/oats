@@ -94,10 +94,18 @@ export function ForceGraphWidget({
   );
 }
 
-/** One subject that comes back, and how many conversations carry it. */
+/**
+ * One subject that comes back, and how many conversations carry it. Lit when
+ * it is pointed at, and when a conversation that carries it is.
+ */
 export function SubjectChip({ subject }: { subject: TabGraph["subjects"][number] }) {
   const { t } = useTranslation();
-  const lit = useGlobalHighlight((state) => state.hoveredSubject === subject.label);
+  const lit = useGlobalHighlight(
+    (state) =>
+      state.hoveredSubject === subject.label ||
+      (state.hoveredConversationId !== null &&
+        subject.conversationIds.includes(state.hoveredConversationId))
+  );
   const point = () => useGlobalHighlight.getState().pointAtSubject(subject.label);
   const leave = () => useGlobalHighlight.getState().leaveSubject(subject.label);
   return (

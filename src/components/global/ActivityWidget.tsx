@@ -3,14 +3,8 @@ import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { WEEKS, activityCalendar, densityFor, firstDayOfWeek } from "./activityCalendar";
 import type { CalendarDay } from "./activityCalendar";
-import {
-  DATA_LINE,
-  RULE_LINE,
-  chartRatio,
-  ditherFill,
-  labelFont,
-  useChartPalette,
-} from "./chartPaint";
+import { CHART, MAX_CHART_RATIO, ditherFill } from "../charts/chartStyle";
+import { useChartPalette } from "./useChartPalette";
 import { markTone } from "./linkedHighlight";
 import { useGlobalHighlight } from "./highlightStore";
 import type { HighlightSource } from "./highlightStore";
@@ -107,7 +101,7 @@ export default function ActivityWidget({
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !palette || !size.width || !size.height) return;
-    const ratio = chartRatio();
+    const ratio = Math.min(window.devicePixelRatio || 1, MAX_CHART_RATIO);
     const pixelWidth = Math.round(size.width * ratio);
     const pixelHeight = Math.round(size.height * ratio);
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
@@ -132,27 +126,26 @@ export default function ActivityWidget({
       if (day.future) continue;
       const { x, y, side } = cellAt(day);
       const count = day.ids.length;
-      ctx.beginPath();
       if (!count) {
         // An empty day is its outline: the grid stays legible with nothing in it.
+        ctx.beginPath();
         ctx.roundRect(x + 0.5, y + 0.5, side - 1, side - 1, 2);
-        ctx.lineWidth = RULE_LINE;
+        ctx.lineWidth = CHART.rule;
         ctx.strokeStyle = palette.rule;
         ctx.stroke();
         continue;
       }
-      ctx.roundRect(x, y, side, side, 2);
+      const cell = (target: CanvasRenderingContext2D) => target.roundRect(x, y, side, side, 2);
       const kind = tone(day);
-      ctx.fillStyle =
-        kind === "focus"
-          ? palette.honey
-          : ditherFill(
-              ctx,
-              kind === "recede" ? palette.rule : palette.quiet,
-              densityFor(count),
-              ratio
-            );
-      ctx.fill();
+      if (kind === "focus") {
+        ctx.beginPath();
+        cell(ctx);
+        ctx.fillStyle = palette.honey;
+        ctx.fill();
+      } else {
+        // A mass (rule 7): the shared dither, as dense as the day was busy.
+        ditherFill(ctx, cell, kind === "recede" ? palette.rule : palette.quiet, densityFor(count));
+      }
     }
 
     // Today, in honey: a ring around its cell.
@@ -161,7 +154,7 @@ export default function ActivityWidget({
       const { x, y, side } = cellAt(today);
       ctx.beginPath();
       ctx.roundRect(x - 2, y - 2, side + 4, side + 4, 3);
-      ctx.lineWidth = DATA_LINE;
+      ctx.lineWidth = CHART.line;
       ctx.strokeStyle = palette.honey;
       ctx.stroke();
     }
@@ -169,7 +162,7 @@ export default function ActivityWidget({
     // Months along the top, weekdays down the side, in the quiet grey. Nothing
     // is drawn across them.
     ctx.fillStyle = palette.quiet;
-    ctx.font = labelFont(palette);
+    ctx.font = `400 12px ${palette.sans}`;
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
     for (const month of calendar.months) {
