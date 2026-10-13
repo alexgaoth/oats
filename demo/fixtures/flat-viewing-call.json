@@ -1,0 +1,539 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "flat-viewing-call",
+    "sample": true,
+    "description": "Sample conversation: a call with a letting agent about a flat viewing. Invented people.",
+    "company": "A letting agency (fictional)",
+    "participants": [
+      { "name": "Leo", "role": "Looking for a flat" },
+      { "name": "Hana", "role": "Letting agent" }
+    ],
+    "startedAt": 1791488400000,
+    "endedAt": 1791488524394,
+    "summarizedAt": 1791488565394,
+    "placement": { "daysAgo": 4, "at": "12:40", "weekdays": true },
+    "group": "personal",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Flat viewing: Saturday at eleven, the rent and the bike room",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-muzxvpg8-1",
+        "text": "Hi Hana, it's Leo, about the flat on Alder Street.",
+        "source": "mic",
+        "timestamp": 1791488402972,
+        "startMs": 2972,
+        "endMs": 8278,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-2",
+        "text": "Hi Leo. The Alder Street flat is still available, and the viewing slots are open.",
+        "source": "mic",
+        "timestamp": 1791488409264,
+        "startMs": 9264,
+        "endMs": 15973,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-3",
+        "text": "Is a viewing on Saturday morning possible?",
+        "source": "mic",
+        "timestamp": 1791488417100,
+        "startMs": 17100,
+        "endMs": 20694,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-4",
+        "text": "Yes, Saturday at eleven works.",
+        "source": "mic",
+        "timestamp": 1791488421791,
+        "startMs": 21791,
+        "endMs": 24164,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-5",
+        "text": "The tenant will be out on Saturday, so the viewing takes about twenty minutes.",
+        "source": "mic",
+        "timestamp": 1791488424753,
+        "startMs": 24753,
+        "endMs": 31153,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-6",
+        "text": "Good. Saturday at eleven for the viewing, then.",
+        "source": "mic",
+        "timestamp": 1791488432384,
+        "startMs": 32384,
+        "endMs": 36406,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-7",
+        "text": "On the rent, the listing says twelve hundred a month.",
+        "source": "mic",
+        "timestamp": 1791488437327,
+        "startMs": 37327,
+        "endMs": 42307,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-8",
+        "text": "The rent is twelve hundred, with heating included in the rent.",
+        "source": "mic",
+        "timestamp": 1791488443340,
+        "startMs": 43340,
+        "endMs": 48654,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-9",
+        "text": "Does the rent include electricity?",
+        "source": "mic",
+        "timestamp": 1791488449389,
+        "startMs": 49389,
+        "endMs": 52049,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-10",
+        "text": "Electricity is separate, around sixty a month.",
+        "source": "mic",
+        "timestamp": 1791488453056,
+        "startMs": 53056,
+        "endMs": 56470,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-11",
+        "text": "The deposit is six weeks of rent, held in the deposit scheme.",
+        "source": "mic",
+        "timestamp": 1791488457330,
+        "startMs": 57330,
+        "endMs": 62778,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-12",
+        "text": "Six weeks of rent for the deposit is fine.",
+        "source": "mic",
+        "timestamp": 1791488463292,
+        "startMs": 63292,
+        "endMs": 68230,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-13",
+        "text": "One more thing. I cycle to work, so bike storage matters.",
+        "source": "mic",
+        "timestamp": 1791488469012,
+        "startMs": 69012,
+        "endMs": 74747,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-14",
+        "text": "The building has a bike room in the basement, shared by the four flats.",
+        "source": "mic",
+        "timestamp": 1791488475740,
+        "startMs": 75740,
+        "endMs": 82611,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-15",
+        "text": "Is there space for one more bike in the bike room?",
+        "source": "mic",
+        "timestamp": 1791488483155,
+        "startMs": 83155,
+        "endMs": 88609,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-16",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791488489459,
+        "startMs": 89459,
+        "endMs": 90170,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-17",
+        "text": "I'll check the bike room before Saturday.",
+        "source": "mic",
+        "timestamp": 1791488490959,
+        "startMs": 90959,
+        "endMs": 94462,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-18",
+        "text": "And the move-in date. My notice runs to the end of next month.",
+        "source": "mic",
+        "timestamp": 1791488495528,
+        "startMs": 95528,
+        "endMs": 102473,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-19",
+        "text": "The landlord wants a tenant from the first, so the move-in date is two weeks early for you.",
+        "source": "mic",
+        "timestamp": 1791488502994,
+        "startMs": 102994,
+        "endMs": 111915,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-20",
+        "text": "Could the landlord accept a later move-in date?",
+        "source": "mic",
+        "timestamp": 1791488512887,
+        "startMs": 112887,
+        "endMs": 116939,
+        "speaker": "speaker_1",
+        "speakerName": "Leo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muzxvpg8-21",
+        "text": "The landlord might, for a short let.",
+        "source": "mic",
+        "timestamp": 1791488518233,
+        "startMs": 118233,
+        "endMs": 121794,
+        "speaker": "speaker_2",
+        "speakerName": "Hana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Leo called Hana, the letting agent, about the flat on Alder Street. A viewing is set for Saturday at eleven, and the rent and the deposit work for him; the bike room and the move-in date are not settled.\n\n## Threads\n- **Viewing.** Saturday at eleven, about twenty minutes, while the tenant is out.\n- **Rent and deposit.** 1,200 a month with heating included; electricity is separate, around 60 a month. The deposit is six weeks of rent, held in a deposit scheme.\n- **Bike room.** A shared bike room in the basement for the four flats. Whether there is space for one more bike is not known yet.\n- **Move-in date.** Leo's notice runs to the end of next month, and the landlord wants a tenant from the first. A later start might work as a short let.\n\n## Action Items\n- [ ] Hana: check the bike room before Saturday.\n- [ ] Leo: view the flat on Saturday at eleven.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "5911-[{\"id\":\"seg-muzxvpg8-1\",\"text\":\"Hi Hana, it's Leo,",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "viewing saturday",
+          "words": ["saturday", "viewing", "alder", "eleven", "flat", "leo", "street", "available"],
+          "durationMs": 29412,
+          "utteranceIds": [
+            "seg-muzxvpg8-1",
+            "seg-muzxvpg8-2",
+            "seg-muzxvpg8-3",
+            "seg-muzxvpg8-4",
+            "seg-muzxvpg8-5",
+            "seg-muzxvpg8-6"
+          ],
+          "firstAt": 1791488402972,
+          "lastAt": 1791488432384,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "rent electricity",
+          "words": [
+            "rent",
+            "electricity",
+            "hundred",
+            "month",
+            "twelve",
+            "around",
+            "heating",
+            "include"
+          ],
+          "durationMs": 15729,
+          "utteranceIds": ["seg-muzxvpg8-7", "seg-muzxvpg8-8", "seg-muzxvpg8-9", "seg-muzxvpg8-10"],
+          "firstAt": 1791488437327,
+          "lastAt": 1791488453056,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 3,
+          "label": "deposit rent",
+          "words": ["deposit", "rent", "six", "week", "bike", "cycle", "fine", "held"],
+          "durationMs": 11682,
+          "utteranceIds": ["seg-muzxvpg8-11", "seg-muzxvpg8-12", "seg-muzxvpg8-13"],
+          "firstAt": 1791488457330,
+          "lastAt": 1791488469012,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 4,
+          "label": "bike room",
+          "words": ["bike", "room", "basement", "building", "check", "flat", "four", "i'll"],
+          "durationMs": 15219,
+          "utteranceIds": ["seg-muzxvpg8-14", "seg-muzxvpg8-15", "seg-muzxvpg8-17"],
+          "firstAt": 1791488475740,
+          "lastAt": 1791488490959,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 5,
+          "label": "date landlord",
+          "words": ["date", "landlord", "move-in", "accept", "early", "end", "first", "later"],
+          "durationMs": 22705,
+          "utteranceIds": [
+            "seg-muzxvpg8-18",
+            "seg-muzxvpg8-19",
+            "seg-muzxvpg8-20",
+            "seg-muzxvpg8-21"
+          ],
+          "firstAt": 1791488495528,
+          "lastAt": 1791488518233,
+          "returns": 0,
+          "state": "resolved"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 3, "weight": 1, "kind": "new" },
+        { "from": 3, "to": 4, "weight": 1, "kind": "new" },
+        { "from": 4, "to": 5, "weight": 1, "kind": "new" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791488400000,
+          "b": "gYWEq62wsLCeoKirrq+trI+qr6yoiqipm6msoaqrrZqkq6+spKSwrK6xpZSYl6eppp6nrY+pqqijnq2sqqukpK6uq6+eqKusrK2oj6itrKuuraamr62uqqOgmaerqZ+fsa+loqyvp6Sqqaesra+sq42pq6uriaeqqamGgoQ="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muzxvpg8-3"],
+      "text": "Is a viewing on Saturday morning possible?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "morning possible saturday viewing",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791488421566
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-muzxvpg8-4"],
+      "text": "Yes, Saturday at eleven works.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791488424981
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muzxvpg8-9"],
+      "text": "Does the rent include electricity?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "electricity include rent",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791488452879
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muzxvpg8-10"],
+      "text": "Electricity is separate, around sixty a month.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791488457334
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muzxvpg8-15"],
+      "text": "Is there space for one more bike in the bike room?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "bike more one room space",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791488489564
+    },
+    {
+      "id": 6,
+      "kind": "response",
+      "parentEventId": 5,
+      "segmentIds": ["seg-muzxvpg8-16"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791488490912
+    },
+    {
+      "id": 7,
+      "kind": "search_suggestion",
+      "parentEventId": 5,
+      "segmentIds": ["seg-muzxvpg8-15"],
+      "text": "Is there space for one more bike in the bike room?",
+      "metadata": {
+        "query": "Is there space for one more bike in the bike room?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791488490912
+    },
+    {
+      "id": 8,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muzxvpg8-20"],
+      "text": "Could the landlord accept a later move-in date?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "accept date landlord later move-in",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791488517831
+    },
+    {
+      "id": 9,
+      "kind": "response",
+      "parentEventId": 8,
+      "segmentIds": ["seg-muzxvpg8-21"],
+      "text": "The landlord might, for a short let.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791488522664
+    }
+  ],
+  "replay": {
+    "voices": { "Leo": { "gain": 1.02 }, "Hana": { "gain": 0.94 } },
+    "loud": {},
+    "stopAtMs": 124394
+  }
+}

@@ -164,11 +164,17 @@ export function createFakeMain({ fixtures, example = null, now = Date.now() }) {
     return { ...event, metadata: { ...event.metadata } };
   };
 
-  // A fixture, placed and stored the way `insertSampleConversations` does.
+  // A fixture, placed and stored the way `insertSampleConversations` does,
+  // filed in its seeded group as `markSampleNote` files it.
   const storeFixture = (fixture, at) => {
     const placed = placeSampleConversation(fixture, { now: at });
     const id = nextNoteId++;
-    const note = noteRow(id, { ...placed.note, sample_id: placed.sampleId });
+    const filed = placed.group ? groups.find((group) => group.seed_key === placed.group) : null;
+    const note = noteRow(id, {
+      ...placed.note,
+      sample_id: placed.sampleId,
+      ...(filed ? { group_id: filed.id, group_source: "model" } : {}),
+    });
     notes.push(note);
     const ids = new Map();
     for (const event of placed.events) {

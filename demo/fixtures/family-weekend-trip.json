@@ -1,0 +1,497 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "family-weekend-trip",
+    "sample": true,
+    "description": "Sample conversation: a family planning a weekend at a lake. Invented people.",
+    "company": "A family (fictional)",
+    "participants": [
+      { "name": "Nora", "role": "Parent" },
+      { "name": "Sam", "role": "Parent" },
+      { "name": "Ada", "role": "Their daughter" }
+    ],
+    "startedAt": 1791685800000,
+    "endedAt": 1791685926162,
+    "summarizedAt": 1791685967162,
+    "placement": { "daysAgo": 2, "at": "19:30" },
+    "group": "personal",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Weekend at the lake: the cabin, the late ferry and the dog",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv37eo9k-1",
+        "text": "Okay, the lake weekend. The cabin booking came through this morning.",
+        "source": "mic",
+        "timestamp": 1791685803064,
+        "startMs": 3064,
+        "endMs": 8558,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-2",
+        "text": "Great. The lake cabin is ours from Friday evening to Sunday.",
+        "source": "mic",
+        "timestamp": 1791685809056,
+        "startMs": 9056,
+        "endMs": 14980,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-3",
+        "text": "The cabin has two bedrooms and a wood stove, and the lake is a short walk from the porch.",
+        "source": "mic",
+        "timestamp": 1791685816056,
+        "startMs": 16056,
+        "endMs": 25802,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-4",
+        "text": "Does the cabin have wifi?",
+        "source": "mic",
+        "timestamp": 1791685827215,
+        "startMs": 27215,
+        "endMs": 29640,
+        "speaker": "speaker_3",
+        "speakerName": "Ada",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-5",
+        "text": "A little, near the porch only.",
+        "source": "mic",
+        "timestamp": 1791685830551,
+        "startMs": 30551,
+        "endMs": 33779,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-6",
+        "text": "Then the cabin weekend is mostly offline. Good for everyone.",
+        "source": "mic",
+        "timestamp": 1791685834581,
+        "startMs": 34581,
+        "endMs": 39803,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-7",
+        "text": "Next, the ferry. The ferry crossing books out on Fridays.",
+        "source": "mic",
+        "timestamp": 1791685840828,
+        "startMs": 40828,
+        "endMs": 46009,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-8",
+        "text": "The early ferry leaves at four, and the late ferry at seven.",
+        "source": "mic",
+        "timestamp": 1791685847522,
+        "startMs": 47522,
+        "endMs": 54068,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-9",
+        "text": "Can we take the late ferry? I have practice until five.",
+        "source": "mic",
+        "timestamp": 1791685855014,
+        "startMs": 55014,
+        "endMs": 59807,
+        "speaker": "speaker_3",
+        "speakerName": "Ada",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-10",
+        "text": "Yes, the late ferry works for me.",
+        "source": "mic",
+        "timestamp": 1791685860506,
+        "startMs": 60506,
+        "endMs": 64475,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-11",
+        "text": "Then I'll book the late ferry tonight, with the car and three bikes.",
+        "source": "mic",
+        "timestamp": 1791685865010,
+        "startMs": 65010,
+        "endMs": 71410,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-12",
+        "text": "The dog is the hard part. The cabin rules say no dogs.",
+        "source": "mic",
+        "timestamp": 1791685871955,
+        "startMs": 71955,
+        "endMs": 78239,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-13",
+        "text": "My mother usually keeps the dog, but her knee is bad this month.",
+        "source": "mic",
+        "timestamp": 1791685879586,
+        "startMs": 79586,
+        "endMs": 85889,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-14",
+        "text": "Could Grandma still keep the dog for two nights?",
+        "source": "mic",
+        "timestamp": 1791685887328,
+        "startMs": 87328,
+        "endMs": 91753,
+        "speaker": "speaker_3",
+        "speakerName": "Ada",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-15",
+        "text": "No idea, honestly.",
+        "source": "mic",
+        "timestamp": 1791685892661,
+        "startMs": 92661,
+        "endMs": 94321,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-16",
+        "text": "My mother gets a call from me tomorrow about the dog.",
+        "source": "mic",
+        "timestamp": 1791685895049,
+        "startMs": 95049,
+        "endMs": 100482,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-17",
+        "text": "Then the food. The food shopping is mine, on Thursday.",
+        "source": "mic",
+        "timestamp": 1791685901624,
+        "startMs": 101624,
+        "endMs": 106878,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-18",
+        "text": "Simple food, then. Pasta one night, and fish the other.",
+        "source": "mic",
+        "timestamp": 1791685908233,
+        "startMs": 108233,
+        "endMs": 113260,
+        "speaker": "speaker_1",
+        "speakerName": "Nora",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-19",
+        "text": "Pasta, fish, and pancakes for breakfast. Food for two dinners.",
+        "source": "mic",
+        "timestamp": 1791685913903,
+        "startMs": 113903,
+        "endMs": 119468,
+        "speaker": "speaker_2",
+        "speakerName": "Sam",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv37eo9k-20",
+        "text": "Can my friend Lily come too?",
+        "source": "mic",
+        "timestamp": 1791685920649,
+        "startMs": 120649,
+        "endMs": 123562,
+        "speaker": "speaker_3",
+        "speakerName": "Ada",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Nora, Sam and Ada planned the weekend at the lake: the cabin is booked, they take the late ferry, and the dog still needs somewhere to stay.\n\n## Threads\n- **Cabin.** Booked from Friday evening to Sunday: two bedrooms, a wood stove, and the lake a short walk from the porch. Wifi only near the porch.\n- **Ferry.** The early crossing leaves at four and the late one at seven. Ada has practice until five, so the late ferry, with the car and three bikes.\n- **Dog.** The cabin takes no dogs, and Nora's mother, who usually keeps him, has a bad knee this month. Whether she can is unknown.\n- **Food.** Sam shops on Thursday: pasta one night, fish the other, pancakes for breakfast.\n\n## Action Items\n- [ ] Nora: book the late ferry tonight.\n- [ ] Nora: call her mother tomorrow about the dog.\n- [ ] Sam: do the food shopping on Thursday.\n\n## Follow-ups\n- Whether Ada's friend Lily can come.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "5639-[{\"id\":\"seg-mv37eo9k-1\",\"text\":\"Okay, the lake wee",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "lake cabin",
+          "words": ["cabin", "lake", "friday", "weekend", "bedroom", "book", "booking", "came"],
+          "durationMs": 37764,
+          "utteranceIds": [
+            "seg-mv37eo9k-1",
+            "seg-mv37eo9k-2",
+            "seg-mv37eo9k-3",
+            "seg-mv37eo9k-6",
+            "seg-mv37eo9k-7"
+          ],
+          "firstAt": 1791685803064,
+          "lastAt": 1791685840828,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "ferry late",
+          "words": ["ferry", "late", "bike", "book", "cabin", "car", "dog", "dogs"],
+          "durationMs": 24433,
+          "utteranceIds": [
+            "seg-mv37eo9k-8",
+            "seg-mv37eo9k-9",
+            "seg-mv37eo9k-10",
+            "seg-mv37eo9k-11",
+            "seg-mv37eo9k-12"
+          ],
+          "firstAt": 1791685847522,
+          "lastAt": 1791685871955,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 3,
+          "label": "keep dog",
+          "words": ["dog", "keep", "mother", "bad", "call", "gets", "grandma", "knee"],
+          "durationMs": 15463,
+          "utteranceIds": ["seg-mv37eo9k-13", "seg-mv37eo9k-14", "seg-mv37eo9k-16"],
+          "firstAt": 1791685879586,
+          "lastAt": 1791685895049,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 4,
+          "label": "food fish",
+          "words": ["food", "fish", "pasta", "breakfast", "come", "dinner", "friend", "lily"],
+          "durationMs": 19025,
+          "utteranceIds": [
+            "seg-mv37eo9k-17",
+            "seg-mv37eo9k-18",
+            "seg-mv37eo9k-19",
+            "seg-mv37eo9k-20"
+          ],
+          "firstAt": 1791685901624,
+          "lastAt": 1791685920649,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 3, "weight": 1, "kind": "new" },
+        { "from": 3, "to": 4, "weight": 1, "kind": "new" }
+      ]
+    },
+    "conversation_marks": [
+      {
+        "id": "m-1791685866410",
+        "at": 1791685866410,
+        "note": "Book the late ferry: car and three bikes"
+      }
+    ],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791685800000,
+          "b": "f4WGpamtq6qnqq2ur6yrja2vr62rqaitsa2Ho6mkmrCsqZ2wra2nl4mnq7GtrI+esLGyraqwl6WqrqyrnaKgsaisrKmvraqcqrCxs62sn5qamrCtrKuKoqenqaiWrJ+qrK+tq6OYrbGvrq6HoqeprLCgsLGwsLCkmK6qoYaIiQ=="
+        }
+      ]
+    },
+    "open_questions": 2
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv37eo9k-4"],
+      "text": "Does the cabin have wifi?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "cabin wifi",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791685830459
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv37eo9k-5"],
+      "text": "A little, near the porch only.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791685834634
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv37eo9k-9"],
+      "text": "Can we take the late ferry?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "ferry late take",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791685860733
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv37eo9k-10"],
+      "text": "Yes, the late ferry works for me.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791685865364
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv37eo9k-14"],
+      "text": "Could Grandma still keep the dog for two nights?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "dog grandma keep night still two",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1791685892662
+    },
+    {
+      "id": 6,
+      "kind": "response",
+      "parentEventId": 5,
+      "segmentIds": ["seg-mv37eo9k-15"],
+      "text": "No idea, honestly.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1791685895106
+    },
+    {
+      "id": 7,
+      "kind": "search_suggestion",
+      "parentEventId": 5,
+      "segmentIds": ["seg-mv37eo9k-14"],
+      "text": "Could Grandma still keep the dog for two nights?",
+      "metadata": {
+        "query": "Could Grandma still keep the dog for two nights?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791685895106
+    },
+    {
+      "id": 8,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv37eo9k-20"],
+      "text": "Can my friend Lily come too?",
+      "metadata": { "state": "asked", "groupKey": "come friend lily too", "occurrence": 1 },
+      "createdAt": 1791685924403
+    }
+  ],
+  "replay": {
+    "voices": { "Nora": { "gain": 1 }, "Sam": { "gain": 1.08 }, "Ada": { "gain": 0.86 } },
+    "loud": {},
+    "stopAtMs": 126162
+  }
+}
