@@ -256,13 +256,31 @@ test("the harness files each demo conversation in its group", async () => {
   const name = (id) => groups.find((group) => group.id === id)?.name ?? null;
   const filed = { Work: 0, Personal: 0, none: 0 };
   for (const note of main.db.notes) {
-    const fixture = [example, ...demoFixtures].find((item) => item.meta.id === note.sample_id);
+    const fixture = [example, ...demoFixtures].find((item) => item.meta.id === note.demo_sample);
     const expected = { work: "Work", personal: "Personal" }[fixture.meta.group] ?? null;
-    assert.equal(name(note.group_id), expected, note.sample_id);
-    assert.equal(note.group_source, expected ? "model" : null, note.sample_id);
+    assert.equal(name(note.group_id), expected, note.demo_sample);
+    assert.equal(note.group_source, expected ? "model" : null, note.demo_sample);
     filed[expected ?? "none"] += 1;
   }
   assert.deepEqual(filed, { Work: 6, Personal: 2, none: 1 });
+});
+
+test("the harness's conversations carry no Example badge unless asked, and the in-app example does", async () => {
+  const { createFakeMain } = await import("../../demo/harness/fake-main.mjs");
+  const plain = createFakeMain({ fixtures: [example, ...demoFixtures], example, now: NOW });
+  assert.equal(plain.db.notes.length, 9);
+  for (const note of plain.db.notes) {
+    assert.equal(note.sample_id, null, note.demo_sample);
+    assert.ok(note.demo_sample, "the harness still knows which sample it is");
+  }
+  assert.equal(plain.db.noteBySample(example.meta.id)?.demo_sample, example.meta.id);
+
+  const badged = createFakeMain({ fixtures: [example], example, now: NOW, badges: true });
+  assert.equal(badged.db.notes[0].sample_id, example.meta.id);
+
+  const fresh = createFakeMain({ fixtures: [], example, now: NOW });
+  const opened = await fresh.api.insertExampleConversation();
+  assert.equal(opened.note.sample_id, example.meta.id);
 });
 
 test("anything that is not a sample fixture is refused", () => {
