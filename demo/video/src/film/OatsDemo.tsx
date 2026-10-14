@@ -70,7 +70,7 @@ const RETURN_FROM = 16;
 const RETURN_RATE = 3;
 const WORDS_FROM = (c: Capture) => cueAt(c, "words") - 1.4;
 const SETTLE_FROM = (c: Capture) => cueAt(c, "words") + 12.5;
-const STOP_FROM = (c: Capture) => cueAt(c, "stopped") - 1.8;
+const STOP_FROM = (c: Capture) => cueAt(c, "stopped") - 1.4;
 const READ_FROM = (c: Capture) => cueAt(c, "opened") - 0.6;
 const READ_RATE = 1.6;
 const LINK_FROM = (c: Capture) => cueAt(c, "connections") - 0.8;
@@ -168,8 +168,9 @@ const SCENES = (
       />
     </Scene>
 
-    {/* Stop, with its key; the sidebar comes back; the conversation is written up. */}
-    <Scene seconds={8}>
+    {/* Stop, with its key; the sidebar comes back; the conversation is written up:
+        its title and summary land in Recent 5.4 s after Stop, and stay in shot. */}
+    <Scene seconds={9.5}>
       <AppShot
         clip="e-stop"
         from={STOP_FROM}
