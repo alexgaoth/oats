@@ -16,6 +16,8 @@ export default {
       await d.click();
       d.cue("words");
       await d.wait(700);
+      await d.rect("status", "text=Recording", { closest: "[data-slot=card]" });
+      await d.rect("flow", "text=Conversation flow", { closest: "[data-slot=card]" });
       await d.moveTo({ x: 1380, y: 840 }, { duration: 900 });
       // Past the "I don't know" (18:17), so the card is seen settling on Unknown.
       await d.waitFor("window.oatsDemo.status().seconds >= 1112", 90000);

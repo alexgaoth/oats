@@ -10,6 +10,10 @@ export default {
     await d.waitFor(READY);
     await d.waitFor("window.oatsDemo.status().phase === 'recording'");
     await d.record(async () => {
+      // After the sidebar has stepped aside, so the cards are where they stay.
+      await d.wait(2500);
+      await d.rect("status", "text=Recording", { closest: "[data-slot=card]" });
+      await d.rect("flow", "text=Conversation flow", { closest: "[data-slot=card]" });
       await d.waitFor("window.oatsDemo.status().seconds >= 700", 240000);
     });
   },

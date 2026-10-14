@@ -15,7 +15,9 @@ export default {
       await d.wait(700);
       await d.type("import bug", { perChar: 85 });
       d.cue("typed");
-      await d.wait(6500);
+      await d.wait(900);
+      await d.rect("field", "input", { pad: 16 });
+      await d.wait(5600);
     });
   },
 };

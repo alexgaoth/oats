@@ -64,7 +64,6 @@ export const RemotionRoot: React.FC = () => (
           { at: 1.4, rect: { x: 440, y: 260, w: 420, h: 236 } },
           { at: 3.2, rect: "full" as const },
         ],
-        caption: { text: "When the room circles back, Oats draws the loop.", from: 0.4, to: 3.8 },
       }}
     />
   </>

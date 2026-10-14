@@ -10,13 +10,16 @@ export default {
     await d.waitFor("window.oatsDemo.status().phase === 'recording' && window.oatsDemo.status().seconds >= 1738", 60000);
     await d.record(async () => {
       await d.waitFor("window.oatsDemo.status().seconds >= 1750", 60000);
+      await d.rect("stop", 'button[aria-label="Finish conversation"]', { pad: 0 });
       await d.moveTo('button[aria-label="Finish conversation"]', { duration: 1000 });
       await d.wait(400);
       await d.click();
       d.cue("stopped");
       await d.wait(900);
       await d.moveTo({ x: 1200, y: 760 }, { duration: 900 });
-      await d.wait(6500);
+      await d.wait(1800);
+      await d.rect("recent", "text=Recent conversations", { closest: "section, [data-slot=card], div" });
+      await d.wait(4700);
     });
   },
 };

@@ -59,6 +59,10 @@ const director = {
         const want = spec.slice(5).trim();
         el = [...document.querySelectorAll("button, a, [role=radio], [role=menuitem], [role=tab], li, h1, h2, h3, span, p, input")]
           .find((node) => node.offsetParent !== null && node.textContent.trim() === want);
+      } else if (spec.startsWith("js=")) {
+        // An expression that finds the element, for targets no selector names
+        // (a canvas node's hidden button, found by its label).
+        el = (0, eval)(spec.slice(3));
       } else {
         el = document.querySelector(spec);
       }
@@ -69,6 +73,36 @@ const director = {
     })()`);
     if (!box) throw new Error(`No element for ${target}`);
     return box;
+  },
+  /**
+   * Where an element is, in the app's CSS pixels: `{ x, y, w, h }` of the first
+   * match (a selector or `text=`), or of its nearest ancestor matching
+   * `closest`, grown by `pad`. Logged as the cue `rect:<name>`, so the edit's
+   * camera frames what was on screen in this capture rather than a guess.
+   */
+  async rect(name, target, { closest = null, pad = 0 } = {}) {
+    const spec = JSON.stringify(target);
+    const up = JSON.stringify(closest);
+    const box = await browser.evaluate(`(() => {
+      const spec = ${spec};
+      const up = ${up};
+      let el = null;
+      if (spec.startsWith("text=")) {
+        const want = spec.slice(5).trim();
+        el = [...document.querySelectorAll("button, a, [role=radio], [role=tab], li, h1, h2, h3, h4, span, p, div")]
+          .find((node) => node.offsetParent !== null && node.childElementCount === 0 && node.textContent.trim() === want);
+      } else {
+        el = document.querySelector(spec);
+      }
+      if (el && up) el = el.closest(up) ?? el;
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    })()`);
+    if (!box) throw new Error(`No element for ${target}`);
+    const rect = { x: box.x - pad, y: box.y - pad, w: box.w + pad * 2, h: box.h + pad * 2 };
+    log.cues.push({ t: now(), name: `rect:${name}`, rect });
+    return rect;
   },
   async moveTo(target, { duration = 650 } = {}) {
     const to = await director.point(target);
