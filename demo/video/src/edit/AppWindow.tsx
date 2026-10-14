@@ -49,7 +49,7 @@ export const AppWindow: React.FC<{
         overflow: "hidden",
         boxShadow: dark
           ? `0 0 0 ${k}px rgba(255,255,255,0.10), 0 ${30 * k}px ${80 * k}px rgba(0,0,0,0.55)`
-          : `0 0 0 ${k}px rgba(24,24,27,0.10), 0 ${24 * k}px ${70 * k}px rgba(107,66,16,0.22), 0 ${4 * k}px ${14 * k}px rgba(24,24,27,0.08)`,
+          : `0 0 0 ${k}px rgba(9,9,11,0.09), 0 ${22 * k}px ${64 * k}px rgba(9,9,11,0.10), 0 ${3 * k}px ${12 * k}px rgba(9,9,11,0.06)`,
       }}
     >
       {children}

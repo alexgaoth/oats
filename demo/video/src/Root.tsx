@@ -1,6 +1,6 @@
 import React from "react";
 import { Composition, Still } from "remotion";
-import { loadInter } from "./brand/fonts";
+import { loadInter, loadWordmark } from "./brand/fonts";
 import { TitleCard } from "./scenes/TitleCard";
 import { AppShot } from "./edit/AppShot";
 import { MarkStill } from "./scenes/MarkStill";
@@ -21,6 +21,7 @@ const README_STILLS: { name: string; image: string; rect?: Rect }[] = [
 ];
 
 loadInter();
+loadWordmark();
 
 export const RemotionRoot: React.FC = () => (
   <>

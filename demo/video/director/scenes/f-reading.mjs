@@ -1,4 +1,5 @@
-// Scene 8: the finished review opened from Recent, read top to bottom.
+// The finished review opened from Recent: its shape (the contour, the
+// questions on it, who talked) held long enough to read, then the summary.
 import { READY, url } from "./_base.mjs";
 
 export default {
@@ -11,14 +12,14 @@ export default {
       await d.wait(500);
       await d.click("text=Enterprise launch review: SSO gates the date", { duration: 1000 });
       d.cue("opened");
-      await d.wait(1500);
-      await d.rect("header", "h1");
-      await d.rect("shape", "text=Answered", { closest: "[data-slot=card]" });
-      await d.moveTo({ x: 820, y: 560 }, { duration: 700 });
-      await d.scroll(520, { duration: 2600 });
       await d.wait(900);
-      await d.scroll(640, { duration: 2800 });
-      await d.wait(1500);
+      await d.rect("shape", "text=Answered", { closest: "[data-slot=card]" });
+      // Out of the card, so the pointer does not draw the hover line on it.
+      await d.moveTo({ x: 1330, y: 640 }, { duration: 700 });
+      await d.wait(4200);
+      d.cue("scroll");
+      await d.scroll(560, { duration: 2400 });
+      await d.wait(1600);
     });
   },
 };

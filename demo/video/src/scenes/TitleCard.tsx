@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop } from "../brand/Backdrop";
 import { Grain } from "../brand/Grain";
+import { WORDMARK_FONT } from "../brand/fonts";
 import { theme } from "../brand/theme";
 
 /** The cold open and the end card: the grain is tossed, lands, and the name settles beside it. */
@@ -20,9 +21,10 @@ export const TitleCard: React.FC<{ line?: string; tossAt?: number }> = ({ line, 
           <Grain id="title-grain" size={220} progress={progress} />
           <div
             style={{
-              fontSize: 168,
-              fontWeight: 650,
-              letterSpacing: "-0.035em",
+              fontFamily: WORDMARK_FONT,
+              fontSize: 176,
+              fontWeight: 400,
+              letterSpacing: "-0.02em",
               color: theme.ink,
               opacity: settle,
               transform: `translateX(${interpolate(settle, [0, 1], [-24, 0])}px)`,
@@ -36,9 +38,9 @@ export const TitleCard: React.FC<{ line?: string; tossAt?: number }> = ({ line, 
             style={{
               position: "absolute",
               top: "68%",
-              fontSize: 40,
+              fontSize: 36,
               fontWeight: 500,
-              color: theme.brandInk,
+              color: theme.muted,
               letterSpacing: "-0.01em",
               opacity: lineIn,
               transform: `translateY(${interpolate(lineIn, [0, 1], [12, 0])}px)`,
