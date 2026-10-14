@@ -4,6 +4,8 @@ export type Capture = {
   viewport: { width: number; height: number; scale: number };
   frames: { t: number; file: string }[];
   cursor: { t: number; x: number; y: number; kind: "move" | "down" | "up" }[];
+  /** Each pointer move as the director made it: start time, duration, from, to. */
+  moves?: { t: number; ms: number; from: { x: number; y: number }; to: { x: number; y: number } }[];
   cues: { t: number; name: string; [key: string]: unknown }[];
 };
 

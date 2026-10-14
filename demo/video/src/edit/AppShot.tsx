@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, staticFile } from "remotion";
+import { AbsoluteFill, Freeze, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop } from "../brand/Backdrop";
 import { AppWindow, WindowLights } from "./AppWindow";
 import { Camera, type Shot } from "./Camera";
@@ -21,8 +21,8 @@ export const rectAt = (capture: Capture, name: string): Rect | "full" =>
 
 /**
  * One scene of the film: the real app, captured by the director, framed as a
- * macOS window on the honey backdrop, with camera moves and the cursor.
- * `from` trims the clip (seconds); `rate` speeds it up (a time-lapse).
+ * macOS window on the white stage, with camera moves and the cursor.
+ * `from` trims the clip (seconds); `rate` or `timeMap` sets its speed.
  * `shots` may be worked out from the capture's log, so the camera frames what
  * the director measured on screen.
  */
@@ -30,15 +30,31 @@ export const AppShot: React.FC<{
   clip: string;
   /** Seconds into the clip where the scene starts, or a function of its log. */
   from?: number | ((capture: Capture) => number);
+  /**
+   * How many clip seconds pass per film second. A whole number: at 1.5 the
+   * film showed the clip's frames in steps of one and two, and motion juddered.
+   */
   rate?: number;
+  /**
+   * Instead of `rate`, where the clip is (seconds past `from`) at each moment
+   * of the scene (seconds): for a speed ramp.
+   */
+  timeMap?: (sceneSeconds: number, capture: Capture) => number;
   shots?: Shot[] | ((capture: Capture) => Shot[]);
   dark?: boolean;
   cursor?: boolean;
   children?: React.ReactNode;
-}> = ({ clip, from = 0, rate = 1, shots = [{ at: 0, rect: "full" }], dark, cursor = true, children }) => {
+}> = ({ clip, from = 0, rate = 1, timeMap, shots = [{ at: 0, rect: "full" }], dark, cursor = true, children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const capture = useCapture(clip);
   if (!capture) return null;
   const start = typeof from === "function" ? Math.max(0, from(capture)) : from;
+  // Where the clip is at this frame. The clip is shown frozen on its own frame
+  // for that moment, so a speed ramp is as exact as a constant speed.
+  const sceneSeconds = frame / fps;
+  const clipSeconds = start + (timeMap ? timeMap(sceneSeconds, capture) : sceneSeconds * rate);
+  const clipFrame = Math.max(0, Math.round(clipSeconds * 60));
   const viewport = capture.viewport;
   const width = WINDOW_WIDTH;
   const height = Math.round((width * viewport.height) / viewport.width);
@@ -49,15 +65,11 @@ export const AppShot: React.FC<{
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <AppWindow width={width} height={height} viewportWidth={viewport.width} dark={dark} lights={false}>
           <Camera shots={framing} width={width} height={height} viewport={viewport}>
-            <OffthreadVideo
-              src={staticFile(`clips/${clip}.mp4`)}
-              startFrom={Math.round(start * 60)}
-              playbackRate={rate}
-              style={{ width, height, display: "block" }}
-              muted
-            />
+            <Freeze frame={clipFrame}>
+              <OffthreadVideo src={staticFile(`clips/${clip}.mp4`)} style={{ width, height, display: "block" }} muted />
+            </Freeze>
             <WindowLights k={scale} />
-            {cursor && <Cursor capture={capture} scale={scale} offsetMs={start * 1000} rate={rate} />}
+            {cursor && <Cursor capture={capture} scale={scale} atMs={(clipFrame / 60) * 1000} />}
             {children}
           </Camera>
         </AppWindow>

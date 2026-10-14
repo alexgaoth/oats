@@ -13,6 +13,7 @@ const chip = (subject) =>
 export default {
   url: url(),
   cursorStart: { x: 1000, y: 640 },
+  capture: { slow: 3 },
   async run(d) {
     await d.waitFor(READY);
     await d.wait(600);
@@ -25,22 +26,22 @@ export default {
       await d.wait(2400);
       await d.rect("force", '[data-widget="force"]');
       await d.rect("arcs", '[data-widget="arcs"]');
-      await d.moveTo(node("arcs", "Design crit"), { duration: 1300 });
+      await d.moveTo(node("arcs", "Design crit"), { duration: 1100 });
       d.cue("hover-arcs");
-      await d.wait(2600);
-      await d.moveTo(node("force", "Enterprise launch review"), { duration: 1200 });
+      await d.wait(1700);
+      await d.moveTo(node("force", "Enterprise launch review"), { duration: 1000 });
       d.cue("hover-force");
-      await d.wait(2400);
-      await d.moveTo(chip("sso saml"), { duration: 1100 });
+      await d.wait(1600);
+      await d.moveTo(chip("sso saml"), { duration: 950 });
       d.cue("hover-subject");
-      await d.wait(2400);
-      await d.click("text=Work", { duration: 1000 });
+      await d.wait(1600);
+      await d.click("text=Work", { duration: 900 });
       d.cue("work");
-      await d.wait(2600);
+      await d.wait(1900);
       await d.rect("footer", "text=On this Mac", { pad: 8 });
-      await d.moveTo("text=On this Mac", { duration: 1200 });
+      await d.moveTo("text=On this Mac", { duration: 1000 });
       d.cue("footer");
-      await d.wait(3600);
+      await d.wait(3000);
     });
   },
 };

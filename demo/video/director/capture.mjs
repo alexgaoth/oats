@@ -4,7 +4,14 @@
 // records it: JPEG frames from the screencast (quality 100), plus logs on the
 // same clock of every cursor move, click and named cue. assemble.mjs turns the
 // frames into a constant-rate clip; the Remotion edit reads the logs to draw a
-// smooth cursor and to place captions and camera moves.
+// smooth cursor and to place camera moves.
+//
+// Slow motion: the page runs `slow` times slower than real time while it is
+// filmed (its clocks, timers, frames and CSS animations), and every log is
+// written in the page's time. The screencast drops frames when the page is
+// heavy or the Mac is busy (a 2x frame of a text-heavy view is about 700 KB),
+// and each dropped frame was a hitch in a glide or a scroll. Filmed at half
+// speed, 30 frames a second of real time are 60 of the page's.
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -23,11 +30,16 @@ fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(path.join(outDir, "frames"), { recursive: true });
 
 const browser = await launch({ ...viewport, scheme: scheme ?? scene.scheme ?? "light" });
+/** How many times slower than real time the page runs while it is filmed. */
+const slow = Math.max(1, Math.round(Number(process.env.OATS_SLOW ?? scene.capture?.slow ?? 2)));
+await browser.page("Page.addScriptToEvaluateOnNewDocument", { source: slowMotion(slow) });
+await browser.page("Animation.enable");
 const now = () => Date.now() / 1000;
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Waits are in the page's time. */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms * slow));
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-const log = { cursor: [], cues: [], frames: [] };
+const log = { cursor: [], cues: [], frames: [], moves: [] };
 let recordingSince = null;
 let cursor = scene.cursorStart ? { ...scene.cursorStart } : { x: viewport.width * 0.62, y: viewport.height * 0.58 };
 
@@ -37,10 +49,12 @@ const director = {
   async goto(url) {
     await browser.page("Page.navigate", { url });
     await director.waitFor("document.readyState === 'complete'");
+    // CSS transitions and animations run on the document's timeline.
+    await browser.page("Animation.setPlaybackRate", { playbackRate: 1 / slow });
   },
   wait: sleep,
   async waitFor(expression, timeoutMs = 20000) {
-    const until = Date.now() + timeoutMs;
+    const until = Date.now() + timeoutMs * slow;
     while (Date.now() < until) {
       if (await browser.evaluate(`Boolean(${expression})`).catch(() => false)) return;
       await sleep(50);
@@ -104,16 +118,25 @@ const director = {
     log.cues.push({ t: now(), name: `rect:${name}`, rect });
     return rect;
   },
+  /**
+   * Move the pointer to a target, eased. The page gets mouse events along the
+   * way, as fast as they can be sent; the film draws the pointer from the
+   * move itself (`moves`: start, end, time, duration), on the same curve, so
+   * its path is smooth whatever the timing of those events was.
+   */
   async moveTo(target, { duration = 650 } = {}) {
     const to = await director.point(target);
     const from = { ...cursor };
-    const steps = Math.max(2, Math.round(duration / 16));
-    for (let i = 1; i <= steps; i += 1) {
-      const t = easeInOut(i / steps);
+    const start = now();
+    log.moves.push({ t: start, ms: duration, from, to: { x: to.x, y: to.y } });
+    for (;;) {
+      const elapsed = ((now() - start) * 1000) / slow;
+      const t = easeInOut(Math.min(1, elapsed / duration));
       cursor = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
       await browser.page("Input.dispatchMouseEvent", { type: "mouseMoved", x: cursor.x, y: cursor.y });
       log.cursor.push({ t: now(), x: cursor.x, y: cursor.y, kind: "move" });
-      await sleep(duration / steps);
+      if (elapsed >= duration) break;
+      await sleep(12 / slow);
     }
     return to;
   },
@@ -126,24 +149,31 @@ const director = {
     await browser.page("Input.dispatchMouseEvent", { type: "mouseReleased", ...at });
     log.cursor.push({ t: now(), ...cursor, kind: "up" });
   },
-  /** Scroll the page under the cursor by `deltaY` CSS pixels, eased over `duration`. */
+  /**
+   * Scroll the pane under the pointer by `deltaY` CSS pixels, eased over
+   * `duration` (the page's time: it reads its own slowed clock). The page
+   * animates it itself, once per frame, so the scroll is as smooth as the
+   * screen: wheel events sent from here arrived unevenly, and the pane stepped
+   * with them.
+   */
   async scroll(deltaY, { duration = 1200 } = {}) {
-    const steps = Math.max(2, Math.round(duration / 16));
-    let done = 0;
-    for (let i = 1; i <= steps; i += 1) {
-      const target = deltaY * easeInOut(i / steps);
-      const delta = target - done;
-      done = target;
-      await browser.page("Input.dispatchMouseEvent", {
-        type: "mouseWheel",
-        x: cursor.x,
-        y: cursor.y,
-        deltaX: 0,
-        deltaY: delta,
-      });
-      await sleep(duration / steps);
-    }
-    log.cues.push({ t: now(), name: "scroll", deltaY });
+    log.cues.push({ t: now(), name: "scroll-start", deltaY });
+    await browser.evaluate(`new Promise((resolve) => {
+      let el = document.elementFromPoint(${cursor.x}, ${cursor.y});
+      while (el && !(el.scrollHeight > el.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
+      el = el ?? document.scrollingElement;
+      const from = el.scrollTop;
+      const start = performance.now();
+      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      const step = (time) => {
+        const t = Math.min(1, (time - start) / ${duration});
+        el.scrollTop = from + ${deltaY} * ease(t);
+        if (t < 1) requestAnimationFrame(step);
+        else resolve();
+      };
+      requestAnimationFrame(step);
+    })`);
+    log.cues.push({ t: now(), name: "scroll-end", deltaY });
   },
   async type(text, { perChar = 55 } = {}) {
     for (const char of text) {
@@ -201,7 +231,8 @@ try {
   await scene.run(director);
 } finally {
   const start = recordingSince ?? log.frames[0]?.t ?? now();
-  const rel = (entries) => entries.map((entry) => ({ ...entry, t: Math.round((entry.t - start) * 1000) }));
+  // In the page's time: real seconds since the start, slowed.
+  const rel = (entries) => entries.map((entry) => ({ ...entry, t: Math.round(((entry.t - start) * 1000) / slow) }));
   fs.writeFileSync(
     path.join(outDir, "capture.json"),
     JSON.stringify(
@@ -209,8 +240,10 @@ try {
         scene: path.basename(scenePath),
         viewport,
         scheme: scheme ?? scene.scheme ?? "light",
+        slow,
         frames: rel(log.frames),
         cursor: rel(log.cursor),
+        moves: rel(log.moves),
         cues: rel(log.cues),
       },
       null,
@@ -218,5 +251,69 @@ try {
     )
   );
   browser.close();
-  console.log(`${log.frames.length} frames, ${log.cursor.length} cursor points, ${log.cues.length} cues -> ${outDir}`);
+  console.log(`${log.frames.length} frames, ${log.cursor.length} cursor points, ${log.cues.length} cues (slow ${slow}) -> ${outDir}`);
+}
+
+/**
+ * A script for the page, run before its own: every clock the page reads runs
+ * `k` times slower. Date.now and performance.now are slowed; timers wait `k`
+ * times longer; animation frames go to the page every `k`th screen frame, so a
+ * simulation that steps once a frame steps at the page's 60 a second too. CSS
+ * animations are slowed separately, through the document timeline
+ * (Animation.setPlaybackRate). That also slows the timestamps Chrome gives
+ * animation frames, so the frames get the slowed performance.now instead:
+ * slowing Chrome's timestamp again made them run k² times slower.
+ */
+function slowMotion(k) {
+  return `(() => {
+    const k = ${k};
+    if (!(k > 1)) return;
+    const realDateNow = Date.now.bind(Date);
+    const realPerfNow = performance.now.bind(performance);
+    const d0 = realDateNow();
+    const p0 = realPerfNow();
+    Date.now = () => d0 + (realDateNow() - d0) / k;
+    performance.now = () => p0 + (realPerfNow() - p0) / k;
+    const realSetTimeout = window.setTimeout.bind(window);
+    const realSetInterval = window.setInterval.bind(window);
+    window.setTimeout = (fn, ms = 0, ...args) => realSetTimeout(fn, ms * k, ...args);
+    window.setInterval = (fn, ms = 0, ...args) => realSetInterval(fn, ms * k, ...args);
+    const realRAF = window.requestAnimationFrame.bind(window);
+    let queue = new Map();
+    let nextId = 1;
+    let screenFrames = 0;
+    let scheduled = false;
+    const schedule = () => {
+      if (scheduled || !queue.size) return;
+      scheduled = true;
+      realRAF(pump);
+    };
+    function pump() {
+      scheduled = false;
+      screenFrames += 1;
+      if (screenFrames % k !== 0) return schedule();
+      const callbacks = queue;
+      queue = new Map();
+      const slowed = performance.now();
+      for (const callback of callbacks.values()) {
+        try {
+          callback(slowed);
+        } catch (error) {
+          realSetTimeout(() => {
+            throw error;
+          });
+        }
+      }
+      schedule();
+    }
+    window.requestAnimationFrame = (callback) => {
+      const id = nextId++;
+      queue.set(id, callback);
+      schedule();
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      queue.delete(id);
+    };
+  })();`;
 }

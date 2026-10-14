@@ -5,6 +5,8 @@ import { READY, url } from "./_base.mjs";
 export default {
   url: url(),
   cursorStart: { x: 1100, y: 640 },
+  // Real time: the results line shows how long the search took, measured.
+  capture: { slow: 1 },
   async run(d) {
     await d.waitFor(READY);
     await d.wait(800);

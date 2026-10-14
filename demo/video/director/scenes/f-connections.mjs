@@ -5,6 +5,7 @@ import { READY, url } from "./_base.mjs";
 export default {
   url: url(),
   cursorStart: { x: 700, y: 600 },
+  capture: { slow: 3 },
   async run(d) {
     await d.waitFor(READY);
     await d.wait(800);
@@ -18,13 +19,13 @@ export default {
       const tabs = await d.eval("document.querySelector('[role=tablist]').getBoundingClientRect().top");
       await d.scroll(Math.max(0, tabs - 96), { duration: 1400 });
       await d.wait(300);
-      await d.click("text=Connections", { duration: 900 });
+      await d.click("text=Connections", { duration: 850 });
       d.cue("connections");
-      await d.wait(1500);
+      await d.wait(1300);
       await d.rect("lanes", "[role=tabpanel][data-state=active]");
-      await d.click("text=soc audit", { duration: 1100 });
+      await d.click("text=soc audit", { duration: 950 });
       d.cue("soc");
-      await d.wait(3800);
+      await d.wait(3000);
     });
   },
 };

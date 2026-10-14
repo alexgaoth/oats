@@ -2,7 +2,7 @@
 //
 // The screencast sends a frame only when the page repaints, at uneven times.
 // This lays them on a constant clock (each output frame shows the latest
-// captured frame at or before its time) and encodes with Remotion's own
+// captured frame, give or take half a frame) and encodes with Remotion's own
 // ffmpeg, so no other install is needed.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -19,13 +19,23 @@ const end = capture.cues.find((cue) => cue.name === "end")?.t ?? frames.at(-1).t
 const sequence = path.join(dir, "sequence");
 fs.rmSync(sequence, { recursive: true, force: true });
 fs.mkdirSync(sequence);
-let at = 0;
+// Each output frame shows the latest captured frame up to half a frame after
+// its time. Strictly "at or before" held a frame twice and then skipped one
+// whenever a timestamp landed a millisecond after a slot boundary, which the
+// screencast's timing does all the time: judder in every glide and scroll.
+// The nearest frame either side is wrong too: the screencast sends nothing
+// while the page is still, so in a still second the nearest frame is half the
+// time the next change, shown early (cut 5's first render lost a hover that
+// way). A slow-motion capture has more frames than slots; the latest is kept.
 const total = Math.ceil((end / 1000) * fps);
+const half = 500 / fps;
+let next = 0;
 for (let index = 0; index < total; index += 1) {
-  const time = (index / fps) * 1000;
-  while (at + 1 < frames.length && frames[at + 1].t <= time) at += 1;
+  const time = (index * 1000) / fps;
+  while (next + 1 < frames.length && frames[next + 1].t <= time + half) next += 1;
+  const shown = frames[next];
   fs.symlinkSync(
-    path.resolve(dir, "frames", frames[at].file),
+    path.resolve(dir, "frames", shown.file),
     path.join(sequence, `${String(index).padStart(6, "0")}.jpg`)
   );
 }
@@ -47,7 +57,7 @@ execFileSync(
     "-preset",
     "slow",
     "-crf",
-    "12",
+    "8",
     "-pix_fmt",
     "yuv420p",
     "-movflags",

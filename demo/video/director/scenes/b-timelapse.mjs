@@ -1,11 +1,14 @@
-// Scene 4: the first eleven minutes at six times speed, captured lightly: the
-// edit plays it faster still, so 15 frames a second is plenty.
+// Scene 4: the first minutes at six times speed. At six times the app pauses
+// for 100-300 ms about once a second (a turn's work arrives six times as
+// often), and at ten times in the film each pause was a held frame. Filmed at
+// a third of real speed, a pause is under 100 ms of page time, shorter than
+// one film frame at ten times; every second screen frame is plenty.
 import { READY, url } from "./_base.mjs";
 
 export default {
   url: url("demo=live&from=20&speed=6&end=hold"),
   cursorStart: { x: 1500, y: 1100 },
-  capture: { quality: 90, everyNthFrame: 4 },
+  capture: { quality: 90, slow: 3, everyNthFrame: 2 },
   async run(d) {
     await d.waitFor(READY);
     await d.waitFor("window.oatsDemo.status().phase === 'recording'");
@@ -14,7 +17,7 @@ export default {
       await d.wait(2500);
       await d.rect("status", "text=Recording", { closest: "[data-slot=card]" });
       await d.rect("flow", "text=Conversation flow", { closest: "[data-slot=card]" });
-      await d.waitFor("window.oatsDemo.status().seconds >= 700", 240000);
+      await d.waitFor("window.oatsDemo.status().seconds >= 480", 240000);
     });
   },
 };
