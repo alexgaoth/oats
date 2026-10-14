@@ -2072,13 +2072,20 @@
         "all": "Toutes"
       },
       "boardLabel": "Tableau : {{tab}}",
+      "add": {
+        "label": "Ajouter",
+        "there": "Déjà sur le tableau"
+      },
       "menu": {
         "label": "Options du tableau",
         "reset": "Réinitialiser la disposition"
       },
       "cleared": "Ce tableau est vide.",
       "widget": {
-        "remove": "Retirer {{name}}"
+        "remove": "Retirer {{name}}",
+        "role": "carte",
+        "keys": "Les flèches la déplacent. Maj et les flèches la redimensionnent.",
+        "place": "{{name}} : colonne {{column}}, ligne {{row}}, {{width}} sur {{height}}"
       },
       "widgets": {
         "force": {
@@ -2088,6 +2095,20 @@
         "arcs": {
           "name": "Frise à arcs",
           "empty": "La frise apparaît dès que {{count}} conversations ici ont des sujets."
+        },
+        "subjects": {
+          "name": "Sujets qui reviennent",
+          "empty": "Rien n'est encore revenu. Un sujet apparaît ici dès que deux conversations le partagent."
+        },
+        "questions": {
+          "name": "Questions ouvertes",
+          "empty": "Aucune question ouverte ici. Chaque question a une réponse.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Activité",
+          "day_one": "{{date}} : {{count}} conversation",
+          "day_other": "{{date}} : {{count}} conversations"
         }
       },
       "subjects": {

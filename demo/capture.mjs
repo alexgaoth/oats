@@ -85,6 +85,13 @@ const SHOTS = [
       "await oatsDemo.show('global'); await demo.wait(1500); await demo.point(oatsDemo.samples()[0].id)",
   },
   {
+    // The Add menu, open: what the board can hold.
+    name: "global-add",
+    query: "",
+    script:
+      "await oatsDemo.show('global'); await demo.wait(1200); [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' })); await demo.wait(400)",
+  },
+  {
     name: "global-many",
     query: "profile=many",
     script: "await oatsDemo.show('global'); await demo.wait(2500)",

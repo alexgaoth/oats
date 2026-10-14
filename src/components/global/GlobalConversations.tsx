@@ -1,6 +1,17 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Ellipsis, RotateCcw } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  CircleHelp,
+  Ellipsis,
+  Plus,
+  Rainbow,
+  RotateCcw,
+  Tags,
+  Waypoints,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -10,13 +21,18 @@ import {
 } from "../ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import Board from "./Board";
+import type { BoardHandle } from "./Board";
+import { WIDGET_TYPES } from "./boardLayout";
 import type { BoardWidget, WidgetType } from "./boardLayout";
+import { conversationsByDay } from "./activityCalendar";
+import ActivityWidget from "./ActivityWidget";
+import OpenQuestionsWidget from "./OpenQuestionsWidget";
 import { boardTabs, conversationsInTab } from "./boardData";
 import { useBoardStore } from "./boardStore";
 import { highlightSource, useGlobalHighlight } from "./highlightStore";
 import { useBoardConversations, useTabGraph } from "./useBoardData";
 import { groupDisplayName, useConversationGroups } from "../../stores/conversationGroupStore";
-import { ArcTimelineWidget, ForceGraphWidget } from "./widgets";
+import { ArcTimelineWidget, ForceGraphWidget, SubjectsWidget } from "./widgets";
 
 // Global conversations: a board of charts across every conversation, one tab
 // per conversation group. "All" shows every conversation; a group's tab shows
@@ -28,9 +44,29 @@ import { ArcTimelineWidget, ForceGraphWidget } from "./widgets";
 const NAME_KEY: Record<WidgetType, string> = {
   force: "oats.global.widgets.force.name",
   arcs: "oats.global.widgets.arcs.name",
+  subjects: "oats.global.widgets.subjects.name",
+  questions: "oats.global.widgets.questions.name",
+  activity: "oats.global.widgets.activity.name",
 };
 
-export default function GlobalConversations({ onOpen }: { onOpen: (noteId: number) => void }) {
+// A small drawing of each in the Add menu.
+const ICON: Record<WidgetType, LucideIcon> = {
+  force: Waypoints,
+  arcs: Rainbow,
+  subjects: Tags,
+  questions: CircleHelp,
+  activity: CalendarDays,
+};
+
+/** What a tab shows before anybody arranges it. */
+const DEFAULT_TYPES: WidgetType[] = ["force", "arcs"];
+
+export default function GlobalConversations({
+  onOpen,
+}: {
+  /** Open a conversation, at a turn when `segmentId` is given. */
+  onOpen: (noteId: number, segmentId?: string | null) => void;
+}) {
   const { t } = useTranslation();
   const conversations = useBoardConversations(t("oats.untitled"));
   const { groups } = useConversationGroups();
@@ -47,7 +83,9 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
 
   const inTab = useMemo(() => conversationsInTab(conversations, tab), [conversations, tab]);
   const graph = useTabGraph(inTab);
-  const highlight = useMemo(() => highlightSource(graph, graph.subjects), [graph]);
+  const days = useMemo(() => conversationsByDay(inTab), [inTab]);
+  const highlight = useMemo(() => highlightSource(graph, graph.subjects, days), [graph, days]);
+  const board = useRef<BoardHandle | null>(null);
 
   const saved = useBoardStore((state) => state.layouts[tab.id]) ?? null;
   const saveLayout = useBoardStore((state) => state.saveLayout);
@@ -56,18 +94,27 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
   // What is pointed at belongs to the board on screen: nothing stays lit on a
   // tab nobody is pointing at, or once the board is gone.
   useEffect(() => {
-    useGlobalHighlight.setState({ hoveredConversationId: null, hoveredSubject: null });
+    useGlobalHighlight.setState({
+      hoveredConversationId: null,
+      hoveredSubject: null,
+      hoveredDay: null,
+    });
   }, [tab.id]);
   useEffect(
-    () => () => useGlobalHighlight.setState({ hoveredConversationId: null, hoveredSubject: null }),
+    () => () =>
+      useGlobalHighlight.setState({
+        hoveredConversationId: null,
+        hoveredSubject: null,
+        hoveredDay: null,
+      }),
     []
   );
 
   const open = useCallback(
-    (id: number) => {
+    (id: number, segmentId: string | null = null) => {
       // Kept honey on the board, so coming back from it shows where you were.
       useGlobalHighlight.getState().select(id);
-      onOpen(id);
+      onOpen(id, segmentId);
     },
     [onOpen]
   );
@@ -86,8 +133,15 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
         );
       case "arcs":
         return <ArcTimelineWidget graph={graph} highlight={highlight} onOpen={open} />;
+      case "subjects":
+        return <SubjectsWidget subjects={graph.subjects} />;
+      case "questions":
+        return <OpenQuestionsWidget conversations={inTab} highlight={highlight} onOpenAt={open} />;
+      case "activity":
+        return <ActivityWidget conversations={inTab} highlight={highlight} />;
     }
   };
+  const onBoard = new Set((saved ?? DEFAULT_TYPES.map((type) => ({ type }))).map((w) => w.type));
 
   return (
     <Tabs
@@ -105,6 +159,41 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
             ))}
           </TabsList>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={onBoard.size === WIDGET_TYPES.length}
+            >
+              <Plus aria-hidden="true" />
+              {t("oats.global.add.label")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[13rem]">
+            {WIDGET_TYPES.map((type) => {
+              const Icon = ICON[type];
+              const there = onBoard.has(type);
+              return (
+                <DropdownMenuItem
+                  key={type}
+                  disabled={there}
+                  // After the menu has closed, and instead of the focus going
+                  // back to Add: the new card takes it (`Board`'s `add`).
+                  onSelectAfterClose={(event) => {
+                    event.preventDefault();
+                    board.current?.add(type);
+                  }}
+                >
+                  <Icon aria-hidden="true" />
+                  {t(NAME_KEY[type])}
+                  {there && <Check aria-label={t("oats.global.add.there")} className="ml-auto" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -128,6 +217,7 @@ export default function GlobalConversations({ onOpen }: { onOpen: (noteId: numbe
       {/* Not a tab stop of its own: the board holds focusable cards. */}
       <TabsContent value={tab.id} tabIndex={-1} className="mt-1 flex-none">
         <Board
+          ref={board}
           widgets={saved}
           onCommit={commit}
           name={name}

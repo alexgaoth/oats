@@ -2072,13 +2072,20 @@
         "all": "Todas"
       },
       "boardLabel": "Tablero: {{tab}}",
+      "add": {
+        "label": "Añadir",
+        "there": "En el tablero"
+      },
       "menu": {
         "label": "Opciones del tablero",
         "reset": "Restablecer disposición"
       },
       "cleared": "No hay nada en este tablero.",
       "widget": {
-        "remove": "Quitar {{name}}"
+        "remove": "Quitar {{name}}",
+        "role": "tarjeta",
+        "keys": "Las flechas la mueven. Mayúsculas y las flechas cambian su tamaño.",
+        "place": "{{name}}: columna {{column}}, fila {{row}}, {{width}} por {{height}}"
       },
       "widgets": {
         "force": {
@@ -2088,6 +2095,20 @@
         "arcs": {
           "name": "Línea de tiempo de arcos",
           "empty": "La línea de tiempo aparece cuando {{count}} conversaciones de aquí tengan temas."
+        },
+        "subjects": {
+          "name": "Temas que vuelven",
+          "empty": "Todavía no ha vuelto nada. Un tema aparece aquí cuando dos conversaciones lo comparten."
+        },
+        "questions": {
+          "name": "Preguntas abiertas",
+          "empty": "No hay preguntas abiertas aquí. Cada pregunta tiene una respuesta.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Actividad",
+          "day_one": "{{date}}: {{count}} conversación",
+          "day_other": "{{date}}: {{count}} conversaciones"
         }
       },
       "subjects": {

@@ -32,6 +32,14 @@ test("the board's dots are 2 px squares in the middle of each cell, crisp on dev
   assert.match(board, /top: MARGIN \* GRID/, "the cards start two cells down");
 });
 
+test("an open question is drawn with the one question mark, ringed in honey when lit", () => {
+  const widget = read("src/components/global/OpenQuestionsWidget.tsx");
+  assert.match(widget, /import \{ StateMark \} from "\.\.\/conversation\/ConversationSignalRail";/);
+  assert.match(widget, /<StateMark state=\{row\.state\} className="" \/>/);
+  assert.match(widget, /honey && "ring-2 ring-primary"/, "lit as a chart lights a dot: a honey ring");
+  assert.match(widget, /t\("questionCard\.state\.denied"\)/, "nobody knew is said, not only drawn");
+});
+
 test("a conversation opened from the board comes back to the board", () => {
   const workspace = read("src/components/OatsWorkspace.tsx");
   // The reading view opens from either view, so Escape returns to the one it
@@ -102,6 +110,53 @@ test("labels sit on plates in the surface colour, never cut at the canvas edge",
     /const plated = surface === palette\.card \? palette : \{ \.\.\.palette, card: surface \};/
   );
   assert.match(graph, /drawPlateText\(ctx, label\.text, label\.x, label\.y, plated,/);
+});
+
+test("a focused card moves with the arrow keys and resizes with shift, and only the card itself", () => {
+  const board = read("src/components/global/Board.tsx");
+  assert.match(board, /if \(event\.target !== event\.currentTarget \|\| !room\.cols\) return;/);
+  assert.match(board, /event\.shiftKey\s*\? grow\(/);
+  assert.match(board, /: nudge\(/);
+  assert.match(board, /tabIndex=\{0\}\s*onKeyDown=\{\(event\) => onCardKey\(event, widget\)\}/);
+  // Said aloud, since a card that moved makes no sound.
+  assert.match(board, /aria-live="polite" role="status"/);
+});
+
+test("Add lists every widget, disables those on the board, and the new card takes the focus", () => {
+  const view = read("src/components/global/GlobalConversations.tsx");
+  assert.match(view, /WIDGET_TYPES\.map\(\(type\) =>/);
+  assert.match(view, /disabled=\{there\}/);
+  assert.match(
+    view,
+    /onSelectAfterClose=\{\(event\) => \{\s*event\.preventDefault\(\);\s*board\.current\?\.add\(type\);/
+  );
+  const board = read("src/components/global/Board.tsx");
+  assert.match(board, /card\.focus\(\{ preventScroll: true \}\)/);
+});
+
+test("an open question opens its conversation at the turn it was asked in", () => {
+  const workspace = read("src/components/OatsWorkspace.tsx");
+  const opened = workspace.slice(
+    workspace.indexOf("<GlobalConversations"),
+    workspace.indexOf("<GlobalConversations") + 500
+  );
+  assert.match(opened, /setTab\(segmentId \? "transcript" : "summary"\)/);
+  assert.match(opened, /setLandedOnSegment\(segmentId \?\? null\)/);
+});
+
+test("the subjects and the open questions light with the rest of the board", () => {
+  const widgets = read("src/components/global/widgets.tsx");
+  // A chip lights for its own subject and for a conversation that carries it.
+  assert.match(widgets, /state\.hoveredSubject === subject\.label \|\|/);
+  assert.match(widgets, /subject\.conversationIds\.includes\(state\.hoveredConversationId\)/);
+  // A question's ring takes honey from the board's one highlight, so a day or
+  // a subject pointed at elsewhere lights it too.
+  const questions = read("src/components/global/OpenQuestionsWidget.tsx");
+  assert.match(questions, /useSyncExternalStore\(\s*highlight\.subscribe,/);
+  assert.match(questions, /markTone\(highlight\.get\(\), id\) === "focus"/);
+  // Each row holds its own subscription: pointing re-renders only the rows
+  // whose ring changes, never the whole list.
+  assert.match(questions, /const QuestionRow = memo\(function QuestionRow/);
 });
 
 test("a label forced on top covers the labels it lands on whole, never leaving a fragment", () => {

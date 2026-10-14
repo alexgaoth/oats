@@ -2072,13 +2072,20 @@
         "all": "Todas"
       },
       "boardLabel": "Quadro: {{tab}}",
+      "add": {
+        "label": "Adicionar",
+        "there": "Já no quadro"
+      },
       "menu": {
         "label": "Opções do quadro",
         "reset": "Repor disposição"
       },
       "cleared": "Não há nada neste quadro.",
       "widget": {
-        "remove": "Remover {{name}}"
+        "remove": "Remover {{name}}",
+        "role": "cartão",
+        "keys": "As setas movem-no. Shift e as setas mudam o tamanho.",
+        "place": "{{name}}: coluna {{column}}, linha {{row}}, {{width}} por {{height}}"
       },
       "widgets": {
         "force": {
@@ -2088,6 +2095,20 @@
         "arcs": {
           "name": "Linha do tempo de arcos",
           "empty": "A linha do tempo aparece quando {{count}} conversas aqui tiverem temas."
+        },
+        "subjects": {
+          "name": "Temas que voltam",
+          "empty": "Ainda nada voltou. Um tema aparece aqui quando duas conversas o partilham."
+        },
+        "questions": {
+          "name": "Perguntas em aberto",
+          "empty": "Não há perguntas em aberto aqui. Cada pergunta tem uma resposta.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Atividade",
+          "day_one": "{{date}}: {{count}} conversa",
+          "day_other": "{{date}}: {{count}} conversas"
         }
       },
       "subjects": {

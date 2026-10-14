@@ -94,41 +94,76 @@ export function ForceGraphWidget({
   );
 }
 
+/**
+ * One subject that comes back, and how many conversations carry it. Lit when
+ * it is pointed at, and when a conversation that carries it is.
+ */
+export function SubjectChip({ subject }: { subject: TabGraph["subjects"][number] }) {
+  const { t } = useTranslation();
+  const lit = useGlobalHighlight(
+    (state) =>
+      state.hoveredSubject === subject.label ||
+      (state.hoveredConversationId !== null &&
+        subject.conversationIds.includes(state.hoveredConversationId))
+  );
+  const point = () => useGlobalHighlight.getState().pointAtSubject(subject.label);
+  const leave = () => useGlobalHighlight.getState().leaveSubject(subject.label);
+  return (
+    <button
+      type="button"
+      aria-label={t("oats.global.subjects.chip", {
+        label: subject.label,
+        count: subject.conversationIds.length,
+      })}
+      onPointerEnter={point}
+      onPointerLeave={leave}
+      onFocus={point}
+      onBlur={leave}
+      className={cn(
+        "inline-flex h-6 cursor-default items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium text-foreground outline-none transition-colors",
+        "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        lit ? "border-foreground" : "border-border"
+      )}
+    >
+      {subject.label}
+      <span className="font-normal tabular-nums text-muted-foreground">
+        {subject.conversationIds.length}
+      </span>
+    </button>
+  );
+}
+
 /** The subjects that come back, above the timeline: pointing at one lights its arcs. */
 export function SubjectLine({ subjects }: { subjects: TabGraph["subjects"] }) {
   const { t } = useTranslation();
-  const hovered = useGlobalHighlight((state) => state.hoveredSubject);
   if (!subjects.length) return null;
-  const point = (label: string) => useGlobalHighlight.getState().pointAtSubject(label);
-  const leave = (label: string) => useGlobalHighlight.getState().leaveSubject(label);
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-1 pt-0.5">
       <span className="text-[13px] text-muted-foreground">{t("oats.global.subjects.caption")}</span>
       {subjects.map((subject) => (
-        <button
-          key={subject.label}
-          type="button"
-          aria-label={t("oats.global.subjects.chip", {
-            label: subject.label,
-            count: subject.conversationIds.length,
-          })}
-          onPointerEnter={() => point(subject.label)}
-          onPointerLeave={() => leave(subject.label)}
-          onFocus={() => point(subject.label)}
-          onBlur={() => leave(subject.label)}
-          className={cn(
-            "inline-flex h-6 cursor-default items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium text-foreground outline-none transition-colors",
-            "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-            hovered === subject.label ? "border-foreground" : "border-border"
-          )}
-        >
-          {subject.label}
-          <span className="font-normal tabular-nums text-muted-foreground">
-            {subject.conversationIds.length}
-          </span>
-        </button>
+        <SubjectChip key={subject.label} subject={subject} />
       ))}
     </div>
+  );
+}
+
+/** Every subject that comes back, most often first: pointing at one lights it everywhere. */
+export function SubjectsWidget({ subjects }: { subjects: TabGraph["subjects"] }) {
+  const { t } = useTranslation();
+  if (!subjects.length) {
+    return <WidgetEmpty>{t("oats.global.widgets.subjects.empty")}</WidgetEmpty>;
+  }
+  return (
+    <ul
+      aria-label={t("oats.global.widgets.subjects.name")}
+      className="flex h-full flex-wrap content-start gap-1.5 overflow-y-auto px-3.5 pb-3 pt-0.5"
+    >
+      {subjects.map((subject) => (
+        <li key={subject.label}>
+          <SubjectChip subject={subject} />
+        </li>
+      ))}
+    </ul>
   );
 }
 

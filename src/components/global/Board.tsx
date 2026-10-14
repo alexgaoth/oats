@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ReactNode, Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
@@ -7,14 +16,17 @@ import { cn } from "../lib/utils";
 import {
   GRID,
   MARGIN,
+  addWidget,
   boardRoom,
   defaultLayout,
   dotField,
   fitToBoard,
+  grow,
   layoutBottom,
+  nudge,
   placeWidget,
 } from "./boardLayout";
-import type { BoardWidget } from "./boardLayout";
+import type { BoardWidget, WidgetType } from "./boardLayout";
 
 // The board: a canvas of 24 px cells with a dot in the middle of each, and the
 // widgets on it as cards that snap to the cells. A card moves by its header and
@@ -28,6 +40,12 @@ import type { BoardWidget } from "./boardLayout";
 
 /** A card's header, which is also the handle it is moved by. */
 export const HEADER = 36;
+
+/** What the page around the board can ask of it. */
+export interface BoardHandle {
+  /** Put a card of `type` where it fits, keep it, and take the focus to it. */
+  add: (type: WidgetType) => void;
+}
 
 // The dots: a 2 px square in the middle of every cell, in the rule grey, drawn
 // by masking a fill of the token so the colour follows the theme. Whole pixels
@@ -69,6 +87,7 @@ export default function Board({
   name,
   render,
   empty,
+  ref,
   "aria-label": ariaLabel,
 }: {
   /** The tab's saved layout, or null for the default. */
@@ -79,9 +98,11 @@ export default function Board({
   render: (widget: BoardWidget, size: { width: number; height: number }) => ReactNode;
   /** Shown in the middle of a board somebody has cleared of every card. */
   empty?: ReactNode;
+  ref?: Ref<BoardHandle>;
   "aria-label"?: string;
 }) {
   const { t } = useTranslation();
+  const hintId = useId();
   const area = useRef<HTMLDivElement | null>(null);
   const [room, setRoom] = useState({ cols: 0, rows: 0, inset: MARGIN * GRID });
 
@@ -193,6 +214,65 @@ export default function Board({
     [onCommit]
   );
 
+  // The card the keyboard is on, and what it last did, for the live region.
+  const [said, setSaid] = useState("");
+  const [arrived, setArrived] = useState<string | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      add: (type) => {
+        if (!room.cols) return;
+        const next = addWidget(committed, type, room.cols);
+        if (next === committed) return;
+        onCommit(next);
+        setArrived(type);
+      },
+    }),
+    [committed, onCommit, room.cols]
+  );
+
+  // A card that was just added is brought into view and given the focus, so
+  // the keyboard is where the new card is.
+  useEffect(() => {
+    if (!arrived) return;
+    const card = area.current?.querySelector<HTMLElement>(`[data-widget="${arrived}"]`);
+    if (!card) return;
+    setArrived(null);
+    card.scrollIntoView({ block: "nearest" });
+    card.focus({ preventScroll: true });
+  }, [arrived, committed]);
+
+  // The arrow keys move a focused card by one cell, and with shift resize it.
+  // Only the card itself: a key inside it belongs to what is inside it.
+  const onCardKey = (event: React.KeyboardEvent<HTMLElement>, widget: BoardWidget) => {
+    if (event.target !== event.currentTarget || !room.cols) return;
+    const delta: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+    };
+    const step = delta[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const next = event.shiftKey
+      ? grow(committed, widget.id, step[0], step[1], room.cols)
+      : nudge(committed, widget.id, step[0], step[1], room.cols);
+    const moved = next.find((item) => item.id === widget.id);
+    if (!moved) return;
+    onCommit(next);
+    setSaid(
+      t("oats.global.widget.place", {
+        name: name(widget),
+        column: moved.x + 1,
+        row: moved.y + 1,
+        width: moved.w,
+        height: moved.h,
+      })
+    );
+  };
+
   // Escape puts a card back where it was picked up from.
   useEffect(() => {
     if (!gesture) return undefined;
@@ -214,6 +294,12 @@ export default function Board({
       className="relative w-full overflow-x-clip"
       style={{ height: (rows + MARGIN * 2) * GRID }}
     >
+      <p id={hintId} className="sr-only">
+        {t("oats.global.widget.keys")}
+      </p>
+      <p aria-live="polite" role="status" className="sr-only">
+        {said}
+      </p>
       {room.cols > 0 && (
         <div
           aria-hidden="true"
@@ -248,9 +334,14 @@ export default function Board({
             <section
               key={widget.id}
               aria-label={label}
+              aria-roledescription={t("oats.global.widget.role")}
+              aria-describedby={hintId}
               data-widget={widget.type}
+              tabIndex={0}
+              onKeyDown={(event) => onCardKey(event, widget)}
               className={cn(
                 "group absolute left-0 top-0 flex flex-col overflow-clip rounded-xl border border-border bg-card shadow-xs",
+                "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                 held
                   ? "z-10 shadow-sm"
                   : "transition-transform duration-150 ease-out motion-reduce:transition-none"

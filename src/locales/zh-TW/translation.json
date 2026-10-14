@@ -2067,13 +2067,20 @@
         "all": "全部"
       },
       "boardLabel": "看板：{{tab}}",
+      "add": {
+        "label": "新增",
+        "there": "已在看板上"
+      },
       "menu": {
         "label": "看板選項",
         "reset": "重設版面配置"
       },
       "cleared": "這個看板上什麼也沒有。",
       "widget": {
-        "remove": "移除{{name}}"
+        "remove": "移除{{name}}",
+        "role": "卡片",
+        "keys": "方向鍵移動它。Shift 加方向鍵調整大小。",
+        "place": "{{name}}：第 {{column}} 欄，第 {{row}} 列，{{width}} × {{height}}"
       },
       "widgets": {
         "force": {
@@ -2083,6 +2090,20 @@
         "arcs": {
           "name": "弧線時間軸",
           "empty": "這裡有 {{count}} 場對話帶有話題時，時間軸就會出現。"
+        },
+        "subjects": {
+          "name": "反覆出現的話題",
+          "empty": "還沒有反覆出現的話題。兩場對話共有一個話題時，它會顯示在這裡。"
+        },
+        "questions": {
+          "name": "未解決的問題",
+          "empty": "這裡沒有未解決的問題。每個問題都有回答。",
+          "where": "{{title}}，{{date}}"
+        },
+        "activity": {
+          "name": "活動",
+          "day_one": "{{date}}：{{count}} 場對話",
+          "day_other": "{{date}}：{{count}} 場對話"
         }
       },
       "subjects": {

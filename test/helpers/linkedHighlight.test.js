@@ -120,6 +120,24 @@ test("a conversation from another tab lights nothing on this one", () => {
   assert.equal(subject.active, false);
 });
 
+test("pointing at a day lights its conversations and the links among them", () => {
+  const { linkedHighlight, markTone, lineTone } = highlight;
+  const { edgeKey } = arcs;
+  const days = new Map([
+    ["2026-10-12", [2, 3]],
+    ["2026-10-13", [5, 99]],
+  ]);
+  const result = linkedHighlight(graph, subjects, { ...nothing, hoveredDay: "2026-10-12" }, days);
+  assert.deepEqual([...result.focus].sort(), [2, 3]);
+  assert.equal(lineTone(result, edgeKey(2, 3)), "lit");
+  assert.equal(lineTone(result, edgeKey(3, 4)), "recede");
+  assert.equal(markTone(result, 1), "recede");
+  const other = linkedHighlight(graph, subjects, { ...nothing, hoveredDay: "2026-10-13" }, days);
+  assert.deepEqual([...other.focus], [5], "a conversation not on this board lights nothing");
+  const empty = linkedHighlight(graph, subjects, { ...nothing, hoveredDay: "2026-01-01" }, days);
+  assert.equal(empty.active, false);
+});
+
 test("recurring subjects name the conversations that carry them", () => {
   const topic = (id, label, words) => ({ id, label, words, durationMs: 60000 });
   const conversations = [
