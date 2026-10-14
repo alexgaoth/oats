@@ -157,6 +157,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("db-get-notes", noteType, limit, folderId),
   updateNote: (id, updates) => ipcRenderer.invoke("db-update-note", id, updates),
   deleteNote: (id) => ipcRenderer.invoke("db-delete-note", id),
+  // The bundled example conversation, for somebody who has recorded nothing yet.
+  insertExampleConversation: () => ipcRenderer.invoke("db-insert-example-conversation"),
   exportNote: (noteId, format) => ipcRenderer.invoke("export-note", noteId, format),
   exportTranscript: (noteId, format) => ipcRenderer.invoke("export-transcript", noteId, format),
   exportDictionary: (words) => ipcRenderer.invoke("export-dictionary", words),
@@ -176,6 +178,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteFolder: (id) => ipcRenderer.invoke("db-delete-folder", id),
   renameFolder: (id, name) => ipcRenderer.invoke("db-rename-folder", id, name),
   getFolderNoteCounts: () => ipcRenderer.invoke("db-get-folder-note-counts"),
+
+  // Conversation groups: Work, Personal and the person's own.
+  getConversationGroups: () => ipcRenderer.invoke("db-get-conversation-groups"),
+  createConversationGroup: (name) => ipcRenderer.invoke("db-create-conversation-group", name),
+  renameConversationGroup: (id, name) =>
+    ipcRenderer.invoke("db-rename-conversation-group", id, name),
+  deleteConversationGroup: (id) => ipcRenderer.invoke("db-delete-conversation-group", id),
+  reorderConversationGroups: (ids) => ipcRenderer.invoke("db-reorder-conversation-groups", ids),
+  setConversationGroup: (noteId, groupId) =>
+    ipcRenderer.invoke("db-set-conversation-group", noteId, groupId),
+  // The writing model's choice, and the conversations it has yet to sort.
+  setConversationGroupFromModel: (noteId, groupId) =>
+    ipcRenderer.invoke("db-set-conversation-group-from-model", noteId, groupId),
+  listUnsortedConversations: () => ipcRenderer.invoke("db-list-unsorted-conversations"),
+  onConversationGroupsChanged: registerListener(
+    "conversation-groups-changed",
+    (callback) => (_event, change) => callback(change)
+  ),
 
   // Note files (markdown mirror) functions
   noteFilesSetEnabled: (enabled, customPath, options) =>

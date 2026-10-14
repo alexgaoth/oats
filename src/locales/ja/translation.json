@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "マークの意味",
         "open": "未解決",
-        "topic": "話題の切り替え",
-        "return": "前の話題に戻った",
-        "marked": "マークした瞬間"
+        "topic": "新しい話題",
+        "marked": "マーク済み"
       },
       "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
       "contourEmpty": "まだ何も記録されていません。",
@@ -1952,20 +1951,16 @@
       "title": "会話の流れ",
       "viewLabel": "表示方法",
       "mode": {
-        "auto": "自動",
-        "stack": "リスト",
+        "lanes": "レーン",
         "graph": "グラフ"
       },
       "empty": "会話が進むと、ここに話題が表示されます。",
       "caption": {
-        "few_one": "リストを表示中：まだ話題は {{count}} 件だけです。",
-        "few_other": "リストを表示中：まだ話題は {{count}} 件だけです。",
-        "linear": "リストを表示中：会話は一直線に進んでいます。",
-        "returns_one": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
-        "returns_other": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
-        "branching": "グラフを表示中：会話が枝分かれしています。",
-        "stack": "リストを表示中。",
-        "graph": "グラフを表示中。"
+        "topics_one": "話題 {{count}} 件",
+        "topics_other": "話題 {{count}} 件",
+        "returns_one": "以前の話題へ {{count}} 回戻った",
+        "returns_other": "以前の話題へ {{count}} 回戻った",
+        "topicsReturns": "{{topics}}、{{returns}}"
       },
       "state": {
         "live": "現在",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "{{count}} 回戻った",
       "back_other": "{{count}} 回戻った",
-      "showMore_one": "さらに {{count}} 件表示",
-      "showMore_other": "さらに {{count}} 件表示",
-      "showFewer": "表示を減らす",
-      "stackLabel": "話題（新しい順）",
+      "lanesLabel": "話題（出た順）",
       "graphLabel_one": "これまでに出た {{count}} 件の話題のグラフ",
       "graphLabel_other": "これまでに出た {{count}} 件の話題のグラフ",
       "nodeName": "{{label}}、{{state}}",
@@ -2067,6 +2059,44 @@
       "notSummarized": "この会話はまだ要約されていません。",
       "summarize": "要約する",
       "setUpModel": "モデルを設定"
+    },
+    "global": {
+      "title": "会話の全体像",
+      "view": {
+        "label": "会話の表示方法",
+        "list": "リスト",
+        "global": "全体"
+      },
+      "tabs": {
+        "label": "会話のグループ",
+        "all": "すべて"
+      },
+      "boardLabel": "ボード: {{tab}}",
+      "menu": {
+        "label": "ボードのオプション",
+        "reset": "配置をリセット"
+      },
+      "cleared": "このボードには何もありません。",
+      "widget": {
+        "remove": "{{name}} を削除"
+      },
+      "widgets": {
+        "force": {
+          "name": "フォースグラフ",
+          "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、グラフが表示されます。"
+        },
+        "arcs": {
+          "name": "アークタイムライン",
+          "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、タイムラインが表示されます。"
+        }
+      },
+      "subjects": {
+        "caption": "繰り返し:",
+        "chip_one": "{{label}}、{{count}} 件の会話",
+        "chip_other": "{{label}}、{{count}} 件の会話"
+      },
+      "node_one": "{{title}}、{{date}}、トピック {{count}} 件",
+      "node_other": "{{title}}、{{date}}、トピック {{count}} 件"
     },
     "review": {
       "title": "未解決のまま残ったこと",
@@ -2269,6 +2299,36 @@
       "room": "部屋",
       "speaker": "話者{{n}}"
     },
+    "example": {
+      "open": "サンプルの会話を開く",
+      "note": "9人が参加したローンチレビューを自由に見られます。いつでも削除できます。",
+      "badge": "サンプル",
+      "failed": "サンプルの会話を開けませんでした",
+      "failedHint": "何も追加されていません。もう一度お試しください。"
+    },
+    "groups": {
+      "seed": {
+        "work": "仕事",
+        "personal": "プライベート"
+      },
+      "moveTo": "グループに移動",
+      "none": "グループなし",
+      "new": "新しいグループ…",
+      "newTitle": "新しいグループ",
+      "newDescription": "グループに名前を付けてください。この会話はそのグループに移動します。",
+      "nameLabel": "名前",
+      "create": "作成",
+      "movedTo": "{{group}}に移動しました",
+      "movedOut": "グループなし",
+      "moveFailed": "移動できませんでした",
+      "sorting": "{{total}}件中{{current}}件目を分類中",
+      "errors": {
+        "nameRequired": "グループ名を入力してください。",
+        "nameTooLong": "{{max}}文字以内で入力してください。",
+        "nameTaken": "同じ名前のグループがすでにあります。別の名前にしてください。",
+        "failed": "グループを保存できませんでした。もう一度お試しください。"
+      }
+    },
     "shell": {
       "sidebar": "サイドバー",
       "showSidebar": "サイドバーを表示",
@@ -2320,19 +2380,5 @@
     "returned_other": "{{count}} 回戻った",
     "search": "検索",
     "noQuestions": "この話の筋に質問はありません。"
-  },
-  "lifetime": {
-    "title": "繰り返し戻ってくるもの",
-    "viewMap": "マップ",
-    "viewList": "リスト",
-    "viewLabel": "会話の表示方法",
-    "recurring": "繰り返し:",
-    "inCount_one": "{{count}} 件の会話",
-    "inCount_other": "{{count}} 件の会話",
-    "node": "{{label}}、トピック {{count}} 件",
-    "topicCount_one": "トピック {{count}} 件",
-    "topicCount_other": "トピック {{count}} 件",
-    "open": "この会話を開く",
-    "empty": "録音した会話が {{count}} 件たまるとマップが表示されます。"
   }
 }

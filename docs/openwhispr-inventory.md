@@ -34,13 +34,14 @@ no route table — this list is the whole of it.
 
 The product. `OatsWorkspace.tsx` (2,256) holds all three surfaces; the rest is
 the signature work: `conversation/` (contour, signal rail, listening pulse, open
-thread stack, `useContour`), and the graph stack `notes/ForceGraph`,
-`graphPhysics`, `ConversationGraph`, `TopicGraph`, `LifetimeGraph`.
+thread stack, `useContour`), the graph stack `notes/ForceGraph`,
+`graphPhysics`, `ConversationGraph`, `TopicGraph`, and `global/`, the Global
+conversations board.
 `MeetingRecordingMount`, `PermissionsSection`, `MarkdownRenderer`,
 `PostMigrationOnboarding` and `BackgroundActionToastListener` complete it.
 
-The `notes/` directory name is a leftover: what is left in it is the topic and
-lifetime graphs, which are Oats signature surfaces (`DESIGN.md` §9.5–9.6).
+The `notes/` directory name is a leftover: what is left in it is the topic graph
+and the force graph the board also draws, which are Oats signature surfaces.
 Renaming it is cosmetic and has not been done.
 
 ## Advanced Settings — 46 components, 11,242 lines

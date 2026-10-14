@@ -106,6 +106,8 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel?: () => void;
   variant?: "default" | "destructive";
+  /** Where the focus goes when it closes, for a dialog opened from state rather than a trigger. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -118,6 +120,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
   variant = "default",
+  onCloseAutoFocus,
 }) => {
   const handleConfirm = () => {
     onConfirm();
@@ -131,7 +134,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

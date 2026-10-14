@@ -38,6 +38,27 @@ export const BANDS = 6;
 export const HORIZON = 0.57;
 
 /**
+ * Where the scene sits in a canvas `height` CSS px tall.
+ *
+ * Every vertical measure in the field (the horizon, the bands, a blade's
+ * height, the farmhouse, the birds, the chaff) is a fraction of the scene's
+ * height, and by default the scene is the canvas. Given its own `sceneHeight`,
+ * the scene keeps that scale and stands on the canvas's bottom edge: the ground
+ * and everything on it stay where they are, and a taller canvas shows more sky
+ * above them, as a taller window onto a field would. Both renderers, and the
+ * shaders, place things this way.
+ */
+export function sceneFrame(height: number, sceneHeight?: number) {
+  const scale = sceneHeight !== undefined && sceneHeight > 0 ? sceneHeight : height;
+  return {
+    /** CSS px per unit of scene height. */
+    scale,
+    /** CSS px from the canvas's top of the point `fraction` of the scene down from its top. */
+    y: (fraction: number) => height - (1 - fraction) * scale,
+  };
+}
+
+/**
  * Where the sun sits, as a fraction of viewport width. Off-centre on a thirds
  * line: a light source dead centre reads as a target rather than as weather.
  */

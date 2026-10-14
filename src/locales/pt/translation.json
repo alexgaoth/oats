@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "O que as marcas significam",
         "open": "Aberta",
-        "topic": "Mudança de assunto",
-        "return": "Volta a um assunto anterior",
-        "marked": "Momento marcado"
+        "topic": "Novo assunto",
+        "marked": "Marcado"
       },
       "contourSummary": "{{minutes}} minutos, {{questions}} perguntas ({{unresolved}} sem resposta), o assunto mudou {{shifts}} vezes e {{returns}} fios foram retomados.",
       "contourEmpty": "Nada gravado ainda.",
@@ -1952,20 +1951,16 @@
       "title": "Fluxo da conversa",
       "viewLabel": "Visualização do fluxo",
       "mode": {
-        "auto": "Auto",
-        "stack": "Lista",
+        "lanes": "Faixas",
         "graph": "Grafo"
       },
       "empty": "Os temas aparecem aqui à medida que a conversa avança.",
       "caption": {
-        "few_one": "Mostrando a lista: até agora só {{count}} tema.",
-        "few_other": "Mostrando a lista: até agora só {{count}} temas.",
-        "linear": "Mostrando a lista: a conversa seguiu em linha reta.",
-        "returns_one": "Mostrando o grafo: até agora {{count}} retorno a um tema anterior.",
-        "returns_other": "Mostrando o grafo: até agora {{count}} retornos a temas anteriores.",
-        "branching": "Mostrando o grafo: a conversa se ramificou.",
-        "stack": "Mostrando a lista.",
-        "graph": "Mostrando o grafo."
+        "topics_one": "{{count}} tema",
+        "topics_other": "{{count}} temas",
+        "returns_one": "{{count}} retorno a um tema anterior",
+        "returns_other": "{{count}} retornos a temas anteriores",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Agora",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "Retomado {{count}}×",
       "back_other": "Retomado {{count}}×",
-      "showMore_one": "Mostrar mais {{count}}",
-      "showMore_other": "Mostrar mais {{count}}",
-      "showFewer": "Mostrar menos",
-      "stackLabel": "Temas, os mais recentes primeiro",
+      "lanesLabel": "Temas na ordem em que surgiram",
       "graphLabel_one": "Grafo de {{count}} tema abordado até agora",
       "graphLabel_other": "Grafo de {{count}} temas abordados até agora",
       "nodeName": "{{label}}, {{state}}",
@@ -2067,6 +2059,44 @@
       "notSummarized": "Esta conversa ainda não foi resumida.",
       "summarize": "Resumir",
       "setUpModel": "Configurar um modelo"
+    },
+    "global": {
+      "title": "Conversas globais",
+      "view": {
+        "label": "Visualização das conversas",
+        "list": "Lista",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Grupos de conversas",
+        "all": "Todas"
+      },
+      "boardLabel": "Quadro: {{tab}}",
+      "menu": {
+        "label": "Opções do quadro",
+        "reset": "Repor disposição"
+      },
+      "cleared": "Não há nada neste quadro.",
+      "widget": {
+        "remove": "Remover {{name}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Grafo de forças",
+          "empty": "O grafo aparece quando {{count}} conversas aqui tiverem temas para ligar."
+        },
+        "arcs": {
+          "name": "Linha do tempo de arcos",
+          "empty": "A linha do tempo aparece quando {{count}} conversas aqui tiverem temas."
+        }
+      },
+      "subjects": {
+        "caption": "Volta:",
+        "chip_one": "{{label}}, em {{count}} conversa",
+        "chip_other": "{{label}}, em {{count}} conversas"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} tópico",
+      "node_other": "{{title}}, {{date}}, {{count}} tópicos"
     },
     "review": {
       "title": "O que ficou em aberto",
@@ -2269,6 +2299,36 @@
       "room": "Sala",
       "speaker": "Falante {{n}}"
     },
+    "example": {
+      "open": "Abrir uma conversa de exemplo",
+      "note": "Uma revisão de lançamento com nove pessoas para explorar. Exclua quando quiser.",
+      "badge": "Exemplo",
+      "failed": "Não foi possível abrir a conversa de exemplo",
+      "failedHint": "Nada foi adicionado. Tente novamente."
+    },
+    "groups": {
+      "seed": {
+        "work": "Trabalho",
+        "personal": "Pessoal"
+      },
+      "moveTo": "Mover para um grupo",
+      "none": "Sem grupo",
+      "new": "Novo grupo…",
+      "newTitle": "Novo grupo",
+      "newDescription": "Dê um nome ao grupo. Esta conversa vai para ele.",
+      "nameLabel": "Nome",
+      "create": "Criar",
+      "movedTo": "Movida para {{group}}",
+      "movedOut": "Sem grupo",
+      "moveFailed": "Não movida",
+      "sorting": "Organizando {{current}} de {{total}}",
+      "errors": {
+        "nameRequired": "Dê um nome ao grupo.",
+        "nameTooLong": "Use no máximo {{max}} caracteres.",
+        "nameTaken": "Já existe um grupo com esse nome. Escolha outro.",
+        "failed": "O grupo não foi salvo. Tente novamente."
+      }
+    },
     "shell": {
       "sidebar": "Barra lateral",
       "showSidebar": "Mostrar barra lateral",
@@ -2320,19 +2380,5 @@
     "returned_other": "retomado {{count}}×",
     "search": "Pesquisar",
     "noQuestions": "Sem perguntas neste fio."
-  },
-  "lifetime": {
-    "title": "Aquilo a que volta sempre",
-    "viewMap": "Mapa",
-    "viewList": "Lista",
-    "viewLabel": "Visualização das conversas",
-    "recurring": "Recorrente:",
-    "inCount_one": "{{count}} conversa",
-    "inCount_other": "{{count}} conversas",
-    "node": "{{label}}, {{count}} tópicos",
-    "topicCount_one": "{{count}} tópico",
-    "topicCount_other": "{{count}} tópicos",
-    "open": "Abrir esta conversa",
-    "empty": "O mapa aparece quando tiver {{count}} conversas gravadas para ligar."
   }
 }

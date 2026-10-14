@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Bedeutung der Markierungen",
         "open": "Offen",
-        "topic": "Themenwechsel",
-        "return": "Zurück zu einem früheren Thema",
-        "marked": "Markierter Moment"
+        "topic": "Neues Thema",
+        "marked": "Markiert"
       },
       "contourSummary": "{{minutes}} Minuten, {{questions}} Fragen ({{unresolved}} unbeantwortet), das Thema wechselte {{shifts}}-mal, und {{returns}} Stränge wurden wieder aufgegriffen.",
       "contourEmpty": "Noch nichts aufgezeichnet.",
@@ -1952,20 +1951,16 @@
       "title": "Gesprächsverlauf",
       "viewLabel": "Ansicht des Verlaufs",
       "mode": {
-        "auto": "Auto",
-        "stack": "Liste",
+        "lanes": "Bahnen",
         "graph": "Graph"
       },
       "empty": "Themen erscheinen hier im Lauf des Gesprächs.",
       "caption": {
-        "few_one": "Als Liste dargestellt: bisher erst {{count}} Thema.",
-        "few_other": "Als Liste dargestellt: bisher erst {{count}} Themen.",
-        "linear": "Als Liste dargestellt: Das Gespräch ist geradlinig verlaufen.",
-        "returns_one": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu einem früheren Thema zurückgekehrt.",
-        "returns_other": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu früheren Themen zurückgekehrt.",
-        "branching": "Als Graph dargestellt: Das Gespräch hat sich verzweigt.",
-        "stack": "Als Liste dargestellt.",
-        "graph": "Als Graph dargestellt."
+        "topics_one": "{{count}} Thema",
+        "topics_other": "{{count}} Themen",
+        "returns_one": "{{count}}-mal zu einem früheren Thema zurückgekehrt",
+        "returns_other": "{{count}}-mal zu früheren Themen zurückgekehrt",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Jetzt",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "{{count}}× zurück",
       "back_other": "{{count}}× zurück",
-      "showMore_one": "{{count}} weiteres anzeigen",
-      "showMore_other": "{{count}} weitere anzeigen",
-      "showFewer": "Weniger anzeigen",
-      "stackLabel": "Themen, neueste zuerst",
+      "lanesLabel": "Themen in der Reihenfolge, in der sie aufkamen",
       "graphLabel_one": "Graph von {{count}} bisher angesprochenem Thema",
       "graphLabel_other": "Graph von {{count}} bisher angesprochenen Themen",
       "nodeName": "{{label}}, {{state}}",
@@ -2067,6 +2059,44 @@
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
       "summarize": "Zusammenfassen",
       "setUpModel": "Modell einrichten"
+    },
+    "global": {
+      "title": "Globale Gespräche",
+      "view": {
+        "label": "Ansicht der Gespräche",
+        "list": "Liste",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Gesprächsgruppen",
+        "all": "Alle"
+      },
+      "boardLabel": "Board: {{tab}}",
+      "menu": {
+        "label": "Board-Optionen",
+        "reset": "Anordnung zurücksetzen"
+      },
+      "cleared": "Auf diesem Board ist nichts.",
+      "widget": {
+        "remove": "{{name}} entfernen"
+      },
+      "widgets": {
+        "force": {
+          "name": "Kräftegraph",
+          "empty": "Der Graph erscheint, sobald {{count}} Gespräche hier Themen haben, die sich verbinden lassen."
+        },
+        "arcs": {
+          "name": "Bogen-Zeitleiste",
+          "empty": "Die Zeitleiste erscheint, sobald {{count}} Gespräche hier Themen haben."
+        }
+      },
+      "subjects": {
+        "caption": "Kommt wieder:",
+        "chip_one": "{{label}}, in {{count}} Gespräch",
+        "chip_other": "{{label}}, in {{count}} Gesprächen"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} Thema",
+      "node_other": "{{title}}, {{date}}, {{count}} Themen"
     },
     "review": {
       "title": "Was offen geblieben ist",
@@ -2269,6 +2299,36 @@
       "room": "Raum",
       "speaker": "Sprecher {{n}}"
     },
+    "example": {
+      "open": "Beispielgespräch öffnen",
+      "note": "Eine Launch-Besprechung mit neun Personen zum Erkunden. Du kannst sie jederzeit löschen.",
+      "badge": "Beispiel",
+      "failed": "Das Beispielgespräch konnte nicht geöffnet werden",
+      "failedHint": "Es wurde nichts hinzugefügt. Versuche es noch einmal."
+    },
+    "groups": {
+      "seed": {
+        "work": "Arbeit",
+        "personal": "Privat"
+      },
+      "moveTo": "In Gruppe verschieben",
+      "none": "Keine Gruppe",
+      "new": "Neue Gruppe…",
+      "newTitle": "Neue Gruppe",
+      "newDescription": "Gib der Gruppe einen Namen. Dieses Gespräch kommt hinein.",
+      "nameLabel": "Name",
+      "create": "Erstellen",
+      "movedTo": "Verschoben nach {{group}}",
+      "movedOut": "In keiner Gruppe",
+      "moveFailed": "Nicht verschoben",
+      "sorting": "Sortiere {{current}} von {{total}}",
+      "errors": {
+        "nameRequired": "Gib der Gruppe einen Namen.",
+        "nameTooLong": "Höchstens {{max}} Zeichen.",
+        "nameTaken": "Eine Gruppe mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+        "failed": "Die Gruppe wurde nicht gespeichert. Versuche es noch einmal."
+      }
+    },
     "shell": {
       "sidebar": "Seitenleiste",
       "showSidebar": "Seitenleiste einblenden",
@@ -2320,19 +2380,5 @@
     "returned_other": "{{count}}× zurückgekehrt",
     "search": "Suchen",
     "noQuestions": "Keine Fragen in diesem Strang."
-  },
-  "lifetime": {
-    "title": "Worauf du immer zurückkommst",
-    "viewMap": "Karte",
-    "viewList": "Liste",
-    "viewLabel": "Ansicht der Gespräche",
-    "recurring": "Wiederkehrend:",
-    "inCount_one": "{{count}} Gespräch",
-    "inCount_other": "{{count}} Gespräche",
-    "node": "{{label}}, {{count}} Themen",
-    "topicCount_one": "{{count}} Thema",
-    "topicCount_other": "{{count}} Themen",
-    "open": "Dieses Gespräch öffnen",
-    "empty": "Die Karte erscheint, sobald {{count}} aufgezeichnete Gespräche verbunden werden können."
   }
 }

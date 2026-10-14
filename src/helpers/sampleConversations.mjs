@@ -111,6 +111,7 @@ export function sampleStart(fixture, { now = Date.now() } = {}) {
  * @param {object} fixture A sample fixture (see `assertSampleFixture`).
  * @param {{ now?: number }} [options]
  * @returns {{ sampleId: string, startedAt: number, endedAt: number,
+ *   group: string | null,
  *   note: Record<string, string | number | null>,
  *   events: Array<{ id: number, kind: string, parentEventId: number | null,
  *     segmentIds: string[], text: string, metadata: object, createdAt: number }> }}
@@ -157,6 +158,9 @@ export function placeSampleConversation(fixture, { now = Date.now() } = {}) {
     sampleId: meta.id,
     startedAt,
     endedAt: shift(meta.endedAt),
+    // The seeded conversation group it is filed in ("work", "personal"), or
+    // null to leave it for the writing model to sort.
+    group: typeof meta.group === "string" && meta.group.trim() ? meta.group.trim() : null,
     note: {
       title: String(note.title ?? ""),
       content: String(note.content ?? ""),
@@ -187,7 +191,7 @@ export function placeSampleConversation(fixture, { now = Date.now() } = {}) {
 /**
  * Insert sample conversations through the app's own DatabaseManager: the note
  * as `saveNote` and `updateNote` write it, the question events as the aide
- * writes them, and then the sample's id and its place in time
+ * writes them, and then the sample's id, its place in time and its group
  * (`markSampleNote`). One transaction per conversation, so a failure leaves
  * nothing half-written.
  *
@@ -257,6 +261,7 @@ export function insertSampleConversations(
         sampleId: placed.sampleId,
         createdAt: placed.note.created_at,
         updatedAt: placed.note.updated_at,
+        group: placed.group,
       });
     })();
     results.push({ sampleId: placed.sampleId, noteId: note.id, inserted: true, note });

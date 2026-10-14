@@ -14,6 +14,7 @@ const day = (daysAgo, hours, minutes) => Date.UTC(2026, 9, 12 - daysAgo, hours, 
 export default [
   {
     id: "backend-hiring-sync",
+    group: "work",
     startedAt: day(12, 21, 0),
     placement: { daysAgo: 12, at: "14:00", weekdays: true },
     company: "Pellwood (fictional)",
@@ -89,6 +90,7 @@ Theo, Maya and Priya reviewed the senior backend search: two finalists remain, a
   },
   {
     id: "corbel-pricing-call",
+    group: "work",
     startedAt: day(9, 18, 0),
     placement: { daysAgo: 9, at: "11:00", weekdays: true },
     company: "Pellwood and Corbel Logistics (both fictional)",
@@ -178,6 +180,7 @@ Corbel's head of IT confirmed that SSO on day one is a contract condition. Prici
   },
   {
     id: "design-crit-import-sso",
+    group: "work",
     startedAt: day(7, 22, 30),
     placement: { daysAgo: 7, at: "15:30", weekdays: true },
     company: "Pellwood (fictional)",
@@ -248,6 +251,7 @@ Jun walked Maya and Ines through two screens for the enterprise launch: the impo
   },
   {
     id: "support-planning-1on1",
+    group: "work",
     startedAt: day(5, 17, 0),
     placement: { daysAgo: 5, at: "10:00", weekdays: true },
     company: "Pellwood (fictional)",
@@ -302,6 +306,7 @@ Grace and Maya planned support for the launch week: staffing is two agents short
   },
   {
     id: "launch-comms-1on1",
+    group: "work",
     startedAt: day(3, 23, 0),
     placement: { daysAgo: 3, at: "16:00", weekdays: true },
     company: "Pellwood (fictional)",
@@ -355,6 +360,7 @@ Lena and Maya set the launch communications around the analyst briefing, the new
   },
   {
     id: "sso-fix-checkin",
+    group: "work",
     startedAt: day(1, 24, 30),
     placement: { daysAgo: 1, at: "17:30", weekdays: true },
     company: "Pellwood (fictional)",

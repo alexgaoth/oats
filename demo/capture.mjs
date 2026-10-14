@@ -4,7 +4,7 @@
 // installed for it. Start the harness first (`npm run demo:harness`).
 //
 //   node demo/capture.mjs --out ~/oats-screens
-//   node demo/capture.mjs --out ~/oats-screens --only home,map --themes dark
+//   node demo/capture.mjs --out ~/oats-screens --only home,global --themes dark
 //
 //   --url <origin>    the harness (default http://127.0.0.1:5391)
 //   --out <dir>       where the PNGs go (required)
@@ -24,14 +24,26 @@ import path from "node:path";
 
 const SHOTS = [
   { name: "home", query: "", script: "" },
+  // Nothing recorded yet: the offer of the example, then the example opened.
+  { name: "first-run", query: "profile=empty", script: "" },
   {
-    name: "live-calm-stack",
+    name: "first-run-conversations",
+    query: "profile=empty",
+    script: "await oatsDemo.show('conversations')",
+  },
+  {
+    name: "example-opened",
+    query: "profile=empty",
+    script: "await demo.press('Open an example conversation'); await demo.wait(600)",
+  },
+  {
+    name: "live-calm-lanes",
     query: "demo=live&from=560&end=hold&view=calm",
     script: "await demo.untilSeconds(563)",
   },
   {
     name: "live-calm-graph",
-    query: "demo=live&from=1062&end=hold&view=calm",
+    query: "demo=live&from=1062&end=hold&view=calm&flow=graph",
     script: "await demo.untilSeconds(1066)",
   },
   {
@@ -64,7 +76,19 @@ const SHOTS = [
       "await oatsDemo.open(undefined, { tab: 'connections' }); await demo.scrollTo('Summary', 'tab'); await demo.wait(2500)",
   },
   { name: "conversations", query: "", script: "await oatsDemo.show('conversations')" },
-  { name: "map", query: "", script: "await oatsDemo.show('map'); await demo.wait(3500)" },
+  { name: "global", query: "", script: "await oatsDemo.show('global'); await demo.wait(1500)" },
+  {
+    // Pointing at the newest conversation lights it in both charts.
+    name: "global-highlight",
+    query: "",
+    script:
+      "await oatsDemo.show('global'); await demo.wait(1500); await demo.point(oatsDemo.samples()[0].id)",
+  },
+  {
+    name: "global-many",
+    query: "profile=many",
+    script: "await oatsDemo.show('global'); await demo.wait(2500)",
+  },
 ];
 
 // Page helpers, evaluated in the page before each shot's script.
@@ -83,6 +107,12 @@ window.demo = {
     button?.click();
     button?.blur();
     await demo.wait(300);
+  },
+  // Point at a conversation on the Global conversations board, as the pointer
+  // would (oatsDemo.point, in the harness).
+  async point(id) {
+    await oatsDemo.point(id);
+    await demo.wait(200);
   },
   async scrollTo(text, role) {
     const candidates = role
