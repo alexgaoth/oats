@@ -65,8 +65,17 @@ export const AppShot: React.FC<{
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <AppWindow width={width} height={height} viewportWidth={viewport.width} dark={dark} lights={false}>
           <Camera shots={framing} width={width} height={height} viewport={viewport}>
-            <Freeze frame={clipFrame}>
-              <OffthreadVideo src={staticFile(`clips/${clip}.mp4`)} style={{ width, height, display: "block" }} muted />
+            {/* The clip's frame goes in as the video's start, under a freeze
+                at frame 0. Frozen at the clip frame itself, it was clamped to
+                the film's own length: past 66 s of clip, cut 6's time-lapse
+                stood still for three seconds. */}
+            <Freeze frame={0}>
+              <OffthreadVideo
+                src={staticFile(`clips/${clip}.mp4`)}
+                startFrom={clipFrame}
+                style={{ width, height, display: "block" }}
+                muted
+              />
             </Freeze>
             <WindowLights k={scale} />
             {cursor && <Cursor capture={capture} scale={scale} atMs={(clipFrame / 60) * 1000} />}

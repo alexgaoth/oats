@@ -17,7 +17,7 @@ export default {
       await d.rect("shape", "text=Answered", { closest: "[data-slot=card]" });
       // Out of the card, so the pointer does not draw the hover line on it.
       await d.moveTo({ x: 1330, y: 640 }, { duration: 700 });
-      await d.wait(3800);
+      await d.wait(2600);
       d.cue("scroll");
       await d.scroll(560, { duration: 2400 });
       await d.wait(1600);
