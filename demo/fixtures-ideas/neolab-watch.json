@@ -12,8 +12,8 @@
       { "name": "Rafa", "role": "Systems engineer" }
     ],
     "startedAt": 1791309600000,
-    "endedAt": 1791309700041,
-    "summarizedAt": 1791309741041,
+    "endedAt": 1791309700520,
+    "summarizedAt": 1791309741520,
     "placement": { "daysAgo": 9, "at": "11:00", "weekdays": true },
     "group": "work",
     "generatedBy": "demo/build-fixtures.mjs"
@@ -116,11 +116,11 @@
       },
       {
         "id": "seg-muwzfehk-8",
-        "text": "So the neolabs are all doing open weights now.",
+        "text": "So two of the neolabs are shipping open weights now.",
         "source": "mic",
         "timestamp": 1791309642704,
         "startMs": 42704,
-        "endMs": 47257,
+        "endMs": 47736,
         "speaker": "speaker_2",
         "speakerName": "Nadia",
         "speakerIsPlaceholder": false,
@@ -131,9 +131,9 @@
         "id": "seg-muwzfehk-9",
         "text": "Then world models. AMD agreed to acquire World Labs.",
         "source": "mic",
-        "timestamp": 1791309648326,
-        "startMs": 48326,
-        "endMs": 52589,
+        "timestamp": 1791309648805,
+        "startMs": 48805,
+        "endMs": 53068,
         "speaker": "speaker_1",
         "speakerName": "Kofi",
         "speakerIsPlaceholder": false,
@@ -144,9 +144,9 @@
         "id": "seg-muwzfehk-10",
         "text": "World models at a chip company. AMD and World Labs still need approvals, though.",
         "source": "mic",
-        "timestamp": 1791309653457,
-        "startMs": 53457,
-        "endMs": 60150,
+        "timestamp": 1791309653936,
+        "startMs": 53936,
+        "endMs": 60629,
         "speaker": "speaker_3",
         "speakerName": "Rafa",
         "speakerIsPlaceholder": false,
@@ -157,9 +157,9 @@
         "id": "seg-muwzfehk-11",
         "text": "And Fei-Fei Li would become chief scientist at AMD once the World Labs deal closes.",
         "source": "mic",
-        "timestamp": 1791309660877,
-        "startMs": 60877,
-        "endMs": 68165,
+        "timestamp": 1791309661356,
+        "startMs": 61356,
+        "endMs": 68644,
         "speaker": "speaker_1",
         "speakerName": "Kofi",
         "speakerIsPlaceholder": false,
@@ -170,9 +170,9 @@
         "id": "seg-muwzfehk-12",
         "text": "Atlas is the newest World Labs world model, trained on text, images, video and 3D.",
         "source": "mic",
-        "timestamp": 1791309668925,
-        "startMs": 68925,
-        "endMs": 76315,
+        "timestamp": 1791309669404,
+        "startMs": 69404,
+        "endMs": 76794,
         "speaker": "speaker_1",
         "speakerName": "Kofi",
         "speakerIsPlaceholder": false,
@@ -183,9 +183,9 @@
         "id": "seg-muwzfehk-13",
         "text": "World models everywhere. AMI Labs on world models from sensor data, World Labs with Marble and Atlas.",
         "source": "mic",
-        "timestamp": 1791309677548,
-        "startMs": 77548,
-        "endMs": 86052,
+        "timestamp": 1791309678027,
+        "startMs": 78027,
+        "endMs": 86531,
         "speaker": "speaker_2",
         "speakerName": "Nadia",
         "speakerIsPlaceholder": false,
@@ -196,9 +196,9 @@
         "id": "seg-muwzfehk-14",
         "text": "And SSI?",
         "source": "mic",
-        "timestamp": 1791309686941,
-        "startMs": 86941,
-        "endMs": 88128,
+        "timestamp": 1791309687420,
+        "startMs": 87420,
+        "endMs": 88607,
         "speaker": "speaker_2",
         "speakerName": "Nadia",
         "speakerIsPlaceholder": false,
@@ -209,9 +209,9 @@
         "id": "seg-muwzfehk-15",
         "text": "Still research, nothing shipped.",
         "source": "mic",
-        "timestamp": 1791309689117,
-        "startMs": 89117,
-        "endMs": 91288,
+        "timestamp": 1791309689596,
+        "startMs": 89596,
+        "endMs": 91767,
         "speaker": "speaker_1",
         "speakerName": "Kofi",
         "speakerIsPlaceholder": false,
@@ -222,9 +222,9 @@
         "id": "seg-muwzfehk-16",
         "text": "Can you put the neolab list in the reading group notes?",
         "source": "mic",
-        "timestamp": 1791309692234,
-        "startMs": 92234,
-        "endMs": 97441,
+        "timestamp": 1791309692713,
+        "startMs": 92713,
+        "endMs": 97920,
         "speaker": "speaker_3",
         "speakerName": "Rafa",
         "speakerIsPlaceholder": false,
@@ -234,7 +234,7 @@
     ],
     "enhanced_content": "Kofi ran a quick neolab watch: open weights from Reflection and Thinking Machines, and AMD agreeing to acquire World Labs.\n\n## Threads\n- **Open weights.** Reflection AI announced Beam, its first open-weight model, a sparse mixture of experts for coding and agents. The weights are promised later this month under Apache 2.0; for now there is a waitlist. Thinking Machines released open weights in July: Inkling, then Inkling-Small.\n- **World models.** AMD agreed to acquire World Labs, pending approvals; Fei-Fei Li would become AMD's chief scientist. World Labs' newest model, Atlas, is trained on text, images, video and 3D. AMI Labs works on world models learned from sensor data.\n- **SSI.** Still no product.\n\n## Follow-ups\n- Putting the neolab list in the reading group notes.",
     "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
-    "enhanced_at_content_hash": "4637-[{\"id\":\"seg-muwzfehk-1\",\"text\":\"Okay, neolab watch",
+    "enhanced_at_content_hash": "4643-[{\"id\":\"seg-muwzfehk-1\",\"text\":\"Okay, neolab watch",
     "conversation_topics": {
       "nodes": [
         {
@@ -279,8 +279,8 @@
             "seg-muwzfehk-15",
             "seg-muwzfehk-16"
           ],
-          "firstAt": 1791309648326,
-          "lastAt": 1791309692234,
+          "firstAt": 1791309648805,
+          "lastAt": 1791309692713,
           "returns": 0,
           "state": "open"
         }
@@ -293,7 +293,7 @@
       "runs": [
         {
           "at": 1791309600000,
-          "b": "hYaDj6qqpIWkrqybm62zsq6wsq+VqKqroq2tpaeurq2rrquJrbCsrrKrla2ura+lprGwrJigsKytsbKyn66ur66rqrCir6+vra2tqJ6MorCqsK6uq62TrJmqr6arrK6wrqWFgoE="
+          "b": "hYaDj6qqpIWkrqybm62zsq6wsq+VqKqroq2tpaeurq2rrquJrbCsrrKrla2ura+uj6+wrJyLrqytsbKyr6Sur66rqrCyp6+vra2tqKuFoLCqsK6uq62lo62Zr6+Uq66wrqyKgoE="
         }
       ]
     },
@@ -342,7 +342,7 @@
         "confidence": 0.75,
         "source": "local"
       },
-      "createdAt": 1791309688891
+      "createdAt": 1791309689370
     },
     {
       "id": 4,
@@ -356,7 +356,7 @@
         "outcome": "answered",
         "source": "local"
       },
-      "createdAt": 1791309692096
+      "createdAt": 1791309692575
     },
     {
       "id": 5,
@@ -369,12 +369,12 @@
         "groupKey": "group list neolab note put reading",
         "occurrence": 1
       },
-      "createdAt": 1791309698385
+      "createdAt": 1791309698864
     }
   ],
   "replay": {
     "voices": { "Kofi": { "gain": 1.1 }, "Nadia": { "gain": 1.02 }, "Rafa": { "gain": 1.16 } },
     "loud": {},
-    "stopAtMs": 100041
+    "stopAtMs": 100520
   }
 }

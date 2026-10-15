@@ -120,7 +120,7 @@ Nadia, Felix and Wen read two papers on reinforcement learning with verifiable r
         "Reflection promised the Beam weights later this month, under Apache 2.0. Open weights, properly licensed.",
       ],
       ["rafa", "And Thinking Machines put out open weights in July. Inkling, then Inkling-Small."],
-      ["nadia", "So the neolabs are all doing open weights now."],
+      ["nadia", "So two of the neolabs are shipping open weights now."],
       ["kofi", "Then world models. AMD agreed to acquire World Labs."],
       ["rafa", "World models at a chip company. AMD and World Labs still need approvals, though."],
       [
