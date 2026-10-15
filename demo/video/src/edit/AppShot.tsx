@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Freeze, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop } from "../brand/Backdrop";
 import { AppWindow, WindowLights } from "./AppWindow";
 import { Camera, type Shot } from "./Camera";
@@ -55,7 +55,11 @@ export const AppShot: React.FC<{
   const sceneSeconds = frame / fps;
   const clipSeconds = start + (timeMap ? timeMap(sceneSeconds, capture) : sceneSeconds * rate);
   const clipFrame = Math.max(0, Math.round(clipSeconds * 60));
-  const startFrame = Math.round(start * 60);
+  // The take's last frame: assemble.mjs writes one per 1/60 s up to "end",
+  // or the baked count.
+  const lastFrame = capture.baked
+    ? Math.round(capture.baked.seconds * 60) - 1
+    : Math.ceil(cueAt(capture, "end") * 60) - 1;
   const viewport = capture.viewport;
   const width = WINDOW_WIDTH;
   const height = Math.round((width * viewport.height) / viewport.width);
@@ -66,21 +70,15 @@ export const AppShot: React.FC<{
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <AppWindow width={width} height={height} viewportWidth={viewport.width} dark={dark} lights={false}>
           <Camera shots={framing} width={width} height={height} viewport={viewport}>
-            {/* The video starts at the scene's first clip frame and is frozen
-                at the frames since. A frozen frame is clamped to the film's
-                length, so it counts from the scene, not from the clip's
-                start; and the start stays put within a scene, because moving
-                it every frame made Remotion hand back a scaled frame now and
-                then (a mosaic of small windows). The time-lapse is baked into
-                a clip of its own (director/bake-lapse.mjs). */}
-            <Freeze frame={Math.max(0, clipFrame - startFrame)}>
-              <OffthreadVideo
-                src={staticFile(`clips/${clip}.mp4`)}
-                startFrom={startFrame}
-                style={{ width, height, display: "block" }}
-                muted
-              />
-            </Freeze>
+            {/* The clip's frame, as an image: public/seq/<clip>/<frame>.jpg
+                links to the take's own frames (director/assemble.mjs).
+                Remotion's video extractor, under load, now and then handed
+                back a frame laid out at the wrong size, a mosaic of small
+                windows; an image has no extractor, and no frame clamp. */}
+            <Img
+              src={staticFile(`seq/${clip}/${String(Math.min(clipFrame, lastFrame)).padStart(6, "0")}.jpg`)}
+              style={{ width, height, display: "block" }}
+            />
             <WindowLights k={scale} />
             {cursor && <Cursor capture={capture} scale={scale} atMs={(clipFrame / 60) * 1000} />}
             {children}

@@ -31,13 +31,14 @@ const FROM = A.clip; // 0:22, about where the record scene leaves the clock
 const TO = clipAt(1052.6); // 17:32.6, where the Words scene begins
 
 // Speed, as clip seconds per film second (the replay's six times on top):
-// from 3 (18x) up to 20 (120x), held, then down to 1 (6x) to meet the Words
-// scene's real time. Each change is an S-curve.
+// from 3 (18x) up to 36 (216x), held, then down to 1 (6x) to meet the Words
+// scene's real time. Each change is an S-curve. Seventeen minutes in about
+// five seconds: the film is watched on X, by people who scroll on.
 const START = 3;
-const TOP = 20;
+const TOP = 36;
 const LAST = 1;
-const UP = 0.8;
-const DOWN = 0.8;
+const UP = 0.6;
+const DOWN = 0.6;
 // An S-curve's mean is its midpoint, so each ramp covers (a + b) / 2 per second.
 const HOLD = (TO - FROM - (UP * (START + TOP)) / 2 - (DOWN * (TOP + LAST)) / 2) / TOP;
 const SECONDS = UP + HOLD + DOWN;
@@ -63,7 +64,7 @@ for (let index = 0; index < frames; index += 1) {
 
 const timesFile = path.join(dir, "lapse-times.json");
 fs.writeFileSync(timesFile, JSON.stringify(times));
-execFileSync("node", [path.join(here, "assemble.mjs"), dir, path.join(root, "public/clips/b-lapse.mp4"), "--times", timesFile], {
+execFileSync("node", [path.join(here, "assemble.mjs"), dir, path.join(root, "public/clips/b-lapse.mp4"), "--times", timesFile, "--seq", "sequence-lapse"], {
   stdio: "inherit",
 });
 fs.writeFileSync(

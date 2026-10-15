@@ -1,8 +1,15 @@
-// node director/assemble.mjs <capture dir> <out.mp4> [--fps 60] [--times <times.json>]
+// node director/assemble.mjs <capture dir> <out.mp4> [--fps 60] [--times <times.json>] [--seq <name>]
 //
 // `--times` bakes a speed change into the clip: a JSON array with the capture
 // time (ms) each output frame shows, made by bake-lapse.mjs. Without it, the
 // output frames are evenly spaced, one per 1/fps of capture time.
+//
+// The frames, one file per output frame, go to `<capture dir>/<name>`
+// (`sequence` by default), and public/seq/<clip> links to them: the film
+// draws each frame as an image from there. Remotion's video extractor, under
+// load, now and then handed back a frame laid out at the wrong size (a mosaic
+// of small windows); an image has no extractor. The mp4 is for watching a
+// clip on its own.
 //
 // The screencast sends a frame only when the page repaints, at uneven times.
 // This lays them on a constant clock (each output frame shows the latest
@@ -20,7 +27,7 @@ const first = capture.frames.filter((frame) => frame.t < 0).at(-1);
 if (first) frames.unshift({ ...first, t: 0 });
 const end = capture.cues.find((cue) => cue.name === "end")?.t ?? frames.at(-1).t;
 
-const sequence = path.join(dir, "sequence");
+const sequence = path.join(dir, rest.includes("--seq") ? rest[rest.indexOf("--seq") + 1] : "sequence");
 fs.rmSync(sequence, { recursive: true, force: true });
 fs.mkdirSync(sequence);
 // Each output frame shows the latest captured frame up to half a frame after
@@ -41,10 +48,9 @@ for (let index = 0; index < total; index += 1) {
   const time = times ? times[index] : (index * 1000) / fps;
   while (next + 1 < frames.length && frames[next + 1].t <= time + half) next += 1;
   const shown = frames[next];
-  fs.symlinkSync(
-    path.resolve(dir, "frames", shown.file),
-    path.join(sequence, `${String(index).padStart(6, "0")}.jpg`)
-  );
+  // A hard link, not a symlink: Remotion's file server answers 404 for a
+  // symlink, and the film reads these frames through it.
+  fs.linkSync(path.resolve(dir, "frames", shown.file), path.join(sequence, `${String(index).padStart(6, "0")}.jpg`));
 }
 
 const ffmpeg = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "node_modules", ".bin", "remotion");
@@ -73,5 +79,11 @@ execFileSync(
   ],
   { stdio: "inherit" }
 );
+// public/seq/<clip> -> the frames, for the film (see the note at the top).
+const clipName = path.basename(out, ".mp4");
+const publicSeq = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "public", "seq");
+fs.mkdirSync(publicSeq, { recursive: true });
+fs.rmSync(path.join(publicSeq, clipName), { force: true });
+fs.symlinkSync(path.resolve(sequence), path.join(publicSeq, clipName));
 const unique = new Set(frames.map((frame) => frame.file)).size;
 console.log(`${total} frames at ${fps} fps (${(end / 1000).toFixed(2)} s) from ${unique} captured -> ${out}`);

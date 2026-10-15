@@ -7,7 +7,7 @@ import { TitleCard } from "../scenes/TitleCard";
 import type { Capture } from "../edit/types";
 
 /**
- * The demo film: about 66 seconds, no captions, no zooms. The whole window is
+ * The demo film: about 62 seconds, no captions, no zooms. The whole window is
  * always in view and the pointer says where to look.
  *
  * The rules the cut follows:
@@ -61,12 +61,12 @@ const RECORD_RAMP = (sceneSeconds: number, c: Capture) =>
   ramp(1, 3, cueAt(c, "fast-end") - RECORD_FROM(c), 0.5)(sceneSeconds);
 /**
  * The time-lapse is baked into a clip of its own by director/bake-lapse.mjs:
- * from 0:23, where the record scene leaves the clock, at the same 18x, up to
- * 120x, through every topic and every return to an earlier one (the launch
+ * from 0:22, where the record scene leaves the clock, at the same 18x, up to
+ * 216x, through every topic and every return to an earlier one (the launch
  * date at 10:43 among them), and down to 6x at 17:32, where Words is chosen.
  * No slow-down inside it, and no cut: it runs into the Words scene.
  */
-const LAPSE_SECONDS = 559 / 60;
+const LAPSE_SECONDS = 320 / 60;
 const WORDS_FROM = (c: Capture) => cueAt(c, "words") - 1.4;
 const SETTLE_FROM = (c: Capture) => cueAt(c, "words") + 16;
 const SETTLE_RATE = 6;

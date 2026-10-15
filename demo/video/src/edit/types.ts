@@ -7,6 +7,8 @@ export type Capture = {
   /** Each pointer move as the director made it: start time, duration, from, to. */
   moves?: { t: number; ms: number; from: { x: number; y: number }; to: { x: number; y: number } }[];
   cues: { t: number; name: string; [key: string]: unknown }[];
+  /** A clip baked with a speed curve (director/bake-lapse.mjs): its length. */
+  baked?: { from: number; to: number; seconds: number };
 };
 
 /** A region of the app window in its CSS pixels (the capture's viewport). */

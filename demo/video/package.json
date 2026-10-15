@@ -5,6 +5,7 @@
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts OatsDemo out/oats-demo.mp4",
+    "film": "remotion render src/index.ts OatsDemo out/frames --sequence --image-format=png && node director/finish-film.mjs out/frames out/oats-demo.mp4",
     "still": "remotion still src/index.ts"
   },
   "dependencies": {
