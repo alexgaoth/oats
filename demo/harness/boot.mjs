@@ -130,6 +130,8 @@ window.oatsDemo = {
     else store.pointAtConversation(id);
     await frame();
   },
+  /** The searches the app opened (auto-search with `autosearch=1`), oldest first. */
+  searches: () => main.searches.map((search) => ({ ...search })),
   /** The ids of the sample conversations held, newest first. */
   samples: () =>
     main.db.notes

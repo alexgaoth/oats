@@ -127,6 +127,8 @@ export function createFakeMain({ fixtures, example = null, now = Date.now(), bad
     sort_order: index,
     created_at: sqlTime(now),
   }));
+  // Searches the app asked to open, in order (see openConversationSearch).
+  const searches = [];
   const listeners = new Map();
   const hooks = {};
   let nextNoteId = 1;
@@ -434,8 +436,16 @@ export function createFakeMain({ fixtures, example = null, now = Date.now(), bad
       event.metadata = { ...event.metadata, state };
       return { ...event, metadata: { ...event.metadata } };
     },
-    // The one way out to the network: in the demo it goes nowhere.
-    openConversationSearch: async () => ({ success: true }),
+    // The one way out to the network: in the demo it goes nowhere, but it is
+    // written down, so a film can show the browser opening at that moment.
+    openConversationSearch: async (request = {}) => {
+      searches.push({
+        query: String(request.query ?? ""),
+        searchBaseUrl: String(request.searchBaseUrl ?? ""),
+        at: Date.now(),
+      });
+      return { success: true };
+    },
     dismissConversationCard: async () => ({ success: true }),
 
     // --- Conversation groups.
@@ -484,5 +494,5 @@ export function createFakeMain({ fixtures, example = null, now = Date.now(), bad
     },
   });
 
-  return { api, db, emit, listen, listenerCount, hooks, insertEvent };
+  return { api, db, emit, listen, listenerCount, hooks, insertEvent, searches };
 }
