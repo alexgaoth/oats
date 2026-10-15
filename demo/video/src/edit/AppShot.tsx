@@ -55,6 +55,7 @@ export const AppShot: React.FC<{
   const sceneSeconds = frame / fps;
   const clipSeconds = start + (timeMap ? timeMap(sceneSeconds, capture) : sceneSeconds * rate);
   const clipFrame = Math.max(0, Math.round(clipSeconds * 60));
+  const startFrame = Math.round(start * 60);
   const viewport = capture.viewport;
   const width = WINDOW_WIDTH;
   const height = Math.round((width * viewport.height) / viewport.width);
@@ -65,14 +66,17 @@ export const AppShot: React.FC<{
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <AppWindow width={width} height={height} viewportWidth={viewport.width} dark={dark} lights={false}>
           <Camera shots={framing} width={width} height={height} viewport={viewport}>
-            {/* The clip's frame goes in as the video's start, under a freeze
-                at frame 0. Frozen at the clip frame itself, it was clamped to
-                the film's own length: past 66 s of clip, cut 6's time-lapse
-                stood still for three seconds. */}
-            <Freeze frame={0}>
+            {/* The video starts at the scene's first clip frame and is frozen
+                at the frames since. A frozen frame is clamped to the film's
+                length, so it counts from the scene, not from the clip's
+                start; and the start stays put within a scene, because moving
+                it every frame made Remotion hand back a scaled frame now and
+                then (a mosaic of small windows). The time-lapse is baked into
+                a clip of its own (director/bake-lapse.mjs). */}
+            <Freeze frame={Math.max(0, clipFrame - startFrame)}>
               <OffthreadVideo
                 src={staticFile(`clips/${clip}.mp4`)}
-                startFrom={clipFrame}
+                startFrom={startFrame}
                 style={{ width, height, display: "block" }}
                 muted
               />

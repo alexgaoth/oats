@@ -1,18 +1,20 @@
 import { continueRender, delayRender, staticFile } from "remotion";
 
 /**
- * The wordmark's face on the title and end cards: Young Serif (SIL OFL 1.1),
- * a warm old-style serif that sits beside the grain; the app itself stays in
- * Inter. Loaded from Google Fonts by the renderer, once, before any frame.
+ * The wordmark's face on the title and end cards: EB Garamond (SIL OFL 1.1),
+ * regular, as hillclimb.com sets its own name (Alex's pick); the app itself
+ * stays in Inter. Loaded from Google Fonts by the renderer, once, before any
+ * frame: the Latin subset of weight 400.
  */
-const WORDMARK_URL = "https://fonts.gstatic.com/s/youngserif/v2/3qTpojO2nS2VtkB3KtkQZ1t93kY6ah7E.woff2";
-export const WORDMARK_FONT = '"Young Serif", Georgia, serif';
+const WORDMARK_URL =
+  "https://fonts.gstatic.com/s/ebgaramond/v33/SlGDmQSNjdsmc35JDF1K5E55YMjF_7DPuGi-6_RkBI9_WamXgHlI.woff2";
+export const WORDMARK_FONT = '"EB Garamond", "Times New Roman", serif';
 let wordmarkLoaded = false;
 export function loadWordmark() {
   if (wordmarkLoaded || typeof document === "undefined") return;
   wordmarkLoaded = true;
-  const handle = delayRender("Loading Young Serif");
-  new FontFace("Young Serif", `url(${WORDMARK_URL}) format("woff2")`)
+  const handle = delayRender("Loading EB Garamond");
+  new FontFace("EB Garamond", `url(${WORDMARK_URL}) format("woff2")`, { weight: "400" })
     .load()
     .then((font) => {
       document.fonts.add(font);

@@ -1,5 +1,6 @@
 import React from "react";
-import { AbsoluteFill, Sequence } from "remotion";
+import { AbsoluteFill, Sequence, useCurrentFrame } from "remotion";
+import { FilmClock } from "../brand/filmClock";
 import { AppShot, cueAt } from "../edit/AppShot";
 import { Fade } from "../edit/Fade";
 import { TitleCard } from "../scenes/TitleCard";
@@ -59,12 +60,13 @@ const RECORD_FROM = (c: Capture) => cueAt(c, "recording") - 1.8;
 const RECORD_RAMP = (sceneSeconds: number, c: Capture) =>
   ramp(1, 3, cueAt(c, "fast-end") - RECORD_FROM(c), 0.5)(sceneSeconds);
 /**
- * b-timelapse is the replay at six times from 0:20; 0.6 s in, the clock is
- * where the record scene left it. It starts at the record scene's 18x (3) and
- * speeds up to 72x (12), and holds it: the topics change at full speed.
+ * The time-lapse is baked into a clip of its own by director/bake-lapse.mjs:
+ * from 0:23, where the record scene leaves the clock, at the same 18x, up to
+ * 120x, through every topic and every return to an earlier one (the launch
+ * date at 10:43 among them), and down to 6x at 17:32, where Words is chosen.
+ * No slow-down inside it, and no cut: it runs into the Words scene.
  */
-const LAPSE_FROM = 0.6;
-const LAPSE_RAMP = ramp(3, 12, 0, 0.6);
+const LAPSE_SECONDS = 559 / 60;
 const WORDS_FROM = (c: Capture) => cueAt(c, "words") - 1.4;
 const SETTLE_FROM = (c: Capture) => cueAt(c, "words") + 16;
 const SETTLE_RATE = 6;
@@ -87,12 +89,10 @@ const SCENES = (
       <AppShot clip="a-record" from={RECORD_FROM} timeMap={RECORD_RAMP} />
     </Scene>
 
-    {/* The first ten minutes, fast: the line fills and the lanes grow a row
-        per topic. It ends before the room comes back to the launch date
-        (10:43): that climb, 0.1 s before the dissolve, read as a glitch.
-        The Words scene's lanes show the returns. */}
-    <Scene seconds={8.9}>
-      <AppShot clip="b-timelapse" from={LAPSE_FROM} timeMap={LAPSE_RAMP} cursor={false} />
+    {/* Seventeen minutes, fast: the line fills, the lanes grow a row per
+        topic, and the room comes back to earlier topics. */}
+    <Scene seconds={LAPSE_SECONDS}>
+      <AppShot clip="b-lapse" cursor={false} />
     </Scene>
 
     {/* Words is chosen. */}
@@ -151,16 +151,22 @@ const starts = scenes.reduce<number[]>((list, scene, index) => {
   return list;
 }, []);
 
-export const OatsDemo: React.FC = () => (
-  <AbsoluteFill style={{ background: "#ffffff" }}>
-    {scenes.map((scene, index) => (
-      <Sequence key={index} from={starts[index]} durationInFrames={s(scene.seconds)}>
-        <Fade inFrames={index === 0 ? 0 : OVERLAP} outFrames={0}>
-          {scene.children}
-        </Fade>
-      </Sequence>
-    ))}
-  </AbsoluteFill>
-);
+export const OatsDemo: React.FC = () => {
+  // The film's frame, for the backdrop's fluid (brand/filmClock.ts).
+  const frame = useCurrentFrame();
+  return (
+    <FilmClock.Provider value={frame}>
+      <AbsoluteFill style={{ background: "#f3f3f3" }}>
+        {scenes.map((scene, index) => (
+          <Sequence key={index} from={starts[index]} durationInFrames={s(scene.seconds)}>
+            <Fade inFrames={index === 0 ? 0 : OVERLAP} outFrames={0}>
+              {scene.children}
+            </Fade>
+          </Sequence>
+        ))}
+      </AbsoluteFill>
+    </FilmClock.Provider>
+  );
+};
 
 export const DURATION = starts[starts.length - 1] + s(scenes[scenes.length - 1].seconds);

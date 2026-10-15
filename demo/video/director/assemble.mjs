@@ -1,4 +1,8 @@
-// node director/assemble.mjs <capture dir> <out.mp4> [--fps 60]
+// node director/assemble.mjs <capture dir> <out.mp4> [--fps 60] [--times <times.json>]
+//
+// `--times` bakes a speed change into the clip: a JSON array with the capture
+// time (ms) each output frame shows, made by bake-lapse.mjs. Without it, the
+// output frames are evenly spaced, one per 1/fps of capture time.
 //
 // The screencast sends a frame only when the page repaints, at uneven times.
 // This lays them on a constant clock (each output frame shows the latest
@@ -27,11 +31,14 @@ fs.mkdirSync(sequence);
 // while the page is still, so in a still second the nearest frame is half the
 // time the next change, shown early (cut 5's first render lost a hover that
 // way). A slow-motion capture has more frames than slots; the latest is kept.
-const total = Math.ceil((end / 1000) * fps);
+const times = rest.includes("--times")
+  ? JSON.parse(fs.readFileSync(rest[rest.indexOf("--times") + 1], "utf8"))
+  : null;
+const total = times ? times.length : Math.ceil((end / 1000) * fps);
 const half = 500 / fps;
 let next = 0;
 for (let index = 0; index < total; index += 1) {
-  const time = (index * 1000) / fps;
+  const time = times ? times[index] : (index * 1000) / fps;
   while (next + 1 < frames.length && frames[next + 1].t <= time + half) next += 1;
   const shown = frames[next];
   fs.symlinkSync(

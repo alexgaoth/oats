@@ -21,11 +21,13 @@ export const TitleCard: React.FC<{ line?: string; tossAt?: number }> = ({ line, 
           <Grain id="title-grain" size={220} progress={progress} />
           <div
             style={{
+              // hillclimb.com's title: EB Garamond 400, tight, near-black.
               fontFamily: WORDMARK_FONT,
-              fontSize: 176,
+              fontSize: 200,
               fontWeight: 400,
-              letterSpacing: "-0.02em",
-              color: theme.ink,
+              lineHeight: 0.95,
+              letterSpacing: "-0.03em",
+              color: "#1a1a1a",
               opacity: settle,
               transform: `translateX(${interpolate(settle, [0, 1], [-24, 0])}px)`,
             }}
