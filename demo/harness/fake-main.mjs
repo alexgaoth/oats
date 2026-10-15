@@ -49,6 +49,13 @@ const GROUP_NAME_MAX = 40;
 // was missing from the Work tab on Global conversations, which reads as a bug.
 export const DEMO_FILING = { "launch-readiness-review": "work" };
 
+// The words the harness's stand-in for the writing model reads as a personal
+// conversation when it is asked to sort one (`replay.mjs`); anything else it
+// files in Work. A main conversation recorded live is sorted this way after
+// Stop, so its title, topics and summary keep clear of them.
+export const PERSONAL_SORT_WORDS =
+  /\b(weekend|holiday|trip|family|flat|landlord|rent|kids|birthday)\b/i;
+
 /** A group name as database.js stores it, and the key two names compare by. */
 const cleanGroupName = (name) =>
   typeof name === "string" ? name.replace(/\s+/gu, " ").trim() : "";

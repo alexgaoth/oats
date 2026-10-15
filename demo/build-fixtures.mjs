@@ -23,6 +23,15 @@
 //   node demo/build-fixtures.mjs            write the fixtures
 //   node demo/build-fixtures.mjs --report   and print what the pipeline made of each turn
 //   node demo/build-fixtures.mjs --check    exit 1 if a fixture on disk is stale
+//
+// `--set ideas` does the same for the second content set: the scripts in
+// `demo/script-ideas/` (a research reading group on reinforcement learning,
+// philosophy, the new AI labs and the news), written to `demo/fixtures-ideas/`.
+// That set's main conversation is written there too, not into the app, and
+// carries `meta.main: true` so the harness can find it (`set=ideas`).
+//
+//   node demo/build-fixtures.mjs --set ideas --report
+//   node demo/build-fixtures.mjs --set ideas --check
 
 import fs from "node:fs";
 import path from "node:path";
@@ -94,8 +103,10 @@ function topicScores(tracker, text) {
 
 /**
  * Record one script through the pipeline. Returns the fixture and a report.
+ * `main` marks the main conversation of a set whose main is not the app's
+ * own sample (`meta.main`), so the harness can tell it from the others.
  */
-async function record(script) {
+async function record(script, { main = false } = {}) {
   const startedAt = script.startedAt;
   const timeline = layoutTurns(script);
   const arrivals = finalArrivals(timeline);
@@ -343,6 +354,7 @@ async function record(script) {
       // and the summary stand in for its writing. Left out when the script
       // names none; such a sample is sorted like any conversation.
       ...(script.group ? { group: script.group } : {}),
+      ...(main ? { main: true } : {}),
       generatedBy: "demo/build-fixtures.mjs",
     },
     note: {
@@ -489,24 +501,65 @@ async function formatJson(value, file) {
   return prettier.format(JSON.stringify(value), { ...options, parser: "json", filepath: file });
 }
 
+/**
+ * The content sets: where each one's scripts are, and where its fixtures go.
+ * The default set's main conversation is the app's own sample; the ideas set
+ * is demo-only, so its main conversation goes with the others and is marked.
+ */
+const SETS = {
+  default: {
+    main: "./script/launch-readiness-review.mjs",
+    supporting: "./script/supporting.mjs",
+    personal: "./script/personal.mjs",
+    mainDir: "src/helpers/sampleConversations",
+    dir: "demo/fixtures",
+    markMain: false,
+  },
+  ideas: {
+    main: "./script-ideas/main.mjs",
+    supporting: "./script-ideas/supporting.mjs",
+    personal: "./script-ideas/personal.mjs",
+    mainDir: "demo/fixtures-ideas",
+    dir: "demo/fixtures-ideas",
+    markMain: true,
+  },
+};
+
+/** `--set <name>` or `--set=<name>`; the default set when it is not given. */
+function setName(argv) {
+  let name = "default";
+  for (const [index, arg] of argv.entries()) {
+    if (arg === "--set") name = argv[index + 1] ?? "";
+    else if (arg.startsWith("--set=")) name = arg.slice("--set=".length);
+  }
+  if (!Object.hasOwn(SETS, name)) {
+    throw new Error(`Unknown set "${name}". Sets: ${Object.keys(SETS).join(", ")}`);
+  }
+  return name;
+}
+
 async function main() {
   const args = new Set(process.argv.slice(2));
-  const { default: main } = await import("./script/launch-readiness-review.mjs");
-  const { default: supporting } = await import("./script/supporting.mjs");
-  const { default: personal } = await import("./script/personal.mjs");
+  const name = setName(process.argv.slice(2));
+  const set = SETS[name];
+  const { default: main } = await import(set.main);
+  const { default: supporting } = await import(set.supporting);
+  const { default: personal } = await import(set.personal);
   const outputs = [
     {
       script: main,
-      file: path.join(root, "src/helpers/sampleConversations", `${main.id}.json`),
+      main: set.markMain,
+      file: path.join(root, set.mainDir, `${main.id}.json`),
     },
     ...[...supporting, ...personal].map((script) => ({
       script,
-      file: path.join(root, "demo/fixtures", `${script.id}.json`),
+      main: false,
+      file: path.join(root, set.dir, `${script.id}.json`),
     })),
   ];
   let stale = 0;
-  for (const { script, file } of outputs) {
-    const { fixture, report } = await record(script);
+  for (const { script, main: isMain, file } of outputs) {
+    const { fixture, report } = await record(script, { main: isMain });
     if (args.has("--report")) printReport(report);
     const text = await formatJson(fixture, file);
     const relative = path.relative(root, file);
@@ -530,7 +583,8 @@ async function main() {
     );
   }
   if (stale) {
-    console.log(`${stale} fixture(s) are stale. Run: node demo/build-fixtures.mjs`);
+    const again = name === "default" ? "" : ` --set ${name}`;
+    console.log(`${stale} fixture(s) are stale. Run: node demo/build-fixtures.mjs${again}`);
     process.exitCode = 1;
   }
 }
