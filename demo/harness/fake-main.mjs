@@ -43,6 +43,12 @@ const SEEDED_GROUPS = [
 ];
 const GROUP_NAME_MAX = 40;
 
+// Where the writing model would file a fixture whose script names no group.
+// The launch review is left unfiled in the app's own samples, to be sorted
+// like any conversation, but the harness has no model to sort it: unfiled, it
+// was missing from the Work tab on Global conversations, which reads as a bug.
+export const DEMO_FILING = { "launch-readiness-review": "work" };
+
 /** A group name as database.js stores it, and the key two names compare by. */
 const cleanGroupName = (name) =>
   typeof name === "string" ? name.replace(/\s+/gu, " ").trim() : "";
@@ -174,7 +180,8 @@ export function createFakeMain({ fixtures, example = null, now = Date.now(), bad
   const storeFixture = (fixture, at, { example: inApp = false } = {}) => {
     const placed = placeSampleConversation(fixture, { now: at });
     const id = nextNoteId++;
-    const filed = placed.group ? groups.find((group) => group.seed_key === placed.group) : null;
+    const groupKey = placed.group ?? DEMO_FILING[placed.sampleId] ?? null;
+    const filed = groupKey ? groups.find((group) => group.seed_key === groupKey) : null;
     const note = noteRow(id, {
       ...placed.note,
       sample_id: inApp || badges ? placed.sampleId : null,
