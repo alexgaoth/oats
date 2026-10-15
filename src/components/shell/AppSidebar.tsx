@@ -91,6 +91,7 @@ function NavItem({
  */
 export function AppSidebar({
   surface,
+  current,
   onNavigate,
   onOpenNote,
   onSearch,
@@ -100,6 +101,8 @@ export function AppSidebar({
   away = false,
 }: {
   surface: ShellSurface;
+  /** The item that is the current page (helpers/shellNav.mjs): Search while searching. */
+  current: "home" | "conversations" | "search" | "settings";
   onNavigate: (surface: ShellSurface) => void;
   onOpenNote: (noteId: number) => void;
   onSearch: () => void;
@@ -235,18 +238,19 @@ export function AppSidebar({
         <NavItem
           icon={House}
           label={t("oats.shell.home")}
-          active={surface === "conversation"}
+          active={current === "home"}
           onClick={() => onNavigate("conversation")}
         />
         <NavItem
           icon={MessagesSquare}
           label={t("oats.shell.conversations")}
-          active={surface === "intelligence"}
+          active={current === "conversations"}
           onClick={() => onNavigate("intelligence")}
         />
         <NavItem
           icon={Search}
           label={t("oats.shell.search")}
+          active={current === "search"}
           onClick={onSearch}
           disabled={recording}
           trailing={<Kbd>/</Kbd>}
