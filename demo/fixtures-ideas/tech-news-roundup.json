@@ -1,0 +1,389 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "tech-news-roundup",
+    "sample": true,
+    "description": "Sample conversation: a short tech news roundup. Invented people.",
+    "company": "A research reading group (fictional)",
+    "participants": [
+      { "name": "Rafa", "role": "Systems engineer, brings the news" },
+      { "name": "Kofi", "role": "Tracks the AI labs" }
+    ],
+    "startedAt": 1791846000000,
+    "endedAt": 1791846110437,
+    "summarizedAt": 1791846151437,
+    "placement": { "daysAgo": 3, "at": "16:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Tech news: Starship in orbit, Nvidia and Hugging Face",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv5usbdk-1",
+        "text": "Okay, tech news. The short tech news list, before the reading group.",
+        "source": "mic",
+        "timestamp": 1791846003327,
+        "startMs": 3327,
+        "endMs": 9181,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-2",
+        "text": "Go. Tech news first, then the AI side.",
+        "source": "mic",
+        "timestamp": 1791846010773,
+        "startMs": 10773,
+        "endMs": 14450,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-3",
+        "text": "Starship made orbit for the first time. The tech news photo of the month, twenty-six Starlink satellites going out.",
+        "source": "mic",
+        "timestamp": 1791846015729,
+        "startMs": 15729,
+        "endMs": 24674,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-4",
+        "text": "Did the Starship flight end well?",
+        "source": "mic",
+        "timestamp": 1791846025773,
+        "startMs": 25773,
+        "endMs": 28591,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-5",
+        "text": "Not quite, per AP.",
+        "source": "mic",
+        "timestamp": 1791846030139,
+        "startMs": 30139,
+        "endMs": 32171,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-6",
+        "text": "AP says it tipped over at splashdown and caught fire. The Starship tech news is still good news.",
+        "source": "mic",
+        "timestamp": 1791846033115,
+        "startMs": 33115,
+        "endMs": 41275,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-7",
+        "text": "And Apple shipped its first foldable, the iPhone Duo. Tech news for the gadget people.",
+        "source": "mic",
+        "timestamp": 1791846042233,
+        "startMs": 42233,
+        "endMs": 49089,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-8",
+        "text": "Tech news from the AI side. Nvidia agreed to buy Hugging Face.",
+        "source": "mic",
+        "timestamp": 1791846050654,
+        "startMs": 50654,
+        "endMs": 56159,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-9",
+        "text": "Jensen Huang says Hugging Face stays an open platform, for the whole ecosystem.",
+        "source": "mic",
+        "timestamp": 1791846057515,
+        "startMs": 57515,
+        "endMs": 63687,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-10",
+        "text": "Will Hugging Face really stay open?",
+        "source": "mic",
+        "timestamp": 1791846064981,
+        "startMs": 64981,
+        "endMs": 67947,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-11",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791846069204,
+        "startMs": 69204,
+        "endMs": 69915,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-12",
+        "text": "Then frontier models. Meta released Muse Wonder today.",
+        "source": "mic",
+        "timestamp": 1791846071166,
+        "startMs": 71166,
+        "endMs": 75219,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-13",
+        "text": "Meta's first frontier models, TechCrunch says. Muse Wonder and Muse Wonder Full.",
+        "source": "mic",
+        "timestamp": 1791846076058,
+        "startMs": 76058,
+        "endMs": 81979,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-14",
+        "text": "That makes four frontier models since early September. GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Muse Wonder.",
+        "source": "mic",
+        "timestamp": 1791846082935,
+        "startMs": 82935,
+        "endMs": 91885,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-15",
+        "text": "And two of the frontier models went to cyber defenders first. Astra, and Gemini 4 Argon.",
+        "source": "mic",
+        "timestamp": 1791846093500,
+        "startMs": 93500,
+        "endMs": 101235,
+        "speaker": "speaker_1",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5usbdk-16",
+        "text": "Can you bring the frontier models list to the reading group?",
+        "source": "mic",
+        "timestamp": 1791846102400,
+        "startMs": 102400,
+        "endMs": 107837,
+        "speaker": "speaker_2",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Rafa and Kofi went through the week's tech news before the reading group: Starship in orbit, Apple's first foldable, Nvidia and Hugging Face, and the run of frontier model releases.\n\n## Threads\n- **Tech news.** Starship reached orbit for the first time and released twenty-six Starlink satellites; AP reports the ship tipped over at splashdown and caught fire. Apple announced the iPhone Duo, its first foldable. Nvidia agreed to buy Hugging Face, and Jensen Huang says it stays an open platform.\n- **Frontier models.** Meta released Muse Wonder and Muse Wonder Full, which TechCrunch calls Meta's first frontier models. That makes four frontier releases since early September (GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Muse Wonder); Astra and Argon went to cyber defenders first.\n\n## Follow-ups\n- Whether Hugging Face really stays open.\n- The frontier models list for the reading group.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4702-[{\"id\":\"seg-mv5usbdk-1\",\"text\":\"Okay, tech news. T",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "tech news",
+          "words": ["news", "tech", "face", "first", "hugging", "starship", "group", "list"],
+          "durationMs": 61654,
+          "utteranceIds": [
+            "seg-mv5usbdk-1",
+            "seg-mv5usbdk-2",
+            "seg-mv5usbdk-3",
+            "seg-mv5usbdk-4",
+            "seg-mv5usbdk-6",
+            "seg-mv5usbdk-7",
+            "seg-mv5usbdk-8",
+            "seg-mv5usbdk-9",
+            "seg-mv5usbdk-10",
+            "seg-mv5usbdk-16"
+          ],
+          "firstAt": 1791846003327,
+          "lastAt": 1791846102400,
+          "returns": 1,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "frontier model",
+          "words": ["frontier", "model", "muse", "wonder", "argon", "astra", "first", "gemini"],
+          "durationMs": 22334,
+          "utteranceIds": [
+            "seg-mv5usbdk-12",
+            "seg-mv5usbdk-13",
+            "seg-mv5usbdk-14",
+            "seg-mv5usbdk-15"
+          ],
+          "firstAt": 1791846071166,
+          "lastAt": 1791846093500,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791846000000,
+          "b": "hIeGpa6usLKvm5Orq62hk66xr7Ourqytq4+xr6OFqbCdra+ts7Cvs7Ghpqyqqqeur5mUra6ur6+bnrCtsa+tpoarrq2MkoWmqq6yoKqroa2sr46tsLOwrrCwq62Hoq+ysrC0tK+fn62uraitiIWC"
+        }
+      ]
+    },
+    "open_questions": 2
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv5usbdk-4"],
+      "text": "Did the Starship flight end well?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "end flight starship well",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791846029428
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv5usbdk-5"],
+      "text": "Not quite, per AP.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791846032972
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv5usbdk-10"],
+      "text": "Will Hugging Face really stay open?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "face hugging open really stay",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791846068790
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv5usbdk-11"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791846070657
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv5usbdk-10"],
+      "text": "Will Hugging Face really stay open?",
+      "metadata": {
+        "query": "Will Hugging Face really stay open?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791846070657
+    },
+    {
+      "id": 6,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv5usbdk-16"],
+      "text": "Can you bring the frontier models list to the reading group?",
+      "metadata": {
+        "state": "asked",
+        "groupKey": "bring frontier group list model reading",
+        "occurrence": 1
+      },
+      "createdAt": 1791846108792
+    }
+  ],
+  "replay": {
+    "voices": { "Rafa": { "gain": 1.16 }, "Kofi": { "gain": 1.1 } },
+    "loud": {},
+    "stopAtMs": 110437
+  }
+}

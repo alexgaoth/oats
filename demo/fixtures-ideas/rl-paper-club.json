@@ -1,0 +1,484 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "rl-paper-club",
+    "sample": true,
+    "description": "Sample conversation: an RL paper club on random rewards and pass@k. Invented people.",
+    "company": "A research reading group (fictional)",
+    "participants": [
+      { "name": "Nadia", "role": "RL researcher" },
+      { "name": "Felix", "role": "Post-training engineer" },
+      { "name": "Wen", "role": "Evaluations researcher" }
+    ],
+    "startedAt": 1791061200000,
+    "endedAt": 1791061356590,
+    "summarizedAt": 1791061397590,
+    "placement": { "daysAgo": 12, "at": "14:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "RL paper club: random rewards and pass at k",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-musvjbtk-1",
+        "text": "Okay, paper club. Random rewards, the spurious rewards paper.",
+        "source": "mic",
+        "timestamp": 1791061203423,
+        "startMs": 3423,
+        "endMs": 7935,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-2",
+        "text": "Right. Spurious rewards: RLVR with random rewards on the Qwen math checkpoints.",
+        "source": "mic",
+        "timestamp": 1791061209329,
+        "startMs": 9329,
+        "endMs": 15673,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-3",
+        "text": "Random rewards, wrong-answer rewards, format rewards. On Qwen, all of these spurious rewards raise the math scores.",
+        "source": "mic",
+        "timestamp": 1791061216409,
+        "startMs": 16409,
+        "endMs": 25115,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-4",
+        "text": "And on Llama and OLMo, the spurious rewards mostly do nothing for the math.",
+        "source": "mic",
+        "timestamp": 1791061225763,
+        "startMs": 25763,
+        "endMs": 32824,
+        "speaker": "speaker_3",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-5",
+        "text": "So random rewards only help a base checkpoint that already has the habit.",
+        "source": "mic",
+        "timestamp": 1791061234250,
+        "startMs": 34250,
+        "endMs": 40598,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-6",
+        "text": "The Qwen habit is code reasoning. Qwen thinks in Python, and the random rewards make it think in Python more often.",
+        "source": "mic",
+        "timestamp": 1791061241384,
+        "startMs": 41384,
+        "endMs": 53228,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-7",
+        "text": "How does a random reward push anything at all?",
+        "source": "mic",
+        "timestamp": 1791061253901,
+        "startMs": 53901,
+        "endMs": 58151,
+        "speaker": "speaker_3",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-8",
+        "text": "The clipping in GRPO biases the update.",
+        "source": "mic",
+        "timestamp": 1791061259021,
+        "startMs": 59021,
+        "endMs": 62976,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-9",
+        "text": "Clipping favours the habits the checkpoint already likes, so even random rewards sharpen them.",
+        "source": "mic",
+        "timestamp": 1791061263947,
+        "startMs": 63947,
+        "endMs": 71425,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-10",
+        "text": "Then every RLVR paper on Qwen needs a random rewards baseline.",
+        "source": "mic",
+        "timestamp": 1791061272463,
+        "startMs": 72463,
+        "endMs": 77997,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-11",
+        "text": "Next, pass at k, from Yue and colleagues.",
+        "source": "mic",
+        "timestamp": 1791061278684,
+        "startMs": 78684,
+        "endMs": 82862,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-12",
+        "text": "Right. Yue and colleagues sample the base model hundreds of times, against the trained model.",
+        "source": "mic",
+        "timestamp": 1791061284489,
+        "startMs": 84489,
+        "endMs": 91659,
+        "speaker": "speaker_3",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-13",
+        "text": "At one sample, the trained model wins. At hundreds of samples, the base model solves more problems.",
+        "source": "mic",
+        "timestamp": 1791061292414,
+        "startMs": 92414,
+        "endMs": 100391,
+        "speaker": "speaker_3",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-14",
+        "text": "So training narrows the sampling. The reasoning paths were already in the base model.",
+        "source": "mic",
+        "timestamp": 1791061301063,
+        "startMs": 101063,
+        "endMs": 108687,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-15",
+        "text": "Did they test distillation too?",
+        "source": "mic",
+        "timestamp": 1791061309406,
+        "startMs": 109406,
+        "endMs": 112006,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-16",
+        "text": "Yes, and distillation did widen it.",
+        "source": "mic",
+        "timestamp": 1791061312953,
+        "startMs": 112953,
+        "endMs": 116029,
+        "speaker": "speaker_3",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-17",
+        "text": "Distillation from a stronger teacher model raised pass at k. Sampling more from the base model never did that.",
+        "source": "mic",
+        "timestamp": 1791061316824,
+        "startMs": 116824,
+        "endMs": 126454,
+        "speaker": "speaker_3",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-18",
+        "text": "That fits. Training polishes, a teacher model adds.",
+        "source": "mic",
+        "timestamp": 1791061327513,
+        "startMs": 127513,
+        "endMs": 131723,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-19",
+        "text": "Does the code reasoning habit show up in the bigger Qwen checkpoints?",
+        "source": "mic",
+        "timestamp": 1791061332697,
+        "startMs": 132697,
+        "endMs": 138907,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-20",
+        "text": "No idea.",
+        "source": "mic",
+        "timestamp": 1791061340002,
+        "startMs": 140002,
+        "endMs": 141252,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-21",
+        "text": "Okay, back to spurious rewards. The spurious rewards paper goes on the reading group list, with a random rewards control of our own.",
+        "source": "mic",
+        "timestamp": 1791061342385,
+        "startMs": 142385,
+        "endMs": 153990,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Nadia, Felix and Wen read two papers on reinforcement learning with verifiable rewards (RLVR): the spurious rewards paper and Yue et al. on pass@k.\n\n## Threads\n- **Spurious rewards.** On Qwen math checkpoints, random, wrong-answer and format rewards all raise math scores; on Llama and OLMo they mostly do not. The paper's explanation is code reasoning that Qwen already has, amplified by the clipping in GRPO.\n- **Pass@k.** RLVR checkpoints win at pass@1, but at large k the base checkpoint solves more problems: RLVR narrows the search rather than adding reasoning paths. Distillation from a stronger teacher did widen it.\n\n## Decisions Made\n- Every RLVR result on Qwen needs a random-reward baseline.\n- The spurious rewards paper goes on the reading group list.\n\n## Follow-ups\n- Whether the code reasoning habit shows up in the larger Qwen checkpoints.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "6349-[{\"id\":\"seg-musvjbtk-1\",\"text\":\"Okay, paper club. ",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "random reward",
+          "words": ["reward", "random", "qwen", "spuriou", "checkpoint", "habit", "math", "paper"],
+          "durationMs": 78728,
+          "utteranceIds": [
+            "seg-musvjbtk-1",
+            "seg-musvjbtk-2",
+            "seg-musvjbtk-3",
+            "seg-musvjbtk-4",
+            "seg-musvjbtk-5",
+            "seg-musvjbtk-6",
+            "seg-musvjbtk-7",
+            "seg-musvjbtk-8",
+            "seg-musvjbtk-9",
+            "seg-musvjbtk-10",
+            "seg-musvjbtk-19",
+            "seg-musvjbtk-21"
+          ],
+          "firstAt": 1791061203423,
+          "lastAt": 1791061342385,
+          "returns": 1,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "base model",
+          "words": [
+            "model",
+            "base",
+            "colleague",
+            "hundred",
+            "pass",
+            "sample",
+            "sampling",
+            "teacher"
+          ],
+          "durationMs": 48829,
+          "utteranceIds": [
+            "seg-musvjbtk-11",
+            "seg-musvjbtk-12",
+            "seg-musvjbtk-13",
+            "seg-musvjbtk-14",
+            "seg-musvjbtk-17",
+            "seg-musvjbtk-18"
+          ],
+          "firstAt": 1791061278684,
+          "lastAt": 1791061327513,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791061200000,
+          "b": "hIWGo62tsa+JoqyrrauurJCnrq6ssa2trpioq6mnqqupiJOqrauwr6ihra2trayqqa6xrquPrK2ur5ymrquukKqrsqqjmpWQoKyorK2vm66vr62LnayxraqmraqeraupqKqlp56nrKyvrbCqqqKeqZCoq6iSp62sq6ursKysoZKapq6olbGvqq2xrYion6KrpqCuq6qqrKuwsZCHhw=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musvjbtk-7"],
+      "text": "How does a random reward push anything at all?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "all anything push random reward",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791061259052
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-musvjbtk-8"],
+      "text": "The clipping in GRPO biases the update.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791061263864
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musvjbtk-15"],
+      "text": "Did they test distillation too?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "distillation test too",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791061312833
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-musvjbtk-16"],
+      "text": "Yes, and distillation did widen it.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791061316877
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musvjbtk-19"],
+      "text": "Does the code reasoning habit show up in the bigger Qwen checkpoints?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "bigger checkpoint code habit qwen reasoning show",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1791061339896
+    },
+    {
+      "id": 6,
+      "kind": "response",
+      "parentEventId": 5,
+      "segmentIds": ["seg-musvjbtk-20"],
+      "text": "No idea.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1791061342018
+    },
+    {
+      "id": 7,
+      "kind": "search_suggestion",
+      "parentEventId": 5,
+      "segmentIds": ["seg-musvjbtk-19"],
+      "text": "Does the code reasoning habit show up in the bigger Qwen checkpoints?",
+      "metadata": {
+        "query": "Does the code reasoning habit show up in the bigger Qwen checkpoints?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791061342018
+    }
+  ],
+  "replay": {
+    "voices": { "Nadia": { "gain": 1.02 }, "Felix": { "gain": 1 }, "Wen": { "gain": 0.92 } },
+    "loud": {},
+    "stopAtMs": 156590
+  }
+}

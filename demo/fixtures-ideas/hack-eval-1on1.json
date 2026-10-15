@@ -1,0 +1,283 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "hack-eval-1on1",
+    "sample": true,
+    "description": "Sample conversation: a 1:1 on reward hacking eval results. Invented people.",
+    "company": "A research reading group (fictional)",
+    "participants": [
+      { "name": "Nadia", "role": "RL researcher" },
+      { "name": "Wen", "role": "Evaluations researcher" }
+    ],
+    "startedAt": 1792024200000,
+    "endedAt": 1792024276989,
+    "summarizedAt": 1792024317989,
+    "placement": { "daysAgo": 1, "at": "17:30", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Wen check-in: reward hacking numbers, and stale agents",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv8svrdk-1",
+        "text": "Okay, Wen. The reward hacking eval results.",
+        "source": "mic",
+        "timestamp": 1792024203180,
+        "startMs": 3180,
+        "endMs": 6743,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-2",
+        "text": "Right. The reward hacking eval ran on three checkpoints last night.",
+        "source": "mic",
+        "timestamp": 1792024207812,
+        "startMs": 7812,
+        "endMs": 13478,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-3",
+        "text": "The hidden unit tests caught most of the reward hacking. The rest was special-casing we missed.",
+        "source": "mic",
+        "timestamp": 1792024214357,
+        "startMs": 14357,
+        "endMs": 22434,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-4",
+        "text": "Did the chain of thought monitor flag the reward hacking?",
+        "source": "mic",
+        "timestamp": 1792024223643,
+        "startMs": 23643,
+        "endMs": 28466,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-5",
+        "text": "Mostly, and with plain language.",
+        "source": "mic",
+        "timestamp": 1792024229183,
+        "startMs": 29183,
+        "endMs": 31763,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-6",
+        "text": "The reasoning says it outright: make the unit tests pass. Reward hacking, in plain words.",
+        "source": "mic",
+        "timestamp": 1792024232493,
+        "startMs": 32493,
+        "endMs": 39468,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-7",
+        "text": "Good. Bring the reward hacking numbers to the reading group tomorrow.",
+        "source": "mic",
+        "timestamp": 1792024240312,
+        "startMs": 40312,
+        "endMs": 45871,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-8",
+        "text": "Second thing. Our agents have a frame problem.",
+        "source": "mic",
+        "timestamp": 1792024246569,
+        "startMs": 46569,
+        "endMs": 50337,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-9",
+        "text": "A frame problem. Stale facts after an action.",
+        "source": "mic",
+        "timestamp": 1792024251214,
+        "startMs": 51214,
+        "endMs": 55263,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-10",
+        "text": "The agents edit a config file, then act on their old reading of the config file. A frame problem.",
+        "source": "mic",
+        "timestamp": 1792024256273,
+        "startMs": 56273,
+        "endMs": 64944,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-11",
+        "text": "They assume nothing else changed. The classic frame problem.",
+        "source": "mic",
+        "timestamp": 1792024265774,
+        "startMs": 65774,
+        "endMs": 70124,
+        "speaker": "speaker_2",
+        "speakerName": "Wen",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-12",
+        "text": "Is that worth its own eval?",
+        "source": "mic",
+        "timestamp": 1792024271170,
+        "startMs": 71170,
+        "endMs": 74389,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Wen brought Nadia the first results from the reward hacking eval, and a pattern of agents acting on stale facts.\n\n## Threads\n- **Reward hacking eval.** Ran on three checkpoints. Hidden unit tests caught most of the reward hacking; the rest was special-casing the eval missed. The chain-of-thought monitor flagged most of it, because the reasoning says it plainly.\n- **Stale agents.** Agents edit a config file and then act on their old reading of it: the frame problem, in agents.\n\n## Action Items\n- [ ] Wen: bring the reward hacking numbers to the reading group.\n\n## Follow-ups\n- Whether stale agent state deserves its own eval.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "3476-[{\"id\":\"seg-mv8svrdk-1\",\"text\":\"Okay, Wen. The rew",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "reward hacking",
+          "words": ["hacking", "reward", "eval", "plain", "test", "unit", "bring", "caught"],
+          "durationMs": 37132,
+          "utteranceIds": [
+            "seg-mv8svrdk-1",
+            "seg-mv8svrdk-2",
+            "seg-mv8svrdk-3",
+            "seg-mv8svrdk-4",
+            "seg-mv8svrdk-5",
+            "seg-mv8svrdk-6",
+            "seg-mv8svrdk-7"
+          ],
+          "firstAt": 1792024203180,
+          "lastAt": 1792024240312,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "frame problem",
+          "words": ["frame", "problem", "agent", "act", "action", "assume", "changed", "classic"],
+          "durationMs": 24601,
+          "utteranceIds": [
+            "seg-mv8svrdk-8",
+            "seg-mv8svrdk-9",
+            "seg-mv8svrdk-10",
+            "seg-mv8svrdk-11",
+            "seg-mv8svrdk-12"
+          ],
+          "firstAt": 1792024246569,
+          "lastAt": 1792024271170,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1792024200000,
+          "b": "gYaEo6qtqIqpqamrqaCkr7Grpaepr6GVrKytppOkq6idsquqr6ytopyqq6usrpusrKqcpLCtrp+iqaiiqKeoqKeSq6utrZakq6mihIQ="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv8svrdk-4"],
+      "text": "Did the chain of thought monitor flag the reward hacking?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "chain flag hacking monitor reward thought",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1792024229393
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv8svrdk-5"],
+      "text": "Mostly, and with plain language.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1792024232589
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv8svrdk-12"],
+      "text": "Is that worth its own eval?",
+      "metadata": { "state": "asked", "groupKey": "eval own worth", "occurrence": 1 },
+      "createdAt": 1792024275244
+    }
+  ],
+  "replay": {
+    "voices": { "Nadia": { "gain": 1.02 }, "Wen": { "gain": 0.92 } },
+    "loud": {},
+    "stopAtMs": 76989
+  }
+}

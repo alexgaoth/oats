@@ -1,0 +1,358 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "credit-assignment-1on1",
+    "sample": true,
+    "description": "Sample conversation: a 1:1 on credit assignment experiments. Invented people.",
+    "company": "A research reading group (fictional)",
+    "participants": [
+      { "name": "Nadia", "role": "RL researcher" },
+      { "name": "Felix", "role": "Post-training engineer" }
+    ],
+    "startedAt": 1791651600000,
+    "endedAt": 1791651693712,
+    "summarizedAt": 1791651734712,
+    "placement": { "daysAgo": 5, "at": "10:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Felix check-in: credit assignment on long agent runs",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv2n1ndk-1",
+        "text": "Okay, Felix. Credit assignment.",
+        "source": "mic",
+        "timestamp": 1791651603182,
+        "startMs": 3182,
+        "endMs": 5321,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-2",
+        "text": "Right. Credit assignment on the long agent tasks, with one outcome score so far.",
+        "source": "mic",
+        "timestamp": 1791651606042,
+        "startMs": 6042,
+        "endMs": 13404,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-3",
+        "text": "One outcome score after fifty tool calls, and credit assignment is mostly noise.",
+        "source": "mic",
+        "timestamp": 1791651614112,
+        "startMs": 14112,
+        "endMs": 20826,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-4",
+        "text": "And with process supervision?",
+        "source": "mic",
+        "timestamp": 1791651621821,
+        "startMs": 21821,
+        "endMs": 23894,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-5",
+        "text": "Better, until the grader gets gamed.",
+        "source": "mic",
+        "timestamp": 1791651625373,
+        "startMs": 25373,
+        "endMs": 28745,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-6",
+        "text": "The step grader is a learned model, so the policy learns the grader instead of the task.",
+        "source": "mic",
+        "timestamp": 1791651629556,
+        "startMs": 29556,
+        "endMs": 39189,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-7",
+        "text": "Then a value function for credit assignment, trained on the agent tasks.",
+        "source": "mic",
+        "timestamp": 1791651640183,
+        "startMs": 40183,
+        "endMs": 46225,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-8",
+        "text": "Agreed. A value function for credit assignment first, and process supervision only on short tasks.",
+        "source": "mic",
+        "timestamp": 1791651647351,
+        "startMs": 47351,
+        "endMs": 55552,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-9",
+        "text": "Second thing. Verifiable rewards for the reading group.",
+        "source": "mic",
+        "timestamp": 1791651656596,
+        "startMs": 56596,
+        "endMs": 60645,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-10",
+        "text": "The verifiable rewards control is ready. Ground truth rewards against random rewards, on two base checkpoints.",
+        "source": "mic",
+        "timestamp": 1791651661891,
+        "startMs": 61891,
+        "endMs": 70310,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-11",
+        "text": "When does the cluster free up?",
+        "source": "mic",
+        "timestamp": 1791651671756,
+        "startMs": 71756,
+        "endMs": 74950,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-12",
+        "text": "No idea, honestly.",
+        "source": "mic",
+        "timestamp": 1791651676476,
+        "startMs": 76476,
+        "endMs": 78204,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-13",
+        "text": "The verifiable rewards runs wait behind the long tasks on the cluster.",
+        "source": "mic",
+        "timestamp": 1791651678945,
+        "startMs": 78945,
+        "endMs": 85299,
+        "speaker": "speaker_2",
+        "speakerName": "Felix",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-14",
+        "text": "Fine. Verifiable rewards and random rewards go first next week.",
+        "source": "mic",
+        "timestamp": 1791651686135,
+        "startMs": 86135,
+        "endMs": 91112,
+        "speaker": "speaker_1",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Felix and Nadia went through the credit assignment experiments on long agent runs, and the verifiable-rewards control for the reading group.\n\n## Threads\n- **Credit assignment.** With one outcome reward after fifty tool calls, credit assignment is mostly noise. Process rewards help until the learned step grader gets gamed.\n- **Verifiable rewards control.** Ground-truth rewards against random rewards on two base checkpoints, ready to run. When the cluster frees up is unknown.\n\n## Decisions Made\n- Try a value function for credit assignment first; process rewards only on short runs.\n- The verifiable-rewards control runs first next week.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4069-[{\"id\":\"seg-mv2n1ndk-1\",\"text\":\"Okay, Felix. Credi",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "credit assignment",
+          "words": [
+            "assignment",
+            "credit",
+            "task",
+            "agent",
+            "function",
+            "grader",
+            "outcome",
+            "score"
+          ],
+          "durationMs": 53414,
+          "utteranceIds": [
+            "seg-mv2n1ndk-1",
+            "seg-mv2n1ndk-2",
+            "seg-mv2n1ndk-3",
+            "seg-mv2n1ndk-5",
+            "seg-mv2n1ndk-6",
+            "seg-mv2n1ndk-7",
+            "seg-mv2n1ndk-8",
+            "seg-mv2n1ndk-9"
+          ],
+          "firstAt": 1791651603182,
+          "lastAt": 1791651656596,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "verifiable reward",
+          "words": [
+            "reward",
+            "verifiable",
+            "random",
+            "against",
+            "base",
+            "behind",
+            "checkpoint",
+            "cluster"
+          ],
+          "durationMs": 24244,
+          "utteranceIds": ["seg-mv2n1ndk-10", "seg-mv2n1ndk-13", "seg-mv2n1ndk-14"],
+          "firstAt": 1791651661891,
+          "lastAt": 1791651686135,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791651600000,
+          "b": "gYSGp5mZlaSrrqurrKemqq6uqqqoj6mqi6OxraucrKuwr66oq6usmaedp6yrsKCjrq6dqqmnq6mdr7CwqYWqqrCvrq6xsaOOrK2tjpKkmqiur6qorp+kqKqorZeFhA=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv2n1ndk-4"],
+      "text": "And with process supervision?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "proces supervision",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791651624697
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv2n1ndk-5"],
+      "text": "Better, until the grader gets gamed.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791651629607
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv2n1ndk-11"],
+      "text": "When does the cluster free up?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "cluster free",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1791651675804
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv2n1ndk-12"],
+      "text": "No idea, honestly.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1791651678992
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv2n1ndk-11"],
+      "text": "When does the cluster free up?",
+      "metadata": {
+        "query": "When does the cluster free up?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791651678992
+    }
+  ],
+  "replay": {
+    "voices": { "Nadia": { "gain": 1.02 }, "Felix": { "gain": 1 } },
+    "loud": {},
+    "stopAtMs": 93712
+  }
+}

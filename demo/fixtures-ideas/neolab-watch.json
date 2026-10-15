@@ -1,0 +1,380 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "neolab-watch",
+    "sample": true,
+    "description": "Sample conversation: a short neolab watch on what the new AI labs announced. Invented people.",
+    "company": "A research reading group (fictional)",
+    "participants": [
+      { "name": "Kofi", "role": "Tracks the AI labs" },
+      { "name": "Nadia", "role": "RL researcher" },
+      { "name": "Rafa", "role": "Systems engineer" }
+    ],
+    "startedAt": 1791309600000,
+    "endedAt": 1791309700041,
+    "summarizedAt": 1791309741041,
+    "placement": { "daysAgo": 9, "at": "11:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Neolab watch: open weights, and AMD to buy a world model lab",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-muwzfehk-1",
+        "text": "Okay, neolab watch. Open weights first.",
+        "source": "mic",
+        "timestamp": 1791309603771,
+        "startMs": 3771,
+        "endMs": 6588,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-2",
+        "text": "Go. Open weights from the neolabs.",
+        "source": "mic",
+        "timestamp": 1791309608228,
+        "startMs": 8228,
+        "endMs": 11283,
+        "speaker": "speaker_2",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-3",
+        "text": "Reflection announced Beam, their first open weights release. A sparse mixture of experts, for coding and agents.",
+        "source": "mic",
+        "timestamp": 1791309612516,
+        "startMs": 12516,
+        "endMs": 20063,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-4",
+        "text": "Are the Beam open weights out yet?",
+        "source": "mic",
+        "timestamp": 1791309620947,
+        "startMs": 20947,
+        "endMs": 24395,
+        "speaker": "speaker_2",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-5",
+        "text": "Not yet, only a waitlist.",
+        "source": "mic",
+        "timestamp": 1791309625111,
+        "startMs": 25111,
+        "endMs": 27489,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-6",
+        "text": "Reflection promised the Beam weights later this month, under Apache 2.0. Open weights, properly licensed.",
+        "source": "mic",
+        "timestamp": 1791309628298,
+        "startMs": 28298,
+        "endMs": 34916,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-7",
+        "text": "And Thinking Machines put out open weights in July. Inkling, then Inkling-Small.",
+        "source": "mic",
+        "timestamp": 1791309636061,
+        "startMs": 36061,
+        "endMs": 41594,
+        "speaker": "speaker_3",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-8",
+        "text": "So the neolabs are all doing open weights now.",
+        "source": "mic",
+        "timestamp": 1791309642704,
+        "startMs": 42704,
+        "endMs": 47257,
+        "speaker": "speaker_2",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-9",
+        "text": "Then world models. AMD agreed to acquire World Labs.",
+        "source": "mic",
+        "timestamp": 1791309648326,
+        "startMs": 48326,
+        "endMs": 52589,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-10",
+        "text": "World models at a chip company. AMD and World Labs still need approvals, though.",
+        "source": "mic",
+        "timestamp": 1791309653457,
+        "startMs": 53457,
+        "endMs": 60150,
+        "speaker": "speaker_3",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-11",
+        "text": "And Fei-Fei Li would become chief scientist at AMD once the World Labs deal closes.",
+        "source": "mic",
+        "timestamp": 1791309660877,
+        "startMs": 60877,
+        "endMs": 68165,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-12",
+        "text": "Atlas is the newest World Labs world model, trained on text, images, video and 3D.",
+        "source": "mic",
+        "timestamp": 1791309668925,
+        "startMs": 68925,
+        "endMs": 76315,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-13",
+        "text": "World models everywhere. AMI Labs on world models from sensor data, World Labs with Marble and Atlas.",
+        "source": "mic",
+        "timestamp": 1791309677548,
+        "startMs": 77548,
+        "endMs": 86052,
+        "speaker": "speaker_2",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-14",
+        "text": "And SSI?",
+        "source": "mic",
+        "timestamp": 1791309686941,
+        "startMs": 86941,
+        "endMs": 88128,
+        "speaker": "speaker_2",
+        "speakerName": "Nadia",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-15",
+        "text": "Still research, nothing shipped.",
+        "source": "mic",
+        "timestamp": 1791309689117,
+        "startMs": 89117,
+        "endMs": 91288,
+        "speaker": "speaker_1",
+        "speakerName": "Kofi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-16",
+        "text": "Can you put the neolab list in the reading group notes?",
+        "source": "mic",
+        "timestamp": 1791309692234,
+        "startMs": 92234,
+        "endMs": 97441,
+        "speaker": "speaker_3",
+        "speakerName": "Rafa",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Kofi ran a quick neolab watch: open weights from Reflection and Thinking Machines, and AMD agreeing to acquire World Labs.\n\n## Threads\n- **Open weights.** Reflection AI announced Beam, its first open-weight model, a sparse mixture of experts for coding and agents. The weights are promised later this month under Apache 2.0; for now there is a waitlist. Thinking Machines released open weights in July: Inkling, then Inkling-Small.\n- **World models.** AMD agreed to acquire World Labs, pending approvals; Fei-Fei Li would become AMD's chief scientist. World Labs' newest model, Atlas, is trained on text, images, video and 3D. AMI Labs works on world models learned from sensor data.\n- **SSI.** Still no product.\n\n## Follow-ups\n- Putting the neolab list in the reading group notes.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4637-[{\"id\":\"seg-muwzfehk-1\",\"text\":\"Okay, neolab watch",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "open weight",
+          "words": [
+            "open",
+            "weight",
+            "beam",
+            "neolab",
+            "first",
+            "reflection",
+            "agent",
+            "announced"
+          ],
+          "durationMs": 38933,
+          "utteranceIds": [
+            "seg-muwzfehk-1",
+            "seg-muwzfehk-2",
+            "seg-muwzfehk-3",
+            "seg-muwzfehk-4",
+            "seg-muwzfehk-6",
+            "seg-muwzfehk-7",
+            "seg-muwzfehk-8"
+          ],
+          "firstAt": 1791309603771,
+          "lastAt": 1791309642704,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "world labs",
+          "words": ["labs", "world", "model", "amd", "atla", "acquire", "agreed", "ami"],
+          "durationMs": 43908,
+          "utteranceIds": [
+            "seg-muwzfehk-9",
+            "seg-muwzfehk-10",
+            "seg-muwzfehk-11",
+            "seg-muwzfehk-12",
+            "seg-muwzfehk-13",
+            "seg-muwzfehk-15",
+            "seg-muwzfehk-16"
+          ],
+          "firstAt": 1791309648326,
+          "lastAt": 1791309692234,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791309600000,
+          "b": "hYaDj6qqpIWkrqybm62zsq6wsq+VqKqroq2tpaeurq2rrquJrbCsrrKrla2ura+lprGwrJigsKytsbKyn66ur66rqrCir6+vra2tqJ6MorCqsK6uq62TrJmqr6arrK6wrqWFgoE="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muwzfehk-4"],
+      "text": "Are the Beam open weights out yet?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "beam open weight yet",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791309625260
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-muwzfehk-5"],
+      "text": "Not yet, only a waitlist.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791309628306
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muwzfehk-14"],
+      "text": "And SSI?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "ssi",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791309688891
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muwzfehk-15"],
+      "text": "Still research, nothing shipped.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791309692096
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muwzfehk-16"],
+      "text": "Can you put the neolab list in the reading group notes?",
+      "metadata": {
+        "state": "asked",
+        "groupKey": "group list neolab note put reading",
+        "occurrence": 1
+      },
+      "createdAt": 1791309698385
+    }
+  ],
+  "replay": {
+    "voices": { "Kofi": { "gain": 1.1 }, "Nadia": { "gain": 1.02 }, "Rafa": { "gain": 1.16 } },
+    "loud": {},
+    "stopAtMs": 100041
+  }
+}
