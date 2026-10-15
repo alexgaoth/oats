@@ -24,7 +24,6 @@ import type {
   ApiKeySettings,
   PrivacySettings,
   ThemeSettings,
-  ChatAgentSettings,
 } from "../hooks/useSettings";
 import type { Snippet } from "../utils/snippets";
 import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
@@ -153,7 +152,6 @@ const BOOLEAN_SETTINGS = new Set([
   "cleanupDisableThinking",
   "dictationAgentDisableThinking",
   "noteFormattingDisableThinking",
-  "chatAgentDisableThinking",
   "notificationsEnabled",
   "notifyMeetingDetection",
   "notifyCalendarReminders",
@@ -300,31 +298,6 @@ function migrateUploadTranscription() {
 
 migrateUploadTranscription();
 
-function migrateAgentMode() {
-  if (!isBrowser) return;
-  if (localStorage.getItem("_agentModeMigrated") === "1") return;
-
-  const cloudAgentMode = localStorage.getItem("cloudAgentMode");
-  const agentProvider = localStorage.getItem("agentProvider");
-
-  let agentInferenceMode: InferenceMode = "local";
-  if (cloudAgentMode === "byok") {
-    const localProviders = ["qwen", "llama", "mistral", "openai-oss", "gemma"];
-    if (agentProvider === "custom") {
-      agentInferenceMode = "self-hosted";
-    } else if (agentProvider && localProviders.includes(agentProvider)) {
-      agentInferenceMode = "local";
-    } else {
-      agentInferenceMode = "providers";
-    }
-  }
-  localStorage.setItem("agentInferenceMode", agentInferenceMode);
-
-  localStorage.setItem("_agentModeMigrated", "1");
-}
-
-migrateAgentMode();
-
 function migrateCustomPrompts() {
   if (!isBrowser) return;
   if (localStorage.getItem("_promptsMigrated") === "1") return;
@@ -344,12 +317,6 @@ function migrateCustomPrompts() {
     } catch {}
     localStorage.removeItem("customUnifiedPrompt");
   }
-
-  const legacyChat = localStorage.getItem("agentSystemPrompt");
-  if (legacyChat && legacyChat.length > 0 && !localStorage.getItem("customPrompt.chatAgent")) {
-    localStorage.setItem("customPrompt.chatAgent", legacyChat);
-  }
-  if (legacyChat !== null) localStorage.removeItem("agentSystemPrompt");
 
   localStorage.setItem("_promptsMigrated", "1");
 }
@@ -373,12 +340,6 @@ const LLM_SCOPE_KEY_PAIRS: ReadonlyArray<[string, string]> = [
   ["meetingCloudReasoningMode", "noteFormattingCloudMode"],
   ["meetingCloudReasoningBaseUrl", "noteFormattingCloudBaseUrl"],
   ["meetingRemoteReasoningUrl", "noteFormattingRemoteUrl"],
-  ["agentInferenceMode", "chatAgentMode"],
-  ["agentProvider", "chatAgentProvider"],
-  ["agentModel", "chatAgentModel"],
-  ["cloudAgentMode", "chatAgentCloudMode"],
-  ["remoteAgentUrl", "chatAgentRemoteUrl"],
-  ["agentKey", "chatAgentKey"],
 ];
 
 function migrateLLMScopeKeys() {
@@ -408,8 +369,7 @@ export interface SettingsState
     MicrophoneSettings,
     ApiKeySettings,
     PrivacySettings,
-    ThemeSettings,
-    ChatAgentSettings {
+    ThemeSettings {
   isSignedIn: boolean;
   audioCuesEnabled: boolean;
   pauseMediaOnDictation: boolean;
@@ -524,7 +484,6 @@ export interface SettingsState
   cleanupDisableThinking: boolean;
   dictationAgentDisableThinking: boolean;
   noteFormattingDisableThinking: boolean;
-  chatAgentDisableThinking: boolean;
 
   customPrompts: Record<PromptKind, string>;
   setCustomPrompt: (kind: PromptKind, value: string) => void;
@@ -602,7 +561,6 @@ export interface SettingsState
   setCleanupDisableThinking: (value: boolean) => void;
   setDictationAgentDisableThinking: (value: boolean) => void;
   setNoteFormattingDisableThinking: (value: boolean) => void;
-  setChatAgentDisableThinking: (value: boolean) => void;
 
   setUseLocalWhisper: (value: boolean) => void;
   setWhisperModel: (value: string) => void;
@@ -730,21 +688,11 @@ export interface SettingsState
   setNoteFilesPath: (value: string) => void;
   setIsSignedIn: (value: boolean) => void;
 
-  setChatAgentModel: (value: string) => void;
-  setChatAgentProvider: (value: string) => void;
-  setChatAgentKey: (key: string) => Promise<boolean>;
-  setChatAgentCloudMode: (value: string) => void;
-  setChatAgentMode: (mode: InferenceMode) => void;
-  setChatAgentCloudBaseUrl: (value: string) => void;
-  setChatAgentRemoteUrl: (url: string) => void;
-  setChatAgentCustomApiKey: (key: string) => void;
-
   updateTranscriptionSettings: (settings: Partial<TranscriptionSettings>) => void;
   setCloudTranscriptionForAllScopes: (settings: Partial<TranscriptionSettings>) => void;
   updateCleanupSettings: (settings: Partial<CleanupSettings>) => void;
   setCloudReasoningForAllScopes: (settings: Partial<CleanupSettings>) => void;
   updateApiKeys: (keys: Partial<ApiKeySettings>) => void;
-  updateChatAgentSettings: (settings: Partial<ChatAgentSettings>) => void;
 }
 
 function createStringSetter(key: string) {
@@ -779,7 +727,6 @@ function createNumberSetter(key: string) {
 // Resolves to false on failure so optimistic UIs (HotkeyListInput) can revert.
 function createRegisteredHotkeySetter(
   key:
-    | "chatAgentKey"
     | "voiceAgentKey"
     | "translationKey"
     | "dictationKey"
@@ -1356,19 +1303,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ translationTargets: normalized });
   },
 
-  chatAgentModel: readString("chatAgentModel", "openai/gpt-oss-120b"),
-  chatAgentProvider: readString("chatAgentProvider", "groq"),
-  chatAgentKey: readString("chatAgentKey", ""),
-  chatAgentCloudMode: readString("chatAgentCloudMode", "local"),
-  chatAgentMode: (() => {
-    const v = readString("chatAgentMode", "local");
-    if (v === "providers" || v === "local" || v === "self-hosted") return v;
-    return "local" as InferenceMode;
-  })(),
-  chatAgentRemoteUrl: readString("chatAgentRemoteUrl", ""),
-  chatAgentCloudBaseUrl: readString("chatAgentCloudBaseUrl", ""),
-  chatAgentCustomApiKey: readString("chatAgentCustomApiKey", ""),
-
   dictationAgentMode: (() => {
     const v = readString("dictationAgentMode", "local");
     if (v === "providers" || v === "local" || v === "self-hosted") return v;
@@ -1384,7 +1318,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   cleanupDisableThinking: readBoolean("cleanupDisableThinking", true),
   dictationAgentDisableThinking: readBoolean("dictationAgentDisableThinking", true),
   noteFormattingDisableThinking: readBoolean("noteFormattingDisableThinking", true),
-  chatAgentDisableThinking: readBoolean("chatAgentDisableThinking", true),
 
   customPrompts: PROMPT_KIND_LIST.reduce(
     (acc, kind) => ({ ...acc, [kind]: readString(`customPrompt.${kind}`, "") }),
@@ -1408,7 +1341,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setCleanupDisableThinking: createBooleanSetter("cleanupDisableThinking"),
   setDictationAgentDisableThinking: createBooleanSetter("dictationAgentDisableThinking"),
   setNoteFormattingDisableThinking: createBooleanSetter("noteFormattingDisableThinking"),
-  setChatAgentDisableThinking: createBooleanSetter("chatAgentDisableThinking"),
 
   setUseLocalWhisper: createBooleanSetter("useLocalWhisper"),
   setWhisperModel: createStringSetter("whisperModel"),
@@ -1835,20 +1767,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ isSignedIn: value });
   },
 
-  setChatAgentModel: createStringSetter("chatAgentModel"),
-  setChatAgentProvider: createStringSetter("chatAgentProvider"),
-  setChatAgentKey: createRegisteredHotkeySetter(
-    "chatAgentKey",
-    "chat agent hotkey",
-    () => window.electronAPI?.updateAgentHotkey,
-    (key) => window.electronAPI?.saveAgentKey?.(key)
-  ),
-  setChatAgentCloudMode: createStringSetter("chatAgentCloudMode"),
-  setChatAgentMode: createStringSetter("chatAgentMode") as (mode: InferenceMode) => void,
-  setChatAgentCloudBaseUrl: createStringSetter("chatAgentCloudBaseUrl"),
-  setChatAgentRemoteUrl: createStringSetter("chatAgentRemoteUrl"),
-  setChatAgentCustomApiKey: createStringSetter("chatAgentCustomApiKey"),
-
   updateTranscriptionSettings: (settings: Partial<TranscriptionSettings>) => {
     const s = useSettingsStore.getState();
     if (settings.useLocalWhisper !== undefined) s.setUseLocalWhisper(settings.useLocalWhisper);
@@ -1937,13 +1855,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       settings.cleanupCloudMode ?? s.cleanupCloudMode,
       settings.cleanupProvider ?? s.cleanupProvider
     );
-    const {
-      dictationCleanup,
-      noteFormatting,
-      dictationAgent,
-      chatIntelligence,
-      dictationTranslation,
-    } = buildReasoningScopePatches(settings, mode);
+    const { dictationCleanup, noteFormatting, dictationAgent, dictationTranslation } =
+      buildReasoningScopePatches(settings, mode);
     s.updateCleanupSettings(dictationCleanup);
     s.setCleanupMode(dictationCleanup.cleanupMode);
     // Each Settings tab selects on its own mode field, so set the mode for every
@@ -1959,11 +1872,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (dictationAgent.cloudMode !== undefined)
       s.setDictationAgentCloudMode(dictationAgent.cloudMode);
     s.setDictationAgentMode(mode);
-    if (chatIntelligence.provider !== undefined) s.setChatAgentProvider(chatIntelligence.provider);
-    if (chatIntelligence.model !== undefined) s.setChatAgentModel(chatIntelligence.model);
-    if (chatIntelligence.cloudMode !== undefined)
-      s.setChatAgentCloudMode(chatIntelligence.cloudMode);
-    s.setChatAgentMode(mode);
     if (dictationTranslation.provider !== undefined)
       s.setTranslationProvider(dictationTranslation.provider);
     if (dictationTranslation.model !== undefined) s.setTranslationModel(dictationTranslation.model);
@@ -1986,16 +1894,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       s.setCustomTranscriptionApiKey(keys.customTranscriptionApiKey);
     if (keys.cleanupCustomApiKey !== undefined) s.setCleanupCustomApiKey(keys.cleanupCustomApiKey);
   },
-
-  updateChatAgentSettings: (settings: Partial<ChatAgentSettings>) => {
-    const s = useSettingsStore.getState();
-    if (settings.chatAgentModel !== undefined) s.setChatAgentModel(settings.chatAgentModel);
-    if (settings.chatAgentProvider !== undefined)
-      s.setChatAgentProvider(settings.chatAgentProvider);
-    if (settings.chatAgentKey !== undefined) s.setChatAgentKey(settings.chatAgentKey);
-    if (settings.chatAgentCloudMode !== undefined)
-      s.setChatAgentCloudMode(settings.chatAgentCloudMode);
-  },
 }));
 
 // --- Selectors (derived state, not stored) ---
@@ -2007,8 +1905,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 export const selectIsCloudCleanupMode = (_state: SettingsState) => false;
 
 export const selectEffectiveCleanupProvider = (state: SettingsState) => state.cleanupProvider;
-
-export const selectIsCloudChatAgentMode = (_state: SettingsState) => false;
 
 export const selectIsCloudDictationAgentMode = (_state: SettingsState) => false;
 
@@ -2197,10 +2093,6 @@ export function setResolvedLLMConfig(
   if (Object.keys(updates).length > 0) useSettingsStore.setState(updates);
 }
 
-export function isCloudChatAgentMode() {
-  return selectIsCloudChatAgentMode(useSettingsStore.getState());
-}
-
 // --- Convenience getters for non-React code ---
 
 export function getSettings() {
@@ -2354,20 +2246,6 @@ export async function initializeSettings(): Promise<void> {
     } catch (err) {
       logger.warn(
         "Failed to sync active dictation key on startup",
-        { error: (err as Error).message },
-        "settings"
-      );
-    }
-
-    // Sync chat agent hotkey from main process
-    try {
-      const envKey = await window.electronAPI.getAgentKey?.();
-      if (envKey && envKey !== state.chatAgentKey) {
-        createStringSetter("chatAgentKey")(envKey);
-      }
-    } catch (err) {
-      logger.warn(
-        "Failed to sync chat agent hotkey on startup",
         { error: (err as Error).message },
         "settings"
       );

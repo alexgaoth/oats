@@ -11,10 +11,6 @@ const SLOT_CONFIG = {
     path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats/",
     name: "Oats Toggle",
   },
-  agent: {
-    path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-agent/",
-    name: "Oats Agent",
-  },
   meeting: {
     path: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/oats-meeting/",
     name: "Oats Meeting",
@@ -98,7 +94,6 @@ class GnomeShortcutManager {
   constructor() {
     this.bus = null;
     this.dictationCallback = null;
-    this.agentCallback = null;
     this.meetingCallback = null;
     this.conversationCallback = null;
     this.voiceAgentCallback = null;
@@ -119,16 +114,6 @@ class GnomeShortcutManager {
 
   static isWayland() {
     return process.env.XDG_SESSION_TYPE === "wayland";
-  }
-
-  /**
-   * Set or update the agent callback after initial D-Bus service initialisation.
-   * This supports the case where the dictation hotkey is set up first and the
-   * agent callback is only available later (after agent window creation).
-   */
-  setAgentCallback(callback) {
-    this.agentCallback = callback;
-    debugLogger.log("[GnomeShortcut] Agent callback registered");
   }
 
   setMeetingCallback(callback) {
@@ -175,11 +160,6 @@ class GnomeShortcutManager {
               this.dictationCallback();
             }
           },
-          ToggleAgent: () => {
-            if (this.agentCallback) {
-              this.agentCallback();
-            }
-          },
           ToggleMeeting: () => {
             if (this.meetingCallback) {
               this.meetingCallback();
@@ -211,7 +191,6 @@ class GnomeShortcutManager {
           name: DBUS_INTERFACE,
           methods: {
             Toggle: ["", ""],
-            ToggleAgent: ["", ""],
             ToggleMeeting: ["", ""],
             ToggleConversation: ["", ""],
             ToggleVoiceAgent: ["", ""],
@@ -257,7 +236,6 @@ class GnomeShortcutManager {
 
     const SLOT_DBUS_METHOD = {
       dictation: "Toggle",
-      agent: "ToggleAgent",
       meeting: "ToggleMeeting",
       voiceAgent: "ToggleVoiceAgent",
       conversation: "ToggleConversation",

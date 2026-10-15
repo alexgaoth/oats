@@ -55,8 +55,7 @@
   },
   "window": {
     "voiceRecorderTitle": "Oats",
-    "controlPanelTitle": "Oats",
-    "agentChatTitle": "Чат агента"
+    "controlPanelTitle": "Oats"
   },
   "dialog": {
     "openLink": {
@@ -1783,79 +1782,6 @@
     "prompt": {
       "title": "Подсказка агента",
       "description": "Системная подсказка, используемая при обнаружении слова активации. По умолчанию применяется встроенная."
-    }
-  },
-  "agentMode": {
-    "settings": {
-      "hotkey": "Горячая клавиша чат-агента",
-      "hotkeyDescription": "Открывает и закрывает окно чат-агента",
-      "model": "Модель агента",
-      "modelDescription": "Модель ИИ для разговоров с агентом",
-      "systemPrompt": "Системный промпт",
-      "systemPromptDescription": "Пользовательские инструкции для агента",
-      "systemPromptPlaceholder": "Введите пользовательский системный промпт...",
-      "modes": {
-        "legacy": "Oats Cloud",
-        "providers": "Облачные провайдеры",
-        "local": "Локально",
-        "selfHosted": "Свой сервер",
-        "legacyDesc": "Надёжные результаты. Без настройки.",
-        "providersDesc": "Свой API-ключ.",
-        "localDesc": "Модели на устройстве. Полная приватность.",
-        "selfHostedDesc": "Ваш сервер в вашей сети.",
-        "enterprise": "Корпоративный",
-        "enterpriseDesc": "Используйте облачный аккаунт вашей организации (AWS, Azure, GCP)."
-      },
-      "legacyCloud": "Oats Cloud",
-      "legacyCloudDescription": "Надёжные результаты. Без настройки.",
-      "customSetup": "Своя настройка (BYOK)",
-      "customSetupDescription": "Используйте собственные API-ключи и выберите предпочтительную модель"
-    },
-    "chat": {
-      "placeholder": "Нажмите {{hotkey}} чтобы говорить",
-      "thinking": "Думаю...",
-      "transcribing": "Транскрибирую...",
-      "listening": "Слушаю...",
-      "newConversation": "Новый",
-      "copyToClipboard": "Копировать в буфер обмена",
-      "copied": "Скопировано",
-      "emptyState": "Спросите что угодно",
-      "errorPrefix": "Ошибка"
-    },
-    "titleBar": {
-      "label": "Агент",
-      "newChat": "Новый разговор",
-      "close": "Закрыть"
-    },
-    "input": {
-      "holdToSpeak": "Удерживайте для разговора",
-      "toClose": "закрыть",
-      "listening": "Слушаю...",
-      "transcribing": "Транскрибирую...",
-      "thinking": "Думаю...",
-      "typeMessage": "Введите сообщение...",
-      "send": "Отправить"
-    },
-    "tools": {
-      "search_notesStatus": "Поиск в заметках...",
-      "web_searchStatus": "Поиск в интернете...",
-      "copy_to_clipboardStatus": "Копирование в буфер обмена...",
-      "get_calendar_eventsStatus": "Проверка календаря...",
-      "get_noteStatus": "Чтение заметки...",
-      "create_noteStatus": "Создание заметки...",
-      "update_noteStatus": "Обновление заметки...",
-      "copiedToClipboard": "Скопировано в буфер обмена",
-      "foundNotes": "Найдена {{count}} заметка",
-      "foundNotes_plural": "Найдено {{count}} заметок",
-      "searchResults": "Найден {{count}} результат",
-      "searchResults_plural": "Найдено {{count}} результатов",
-      "openNote": "Открыть заметку",
-      "calendarEvents": "Найдено {{count}} событие",
-      "calendarEvents_plural": "Найдено {{count}} событий",
-      "noResults": "Ничего не найдено",
-      "error": "Ошибка инструмента",
-      "unknownTool": "Неизвестный инструмент: {{name}}",
-      "invalidArgs": "Недопустимые аргументы инструмента для {{name}}"
     }
   },
   "upcoming": {
