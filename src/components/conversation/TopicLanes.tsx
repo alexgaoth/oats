@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "../ui/badge";
 import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { formatSpan } from "../../helpers/ledgerDate.mjs";
@@ -212,7 +211,9 @@ export default function TopicLanes({
                 >
                   {row.label}
                 </span>
-                {isNow && <Badge variant="brand">{t("oats.flow.state.live")}</Badge>}
+                {/* No "Now" badge: the line's honey end already says which
+                    topic is current, and the badge said it twice. A screen
+                    reader still hears "Now" in the row's name. */}
               </span>
               {/* The line's column: the line itself is drawn over all rows. */}
               <span aria-hidden="true" />

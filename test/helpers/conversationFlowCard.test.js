@@ -79,9 +79,11 @@ test("each row is a button: the label, the minutes, and its state for a screen r
   assert.match(LANES, /"truncate text-\[13px\]"/);
   assert.match(LANES, /text-right text-\[13px\] tabular-nums text-muted-foreground/);
   assert.match(LANES, /<span className="sr-only">\{name\}<\/span>/);
-  // The topic now: medium weight and the honey Now badge.
+  // The topic now: medium weight, and no Now badge (the line's honey end says
+  // it); its state is still in the row's name for a screen reader.
   assert.match(LANES, /isNow && "font-medium text-foreground"/);
-  assert.match(LANES, /<Badge variant="brand">\{t\("oats\.flow\.state\.live"\)\}<\/Badge>/);
+  assert.doesNotMatch(LANES, /<Badge/);
+  assert.match(LANES, /stateLabel\(t, isNow \? "live"/);
   // The stack's dividers.
   assert.match(LANES, /index > 0 && "border-t border-border"/);
 });
