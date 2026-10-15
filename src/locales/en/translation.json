@@ -2376,6 +2376,7 @@
     }
   },
   "questionCard": {
+    "now": "now",
     "state": {
       "asked": "Open",
       "answered": "Answered",

@@ -2371,6 +2371,7 @@
     }
   },
   "questionCard": {
+    "now": "剛剛",
     "state": {
       "asked": "未解決",
       "answered": "已解答",

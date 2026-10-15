@@ -2371,6 +2371,7 @@
     }
   },
   "questionCard": {
+    "now": "刚刚",
     "state": {
       "asked": "未解决",
       "answered": "已解答",

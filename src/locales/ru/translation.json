@@ -2420,6 +2420,7 @@
     }
   },
   "questionCard": {
+    "now": "сейчас",
     "state": {
       "asked": "Открыт",
       "answered": "Отвечен",

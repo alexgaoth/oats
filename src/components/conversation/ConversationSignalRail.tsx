@@ -8,6 +8,7 @@ import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { searchHostLabel } from "../../utils/searchHost";
 import type { ConversationCard, QuestionOutcome } from "../../types/conversationEvents";
 import { nextAnnouncement } from "../../helpers/questionAnnouncement.mjs";
+import { questionAge } from "../../helpers/questionAge.mjs";
 import { markFill, markTone, TONE_TOKEN, type MarkTone } from "./questionMarks";
 
 /** What the live region is currently saying. See `questionAnnouncement.mjs`. */
@@ -88,12 +89,6 @@ function groupCards(cards: ConversationCard[]): CardGroup[] {
     .sort((a, b) => latest(a.cards) - latest(b.cards));
 }
 
-function elapsedLabel(from: number, now: number): string {
-  const seconds = Math.max(0, Math.round((now - from) / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  return `${Math.round(seconds / 60)}m`;
-}
-
 /**
  * A question's state mark, always a complete circle of one size: filled when
  * settled, a soft fill inside a ring when the answer was hedged, an empty ring
@@ -165,7 +160,12 @@ function Asking({
         <div className="mt-1 flex min-h-6 items-center gap-2 text-xs text-muted-foreground">
           <span>{t(`questionCard.state.${card.state}`)}</span>
           <span aria-hidden="true">·</span>
-          <span className="tabular-nums">{elapsedLabel(card.createdAt, now)}</span>
+          <span className="tabular-nums">
+            {(() => {
+              const age = questionAge(card.createdAt, now);
+              return age.kind === "now" ? t("questionCard.now") : age.label;
+            })()}
+          </span>
           <span className="flex-1" />
           {card.searched ? (
             // Naming the host is the honesty requirement, not decoration. The
