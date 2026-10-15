@@ -118,6 +118,7 @@ import {
   withOlderMatches,
 } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
+import { isSearching, shellNav } from "../helpers/shellNav.mjs";
 import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import {
@@ -194,12 +195,7 @@ const AdvancedSettings = React.lazy(() => import("./SettingsPage"));
 // the screens other messages point people to.
 
 type Surface = "conversation" | "intelligence" | "settings";
-
-const SURFACE_TITLES: Record<Surface, string> = {
-  conversation: "oats.shell.home",
-  intelligence: "oats.shell.conversations",
-  settings: "oats.nav.settings",
-};
+// The title over each surface comes from helpers/shellNav.mjs, with Search's.
 type DetailTab = "summary" | "transcript" | "connections";
 
 // Three destinations, named. No icons — see the nav comment in OatsWorkspace.
@@ -1464,6 +1460,30 @@ function IntelligenceViews({
     return () => window.removeEventListener("oats-focus-search", focusSearch);
   }, [setReading, setView]);
 
+  // Searching is shown outside this page: the sidebar marks Search and the
+  // title says Search (helpers/shellNav.mjs). The shell hears it by event, as
+  // it hears everything else from here. Conversations in the sidebar asks for
+  // the whole list again, so it clears the search.
+  // Only changes are reported: on the first visit the page mounts while the
+  // shell already shows Search, and an opening "not searching" would flick the
+  // sidebar back to Conversations until the field took focus.
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searching = isSearching({ view, reading, focused: searchFocused, query });
+  const reportedSearching = useRef(false);
+  useEffect(() => {
+    if (reportedSearching.current === searching) return;
+    reportedSearching.current = searching;
+    window.dispatchEvent(new CustomEvent<boolean>("oats-search-state", { detail: searching }));
+  }, [searching]);
+  useEffect(() => {
+    const clear = () => {
+      setQuery("");
+      searchInputRef.current?.blur();
+    };
+    window.addEventListener("oats-clear-search", clear);
+    return () => window.removeEventListener("oats-clear-search", clear);
+  }, []);
+
   // Find in this conversation. `null` is closed; a string is the find line,
   // open, with what is typed in it. "Search what you are looking at": in the
   // list `/` searches conversations, in a record it finds inside that record —
@@ -2199,6 +2219,8 @@ function IntelligenceViews({
               aria-label={t("oats.intelligence.searchPlaceholder")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
               placeholder={t("oats.intelligence.searchPlaceholder")}
               className="peer pl-8 pr-9"
             />
@@ -3762,6 +3784,16 @@ export default function OatsWorkspace() {
   const { t } = useTranslation();
   const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
+  // Whether the Conversations page is searching, as it reports it. Search in
+  // the sidebar sets it at once, so the item lights on the click rather than
+  // when the field takes focus two frames later.
+  const [searching, setSearching] = useState(false);
+  useEffect(() => {
+    const onState = (event: Event) => setSearching(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener("oats-search-state", onState);
+    return () => window.removeEventListener("oats-search-state", onState);
+  }, []);
+  const nav = shellNav(surface, searching);
   const settingsPage = useSettingsNavStore((state) => state.page);
   const setSettingsPage = useSettingsNavStore((state) => state.setPage);
   // Turning dictation off removes the Dictation page; if it was open, General
@@ -3864,6 +3896,7 @@ export default function OatsWorkspace() {
     const goToSearch = () => {
       if (useMeetingRecordingStore.getState().isRecording) return;
       setSurface("intelligence");
+      setSearching(true);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
       });
@@ -4054,6 +4087,7 @@ export default function OatsWorkspace() {
           <div ref={sidebarCell} id={sidebarId} className="oats-frame-sidebar" inert={sidebarAway}>
             <AppSidebar
               surface={surface}
+              current={nav.current}
               away={sidebarAway}
               settingsPage={settingsPage}
               onSettingsPage={setSettingsPage}
@@ -4061,6 +4095,11 @@ export default function OatsWorkspace() {
               onNavigate={(next) => {
                 // Settings stays closed while a conversation is live, as Cmd+, does.
                 if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
+                // Conversations is the whole list: it ends a search.
+                if (next === "intelligence") {
+                  window.dispatchEvent(new Event("oats-clear-search"));
+                  setSearching(false);
+                }
                 setSurface(next);
               }}
               onOpenNote={(noteId) =>
@@ -4068,6 +4107,7 @@ export default function OatsWorkspace() {
               }
               onSearch={() => {
                 setSurface("intelligence");
+                setSearching(true);
                 requestAnimationFrame(() => {
                   requestAnimationFrame(() => window.dispatchEvent(new Event("oats-focus-search")));
                 });
@@ -4095,9 +4135,7 @@ export default function OatsWorkspace() {
                   />
                 )}
               </div>
-              <h1 className="text-sm font-semibold tracking-[-0.01em]">
-                {t(SURFACE_TITLES[surface])}
-              </h1>
+              <h1 className="text-sm font-semibold tracking-[-0.01em]">{t(nav.titleKey)}</h1>
             </header>
             <div className="oats-enter relative min-h-0 flex-1">
               {SURFACES.map(({ id, render }) => (
