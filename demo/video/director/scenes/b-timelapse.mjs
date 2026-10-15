@@ -5,7 +5,7 @@
 // At six times the app pauses for 100-300 ms about once a second (a turn's
 // work arrives six times as often). Filmed at a third of real speed, a pause
 // is under 100 ms of page time; every second screen frame is plenty.
-import { READY, url } from "./_base.mjs";
+import { READY, SHEET, url } from "./_base.mjs";
 
 export default {
   url: url("demo=live&from=20&speed=6&end=hold"),
@@ -19,7 +19,14 @@ export default {
       await d.wait(2500);
       await d.rect("status", "text=Recording", { closest: "[data-slot=card]" });
       await d.rect("flow", "text=Conversation flow", { closest: "[data-slot=card]" });
-      await d.waitFor("window.oatsDemo.status().seconds >= 1056", 600000);
+      // The replay's own clock, every two seconds, so the bake can place a
+      // demo time in the take (director/bake-lapse.mjs).
+      for (;;) {
+        const seconds = await d.eval("window.oatsDemo.status().seconds");
+        d.cue("demo", { seconds });
+        if (seconds >= SHEET.lapseUntil) break;
+        await d.wait(2000);
+      }
     });
   },
 };

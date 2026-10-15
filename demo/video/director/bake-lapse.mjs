@@ -6,71 +6,64 @@
 // curve, from where the record scene leaves the clock (about 0:23, at 18x)
 // to where the Words scene picks it up (17:32.6, at 6x).
 //
-// Why a clip of its own: Remotion clamps a frozen frame to the film's length,
-// and a 66 s film could not reach the 3-minute take's last frames; moving the
-// video's start every frame instead made Remotion hand back a scaled frame
-// now and then, and the film flashed a mosaic of small windows.
+// Why its own frames: a speed curve this steep is simplest as a list of the
+// take's frames, one per film frame (public/seq/b-lapse), which the film
+// shows as it shows any clip.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { speedCurve } from "../src/edit/speedCurve.mjs";
+
+import pellwood from "./sets/pellwood.mjs";
+import ideas from "./sets/ideas.mjs";
 
 const here = path.dirname(new URL(import.meta.url).pathname);
 const root = path.resolve(here, "..");
-const dir = path.join(root, "out/capture/b-timelapse");
+const SHEET = { pellwood, ideas }[process.env.OATS_SET ?? "pellwood"];
+const prefix = SHEET.name === "pellwood" ? "" : `${SHEET.name}-`;
+const dir = path.join(root, SHEET.name === "pellwood" ? "out/capture/b-timelapse" : `out/capture-${SHEET.name}/b-timelapse`);
 const capture = JSON.parse(fs.readFileSync(path.join(dir, "capture.json"), "utf8"));
 const FPS = 60;
 
-// Where the take shows a demo time, read off its own clock: 0:22 at 1.0 s
-// (the seek to 0:20 lands just before; earlier frames still show 0:00) and
-// 17:34 at 173.1 s, six times exactly in between.
-const A = { clip: 1.0, demo: 22 };
-const B = { clip: 173.1, demo: 1054 };
-const clipAt = (demoSeconds) => A.clip + ((demoSeconds - A.demo) * (B.clip - A.clip)) / (B.demo - A.demo);
-
-const FROM = A.clip; // 0:22, about where the record scene leaves the clock
-const TO = clipAt(1052.6); // 17:32.6, where the Words scene begins
-
-// Speed, as clip seconds per film second (the replay's six times on top):
-// from 3 (18x) up to 36 (216x), held, then down to 1 (6x) to meet the Words
-// scene's real time. Each change is an S-curve. Seventeen minutes in about
-// five seconds: the film is watched on X, by people who scroll on.
-const START = 3;
-const TOP = 36;
-const LAST = 1;
-const UP = 0.6;
-const DOWN = 0.6;
-// An S-curve's mean is its midpoint, so each ramp covers (a + b) / 2 per second.
-const HOLD = (TO - FROM - (UP * (START + TOP)) / 2 - (DOWN * (TOP + LAST)) / 2) / TOP;
-const SECONDS = UP + HOLD + DOWN;
-const smooth = (u) => u * u * (3 - 2 * u);
-const speed = (t) => {
-  if (t < UP) return START + (TOP - START) * smooth(t / UP);
-  if (t < UP + HOLD) return TOP;
-  return TOP + (LAST - TOP) * smooth(Math.min(1, (t - UP - HOLD) / DOWN));
-};
-
-// Clip time at each film frame: the speed, integrated in small steps.
-const frames = Math.round(SECONDS * FPS);
-const times = [];
-let clip = FROM;
-const STEPS = 20;
-for (let index = 0; index < frames; index += 1) {
-  times.push(Math.round(clip * 1000));
-  for (let step = 0; step < STEPS; step += 1) {
-    const t = (index + (step + 0.5) / STEPS) / FPS;
-    clip += speed(t) / FPS / STEPS;
-  }
+// Where the take shows a demo time. The take logs the replay's own clock every
+// two seconds ("demo" cues): a straight line through them, once the seek to
+// 0:20 has landed. An older take without them uses two clock readings off its
+// frames (the sheet's lapseClock).
+const readings = capture.cues
+  .filter((cue) => cue.name === "demo" && cue.seconds >= 20)
+  .map((cue) => ({ clip: cue.t / 1000, demo: cue.seconds }));
+let clipAt;
+if (readings.length >= 2) {
+  const n = readings.length;
+  const mx = readings.reduce((sum, r) => sum + r.demo, 0) / n;
+  const my = readings.reduce((sum, r) => sum + r.clip, 0) / n;
+  const slope =
+    readings.reduce((sum, r) => sum + (r.demo - mx) * (r.clip - my), 0) /
+    readings.reduce((sum, r) => sum + (r.demo - mx) ** 2, 0);
+  clipAt = (demoSeconds) => my + slope * (demoSeconds - mx);
+} else {
+  const [A, B] = SHEET.lapseClock;
+  clipAt = (demoSeconds) => A.clip + ((demoSeconds - A.demo) * (B.clip - A.clip)) / (B.demo - A.demo);
 }
+
+// The sheet's speed curve, from demo times to the take's clip times, with
+// S-curves between the points (src/edit/speedCurve.mjs).
+const curve = speedCurve(SHEET.lapse.map((point) => ({ at: clipAt(point.demo), speed: point.speed })));
+const FROM = curve.start;
+const TO = curve.end;
+const SECONDS = curve.seconds;
+const frames = Math.round(SECONDS * FPS);
+const times = Array.from({ length: frames }, (_, index) => Math.round(curve.clipAt(index / FPS) * 1000));
 
 const timesFile = path.join(dir, "lapse-times.json");
 fs.writeFileSync(timesFile, JSON.stringify(times));
-execFileSync("node", [path.join(here, "assemble.mjs"), dir, path.join(root, "public/clips/b-lapse.mp4"), "--times", timesFile, "--seq", "sequence-lapse"], {
+execFileSync("node", [path.join(here, "assemble.mjs"), dir, path.join(root, `public/clips/${prefix}b-lapse.mp4`), "--times", timesFile, "--seq", "sequence-lapse"], {
   stdio: "inherit",
 });
 fs.writeFileSync(
-  path.join(root, "public/clips/b-lapse.json"),
+  path.join(root, `public/clips/${prefix}b-lapse.json`),
   JSON.stringify({ ...capture, frames: [], cursor: [], moves: [], baked: { from: FROM, to: TO, seconds: frames / FPS } }, null, 1)
 );
 console.log(
-  `b-lapse: ${frames} frames (${(frames / FPS).toFixed(3)} s) from clip ${FROM}s to ${(times.at(-1) / 1000).toFixed(2)}s (aim ${TO.toFixed(2)}s), hold ${HOLD.toFixed(2)} s at ${TOP * 6}x`
+  `${prefix}b-lapse: ${frames} frames (${(frames / FPS).toFixed(3)} s), clip ${FROM.toFixed(2)}s to ${(times.at(-1) / 1000).toFixed(2)}s (aim ${TO.toFixed(2)}s)`
 );

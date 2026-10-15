@@ -1,6 +1,6 @@
 // Scene 9: "/" opens search; "import bug" is typed; results arrive with the count
 // of matches and how long the search took.
-import { READY, url } from "./_base.mjs";
+import { READY, SHEET, url } from "./_base.mjs";
 
 export default {
   url: url(),
@@ -15,7 +15,7 @@ export default {
       await d.click("text=Search/", { duration: 900 });
       d.cue("search");
       await d.wait(700);
-      await d.type("import bug", { perChar: 85 });
+      await d.type(SHEET.searchTerm, { perChar: 85 });
       d.cue("typed");
       await d.wait(900);
       await d.rect("field", "input", { pad: 16 });

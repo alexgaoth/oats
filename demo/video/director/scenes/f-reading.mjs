@@ -1,6 +1,6 @@
 // The finished review opened from Recent: its shape (the contour, the
 // questions on it, who talked) held long enough to read, then the summary.
-import { READY, url } from "./_base.mjs";
+import { READY, SHEET, url } from "./_base.mjs";
 
 export default {
   url: url(),
@@ -11,7 +11,7 @@ export default {
     await d.wait(800);
     await d.record(async () => {
       await d.wait(500);
-      await d.click("text=Enterprise launch review: SSO gates the date", { duration: 1000 });
+      await d.click(`text=${SHEET.mainTitle}`, { duration: 1000 });
       d.cue("opened");
       await d.wait(900);
       await d.rect("shape", "text=Answered", { closest: "[data-slot=card]" });

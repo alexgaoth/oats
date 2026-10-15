@@ -1,6 +1,6 @@
 // The finished review's Connections tab: each question on the topic it was asked
 // in; SOC audit is chosen, and its two open questions are listed below.
-import { READY, url } from "./_base.mjs";
+import { READY, SHEET, url } from "./_base.mjs";
 
 export default {
   url: url(),
@@ -9,7 +9,7 @@ export default {
   async run(d) {
     await d.waitFor(READY);
     await d.wait(800);
-    await d.eval("window.oatsDemo.open()");
+    await d.eval(`window.oatsDemo.open(${JSON.stringify(SHEET.mainSample)})`);
     await d.waitFor("document.querySelector('[role=tab]')");
     await d.wait(700);
     await d.record(async () => {
@@ -23,7 +23,7 @@ export default {
       d.cue("connections");
       await d.wait(1300);
       await d.rect("lanes", "[role=tabpanel][data-state=active]");
-      await d.click("text=soc audit", { duration: 950 });
+      await d.click(`text=${SHEET.connectionsTopic}`, { duration: 950 });
       d.cue("soc");
       await d.wait(3000);
     });

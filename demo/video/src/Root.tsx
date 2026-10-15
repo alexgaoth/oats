@@ -5,7 +5,7 @@ import { TitleCard } from "./scenes/TitleCard";
 import { AppShot } from "./edit/AppShot";
 import { MarkStill } from "./scenes/MarkStill";
 import { AppStill, stillSize } from "./edit/AppStill";
-import { DURATION, FPS, OatsDemo } from "./film/OatsDemo";
+import { DURATION, FPS, IDEAS_DURATION, OatsDemo, OatsIdeas } from "./film/OatsDemo";
 import type { Rect } from "./edit/types";
 
 // The README's pictures: name, the harness shot it is made from, and the card
@@ -27,6 +27,14 @@ export const RemotionRoot: React.FC = () => (
   <>
     <Still id="Mark" component={MarkStill} width={512} height={512} />
     <Composition id="OatsDemo" component={OatsDemo} durationInFrames={DURATION} fps={FPS} width={1920} height={1080} />
+    <Composition
+      id="OatsIdeas"
+      component={OatsIdeas}
+      durationInFrames={IDEAS_DURATION}
+      fps={FPS}
+      width={1920}
+      height={1080}
+    />
     {README_STILLS.flatMap(({ name, image, rect }) =>
       (["light", "dark"] as const).map((theme) => {
         const size = stillSize(rect, rect ? 1760 : 1920);
