@@ -3,6 +3,8 @@
 //
 //   onboarding done, English, the work interface
 //   question cards on, read locally (no classifier model), auto-search off
+//   unless `autosearch=1` (the fake main process records the search instead
+//   of opening a browser: `window.oatsDemo.searches()`)
 //   a local summary model, so Finish writes a title and a summary
 //
 // Page parameters choose the rest: `theme=light|dark`, `view=calm|words`
@@ -23,7 +25,7 @@ export function applyDemoSettings(params) {
   set("conversationAideEnabled", "true");
   set("conversationAideInRoomEnabled", "true");
   set("conversationAideModel", "");
-  set("conversationAutoSearchEnabled", "false");
+  set("conversationAutoSearchEnabled", params.get("autosearch") === "1" ? "true" : "false");
   set("meetingUseLocalWhisper", "true");
   set("cleanupMode", "local");
   set("cleanupModel", "qwen3.5-4b-q4_k_m");

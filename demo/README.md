@@ -160,11 +160,14 @@ it is asked), `profile=many` (two hundred synthetic conversations over a year,
 in three conversation groups, instead of the samples: `harness/many.mjs`),
 `theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
 `connections=lanes|graph`, `badges=1` (show the "Example" badge on the demo's
-conversations).
+conversations), `autosearch=1` (turn auto-search on; the fake main process
+writes each search down instead of opening a browser, and
+`oatsDemo.searches()` lists them, so a film can show the browser opening).
 `panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,
-question cards on and read locally (no classifier model), auto-search off, and
+question cards on and read locally (no classifier model), auto-search off
+(unless `autosearch=1`), and
 a local summary model, so Finish writes a title and a summary.
 
 ### Directing a recording
