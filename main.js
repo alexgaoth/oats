@@ -31,6 +31,9 @@ const {
 // First, before anything can open a connection: the sidebar's count of requests
 // that left this machine must see every one (networkLedger.js says where).
 require("./src/helpers/networkLedger").install({ app, session, shell });
+// Then, before any session exists: no session fetches spellcheck dictionaries
+// (spellcheckOff.js says why a window's own setting is not enough).
+require("./src/helpers/spellcheckOff").install({ app });
 
 const path = require("path");
 const tls = require("tls");

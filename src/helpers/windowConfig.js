@@ -51,6 +51,10 @@ const MAIN_WINDOW_CONFIG = {
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
+    // Off in every window here; Electron's default is on. Nothing is typed into
+    // this one, because it cannot be focused. spellcheckOff.js is what stops
+    // Chromium fetching dictionaries; this flag alone would not.
+    spellcheck: false,
   },
   frame: false,
   alwaysOnTop: true,
@@ -99,6 +103,8 @@ const CONTROL_PANEL_CONFIG = {
     // cross-origin fetch calls to Better Auth, Gemini, OpenAI, and Groq APIs
     // directly from the browser. These would be blocked by CORS otherwise.
     webSecurity: false,
+    // Off, though titles, search and notes are typed here: on Linux and Windows
+    // a spellchecker needs dictionaries that Chromium downloads from Google.
     spellcheck: false,
     backgroundThrottling: false,
   },
@@ -138,6 +144,8 @@ const NOTIFICATION_WINDOW_CONFIG = {
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
+    // Cannot be focused, so nothing is typed here (MAIN_WINDOW_CONFIG says more).
+    spellcheck: false,
   },
   visibleOnAllWorkspaces: process.platform !== "win32",
   type: FLOATING_OVERLAY_TYPE,
@@ -169,6 +177,8 @@ const TRANSCRIPTION_PREVIEW_CONFIG = {
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
+    // Cannot be focused, so nothing is typed here (MAIN_WINDOW_CONFIG says more).
+    spellcheck: false,
   },
   visibleOnAllWorkspaces: process.platform !== "win32",
   type: FLOATING_OVERLAY_TYPE,
