@@ -249,20 +249,26 @@ test("the personal conversations are short, with every kind of answer between th
   assert.deepEqual([...outcomes].sort(), ["answered", "denied", "open", "silence"]);
 });
 
+// The launch review's script names no group, so the app's sample is sorted like
+// any conversation. The harness has no model to sort it and files it in Work
+// itself (DEMO_FILING), or the Work tab would leave out the demo's main
+// conversation.
 test("the harness files each demo conversation in its group", async () => {
-  const { createFakeMain } = await import("../../demo/harness/fake-main.mjs");
+  const { createFakeMain, DEMO_FILING } = await import("../../demo/harness/fake-main.mjs");
+  assert.equal(example.meta.group ?? null, null, "the app's sample stays unfiled");
   const main = createFakeMain({ fixtures: [example, ...demoFixtures], now: NOW });
   const groups = await main.api.getConversationGroups();
   const name = (id) => groups.find((group) => group.id === id)?.name ?? null;
   const filed = { Work: 0, Personal: 0, none: 0 };
   for (const note of main.db.notes) {
     const fixture = [example, ...demoFixtures].find((item) => item.meta.id === note.demo_sample);
-    const expected = { work: "Work", personal: "Personal" }[fixture.meta.group] ?? null;
+    const key = fixture.meta.group ?? DEMO_FILING[fixture.meta.id];
+    const expected = { work: "Work", personal: "Personal" }[key] ?? null;
     assert.equal(name(note.group_id), expected, note.demo_sample);
     assert.equal(note.group_source, expected ? "model" : null, note.demo_sample);
     filed[expected ?? "none"] += 1;
   }
-  assert.deepEqual(filed, { Work: 6, Personal: 2, none: 1 });
+  assert.deepEqual(filed, { Work: 7, Personal: 2, none: 0 });
 });
 
 test("the harness's conversations carry no Example badge unless asked, and the in-app example does", async () => {
