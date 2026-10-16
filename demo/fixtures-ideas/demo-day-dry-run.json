@@ -1,0 +1,367 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "demo-day-dry-run",
+    "sample": true,
+    "description": "Sample conversation: a demo day dry run. Invented people.",
+    "company": "A startup in the current batch (fictional)",
+    "participants": [
+      { "name": "Sasha", "role": "Founder" },
+      { "name": "Kai", "role": "Co-founder, vibe coder" },
+      { "name": "Bea", "role": "Designer" }
+    ],
+    "startedAt": 1792024200000,
+    "endedAt": 1792024290421,
+    "summarizedAt": 1792024331421,
+    "placement": { "daysAgo": 1, "at": "17:30", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Demo day dry run: the moat is vibes",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv8svrdk-1",
+        "text": "Okay, demo day dry run. Demo day pitch, from the top.",
+        "source": "mic",
+        "timestamp": 1792024203012,
+        "startMs": 3012,
+        "endMs": 8744,
+        "speaker": "speaker_1",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-2",
+        "text": "Right. Demo day, two minutes, no notes.",
+        "source": "mic",
+        "timestamp": 1792024210126,
+        "startMs": 10126,
+        "endMs": 13737,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-3",
+        "text": "Demo day pitch: agents that take your sales calls while you sleep.",
+        "source": "mic",
+        "timestamp": 1792024214974,
+        "startMs": 14974,
+        "endMs": 20699,
+        "speaker": "speaker_1",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-4",
+        "text": "Demo day slide three is too busy. One number per slide.",
+        "source": "mic",
+        "timestamp": 1792024221765,
+        "startMs": 21765,
+        "endMs": 27903,
+        "speaker": "speaker_3",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-5",
+        "text": "What's the moat, in one word?",
+        "source": "mic",
+        "timestamp": 1792024228873,
+        "startMs": 28873,
+        "endMs": 31969,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-6",
+        "text": "Taste, and also distribution.",
+        "source": "mic",
+        "timestamp": 1792024232895,
+        "startMs": 32895,
+        "endMs": 35002,
+        "speaker": "speaker_1",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-7",
+        "text": "Demo day rule: one moat per slide, max.",
+        "source": "mic",
+        "timestamp": 1792024235799,
+        "startMs": 35799,
+        "endMs": 40090,
+        "speaker": "speaker_3",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-8",
+        "text": "Then vibe coding. The live vibe coding part.",
+        "source": "mic",
+        "timestamp": 1792024240664,
+        "startMs": 40664,
+        "endMs": 44576,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-9",
+        "text": "Right. Vibe coding live, on stage. The agent builds a feature in ninety seconds.",
+        "source": "mic",
+        "timestamp": 1792024245183,
+        "startMs": 45183,
+        "endMs": 51776,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-10",
+        "text": "So the real moat is vibes. Literally vibe coding.",
+        "source": "mic",
+        "timestamp": 1792024252312,
+        "startMs": 52312,
+        "endMs": 57070,
+        "speaker": "speaker_3",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-11",
+        "text": "Vibe coding live is either legendary or a postmortem.",
+        "source": "mic",
+        "timestamp": 1792024257680,
+        "startMs": 57680,
+        "endMs": 62486,
+        "speaker": "speaker_3",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-12",
+        "text": "Did the vibe coding run work in rehearsal?",
+        "source": "mic",
+        "timestamp": 1792024263764,
+        "startMs": 63764,
+        "endMs": 67946,
+        "speaker": "speaker_1",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-13",
+        "text": "Twice out of five.",
+        "source": "mic",
+        "timestamp": 1792024269070,
+        "startMs": 69070,
+        "endMs": 71167,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-14",
+        "text": "Two out of five vibe coding runs. Good enough for demo day.",
+        "source": "mic",
+        "timestamp": 1792024272047,
+        "startMs": 72047,
+        "endMs": 77831,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-15",
+        "text": "Vibe coding plan B: the backup video.",
+        "source": "mic",
+        "timestamp": 1792024279411,
+        "startMs": 79411,
+        "endMs": 83226,
+        "speaker": "speaker_3",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv8svrdk-16",
+        "text": "Should the backup video be vibe coded too?",
+        "source": "mic",
+        "timestamp": 1792024283913,
+        "startMs": 83913,
+        "endMs": 87821,
+        "speaker": "speaker_1",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Sasha, Kai and Bea ran the demo day pitch from the top, and argued about vibe coding live on stage.\n\n## Threads\n- **Demo day.** Two minutes, no notes, one number per slide. The moat, in one word: taste, and also distribution.\n- **Vibe coding.** The agent builds a feature live in ninety seconds, so the real moat is vibes. It worked twice out of five in rehearsal; plan B is a backup video.\n\n## Decisions Made\n- One number per slide, and one moat per slide.\n\n## Follow-ups\n- Whether the backup video should be vibe coded too.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4404-[{\"id\":\"seg-mv8svrdk-1\",\"text\":\"Okay, demo day dry",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "demo day",
+          "words": ["day", "demo", "moat", "per", "pitch", "slide", "agent", "busy"],
+          "durationMs": 32787,
+          "utteranceIds": [
+            "seg-mv8svrdk-1",
+            "seg-mv8svrdk-2",
+            "seg-mv8svrdk-3",
+            "seg-mv8svrdk-4",
+            "seg-mv8svrdk-5",
+            "seg-mv8svrdk-7"
+          ],
+          "firstAt": 1792024203012,
+          "lastAt": 1792024235799,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "vibe coding",
+          "words": ["vibe", "coding", "live", "backup", "video", "agent", "build", "coded"],
+          "durationMs": 43249,
+          "utteranceIds": [
+            "seg-mv8svrdk-8",
+            "seg-mv8svrdk-9",
+            "seg-mv8svrdk-10",
+            "seg-mv8svrdk-11",
+            "seg-mv8svrdk-12",
+            "seg-mv8svrdk-14",
+            "seg-mv8svrdk-15",
+            "seg-mv8svrdk-16"
+          ],
+          "firstAt": 1792024240664,
+          "lastAt": 1792024283913,
+          "returns": 0,
+          "state": "resolved"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1792024200000,
+          "b": "goaFqK2tqKysh6avq6qHqa2srKyqjaWqqq6oqImwrbCOq6uRqKupqqCpmJ2hpLCvsq6urpGip6irmKemqqqlkqitq6mLqbCeqK2xrayoh52mpKeXraqpqoqEhw=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv8svrdk-5"],
+      "text": "What's the moat, in one word?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "moat one what' word",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1792024232818
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv8svrdk-6"],
+      "text": "Taste, and also distribution.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1792024235807
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv8svrdk-12"],
+      "text": "Did the vibe coding run work in rehearsal?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "coding rehearsal run vibe work",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1792024268844
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv8svrdk-13"],
+      "text": "Twice out of five.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1792024271971
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv8svrdk-16"],
+      "text": "Should the backup video be vibe coded too?",
+      "metadata": { "state": "asked", "groupKey": "backup coded too vibe video", "occurrence": 1 },
+      "createdAt": 1792024288707
+    }
+  ],
+  "replay": {
+    "voices": { "Sasha": { "gain": 1.02 }, "Kai": { "gain": 1.1 }, "Bea": { "gain": 0.84 } },
+    "loud": {},
+    "stopAtMs": 90421
+  }
+}

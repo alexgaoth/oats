@@ -1,0 +1,397 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "yc-office-hours",
+    "sample": true,
+    "description": "Sample conversation: office hours on a vibe coding startup. Invented people.",
+    "company": "A startup in the current batch (fictional)",
+    "participants": [
+      { "name": "Hollis", "role": "Office hours mentor" },
+      { "name": "Kai", "role": "Founder, vibe coder" },
+      { "name": "Sasha", "role": "Co-founder" }
+    ],
+    "startedAt": 1791061200000,
+    "endedAt": 1791061302542,
+    "summarizedAt": 1791061343542,
+    "placement": { "daysAgo": 12, "at": "14:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "YC office hours: vibe coding is the whole product",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-musvjbtk-1",
+        "text": "Okay, office hours. Vibe coding first. The vibe coding pitch.",
+        "source": "mic",
+        "timestamp": 1791061203991,
+        "startMs": 3991,
+        "endMs": 8947,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-2",
+        "text": "Right. Vibe coding for teams. You describe the vibe, the agents write the code.",
+        "source": "mic",
+        "timestamp": 1791061210210,
+        "startMs": 10210,
+        "endMs": 17191,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-3",
+        "text": "Vibe coding is a feature, not a company.",
+        "source": "mic",
+        "timestamp": 1791061218495,
+        "startMs": 18495,
+        "endMs": 22598,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-4",
+        "text": "Vibe coding was a feature until forty teams paid for it.",
+        "source": "mic",
+        "timestamp": 1791061223957,
+        "startMs": 23957,
+        "endMs": 29503,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-5",
+        "text": "Forty teams vibe coding, and nobody reads the diffs.",
+        "source": "mic",
+        "timestamp": 1791061230895,
+        "startMs": 30895,
+        "endMs": 35256,
+        "speaker": "speaker_3",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-6",
+        "text": "Who reviews the code, then?",
+        "source": "mic",
+        "timestamp": 1791061236823,
+        "startMs": 36823,
+        "endMs": 39485,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-7",
+        "text": "A second agent, plus me on Fridays.",
+        "source": "mic",
+        "timestamp": 1791061240733,
+        "startMs": 40733,
+        "endMs": 44240,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-8",
+        "text": "Vibe coding with a second agent is still vibe coding.",
+        "source": "mic",
+        "timestamp": 1791061244765,
+        "startMs": 44765,
+        "endMs": 49848,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-9",
+        "text": "Vibe coding with receipts. Every diff gets a summary.",
+        "source": "mic",
+        "timestamp": 1791061250784,
+        "startMs": 50784,
+        "endMs": 55108,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-10",
+        "text": "Then demo day. Demo day is in five weeks.",
+        "source": "mic",
+        "timestamp": 1791061256224,
+        "startMs": 56224,
+        "endMs": 60856,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-11",
+        "text": "Right. Demo day pitch: forty paying customers, growing ten percent a week.",
+        "source": "mic",
+        "timestamp": 1791061262138,
+        "startMs": 62138,
+        "endMs": 68162,
+        "speaker": "speaker_3",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-12",
+        "text": "Lead with the forty customers. Demo day investors want traction.",
+        "source": "mic",
+        "timestamp": 1791061269733,
+        "startMs": 69733,
+        "endMs": 74968,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-13",
+        "text": "So the demo day slide says traction in huge letters.",
+        "source": "mic",
+        "timestamp": 1791061276252,
+        "startMs": 76252,
+        "endMs": 81134,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-14",
+        "text": "Is a live demo too risky for demo day?",
+        "source": "mic",
+        "timestamp": 1791061282328,
+        "startMs": 82328,
+        "endMs": 86851,
+        "speaker": "speaker_3",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-15",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791061288092,
+        "startMs": 88092,
+        "endMs": 88829,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-16",
+        "text": "Record a backup video for demo day, just in case.",
+        "source": "mic",
+        "timestamp": 1791061289455,
+        "startMs": 89455,
+        "endMs": 94732,
+        "speaker": "speaker_1",
+        "speakerName": "Hollis",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musvjbtk-17",
+        "text": "Can we vibe code the demo day video too?",
+        "source": "mic",
+        "timestamp": 1791061295746,
+        "startMs": 95746,
+        "endMs": 99942,
+        "speaker": "speaker_2",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Hollis pushed Kai and Sasha on whether vibe coding is a product or a feature, and on the demo day pitch.\n\n## Threads\n- **Vibe coding.** Forty teams pay for vibe coding: you describe the vibe, agents write the code, and a second agent (plus Kai on Fridays) reviews the diffs. Hollis: still vibe coding.\n- **Demo day.** Five weeks out. Lead with the forty paying customers and ten percent weekly growth: demo day investors want traction.\n\n## Decisions Made\n- The demo day slide leads with traction.\n\n## Action Items\n- [ ] Kai: record a backup video of the demo.\n\n## Follow-ups\n- Whether a live demo is too risky for demo day.\n- Whether the demo day video can be vibe coded too.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4718-[{\"id\":\"seg-musvjbtk-1\",\"text\":\"Okay, office hours",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "vibe coding",
+          "words": ["coding", "vibe", "agent", "team", "diff", "feature", "forty", "second"],
+          "durationMs": 46793,
+          "utteranceIds": [
+            "seg-musvjbtk-1",
+            "seg-musvjbtk-2",
+            "seg-musvjbtk-3",
+            "seg-musvjbtk-4",
+            "seg-musvjbtk-5",
+            "seg-musvjbtk-7",
+            "seg-musvjbtk-8",
+            "seg-musvjbtk-9"
+          ],
+          "firstAt": 1791061203991,
+          "lastAt": 1791061250784,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "demo day",
+          "words": ["day", "demo", "customer", "forty", "traction", "video", "week", "backup"],
+          "durationMs": 39522,
+          "utteranceIds": [
+            "seg-musvjbtk-10",
+            "seg-musvjbtk-11",
+            "seg-musvjbtk-12",
+            "seg-musvjbtk-13",
+            "seg-musvjbtk-14",
+            "seg-musvjbtk-16",
+            "seg-musvjbtk-17"
+          ],
+          "firstAt": 1791061256224,
+          "lastAt": 1791061295746,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791061200000,
+          "b": "hYeIiJ+rsK6vjaevsrGxsK6anqurqaeGrKqxrrKnh6qpsa2fi62uqJSxsaygmKaxra2QrbCvrpigmaGqqIqosKuroJiSlKuoqa+ti6ewrbCwmKKorK+shqSdrK+trauSra2noY2ChQ=="
+        }
+      ]
+    },
+    "open_questions": 2
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musvjbtk-6"],
+      "text": "Who reviews the code, then?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "code review",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791061240315
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-musvjbtk-7"],
+      "text": "A second agent, plus me on Fridays.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791061245108
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musvjbtk-14"],
+      "text": "Is a live demo too risky for demo day?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "day demo live risky too",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791061287765
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-musvjbtk-15"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791061289572
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-musvjbtk-14"],
+      "text": "Is a live demo too risky for demo day?",
+      "metadata": {
+        "query": "Is a live demo too risky for demo day?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791061289572
+    },
+    {
+      "id": 6,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musvjbtk-17"],
+      "text": "Can we vibe code the demo day video too?",
+      "metadata": { "state": "asked", "groupKey": "code day demo too vibe video", "occurrence": 1 },
+      "createdAt": 1791061300841
+    }
+  ],
+  "replay": {
+    "voices": { "Hollis": { "gain": 1 }, "Kai": { "gain": 1.1 }, "Sasha": { "gain": 1.02 } },
+    "loud": {},
+    "stopAtMs": 102542
+  }
+}

@@ -1,0 +1,328 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "eval-sync",
+    "sample": true,
+    "description": "Sample conversation: an eval sync on a leaky agent benchmark. Invented people.",
+    "company": "A hacker house in San Francisco (fictional)",
+    "participants": [
+      { "name": "Noor", "role": "Post-training engineer" },
+      { "name": "Ravi", "role": "Safety researcher" },
+      { "name": "Kai", "role": "Vibe coder" }
+    ],
+    "startedAt": 1791651600000,
+    "endedAt": 1791651683424,
+    "summarizedAt": 1791651724424,
+    "placement": { "daysAgo": 5, "at": "10:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Eval sync: is the agent AGI-pilled, or just overfit",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv2n1ndk-1",
+        "text": "Okay, sync on the agent evals. Agent evals first.",
+        "source": "mic",
+        "timestamp": 1791651603530,
+        "startMs": 3530,
+        "endMs": 8308,
+        "speaker": "speaker_1",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-2",
+        "text": "Right. The agent evals look great. Too great.",
+        "source": "mic",
+        "timestamp": 1791651608865,
+        "startMs": 8865,
+        "endMs": 13496,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-3",
+        "text": "Too great means the agent evals leaked into training.",
+        "source": "mic",
+        "timestamp": 1791651614472,
+        "startMs": 14472,
+        "endMs": 19055,
+        "speaker": "speaker_3",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-4",
+        "text": "Or the agent is AGI-pilled.",
+        "source": "mic",
+        "timestamp": 1791651620272,
+        "startMs": 20272,
+        "endMs": 23015,
+        "speaker": "speaker_1",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-5",
+        "text": "The agent is not AGI-pilled. The agent is overfit.",
+        "source": "mic",
+        "timestamp": 1791651623724,
+        "startMs": 23724,
+        "endMs": 28964,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-6",
+        "text": "Did the agent evals leak?",
+        "source": "mic",
+        "timestamp": 1791651630155,
+        "startMs": 30155,
+        "endMs": 33007,
+        "speaker": "speaker_1",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-7",
+        "text": "Yes, the test set was public.",
+        "source": "mic",
+        "timestamp": 1791651634219,
+        "startMs": 34219,
+        "endMs": 37259,
+        "speaker": "speaker_3",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-8",
+        "text": "Leaked agent evals, private shame.",
+        "source": "mic",
+        "timestamp": 1791651638025,
+        "startMs": 38025,
+        "endMs": 40560,
+        "speaker": "speaker_3",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-9",
+        "text": "Fresh agent evals by Friday, held out properly.",
+        "source": "mic",
+        "timestamp": 1791651641645,
+        "startMs": 41645,
+        "endMs": 46193,
+        "speaker": "speaker_1",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-10",
+        "text": "Separate thing. My AGI timeline moved.",
+        "source": "mic",
+        "timestamp": 1791651647077,
+        "startMs": 47077,
+        "endMs": 50632,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-11",
+        "text": "Right. My AGI timeline was 2030. The leak made it 2031.",
+        "source": "mic",
+        "timestamp": 1791651651330,
+        "startMs": 51330,
+        "endMs": 57515,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-12",
+        "text": "Your AGI timeline goes up every time an eval leaks.",
+        "source": "mic",
+        "timestamp": 1791651658988,
+        "startMs": 58988,
+        "endMs": 63887,
+        "speaker": "speaker_3",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-13",
+        "text": "AGI timelines are sensitive to leaks. Noted.",
+        "source": "mic",
+        "timestamp": 1791651664868,
+        "startMs": 64868,
+        "endMs": 68677,
+        "speaker": "speaker_1",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-14",
+        "text": "My AGI timeline is 2031 until the fresh evals land.",
+        "source": "mic",
+        "timestamp": 1791651669692,
+        "startMs": 69692,
+        "endMs": 75347,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv2n1ndk-15",
+        "text": "Will the fresh evals be ready by Friday?",
+        "source": "mic",
+        "timestamp": 1791651676907,
+        "startMs": 76907,
+        "endMs": 80824,
+        "speaker": "speaker_3",
+        "speakerName": "Kai",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Noor, Ravi and Kai found out why the agent evals looked too good, and Ravi moved his AGI timeline.\n\n## Threads\n- **Agent evals.** The scores were too good: the test set was public. Not AGI-pilled, just overfit. Fresh, properly held-out evals by Friday.\n- **AGI timeline.** Ravi's AGI timeline went from 2030 to 2031 after the leak, until the fresh evals land.\n\n## Action Items\n- [ ] Noor: fresh held-out agent evals by Friday.\n\n## Follow-ups\n- Whether the fresh evals are ready by Friday.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4077-[{\"id\":\"seg-mv2n1ndk-1\",\"text\":\"Okay, sync on the ",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "agent eval",
+          "words": ["agent", "eval", "fresh", "friday", "great", "leaked", "agi-pilled", "first"],
+          "durationMs": 38115,
+          "utteranceIds": [
+            "seg-mv2n1ndk-1",
+            "seg-mv2n1ndk-2",
+            "seg-mv2n1ndk-3",
+            "seg-mv2n1ndk-5",
+            "seg-mv2n1ndk-6",
+            "seg-mv2n1ndk-7",
+            "seg-mv2n1ndk-8",
+            "seg-mv2n1ndk-9",
+            "seg-mv2n1ndk-15"
+          ],
+          "firstAt": 1791651603530,
+          "lastAt": 1791651676907,
+          "returns": 1,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "agi timeline",
+          "words": ["agi", "timeline", "leak", "2031", "eval", "2030", "every", "fresh"],
+          "durationMs": 22615,
+          "utteranceIds": [
+            "seg-mv2n1ndk-10",
+            "seg-mv2n1ndk-11",
+            "seg-mv2n1ndk-12",
+            "seg-mv2n1ndk-13",
+            "seg-mv2n1ndk-14"
+          ],
+          "firstAt": 1791651647077,
+          "lastAt": 1791651669692,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791651600000,
+          "b": "gYSFn6uqqqucqaynraafrq+wrZKiq6yZq6ipp6qLqKihjpWvrp2tsKWYqauuqJqnqqulo6qsqa6toIWrsK6usI2qqayrlqupqqmonYernKCthoOE"
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv2n1ndk-6"],
+      "text": "Did the agent evals leak?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "agent eval leak",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791651633845
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv2n1ndk-7"],
+      "text": "Yes, the test set was public.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791651638106
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv2n1ndk-15"],
+      "text": "Will the fresh evals be ready by Friday?",
+      "metadata": { "state": "asked", "groupKey": "eval fresh friday ready", "occurrence": 1 },
+      "createdAt": 1791651681710
+    }
+  ],
+  "replay": {
+    "voices": { "Noor": { "gain": 0.96 }, "Ravi": { "gain": 0.9 }, "Kai": { "gain": 1.1 } },
+    "loud": {},
+    "stopAtMs": 83424
+  }
+}

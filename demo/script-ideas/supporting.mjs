@@ -1,13 +1,12 @@
-// The shorter conversations around the reading group, over the two weeks
-// before it: an RL paper club, a neolab watch, an eval design review, two
-// 1:1s and a tech news roundup. Placed on weekdays and filed in Work. They
-// share subjects with the reading group (verifiable rewards, the new labs,
-// reward hacking, credit assignment, the frame problem in agents, the news),
-// which is what Home's recent rows, search and the Global board draw on.
-// "Reward hacking" is said in exactly three conversations: the reading group,
-// the eval design review and the eval 1:1, so a search for it finds three.
-// The people are invented; every real paper, lab and news item they mention
-// is in `SOURCES.md`.
+// The shorter conversations around the hacker house meeting, over the two
+// weeks before it: office hours, a GPU poor support group, a pre-seed pitch,
+// an eval sync, a coffee line and a demo day dry run. Placed on weekdays and
+// filed in Work. They share subjects with the house meeting (vibe coding,
+// demo day, founder mode, the 996 grind, AGI timelines, doom numbers), which
+// is what Home's recent rows, search and the Global board draw on.
+// "p(doom)" is said in exactly three conversations: the house meeting, the
+// coffee line and the call with Mom (`personal.mjs`), so a search for it
+// finds three. Every person and startup is invented.
 //
 // The same rules as the main conversation apply (see `main.mjs`): question
 // marks and wh-words only on questions, short first replies, and each topic
@@ -17,347 +16,269 @@ const day = (daysAgo, hours, minutes) => Date.UTC(2026, 9, 15 - daysAgo, hours, 
 
 export default [
   {
-    id: "rl-paper-club",
+    id: "yc-office-hours",
     group: "work",
     startedAt: day(12, 21, 0),
     placement: { daysAgo: 12, at: "14:00", weekdays: true },
-    company: "A research reading group (fictional)",
-    description:
-      "Sample conversation: an RL paper club on random rewards and pass@k. Invented people.",
-    title: "RL paper club: random rewards and pass at k",
+    company: "A startup in the current batch (fictional)",
+    description: "Sample conversation: office hours on a vibe coding startup. Invented people.",
+    title: "YC office hours: vibe coding is the whole product",
     speakers: {
-      nadia: { name: "Nadia", role: "RL researcher", rate: 2.06, gain: 1.02 },
-      felix: { name: "Felix", role: "Post-training engineer", rate: 1.92, gain: 1.0 },
-      wen: { name: "Wen", role: "Evaluations researcher", rate: 2.15, gain: 0.92 },
+      hollis: { name: "Hollis", role: "Office hours mentor", rate: 2.0, gain: 1.0 },
+      kai: { name: "Kai", role: "Founder, vibe coder", rate: 2.2, gain: 1.1 },
+      sasha: { name: "Sasha", role: "Co-founder", rate: 2.15, gain: 1.02 },
     },
     turns: [
-      ["nadia", "Okay, paper club. Random rewards, the spurious rewards paper."],
-      ["felix", "Right. Spurious rewards: RLVR with random rewards on the Qwen math checkpoints."],
-      [
-        "felix",
-        "Random rewards, wrong-answer rewards, format rewards. On Qwen, all of these spurious rewards raise the math scores.",
-      ],
-      ["wen", "And on Llama and OLMo, the spurious rewards mostly do nothing for the math."],
-      ["nadia", "So random rewards only help a base checkpoint that already has the habit."],
-      [
-        "felix",
-        "The Qwen habit is code reasoning. Qwen thinks in Python, and the random rewards make it think in Python more often.",
-      ],
-      ["wen", "How does a random reward push anything at all?"],
-      ["felix", "The clipping in GRPO biases the update."],
-      [
-        "felix",
-        "Clipping favours the habits the checkpoint already likes, so even random rewards sharpen them.",
-      ],
-      ["nadia", "Then every RLVR paper on Qwen needs a random rewards baseline."],
-      ["nadia", "Next, pass at k, from Yue and colleagues."],
-      [
-        "wen",
-        "Right. Yue and colleagues sample the base model hundreds of times, against the trained model.",
-      ],
-      [
-        "wen",
-        "At one sample, the trained model wins. At hundreds of samples, the base model solves more problems.",
-      ],
-      [
-        "felix",
-        "So training narrows the sampling. The reasoning paths were already in the base model.",
-      ],
-      ["nadia", "Did they test distillation too?"],
-      ["wen", "Yes, and distillation did widen it."],
-      [
-        "wen",
-        "Distillation from a stronger teacher model raised pass at k. Sampling more from the base model never did that.",
-      ],
-      ["felix", "That fits. Training polishes, a teacher model adds."],
-      ["nadia", "Does the code reasoning habit show up in the bigger Qwen checkpoints?"],
-      ["felix", "No idea."],
-      [
-        "nadia",
-        "Okay, back to spurious rewards. The spurious rewards paper goes on the reading group list, with a random rewards control of our own.",
-      ],
+      ["hollis", "Okay, office hours. Vibe coding first. The vibe coding pitch."],
+      ["kai", "Right. Vibe coding for teams. You describe the vibe, the agents write the code."],
+      ["hollis", "Vibe coding is a feature, not a company."],
+      ["kai", "Vibe coding was a feature until forty teams paid for it."],
+      ["sasha", "Forty teams vibe coding, and nobody reads the diffs."],
+      ["hollis", "Who reviews the code, then?"],
+      ["kai", "A second agent, plus me on Fridays."],
+      ["hollis", "Vibe coding with a second agent is still vibe coding."],
+      ["kai", "Vibe coding with receipts. Every diff gets a summary."],
+      ["hollis", "Then demo day. Demo day is in five weeks."],
+      ["sasha", "Right. Demo day pitch: forty paying customers, growing ten percent a week."],
+      ["hollis", "Lead with the forty customers. Demo day investors want traction."],
+      ["kai", "So the demo day slide says traction in huge letters."],
+      ["sasha", "Is a live demo too risky for demo day?"],
+      ["hollis", "Hmm."],
+      ["hollis", "Record a backup video for demo day, just in case."],
+      ["kai", "Can we vibe code the demo day video too?"],
     ],
     summary: `
-Nadia, Felix and Wen read two papers on reinforcement learning with verifiable rewards (RLVR): the spurious rewards paper and Yue et al. on pass@k.
+Hollis pushed Kai and Sasha on whether vibe coding is a product or a feature, and on the demo day pitch.
 
 ## Threads
-- **Spurious rewards.** On Qwen math checkpoints, random, wrong-answer and format rewards all raise math scores; on Llama and OLMo they mostly do not. The paper's explanation is code reasoning that Qwen already has, amplified by the clipping in GRPO.
-- **Pass@k.** RLVR checkpoints win at pass@1, but at large k the base checkpoint solves more problems: RLVR narrows the search rather than adding reasoning paths. Distillation from a stronger teacher did widen it.
+- **Vibe coding.** Forty teams pay for vibe coding: you describe the vibe, agents write the code, and a second agent (plus Kai on Fridays) reviews the diffs. Hollis: still vibe coding.
+- **Demo day.** Five weeks out. Lead with the forty paying customers and ten percent weekly growth: demo day investors want traction.
 
 ## Decisions Made
-- Every RLVR result on Qwen needs a random-reward baseline.
-- The spurious rewards paper goes on the reading group list.
+- The demo day slide leads with traction.
+
+## Action Items
+- [ ] Kai: record a backup video of the demo.
 
 ## Follow-ups
-- Whether the code reasoning habit shows up in the larger Qwen checkpoints.
+- Whether a live demo is too risky for demo day.
+- Whether the demo day video can be vibe coded too.
 `,
   },
   {
-    id: "neolab-watch",
+    id: "gpu-poor-support-group",
     group: "work",
     startedAt: day(9, 18, 0),
     placement: { daysAgo: 9, at: "11:00", weekdays: true },
-    company: "A research reading group (fictional)",
-    description:
-      "Sample conversation: a short neolab watch on what the new AI labs announced. Invented people.",
-    title: "Neolab watch: open weights, and AMD to buy a world model lab",
+    company: "A GPU-poor indie lab (fictional)",
+    description: "Sample conversation: a GPU poor support group. Invented people.",
+    title: "GPU poor support group: eight GPUs and a dream",
     speakers: {
-      kofi: { name: "Kofi", role: "Tracks the AI labs", rate: 2.2, gain: 1.1 },
-      nadia: { name: "Nadia", role: "RL researcher", rate: 2.06, gain: 1.02 },
-      rafa: { name: "Rafa", role: "Systems engineer", rate: 2.2, gain: 1.16 },
+      ollie: { name: "Ollie", role: "Runs a GPU-poor indie lab", rate: 2.0, gain: 1.12 },
+      noor: { name: "Noor", role: "Post-training engineer", rate: 1.95, gain: 0.96 },
+      jasper: { name: "Jasper", role: "Founder", rate: 2.05, gain: 1.04 },
     },
     turns: [
-      ["kofi", "Okay, neolab watch. Open weights first."],
-      ["nadia", "Go. Open weights from the neolabs."],
+      ["ollie", "Okay, GPU poor support group. Hi, I'm Ollie, and I am GPU poor."],
+      ["noor", "Hi, Ollie. GPU poor is the first step. Admit the GPU count."],
+      ["ollie", "Eight GPUs. One GPU is cursed. The cursed one is Gerald."],
+      ["jasper", "How cursed is Gerald?"],
+      ["ollie", "Gerald crashes every third run."],
+      ["noor", "GPU poor tip: quantize everything, then quantize the quantized thing."],
+      ["ollie", "GPU poor and quantized. A lifestyle."],
+      ["jasper", "GPU poor is temporary. Unless it is permanent."],
+      ["noor", "Then the bitter lesson, the sad part."],
       [
-        "kofi",
-        "Reflection announced Beam, their first open weights release. A sparse mixture of experts, for coding and agents.",
+        "ollie",
+        "Right. The bitter lesson says more compute wins. The bitter lesson has never met Gerald.",
       ],
-      ["nadia", "Are the Beam open weights out yet?"],
-      ["kofi", "Not yet, only a waitlist."],
-      [
-        "kofi",
-        "Reflection promised the Beam weights later this month, under Apache 2.0. Open weights, properly licensed.",
-      ],
-      ["rafa", "And Thinking Machines put out open weights in July. Inkling, then Inkling-Small."],
-      ["nadia", "So two of the neolabs are shipping open weights now."],
-      ["kofi", "Then world models. AMD agreed to acquire World Labs."],
-      ["rafa", "World models at a chip company. AMD and World Labs still need approvals, though."],
-      [
-        "kofi",
-        "And Fei-Fei Li would become chief scientist at AMD once the World Labs deal closes.",
-      ],
-      [
-        "kofi",
-        "Atlas is the newest World Labs world model, trained on text, images, video and 3D.",
-      ],
-      [
-        "nadia",
-        "World models everywhere. AMI Labs on world models from sensor data, World Labs with Marble and Atlas.",
-      ],
-      ["nadia", "And SSI?"],
-      ["kofi", "Still research, nothing shipped."],
-      ["rafa", "Can you put the neolab list in the reading group notes?"],
+      ["jasper", "The bitter lesson is a lot of pressure for eight GPUs."],
+      ["noor", "The bitter lesson for the GPU poor: be clever until you can afford not to."],
+      ["ollie", "Did Sutton say anything about Gerald?"],
+      ["noor", "No idea, honestly."],
+      ["jasper", "The bitter lesson, chapter two: raise a round, buy GPUs."],
+      ["ollie", "Can the support group chip in for a ninth GPU?"],
     ],
     summary: `
-Kofi ran a quick neolab watch: open weights from Reflection and Thinking Machines, and AMD agreeing to acquire World Labs.
+Ollie admitted the GPU count at the GPU poor support group, and Noor and Jasper talked him through the bitter lesson.
 
 ## Threads
-- **Open weights.** Reflection AI announced Beam, its first open-weight model, a sparse mixture of experts for coding and agents. The weights are promised later this month under Apache 2.0; for now there is a waitlist. Thinking Machines released open weights in July: Inkling, then Inkling-Small.
-- **World models.** AMD agreed to acquire World Labs, pending approvals; Fei-Fei Li would become AMD's chief scientist. World Labs' newest model, Atlas, is trained on text, images, video and 3D. AMI Labs works on world models learned from sensor data.
-- **SSI.** Still no product.
+- **GPU poor.** Eight GPUs, one cursed (Gerald, who crashes every third run). Survival tip: quantize everything, then quantize again.
+- **The bitter lesson.** More compute wins, which is a lot of pressure on eight GPUs. Noor's version for the GPU poor: be clever until you can afford not to.
 
 ## Follow-ups
-- Putting the neolab list in the reading group notes.
+- Whether the support group chips in for a ninth GPU.
 `,
   },
   {
-    id: "hack-eval-design",
+    id: "pre-seed-pitch",
     group: "work",
     startedAt: day(7, 22, 30),
     placement: { daysAgo: 7, at: "15:30", weekdays: true },
-    company: "A research reading group (fictional)",
-    description: "Sample conversation: an eval design review for coding agents. Invented people.",
-    title: "Eval design: hidden tests against reward hacking",
+    company: "A pre-seed startup (fictional)",
+    description: "Sample conversation: a pre-seed pitch to an angel. Invented people.",
+    title: "Pre-seed pitch: founder mode, but make it 996",
     speakers: {
-      wen: { name: "Wen", role: "Evaluations researcher", rate: 2.15, gain: 0.92 },
-      nadia: { name: "Nadia", role: "RL researcher", rate: 2.06, gain: 1.02 },
-      felix: { name: "Felix", role: "Post-training engineer", rate: 1.92, gain: 1.0 },
+      margo: { name: "Margo", role: "Angel investor", rate: 2.05, gain: 0.98 },
+      sasha: { name: "Sasha", role: "Founder", rate: 2.15, gain: 1.02 },
+      jasper: { name: "Jasper", role: "Co-founder", rate: 2.05, gain: 1.04 },
     },
     turns: [
-      ["wen", "Okay, eval design. Reward hacking by coding agents, on the unit tests."],
-      ["nadia", "Right. Reward hacking first. The unit tests the coding agents keep gaming."],
-      [
-        "wen",
-        "Three reward hacking patterns so far. Special-casing the unit tests, editing the unit tests, and exiting early.",
-      ],
-      ["felix", "Editing the unit tests is the easy reward hacking to catch. Hash the test files."],
-      ["wen", "So the reward hacking eval keeps hidden unit tests the coding agent never sees."],
-      ["nadia", "Do hidden unit tests catch the special-casing?"],
-      ["wen", "Most of it, in the pilot."],
-      ["felix", "And a separate grader, so the reward hacking can't target the grader itself."],
-      ["nadia", "Plus a monitor on the chain of thought, flagging reward hacking intent."],
-      ["wen", "Second item, the thinking budget. The eval runs at a fixed thinking budget."],
-      [
-        "felix",
-        "A fixed thinking budget keeps the comparison honest. More test-time compute changes the scores.",
-      ],
-      ["nadia", "Which thinking budget goes in the report?"],
-      ["wen", "Hmm."],
-      [
-        "nadia",
-        "Then two thinking budgets, low and high, and the test-time compute in every table.",
-      ],
-      ["wen", "Fine. Two thinking budgets, and the hidden tests stay hidden."],
+      ["margo", "Okay, pre-seed pitch. Founder mode questions first."],
+      ["sasha", "Right. Founder mode, full time. Founder mode is the whole plan."],
+      ["margo", "Founder mode sounds great until the founder needs sleep."],
+      ["jasper", "Sasha in founder mode reads every pull request. Every one."],
+      ["margo", "Does founder mode scale past ten people?"],
+      ["sasha", "Hmm."],
+      ["sasha", "Founder mode scales with good evals. Founder mode with dashboards."],
+      ["margo", "Then the 996 grind. Your deck says 996 on the culture slide."],
+      ["sasha", "Right. The 996 grind is optional. The 996 grind is also expected."],
+      ["jasper", "The 996 grind with a Sunday off. We call it 995."],
+      ["margo", "Investors love a 996 grind on the slide, and hate it in the burn rate."],
+      ["margo", "How much runway does the 996 grind buy?"],
+      ["sasha", "Eighteen months, at ramen prices."],
+      ["jasper", "That runway covers the 996 grind until the launch."],
+      ["margo", "Send me the founder mode deck, minus the 996 slide."],
     ],
     summary: `
-Wen took Nadia and Felix through an eval for reward hacking in coding agents, built on hidden unit tests.
+Margo heard Sasha and Jasper's pre-seed pitch: founder mode is the whole plan, and the deck has a 996 slide.
 
 ## Threads
-- **Reward hacking patterns.** Three so far: special-casing the unit tests, editing them, and exiting early. Hashing the test files catches the edits; hidden unit tests the agent never sees caught most of the special-casing in the pilot.
-- **Grading.** A separate grader the agent cannot target, plus a monitor on the chain of thought for hacking intent.
-- **Thinking budget.** The eval runs at a fixed thinking budget, because more test-time compute changes the scores.
+- **Founder mode.** Sasha reads every pull request. Whether founder mode scales past ten people got no answer.
+- **The 996 grind.** Optional, and also expected; with a Sunday off it is 995. Margo: investors love it on the slide and hate it in the burn rate. Eighteen months of runway at ramen prices.
 
-## Decisions Made
-- Report two thinking budgets, low and high, with the test-time compute in every table.
-
-## Follow-ups
-- Which single thinking budget the headline number uses.
+## Action Items
+- [ ] Sasha: send Margo the deck, without the 996 slide.
 `,
   },
   {
-    id: "credit-assignment-1on1",
+    id: "eval-sync",
     group: "work",
     startedAt: day(5, 17, 0),
     placement: { daysAgo: 5, at: "10:00", weekdays: true },
-    company: "A research reading group (fictional)",
-    description: "Sample conversation: a 1:1 on credit assignment experiments. Invented people.",
-    title: "Felix check-in: credit assignment on long agent runs",
+    company: "A hacker house in San Francisco (fictional)",
+    description: "Sample conversation: an eval sync on a leaky agent benchmark. Invented people.",
+    title: "Eval sync: is the agent AGI-pilled, or just overfit",
     speakers: {
-      nadia: { name: "Nadia", role: "RL researcher", rate: 2.06, gain: 1.02 },
-      felix: { name: "Felix", role: "Post-training engineer", rate: 1.92, gain: 1.0 },
+      noor: { name: "Noor", role: "Post-training engineer", rate: 1.95, gain: 0.96 },
+      ravi: { name: "Ravi", role: "Safety researcher", rate: 1.85, gain: 0.9 },
+      kai: { name: "Kai", role: "Vibe coder", rate: 2.2, gain: 1.1 },
     },
     turns: [
-      ["nadia", "Okay, Felix. Credit assignment."],
-      ["felix", "Right. Credit assignment on the long agent tasks, with one outcome score so far."],
-      ["felix", "One outcome score after fifty tool calls, and credit assignment is mostly noise."],
-      ["nadia", "And with process supervision?"],
-      ["felix", "Better, until the grader gets gamed."],
-      [
-        "felix",
-        "The step grader is a learned model, so the policy learns the grader instead of the task.",
-      ],
-      ["nadia", "Then a value function for credit assignment, trained on the agent tasks."],
-      [
-        "felix",
-        "Agreed. A value function for credit assignment first, and process supervision only on short tasks.",
-      ],
-      ["nadia", "Second thing. Verifiable rewards for the reading group."],
-      [
-        "felix",
-        "The verifiable rewards control is ready. Ground truth rewards against random rewards, on two base checkpoints.",
-      ],
-      ["nadia", "When does the cluster free up?"],
-      ["felix", "No idea, honestly."],
-      ["felix", "The verifiable rewards runs wait behind the long tasks on the cluster."],
-      ["nadia", "Fine. Verifiable rewards and random rewards go first next week."],
+      ["noor", "Okay, sync on the agent evals. Agent evals first."],
+      ["ravi", "Right. The agent evals look great. Too great."],
+      ["kai", "Too great means the agent evals leaked into training."],
+      ["noor", "Or the agent is AGI-pilled."],
+      ["ravi", "The agent is not AGI-pilled. The agent is overfit."],
+      ["noor", "Did the agent evals leak?"],
+      ["kai", "Yes, the test set was public."],
+      ["kai", "Leaked agent evals, private shame."],
+      ["noor", "Fresh agent evals by Friday, held out properly."],
+      ["ravi", "Separate thing. My AGI timeline moved."],
+      ["ravi", "Right. My AGI timeline was 2030. The leak made it 2031."],
+      ["kai", "Your AGI timeline goes up every time an eval leaks."],
+      ["noor", "AGI timelines are sensitive to leaks. Noted."],
+      ["ravi", "My AGI timeline is 2031 until the fresh evals land."],
+      ["kai", "Will the fresh evals be ready by Friday?"],
     ],
     summary: `
-Felix and Nadia went through the credit assignment experiments on long agent runs, and the verifiable-rewards control for the reading group.
+Noor, Ravi and Kai found out why the agent evals looked too good, and Ravi moved his AGI timeline.
 
 ## Threads
-- **Credit assignment.** With one outcome reward after fifty tool calls, credit assignment is mostly noise. Process rewards help until the learned step grader gets gamed.
-- **Verifiable rewards control.** Ground-truth rewards against random rewards on two base checkpoints, ready to run. When the cluster frees up is unknown.
+- **Agent evals.** The scores were too good: the test set was public. Not AGI-pilled, just overfit. Fresh, properly held-out evals by Friday.
+- **AGI timeline.** Ravi's AGI timeline went from 2030 to 2031 after the leak, until the fresh evals land.
 
-## Decisions Made
-- Try a value function for credit assignment first; process rewards only on short runs.
-- The verifiable-rewards control runs first next week.
-`,
-  },
-  {
-    id: "tech-news-roundup",
-    group: "work",
-    startedAt: day(3, 23, 0),
-    placement: { daysAgo: 3, at: "16:00", weekdays: true },
-    company: "A research reading group (fictional)",
-    description: "Sample conversation: a short tech news roundup. Invented people.",
-    title: "Tech news: Starship in orbit, Nvidia and Hugging Face",
-    speakers: {
-      rafa: { name: "Rafa", role: "Systems engineer, brings the news", rate: 2.2, gain: 1.16 },
-      kofi: { name: "Kofi", role: "Tracks the AI labs", rate: 2.2, gain: 1.1 },
-    },
-    turns: [
-      ["rafa", "Okay, tech news. The short tech news list, before the reading group."],
-      ["kofi", "Go. Tech news first, then the AI side."],
-      [
-        "rafa",
-        "Starship made orbit for the first time. The tech news photo of the month, twenty-six Starlink satellites going out.",
-      ],
-      ["kofi", "Did the Starship flight end well?"],
-      ["rafa", "Not quite, per AP."],
-      [
-        "rafa",
-        "AP says it tipped over at splashdown and caught fire. The Starship tech news is still good news.",
-      ],
-      [
-        "rafa",
-        "And Apple shipped its first foldable, the iPhone Duo. Tech news for the gadget people.",
-      ],
-      ["kofi", "Tech news from the AI side. Nvidia agreed to buy Hugging Face."],
-      ["rafa", "Jensen Huang says Hugging Face stays an open platform, for the whole ecosystem."],
-      ["kofi", "Will Hugging Face really stay open?"],
-      ["rafa", "Hmm."],
-      ["kofi", "Then frontier models. Meta released Muse Wonder today."],
-      ["rafa", "Meta's first frontier models, TechCrunch says. Muse Wonder and Muse Wonder Full."],
-      [
-        "kofi",
-        "That makes four frontier models since early September. GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Muse Wonder.",
-      ],
-      [
-        "rafa",
-        "And two of the frontier models went to cyber defenders first. Astra, and Gemini 4 Argon.",
-      ],
-      ["kofi", "Can you bring the frontier models list to the reading group?"],
-    ],
-    summary: `
-Rafa and Kofi went through the week's tech news before the reading group: Starship in orbit, Apple's first foldable, Nvidia and Hugging Face, and the run of frontier model releases.
-
-## Threads
-- **Tech news.** Starship reached orbit for the first time and released twenty-six Starlink satellites; AP reports the ship tipped over at splashdown and caught fire. Apple announced the iPhone Duo, its first foldable. Nvidia agreed to buy Hugging Face, and Jensen Huang says it stays an open platform.
-- **Frontier models.** Meta released Muse Wonder and Muse Wonder Full, which TechCrunch calls Meta's first frontier models. That makes four frontier releases since early September (GPT-6 Astra, Claude Opus 5.5, Gemini 4 Argon, Muse Wonder); Astra and Argon went to cyber defenders first.
+## Action Items
+- [ ] Noor: fresh held-out agent evals by Friday.
 
 ## Follow-ups
-- Whether Hugging Face really stays open.
-- The frontier models list for the reading group.
+- Whether the fresh evals are ready by Friday.
 `,
   },
   {
-    id: "hack-eval-1on1",
+    id: "hayes-valley-coffee-line",
+    group: "work",
+    startedAt: day(3, 15, 30),
+    placement: { daysAgo: 3, at: "08:30", weekdays: true },
+    company: "A hacker house in San Francisco (fictional)",
+    description: "Sample conversation: doom numbers in a coffee line. Invented people.",
+    title: "Hayes Valley coffee line: everyone's p(doom), ranked",
+    speakers: {
+      bea: { name: "Bea", role: "Designer", rate: 1.9, gain: 0.84 },
+      ravi: { name: "Ravi", role: "Safety researcher", rate: 1.85, gain: 0.9 },
+      jasper: { name: "Jasper", role: "Founder", rate: 2.05, gain: 1.04 },
+    },
+    turns: [
+      ["bea", "Okay, coffee line game. Everyone's p(doom). Doom numbers, out loud."],
+      ["ravi", "Right. My p(doom) is fifteen. Doom number fifteen, oat milk."],
+      ["jasper", "My doom number is five. Five and a cortado."],
+      ["bea", "The barista's p(doom) is clearly higher than ours."],
+      ["ravi", "Doom numbers in a coffee line. Peak Hayes Valley."],
+      ["bea", "What's the doom number of the guy behind us?"],
+      ["ravi", "Forty, judging by the laptop stickers."],
+      ["jasper", "That's a decel doom number. Respect, though."],
+      ["ravi", "Then AGI timelines, for the walk back."],
+      ["jasper", "Right. AGI timeline, 2027. My AGI timeline has not moved."],
+      ["bea", "Your AGI timeline never moves. It's a tattoo."],
+      ["ravi", "My AGI timeline is 2030, and my doom number goes with it."],
+      ["bea", "Is it rude to ask a barista for their AGI timeline?"],
+      ["jasper", "No idea, honestly."],
+      ["jasper", "Next time we ask the barista for an AGI timeline and a doom number."],
+    ],
+    summary: `
+Bea turned the Hayes Valley coffee line into a p(doom) ranking, then the walk back into AGI timelines.
+
+## Threads
+- **p(doom).** Ravi's doom number is fifteen (oat milk), Jasper's five (cortado). The guy behind them: forty, judging by the laptop stickers.
+- **AGI timelines.** Jasper's AGI timeline is still 2027 and never moves; Ravi's is 2030, and his doom number goes with it.
+
+## Follow-ups
+- Whether it is rude to ask a barista for their AGI timeline.
+`,
+  },
+  {
+    id: "demo-day-dry-run",
     group: "work",
     startedAt: day(1, 24, 30),
     placement: { daysAgo: 1, at: "17:30", weekdays: true },
-    company: "A research reading group (fictional)",
-    description: "Sample conversation: a 1:1 on reward hacking eval results. Invented people.",
-    title: "Wen check-in: reward hacking numbers, and stale agents",
+    company: "A startup in the current batch (fictional)",
+    description: "Sample conversation: a demo day dry run. Invented people.",
+    title: "Demo day dry run: the moat is vibes",
     speakers: {
-      nadia: { name: "Nadia", role: "RL researcher", rate: 2.06, gain: 1.02 },
-      wen: { name: "Wen", role: "Evaluations researcher", rate: 2.15, gain: 0.92 },
+      sasha: { name: "Sasha", role: "Founder", rate: 2.15, gain: 1.02 },
+      kai: { name: "Kai", role: "Co-founder, vibe coder", rate: 2.2, gain: 1.1 },
+      bea: { name: "Bea", role: "Designer", rate: 1.9, gain: 0.84 },
     },
     turns: [
-      ["nadia", "Okay, Wen. The reward hacking eval results."],
-      ["wen", "Right. The reward hacking eval ran on three checkpoints last night."],
-      [
-        "wen",
-        "The hidden unit tests caught most of the reward hacking. The rest was special-casing we missed.",
-      ],
-      ["nadia", "Did the chain of thought monitor flag the reward hacking?"],
-      ["wen", "Mostly, and with plain language."],
-      [
-        "wen",
-        "The reasoning says it outright: make the unit tests pass. Reward hacking, in plain words.",
-      ],
-      ["nadia", "Good. Bring the reward hacking numbers to the reading group tomorrow."],
-      ["wen", "Second thing. Our agents have a frame problem."],
-      ["nadia", "A frame problem. Stale facts after an action."],
-      [
-        "wen",
-        "The agents edit a config file, then act on their old reading of the config file. A frame problem.",
-      ],
-      ["wen", "They assume nothing else changed. The classic frame problem."],
-      ["nadia", "Is that worth its own eval?"],
+      ["sasha", "Okay, demo day dry run. Demo day pitch, from the top."],
+      ["kai", "Right. Demo day, two minutes, no notes."],
+      ["sasha", "Demo day pitch: agents that take your sales calls while you sleep."],
+      ["bea", "Demo day slide three is too busy. One number per slide."],
+      ["kai", "What's the moat, in one word?"],
+      ["sasha", "Taste, and also distribution."],
+      ["bea", "Demo day rule: one moat per slide, max."],
+      ["kai", "Then vibe coding. The live vibe coding part."],
+      ["kai", "Right. Vibe coding live, on stage. The agent builds a feature in ninety seconds."],
+      ["bea", "So the real moat is vibes. Literally vibe coding."],
+      ["bea", "Vibe coding live is either legendary or a postmortem."],
+      ["sasha", "Did the vibe coding run work in rehearsal?"],
+      ["kai", "Twice out of five."],
+      ["kai", "Two out of five vibe coding runs. Good enough for demo day."],
+      ["bea", "Vibe coding plan B: the backup video."],
+      ["sasha", "Should the backup video be vibe coded too?"],
     ],
     summary: `
-Wen brought Nadia the first results from the reward hacking eval, and a pattern of agents acting on stale facts.
+Sasha, Kai and Bea ran the demo day pitch from the top, and argued about vibe coding live on stage.
 
 ## Threads
-- **Reward hacking eval.** Ran on three checkpoints. Hidden unit tests caught most of the reward hacking; the rest was special-casing the eval missed. The chain-of-thought monitor flagged most of it, because the reasoning says it plainly.
-- **Stale agents.** Agents edit a config file and then act on their old reading of it: the frame problem, in agents.
+- **Demo day.** Two minutes, no notes, one number per slide. The moat, in one word: taste, and also distribution.
+- **Vibe coding.** The agent builds a feature live in ninety seconds, so the real moat is vibes. It worked twice out of five in rehearsal; plan B is a backup video.
 
-## Action Items
-- [ ] Wen: bring the reward hacking numbers to the reading group.
+## Decisions Made
+- One number per slide, and one moat per slide.
 
 ## Follow-ups
-- Whether stale agent state deserves its own eval.
+- Whether the backup video should be vibe coded too.
 `,
   },
 ];

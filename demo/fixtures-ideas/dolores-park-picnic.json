@@ -1,0 +1,282 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "dolores-park-picnic",
+    "sample": true,
+    "description": "Sample conversation: friends at Dolores Park, no laptops allowed. Invented people.",
+    "company": "Friends at Dolores Park (fictional)",
+    "participants": [
+      { "name": "Marisol", "role": "Friend" },
+      { "name": "Tess", "role": "Friend" },
+      { "name": "Ike", "role": "Friend at a startup" }
+    ],
+    "startedAt": 1791928800000,
+    "endedAt": 1791928874467,
+    "summarizedAt": 1791928915467,
+    "placement": { "daysAgo": 2, "at": "15:00" },
+    "group": "personal",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Dolores Park: touch grass, no laptops allowed",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv78309k-1",
+        "text": "Okay, Dolores Park rules. No laptops, no 996 grind talk.",
+        "source": "mic",
+        "timestamp": 1791928803663,
+        "startMs": 3663,
+        "endMs": 8735,
+        "speaker": "speaker_1",
+        "speakerName": "Marisol",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-2",
+        "text": "Right. No 996 grind talk. Ike, that means you.",
+        "source": "mic",
+        "timestamp": 1791928809598,
+        "startMs": 9598,
+        "endMs": 14427,
+        "speaker": "speaker_2",
+        "speakerName": "Tess",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-3",
+        "text": "I am only on the 996 grind because the startup is on the 996 grind.",
+        "source": "mic",
+        "timestamp": 1791928815433,
+        "startMs": 15433,
+        "endMs": 22805,
+        "speaker": "speaker_3",
+        "speakerName": "Ike",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-4",
+        "text": "The 996 grind is nine to nine, six days a week. That is not a personality.",
+        "source": "mic",
+        "timestamp": 1791928823863,
+        "startMs": 23863,
+        "endMs": 32443,
+        "speaker": "speaker_2",
+        "speakerName": "Tess",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-5",
+        "text": "Is Ike even allowed to touch grass on a Saturday?",
+        "source": "mic",
+        "timestamp": 1791928833119,
+        "startMs": 33119,
+        "endMs": 38462,
+        "speaker": "speaker_1",
+        "speakerName": "Marisol",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-6",
+        "text": "Only with a calendar invite.",
+        "source": "mic",
+        "timestamp": 1791928839890,
+        "startMs": 39890,
+        "endMs": 42816,
+        "speaker": "speaker_2",
+        "speakerName": "Tess",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-7",
+        "text": "Two to four, then back to the 996 grind.",
+        "source": "mic",
+        "timestamp": 1791928844141,
+        "startMs": 44141,
+        "endMs": 48306,
+        "speaker": "speaker_3",
+        "speakerName": "Ike",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-8",
+        "text": "Burrito order, then. Mission burritos.",
+        "source": "mic",
+        "timestamp": 1791928848969,
+        "startMs": 48969,
+        "endMs": 51823,
+        "speaker": "speaker_2",
+        "speakerName": "Tess",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-9",
+        "text": "Right. Burrito order: two carne asada, one veggie burrito.",
+        "source": "mic",
+        "timestamp": 1791928852783,
+        "startMs": 52783,
+        "endMs": 57277,
+        "speaker": "speaker_1",
+        "speakerName": "Marisol",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-10",
+        "text": "Veggie burrito for me. The 996 grind needs fiber.",
+        "source": "mic",
+        "timestamp": 1791928858486,
+        "startMs": 58486,
+        "endMs": 62773,
+        "speaker": "speaker_3",
+        "speakerName": "Ike",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-11",
+        "text": "Burritos, sunlight, and nobody says AGI.",
+        "source": "mic",
+        "timestamp": 1791928864080,
+        "startMs": 64080,
+        "endMs": 67492,
+        "speaker": "speaker_2",
+        "speakerName": "Tess",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv78309k-12",
+        "text": "Can we do this again next Sunday?",
+        "source": "mic",
+        "timestamp": 1791928868197,
+        "startMs": 68197,
+        "endMs": 71867,
+        "speaker": "speaker_1",
+        "speakerName": "Marisol",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Marisol, Tess and Ike spent an afternoon at Dolores Park with no laptops and, officially, no 996 talk.\n\n## Threads\n- **The 996 grind.** Ike is on the 996 grind because his startup is. Nine to nine, six days a week, is not a personality; touching grass is booked from two to four.\n- **Burrito order.** Two carne asada, one veggie (the 996 grind needs fiber). Nobody said AGI.\n\n## Follow-ups\n- Whether the picnic happens again next Sunday.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "3327-[{\"id\":\"seg-mv78309k-1\",\"text\":\"Okay, Dolores Park",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "996 grind",
+          "words": ["996", "grind", "ike", "talk", "allowed", "days", "dolore", "even"],
+          "durationMs": 40478,
+          "utteranceIds": [
+            "seg-mv78309k-1",
+            "seg-mv78309k-2",
+            "seg-mv78309k-3",
+            "seg-mv78309k-4",
+            "seg-mv78309k-5",
+            "seg-mv78309k-7"
+          ],
+          "firstAt": 1791928803663,
+          "lastAt": 1791928844141,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "burrito order",
+          "words": ["burrito", "order", "veggie", "996", "agi", "asada", "carne", "fiber"],
+          "durationMs": 15111,
+          "utteranceIds": [
+            "seg-mv78309k-8",
+            "seg-mv78309k-9",
+            "seg-mv78309k-10",
+            "seg-mv78309k-11"
+          ],
+          "firstAt": 1791928848969,
+          "lastAt": 1791928864080,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791928800000,
+          "b": "g4WElqywrquqmrGwrq2lnausrKusqqyKrq2xsbGura2nqaursbGnhayvr4amp6Osn6uuq42srq+wo5+tra6shqiqraWhrK6xioKE"
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv78309k-5"],
+      "text": "Is Ike even allowed to touch grass on a Saturday?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "allowed even gras ike saturday touch",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791928839412
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv78309k-6"],
+      "text": "Only with a calendar invite.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791928843658
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv78309k-12"],
+      "text": "Can we do this again next Sunday?",
+      "metadata": { "state": "asked", "groupKey": "again next sunday", "occurrence": 1 },
+      "createdAt": 1791928872742
+    }
+  ],
+  "replay": {
+    "voices": { "Marisol": { "gain": 1 }, "Tess": { "gain": 1.06 }, "Ike": { "gain": 0.9 } },
+    "loud": {},
+    "stopAtMs": 74467
+  }
+}

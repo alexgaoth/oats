@@ -5,7 +5,7 @@
 //   /demo.html?panel=true&demo=live                the review, recorded live
 //   /demo.html?panel=true&demo=live&from=720&speed=1&view=words&theme=dark
 //   /demo.html?panel=true&profile=empty            nothing recorded yet
-//   /demo.html?panel=true&set=ideas&demo=live      the reading group, recorded live
+//   /demo.html?panel=true&set=ideas&demo=live      the hacker house, recorded live
 //
 // Parameters: `demo=live` replays the launch review as a live recording (the
 // other samples are already there; the review is the one being recorded);
@@ -16,7 +16,7 @@
 // offer the example; `profile=many` holds two hundred synthetic conversations
 // in three groups instead of the samples (`many.mjs`), to measure Global
 // conversations at size; `set=ideas` uses the second content set
-// (`demo/fixtures-ideas/`, built with `--set ideas`): its reading group is the
+// (`demo/fixtures-ideas/`, built with `--set ideas`): its hacker house is the
 // main conversation, for `demo=live` and the example, and its other eight are
 // the ones already there; `theme`, `view` and `flow` as in `settings.mjs`.
 // `panel=true` is the app's own: the workspace window.

@@ -1,9 +1,9 @@
-// The second demo set: a research reading group and the eight conversations
-// around it (`demo/script-ideas/`, recorded into `demo/fixtures-ideas/` by
-// `node demo/build-fixtures.mjs --set ideas`). These pin what its film needs:
-// fresh fixtures, every conversation filed, one search term in exactly three
-// conversations, the room coming back to its first topic, and the one question
-// nobody in the room could answer.
+// The second demo set: a house meeting at a San Francisco hacker house and the
+// eight conversations around it (`demo/script-ideas/`, recorded into
+// `demo/fixtures-ideas/` by `node demo/build-fixtures.mjs --set ideas`). These
+// pin what its film needs: fresh fixtures, every conversation filed, one search
+// term in exactly three conversations, the room coming back to its first topic,
+// and the one question nobody in the room could answer.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -21,7 +21,7 @@ const main = fixtures.find((fixture) => fixture.meta.main);
 const others = fixtures.filter((fixture) => !fixture.meta.main);
 
 const NOW = Date.UTC(2027, 2, 15, 18, 0, 0);
-const SEARCH_TERM = "reward hacking";
+const SEARCH_TERM = "p(doom)";
 
 let samples;
 let review;
@@ -61,7 +61,7 @@ test("the ideas fixtures are what the scripts record today", () => {
 
 test("one main conversation of about 29 minutes, six work and two personal ones around it", () => {
   assert.equal(fixtures.filter((fixture) => fixture.meta.main).length, 1);
-  assert.equal(main.meta.id, "reading-group");
+  assert.equal(main.meta.id, "hacker-house");
   for (const fixture of fixtures) {
     samples.assertSampleFixture(fixture);
     assert.match(fixture.meta.description, /[Ii]nvented people/, fixture.meta.id);
@@ -80,7 +80,7 @@ test("one main conversation of about 29 minutes, six work and two personal ones 
     "work",
     "work",
   ]);
-  // The people in somebody's evenings are not the reading group.
+  // The people in somebody's evenings are not the hacker house.
   const group = new Set(main.meta.participants.map((person) => person.name));
   for (const fixture of others.filter((item) => item.meta.group === "personal")) {
     for (const person of fixture.meta.participants) {
@@ -105,7 +105,7 @@ test("the harness files every ideas conversation in its group", async () => {
   assert.deepEqual(filed, { Work: 7, Personal: 2 });
 });
 
-test("the sorting stub files the reading group in Work when it is recorded live", async () => {
+test("the sorting stub files the hacker house in Work when it is recorded live", async () => {
   const { PERSONAL_SORT_WORDS } = await import("../../demo/harness/fake-main.mjs");
   const { text } = groupSort.buildGroupSortPrompt({
     title: main.note.title,
@@ -116,7 +116,7 @@ test("the sorting stub files the reading group in Work when it is recorded live"
   assert.equal(PERSONAL_SORT_WORDS.test(text), false, text);
 });
 
-test(`a search for "${SEARCH_TERM}" finds exactly three conversations, the reading group among them`, () => {
+test(`a search for "${SEARCH_TERM}" finds exactly three conversations, the hacker house among them`, () => {
   const needle = fold.foldText(SEARCH_TERM);
   const found = fixtures
     .filter((fixture) => {
@@ -125,14 +125,26 @@ test(`a search for "${SEARCH_TERM}" finds exactly three conversations, the readi
     })
     .map((fixture) => fixture.meta.id)
     .sort();
-  assert.deepEqual(found, ["hack-eval-1on1", "hack-eval-design", "reading-group"]);
+  assert.deepEqual(found, ["call-with-mom", "hacker-house", "hayes-valley-coffee-line"]);
 });
 
-test("the reading group comes back to its first topic near 10:40, and to another near the end", () => {
+test("the hacker house comes back to its first topic near 10:40, and to another near the end", () => {
   const snapshot = main.note.conversation_topics;
   const drawn = lanes.topicLanes({ snapshot, segments: main.note.transcript });
   assert.ok(drawn.rows.length >= 5 && drawn.rows.length <= 8, `${drawn.rows.length} topics`);
-  assert.equal(drawn.rows[0].label, "reward hacking");
+  assert.deepEqual(
+    drawn.rows.map((row) => row.label),
+    [
+      "agi timeline",
+      "doom number",
+      "vibe coding",
+      "gpu poor",
+      "founder mode",
+      "demo day",
+      "bitter lesson",
+      "996 grind",
+    ]
+  );
   const at = (fraction) => (drawn.start - main.meta.startedAt + fraction * drawn.span) / 1000;
   // Three or four topics in the first ten minutes.
   const early = drawn.runs.filter((run) => at(run.from) < 600).map((run) => run.topic);
@@ -154,7 +166,7 @@ test("near 17:30 a question is answered, and about 40 seconds later the one Unkn
   });
   const unknown = asked.filter((item) => item.outcome === "denied");
   assert.equal(unknown.length, 1, "the film searches for exactly one question");
-  assert.equal(unknown[0].text, "When did Periodic Labs launch?");
+  assert.equal(unknown[0].text, "When is AGI?");
   const answered = asked.filter(
     (item) =>
       item.outcome === "answered" && item.seconds < unknown[0].seconds && item.seconds > 1020
@@ -179,7 +191,7 @@ test("every ideas conversation's lanes show the returns its tracker counted", ()
   }
 });
 
-test("the board links every conversation to the reading group, and three subjects to three conversations each", () => {
+test("the board links every conversation to the hacker house, and five subjects to three or more", () => {
   const conversations = fixtures.map((fixture, index) => {
     const placed = samples.placeSampleConversation(fixture, { now: NOW });
     return {
@@ -198,12 +210,12 @@ test("the board links every conversation to the reading group, and three subject
         (edge.from === mainId && edge.to === conversation.id) ||
         (edge.to === mainId && edge.from === conversation.id)
     );
-    assert.ok(linked, `${conversation.title} is not linked to the reading group`);
+    assert.ok(linked, `${conversation.title} is not linked to the hacker house`);
   }
   const { subjects } = lifetime.subjectThreads(conversations);
   const wide = subjects
     .filter((subject) => subject.conversationIds.length >= 3)
     .map((subject) => subject.label)
     .sort();
-  assert.deepEqual(wide, ["personal identity", "random reward", "reward hacking"]);
+  assert.deepEqual(wide, ["996 grind", "agi timeline", "demo day", "doom number", "vibe coding"]);
 });

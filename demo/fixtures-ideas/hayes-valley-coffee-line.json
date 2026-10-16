@@ -1,0 +1,361 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "hayes-valley-coffee-line",
+    "sample": true,
+    "description": "Sample conversation: doom numbers in a coffee line. Invented people.",
+    "company": "A hacker house in San Francisco (fictional)",
+    "participants": [
+      { "name": "Bea", "role": "Designer" },
+      { "name": "Ravi", "role": "Safety researcher" },
+      { "name": "Jasper", "role": "Founder" }
+    ],
+    "startedAt": 1791819000000,
+    "endedAt": 1791819094060,
+    "summarizedAt": 1791819135060,
+    "placement": { "daysAgo": 3, "at": "08:30", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Hayes Valley coffee line: everyone's p(doom), ranked",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv5epm1k-1",
+        "text": "Okay, coffee line game. Everyone's p(doom). Doom numbers, out loud.",
+        "source": "mic",
+        "timestamp": 1791819003515,
+        "startMs": 3515,
+        "endMs": 8850,
+        "speaker": "speaker_1",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-2",
+        "text": "Right. My p(doom) is fifteen. Doom number fifteen, oat milk.",
+        "source": "mic",
+        "timestamp": 1791819010395,
+        "startMs": 10395,
+        "endMs": 16123,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-3",
+        "text": "My doom number is five. Five and a cortado.",
+        "source": "mic",
+        "timestamp": 1791819017228,
+        "startMs": 17228,
+        "endMs": 21756,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-4",
+        "text": "The barista's p(doom) is clearly higher than ours.",
+        "source": "mic",
+        "timestamp": 1791819022512,
+        "startMs": 22512,
+        "endMs": 27041,
+        "speaker": "speaker_1",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-5",
+        "text": "Doom numbers in a coffee line. Peak Hayes Valley.",
+        "source": "mic",
+        "timestamp": 1791819027802,
+        "startMs": 27802,
+        "endMs": 33042,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-6",
+        "text": "What's the doom number of the guy behind us?",
+        "source": "mic",
+        "timestamp": 1791819033895,
+        "startMs": 33895,
+        "endMs": 38717,
+        "speaker": "speaker_1",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-7",
+        "text": "Forty, judging by the laptop stickers.",
+        "source": "mic",
+        "timestamp": 1791819039677,
+        "startMs": 39677,
+        "endMs": 43280,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-8",
+        "text": "That's a decel doom number. Respect, though.",
+        "source": "mic",
+        "timestamp": 1791819044387,
+        "startMs": 44387,
+        "endMs": 48010,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-9",
+        "text": "Then AGI timelines, for the walk back.",
+        "source": "mic",
+        "timestamp": 1791819049002,
+        "startMs": 49002,
+        "endMs": 53152,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-10",
+        "text": "Right. AGI timeline, 2027. My AGI timeline has not moved.",
+        "source": "mic",
+        "timestamp": 1791819054315,
+        "startMs": 54315,
+        "endMs": 59469,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-11",
+        "text": "Your AGI timeline never moves. It's a tattoo.",
+        "source": "mic",
+        "timestamp": 1791819060792,
+        "startMs": 60792,
+        "endMs": 65091,
+        "speaker": "speaker_1",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-12",
+        "text": "My AGI timeline is 2030, and my doom number goes with it.",
+        "source": "mic",
+        "timestamp": 1791819066404,
+        "startMs": 66404,
+        "endMs": 73073,
+        "speaker": "speaker_2",
+        "speakerName": "Ravi",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-13",
+        "text": "Is it rude to ask a barista for their AGI timeline?",
+        "source": "mic",
+        "timestamp": 1791819074367,
+        "startMs": 74367,
+        "endMs": 80212,
+        "speaker": "speaker_1",
+        "speakerName": "Bea",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-14",
+        "text": "No idea, honestly.",
+        "source": "mic",
+        "timestamp": 1791819081397,
+        "startMs": 81397,
+        "endMs": 83184,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv5epm1k-15",
+        "text": "Next time we ask the barista for an AGI timeline and a doom number.",
+        "source": "mic",
+        "timestamp": 1791819083945,
+        "startMs": 83945,
+        "endMs": 91460,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Bea turned the Hayes Valley coffee line into a p(doom) ranking, then the walk back into AGI timelines.\n\n## Threads\n- **p(doom).** Ravi's doom number is fifteen (oat milk), Jasper's five (cortado). The guy behind them: forty, judging by the laptop stickers.\n- **AGI timelines.** Jasper's AGI timeline is still 2027 and never moves; Ravi's is 2030, and his doom number goes with it.\n\n## Follow-ups\n- Whether it is rude to ask a barista for their AGI timeline.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4168-[{\"id\":\"seg-mv5epm1k-1\",\"text\":\"Okay, coffee line ",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "doom number",
+          "words": ["doom", "number", "coffee", "line", "barista'", "behind", "clearly", "cortado"],
+          "durationMs": 40872,
+          "utteranceIds": [
+            "seg-mv5epm1k-1",
+            "seg-mv5epm1k-2",
+            "seg-mv5epm1k-3",
+            "seg-mv5epm1k-4",
+            "seg-mv5epm1k-5",
+            "seg-mv5epm1k-6",
+            "seg-mv5epm1k-7",
+            "seg-mv5epm1k-8"
+          ],
+          "firstAt": 1791819003515,
+          "lastAt": 1791819044387,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "agi timeline",
+          "words": ["agi", "timeline", "ask", "barista", "doom", "number", "2027", "2030"],
+          "durationMs": 34943,
+          "utteranceIds": [
+            "seg-mv5epm1k-9",
+            "seg-mv5epm1k-10",
+            "seg-mv5epm1k-11",
+            "seg-mv5epm1k-12",
+            "seg-mv5epm1k-13",
+            "seg-mv5epm1k-15"
+          ],
+          "firstAt": 1791819049002,
+          "lastAt": 1791819083945,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791819000000,
+          "b": "hIWDm6mtrKinh5+lpqqsrJemrKuurKCrp6mulaupp6mpkampqKqjjayurZ+cq6+vj6amp6SVpbCmrK2piqynqKiUoq+uq6qbqpSbqqypp6WUprKgr7Oxr6mim5WGhYQ="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv5epm1k-6"],
+      "text": "What's the doom number of the guy behind us?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "behind doom guy number what'",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791819039644
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv5epm1k-7"],
+      "text": "Forty, judging by the laptop stickers.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791819044152
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv5epm1k-13"],
+      "text": "Is it rude to ask a barista for their AGI timeline?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "agi ask barista rude timeline",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1791819081185
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv5epm1k-14"],
+      "text": "No idea, honestly.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1791819083974
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv5epm1k-13"],
+      "text": "Is it rude to ask a barista for their AGI timeline?",
+      "metadata": {
+        "query": "Is it rude to ask a barista for their AGI timeline?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791819083974
+    }
+  ],
+  "replay": {
+    "voices": { "Bea": { "gain": 0.84 }, "Ravi": { "gain": 0.9 }, "Jasper": { "gain": 1.04 } },
+    "loud": {},
+    "stopAtMs": 94060
+  }
+}

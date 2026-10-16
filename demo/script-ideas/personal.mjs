@@ -1,9 +1,9 @@
-// Two personal conversations for the second demo: a philosophy book club on
-// Parfit, and a call about a public talk on personal identity. Short,
-// invented, and filed in Personal (`group`), as the work ones are filed in
-// Work. Unlike the first demo's personal pair, these share a subject with the
-// reading group (personal identity) and with each other, so the board links
-// all three. Every real book and idea they mention is in `SOURCES.md`.
+// Two personal conversations for the second demo: friends at Dolores Park
+// who ban 996 talk, and a call with Mom about p(doom). Short, invented, and
+// filed in Personal (`group`), as the work ones are filed in Work. Unlike the
+// first demo's personal pair, these share subjects with the hacker house
+// meeting (the 996 grind, doom numbers) and with each other, so the board
+// links them.
 //
 // The same rules as the main conversation apply (see `main.mjs`): question
 // marks and wh-words only on questions, short first replies, and each topic
@@ -13,123 +13,81 @@ const day = (daysAgo, hours, minutes) => Date.UTC(2026, 9, 15 - daysAgo, hours, 
 
 export default [
   {
-    id: "parfit-book-club",
+    id: "dolores-park-picnic",
     group: "personal",
-    startedAt: day(2, 26, 30),
-    placement: { daysAgo: 2, at: "19:30" },
-    company: "A book club (fictional)",
-    description: "Sample conversation: a philosophy book club reading Parfit. Invented people.",
-    title: "Book club: Parfit's teletransporter, and the bat paper next",
+    startedAt: day(2, 22, 0),
+    placement: { daysAgo: 2, at: "15:00" },
+    company: "Friends at Dolores Park (fictional)",
+    description:
+      "Sample conversation: friends at Dolores Park, no laptops allowed. Invented people.",
+    title: "Dolores Park: touch grass, no laptops allowed",
     speakers: {
-      lucia: { name: "Lucia", role: "Hosts the book club", rate: 2.05, gain: 1.0 },
-      dev: { name: "Dev", role: "Book club member", rate: 1.95, gain: 1.08 },
-      hanne: { name: "Hanne", role: "Book club member", rate: 2.2, gain: 0.88 },
+      marisol: { name: "Marisol", role: "Friend", rate: 2.05, gain: 1.0 },
+      tess: { name: "Tess", role: "Friend", rate: 1.95, gain: 1.06 },
+      ike: { name: "Ike", role: "Friend at a startup", rate: 2.2, gain: 0.9 },
     },
     turns: [
-      ["lucia", "Okay, book club. Parfit on personal identity, from Reasons and Persons."],
-      [
-        "dev",
-        "Right. Personal identity and the teletransporter. I argued with Parfit on personal identity the whole way.",
-      ],
-      [
-        "hanne",
-        "The teletransporter is the famous personal identity case. A copy of you on Mars, and the original destroyed on Earth.",
-      ],
-      [
-        "lucia",
-        "And Parfit says personal identity is not the thing that matters. Psychological continuity is.",
-      ],
-      ["dev", "Would you use the teletransporter?"],
-      ["hanne", "Never. I'd take the train."],
-      ["dev", "Same. The copy on Mars has my memories, but the copy isn't me."],
-      [
-        "lucia",
-        "Then fission, the other personal identity case. Each half of your brain survives in a different body.",
-      ],
-      [
-        "hanne",
-        "Fission is the personal identity case that got me. Identity can't go to both halves, and neither half has a better claim.",
-      ],
-      [
-        "lucia",
-        "Parfit said the view made him care less about his own future, and more about other people.",
-        { mark: { after: 2.0, note: "Parfit: less concern for his own future, more for others" } },
-      ],
-      ["dev", "That's the part of personal identity I liked. Less self, more everyone else."],
-      ["hanne", "Next month, then. Nagel's bat paper."],
-      ["lucia", "Right, Nagel's bat paper. The bat paper on conscious experience, from 1974."],
-      ["dev", "Is the bat paper long?"],
-      ["lucia", "Short, one evening's reading."],
-      ["hanne", "Good. One evening of the bat paper, and wine."],
-      ["dev", "Can we do the bat paper at my place?"],
+      ["marisol", "Okay, Dolores Park rules. No laptops, no 996 grind talk."],
+      ["tess", "Right. No 996 grind talk. Ike, that means you."],
+      ["ike", "I am only on the 996 grind because the startup is on the 996 grind."],
+      ["tess", "The 996 grind is nine to nine, six days a week. That is not a personality."],
+      ["marisol", "Is Ike even allowed to touch grass on a Saturday?"],
+      ["tess", "Only with a calendar invite."],
+      ["ike", "Two to four, then back to the 996 grind."],
+      ["tess", "Burrito order, then. Mission burritos."],
+      ["marisol", "Right. Burrito order: two carne asada, one veggie burrito."],
+      ["ike", "Veggie burrito for me. The 996 grind needs fiber."],
+      ["tess", "Burritos, sunlight, and nobody says AGI."],
+      ["marisol", "Can we do this again next Sunday?"],
     ],
     summary: `
-Lucia, Dev and Hanne discussed the part of Parfit's Reasons and Persons on personal identity, and picked Nagel's bat paper for next month.
+Marisol, Tess and Ike spent an afternoon at Dolores Park with no laptops and, officially, no 996 talk.
 
 ## Threads
-- **Teletransporter.** A copy of you is built on Mars and the original destroyed on Earth. Parfit's claim is that personal identity is not what matters; psychological continuity is. Dev and Hanne would still not use it.
-- **Fission.** Both halves of a brain survive in two bodies and both remember being you. Identity cannot go to both, and neither has the better claim, which is the case that persuaded Hanne.
-- **Parfit's own view.** He wrote that the view made him care less about his own future and more about other people.
-
-## Decisions Made
-- Next month: Nagel's "What Is It Like to Be a Bat?" (1974), short enough for one evening.
+- **The 996 grind.** Ike is on the 996 grind because his startup is. Nine to nine, six days a week, is not a personality; touching grass is booked from two to four.
+- **Burrito order.** Two carne asada, one veggie (the 996 grind needs fiber). Nobody said AGI.
 
 ## Follow-ups
-- Whether next month's meeting can be at Dev's place.
+- Whether the picnic happens again next Sunday.
 `,
   },
   {
-    id: "library-talk-call",
+    id: "call-with-mom",
     group: "personal",
-    startedAt: day(4, 19, 40),
-    placement: { daysAgo: 4, at: "12:40", weekdays: true },
-    company: "A public library (fictional)",
-    description:
-      "Sample conversation: a call about a public talk on personal identity at a library. Invented people.",
-    title: "Library talk: personal identity for a general audience",
+    startedAt: day(4, 26, 30),
+    placement: { daysAgo: 4, at: "19:30" },
+    company: "A family call (fictional)",
+    description: "Sample conversation: a call with Mom about p(doom). Invented people.",
+    title: "Call with Mom: what a p(doom) is, explained",
     speakers: {
-      ben: { name: "Ben", role: "Runs the library's evening talks", rate: 2.0, gain: 1.02 },
-      clara: { name: "Clara", role: "Gives the talk", rate: 2.15, gain: 0.94 },
+      mom: { name: "Mom", role: "Arjun's mom", rate: 1.9, gain: 1.0 },
+      arjun: { name: "Arjun", role: "Works at an AI startup", rate: 2.1, gain: 1.04 },
     },
     turns: [
-      ["ben", "Hi Clara, it's Ben, about your library talk."],
-      ["clara", "Hi Ben. The library talk is all set on my side."],
-      ["ben", "Good. The library talk gets the reading room, about sixty chairs."],
-      ["ben", "Do you need a projector?"],
-      ["clara", "Yes, a projector and a clicker."],
-      ["clara", "Ten slides for the library talk, and a long question time after."],
-      ["ben", "Then the subject. Personal identity, for an audience of mostly retired teachers."],
-      [
-        "clara",
-        "Personal identity starts with the teletransporter. A copy of you on Mars, and the original gone.",
-      ],
-      [
-        "clara",
-        "Then AI copies. One set of weights, thousands of copies running, and personal identity gets strange.",
-      ],
-      ["ben", "Is the teletransporter too dark for an evening crowd?"],
-      ["clara", "Hmm."],
-      [
-        "clara",
-        "I'll keep the teletransporter light. Parfit's fission case does the heavy lifting on personal identity.",
-      ],
-      ["ben", "And after the library talk, tea and biscuits in the reading room."],
-      ["clara", "Lovely. Biscuits after the library talk, the right order."],
-      ["ben", "Could you send a short blurb for the poster?"],
+      ["mom", "Arjun, your friend posted his p(doom). Explain the doom number, please."],
+      ["arjun", "Right, Mom. A p(doom) is a doom number. The chance things go badly with AI."],
+      ["mom", "And your doom number is high?"],
+      ["arjun", "Ten percent. That is low, Mom."],
+      ["mom", "Ten percent doom sounds high to me. Your father's doom number is zero."],
+      ["arjun", "Dad's doom number is zero because he thinks AGI is a printer brand."],
+      ["mom", "Then the 996 grind. Your sister says you work the 996 grind now."],
+      ["arjun", "Right. The 996 grind is nine to nine, six days a week. Only until demo day."],
+      ["mom", "Is the 996 grind why you never call on Sundays?"],
+      ["arjun", "Hmm."],
+      ["mom", "No laptop at Thanksgiving. Not even for the 996 grind."],
+      ["arjun", "Deal. No laptop, no doom number talk, extra pie."],
+      ["mom", "Can you explain AGI to your grandmother at dinner?"],
     ],
     summary: `
-Ben and Clara settled the library talk on personal identity and AI copies: the reading room, a projector, ten slides and a long question time.
+Mom asked Arjun what a p(doom) is, and then about the hours he works.
 
 ## Threads
-- **Logistics.** The reading room holds about sixty chairs. Clara needs a projector and a clicker.
-- **The talk.** It opens with the teletransporter (a copy of you on Mars), moves to AI copies (one set of weights, thousands of copies running), and leans on Parfit's fission case.
-
-## Action Items
-- [ ] Ben: book the projector and the clicker.
+- **p(doom).** A doom number is the chance things go badly with AI. Arjun's is ten percent, which he calls low; Dad's is zero, because he thinks AGI is a printer brand.
+- **The 996 grind.** Nine to nine, six days a week, until demo day. No laptop at Thanksgiving.
 
 ## Follow-ups
-- Whether the teletransporter is too dark for an evening audience.
-- A short blurb for the poster.
+- Whether the 996 grind is why Arjun never calls on Sundays.
+- Explaining AGI to his grandmother at dinner.
 `,
   },
 ];

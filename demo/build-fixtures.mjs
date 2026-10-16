@@ -25,8 +25,8 @@
 //   node demo/build-fixtures.mjs --check    exit 1 if a fixture on disk is stale
 //
 // `--set ideas` does the same for the second content set: the scripts in
-// `demo/script-ideas/` (a research reading group on reinforcement learning,
-// philosophy, the new AI labs and the news), written to `demo/fixtures-ideas/`.
+// `demo/script-ideas/` (a house meeting at a San Francisco hacker house, and
+// eight conversations around it), written to `demo/fixtures-ideas/`.
 // That set's main conversation is written there too, not into the app, and
 // carries `meta.main: true` so the harness can find it (`set=ideas`).
 //
