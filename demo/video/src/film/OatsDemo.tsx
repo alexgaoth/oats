@@ -14,8 +14,8 @@ import { BrowserPopup } from "../scenes/BrowserPopup";
  * The demo films: about 63 seconds, no captions, no zooms. The whole window is
  * always in view and the pointer says where to look. Two films share one cut:
  * `OatsDemo` (the Pellwood launch review, the app's own sample) and
- * `OatsIdeas` (a research discussion: RL, philosophy, the new labs, tech
- * news), each from its own takes (director/sets/).
+ * `OatsIdeas` (a San Francisco hacker house: AGI timelines, p(doom), vibe
+ * coding, founder mode), each from its own takes (director/sets/).
  *
  * The rules the cut follows:
  * - The camera holds the whole window. Zooms, even ones aimed at the thing
@@ -239,24 +239,30 @@ const PELLWOOD: FilmConfig = {
 };
 
 /**
- * The reading group (director/sets/ideas.mjs). d-questions: Words is chosen
- * 2.0 s into the take (17:20); "So what is Tinker, concretely?" is answered on
- * the way; "When did Periodic Labs launch?" appears at 59.6 s and is searched
- * at 61.7 s. The time-lapse is 328 frames, from 0:23.
+ * The hacker house (director/sets/ideas.mjs). d-questions: Words is chosen
+ * 2.0 s into the take (17:12). "What's the moat?" comes at 14.6 s and turns
+ * Answered at 18.6 s ("Taste, distribution, and a cracked team."): the curve
+ * slows for it as it does for the question that is searched. "When is AGI?"
+ * appears at 53.6 s and is searched at 56.1 s. The time-lapse is 326 frames,
+ * from 0:22.
  */
 const IDEAS: FilmConfig = {
   prefix: "ideas-",
-  lapseSeconds: 328 / 60,
+  lapseSeconds: 326 / 60,
   question: [
     { at: 1.0, speed: 1 },
     { at: 2.6, speed: 1 },
     { at: 5.0, speed: 20 },
-    { at: 56.0, speed: 20 },
-    { at: 58.5, speed: 2 },
-    { at: 61.7, speed: 2 },
-    { at: 62.1, speed: 1 },
+    { at: 12.4, speed: 20 },
+    { at: 14.2, speed: 2 },
+    { at: 19.4, speed: 2 },
+    { at: 21.4, speed: 20 },
+    { at: 50.0, speed: 20 },
+    { at: 52.5, speed: 2 },
+    { at: 56.1, speed: 2 },
+    { at: 56.5, speed: 1 },
   ],
-  searched: 61.7,
+  searched: 56.1,
 };
 
 const pellwood = makeFilm(PELLWOOD);
