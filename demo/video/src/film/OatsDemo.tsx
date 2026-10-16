@@ -238,8 +238,26 @@ const PELLWOOD: FilmConfig = {
   searched: 48.6,
 };
 
-/** The second film's content (filled in from its takes). */
-const IDEAS: FilmConfig = { ...PELLWOOD, prefix: "ideas-" };
+/**
+ * The reading group (director/sets/ideas.mjs). d-questions: Words is chosen
+ * 2.0 s into the take (17:20); "So what is Tinker, concretely?" is answered on
+ * the way; "When did Periodic Labs launch?" appears at 59.6 s and is searched
+ * at 61.7 s. The time-lapse is 328 frames, from 0:23.
+ */
+const IDEAS: FilmConfig = {
+  prefix: "ideas-",
+  lapseSeconds: 328 / 60,
+  question: [
+    { at: 1.0, speed: 1 },
+    { at: 2.6, speed: 1 },
+    { at: 5.0, speed: 20 },
+    { at: 56.0, speed: 20 },
+    { at: 58.5, speed: 2 },
+    { at: 61.7, speed: 2 },
+    { at: 62.1, speed: 1 },
+  ],
+  searched: 61.7,
+};
 
 const pellwood = makeFilm(PELLWOOD);
 export const OatsDemo = pellwood.Film;
