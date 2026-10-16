@@ -5,6 +5,7 @@
 //   /demo.html?panel=true&demo=live                the review, recorded live
 //   /demo.html?panel=true&demo=live&from=720&speed=1&view=words&theme=dark
 //   /demo.html?panel=true&profile=empty            nothing recorded yet
+//   /demo.html?panel=true&set=ideas&demo=live      the hacker house, recorded live
 //
 // Parameters: `demo=live` replays the launch review as a live recording (the
 // other samples are already there; the review is the one being recorded);
@@ -14,10 +15,13 @@
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
 // in three groups instead of the samples (`many.mjs`), to measure Global
-// conversations at size; `theme`, `view` and `flow` as in `settings.mjs`.
+// conversations at size; `set=ideas` uses the second content set
+// (`demo/fixtures-ideas/`, built with `--set ideas`): its hacker house is the
+// main conversation, for `demo=live` and the example, and its other eight are
+// the ones already there; `theme`, `view` and `flow` as in `settings.mjs`.
 // `panel=true` is the app's own: the workspace window.
 
-import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
+import launchReview from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { installFakeMicrophone } from "./media.mjs";
@@ -25,11 +29,31 @@ import { manyConversations } from "./many.mjs";
 import { createReplay } from "./replay.mjs";
 import { applyDemoSettings } from "./settings.mjs";
 
-const supporting = Object.values(
-  import.meta.glob("../fixtures/*.json", { eager: true, import: "default" })
-);
+const glob = (fixtures) => Object.values(fixtures);
+const SETS = {
+  default: {
+    main: launchReview,
+    supporting: glob(import.meta.glob("../fixtures/*.json", { eager: true, import: "default" })),
+  },
+  // Its main conversation is marked (`meta.main`), not shipped with the app.
+  ideas: (() => {
+    const all = glob(
+      import.meta.glob("../fixtures-ideas/*.json", { eager: true, import: "default" })
+    );
+    return {
+      main: all.find((fixture) => fixture.meta?.main) ?? null,
+      supporting: all.filter((fixture) => !fixture.meta?.main),
+    };
+  })(),
+};
 
 const params = new URLSearchParams(window.location.search);
+const set = SETS[params.get("set") === "ideas" ? "ideas" : "default"];
+if (!set.main) {
+  throw new Error("oatsDemo: no ideas fixtures. Run: node demo/build-fixtures.mjs --set ideas");
+}
+const mainFixture = set.main;
+const supporting = set.supporting;
 const live = params.get("demo") === "live";
 const empty = params.get("profile") === "empty";
 const many = params.get("profile") === "many";
@@ -92,7 +116,7 @@ const frame = () => new Promise((resolve) => setTimeout(resolve, 120));
 window.oatsDemo = {
   ...replay,
   /** Open a sample conversation in the reading view, on a tab. */
-  async open(sampleId = "launch-readiness-review", { tab = "summary" } = {}) {
+  async open(sampleId = mainFixture.meta.id, { tab = "summary" } = {}) {
     const note = main.db.noteBySample(sampleId) ?? main.db.findNote(Number(sampleId));
     if (!note) throw new Error(`oatsDemo: no conversation ${sampleId}`);
     window.dispatchEvent(new CustomEvent("oats-open-note", { detail: note.id }));
