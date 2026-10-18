@@ -293,7 +293,8 @@ export function guardHookCommand() {
   const reads = ` ${READ_VERBS.join(" ")} `;
   const writes = ` ${WRITE_WORDS.join(" ")} `;
   const services = TEAM_SERVICES.map(({ word }) => `*${word}*`).join("|");
-  const toJsonArg = (json) => `"${json.replace(/"/g, '\\"')}"`;
+  // Inside sh double quotes only \ " $ and ` are special; each gets a backslash.
+  const toJsonArg = (json) => `"${json.replace(/[\\"$`]/g, "\\$&")}"`;
   const script = [
     "LC_ALL=C",
     "export LC_ALL",
