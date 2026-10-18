@@ -2282,7 +2282,7 @@
         "description": "Bekommt eine Frage eine unsichere oder keine Antwort, sucht Oats in früheren Gesprächen und in einem Ordner, den das Team teilt, und sagt, ob die Antwort stimmt.",
         "enable": "Unsichere Antworten prüfen",
         "enableHint": "Nutzt das unter Modelle gewählte Schreibmodell. Bei einem Cloud-Modell werden die Frage, die Antwort und die gelesenen Abschnitte an diesen Anbieter gesendet.",
-        "needsModel": "Wähle zuerst unter Modelle ein Schreibmodell. Bis dahin wird nichts geprüft.",
+        "needsModel": "Wählen Sie zuerst unter Modelle ein Schreibmodell. Bis dahin wird nichts geprüft.",
         "folder": "Team-Ordner",
         "noFolder": "Kein Ordner gewählt. Frühere Gespräche werden trotzdem geprüft.",
         "choose": "Ordner wählen",
