@@ -24,6 +24,7 @@ import {
   type TranscriptSpeakerStatus,
 } from "../utils/transcriptSpeakerState";
 import { ConversationAideSession } from "../helpers/conversationAide";
+import { runContextCheck } from "./contextCheckRunner";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
@@ -663,9 +664,15 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
       if (!conversationCards.delete(cardId)) return;
       pushConversationCards();
     },
-    // The one place a conversation reaches the network. Routed through the main
+    // A reply somebody was not sure of, put to the team's context. Off unless
+    // chosen in Settings; with no strong match or no writing model it says
+    // nothing (contextCheckRunner.ts).
+    checkContext: settings.contextCheckEnabled ? runContextCheck : null,
+    // Where a conversation reaches the search host. Routed through the main
     // process so the host validation and the URL construction stay in a single
-    // audited path (see docs/network-allowlist.md).
+    // audited path (see docs/network-allowlist.md). The context check above is
+    // the only other way out: with a cloud writing model, its judge sends the
+    // question, the reply and the passages it read to that provider.
     openSearch: async (suggestion: { eventId: number | null; query: string }) => {
       const result = await window.electronAPI.openConversationSearch?.({
         eventId: suggestion.eventId,

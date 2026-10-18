@@ -1015,3 +1015,130 @@ test("the default timers are called as plain functions, as Chromium requires", (
     globalThis.clearTimeout = realClear;
   }
 });
+
+// --- The context check (contextCheck.mjs): a reply somebody was not sure of
+// is put to the team's context, beside the evaluation chain.
+
+const settle = async (times = 5) => {
+  for (let i = 0; i < times; i += 1) await new Promise((resolve) => setImmediate(resolve));
+};
+
+const verdict = {
+  state: "wrong",
+  by: "context",
+  answer: "October 30",
+  quote: "goes live on October 30",
+  source: { kind: "file", path: "plan.md", heading: "", label: "plan.md" },
+};
+
+test("a hedged reply is checked, and the verdict lands on the card and on the question's event", async () => {
+  const asked = [];
+  let release;
+  const gate = new Promise((resolve) => (release = resolve));
+  const { session, cards, updates } = harness({
+    classify: null,
+    checkContext: async (input, onProgress) => {
+      asked.push(input);
+      onProgress({ state: "checking", by: "context" });
+      await gate;
+      return verdict;
+    },
+  });
+  session.onFinalized({ id: "q1", text: "When does Pellwood go live?" });
+  session.onFinalized({ id: "r1", text: "I think the 23rd." });
+  await session.evaluation;
+  await settle();
+  assert.deepEqual(asked, [
+    {
+      question: "When does Pellwood go live?",
+      reply: "I think the 23rd.",
+      outcome: "uncertain",
+      noteId: 1,
+    },
+  ]);
+  assert.equal(latestCard(cards, "q1").state, "uncertain");
+  assert.deepEqual(latestCard(cards, "q1").check, { state: "checking", by: "context" });
+
+  release();
+  await settle();
+  assert.deepEqual(latestCard(cards, "q1").check, verdict);
+  const stored = updates.find((update) => update.patch.check);
+  assert.deepEqual(stored, { id: 1, patch: { check: verdict } });
+});
+
+test("a denial is checked too; a confident answer and silence are not", async () => {
+  const outcomes = [];
+  const { session } = harness({
+    classify: null,
+    checkContext: async (input) => {
+      outcomes.push(input.outcome);
+      return null;
+    },
+  });
+  session.onFinalized({ id: "q1", text: "When does Pellwood go live?" });
+  session.onFinalized({ id: "r1", text: "No idea, honestly." });
+  session.onFinalized({ id: "q2", text: "Who owns the billing cutover?" });
+  session.onFinalized({ id: "r2", text: "Dana owns the billing cutover this quarter." });
+  session.onFinalized({ id: "q3", text: "What is the ledger export limit?" });
+  await session.evaluation;
+  await session.shutdown();
+  await settle();
+  assert.deepEqual(outcomes, ["denied"]);
+});
+
+test("a check with nothing to say, or one that fails, leaves no line on the card", async () => {
+  for (const finish of [async () => null, async () => Promise.reject(new Error("model gone"))]) {
+    const { session, cards, diagnostics } = harness({
+      classify: null,
+      checkContext: async (input, onProgress) => {
+        onProgress({ state: "checking", by: "context" });
+        return finish();
+      },
+    });
+    session.onFinalized({ id: "q1", text: "When does Pellwood go live?" });
+    session.onFinalized({ id: "r1", text: "Maybe the 23rd?" });
+    await session.evaluation;
+    await settle();
+    assert.equal(latestCard(cards, "q1").check, undefined);
+    assert.equal(latestCard(cards, "q1").state, "uncertain");
+    if (diagnostics.length) assert.equal(diagnostics[0].code, "context_check_failed");
+  }
+});
+
+test("Finish does not wait for a check, and a late verdict is still stored", async () => {
+  let release;
+  const gate = new Promise((resolve) => (release = resolve));
+  const { session, cards, updates } = harness({
+    classify: null,
+    checkContext: async () => {
+      await gate;
+      return verdict;
+    },
+  });
+  session.onFinalized({ id: "q1", text: "When does Pellwood go live?" });
+  session.onFinalized({ id: "r1", text: "Probably the 23rd." });
+  await session.evaluation;
+  await session.shutdown(); // Returns while the check is still waiting.
+  const shown = cards.length;
+  release();
+  await settle();
+  assert.equal(cards.length, shown, "nothing is drawn after Stop");
+  assert.ok(updates.some((update) => update.patch.check?.state === "wrong"));
+});
+
+test("the model path checks the outcome it settles on", async () => {
+  const outcomes = [];
+  const { session } = harness({
+    classify: async () =>
+      unanswered({ isAnswered: true, confidence: 0.6, reason: "uncertain_response" }),
+    checkContext: async (input) => {
+      outcomes.push(input.outcome);
+      return null;
+    },
+  });
+  session.onFinalized({ id: "q1", text: "When does Pellwood go live?" });
+  session.onFinalized({ id: "r1", text: "I think it is the twenty third." });
+  await session.evaluation;
+  await settle();
+  assert.deepEqual(outcomes, ["uncertain"]);
+});

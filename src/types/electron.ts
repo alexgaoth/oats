@@ -1,5 +1,10 @@
 import type { TinfoilCatalogModel } from "../models/tinfoilModels";
-import type { ConversationEvent, SuggestionState } from "./conversationEvents";
+import type {
+  ContextPassage,
+  ContextStatus,
+  ConversationEvent,
+  SuggestionState,
+} from "./conversationEvents";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia";
 
@@ -544,6 +549,15 @@ declare global {
       exportNoteToVault?: (
         noteId: number
       ) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+      // The context check's sources (helpers/contextService.js).
+      configureContext?: (config: { folder: string | null }) => Promise<ContextStatus>;
+      getContextStatus?: () => Promise<ContextStatus>;
+      chooseContextFolder?: () => Promise<{ success: boolean; path?: string }>;
+      searchContext?: (query: {
+        question: string;
+        noteId?: number | null;
+      }) => Promise<{ success: boolean; passages: ContextPassage[] }>;
+      openContextFile?: (relPath: string) => Promise<{ success: boolean }>;
       getNoteRecordingConfig?: () => Promise<{
         success: boolean;
         providers: Array<{

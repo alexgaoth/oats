@@ -2276,7 +2276,24 @@
       "dictationButton": "Durante la dettatura",
       "instructionsDescription": "Come il modello riscrive ogni dettatura. L'impostazione predefinita va bene per quasi tutti.",
       "editInstructions": "Modifica istruzioni",
-      "instructions": "Istruzioni di pulizia"
+      "instructions": "Istruzioni di pulizia",
+      "context": {
+        "title": "Verifica del contesto",
+        "description": "Quando una domanda riceve una risposta incerta o nessuna, Oats la cerca nelle conversazioni passate e in una cartella condivisa dal team, e dice se la risposta regge.",
+        "enable": "Verifica le risposte incerte",
+        "enableHint": "Usa il modello di scrittura scelto in Modelli. Con un modello cloud, la domanda, la risposta e i passaggi letti vengono inviati a quel fornitore.",
+        "needsModel": "Scegli prima un modello di scrittura in Modelli. Fino ad allora non viene verificato nulla.",
+        "folder": "Cartella del team",
+        "noFolder": "Nessuna cartella scelta. Le conversazioni passate vengono comunque verificate.",
+        "choose": "Scegli cartella",
+        "change": "Modifica",
+        "remove": "Rimuovi",
+        "reading": "Lettura della cartella",
+        "files_one": "{{count}} file letto",
+        "files_other": "{{count}} file letti",
+        "missing": "Questa cartella non esiste più.",
+        "unreadable": "Oats non riesce a leggere questa cartella."
+      }
     },
     "errors": {
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",
@@ -2392,7 +2409,21 @@
     "announced": "Nuova domanda: {{question}}",
     "announcedAgain": "Posta di nuovo, {{count}} volte finora: {{question}}",
     "announcedBatch": "{{count}} nuove domande, l'ultima: {{question}}",
-    "searchedHost": "Cercato su {{host}}"
+    "searchedHost": "Cercato su {{host}}",
+    "check": {
+      "checking": "Controllo del contesto",
+      "checkingSources": "Controllo in {{sources}}",
+      "right": "È corretto",
+      "wrong": "Aspetta, non è corretto",
+      "answer": "Trovato",
+      "quote": "«{{quote}}»",
+      "openSource": "Apri {{source}}",
+      "announced": {
+        "right": "È corretto: {{answer}}. Fonte: {{source}}.",
+        "wrong": "Aspetta, non è corretto: {{answer}}. Fonte: {{source}}.",
+        "answer": "Trovato: {{answer}}. Fonte: {{source}}."
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} secondi",

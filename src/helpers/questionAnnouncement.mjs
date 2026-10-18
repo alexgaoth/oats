@@ -53,3 +53,34 @@ export function nextAnnouncement(cards, spoken) {
     count: speakable.length,
   };
 }
+
+const CHECK_VERDICTS = new Set(["right", "wrong", "answer"]);
+
+/**
+ * The context check's verdict the live region should say next, if any.
+ *
+ * A verdict is spoken once, when it lands; "checking" is never spoken, since a
+ * status nobody can act on is noise beside a live conversation. The same
+ * forwards-only rule as above: `spoken` holds every card id whose verdict was
+ * announced, so dismissing or restoring a card cannot repeat one.
+ *
+ * @param {Array<{ id?: string, check?: { state?: string, answer?: string, source?: { label?: string } } }>} cards
+ * @param {Set<string>} spoken
+ * @returns {{ ids: string[], state: string, answer: string, source: string } | null}
+ */
+export function nextCheckAnnouncement(cards, spoken) {
+  const ids = [];
+  let newest = null;
+  for (const card of cards ?? []) {
+    if (!card?.id || spoken.has(card.id) || !CHECK_VERDICTS.has(card.check?.state)) continue;
+    ids.push(card.id);
+    newest = card;
+  }
+  if (!newest) return null;
+  return {
+    ids,
+    state: newest.check.state,
+    answer: String(newest.check.answer || ""),
+    source: String(newest.check.source?.label || ""),
+  };
+}

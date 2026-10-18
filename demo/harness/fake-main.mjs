@@ -9,6 +9,7 @@
 // would; any `on*` subscription it does not drive is accepted and never fires.
 
 import { placeSampleConversation } from "../../src/helpers/sampleConversations.mjs";
+import { folderStatus, searchDemoContext } from "./context.mjs";
 
 // The columns `DatabaseManager.updateNote` accepts.
 const UPDATABLE = new Set([
@@ -447,6 +448,16 @@ export function createFakeMain({ fixtures, example = null, now = Date.now(), bad
       return { success: true };
     },
     dismissConversationCard: async () => ({ success: true }),
+
+    // --- The context check (`check=1`): the demo's team folder (context.mjs).
+    configureContext: async () => folderStatus(),
+    getContextStatus: async () => folderStatus(),
+    chooseContextFolder: async () => ({ success: false }),
+    searchContext: async (query = {}) => ({
+      success: true,
+      passages: searchDemoContext(query.question),
+    }),
+    openContextFile: async () => ({ success: true }),
 
     // --- Conversation groups.
     ...groupApi,

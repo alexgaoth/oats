@@ -1,9 +1,13 @@
 const modelManager = require("../helpers/modelManagerBridge").default;
 const debugLogger = require("../helpers/debugLogger");
+const { createOneAtATime } = require("../helpers/oneAtATime");
 
 class LocalReasoningService {
   constructor() {
     this.isProcessing = false;
+    // The server answers one request at a time. A second request waits its
+    // turn rather than being refused (oneAtATime.js says why).
+    this.turns = createOneAtATime();
   }
 
   async isAvailable() {
@@ -21,12 +25,12 @@ class LocalReasoningService {
       modelId,
       textLength: text.length,
       hasConfig: Object.keys(config).length > 0,
+      waiting: this.turns.waiting,
     });
+    return this.turns.run(() => this._process(text, modelId, config));
+  }
 
-    if (this.isProcessing) {
-      throw new Error("Already processing a request");
-    }
-
+  async _process(text, modelId, config) {
     this.isProcessing = true;
     const startTime = Date.now();
 

@@ -461,6 +461,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   configureObsidianVault: (config) => ipcRenderer.invoke("configure-obsidian-vault", config),
   chooseObsidianVault: () => ipcRenderer.invoke("choose-obsidian-vault"),
   exportNoteToVault: (noteId) => ipcRenderer.invoke("export-note-to-vault", noteId),
+  // The context check's sources (contextService.js).
+  configureContext: (config) => ipcRenderer.invoke("context-configure", config),
+  getContextStatus: () => ipcRenderer.invoke("context-status"),
+  chooseContextFolder: () => ipcRenderer.invoke("context-choose-folder"),
+  searchContext: (query) => ipcRenderer.invoke("context-search", query),
+  openContextFile: (relPath) => ipcRenderer.invoke("context-open-file", relPath),
   onCancelHotkeyPressed: registerListener("cancel-hotkey-pressed", (cb) => () => cb()),
   registerCancelHotkey: (key) => ipcRenderer.invoke("register-cancel-hotkey", key),
   unregisterCancelHotkey: () => ipcRenderer.invoke("unregister-cancel-hotkey"),

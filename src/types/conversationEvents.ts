@@ -31,6 +31,47 @@ export interface ConversationCard {
   // rail offer a manual search without ever handling a URL itself.
   query?: string | null;
   searchBaseUrl?: string | null;
+  // The context check (contextCheck.mjs): set only for a reply somebody was not
+  // sure of, and only when the team's context had something to say about it.
+  check?: ContextCheck;
+}
+
+// Where a context check's evidence came from: a file in the context folder
+// (contextService.js), a past conversation, or a page the agent read.
+export type ContextSource =
+  | { kind: "file"; path: string; heading: string; label: string }
+  | { kind: "conversation"; noteId: number; title: string; day: string; label: string }
+  | { kind: "link"; url: string; label: string };
+
+// One passage the context search found for a question.
+export interface ContextPassage {
+  id: string;
+  label: string;
+  text: string;
+  source: ContextSource;
+}
+
+// What a question card says about its reply. `checking` while the judge
+// reads; then a verdict with the answer and its source. A check that finds
+// nothing leaves no trace on the card.
+export type ContextCheck =
+  | { state: "checking"; by: "context" | "agent"; sources?: string[] }
+  | {
+      state: "right" | "wrong" | "answer";
+      by: "context" | "agent";
+      answer: string;
+      quote: string;
+      source: ContextSource;
+    };
+
+// The context folder's index, as Settings shows it.
+export interface ContextStatus {
+  folder: string | null;
+  files: number;
+  passages: number;
+  indexing: boolean;
+  truncated: boolean;
+  error: "missing" | "unreadable" | null;
 }
 
 // A thread's state (DESIGN.md §4). `live` is the topic being spoken, `open` was

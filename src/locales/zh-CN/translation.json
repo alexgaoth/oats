@@ -2271,7 +2271,24 @@
       "dictationButton": "听写时",
       "instructionsDescription": "模型如何改写每段听写。默认设置适合大多数人。",
       "editInstructions": "编辑指令",
-      "instructions": "整理指令"
+      "instructions": "整理指令",
+      "context": {
+        "title": "资料核对",
+        "description": "当问题得到不确定的回答或没人回答时，Oats 会在过去的对话和团队共享的文件夹中查找，并说明回答是否成立。",
+        "enable": "核对不确定的回答",
+        "enableHint": "使用在“模型”中选择的写作模型。若为云端模型，问题、回答和读取的段落会发送给该服务商。",
+        "needsModel": "请先在“模型”中选择写作模型。在此之前不会核对任何内容。",
+        "folder": "团队文件夹",
+        "noFolder": "尚未选择文件夹。仍会核对过去的对话。",
+        "choose": "选择文件夹",
+        "change": "更改",
+        "remove": "移除",
+        "reading": "正在读取文件夹",
+        "files_one": "已读取 {{count}} 个文件",
+        "files_other": "已读取 {{count}} 个文件",
+        "missing": "此文件夹已不存在。",
+        "unreadable": "Oats 无法读取此文件夹。"
+      }
     },
     "errors": {
       "noModel": "录制对话前请先配置 Oats 的处理方式。",
@@ -2387,7 +2404,21 @@
     "announced": "新问题：{{question}}",
     "announcedAgain": "再次提问，已 {{count}} 次：{{question}}",
     "announcedBatch": "{{count}} 个新问题，最新：{{question}}",
-    "searchedHost": "已在 {{host}} 搜索"
+    "searchedHost": "已在 {{host}} 搜索",
+    "check": {
+      "checking": "正在核对资料",
+      "checkingSources": "正在查看 {{sources}}",
+      "right": "没错",
+      "wrong": "等等，不对",
+      "answer": "找到了",
+      "quote": "“{{quote}}”",
+      "openSource": "打开 {{source}}",
+      "announced": {
+        "right": "没错：{{answer}}。来源：{{source}}。",
+        "wrong": "等等，不对：{{answer}}。来源：{{source}}。",
+        "answer": "找到了：{{answer}}。来源：{{source}}。"
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}，{{seconds}} 秒",

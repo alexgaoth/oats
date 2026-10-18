@@ -2276,7 +2276,24 @@
       "dictationButton": "ディクテーション中",
       "instructionsDescription": "モデルが各ディクテーションをどう書き直すか。ほとんどの人は既定のままで問題ありません。",
       "editInstructions": "指示を編集",
-      "instructions": "整形の指示"
+      "instructions": "整形の指示",
+      "context": {
+        "title": "コンテキスト確認",
+        "description": "質問への答えがあいまいなときや誰も答えられないとき、Oats は過去の会話とチームで共有しているフォルダを調べ、その答えが正しいかを示します。",
+        "enable": "あいまいな答えを確認",
+        "enableHint": "「モデル」で選んだ文章モデルを使います。クラウドのモデルでは、質問、答え、読んだ箇所がそのプロバイダに送られます。",
+        "needsModel": "先に「モデル」で文章モデルを選んでください。それまでは何も確認しません。",
+        "folder": "チームのフォルダ",
+        "noFolder": "フォルダが選ばれていません。過去の会話は確認します。",
+        "choose": "フォルダを選ぶ",
+        "change": "変更",
+        "remove": "外す",
+        "reading": "フォルダを読み込み中",
+        "files_one": "{{count}} 件のファイルを読み込み済み",
+        "files_other": "{{count}} 件のファイルを読み込み済み",
+        "missing": "このフォルダはもうありません。",
+        "unreadable": "Oats はこのフォルダを読めません。"
+      }
     },
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
@@ -2392,7 +2409,21 @@
     "announced": "新しい質問: {{question}}",
     "announcedAgain": "再度質問（{{count}} 回目）: {{question}}",
     "announcedBatch": "新しい質問 {{count}} 件、最新: {{question}}",
-    "searchedHost": "{{host}} で検索済み"
+    "searchedHost": "{{host}} で検索済み",
+    "check": {
+      "checking": "コンテキストを確認中",
+      "checkingSources": "{{sources}} を確認中",
+      "right": "合っています",
+      "wrong": "待って、違います",
+      "answer": "見つかりました",
+      "quote": "「{{quote}}」",
+      "openSource": "{{source}} を開く",
+      "announced": {
+        "right": "合っています: {{answer}}。出典: {{source}}。",
+        "wrong": "待って、違います: {{answer}}。出典: {{source}}。",
+        "answer": "見つかりました: {{answer}}。出典: {{source}}。"
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}、{{seconds}} 秒",

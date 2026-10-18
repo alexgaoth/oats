@@ -643,6 +643,12 @@ export interface SettingsState
   setObsidianVaultPath: (value: string) => void;
   obsidianExportEnabled: boolean;
   setObsidianExportEnabled: (value: boolean) => void;
+  // The context check (contextCheck.mjs): replies somebody was not sure of are
+  // checked against past conversations and, when one is chosen, a team folder.
+  contextCheckEnabled: boolean;
+  setContextCheckEnabled: (value: boolean) => void;
+  contextFolder: string;
+  setContextFolder: (value: string) => void;
   setAssemblyaiApiKey: (key: string) => void;
   setCustomTranscriptionApiKey: (key: string) => void;
   setCleanupCustomApiKey: (key: string) => void;
@@ -1001,6 +1007,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   assemblyaiApiKey: "",
   obsidianVaultPath: readString("obsidianVaultPath", ""),
   obsidianExportEnabled: readBoolean("obsidianExportEnabled", false),
+  contextCheckEnabled: readBoolean("contextCheckEnabled", false),
+  contextFolder: readString("contextFolder", ""),
   anthropicApiKey: "",
   geminiApiKey: "",
   groqApiKey: "",
@@ -1491,6 +1499,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setDeepgramApiKey: createSecretSetter("deepgramApiKey", "deepgram"),
   setObsidianVaultPath: createStringSetter("obsidianVaultPath"),
   setObsidianExportEnabled: createBooleanSetter("obsidianExportEnabled"),
+  setContextCheckEnabled: createBooleanSetter("contextCheckEnabled"),
+  setContextFolder: createStringSetter("contextFolder"),
   setAssemblyaiApiKey: createSecretSetter("assemblyaiApiKey", "assemblyai"),
   setGeminiApiKey: createSecretSetter("geminiApiKey", "gemini", "gemini"),
   setGroqApiKey: createSecretSetter("groqApiKey", "groq", "groq"),

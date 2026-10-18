@@ -63,6 +63,16 @@ in the background only by a model on this computer or the user's own server.
 With a cloud provider selected, they are not sent: they may have been
 summarized on this computer, before that provider was chosen.
 
+The context check (off by default, Settings › Connections) uses the same
+writing model by the same route, so it adds no destination either. When a
+question gets a hedged answer or an "I don't know", the model gets one short
+request: the question, the reply, and at most four passages from the team
+folder or from past conversations (`src/helpers/contextCheck.mjs`). With a
+model on this computer, nothing leaves. With a cloud provider selected, that
+request goes to the provider. The team folder is read from disk and never
+synced by Oats; its text reaches a model only as those passages
+(`src/helpers/contextService.js`).
+
 ## The context check's agent (off by default)
 
 When a reply is hedged or nobody knew, and the team's local context has no
