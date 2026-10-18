@@ -154,6 +154,8 @@ export const AGENT_RUNS_PER_RECORDING = 6;
  *
  * @param {{ ok: boolean, verdict?: { verdict: string, answer: string, quote?: string,
  *   source: { title: string, url: string } } } | null | undefined} result
+ * @returns {{ state: "right" | "wrong" | "answer", by: "agent", answer: string, quote: string,
+ *   source: { kind: "link", url: string, label: string } } | null}
  */
 export function checkFromAgent(result) {
   const verdict = result?.ok ? result.verdict : null;

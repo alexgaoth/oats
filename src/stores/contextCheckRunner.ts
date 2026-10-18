@@ -170,7 +170,7 @@ async function askAgent(
     void logger.debug(
       "Context agent",
       {
-        result: result?.ok ? result.verdict.verdict : result?.reason,
+        result: !result ? "none" : "reason" in result ? result.reason : result.verdict.verdict,
         ms: Math.round(performance.now() - started),
       },
       "context"
