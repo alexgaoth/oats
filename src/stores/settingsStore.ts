@@ -649,6 +649,10 @@ export interface SettingsState
   setContextCheckEnabled: (value: boolean) => void;
   contextFolder: string;
   setContextFolder: (value: string) => void;
+  // When the folder and past conversations have no answer: ask the user's
+  // Claude Code, read-only (helpers/contextAgentRunner.js).
+  contextAgentEnabled: boolean;
+  setContextAgentEnabled: (value: boolean) => void;
   setAssemblyaiApiKey: (key: string) => void;
   setCustomTranscriptionApiKey: (key: string) => void;
   setCleanupCustomApiKey: (key: string) => void;
@@ -1009,6 +1013,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   obsidianExportEnabled: readBoolean("obsidianExportEnabled", false),
   contextCheckEnabled: readBoolean("contextCheckEnabled", false),
   contextFolder: readString("contextFolder", ""),
+  contextAgentEnabled: readBoolean("contextAgentEnabled", false),
   anthropicApiKey: "",
   geminiApiKey: "",
   groqApiKey: "",
@@ -1501,6 +1506,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setObsidianExportEnabled: createBooleanSetter("obsidianExportEnabled"),
   setContextCheckEnabled: createBooleanSetter("contextCheckEnabled"),
   setContextFolder: createStringSetter("contextFolder"),
+  setContextAgentEnabled: createBooleanSetter("contextAgentEnabled"),
   setAssemblyaiApiKey: createSecretSetter("assemblyaiApiKey", "assemblyai"),
   setGeminiApiKey: createSecretSetter("geminiApiKey", "gemini", "gemini"),
   setGroqApiKey: createSecretSetter("groqApiKey", "groq", "groq"),

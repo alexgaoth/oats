@@ -142,3 +142,29 @@ export function parseCheckVerdict(raw, { passages, outcome }) {
   const answer = clip(parsed.answer, 160) || quote;
   return { verdict, answer, quote, passage };
 }
+
+/** Agent runs one recording may start: each is a Claude Code session. */
+export const AGENT_RUNS_PER_RECORDING = 6;
+
+/**
+ * The card's check from the agent's answer (contextAgent.mjs,
+ * `parseAgentVerdict`), or null when it had none. The agent's source is a
+ * page Oats cannot read, so its words are shown as the agent gave them and
+ * its link is the evidence.
+ *
+ * @param {{ ok: boolean, verdict?: { verdict: string, answer: string, quote?: string,
+ *   source: { title: string, url: string } } } | null | undefined} result
+ */
+export function checkFromAgent(result) {
+  const verdict = result?.ok ? result.verdict : null;
+  if (!verdict || !CHECK_VERDICTS.has(verdict.verdict)) return null;
+  const url = String(verdict.source?.url || "");
+  if (!/^https:\/\//i.test(url) || !String(verdict.answer || "").trim()) return null;
+  return {
+    state: verdict.verdict,
+    by: "agent",
+    answer: clip(verdict.answer, 160),
+    quote: clip(verdict.quote, 400),
+    source: { kind: "link", url, label: clip(verdict.source.title, 120) || new URL(url).hostname },
+  };
+}

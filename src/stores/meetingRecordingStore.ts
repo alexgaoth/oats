@@ -24,7 +24,8 @@ import {
   type TranscriptSpeakerStatus,
 } from "../utils/transcriptSpeakerState";
 import { ConversationAideSession } from "../helpers/conversationAide";
-import { runContextCheck } from "./contextCheckRunner";
+import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
+import { AGENT_RUNS_PER_RECORDING } from "../helpers/contextCheck.mjs";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
@@ -32,6 +33,7 @@ import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
 import { TranscriptLag } from "../helpers/transcriptLag.mjs";
 import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
+  ContextCheck,
   ConversationCard,
   ConversationSuggestion,
   ConversationTopicSnapshot,
@@ -601,6 +603,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
   );
   conversationCards.clear();
   useMeetingRecordingStore.setState({ questionCards: [] });
+  const agentBudget = settings.contextAgentEnabled ? { left: AGENT_RUNS_PER_RECORDING } : null;
   conversationAideSession = new ConversationAideSession({
     noteId,
     confidenceThreshold: settings.conversationAideConfidence,
@@ -666,8 +669,12 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     },
     // A reply somebody was not sure of, put to the team's context. Off unless
     // chosen in Settings; with no strong match or no writing model it says
-    // nothing (contextCheckRunner.ts).
-    checkContext: settings.contextCheckEnabled ? runContextCheck : null,
+    // nothing (contextCheckRunner.ts). The agent, when on, has a budget of
+    // runs per recording: each one is a Claude Code session.
+    checkContext: settings.contextCheckEnabled
+      ? (input: ContextCheckInput, onProgress: (check: ContextCheck) => void) =>
+          runContextCheck(input, onProgress, { agent: agentBudget })
+      : null,
     // Where a conversation reaches the search host. Routed through the main
     // process so the host validation and the URL construction stay in a single
     // audited path (see docs/network-allowlist.md). The context check above is

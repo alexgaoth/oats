@@ -2287,7 +2287,10 @@
         "files_one": "已讀取 {{count}} 個檔案",
         "files_other": "已讀取 {{count}} 個檔案",
         "missing": "此資料夾已不存在。",
-        "unreadable": "Oats 無法讀取此資料夾。"
+        "unreadable": "Oats 無法讀取此資料夾。",
+        "agent": "沒有答案時詢問 Claude Code",
+        "agentHint": "在這台 Mac 上執行 Claude Code，使用你的 GitHub、Linear、Notion 和 Slack 連線，唯讀。問題和回答會傳送給 Anthropic，搜尋文字會傳送給這些服務。",
+        "agentMissing": "需要這台 Mac 上已登入的 Claude Code。找不到。"
       }
     },
     "errors": {
@@ -2417,7 +2420,8 @@
         "right": "沒錯：{{answer}}。來源：{{source}}。",
         "wrong": "等等，不對：{{answer}}。來源：{{source}}。",
         "answer": "找到了：{{answer}}。來源：{{source}}。"
-      }
+      },
+      "checkingAgent": "正在詢問 Claude Code"
     }
   },
   "topicGraph": {

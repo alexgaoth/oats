@@ -2292,7 +2292,10 @@
         "files_one": "{{count}} Datei gelesen",
         "files_other": "{{count}} Dateien gelesen",
         "missing": "Dieser Ordner existiert nicht mehr.",
-        "unreadable": "Oats kann diesen Ordner nicht lesen."
+        "unreadable": "Oats kann diesen Ordner nicht lesen.",
+        "agent": "Claude Code fragen, wenn es keine Antwort gibt",
+        "agentHint": "Startet Claude Code auf diesem Mac mit Ihren Verbindungen zu GitHub, Linear, Notion und Slack, nur lesend. Die Frage und die Antwort gehen an Anthropic, der Suchtext an diese Dienste.",
+        "agentMissing": "Benötigt Claude Code auf diesem Mac, angemeldet. Es wurde nicht gefunden."
       }
     },
     "errors": {
@@ -2422,7 +2425,8 @@
         "right": "Das stimmt: {{answer}}. Quelle: {{source}}.",
         "wrong": "Moment, das stimmt nicht: {{answer}}. Quelle: {{source}}.",
         "answer": "Gefunden: {{answer}}. Quelle: {{source}}."
-      }
+      },
+      "checkingAgent": "Claude Code wird gefragt"
     }
   },
   "topicGraph": {

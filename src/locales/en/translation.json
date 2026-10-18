@@ -2292,7 +2292,10 @@
         "files_one": "{{count}} file read",
         "files_other": "{{count}} files read",
         "missing": "This folder no longer exists.",
-        "unreadable": "Oats cannot read this folder."
+        "unreadable": "Oats cannot read this folder.",
+        "agent": "Ask Claude Code when there is no answer",
+        "agentHint": "Runs Claude Code on this Mac with your GitHub, Linear, Notion and Slack connections, read-only. The question and the reply go to Anthropic, and the search text to those services.",
+        "agentMissing": "Needs Claude Code on this Mac, signed in. It was not found."
       }
     },
     "errors": {
@@ -2422,7 +2425,8 @@
         "right": "That's right: {{answer}}. From {{source}}.",
         "wrong": "Wait, that's wrong: {{answer}}. From {{source}}.",
         "answer": "Found it: {{answer}}. From {{source}}."
-      }
+      },
+      "checkingAgent": "Asking Claude Code"
     }
   },
   "topicGraph": {

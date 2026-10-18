@@ -284,6 +284,21 @@ export function ContextCheckSettings() {
   const setFolder = useSettingsStore((state) => state.setContextFolder);
   const readiness = useSummaryReadiness();
   const [status, setStatus] = useState<ContextStatus | null>(null);
+  const agentOn = useSettingsStore((state) => state.contextAgentEnabled);
+  const setAgentOn = useSettingsStore((state) => state.setContextAgentEnabled);
+  // Whether Claude Code is on this Mac. The switch cannot be turned on
+  // without it, and the row says so instead of failing in a meeting.
+  const [agentAvailable, setAgentAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    void Promise.resolve(window.electronAPI?.contextAgentStatus?.()).then((status) => {
+      if (!cancelled) setAgentAvailable(Boolean(status?.available));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
 
   // How far the folder's index has got. A large folder takes a few seconds,
   // and nothing else would say so; polled only while it is still reading.
@@ -372,6 +387,24 @@ export function ContextCheckSettings() {
               {t("oats.settings.context.choose")}
             </Button>
           )}
+        </SettingRow>
+      )}
+      {enabled && (
+        <SettingRow
+          label={t("oats.settings.context.agent")}
+          description={
+            agentAvailable === false
+              ? t("oats.settings.context.agentMissing")
+              : t("oats.settings.context.agentHint")
+          }
+          htmlFor="context-agent"
+        >
+          <Toggle
+            id="context-agent"
+            checked={agentOn && agentAvailable === true}
+            onChange={setAgentOn}
+            disabled={agentAvailable !== true}
+          />
         </SettingRow>
       )}
     </SettingsSection>

@@ -2336,7 +2336,10 @@
         "files_many": "Прочитано {{count}} файлов",
         "files_other": "Прочитано {{count}} файла",
         "missing": "Этой папки больше нет.",
-        "unreadable": "Oats не может прочитать эту папку."
+        "unreadable": "Oats не может прочитать эту папку.",
+        "agent": "Спрашивать Claude Code, если ответа нет",
+        "agentHint": "Запускает Claude Code на этом Mac с вашими подключениями к GitHub, Linear, Notion и Slack, только для чтения. Вопрос и ответ отправляются в Anthropic, а текст поиска в эти сервисы.",
+        "agentMissing": "Нужен Claude Code на этом Mac с выполненным входом. Он не найден."
       }
     },
     "errors": {
@@ -2468,7 +2471,8 @@
         "right": "Верно: {{answer}}. Источник: {{source}}.",
         "wrong": "Стоп, это неверно: {{answer}}. Источник: {{source}}.",
         "answer": "Найдено: {{answer}}. Источник: {{source}}."
-      }
+      },
+      "checkingAgent": "Запрос к Claude Code"
     }
   },
   "topicGraph": {

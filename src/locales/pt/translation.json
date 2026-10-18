@@ -2292,7 +2292,10 @@
         "files_one": "{{count}} arquivo lido",
         "files_other": "{{count}} arquivos lidos",
         "missing": "Esta pasta não existe mais.",
-        "unreadable": "O Oats não consegue ler esta pasta."
+        "unreadable": "O Oats não consegue ler esta pasta.",
+        "agent": "Perguntar ao Claude Code quando não houver resposta",
+        "agentHint": "Executa o Claude Code neste Mac com as suas conexões do GitHub, Linear, Notion e Slack, só leitura. A pergunta e a resposta vão para a Anthropic, e o texto de busca para esses serviços.",
+        "agentMissing": "Precisa do Claude Code neste Mac, com login feito. Não foi encontrado."
       }
     },
     "errors": {
@@ -2422,7 +2425,8 @@
         "right": "Está certo: {{answer}}. Fonte: {{source}}.",
         "wrong": "Espera, está errado: {{answer}}. Fonte: {{source}}.",
         "answer": "Encontrado: {{answer}}. Fonte: {{source}}."
-      }
+      },
+      "checkingAgent": "Perguntando ao Claude Code"
     }
   },
   "topicGraph": {

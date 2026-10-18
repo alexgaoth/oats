@@ -9,7 +9,7 @@
 // would; any `on*` subscription it does not drive is accepted and never fires.
 
 import { placeSampleConversation } from "../../src/helpers/sampleConversations.mjs";
-import { folderStatus, searchDemoContext } from "./context.mjs";
+import { demoAgentAnswer, folderStatus, searchDemoContext } from "./context.mjs";
 
 // The columns `DatabaseManager.updateNote` accepts.
 const UPDATABLE = new Set([
@@ -113,12 +113,18 @@ function noteRow(id, fields) {
 }
 
 /**
- * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean }} options The
+ * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean }} options The
  *   sample fixtures to hold, placed relative to `now` exactly as
  *   `insertSampleConversations` places them, and the one the app ships as its
  *   in-app example (`insertExampleConversation`).
  */
-export function createFakeMain({ fixtures, example = null, now = Date.now(), badges = false }) {
+export function createFakeMain({
+  fixtures,
+  example = null,
+  now = Date.now(),
+  badges = false,
+  agent = false,
+}) {
   const notes = [];
   const events = [];
   const groups = SEEDED_GROUPS.map((group, index) => ({
@@ -450,14 +456,33 @@ export function createFakeMain({ fixtures, example = null, now = Date.now(), bad
     dismissConversationCard: async () => ({ success: true }),
 
     // --- The context check (`check=1`): the demo's team folder (context.mjs).
-    configureContext: async () => folderStatus(),
-    getContextStatus: async () => folderStatus(),
+    configureContext: async () => folderStatus({ agent }),
+    getContextStatus: async () => folderStatus({ agent }),
     chooseContextFolder: async () => ({ success: false }),
     searchContext: async (query = {}) => ({
       success: true,
-      passages: searchDemoContext(query.question),
+      passages: searchDemoContext(query.question, { agent }),
     }),
     openContextFile: async () => ({ success: true }),
+
+    // --- Its agent (`agent=1`): a stand-in for the user's Claude Code that
+    // names the service it reads, then answers, at a run's pace.
+    contextAgentStatus: async () => ({
+      available: agent,
+      path: agent ? "/Users/demo/.local/bin/claude" : null,
+      version: agent ? "2.1.302" : null,
+    }),
+    contextAgentCheck: async (request = {}) => {
+      const run = agent ? demoAgentAnswer(request.question) : null;
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      if (!run) return { ok: false, reason: "unclear" };
+      emit("onContextAgentProgress", { checkId: request.checkId, sources: run.sources });
+      await new Promise((resolve) => setTimeout(resolve, 2600));
+      const verdict =
+        request.outcome === "denied" ? { ...run.verdict, verdict: "answer" } : run.verdict;
+      return { ok: true, verdict, sources: run.sources };
+    },
+    contextAgentCancel: async () => ({ success: true }),
 
     // --- Conversation groups.
     ...groupApi,

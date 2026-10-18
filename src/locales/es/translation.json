@@ -2292,7 +2292,10 @@
         "files_one": "{{count}} archivo leído",
         "files_other": "{{count}} archivos leídos",
         "missing": "Esta carpeta ya no existe.",
-        "unreadable": "Oats no puede leer esta carpeta."
+        "unreadable": "Oats no puede leer esta carpeta.",
+        "agent": "Preguntar a Claude Code cuando no hay respuesta",
+        "agentHint": "Ejecuta Claude Code en este Mac con tus conexiones de GitHub, Linear, Notion y Slack, solo lectura. La pregunta y la respuesta van a Anthropic, y el texto de búsqueda a esos servicios.",
+        "agentMissing": "Necesita Claude Code en este Mac, con sesión iniciada. No se encontró."
       }
     },
     "errors": {
@@ -2422,7 +2425,8 @@
         "right": "Es correcto: {{answer}}. Fuente: {{source}}.",
         "wrong": "Espera, no es correcto: {{answer}}. Fuente: {{source}}.",
         "answer": "Encontrado: {{answer}}. Fuente: {{source}}."
-      }
+      },
+      "checkingAgent": "Preguntando a Claude Code"
     }
   },
   "topicGraph": {
