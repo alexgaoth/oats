@@ -298,6 +298,7 @@ class IPCHandlers {
     this._autoLearnLatestData = null;
     this._textEditHandler = null;
     this._activeRecordingPipeline = null;
+    this._contextServiceInstance = null;
     this.audioStorageManager = new AudioStorageManager();
     this._audioCleanupInterval = null;
     this._noteFilesEnabled = false;
@@ -335,6 +336,15 @@ class IPCHandlers {
         this.broadcastToWindows("gpu-fallback-notification", {});
       });
     }
+  }
+
+  /** The context check's index (contextService.js), created on first use. */
+  _contextService() {
+    if (!this._contextServiceInstance) {
+      const { ContextService } = require("./contextService");
+      this._contextServiceInstance = new ContextService({ databaseManager: this.databaseManager });
+    }
+    return this._contextServiceInstance;
   }
 
   _getWhisperVadSettings() {
@@ -1066,6 +1076,46 @@ class IPCHandlers {
       });
       if (result.canceled || !result.filePaths?.[0]) return { success: false };
       return { success: true, path: result.filePaths[0] };
+    });
+
+    // The team's context for the context check (contextService.js): a folder
+    // the renderer's settings name, indexed here on this Mac, plus the
+    // conversations in the database. Configured like the vault: the renderer
+    // tells main on boot and on every change.
+    ipcMain.handle("context-configure", async (event, config) =>
+      this._contextService().configure({ folder: config?.folder || null })
+    );
+
+    ipcMain.handle("context-status", async () => this._contextService().status());
+
+    ipcMain.handle("context-choose-folder", async () => {
+      const { dialog } = require("electron");
+      const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
+      if (result.canceled || !result.filePaths?.[0]) return { success: false };
+      return { success: true, path: result.filePaths[0] };
+    });
+
+    ipcMain.handle("context-search", async (event, query) => {
+      try {
+        const passages = await this._contextService().search({
+          question: String(query?.question || ""),
+          noteId: Number.isInteger(query?.noteId) ? query.noteId : null,
+        });
+        return { success: true, passages };
+      } catch (error) {
+        debugLogger.debug("Context search failed", { error: error.message }, "context");
+        return { success: false, passages: [] };
+      }
+    });
+
+    // Opens a source file in the app that owns it. Only a file inside the
+    // context folder: the path comes from the renderer, and the renderer only
+    // ever holds paths this service gave it.
+    ipcMain.handle("context-open-file", async (event, relPath) => {
+      const target = this._contextService().resolveInside(relPath);
+      if (!target) return { success: false };
+      const error = await shell.openPath(target);
+      return { success: !error };
     });
 
     // The manual counterpart: writes this conversation now rather than on the
