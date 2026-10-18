@@ -120,10 +120,10 @@ export const TEAM_SERVICES = Object.freeze([
 
 /**
  * The only built-in tools the agent gets (`--tools`). `ToolSearch` loads the
- * MCP tools Claude Code defers; `Read` opens a tool result that was too large
- * to return inline. In `dontAsk` mode `Read` reaches only the run's own empty
- * working directory and Claude Code's own files: any other path would ask, and
- * is refused.
+ * MCP tools Claude Code defers; `Read` is there for a tool result too large to
+ * return inline, which Claude Code saves to a file. The working directory is
+ * empty, and in `dontAsk` mode a read outside it asks for permission and is
+ * refused (measured with `/etc/hosts`).
  */
 export const AGENT_BUILT_IN_TOOLS = Object.freeze(["ToolSearch", "Read"]);
 
