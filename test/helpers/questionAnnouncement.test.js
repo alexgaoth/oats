@@ -4,9 +4,11 @@ const assert = require("node:assert/strict");
 // House convention for a pure `.mjs` helper from CommonJS (see
 // conversationGraph.test.js): no build step, reached by dynamic import.
 let nextAnnouncement;
+let nextCheckAnnouncement;
 
 test.before(async () => {
-  ({ nextAnnouncement } = await import("../../src/helpers/questionAnnouncement.mjs"));
+  ({ nextAnnouncement, nextCheckAnnouncement } =
+    await import("../../src/helpers/questionAnnouncement.mjs"));
 });
 
 /** A card. Cards arrive oldest first, which is the order the rail holds them. */
@@ -90,4 +92,31 @@ test("a card with no question text is still marked spoken, not reconsidered fore
 test("malformed input does not throw", () => {
   assert.equal(nextAnnouncement(undefined, new Set()), null);
   assert.equal(nextAnnouncement([null, { question: "no id?" }], new Set()), null);
+});
+
+test("a check's verdict is spoken once, and checking never", () => {
+  const spoken = new Set();
+  const checking = [{ id: "a", check: { state: "checking", by: "context" } }];
+  assert.equal(nextCheckAnnouncement(checking, spoken), null);
+
+  const landed = [
+    { id: "a", check: { state: "wrong", answer: "October 30", source: { label: "plan.md" } } },
+    { id: "b" },
+  ];
+  const first = nextCheckAnnouncement(landed, spoken);
+  assert.deepEqual(first, { ids: ["a"], state: "wrong", answer: "October 30", source: "plan.md" });
+  for (const id of first.ids) spoken.add(id);
+  assert.equal(nextCheckAnnouncement(landed, spoken), null);
+
+  // Two verdicts in one update: the newest is spoken, both are marked.
+  const two = [
+    { id: "c", check: { state: "right", answer: "Dana", source: { label: "owners.md" } } },
+    {
+      id: "d",
+      check: { state: "answer", answer: "Friday", source: { label: "Hiring (2026-10-12)" } },
+    },
+  ];
+  const next = nextCheckAnnouncement(two, spoken);
+  assert.deepEqual(next.ids, ["c", "d"]);
+  assert.equal(next.answer, "Friday");
 });

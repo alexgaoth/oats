@@ -2271,7 +2271,24 @@
       "dictationButton": "聽寫時",
       "instructionsDescription": "模型如何改寫每段聽寫。預設設定適合大多數人。",
       "editInstructions": "編輯指令",
-      "instructions": "整理指令"
+      "instructions": "整理指令",
+      "context": {
+        "title": "資料核對",
+        "description": "當問題得到不確定的回答或沒人回答時，Oats 會在過去的對話和團隊共享的資料夾中查找，並說明回答是否成立。",
+        "enable": "核對不確定的回答",
+        "enableHint": "使用在「模型」中選擇的寫作模型。若為雲端模型，問題、回答和讀取的段落會傳送給該服務商。",
+        "needsModel": "請先在「模型」中選擇寫作模型。在此之前不會核對任何內容。",
+        "folder": "團隊資料夾",
+        "noFolder": "尚未選擇資料夾。仍會核對過去的對話。",
+        "choose": "選擇資料夾",
+        "change": "變更",
+        "remove": "移除",
+        "reading": "正在讀取資料夾",
+        "files_one": "已讀取 {{count}} 個檔案",
+        "files_other": "已讀取 {{count}} 個檔案",
+        "missing": "此資料夾已不存在。",
+        "unreadable": "Oats 無法讀取此資料夾。"
+      }
     },
     "errors": {
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",
@@ -2387,7 +2404,21 @@
     "announced": "新問題：{{question}}",
     "announcedAgain": "再次提問，已 {{count}} 次：{{question}}",
     "announcedBatch": "{{count}} 個新問題，最新：{{question}}",
-    "searchedHost": "已在 {{host}} 搜尋"
+    "searchedHost": "已在 {{host}} 搜尋",
+    "check": {
+      "checking": "正在核對資料",
+      "checkingSources": "正在查看 {{sources}}",
+      "right": "沒錯",
+      "wrong": "等等，不對",
+      "answer": "找到了",
+      "quote": "「{{quote}}」",
+      "openSource": "開啟 {{source}}",
+      "announced": {
+        "right": "沒錯：{{answer}}。來源：{{source}}。",
+        "wrong": "等等，不對：{{answer}}。來源：{{source}}。",
+        "answer": "找到了：{{answer}}。來源：{{source}}。"
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}，{{seconds}} 秒",

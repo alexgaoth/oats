@@ -3856,6 +3856,16 @@ export default function OatsWorkspace() {
     });
   }, [vaultPathSetting, vaultEnabledSetting]);
 
+  // The context check's folder is indexed in main (contextService.js), which
+  // has to be told the same way: on boot and on every change.
+  const contextEnabledSetting = useSettingsStore((s) => s.contextCheckEnabled);
+  const contextFolderSetting = useSettingsStore((s) => s.contextFolder);
+  useEffect(() => {
+    void window.electronAPI?.configureContext?.({
+      folder: contextEnabledSetting && contextFolderSetting ? contextFolderSetting : null,
+    });
+  }, [contextEnabledSetting, contextFolderSetting]);
+
   // Opening a conversation from the Conversation surface's last-entry row.
   // Delegated rather than lifted into props for the same reason the recall
   // hotkey is: the shell owns `surface`, the row is three components down, and

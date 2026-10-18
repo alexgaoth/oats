@@ -6,10 +6,14 @@
 //   unless `autosearch=1` (the fake main process records the search instead
 //   of opening a browser: `window.oatsDemo.searches()`)
 //   a local summary model, so Finish writes a title and a summary
+//   the context check off unless `check=1`, which turns it on with the demo's
+//   team folder (context.mjs)
 //
 // Page parameters choose the rest: `theme=light|dark`, `view=calm|words`
 // (the recording view), `flow=lanes|graph` (the flow card),
 // `connections=lanes|graph` (the reading view's Connections tab).
+
+import { CONTEXT_FOLDER } from "./context.mjs";
 
 const VIEWS = { calm: "clean", words: "detailed", clean: "clean", detailed: "detailed" };
 
@@ -30,6 +34,8 @@ export function applyDemoSettings(params) {
   set("cleanupMode", "local");
   set("cleanupModel", "qwen3.5-4b-q4_k_m");
   set("autoGenerateNoteTitle", "true");
+  set("contextCheckEnabled", params.get("check") === "1" ? "true" : "false");
+  set("contextFolder", params.get("check") === "1" ? CONTEXT_FOLDER : "");
   // Where each topic graph's nodes were dragged to, per note id: a fresh page
   // lays them out afresh, so two runs draw the same graph.
   for (const key of Object.keys(localStorage)) {

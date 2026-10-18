@@ -77,6 +77,7 @@ import {
   getWhisperModelInfo,
 } from "../models/ModelRegistry";
 import {
+  ContextCheckSettings,
   ConversationShortcutRow,
   DictionaryEditor,
   InAppShortcuts,
@@ -1938,6 +1939,8 @@ EOF`,
       case "connections":
         return (
           <div className="space-y-8">
+            <ContextCheckSettings />
+
             <SettingsSection
               title={t("oats.settings.connections.vaultTitle")}
               description={t("oats.settings.connections.vaultDescription")}
