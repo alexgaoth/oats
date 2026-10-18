@@ -134,7 +134,7 @@ export function currentWritingRoute(): WritingRoute | null {
 // --- Sharing the model with the summary.
 //
 // On this computer the writing model answers one request at a time
-// (localReasoningBridge.js refuses a second), so the background run steps
+// (localReasoningBridge.js makes a second wait its turn), so the background run steps
 // aside: it starts nothing while a summary or a recording needs the model,
 // and a summary waits for the request it has in flight.
 
