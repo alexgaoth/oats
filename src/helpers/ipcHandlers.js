@@ -979,6 +979,7 @@ class IPCHandlers {
         return { success: false, error: error.message };
       }
     });
+    require("./contextAgentIpc").registerContextAgentIpc(ipcMain);
 
     ipcMain.handle("resize-main-window", (event, sizeKey) => {
       return this.windowManager.resizeMainWindow(sizeKey);

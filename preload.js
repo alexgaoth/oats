@@ -320,6 +320,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => (_event, status) => callback(status)
   ),
 
+  // The context agent (contextAgentIpc.js): the user's Claude Code checks a
+  // question against GitHub, Linear, Notion and Slack, read-only.
+  contextAgentStatus: () => ipcRenderer.invoke("context-agent-status"),
+  contextAgentCheck: (request) => ipcRenderer.invoke("context-agent-check", request),
+  contextAgentCancel: (checkId) => ipcRenderer.invoke("context-agent-cancel", checkId),
+  onContextAgentProgress: registerListener(
+    "context-agent-progress",
+    (callback) => (_event, progress) => callback(progress)
+  ),
+
   // CUDA GPU acceleration
   listGpus: () => ipcRenderer.invoke("list-gpus"),
   setGpuDeviceIndex: (purpose, uuid) => ipcRenderer.invoke("set-gpu-device-index", purpose, uuid),
