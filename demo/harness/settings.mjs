@@ -9,7 +9,8 @@
 //   the context check off unless `check=1`, which turns it on with the demo's
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
 //
-// Page parameters choose the rest: `theme=light|dark`, `view=calm|words`
+// Page parameters choose the rest: `firstrun=1` (the setup screen),
+// `theme=light|dark`, `view=calm|words`
 // (the recording view), `flow=lanes|graph` (the flow card),
 // `connections=lanes|graph` (the reading view's Connections tab).
 
@@ -19,7 +20,15 @@ const VIEWS = { calm: "clean", words: "detailed", clean: "clean", detailed: "det
 
 export function applyDemoSettings(params) {
   const set = (key, value) => localStorage.setItem(key, value);
-  set("onboardingCompleted", "true");
+  // `firstrun=1`: a profile that has never finished setup, so the app opens on
+  // the setup screen, as it does for somebody who just downloaded it.
+  if (params.get("firstrun") === "1") {
+    for (const key of ["onboardingCompleted", "onboardingCurrentStep", "micPermissionGranted"]) {
+      localStorage.removeItem(key);
+    }
+  } else {
+    set("onboardingCompleted", "true");
+  }
   set("uiLanguage", params.get("lang") || "en");
   set("uiMode", "work");
   set("theme", params.get("theme") === "dark" ? "dark" : "light");
