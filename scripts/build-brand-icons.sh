@@ -1,33 +1,25 @@
 #!/usr/bin/env bash
-# Rebuilds every Oats icon from its SVG master, on macOS:
-#   src/assets/logo.svg            -> icon.png (1024), icon.icns, icon.ico
-#   scripts/brand-grain-layer.svg  -> oats.icon/Assets/ICON.png (macOS 26 layer)
+# Rebuilds every Oats icon, on macOS:
+#   the app's grain painter (render-brand-icons.cjs, in Electron)
+#     -> icon.png (1024), icon.icns, icon.ico
+#     -> oats.icon/Assets/ICON.png (the macOS 26 layer)
 #   scripts/brand-tray-template.svg -> iconTemplate@3x.png (menu bar, 48px)
-# Uses Quick Look (qlmanage) to render SVG, sips to resize, iconutil for .icns.
+#   the DMG window's background -> dmg-background.tiff (1x and 2x in one file)
+# Painting keeps the transparency around the tile, the grain's dither matches
+# the app's mark and the film, and each size is painted at its own size.
+# iconutil packs the .icns.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-render() { qlmanage -t -s 1024 -o "$work" "$1" >/dev/null 2>&1; echo "$work/$(basename "$1").png"; }
 
-icon="$(render src/assets/logo.svg)"
-cp "$icon" src/assets/icon.png
+node_modules/.bin/electron scripts/render-brand-icons.cjs "$work"
 
-set_dir="$work/icon.iconset"
-mkdir -p "$set_dir"
-for size in 16 32 128 256 512; do
-  sips -z "$size" "$size" "$icon" --out "$set_dir/icon_${size}x${size}.png" >/dev/null
-  double=$((size * 2))
-  sips -z "$double" "$double" "$icon" --out "$set_dir/icon_${size}x${size}@2x.png" >/dev/null
-done
-iconutil -c icns "$set_dir" -o src/assets/icon.icns
+iconutil -c icns "$work/icon.iconset" -o src/assets/icon.icns
+tiffutil -cathidpicheck "$work/dmg/background.png" "$work/dmg/background@2x.png" \
+  -out src/assets/dmg-background.tiff >/dev/null
 
-ico_dir="$work/ico"
-mkdir -p "$ico_dir"
-for size in 16 24 32 48 64 128 256; do
-  sips -z "$size" "$size" "$icon" --out "$ico_dir/$size.png" >/dev/null
-done
-python3 - "$ico_dir" src/assets/icon.ico <<'PY'
+python3 - "$work/ico" src/assets/icon.ico <<'PY'
 import os, struct, sys
 src, out = sys.argv[1], sys.argv[2]
 sizes = [16, 24, 32, 48, 64, 128, 256]
@@ -41,11 +33,5 @@ for size, blob in zip(sizes, blobs):
     offset += len(blob)
 open(out, "wb").write(header + entries + b"".join(blobs))
 PY
-
-layer="$(render scripts/brand-grain-layer.svg)"
-cp "$layer" src/assets/oats.icon/Assets/ICON.png
-
-tray="$(render scripts/brand-tray-template.svg)"
-sips -Z 48 "$tray" --out src/assets/iconTemplate@3x.png >/dev/null
 
 echo "icons rebuilt"

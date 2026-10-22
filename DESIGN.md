@@ -113,9 +113,11 @@ Rules:
   the same in light and dark mode, with no tile behind it. It is tossed once when
   the app first comes into view and again when the sidebar mark is clicked: it
   hops, tumbles end over end twice and lands with a small squash, while the light
-  stays put (`helpers/oatsMarkMotion.mjs`). No toss under reduced motion. The app icon is the same grain on a light
-  neutral tile; every icon file comes from `src/assets/logo.svg` and the masters
-  in `scripts/` via `scripts/build-brand-icons.sh`.
+  stays put (`helpers/oatsMarkMotion.mjs`). No toss under reduced motion. The app icon is the same grain,
+  painted by the same painter in the film's dither (about 110 dots across, in the four honey
+  tones pushed apart), on one white tile with nothing around it: no white square, no second
+  edge. `scripts/build-brand-icons.sh` paints every icon file (`render-brand-icons.cjs`, in
+  Electron), each size at its own size, and the DMG window's background with them.
 - **Red means recording or danger.** It is never decoration. Idle, the record
   action is the brand; live, it turns red and says Stop.
 - Status is a soft badge (`bg-success/10 text-success`), never a colored border bar.
