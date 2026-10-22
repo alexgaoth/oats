@@ -32,10 +32,10 @@
       "show": "Show Dictation Panel",
       "hide": "Hide Dictation Panel"
     },
-    "openControlPanel": "Open Control Panel",
-    "hideControlPanel": "Hide Control Panel",
+    "openControlPanel": "Open Oats",
+    "hideControlPanel": "Hide Oats",
     "quit": "Quit Oats",
-    "tooltip": "Oats - Voice Dictation",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Start Conversation",
       "stop": "Stop Conversation"
@@ -2290,7 +2290,7 @@
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to use an API key, but none is saved yet. Add one in Settings.",
       "question-cards-off": "Question cards are off, so questions will pass silently. Turn them on in Settings, under Recording.",
-      "no-summary-model": "Conversations will be saved without a title or summary: no summary model is ready. Set one up under Settings › Advanced › Language Models."
+      "no-summary-model": "Conversations will be saved without a title or summary: no writing model is ready. Choose one in Settings › AI models."
     },
     "aide": {
       "title": "Conversation aide",
