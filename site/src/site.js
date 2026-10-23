@@ -37,3 +37,23 @@ for (const button of document.querySelectorAll("[data-play-film]")) {
   });
 }
 film?.addEventListener("play", () => film.closest(".film")?.classList.add("is-playing"));
+
+// The product loops: real recordings of the app (demo/video's scene clips).
+// Each plays while it is on screen and stops when it is not, so the page never
+// runs more than the one in view; under reduced motion they stay on their
+// poster, a still of the same moment.
+const still = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+const loops = document.querySelectorAll("video[data-loop]");
+const watcher = new IntersectionObserver(
+  (entries) => {
+    for (const { target, isIntersecting } of entries) {
+      if (isIntersecting && !still?.matches) target.play().catch(() => {});
+      else target.pause();
+    }
+  },
+  { threshold: 0.35 }
+);
+for (const video of loops) watcher.observe(video);
+still?.addEventListener?.("change", () => {
+  if (still.matches) for (const video of loops) video.pause();
+});

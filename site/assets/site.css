@@ -478,6 +478,10 @@ q {
   gap: clamp(32px, 5.5vw, 80px);
 }
 
+.feature-flip .feature-row {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+
 .feature-flip .feature-copy {
   order: 2;
 }
@@ -495,6 +499,23 @@ q {
 
 .feature-visual {
   min-width: 0;
+}
+
+/* A full-window story (recording, the board): the words above, the window
+   across the whole column below. */
+.feature-head {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: start;
+  gap: 20px clamp(32px, 5.5vw, 80px);
+}
+
+.feature-head .feature-copy > p:first-child {
+  margin-top: 6px;
+}
+
+.feature-wide {
+  margin-top: clamp(36px, 5vw, 56px);
 }
 
 .points {
@@ -544,31 +565,30 @@ q {
 .verdict {
   display: inline-flex;
   align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 500;
+  color: var(--ink);
 }
 
-.verdict-answered {
-  background: rgb(22 163 74 / 0.1);
-  color: #15803d;
+/* The app's question marks (questionMarks.ts): one circle, filled when settled. */
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
 }
 
-.verdict-unknown {
-  background: rgb(194 65 12 / 0.1);
-  color: #c2410c;
+.dot-answered {
+  background: #16a34a;
 }
 
-.verdict-unanswered {
-  background: #f4f4f5;
-  color: #52525b;
+.dot-unknown {
+  background: #c2410c;
 }
 
-.verdict-open {
-  background: rgb(245 163 15 / 0.16);
-  color: var(--honey-ink);
+.dot-ring {
+  box-shadow: inset 0 0 0 1.5px var(--muted);
 }
 
 /* Privacy */
@@ -599,7 +619,7 @@ q {
   grid-row: 2;
   justify-self: start;
   margin: 8px 0 0;
-  max-width: 320px;
+  max-width: 232px;
   overflow: hidden;
   border-radius: 10px;
   box-shadow: 0 0 0 1px rgb(24 24 27 / 0.08), 0 8px 24px -12px rgb(24 24 27 / 0.2);
@@ -810,6 +830,8 @@ q {
 
 @media (max-width: 900px) {
   .feature-row,
+  .feature-flip .feature-row,
+  .feature-head,
   .privacy-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -881,4 +903,13 @@ q {
     transition: none;
     transform: none;
   }
+}
+
+/* The page for an address that does not exist (404.html). */
+
+.lost {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
 }

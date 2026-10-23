@@ -83,39 +83,43 @@
         </div>
         <figure class="window hero-window">
           <img
-            src="media/hero-1120.webp"
-            srcset="media/hero-1120.webp 1120w, media/hero-2240.webp 2240w"
+            src="media/summary-window-1120.webp"
+            srcset="media/summary-window-1120.webp 1120w, media/summary-window-2240.webp 2240w"
             sizes="(min-width: 1180px) 1120px, calc(100vw - 32px)"
             width="1120"
             height="700"
-            alt="Oats during a conversation: the live transcript beside the questions the room asked, each marked Answered, Unknown or Open"
+            alt="Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person."
             fetchpriority="high"
           />
         </figure>
       </section>
 
-      <section class="feature" id="room">
-        <div class="wrap feature-row">
-          <div class="feature-copy">
+      <section class="feature feature-stack" id="room">
+        <div class="wrap">
+          <div class="feature-head">
             <h2>Make room for the conversation</h2>
-            <p>
-              Press <kbd>⇧⌘O</kbd> in any app and talk. Oats listens through one microphone and stays out of the way
-              while people speak. One line draws the conversation as it happens: its height is how loud the room is, a
-              notch marks where the subject turned, and a mark shows where someone asked a question.
-            </p>
-            <ul class="points">
-              <li>Transcribed on your Mac with whisper.cpp, on the GPU</li>
-              <li>Press <kbd>M</kbd> to mark a moment</li>
-              <li>Calm shows the line only. Words adds the live transcript</li>
-            </ul>
+            <div class="feature-copy">
+              <p>
+                Press <kbd>⇧⌘O</kbd> in any app and talk. Oats listens through one microphone and steps aside while people
+                speak. One line draws the conversation as it happens: its height is how loud the room is, a notch marks
+                where the subject turned, and a mark shows where someone asked a question.
+              </p>
+              <ul class="points">
+                <li>Transcribed on your Mac with whisper.cpp, on the GPU</li>
+                <li>Press <kbd>M</kbd> to mark a moment</li>
+                <li>Calm shows the line only. Words adds the live transcript</li>
+              </ul>
+            </div>
           </div>
-          <figure class="window feature-visual">
-            <img src="media/live-calm.webp" width="1120" height="700" loading="lazy" decoding="async" alt="Oats while recording in the calm view: one line that rises and falls with the room, with notches where the subject turned" />
+          <figure class="window feature-wide">
+            <video data-loop muted loop playsinline preload="none" poster="media/loop-record.webp" width="1680" height="1050" aria-label="Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes">
+              <source src="media/loop-record.mp4" type="video/mp4" />
+            </video>
           </figure>
         </div>
       </section>
 
-      <section class="feature feature-flip" id="questions">
+      <section class="feature" id="questions">
         <div class="wrap feature-row">
           <div class="feature-copy">
             <h2>Walk out knowing what is still open</h2>
@@ -124,26 +128,29 @@
               people are still talking. A question asked twice is kept as a signal.
             </p>
             <dl class="verdicts">
-              <div><dt><span class="verdict verdict-answered">Answered</span></dt><dd>Someone gave an answer.</dd></div>
-              <div><dt><span class="verdict verdict-unknown">Unknown</span></dt><dd>The room said it did not know.</dd></div>
-              <div><dt><span class="verdict verdict-unanswered">Unanswered</span></dt><dd>The room moved on.</dd></div>
-              <div><dt><span class="verdict verdict-open">Open</span></dt><dd>Nobody has replied yet.</dd></div>
+              <div><dt class="verdict"><span class="dot dot-answered" aria-hidden="true"></span>Answered</dt><dd>Someone gave an answer.</dd></div>
+              <div><dt class="verdict"><span class="dot dot-unknown" aria-hidden="true"></span>Unknown</dt><dd>The room said it did not know.</dd></div>
+              <div><dt class="verdict"><span class="dot dot-ring" aria-hidden="true"></span>Unanswered</dt><dd>The room moved on.</dd></div>
+              <div><dt class="verdict"><span class="dot dot-ring" aria-hidden="true"></span>Open</dt><dd>Nobody has replied yet.</dd></div>
             </dl>
           </div>
           <figure class="window feature-visual">
-            <img src="media/questions.webp" width="1120" height="700" loading="lazy" decoding="async" alt="The words view: the live transcript, with question cards marked Answered, Unknown and Open beside it" />
+            <video data-loop muted loop playsinline preload="none" poster="media/loop-questions.webp" width="1040" height="900" aria-label="A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web">
+              <source src="media/loop-questions.mp4" type="video/mp4" />
+            </video>
           </figure>
         </div>
       </section>
 
-      <section class="feature" id="check">
+      <section class="feature feature-flip" id="check">
         <div class="wrap feature-row">
           <div class="feature-copy">
             <h2>Checked against what your team wrote down</h2>
             <p>
-              Choose a folder of your team's notes. When an answer in the room sounds unsure, Oats finds the passage that
-              settles it, in that folder or in your past conversations, and says so under the question:
-              <q>That's right</q>, or <q>Wait, that's wrong</q>, with the words it relied on and where they came from.
+              Turn it on in Settings and choose a folder of your team's notes. When an answer in the room sounds unsure,
+              Oats finds the passage that settles it, in that folder or in your past conversations, and says so under the
+              question: <q>That's right</q>, <q>Wait, that's wrong</q>, or <q>Found it</q> when the room did not know,
+              with the answer and the file it came from.
             </p>
             <p class="aside">
               Optional, and off by default: when the folder has no answer, Oats can ask Claude Code to look in GitHub,
@@ -151,12 +158,12 @@
             </p>
           </div>
           <figure class="window feature-visual">
-            <img src="media/context-check.webp" width="1120" height="700" loading="lazy" decoding="async" alt="A question card with a context check under it, quoting the team's runbook and naming the file it came from" />
+            <img src="media/check-live.webp" width="1968" height="1464" loading="lazy" decoding="async" alt="A recording at 8 minutes 25 seconds. Under the question Do we have a date from the auditors yet, marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates." />
           </figure>
         </div>
       </section>
 
-      <section class="feature feature-flip" id="after">
+      <section class="feature" id="after">
         <div class="wrap feature-row">
           <div class="feature-copy">
             <h2>The conversation, given back in order</h2>
@@ -167,12 +174,12 @@
             <p class="aside">Titles and summaries come from a writing model you choose: a local one, or your own API key.</p>
           </div>
           <figure class="window feature-visual">
-            <img src="media/after-summary.webp" width="1120" height="700" loading="lazy" decoding="async" alt="A finished conversation: its title, the summary, and the threads it followed" />
+            <img src="media/outcomes.webp" width="1504" height="1662" loading="lazy" decoding="async" alt="The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one." />
           </figure>
         </div>
       </section>
 
-      <section class="feature" id="across">
+      <section class="feature feature-flip" id="search">
         <div class="wrap feature-row">
           <div class="feature-copy">
             <h2>Find anything anyone said</h2>
@@ -180,13 +187,35 @@
               Search every transcript, part words included: <q>rice</q> finds <q>price</q>. Chinese and Japanese work
               too. Each search shows how many matches it found and how long it took.
             </p>
-            <p>
-              The board shows how your conversations connect, as a graph or a timeline, filed into Work, Personal or
-              groups you make. A local model files each one from its title and summary, never from the transcript.
-            </p>
+            <ul class="points">
+              <li>Press <kbd>/</kbd> to search from anywhere in the app</li>
+              <li>Each match shows when in the conversation it was said</li>
+            </ul>
           </div>
           <figure class="window feature-visual">
-            <img src="media/global.webp" width="1120" height="700" loading="lazy" decoding="async" alt="The board of all conversations: a graph of how they connect, grouped into Work and Personal" />
+            <video data-loop muted loop playsinline preload="none" poster="media/loop-search.webp" width="1460" height="680" aria-label="A search for import bug finds 15 matches in 3 conversations in under a tenth of a millisecond, with the words highlighted">
+              <source src="media/loop-search.mp4" type="video/mp4" />
+            </video>
+          </figure>
+        </div>
+      </section>
+
+      <section class="feature feature-stack" id="board">
+        <div class="wrap">
+          <div class="feature-head">
+            <h2>See how your conversations connect</h2>
+            <div class="feature-copy">
+              <p>
+                The board lays out every conversation as a graph and as a timeline, so a subject that keeps coming back
+                shows as the arcs between the days it came up. Each one is filed into Work, Personal or a group you make.
+              </p>
+              <p class="aside">A local model files each conversation from its title, topics and summary, never from the transcript.</p>
+            </div>
+          </div>
+          <figure class="window feature-wide">
+            <video data-loop muted loop playsinline preload="none" poster="media/loop-global.webp" width="1680" height="1050" aria-label="The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back">
+              <source src="media/loop-global.mp4" type="video/mp4" />
+            </video>
           </figure>
         </div>
       </section>
@@ -212,7 +241,7 @@
             </p>
           </div>
           <figure class="counter">
-            <img src="media/network-counter.webp" width="480" height="120" loading="lazy" decoding="async" alt="The sidebar's counter: 0 network requests since launch" />
+            <img src="media/sidebar-foot.webp" width="464" height="704" loading="lazy" decoding="async" alt="The bottom of the Oats sidebar: Settings, then On this Mac, base on Metal and 0 network requests since launch, above a dithered sky and wheat field." />
           </figure>
         </div>
       </section>

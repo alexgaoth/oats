@@ -348,4 +348,11 @@ for (let e of document.querySelectorAll("[data-play-film]")) e.addEventListener(
 	e.preventDefault(), Z();
 });
 X?.addEventListener("play", () => X.closest(".film")?.classList.add("is-playing"));
+var Q = window.matchMedia?.("(prefers-reduced-motion: reduce)"), $ = document.querySelectorAll("video[data-loop]"), ee = new IntersectionObserver((e) => {
+	for (let { target: t, isIntersecting: n } of e) n && !Q?.matches ? t.play().catch(() => {}) : t.pause();
+}, { threshold: .35 });
+for (let e of $) ee.observe(e);
+Q?.addEventListener?.("change", () => {
+	if (Q.matches) for (let e of $) e.pause();
+});
 //#endregion
