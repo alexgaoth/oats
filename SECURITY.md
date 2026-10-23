@@ -4,15 +4,15 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.7.x   | :white_check_mark: |
-| < 1.7   | :x:                |
+| 0.1.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
 **Please do not open public issues for security vulnerabilities.**
 
-Use [GitHub's private vulnerability reporting](https://github.com/OpenWhispr/openwhispr/security/advisories/new)
-to submit a report. You can also email security@openwhispr.com.
+Use [GitHub's private vulnerability reporting](https://github.com/alexgaoth/oats/security/advisories/new)
+to submit a report. If that page does not open, open an issue that asks for a
+private contact, and put no details of the problem in it.
 
 We will acknowledge your report within **48 hours** and aim to release a fix
 within **7 days** for critical issues.

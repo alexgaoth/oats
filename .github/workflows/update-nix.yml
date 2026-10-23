@@ -1,8 +1,8 @@
 name: Update Nix package
 
+# By hand only. The macOS releases carry no Linux AppImage yet, so a run on
+# every published release would fail at the download.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
