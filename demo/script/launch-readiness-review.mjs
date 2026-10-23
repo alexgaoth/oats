@@ -595,13 +595,13 @@ The team reviewed launch readiness for Pellwood Enterprise and kept Tuesday the 
 - **Enterprise pricing.** The list price ($48 a seat a month, 50-seat minimum) is holding. The pressure is on discounts: three deals are asking for 40% off, Greywater among them at 300 seats.
 - **Migration and beta risk.** The permissions migration took 3h20m on a copy of production (4 of 1,140 workspaces failed) but has never run against the three largest workspaces. The CSV import bug hit 14 of 212 beta accounts; whether any data was lost is still unknown.
 
-## Decisions Made
+## Decisions made
 - Hold Tuesday the 3rd, with a hard check on Monday the 2nd. If the SSO fix or its review is not done, the launch moves a week and the team hears on Monday.
 - Ship SSO behind a per-workspace flag, switched on for the six accounts only after the security review.
 - Discount floor: 25% standard, 30% with a two-year term. Anything deeper needs Maya, finance and a signed case study.
 - Announce on Wednesday the 4th, the day after the analyst briefing, and keep SOC 2 out of the news release until the bridge letter exists.
 
-## Action Items
+## Action items
 - [ ] Theo: signed-assertion fix by Thursday the 29th, with clock tolerance capped at two minutes and logged.
 - [ ] Ruth: security review of the fix; chase Kestrel for fieldwork dates.
 - [ ] Ines: run the migration on the three largest workspaces and report timings by Thursday; replay the 14 failed imports.
