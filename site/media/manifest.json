@@ -1,0 +1,125 @@
+{
+  "source": "Real renderer in the demo harness (alex/website-build, the 0.1.0 code), headless Chrome at 2x, light theme. Sample data: the fictional Pellwood launch review. The sidebar footer's status (whisper base on Metal, 0 requests) was supplied to the harness, which has no main process; it is what a packaged build shows at rest.",
+  "files": [
+    {
+      "name": "summary-window-2240.webp",
+      "width": 2240,
+      "height": 1400,
+      "bytes": 110948,
+      "shows": "Full window: a finished conversation, with its title, how each question ended, the shape of the talk and talk time per person.",
+      "alt": "Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person."
+    },
+    {
+      "name": "summary-window-1120.webp",
+      "width": 1120,
+      "height": 700,
+      "bytes": 33722,
+      "shows": "The same finished conversation at half size, for narrow screens.",
+      "alt": "Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person."
+    },
+    {
+      "name": "check-live.webp",
+      "width": 1968,
+      "height": 1464,
+      "bytes": 103630,
+      "shows": "Crop of a recording where the context check answers an unknown question from the team's notes, with the recording and topic cards above it.",
+      "alt": "A recording at 8 minutes 25 seconds. Under the question Do we have a date from the auditors yet, marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates."
+    },
+    {
+      "name": "outcomes.webp",
+      "width": 1504,
+      "height": 1662,
+      "bytes": 95050,
+      "shows": "Crop of What this left open: every question with its verdict, and the answer under each answered one.",
+      "alt": "The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one."
+    },
+    {
+      "name": "sidebar-foot.webp",
+      "width": 464,
+      "height": 704,
+      "bytes": 73204,
+      "shows": "Crop of the sidebar's foot: where processing runs, the speech model and the network request count, above the wheat field.",
+      "alt": "The bottom of the Oats sidebar: Settings, then On this Mac, base on Metal and 0 network requests since launch, above a dithered sky and wheat field."
+    },
+    {
+      "name": "oats-film.mp4",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 3496787,
+      "shows": "The film, 63 seconds, no sound: a launch review recorded with Oats, from the title card through the live view, the summary and the board, to the GitHub end card.",
+      "alt": "A 63 second film of Oats recording a launch review: the live line and topics, question cards, the finished summary, connections and the board of all conversations."
+    },
+    {
+      "name": "oats-film-poster.webp",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 43698,
+      "shows": "Poster frame from the film at 20 seconds: the words view during the launch review.",
+      "alt": "Oats recording a launch review at 18 minutes 20 seconds, with five topic lanes and the question How long does the full migration take on production, marked Unknown."
+    },
+    {
+      "name": "loop-record.mp4",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 606390,
+      "shows": "Starting a recording: the sidebar steps aside, then a time-lapse of the line growing and the topics filling their lanes. From demo/video's scenes a-record and b-lapse.",
+      "alt": "Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes"
+    },
+    {
+      "name": "loop-record.webp",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 36268,
+      "shows": "Poster for loop-record: what reduced motion shows. Starting a recording: the sidebar steps aside, then a time-lapse of the line growing and the topics filling their lanes. From demo/video's scenes a-record and b-lapse.",
+      "alt": "Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes"
+    },
+    {
+      "name": "loop-questions.mp4",
+      "width": 1040,
+      "height": 900,
+      "bytes": 185810,
+      "shows": "A question card appears as Open, then turns Unknown after someone says they do not know, and Oats searches it. From scene d-questions, 43 to 53 s.",
+      "alt": "A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web"
+    },
+    {
+      "name": "loop-questions.webp",
+      "width": 1040,
+      "height": 900,
+      "bytes": 35096,
+      "shows": "Poster for loop-questions: what reduced motion shows. A question card appears as Open, then turns Unknown after someone says they do not know, and Oats searches it. From scene d-questions, 43 to 53 s.",
+      "alt": "A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web"
+    },
+    {
+      "name": "loop-search.mp4",
+      "width": 1460,
+      "height": 680,
+      "bytes": 240718,
+      "shows": "A search for import bug: 15 matches in 3 conversations, under 0.1 ms, with where each was said. From scene g-search.",
+      "alt": "A search for import bug finds 15 matches in 3 conversations in under a tenth of a millisecond, with the words highlighted"
+    },
+    {
+      "name": "loop-search.webp",
+      "width": 1460,
+      "height": 680,
+      "bytes": 47742,
+      "shows": "Poster for loop-search: what reduced motion shows. A search for import bug: 15 matches in 3 conversations, under 0.1 ms, with where each was said. From scene g-search.",
+      "alt": "A search for import bug finds 15 matches in 3 conversations in under a tenth of a millisecond, with the words highlighted"
+    },
+    {
+      "name": "loop-global.mp4",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 441313,
+      "shows": "The board: the force graph, the arc timeline, a conversation pointed at, and the Work tab. From scene h-global, 3 to 17 s.",
+      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back"
+    },
+    {
+      "name": "loop-global.webp",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 76614,
+      "shows": "Poster for loop-global: what reduced motion shows. The board: the force graph, the arc timeline, a conversation pointed at, and the Work tab. From scene h-global, 3 to 17 s.",
+      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back"
+    }
+  ]
+}
