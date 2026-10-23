@@ -123,7 +123,7 @@ test("the line ends at now in honey, and questions sit on their topic in the sha
 
 test("past eight rows the card scrolls inside, and the topic now stays in view", () => {
   assert.match(LANES, /export const LANE_ROWS_SHOWN = 8;/);
-  assert.match(FLOW, /maxHeight: \(LANE_ROWS_SHOWN \+ 0\.5\) \* LANE_ROW_PX/);
+  assert.match(FLOW, /const LANES_MAX_PX = \(LANE_ROWS_SHOWN \+ 0\.5\) \* LANE_ROW_PX;/);
   assert.match(LANES, /scroller\.scrollTop = top \+ LANE_ROW_PX - scroller\.clientHeight/);
 });
 
@@ -177,4 +177,23 @@ test("labels sit on plates in the card colour, placed clear of each other's word
   assert.match(FLOW, /"bg-card text-muted-foreground hover:bg-muted hover:text-foreground"/);
   assert.match(FLOW, /plateX: BUTTON_PAD_X_PX,\s*plateY: PLATE_Y_PX,/);
   assert.doesNotMatch(FLOW, /hover:bg-muted\/60/, "a plate is opaque, even under the pointer");
+});
+
+// While recording, the lanes follow now, usually the last row. In the Detailed
+// composition the card is capped, and a height that was not a whole number of
+// rows sliced the first one through its label ("launch date" at 1440x900).
+test("in the capped card the lanes take whole rows, and now is followed when their room changes", () => {
+  assert.match(
+    FLOW,
+    /const lanesHeight = useWholeLanes\(\s*lanesBox,\s*compact && view === "lanes" && !empty,/
+  );
+  assert.match(
+    FLOW,
+    /style=\{view === "lanes" \? \{ maxHeight: lanesHeight \?\? LANES_MAX_PX \} : undefined\}/
+  );
+  assert.match(FLOW, /cap: LANES_MAX_PX - rule,/);
+  assert.match(
+    LANES,
+    /const observer = new ResizeObserver\(follow\);\s*observer\.observe\(scroller\);/
+  );
 });
