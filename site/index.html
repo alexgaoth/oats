@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Oats · High-signal tool for high-signal conversations</title>
+    <meta
+      name="description"
+      content="Oats records the conversation in the room and transcribes it on your Mac. It tracks the questions people ask and whether the room answered them. Free and open source."
+    />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f3f3f3" />
+    <link rel="canonical" href="https://oats.alexgaoth.com/" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://oats.alexgaoth.com/" />
+    <meta property="og:title" content="Oats · High-signal tool for high-signal conversations" />
+    <meta
+      property="og:description"
+      content="Records the conversation in the room, transcribes it on your Mac, and tracks the questions people ask and whether the room answered them."
+    />
+    <meta property="og:image" content="https://oats.alexgaoth.com/assets/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preload" href="assets/fonts/eb-garamond-latin-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script type="module" src="assets/site.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-row">
+        <a class="brand" href="#top" aria-label="Oats, back to the top">
+          <canvas class="mark mark-small" data-mark="small" aria-hidden="true"></canvas>
+          <span class="wordmark">Oats</span>
+        </a>
+        <nav class="nav-links" aria-label="Sections">
+          <a href="#room">How it works</a>
+          <a href="#privacy">Privacy</a>
+          <a href="https://github.com/alexgaoth/oats">GitHub</a>
+          <a class="button button-small button-honey" data-download="primary" href="https://github.com/alexgaoth/oats/releases/latest">
+            Download
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero stage" id="top">
+        <canvas class="field" data-field aria-hidden="true"></canvas>
+        <div class="wrap hero-copy">
+          <button class="mark-button" type="button" aria-label="Toss the oat">
+            <canvas class="mark mark-hero" data-mark="large" data-toss="load" data-interactive aria-hidden="true"></canvas>
+          </button>
+          <h1>High-signal tool for high-signal conversations</h1>
+          <p class="lead">
+            Oats records the conversation in the room and transcribes it on your Mac. It tracks the questions people
+            ask and whether the room answered them, checks an unsure answer against your team's notes, and hands you
+            the summary when you stop.
+          </p>
+          <div class="cta-row">
+            <a class="button button-honey button-large" data-download="primary" href="https://github.com/alexgaoth/oats/releases/latest">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg>
+              <span>Download for Mac</span>
+            </a>
+            <a class="button button-quiet button-large" href="#film" data-play-film>
+              <svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></svg>
+              <span>Watch the film</span>
+            </a>
+          </div>
+          <ul class="facts" aria-label="About this download">
+            <li>Version 0.1.0 for <span data-arch-label>Apple Silicon</span></li>
+            <li>macOS 12 or later</li>
+            <li>Free and open source</li>
+          </ul>
+          <p class="other-arch"><a data-other-arch href="https://github.com/alexgaoth/oats/releases/latest">Intel Mac? Get the Intel build</a></p>
+          <p class="not-mac">Oats is a Mac app. Open this page on a Mac to download it.</p>
+        </div>
+        <figure class="window hero-window">
+          <img
+            src="media/hero-1120.webp"
+            srcset="media/hero-1120.webp 1120w, media/hero-2240.webp 2240w"
+            sizes="(min-width: 1180px) 1120px, calc(100vw - 32px)"
+            width="1120"
+            height="700"
+            alt="Oats during a conversation: the live transcript beside the questions the room asked, each marked Answered, Unknown or Open"
+            fetchpriority="high"
+          />
+        </figure>
+      </section>
+
+      <section class="feature" id="room">
+        <div class="wrap feature-row">
+          <div class="feature-copy">
+            <h2>Make room for the conversation</h2>
+            <p>
+              Press <kbd>⇧⌘O</kbd> in any app and talk. Oats listens through one microphone and stays out of the way
+              while people speak. One line draws the conversation as it happens: its height is how loud the room is, a
+              notch marks where the subject turned, and a mark shows where someone asked a question.
+            </p>
+            <ul class="points">
+              <li>Transcribed on your Mac with whisper.cpp, on the GPU</li>
+              <li>Press <kbd>M</kbd> to mark a moment</li>
+              <li>Calm shows the line only. Words adds the live transcript</li>
+            </ul>
+          </div>
+          <figure class="window feature-visual">
+            <img src="media/live-calm.webp" width="1120" height="700" loading="lazy" decoding="async" alt="Oats while recording in the calm view: one line that rises and falls with the room, with notches where the subject turned" />
+          </figure>
+        </div>
+      </section>
+
+      <section class="feature feature-flip" id="questions">
+        <div class="wrap feature-row">
+          <div class="feature-copy">
+            <h2>Walk out knowing what is still open</h2>
+            <p>
+              Oats hears a question and watches what the room does with it. The card says how it ended, in place, while
+              people are still talking. A question asked twice is kept as a signal.
+            </p>
+            <dl class="verdicts">
+              <div><dt><span class="verdict verdict-answered">Answered</span></dt><dd>Someone gave an answer.</dd></div>
+              <div><dt><span class="verdict verdict-unknown">Unknown</span></dt><dd>The room said it did not know.</dd></div>
+              <div><dt><span class="verdict verdict-unanswered">Unanswered</span></dt><dd>The room moved on.</dd></div>
+              <div><dt><span class="verdict verdict-open">Open</span></dt><dd>Nobody has replied yet.</dd></div>
+            </dl>
+          </div>
+          <figure class="window feature-visual">
+            <img src="media/questions.webp" width="1120" height="700" loading="lazy" decoding="async" alt="The words view: the live transcript, with question cards marked Answered, Unknown and Open beside it" />
+          </figure>
+        </div>
+      </section>
+
+      <section class="feature" id="check">
+        <div class="wrap feature-row">
+          <div class="feature-copy">
+            <h2>Checked against what your team wrote down</h2>
+            <p>
+              Choose a folder of your team's notes. When an answer in the room sounds unsure, Oats finds the passage that
+              settles it, in that folder or in your past conversations, and says so under the question:
+              <q>That's right</q>, or <q>Wait, that's wrong</q>, with the words it relied on and where they came from.
+            </p>
+            <p class="aside">
+              Optional, and off by default: when the folder has no answer, Oats can ask Claude Code to look in GitHub,
+              Linear and Notion, read only.
+            </p>
+          </div>
+          <figure class="window feature-visual">
+            <img src="media/context-check.webp" width="1120" height="700" loading="lazy" decoding="async" alt="A question card with a context check under it, quoting the team's runbook and naming the file it came from" />
+          </figure>
+        </div>
+      </section>
+
+      <section class="feature feature-flip" id="after">
+        <div class="wrap feature-row">
+          <div class="feature-copy">
+            <h2>The conversation, given back in order</h2>
+            <p>
+              A title, a summary and the threads the conversation followed. Talk time for each person, how each
+              question ended, and the transcript with the speakers told apart.
+            </p>
+            <p class="aside">Titles and summaries come from a writing model you choose: a local one, or your own API key.</p>
+          </div>
+          <figure class="window feature-visual">
+            <img src="media/after-summary.webp" width="1120" height="700" loading="lazy" decoding="async" alt="A finished conversation: its title, the summary, and the threads it followed" />
+          </figure>
+        </div>
+      </section>
+
+      <section class="feature" id="across">
+        <div class="wrap feature-row">
+          <div class="feature-copy">
+            <h2>Find anything anyone said</h2>
+            <p>
+              Search every transcript, part words included: <q>rice</q> finds <q>price</q>. Chinese and Japanese work
+              too. Each search shows how many matches it found and how long it took.
+            </p>
+            <p>
+              The board shows how your conversations connect, as a graph or a timeline, filed into Work, Personal or
+              groups you make. A local model files each one from its title and summary, never from the transcript.
+            </p>
+          </div>
+          <figure class="window feature-visual">
+            <img src="media/global.webp" width="1120" height="700" loading="lazy" decoding="async" alt="The board of all conversations: a graph of how they connect, grouped into Work and Personal" />
+          </figure>
+        </div>
+      </section>
+
+      <section class="privacy" id="privacy">
+        <div class="wrap privacy-grid">
+          <div>
+            <h2>Privacy you can check</h2>
+          </div>
+          <div class="privacy-copy">
+            <p>
+              Audio and transcripts stay on your Mac. There is no Oats account and no Oats server. Summaries run on a
+              local model, or on your own API key if you add one.
+            </p>
+            <p>
+              When a question meets a clear <q>I don't know</q>, Oats opens a web search for the question text in your
+              browser. You can turn that off in Settings.
+            </p>
+            <p>
+              The sidebar counts every network request since launch. Calls to the speech, writing and search servers
+              that run on your Mac are not counted, because they never leave it.
+              <a href="https://github.com/alexgaoth/oats/blob/main/docs/network-allowlist.md">Every destination is listed</a>.
+            </p>
+          </div>
+          <figure class="counter">
+            <img src="media/network-counter.webp" width="480" height="120" loading="lazy" decoding="async" alt="The sidebar's counter: 0 network requests since launch" />
+          </figure>
+        </div>
+      </section>
+
+      <section class="numbers" aria-label="Measured">
+        <div class="wrap numbers-grid">
+          <div><p class="number">89<span> ms</span></p><p>to transcribe 5 seconds of audio, with whisper base on an M5 Pro</p></div>
+          <div><p class="number">1.3<span> s</span></p><p>until the first words show in a live room, median, in a replay at real speed</p></div>
+          <div><p class="number">10</p><p>languages in the interface</p></div>
+          <div><p class="number">MIT</p><p>licence. The whole app is <a href="https://github.com/alexgaoth/oats">on GitHub</a></p></div>
+        </div>
+      </section>
+
+      <section class="film-section" id="film">
+        <div class="wrap">
+          <h2>One conversation, start to finish</h2>
+          <div class="film window">
+            <video controls playsinline preload="none" poster="media/oats-film-poster.webp" width="1920" height="1080">
+              <source src="media/oats-film.mp4" type="video/mp4" />
+            </video>
+            <button class="film-play" type="button" data-play-film aria-label="Play the film">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="download stage" id="download">
+        <canvas class="field" data-field aria-hidden="true"></canvas>
+        <div class="wrap download-copy">
+          <button class="mark-button" type="button" aria-label="Toss the oat">
+            <canvas class="mark mark-download" data-mark="large" data-interactive aria-hidden="true"></canvas>
+          </button>
+          <h2>Get Oats for your Mac</h2>
+          <div class="cta-row">
+            <a class="button button-honey button-large" data-download="primary" href="https://github.com/alexgaoth/oats/releases/latest">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg>
+              <span>Download for Mac</span>
+            </a>
+          </div>
+          <ul class="facts" aria-label="About this download">
+            <li>Version 0.1.0 for <span data-arch-label>Apple Silicon</span></li>
+            <li>About 610 MB, models included</li>
+            <li>macOS 12 or later</li>
+          </ul>
+          <p class="other-arch">
+            <a data-other-arch href="https://github.com/alexgaoth/oats/releases/latest">Intel Mac? Get the Intel build</a>
+            <span class="note">Built for Intel, not yet tested on an Intel Mac.</span>
+          </p>
+          <p class="not-mac">Oats is a Mac app. Open this page on a Mac to download it.</p>
+
+          <div class="first-run">
+            <h3>The first time you open it</h3>
+            <p>This version is not notarized by Apple yet, so macOS stops it once.</p>
+            <ol>
+              <li>Open the DMG and drag Oats to Applications.</li>
+              <li>Open Oats. macOS says it cannot verify the app. Click Done.</li>
+              <li>Open System Settings, then Privacy &amp; Security. Scroll down and click Open Anyway next to <q>Oats was blocked</q>.</li>
+              <li>Confirm with your password or Touch ID. macOS asks only once.</li>
+            </ol>
+          </div>
+          <p class="consent">Tell people before you record. Some places, for example California, need everyone's consent.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-row">
+        <div class="brand">
+          <canvas class="mark mark-small" data-mark="small" aria-hidden="true"></canvas>
+          <span class="wordmark">Oats</span>
+        </div>
+        <ul class="footer-links">
+          <li><a href="https://github.com/alexgaoth/oats">Source</a></li>
+          <li><a href="https://github.com/alexgaoth/oats/releases">Releases</a></li>
+          <li><a href="https://github.com/alexgaoth/oats/releases/latest/download/SHA256SUMS.txt">Checksums</a></li>
+          <li><a href="https://github.com/alexgaoth/oats/blob/main/SECURITY.md">Security</a></li>
+        </ul>
+        <p class="footer-note">Open source under the MIT licence. Made by <a href="https://alexgaoth.com">Alex Gao</a>.</p>
+      </div>
+    </footer>
+  </body>
+</html>
