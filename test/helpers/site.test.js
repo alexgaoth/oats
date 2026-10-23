@@ -70,19 +70,19 @@ test("every image says what it shows and keeps its space", () => {
 });
 
 // DESIGN.md §8: no em or en dash, and no exclamation mark, in visible English.
+// The page keeps its script and styles in files, so everything after the
+// doctype is markup or words a reader sees (text, alt, labels, titles).
 test("the page's English follows the voice rules", () => {
-  const visible = HTML.replace(/<!doctype html>/i, "")
-    .replace(/<script[\s\S]*?<\/script>/g, "")
-    .replace(/<style[\s\S]*?<\/style>/g, "");
-  assert.doesNotMatch(visible, /[–—]/, "an em or en dash");
-  assert.doesNotMatch(visible, /!/, "an exclamation mark");
-  assert.doesNotMatch(visible, /AI-powered|nothing leaves your Mac/i);
+  const page = HTML.slice(HTML.indexOf("<html"));
+  assert.doesNotMatch(page, /[\u2013\u2014]/, "an em or en dash");
+  assert.doesNotMatch(page, /!/, "an exclamation mark");
+  assert.doesNotMatch(page, /AI-powered|nothing leaves your Mac/i);
 });
 
 // The page makes no request to another site until someone downloads: its
 // fonts, script and media are its own.
 test("the page loads nothing from other sites", () => {
-  for (const [tag] of HTML.matchAll(/<(?:script|link|img|source|video)\b[^>]*>/g)) {
+  for (const [tag] of HTML.matchAll(/<(?:script|link|img|source|video)\b[^>]*>/gi)) {
     if (/rel="canonical"/.test(tag)) continue;
     assert.doesNotMatch(tag, /\b(?:src|href|poster|srcset)="https?:/, tag);
   }
