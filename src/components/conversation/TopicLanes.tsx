@@ -129,22 +129,30 @@ export default function TopicLanes({
 
   // While recording, the topic now stays in view: past eight rows the card
   // scrolls inside, and a new topic is a new row at the bottom. Only when the
-  // topic changes, and only as far as needed.
+  // topic changes or the room for the rows does, and only as far as needed.
   const nowTopic = live ? lanes.now : null;
   useEffect(() => {
     const element = list.current;
     const index = nowTopic == null ? undefined : rowOf.get(nowTopic);
     const scroller = scrollerOf(element);
-    if (!element || index === undefined || !scroller) return;
-    const top =
-      element.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top +
-      scroller.scrollTop +
-      index * LANE_ROW_PX;
-    if (top < scroller.scrollTop) scroller.scrollTop = top;
-    else if (top + LANE_ROW_PX > scroller.scrollTop + scroller.clientHeight) {
-      scroller.scrollTop = top + LANE_ROW_PX - scroller.clientHeight;
-    }
+    if (!element || index === undefined || !scroller) return undefined;
+    const follow = () => {
+      const top =
+        element.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top +
+        scroller.scrollTop +
+        index * LANE_ROW_PX;
+      if (top < scroller.scrollTop) scroller.scrollTop = top;
+      else if (top + LANE_ROW_PX > scroller.scrollTop + scroller.clientHeight) {
+        scroller.scrollTop = top + LANE_ROW_PX - scroller.clientHeight;
+      }
+    };
+    follow();
+    // The Detailed composition sets the rows' room in whole rows as the card
+    // around them changes (ConversationFlow), and a window can shorten it.
+    const observer = new ResizeObserver(follow);
+    observer.observe(scroller);
+    return () => observer.disconnect();
     // The row index moves with the topic; the rows only grow below it.
   }, [nowTopic, rowOf]);
 
