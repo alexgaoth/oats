@@ -2601,7 +2601,7 @@ function ConversationReview({
       {review.unresolved.length > 0 && (
         <ul className="divide-y divide-border border-t border-border">
           {review.unresolved.map((item) => {
-            const outcome = item.outcome === "open" ? "asked" : item.outcome;
+            const { outcome } = item;
             return (
               <li key={item.key}>
                 <button
@@ -2813,12 +2813,7 @@ function TranscriptView({
                 )}
               >
                 {isMarked && <Bookmark className="size-3 fill-current text-foreground" />}
-                {outcome && (
-                  <StateMark
-                    state={(outcome === "open" ? "asked" : outcome) as QuestionOutcome}
-                    className=""
-                  />
-                )}
+                {outcome && <StateMark state={outcome as QuestionOutcome} className="" />}
                 {at ?? ""}
               </span>
               <div className="min-w-0">
@@ -3399,8 +3394,7 @@ function QuestionOutcomes({ events }: { events: ConversationEvent[] }) {
         {t("oats.intelligence.outcomes.questions", { count: tally.total })}
       </li>
       {tally.outcomes.map(({ outcome, count }) => {
-        // No verdict is the transcript's `asked`: an empty ring.
-        const state = (outcome === "open" ? "asked" : outcome) as QuestionOutcome;
+        const state = outcome as QuestionOutcome;
         return (
           <li key={outcome} className="flex items-center gap-1.5">
             <StateMark state={state} className="" />

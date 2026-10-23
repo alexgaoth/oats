@@ -48,9 +48,66 @@ test("an empty conversation produces no geometry rather than a faked one", () =>
   assert.equal(contour.span, 0);
 });
 
-test("a single utterance has no span, so there is nothing to draw yet", () => {
-  const contour = buildContour({ utterances: talk([[0, SENTENCE]]) });
-  assert.equal(contour.empty, true);
+test("a single utterance spans the time it took to say", () => {
+  const measured = buildContour({
+    utterances: [{ id: "u0", text: SENTENCE, timestamp: T0, durationMs: 4_000 }],
+  });
+  assert.equal(measured.empty, false);
+  assert.equal(measured.span, 4_000);
+  // With no measured length, as long as its words take to say.
+  const sentence = buildContour({ utterances: talk([[0, SENTENCE]]) });
+  const twoSentences = buildContour({ utterances: talk([[0, `${SENTENCE} ${SENTENCE}`]]) });
+  assert.equal(sentence.empty, false);
+  assert.ok(Math.abs(twoSentences.span / sentence.span - 2) < 1e-6);
+  // Nothing said is still nothing to draw.
+  assert.equal(buildContour({ utterances: talk([[0, ""]]) }).empty, true);
+});
+
+test("the window ends where the last turn ends, not where it began", () => {
+  const measured = buildContour({
+    utterances: [
+      { id: "u0", text: SENTENCE, timestamp: T0, durationMs: 4_000 },
+      { id: "u1", text: SENTENCE, timestamp: T0 + 10 * MINUTE, durationMs: 6_000 },
+    ],
+  });
+  assert.equal(measured.span, 10 * MINUTE + 6_000);
+  // The final turn is on the trace, not cut off at its first word.
+  assert.equal(measured.points[measured.points.length - 1].quiet, false);
+
+  // With no measured length, the last turn lasts as long as its words take.
+  const sentenceMs = buildContour({ utterances: talk([[0, SENTENCE]]) }).span;
+  const estimated = buildContour({
+    utterances: talk([
+      [0, SENTENCE],
+      [10, SENTENCE],
+    ]),
+  });
+  assert.ok(Math.abs(estimated.span - (10 * MINUTE + sentenceMs)) < 1);
+  assert.equal(estimated.points[estimated.points.length - 1].quiet, false);
+});
+
+// A question is stamped when its turn has been transcribed (conversationAide.mjs
+// stamps the card when the finalized segment arrives), which is after the
+// speech ended. Mark can be pressed in the quiet after the last turn.
+test("a question asked in the final turn keeps its pin, and a late mark its place", () => {
+  const lastTurn = T0 + 10 * MINUTE;
+  const contour = buildContour({
+    utterances: [
+      { id: "u0", text: SENTENCE, timestamp: T0, durationMs: 4_000 },
+      { id: "u1", text: "so who owns the migration?", timestamp: lastTurn, durationMs: 2_000 },
+    ],
+    questions: [{ id: "q", state: "silence", createdAt: lastTurn + 3_200 }],
+    moments: [{ id: "m", at: lastTurn + 2_500 }],
+  });
+  assert.equal(contour.span, 10 * MINUTE + 3_200);
+  assert.deepEqual(
+    contour.marks.map((mark) => [mark.id, mark.x]),
+    [["q", 1]]
+  );
+  assert.deepEqual(
+    contour.moments.map((moment) => moment.id),
+    ["m"]
+  );
 });
 
 test("the trace is normalized 0..1 in both axes and starts and ends on the window", () => {
@@ -212,6 +269,8 @@ test("repeats each get their own mark and keep their group", () => {
   );
 });
 
+// With no explicit end the window reaches the last question, so this is about
+// an explicit window: the resume case, where a sitting starts at the press.
 test("questions outside the window are dropped rather than clamped onto the ends", () => {
   const contour = buildContour({
     utterances: talk([
@@ -223,6 +282,8 @@ test("questions outside the window are dropped rather than clamped onto the ends
       { id: "inside", state: "asked", createdAt: T0 + 15 * MINUTE },
       { id: "after", state: "asked", createdAt: T0 + 90 * MINUTE },
     ],
+    startedAt: T0 + 10 * MINUTE,
+    now: T0 + 20 * MINUTE,
   });
   assert.deepEqual(
     contour.marks.map((mark) => mark.id),
@@ -355,7 +416,8 @@ test("marked moments sit at their instant, and the window can be inverted", () =
   const contour = buildContour({
     utterances: [
       { id: "a", text: "we should cut the take home", timestamp: T0 },
-      { id: "b", text: "the hiring loop is broken", timestamp: T0 + 60_000 },
+      // Ends a minute in, so the window is a minute long.
+      { id: "b", text: "the hiring loop is broken", timestamp: T0 + 58_000, durationMs: 2_000 },
     ],
     moments: [
       { id: "m1", at: T0 + 15_000, note: "the counter-example" },
@@ -670,9 +732,19 @@ test("a conversation recorded before loudness was kept draws exactly as before",
 
 test("the list strip keeps the loudness shape", () => {
   const utterances = finishedTalk();
-  const strip = contourStrip(buildContour({ utterances, levels: finishedLevels() }), 24);
+  // The same words throughout, the first half said loudly and the second
+  // softly. A strip bucket is most of a turn long, so a shape it can keep is
+  // one this slow: turn by turn, both strips are only aliasing.
+  const levels = finishedLevels((turn, second) =>
+    turn < 10
+      ? 0.04 + 0.16 * Math.sin((second / 20) * Math.PI)
+      : 0.01 + 0.04 * Math.sin((second / 20) * Math.PI)
+  );
+  const strip = contourStrip(buildContour({ utterances, levels }), 24);
   const flat = contourStrip(buildContour({ utterances }), 24);
   const ys = (contour) => contour.points.map((point) => point.y);
+  const mean = (values) => values.reduce((total, value) => total + value, 0) / values.length;
   assert.equal(strip.points.length, 24);
   assert.ok(spreadOf(ys(strip)) > spreadOf(ys(flat)));
+  assert.ok(mean(ys(strip).slice(0, 12)) > mean(ys(strip).slice(12)) + 0.2);
 });

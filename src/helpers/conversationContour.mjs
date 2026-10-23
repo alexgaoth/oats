@@ -98,6 +98,38 @@ export function speechWeight(text) {
 }
 
 /**
+ * How long an utterance took to say: exactly, where the speech segmenter
+ * measured it (`durationMs`, from the segment's `startMs` and `endMs`),
+ * otherwise as long as its words take to say.
+ */
+function spokenMs(utterance, weight = speechWeight(utterance.text)) {
+  return Number.isFinite(utterance.durationMs) && utterance.durationMs > 0
+    ? utterance.durationMs
+    : (weight / WORDS_PER_SECOND) * 1000;
+}
+
+/**
+ * Where a finished conversation's window ends: where its last speech ended, or
+ * at its last question or mark if that came later.
+ *
+ * It used to end where the last utterance began, which cut the final turn off
+ * the trace and dropped a question asked in it. The end of the speech is not
+ * enough alone: a question is stamped once its turn has been transcribed, after
+ * the speech ended, so the window reaches the last pin too.
+ */
+function windowEnd(timed, questions, moments) {
+  let end = -Infinity;
+  for (const utterance of timed) end = Math.max(end, utterance.timestamp + spokenMs(utterance));
+  for (const card of Array.isArray(questions) ? questions : []) {
+    if (Number.isFinite(card?.createdAt)) end = Math.max(end, card.createdAt);
+  }
+  for (const moment of Array.isArray(moments) ? moments : []) {
+    if (Number.isFinite(moment?.at)) end = Math.max(end, moment.at);
+  }
+  return end;
+}
+
+/**
  * The trace's height from words alone: speech density, with each utterance
  * occupying the time it plausibly took to say rather than a single instant,
  * smoothed across neighbours and scaled to the busiest moment.
@@ -188,12 +220,7 @@ function loudnessPoints({ utterances, levels, firstAt, span }) {
   for (const utterance of utterances) {
     const weight = speechWeight(utterance.text);
     if (weight <= 0) continue;
-    // In-room speech carries its exact length; otherwise it took as long as
-    // its words take to say.
-    const durationMs =
-      Number.isFinite(utterance.durationMs) && utterance.durationMs > 0
-        ? utterance.durationMs
-        : (weight / WORDS_PER_SECOND) * 1000;
+    const durationMs = spokenMs(utterance, weight);
     const perMs = weight / durationMs;
     eachOverlap(
       firstAt,
@@ -251,8 +278,8 @@ function loudnessPoints({ utterances, levels, firstAt, span }) {
  * Build the contour.
  *
  * @param {object} input
- * @param {Array<{ id?: string, text?: string, timestamp?: number }>} input.utterances
- *   Finalized speech, in order.
+ * @param {Array<{ id?: string, text?: string, timestamp?: number, durationMs?: number }>} input.utterances
+ *   Finalized speech, in order. `durationMs`, when known, is how long it took.
  * @param {Array<{ id?: string, question?: string, state?: string, createdAt?: number,
  *   groupKey?: string, occurrence?: number }>} [input.questions]
  *   Question cards. Repeats keep their own entry — a re-asking is the signal.
@@ -267,8 +294,10 @@ function loudnessPoints({ utterances, levels, firstAt, span }) {
  *   (`conversationLoudness.mjs`). With them the height is loudness, the way the
  *   live line draws it; without them (a conversation recorded before they were
  *   kept) it is words.
- * @param {number} [input.now] End of the window. Defaults to the last event.
- * @param {number} [input.startedAt] Start of the window. Defaults to the first.
+ * @param {number} [input.now] End of the window. Defaults to where the last
+ *   speech ended, or the last question or mark if that came later.
+ * @param {number} [input.startedAt] Start of the window. Defaults to the first
+ *   utterance.
  * @returns {{ points: Array<{x: number, y: number, quiet: boolean}>,
  *   marks: Array<object>, shifts: Array<object>, returns: Array<object>,
  *   moments: Array<{ id: string, x: number, at: number, note: string }>,
@@ -295,7 +324,7 @@ export function buildContour({
   const lastAt = Number.isFinite(now)
     ? now
     : timed.length
-      ? timed[timed.length - 1].timestamp
+      ? windowEnd(timed, questions, moments)
       : null;
 
   // A conversation with nothing in it yet is not an error and must not be
@@ -662,11 +691,7 @@ export function buildLiveContour({
   for (const utterance of Array.isArray(utterances) ? utterances : []) {
     if (!Number.isFinite(utterance?.timestamp)) continue;
     const weight = speechWeight(utterance.text);
-    const durationMs =
-      Number.isFinite(utterance.durationMs) && utterance.durationMs > 0
-        ? utterance.durationMs
-        : (weight / WORDS_PER_SECOND) * 1000;
-    spread(utterance.timestamp, weight, durationMs);
+    spread(utterance.timestamp, weight, spokenMs(utterance, weight));
   }
   // Speech still being transcribed is happening now, so it ends now.
   for (const text of Array.isArray(partials) ? partials : []) {
