@@ -1,110 +1,107 @@
 <p align="center">
-  <img src="docs/media/oats-mark.png" width="88" alt="">
-</p>
-
-<h1 align="center">Oats</h1>
-
-<p align="center">
-  <b>Make room for the conversation.</b><br>
-  Oats records a conversation in the room, on your Mac, and stays quiet while people talk.<br>
-  When you stop, it hands back the title, a summary, the threads, and every question asked.
+  <a href="https://oats-mac.vercel.app">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/media/banner-dark.png">
+      <img src="docs/media/banner-light.png" width="800" alt="Oats. High-signal tool for high-signal conversations.">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.jpg">
-    <img src="docs/media/hero-light.jpg" width="880" alt="Oats recording a nine-person launch review: the live line of the conversation, counters under the clock, and the topics drawn as a graph after the room returned to the launch date">
-  </picture>
+  Oats records the conversation in the room and transcribes it on your Mac.<br>
+  It tracks the questions people ask and whether the room answered them, checks an unsure<br>
+  answer against your team's notes, and hands you the summary when you stop.
 </p>
 
 <p align="center">
-  macOS on Apple Silicon · Linux · processed on your machine · MIT licensed
+  <a href="https://github.com/alexgaoth/oats/releases/latest/download/Oats-arm64.dmg"><img src="docs/media/download-mac.png" width="260" alt="Download Oats for Mac"></a>
 </p>
 
----
+<p align="center">
+  <sub>Version 0.1.0 for Apple Silicon, macOS 12 or later. Also as an <a href="https://github.com/alexgaoth/oats/releases/latest/download/Oats-x64.dmg">Intel build</a>, not yet tested on an Intel Mac.</sub><br>
+  <sub><a href="https://oats-mac.vercel.app">Website</a> · <a href="https://github.com/alexgaoth/oats/releases/latest">Release notes</a></sub>
+</p>
 
-The conversations that matter happen around a table. Taking notes pulls you out of them, and meeting bots join calls, not rooms. Oats sits on the table with one microphone. While you talk, the screen shows the shape of the conversation and nothing that competes with the people in front of you. When you stop, it is already written up.
+<p align="center">
+  <img src="site/media/summary-window-2240.webp" width="880" alt="Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person.">
+</p>
+
+The conversations that matter happen around a table. Taking notes pulls you out of them, and meeting bots join calls, not rooms. Oats sits on the table with one microphone. While you talk, the screen shows the shape of the conversation and nothing that competes with the people in front of you.
 
 ## What it does
 
-### Records the room, calmly
+### Make room for the conversation
 
-Press **⇧⌘O** from any app. The sidebar steps aside, the record dot follows the voices, and one line draws the conversation: taller where people spoke louder, notched where the subject turned, marked wherever someone asked a question. Under the clock, two quiet counters show the words and questions so far. Choose **Words** to add the live transcript and the question cards.
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/recording-dark.jpg">
-    <img src="docs/media/recording-light.jpg" width="820" alt="The recording view in the middle of a meeting: the clock, the word and question counts, the live line with question marks above it, and the Calm / Words switch">
-  </picture>
-</p>
-
-### Draws the topics as they move
-
-Oats follows the topics from the words themselves, with no model and no network. The stack shows the topic now and the ones before it, with how long each held the room. When the room keeps coming back to a subject, **Auto** turns the stack into a graph and draws each return as a curve.
+Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> in any app and talk. The sidebar steps aside, and one line draws the conversation as it happens: its height is how loud the room is, a notch marks where the subject turned, and a mark shows where someone asked a question. Under the clock, two quiet counters keep the words and the questions so far. Choose **Words** to add the live transcript and the question cards.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/topics-dark.jpg">
-    <img src="docs/media/topics-light.jpg" width="820" alt="The conversation flow card as a graph: topics placed by when they were first raised and how unsettled they are, with a dashed curve where the room returned to the launch date">
-  </picture>
+  <img src="docs/media/loop-record.webp" width="840" alt="Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes">
 </p>
 
-### Catches every question
+### Walk out knowing what is still open
 
-A card appears the moment someone asks a question, before anyone answers. When the reply comes, the card settles in place: **Answered**, **Unknown** when the room said it did not know, **Unanswered** when the room moved on, or still **Open**. Asking again is kept as a signal, not dropped as a repeat.
+Oats hears a question and watches what the room does with it. Its card says how it ended, in place, while people are still talking. A question asked twice is kept as a signal, not dropped as a repeat.
+
+| Card | When |
+|---|---|
+| **Answered** | Someone gave an answer. |
+| **Unknown** | The room said it did not know. Oats opens a web search for the question. |
+| **Unanswered** | The room moved on. |
+| **Open** | Nobody has replied yet. |
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/questions-dark.jpg">
-    <img src="docs/media/questions-light.jpg" width="820" alt="Question cards from the meeting, each with its outcome: answered, unknown or open">
-  </picture>
+  <img src="docs/media/loop-questions.webp" width="560" alt="A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web">
 </p>
 
-### Writes it up when you stop
+### Checked against what your team wrote down
 
-Stop, and the conversation comes back with a title, a summary, the threads that developed, how much each person spoke, every question with its outcome, and the shape of the whole conversation. The transcript is kept beside it, with the speakers told apart. The summary needs a local model or your own API key; the transcript, speakers, questions and shape need neither.
+Turn on the context check in Settings and choose a folder of your team's notes. When an answer in the room sounds unsure, Oats finds the passage that settles it, in that folder or in your past conversations, and says so under the question: **That's right**, **Wait, that's wrong**, or **Found it** when the room did not know, with the answer and the file it came from.
+
+Optional, and off by default: when the folder has no answer, Oats can ask Claude Code to look in GitHub, Linear and Notion, read only.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/reading-dark.jpg">
-    <img src="docs/media/reading-light.jpg" width="820" alt="A finished conversation: title, summary with threads, talk time per person, question outcomes and the stored shape of the conversation">
-  </picture>
+  <img src="site/media/check-live.webp" width="640" alt="A recording at 8 minutes 25 seconds. Under the question Do we have a date from the auditors yet, marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates.">
 </p>
 
-### Finds anything anyone said
+### The conversation, given back in order
+
+Stop, and the conversation comes back with a title, a summary and the threads it followed, talk time for each person, how each question ended, and the transcript with the speakers told apart. Titles and summaries come from a writing model you choose: a local one, or your own API key. The transcript, the speakers, the questions and the shape of the conversation need neither.
+
+<p align="center">
+  <img src="site/media/outcomes.webp" width="560" alt="The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one.">
+</p>
+
+### Find anything anyone said
 
 Search reads every transcript on your Mac, including the oldest. It finds a word inside a longer one, so "rice" finds "price", and it works in Chinese and Japanese, which are written without spaces. Each search says how many matches it found and how long it took.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/search-dark.jpg">
-    <img src="docs/media/search-light.jpg" width="820" alt="Searching every conversation for the import bug, with the count of matches and the time taken">
-  </picture>
+  <img src="docs/media/loop-search.webp" width="730" alt="A search for import bug finds 15 matches in 3 conversations in under a tenth of a millisecond, with the words highlighted">
 </p>
 
-### Shows what you keep coming back to
+### See how your conversations connect
 
-**Map** joins conversations that covered the same subject and names the subjects that recur, so the pattern you cannot see from inside one meeting becomes visible across all of them.
+The board lays out every conversation as a graph and as a timeline, so a subject that keeps coming back shows as the arcs between the days it came up. Each conversation is filed into Work, Personal or a group you make. A local model files it from its title, topics and summary, never from the transcript.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/map-dark.jpg">
-    <img src="docs/media/map-light.jpg" width="820" alt="The map of conversations, joined where they shared a subject">
-  </picture>
+  <img src="docs/media/loop-global.webp" width="840" alt="The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back">
 </p>
 
-## Private by design
+## Privacy you can check
 
-- **Transcription runs on your Mac**, on whisper.cpp with Metal. Summaries run on a local model, or on your own API key if you choose one. There is no Oats account and no Oats server.
-- **Audio and transcripts never leave your Mac.** Topic tracking and question detection run locally, without a model call.
-- **The sidebar says what has left.** Its footer reads "On this Mac", and it counts every network request since launch; no count is the normal state.
-- **One thing is on by default, and you can turn it off:** when a question meets a clear "I don't know", Oats opens a web search for the question text alone, in your browser.
-- **Everything else happens only when you choose it:** a model download, or an API provider you add a key for.
-- Every network destination is listed in [the network allowlist](docs/network-allowlist.md).
+<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Oats sidebar: Settings, then On this Mac, base on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
+
+Audio and transcripts stay on your Mac. Transcription runs on whisper.cpp with Metal. There is no Oats account and no Oats server. Summaries run on a local model, or on your own API key if you add one.
+
+One thing is on by default, and you can turn it off in Settings: when a question meets a clear "I don't know", Oats opens a web search for the question text in your browser.
+
+The sidebar counts every network request since launch. Calls to the speech, writing and search servers that run on your Mac are not counted, because they never leave it. [The network allowlist](docs/network-allowlist.md) lists every destination.
+
+<br clear="right">
 
 ## Small guarantees
 
-- **Nothing is lost.** The transcript is saved as each sentence is finished, so a crash or a closed lid costs at most the sentence in progress. ⌘Q finishes and saves first.
+- **Nothing is lost.** The transcript is saved as each sentence is finished, so a crash or a closed lid costs at most the sentence in progress. <kbd>⌘</kbd><kbd>Q</kbd> finishes and saves first.
 - **A dead microphone is reported while it still matters**, not at the end.
 - **A conversation that captured nothing is not saved** as a blank note.
 - **Stopping and starting again within half an hour continues the same conversation**, so a coffee break does not split one meeting into two notes.
@@ -124,9 +121,20 @@ Search reads every transcript on your Mac, including the oldest. It finds a word
 
 The record shortcut can be changed in Settings.
 
-## Try it
+## Install
 
-There is no signed download yet, so Oats runs from source. You need an Apple Silicon Mac (or Linux), Node.js 24 and the Xcode command line tools.
+1. Download Oats for [Apple Silicon](https://github.com/alexgaoth/oats/releases/latest/download/Oats-arm64.dmg) or [Intel](https://github.com/alexgaoth/oats/releases/latest/download/Oats-x64.dmg). It needs macOS 12 Monterey or later, and the speech model ships inside, so it transcribes offline from the first launch.
+2. Open the DMG and drag Oats to Applications.
+3. Open Oats. This version is not notarized by Apple yet, so macOS says it cannot verify the app. Click Done.
+4. Open System Settings, then Privacy & Security. Scroll down and click Open Anyway next to "Oats was blocked", and confirm with your password or Touch ID. macOS asks only once.
+
+The SHA-256 checksums are in [SHA256SUMS.txt](https://github.com/alexgaoth/oats/releases/latest/download/SHA256SUMS.txt). On an empty Home, open the **example conversation**, a nine-person launch review, to explore everything before you record.
+
+Tell people before you record. Some places, for example California, need everyone's consent.
+
+## Build from source
+
+You need Node.js 24 and the Xcode command line tools.
 
 ```sh
 git clone https://github.com/alexgaoth/oats.git
@@ -136,11 +144,11 @@ npm run setup:check
 npm run dev
 ```
 
-On an empty Home, open the **example conversation**: a nine-person launch review with a busy topic graph and real questions, so you can explore everything before you record anything. To fill a development profile with more sample conversations, run `npm run seed:sample`. [Developing Oats](docs/development.md) has the full setup, Linux notes and the test suites.
+[Developing Oats](docs/development.md) has the full setup, the Linux notes and the test suites. The public page lives in [site/](site/README.md).
 
 ## How it works
 
-Oats is an Electron app. The interface is React; the main process runs the local speech server (whisper.cpp), an optional local language model (llama.cpp) for summaries, local embeddings for related-conversation search, and SQLite with full-text search for the transcripts. The topic tracker and the question detector are plain code over the transcript, so they cost nothing to run for an hour and never need a network. [Architecture](docs/architecture.md) maps the modules; [DESIGN.md](DESIGN.md) is the design reference, and [the product description](docs/product.md) explains each behaviour in depth.
+Oats is an Electron app. The interface is React. The main process runs the local speech server (whisper.cpp), an optional local language model (llama.cpp) for summaries, local embeddings for related-conversation search, and SQLite with full-text search for the transcripts. The topic tracker and the question detector are plain code over the transcript, so they cost nothing to run for an hour and never need a network. [Architecture](docs/architecture.md) maps the modules, [DESIGN.md](DESIGN.md) is the design reference, and [the product description](docs/product.md) explains each behaviour in depth.
 
 ## Principles
 
@@ -150,7 +158,7 @@ Oats is an Electron app. The interface is React; the main process runs the local
 
 ## Acknowledgements
 
-Oats grew out of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop dictation app; [UPSTREAM.md](UPSTREAM.md) records the provenance. Transcription uses [whisper.cpp](https://github.com/ggml-org/whisper.cpp), local models run on [llama.cpp](https://github.com/ggml-org/llama.cpp), and the interface is set in [Inter](https://rsms.me/inter/).
+Oats grew out of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop dictation app, and [UPSTREAM.md](UPSTREAM.md) records the provenance. Transcription uses [whisper.cpp](https://github.com/ggml-org/whisper.cpp), local models run on [llama.cpp](https://github.com/ggml-org/llama.cpp), the interface is set in [Inter](https://rsms.me/inter/), and the wordmark in [EB Garamond](https://github.com/octaviopardo/EBGaramond12).
 
 ## License
 

@@ -8,6 +8,11 @@
 //   apple-touch-icon.png             the grain on white, 180 px (iOS rounds it)
 //   og.png                           the link preview, 1200x630: the film's grey
 //                                    fluid, the grain, and the headline
+// and, in docs/media/, for the README (2x, shown at half size):
+//   banner-light.png, banner-dark.png  the grain and the wordmark over the fluid,
+//                                      light and dark, with the headline
+//   download-mac.png                   the app's honey button: Download for Mac
+//   social-preview.png                 1280x640, for the repository's settings
 const { app, BrowserWindow, protocol } = require("electron");
 const fs = require("fs");
 const path = require("path");
@@ -79,7 +84,7 @@ function fbm(x, y) {
   }
   return value / 0.9375;
 }
-function field(context, width, height, t) {
+function field(context, width, height, t, base = 243, spread = 7) {
   const image = context.createImageData(width, height);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -87,7 +92,7 @@ function field(context, width, height, t) {
       const qx = fbm(px + 0.07 * t, py - 0.05 * t);
       const qy = fbm(px + 5.2 - 0.04 * t, py + 1.3 + 0.06 * t);
       const value = fbm(px + 1.8 * qx + 0.03 * t, py + 1.8 * qy - 0.02 * t);
-      const level = Math.round(243 + 7 * (value * 2 - 1) + BAYER4[((y & 3) << 2) | (x & 3)]);
+      const level = Math.round(base + spread * (value * 2 - 1) + BAYER4[((y & 3) << 2) | (x & 3)]);
       const k = (y * width + x) * 4;
       image.data[k] = image.data[k + 1] = image.data[k + 2] = level;
       image.data[k + 3] = 255;
@@ -134,11 +139,142 @@ async function ogImage() {
   return element.toDataURL("image/png");
 }
 
+function roundedRect(context, x, y, width, height, radius) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.arcTo(x + width, y, x + width, y + height, radius);
+  context.arcTo(x + width, y + height, x, y + height, radius);
+  context.arcTo(x, y + height, x, y, radius);
+  context.arcTo(x, y, x + width, y, radius);
+  context.closePath();
+}
+
+const HEADLINE = "High-signal tool for high-signal conversations";
+
+/** The grain beside the wordmark, centred on cx with its baseline at baseline. */
+function signature(context, cx, baseline, size, ink, shadow) {
+  context.font = '400 ' + size + 'px "EB Garamond"';
+  context.letterSpacing = Math.round(-0.03 * size) + "px";
+  const word = context.measureText("Oats").width;
+  const oat = Math.round(size * 1.02);
+  // The grain sits in the middle of its square, so the visible gap is wider
+  // than this: pull the word in by the square's empty side.
+  const gap = Math.round(size * -0.12);
+  const left = Math.round(cx - (oat + gap + word) / 2);
+  const art = grain(oat, shadow);
+  context.drawImage(art, left, Math.round(baseline - size * 0.86));
+  context.fillStyle = ink;
+  context.textAlign = "left";
+  context.fillText("Oats", left + oat + gap, baseline);
+  context.letterSpacing = "0px";
+}
+
+/** The README's banner: the film's fluid, the grain and the wordmark, the headline. */
+async function banner(dark) {
+  await document.fonts.load('400 168px "EB Garamond"');
+  const width = 1600, height = 520;
+  const element = canvas(width, height);
+  const context = element.getContext("2d");
+  const backdrop = canvas(width, height);
+  field(backdrop.getContext("2d"), width, height, 52, dark ? 24 : 243, dark ? 5 : 7);
+  roundedRect(context, 0, 0, width, height, 40);
+  context.save();
+  context.clip();
+  context.drawImage(backdrop, 0, 0);
+  context.restore();
+  signature(context, width / 2, 268, 168, dark ? "#fafafa" : "#1a1a1a", !dark);
+  context.font = '400 54px "EB Garamond"';
+  context.letterSpacing = "-1.4px";
+  context.textAlign = "center";
+  context.fillStyle = dark ? "#d4d4d8" : "#3f3f46";
+  context.fillText(HEADLINE, width / 2, 410);
+  context.letterSpacing = "0px";
+  return element.toDataURL("image/png");
+}
+
+/** The app's main action (.oats-cta in src/index.css), as a picture to link. */
+async function downloadButton() {
+  await document.fonts.load("600 34px Inter");
+  const width = 520, height = 168;
+  const element = canvas(width, height);
+  const context = element.getContext("2d");
+  const x = 28, y = 20, w = 464, h = 112, r = 22;
+  context.save();
+  context.shadowColor = "rgba(245, 163, 15, 0.45)";
+  context.shadowBlur = 24;
+  context.shadowOffsetY = 10;
+  roundedRect(context, x, y, w, h, r);
+  context.fillStyle = "#f5a30f";
+  context.fill();
+  context.restore();
+  context.save();
+  context.shadowColor = "rgba(154, 91, 0, 0.35)";
+  context.shadowBlur = 4;
+  context.shadowOffsetY = 2;
+  const honey = context.createLinearGradient(0, y, 0, y + h);
+  honey.addColorStop(0, "#f8b52e");
+  honey.addColorStop(1, "#f5a30f");
+  roundedRect(context, x, y, w, h, r);
+  context.fillStyle = honey;
+  context.fill();
+  context.restore();
+  context.save();
+  roundedRect(context, x, y, w, h, r);
+  context.clip();
+  context.fillStyle = "rgba(255, 255, 255, 0.45)";
+  context.fillRect(x, y, w, 2);
+  context.restore();
+  context.font = "600 34px Inter";
+  const label = "Download for Mac";
+  const text = context.measureText(label).width;
+  const icon = 36, gap = 18;
+  const left = Math.round(x + (w - (icon + gap + text)) / 2);
+  const mid = y + h / 2;
+  context.save();
+  context.translate(left, mid - icon / 2);
+  context.scale(icon / 24, icon / 24);
+  context.strokeStyle = "#1a1306";
+  context.lineWidth = 2;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const d of ["M12 15V3", "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "m7 10 5 5 5-5"]) context.stroke(new Path2D(d));
+  context.restore();
+  context.fillStyle = "#1a1306";
+  context.textBaseline = "middle";
+  context.fillText(label, left + icon + gap, mid + 1);
+  return element.toDataURL("image/png");
+}
+
+/** The repository's social preview (GitHub takes it by upload, in Settings). */
+async function socialPreview() {
+  await document.fonts.load('400 150px "EB Garamond"');
+  await document.fonts.load("500 26px Inter");
+  const width = 1280, height = 640;
+  const element = canvas(width, height);
+  const context = element.getContext("2d");
+  field(context, width, height, 52);
+  signature(context, width / 2, 300, 150, "#1a1a1a", true);
+  context.font = '400 56px "EB Garamond"';
+  context.letterSpacing = "-1.4px";
+  context.textAlign = "center";
+  context.fillStyle = "#3f3f46";
+  context.fillText(HEADLINE, width / 2, 430);
+  context.letterSpacing = "0px";
+  context.font = "500 26px Inter";
+  context.fillStyle = "#71717a";
+  context.fillText("For Mac. Free and open source.", width / 2, 520);
+  return element.toDataURL("image/png");
+}
+
 window.paintSite = async () => ({
   favicon32: favicon(32),
   favicon64: favicon(64),
   touch: touchIcon(),
   og: await ogImage(),
+  bannerLight: await banner(false),
+  bannerDark: await banner(true),
+  download: await downloadButton(),
+  social: await socialPreview(),
 });
 window.paintReady = true;
 `;
@@ -165,7 +301,9 @@ function serve(request) {
   return new Response(body, { headers: { "content-type": TYPES[path.extname(file)] || "application/octet-stream" } });
 }
 
-const write = (name, dataUrl) => fs.writeFileSync(path.join(out, name), Buffer.from(dataUrl.split(",")[1], "base64"));
+const docs = path.join(root, "docs/media");
+const write = (name, dataUrl, dir = out) =>
+  fs.writeFileSync(path.join(dir, name), Buffer.from(dataUrl.split(",")[1], "base64"));
 
 app.whenReady().then(async () => {
   try {
@@ -181,7 +319,12 @@ app.whenReady().then(async () => {
     write("favicon-64.png", images.favicon64);
     write("apple-touch-icon.png", images.touch);
     write("og.png", images.og);
-    console.log("render-images: painted the favicons, the touch icon and the link preview");
+    fs.mkdirSync(docs, { recursive: true });
+    write("banner-light.png", images.bannerLight, docs);
+    write("banner-dark.png", images.bannerDark, docs);
+    write("download-mac.png", images.download, docs);
+    write("social-preview.png", images.social, docs);
+    console.log("render-images: painted the site's images and the README's");
     app.exit(0);
   } catch (error) {
     console.error("render-images:", error);
