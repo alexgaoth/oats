@@ -11,6 +11,7 @@ module.exports = [
       "build/**",
       ".eb-cache/**", // electron-builder tool cache (fpm/ruby, etc.)
       "src/**", // src has its own config
+      "site/assets/site.js", // built from site/src by npm run build:site
     ],
   },
   // Main process files (CommonJS)
@@ -39,6 +40,16 @@ module.exports = [
       "no-async-promise-executor": "off",
       "prefer-const": "off",
       "no-var": "off",
+    },
+  },
+  // The site's own scripts (site/src): ES modules that run in the browser.
+  {
+    files: ["site/src/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
     },
   },
 ];
