@@ -1,0 +1,348 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "call-with-mom",
+    "sample": true,
+    "description": "Sample conversation: a call with Mom about p(doom). Invented people.",
+    "company": "A family call (fictional)",
+    "participants": [
+      { "name": "Mom", "role": "Arjun's mom" },
+      { "name": "Arjun", "role": "Works at an AI startup" }
+    ],
+    "startedAt": 1791772200000,
+    "endedAt": 1791772287248,
+    "summarizedAt": 1791772328248,
+    "placement": { "daysAgo": 4, "at": "19:30" },
+    "group": "personal",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Call with Mom: what a p(doom) is, explained",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv4muixk-1",
+        "text": "Arjun, your friend posted his p(doom). Explain the doom number, please.",
+        "source": "mic",
+        "timestamp": 1791772203550,
+        "startMs": 3550,
+        "endMs": 9594,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-2",
+        "text": "Right, Mom. A p(doom) is a doom number. The chance things go badly with AI.",
+        "source": "mic",
+        "timestamp": 1791772210926,
+        "startMs": 10926,
+        "endMs": 18335,
+        "speaker": "speaker_2",
+        "speakerName": "Arjun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-3",
+        "text": "And your doom number is high?",
+        "source": "mic",
+        "timestamp": 1791772219497,
+        "startMs": 19497,
+        "endMs": 22737,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-4",
+        "text": "Ten percent. That is low, Mom.",
+        "source": "mic",
+        "timestamp": 1791772223677,
+        "startMs": 23677,
+        "endMs": 26938,
+        "speaker": "speaker_2",
+        "speakerName": "Arjun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-5",
+        "text": "Ten percent doom sounds high to me. Your father's doom number is zero.",
+        "source": "mic",
+        "timestamp": 1791772227448,
+        "startMs": 27448,
+        "endMs": 34401,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-6",
+        "text": "Dad's doom number is zero because he thinks AGI is a printer brand.",
+        "source": "mic",
+        "timestamp": 1791772234957,
+        "startMs": 34957,
+        "endMs": 41625,
+        "speaker": "speaker_2",
+        "speakerName": "Arjun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-7",
+        "text": "Then the 996 grind. Your sister says you work the 996 grind now.",
+        "source": "mic",
+        "timestamp": 1791772242447,
+        "startMs": 42447,
+        "endMs": 49773,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-8",
+        "text": "Right. The 996 grind is nine to nine, six days a week. Only until demo day.",
+        "source": "mic",
+        "timestamp": 1791772251078,
+        "startMs": 51078,
+        "endMs": 58989,
+        "speaker": "speaker_2",
+        "speakerName": "Arjun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-9",
+        "text": "Is the 996 grind why you never call on Sundays?",
+        "source": "mic",
+        "timestamp": 1791772259973,
+        "startMs": 59973,
+        "endMs": 65792,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-10",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791772266609,
+        "startMs": 66609,
+        "endMs": 67319,
+        "speaker": "speaker_2",
+        "speakerName": "Arjun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-11",
+        "text": "No laptop at Thanksgiving. Not even for the 996 grind.",
+        "source": "mic",
+        "timestamp": 1791772268006,
+        "startMs": 68006,
+        "endMs": 73438,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-12",
+        "text": "Deal. No laptop, no doom number talk, extra pie.",
+        "source": "mic",
+        "timestamp": 1791772274044,
+        "startMs": 74044,
+        "endMs": 78473,
+        "speaker": "speaker_2",
+        "speakerName": "Arjun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv4muixk-13",
+        "text": "Can you explain AGI to your grandmother at dinner?",
+        "source": "mic",
+        "timestamp": 1791772279642,
+        "startMs": 79642,
+        "endMs": 84648,
+        "speaker": "speaker_1",
+        "speakerName": "Mom",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Mom asked Arjun what a p(doom) is, and then about the hours he works.\n\n## Threads\n- **p(doom).** A doom number is the chance things go badly with AI. Arjun's is ten percent, which he calls low; Dad's is zero, because he thinks AGI is a printer brand.\n- **The 996 grind.** Nine to nine, six days a week, until demo day. No laptop at Thanksgiving.\n\n## Follow-ups\n- Whether the 996 grind is why Arjun never calls on Sundays.\n- Explaining AGI to his grandmother at dinner.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "3664-[{\"id\":\"seg-mv4muixk-1\",\"text\":\"Arjun, your friend",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "doom number",
+          "words": ["doom", "number", "agi", "explain", "high", "mom", "percent", "ten"],
+          "durationMs": 31407,
+          "utteranceIds": [
+            "seg-mv4muixk-1",
+            "seg-mv4muixk-2",
+            "seg-mv4muixk-3",
+            "seg-mv4muixk-4",
+            "seg-mv4muixk-5",
+            "seg-mv4muixk-6",
+            "seg-mv4muixk-13"
+          ],
+          "firstAt": 1791772203550,
+          "lastAt": 1791772279642,
+          "returns": 1,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "996 grind",
+          "words": ["996", "grind", "laptop", "call", "day", "days", "deal", "demo"],
+          "durationMs": 31597,
+          "utteranceIds": [
+            "seg-mv4muixk-7",
+            "seg-mv4muixk-8",
+            "seg-mv4muixk-9",
+            "seg-mv4muixk-11",
+            "seg-mv4muixk-12"
+          ],
+          "firstAt": 1791772242447,
+          "lastAt": 1791772274044,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791772200000,
+          "b": "hIaCn7Kwrq6wqIisr66qqa2tpKGvqquVsK6rnqysrrCtq6Ckraiqqaqkn7Ktr7Guq6eFqK2ssLGurayJqq6qq62nmJ6qrqaprqSmrbGroZKrq62sqYaEhA=="
+        }
+      ]
+    },
+    "open_questions": 2
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv4muixk-3"],
+      "text": "And your doom number is high?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "doom high number",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791772223593
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv4muixk-4"],
+      "text": "Ten percent. That is low, Mom.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791772227795
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv4muixk-9"],
+      "text": "Is the 996 grind why you never call on Sundays?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "996 call grind never sunday",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791772266764
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv4muixk-10"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791772268061
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-mv4muixk-9"],
+      "text": "Is the 996 grind why you never call on Sundays?",
+      "metadata": {
+        "query": "Is the 996 grind why you never call on Sundays?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791772268061
+    },
+    {
+      "id": 6,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv4muixk-13"],
+      "text": "Can you explain AGI to your grandmother at dinner?",
+      "metadata": {
+        "state": "asked",
+        "groupKey": "agi dinner explain grandmother",
+        "occurrence": 1
+      },
+      "createdAt": 1791772285583
+    }
+  ],
+  "replay": {
+    "voices": { "Mom": { "gain": 1 }, "Arjun": { "gain": 1.04 } },
+    "loud": {},
+    "stopAtMs": 87248
+  }
+}
