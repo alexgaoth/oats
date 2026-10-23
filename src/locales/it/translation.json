@@ -32,10 +32,10 @@
       "show": "Mostra pannello dettatura",
       "hide": "Nascondi pannello dettatura"
     },
-    "openControlPanel": "Apri pannello di controllo",
-    "hideControlPanel": "Nascondi pannello di controllo",
+    "openControlPanel": "Apri Oats",
+    "hideControlPanel": "Nascondi Oats",
     "quit": "Esci da Oats",
-    "tooltip": "Oats - Dettatura vocale",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Avvia conversazione",
       "stop": "Termina conversazione"
@@ -2310,7 +2310,7 @@
       "no-model": "Il modello vocale incluso non si è installato. Riavvia Oats; se persiste, reinstalla.",
       "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni.",
       "question-cards-off": "Le schede delle domande sono disattivate, quindi le domande passeranno in silenzio. Attivale nelle Impostazioni, in Registrazione.",
-      "no-summary-model": "Le conversazioni verranno salvate senza titolo né riassunto: nessun modello di riassunto è pronto. Configurane uno in Impostazioni › Avanzate › Modelli linguistici."
+      "no-summary-model": "Le conversazioni verranno salvate senza titolo né riassunto: nessun modello di scrittura è pronto. Scegline uno in Impostazioni › Modelli di IA."
     },
     "aide": {
       "title": "Assistente di conversazione",

@@ -1,7 +1,7 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <!-- Oats app icon: the honey oat grain (src/components/shell/OatsMark.tsx) on a
-       light neutral tile. Master for icon.icns, icon.png, icon.ico and the macOS 26
-       Icon Composer layer; regenerate them with scripts/build-brand-icons.sh. -->
+  <!-- Oats mark as a vector drawing, for documents. It is not the icons' master:
+       scripts/build-brand-icons.sh paints icon.icns, icon.png, icon.ico and the
+       macOS 26 layer with the app's grain painter, in the film's dither. -->
   <defs>
     <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#ECECEF"/>
