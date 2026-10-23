@@ -18,7 +18,7 @@ Theo, Maya and Priya reviewed the senior backend search: two finalists remain, a
 - **Finalists.** Of 31 applicants, two reached the final round. Only one has run a large data migration.
 - **Interview loop.** Three of six candidates dropped at the four-hour take-home.
 
-## Action Items
+## Action items
 - [ ] Priya: tell both finalists about the new loop today.
 `;
 
@@ -31,7 +31,7 @@ test("the summary is read as prose: headings dropped whole, markup unwrapped", (
       "Interview loop. Three of six candidates dropped at the four-hour take-home. " +
       "Priya: tell both finalists about the new loop today."
   );
-  assert.doesNotMatch(excerpt, /Threads|Action Items|\*|#|\[ \]/);
+  assert.doesNotMatch(excerpt, /Threads|Action items|\*|#|\[ \]/);
   assert.equal(sort.summaryExcerpt(null), "");
   assert.equal(sort.summaryExcerpt("   "), "");
   // A link keeps its words, and snake_case keeps its underscores.

@@ -80,10 +80,10 @@ Theo, Maya and Priya reviewed the senior backend search: two finalists remain, a
 - **Interview loop.** Three of six candidates dropped at the four-hour take-home. It is replaced by a 90-minute paired session on a real migration bug, starting this week.
 - **Migration ownership.** Ines carries the data migration alone; whoever joins owns it from week one. Whether the second finalist has done one is unknown.
 
-## Decisions Made
+## Decisions made
 - Replace the take-home with a paired session, starting this week.
 
-## Action Items
+## Action items
 - [ ] Priya: tell both finalists about the new loop today.
 - [ ] Theo: ask both finalists about data migration ownership in the paired session.
 `,
@@ -169,7 +169,7 @@ Corbel's head of IT confirmed that SSO on day one is a contract condition. Prici
 - **Pricing.** $48 a seat for 200 seats. Corbel asked for 30% off on a two-year term, which is at Pellwood's floor; the platform fee stays at list.
 - **SOC 2.** The report lands in December. Corbel's security team accepted a bridge letter last year.
 
-## Action Items
+## Action items
 - [ ] Marcus: write the SSO condition into the contract.
 - [ ] Ruth: send Corbel the SOC 2 audit dates once the auditors confirm.
 - [ ] Maya: check data residency for Canada with engineering this week.
@@ -241,7 +241,7 @@ Jun walked Maya and Ines through two screens for the enterprise launch: the impo
 - **Import errors.** A failed import shows one generic error today, although most rows land and only the last chunk goes missing. The new screen shows the rows that landed and the rows that failed, with a retry for the failed rows once the import fix ships.
 - **SSO setup.** Admins upload SAML metadata and test the connection. Raw SAML errors from the identity provider will be mapped to plain messages, clock skew first.
 
-## Action Items
+## Action items
 - [ ] Jun: map the five most common SAML errors to plain messages.
 - [ ] Jun: retry and download for failed rows on the import error screen.
 
@@ -298,7 +298,7 @@ Grace and Maya planned support for the launch week: staffing is two agents short
 - **Staffing.** Two of four support agents are out the week of the 3rd, and sales cannot lend anyone, so coverage depends on engineering.
 - **Import tickets.** 41 import tickets this month, mostly from beta accounts with large CSV files. Whether any customer lost data is unknown.
 
-## Action Items
+## Action items
 - [ ] Maya: ask Theo about engineers for support staffing.
 - [ ] Grace: support macro for the import bug, live before the release.
 - [ ] Grace: get the beta account list from Omar to check large imports.
@@ -351,7 +351,7 @@ Lena and Maya set the launch communications around the analyst briefing, the new
 - **Webinar.** Thursday the 5th, 140 signups so far, mostly finance leads. Jun and Lena present, with Theo for questions; flagged features stay out of the demo.
 - **Date risk.** The launch date still depends on SSO and could move a week, so Lena keeps a second date in the plan.
 
-## Decisions Made
+## Decisions made
 - The news embargo lifts on Wednesday; no exclusive.
 
 ## Follow-ups
@@ -404,10 +404,10 @@ Theo, Ines and Ruth went through the SSO failure and what the fix needs before t
 - **Security review.** Ruth wants the tolerance logged and alerted, and a full security review before the fix ships. Whether the review can start before the merge was left open.
 - **SOC 2 scope.** SSO is in audit scope, and SSO login events already go to the activity log. Kestrel has not confirmed fieldwork dates.
 
-## Decisions Made
+## Decisions made
 - Two-minute clock tolerance, logged and alerted.
 
-## Action Items
+## Action items
 - [ ] Theo: land the SSO fix by Thursday.
 - [ ] Ruth: start the security review on Friday.
 `,

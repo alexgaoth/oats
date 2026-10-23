@@ -74,9 +74,9 @@ FORMAT RULES (strict):
 - Do NOT use tables, horizontal rules, or block quotes.
 - Do NOT list or guess participant names/roles.
 - Start with a concise 1–2 sentence summary of what the meeting was about.
-- Use clear section headings: ## Threads, ## Key Discussion Points, ## Decisions Made, ## Action Items, ## Follow-ups (omit any section that has no content).
+- Use these section headings, in sentence case: ## Threads, ## Key discussion points, ## Decisions made, ## Action items, ## Follow-ups (omit any section that has no content).
 - Under ## Threads, capture the 2–5 important lines of thought: the starting question or claim, how it developed, and what remains unresolved. Write each as a concise bullet; this is the conversation's intellectual map, not a chronological recap.
-- Under Action Items, use checkboxes (\`- [ ]\`) and attribute each item to "You" or "Them" where clear.
+- Under ## Action items, use checkboxes (\`- [ ]\`) and attribute each item to "You" or "Them" where clear.
 
 CONTENT RULES:
 - Preserve important quotes or specific commitments verbatim when they carry meaning.

@@ -62,7 +62,7 @@ Nora, Sam and Ada planned the weekend at the lake: the cabin is booked, they tak
 - **Dog.** The cabin takes no dogs, and Nora's mother, who usually keeps him, has a bad knee this month. Whether she can is unknown.
 - **Food.** Sam shops on Thursday: pasta one night, fish the other, pancakes for breakfast.
 
-## Action Items
+## Action items
 - [ ] Nora: book the late ferry tonight.
 - [ ] Nora: call her mother tomorrow about the dog.
 - [ ] Sam: do the food shopping on Thursday.
@@ -119,7 +119,7 @@ Leo called Hana, the letting agent, about the flat on Alder Street. A viewing is
 - **Bike room.** A shared bike room in the basement for the four flats. Whether there is space for one more bike is not known yet.
 - **Move-in date.** Leo's notice runs to the end of next month, and the landlord wants a tenant from the first. A later start might work as a short let.
 
-## Action Items
+## Action items
 - [ ] Hana: check the bike room before Saturday.
 - [ ] Leo: view the flat on Saturday at eleven.
 `,
