@@ -32,10 +32,10 @@
       "show": "Diktierfeld anzeigen",
       "hide": "Diktierfeld ausblenden"
     },
-    "openControlPanel": "Kontrollzentrum öffnen",
-    "hideControlPanel": "Kontrollzentrum ausblenden",
+    "openControlPanel": "Oats öffnen",
+    "hideControlPanel": "Oats ausblenden",
     "quit": "Oats beenden",
-    "tooltip": "Oats – Sprachdiktat",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Unterhaltung starten",
       "stop": "Unterhaltung beenden"
@@ -2290,7 +2290,7 @@
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
       "question-cards-off": "Fragekarten sind ausgeschaltet, Fragen gehen also still vorbei. Schalte sie in den Einstellungen unter Aufnahme ein.",
-      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Zusammenfassungsmodell bereit. Einrichten lässt es sich unter Einstellungen › Erweitert › Sprachmodelle."
+      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Schreibmodell bereit. Wählen Sie eines unter Einstellungen › KI-Modelle."
     },
     "aide": {
       "title": "Gesprächshilfe",

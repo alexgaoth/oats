@@ -32,10 +32,10 @@
       "show": "Mostrar painel de ditado",
       "hide": "Ocultar painel de ditado"
     },
-    "openControlPanel": "Abrir painel de controle",
-    "hideControlPanel": "Ocultar painel de controle",
+    "openControlPanel": "Abrir o Oats",
+    "hideControlPanel": "Ocultar o Oats",
     "quit": "Sair do Oats",
-    "tooltip": "Oats - Ditado por voz",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Iniciar conversa",
       "stop": "Parar conversa"
@@ -2290,7 +2290,7 @@
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
       "question-cards-off": "Os cartões de perguntas estão desativados, então as perguntas passarão em silêncio. Ative-os em Configurações, em Gravação.",
-      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de resumo está pronto. Configure um em Definições › Avançado › Modelos de linguagem."
+      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de escrita está pronto. Escolha um em Definições › Modelos de IA."
     },
     "aide": {
       "title": "Assistente de conversa",
