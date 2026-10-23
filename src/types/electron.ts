@@ -472,6 +472,40 @@ declare global {
       // The sidebar's footer: pulled once on mount, then pushed on every change.
       getOnDeviceStatus?: () => Promise<OnDeviceStatus>;
       onOnDeviceStatus?: (callback: (status: OnDeviceStatus) => void) => () => void;
+      // The context agent (helpers/contextAgentIpc.js): the user's Claude Code
+      // checks a question against GitHub, Linear, Notion and Slack, read-only.
+      // `sources` are the services it read, as labels ("Notion"). `busy` means
+      // two checks are already running.
+      contextAgentStatus?: () => Promise<{
+        available: boolean;
+        path: string | null;
+        version: string | null;
+      }>;
+      contextAgentCheck?: (request: {
+        checkId: string | number;
+        question: string;
+        reply: string;
+        outcome: "uncertain" | "denied";
+      }) => Promise<
+        | {
+            ok: true;
+            verdict: {
+              verdict: "right" | "wrong" | "answer";
+              answer: string;
+              source: { title: string; url: string };
+              quote: string;
+            };
+            sources: string[];
+          }
+        | {
+            ok: false;
+            reason: "not-installed" | "timeout" | "failed" | "unclear" | "cancelled" | "busy";
+          }
+      >;
+      contextAgentCancel?: (checkId: string | number) => Promise<{ success: boolean }>;
+      onContextAgentProgress?: (
+        callback: (progress: { checkId: string | number; sources: string[] }) => void
+      ) => () => void;
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
       onToggleConversation?: (callback: () => void) => () => void;

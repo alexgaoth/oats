@@ -160,6 +160,26 @@ test("the Linux new-window search launch counts itself", () => {
   );
 });
 
+test("the context agent's Claude Code run counts itself, and nothing else starts one", () => {
+  // A child process passes none of the ledger's hooks. The runner records
+  // Anthropic's API once Claude Code has started, and each service it reads;
+  // contextAgentRunner.test.js checks the counts with a fake Claude Code.
+  const runner = read("src/helpers/contextAgentRunner.js");
+  const launch = runner.indexOf("spawnProcess(binary, agent.buildAgentArgs(");
+  const started = runner.indexOf('child.once("spawn"');
+  const recorded = runner.indexOf("ledger().recordUrl(LEDGER_SOURCE, ANTHROPIC_API_URL)");
+  assert.ok(launch > 0 && started > launch && recorded > started, "recorded once it has started");
+  assert.match(runner, /ledger\(\)\.recordHost\(LEDGER_SOURCE, event\.server\)/);
+  for (const file of MAIN_SOURCES) {
+    if (file.endsWith("contextAgentRunner.js") || file.endsWith("contextAgent.mjs")) continue;
+    assert.doesNotMatch(
+      read(file),
+      /buildAgentArgs/,
+      `${file}: start Claude Code through the runner`
+    );
+  }
+});
+
 test("the only utility process is the ONNX worker, and it has no way to the network", () => {
   for (const file of MAIN_SOURCES) {
     if (file.endsWith("onnxWorkerClient.js")) continue;

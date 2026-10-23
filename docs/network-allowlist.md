@@ -73,6 +73,37 @@ request goes to the provider. The team folder is read from disk and never
 synced by Oats; its text reaches a model only as those passages
 (`src/helpers/contextService.js`).
 
+## The context check's agent (off by default)
+
+When a reply is hedged or nobody knew, and the team's local context has no
+answer, the context check can hand the question to an agent: the user's own
+Claude Code, installed separately and signed in with the user's own account,
+run headless in the background (`src/helpers/contextAgentRunner.js`). It is
+off by default and runs only after the user turns it on in Settings.
+
+- **Sent to Anthropic, by Claude Code:** the question and the reply, clipped
+  to 500 and 800 characters, as the prompt of one Claude Code run. Never audio,
+  never the rest of the transcript, never the summary. Claude Code uses the
+  user's own account, model and settings for it.
+- **Read through Claude Code:** the user's connected services, GitHub,
+  Linear, Notion and Slack, through the plugins and MCP servers Claude Code
+  already has. The search text the agent writes goes to those services. Oats
+  stores no token for any of them.
+- **Read only.** The run allows only read tools of those four services, by
+  name, and refuses every other tool: no shell, no file writes, no web fetch,
+  no other agents, no messages, and no tool of any other service, the user's
+  mail and calendar included. The rules are in `src/helpers/contextAgent.mjs`;
+  `test/helpers/contextAgent.test.js` runs the guard against a table of real
+  tool names.
+
+The app records each run in the on-device count, because no hook sees a
+child process's requests: one request to Anthropic's API when Claude Code
+starts, and one for each service the agent reads from. Claude Code makes more
+requests than that (one per model turn, plus connecting the MCP servers it has
+configured and whatever its own settings send), so the count shows that a run
+happened and which services it reached, not each request. Claude Code's
+auto-updater is off for the run.
+
 ## How the sidebar counts what leaves
 
 The foot of the sidebar shows how many requests Oats sent to another computer
@@ -97,6 +128,7 @@ and schemes that are not network requests (`file://`, `devtools://`, `data:`,
 | Node `http` and `https` in the main process                                                       | Realtime transcription sockets (`ws`), Tinfoil, the AWS SDK                     | The `http.client.request.created` diagnostics channel                                                                                                                             |
 | Node `fetch` in the main process                                                                  | AI SDK providers (Bedrock, Azure, Vertex), Tinfoil attestation                  | The `undici:request:create` diagnostics channel                                                                                                                                   |
 | A link opened in the browser                                                                      | The question search, links in Settings                                          | `shell.openExternal` is wrapped; the Linux new-window launch records itself. One link is one request: the browser makes it, but Oats chose what it carries                        |
+| Claude Code, run by the context check (off by default)                                            | Checking a question against GitHub, Linear, Notion and Slack                    | Recorded by `contextAgentRunner.js` itself: one for Anthropic's API when Claude Code starts, and one for each service it reads from                                               |
 | Sidecars: whisper-server, llama-server, Qdrant, sherpa-onnx, ffmpeg, the echo-cancellation helper | Speech, writing, search, speakers                                               | Zero by construction: they listen on loopback and read local files. llama-server runs with `LLAMA_ARG_OFFLINE=1`, so its own downloader cannot run, and Qdrant's telemetry is off |
 | The ONNX utility process                                                                          | Embeddings and speaker models                                                   | Zero by construction: it loads only `fs`, `os`, `path` and `onnxruntime-node`                                                                                                     |
 | Raw sockets, HTTP/2, UDP, WebRTC                                                                  | Nothing                                                                         | Pinned unused, because none of the hooks above would see them                                                                                                                     |
