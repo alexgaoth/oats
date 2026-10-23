@@ -32,10 +32,10 @@
       "show": "Diktierfeld anzeigen",
       "hide": "Diktierfeld ausblenden"
     },
-    "openControlPanel": "Kontrollzentrum öffnen",
-    "hideControlPanel": "Kontrollzentrum ausblenden",
+    "openControlPanel": "Oats öffnen",
+    "hideControlPanel": "Oats ausblenden",
     "quit": "Oats beenden",
-    "tooltip": "Oats – Sprachdiktat",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Unterhaltung starten",
       "stop": "Unterhaltung beenden"
@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Bedeutung der Markierungen",
         "open": "Offen",
-        "topic": "Themenwechsel",
-        "return": "Zurück zu einem früheren Thema",
-        "marked": "Markierter Moment"
+        "topic": "Neues Thema",
+        "marked": "Markiert"
       },
       "contourSummary": "{{minutes}} Minuten, {{questions}} Fragen ({{unresolved}} unbeantwortet), das Thema wechselte {{shifts}}-mal, und {{returns}} Stränge wurden wieder aufgegriffen.",
       "contourEmpty": "Noch nichts aufgezeichnet.",
@@ -1952,20 +1951,16 @@
       "title": "Gesprächsverlauf",
       "viewLabel": "Ansicht des Verlaufs",
       "mode": {
-        "auto": "Auto",
-        "stack": "Liste",
+        "lanes": "Bahnen",
         "graph": "Graph"
       },
       "empty": "Themen erscheinen hier im Lauf des Gesprächs.",
       "caption": {
-        "few_one": "Als Liste dargestellt: bisher erst {{count}} Thema.",
-        "few_other": "Als Liste dargestellt: bisher erst {{count}} Themen.",
-        "linear": "Als Liste dargestellt: Das Gespräch ist geradlinig verlaufen.",
-        "returns_one": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu einem früheren Thema zurückgekehrt.",
-        "returns_other": "Als Graph dargestellt: Das Gespräch ist bisher {{count}}-mal zu früheren Themen zurückgekehrt.",
-        "branching": "Als Graph dargestellt: Das Gespräch hat sich verzweigt.",
-        "stack": "Als Liste dargestellt.",
-        "graph": "Als Graph dargestellt."
+        "topics_one": "{{count}} Thema",
+        "topics_other": "{{count}} Themen",
+        "returns_one": "{{count}}-mal zu einem früheren Thema zurückgekehrt",
+        "returns_other": "{{count}}-mal zu früheren Themen zurückgekehrt",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Jetzt",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "{{count}}× zurück",
       "back_other": "{{count}}× zurück",
-      "showMore_one": "{{count}} weiteres anzeigen",
-      "showMore_other": "{{count}} weitere anzeigen",
-      "showFewer": "Weniger anzeigen",
-      "stackLabel": "Themen, neueste zuerst",
+      "lanesLabel": "Themen in der Reihenfolge, in der sie aufkamen",
       "graphLabel_one": "Graph von {{count}} bisher angesprochenem Thema",
       "graphLabel_other": "Graph von {{count}} bisher angesprochenen Themen",
       "nodeName": "{{label}}, {{state}}",
@@ -2067,6 +2059,65 @@
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
       "summarize": "Zusammenfassen",
       "setUpModel": "Modell einrichten"
+    },
+    "global": {
+      "title": "Globale Gespräche",
+      "view": {
+        "label": "Ansicht der Gespräche",
+        "list": "Liste",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Gesprächsgruppen",
+        "all": "Alle"
+      },
+      "boardLabel": "Board: {{tab}}",
+      "add": {
+        "label": "Hinzufügen",
+        "there": "Schon auf dem Board"
+      },
+      "menu": {
+        "label": "Board-Optionen",
+        "reset": "Anordnung zurücksetzen"
+      },
+      "cleared": "Auf diesem Board ist nichts.",
+      "widget": {
+        "remove": "{{name}} entfernen",
+        "role": "Karte",
+        "keys": "Die Pfeiltasten verschieben sie. Umschalt und die Pfeiltasten ändern ihre Größe.",
+        "place": "{{name}}: Spalte {{column}}, Zeile {{row}}, {{width}} mal {{height}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Kräftegraph",
+          "empty": "Der Graph erscheint, sobald {{count}} Gespräche hier Themen haben, die sich verbinden lassen."
+        },
+        "arcs": {
+          "name": "Bogen-Zeitleiste",
+          "empty": "Die Zeitleiste erscheint, sobald {{count}} Gespräche hier Themen haben."
+        },
+        "subjects": {
+          "name": "Themen, die wiederkommen",
+          "empty": "Noch ist nichts wiedergekommen. Ein Thema erscheint hier, sobald zwei Gespräche es teilen."
+        },
+        "questions": {
+          "name": "Offene Fragen",
+          "empty": "Hier gibt es keine offenen Fragen. Jede Frage hat eine Antwort.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Aktivität",
+          "day_one": "{{date}}: {{count}} Gespräch",
+          "day_other": "{{date}}: {{count}} Gespräche"
+        }
+      },
+      "subjects": {
+        "caption": "Kommt wieder:",
+        "chip_one": "{{label}}, in {{count}} Gespräch",
+        "chip_other": "{{label}}, in {{count}} Gesprächen"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} Thema",
+      "node_other": "{{title}}, {{date}}, {{count}} Themen"
     },
     "review": {
       "title": "Was offen geblieben ist",
@@ -2225,7 +2276,27 @@
       "dictationButton": "Beim Diktieren",
       "instructionsDescription": "Wie das Modell jedes Diktat überarbeitet. Die Standardeinstellung passt für die meisten.",
       "editInstructions": "Anweisungen bearbeiten",
-      "instructions": "Bereinigungsanweisungen"
+      "instructions": "Bereinigungsanweisungen",
+      "context": {
+        "title": "Kontextprüfung",
+        "description": "Bekommt eine Frage eine unsichere oder keine Antwort, sucht Oats in früheren Gesprächen und in einem Ordner, den das Team teilt, und sagt, ob die Antwort stimmt.",
+        "enable": "Unsichere Antworten prüfen",
+        "enableHint": "Nutzt das unter Modelle gewählte Schreibmodell. Bei einem Cloud-Modell werden die Frage, die Antwort und die gelesenen Abschnitte an diesen Anbieter gesendet.",
+        "needsModel": "Wählen Sie zuerst unter Modelle ein Schreibmodell. Bis dahin wird nichts geprüft.",
+        "folder": "Team-Ordner",
+        "noFolder": "Kein Ordner gewählt. Frühere Gespräche werden trotzdem geprüft.",
+        "choose": "Ordner wählen",
+        "change": "Ändern",
+        "remove": "Entfernen",
+        "reading": "Ordner wird gelesen",
+        "files_one": "{{count}} Datei gelesen",
+        "files_other": "{{count}} Dateien gelesen",
+        "missing": "Dieser Ordner existiert nicht mehr.",
+        "unreadable": "Oats kann diesen Ordner nicht lesen.",
+        "agent": "Claude Code fragen, wenn es keine Antwort gibt",
+        "agentHint": "Startet Claude Code auf diesem Mac mit Ihren Verbindungen zu GitHub, Linear, Notion und Slack, nur lesend. Die Frage und die Antwort gehen an Anthropic, der Suchtext an diese Dienste.",
+        "agentMissing": "Benötigt Claude Code auf diesem Mac, angemeldet. Es wurde nicht gefunden."
+      }
     },
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",
@@ -2239,7 +2310,7 @@
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
       "question-cards-off": "Fragekarten sind ausgeschaltet, Fragen gehen also still vorbei. Schalte sie in den Einstellungen unter Aufnahme ein.",
-      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Zusammenfassungsmodell bereit. Einrichten lässt es sich unter Einstellungen › Erweitert › Sprachmodelle."
+      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Schreibmodell bereit. Wählen Sie eines unter Einstellungen › KI-Modelle."
     },
     "aide": {
       "title": "Gesprächshilfe",
@@ -2269,6 +2340,36 @@
       "room": "Raum",
       "speaker": "Sprecher {{n}}"
     },
+    "example": {
+      "open": "Beispielgespräch öffnen",
+      "note": "Eine Launch-Besprechung mit neun Personen zum Erkunden. Du kannst sie jederzeit löschen.",
+      "badge": "Beispiel",
+      "failed": "Das Beispielgespräch konnte nicht geöffnet werden",
+      "failedHint": "Es wurde nichts hinzugefügt. Versuche es noch einmal."
+    },
+    "groups": {
+      "seed": {
+        "work": "Arbeit",
+        "personal": "Privat"
+      },
+      "moveTo": "In Gruppe verschieben",
+      "none": "Keine Gruppe",
+      "new": "Neue Gruppe…",
+      "newTitle": "Neue Gruppe",
+      "newDescription": "Gib der Gruppe einen Namen. Dieses Gespräch kommt hinein.",
+      "nameLabel": "Name",
+      "create": "Erstellen",
+      "movedTo": "Verschoben nach {{group}}",
+      "movedOut": "In keiner Gruppe",
+      "moveFailed": "Nicht verschoben",
+      "sorting": "Sortiere {{current}} von {{total}}",
+      "errors": {
+        "nameRequired": "Gib der Gruppe einen Namen.",
+        "nameTooLong": "Höchstens {{max}} Zeichen.",
+        "nameTaken": "Eine Gruppe mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+        "failed": "Die Gruppe wurde nicht gespeichert. Versuche es noch einmal."
+      }
+    },
     "shell": {
       "sidebar": "Seitenleiste",
       "showSidebar": "Seitenleiste einblenden",
@@ -2295,6 +2396,7 @@
     }
   },
   "questionCard": {
+    "now": "jetzt",
     "state": {
       "asked": "Offen",
       "answered": "Beantwortet",
@@ -2310,7 +2412,22 @@
     "announced": "Neue Frage: {{question}}",
     "announcedAgain": "Erneut gefragt, jetzt {{count}}×: {{question}}",
     "announcedBatch": "{{count}} neue Fragen, zuletzt: {{question}}",
-    "searchedHost": "Gesucht auf {{host}}"
+    "searchedHost": "Gesucht auf {{host}}",
+    "check": {
+      "checking": "Kontext wird geprüft",
+      "checkingSources": "{{sources}} wird geprüft",
+      "right": "Das stimmt",
+      "wrong": "Moment, das stimmt nicht",
+      "answer": "Gefunden",
+      "quote": "„{{quote}}“",
+      "openSource": "{{source}} öffnen",
+      "announced": {
+        "right": "Das stimmt: {{answer}}. Quelle: {{source}}.",
+        "wrong": "Moment, das stimmt nicht: {{answer}}. Quelle: {{source}}.",
+        "answer": "Gefunden: {{answer}}. Quelle: {{source}}."
+      },
+      "checkingAgent": "Claude Code wird gefragt"
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} Sekunden",
@@ -2320,19 +2437,5 @@
     "returned_other": "{{count}}× zurückgekehrt",
     "search": "Suchen",
     "noQuestions": "Keine Fragen in diesem Strang."
-  },
-  "lifetime": {
-    "title": "Worauf du immer zurückkommst",
-    "viewMap": "Karte",
-    "viewList": "Liste",
-    "viewLabel": "Ansicht der Gespräche",
-    "recurring": "Wiederkehrend:",
-    "inCount_one": "{{count}} Gespräch",
-    "inCount_other": "{{count}} Gespräche",
-    "node": "{{label}}, {{count}} Themen",
-    "topicCount_one": "{{count}} Thema",
-    "topicCount_other": "{{count}} Themen",
-    "open": "Dieses Gespräch öffnen",
-    "empty": "Die Karte erscheint, sobald {{count}} aufgezeichnete Gespräche verbunden werden können."
   }
 }

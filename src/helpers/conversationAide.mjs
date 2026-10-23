@@ -1,3 +1,5 @@
+import { CHECK_OUTCOMES } from "./contextCheck.mjs";
+
 const QUESTION_PREFIX =
   /^(?:what|why|how|which|who|where|when|do\s+you\s+know|can\s+you\s+(?:explain|tell)|could\s+you\s+(?:explain|tell))\b/i;
 const QUESTION_ANYWHERE =
@@ -776,6 +778,10 @@ class ConversationAideSession {
     this.onCard = options.onCard || (() => {});
     this.onCardRemoved = options.onCardRemoved || (() => {});
     this.openSearch = options.openSearch || (async () => false);
+    // Optional: puts a reply somebody was not sure of to the team's context
+    // (contextCheck.mjs). Called with the question, the reply and a progress
+    // callback; resolves with the card's check, or null for nothing to say.
+    this.checkContext = options.checkContext || null;
     this.autoSearch = options.autoSearch ?? true;
     this.onDiagnostic = options.onDiagnostic || (() => {});
     this.confidenceThreshold = options.confidenceThreshold ?? 0.75;
@@ -915,6 +921,44 @@ class ConversationAideSession {
       .catch((error) => this.onDiagnostic("evaluation_failed", error));
   }
 
+  // Phase 3, beside the chain rather than on it. A reply somebody was not
+  // sure of (a hedge, or "I don't know") is put to the team's context. Finish
+  // awaits the evaluation chain before it saves, and a check takes as long as
+  // the writing model needs, so the check must never be on that chain. Its
+  // result lands on the card while the card is on screen, and on the
+  // question's event either way, so the reading view can show it later.
+  _startCheck(candidate, followingContext, outcome) {
+    if (!this.checkContext || !CHECK_OUTCOMES.has(outcome)) return;
+    const card = this.cards.get(candidate.id);
+    if (!card) return;
+    const show = (check) => {
+      if (this.closed || !this.cards.has(candidate.id)) return;
+      this._updateCard(candidate.id, { check });
+    };
+    const input = {
+      question: card.question,
+      reply: followingContext.map((item) => item.text).join(" "),
+      outcome,
+      noteId: this.noteId,
+    };
+    Promise.resolve()
+      .then(() => this.checkContext(input, show))
+      .then(async (check) => {
+        if (!check) {
+          // Nothing to say: a "checking" line, if one was shown, goes away.
+          if (this.cards.get(candidate.id)?.check) show(undefined);
+          return;
+        }
+        show(check);
+        const eventId = this.cards.get(candidate.id)?.eventId ?? card.eventId;
+        if (eventId != null) await this.updateEvent(eventId, { check });
+      })
+      .catch((error) => {
+        this.onDiagnostic("context_check_failed", error);
+        if (this.cards.get(candidate.id)?.check) show(undefined);
+      });
+  }
+
   // Resolves a card without the classifier at all — used whenever the model
   // fails, times out, or returns something off-contract. Before this existed such
   // a card sat at `asked` for the rest of the conversation and a plainly denied
@@ -945,6 +989,7 @@ class ConversationAideSession {
       text: followingContext.map((item) => item.text).join(" ") || "",
       metadata: { reason: local.outcome, trigger, outcome: local.outcome, source: "local" },
     });
+    this._startCheck(candidate, followingContext, local.outcome);
     if (local.outcome === "answered") return;
 
     // The question text is the best search query available without the model.
@@ -1061,6 +1106,7 @@ class ConversationAideSession {
       text: followingContext.map((item) => item.text).join(" ") || "",
       metadata: { reason: assessment.reason, trigger, outcome },
     });
+    this._startCheck(candidate, followingContext, outcome);
 
     // Answered questions are a record, nothing more.
     if (outcome === "answered") return;

@@ -16,6 +16,9 @@
 // - A link handed to the browser: `shell.openExternal`, wrapped here, and the
 //   Linux new-window launch in ipcHandlers.js, which records itself. The
 //   browser makes that request, but Oats chose what it carries.
+// - The context check's agent, the user's Claude Code run as a child process
+//   (contextAgentRunner.js), which records itself: Anthropic's API once per
+//   run, and each service it reads from.
 //
 // Not counted, because none of it reaches another computer: loopback (the local
 // whisper, llama and Qdrant servers), unix sockets, and every scheme that is not

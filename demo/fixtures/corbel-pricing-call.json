@@ -1,0 +1,694 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "corbel-pricing-call",
+    "sample": true,
+    "description": "Sample conversation: a customer call with Corbel Logistics, a fictional customer. Invented people.",
+    "company": "Pellwood and Corbel Logistics (both fictional)",
+    "participants": [
+      { "name": "Marcus", "role": "Head of sales, Pellwood" },
+      { "name": "Dana", "role": "Head of IT, Corbel Logistics" },
+      { "name": "Maya", "role": "Product lead, Pellwood" }
+    ],
+    "startedAt": 1791050400000,
+    "endedAt": 1791050628559,
+    "summarizedAt": 1791050669559,
+    "placement": { "daysAgo": 9, "at": "11:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Corbel call: SSO on day one is a contract condition",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-musp3uhk-1",
+        "text": "Thanks for joining, Dana. Today is mostly SSO and SAML.",
+        "source": "mic",
+        "timestamp": 1791050403989,
+        "startMs": 3989,
+        "endMs": 8542,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-2",
+        "text": "Right. SSO with SAML is the hard requirement for us.",
+        "source": "mic",
+        "timestamp": 1791050410215,
+        "startMs": 10215,
+        "endMs": 15384,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-3",
+        "text": "Every login at Corbel goes through our identity provider, so SSO over SAML is the only way in.",
+        "source": "mic",
+        "timestamp": 1791050416340,
+        "startMs": 16340,
+        "endMs": 25836,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-4",
+        "text": "SSO ships with the launch on the 3rd, with SAML login and an admin setup screen.",
+        "source": "mic",
+        "timestamp": 1791050426922,
+        "startMs": 26922,
+        "endMs": 34708,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-5",
+        "text": "Can you do SSO with our identity provider on day one?",
+        "source": "mic",
+        "timestamp": 1791050435307,
+        "startMs": 35307,
+        "endMs": 41281,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-6",
+        "text": "Yes, it's on the test plan.",
+        "source": "mic",
+        "timestamp": 1791050441793,
+        "startMs": 41793,
+        "endMs": 45081,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-7",
+        "text": "Your identity provider has a known SAML clock issue, and the SSO fix is in progress.",
+        "source": "mic",
+        "timestamp": 1791050445799,
+        "startMs": 45799,
+        "endMs": 54162,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-8",
+        "text": "How long does SSO setup take for an admin?",
+        "source": "mic",
+        "timestamp": 1791050455690,
+        "startMs": 55690,
+        "endMs": 60488,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-9",
+        "text": "About ten minutes, with the SAML metadata.",
+        "source": "mic",
+        "timestamp": 1791050461287,
+        "startMs": 61287,
+        "endMs": 64938,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-10",
+        "text": "Ten minutes is fine. Our admins hate long SSO setups, and they hate SAML errors more.",
+        "source": "mic",
+        "timestamp": 1791050465650,
+        "startMs": 65650,
+        "endMs": 73935,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-11",
+        "text": "Good. SSO on day one is a contract condition for us, not a nice-to-have.",
+        "source": "mic",
+        "timestamp": 1791050474580,
+        "startMs": 74580,
+        "endMs": 81990,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-12",
+        "text": "Understood. We'll write the SSO condition into the contract.",
+        "source": "mic",
+        "timestamp": 1791050482494,
+        "startMs": 82494,
+        "endMs": 86500,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-13",
+        "text": "On pricing, the enterprise quote is forty-eight a seat, two hundred seats.",
+        "source": "mic",
+        "timestamp": 1791050487244,
+        "startMs": 87244,
+        "endMs": 92655,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-14",
+        "text": "Forty-eight a seat is fine. The discount is the conversation.",
+        "source": "mic",
+        "timestamp": 1791050493691,
+        "startMs": 93691,
+        "endMs": 98888,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-15",
+        "text": "Our finance team wants a thirty percent discount on the seat price, for two years.",
+        "source": "mic",
+        "timestamp": 1791050499659,
+        "startMs": 99659,
+        "endMs": 107252,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-16",
+        "text": "Thirty percent with a two-year term works for us.",
+        "source": "mic",
+        "timestamp": 1791050507822,
+        "startMs": 107822,
+        "endMs": 111955,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-17",
+        "text": "Two hundred seats on a two-year term also gets the onboarding package, at no discount cost to you.",
+        "source": "mic",
+        "timestamp": 1791050512717,
+        "startMs": 112717,
+        "endMs": 120527,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-18",
+        "text": "The onboarding package matters more than the discount, honestly.",
+        "source": "mic",
+        "timestamp": 1791050521886,
+        "startMs": 121886,
+        "endMs": 126290,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-19",
+        "text": "Our CFO signs anything over a hundred thousand a year, so the discount has to land under that.",
+        "source": "mic",
+        "timestamp": 1791050527063,
+        "startMs": 127063,
+        "endMs": 135957,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-20",
+        "text": "Thirty percent is our discount floor for a two-year term, so that one's easy.",
+        "source": "mic",
+        "timestamp": 1791050537112,
+        "startMs": 137112,
+        "endMs": 144016,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-21",
+        "text": "And the platform fee.",
+        "source": "mic",
+        "timestamp": 1791050545172,
+        "startMs": 145172,
+        "endMs": 147408,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-22",
+        "text": "The platform fee has no discount. Eight thousand a year, at list.",
+        "source": "mic",
+        "timestamp": 1791050548299,
+        "startMs": 148299,
+        "endMs": 153791,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-23",
+        "text": "Last item, the SOC 2 report. Security won't sign without the SOC 2 report.",
+        "source": "mic",
+        "timestamp": 1791050554747,
+        "startMs": 154747,
+        "endMs": 162208,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-24",
+        "text": "The SOC 2 report lands in December, with a bridge letter until then.",
+        "source": "mic",
+        "timestamp": 1791050563023,
+        "startMs": 163023,
+        "endMs": 168937,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-25",
+        "text": "Would a bridge letter work for your security team?",
+        "source": "mic",
+        "timestamp": 1791050569568,
+        "startMs": 169568,
+        "endMs": 173977,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-26",
+        "text": "Our security team accepted one last year.",
+        "source": "mic",
+        "timestamp": 1791050574718,
+        "startMs": 174718,
+        "endMs": 178546,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-27",
+        "text": "A bridge letter plus the SOC 2 audit dates should be enough for the security review.",
+        "source": "mic",
+        "timestamp": 1791050579235,
+        "startMs": 179235,
+        "endMs": 187338,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-28",
+        "text": "Ruth will send you the SOC 2 audit dates once the auditors confirm.",
+        "source": "mic",
+        "timestamp": 1791050588281,
+        "startMs": 188281,
+        "endMs": 194717,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-29",
+        "text": "Ruth can also walk your security team through the SOC 2 audit scope.",
+        "source": "mic",
+        "timestamp": 1791050595707,
+        "startMs": 195707,
+        "endMs": 201895,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-30",
+        "text": "Then we're close. SSO on day one, thirty percent for two years, and the bridge letter.",
+        "source": "mic",
+        "timestamp": 1791050603092,
+        "startMs": 203092,
+        "endMs": 211220,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-31",
+        "text": "One more. Is there a data residency option for Canada?",
+        "source": "mic",
+        "timestamp": 1791050612086,
+        "startMs": 212086,
+        "endMs": 217276,
+        "speaker": "speaker_2",
+        "speakerName": "Dana",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-32",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791050618506,
+        "startMs": 218506,
+        "endMs": 219169,
+        "speaker": "speaker_1",
+        "speakerName": "Marcus",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-musp3uhk-33",
+        "text": "Let me check with engineering and come back to you this week.",
+        "source": "mic",
+        "timestamp": 1791050619772,
+        "startMs": 219772,
+        "endMs": 225959,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Corbel's head of IT confirmed that SSO on day one is a contract condition. Pricing landed at 30% off for a two-year term, and a bridge letter should satisfy their security review.\n\n## Threads\n- **SSO.** Every Corbel login goes through their identity provider, so SSO with SAML on the 3rd is a hard requirement and goes into the contract. Their provider is the one with the known clock issue.\n- **Pricing.** $48 a seat for 200 seats. Corbel asked for 30% off on a two-year term, which is at Pellwood's floor; the platform fee stays at list.\n- **SOC 2.** The report lands in December. Corbel's security team accepted a bridge letter last year.\n\n## Action Items\n- [ ] Marcus: write the SSO condition into the contract.\n- [ ] Ruth: send Corbel the SOC 2 audit dates once the auditors confirm.\n- [ ] Maya: check data residency for Canada with engineering this week.\n\n## Follow-ups\n- Data residency for Canada: no answer yet.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "9705-[{\"id\":\"seg-musp3uhk-1\",\"text\":\"Thanks for joining",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "sso saml",
+          "words": [
+            "sso",
+            "saml",
+            "admin",
+            "identity",
+            "provider",
+            "setup",
+            "condition",
+            "contract"
+          ],
+          "durationMs": 78505,
+          "utteranceIds": [
+            "seg-musp3uhk-1",
+            "seg-musp3uhk-2",
+            "seg-musp3uhk-3",
+            "seg-musp3uhk-4",
+            "seg-musp3uhk-5",
+            "seg-musp3uhk-6",
+            "seg-musp3uhk-7",
+            "seg-musp3uhk-8",
+            "seg-musp3uhk-9",
+            "seg-musp3uhk-10",
+            "seg-musp3uhk-11",
+            "seg-musp3uhk-12"
+          ],
+          "firstAt": 1791050403989,
+          "lastAt": 1791050482494,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "seat discount",
+          "words": ["discount", "seat", "hundred", "percent", "term", "thirty", "two", "two-year"],
+          "durationMs": 61055,
+          "utteranceIds": [
+            "seg-musp3uhk-13",
+            "seg-musp3uhk-14",
+            "seg-musp3uhk-15",
+            "seg-musp3uhk-16",
+            "seg-musp3uhk-17",
+            "seg-musp3uhk-18",
+            "seg-musp3uhk-19",
+            "seg-musp3uhk-20",
+            "seg-musp3uhk-22"
+          ],
+          "firstAt": 1791050487244,
+          "lastAt": 1791050548299,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 3,
+          "label": "soc security",
+          "words": ["security", "soc", "bridge", "letter", "audit", "team", "date", "last"],
+          "durationMs": 65025,
+          "utteranceIds": [
+            "seg-musp3uhk-23",
+            "seg-musp3uhk-24",
+            "seg-musp3uhk-25",
+            "seg-musp3uhk-26",
+            "seg-musp3uhk-27",
+            "seg-musp3uhk-28",
+            "seg-musp3uhk-29",
+            "seg-musp3uhk-30",
+            "seg-musp3uhk-31",
+            "seg-musp3uhk-33"
+          ],
+          "firstAt": 1791050554747,
+          "lastAt": 1791050619772,
+          "returns": 0,
+          "state": "resolved"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 3, "weight": 1, "kind": "new" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791050400000,
+          "b": "hoeDga2urK+nhKSpq6ypoqiura+sqq6tsKuIqq6prq+qrquiqKWrrqqZrK2rmK2tsK6rraaunZWvrq2xo6SvrbCarK2rqaiqrKmeraqprK6rqZSerKyiqK+rrrGsl66vra+pl62vq6qqqqmcr7CusJexsbCxrayuq4isqaWnnaqtq6+rqKyprY+lq66pq6qqj6aupKSvsLGwqZKuqqmsrq2umrCvr6+wrqCvsa6wkqywrKSprKyrrK6uq6CotLCur7GvmK+npa2urIymq6ysqquvrZqmq6ywrJ+enaisrayvroqChQ=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musp3uhk-5"],
+      "text": "Can you do SSO with our identity provider on day one?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "day identity one provider sso",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791050442260
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-musp3uhk-6"],
+      "text": "Yes, it's on the test plan.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791050445939
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musp3uhk-8"],
+      "text": "How long does SSO setup take for an admin?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "admin long setup sso take",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791050461414
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-musp3uhk-9"],
+      "text": "About ten minutes, with the SAML metadata.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791050465812
+    },
+    {
+      "id": 5,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musp3uhk-25"],
+      "text": "Would a bridge letter work for your security team?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "bridge letter security team work",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791050574885
+    },
+    {
+      "id": 6,
+      "kind": "response",
+      "parentEventId": 5,
+      "segmentIds": ["seg-musp3uhk-26"],
+      "text": "Our security team accepted one last year.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791050579428
+    },
+    {
+      "id": 7,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-musp3uhk-31"],
+      "text": "Is there a data residency option for Canada?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "canada data option residency",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791050618220
+    },
+    {
+      "id": 8,
+      "kind": "response",
+      "parentEventId": 7,
+      "segmentIds": ["seg-musp3uhk-32"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791050619909
+    },
+    {
+      "id": 9,
+      "kind": "search_suggestion",
+      "parentEventId": 7,
+      "segmentIds": ["seg-musp3uhk-31"],
+      "text": "Is there a data residency option for Canada?",
+      "metadata": {
+        "query": "Is there a data residency option for Canada?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791050619909
+    }
+  ],
+  "replay": {
+    "voices": { "Marcus": { "gain": 1.15 }, "Dana": { "gain": 0.98 }, "Maya": { "gain": 1.04 } },
+    "loud": {},
+    "stopAtMs": 228559
+  }
+}

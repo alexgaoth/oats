@@ -50,7 +50,9 @@ export function tallyMatches(texts, needle) {
 /**
  * How long a search took, short and in the reader's own number format: a
  * tenth of a millisecond under 10 ms, whole milliseconds under a second, then
- * seconds. Null for a time that is not a time.
+ * seconds. Under a twentieth of a millisecond it reads "<0.1 ms": rounded, it
+ * read "0 ms", and a search that took no time at all looks like one that did
+ * not run. Null for a time that is not a time.
  *
  * @param {number} ms
  * @param {string} [locale]
@@ -71,5 +73,6 @@ export function formatSearchDuration(ms, locale) {
     }
   };
   if (seconds) return format(ms / 1000, "second", 1);
+  if (ms < 0.05) return `<${format(0.1, "millisecond", 1)}`;
   return format(ms, "millisecond", ms < 10 ? 1 : 0);
 }

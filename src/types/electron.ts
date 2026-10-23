@@ -1,5 +1,10 @@
 import type { TinfoilCatalogModel } from "../models/tinfoilModels";
-import type { ConversationEvent, SuggestionState } from "./conversationEvents";
+import type {
+  ContextPassage,
+  ContextStatus,
+  ConversationEvent,
+  SuggestionState,
+} from "./conversationEvents";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia";
 
@@ -79,6 +84,14 @@ export interface NoteItem {
   // How loud each second was, written at Finish (helpers/conversationLoudness.mjs).
   // Optional: absent for conversations recorded before it was kept.
   conversation_loudness?: string | null;
+  // Which bundled example conversation this is (helpers/sampleConversations.mjs),
+  // or null for a conversation somebody recorded.
+  sample_id?: string | null;
+  // The conversation group it is in (ConversationGroup.id), or null, and who
+  // chose: the writing model or a person. A source with no group means it was
+  // looked at and left out; no source means nobody has chosen yet.
+  group_id?: number | null;
+  group_source?: ConversationGroupSource | null;
   cloud_id: string | null;
   created_at: string;
   updated_at: string;
@@ -87,6 +100,46 @@ export interface NoteItem {
   deleted_at: string | null;
   workspace_id?: string | null;
   team_id?: string | null;
+}
+
+/** Who put a conversation in its group: the writing model, or a person. */
+export type ConversationGroupSource = "model" | "user";
+
+/**
+ * A conversation group: Work, Personal, or one the person made. A seeded
+ * group shows its name through i18n by `seed_key` (`oats.groups.seed.<key>`)
+ * until it is renamed, which clears the key.
+ */
+export interface ConversationGroup {
+  id: number;
+  name: string;
+  seed_key: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+/**
+ * Why a group could not be created, renamed, deleted, ordered or used.
+ * "chosen": the model's choice was not written because a person chose.
+ */
+export type ConversationGroupError =
+  "name-required" | "name-too-long" | "name-taken" | "not-found" | "invalid" | "chosen";
+
+export type ConversationGroupResult =
+  | { success: true; group: ConversationGroup; changed?: boolean }
+  | { success: false; error: ConversationGroupError };
+
+/** A note's group after a change to the groups, e.g. its group was deleted. */
+export interface NoteGroupPatch {
+  id: number;
+  group_id: number | null;
+  group_source: ConversationGroupSource | null;
+}
+
+/** Sent to every window after a group is created, renamed, ordered or deleted. */
+export interface ConversationGroupsChange {
+  groups: ConversationGroup[];
+  notes: NoteGroupPatch[];
 }
 
 export interface FolderItem {
@@ -419,6 +472,40 @@ declare global {
       // The sidebar's footer: pulled once on mount, then pushed on every change.
       getOnDeviceStatus?: () => Promise<OnDeviceStatus>;
       onOnDeviceStatus?: (callback: (status: OnDeviceStatus) => void) => () => void;
+      // The context agent (helpers/contextAgentIpc.js): the user's Claude Code
+      // checks a question against GitHub, Linear, Notion and Slack, read-only.
+      // `sources` are the services it read, as labels ("Notion"). `busy` means
+      // two checks are already running.
+      contextAgentStatus?: () => Promise<{
+        available: boolean;
+        path: string | null;
+        version: string | null;
+      }>;
+      contextAgentCheck?: (request: {
+        checkId: string | number;
+        question: string;
+        reply: string;
+        outcome: "uncertain" | "denied";
+      }) => Promise<
+        | {
+            ok: true;
+            verdict: {
+              verdict: "right" | "wrong" | "answer";
+              answer: string;
+              source: { title: string; url: string };
+              quote: string;
+            };
+            sources: string[];
+          }
+        | {
+            ok: false;
+            reason: "not-installed" | "timeout" | "failed" | "unclear" | "cancelled" | "busy";
+          }
+      >;
+      contextAgentCancel?: (checkId: string | number) => Promise<{ success: boolean }>;
+      onContextAgentProgress?: (
+        callback: (progress: { checkId: string | number; sources: string[] }) => void
+      ) => () => void;
       onToggleDictation: (callback: () => void) => () => void;
       onToggleVoiceAgent?: (callback: () => void) => () => void;
       onToggleConversation?: (callback: () => void) => () => void;
@@ -462,6 +549,15 @@ declare global {
       exportNoteToVault?: (
         noteId: number
       ) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+      // The context check's sources (helpers/contextService.js).
+      configureContext?: (config: { folder: string | null }) => Promise<ContextStatus>;
+      getContextStatus?: () => Promise<ContextStatus>;
+      chooseContextFolder?: () => Promise<{ success: boolean; path?: string }>;
+      searchContext?: (query: {
+        question: string;
+        noteId?: number | null;
+      }) => Promise<{ success: boolean; passages: ContextPassage[] }>;
+      openContextFile?: (relPath: string) => Promise<{ success: boolean }>;
       getNoteRecordingConfig?: () => Promise<{
         success: boolean;
         providers: Array<{
@@ -600,6 +696,12 @@ declare global {
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;
+      // The bundled example conversation (helpers/exampleConversation.mjs):
+      // inserted, or the copy already there (`inserted: false`).
+      insertExampleConversation?: () => Promise<
+        | { success: true; noteId: number; inserted: boolean; note: NoteItem }
+        | { success: false; error?: string }
+      >;
       exportNote: (
         noteId: number,
         format: "txt" | "md"
@@ -634,6 +736,49 @@ declare global {
         name: string
       ) => Promise<{ success: boolean; folder?: FolderItem; error?: string }>;
       getFolderNoteCounts: () => Promise<Array<{ folder_id: number; count: number }>>;
+
+      // Conversation groups (database.js). Names are trimmed, not empty, at
+      // most 40 characters and unique whatever their case.
+      getConversationGroups?: () => Promise<ConversationGroup[]>;
+      createConversationGroup?: (name: string) => Promise<ConversationGroupResult>;
+      // `changed: false` when the name is the one it already shows.
+      renameConversationGroup?: (id: number, name: string) => Promise<ConversationGroupResult>;
+      // Its conversations are left in no group.
+      deleteConversationGroup?: (
+        id: number
+      ) => Promise<
+        | { success: true; id: number; notes: NoteGroupPatch[] }
+        | { success: false; error: ConversationGroupError }
+      >;
+      // Groups not named keep their order, after the ones named.
+      reorderConversationGroups?: (
+        ids: number[]
+      ) => Promise<
+        | { success: true; groups: ConversationGroup[] }
+        | { success: false; error: ConversationGroupError }
+      >;
+      // A person's choice (`group_source: "user"`), which the model never
+      // changes. null is "No group". Broadcast as `note-updated`.
+      setConversationGroup?: (
+        noteId: number,
+        groupId: number | null
+      ) => Promise<
+        { success: true; note: NoteItem } | { success: false; error: ConversationGroupError }
+      >;
+      // The writing model's choice (`group_source: "model"`): written only
+      // where no person has chosen ("chosen" otherwise). null is "none".
+      setConversationGroupFromModel?: (
+        noteId: number,
+        groupId: number | null
+      ) => Promise<
+        { success: true; note: NoteItem } | { success: false; error: ConversationGroupError }
+      >;
+      // Finished conversations with a summary that nobody has sorted yet,
+      // the most recently changed first.
+      listUnsortedConversations?: () => Promise<number[]>;
+      onConversationGroupsChanged?: (
+        callback: (change: ConversationGroupsChange) => void
+      ) => () => void;
 
       // Note files (markdown mirror)
       noteFilesSetEnabled?: (

@@ -328,6 +328,31 @@
   }
 }
 
+/* The lanes' line drawing itself once, left to right, when the lanes appear
+   (TopicLanes.tsx). Time runs left to right and the line only ever moves
+   forward in it, so uncovering the box from the left draws the line in the
+   order the room took it. The clip extends past the box so the dot at now is
+   not cut, and it is not kept afterwards (`backwards`, not `both`). Not under
+   reduced motion: the line is simply there. */
+@keyframes oats-lanes-draw {
+  from {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+  to {
+    clip-path: inset(-8px -8px -8px -8px);
+  }
+}
+
+.oats-lanes-draw {
+  animation: oats-lanes-draw var(--motion-slow) var(--ease-oats) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-lanes-draw {
+    animation: none;
+  }
+}
+
 /* The main action: honey with a little depth, and it sinks when pressed. New
    recording and Start recording are the only controls with depth (DESIGN.md §2,
    "Alive, not busy"); everything else stays flat. Unlayered, so the gradient and
@@ -363,12 +388,26 @@
   }
 }
 
-/* The field at the sidebar's foot gives its height back on short windows, so
-   the recent conversations above it never have to scroll for it. */
-@media (max-height: 760px) {
-  .oats-sidebar-field {
-    display: none;
-  }
+/* The sky over the field at the sidebar's foot (shell/SidebarField.tsx) fades
+   into the sidebar, so the field rises out of it with no edge: opaque at the
+   top, clear well before the horizon, and eased at both ends so neither end
+   shows as a line. It is measured on the sky, the field's height less the
+   ground the field sets, so it covers the same part of the sky at every
+   height. */
+.oats-sidebar-sky {
+  --sky: calc(100% - var(--oats-field-ground, 52px));
+  background: linear-gradient(
+    180deg,
+    var(--color-sidebar) 0%,
+    color-mix(in srgb, var(--color-sidebar) 96%, transparent) calc(var(--sky) * 0.0875),
+    color-mix(in srgb, var(--color-sidebar) 84%, transparent) calc(var(--sky) * 0.175),
+    color-mix(in srgb, var(--color-sidebar) 68%, transparent) calc(var(--sky) * 0.2625),
+    color-mix(in srgb, var(--color-sidebar) 50%, transparent) calc(var(--sky) * 0.35),
+    color-mix(in srgb, var(--color-sidebar) 32%, transparent) calc(var(--sky) * 0.4375),
+    color-mix(in srgb, var(--color-sidebar) 16%, transparent) calc(var(--sky) * 0.525),
+    color-mix(in srgb, var(--color-sidebar) 4%, transparent) calc(var(--sky) * 0.6125),
+    transparent calc(var(--sky) * 0.7)
+  );
 }
 
 /* A ViewSwitch's choice (ui/view-switch.tsx): a honey indicator that slides to

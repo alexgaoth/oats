@@ -161,6 +161,40 @@ export function openQuestionCount(events) {
 }
 
 /**
+ * When each question was asked, and how it came out: for marks on a timeline,
+ * such as the lanes in the reading view's Connections tab.
+ *
+ * The moment is the turn the question started in, read from `segments`, so a
+ * mark sits on the stretch of the conversation that turn belongs to. A
+ * question whose turn is not in the transcript falls back to when its event
+ * was written, a moment later; one with neither is left out. Each is read by
+ * `outcomeOf`, like the counts and the margin marks on the same page.
+ *
+ * @param {Array} events Persisted conversation events for one note.
+ * @param {Array<{ id?: unknown, timestamp?: number }>} [segments] The transcript.
+ * @returns {Array<{ id: number, key: string, at: number, outcome: string,
+ *   segmentIds: string[] }>} `id` is the question event's; `outcome` is
+ *   "answered" | "denied" | "uncertain" | "silence" | "open".
+ */
+export function questionMoments(events, segments = []) {
+  const said = new Map();
+  for (const segment of Array.isArray(segments) ? segments : []) {
+    if (segment?.id != null && Number.isFinite(segment.timestamp)) {
+      said.set(String(segment.id), segment.timestamp);
+    }
+  }
+  const moments = [];
+  for (const node of buildConversationGraph(Array.isArray(events) ? events : [])) {
+    if (!node.question) continue;
+    const segmentIds = (node.question.segmentIds ?? []).map(String);
+    const at = said.get(segmentIds[0]) ?? node.question.createdAt;
+    if (!Number.isFinite(at)) continue;
+    moments.push({ id: node.question.id, key: node.key, at, outcome: outcomeOf(node), segmentIds });
+  }
+  return moments;
+}
+
+/**
  * Which turns asked a question, and how each came out — for the transcript's
  * margin. Keyed by the segment the question started in.
  *

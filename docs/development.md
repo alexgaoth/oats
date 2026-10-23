@@ -69,7 +69,7 @@ If the helper is missing, the same report instead names its expected path and pr
 8. Toggle auto-search off in Settings and repeat step 5. Confirm the card still appears and resolves but no browser opens.
 9. Expand the open-thread stack mid-conversation, confirm it lists unfinished threads, then speak and confirm it auto-collapses.
 10. Stop recording, open the conversation in **Intelligence**, and confirm the topic graph renders with the questions reachable from their topic nodes and re-search working.
-11. Choose **Map** in Intelligence and confirm the lifetime graph connects conversations that shared a subject, and that the caption names the recurring ones.
+11. Choose **Global** in Conversations and confirm the force graph and the arc timeline connect conversations that shared a subject, that the line above the timeline names the ones that come back, and that pointing at a conversation lights it in both.
 12. Ramble for a while and put the question at the very end. Confirm the card quotes only the question, not the whole turn.
 13. Stop, then start again within half an hour, and confirm Oats offers to continue the previous conversation.
 14. Stop a recording that captured nothing and confirm no blank note is left behind.

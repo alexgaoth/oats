@@ -32,10 +32,10 @@
       "show": "Afficher le panneau de dictée",
       "hide": "Masquer le panneau de dictée"
     },
-    "openControlPanel": "Ouvrir le panneau de contrôle",
-    "hideControlPanel": "Masquer le panneau de contrôle",
+    "openControlPanel": "Ouvrir Oats",
+    "hideControlPanel": "Masquer Oats",
     "quit": "Quitter Oats",
-    "tooltip": "Oats - Dictée vocale",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Démarrer une conversation",
       "stop": "Arrêter la conversation"
@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "Signification des marques",
         "open": "Ouverte",
-        "topic": "Changement de sujet",
-        "return": "Retour à un sujet précédent",
-        "marked": "Moment marqué"
+        "topic": "Nouveau sujet",
+        "marked": "Marqué"
       },
       "contourSummary": "{{minutes}} minutes, {{questions}} questions posées ({{unresolved}} sans réponse), le sujet a changé {{shifts}} fois et {{returns}} fils ont été repris.",
       "contourEmpty": "Rien d'enregistré pour l'instant.",
@@ -1952,20 +1951,16 @@
       "title": "Déroulé de la conversation",
       "viewLabel": "Vue du déroulé",
       "mode": {
-        "auto": "Auto",
-        "stack": "Liste",
+        "lanes": "Couloirs",
         "graph": "Graphe"
       },
       "empty": "Les sujets apparaissent ici au fil de la conversation.",
       "caption": {
-        "few_one": "Affichage de la liste : seulement {{count}} sujet pour l'instant.",
-        "few_other": "Affichage de la liste : seulement {{count}} sujets pour l'instant.",
-        "linear": "Affichage de la liste : la conversation a avancé en ligne droite.",
-        "returns_one": "Affichage du graphe : {{count}} retour à un sujet précédent jusqu'ici.",
-        "returns_other": "Affichage du graphe : {{count}} retours à des sujets précédents jusqu'ici.",
-        "branching": "Affichage du graphe : la conversation s'est ramifiée.",
-        "stack": "Affichage de la liste.",
-        "graph": "Affichage du graphe."
+        "topics_one": "{{count}} sujet",
+        "topics_other": "{{count}} sujets",
+        "returns_one": "{{count}} retour à un sujet précédent",
+        "returns_other": "{{count}} retours à des sujets précédents",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "En cours",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "Repris {{count}}×",
       "back_other": "Repris {{count}}×",
-      "showMore_one": "Afficher {{count}} de plus",
-      "showMore_other": "Afficher {{count}} de plus",
-      "showFewer": "Afficher moins",
-      "stackLabel": "Sujets, du plus récent au plus ancien",
+      "lanesLabel": "Sujets dans l'ordre où ils ont été abordés",
       "graphLabel_one": "Graphe de {{count}} sujet abordé jusqu'ici",
       "graphLabel_other": "Graphe des {{count}} sujets abordés jusqu'ici",
       "nodeName": "{{label}}, {{state}}",
@@ -2067,6 +2059,65 @@
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
       "summarize": "Résumer",
       "setUpModel": "Configurer un modèle"
+    },
+    "global": {
+      "title": "Conversations globales",
+      "view": {
+        "label": "Vue des conversations",
+        "list": "Liste",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Groupes de conversations",
+        "all": "Toutes"
+      },
+      "boardLabel": "Tableau : {{tab}}",
+      "add": {
+        "label": "Ajouter",
+        "there": "Déjà sur le tableau"
+      },
+      "menu": {
+        "label": "Options du tableau",
+        "reset": "Réinitialiser la disposition"
+      },
+      "cleared": "Ce tableau est vide.",
+      "widget": {
+        "remove": "Retirer {{name}}",
+        "role": "carte",
+        "keys": "Les flèches la déplacent. Maj et les flèches la redimensionnent.",
+        "place": "{{name}} : colonne {{column}}, ligne {{row}}, {{width}} sur {{height}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Graphe de forces",
+          "empty": "Le graphe apparaît dès que {{count}} conversations ici ont des sujets à relier."
+        },
+        "arcs": {
+          "name": "Frise à arcs",
+          "empty": "La frise apparaît dès que {{count}} conversations ici ont des sujets."
+        },
+        "subjects": {
+          "name": "Sujets qui reviennent",
+          "empty": "Rien n'est encore revenu. Un sujet apparaît ici dès que deux conversations le partagent."
+        },
+        "questions": {
+          "name": "Questions ouvertes",
+          "empty": "Aucune question ouverte ici. Chaque question a une réponse.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Activité",
+          "day_one": "{{date}} : {{count}} conversation",
+          "day_other": "{{date}} : {{count}} conversations"
+        }
+      },
+      "subjects": {
+        "caption": "Revient :",
+        "chip_one": "{{label}}, dans {{count}} conversation",
+        "chip_other": "{{label}}, dans {{count}} conversations"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} sujet",
+      "node_other": "{{title}}, {{date}}, {{count}} sujets"
     },
     "review": {
       "title": "Ce qui reste ouvert",
@@ -2225,7 +2276,27 @@
       "dictationButton": "Pendant la dictée",
       "instructionsDescription": "Comment le modèle réécrit chaque dictée. Le réglage par défaut convient à la plupart des gens.",
       "editInstructions": "Modifier les instructions",
-      "instructions": "Instructions de nettoyage"
+      "instructions": "Instructions de nettoyage",
+      "context": {
+        "title": "Vérification du contexte",
+        "description": "Quand une question reçoit une réponse incertaine ou aucune, Oats la cherche dans vos conversations passées et dans un dossier partagé par l’équipe, et dit si la réponse tient.",
+        "enable": "Vérifier les réponses incertaines",
+        "enableHint": "Utilise le modèle de rédaction choisi dans Modèles. Avec un modèle cloud, la question, la réponse et les passages lus sont envoyés à ce fournisseur.",
+        "needsModel": "Choisissez d’abord un modèle de rédaction dans Modèles. D’ici là, rien n’est vérifié.",
+        "folder": "Dossier de l’équipe",
+        "noFolder": "Aucun dossier choisi. Les conversations passées sont tout de même vérifiées.",
+        "choose": "Choisir un dossier",
+        "change": "Modifier",
+        "remove": "Retirer",
+        "reading": "Lecture du dossier",
+        "files_one": "{{count}} fichier lu",
+        "files_other": "{{count}} fichiers lus",
+        "missing": "Ce dossier n’existe plus.",
+        "unreadable": "Oats ne peut pas lire ce dossier.",
+        "agent": "Demander à Claude Code quand il n’y a pas de réponse",
+        "agentHint": "Lance Claude Code sur ce Mac avec vos connexions GitHub, Linear, Notion et Slack, en lecture seule. La question et la réponse vont à Anthropic, et le texte de recherche à ces services.",
+        "agentMissing": "Nécessite Claude Code sur ce Mac, connecté. Il est introuvable."
+      }
     },
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
@@ -2239,7 +2310,7 @@
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
       "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Activez-les dans les Réglages, section Enregistrement.",
-      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de résumé n'est prêt. Configurez-en un dans Réglages › Avancé › Modèles de langage."
+      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de rédaction n’est prêt. Choisissez-en un dans Réglages › Modèles d’IA."
     },
     "aide": {
       "title": "Assistant de conversation",
@@ -2269,6 +2340,36 @@
       "room": "Salle",
       "speaker": "Intervenant {{n}}"
     },
+    "example": {
+      "open": "Ouvrir un exemple de conversation",
+      "note": "Une revue de lancement à neuf personnes, à explorer. Vous pouvez la supprimer quand vous voulez.",
+      "badge": "Exemple",
+      "failed": "Impossible d’ouvrir l’exemple de conversation",
+      "failedHint": "Rien n’a été ajouté. Réessayez."
+    },
+    "groups": {
+      "seed": {
+        "work": "Travail",
+        "personal": "Personnel"
+      },
+      "moveTo": "Déplacer vers un groupe",
+      "none": "Aucun groupe",
+      "new": "Nouveau groupe…",
+      "newTitle": "Nouveau groupe",
+      "newDescription": "Nommez le groupe. Cette conversation y sera déplacée.",
+      "nameLabel": "Nom",
+      "create": "Créer",
+      "movedTo": "Déplacée vers {{group}}",
+      "movedOut": "Dans aucun groupe",
+      "moveFailed": "Non déplacée",
+      "sorting": "Classement : {{current}} sur {{total}}",
+      "errors": {
+        "nameRequired": "Donnez un nom au groupe.",
+        "nameTooLong": "Utilisez {{max}} caractères au maximum.",
+        "nameTaken": "Un groupe porte déjà ce nom. Choisissez-en un autre.",
+        "failed": "Le groupe n’a pas été enregistré. Réessayez."
+      }
+    },
     "shell": {
       "sidebar": "Barre latérale",
       "showSidebar": "Afficher la barre latérale",
@@ -2295,6 +2396,7 @@
     }
   },
   "questionCard": {
+    "now": "à l'instant",
     "state": {
       "asked": "Ouverte",
       "answered": "Répondue",
@@ -2310,7 +2412,22 @@
     "announced": "Nouvelle question : {{question}}",
     "announcedAgain": "Posée à nouveau, {{count}} fois désormais : {{question}}",
     "announcedBatch": "{{count}} nouvelles questions, la dernière : {{question}}",
-    "searchedHost": "Recherché sur {{host}}"
+    "searchedHost": "Recherché sur {{host}}",
+    "check": {
+      "checking": "Vérification du contexte",
+      "checkingSources": "Vérification dans {{sources}}",
+      "right": "C’est exact",
+      "wrong": "Attendez, c’est faux",
+      "answer": "Trouvé",
+      "quote": "« {{quote}} »",
+      "openSource": "Ouvrir {{source}}",
+      "announced": {
+        "right": "C’est exact : {{answer}}. Source : {{source}}.",
+        "wrong": "Attendez, c’est faux : {{answer}}. Source : {{source}}.",
+        "answer": "Trouvé : {{answer}}. Source : {{source}}."
+      },
+      "checkingAgent": "Question posée à Claude Code"
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} secondes",
@@ -2320,19 +2437,5 @@
     "returned_other": "repris {{count}}×",
     "search": "Rechercher",
     "noQuestions": "Aucune question dans ce fil."
-  },
-  "lifetime": {
-    "title": "Ce sur quoi vous revenez",
-    "viewMap": "Carte",
-    "viewList": "Liste",
-    "viewLabel": "Vue des conversations",
-    "recurring": "Récurrent :",
-    "inCount_one": "{{count}} conversation",
-    "inCount_other": "{{count}} conversations",
-    "node": "{{label}}, {{count}} sujets",
-    "topicCount_one": "{{count}} sujet",
-    "topicCount_other": "{{count}} sujets",
-    "open": "Ouvrir cette conversation",
-    "empty": "La carte apparaît dès que vous avez {{count}} conversations enregistrées à relier."
   }
 }

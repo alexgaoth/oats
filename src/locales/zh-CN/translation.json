@@ -32,10 +32,10 @@
       "show": "显示听写面板",
       "hide": "隐藏听写面板"
     },
-    "openControlPanel": "打开控制面板",
-    "hideControlPanel": "隐藏控制面板",
+    "openControlPanel": "打开 Oats",
+    "hideControlPanel": "隐藏 Oats",
     "quit": "退出 Oats",
-    "tooltip": "Oats - 语音听写",
+    "tooltip": "Oats",
     "conversation": {
       "start": "开始对话",
       "stop": "结束对话"
@@ -1902,9 +1902,8 @@
       "legend": {
         "label": "标记的含义",
         "open": "未解决",
-        "topic": "话题切换",
-        "return": "回到之前的话题",
-        "marked": "标记时刻"
+        "topic": "新话题",
+        "marked": "已标记"
       },
       "contourSummary": "{{minutes}} 分钟，提出 {{questions}} 个问题（{{unresolved}} 个仍未解答），话题转变 {{shifts}} 次，回到 {{returns}} 条线索。",
       "contourEmpty": "尚未录制任何内容。",
@@ -1947,20 +1946,16 @@
       "title": "对话走向",
       "viewLabel": "显示方式",
       "mode": {
-        "auto": "自动",
-        "stack": "列表",
+        "lanes": "泳道",
         "graph": "关系图"
       },
       "empty": "随着对话推进，话题会显示在这里。",
       "caption": {
-        "few_one": "正在显示列表：目前只有 {{count}} 个话题。",
-        "few_other": "正在显示列表：目前只有 {{count}} 个话题。",
-        "linear": "正在显示列表：对话一路向前推进。",
-        "returns_one": "正在显示关系图：目前已 {{count}} 次回到之前的话题。",
-        "returns_other": "正在显示关系图：目前已 {{count}} 次回到之前的话题。",
-        "branching": "正在显示关系图：对话出现了分支。",
-        "stack": "正在显示列表。",
-        "graph": "正在显示关系图。"
+        "topics_one": "{{count}} 个话题",
+        "topics_other": "{{count}} 个话题",
+        "returns_one": "{{count}} 次回到之前的话题",
+        "returns_other": "{{count}} 次回到之前的话题",
+        "topicsReturns": "{{topics}}，{{returns}}"
       },
       "state": {
         "live": "当前",
@@ -1970,10 +1965,7 @@
       },
       "back_one": "回到 {{count}} 次",
       "back_other": "回到 {{count}} 次",
-      "showMore_one": "再显示 {{count}} 个",
-      "showMore_other": "再显示 {{count}} 个",
-      "showFewer": "收起",
-      "stackLabel": "话题（最新在前）",
+      "lanesLabel": "话题（按提出顺序）",
       "graphLabel_one": "目前提到的 {{count}} 个话题的关系图",
       "graphLabel_other": "目前提到的 {{count}} 个话题的关系图",
       "nodeName": "{{label}}，{{state}}",
@@ -2062,6 +2054,65 @@
       "notSummarized": "此对话尚未生成摘要。",
       "summarize": "生成摘要",
       "setUpModel": "设置模型"
+    },
+    "global": {
+      "title": "全局对话",
+      "view": {
+        "label": "对话显示方式",
+        "list": "列表",
+        "global": "全局"
+      },
+      "tabs": {
+        "label": "对话分组",
+        "all": "全部"
+      },
+      "boardLabel": "看板：{{tab}}",
+      "add": {
+        "label": "添加",
+        "there": "已在看板上"
+      },
+      "menu": {
+        "label": "看板选项",
+        "reset": "重置布局"
+      },
+      "cleared": "这个看板上什么也没有。",
+      "widget": {
+        "remove": "移除{{name}}",
+        "role": "卡片",
+        "keys": "方向键移动它。Shift 加方向键调整大小。",
+        "place": "{{name}}：第 {{column}} 列，第 {{row}} 行，{{width}} × {{height}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "力导向图",
+          "empty": "这里有 {{count}} 场对话带有可以连接的话题时，图就会出现。"
+        },
+        "arcs": {
+          "name": "弧线时间轴",
+          "empty": "这里有 {{count}} 场对话带有话题时，时间轴就会出现。"
+        },
+        "subjects": {
+          "name": "反复出现的话题",
+          "empty": "还没有反复出现的话题。两场对话共有一个话题时，它会显示在这里。"
+        },
+        "questions": {
+          "name": "未解决的问题",
+          "empty": "这里没有未解决的问题。每个问题都有回答。",
+          "where": "{{title}}，{{date}}"
+        },
+        "activity": {
+          "name": "活动",
+          "day_one": "{{date}}：{{count}} 场对话",
+          "day_other": "{{date}}：{{count}} 场对话"
+        }
+      },
+      "subjects": {
+        "caption": "反复出现：",
+        "chip_one": "{{label}}，{{count}} 场对话",
+        "chip_other": "{{label}}，{{count}} 场对话"
+      },
+      "node_one": "{{title}}，{{date}}，{{count}} 个话题",
+      "node_other": "{{title}}，{{date}}，{{count}} 个话题"
     },
     "review": {
       "title": "尚未解决的内容",
@@ -2220,7 +2271,27 @@
       "dictationButton": "听写时",
       "instructionsDescription": "模型如何改写每段听写。默认设置适合大多数人。",
       "editInstructions": "编辑指令",
-      "instructions": "整理指令"
+      "instructions": "整理指令",
+      "context": {
+        "title": "资料核对",
+        "description": "当问题得到不确定的回答或没人回答时，Oats 会在过去的对话和团队共享的文件夹中查找，并说明回答是否成立。",
+        "enable": "核对不确定的回答",
+        "enableHint": "使用在“模型”中选择的写作模型。若为云端模型，问题、回答和读取的段落会发送给该服务商。",
+        "needsModel": "请先在“模型”中选择写作模型。在此之前不会核对任何内容。",
+        "folder": "团队文件夹",
+        "noFolder": "尚未选择文件夹。仍会核对过去的对话。",
+        "choose": "选择文件夹",
+        "change": "更改",
+        "remove": "移除",
+        "reading": "正在读取文件夹",
+        "files_one": "已读取 {{count}} 个文件",
+        "files_other": "已读取 {{count}} 个文件",
+        "missing": "此文件夹已不存在。",
+        "unreadable": "Oats 无法读取此文件夹。",
+        "agent": "没有答案时询问 Claude Code",
+        "agentHint": "在这台 Mac 上运行 Claude Code，使用你的 GitHub、Linear、Notion 和 Slack 连接，只读。问题和回答会发送给 Anthropic，搜索文本会发送给这些服务。",
+        "agentMissing": "需要这台 Mac 上已登录的 Claude Code。未找到。"
+      }
     },
     "errors": {
       "noModel": "录制对话前请先配置 Oats 的处理方式。",
@@ -2234,7 +2305,7 @@
       "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
       "question-cards-off": "问题卡片已关闭，问题会被忽略。请在设置的“录音”中开启。",
-      "no-summary-model": "摘要模型尚未就绪，对话将以无标题、无摘要的形式保存。请在 设置 › 高级 › 语言模型 中进行设置。"
+      "no-summary-model": "写作模型尚未就绪，对话将以无标题、无摘要的形式保存。请在 设置 › AI 模型 中选择一个。"
     },
     "aide": {
       "title": "对话助手",
@@ -2264,6 +2335,36 @@
       "room": "房间",
       "speaker": "说话人 {{n}}"
     },
+    "example": {
+      "open": "打开示例对话",
+      "note": "一场九人参加的发布评审，供你随意浏览。随时可以删除。",
+      "badge": "示例",
+      "failed": "无法打开示例对话",
+      "failedHint": "没有添加任何内容。请重试。"
+    },
+    "groups": {
+      "seed": {
+        "work": "工作",
+        "personal": "个人"
+      },
+      "moveTo": "移到分组",
+      "none": "无分组",
+      "new": "新建分组…",
+      "newTitle": "新建分组",
+      "newDescription": "为分组命名。此对话将移入该分组。",
+      "nameLabel": "名称",
+      "create": "创建",
+      "movedTo": "已移到{{group}}",
+      "movedOut": "不在任何分组中",
+      "moveFailed": "未能移动",
+      "sorting": "正在分组：第 {{current}} 个，共 {{total}} 个",
+      "errors": {
+        "nameRequired": "请为分组命名。",
+        "nameTooLong": "最多 {{max}} 个字符。",
+        "nameTaken": "已有同名分组。请换一个名称。",
+        "failed": "分组未能保存。请重试。"
+      }
+    },
     "shell": {
       "sidebar": "侧边栏",
       "showSidebar": "显示侧边栏",
@@ -2290,6 +2391,7 @@
     }
   },
   "questionCard": {
+    "now": "刚刚",
     "state": {
       "asked": "未解决",
       "answered": "已解答",
@@ -2305,7 +2407,22 @@
     "announced": "新问题：{{question}}",
     "announcedAgain": "再次提问，已 {{count}} 次：{{question}}",
     "announcedBatch": "{{count}} 个新问题，最新：{{question}}",
-    "searchedHost": "已在 {{host}} 搜索"
+    "searchedHost": "已在 {{host}} 搜索",
+    "check": {
+      "checking": "正在核对资料",
+      "checkingSources": "正在查看 {{sources}}",
+      "right": "没错",
+      "wrong": "等等，不对",
+      "answer": "找到了",
+      "quote": "“{{quote}}”",
+      "openSource": "打开 {{source}}",
+      "announced": {
+        "right": "没错：{{answer}}。来源：{{source}}。",
+        "wrong": "等等，不对：{{answer}}。来源：{{source}}。",
+        "answer": "找到了：{{answer}}。来源：{{source}}。"
+      },
+      "checkingAgent": "正在询问 Claude Code"
+    }
   },
   "topicGraph": {
     "node": "{{label}}，{{seconds}} 秒",
@@ -2315,19 +2432,5 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜索",
     "noQuestions": "这条线索中没有问题。"
-  },
-  "lifetime": {
-    "title": "你反复回到的主题",
-    "viewMap": "图谱",
-    "viewList": "列表",
-    "viewLabel": "对话显示方式",
-    "recurring": "反复出现：",
-    "inCount_one": "{{count}} 场对话",
-    "inCount_other": "{{count}} 场对话",
-    "node": "{{label}}，{{count}} 个话题",
-    "topicCount_one": "{{count}} 个话题",
-    "topicCount_other": "{{count}} 个话题",
-    "open": "打开这场对话",
-    "empty": "当你有 {{count}} 场录制的对话可以连接时，图谱就会出现。"
   }
 }

@@ -7,13 +7,20 @@ on:
       - "**.md"
       - "LICENSE"
       - ".github/ISSUE_TEMPLATE/**"
+      - "site/**"
   pull_request:
     branches: [main]
     paths-ignore:
       - "**.md"
       - "LICENSE"
       - ".github/ISSUE_TEMPLATE/**"
+      - "site/**"
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Draft a GitHub release with this tag, for example v0.1.0. It must match package.json. Leave empty to only build."
+        required: false
+        default: ""
 
 # One run per pull request, and one per branch for pushes. A new push to a pull
 # request cancels the run it replaces, so superseded runs stop holding
@@ -268,9 +275,51 @@ jobs:
           path: dist/
           retention-days: 7
 
+      # The DMG alone, for the release job: a third of the size of dist/.
+      - name: Upload the DMG
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-dmg
+          path: dist/*.dmg
+          retention-days: 7
+
       - name: Cleanup Certificates
         if: always() && github.event_name != 'pull_request' && env.HAS_SIGNING_CERT == 'true'
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           rm -f $RUNNER_TEMP/build_certificate.p12
           rm -f $RUNNER_TEMP/api_key.p8
+
+  release:
+    # A run started by hand with a tag drafts a GitHub release that carries
+    # both DMGs under names that stay the same from version to version, so
+    # releases/latest/download/Oats-arm64.dmg (the site's download button)
+    # always serves the newest published one. A person checks the draft and
+    # publishes it.
+    if: github.event_name == 'workflow_dispatch' && inputs.release != ''
+    needs: build-macos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*-dmg
+          path: dmg
+
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "$TAG" = "v$version" || { echo "The tag $TAG does not match package.json ($version)"; exit 1; }
+          cp "dmg/macos-arm64-dmg/Oats-$version-arm64.dmg" Oats-arm64.dmg
+          cp "dmg/macos-x64-dmg/Oats-$version.dmg" Oats-x64.dmg
+          sha256sum Oats-arm64.dmg Oats-x64.dmg > SHA256SUMS.txt
+          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "Oats $version" \
+            --notes-file ".github/release-notes/$TAG.md" \
+            Oats-arm64.dmg Oats-x64.dmg SHA256SUMS.txt

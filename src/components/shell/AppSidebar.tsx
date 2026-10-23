@@ -7,7 +7,6 @@ import { ShortcutTooltip } from "../ui/shortcut-tooltip";
 import { OatsMark } from "./OatsMark";
 import { OnDeviceFooter } from "./OnDeviceFooter";
 import { SidebarField } from "./SidebarField";
-import { SidebarGrain } from "./SidebarGrain";
 import { useNotes } from "../../stores/noteStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -92,6 +91,7 @@ function NavItem({
  */
 export function AppSidebar({
   surface,
+  current,
   onNavigate,
   onOpenNote,
   onSearch,
@@ -101,6 +101,8 @@ export function AppSidebar({
   away = false,
 }: {
   surface: ShellSurface;
+  /** The item that is the current page (helpers/shellNav.mjs): Search while searching. */
+  current: "home" | "conversations" | "search" | "settings";
   onNavigate: (surface: ShellSurface) => void;
   onOpenNote: (noteId: number) => void;
   onSearch: () => void;
@@ -146,9 +148,8 @@ export function AppSidebar({
     return (
       <aside
         aria-label={t("oats.shell.sidebar")}
-        className="relative isolate flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
+        className="flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
       >
-        <SidebarGrain />
         <div
           className="h-[52px] shrink-0"
           style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
@@ -184,9 +185,8 @@ export function AppSidebar({
   return (
     <aside
       aria-label={t("oats.shell.sidebar")}
-      className="relative isolate flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
+      className="flex w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
     >
-      <SidebarGrain />
       {/* The traffic lights live here on macOS; the band moves the window. */}
       <div
         className="h-[52px] shrink-0"
@@ -238,18 +238,19 @@ export function AppSidebar({
         <NavItem
           icon={House}
           label={t("oats.shell.home")}
-          active={surface === "conversation"}
+          active={current === "home"}
           onClick={() => onNavigate("conversation")}
         />
         <NavItem
           icon={MessagesSquare}
           label={t("oats.shell.conversations")}
-          active={surface === "intelligence"}
+          active={current === "conversations"}
           onClick={() => onNavigate("intelligence")}
         />
         <NavItem
           icon={Search}
           label={t("oats.shell.search")}
+          active={current === "search"}
           onClick={onSearch}
           disabled={recording}
           trailing={<Kbd>/</Kbd>}
@@ -259,7 +260,9 @@ export function AppSidebar({
       <div className="mt-6 px-5 pb-1.5 text-xs font-medium text-muted-foreground">
         {t("oats.shell.recent")}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+      {/* As tall as its conversations: the room under them goes to the field at
+          the foot. It scrolls only on a window too short for the list itself. */}
+      <div className="min-h-0 overflow-y-auto px-3 pb-3">
         {recent.length === 0 ? (
           <p className="px-2 py-1.5 text-[13px] text-muted-foreground">
             {t("oats.shell.noRecent")}
@@ -285,22 +288,23 @@ export function AppSidebar({
         )}
       </div>
 
-      <div className="border-t border-sidebar-border px-3 py-3">
-        <ShortcutTooltip label={t("oats.nav.settings")} keys={keys.settings} side="right">
-          <NavItem
-            icon={Settings}
-            label={t("oats.nav.settings")}
-            disabled={recording}
-            aria-keyshortcuts={keys.settingsAria}
-            onClick={() => onNavigate("settings")}
-          />
-        </ShortcutTooltip>
-        <OnDeviceFooter className="mt-2 pl-2" />
-      </div>
-
-      {/* The field at the foot: still at rest, swaying while recording, and
-          still again while the sidebar is aside, where nobody can see it. */}
-      <SidebarField away={away} />
+      {/* The field at the foot, under Settings: it takes the room the list
+          leaves, is still at rest, sways while recording, and is still again
+          while the sidebar is aside, where nobody can see it. */}
+      <SidebarField away={away}>
+        <div className="border-t border-sidebar-border px-3 py-3">
+          <ShortcutTooltip label={t("oats.nav.settings")} keys={keys.settings} side="right">
+            <NavItem
+              icon={Settings}
+              label={t("oats.nav.settings")}
+              disabled={recording}
+              aria-keyshortcuts={keys.settingsAria}
+              onClick={() => onNavigate("settings")}
+            />
+          </ShortcutTooltip>
+          <OnDeviceFooter className="mt-2 pl-2" />
+        </div>
+      </SidebarField>
     </aside>
   );
 }

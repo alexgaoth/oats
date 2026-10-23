@@ -32,10 +32,10 @@
       "show": "顯示語音輸入面板",
       "hide": "隱藏語音輸入面板"
     },
-    "openControlPanel": "開啟控制面板",
-    "hideControlPanel": "隱藏控制面板",
+    "openControlPanel": "開啟 Oats",
+    "hideControlPanel": "隱藏 Oats",
     "quit": "結束 Oats",
-    "tooltip": "Oats - 語音輸入",
+    "tooltip": "Oats",
     "conversation": {
       "start": "開始對話",
       "stop": "結束對話"
@@ -1902,9 +1902,8 @@
       "legend": {
         "label": "標記的含義",
         "open": "未解決",
-        "topic": "話題切換",
-        "return": "回到先前的話題",
-        "marked": "標記時刻"
+        "topic": "新話題",
+        "marked": "已標記"
       },
       "contourSummary": "{{minutes}} 分鐘，提出 {{questions}} 個問題（{{unresolved}} 個仍未解答），話題轉變 {{shifts}} 次，回到 {{returns}} 條脈絡。",
       "contourEmpty": "尚未錄製任何內容。",
@@ -1947,20 +1946,16 @@
       "title": "對話走向",
       "viewLabel": "顯示方式",
       "mode": {
-        "auto": "自動",
-        "stack": "列表",
+        "lanes": "泳道",
         "graph": "關係圖"
       },
       "empty": "隨著對話推進，話題會顯示在這裡。",
       "caption": {
-        "few_one": "正在顯示列表：目前只有 {{count}} 個話題。",
-        "few_other": "正在顯示列表：目前只有 {{count}} 個話題。",
-        "linear": "正在顯示列表：對話一路向前推進。",
-        "returns_one": "正在顯示關係圖：目前已 {{count}} 次回到之前的話題。",
-        "returns_other": "正在顯示關係圖：目前已 {{count}} 次回到之前的話題。",
-        "branching": "正在顯示關係圖：對話出現了分支。",
-        "stack": "正在顯示列表。",
-        "graph": "正在顯示關係圖。"
+        "topics_one": "{{count}} 個話題",
+        "topics_other": "{{count}} 個話題",
+        "returns_one": "{{count}} 次回到之前的話題",
+        "returns_other": "{{count}} 次回到之前的話題",
+        "topicsReturns": "{{topics}}，{{returns}}"
       },
       "state": {
         "live": "目前",
@@ -1970,10 +1965,7 @@
       },
       "back_one": "回到 {{count}} 次",
       "back_other": "回到 {{count}} 次",
-      "showMore_one": "再顯示 {{count}} 個",
-      "showMore_other": "再顯示 {{count}} 個",
-      "showFewer": "收起",
-      "stackLabel": "話題（最新在前）",
+      "lanesLabel": "話題（依提出順序）",
       "graphLabel_one": "目前提到的 {{count}} 個話題的關係圖",
       "graphLabel_other": "目前提到的 {{count}} 個話題的關係圖",
       "nodeName": "{{label}}，{{state}}",
@@ -2062,6 +2054,65 @@
       "notSummarized": "此對話尚未產生摘要。",
       "summarize": "產生摘要",
       "setUpModel": "設定模型"
+    },
+    "global": {
+      "title": "全域對話",
+      "view": {
+        "label": "對話顯示方式",
+        "list": "列表",
+        "global": "全域"
+      },
+      "tabs": {
+        "label": "對話分組",
+        "all": "全部"
+      },
+      "boardLabel": "看板：{{tab}}",
+      "add": {
+        "label": "新增",
+        "there": "已在看板上"
+      },
+      "menu": {
+        "label": "看板選項",
+        "reset": "重設版面配置"
+      },
+      "cleared": "這個看板上什麼也沒有。",
+      "widget": {
+        "remove": "移除{{name}}",
+        "role": "卡片",
+        "keys": "方向鍵移動它。Shift 加方向鍵調整大小。",
+        "place": "{{name}}：第 {{column}} 欄，第 {{row}} 列，{{width}} × {{height}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "力導向圖",
+          "empty": "這裡有 {{count}} 場對話帶有可以連結的話題時，圖就會出現。"
+        },
+        "arcs": {
+          "name": "弧線時間軸",
+          "empty": "這裡有 {{count}} 場對話帶有話題時，時間軸就會出現。"
+        },
+        "subjects": {
+          "name": "反覆出現的話題",
+          "empty": "還沒有反覆出現的話題。兩場對話共有一個話題時，它會顯示在這裡。"
+        },
+        "questions": {
+          "name": "未解決的問題",
+          "empty": "這裡沒有未解決的問題。每個問題都有回答。",
+          "where": "{{title}}，{{date}}"
+        },
+        "activity": {
+          "name": "活動",
+          "day_one": "{{date}}：{{count}} 場對話",
+          "day_other": "{{date}}：{{count}} 場對話"
+        }
+      },
+      "subjects": {
+        "caption": "反覆出現：",
+        "chip_one": "{{label}}，{{count}} 場對話",
+        "chip_other": "{{label}}，{{count}} 場對話"
+      },
+      "node_one": "{{title}}，{{date}}，{{count}} 個主題",
+      "node_other": "{{title}}，{{date}}，{{count}} 個主題"
     },
     "review": {
       "title": "尚未解決的內容",
@@ -2220,7 +2271,27 @@
       "dictationButton": "聽寫時",
       "instructionsDescription": "模型如何改寫每段聽寫。預設設定適合大多數人。",
       "editInstructions": "編輯指令",
-      "instructions": "整理指令"
+      "instructions": "整理指令",
+      "context": {
+        "title": "資料核對",
+        "description": "當問題得到不確定的回答或沒人回答時，Oats 會在過去的對話和團隊共享的資料夾中查找，並說明回答是否成立。",
+        "enable": "核對不確定的回答",
+        "enableHint": "使用在「模型」中選擇的寫作模型。若為雲端模型，問題、回答和讀取的段落會傳送給該服務商。",
+        "needsModel": "請先在「模型」中選擇寫作模型。在此之前不會核對任何內容。",
+        "folder": "團隊資料夾",
+        "noFolder": "尚未選擇資料夾。仍會核對過去的對話。",
+        "choose": "選擇資料夾",
+        "change": "變更",
+        "remove": "移除",
+        "reading": "正在讀取資料夾",
+        "files_one": "已讀取 {{count}} 個檔案",
+        "files_other": "已讀取 {{count}} 個檔案",
+        "missing": "此資料夾已不存在。",
+        "unreadable": "Oats 無法讀取此資料夾。",
+        "agent": "沒有答案時詢問 Claude Code",
+        "agentHint": "在這台 Mac 上執行 Claude Code，使用你的 GitHub、Linear、Notion 和 Slack 連線，唯讀。問題和回答會傳送給 Anthropic，搜尋文字會傳送給這些服務。",
+        "agentMissing": "需要這台 Mac 上已登入的 Claude Code。找不到。"
+      }
     },
     "errors": {
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",
@@ -2234,7 +2305,7 @@
       "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
       "question-cards-off": "問題卡片已關閉，問題會被略過。請在設定的「錄音」中開啟。",
-      "no-summary-model": "摘要模型尚未就緒，對話將以無標題、無摘要的形式儲存。請在 設定 › 進階 › 語言模型 中進行設定。"
+      "no-summary-model": "寫作模型尚未就緒，對話將以無標題、無摘要的形式儲存。請在 設定 › AI 模型 中選擇一個。"
     },
     "aide": {
       "title": "對話助手",
@@ -2264,6 +2335,36 @@
       "room": "房間",
       "speaker": "說話者 {{n}}"
     },
+    "example": {
+      "open": "開啟範例對話",
+      "note": "一場九人參與的發布審查，供你隨意瀏覽。隨時都能刪除。",
+      "badge": "範例",
+      "failed": "無法開啟範例對話",
+      "failedHint": "沒有新增任何內容。請再試一次。"
+    },
+    "groups": {
+      "seed": {
+        "work": "工作",
+        "personal": "個人"
+      },
+      "moveTo": "移到群組",
+      "none": "無群組",
+      "new": "新增群組…",
+      "newTitle": "新增群組",
+      "newDescription": "為群組命名。此對話將移入該群組。",
+      "nameLabel": "名稱",
+      "create": "建立",
+      "movedTo": "已移到{{group}}",
+      "movedOut": "不在任何群組中",
+      "moveFailed": "未能移動",
+      "sorting": "正在分組：第 {{current}} 個，共 {{total}} 個",
+      "errors": {
+        "nameRequired": "請為群組命名。",
+        "nameTooLong": "最多 {{max}} 個字元。",
+        "nameTaken": "已有同名群組。請換一個名稱。",
+        "failed": "群組未能儲存。請再試一次。"
+      }
+    },
     "shell": {
       "sidebar": "側邊欄",
       "showSidebar": "顯示側邊欄",
@@ -2290,6 +2391,7 @@
     }
   },
   "questionCard": {
+    "now": "剛剛",
     "state": {
       "asked": "未解決",
       "answered": "已解答",
@@ -2305,7 +2407,22 @@
     "announced": "新問題：{{question}}",
     "announcedAgain": "再次提問，已 {{count}} 次：{{question}}",
     "announcedBatch": "{{count}} 個新問題，最新：{{question}}",
-    "searchedHost": "已在 {{host}} 搜尋"
+    "searchedHost": "已在 {{host}} 搜尋",
+    "check": {
+      "checking": "正在核對資料",
+      "checkingSources": "正在查看 {{sources}}",
+      "right": "沒錯",
+      "wrong": "等等，不對",
+      "answer": "找到了",
+      "quote": "「{{quote}}」",
+      "openSource": "開啟 {{source}}",
+      "announced": {
+        "right": "沒錯：{{answer}}。來源：{{source}}。",
+        "wrong": "等等，不對：{{answer}}。來源：{{source}}。",
+        "answer": "找到了：{{answer}}。來源：{{source}}。"
+      },
+      "checkingAgent": "正在詢問 Claude Code"
+    }
   },
   "topicGraph": {
     "node": "{{label}}，{{seconds}} 秒",
@@ -2315,19 +2432,5 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜尋",
     "noQuestions": "這條脈絡中沒有問題。"
-  },
-  "lifetime": {
-    "title": "你反覆回到的主題",
-    "viewMap": "圖譜",
-    "viewList": "列表",
-    "viewLabel": "對話顯示方式",
-    "recurring": "反覆出現：",
-    "inCount_one": "{{count}} 場對話",
-    "inCount_other": "{{count}} 場對話",
-    "node": "{{label}}，{{count}} 個主題",
-    "topicCount_one": "{{count}} 個主題",
-    "topicCount_other": "{{count}} 個主題",
-    "open": "開啟這場對話",
-    "empty": "當你有 {{count}} 場錄製的對話可以連接時，圖譜就會出現。"
   }
 }

@@ -298,6 +298,7 @@ class IPCHandlers {
     this._autoLearnLatestData = null;
     this._textEditHandler = null;
     this._activeRecordingPipeline = null;
+    this._contextServiceInstance = null;
     this.audioStorageManager = new AudioStorageManager();
     this._audioCleanupInterval = null;
     this._noteFilesEnabled = false;
@@ -337,6 +338,15 @@ class IPCHandlers {
     }
   }
 
+  /** The context check's index (contextService.js), created on first use. */
+  _contextService() {
+    if (!this._contextServiceInstance) {
+      const { ContextService } = require("./contextService");
+      this._contextServiceInstance = new ContextService({ databaseManager: this.databaseManager });
+    }
+    return this._contextServiceInstance;
+  }
+
   _getWhisperVadSettings() {
     const current = this.whisperVadSettings || {};
     return {
@@ -374,6 +384,17 @@ class IPCHandlers {
       vadEnabled: resolveContextSileroEnabled(settings, context),
       vadConfig,
     };
+  }
+
+  /**
+   * Tell everything that keeps a copy of the notes about a new one: every
+   * window (`note-added`), the vector index and the note files. A saved note
+   * and the inserted example conversation take this same path.
+   */
+  _announceNoteAdded(note) {
+    setImmediate(() => this.broadcastToWindows("note-added", note));
+    this._asyncVectorUpsert(note);
+    this._asyncMirrorWrite(note);
   }
 
   _asyncVectorUpsert(note) {
@@ -497,6 +518,27 @@ class IPCHandlers {
       const markdownMirror = require("./markdownMirror");
       markdownMirror.deleteNote(noteId);
     });
+  }
+
+  /** How each seeded conversation group is named in the current language, by seed key. */
+  _conversationGroupSeedNames() {
+    const names = {};
+    for (const group of this.databaseManager.getConversationGroups()) {
+      if (!group.seed_key) continue;
+      names[group.seed_key] = i18nMain.t(`oats.groups.seed.${group.seed_key}`, {
+        defaultValue: group.name,
+      });
+    }
+    return names;
+  }
+
+  /**
+   * Tell every window the groups changed: the whole list, and the notes whose
+   * group changed with them (a deleted group's conversations).
+   */
+  _announceConversationGroups(notes = []) {
+    const change = { groups: this.databaseManager.getConversationGroups(), notes };
+    setImmediate(() => this.broadcastToWindows("conversation-groups-changed", change));
   }
 
   _buildFolderMap() {
@@ -947,6 +989,7 @@ class IPCHandlers {
         return { success: false, error: error.message };
       }
     });
+    require("./contextAgentIpc").registerContextAgentIpc(ipcMain);
 
     ipcMain.handle("resize-main-window", (event, sizeKey) => {
       return this.windowManager.resizeMainWindow(sizeKey);
@@ -1034,6 +1077,46 @@ class IPCHandlers {
       });
       if (result.canceled || !result.filePaths?.[0]) return { success: false };
       return { success: true, path: result.filePaths[0] };
+    });
+
+    // The team's context for the context check (contextService.js): a folder
+    // the renderer's settings name, indexed here on this Mac, plus the
+    // conversations in the database. Configured like the vault: the renderer
+    // tells main on boot and on every change.
+    ipcMain.handle("context-configure", async (event, config) =>
+      this._contextService().configure({ folder: config?.folder || null })
+    );
+
+    ipcMain.handle("context-status", async () => this._contextService().status());
+
+    ipcMain.handle("context-choose-folder", async () => {
+      const { dialog } = require("electron");
+      const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
+      if (result.canceled || !result.filePaths?.[0]) return { success: false };
+      return { success: true, path: result.filePaths[0] };
+    });
+
+    ipcMain.handle("context-search", async (event, query) => {
+      try {
+        const passages = await this._contextService().search({
+          question: String(query?.question || ""),
+          noteId: Number.isInteger(query?.noteId) ? query.noteId : null,
+        });
+        return { success: true, passages };
+      } catch (error) {
+        debugLogger.debug("Context search failed", { error: error.message }, "context");
+        return { success: false, passages: [] };
+      }
+    });
+
+    // Opens a source file in the app that owns it. Only a file inside the
+    // context folder: the path comes from the renderer, and the renderer only
+    // ever holds paths this service gave it.
+    ipcMain.handle("context-open-file", async (event, relPath) => {
+      const target = this._contextService().resolveInside(relPath);
+      if (!target) return { success: false };
+      const error = await shell.openPath(target);
+      return { success: !error };
     });
 
     // The manual counterpart: writes this conversation now rather than on the
@@ -1197,14 +1280,29 @@ class IPCHandlers {
           audioDuration,
           folderId
         );
-        if (result?.success && result?.note) {
-          setImmediate(() => this.broadcastToWindows("note-added", result.note));
-          this._asyncVectorUpsert(result.note);
-          this._asyncMirrorWrite(result.note);
-        }
+        if (result?.success && result?.note) this._announceNoteAdded(result.note);
         return result;
       }
     );
+
+    // The bundled example conversation (helpers/exampleConversation.mjs), from
+    // Home or the empty Conversations page. A new copy is announced as a saved
+    // note is; while a copy is there, that copy is the answer and nothing is
+    // added.
+    ipcMain.handle("db-insert-example-conversation", async () => {
+      try {
+        const { insertExampleConversation } = await import("./exampleConversation.mjs");
+        const fixture = require("./sampleConversations/launch-readiness-review.json");
+        const example = insertExampleConversation(this.databaseManager, fixture, {
+          now: Date.now(),
+          announce: (note) => this._announceNoteAdded(note),
+        });
+        return { success: true, ...example };
+      } catch (error) {
+        debugLogger.error("Example conversation failed", { error: error.message }, "notes");
+        return { success: false, error: error.message };
+      }
+    });
 
     ipcMain.handle("db-get-note", async (event, id) => {
       return this.databaseManager.getNote(id);
@@ -1362,6 +1460,65 @@ class IPCHandlers {
 
     ipcMain.handle("db-get-folder-note-counts", async () => {
       return this.databaseManager.getFolderNoteCounts();
+    });
+
+    // Conversation groups (database.js). Every change to the groups is
+    // broadcast whole as `conversation-groups-changed`, with the notes whose
+    // group changed with it; moving one conversation is a `note-updated`.
+    ipcMain.handle("db-get-conversation-groups", async () => {
+      return this.databaseManager.getConversationGroups();
+    });
+
+    ipcMain.handle("db-create-conversation-group", async (event, name) => {
+      const result = this.databaseManager.createConversationGroup(name, {
+        seedNames: this._conversationGroupSeedNames(),
+      });
+      if (result?.success) this._announceConversationGroups();
+      return result;
+    });
+
+    ipcMain.handle("db-rename-conversation-group", async (event, id, name) => {
+      const result = this.databaseManager.renameConversationGroup(id, name, {
+        seedNames: this._conversationGroupSeedNames(),
+      });
+      if (result?.success && result.changed) this._announceConversationGroups();
+      return result;
+    });
+
+    ipcMain.handle("db-delete-conversation-group", async (event, id) => {
+      const result = this.databaseManager.deleteConversationGroup(id);
+      if (result?.success) this._announceConversationGroups(result.notes);
+      return result;
+    });
+
+    ipcMain.handle("db-reorder-conversation-groups", async (event, ids) => {
+      const result = this.databaseManager.reorderConversationGroups(ids);
+      if (result?.success) this._announceConversationGroups();
+      return result;
+    });
+
+    // A person's choice: from then on the writing model leaves it alone.
+    ipcMain.handle("db-set-conversation-group", async (event, noteId, groupId) => {
+      const result = this.databaseManager.setConversationGroup(noteId, groupId ?? null);
+      if (result?.success && result.note) {
+        setImmediate(() => this.broadcastToWindows("note-updated", result.note));
+      }
+      return result;
+    });
+
+    // The writing model's choice (stores/conversationGroupSortStore.ts). The
+    // model ran in the renderer, through the summary's own route; this only
+    // writes what it chose, and never over a person's choice.
+    ipcMain.handle("db-set-conversation-group-from-model", async (event, noteId, groupId) => {
+      const result = this.databaseManager.setConversationGroupFromModel(noteId, groupId ?? null);
+      if (result?.success && result.note) {
+        setImmediate(() => this.broadcastToWindows("note-updated", result.note));
+      }
+      return result;
+    });
+
+    ipcMain.handle("db-list-unsorted-conversations", async () => {
+      return this.databaseManager.listUnsortedConversations();
     });
 
     ipcMain.handle("db-get-actions", async () => {

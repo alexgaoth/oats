@@ -1,0 +1,405 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "launch-comms-1on1",
+    "sample": true,
+    "description": "Sample conversation: a launch communications 1:1 at Pellwood. Invented people.",
+    "company": "Pellwood (fictional)",
+    "participants": [
+      { "name": "Lena", "role": "Marketing lead" },
+      { "name": "Maya", "role": "Product lead" }
+    ],
+    "startedAt": 1791586800000,
+    "endedAt": 1791586920265,
+    "summarizedAt": 1791586961265,
+    "placement": { "daysAgo": 3, "at": "16:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Launch comms: embargo, webinar, a backup date",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv1kgrdk-1",
+        "text": "Okay, launch comms. The news embargo and the analyst briefing are the two fixed points.",
+        "source": "mic",
+        "timestamp": 1791586803413,
+        "startMs": 3413,
+        "endMs": 10202,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-2",
+        "text": "The analyst briefing is Tuesday morning, so the news embargo should lift Wednesday.",
+        "source": "mic",
+        "timestamp": 1791586811008,
+        "startMs": 11008,
+        "endMs": 17107,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-3",
+        "text": "Wednesday works. Customers get the product on Tuesday, and the news on Wednesday.",
+        "source": "mic",
+        "timestamp": 1791586817858,
+        "startMs": 17858,
+        "endMs": 24210,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-4",
+        "text": "Two trade outlets agreed to the news embargo. A third one wants an exclusive.",
+        "source": "mic",
+        "timestamp": 1791586824887,
+        "startMs": 24887,
+        "endMs": 31931,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-5",
+        "text": "Skip the exclusive. The news embargo is cleaner.",
+        "source": "mic",
+        "timestamp": 1791586833344,
+        "startMs": 33344,
+        "endMs": 37492,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-6",
+        "text": "The analyst briefing deck still needs the final customer quotes.",
+        "source": "mic",
+        "timestamp": 1791586838226,
+        "startMs": 38226,
+        "endMs": 43449,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-7",
+        "text": "Legal has the customer quotes. They should clear before the briefing.",
+        "source": "mic",
+        "timestamp": 1791586844226,
+        "startMs": 44226,
+        "endMs": 50050,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-8",
+        "text": "Separate thing, the webinar. The webinar is Thursday the 5th.",
+        "source": "mic",
+        "timestamp": 1791586851327,
+        "startMs": 51327,
+        "endMs": 56203,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-9",
+        "text": "The Thursday webinar has a hundred and forty signups, mostly finance leads.",
+        "source": "mic",
+        "timestamp": 1791586856966,
+        "startMs": 56966,
+        "endMs": 62551,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-10",
+        "text": "Who's presenting the webinar demo?",
+        "source": "mic",
+        "timestamp": 1791586863506,
+        "startMs": 63506,
+        "endMs": 66164,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-11",
+        "text": "Jun and me, with Theo for questions.",
+        "source": "mic",
+        "timestamp": 1791586867179,
+        "startMs": 67179,
+        "endMs": 70797,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-12",
+        "text": "Keep the flagged features out of the live webinar demo.",
+        "source": "mic",
+        "timestamp": 1791586871952,
+        "startMs": 71952,
+        "endMs": 76925,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-13",
+        "text": "Good call. The webinar demo shows the activity log and the import fixes.",
+        "source": "mic",
+        "timestamp": 1791586877696,
+        "startMs": 77696,
+        "endMs": 84385,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-14",
+        "text": "The webinar recording goes out to every signup the next morning.",
+        "source": "mic",
+        "timestamp": 1791586884997,
+        "startMs": 84997,
+        "endMs": 90722,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-15",
+        "text": "One risk. The launch date still depends on SSO.",
+        "source": "mic",
+        "timestamp": 1791586891283,
+        "startMs": 91283,
+        "endMs": 95778,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-16",
+        "text": "So the launch date could still move a week.",
+        "source": "mic",
+        "timestamp": 1791586896662,
+        "startMs": 96662,
+        "endMs": 101176,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-17",
+        "text": "Then I'll keep a second launch date in the plan, quietly.",
+        "source": "mic",
+        "timestamp": 1791586901944,
+        "startMs": 101944,
+        "endMs": 107234,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-18",
+        "text": "Do that. We decide the launch date at the readiness review.",
+        "source": "mic",
+        "timestamp": 1791586908189,
+        "startMs": 108189,
+        "endMs": 113586,
+        "speaker": "speaker_2",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv1kgrdk-19",
+        "text": "Is the readiness review still on Monday?",
+        "source": "mic",
+        "timestamp": 1791586914247,
+        "startMs": 114247,
+        "endMs": 117665,
+        "speaker": "speaker_1",
+        "speakerName": "Lena",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Lena and Maya set the launch communications around the analyst briefing, the news embargo and the launch webinar.\n\n## Threads\n- **News embargo.** The analyst briefing is Tuesday morning, so the embargo lifts on Wednesday: customers get the product on Tuesday and the news on Wednesday. Two trade outlets agreed; the exclusive request is declined.\n- **Webinar.** Thursday the 5th, 140 signups so far, mostly finance leads. Jun and Lena present, with Theo for questions; flagged features stay out of the demo.\n- **Date risk.** The launch date still depends on SSO and could move a week, so Lena keeps a second date in the plan.\n\n## Decisions Made\n- The news embargo lifts on Wednesday; no exclusive.\n\n## Follow-ups\n- Whether the readiness review is still on Monday.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "5520-[{\"id\":\"seg-mv1kgrdk-1\",\"text\":\"Okay, launch comms",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "news briefing",
+          "words": [
+            "news",
+            "briefing",
+            "embargo",
+            "analyst",
+            "customer",
+            "exclusive",
+            "quote",
+            "tuesday"
+          ],
+          "durationMs": 40813,
+          "utteranceIds": [
+            "seg-mv1kgrdk-1",
+            "seg-mv1kgrdk-2",
+            "seg-mv1kgrdk-3",
+            "seg-mv1kgrdk-4",
+            "seg-mv1kgrdk-5",
+            "seg-mv1kgrdk-6",
+            "seg-mv1kgrdk-7"
+          ],
+          "firstAt": 1791586803413,
+          "lastAt": 1791586844226,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "webinar demo",
+          "words": ["webinar", "demo", "signup", "thursday", "5th", "activity", "call", "every"],
+          "durationMs": 33670,
+          "utteranceIds": [
+            "seg-mv1kgrdk-8",
+            "seg-mv1kgrdk-9",
+            "seg-mv1kgrdk-10",
+            "seg-mv1kgrdk-11",
+            "seg-mv1kgrdk-12",
+            "seg-mv1kgrdk-13",
+            "seg-mv1kgrdk-14"
+          ],
+          "firstAt": 1791586851327,
+          "lastAt": 1791586884997,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 3,
+          "label": "launch date",
+          "words": ["date", "launch", "readines", "review", "decide", "depend", "i'll", "keep"],
+          "durationMs": 22964,
+          "utteranceIds": [
+            "seg-mv1kgrdk-15",
+            "seg-mv1kgrdk-16",
+            "seg-mv1kgrdk-17",
+            "seg-mv1kgrdk-18",
+            "seg-mv1kgrdk-19"
+          ],
+          "firstAt": 1791586891283,
+          "lastAt": 1791586914247,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 3, "weight": 1, "kind": "new" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791586800000,
+          "b": "goOGoKuqrq6tr52pqaWsra+Vq6irr6ysn6mvsa+xrrGOn66wsKSor7Guq6OlrK+vr66Uoa+xrq+aqayprLKomqqtnKerq6eHrKysq66VrKybpampm6israuqqaevrrGpmK2sr66YqqutrKygp6msraqUqbCsqoeEhA=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv1kgrdk-10"],
+      "text": "Who's presenting the webinar demo?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "demo presenting webinar who'",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791586866994
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv1kgrdk-11"],
+      "text": "Jun and me, with Theo for questions.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791586871670
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv1kgrdk-19"],
+      "text": "Is the readiness review still on Monday?",
+      "metadata": { "state": "asked", "groupKey": "monday readines review still", "occurrence": 1 },
+      "createdAt": 1791586918529
+    }
+  ],
+  "replay": {
+    "voices": { "Lena": { "gain": 1.02 }, "Maya": { "gain": 1.04 } },
+    "loud": {},
+    "stopAtMs": 120265
+  }
+}

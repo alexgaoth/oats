@@ -56,9 +56,9 @@ Opening a conversation in **Intelligence** shows that summary and transcript alo
 
 Opening a conversation also shows what the **previous** conversation on the same subject left unfinished, and the conversation list can be searched across titles, summaries, and transcripts.
 
-## The lifetime graph
+## Global conversations
 
-Intelligence also has a **Map**, which zooms out: one node per conversation, an edge wherever two conversations covered the same subject, and a caption naming the subjects that keep coming back. The topic graph answers "how did this conversation move?"; the map answers the question you cannot see from inside any single conversation — "what do I keep coming back to?" Selecting a conversation shows what it covered and opens it.
+Conversations also has a **Global** view, which zooms out to every conversation at once: a board of charts, with one tab per conversation group ("All" holds them all). It opens on a **force graph**, one disc per conversation sized by its length, and an **arc timeline**, the conversations in date order with an arc wherever a subject came back. Pointing at a conversation lights it in every chart on the board, and pointing at a subject lights the conversations and the links that carry it; a click opens the conversation. The cards can be moved, resized and removed, and each tab keeps its arrangement. The topic graph answers "how did this conversation move?"; the board answers the question you cannot see from inside any single conversation: what keeps coming back, and when.
 
 ## Small guarantees
 
@@ -133,9 +133,9 @@ An Obsidian-style force-directed map of topics and the transitions between them,
 
 Inside the expanded open-thread stack, a short list of what else is worth raising: unfinished threads, barely-touched topics, and subjects that historically accompany the live one. Local, no model call, never a prompt.
 
-### Objective 7: The lifetime graph — built, not yet tested live
+### Objective 7: Global conversations — built, not yet tested live
 
-A cross-conversation map: nodes are conversations, edges are shared subjects, and a caption names what recurs. This reverses an earlier decision to keep cross-conversation graphs out of scope. Entity linking (people, companies, documents as first-class nodes) is still out of scope.
+A board of cross-conversation charts, one tab per conversation group: a force graph whose nodes are conversations and whose edges are shared subjects, and an arc timeline of when each subject came back. This reverses an earlier decision to keep cross-conversation graphs out of scope. Entity linking (people, companies, documents as first-class nodes) is still out of scope.
 
 ### Objective 8: Reliable dictation and recovery — built, partly tested live
 

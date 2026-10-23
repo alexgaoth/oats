@@ -91,6 +91,11 @@ test("a duration reads in the reader's number format, finer when it is short", (
   assert.equal(formatSearchDuration(12.6, "en"), "13 ms");
   assert.equal(formatSearchDuration(1234, "en"), "1.2 sec");
   assert.equal(formatSearchDuration(0.42, "de"), "0,4 ms");
+  // Never "0 ms": that reads as a search that did not run.
+  assert.equal(formatSearchDuration(0.03, "en"), "<0.1 ms");
+  assert.equal(formatSearchDuration(0, "en"), "<0.1 ms");
+  assert.equal(formatSearchDuration(0.03, "de"), "<0,1 ms");
+  assert.equal(formatSearchDuration(0.05, "en"), "0.1 ms");
   assert.equal(formatSearchDuration(Number.NaN, "en"), null);
   assert.equal(formatSearchDuration(-1, "en"), null);
 });

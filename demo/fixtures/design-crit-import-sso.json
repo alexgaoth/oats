@@ -1,0 +1,431 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "design-crit-import-sso",
+    "sample": true,
+    "description": "Sample conversation: a design crit at Pellwood. Invented people.",
+    "company": "Pellwood (fictional)",
+    "participants": [
+      { "name": "Jun", "role": "Product designer" },
+      { "name": "Maya", "role": "Product lead" },
+      { "name": "Ines", "role": "Backend engineer" }
+    ],
+    "startedAt": 1791239400000,
+    "endedAt": 1791239560212,
+    "summarizedAt": 1791239601212,
+    "placement": { "daysAgo": 7, "at": "15:30", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Design crit: import errors and SSO setup",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-muvtmrtk-1",
+        "text": "Okay, design crit. First the import error screen.",
+        "source": "mic",
+        "timestamp": 1791239403450,
+        "startMs": 3450,
+        "endMs": 7710,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-2",
+        "text": "Right now a failed CSV import shows one generic error. Nobody can act on that import error.",
+        "source": "mic",
+        "timestamp": 1791239408351,
+        "startMs": 8351,
+        "endMs": 17278,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-3",
+        "text": "The new import error screen shows the CSV rows that landed and the rows that failed.",
+        "source": "mic",
+        "timestamp": 1791239417873,
+        "startMs": 17873,
+        "endMs": 26528,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-4",
+        "text": "That matches the import bug. Most rows land, and the last chunk of the CSV file goes missing.",
+        "source": "mic",
+        "timestamp": 1791239427136,
+        "startMs": 27136,
+        "endMs": 35043,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-5",
+        "text": "Can the import error screen offer a retry for just the failed rows?",
+        "source": "mic",
+        "timestamp": 1791239436171,
+        "startMs": 36171,
+        "endMs": 42761,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-6",
+        "text": "Yes, once the import fix ships.",
+        "source": "mic",
+        "timestamp": 1791239444015,
+        "startMs": 44015,
+        "endMs": 46885,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-7",
+        "text": "Then the import error screen gets a retry button for the failed rows, and a download of the rows that failed.",
+        "source": "mic",
+        "timestamp": 1791239447977,
+        "startMs": 47977,
+        "endMs": 59485,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-8",
+        "text": "Good. And the import error copy should name the reason, not just the error.",
+        "source": "mic",
+        "timestamp": 1791239460203,
+        "startMs": 60203,
+        "endMs": 67380,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-9",
+        "text": "The download only needs the failed rows, in the original CSV format, so the import bug never costs a full re-import.",
+        "source": "mic",
+        "timestamp": 1791239468824,
+        "startMs": 68824,
+        "endMs": 78672,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-10",
+        "text": "Second screen. The SSO setup screen in the admin console.",
+        "source": "mic",
+        "timestamp": 1791239479964,
+        "startMs": 79964,
+        "endMs": 85672,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-11",
+        "text": "Admins upload the SAML metadata file, then test the SSO connection.",
+        "source": "mic",
+        "timestamp": 1791239486509,
+        "startMs": 86509,
+        "endMs": 92764,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-12",
+        "text": "If the SAML test fails, the screen shows the raw SAML error from the identity provider.",
+        "source": "mic",
+        "timestamp": 1791239494085,
+        "startMs": 94085,
+        "endMs": 101914,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-13",
+        "text": "Raw SAML errors will scare every admin. We need plain language there.",
+        "source": "mic",
+        "timestamp": 1791239503432,
+        "startMs": 103432,
+        "endMs": 109352,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-14",
+        "text": "I'll map the five most common SAML errors to plain messages.",
+        "source": "mic",
+        "timestamp": 1791239510642,
+        "startMs": 110642,
+        "endMs": 116745,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-15",
+        "text": "The clock skew error is the most common SSO error on that third identity provider.",
+        "source": "mic",
+        "timestamp": 1791239517318,
+        "startMs": 117318,
+        "endMs": 124764,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-16",
+        "text": "Then the clock skew message comes first, with a link to the SSO setup guide.",
+        "source": "mic",
+        "timestamp": 1791239525915,
+        "startMs": 125915,
+        "endMs": 133200,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-17",
+        "text": "Do admins need to see the SAML certificate expiry date on the SSO screen?",
+        "source": "mic",
+        "timestamp": 1791239534632,
+        "startMs": 134632,
+        "endMs": 141913,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-18",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791239543516,
+        "startMs": 143516,
+        "endMs": 144225,
+        "speaker": "speaker_3",
+        "speakerName": "Maya",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-19",
+        "text": "Let's leave the SAML certificate for the next round.",
+        "source": "mic",
+        "timestamp": 1791239545501,
+        "startMs": 145501,
+        "endMs": 149997,
+        "speaker": "speaker_2",
+        "speakerName": "Ines",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muvtmrtk-20",
+        "text": "Then the SSO setup screen is ready for review on Friday.",
+        "source": "mic",
+        "timestamp": 1791239551430,
+        "startMs": 151430,
+        "endMs": 157612,
+        "speaker": "speaker_1",
+        "speakerName": "Jun",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Jun walked Maya and Ines through two screens for the enterprise launch: the import error screen and the SSO setup screen.\n\n## Threads\n- **Import errors.** A failed import shows one generic error today, although most rows land and only the last chunk goes missing. The new screen shows the rows that landed and the rows that failed, with a retry for the failed rows once the import fix ships.\n- **SSO setup.** Admins upload SAML metadata and test the connection. Raw SAML errors from the identity provider will be mapped to plain messages, clock skew first.\n\n## Action Items\n- [ ] Jun: map the five most common SAML errors to plain messages.\n- [ ] Jun: retry and download for failed rows on the import error screen.\n\n## Follow-ups\n- Whether admins need the SAML certificate expiry date on the SSO screen.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "6004-[{\"id\":\"seg-muvtmrtk-1\",\"text\":\"Okay, design crit.",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "import error",
+          "words": ["import", "error", "failed", "rows", "csv", "screen", "bug", "download"],
+          "durationMs": 65374,
+          "utteranceIds": [
+            "seg-muvtmrtk-1",
+            "seg-muvtmrtk-2",
+            "seg-muvtmrtk-3",
+            "seg-muvtmrtk-4",
+            "seg-muvtmrtk-5",
+            "seg-muvtmrtk-6",
+            "seg-muvtmrtk-7",
+            "seg-muvtmrtk-8",
+            "seg-muvtmrtk-9"
+          ],
+          "firstAt": 1791239403450,
+          "lastAt": 1791239468824,
+          "returns": 0,
+          "state": "resolved"
+        },
+        {
+          "id": 2,
+          "label": "sso saml",
+          "words": ["saml", "sso", "admin", "error", "screen", "setup", "certificate", "clock"],
+          "durationMs": 71466,
+          "utteranceIds": [
+            "seg-muvtmrtk-10",
+            "seg-muvtmrtk-11",
+            "seg-muvtmrtk-12",
+            "seg-muvtmrtk-13",
+            "seg-muvtmrtk-14",
+            "seg-muvtmrtk-15",
+            "seg-muvtmrtk-16",
+            "seg-muvtmrtk-17",
+            "seg-muvtmrtk-19",
+            "seg-muvtmrtk-20"
+          ],
+          "firstAt": 1791239479964,
+          "lastAt": 1791239551430,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791239400000,
+          "b": "gYKDm6aqpaKcpKmlpaWmp56dpKirrqulpKmjp6+rqq+usLCSmKmuq7GrqYmjqqyJpa2jpKqnqamrpaego66trautrKeEl5Wdqqeqp6ippYWoqqijp6OZq6ysq6ugg6aqrKmpraurjJ2traqrrqGInqamqKumlqmsraqqrquJq6yVrK+vrZuapKirp6appYeYm56rqamskZ6oq6iorqqJhII="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muvtmrtk-5"],
+      "text": "Can the import error screen offer a retry for just the failed rows?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "error failed import offer retry rows screen",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791239443768
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-muvtmrtk-6"],
+      "text": "Yes, once the import fix ships.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791239447724
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muvtmrtk-17"],
+      "text": "Do admins need to see the SAML certificate expiry date on the SSO screen?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "admin certificate date expiry need saml screen see sso",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791239542951
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muvtmrtk-18"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791239544967
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muvtmrtk-17"],
+      "text": "Do admins need to see the SAML certificate expiry date on the SSO screen?",
+      "metadata": {
+        "query": "Do admins need to see the SAML certificate expiry date on the SSO screen?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791239544967
+    }
+  ],
+  "replay": {
+    "voices": { "Jun": { "gain": 0.8 }, "Maya": { "gain": 1.04 }, "Ines": { "gain": 0.92 } },
+    "loud": {},
+    "stopAtMs": 160212
+  }
+}

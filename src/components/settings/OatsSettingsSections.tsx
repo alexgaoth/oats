@@ -16,6 +16,8 @@ import { Toggle } from "../ui/toggle";
 import HotkeyInput from "../ui/HotkeyInput";
 import { SettingRow, SettingsSection } from "./SettingsKit";
 import { processingMode, setProcessing, type ProcessingMode } from "./processing";
+import { useSummaryReadiness } from "../../hooks/useSummaryReadiness";
+import type { ContextStatus } from "../../types/conversationEvents";
 
 /**
  * The parts of Settings that are Oats's own rather than inherited: the one
@@ -266,6 +268,147 @@ export function QuestionModelSettings() {
 function shortPath(path: string): string {
   const parts = path.split(/[\\/]/).filter(Boolean);
   return parts.length > 2 ? `…/${parts.slice(-2).join("/")}` : path;
+}
+
+/**
+ * The context check: a reply somebody was not sure of is checked against past
+ * conversations and a folder the team shares (helpers/contextService.js,
+ * helpers/contextCheck.mjs). Off by default: it reads what the team wrote and
+ * uses the writing model, and both are choices to make, not defaults to find.
+ */
+export function ContextCheckSettings() {
+  const { t } = useTranslation();
+  const enabled = useSettingsStore((state) => state.contextCheckEnabled);
+  const setEnabled = useSettingsStore((state) => state.setContextCheckEnabled);
+  const folder = useSettingsStore((state) => state.contextFolder);
+  const setFolder = useSettingsStore((state) => state.setContextFolder);
+  const readiness = useSummaryReadiness();
+  const [status, setStatus] = useState<ContextStatus | null>(null);
+  const agentOn = useSettingsStore((state) => state.contextAgentEnabled);
+  const setAgentOn = useSettingsStore((state) => state.setContextAgentEnabled);
+  // Whether Claude Code is on this Mac. The switch cannot be turned on
+  // without it, and the row says so instead of failing in a meeting.
+  const [agentAvailable, setAgentAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    void Promise.resolve(window.electronAPI?.contextAgentStatus?.()).then((status) => {
+      if (!cancelled) setAgentAvailable(Boolean(status?.available));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  // How far the folder's index has got. A large folder takes a few seconds,
+  // and nothing else would say so; polled only while it is still reading.
+  useEffect(() => {
+    setStatus(null);
+    if (!enabled || !folder) return;
+    let cancelled = false;
+    let timer: number | undefined;
+    let polls = 0;
+    const poll = async () => {
+      const next = await window.electronAPI?.getContextStatus?.();
+      if (cancelled || !next) return;
+      polls += 1;
+      // Main hears of a new folder from the shell's effect, a moment after
+      // this one asks: until it reports this folder, its status is the old one.
+      const current = next.folder === folder;
+      if (current) setStatus(next);
+      if ((next.indexing || !current) && polls < 60) timer = window.setTimeout(poll, 800);
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [enabled, folder]);
+
+  const choose = async () => {
+    const picked = await window.electronAPI?.chooseContextFolder?.();
+    if (picked?.success && picked.path) setFolder(picked.path);
+  };
+
+  const folderState = !folder
+    ? t("oats.settings.context.noFolder")
+    : status?.error === "missing"
+      ? t("oats.settings.context.missing")
+      : status?.error === "unreadable"
+        ? t("oats.settings.context.unreadable")
+        : !status || status.indexing
+          ? t("oats.settings.context.reading")
+          : t("oats.settings.context.files", { count: status.files });
+
+  return (
+    <SettingsSection
+      title={t("oats.settings.context.title")}
+      description={t("oats.settings.context.description")}
+    >
+      <SettingRow
+        label={t("oats.settings.context.enable")}
+        description={
+          enabled && readiness !== null && readiness !== "ready"
+            ? t("oats.settings.context.needsModel")
+            : t("oats.settings.context.enableHint")
+        }
+        htmlFor="context-check"
+      >
+        <Toggle id="context-check" checked={enabled} onChange={setEnabled} />
+      </SettingRow>
+      {enabled && (
+        <SettingRow
+          label={t("oats.settings.context.folder")}
+          description={
+            folder ? (
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex min-w-0 items-center gap-1.5" title={folder}>
+                  <FolderOpen aria-hidden="true" className="size-3.5 shrink-0" />
+                  <span className="truncate">{shortPath(folder)}</span>
+                </span>
+                <span className="tabular-nums">{folderState}</span>
+              </span>
+            ) : (
+              folderState
+            )
+          }
+        >
+          {folder ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => void choose()}>
+                {t("oats.settings.context.change")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setFolder("")}>
+                {t("oats.settings.context.remove")}
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => void choose()}>
+              {t("oats.settings.context.choose")}
+            </Button>
+          )}
+        </SettingRow>
+      )}
+      {enabled && (
+        <SettingRow
+          label={t("oats.settings.context.agent")}
+          description={
+            agentAvailable === false
+              ? t("oats.settings.context.agentMissing")
+              : t("oats.settings.context.agentHint")
+          }
+          htmlFor="context-agent"
+        >
+          <Toggle
+            id="context-agent"
+            checked={agentOn && agentAvailable === true}
+            onChange={setAgentOn}
+            disabled={agentAvailable !== true}
+          />
+        </SettingRow>
+      )}
+    </SettingsSection>
+  );
 }
 
 /** Each conversation writes itself into an Obsidian vault. */

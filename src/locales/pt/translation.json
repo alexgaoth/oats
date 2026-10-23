@@ -32,10 +32,10 @@
       "show": "Mostrar painel de ditado",
       "hide": "Ocultar painel de ditado"
     },
-    "openControlPanel": "Abrir painel de controle",
-    "hideControlPanel": "Ocultar painel de controle",
+    "openControlPanel": "Abrir o Oats",
+    "hideControlPanel": "Ocultar o Oats",
     "quit": "Sair do Oats",
-    "tooltip": "Oats - Ditado por voz",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Iniciar conversa",
       "stop": "Parar conversa"
@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "O que as marcas significam",
         "open": "Aberta",
-        "topic": "Mudança de assunto",
-        "return": "Volta a um assunto anterior",
-        "marked": "Momento marcado"
+        "topic": "Novo assunto",
+        "marked": "Marcado"
       },
       "contourSummary": "{{minutes}} minutos, {{questions}} perguntas ({{unresolved}} sem resposta), o assunto mudou {{shifts}} vezes e {{returns}} fios foram retomados.",
       "contourEmpty": "Nada gravado ainda.",
@@ -1952,20 +1951,16 @@
       "title": "Fluxo da conversa",
       "viewLabel": "Visualização do fluxo",
       "mode": {
-        "auto": "Auto",
-        "stack": "Lista",
+        "lanes": "Faixas",
         "graph": "Grafo"
       },
       "empty": "Os temas aparecem aqui à medida que a conversa avança.",
       "caption": {
-        "few_one": "Mostrando a lista: até agora só {{count}} tema.",
-        "few_other": "Mostrando a lista: até agora só {{count}} temas.",
-        "linear": "Mostrando a lista: a conversa seguiu em linha reta.",
-        "returns_one": "Mostrando o grafo: até agora {{count}} retorno a um tema anterior.",
-        "returns_other": "Mostrando o grafo: até agora {{count}} retornos a temas anteriores.",
-        "branching": "Mostrando o grafo: a conversa se ramificou.",
-        "stack": "Mostrando a lista.",
-        "graph": "Mostrando o grafo."
+        "topics_one": "{{count}} tema",
+        "topics_other": "{{count}} temas",
+        "returns_one": "{{count}} retorno a um tema anterior",
+        "returns_other": "{{count}} retornos a temas anteriores",
+        "topicsReturns": "{{topics}}, {{returns}}"
       },
       "state": {
         "live": "Agora",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "Retomado {{count}}×",
       "back_other": "Retomado {{count}}×",
-      "showMore_one": "Mostrar mais {{count}}",
-      "showMore_other": "Mostrar mais {{count}}",
-      "showFewer": "Mostrar menos",
-      "stackLabel": "Temas, os mais recentes primeiro",
+      "lanesLabel": "Temas na ordem em que surgiram",
       "graphLabel_one": "Grafo de {{count}} tema abordado até agora",
       "graphLabel_other": "Grafo de {{count}} temas abordados até agora",
       "nodeName": "{{label}}, {{state}}",
@@ -2067,6 +2059,65 @@
       "notSummarized": "Esta conversa ainda não foi resumida.",
       "summarize": "Resumir",
       "setUpModel": "Configurar um modelo"
+    },
+    "global": {
+      "title": "Conversas globais",
+      "view": {
+        "label": "Visualização das conversas",
+        "list": "Lista",
+        "global": "Global"
+      },
+      "tabs": {
+        "label": "Grupos de conversas",
+        "all": "Todas"
+      },
+      "boardLabel": "Quadro: {{tab}}",
+      "add": {
+        "label": "Adicionar",
+        "there": "Já no quadro"
+      },
+      "menu": {
+        "label": "Opções do quadro",
+        "reset": "Repor disposição"
+      },
+      "cleared": "Não há nada neste quadro.",
+      "widget": {
+        "remove": "Remover {{name}}",
+        "role": "cartão",
+        "keys": "As setas movem-no. Shift e as setas mudam o tamanho.",
+        "place": "{{name}}: coluna {{column}}, linha {{row}}, {{width}} por {{height}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "Grafo de forças",
+          "empty": "O grafo aparece quando {{count}} conversas aqui tiverem temas para ligar."
+        },
+        "arcs": {
+          "name": "Linha do tempo de arcos",
+          "empty": "A linha do tempo aparece quando {{count}} conversas aqui tiverem temas."
+        },
+        "subjects": {
+          "name": "Temas que voltam",
+          "empty": "Ainda nada voltou. Um tema aparece aqui quando duas conversas o partilham."
+        },
+        "questions": {
+          "name": "Perguntas em aberto",
+          "empty": "Não há perguntas em aberto aqui. Cada pergunta tem uma resposta.",
+          "where": "{{title}}, {{date}}"
+        },
+        "activity": {
+          "name": "Atividade",
+          "day_one": "{{date}}: {{count}} conversa",
+          "day_other": "{{date}}: {{count}} conversas"
+        }
+      },
+      "subjects": {
+        "caption": "Volta:",
+        "chip_one": "{{label}}, em {{count}} conversa",
+        "chip_other": "{{label}}, em {{count}} conversas"
+      },
+      "node_one": "{{title}}, {{date}}, {{count}} tópico",
+      "node_other": "{{title}}, {{date}}, {{count}} tópicos"
     },
     "review": {
       "title": "O que ficou em aberto",
@@ -2225,7 +2276,27 @@
       "dictationButton": "Enquanto você dita",
       "instructionsDescription": "Como o modelo reescreve cada ditado. O padrão serve para a maioria das pessoas.",
       "editInstructions": "Editar instruções",
-      "instructions": "Instruções de limpeza"
+      "instructions": "Instruções de limpeza",
+      "context": {
+        "title": "Verificação de contexto",
+        "description": "Quando uma pergunta recebe uma resposta incerta ou nenhuma, o Oats procura nas conversas anteriores e numa pasta que a equipe compartilha, e diz se a resposta se sustenta.",
+        "enable": "Verificar respostas incertas",
+        "enableHint": "Usa o modelo de escrita escolhido em Modelos. Com um modelo na nuvem, a pergunta, a resposta e os trechos lidos são enviados a esse provedor.",
+        "needsModel": "Escolha primeiro um modelo de escrita em Modelos. Até lá nada é verificado.",
+        "folder": "Pasta da equipe",
+        "noFolder": "Nenhuma pasta escolhida. As conversas anteriores continuam sendo verificadas.",
+        "choose": "Escolher pasta",
+        "change": "Alterar",
+        "remove": "Remover",
+        "reading": "Lendo a pasta",
+        "files_one": "{{count}} arquivo lido",
+        "files_other": "{{count}} arquivos lidos",
+        "missing": "Esta pasta não existe mais.",
+        "unreadable": "O Oats não consegue ler esta pasta.",
+        "agent": "Perguntar ao Claude Code quando não houver resposta",
+        "agentHint": "Executa o Claude Code neste Mac com as suas conexões do GitHub, Linear, Notion e Slack, só leitura. A pergunta e a resposta vão para a Anthropic, e o texto de busca para esses serviços.",
+        "agentMissing": "Precisa do Claude Code neste Mac, com login feito. Não foi encontrado."
+      }
     },
     "errors": {
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",
@@ -2239,7 +2310,7 @@
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
       "question-cards-off": "Os cartões de perguntas estão desativados, então as perguntas passarão em silêncio. Ative-os em Configurações, em Gravação.",
-      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de resumo está pronto. Configure um em Definições › Avançado › Modelos de linguagem."
+      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de escrita está pronto. Escolha um em Definições › Modelos de IA."
     },
     "aide": {
       "title": "Assistente de conversa",
@@ -2269,6 +2340,36 @@
       "room": "Sala",
       "speaker": "Falante {{n}}"
     },
+    "example": {
+      "open": "Abrir uma conversa de exemplo",
+      "note": "Uma revisão de lançamento com nove pessoas para explorar. Exclua quando quiser.",
+      "badge": "Exemplo",
+      "failed": "Não foi possível abrir a conversa de exemplo",
+      "failedHint": "Nada foi adicionado. Tente novamente."
+    },
+    "groups": {
+      "seed": {
+        "work": "Trabalho",
+        "personal": "Pessoal"
+      },
+      "moveTo": "Mover para um grupo",
+      "none": "Sem grupo",
+      "new": "Novo grupo…",
+      "newTitle": "Novo grupo",
+      "newDescription": "Dê um nome ao grupo. Esta conversa vai para ele.",
+      "nameLabel": "Nome",
+      "create": "Criar",
+      "movedTo": "Movida para {{group}}",
+      "movedOut": "Sem grupo",
+      "moveFailed": "Não movida",
+      "sorting": "Organizando {{current}} de {{total}}",
+      "errors": {
+        "nameRequired": "Dê um nome ao grupo.",
+        "nameTooLong": "Use no máximo {{max}} caracteres.",
+        "nameTaken": "Já existe um grupo com esse nome. Escolha outro.",
+        "failed": "O grupo não foi salvo. Tente novamente."
+      }
+    },
     "shell": {
       "sidebar": "Barra lateral",
       "showSidebar": "Mostrar barra lateral",
@@ -2295,6 +2396,7 @@
     }
   },
   "questionCard": {
+    "now": "agora",
     "state": {
       "asked": "Aberta",
       "answered": "Respondida",
@@ -2310,7 +2412,22 @@
     "announced": "Nova pergunta: {{question}}",
     "announcedAgain": "Perguntada de novo, {{count}} vezes já: {{question}}",
     "announcedBatch": "{{count}} perguntas novas, a última: {{question}}",
-    "searchedHost": "Pesquisado em {{host}}"
+    "searchedHost": "Pesquisado em {{host}}",
+    "check": {
+      "checking": "Verificando o contexto",
+      "checkingSources": "Verificando {{sources}}",
+      "right": "Está certo",
+      "wrong": "Espera, está errado",
+      "answer": "Encontrado",
+      "quote": "“{{quote}}”",
+      "openSource": "Abrir {{source}}",
+      "announced": {
+        "right": "Está certo: {{answer}}. Fonte: {{source}}.",
+        "wrong": "Espera, está errado: {{answer}}. Fonte: {{source}}.",
+        "answer": "Encontrado: {{answer}}. Fonte: {{source}}."
+      },
+      "checkingAgent": "Perguntando ao Claude Code"
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} segundos",
@@ -2320,19 +2437,5 @@
     "returned_other": "retomado {{count}}×",
     "search": "Pesquisar",
     "noQuestions": "Sem perguntas neste fio."
-  },
-  "lifetime": {
-    "title": "Aquilo a que volta sempre",
-    "viewMap": "Mapa",
-    "viewList": "Lista",
-    "viewLabel": "Visualização das conversas",
-    "recurring": "Recorrente:",
-    "inCount_one": "{{count}} conversa",
-    "inCount_other": "{{count}} conversas",
-    "node": "{{label}}, {{count}} tópicos",
-    "topicCount_one": "{{count}} tópico",
-    "topicCount_other": "{{count}} tópicos",
-    "open": "Abrir esta conversa",
-    "empty": "O mapa aparece quando tiver {{count}} conversas gravadas para ligar."
   }
 }

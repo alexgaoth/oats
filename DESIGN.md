@@ -41,9 +41,9 @@ The product rules from v1 still hold and still win over taste:
 └───────────┴────────────────────────────────────────┘
 ```
 
-- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with a
-  faded texture of scattered oat grains behind it (`shell/SidebarGrain.tsx`: a
-  static pattern at 7%, brown in light mode, honey in dark). Top 52px band holds
+- **Sidebar** (`shell/AppSidebar.tsx`), 232px, `bg-sidebar`, right border, with
+  the wheat field at its foot (`shell/SidebarField.tsx`: the room the list leaves,
+  120 to 240px, none in less; taller is more sky). Top 52px band holds
   the macOS traffic lights (`windowConfig.js`: `{ x: 18, y: 18 }`) and moves the
   window. Then the brand row, the Record button (honey with depth; a red **Stop
   recording** with elapsed time while live), Home / Conversations / Search, the six
@@ -91,7 +91,8 @@ Rules:
 - **Content is flat; the frame may carry the oat world.** Cards, lists and reading
   surfaces stay flat, with depth from a border and at most `shadow-xs`/`shadow-sm`,
   and no glows. The oat world may dress the frame where it never sits under words:
-  the sidebar's grain texture, the field at the sidebar's foot, empty states.
+  the field at the sidebar's foot, empty states.
+  The one exception in content: a chart's areas carry the field's dither (§6).
 - **The main action has depth.** New recording and Start recording are honey with
   an inner highlight and a soft honey shadow, and they sink 1px when pressed
   (`.oats-cta` in `index.css`). They are the only controls with depth.
@@ -108,12 +109,15 @@ Rules:
   mode, so a warning read as the brand. Light mode uses orange-700 so warning text
   meets 4.5:1 on white.
 - **The symbol is the honey oat grain** (`shell/OatsMark.tsx`): a small 3D grain,
+  dithered like the field's sky (four honey tones in ordered dither on device pixels, no glow; `helpers/grainDither.mjs`),
   the same in light and dark mode, with no tile behind it. It is tossed once when
   the app first comes into view and again when the sidebar mark is clicked: it
   hops, tumbles end over end twice and lands with a small squash, while the light
-  stays put (`helpers/oatsMarkMotion.mjs`). No toss under reduced motion. The app icon is the same grain on a light
-  neutral tile; every icon file comes from `src/assets/logo.svg` and the masters
-  in `scripts/` via `scripts/build-brand-icons.sh`.
+  stays put (`helpers/oatsMarkMotion.mjs`). No toss under reduced motion. The app icon is the same grain,
+  painted by the same painter in the film's dither (about 110 dots across, in the four honey
+  tones pushed apart), on one white tile with nothing around it: no white square, no second
+  edge. `scripts/build-brand-icons.sh` paints every icon file (`render-brand-icons.cjs`, in
+  Electron), each size at its own size, and the DMG window's background with them.
 - **Red means recording or danger.** It is never decoration. Idle, the record
   action is the brand; live, it turns red and says Stop.
 - Status is a soft badge (`bg-success/10 text-success`), never a colored border bar.
@@ -148,6 +152,14 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 - Settings are grouped cards of rows: label and description on the left, the
   control on the right.
 - Alerts are a bordered row with an icon, tinted by tone (`warning`, `danger`).
+- **The example conversation** (`helpers/exampleConversation.mjs`). With nothing
+  recorded, Home (under the record card) and the empty Conversations page
+  (under Start recording) offer the bundled sample: a ghost button and one muted
+  line, never honey, because Start recording is the main action on both. An
+  example has a muted outline **Example** badge beside its title on Home, in the
+  list and in the reading view. The sidebar's Recent list has none: at 232px
+  the badge would take half of the title. Delete removes the example like any
+  conversation, and the offer comes back when nothing is left.
 - Radius: `rounded-md` (8px) for controls, `rounded-xl` (12px) for cards and
   panels. Focus: `ring-[3px] ring-ring/50` on every interactive element.
 
@@ -170,15 +182,18 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   motion. The questions count is left out while question cards are off: a zero
   there would be a guess.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
-  talked about so far, as a **stack** (the topic now, then the most recent: state
-  dot, label, state badge, returns, minutes) or a **graph** (x is when a topic was
-  first raised, y how unsettled it still is; a dashed honey curve is a return to
-  an earlier topic). A view switch chooses Auto / Stack / Graph, and the
-  choice persists. Auto shows the graph only when a list would hide the shape —
-  four or more topics, with two returns to earlier topics or a topic that
-  branches — and says why in a one-line caption. It changes view only when two
-  snapshots in a row agree and 20 s after its last change, so it never
-  flip-flops (`helpers/conversationFlow.mjs`).
+  talked about so far, as **lanes** (the default) or a **graph**. A view switch
+  chooses Lanes / Graph, and the choice persists. The lanes
+  (`conversation/TopicLanes.tsx`, `helpers/topicLanes.mjs`) are one row per
+  topic in the order raised, with its minutes, and one line for the room: it
+  runs along a topic's row while the room is on it, bends to the next row when
+  the room moves, climbs back to an earlier row on a return, and ends at now
+  with a honey dot. The topic now has a medium label and the Now badge; a
+  pressed row is selected and quotes the topic. Past eight rows the card
+  scrolls inside. The graph keeps its axes (x is when a topic was first raised,
+  y how unsettled it still is); a return is an ink curve, a move on a quiet one,
+  and the labels sit on plates. A one-line caption states the facts of the view
+  shown: "8 topics, 3 returns to earlier topics".
 - **Detailed:** adds the question cards and the live transcript below the flow
   card, each in standard card/list styling. The flow card then yields height to
   them (at most 40% of the column) and scrolls inside.
@@ -203,29 +218,84 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 ## 6. Data visualisation
 
 The conversation contour (`helpers/conversationContour.mjs`), the flow card's
-graph and the topic/lifetime graphs stay: every value in them is measured from
-the conversation. They draw in
-`muted-foreground` with status colors for question marks, on the card surface,
-with no decorative gradient.
+graph, the topic graph and the Global conversations board stay: every value in them is measured from
+the conversation. Every chart draws through one module
+(`components/charts/chartStyle.ts`), by seven rules:
+
+1. **Two line weights.** Data lines are 1.5 px, with round caps and joins.
+   Rules (baselines, row dividers, ticks) are 1 px. No dashes anywhere.
+2. **Three greys.** Ink (`foreground`) is for words and emphasis, quiet
+   (`muted-foreground`) for data lines and marks, rule (`border`) for rules. No
+   other opacities, except the fill.
+3. **One accent.** Honey (`primary`) marks only "now" and "selected or hovered".
+4. **Status colours only for question verdicts:** answered is filled
+   `success`, unknown is filled `warning`, hedged is a soft `warning` fill
+   inside a ring, and open (no verdict) is a ring in quiet.
+5. **One dot:** radius 4, with a 2 px ring in `card`, so it stays clear on a
+   line or on another dot.
+6. **Nothing crosses a word.** Labels sit in a column, or on a plate in the card
+   colour.
+7. **Fill.** An area or mass is an ordered 4×4 Bayer dither of the quiet grey,
+   locked to device pixels, with the field's matrix (`helpers/chartDither.mjs`).
+   A fade under about 24 px tall (the list strips) is a 12% wash instead. This
+   is the one exception to "content is flat" (§2): charts carry the dither.
 
 - A question's mark has one vocabulary on every surface
   (`conversation/questionMarks.ts`), and it is always a complete circle of one
   size: **filled** when settled (answered in `success`, unknown in
   `warning`), a **soft fill inside a ring** when the answer was hedged
   (`warning`), an **empty ring** when there is no verdict (`muted-foreground`).
-  The fill carries the meaning without colour. On a contour the marks are
-  **pins**: heads on one row along the top, each with a stem down to its moment.
+  The fill carries the meaning without colour. On a contour a question is a
+  **dot on the line** at the moment it was asked; the one being read is a size
+  up, ringed in honey.
 - The live contour rolls: it shows the last four minutes with now at the
-  right-hand edge, and redraws once a second, so the trace and every pin move one
+  right-hand edge, and redraws once a second, so the trace and every dot move one
   second to the left. Transcript speech and the microphone level both feed it,
   so it moves while somebody is talking. Its label describes the whole sitting.
 - A finished contour keeps the shape the live one had: the recording keeps how
   loud each second was (one byte a second, `helpers/conversationLoudness.mjs`),
   and the record and every list strip take their height from it by the live
   rule. Conversations recorded before it was kept draw from their words.
-- The legend under a contour lists only what that contour draws, in two rows: how
-  the questions ended, then the shape marks (topic change, topic revisited,
-  marked moment).
+- The legend under a contour lists only what that contour draws, in one row: how
+  the questions ended, then the shape marks (new topic, marked).
+- Talk time is a list of bars under the contour: each voice's name, a 6 px bar
+  as long as its share against the voice that talked most, dithered at half
+  density, and the share. Two columns from 420 px. Pressing a voice shows only
+  its turns: its bar turns honey and its name medium. Unattributed speech is the
+  last row, with a rule-grey bar.
+- **Global conversations** (`components/global/`), the Conversations page's
+  Global view: a board of charts across every conversation, one tab per
+  conversation group, All first. The board is the background in 24 px cells,
+  with a 2 px dot in the rule grey in the middle of each (2 device pixels at
+  1x, 4 at 2x: crisp at both). Each chart is a card on it (card colour, 1 px
+  border, `rounded-xl`, `shadow-xs`) that covers whole cells and snaps to them,
+  moves by its header, resizes by its bottom-right corner and keeps one cell of
+  board to the next card; the cards it would land on step down out of its way.
+  Two cells of board stay clear around the cards, so a row of dots runs between
+  every two cards and two rows around them all, and no dot touches a card. A
+  card's remove button shows on hover or focus. Add, at the top right, puts any
+  widget that is not on the board yet where it first fits and takes the focus
+  to it: the force graph, the arc timeline, the subjects that come back, the
+  open questions (every question Home counts as open: no verdict, or nobody
+  knew, each with its mark; newest first; a click opens its conversation at
+  that turn) and the activity of the last twelve weeks (a
+  cell a day, dithered by how many conversations it held, today ringed in
+  honey). A focused card moves a cell with the arrow keys and resizes with
+  shift. Each tab keeps its arrangement; Reset layout, in the board's menu, puts
+  back the default: the force graph above the arc timeline, filling the view.
+- The board's charts share one highlight (`highlightStore.ts`,
+  `linkedHighlight.ts`). Pointing at a conversation, or focusing it, lights it
+  honey in every chart and its links ink, and everything else recedes to the
+  rule grey (words recede only to the quiet grey, so they stay readable).
+  Pointing at a subject lights the conversations and the links that carry it,
+  and pointing at a day lights that day's conversations.
+  A click opens the conversation, which stays selected, in honey, when you come
+  back to the board.
+- A subject's links are a thread: each conversation on it joins the one on it
+  before (`subjectThreads`), not every other one. Joining every pair made 1,500
+  links at 200 conversations, a solid mass in both charts.
+- Pointing redraws only the canvases, from layers cached until the data, the
+  size or the theme changes: nothing re-renders and nothing moves at rest.
 
 ## 7. Motion
 

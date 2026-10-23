@@ -1,13 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronUp, Search, Undo2, X } from "lucide-react";
+import {
+  BookOpen,
+  ChevronUp,
+  CircleCheck,
+  FileText,
+  Link2,
+  MessagesSquare,
+  Search,
+  TriangleAlert,
+  Undo2,
+  X,
+} from "lucide-react";
 import { cn } from "../lib/utils";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { searchHostLabel } from "../../utils/searchHost";
-import type { ConversationCard, QuestionOutcome } from "../../types/conversationEvents";
-import { nextAnnouncement } from "../../helpers/questionAnnouncement.mjs";
+import type {
+  ContextCheck,
+  ContextSource,
+  ConversationCard,
+  QuestionOutcome,
+} from "../../types/conversationEvents";
+import { nextAnnouncement, nextCheckAnnouncement } from "../../helpers/questionAnnouncement.mjs";
+import { questionAge } from "../../helpers/questionAge.mjs";
 import { markFill, markTone, TONE_TOKEN, type MarkTone } from "./questionMarks";
 
 /** What the live region is currently saying. See `questionAnnouncement.mjs`. */
@@ -88,12 +106,6 @@ function groupCards(cards: ConversationCard[]): CardGroup[] {
     .sort((a, b) => latest(a.cards) - latest(b.cards));
 }
 
-function elapsedLabel(from: number, now: number): string {
-  const seconds = Math.max(0, Math.round((now - from) / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  return `${Math.round(seconds / 60)}m`;
-}
-
 /**
  * A question's state mark, always a complete circle of one size: filled when
  * settled, a soft fill inside a ring when the answer was hedged, an empty ring
@@ -123,6 +135,96 @@ export function StateMark({
         className
       )}
     />
+  );
+}
+
+const VERDICT = {
+  right: { badge: "success", icon: CircleCheck },
+  wrong: { badge: "warning", icon: TriangleAlert },
+  answer: { badge: "info", icon: BookOpen },
+} as const;
+
+/** Where a verdict came from, and the way to open it when there is one. */
+function CheckSource({ source, quote }: { source: ContextSource; quote: string }) {
+  const { t } = useTranslation();
+  const Icon = source.kind === "file" ? FileText : source.kind === "link" ? Link2 : MessagesSquare;
+  const open =
+    source.kind === "file"
+      ? () => void window.electronAPI?.openContextFile?.(source.path)
+      : source.kind === "link"
+        ? () => void window.electronAPI?.openExternal?.(source.url)
+        : null;
+  // The exact words that settle it are the hover text, not a line of their
+  // own: beside a live conversation the verdict, the answer and where it is
+  // written are enough, and the words are one look away.
+  const words = t("questionCard.check.quote", { quote });
+  // A past conversation is named, not opened: opening it would take the
+  // window away from the conversation being recorded.
+  if (!open) {
+    return (
+      <span
+        title={words}
+        className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+      >
+        <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+        <span className="truncate">{source.label}</span>
+      </span>
+    );
+  }
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="xs"
+      onClick={open}
+      title={words}
+      aria-label={t("questionCard.check.openSource", { source: source.label })}
+      className="-mx-2 max-w-full justify-start text-muted-foreground"
+    >
+      <Icon aria-hidden="true" />
+      <span className="truncate">{source.label}</span>
+    </Button>
+  );
+}
+
+/**
+ * What the team's context says about the reply (contextCheck.mjs): checking,
+ * then right, wrong, or the answer nobody had, and where it is written.
+ * Spoken through the rail's live region, never from here.
+ */
+function CheckLine({ check }: { check: ContextCheck }) {
+  const { t } = useTranslation();
+  if (check.state === "checking") {
+    // Its shape, under one status line, not a spinner (DESIGN.md §7).
+    return (
+      <div className="mt-2 grid gap-1.5">
+        <p className="text-xs text-muted-foreground">
+          {check.by !== "agent"
+            ? t("questionCard.check.checking")
+            : check.sources?.length
+              ? t("questionCard.check.checkingSources", { sources: check.sources.join(", ") })
+              : t("questionCard.check.checkingAgent")}
+        </p>
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-2/3 rounded-full bg-muted motion-safe:animate-pulse"
+        />
+      </div>
+    );
+  }
+  const verdict = VERDICT[check.state];
+  const Icon = verdict.icon;
+  return (
+    <div className="mt-2 grid min-w-0 gap-1">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <Badge variant={verdict.badge}>
+          <Icon aria-hidden="true" />
+          {t(`questionCard.check.${check.state}`)}
+        </Badge>
+        <span className="min-w-0 text-[13px] font-medium text-foreground">{check.answer}</span>
+      </div>
+      <CheckSource source={check.source} quote={check.quote} />
+    </div>
   );
 }
 
@@ -165,7 +267,12 @@ function Asking({
         <div className="mt-1 flex min-h-6 items-center gap-2 text-xs text-muted-foreground">
           <span>{t(`questionCard.state.${card.state}`)}</span>
           <span aria-hidden="true">·</span>
-          <span className="tabular-nums">{elapsedLabel(card.createdAt, now)}</span>
+          <span className="tabular-nums">
+            {(() => {
+              const age = questionAge(card.createdAt, now);
+              return age.kind === "now" ? t("questionCard.now") : age.label;
+            })()}
+          </span>
           <span className="flex-1" />
           {card.searched ? (
             // Naming the host is the honesty requirement, not decoration. The
@@ -195,6 +302,7 @@ function Asking({
             </Button>
           )}
         </div>
+        {card.check && <CheckLine check={card.check} />}
       </div>
     </div>
   );
@@ -412,6 +520,23 @@ export default function ConversationSignalRail({
           })
         : t("questionCard.announced", { question: announced.question });
 
+  // A check's verdict is announced once, when it lands, in its own region:
+  // folding it into the question's text would make that region re-speak the
+  // question (helpers/questionAnnouncement.mjs, nextCheckAnnouncement).
+  const checkSpoken = useRef<Set<string>>(new Set());
+  const [checkAnnounced, setCheckAnnounced] = useState("");
+  useEffect(() => {
+    const next = nextCheckAnnouncement(cards, checkSpoken.current);
+    if (!next) return;
+    for (const id of next.ids) checkSpoken.current.add(id);
+    setCheckAnnounced(
+      t(`questionCard.check.announced.${next.state}`, {
+        answer: next.answer,
+        source: next.source,
+      })
+    );
+  }, [cards, t]);
+
   const hidden = Math.max(0, groups.length - VISIBLE_GROUPS);
   // **Newest first.**
   //
@@ -449,6 +574,9 @@ export default function ConversationSignalRail({
           nobody hears. That is why this sits above the early return. */}
       <p aria-live="polite" className="sr-only">
         {announcement}
+      </p>
+      <p aria-live="polite" className="sr-only">
+        {checkAnnounced}
       </p>
 
       {announceOnly || (!groups.length && !undoable) ? null : (

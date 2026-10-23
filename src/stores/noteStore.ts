@@ -1,14 +1,18 @@
 import { create } from "zustand";
-import type { NoteItem } from "../types/electron";
+import type { NoteGroupPatch, NoteItem } from "../types/electron";
 
 interface NoteState {
   notes: NoteItem[];
+  // True once the list has been read from the database. Until then an empty
+  // list means "not known yet", not "no conversations".
+  loaded: boolean;
   activeNoteId: number | null;
   activeFolderId: number | null;
 }
 
 const useNoteStore = create<NoteState>()(() => ({
   notes: [],
+  loaded: false,
   activeNoteId: null,
   activeFolderId: null,
 }));
@@ -73,7 +77,7 @@ export async function initializeNotes(
   ensureIpcListeners();
   const items = (await window.electronAPI?.getNotes(noteType, limit, folderId)) ?? [];
   if (gen !== loadGeneration) return items;
-  useNoteStore.setState({ notes: items });
+  useNoteStore.setState({ notes: items, loaded: true });
   return items;
 }
 
@@ -91,6 +95,24 @@ export function updateNoteInStore(note: NoteItem): void {
   useNoteStore.setState({
     notes: notes.map((existing) => (existing.id === note.id ? note : existing)),
   });
+}
+
+/**
+ * Many notes' groups at once, in one update: a deleted group's conversations
+ * (`conversation-groups-changed`). Notes this store does not hold are skipped.
+ */
+export function patchNoteGroups(patches: NoteGroupPatch[]): void {
+  if (!Array.isArray(patches) || !patches.length) return;
+  const byId = new Map(patches.map((patch) => [patch.id, patch]));
+  const { notes } = useNoteStore.getState();
+  let changed = false;
+  const next = notes.map((note) => {
+    const patch = byId.get(note.id);
+    if (!patch) return note;
+    changed = true;
+    return { ...note, group_id: patch.group_id, group_source: patch.group_source };
+  });
+  if (changed) useNoteStore.setState({ notes: next });
 }
 
 export function removeNote(id: number): void {
@@ -127,6 +149,11 @@ export function getActiveFolderIdValue(): number | null {
 
 export function useNotes(): NoteItem[] {
   return useNoteStore((state) => state.notes);
+}
+
+/** Whether the list has been read from the database yet (see `loaded`). */
+export function useNotesLoaded(): boolean {
+  return useNoteStore((state) => state.loaded);
 }
 
 export function useActiveNoteId(): number | null {

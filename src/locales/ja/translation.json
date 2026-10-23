@@ -32,10 +32,10 @@
       "show": "ディクテーションパネルを表示",
       "hide": "ディクテーションパネルを非表示"
     },
-    "openControlPanel": "コントロールパネルを開く",
-    "hideControlPanel": "コントロールパネルを非表示",
+    "openControlPanel": "Oats を開く",
+    "hideControlPanel": "Oats を隠す",
     "quit": "Oats を終了",
-    "tooltip": "Oats - 音声ディクテーション",
+    "tooltip": "Oats",
     "conversation": {
       "start": "会話を開始",
       "stop": "会話を終了"
@@ -1907,9 +1907,8 @@
       "legend": {
         "label": "マークの意味",
         "open": "未解決",
-        "topic": "話題の切り替え",
-        "return": "前の話題に戻った",
-        "marked": "マークした瞬間"
+        "topic": "新しい話題",
+        "marked": "マーク済み"
       },
       "contourSummary": "{{minutes}}分、質問{{questions}}件（うち未回答{{unresolved}}件）、話題の切り替わり{{shifts}}回、{{returns}}件のスレッドに戻りました。",
       "contourEmpty": "まだ何も記録されていません。",
@@ -1952,20 +1951,16 @@
       "title": "会話の流れ",
       "viewLabel": "表示方法",
       "mode": {
-        "auto": "自動",
-        "stack": "リスト",
+        "lanes": "レーン",
         "graph": "グラフ"
       },
       "empty": "会話が進むと、ここに話題が表示されます。",
       "caption": {
-        "few_one": "リストを表示中：まだ話題は {{count}} 件だけです。",
-        "few_other": "リストを表示中：まだ話題は {{count}} 件だけです。",
-        "linear": "リストを表示中：会話は一直線に進んでいます。",
-        "returns_one": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
-        "returns_other": "グラフを表示中：これまでに以前の話題へ {{count}} 回戻りました。",
-        "branching": "グラフを表示中：会話が枝分かれしています。",
-        "stack": "リストを表示中。",
-        "graph": "グラフを表示中。"
+        "topics_one": "話題 {{count}} 件",
+        "topics_other": "話題 {{count}} 件",
+        "returns_one": "以前の話題へ {{count}} 回戻った",
+        "returns_other": "以前の話題へ {{count}} 回戻った",
+        "topicsReturns": "{{topics}}、{{returns}}"
       },
       "state": {
         "live": "現在",
@@ -1975,10 +1970,7 @@
       },
       "back_one": "{{count}} 回戻った",
       "back_other": "{{count}} 回戻った",
-      "showMore_one": "さらに {{count}} 件表示",
-      "showMore_other": "さらに {{count}} 件表示",
-      "showFewer": "表示を減らす",
-      "stackLabel": "話題（新しい順）",
+      "lanesLabel": "話題（出た順）",
       "graphLabel_one": "これまでに出た {{count}} 件の話題のグラフ",
       "graphLabel_other": "これまでに出た {{count}} 件の話題のグラフ",
       "nodeName": "{{label}}、{{state}}",
@@ -2067,6 +2059,65 @@
       "notSummarized": "この会話はまだ要約されていません。",
       "summarize": "要約する",
       "setUpModel": "モデルを設定"
+    },
+    "global": {
+      "title": "会話の全体像",
+      "view": {
+        "label": "会話の表示方法",
+        "list": "リスト",
+        "global": "全体"
+      },
+      "tabs": {
+        "label": "会話のグループ",
+        "all": "すべて"
+      },
+      "boardLabel": "ボード: {{tab}}",
+      "add": {
+        "label": "追加",
+        "there": "ボードにあります"
+      },
+      "menu": {
+        "label": "ボードのオプション",
+        "reset": "配置をリセット"
+      },
+      "cleared": "このボードには何もありません。",
+      "widget": {
+        "remove": "{{name}} を削除",
+        "role": "カード",
+        "keys": "矢印キーで移動します。Shift と矢印キーでサイズを変えます。",
+        "place": "{{name}}: {{column}} 列目、{{row}} 行目、{{width}} × {{height}}"
+      },
+      "widgets": {
+        "force": {
+          "name": "フォースグラフ",
+          "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、グラフが表示されます。"
+        },
+        "arcs": {
+          "name": "アークタイムライン",
+          "empty": "ここにある会話のうち {{count}} 件にトピックがそろうと、タイムラインが表示されます。"
+        },
+        "subjects": {
+          "name": "繰り返し出てくる話題",
+          "empty": "まだ繰り返し出てきた話題はありません。2 つの会話で共有されると、ここに表示されます。"
+        },
+        "questions": {
+          "name": "未解決の質問",
+          "empty": "ここには未解決の質問はありません。どの質問にも答えがあります。",
+          "where": "{{title}}、{{date}}"
+        },
+        "activity": {
+          "name": "アクティビティ",
+          "day_one": "{{date}}: 会話 {{count}} 件",
+          "day_other": "{{date}}: 会話 {{count}} 件"
+        }
+      },
+      "subjects": {
+        "caption": "繰り返し:",
+        "chip_one": "{{label}}、{{count}} 件の会話",
+        "chip_other": "{{label}}、{{count}} 件の会話"
+      },
+      "node_one": "{{title}}、{{date}}、トピック {{count}} 件",
+      "node_other": "{{title}}、{{date}}、トピック {{count}} 件"
     },
     "review": {
       "title": "未解決のまま残ったこと",
@@ -2225,7 +2276,27 @@
       "dictationButton": "ディクテーション中",
       "instructionsDescription": "モデルが各ディクテーションをどう書き直すか。ほとんどの人は既定のままで問題ありません。",
       "editInstructions": "指示を編集",
-      "instructions": "整形の指示"
+      "instructions": "整形の指示",
+      "context": {
+        "title": "コンテキスト確認",
+        "description": "質問への答えがあいまいなときや誰も答えられないとき、Oats は過去の会話とチームで共有しているフォルダを調べ、その答えが正しいかを示します。",
+        "enable": "あいまいな答えを確認",
+        "enableHint": "「モデル」で選んだ文章モデルを使います。クラウドのモデルでは、質問、答え、読んだ箇所がそのプロバイダに送られます。",
+        "needsModel": "先に「モデル」で文章モデルを選んでください。それまでは何も確認しません。",
+        "folder": "チームのフォルダ",
+        "noFolder": "フォルダが選ばれていません。過去の会話は確認します。",
+        "choose": "フォルダを選ぶ",
+        "change": "変更",
+        "remove": "外す",
+        "reading": "フォルダを読み込み中",
+        "files_one": "{{count}} 件のファイルを読み込み済み",
+        "files_other": "{{count}} 件のファイルを読み込み済み",
+        "missing": "このフォルダはもうありません。",
+        "unreadable": "Oats はこのフォルダを読めません。",
+        "agent": "答えがないときは Claude Code に聞く",
+        "agentHint": "この Mac で Claude Code を、GitHub、Linear、Notion、Slack への接続を使って読み取り専用で実行します。質問と答えは Anthropic に、検索語はそれらのサービスに送られます。",
+        "agentMissing": "この Mac にサインイン済みの Claude Code が必要です。見つかりませんでした。"
+      }
     },
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
@@ -2239,7 +2310,7 @@
       "no-model": "同梱の音声モデルがインストールされませんでした。Oats を再起動し、続く場合は再インストールしてください。",
       "no-api-key": "処理は API キーを使う設定ですが、キーが保存されていません — 設定を確認してください。",
       "question-cards-off": "質問カードがオフのため、質問は見過ごされます。設定の「録音」でオンにしてください。",
-      "no-summary-model": "要約モデルが準備できていないため、会話はタイトルと要約なしで保存されます。設定 › 詳細設定 › 言語モデル で設定してください。"
+      "no-summary-model": "文章モデルが準備できていないため、会話はタイトルと要約なしで保存されます。設定 › AI モデル で選んでください。"
     },
     "aide": {
       "title": "会話アシスタント",
@@ -2269,6 +2340,36 @@
       "room": "部屋",
       "speaker": "話者{{n}}"
     },
+    "example": {
+      "open": "サンプルの会話を開く",
+      "note": "9人が参加したローンチレビューを自由に見られます。いつでも削除できます。",
+      "badge": "サンプル",
+      "failed": "サンプルの会話を開けませんでした",
+      "failedHint": "何も追加されていません。もう一度お試しください。"
+    },
+    "groups": {
+      "seed": {
+        "work": "仕事",
+        "personal": "プライベート"
+      },
+      "moveTo": "グループに移動",
+      "none": "グループなし",
+      "new": "新しいグループ…",
+      "newTitle": "新しいグループ",
+      "newDescription": "グループに名前を付けてください。この会話はそのグループに移動します。",
+      "nameLabel": "名前",
+      "create": "作成",
+      "movedTo": "{{group}}に移動しました",
+      "movedOut": "グループなし",
+      "moveFailed": "移動できませんでした",
+      "sorting": "{{total}}件中{{current}}件目を分類中",
+      "errors": {
+        "nameRequired": "グループ名を入力してください。",
+        "nameTooLong": "{{max}}文字以内で入力してください。",
+        "nameTaken": "同じ名前のグループがすでにあります。別の名前にしてください。",
+        "failed": "グループを保存できませんでした。もう一度お試しください。"
+      }
+    },
     "shell": {
       "sidebar": "サイドバー",
       "showSidebar": "サイドバーを表示",
@@ -2295,6 +2396,7 @@
     }
   },
   "questionCard": {
+    "now": "今",
     "state": {
       "asked": "未解決",
       "answered": "回答済み",
@@ -2310,7 +2412,22 @@
     "announced": "新しい質問: {{question}}",
     "announcedAgain": "再度質問（{{count}} 回目）: {{question}}",
     "announcedBatch": "新しい質問 {{count}} 件、最新: {{question}}",
-    "searchedHost": "{{host}} で検索済み"
+    "searchedHost": "{{host}} で検索済み",
+    "check": {
+      "checking": "コンテキストを確認中",
+      "checkingSources": "{{sources}} を確認中",
+      "right": "合っています",
+      "wrong": "待って、違います",
+      "answer": "見つかりました",
+      "quote": "「{{quote}}」",
+      "openSource": "{{source}} を開く",
+      "announced": {
+        "right": "合っています: {{answer}}。出典: {{source}}。",
+        "wrong": "待って、違います: {{answer}}。出典: {{source}}。",
+        "answer": "見つかりました: {{answer}}。出典: {{source}}。"
+      },
+      "checkingAgent": "Claude Code に確認中"
+    }
   },
   "topicGraph": {
     "node": "{{label}}、{{seconds}} 秒",
@@ -2320,19 +2437,5 @@
     "returned_other": "{{count}} 回戻った",
     "search": "検索",
     "noQuestions": "この話の筋に質問はありません。"
-  },
-  "lifetime": {
-    "title": "繰り返し戻ってくるもの",
-    "viewMap": "マップ",
-    "viewList": "リスト",
-    "viewLabel": "会話の表示方法",
-    "recurring": "繰り返し:",
-    "inCount_one": "{{count}} 件の会話",
-    "inCount_other": "{{count}} 件の会話",
-    "node": "{{label}}、トピック {{count}} 件",
-    "topicCount_one": "トピック {{count}} 件",
-    "topicCount_other": "トピック {{count}} 件",
-    "open": "この会話を開く",
-    "empty": "録音した会話が {{count}} 件たまるとマップが表示されます。"
   }
 }
