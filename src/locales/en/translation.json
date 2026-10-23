@@ -2276,7 +2276,24 @@
       "dictationButton": "While you dictate",
       "instructionsDescription": "How the model rewrites each dictation. The default works for most people.",
       "editInstructions": "Edit instructions",
-      "instructions": "Cleanup instructions"
+      "instructions": "Cleanup instructions",
+      "context": {
+        "title": "Context check",
+        "description": "When a question gets an unsure answer or none, Oats looks it up in your past conversations and in a folder your team shares, and says whether the answer holds up.",
+        "enable": "Check unsure answers",
+        "enableHint": "Uses the writing model chosen in Models. With a cloud model, the question, the reply and the passages it reads are sent to that provider.",
+        "needsModel": "Choose a writing model in Models first. Until then nothing is checked.",
+        "folder": "Team folder",
+        "noFolder": "No folder chosen. Past conversations are still checked.",
+        "choose": "Choose folder",
+        "change": "Change",
+        "remove": "Remove",
+        "reading": "Reading the folder",
+        "files_one": "{{count}} file read",
+        "files_other": "{{count}} files read",
+        "missing": "This folder no longer exists.",
+        "unreadable": "Oats cannot read this folder."
+      }
     },
     "errors": {
       "noModel": "Configure Oats processing before recording a conversation.",
@@ -2392,7 +2409,21 @@
     "announced": "New question: {{question}}",
     "announcedAgain": "Asked again, {{count}} times now: {{question}}",
     "announcedBatch": "{{count}} new questions, latest: {{question}}",
-    "searchedHost": "Searched on {{host}}"
+    "searchedHost": "Searched on {{host}}",
+    "check": {
+      "checking": "Checking your context",
+      "checkingSources": "Checking {{sources}}",
+      "right": "That's right",
+      "wrong": "Wait, that's wrong",
+      "answer": "Found it",
+      "quote": "“{{quote}}”",
+      "openSource": "Open {{source}}",
+      "announced": {
+        "right": "That's right: {{answer}}. From {{source}}.",
+        "wrong": "Wait, that's wrong: {{answer}}. From {{source}}.",
+        "answer": "Found it: {{answer}}. From {{source}}."
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} seconds",

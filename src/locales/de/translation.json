@@ -2276,7 +2276,24 @@
       "dictationButton": "Beim Diktieren",
       "instructionsDescription": "Wie das Modell jedes Diktat überarbeitet. Die Standardeinstellung passt für die meisten.",
       "editInstructions": "Anweisungen bearbeiten",
-      "instructions": "Bereinigungsanweisungen"
+      "instructions": "Bereinigungsanweisungen",
+      "context": {
+        "title": "Kontextprüfung",
+        "description": "Bekommt eine Frage eine unsichere oder keine Antwort, sucht Oats in früheren Gesprächen und in einem Ordner, den das Team teilt, und sagt, ob die Antwort stimmt.",
+        "enable": "Unsichere Antworten prüfen",
+        "enableHint": "Nutzt das unter Modelle gewählte Schreibmodell. Bei einem Cloud-Modell werden die Frage, die Antwort und die gelesenen Abschnitte an diesen Anbieter gesendet.",
+        "needsModel": "Wählen Sie zuerst unter Modelle ein Schreibmodell. Bis dahin wird nichts geprüft.",
+        "folder": "Team-Ordner",
+        "noFolder": "Kein Ordner gewählt. Frühere Gespräche werden trotzdem geprüft.",
+        "choose": "Ordner wählen",
+        "change": "Ändern",
+        "remove": "Entfernen",
+        "reading": "Ordner wird gelesen",
+        "files_one": "{{count}} Datei gelesen",
+        "files_other": "{{count}} Dateien gelesen",
+        "missing": "Dieser Ordner existiert nicht mehr.",
+        "unreadable": "Oats kann diesen Ordner nicht lesen."
+      }
     },
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",
@@ -2392,7 +2409,21 @@
     "announced": "Neue Frage: {{question}}",
     "announcedAgain": "Erneut gefragt, jetzt {{count}}×: {{question}}",
     "announcedBatch": "{{count}} neue Fragen, zuletzt: {{question}}",
-    "searchedHost": "Gesucht auf {{host}}"
+    "searchedHost": "Gesucht auf {{host}}",
+    "check": {
+      "checking": "Kontext wird geprüft",
+      "checkingSources": "{{sources}} wird geprüft",
+      "right": "Das stimmt",
+      "wrong": "Moment, das stimmt nicht",
+      "answer": "Gefunden",
+      "quote": "„{{quote}}“",
+      "openSource": "{{source}} öffnen",
+      "announced": {
+        "right": "Das stimmt: {{answer}}. Quelle: {{source}}.",
+        "wrong": "Moment, das stimmt nicht: {{answer}}. Quelle: {{source}}.",
+        "answer": "Gefunden: {{answer}}. Quelle: {{source}}."
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} Sekunden",

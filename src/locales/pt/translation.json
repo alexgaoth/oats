@@ -2276,7 +2276,24 @@
       "dictationButton": "Enquanto você dita",
       "instructionsDescription": "Como o modelo reescreve cada ditado. O padrão serve para a maioria das pessoas.",
       "editInstructions": "Editar instruções",
-      "instructions": "Instruções de limpeza"
+      "instructions": "Instruções de limpeza",
+      "context": {
+        "title": "Verificação de contexto",
+        "description": "Quando uma pergunta recebe uma resposta incerta ou nenhuma, o Oats procura nas conversas anteriores e numa pasta que a equipe compartilha, e diz se a resposta se sustenta.",
+        "enable": "Verificar respostas incertas",
+        "enableHint": "Usa o modelo de escrita escolhido em Modelos. Com um modelo na nuvem, a pergunta, a resposta e os trechos lidos são enviados a esse provedor.",
+        "needsModel": "Escolha primeiro um modelo de escrita em Modelos. Até lá nada é verificado.",
+        "folder": "Pasta da equipe",
+        "noFolder": "Nenhuma pasta escolhida. As conversas anteriores continuam sendo verificadas.",
+        "choose": "Escolher pasta",
+        "change": "Alterar",
+        "remove": "Remover",
+        "reading": "Lendo a pasta",
+        "files_one": "{{count}} arquivo lido",
+        "files_other": "{{count}} arquivos lidos",
+        "missing": "Esta pasta não existe mais.",
+        "unreadable": "O Oats não consegue ler esta pasta."
+      }
     },
     "errors": {
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",
@@ -2392,7 +2409,21 @@
     "announced": "Nova pergunta: {{question}}",
     "announcedAgain": "Perguntada de novo, {{count}} vezes já: {{question}}",
     "announcedBatch": "{{count}} perguntas novas, a última: {{question}}",
-    "searchedHost": "Pesquisado em {{host}}"
+    "searchedHost": "Pesquisado em {{host}}",
+    "check": {
+      "checking": "Verificando o contexto",
+      "checkingSources": "Verificando {{sources}}",
+      "right": "Está certo",
+      "wrong": "Espera, está errado",
+      "answer": "Encontrado",
+      "quote": "“{{quote}}”",
+      "openSource": "Abrir {{source}}",
+      "announced": {
+        "right": "Está certo: {{answer}}. Fonte: {{source}}.",
+        "wrong": "Espera, está errado: {{answer}}. Fonte: {{source}}.",
+        "answer": "Encontrado: {{answer}}. Fonte: {{source}}."
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} segundos",

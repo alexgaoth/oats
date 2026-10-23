@@ -2276,7 +2276,24 @@
       "dictationButton": "Mientras dictas",
       "instructionsDescription": "Cómo el modelo reescribe cada dictado. La opción predeterminada sirve para casi todos.",
       "editInstructions": "Editar instrucciones",
-      "instructions": "Instrucciones de limpieza"
+      "instructions": "Instrucciones de limpieza",
+      "context": {
+        "title": "Comprobación de contexto",
+        "description": "Cuando una pregunta recibe una respuesta insegura o ninguna, Oats la busca en tus conversaciones anteriores y en una carpeta que comparte tu equipo, y dice si la respuesta es correcta.",
+        "enable": "Comprobar respuestas inseguras",
+        "enableHint": "Usa el modelo de escritura elegido en Modelos. Con un modelo en la nube, la pregunta, la respuesta y los fragmentos que lee se envían a ese proveedor.",
+        "needsModel": "Elige primero un modelo de escritura en Modelos. Hasta entonces no se comprueba nada.",
+        "folder": "Carpeta del equipo",
+        "noFolder": "No has elegido carpeta. Las conversaciones anteriores se siguen comprobando.",
+        "choose": "Elegir carpeta",
+        "change": "Cambiar",
+        "remove": "Quitar",
+        "reading": "Leyendo la carpeta",
+        "files_one": "{{count}} archivo leído",
+        "files_other": "{{count}} archivos leídos",
+        "missing": "Esta carpeta ya no existe.",
+        "unreadable": "Oats no puede leer esta carpeta."
+      }
     },
     "errors": {
       "noModel": "Configura el procesamiento de Oats antes de grabar una conversación.",
@@ -2392,7 +2409,21 @@
     "announced": "Nueva pregunta: {{question}}",
     "announcedAgain": "Preguntado de nuevo, {{count}} veces ya: {{question}}",
     "announcedBatch": "{{count}} preguntas nuevas, la última: {{question}}",
-    "searchedHost": "Buscado en {{host}}"
+    "searchedHost": "Buscado en {{host}}",
+    "check": {
+      "checking": "Revisando tu contexto",
+      "checkingSources": "Revisando {{sources}}",
+      "right": "Es correcto",
+      "wrong": "Espera, no es correcto",
+      "answer": "Encontrado",
+      "quote": "«{{quote}}»",
+      "openSource": "Abrir {{source}}",
+      "announced": {
+        "right": "Es correcto: {{answer}}. Fuente: {{source}}.",
+        "wrong": "Espera, no es correcto: {{answer}}. Fuente: {{source}}.",
+        "answer": "Encontrado: {{answer}}. Fuente: {{source}}."
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} segundos",

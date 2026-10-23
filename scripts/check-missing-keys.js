@@ -38,6 +38,9 @@ const WANTED = at !== -1 && process.argv[at + 1] ? process.argv[at + 1].split(",
 const DYNAMIC = {
   // QuestionOutcome — src/types/conversationEvents.ts
   "questionCard.state": ["asked", "answered", "uncertain", "silence", "denied"],
+  // ContextCheck's verdicts — src/types/conversationEvents.ts
+  "questionCard.check": ["right", "wrong", "answer"],
+  "questionCard.check.announced": ["right", "wrong", "answer"],
   // findExcerpt's `source` — src/helpers/conversationRecall.mjs
   "oats.intelligence.match": ["transcript", "note", "summary", "title"],
   // DetailTab — src/components/OatsWorkspace.tsx
