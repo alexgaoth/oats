@@ -152,7 +152,9 @@ npm run demo:harness        # Vite on http://127.0.0.1:5391 (another port if tha
 | `/demo.html?panel=true&profile=empty`                  | Nothing recorded yet: Home offers the example conversation.             |
 | `/demo.html?panel=true&profile=many`                   | 200 synthetic conversations in three groups, for Global at size.        |
 
-Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
+Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `start=click`
+(wait for Record to be pressed: the app's own button or shortcut starts the replay,
+and pressing again stops it), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last
 words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
