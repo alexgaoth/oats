@@ -27,6 +27,7 @@
 // (`currentMicLevel`), one a second, because the meter samples in real time
 // and a jump forward has none.
 
+import { judgeDemoCheck } from "./context.mjs";
 import {
   ROOM_FLOOR,
   createRoom,
@@ -201,6 +202,10 @@ export function createReplay({ main, fixture, options = {} }) {
     }
     if (/concise 3-8 word title/i.test(prompt)) {
       return { text: fixture.note.title, delayMs: 900 };
+    }
+    // The context check's judge (`check=1`, context.mjs).
+    if (/check what was said in a meeting/i.test(prompt)) {
+      return { text: judgeDemoCheck(text), delayMs: 1200 };
     }
     if (/sort conversations into groups/i.test(prompt)) {
       const personal = /\b(weekend|holiday|trip|family|flat|landlord|rent|kids|birthday)\b/i;

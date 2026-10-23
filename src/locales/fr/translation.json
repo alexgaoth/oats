@@ -2276,7 +2276,24 @@
       "dictationButton": "Pendant la dictée",
       "instructionsDescription": "Comment le modèle réécrit chaque dictée. Le réglage par défaut convient à la plupart des gens.",
       "editInstructions": "Modifier les instructions",
-      "instructions": "Instructions de nettoyage"
+      "instructions": "Instructions de nettoyage",
+      "context": {
+        "title": "Vérification du contexte",
+        "description": "Quand une question reçoit une réponse incertaine ou aucune, Oats la cherche dans vos conversations passées et dans un dossier partagé par l’équipe, et dit si la réponse tient.",
+        "enable": "Vérifier les réponses incertaines",
+        "enableHint": "Utilise le modèle de rédaction choisi dans Modèles. Avec un modèle cloud, la question, la réponse et les passages lus sont envoyés à ce fournisseur.",
+        "needsModel": "Choisissez d’abord un modèle de rédaction dans Modèles. D’ici là, rien n’est vérifié.",
+        "folder": "Dossier de l’équipe",
+        "noFolder": "Aucun dossier choisi. Les conversations passées sont tout de même vérifiées.",
+        "choose": "Choisir un dossier",
+        "change": "Modifier",
+        "remove": "Retirer",
+        "reading": "Lecture du dossier",
+        "files_one": "{{count}} fichier lu",
+        "files_other": "{{count}} fichiers lus",
+        "missing": "Ce dossier n’existe plus.",
+        "unreadable": "Oats ne peut pas lire ce dossier."
+      }
     },
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
@@ -2392,7 +2409,21 @@
     "announced": "Nouvelle question : {{question}}",
     "announcedAgain": "Posée à nouveau, {{count}} fois désormais : {{question}}",
     "announcedBatch": "{{count}} nouvelles questions, la dernière : {{question}}",
-    "searchedHost": "Recherché sur {{host}}"
+    "searchedHost": "Recherché sur {{host}}",
+    "check": {
+      "checking": "Vérification du contexte",
+      "checkingSources": "Vérification dans {{sources}}",
+      "right": "C’est exact",
+      "wrong": "Attendez, c’est faux",
+      "answer": "Trouvé",
+      "quote": "« {{quote}} »",
+      "openSource": "Ouvrir {{source}}",
+      "announced": {
+        "right": "C’est exact : {{answer}}. Source : {{source}}.",
+        "wrong": "Attendez, c’est faux : {{answer}}. Source : {{source}}.",
+        "answer": "Trouvé : {{answer}}. Source : {{source}}."
+      }
+    }
   },
   "topicGraph": {
     "node": "{{label}}, {{seconds}} secondes",
