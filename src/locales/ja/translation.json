@@ -2292,7 +2292,10 @@
         "files_one": "{{count}} 件のファイルを読み込み済み",
         "files_other": "{{count}} 件のファイルを読み込み済み",
         "missing": "このフォルダはもうありません。",
-        "unreadable": "Oats はこのフォルダを読めません。"
+        "unreadable": "Oats はこのフォルダを読めません。",
+        "agent": "答えがないときは Claude Code に聞く",
+        "agentHint": "この Mac で Claude Code を、GitHub、Linear、Notion、Slack への接続を使って読み取り専用で実行します。質問と答えは Anthropic に、検索語はそれらのサービスに送られます。",
+        "agentMissing": "この Mac にサインイン済みの Claude Code が必要です。見つかりませんでした。"
       }
     },
     "errors": {
@@ -2422,7 +2425,8 @@
         "right": "合っています: {{answer}}。出典: {{source}}。",
         "wrong": "待って、違います: {{answer}}。出典: {{source}}。",
         "answer": "見つかりました: {{answer}}。出典: {{source}}。"
-      }
+      },
+      "checkingAgent": "Claude Code に確認中"
     }
   },
   "topicGraph": {

@@ -43,3 +43,17 @@ for (const [question, answer] of OPEN_QUESTIONS) {
 test("a question the folder does not cover finds nothing", () => {
   assert.deepEqual(context.searchDemoContext("How was everyone's weekend?"), []);
 });
+
+test("with agent=1 the beta question is left to the agent, whose answer makes a card", () => {
+  const question = "Did any of those beta accounts lose data for good?";
+  assert.deepEqual(context.searchDemoContext(question, { agent: true }), []);
+  // The other two are still answered by the folder.
+  assert.ok(
+    context.searchDemoContext("Do we have a date from the auditors yet?", { agent: true }).length
+  );
+  const run = context.demoAgentAnswer(question);
+  const card = check.checkFromAgent({ ok: true, verdict: run.verdict, sources: run.sources });
+  assert.equal(card.by, "agent");
+  assert.equal(card.source.kind, "link");
+  assert.match(card.source.url, /^https:\/\/linear\.app\//);
+});

@@ -42,16 +42,24 @@ The last dry run took six hours end to end on production-sized data. Plan for on
 No beta account lost data for good. Every partial import was replayed from the original file by October 9.`,
 };
 
-const index = createContextIndex();
-for (const [docId, text] of Object.entries(DOCS)) {
-  index.setDoc(docId, chunkDocument(text, { docId, title: docId }));
-}
+// With `agent=1` the folder holds no incident report, so the question about
+// the beta import is one the folder cannot answer and the agent is asked.
+const AGENT_ONLY = new Set(["incidents/beta-import.md"]);
+
+const buildIndex = (docs) => {
+  const built = createContextIndex();
+  for (const [docId, text] of docs)
+    built.setDoc(docId, chunkDocument(text, { docId, title: docId }));
+  return built;
+};
+const index = buildIndex(Object.entries(DOCS));
+const folderIndex = buildIndex(Object.entries(DOCS).filter(([docId]) => !AGENT_ONLY.has(docId)));
 
 const fileName = (docId) => docId.split("/").pop();
 
 /** The passages for a question, in the shape `searchContext` returns. */
-export function searchDemoContext(question) {
-  return index
+export function searchDemoContext(question, { agent = false } = {}) {
+  return (agent ? folderIndex : index)
     .search(String(question || ""), 8)
     .filter(isStrongMatch)
     .slice(0, 4)
@@ -68,10 +76,10 @@ export function searchDemoContext(question) {
     });
 }
 
-export const folderStatus = () => ({
+export const folderStatus = ({ agent = false } = {}) => ({
   folder: CONTEXT_FOLDER,
-  files: Object.keys(DOCS).length,
-  passages: index.size,
+  files: Object.keys(DOCS).length - (agent ? AGENT_ONLY.size : 0),
+  passages: (agent ? folderIndex : index).size,
   indexing: false,
   truncated: false,
   error: null,
@@ -117,4 +125,27 @@ export function judgeDemoCheck(prompt) {
     note: Number(note[1]),
     quote: known.quote,
   });
+}
+
+// What the user's Claude Code would answer (`agent=1`): it reads the team's
+// Linear and finds the incident ticket. Fictional workspace, fictional ticket.
+const AGENT_ANSWERS = [
+  {
+    asks: /lose data/i,
+    sources: ["Linear"],
+    verdict: {
+      verdict: "answer",
+      answer: "No. All 14 accounts were replayed by October 9",
+      quote: "All 14 affected beta accounts were replayed from the original files.",
+      source: {
+        title: "PEL-118 Beta import replay",
+        url: "https://linear.app/pellwood/issue/PEL-118",
+      },
+    },
+  },
+];
+
+/** The agent's run for a question, or null when it would find nothing. */
+export function demoAgentAnswer(question) {
+  return AGENT_ANSWERS.find((item) => item.asks.test(String(question || ""))) ?? null;
 }

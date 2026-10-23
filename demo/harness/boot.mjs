@@ -44,6 +44,8 @@ const main = createFakeMain({
   // The demo's conversations stand for somebody's own: no "Example" badge
   // unless `badges=1` asks for it.
   badges: params.get("badges") === "1",
+  // The context check's agent (`agent=1`, with `check=1`): see context.mjs.
+  agent: params.get("agent") === "1",
 });
 if (many) {
   // Work and Personal are seeded; Research is one the person made, between them.

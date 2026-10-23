@@ -142,3 +142,40 @@ test("a missing answer falls back to the quote", () => {
   });
   assert.equal(verdict.answer, "goes live on October 30");
 });
+
+test("the agent's answer becomes a check with its link as the source", () => {
+  const result = {
+    ok: true,
+    verdict: {
+      verdict: "wrong",
+      answer: "Public launch is October 28",
+      quote: "Launch moved to Tuesday 28 October",
+      source: { title: "PEL-42 Launch date", url: "https://linear.app/pellwood/issue/PEL-42" },
+    },
+    sources: ["Linear"],
+  };
+  assert.deepEqual(check.checkFromAgent(result), {
+    state: "wrong",
+    by: "agent",
+    answer: "Public launch is October 28",
+    quote: "Launch moved to Tuesday 28 October",
+    source: {
+      kind: "link",
+      url: "https://linear.app/pellwood/issue/PEL-42",
+      label: "PEL-42 Launch date",
+    },
+  });
+});
+
+test("no answer, an unknown verdict or a link that is not https shows nothing", () => {
+  const good = { verdict: "right", answer: "Yes", source: { title: "t", url: "https://x.dev/a" } };
+  assert.equal(check.checkFromAgent({ ok: false, reason: "unclear" }), null);
+  assert.equal(check.checkFromAgent(null), null);
+  assert.equal(check.checkFromAgent({ ok: true, verdict: { ...good, verdict: "unclear" } }), null);
+  assert.equal(check.checkFromAgent({ ok: true, verdict: { ...good, answer: " " } }), null);
+  const http = { ...good, source: { title: "t", url: "http://x.dev/a" } };
+  assert.equal(check.checkFromAgent({ ok: true, verdict: http }), null);
+  // A missing title falls back to the host.
+  const untitled = { ...good, source: { title: "", url: "https://linear.app/i/1" } };
+  assert.equal(check.checkFromAgent({ ok: true, verdict: untitled }).source.label, "linear.app");
+});

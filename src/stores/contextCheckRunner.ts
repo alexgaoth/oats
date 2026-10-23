@@ -7,6 +7,7 @@ import {
   CHECK_SYSTEM_PROMPT,
   MAX_PASSAGES,
   buildCheckPrompt,
+  checkFromAgent,
   parseCheckVerdict,
 } from "../helpers/contextCheck.mjs";
 import type { ContextCheck, ContextPassage } from "../types/conversationEvents";
@@ -15,7 +16,9 @@ import logger from "../utils/logger";
 // One context check, as the aide session runs it (`checkContext` in
 // conversationAide.mjs): find the passages that could settle the question
 // (contextService.js, in main), then ask the writing model whether they agree
-// with the reply (contextCheck.mjs).
+// with the reply (contextCheck.mjs). When the team's context has nothing to
+// say and the agent is on, the question goes to the user's Claude Code, which
+// reads GitHub, Linear, Notion and Slack read-only (contextAgentRunner.js).
 //
 // The judge is the writing model Settings already names, the one that writes
 // summaries: a person makes one processing choice, not one per feature
@@ -60,12 +63,29 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
   return Promise.race([work, timeout]).finally(() => window.clearTimeout(timer));
 }
 
+/** Agent runs left in this recording (AGENT_RUNS_PER_RECORDING at the start). */
+export interface AgentBudget {
+  left: number;
+}
+
 /**
  * The card's check for one reply, or null when there is nothing to say: no
- * strong match in the context, no writing model, or a verdict that could not
- * show its source.
+ * strong match in the context and no agent, no writing model, or a verdict
+ * that could not show its source.
  */
 export async function runContextCheck(
+  input: ContextCheckInput,
+  onProgress: (check: ContextCheck) => void,
+  { agent = null }: { agent?: AgentBudget | null } = {}
+): Promise<ContextCheck | null> {
+  const local = await checkLocally(input, onProgress);
+  if (local) return local;
+  if (!agent || agent.left <= 0) return null;
+  return askAgent(input, onProgress, agent);
+}
+
+/** The team folder and past conversations, judged by the writing model. */
+async function checkLocally(
   input: ContextCheckInput,
   onProgress: (check: ContextCheck) => void
 ): Promise<ContextCheck | null> {
@@ -115,4 +135,48 @@ export async function runContextCheck(
     quote: read.quote,
     source: passages[read.passage].source,
   };
+}
+
+/**
+ * The user's Claude Code, when the local context had nothing (contextAgent.mjs
+ * says what it may touch). Its progress names the services it reads, so the
+ * card says "Checking Linear" rather than a spinner with no subject.
+ */
+async function askAgent(
+  input: ContextCheckInput,
+  onProgress: (check: ContextCheck) => void,
+  budget: AgentBudget
+): Promise<ContextCheck | null> {
+  const api = window.electronAPI;
+  if (!api?.contextAgentCheck) return null;
+  const status = await api.contextAgentStatus?.();
+  if (!status?.available) return null;
+  budget.left -= 1;
+  const checkId = `${input.noteId ?? "note"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  onProgress({ state: "checking", by: "agent", sources: [] });
+  const stop = api.onContextAgentProgress?.((progress) => {
+    if (progress.checkId === checkId) {
+      onProgress({ state: "checking", by: "agent", sources: progress.sources });
+    }
+  });
+  const started = performance.now();
+  try {
+    const result = await api.contextAgentCheck({
+      checkId,
+      question: input.question,
+      reply: input.reply,
+      outcome: input.outcome === "denied" ? "denied" : "uncertain",
+    });
+    void logger.debug(
+      "Context agent",
+      {
+        result: !result ? "none" : "reason" in result ? result.reason : result.verdict.verdict,
+        ms: Math.round(performance.now() - started),
+      },
+      "context"
+    );
+    return checkFromAgent(result);
+  } finally {
+    stop?.();
+  }
 }

@@ -199,9 +199,11 @@ function CheckLine({ check }: { check: ContextCheck }) {
     return (
       <div className="mt-2 grid gap-1.5">
         <p className="text-xs text-muted-foreground">
-          {check.by === "agent" && check.sources?.length
-            ? t("questionCard.check.checkingSources", { sources: check.sources.join(", ") })
-            : t("questionCard.check.checking")}
+          {check.by !== "agent"
+            ? t("questionCard.check.checking")
+            : check.sources?.length
+              ? t("questionCard.check.checkingSources", { sources: check.sources.join(", ") })
+              : t("questionCard.check.checkingAgent")}
         </p>
         <span
           aria-hidden="true"
