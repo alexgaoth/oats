@@ -32,10 +32,10 @@
       "show": "Afficher le panneau de dictée",
       "hide": "Masquer le panneau de dictée"
     },
-    "openControlPanel": "Ouvrir le panneau de contrôle",
-    "hideControlPanel": "Masquer le panneau de contrôle",
+    "openControlPanel": "Ouvrir Oats",
+    "hideControlPanel": "Masquer Oats",
     "quit": "Quitter Oats",
-    "tooltip": "Oats - Dictée vocale",
+    "tooltip": "Oats",
     "conversation": {
       "start": "Démarrer une conversation",
       "stop": "Arrêter la conversation"
@@ -2307,7 +2307,7 @@
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
       "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Activez-les dans les Réglages, section Enregistrement.",
-      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de résumé n'est prêt. Configurez-en un dans Réglages › Avancé › Modèles de langage."
+      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de rédaction n’est prêt. Choisissez-en un dans Réglages › Modèles d’IA."
     },
     "aide": {
       "title": "Assistant de conversation",
