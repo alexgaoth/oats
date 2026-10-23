@@ -54,18 +54,6 @@ export const INFERENCE_SCOPES = {
     },
     fallbackScope: "dictationCleanup",
   },
-  chatIntelligence: {
-    storeKeys: {
-      mode: "chatAgentMode",
-      provider: "chatAgentProvider",
-      model: "chatAgentModel",
-      cloudMode: "chatAgentCloudMode",
-      cloudBaseUrl: "chatAgentCloudBaseUrl",
-      remoteUrl: "chatAgentRemoteUrl",
-      customApiKey: "chatAgentCustomApiKey",
-      disableThinking: "chatAgentDisableThinking",
-    },
-  },
   dictationTranslation: {
     storeKeys: {
       mode: "translationMode",

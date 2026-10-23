@@ -55,8 +55,7 @@
   },
   "window": {
     "voiceRecorderTitle": "Oats",
-    "controlPanelTitle": "Oats",
-    "agentChatTitle": "Agent Chat"
+    "controlPanelTitle": "Oats"
   },
   "dialog": {
     "openLink": {
@@ -1786,79 +1785,6 @@
     "prompt": {
       "title": "Agent prompt",
       "description": "The system prompt used when the wake word is detected. Falls back to the built-in default."
-    }
-  },
-  "agentMode": {
-    "settings": {
-      "hotkey": "Chat Agent Hotkey",
-      "hotkeyDescription": "Open and close the chat agent overlay",
-      "model": "Agent Model",
-      "modelDescription": "AI model used for agent conversations",
-      "systemPrompt": "System Prompt",
-      "systemPromptDescription": "Custom instructions for the agent",
-      "systemPromptPlaceholder": "Enter custom system prompt...",
-      "modes": {
-        "legacy": "Oats Cloud",
-        "providers": "Cloud Providers",
-        "local": "Local",
-        "selfHosted": "Self-Hosted",
-        "enterprise": "Enterprise",
-        "legacyDesc": "Reliable accuracy. No setup needed.",
-        "providersDesc": "Bring your own API key.",
-        "localDesc": "On-device models. Fully private.",
-        "selfHostedDesc": "Your own server on your network.",
-        "enterpriseDesc": "Use your organization's cloud account (AWS, Azure, GCP)."
-      },
-      "legacyCloud": "Oats Cloud",
-      "legacyCloudDescription": "Reliable accuracy. No setup needed.",
-      "customSetup": "Custom Setup (BYOK)",
-      "customSetupDescription": "Use your own API keys and choose your preferred model"
-    },
-    "chat": {
-      "placeholder": "Press {{hotkey}} to speak",
-      "thinking": "Thinking...",
-      "transcribing": "Transcribing...",
-      "listening": "Listening...",
-      "newConversation": "New",
-      "copyToClipboard": "Copy to clipboard",
-      "copied": "Copied",
-      "emptyState": "Ask me anything",
-      "errorPrefix": "Error"
-    },
-    "titleBar": {
-      "label": "Agent",
-      "newChat": "New conversation",
-      "close": "Close"
-    },
-    "input": {
-      "holdToSpeak": "Hold to speak",
-      "toClose": "close",
-      "listening": "Listening...",
-      "transcribing": "Transcribing...",
-      "thinking": "Thinking...",
-      "typeMessage": "Type a message...",
-      "send": "Send"
-    },
-    "tools": {
-      "search_notesStatus": "Searching notes...",
-      "web_searchStatus": "Searching the web...",
-      "copy_to_clipboardStatus": "Copying to clipboard...",
-      "get_calendar_eventsStatus": "Checking calendar...",
-      "get_noteStatus": "Reading note...",
-      "create_noteStatus": "Creating note...",
-      "update_noteStatus": "Updating note...",
-      "copiedToClipboard": "Copied to your clipboard",
-      "foundNotes": "Found {{count}} note",
-      "foundNotes_plural": "Found {{count}} notes",
-      "searchResults": "Found {{count}} result",
-      "searchResults_plural": "Found {{count}} results",
-      "openNote": "Open note",
-      "calendarEvents": "Found {{count}} event",
-      "calendarEvents_plural": "Found {{count}} events",
-      "noResults": "No results found",
-      "error": "Tool error",
-      "unknownTool": "Unknown tool: {{name}}",
-      "invalidArgs": "Invalid tool arguments for {{name}}"
     }
   },
   "updateNotification": {
