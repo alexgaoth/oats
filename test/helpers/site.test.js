@@ -56,6 +56,17 @@ test("every image says what it shows and keeps its space", () => {
     assert.match(image, /\bwidth="\d+"/, image);
     assert.match(image, /\bheight="\d+"/, image);
   }
+  // The product loops have no sound, so their description is their label, and
+  // their poster is what reduced motion shows.
+  const loops = [...HTML.matchAll(/<video\b[^>]*\bdata-loop\b[^>]*>/g)].map((match) => match[0]);
+  assert.ok(loops.length > 0);
+  for (const loop of loops) {
+    assert.match(loop, /\baria-label="[^"]{12,}"/, loop);
+    assert.match(loop, /\bposter="media\/[^"]+"/, loop);
+    assert.match(loop, /\bmuted\b/, loop);
+    assert.match(loop, /\bwidth="\d+"/, loop);
+    assert.match(loop, /\bheight="\d+"/, loop);
+  }
 });
 
 // DESIGN.md §8: no em or en dash, and no exclamation mark, in visible English.
