@@ -68,6 +68,10 @@ export function useScrollFade(
   return { faded, measure };
 }
 
+/** How far each fade reaches into its scroller, in px: `h-3` and `h-6` below. */
+export const SCROLL_FADE_TOP_PX = 12;
+export const SCROLL_FADE_BOTTOM_PX = 24;
+
 /**
  * The fades themselves, painted beside a scroller rather than over it.
  *
