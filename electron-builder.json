@@ -236,9 +236,15 @@
   "dmg": {
     "title": "Oats",
     "icon": "src/assets/icon.icns",
+    "background": "src/assets/dmg-background.tiff",
+    "iconSize": 128,
     "window": {
-      "width": 540,
-      "height": 380
-    }
+      "width": 600,
+      "height": 400
+    },
+    "contents": [
+      { "x": 165, "y": 200, "type": "file" },
+      { "x": 435, "y": 200, "type": "link", "path": "/Applications" }
+    ]
   }
 }

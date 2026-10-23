@@ -32,10 +32,10 @@
       "show": "显示听写面板",
       "hide": "隐藏听写面板"
     },
-    "openControlPanel": "打开控制面板",
-    "hideControlPanel": "隐藏控制面板",
+    "openControlPanel": "打开 Oats",
+    "hideControlPanel": "隐藏 Oats",
     "quit": "退出 Oats",
-    "tooltip": "Oats - 语音听写",
+    "tooltip": "Oats",
     "conversation": {
       "start": "开始对话",
       "stop": "结束对话"
@@ -2302,7 +2302,7 @@
       "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
       "question-cards-off": "问题卡片已关闭，问题会被忽略。请在设置的“录音”中开启。",
-      "no-summary-model": "摘要模型尚未就绪，对话将以无标题、无摘要的形式保存。请在 设置 › 高级 › 语言模型 中进行设置。"
+      "no-summary-model": "写作模型尚未就绪，对话将以无标题、无摘要的形式保存。请在 设置 › AI 模型 中选择一个。"
     },
     "aide": {
       "title": "对话助手",
