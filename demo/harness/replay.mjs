@@ -225,14 +225,28 @@ export function createReplay({ main, fixture, options = {} }) {
     if (session && (session.phase === "recording" || session.phase === "stopping")) {
       return { success: false, error: "Operation in progress" };
     }
+    // Record pressed again soon after Stop continues the conversation: the
+    // app records into the same note (`conversationResume.mjs`), and the
+    // script goes on from where it stopped rather than from 0:00.
+    const earlier =
+      session?.phase === "finished" &&
+      session.noteId != null &&
+      session.noteId === startOptions.noteId
+        ? session
+        : null;
+    const from = earlier?.stoppedAtMs ?? 0;
     session = {
       phase: "recording",
       noteId: startOptions.noteId ?? null,
-      startedAt: Date.now(),
-      cursor: 0,
-      finalized: new Set(),
+      // The script's clock reads where it stopped.
+      startedAt: Date.now() - from,
+      cursor: earlier ? schedule.findIndex((event) => event.at > from) : 0,
+      finalized: new Set(earlier?.finalized ?? []),
+      // Turns of the earlier sittings, which this one's speaker pass leaves out.
+      earlier: new Set(earlier?.finalized ?? []),
       ended: false,
     };
+    if (session.cursor < 0) session.cursor = schedule.length;
     if (pendingRate != null) {
       setRate(pendingRate);
       pendingRate = null;
@@ -267,7 +281,9 @@ export function createReplay({ main, fixture, options = {} }) {
       else session.finalized.add(index);
     });
     sendSegment({ text: "", source: "mic", type: "partial" });
-    const spoken = timeline.filter((_, index) => session.finalized.has(index));
+    const spoken = timeline.filter(
+      (_, index) => session.finalized.has(index) && !session.earlier.has(index)
+    );
     const finished = { noteId: session.noteId, startedAt: session.startedAt, at, spoken };
     session.phase = "finished";
     session.stoppedAtMs = at;

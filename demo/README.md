@@ -193,6 +193,11 @@ await oatsDemo.point(noteId); // point at a conversation on the board (null: at 
 oatsDemo.samples();
 ```
 
+`play()` after `finish()`, within half an hour of the last words, continues the
+conversation as the app does (`conversationResume.mjs`): the app records into
+the same note, and the script goes on from where it stopped instead of from
+0:00.
+
 ### What is real and what stands in
 
 The renderer, its stores and every helper are the app's. The harness stands
