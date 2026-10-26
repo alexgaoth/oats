@@ -92,7 +92,10 @@ export interface OpenThread {
 // times the conversation came back, which is what the back-edges encode.
 export interface ConversationTopicNode {
   id: number;
+  /** The name shown: the writing model's when it named the topic, else the on-device one. */
   label: string;
+  /** The on-device name, present only when `label` is the writing model's (topicNaming.mjs). */
+  deviceLabel?: string;
   words: string[];
   durationMs: number;
   utteranceIds: string[];
