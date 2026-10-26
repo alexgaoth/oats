@@ -174,7 +174,7 @@ function tokenize(text) {
       word.length > 1 &&
       !STOPWORDS.has(word) &&
       !HYPHENATED_SPEECH.test(word) &&
-      // A bare number names nothing on its own ("800", "2.5").
+      // A bare number names nothing on its own ("40", "2.5").
       !/^[\d.,:%]+$/.test(word)
     ) {
       key = keyOf(word);
