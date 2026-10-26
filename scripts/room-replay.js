@@ -338,6 +338,59 @@ function parseResult(result) {
 }
 
 /**
+ * Start a server with nobody else on its port. `findAvailablePort` checks a
+ * port, then the server takes seconds to load its model before it binds, and
+ * whisper-server binds with SO_REUSEPORT: two replays starting at once, or a
+ * replay and a running Oats, both take the free port, and on macOS every new
+ * connection then goes to whichever bound last — one replay is answered by
+ * the other's model. So starts take turns (a lock directory beside the other
+ * replays), and a server that finds company on its port is started again.
+ */
+async function startAlone(manager, model, startOptions) {
+  const lock = path.join(require("os").tmpdir(), "oats-room-replay-start.lock");
+  for (;;) {
+    try {
+      fs.mkdirSync(lock);
+      fs.writeFileSync(path.join(lock, "pid"), String(process.pid));
+      break;
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      let holder = null;
+      try {
+        holder = Number(fs.readFileSync(path.join(lock, "pid"), "utf8"));
+        process.kill(holder, 0); // is it still running? (signal 0 sends nothing)
+      } catch {
+        // Its holder is gone: take it over.
+        if (holder) {
+          fs.writeFileSync(path.join(lock, "pid"), String(process.pid));
+          break;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  try {
+    for (let attempt = 0; ; attempt += 1) {
+      await manager.start(model, startOptions);
+      const listeners = spawnSync("lsof", ["-nP", `-iTCP:${manager.port}`, "-sTCP:LISTEN", "-t"])
+        .stdout.toString()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(Number);
+      if (listeners.every((pid) => pid === manager.process.pid)) return;
+      if (attempt >= 3)
+        throw new Error(`port ${manager.port} is shared with ${listeners.join(", ")}`);
+      // Another server holds this port too: leave it to them and take another.
+      await manager.stop();
+    }
+  } finally {
+    try {
+      fs.rmSync(lock, { recursive: true, force: true });
+    } catch {}
+  }
+}
+
+/**
  * A whisper-server started exactly as `WhisperManager#_runServerTranscription`
  * starts one, and the VAD's verdict on each request read from its log.
  */
@@ -364,7 +417,7 @@ async function startLocal(vadEnabled) {
   const ensure = async () => {
     // What `_runServerTranscription` does before every request: a no-op while
     // the server is up, a restart if it is not.
-    await manager.start(MODEL, startOptions);
+    if (!(manager.ready && manager.process)) await startAlone(manager, MODEL, startOptions);
     // The replay blocks its own event loop for seconds between recordings
     // (decoding, scoring), which the health check reads as a dead server. The
     // app never holds main that long, so the check is off here.
