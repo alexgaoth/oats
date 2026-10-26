@@ -383,25 +383,20 @@
         {
           "id": 1,
           "label": "backend hiring",
-          "words": ["hiring", "backend", "both", "final", "finalist", "new", "change", "decision"],
-          "durationMs": 71841,
+          "words": ["backend", "hiring", "two", "finalist", "schema", "api", "downtime", "funnel"],
+          "durationMs": 38074,
           "utteranceIds": [
             "seg-muol7rtk-1",
             "seg-muol7rtk-2",
             "seg-muol7rtk-3",
             "seg-muol7rtk-4",
             "seg-muol7rtk-5",
-            "seg-muol7rtk-7",
-            "seg-muol7rtk-8",
-            "seg-muol7rtk-9",
-            "seg-muol7rtk-10",
-            "seg-muol7rtk-16",
-            "seg-muol7rtk-18",
-            "seg-muol7rtk-27"
+            "seg-muol7rtk-6",
+            "seg-muol7rtk-7"
           ],
           "firstAt": 1790802003109,
-          "lastAt": 1790802176003,
-          "returns": 2,
+          "lastAt": 1790802041183,
+          "returns": 0,
           "state": "resolved"
         },
         {
@@ -412,49 +407,55 @@
             "loop",
             "take-home",
             "paired",
-            "people",
             "session",
-            "better",
-            "bug"
+            "decision",
+            "week",
+            "people"
           ],
-          "durationMs": 29342,
+          "durationMs": 64576,
           "utteranceIds": [
+            "seg-muol7rtk-8",
+            "seg-muol7rtk-9",
+            "seg-muol7rtk-10",
             "seg-muol7rtk-11",
             "seg-muol7rtk-12",
             "seg-muol7rtk-13",
             "seg-muol7rtk-14",
-            "seg-muol7rtk-15"
+            "seg-muol7rtk-15",
+            "seg-muol7rtk-16",
+            "seg-muol7rtk-17"
           ],
-          "firstAt": 1790802072324,
-          "lastAt": 1790802101666,
+          "firstAt": 1790802051794,
+          "lastAt": 1790802116370,
           "returns": 0,
-          "state": "open"
+          "state": "resolved"
         },
         {
           "id": 3,
           "label": "data migration",
-          "words": ["data", "migration", "ines", "launch", "need", "second", "whoever", "alone"],
-          "durationMs": 44594,
+          "words": ["data", "migration", "ine", "launch", "finalist", "new", "second", "reviewer"],
+          "durationMs": 56976,
           "utteranceIds": [
+            "seg-muol7rtk-18",
             "seg-muol7rtk-19",
             "seg-muol7rtk-20",
             "seg-muol7rtk-21",
             "seg-muol7rtk-22",
+            "seg-muol7rtk-23",
             "seg-muol7rtk-24",
             "seg-muol7rtk-25",
-            "seg-muol7rtk-26"
+            "seg-muol7rtk-26",
+            "seg-muol7rtk-27"
           ],
-          "firstAt": 1790802125374,
-          "lastAt": 1790802169968,
+          "firstAt": 1790802119027,
+          "lastAt": 1790802176003,
           "returns": 0,
           "state": "open"
         }
       ],
       "edges": [
         { "from": 1, "to": 2, "weight": 1, "kind": "new" },
-        { "from": 2, "to": 1, "weight": 1, "kind": "return" },
-        { "from": 1, "to": 3, "weight": 1, "kind": "new" },
-        { "from": 3, "to": 1, "weight": 1, "kind": "return" }
+        { "from": 2, "to": 3, "weight": 1, "kind": "new" }
       ]
     },
     "conversation_marks": [],

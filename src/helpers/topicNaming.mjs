@@ -1,10 +1,10 @@
 // Topic names from the writing model.
 //
 // Topics are always found on this computer (`conversationTopics.mjs`), and
-// named there from their most repeated words. Those names come from counting,
-// so they are often two words nobody said together ("wait it's", "connect
-// 800"). When the person has chosen a writing model (Settings › AI models), it
-// names each topic better: a short name read from what was said on it. This
+// named there with the phrase said most in them ("launch date", "SSO"). That
+// is a phrase somebody said, not a sentence about the topic. When the person
+// has chosen a writing model (Settings › AI models), it names each topic
+// better: a short name read from what was said on it. This
 // is the pure half of that: the prompt, reading the answer, when a topic needs
 // a name, and putting the names on a snapshot. When requests go out lives in
 // `topicNamer.mjs`; the route to the model in `stores/topicNamingRunner.ts`.

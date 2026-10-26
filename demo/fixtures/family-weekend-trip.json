@@ -291,71 +291,38 @@
       "nodes": [
         {
           "id": 1,
-          "label": "lake cabin",
-          "words": ["cabin", "lake", "friday", "weekend", "bedroom", "book", "booking", "came"],
-          "durationMs": 37764,
+          "label": "late ferry",
+          "words": ["late", "ferry", "cabin", "dog", "lake", "food", "pasta", "porch"],
+          "durationMs": 117585,
           "utteranceIds": [
             "seg-mv37eo9k-1",
             "seg-mv37eo9k-2",
             "seg-mv37eo9k-3",
+            "seg-mv37eo9k-4",
+            "seg-mv37eo9k-5",
             "seg-mv37eo9k-6",
-            "seg-mv37eo9k-7"
-          ],
-          "firstAt": 1791685803064,
-          "lastAt": 1791685840828,
-          "returns": 0,
-          "state": "open"
-        },
-        {
-          "id": 2,
-          "label": "ferry late",
-          "words": ["ferry", "late", "bike", "book", "cabin", "car", "dog", "dogs"],
-          "durationMs": 24433,
-          "utteranceIds": [
+            "seg-mv37eo9k-7",
             "seg-mv37eo9k-8",
             "seg-mv37eo9k-9",
             "seg-mv37eo9k-10",
             "seg-mv37eo9k-11",
-            "seg-mv37eo9k-12"
-          ],
-          "firstAt": 1791685847522,
-          "lastAt": 1791685871955,
-          "returns": 0,
-          "state": "resolved"
-        },
-        {
-          "id": 3,
-          "label": "keep dog",
-          "words": ["dog", "keep", "mother", "bad", "call", "gets", "grandma", "knee"],
-          "durationMs": 15463,
-          "utteranceIds": ["seg-mv37eo9k-13", "seg-mv37eo9k-14", "seg-mv37eo9k-16"],
-          "firstAt": 1791685879586,
-          "lastAt": 1791685895049,
-          "returns": 0,
-          "state": "open"
-        },
-        {
-          "id": 4,
-          "label": "food fish",
-          "words": ["food", "fish", "pasta", "breakfast", "come", "dinner", "friend", "lily"],
-          "durationMs": 19025,
-          "utteranceIds": [
+            "seg-mv37eo9k-12",
+            "seg-mv37eo9k-13",
+            "seg-mv37eo9k-14",
+            "seg-mv37eo9k-15",
+            "seg-mv37eo9k-16",
             "seg-mv37eo9k-17",
             "seg-mv37eo9k-18",
             "seg-mv37eo9k-19",
             "seg-mv37eo9k-20"
           ],
-          "firstAt": 1791685901624,
+          "firstAt": 1791685803064,
           "lastAt": 1791685920649,
           "returns": 0,
-          "state": "open"
+          "state": "resolved"
         }
       ],
-      "edges": [
-        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
-        { "from": 2, "to": 3, "weight": 1, "kind": "new" },
-        { "from": 3, "to": 4, "weight": 1, "kind": "new" }
-      ]
+      "edges": []
     },
     "conversation_marks": [
       {

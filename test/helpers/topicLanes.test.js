@@ -64,7 +64,7 @@ const labelsOf = (lanes, ids) =>
 
 // ------------------------------------------------------------ the example
 
-test("the example has 8 rows in the order raised and 11 runs", () => {
+test("the example has 8 rows in the order raised and 10 runs", () => {
   const lanes = topicLanes({
     snapshot: example.note.conversation_topics,
     segments: example.note.transcript,
@@ -73,16 +73,16 @@ test("the example has 8 rows in the order raised and 11 runs", () => {
     lanes.rows.map((row) => row.label),
     [
       "launch date",
-      "sso saml",
-      "soc audit",
-      "discount pricing",
+      "SSO",
+      "SOC",
+      "discount",
       "data migration",
       "support queue",
       "import bug",
       "news embargo",
     ]
   );
-  assert.equal(lanes.runs.length, 11);
+  assert.equal(lanes.runs.length, 10);
   assert.deepEqual(
     labelsOf(
       lanes,
@@ -90,11 +90,10 @@ test("the example has 8 rows in the order raised and 11 runs", () => {
     ),
     [
       "launch date",
-      "sso saml",
-      "soc audit",
+      "SSO",
+      "SOC",
       "launch date",
-      "discount pricing",
-      "sso saml",
+      "discount",
       "data migration",
       "support queue",
       "import bug",
@@ -106,7 +105,7 @@ test("the example has 8 rows in the order raised and 11 runs", () => {
   assert.equal(lanes.empty, false);
 });
 
-test("the example returns to the launch date twice and to SSO once", () => {
+test("the example returns to the launch date twice", () => {
   const lanes = topicLanes({
     snapshot: example.note.conversation_topics,
     segments: example.note.transcript,
@@ -116,19 +115,19 @@ test("the example returns to the launch date twice and to SSO once", () => {
       lanes,
       lanes.returns.map((item) => item.topic)
     ),
-    ["launch date", "sso saml", "launch date"]
+    ["launch date", "launch date"]
   );
   assert.deepEqual(
     labelsOf(
       lanes,
       lanes.returns.map((item) => item.previous)
     ),
-    ["soc audit", "discount pricing", "news embargo"]
+    ["SOC", "news embargo"]
   );
   const back = Object.fromEntries(lanes.rows.map((row) => [row.label, row.back]));
   assert.equal(back["launch date"], 2);
-  assert.equal(back["sso saml"], 1);
-  assert.equal(back["soc audit"], 0);
+  assert.equal(back.SSO, 0);
+  assert.equal(back.SOC, 0);
 });
 
 test("the example's runs are contiguous and fill the axis from the first words", () => {
