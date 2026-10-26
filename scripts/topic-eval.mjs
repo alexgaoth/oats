@@ -4,12 +4,13 @@
 //
 //   node scripts/topic-eval.mjs --ami <dir> [--split test|tune|all] [--demo]
 //     [--transcript file.json ...] [--tracker file.mjs] [--name label]
-//     [--refine] [--judge] [--show-labels] [--json out.json]
+//     [--judge] [--show-labels] [--json out.json]
 //
 // Sources
 //   --ami DIR         the AMI meeting corpus' manual annotations
-//                     (ami_public_manual_1.6.2, CC BY 4.0), unzipped: words/,
-//                     topics/ and ontologies/. Each meeting is replayed as a
+//                     (ami_public_manual_1.6.2, CC BY 4.0), unzipped: the
+//                     folder with words/, topics/ and ontologies/, or the one
+//                     above it holding annotations/. Each meeting is replayed as a
 //                     room hears it: every voice's words in time order, cut
 //                     into utterances at pauses of 400 ms or at 20 s, as
 //                     `speechSegmenter.mjs` cuts a room.
@@ -42,8 +43,6 @@
 //
 // --judge reads OPENAI_API_KEY from the environment and caches every rating in
 // ~/.cache/oats/topic-eval/judge-cache.json, so a rerun costs nothing.
-// --refine also runs the embedding refinement (`topicRefine.mjs`) over
-// all-MiniLM-L6-v2, loaded the way the app's ONNX worker loads it.
 
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -67,7 +66,6 @@ const { values: args } = parseArgs({
     transcript: { type: "string", multiple: true, default: [] },
     tracker: { type: "string", default: path.join(ROOT, "src/helpers/conversationTopics.mjs") },
     name: { type: "string" },
-    refine: { type: "boolean", default: false },
     judge: { type: "boolean", default: false },
     "judge-model": { type: "string", default: "gpt-4.1-mini-2025-04-14" },
     "show-labels": { type: "boolean", default: false },
@@ -365,24 +363,47 @@ function replay(module, conversation) {
   const tracker = new module.ConversationTopicTracker();
   const started = performance.now();
   let worst = 0;
+  // What the flow card drew after each utterance: where its topic changes
+  // were, as the utterance each one starts at.
+  const live = [];
   for (const utterance of conversation.utterances) {
     const before = performance.now();
     tracker.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
-    tracker.snapshot(utterance.at);
+    const shown = tracker.snapshot(utterance.at);
     tracker.openThreads(utterance.at);
     worst = Math.max(worst, performance.now() - before);
+    live.push({ at: utterance.at, changes: changesOf(conversation, shown) });
   }
   const end = conversation.utterances.at(-1)?.at ?? T0;
   const snapshot = tracker.snapshot(end, { final: true });
   return {
     tracker,
     snapshot,
+    live,
     timing: {
       totalMs: performance.now() - started,
       worstMs: worst,
       perUtteranceMs: (performance.now() - started) / Math.max(1, conversation.utterances.length),
     },
   };
+}
+
+// The moments a snapshot's topic changes: utterance id -> time.
+function changesOf(conversation, snapshot) {
+  const topicOf = new Map();
+  for (const node of snapshot.nodes) {
+    for (const id of node.utteranceIds) topicOf.set(String(id), node.id);
+  }
+  const changes = new Map();
+  let previous = null;
+  for (const utterance of conversation.utterances) {
+    // A turn placed nowhere (a backchannel, or one still held) changes nothing.
+    const topic = topicOf.get(utterance.id);
+    if (topic == null) continue;
+    if (previous != null && topic !== previous) changes.set(utterance.id, utterance.at);
+    previous = topic;
+  }
+  return changes;
 }
 
 // Every utterance's topic. One the tracker set aside (too short to place)
@@ -478,6 +499,65 @@ function boundaryMatches(conversation, wordReference, perUtterance) {
   return { hits, drawn: drawn.length, real: real.length };
 }
 
+// How the flow card behaved while the meeting was "recorded": its topic
+// changes at the end against the reference (as for the record), how often it
+// took back a change older than three minutes, and how long after a real
+// topic change it first drew one within a minute of it.
+const OLD_CHANGE_MS = 3 * 60_000;
+
+function liveBehaviour(conversation, wordReference, live) {
+  const reference = [];
+  let word = 0;
+  for (const utterance of conversation.utterances) {
+    reference.push(wordReference[word]);
+    word += utterance.refTop.length;
+  }
+  const real = [];
+  conversation.utterances.forEach((utterance, index) => {
+    if (index && reference[index] !== reference[index - 1]) real.push(utterance.at);
+  });
+  let takenBack = 0;
+  const lags = [];
+  const found = new Set();
+  live.forEach((step, index) => {
+    const before = index ? live[index - 1].changes : new Map();
+    for (const [id, at] of before) {
+      if (!step.changes.has(id) && step.at - at > OLD_CHANGE_MS) takenBack += 1;
+    }
+    real.forEach((at, which) => {
+      if (found.has(which)) return;
+      for (const drawn of step.changes.values()) {
+        if (Math.abs(drawn - at) <= BOUNDARY_TOLERANCE_MS) {
+          found.add(which);
+          lags.push(Math.max(0, step.at - at));
+          break;
+        }
+      }
+    });
+  });
+  const last = live.at(-1).changes;
+  const drawn = [...last.values()];
+  const used = new Set();
+  let hits = 0;
+  for (const at of drawn) {
+    const match = real.findIndex(
+      (other, index) => !used.has(index) && Math.abs(other - at) <= BOUNDARY_TOLERANCE_MS
+    );
+    if (match >= 0) {
+      used.add(match);
+      hits += 1;
+    }
+  }
+  const minutes = (conversation.utterances.at(-1).at - conversation.utterances[0].at) / 60_000 || 1;
+  return {
+    hits,
+    drawn: drawn.length,
+    real: real.length,
+    takenBackPerHour: (takenBack / minutes) * 60,
+    lags,
+  };
+}
+
 function evenLabels(n, parts) {
   return Array.from({ length: n }, (_, index) =>
     Math.min(parts - 1, Math.floor((index * parts) / n))
@@ -529,14 +609,16 @@ function labelFlaws(label) {
   };
 }
 
-function normalizedText(text) {
-  return ` ${labelTokens(text).join(" ")} `;
+// Words compared as said: case folded, and a possessive "'s" taken off, so
+// "the company's roadmap" says "company".
+function saidTokens(text) {
+  return labelTokens(text).map((token) => token.replace(/'s$/, ""));
 }
 
 function saidInTopic(label, text) {
-  const tokens = labelTokens(label);
+  const tokens = saidTokens(label);
   if (!tokens.length) return false;
-  return normalizedText(text).includes(` ${tokens.join(" ")} `);
+  return ` ${saidTokens(text).join(" ")} `.includes(` ${tokens.join(" ")} `);
 }
 
 // ---------------------------------------------------------------------------
@@ -658,7 +740,7 @@ function mostCommon(values) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 }
 
-function scoreConversation(conversation, snapshot, { fine }) {
+function scoreConversation(conversation, snapshot, { fine, live = null }) {
   const perUtterance = assignment(conversation, snapshot);
   const textOf = new Map(
     conversation.utterances.map((utterance) => [utterance.id, utterance.text])
@@ -710,6 +792,7 @@ function scoreConversation(conversation, snapshot, { fine }) {
     ).size;
     Object.assign(result, pkWindowDiff(reference, hypothesis));
     result.boundaries = boundaryMatches(conversation, reference, perUtterance);
+    if (live?.length) result.live = liveBehaviour(conversation, reference, live);
     const one = pkWindowDiff(reference, new Array(reference.length).fill(0));
     const even = pkWindowDiff(reference, evenLabels(reference.length, refSegments));
     result.baselines = {
@@ -746,6 +829,10 @@ const mean = (values) => {
   const finite = values.filter((value) => Number.isFinite(value));
   return finite.length ? finite.reduce((sum, value) => sum + value, 0) / finite.length : null;
 };
+const median = (values) => {
+  const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  return sorted.length ? sorted[Math.floor(sorted.length / 2)] : Number.NaN;
+};
 const fmt = (value, digits = 3) => (value == null ? "n/a" : value.toFixed(digits));
 const pct = (value) => (value == null ? "n/a" : `${(value * 100).toFixed(0)}%`);
 
@@ -781,6 +868,26 @@ function aggregate(results) {
         ami.reduce((sum, result) => sum + result.boundaries.real, 0)
       ),
     runError: mean(ami.map((result) => Math.abs(result.runs - result.refSegments))),
+    livePrecision:
+      ami.reduce((sum, result) => sum + (result.live?.hits ?? 0), 0) /
+      Math.max(
+        1,
+        ami.reduce((sum, result) => sum + (result.live?.drawn ?? 0), 0)
+      ),
+    liveRecall:
+      ami.reduce((sum, result) => sum + (result.live?.hits ?? 0), 0) /
+      Math.max(
+        1,
+        ami.reduce((sum, result) => sum + (result.live?.real ?? 0), 0)
+      ),
+    liveTakenBack: mean(ami.map((result) => result.live?.takenBackPerHour)),
+    liveFound:
+      ami.reduce((sum, result) => sum + (result.live?.lags.length ?? 0), 0) /
+      Math.max(
+        1,
+        ami.reduce((sum, result) => sum + (result.live?.real ?? 0), 0)
+      ),
+    liveLagMinutes: median(ami.flatMap((result) => result.live?.lags ?? [])) / 60_000,
     labels: labels.length,
     flawed: mean(labels.map((label) => (label.flawed ? 1 : 0))),
     stopword: mean(labels.map((label) => (label.flaws.stopword ? 1 : 0))),
@@ -812,6 +919,11 @@ function printAggregate(name, group, summary) {
     lines.push(
       `topic changes within a minute of a real one: precision ${pct(summary.boundaryPrecision)}, ` +
         `recall ${pct(summary.boundaryRecall)}`
+    );
+    lines.push(
+      `live: precision ${pct(summary.livePrecision)}, recall ${pct(summary.liveRecall)}, ` +
+        `changes older than 3 min taken back ${fmt(summary.liveTakenBack, 1)} an hour, ` +
+        `real changes drawn ${pct(summary.liveFound)} after a median ${fmt(summary.liveLagMinutes, 1)} min`
     );
     lines.push(
       `topics ${fmt(summary.nodes, 1)} (reference ${fmt(summary.refTopics, 1)} distinct, ` +
@@ -846,14 +958,18 @@ function printAggregate(name, group, summary) {
 async function main() {
   const conversations = [];
   if (args.ami) {
-    const names = topicNames(args.ami);
-    let ids = amiMeetingIds(args.ami);
+    // The corpus folder or its annotations folder.
+    const dir = fs.existsSync(path.join(args.ami, "annotations", "topics"))
+      ? path.join(args.ami, "annotations")
+      : args.ami;
+    const names = topicNames(dir);
+    let ids = amiMeetingIds(dir);
     if (args.meetings) {
       const wanted = new Set(args.meetings.split(",").map((id) => id.trim()));
       ids = ids.filter((id) => wanted.has(id));
     }
     for (const id of ids) {
-      const meeting = loadAmiMeeting(args.ami, id, names);
+      const meeting = loadAmiMeeting(dir, id, names);
       if (!args.meetings && args.split !== "all" && meeting.split !== args.split) continue;
       if (meeting.utterances.length) conversations.push(meeting);
     }
@@ -874,19 +990,10 @@ async function main() {
 
   const name = args.name || path.relative(ROOT, path.resolve(args.tracker));
   const module = await loadTracker(args.tracker);
-  let refine = null;
-  if (args.refine) {
-    const { createRefiner } = await import(
-      pathToFileURL(path.join(ROOT, "scripts/lib/topic-refine-eval.mjs")).href
-    );
-    refine = await createRefiner({ module });
-  }
-
   const results = [];
   for (const conversation of conversations) {
-    const { snapshot, timing } = replay(module, conversation);
-    const final = refine ? await refine(conversation, snapshot) : snapshot;
-    const result = scoreConversation(conversation, final, { fine: args.fine });
+    const { snapshot, live, timing } = replay(module, conversation);
+    const result = scoreConversation(conversation, snapshot, { fine: args.fine, live });
     result.timing = timing;
     result.private = !!conversation.private;
     results.push(result);
