@@ -263,8 +263,9 @@ function secondLevels(samples) {
  * Main's 16 kHz stream, chunk by chunk, and where each of its samples really
  * was. `downsample24kTo16k` keeps floor(800 / 1.5) = 533 samples of each
  * 800-sample chunk, a third of a sample short, so the stream's own clock runs
- * 0.06% fast: 1.5 s over a 40-minute meeting. Scoring against the reference
- * uses the true time; the app's offsets are what the segmenter counts.
+ * 0.06% slow: 1.5 s behind after a 40-minute meeting. Scoring against the
+ * reference uses the true time; the app's offsets are what the segmenter
+ * counts.
  */
 function capture(samples24k) {
   const chunks = [];

@@ -24,10 +24,11 @@
 // its loudest syllables pass the first level, its softer words only the
 // second. With one level — every frame three times the floor — such a voice
 // never opened a segment, or opened one on a syllable and lost it 400 ms later
-// as a cough. A real conversation in a room with steady background sound kept
-// segments over 19% of its 28 minutes. AMI meetings replayed at that room's
-// levels kept 23% of their speech, and keep 85% now; at a quiet room's levels,
-// 72% and 98% (scripts/room-replay.js, docs/dictation-accuracy.md).
+// as a cough. A real conversation, its quietest seconds only a few dB under its
+// speech, kept segments over 19% of its 28 minutes. AMI meetings replayed at
+// that room's levels kept 23% of their speech, and keep 85% now; at a quiet
+// room's levels, 72% and 98% (scripts/room-replay.js,
+// docs/dictation-accuracy.md).
 //
 // Held open through soft speech, a segment is also held through the soft gap
 // where one person stops and the next starts. So a segment longer than

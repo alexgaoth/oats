@@ -82,10 +82,10 @@ export function readPcm16Wav(bytes) {
  * pauses. A room now opens a segment at 2.5 times its floor, holds it at 1.5
  * and splits it at soft pauses, so a far voice is not lost
  * (speechSegmenter.mjs). A dictation is one near voice, and a cut wants its
- * clearest pause: with the room's levels the cuts moved in 27 of 40 long
- * dictations and WER moved inside its noise (`base.en` 4.16% to 4.08%,
- * `base` + `auto` 5.14% to 5.36%). Nothing to gain, so the cuts keep the
- * levels they were measured with (docs/dictation-accuracy.md).
+ * clearest pause: tried with a first version of the room's levels, the cuts
+ * moved in 27 of 40 long dictations and WER moved inside its noise (`base.en`
+ * 4.16% to 4.08%, `base` + `auto` 5.14% to 5.36%). Nothing to gain, so the
+ * cuts keep the levels they were measured with (docs/dictation-accuracy.md).
  */
 const PAUSE_LEVELS = Object.freeze({
   speechRatio: 3,
