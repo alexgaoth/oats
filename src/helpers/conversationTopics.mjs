@@ -665,6 +665,18 @@ const LABEL_MARGIN = 1.5;
 // way to the next one.
 const LABEL_CANDIDATES = 12;
 
+// How much meaning weighs in a name, once vectors are known (see
+// `addVectors`): a candidate's score is multiplied by its closeness to the
+// topic (cosine) to this power. Chosen on AMI with the judge.
+const VECTOR_WEIGHT = 4;
+
+// A topic is named by meaning only when at least this share of its turns
+// have vectors.
+const VECTOR_COVERAGE = 0.5;
+
+// At most this many phrases are embedded for one conversation.
+const MAX_PHRASE_VECTORS = 5000;
+
 class ConversationTopicTracker {
   constructor(options = {}) {
     // A topic nobody has come back to for this long has gone cold.
@@ -700,6 +712,16 @@ class ConversationTopicTracker {
     this.transitions = [];
     this.currentId = null;
 
+    // Meaning, when the app can read it: unit vectors of each utterance and
+    // of each repeated phrase (all-MiniLM-L6-v2 in the main process), handed
+    // in by `addVectors`. Without them the names stay lexical.
+    this.vectorWeight = options.vectorWeight ?? VECTOR_WEIGHT;
+    this.vectors = new Map();
+    this.phraseVectors = new Map();
+    this._phrasesAsked = new Set();
+    this._byId = new Map();
+    this._shownCuts = [];
+
     this._similarities = new Map();
     this._candidateSince = new Map();
     this._grouping = new Map();
@@ -724,6 +746,7 @@ class ConversationTopicTracker {
       phrases,
     };
     this.utterances.push(record);
+    this._byId.set(record.id, record);
     for (const key of new Set(phrases.map((phrase) => phrase.key))) addCount(this.everywhere, key);
     if (keys.length) {
       this.units.push({ id: record.id, index: this.utterances.length - 1 });
@@ -822,7 +845,67 @@ class ConversationTopicTracker {
     this._depthCache = { window, segment, wide, narrow, total };
     this._final = null;
     const shown = cuts.filter((cut) => this.settledCuts.has(this.units[cut].id));
+    this._shownCuts = shown;
     Object.assign(this, this._topicsFor(shown, { commit: true }));
+  }
+
+  // Vectors for utterances (by id) and phrases (by the key `phrasesToEmbed`
+  // gave), from a sentence embedding model. The topics are named again with
+  // them; nothing is cut differently. Vectors of any length; they are made
+  // unit length here.
+  addVectors({ utterances = [], phrases = [] } = {}) {
+    const unit = (vector) => {
+      const values = Float32Array.from(vector ?? []);
+      let norm = 0;
+      for (const value of values) norm += value * value;
+      norm = Math.sqrt(norm);
+      if (!(norm > 0)) return null;
+      for (let index = 0; index < values.length; index += 1) values[index] /= norm;
+      return values;
+    };
+    let added = 0;
+    for (const [id, vector] of utterances) {
+      const value = unit(vector);
+      if (value) {
+        this.vectors.set(String(id), value);
+        added += 1;
+      }
+    }
+    for (const [key, vector] of phrases) {
+      const value = unit(vector);
+      if (value) {
+        this.phraseVectors.set(String(key), value);
+        added += 1;
+      }
+    }
+    if (!added || !this._depthCache) return;
+    this._final = null;
+    Object.assign(this, this._topicsFor(this._shownCuts, { commit: true }));
+  }
+
+  // The phrases worth a vector that have none yet and were not asked for:
+  // the candidates to name the topics as they stand, then every phrase said
+  // in two turns or more, most used first, since the record is cut again at
+  // the end and its topics can have other candidates. Each is returned once,
+  // as the key `addVectors` takes back and the text to embed.
+  phrasesToEmbed(limit = 64) {
+    const out = [];
+    const ask = (key, text) => {
+      if (out.length >= limit || this._phrasesAsked.size >= MAX_PHRASE_VECTORS) return false;
+      if (!this._phrasesAsked.has(key)) {
+        this._phrasesAsked.add(key);
+        out.push({ key, text });
+      }
+      return true;
+    };
+    for (const topic of this.topics) {
+      for (const entry of topic.ranked) if (!ask(entry.key, entry.text)) return out;
+    }
+    const repeated = [...this.everywhere.entries()]
+      .filter(([key, count]) => count >= 2 && !this._phrasesAsked.has(key))
+      .sort((a, b) => b[1] - a[1]);
+    for (const [key] of repeated) if (!ask(key, key)) break;
+    return out;
   }
 
   // One stretch of utterances, from `start` up to `end` (not included), with
@@ -1101,7 +1184,7 @@ class ConversationTopicTracker {
     const taken = new Set();
     const order = [...topics].sort((a, b) => b.size - a.size || a.firstAt - b.firstAt);
     for (const topic of order) {
-      const free = topic.ranked.filter((entry) => !taken.has(entry.key));
+      const free = this._byMeaning(topic).filter((entry) => !taken.has(entry.key));
       // Twelve candidates all taken by bigger topics is next to impossible;
       // then a repeated name beats none.
       let choice = free[0] ?? topic.ranked[0] ?? null;
@@ -1122,6 +1205,56 @@ class ConversationTopicTracker {
         topic.label = "untitled";
       }
     }
+  }
+
+  // A topic's candidates, ordered by meaning too when its vectors are known:
+  // each lexical score times the candidate's closeness to what the topic says
+  // (the mean of its turns' vectors). Measured on AMI, this names a topic
+  // after its subject more often than after a vivid detail of it.
+  _byMeaning(topic) {
+    if (!this.phraseVectors.size || !this.vectors.size) return topic.ranked;
+    let dimension = 0;
+    let centroid = null;
+    let content = 0;
+    let embedded = 0;
+    for (const id of topic.utteranceIds) {
+      const record = this._byId.get(id);
+      if (!record?.keys.length) continue;
+      content += 1;
+      const vector = this.vectors.get(id);
+      if (!vector) continue;
+      if (!centroid) {
+        dimension = vector.length;
+        centroid = new Float64Array(dimension);
+      }
+      if (vector.length !== dimension) continue;
+      embedded += 1;
+      for (let index = 0; index < dimension; index += 1) {
+        centroid[index] += vector[index] * record.keys.length;
+      }
+    }
+    if (!centroid || embedded < content * VECTOR_COVERAGE) return topic.ranked;
+    let norm = 0;
+    for (const value of centroid) norm += value * value;
+    norm = Math.sqrt(norm);
+    if (!(norm > 0)) return topic.ranked;
+    const closeness = topic.ranked.map((entry) => {
+      const vector = this.phraseVectors.get(entry.key);
+      if (!vector || vector.length !== dimension) return null;
+      let dot = 0;
+      for (let index = 0; index < dimension; index += 1) dot += vector[index] * centroid[index];
+      return dot / norm;
+    });
+    const known = closeness.filter((value) => value != null);
+    if (known.length < topic.ranked.length / 2) return topic.ranked;
+    // A candidate not embedded yet counts as the least close of the others.
+    const floor = Math.max(0.01, Math.min(...known));
+    return topic.ranked
+      .map((entry, index) => ({
+        ...entry,
+        score: entry.score * Math.max(0.01, closeness[index] ?? floor) ** this.vectorWeight,
+      }))
+      .sort((a, b) => b.score - a.score);
   }
 
   // The stack's contents: what was started and never finished, most recently

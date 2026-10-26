@@ -721,6 +721,9 @@ declare global {
       ) => Promise<NoteItem[]>;
       semanticSearchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
       semanticReindexAll: () => Promise<{ success: boolean; indexed?: number; error?: string }>;
+      embedTexts?: (
+        texts: string[]
+      ) => Promise<{ success: boolean; vectors?: number[][]; error?: string }>;
       onSemanticReindexProgress: (
         callback: (data: { done: number; total: number }) => void
       ) => () => void;

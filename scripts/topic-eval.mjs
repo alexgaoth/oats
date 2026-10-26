@@ -4,7 +4,7 @@
 //
 //   node scripts/topic-eval.mjs --ami <dir> [--split test|tune|all] [--demo]
 //     [--transcript file.json ...] [--tracker file.mjs] [--name label]
-//     [--judge] [--show-labels] [--json out.json]
+//     [--vectors] [--judge] [--show-labels] [--json out.json]
 //
 // Sources
 //   --ami DIR         the AMI meeting corpus' manual annotations
@@ -43,12 +43,18 @@
 //
 // --judge reads OPENAI_API_KEY from the environment and caches every rating in
 // ~/.cache/oats/topic-eval/judge-cache.json, so a rerun costs nothing.
+// --vectors also hands the tracker sentence vectors as the app does
+// (topicVectors.mjs): each turn and the phrases it asks for, embedded by
+// all-MiniLM-L6-v2 here, the way the app's ONNX worker embeds them, from
+// --model-dir (default: the app's own lookup). Cached in
+// ~/.cache/oats/topic-eval/vectors. Local only.
 
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import { parseArgs } from "node:util";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -72,6 +78,8 @@ const { values: args } = parseArgs({
     fine: { type: "boolean", default: false },
     json: { type: "string" },
     quiet: { type: "boolean", default: false },
+    vectors: { type: "boolean", default: false },
+    "model-dir": { type: "string" },
   },
 });
 
@@ -359,19 +367,37 @@ async function loadTracker(file) {
 // As `trackConversationTopic` in meetingRecordingStore.ts: one utterance in,
 // then the graph and the stack read, after every finalized utterance; the
 // record is the final snapshot.
-function replay(module, conversation) {
+async function replay(module, conversation, { embedder = null } = {}) {
   const tracker = new module.ConversationTopicTracker();
-  const started = performance.now();
+  let spent = 0;
   let worst = 0;
   // What the flow card drew after each utterance: where its topic changes
   // were, as the utterance each one starts at.
   const live = [];
   for (const utterance of conversation.utterances) {
-    const before = performance.now();
+    let before = performance.now();
     tracker.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+    let took = performance.now() - before;
+    if (embedder && typeof tracker.addVectors === "function") {
+      // As the feeder does, but with no wait: the turn and the phrases asked.
+      const phrases = tracker.phrasesToEmbed(47);
+      const vectors = await embedder.embed([
+        utterance.text,
+        ...phrases.map((phrase) => phrase.text),
+      ]);
+      before = performance.now();
+      tracker.addVectors({
+        utterances: [[utterance.id, vectors[0]]],
+        phrases: phrases.map((phrase, index) => [phrase.key, vectors[index + 1]]),
+      });
+      took += performance.now() - before;
+    }
+    before = performance.now();
     const shown = tracker.snapshot(utterance.at);
     tracker.openThreads(utterance.at);
-    worst = Math.max(worst, performance.now() - before);
+    took += performance.now() - before;
+    spent += took;
+    worst = Math.max(worst, took);
     live.push({ at: utterance.at, changes: changesOf(conversation, shown) });
   }
   const end = conversation.utterances.at(-1)?.at ?? T0;
@@ -381,9 +407,9 @@ function replay(module, conversation) {
     snapshot,
     live,
     timing: {
-      totalMs: performance.now() - started,
+      totalMs: spent,
       worstMs: worst,
-      perUtteranceMs: (performance.now() - started) / Math.max(1, conversation.utterances.length),
+      perUtteranceMs: spent / Math.max(1, conversation.utterances.length),
     },
   };
 }
@@ -955,6 +981,104 @@ function printAggregate(name, group, summary) {
 
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Sentence vectors (--vectors): all-MiniLM-L6-v2 through onnxruntime-node,
+// tokenized, pooled and normalized as src/workers/onnxWorker.js does it.
+
+const VECTOR_CACHE = path.join(os.homedir(), ".cache", "oats", "topic-eval", "vectors");
+
+async function createEmbedder(modelDir) {
+  const require = createRequire(path.join(ROOT, "package.json"));
+  const ort = require("onnxruntime-node");
+  const candidates = [
+    modelDir,
+    path.join(ROOT, "resources", "bin", "all-MiniLM-L6-v2"),
+    path.join(os.homedir(), ".cache", "oats", "embedding-models", "all-MiniLM-L6-v2"),
+  ].filter(Boolean);
+  const dir = candidates.find((candidate) => fs.existsSync(path.join(candidate, "model.onnx")));
+  if (!dir) throw new Error("all-MiniLM-L6-v2 not found: run node scripts/download-minilm.js");
+  const vocab = new Map(
+    Object.entries(
+      JSON.parse(fs.readFileSync(path.join(dir, "tokenizer.json"), "utf8")).model.vocab
+    )
+  );
+  const session = await ort.InferenceSession.create(path.join(dir, "model.onnx"), {
+    intraOpNumThreads: 4,
+    executionMode: "sequential",
+  });
+  const MAX = 256;
+  const tokenize = (text) => {
+    const ids = [vocab.get("[CLS]") ?? 101];
+    for (const word of text.toLowerCase().match(/[a-z0-9]+|[^\s\w]/g) || []) {
+      if (ids.length >= MAX - 1) break;
+      if (vocab.has(word)) {
+        ids.push(vocab.get(word));
+        continue;
+      }
+      let start = 0;
+      while (start < word.length && ids.length < MAX - 1) {
+        let end = word.length;
+        let piece = null;
+        while (end > start) {
+          const candidate = start === 0 ? word.slice(start, end) : `##${word.slice(start, end)}`;
+          if (vocab.has(candidate)) {
+            piece = vocab.get(candidate);
+            break;
+          }
+          end -= 1;
+        }
+        if (piece == null) {
+          ids.push(vocab.get("[UNK]") ?? 100);
+          start += 1;
+        } else {
+          ids.push(piece);
+          start = end;
+        }
+      }
+    }
+    ids.push(vocab.get("[SEP]") ?? 102);
+    return ids;
+  };
+  const embedOne = async (text) => {
+    const ids = tokenize(text);
+    const n = ids.length;
+    const out = await session.run({
+      input_ids: new ort.Tensor("int64", BigInt64Array.from(ids.map(BigInt)), [1, n]),
+      attention_mask: new ort.Tensor("int64", new BigInt64Array(n).fill(1n), [1, n]),
+      token_type_ids: new ort.Tensor("int64", new BigInt64Array(n), [1, n]),
+    });
+    const data = (out.last_hidden_state ?? out.output_0).data;
+    const dimension = data.length / n;
+    const vector = new Float32Array(dimension);
+    for (let token = 0; token < n; token += 1) {
+      for (let index = 0; index < dimension; index += 1)
+        vector[index] += data[token * dimension + index] / n;
+    }
+    return vector;
+  };
+  fs.mkdirSync(VECTOR_CACHE, { recursive: true });
+  return {
+    async embed(texts) {
+      const vectors = [];
+      for (const text of texts) {
+        const file = path.join(
+          VECTOR_CACHE,
+          `${crypto.createHash("sha1").update(text).digest("hex")}.bin`
+        );
+        if (fs.existsSync(file)) {
+          const buffer = fs.readFileSync(file);
+          vectors.push(new Float32Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / 4));
+          continue;
+        }
+        const vector = await embedOne(text);
+        fs.writeFileSync(file, Buffer.from(vector.buffer));
+        vectors.push(vector);
+      }
+      return vectors;
+    },
+  };
+}
+
 async function main() {
   const conversations = [];
   if (args.ami) {
@@ -990,9 +1114,10 @@ async function main() {
 
   const name = args.name || path.relative(ROOT, path.resolve(args.tracker));
   const module = await loadTracker(args.tracker);
+  const embedder = args.vectors ? await createEmbedder(args["model-dir"]) : null;
   const results = [];
   for (const conversation of conversations) {
-    const { snapshot, live, timing } = replay(module, conversation);
+    const { snapshot, live, timing } = await replay(module, conversation, { embedder });
     const result = scoreConversation(conversation, snapshot, { fine: args.fine, live });
     result.timing = timing;
     result.private = !!conversation.private;

@@ -28,6 +28,7 @@ import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
 import { namedTopicSnapshot, observeTopics, startTopicNaming } from "./topicNamingRunner";
 import { AGENT_RUNS_PER_RECORDING } from "../helpers/contextCheck.mjs";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
+import { TopicVectorFeeder } from "../helpers/topicVectors.mjs";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
 import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
@@ -525,6 +526,9 @@ let speakerLocks: Map<string, string> = new Map();
 let pushConfigTimeout: ReturnType<typeof setTimeout> | null = null;
 let conversationAideSession: InstanceType<typeof ConversationAideSession> | null = null;
 let conversationTopicTracker: InstanceType<typeof ConversationTopicTracker> | null = null;
+// Sentence vectors for the tracker's names, from the local embedding model
+// (topicVectors.mjs). Off when there is no model; the names stay lexical.
+let topicVectors: TopicVectorFeeder | null = null;
 const conversationCards = new Map<string, ConversationCard>();
 
 export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
@@ -733,6 +737,7 @@ function trackConversationTopic(segment: TranscriptSegment) {
     text: segment.text,
     at: segment.timestamp ?? Date.now(),
   });
+  topicVectors?.observe(segment);
   // The tracker is dependency-free ESM (so node:test can import it without a
   // TypeScript build), which is why its output is asserted at this boundary.
   const tracked = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
@@ -1388,6 +1393,14 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // set intersection per utterance. The tracker deliberately outlives the stop so
   // the final snapshot can still be read and saved onto the note.
   conversationTopicTracker = new ConversationTopicTracker();
+  // Each turn and each candidate name is embedded on this computer, so the
+  // tracker can name a topic by meaning; a name that arrives is drawn at once.
+  topicVectors?.stop();
+  topicVectors = new TopicVectorFeeder({
+    tracker: conversationTopicTracker,
+    embed: async (texts: string[]) => (await window.electronAPI?.embedTexts?.(texts)) ?? null,
+    onChange: publishTopicNames,
+  });
   // Names from the writing model, when one is chosen; none is sent otherwise.
   void startTopicNaming(publishTopicNames);
   // The snapshot too: it is published only when an utterance lands, so until
