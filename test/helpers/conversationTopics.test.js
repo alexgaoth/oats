@@ -383,3 +383,45 @@ test("a node keeps the shape every reader of the record expects", () => {
   }
   assert.ok(nodes[0].words.includes("pricing"));
 });
+
+// ------------------------------------------------------------------ meaning
+
+// With sentence vectors (topicVectors.mjs feeds them from the local model),
+// a topic is named with the candidate closest in meaning to what it says.
+test("with vectors, a topic is named by the candidate closest to what it says", () => {
+  const { tracker, utterances } = record(PRICING);
+  assert.equal(tracker.snapshot(0).nodes[0].label, "enterprise pricing");
+  const toward = [0, 1, 0];
+  const away = [1, 0, 0];
+  const phrases = tracker.phrasesToEmbed(500);
+  assert.ok(phrases.some((phrase) => phrase.key === "seat discount"));
+  tracker.addVectors({
+    utterances: utterances.map((utterance) => [utterance.id, toward]),
+    phrases: phrases.map((phrase) => [phrase.key, phrase.key === "seat discount" ? toward : away]),
+  });
+  assert.equal(tracker.snapshot(0, { final: true }).nodes[0].label, "seat discount");
+});
+
+test("without vectors for most of a topic, its name stays the room's most used phrase", () => {
+  const { tracker, utterances } = record(PRICING);
+  const phrases = tracker.phrasesToEmbed(500);
+  tracker.addVectors({
+    // Only two turns have vectors: too few to say what the topic means.
+    utterances: utterances.slice(0, 2).map((utterance) => [utterance.id, [0, 1, 0]]),
+    phrases: phrases.map((phrase) => [
+      phrase.key,
+      phrase.key === "seat discount" ? [0, 1, 0] : [1, 0, 0],
+    ]),
+  });
+  assert.equal(tracker.snapshot(0, { final: true }).nodes[0].label, "enterprise pricing");
+});
+
+test("each phrase is asked for once, the topics' candidates first", () => {
+  const { tracker } = record(PRICING);
+  const first = tracker.phrasesToEmbed(3);
+  assert.equal(first.length, 3);
+  assert.equal(first[0].key, "enterprise pricing");
+  const rest = tracker.phrasesToEmbed(500);
+  assert.ok(rest.every((phrase) => !first.some((asked) => asked.key === phrase.key)));
+  assert.deepEqual(tracker.phrasesToEmbed(500), []);
+});

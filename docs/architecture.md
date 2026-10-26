@@ -129,7 +129,7 @@ Oats is an Electron-based, local-first conversation intelligence application tha
 - **parakeet.js**: NVIDIA Parakeet model management via sherpa-onnx
 - **parakeetServer.js**: sherpa-onnx CLI wrapper for transcription
 - **qdrantManager.js**: Qdrant vector DB sidecar process lifecycle (spawn, health check, shutdown)
-- **localEmbeddings.js**: Local text embedding via ONNX Runtime + all-MiniLM-L6-v2 (384-dim vectors)
+- **localEmbeddings.js**: Local text embedding via ONNX Runtime + all-MiniLM-L6-v2 (384-dim vectors). Also answers `embed-texts`, which the recording store's topic vector feeder (`topicVectors.mjs`) calls so the topic tracker can name topics by meaning; local only, and the names stay lexical without the model
 - **vectorIndex.js**: Qdrant collection management — upsert, delete, search, batch reindex
 - **windowConfig.js**: Centralized window configuration
 - **windowManager.js**: Window creation and lifecycle management

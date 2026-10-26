@@ -167,6 +167,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   semanticSearchNotes: (query, limit) =>
     ipcRenderer.invoke("db-semantic-search-notes", query, limit),
   semanticReindexAll: () => ipcRenderer.invoke("db-semantic-reindex-all"),
+  // Sentence vectors for the topic names, from the local embedding model.
+  embedTexts: (texts) => ipcRenderer.invoke("embed-texts", texts),
   onSemanticReindexProgress: (callback) => {
     const listener = (_event, data) => callback?.(data);
     ipcRenderer.on("semantic-reindex-progress", listener);

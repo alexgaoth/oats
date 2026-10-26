@@ -1394,6 +1394,30 @@ class IPCHandlers {
       }
     });
 
+    // Sentence vectors for the topic tracker's names (conversationTopics.mjs,
+    // `addVectors`): the turns of a recording and the phrases that could name
+    // its topics, embedded by the bundled all-MiniLM-L6-v2 in the ONNX worker.
+    // Local only. No model on disk answers `success: false`, and the names
+    // stay as the tracker made them.
+    ipcMain.handle("embed-texts", async (_event, texts) => {
+      const list = (Array.isArray(texts) ? texts : [])
+        .filter((text) => typeof text === "string")
+        .slice(0, 64)
+        .map((text) => text.slice(0, 2000));
+      if (!list.length) return { success: true, vectors: [] };
+      const localEmbeddings = require("./localEmbeddings");
+      if (!localEmbeddings.isAvailable()) {
+        return { success: false, error: "Embedding model not available" };
+      }
+      try {
+        const vectors = await localEmbeddings.embedTexts(list);
+        return { success: true, vectors: vectors.map((vector) => Array.from(vector)) };
+      } catch (error) {
+        debugLogger.debug("embed-texts failed", { error: error.message }, "topics");
+        return { success: false, error: error.message };
+      }
+    });
+
     ipcMain.handle("db-semantic-reindex-all", async () => {
       const vectorIndex = require("./vectorIndex");
       if (!vectorIndex.isReady()) return { success: false, error: "Vector index not ready" };
