@@ -283,10 +283,16 @@ test("a density that varies is sampled once per 4x4 tile, clipped to the shape",
   assert.equal(fills.length, 2);
   assert.ok(fills.every((call) => call[4] === "path2d"));
   // 16x8 pixels are eight tiles: a call per tile, at its centre, not per pixel.
-  assert.deepEqual(
-    sampled.map(([x, y]) => `${x},${y}`).sort(),
-    ["10,2", "10,6", "14,2", "14,6", "2,2", "2,6", "6,2", "6,6"]
-  );
+  assert.deepEqual(sampled.map(([x, y]) => `${x},${y}`).sort(), [
+    "10,2",
+    "10,6",
+    "14,2",
+    "14,6",
+    "2,2",
+    "2,6",
+    "6,2",
+    "6,6",
+  ]);
   assert.deepEqual(
     fills.map((call) => call[1].source.lit.length).sort((a, b) => a - b),
     [ditherStep(0.1), ditherStep(0.5)]
@@ -327,6 +333,68 @@ test("a label sits on a plate in the card colour, cut to fit, and says where the
     bottom: roundRect[2] + roundRect[4],
   });
   assert.equal(box.top, 50 - 6 - 3);
+});
+
+// A topic name runs to five words (topicNaming.mjs): too long for one line of
+// a graph's label, and better in two than cut. Widths here are 6px a character.
+test("a name too long for one line takes two, broken where they come out even", () => {
+  const ctx = recorder();
+  assert.deepEqual(S.balancedLines(ctx, "SOC 2 audit timeline", 180), ["SOC 2 audit timeline"]);
+  // 32 characters, 192px: a greedy break would leave "rollback" alone.
+  assert.deepEqual(S.balancedLines(ctx, "Data migration risk and rollback", 150), [
+    "Data migration",
+    "risk and rollback",
+  ]);
+  // On a tie the longer line goes first.
+  assert.deepEqual(S.balancedLines(ctx, "Pellwood launch date decision", 150), [
+    "Pellwood launch",
+    "date decision",
+  ]);
+  // Japanese and Chinese break between characters; one long word does not break.
+  assert.deepEqual(S.balancedLines(ctx, "発売日の変更について", 36), ["発売日の変", "更について"]);
+  const [word] = S.balancedLines(ctx, "Fernbedienungsdesignbesprechung", 96);
+  assert.ok(word.endsWith("…") && word.length * 6 <= 96, word);
+  // Only a line still too wide is cut.
+  const [first, second] = S.balancedLines(
+    ctx,
+    "One two three four five six seven eight nine ten",
+    90
+  );
+  assert.ok(first.length * 6 <= 90 && second.length * 6 <= 90);
+  assert.ok(second.endsWith("…"), second);
+});
+
+test("two lines sit on one plate, centred on the label's middle", () => {
+  const ctx = recorder();
+  const box = S.drawPlateLines(ctx, ["Data migration", "risk and rollback"], 100, 50, PALETTE, {
+    align: "center",
+    size: 12,
+    lineHeight: 15,
+  });
+  assert.equal(of(ctx, "roundRect").length, 1, "one plate for both lines");
+  const lines = of(ctx, "fillText");
+  assert.deepEqual(
+    lines.map(([, text, x, y]) => [text, x, y]),
+    [
+      ["Data migration", 100 - (14 * 6) / 2, 50 - 7.5],
+      ["risk and rollback", 100 - (17 * 6) / 2, 50 + 7.5],
+    ]
+  );
+  // As wide as the wider line, and as tall as both lines, padded as one line is.
+  assert.deepEqual(box, {
+    left: 100 - (17 * 6) / 2 - 4,
+    right: 100 + (17 * 6) / 2 + 4,
+    top: 50 - (12 + 15) / 2 - 3,
+    bottom: 50 + (12 + 15) / 2 + 3,
+  });
+  // One line is the plate `drawPlateText` draws.
+  const one = recorder();
+  const single = S.drawPlateLines(one, ["launch date"], 100, 50, PALETTE, { align: "center" });
+  const text = recorder();
+  assert.deepEqual(
+    single,
+    S.drawPlateText(text, "launch date", 100, 50, PALETTE, { align: "center" })
+  );
 });
 
 test("a monotone trace is one Bézier per piece, with its handles a third of the way", () => {
@@ -370,7 +438,10 @@ test("a question is a dot on the line, with no stem and no second row", () => {
 test("the fill thins from 0.5 under the line to 0.08 at the baseline, and strips wash", () => {
   assert.match(CONTOUR, /const FILL_UNDER_LINE = 0\.5;/);
   assert.match(CONTOUR, /const FILL_AT_BASELINE = 0\.08;/);
-  assert.match(CONTOUR, /cssHeight < DITHER_MIN_HEIGHT[\s\S]*washFill\(ctx, area, palette\.quiet\)/);
+  assert.match(
+    CONTOUR,
+    /cssHeight < DITHER_MIN_HEIGHT[\s\S]*washFill\(ctx, area, palette\.quiet\)/
+  );
   assert.match(CONTOUR, /ditherFade\(/);
   // Live, the grain rolls with the line.
   assert.match(CONTOUR, /origin: \{ x: x\(contour\.sessionX \?\? 0\), y: 0 \}/);

@@ -97,6 +97,14 @@ const ALIGN: Record<string, string> = {
   end: "items-end",
 };
 
+// The lines of a two-line label, flush toward the dot beside it, or set as the
+// label is aligned above or below it.
+const LINES_ALIGN: Record<string, string> = {
+  center: "items-center text-center",
+  start: "items-start text-left",
+  end: "items-end text-right",
+};
+
 interface MapPoint {
   id: number;
   label: string;
@@ -438,11 +446,11 @@ function FlowGraph({
           {map.points.map((point) => {
             const isSelected = point.id === selected;
             const isLive = point.state === "live";
-            const { side, align, hidden } = placement.get(point.id) ?? {
+            const { side, align, hidden, lines } = (placement.get(point.id) ?? {
               side: "right",
               align: "center",
               hidden: false,
-            };
+            }) as { side: string; align: string; hidden: boolean; lines?: string[] };
             const state = stateLabel(t, point.state);
             const name =
               point.returns > 0
@@ -497,8 +505,25 @@ function FlowGraph({
                   />
                   {/* Hidden when it has nowhere to go without covering another
                       topic's words; still the button's title. */}
-                  <span aria-hidden="true" className={hidden ? "sr-only" : undefined}>
-                    {point.label}
+                  <span
+                    aria-hidden="true"
+                    className={
+                      hidden
+                        ? "sr-only"
+                        : lines
+                          ? cn(
+                              "flex flex-col",
+                              LINES_ALIGN[
+                                side === "left" ? "end" : side === "right" ? "start" : align
+                              ]
+                            )
+                          : undefined
+                    }
+                  >
+                    {/* Two lines when one had no room (`placeLabels`). */}
+                    {!hidden && lines
+                      ? lines.map((line, index) => <span key={index}>{line}</span>)
+                      : point.label}
                   </span>
                 </button>
               </li>

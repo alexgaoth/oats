@@ -155,10 +155,13 @@ export default function TopicLanes({
       ref={list}
       aria-label={t("oats.flow.lanesLabel")}
       // Label, line, minutes. The label column is as wide as the longest label,
-      // up to 13rem or 30% of the card, whichever is less; the minutes as wide
-      // as the longest minutes. A longer label is cut with an ellipsis.
+      // up to 15rem or 34% of the card, whichever is less; the minutes as wide
+      // as the longest minutes. A longer label is cut with an ellipsis, and the
+      // whole name is the row's tooltip. 15rem holds about 37 characters at
+      // 13px: nineteen in twenty of the names a writing model gives a topic
+      // (topicNaming.mjs, 28 on average), where 13rem held four in five.
       className={cn(
-        "grid grid-cols-[fit-content(min(13rem,30%))_minmax(0,1fr)_max-content] gap-x-3",
+        "grid grid-cols-[fit-content(min(15rem,34%))_minmax(0,1fr)_max-content] gap-x-3",
         className
       )}
       style={{ gridTemplateRows: `repeat(${rows.length}, ${LANE_ROW_PX}px)` }}
@@ -200,6 +203,12 @@ export default function TopicLanes({
               <span className="sr-only">{name}</span>
               <span aria-hidden="true" className="flex min-w-0 items-center gap-2">
                 <span
+                  // Whether the name was cut is known only where it is drawn,
+                  // so the tooltip is decided when the pointer arrives.
+                  onMouseEnter={(event) => {
+                    const label = event.currentTarget;
+                    label.title = label.scrollWidth > label.clientWidth ? row.label : "";
+                  }}
                   className={cn(
                     "truncate text-[13px]",
                     isNow && "font-medium text-foreground",

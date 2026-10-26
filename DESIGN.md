@@ -242,7 +242,12 @@ the conversation. Every chart draws through one module
 5. **One dot:** radius 4, with a 2 px ring in `card`, so it stays clear on a
    line or on another dot.
 6. **Nothing crosses a word.** Labels sit in a column, or on a plate in the card
-   colour.
+   colour. A topic's name that one line of a label cannot hold takes a second
+   line on the same plate, broken where the two lines come out most even
+   (`balancedLines`), before it is ever cut: in a conversation's graph, beside
+   its disc too where that is where the room is, and on the live map when one
+   line has no room. The lanes' name column holds about 37 characters; a
+   longer name is cut and is the row's tooltip.
 7. **Fill.** An area or mass is an ordered 4×4 Bayer dither of the quiet grey,
    locked to device pixels, with the field's matrix (`helpers/chartDither.mjs`).
    A fade under about 24 px tall (the list strips) is a 12% wash instead. This

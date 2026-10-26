@@ -2,10 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 let buildThreadMap, quotedUtterance, unsettled, placeLabels, dotSize, DOT_PX, DOT_RING_PX;
+let balancedSplit;
 
 test.before(async () => {
   ({ buildThreadMap, quotedUtterance, unsettled, placeLabels, dotSize, DOT_PX, DOT_RING_PX } =
     await import("../../src/helpers/liveThreadMap.mjs"));
+  ({ balancedSplit } = await import("../../src/helpers/liveThreadMap.mjs"));
 });
 
 const START = 1_800_000_000_000;
@@ -355,4 +357,55 @@ test("a link says whether it was a move back to an earlier topic", () => {
       [2, 1, "return"],
     ]
   );
+});
+
+// A topic name from the writing model runs to five words. Where one line has
+// no room beside, above or below its dot, two lines of half the width often do.
+test("a name breaks into two even lines, by words, or by characters in Japanese", () => {
+  assert.deepEqual(balancedSplit("Data migration risk and rollback"), [
+    "Data migration",
+    "risk and rollback",
+  ]);
+  assert.deepEqual(balancedSplit("Pellwood launch date decision"), [
+    "Pellwood launch",
+    "date decision",
+  ]);
+  assert.deepEqual(balancedSplit("発売日の変更について"), ["発売日の変", "更について"]);
+  assert.equal(balancedSplit("pricing"), null);
+  assert.equal(balancedSplit(""), null);
+});
+
+test("a label with no room on one line takes two before it is hidden", () => {
+  // A short map: one line of 32 characters fits nowhere around the dot, two
+  // lines of 17 fit beside it.
+  const map = { width: 260, height: 40 };
+  const point = pt({ label: "Data migration risk and rollback", x: 0.5, y: 0.5 });
+  assert.deepEqual(placeLabels([point], map).get(1), {
+    side: "right",
+    align: "center",
+    hidden: false,
+    lines: ["Data migration", "risk and rollback"],
+  });
+  // Where one line fits, nothing changes: no second line.
+  assert.deepEqual(placeLabels([pt({ label: "pricing" })], map).get(1), {
+    side: "right",
+    align: "center",
+    hidden: false,
+  });
+  // Two two-line labels on one spot take the two sides, the heavier first.
+  const crowd = [
+    pt({ id: 1, label: "Data migration risk and rollback", durationMs: 1 }),
+    pt({ id: 2, label: "Enterprise discount policy", durationMs: 9 }),
+  ];
+  const both = placeLabels(crowd, map);
+  assert.equal(both.get(2).side, "right");
+  assert.deepEqual(both.get(2).lines, ["Enterprise", "discount policy"]);
+  assert.equal(both.get(1).side, "left");
+  assert.equal(both.get(1).hidden, false);
+  // A third has nowhere left, and is hidden rather than drawn over them.
+  const three = placeLabels(
+    [...crowd, pt({ id: 3, label: "News embargo timing", durationMs: 0 })],
+    map
+  );
+  assert.equal(three.get(3).hidden, true);
 });

@@ -207,8 +207,9 @@ where the main process and the microphone stand:
 - The local model names the topics as they grow, and once more at Finish
   (`src/helpers/topicNaming.mjs`): a stub (`harness/topicNames.mjs`) reads the
   words sent for a topic and answers with the review's names for its eight
-  topics ("Launch date move", "SSO login with SAML", and so on). A topic with
-  no subject it knows keeps its on-device name.
+  topics ("Pellwood launch date decision", "SAML clock skew fix", and so on:
+  what gpt-5.6-luna named them). A topic with no subject it knows keeps its
+  on-device name.
 - After Stop, main's half follows: the turn being said is transcribed, the
   speaker pass reports the voices (`conversation-speakers`), and the local model
   answers the summary action with the sample's title and summary. Then the
