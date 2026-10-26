@@ -5,56 +5,106 @@ let ConversationTopicTracker;
 let contentWords;
 let similarity;
 let topicLabel;
+let labelCandidates;
 
 test.before(async () => {
-  ({ ConversationTopicTracker, contentWords, similarity, topicLabel } =
+  ({ ConversationTopicTracker, contentWords, similarity, topicLabel, labelCandidates } =
     await import("../../src/helpers/conversationTopics.mjs"));
 });
 
-// A label is two words, and which two is a frequency question — but the order
-// they are said in is not. Ranking by frequency alone renders every multi-word
-// subject backwards as soon as its second word is repeated more than its first.
-test("a label keeps the order the words were first said in, not their ranking", () => {
-  // "onboarding" first, "flow" more often: the subject is still onboarding flow.
-  const counts = new Map([
-    ["onboarding", 2],
-    ["flow", 5],
-  ]);
-  assert.equal(topicLabel(counts, "fallback"), "onboarding flow");
-});
+// Three subjects, written as a room says them: fillers, backchannels and
+// half-sentences included. The tracker reads windows of speech, so a subject
+// needs a minute or so of talk before it is one.
+const PRICING = [
+  "So the enterprise pricing is the thing I keep coming back to.",
+  "Yeah, our enterprise pricing is too low for the seat count we see.",
+  "If we raise enterprise pricing, the renewal conversations get harder.",
+  "Mm-hmm.",
+  "The seat discount is what makes the enterprise pricing look cheap.",
+  "Corbel asked for a seat discount of thirty percent on the renewal.",
+  "I'd rather hold the list price and give the seat discount once.",
+  "Okay.",
+  "What does the enterprise pricing page say about the seat discount today?",
+  "It says the list price, and the seat discount is only in the contract.",
+  "Then the renewal for Corbel is where we test the enterprise pricing.",
+  "Right, and the list price stays the same for everyone else.",
+  "So enterprise pricing goes up, and the seat discount comes down at renewal.",
+  "Fine by me, I think that's the plan for pricing.",
+];
+const HIRING = [
+  "Separately, hiring the research engineer is urgent.",
+  "The research engineer role has been open for three months now.",
+  "We had two candidates in the interview loop last week.",
+  "Yeah.",
+  "The interview loop takes four hours and candidates drop out of it.",
+  "Can we cut the interview loop to two hours for the research engineer?",
+  "We could drop the take-home from the interview loop.",
+  "The job post for the research engineer also needs a rewrite.",
+  "Uh-huh.",
+  "Who owns the job post? I can rewrite the job post this week.",
+  "Good, then the research engineer candidates see the new job post.",
+  "And the shorter interview loop starts with the next candidates.",
+  "So the research engineer hiring plan is the job post and the loop.",
+  "That works, hiring is sorted for now.",
+];
+const DEMO = [
+  "Now the investor demo on Friday keeps crashing.",
+  "The investor demo build crashes on the slides with the charts.",
+  "It's the chart rendering in the demo build, it runs out of memory.",
+  "Okay, so the investor demo needs a smaller dataset for the charts.",
+  "Mm-hmm.",
+  "We can cut the charts to the last quarter for the investor demo.",
+  "The demo build should use the cached charts, not live queries.",
+  "Who is presenting the investor demo on Friday?",
+  "Maya is presenting the investor demo, with the new slides.",
+  "Then the slides and the demo build have to be frozen by Thursday.",
+  "Yeah.",
+  "I'll freeze the demo build on Thursday morning.",
+  "Good, the investor demo is fine if the charts load.",
+  "Right, the charts are the only risk for the investor demo.",
+];
 
-test("a label still picks the two most repeated words", () => {
-  const counts = new Map([
-    ["think", 1],
-    ["pricing", 6],
-    ["seat", 2],
-    ["enterprise", 5],
-  ]);
-  assert.equal(topicLabel(counts, "fallback"), "pricing enterprise");
-});
-
-test("a topic with nothing countable falls back rather than rendering empty", () => {
-  assert.equal(topicLabel(new Map(), "the opening sentence"), "the opening sentence");
-  assert.equal(topicLabel(new Map(), ""), "untitled");
-});
-
-// Feeds utterances a fixed interval apart so duration and drop-age assertions
-// are deterministic.
-function feed(tracker, lines, { start = 0, stepMs = 1000 } = {}) {
-  lines.forEach((text, index) => {
-    tracker.onUtterance({ id: `u${index}`, text, at: start + index * stepMs });
-  });
+// Utterances a fixed interval apart, ids u0, u1, ...
+function utterancesOf(lines, { start = 0, stepMs = 6000 } = {}) {
+  return lines.map((text, index) => ({ id: `u${index}`, text, at: start + index * stepMs }));
 }
 
-test("content extraction keeps subject matter and drops conversational filler", () => {
+function feed(tracker, utterances) {
+  for (const utterance of utterances) tracker.onUtterance(utterance);
+  return utterances;
+}
+
+function record(lines, options) {
+  const tracker = new ConversationTopicTracker(options);
+  const utterances = feed(tracker, utterancesOf(lines));
+  return { tracker, utterances, end: utterances.at(-1).at };
+}
+
+// ------------------------------------------------------------------ words
+
+// What Alex's real conversation was labelled with ("wait it's", "aws i'm",
+// "couldn't let"), and the plural strip that cut "that's" to "that'".
+test("content words leave out contractions, fillers and bare numbers", () => {
   assert.deepEqual(contentWords("So yeah, I think the pricing model is broken"), [
     "pricing",
     "model",
     "broken",
   ]);
-  assert.deepEqual(contentWords("Yeah. Okay, sure."), []);
-  // Plurals fold together so "investors" and "investor" are one subject.
+  assert.deepEqual(contentWords("Yeah. Okay, sure. Mm-hmm, uh-huh."), []);
+  assert.deepEqual(contentWords("Wait, it's, I'm, you're, couldn't, I'll, can't, that's"), []);
+  assert.deepEqual(contentWords("It’s fine, we’re not, that’s it"), []);
+  assert.deepEqual(contentWords("connect to port 800 at 2.5 seconds"), ["connect", "port", "second"]);
+});
+
+test("plurals fold together without cutting words that only end in s", () => {
   assert.deepEqual(contentWords("investors"), ["investor"]);
+  assert.deepEqual(contentWords("companies company"), ["company", "company"]);
+  assert.deepEqual(contentWords("the process analysis status"), ["process", "analysis", "status"]);
+  assert.deepEqual(contentWords("the company's roadmap"), ["company", "roadmap"]);
+});
+
+test("two-letter names survive and two-letter function words do not", () => {
+  assert.deepEqual(contentWords("We use AI for the UX of it"), ["ai", "ux"]);
 });
 
 test("similarity is symmetric, bounded, and zero against nothing", () => {
@@ -66,275 +116,273 @@ test("similarity is symmetric, bounded, and zero against nothing", () => {
   assert.ok(similarity(a, new Set(["pricing", "churn"])) < 1);
 });
 
+// ------------------------------------------------------------------ labels
+
+// The first tracker joined the two most frequent words, in the order first
+// said ("wait it's", "connect 800"). A label is now a phrase the room said.
+test("a label is a phrase somebody said, not two frequent words joined", () => {
+  const label = topicLabel(PRICING);
+  assert.equal(label, "enterprise pricing");
+  const said = PRICING.join(" ").toLowerCase();
+  assert.ok(said.includes(label.toLowerCase()));
+});
+
+test("a phrase people repeat beats each of its words", () => {
+  assert.equal(
+    topicLabel([
+      "The speech recognition is slow on the old phones.",
+      "Speech recognition needs a better microphone.",
+      "We could license speech recognition from a vendor.",
+      "And the speech recognition errors annoy people.",
+    ]),
+    "speech recognition"
+  );
+});
+
+test("a label is never a filler, a contraction or a number", () => {
+  const lines = [
+    "Wait, it's, I mean, I'm not sure, wait.",
+    "Wait, wait, it's 800, it's 800 for the AWS bill.",
+    "I'm saying the AWS bill is 800, you know.",
+    "Couldn't we, I don't know, wait, cut the AWS bill?",
+    "Yeah, it's the AWS bill again, I'm sorry.",
+  ];
+  const label = topicLabel(lines);
+  assert.equal(label, "AWS bill");
+  for (const candidate of labelCandidates(lines, { limit: 10 })) {
+    assert.doesNotMatch(candidate.text, /'|^\d+$|\bwait\b|\bit's\b|\bi'm\b/i);
+  }
+});
+
+test("a name keeps its own case and a sentence's capital does not stick", () => {
+  assert.equal(
+    topicLabel(["SAML breaks for SSO.", "The SAML config is wrong.", "Fix SAML first."]),
+    "SAML"
+  );
+  assert.equal(
+    topicLabel([
+      "Budget is tight this quarter.",
+      "Budget again: the budget for travel.",
+      "The budget for hiring too.",
+    ]),
+    "budget"
+  );
+});
+
+test("a word the whole conversation uses does not name one part of it", () => {
+  const conversation = [...PRICING, ...HIRING];
+  assert.equal(topicLabel(HIRING, { conversation }), "research engineer");
+  assert.equal(topicLabel(PRICING, { conversation }), "enterprise pricing");
+});
+
+test("nothing nameable names nothing", () => {
+  assert.equal(topicLabel([]), "");
+  assert.equal(topicLabel(["Yeah.", "Okay, sure.", "Mm-hmm."]), "");
+});
+
+// ------------------------------------------------------------------ topics
+
 test("a conversation that stays on one subject stays on one topic", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is the thing I keep coming back to",
-    "Our pricing is too low for the enterprise segment",
-    "If we raise pricing the enterprise deals get easier",
-  ]);
-  const { nodes, edges } = tracker.snapshot(3000);
+  const { tracker, end } = record(PRICING);
+  const { nodes, edges } = tracker.snapshot(end, { final: true });
   assert.equal(nodes.length, 1);
   assert.deepEqual(edges, []);
-  assert.equal(nodes[0].state, "live");
+  assert.equal(nodes[0].label, "enterprise pricing");
   assert.ok(nodes[0].durationMs > 0);
 });
 
-// A stored record is not being spoken. The topic current at stop takes the
-// state it would have had the moment the room left it — including `resolved`,
-// which `live` used to mask.
-test("a final snapshot has nothing live, and keeps a resolved current topic resolved", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, hiring the research engineer is urgent",
-    "The research engineer role has been open for months",
-  ]);
-  const open = tracker.snapshot(4000, { final: true });
+test("each change of subject starts a topic named after it, in order", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...DEMO]);
+  const { nodes, edges } = tracker.snapshot(end, { final: true });
   assert.deepEqual(
-    open.nodes.map((node) => node.state),
-    ["open", "open"]
+    nodes.map((node) => node.label),
+    ["enterprise pricing", "research engineer", "investor demo"]
   );
-
-  tracker.resolveTopicForUtterance("u3");
-  const settled = tracker.snapshot(4000, { final: true });
-  assert.equal(settled.nodes[1].state, "resolved");
-  assert.equal(tracker.snapshot(4000).nodes[1].state, "live", "the live view is unchanged");
-});
-
-test("backchannel utterances are ignored rather than becoming topics", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, ["The pricing model is broken", "Yeah", "Mm-hm", "Right, okay"]);
-  assert.equal(tracker.snapshot(3000).nodes.length, 1);
-});
-
-test("a genuine subject change starts a topic and records the transition", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, hiring the research engineer is urgent",
-    "The research engineer role has been open for months",
-  ]);
-  const { nodes, edges } = tracker.snapshot(4000);
-  assert.equal(nodes.length, 2);
-  assert.equal(edges.length, 1);
-  assert.equal(edges[0].from, nodes[0].id);
-  assert.equal(edges[0].to, nodes[1].id);
-  assert.equal(edges[0].kind, "new");
+  assert.deepEqual(
+    edges.map((edge) => [edge.from, edge.to, edge.kind]),
+    [
+      [nodes[0].id, nodes[1].id, "new"],
+      [nodes[1].id, nodes[2].id, "new"],
+    ]
+  );
+  // Every utterance is in a topic, backchannels included.
+  const placed = nodes.flatMap((node) => node.utteranceIds);
+  assert.equal(placed.length, PRICING.length + HIRING.length + DEMO.length);
+  assert.ok(nodes[0].utteranceIds.includes("u3"), "the first Mm-hmm sits with pricing");
 });
 
 test("returning to an earlier subject produces the back-edge the graph is for", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, hiring the research engineer is urgent",
-    "The research engineer role has been open for months",
-    "Coming back to enterprise pricing though, it is broken",
-  ]);
-  const { nodes, edges } = tracker.snapshot(5000);
+  const { tracker, end } = record([...PRICING, ...HIRING, ...PRICING.slice(0, 9)]);
+  const { nodes, edges } = tracker.snapshot(end, { final: true });
   assert.equal(nodes.length, 2);
   const back = edges.find((edge) => edge.kind === "return");
   assert.ok(back, "expected a return edge");
   assert.equal(back.from, nodes[1].id);
   assert.equal(back.to, nodes[0].id);
   assert.equal(nodes[0].returns, 1);
-  assert.equal(nodes[0].state, "live");
 });
 
-// A topic's time is the time the room spent on it. A return used to add the
-// whole gap since the topic was last discussed, so a topic revisited at the end
-// of a meeting claimed the entire meeting.
-test("time spent on other topics is not counted when the room returns", () => {
+test("backchannels and a passing remark do not become topics", () => {
+  const lines = [
+    ...PRICING.slice(0, 7),
+    "Yeah.",
+    "Mm-hmm.",
+    "Anyway, the coffee machine broke again this morning.",
+    "Okay.",
+    ...PRICING.slice(7),
+  ];
+  const { tracker, end } = record(lines);
+  const { nodes } = tracker.snapshot(end, { final: true });
+  assert.equal(nodes.length, 1);
+  assert.ok(nodes[0].utteranceIds.includes("u9"), "the remark stays in the topic it interrupted");
+});
+
+test("no two topics of a conversation share a label", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...DEMO, ...HIRING.slice(0, 4)]);
+  const labels = tracker.snapshot(end, { final: true }).nodes.map((node) => node.label);
+  assert.equal(new Set(labels).size, labels.length);
+});
+
+// ------------------------------------------------------------------ live
+
+// The flow card redraws from every snapshot. A topic it has drawn is never
+// taken back while the room talks.
+test("the live view never takes a topic back", () => {
   const tracker = new ConversationTopicTracker();
-  const at = (minutes) => minutes * 60000;
-  const say = (id, text, minutes) => tracker.onUtterance({ id, text, at: at(minutes) });
-  say("p1", "The pricing model is broken for enterprise", 0);
-  say("p2", "Enterprise pricing needs a rethink this quarter", 2);
-  say("h1", "Separately, hiring the research engineer is urgent", 3);
-  say("h2", "The research engineer role has been open for months", 7);
-  say("h3", "Hiring a research engineer needs a better job post", 13);
-  say("p3", "Coming back to enterprise pricing though, it is broken", 14);
-  say("p4", "Enterprise pricing should change before the renewal", 15);
-  const { nodes } = tracker.snapshot(at(15));
-  const pricing = nodes.find((node) => node.label.includes("pricing"));
-  const hiring = nodes.find((node) => node.label.includes("research") || node.label.includes("hiring"));
-  assert.equal(pricing.returns, 1);
-  assert.equal(pricing.durationMs, at(3), "2 minutes before, 1 minute after the return");
-  assert.equal(hiring.durationMs, at(10));
+  let previous = [];
+  const lines = [...PRICING, ...HIRING, ...DEMO, ...PRICING.slice(0, 6)];
+  for (const utterance of utterancesOf(lines)) {
+    tracker.onUtterance(utterance);
+    const { nodes } = tracker.snapshot(utterance.at);
+    const starts = nodes.map((node) => node.utteranceIds[0]);
+    for (const start of previous) assert.ok(starts.includes(start), `${start} stays a topic start`);
+    previous = starts;
+  }
+  assert.ok(previous.length >= 3, "the live view did move on to new topics");
 });
 
-test("the stack lists what was left open and never the topic being spoken", () => {
+test("a live topic appears once enough of it has been said", () => {
   const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, hiring the research engineer is urgent",
-    "The research engineer role has been open for months",
-  ]);
-  const open = tracker.openThreads(4000);
-  assert.equal(open.length, 1);
-  assert.match(open[0].label, /pricing|enterprise/);
-  assert.equal(open[0].state, "open");
-});
-
-test("a thread nobody returns to goes cold, and a resolved one leaves the stack", () => {
-  const tracker = new ConversationTopicTracker({ dropAfterMs: 5000 });
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-  ]);
-  // Resolving is keyed by the utterance the question was asked in, not by
-  // whatever happens to be live when the verdict lands.
-  assert.ok(tracker.resolveTopicForUtterance("u0"));
-  feed(
-    tracker,
-    ["Separately, hiring the research engineer is urgent", "The research engineer search drags on"],
-    {
-      start: 2000,
+  const utterances = utterancesOf([...PRICING, ...HIRING]);
+  utterances.forEach((utterance, index) => {
+    tracker.onUtterance(utterance);
+    if (index === PRICING.length) {
+      assert.equal(tracker.snapshot(utterance.at).nodes.length, 1, "one sentence is no new topic");
     }
-  );
-
-  // Resolved threads are not reminders — they are gone from the stack.
-  assert.deepEqual(tracker.openThreads(4000), []);
-
-  feed(
-    tracker,
-    [
-      "Marketing spend on the conference booth was wasted",
-      "That conference booth spend was pure marketing waste",
-    ],
-    {
-      start: 20000,
-    }
-  );
-  const cold = tracker.openThreads(22000).find((thread) => /research|engineer/.test(thread.label));
-  assert.ok(cold, "expected the hiring thread to still be listed");
-  assert.equal(cold.state, "dropped");
+  });
+  const { nodes } = tracker.snapshot(utterances.at(-1).at);
+  assert.equal(nodes.length, 2);
+  assert.match(nodes.find((node) => node.state === "live").label, /^(research engineer|interview loop)$/);
 });
 
-test("resolving closes the thread the question was asked in, not the live one", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Separately, hiring the research engineer is urgent",
-  ]);
-  // The room has moved to hiring; the answered question was about pricing.
-  const resolved = tracker.resolveTopicForUtterance("u0");
-  assert.match(resolved.label, /pricing|enterprise/);
-  assert.deepEqual(tracker.openThreads(2000), []);
+// The store reads the graph and the stack after every finalized utterance.
+// Reading must not decide anything.
+test("reading after every utterance decides nothing the tracker would not", () => {
+  const lines = [...PRICING, ...HIRING, ...DEMO];
+  const quiet = new ConversationTopicTracker();
+  feed(quiet, utterancesOf(lines));
+  const read = new ConversationTopicTracker();
+  for (const utterance of utterancesOf(lines)) {
+    read.onUtterance(utterance);
+    read.snapshot(utterance.at);
+    read.openThreads(utterance.at);
+  }
+  const end = lines.length * 6000;
+  assert.deepEqual(read.snapshot(end), quiet.snapshot(end));
+  assert.deepEqual(read.snapshot(end, { final: true }), quiet.snapshot(end, { final: true }));
+});
 
+// A stored record is not being spoken. The topic current at stop takes the
+// state it would have had the moment the room left it, including `resolved`.
+test("a final snapshot has nothing live, and keeps a resolved current topic resolved", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING]);
+  const open = tracker.snapshot(end, { final: true });
+  assert.deepEqual(
+    open.nodes.map((node) => node.state),
+    ["open", "open"]
+  );
+  tracker.resolveTopicForUtterance(`u${PRICING.length + 9}`);
+  const settled = tracker.snapshot(end, { final: true });
+  assert.equal(settled.nodes[1].state, "resolved");
+  assert.equal(tracker.snapshot(end).nodes.at(-1).state, "live", "the live view is unchanged");
+});
+
+test("resolving closes the topic the question was asked in, not the live one", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...DEMO]);
+  // The room is on the demo; the answered question was about pricing.
+  const resolved = tracker.resolveTopicForUtterance("u8");
+  assert.ok(resolved);
+  assert.ok(resolved.utteranceIds.includes("u8"));
+  const pricing = tracker.snapshot(end).nodes.find((node) => node.utteranceIds.includes("u8"));
+  assert.equal(pricing.state, "resolved");
+  assert.ok(tracker.openThreads(end).every((thread) => thread.id !== pricing.id));
   // An utterance nobody has heard of resolves nothing rather than guessing.
   assert.equal(tracker.resolveTopicForUtterance("nope"), null);
   assert.equal(tracker.resolveTopicForUtterance(null), null);
 });
 
-test("the stack is ordered by what was dropped most recently", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing has to change",
-    "Separately, hiring the research engineer is urgent",
-    "The research engineer search drags on",
-    "Marketing spend on the conference booth was wasted",
-    "That conference booth spend was pure marketing waste",
-  ]);
-  const open = tracker.openThreads(6000);
-  assert.equal(open.length, 2);
-  assert.ok(open[0].lastAt > open[1].lastAt);
+test("the stack lists what was left open, most recent first, never the live topic", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...DEMO]);
+  const live = tracker.snapshot(end).nodes.find((node) => node.state === "live");
+  const open = tracker.openThreads(end);
+  assert.ok(open.length >= 1);
+  assert.ok(open.every((thread) => thread.id !== live.id));
+  for (let index = 1; index < open.length; index += 1) {
+    assert.ok(open[index - 1].lastAt >= open[index].lastAt);
+  }
 });
 
-test("a one-sentence tangent is folded in rather than becoming its own node", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing has to change",
-    "Anyway the coffee machine broke again this morning",
-    "Back to enterprise pricing, it has to change",
-  ]);
-  const { nodes } = tracker.snapshot(4000);
-  // The coffee remark never earned a node — but it is not lost either.
-  assert.equal(nodes.length, 1);
-  assert.ok(nodes[0].utteranceIds.includes("u2"));
+test("a thread nobody returns to goes cold", () => {
+  const tracker = new ConversationTopicTracker({ dropAfterMs: 60_000 });
+  const utterances = feed(tracker, utterancesOf([...PRICING, ...HIRING, ...DEMO]));
+  const states = tracker.openThreads(utterances.at(-1).at).map((thread) => thread.state);
+  assert.ok(states.includes("dropped"), "the oldest thread has gone cold");
 });
 
-test("snapshot weights topics by time spent, not by utterance count", () => {
-  const tracker = new ConversationTopicTracker();
-  tracker.onUtterance({ id: "a", text: "The pricing model is broken", at: 0 });
-  tracker.onUtterance({ id: "b", text: "Pricing for enterprise is broken", at: 60000 });
-  tracker.onUtterance({ id: "c", text: "Hiring a research engineer is urgent", at: 61000 });
-  tracker.onUtterance({ id: "d", text: "The research engineer search is slow", at: 62000 });
-  const { nodes } = tracker.snapshot(62000);
-  const pricing = nodes.find((node) => /pricing/.test(node.label));
-  const hiring = nodes.find((node) => /research|engineer|hiring/.test(node.label));
-  assert.ok(pricing.durationMs > hiring.durationMs);
+// ------------------------------------------------------------------ time
+
+// A topic's time is the time the room spent on it. A return used to add the
+// whole gap since the topic was last discussed.
+test("time spent on other topics is not counted when the room returns", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...PRICING.slice(0, 9)]);
+  const [pricing, hiring] = tracker.snapshot(end, { final: true }).nodes;
+  assert.equal(pricing.returns, 1);
+  // 6 s between turns within each of its two stretches, nothing between them.
+  assert.equal(pricing.durationMs, (pricing.utteranceIds.length - 2) * 6000);
+  assert.equal(hiring.durationMs, (hiring.utteranceIds.length - 1) * 6000);
 });
 
-// The store reads the graph and the stack after every finalized utterance. While
-// a read committed the held turn, every change of subject was folded into the
-// current topic before the next turn could confirm it, and a real recording
-// stayed one topic from start to finish. Measured on a two-voice recording
-// through the app: three subjects in, one topic out.
-test("reading after every utterance decides nothing the tracker would not", () => {
-  const lines = [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, hiring the research engineer is urgent",
-    "The research engineer role has been open for months",
-    "Now the investor demo on Friday keeps crashing",
-    "The investor demo build crashes on the slides",
-    "Coming back to enterprise pricing though, it is broken",
-  ];
-  const quiet = new ConversationTopicTracker();
-  feed(quiet, lines);
-  const read = new ConversationTopicTracker();
-  lines.forEach((text, index) => {
-    read.onUtterance({ id: `u${index}`, text, at: index * 1000 });
-    read.snapshot(index * 1000);
-    read.openThreads(index * 1000);
-  });
-  const shape = (tracker) => {
-    const { nodes, edges } = tracker.snapshot(7000);
-    return { labels: nodes.map((node) => node.label), edges };
-  };
-  assert.equal(shape(quiet).labels.length, 3);
-  assert.deepEqual(shape(read), shape(quiet));
+test("a long silence inside a topic is not time spent on it", () => {
+  const tracker = new ConversationTopicTracker({ maxGapMs: 60_000 });
+  const utterances = utterancesOf(PRICING);
+  for (const utterance of utterances.slice(7)) utterance.at += 30 * 60_000;
+  feed(tracker, utterances);
+  const [pricing] = tracker.snapshot(utterances.at(-1).at, { final: true }).nodes;
+  assert.equal(pricing.durationMs, 12 * 6000 + 60_000);
 });
 
-test("a live read leaves a trailing aside held, and the record keeps it", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, hiring the research engineer is urgent",
-  ]);
-  const ids = (snapshot) => snapshot.nodes.flatMap((node) => node.utteranceIds);
-  assert.ok(!ids(tracker.snapshot(3000)).includes("u2"), "not placed until the next turn");
-  assert.ok(ids(tracker.snapshot(3000, { final: true })).includes("u2"), "never lost");
-});
-
-test("a question answered while its turn is held resolves the topic it joins", () => {
-  const tracker = new ConversationTopicTracker();
-  feed(tracker, [
-    "The pricing model is broken for enterprise",
-    "Enterprise pricing needs a rethink",
-    "Separately, have we hired the research engineer yet",
-  ]);
-  // The verdict lands before the next turn has placed the question.
-  assert.equal(tracker.resolveTopicForUtterance("u2"), null);
-  tracker.onUtterance({
-    id: "u3",
-    text: "The research engineer role was filled on Monday",
-    at: 3000,
-  });
-  const hiring = tracker.snapshot(4000).nodes.find((node) => node.utteranceIds.includes("u2"));
-  assert.ok(hiring && /research|engineer|hired/.test(hiring.label));
-  assert.ok(
-    tracker.openThreads(4000).every((thread) => thread.id !== hiring.id),
-    "the answered thread is not a reminder"
-  );
-  // It is the live topic, so it reads live until the room moves on.
-  assert.equal(tracker.snapshot(4000, { final: true }).nodes.at(-1).state, "resolved");
+// Agent-independent readers (the lanes, the graph, the vault note, the
+// cross-conversation board) read these fields from the stored record.
+test("a node keeps the shape every reader of the record expects", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING]);
+  const { nodes, edges } = tracker.snapshot(end, { final: true });
+  for (const node of nodes) {
+    assert.deepEqual(Object.keys(node).sort(), [
+      "durationMs",
+      "firstAt",
+      "id",
+      "label",
+      "lastAt",
+      "returns",
+      "state",
+      "utteranceIds",
+      "words",
+    ]);
+    assert.ok(node.words.length > 0 && node.words.length <= 8);
+    assert.ok(node.words.every((word) => word === word.toLowerCase()));
+  }
+  for (const edge of edges) {
+    assert.deepEqual(Object.keys(edge).sort(), ["from", "kind", "to", "weight"]);
+  }
+  assert.ok(nodes[0].words.includes("pricing"));
 });
