@@ -327,6 +327,99 @@ export function drawPlateText(
   return box;
 }
 
+// Scripts written without spaces, which break between characters.
+const UNSPACED = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u;
+
+/**
+ * A label in at most two lines of `maxWidth` (CSS px), in the context's
+ * current font: whole on one line when it fits, otherwise broken where the two
+ * lines come out most nearly even, as `text-wrap: balance` breaks a heading
+ * (DESIGN.md §3), so a name reads as two halves rather than a line and a
+ * stray word. Words break at spaces; Japanese and Chinese break between
+ * characters, and one long word does not break. Only a line still too wide is
+ * cut with an ellipsis.
+ */
+export function balancedLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  const whole = text.trim().replace(/\s+/g, " ");
+  if (!whole || ctx.measureText(whole).width <= maxWidth) return [whole];
+  const spaced = whole.includes(" ");
+  const parts = spaced ? whole.split(" ") : UNSPACED.test(whole) ? Array.from(whole) : [whole];
+  const join = (list: string[]) => list.join(spaced ? " " : "");
+  let best: string[] | null = null;
+  let bestWidth = Infinity;
+  for (let at = 1; at < parts.length; at += 1) {
+    const first = join(parts.slice(0, at));
+    const second = join(parts.slice(at));
+    const wider = Math.max(ctx.measureText(first).width, ctx.measureText(second).width);
+    // The most even pair; on a tie, the later break, which puts the longer
+    // line first, as a balanced heading sets it.
+    if (wider <= bestWidth) {
+      best = [first, second];
+      bestWidth = wider;
+    }
+  }
+  if (!best) return [fitText(ctx, whole, maxWidth)];
+  return best.map((line) => fitText(ctx, line, maxWidth));
+}
+
+/**
+ * Lines on one plate in the card colour (rule 6), `lineHeight` apart, the
+ * block centred on `y`: a name in two lines is one label, not two. One line
+ * draws exactly as `drawPlateText` does. Returns the plate.
+ */
+export function drawPlateLines(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  x: number,
+  y: number,
+  palette: ChartPalette,
+  {
+    align = "left",
+    weight = 400,
+    size = 12,
+    color = palette.ink,
+    lineHeight = size + 3,
+  }: {
+    align?: "left" | "center" | "right";
+    weight?: number;
+    size?: number;
+    color?: string;
+    lineHeight?: number;
+  } = {}
+): PlateBox {
+  ctx.save();
+  ctx.font = `${weight} ${size}px ${palette.sans}`;
+  const widths = lines.map((line) => ctx.measureText(line).width);
+  const width = Math.max(0, ...widths);
+  const block = size + (lines.length - 1) * lineHeight;
+  const left = align === "center" ? x - width / 2 : align === "right" ? x - width : x;
+  const box = {
+    left: left - PLATE_PAD_X,
+    top: y - block / 2 - PLATE_PAD_Y,
+    right: left + width + PLATE_PAD_X,
+    bottom: y + block / 2 + PLATE_PAD_Y,
+  };
+  ctx.beginPath();
+  ctx.roundRect(box.left, box.top, box.right - box.left, box.bottom - box.top, 4);
+  ctx.fillStyle = palette.card;
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  lines.forEach((line, index) => {
+    // Each line on the block's alignment: centred lines stay centred.
+    const lineLeft =
+      align === "center" ? x - widths[index] / 2 : align === "right" ? x - widths[index] : x;
+    ctx.fillText(line, lineLeft, y - block / 2 + size / 2 + index * lineHeight);
+  });
+  ctx.restore();
+  return box;
+}
+
 /**
  * Adds a monotone cubic through `points` (CSS px, sorted by x) to the current
  * path, from the first point, which the caller has moved or lined to. Every

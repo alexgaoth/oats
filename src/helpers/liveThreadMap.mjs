@@ -139,6 +139,40 @@ const LABEL_GAP_Y_PX = 2;
 
 const overlaps = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
 
+// Scripts written without spaces, broken between characters instead of words.
+const UNSPACED = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u;
+
+/**
+ * A label in two lines, broken where they come out most nearly even, or null
+ * when it cannot break (one word). Measured in characters, as the map
+ * estimates a label's width. On a tie the longer line goes first, as a
+ * balanced heading sets it. Japanese and Chinese break between characters.
+ *
+ * @param {string} label
+ * @returns {[string, string] | null}
+ */
+export function balancedSplit(label) {
+  const text = String(label ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+  const spaced = text.includes(" ");
+  const parts = spaced ? text.split(" ") : UNSPACED.test(text) ? Array.from(text) : [text];
+  if (parts.length < 2) return null;
+  const join = (list) => list.join(spaced ? " " : "");
+  let best = null;
+  let longest = Infinity;
+  for (let at = 1; at < parts.length; at += 1) {
+    const first = join(parts.slice(0, at));
+    const second = join(parts.slice(at));
+    const longer = Math.max(Array.from(first).length, Array.from(second).length);
+    if (longer <= longest) {
+      best = [first, second];
+      longest = longer;
+    }
+  }
+  return best;
+}
+
 /**
  * Which side of its dot each label goes on — or whether it fits at all.
  *
@@ -151,6 +185,11 @@ const overlaps = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a
  * than drawn over another (§9.4: never a wall of overlapping text) and stays in
  * the button's accessible name and title. Heavier subjects are placed first, so
  * when two compete the one the room spent longer on keeps its words.
+ *
+ * Before a label is hidden it tries the same places in two lines
+ * (`balancedSplit`): a topic name of four or five words is often too long for
+ * the room beside its dot and fits in half the width at twice the height. Such
+ * a placement says so with `lines`, the two lines to draw.
  *
  * `width`/`height` are the map's box in px. With no box yet (first render,
  * before it is measured) every label goes right, which is the old behaviour.
@@ -206,18 +245,53 @@ export function placeLabels(
       y1: box.y1 - plateY,
       y2: box.y2 + plateY,
     });
-    const fits = candidates.find(
-      (box) =>
-        box.x1 >= 0 &&
-        box.x2 <= width &&
-        box.y1 >= 0 &&
-        box.y2 <= height &&
-        !placed.some((other) => overlaps(plate(box), other)) &&
-        !dots.some((other) => other.id !== point.id && overlaps(plate(box), other))
-    );
+    const free = (box) =>
+      box.x1 >= 0 &&
+      box.x2 <= width &&
+      box.y1 >= 0 &&
+      box.y2 <= height &&
+      !placed.some((other) => overlaps(plate(box), other)) &&
+      !dots.some((other) => other.id !== point.id && overlaps(plate(box), other));
+    let fits = candidates.find(free);
+    // No room on one line anywhere: the same places, in two lines.
+    const lines = fits ? null : balancedSplit(point.label);
+    if (lines) {
+      const w2 = Math.max(...lines.map((line) => Array.from(line).length)) * charPx;
+      const h2 = LABEL_H_PX * 2;
+      const twoSpans = [
+        { align: "center", x1: dot.cx - w2 / 2 },
+        { align: "end", x1: dot.cx + dot.half - w2 },
+        { align: "start", x1: dot.cx - dot.half },
+      ];
+      fits = [
+        {
+          side: "right",
+          align: "center",
+          x1: dot.cx + dot.half + LABEL_GAP_PX,
+          y1: dot.cy - h2 / 2,
+          y2: dot.cy + h2 / 2,
+        },
+        {
+          side: "left",
+          align: "center",
+          x1: dot.cx - dot.half - LABEL_GAP_PX - w2,
+          y1: dot.cy - h2 / 2,
+          y2: dot.cy + h2 / 2,
+        },
+        ...twoSpans.map((span) => ({ side: "above", ...span, y1: above - h2, y2: above })),
+        ...twoSpans.map((span) => ({ side: "below", ...span, y1: below, y2: below + h2 })),
+      ]
+        .map((box) => ({ ...box, x2: box.x1 + w2 }))
+        .find(free);
+    }
     if (fits) {
       placed.push(fits);
-      result.set(point.id, { side: fits.side, align: fits.align, hidden: false });
+      result.set(point.id, {
+        side: fits.side,
+        align: fits.align,
+        hidden: false,
+        ...(lines && fits ? { lines } : {}),
+      });
     } else {
       result.set(point.id, { side: "right", align: "center", hidden: true });
     }

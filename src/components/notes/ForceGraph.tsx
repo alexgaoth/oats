@@ -22,7 +22,9 @@ import {
 import type { DragLifecycle, GraphEdge, GraphNode, SimNode } from "./graphPhysics";
 import {
   CHART,
+  balancedLines,
   ditherFill,
+  drawPlateLines,
   drawPlateText,
   fitText,
   subscribeChartPalette,
@@ -81,8 +83,10 @@ const EDGE_GAP = 3;
 // Under a disc, the gap between its rim and its label's plate.
 const LABEL_GAP = 4;
 // A label: 12 px, on a plate 4 px wider each side and 3 px taller each way, as
-// `drawPlateText` draws it, so a label can be placed before it is drawn.
+// `drawPlateText` draws it, so a label can be placed before it is drawn. A
+// label in two lines has them this far apart, as `drawPlateLines` sets them.
 const LABEL_SIZE = 12;
+const LABEL_LINE = LABEL_SIZE + 3;
 const PLATE_PAD_X = 4;
 const PLATE_PAD_Y = 3;
 
@@ -92,13 +96,18 @@ const PLATE_PAD_Y = 3;
 // own token (DESIGN.md §3).
 type Palette = ChartPalette;
 
-/** The plate a label of `width` centred on (x, y) takes. */
-function plateBox(x: number, y: number, width: number): PlateBox {
+/** The height of a label's text in `lines` lines. */
+function textBlock(lines: number): number {
+  return LABEL_SIZE + (lines - 1) * LABEL_LINE;
+}
+
+/** The plate a label of `width`, in `lines` lines, centred on (x, y) takes. */
+function plateBox(x: number, y: number, width: number, lines = 1): PlateBox {
   return {
     left: x - width / 2 - PLATE_PAD_X,
     right: x + width / 2 + PLATE_PAD_X,
-    top: y - LABEL_SIZE / 2 - PLATE_PAD_Y,
-    bottom: y + LABEL_SIZE / 2 + PLATE_PAD_Y,
+    top: y - textBlock(lines) / 2 - PLATE_PAD_Y,
+    bottom: y + textBlock(lines) / 2 + PLATE_PAD_Y,
   };
 }
 
@@ -171,7 +180,9 @@ interface EdgePair {
 
 interface PlacedLabel {
   id: number;
+  /** What it says on one line; in two, both lines joined. */
   text: string;
+  lines: string[];
   x: number;
   y: number;
   box: PlateBox;
@@ -273,6 +284,15 @@ function paintLabels(
   // the page in a conversation's Connections tab.
   const plated = surface === palette.card ? palette : { ...palette, card: surface };
   for (const label of labels) {
+    if (label.lines.length > 1) {
+      drawPlateLines(ctx, label.lines, label.x, label.y, plated, {
+        align: "center",
+        color,
+        size: LABEL_SIZE,
+        lineHeight: LABEL_LINE,
+      });
+      continue;
+    }
     drawPlateText(ctx, label.text, label.x, label.y, plated, {
       align: "center",
       color,
@@ -287,33 +307,73 @@ function labelWidth(canvasWidth: number): number {
 }
 
 /**
+ * The widest a line of a label in two lines may run: a little wider than one
+ * line may, so the five words a topic name runs to (48 characters at most,
+ * `topicNaming.mjs`) fit in two lines of the reading column's graph.
+ */
+function wrappedLabelWidth(canvasWidth: number): number {
+  return Math.min(200, Math.max(120, canvasWidth / 4));
+}
+
+/**
  * Where a node's label goes: under its disc by preference, above if that is
  * where the room is, always held inside the canvas so it is never cut at the
- * card's edge. Returns both candidates, best first; a candidate that would
- * leave the canvas vertically is left out.
+ * card's edge. Returns the candidates, best first; a candidate that would
+ * leave the canvas is left out.
+ *
+ * With `wrap` (a conversation's topics), a name longer than a label's width
+ * takes two lines before it is ever cut (`balancedLines`), and a label may sit
+ * beside its disc too, where a crowded graph often has room left. Without it
+ * (the board's conversation titles) a label is one line, cut to fit, as it
+ * always was.
  */
 function labelCandidates(
   ctx: CanvasRenderingContext2D,
   node: SimNode,
   width: number,
-  height: number
+  height: number,
+  wrap = false
 ): PlacedLabel[] {
-  const text = fitText(ctx, node.label, labelWidth(width));
-  const textWidth = ctx.measureText(text).width;
-  const half = textWidth / 2 + PLATE_PAD_X + 2;
-  const x = Math.min(width - half, Math.max(half, node.x));
-  const offset = node.radius + LABEL_GAP + LABEL_SIZE / 2 + 3;
+  const max = labelWidth(width);
+  const cut = fitText(ctx, node.label, max);
+  // What the label can say, best first: the whole name; then, only for a name
+  // that two lines hold and one does not, the same name cut to one line.
+  const sayings =
+    wrap && cut !== node.label
+      ? [balancedLines(ctx, node.label, wrappedLabelWidth(width)), [cut]]
+      : [[cut]];
   const out: PlacedLabel[] = [];
-  for (const y of [node.y + offset, node.y - offset]) {
-    const box = plateBox(x, y, textWidth);
-    if (box.top < 1 || box.bottom > height - 1) continue;
-    out.push({ id: node.id, text, x, y, box });
+  for (const lines of sayings) {
+    const text = lines.join(" ");
+    const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
+    const half = textWidth / 2 + PLATE_PAD_X + 2;
+    const x = Math.min(width - half, Math.max(half, node.x));
+    const offset = node.radius + LABEL_GAP + textBlock(lines.length) / 2 + PLATE_PAD_Y;
+    for (const y of [node.y + offset, node.y - offset]) {
+      const box = plateBox(x, y, textWidth, lines.length);
+      if (box.top < 1 || box.bottom > height - 1) continue;
+      out.push({ id: node.id, text, lines, x, y, box });
+    }
+    if (!wrap) continue;
+    const reach = node.radius + LABEL_GAP + PLATE_PAD_X + textWidth / 2;
+    // Beside the disc, right then left.
+    for (const beside of [node.x + reach, node.x - reach]) {
+      const box = plateBox(beside, node.y, textWidth, lines.length);
+      if (box.left < 1 || box.right > width - 1 || box.top < 1 || box.bottom > height - 1) {
+        continue;
+      }
+      out.push({ id: node.id, text, lines, x: beside, y: node.y, box });
+    }
   }
   if (!out.length) {
     // A disc hard against the top or bottom: the label sits inside the canvas
     // beside it rather than off the edge.
+    const textWidth = ctx.measureText(cut).width;
+    const half = textWidth / 2 + PLATE_PAD_X + 2;
+    const x = Math.min(width - half, Math.max(half, node.x));
+    const offset = node.radius + LABEL_GAP + LABEL_SIZE / 2 + PLATE_PAD_Y;
     const y = Math.min(height - LABEL_SIZE, Math.max(LABEL_SIZE, node.y + offset));
-    out.push({ id: node.id, text, x, y, box: plateBox(x, y, textWidth) });
+    out.push({ id: node.id, text: cut, lines: [cut], x, y, box: plateBox(x, y, textWidth) });
   }
   return out;
 }
@@ -329,14 +389,15 @@ function placeLabels(
   nodes: SimNode[],
   width: number,
   height: number,
-  palette: Palette
+  palette: Palette,
+  wrap: boolean
 ): Map<number, PlacedLabel> {
   ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
   const placed = new Map<number, PlacedLabel>();
   const claimed: PlateBox[] = [];
   const byImportance = [...nodes].sort((a, b) => b.radius - a.radius || a.id - b.id);
   for (const node of byImportance) {
-    for (const candidate of labelCandidates(ctx, node, width, height)) {
+    for (const candidate of labelCandidates(ctx, node, width, height, wrap)) {
       if (overlapsNode(candidate.box, nodes, node.id)) continue;
       if (claimed.some((box) => boxesOverlap(candidate.box, box))) continue;
       placed.set(node.id, candidate);
@@ -361,6 +422,7 @@ export default function ForceGraph<TNode extends GraphNode>({
   onBackgroundPress,
   surface = "background",
   roving = false,
+  wrapLabels = false,
   "aria-label": ariaLabel,
 }: {
   nodes: TNode[];
@@ -383,6 +445,8 @@ export default function ForceGraph<TNode extends GraphNode>({
   surface?: "background" | "card";
   /** One tab stop for the whole graph, with the arrow keys between nodes. */
   roving?: boolean;
+  /** A label too long for one line takes two, and may sit beside its disc. */
+  wrapLabels?: boolean;
   "aria-label"?: string;
 }) {
   const { t } = useTranslation();
@@ -516,7 +580,7 @@ export default function ForceGraph<TNode extends GraphNode>({
       scene = {
         byId,
         pairs,
-        labels: placeLabels(ctx, nodes, size.width, size.height, palette),
+        labels: placeLabels(ctx, nodes, size.width, size.height, palette, wrapLabels),
         layers: new Map(),
       };
       sceneRef.current = scene;
@@ -594,7 +658,9 @@ export default function ForceGraph<TNode extends GraphNode>({
     // no word, and the hidden one comes back when the pointer moves on.
     ctx.font = `400 ${LABEL_SIZE}px ${palette.sans}`;
     const named = focusNodes.map(
-      (node) => scene.labels.get(node.id) ?? labelCandidates(ctx, node, size.width, size.height)[0]
+      (node) =>
+        scene.labels.get(node.id) ??
+        labelCandidates(ctx, node, size.width, size.height, wrapLabels)[0]
     );
     for (const label of named) {
       if (scene.labels.get(label.id) === label) continue;
@@ -604,7 +670,7 @@ export default function ForceGraph<TNode extends GraphNode>({
       }
     }
     paintLabels(ctx, named, palette.ink, palette, plate);
-  }, [edges, size, palette, surface, currentHighlight]);
+  }, [edges, size, palette, surface, currentHighlight, wrapLabels]);
 
   // The running settle captured `draw` once, so a hover during a settle had its
   // highlight painted by React and immediately overwritten by the next tick's
