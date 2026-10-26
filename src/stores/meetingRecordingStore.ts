@@ -25,6 +25,7 @@ import {
 } from "../utils/transcriptSpeakerState";
 import { ConversationAideSession } from "../helpers/conversationAide";
 import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
+import { namedTopicSnapshot, observeTopics, startTopicNaming } from "./topicNamingRunner";
 import { AGENT_RUNS_PER_RECORDING } from "../helpers/contextCheck.mjs";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
@@ -655,9 +656,9 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
           // the next utterance, which may be a long pause away.
           ...(conversationTopicTracker
             ? {
-                topicSnapshot: conversationTopicTracker.snapshot(
-                  Date.now()
-                ) as ConversationTopicSnapshot,
+                topicSnapshot: namedTopicSnapshot(
+                  conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
+                ),
               }
             : {}),
         });
@@ -734,7 +735,11 @@ function trackConversationTopic(segment: TranscriptSegment) {
   });
   // The tracker is dependency-free ESM (so node:test can import it without a
   // TypeScript build), which is why its output is asserted at this boundary.
-  const snapshot = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
+  const tracked = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
+  // The writing model names topics as they grow, when there is one
+  // (topicNamingRunner.ts); what is published carries its names.
+  observeTopics(tracked, useMeetingRecordingStore.getState().segments);
+  const snapshot = namedTopicSnapshot(tracked);
   useMeetingRecordingStore.setState({
     // Already computed on the line above for the suggestions; publishing it
     // costs nothing and is what the flow card draws.
@@ -744,6 +749,17 @@ function trackConversationTopic(segment: TranscriptSegment) {
       snapshot,
       history: conversationHistory,
     }) as ConversationSuggestion[],
+  });
+}
+
+// A topic's name from the writing model arrived: the flow card shows it now,
+// not at the next turn, which may be a long pause away.
+function publishTopicNames() {
+  if (!conversationTopicTracker || !useMeetingRecordingStore.getState().isRecording) return;
+  useMeetingRecordingStore.setState({
+    topicSnapshot: namedTopicSnapshot(
+      conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
+    ),
   });
 }
 
@@ -846,7 +862,9 @@ function flushTranscriptCheckpoint() {
   const serialized = serializeTranscriptSegments(state.segments);
   if (serialized === checkpointLastWritten) return;
   const attemptedCount = state.segments.length;
-  const topics = conversationTopicTracker?.snapshot(Date.now());
+  const topics = conversationTopicTracker
+    ? namedTopicSnapshot(conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot)
+    : undefined;
   // With the words, so a crash keeps the loudness up to the last turn written.
   const loudness = sittingLoudness();
   // The result is read now instead of thrown away with `void`.
@@ -906,9 +924,11 @@ function stopTranscriptCheckpoints() {
  */
 export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null {
   if (!conversationTopicTracker) return null;
-  return conversationTopicTracker.snapshot(Date.now(), {
-    final: true,
-  }) as ConversationTopicSnapshot;
+  return namedTopicSnapshot(
+    conversationTopicTracker.snapshot(Date.now(), {
+      final: true,
+    }) as ConversationTopicSnapshot
+  );
 }
 
 async function stopConversationAide() {
@@ -1368,6 +1388,8 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // set intersection per utterance. The tracker deliberately outlives the stop so
   // the final snapshot can still be read and saved onto the note.
   conversationTopicTracker = new ConversationTopicTracker();
+  // Names from the writing model, when one is chosen; none is sent otherwise.
+  void startTopicNaming(publishTopicNames);
   // The snapshot too: it is published only when an utterance lands, so until
   // the first one the flow card on the recording screen would otherwise draw
   // the previous conversation's topics as if they were this one's.

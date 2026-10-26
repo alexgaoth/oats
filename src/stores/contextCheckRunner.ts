@@ -1,8 +1,5 @@
 import reasoningService from "../services/ReasoningService";
-import { getSettings, selectResolvedNoteFormatting } from "./settingsStore";
-import { currentWritingRoute } from "./conversationGroupSortStore";
-import { localSummaryModelDownloaded } from "../hooks/useSummaryReadiness";
-import { summaryReadiness } from "../utils/summaryReadiness";
+import { currentWritingRoute, writingModelReady } from "./conversationGroupSortStore";
 import {
   CHECK_SYSTEM_PROMPT,
   MAX_PASSAGES,
@@ -36,23 +33,6 @@ export interface ContextCheckInput {
   reply: string;
   outcome: string;
   noteId: number | null;
-}
-
-/** Whether the writing model can answer now: chosen, and on disk if local. */
-async function writingModelReady(): Promise<boolean> {
-  if (!currentWritingRoute()) return false;
-  const noteFormatting = selectResolvedNoteFormatting(getSettings());
-  const verdict = summaryReadiness({
-    mode: noteFormatting.mode,
-    model: noteFormatting.model,
-    remoteUrl: noteFormatting.remoteUrl,
-    localModelDownloaded: await localSummaryModelDownloaded(
-      noteFormatting.mode,
-      noteFormatting.model
-    ),
-  });
-  // Unknown (null) is let through: the call itself will say.
-  return verdict === "ready" || verdict === null;
 }
 
 function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {

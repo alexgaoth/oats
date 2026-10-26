@@ -28,6 +28,7 @@
 // and a jump forward has none.
 
 import { judgeDemoCheck } from "./context.mjs";
+import { demoTopicName } from "./topicNames.mjs";
 import {
   ROOM_FLOOR,
   createRoom,
@@ -206,6 +207,12 @@ export function createReplay({ main, fixture, options = {} }) {
     // The context check's judge (`check=1`, context.mjs).
     if (/check what was said in a meeting/i.test(prompt)) {
       return { text: judgeDemoCheck(text), delayMs: 1200 };
+    }
+    // A topic's name (`topicNaming.mjs`, topicNames.mjs), while recording and
+    // at Finish.
+    if (/name one topic of a recorded conversation/i.test(prompt)) {
+      const name = demoTopicName(text);
+      return name ? { text: name, delayMs: 800 } : null;
     }
     if (/sort conversations into groups/i.test(prompt)) {
       const personal = /\b(weekend|holiday|trip|family|flat|landlord|rent|kids|birthday)\b/i;

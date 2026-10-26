@@ -131,6 +131,27 @@ export function currentWritingRoute(): WritingRoute | null {
   };
 }
 
+/**
+ * Whether the writing model can answer now: chosen, and on disk if it runs on
+ * this computer. What the context check and the topic names ask before every
+ * request, so neither sends anything a summary would not.
+ */
+export async function writingModelReady(): Promise<boolean> {
+  if (!currentWritingRoute()) return false;
+  const noteFormatting = selectResolvedNoteFormatting(getSettings());
+  const verdict = summaryReadiness({
+    mode: noteFormatting.mode,
+    model: noteFormatting.model,
+    remoteUrl: noteFormatting.remoteUrl,
+    localModelDownloaded: await localSummaryModelDownloaded(
+      noteFormatting.mode,
+      noteFormatting.model
+    ),
+  });
+  // Unknown (null) is let through: the call itself will say.
+  return verdict === "ready" || verdict === null;
+}
+
 // --- Sharing the model with the summary.
 //
 // On this computer the writing model answers one request at a time
