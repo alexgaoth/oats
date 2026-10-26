@@ -1195,6 +1195,7 @@ export {
   aggregate,
   amiMeetingIds,
   assignment,
+  createEmbedder,
   demoConversations,
   judgeRatings,
   labelFlaws,
