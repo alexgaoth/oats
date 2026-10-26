@@ -63,6 +63,22 @@ in the background only by a model on this computer or the user's own server.
 With a cloud provider selected, they are not sent: they may have been
 summarized on this computer, before that provider was chosen.
 
+Naming a conversation's topics uses the same writing model by the same route,
+so it adds no destination. Topics are always found and named on this computer;
+when a writing model is chosen and ready, it gives each topic a better name.
+It gets one short request per topic when the topic holds 40 words, again each
+time the topic has grown two and a half times (100, 250, 625 words, and so
+on), and at the end for a topic that is new or changed since: the names the
+other topics already have, and at most 3,000 characters of what was said on
+that topic (`src/helpers/topicNaming.mjs`), never audio and never the rest of
+the transcript. One request is out at a time. With a model on this computer,
+nothing leaves (and when the question cards use a classifier model of their
+own, the names wait for the end, so the two models do not take turns loading).
+With a cloud provider selected, these requests go to the provider during the
+conversation, and the sidebar counts them like any renderer request. With no
+writing model, or one that is not ready, nothing is sent and the topics keep
+their on-device names (`src/stores/topicNamingRunner.ts`).
+
 The context check (off by default, Settings › Connections) uses the same
 writing model by the same route, so it adds no destination either. When a
 question gets a hedged answer or an "I don't know", the model gets one short

@@ -204,6 +204,11 @@ where the main process and the microphone stand:
   the AnalyserNode reports the replayed room's level. The listening ring, the
   live contour and the loudness kept at Finish are the app's own measurement.
 - Mark is pressed with the M key.
+- The local model names the topics as they grow, and once more at Finish
+  (`src/helpers/topicNaming.mjs`): a stub (`harness/topicNames.mjs`) reads the
+  words sent for a topic and answers with the review's names for its eight
+  topics ("Launch date move", "SSO login with SAML", and so on). A topic with
+  no subject it knows keeps its on-device name.
 - After Stop, main's half follows: the turn being said is transcribed, the
   speaker pass reports the voices (`conversation-speakers`), and the local model
   answers the summary action with the sample's title and summary. Then the

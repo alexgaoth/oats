@@ -165,6 +165,7 @@ import { getCachedPlatform } from "../utils/platform";
 import { ariaKeyShortcuts, formatHotkey } from "../utils/hotkeyLabel";
 import { initializeActions } from "../stores/actionStore";
 import { runBackgroundAction, useActionProcessingStore } from "../stores/actionProcessingStore";
+import { nameFinalTopics } from "../stores/topicNamingRunner";
 import { useSummaryReadiness } from "../hooks/useSummaryReadiness";
 import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
@@ -640,6 +641,10 @@ function ConversationSurface() {
       } finally {
         finishSaved();
       }
+      // The writing model's last names for the topics, for the record. With a
+      // model on this computer they go before the summary, which would
+      // otherwise hold them behind it (topicNamingRunner.ts).
+      await nameFinalTopics(recordingNoteId, topics, state.segments);
       await summarizeConversation(recordingNoteId, finalTranscript, t, {
         allowTitleGeneration: true,
       });
