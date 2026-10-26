@@ -81,8 +81,8 @@ function record(lines, options) {
 
 // ------------------------------------------------------------------ words
 
-// What Alex's real conversation was labelled with ("wait it's", "aws i'm",
-// "couldn't let"), and the plural strip that cut "that's" to "that'".
+// What the first tracker put in labels: contractions, fillers, and the
+// plural strip that cut "that's" to "that'".
 test("content words leave out contractions, fillers and bare numbers", () => {
   assert.deepEqual(contentWords("So yeah, I think the pricing model is broken"), [
     "pricing",
@@ -92,9 +92,10 @@ test("content words leave out contractions, fillers and bare numbers", () => {
   assert.deepEqual(contentWords("Yeah. Okay, sure. Mm-hmm, uh-huh."), []);
   assert.deepEqual(contentWords("Wait, it's, I'm, you're, couldn't, I'll, can't, that's"), []);
   assert.deepEqual(contentWords("It’s fine, we’re not, that’s it"), []);
-  assert.deepEqual(contentWords("connect to port 800 at 2.5 seconds"), [
-    "connect",
-    "port",
+  assert.deepEqual(contentWords("restart the router at 40 past, for 2.5 seconds"), [
+    "restart",
+    "router",
+    "past",
     "second",
   ]);
 });
@@ -113,7 +114,7 @@ test("two-letter names survive and two-letter function words do not", () => {
 // ------------------------------------------------------------------ labels
 
 // The first tracker joined the two most frequent words, in the order first
-// said ("wait it's", "connect 800"). A label is now a phrase the room said.
+// said, whatever they were. A label is now a phrase the room said.
 test("a label is a phrase somebody said, not two frequent words joined", () => {
   const label = topicLabel(PRICING);
   assert.equal(label, "enterprise pricing");
@@ -136,13 +137,13 @@ test("a phrase people repeat beats each of its words", () => {
 test("a label is never a filler, a contraction or a number", () => {
   const lines = [
     "Wait, it's, I mean, I'm not sure, wait.",
-    "Wait, wait, it's 800, it's 800 for the AWS bill.",
-    "I'm saying the AWS bill is 800, you know.",
-    "Couldn't we, I don't know, wait, cut the AWS bill?",
-    "Yeah, it's the AWS bill again, I'm sorry.",
+    "Wait, wait, it's 900, it's 900 for the hosting bill.",
+    "I'm saying the hosting bill is 900, you know.",
+    "Couldn't we, I don't know, wait, cut the hosting bill?",
+    "Yeah, it's the hosting bill again, I'm sorry.",
   ];
   const label = topicLabel(lines);
-  assert.equal(label, "AWS bill");
+  assert.equal(label, "hosting bill");
   for (const candidate of labelCandidates(lines, { limit: 10 })) {
     assert.doesNotMatch(candidate.text, /'|^\d+$|\bwait\b|\bit's\b|\bi'm\b/i);
   }
