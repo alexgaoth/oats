@@ -303,87 +303,39 @@
       "nodes": [
         {
           "id": 1,
-          "label": "viewing saturday",
-          "words": ["saturday", "viewing", "alder", "eleven", "flat", "leo", "street", "available"],
-          "durationMs": 29412,
+          "label": "rent",
+          "words": ["rent", "saturday", "move-in", "date", "bike", "room", "viewing", "alder"],
+          "durationMs": 115261,
           "utteranceIds": [
             "seg-muzxvpg8-1",
             "seg-muzxvpg8-2",
             "seg-muzxvpg8-3",
             "seg-muzxvpg8-4",
             "seg-muzxvpg8-5",
-            "seg-muzxvpg8-6"
-          ],
-          "firstAt": 1791488402972,
-          "lastAt": 1791488432384,
-          "returns": 0,
-          "state": "resolved"
-        },
-        {
-          "id": 2,
-          "label": "rent electricity",
-          "words": [
-            "rent",
-            "electricity",
-            "hundred",
-            "month",
-            "twelve",
-            "around",
-            "heating",
-            "include"
-          ],
-          "durationMs": 15729,
-          "utteranceIds": ["seg-muzxvpg8-7", "seg-muzxvpg8-8", "seg-muzxvpg8-9", "seg-muzxvpg8-10"],
-          "firstAt": 1791488437327,
-          "lastAt": 1791488453056,
-          "returns": 0,
-          "state": "resolved"
-        },
-        {
-          "id": 3,
-          "label": "deposit rent",
-          "words": ["deposit", "rent", "six", "week", "bike", "cycle", "fine", "held"],
-          "durationMs": 11682,
-          "utteranceIds": ["seg-muzxvpg8-11", "seg-muzxvpg8-12", "seg-muzxvpg8-13"],
-          "firstAt": 1791488457330,
-          "lastAt": 1791488469012,
-          "returns": 0,
-          "state": "open"
-        },
-        {
-          "id": 4,
-          "label": "bike room",
-          "words": ["bike", "room", "basement", "building", "check", "flat", "four", "i'll"],
-          "durationMs": 15219,
-          "utteranceIds": ["seg-muzxvpg8-14", "seg-muzxvpg8-15", "seg-muzxvpg8-17"],
-          "firstAt": 1791488475740,
-          "lastAt": 1791488490959,
-          "returns": 0,
-          "state": "open"
-        },
-        {
-          "id": 5,
-          "label": "date landlord",
-          "words": ["date", "landlord", "move-in", "accept", "early", "end", "first", "later"],
-          "durationMs": 22705,
-          "utteranceIds": [
+            "seg-muzxvpg8-6",
+            "seg-muzxvpg8-7",
+            "seg-muzxvpg8-8",
+            "seg-muzxvpg8-9",
+            "seg-muzxvpg8-10",
+            "seg-muzxvpg8-11",
+            "seg-muzxvpg8-12",
+            "seg-muzxvpg8-13",
+            "seg-muzxvpg8-14",
+            "seg-muzxvpg8-15",
+            "seg-muzxvpg8-16",
+            "seg-muzxvpg8-17",
             "seg-muzxvpg8-18",
             "seg-muzxvpg8-19",
             "seg-muzxvpg8-20",
             "seg-muzxvpg8-21"
           ],
-          "firstAt": 1791488495528,
+          "firstAt": 1791488402972,
           "lastAt": 1791488518233,
           "returns": 0,
           "state": "resolved"
         }
       ],
-      "edges": [
-        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
-        { "from": 2, "to": 3, "weight": 1, "kind": "new" },
-        { "from": 3, "to": 4, "weight": 1, "kind": "new" },
-        { "from": 4, "to": 5, "weight": 1, "kind": "new" }
-      ]
+      "edges": []
     },
     "conversation_marks": [],
     "conversation_loudness": {

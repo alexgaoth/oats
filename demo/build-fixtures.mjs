@@ -32,9 +32,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const fromApp = (file) => import(pathToFileURL(path.join(root, "src", file)).href);
 
-const { ConversationTopicTracker, contentWords, coverage } = await fromApp(
-  "helpers/conversationTopics.mjs"
-);
+const { ConversationTopicTracker, contentWords } = await fromApp("helpers/conversationTopics.mjs");
 const { ConversationAideSession, isQuestionCandidate } = await fromApp(
   "helpers/conversationAide.mjs"
 );
@@ -68,29 +66,6 @@ const CONFIDENCE_THRESHOLD = 0.75;
 const DEFAULT_TAIL_MS = 2600;
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-/**
- * How an utterance compares with the topics so far, for the report: its share
- * of words already in the current topic, in the turn being held, and in the
- * closest earlier topic (`conversationTopics.mjs` decides on these).
- */
-function topicScores(tracker, text) {
-  const words = contentWords(text);
-  if (words.length < tracker.minWords) return null;
-  const bag = new Set(words);
-  const current = tracker.topics.find((topic) => topic.id === tracker.currentId);
-  let best = null;
-  for (const topic of tracker.topics) {
-    if (topic.id === tracker.currentId) continue;
-    const score = coverage(bag, topic.bag);
-    if (!best || score > best.score) best = { id: topic.id, score };
-  }
-  return {
-    current: current ? coverage(bag, current.bag) : 0,
-    pending: tracker.pending ? coverage(bag, tracker.pending.bag) : null,
-    best,
-  };
-}
 
 /**
  * Record one script through the pipeline. Returns the fixture and a report.
@@ -219,7 +194,6 @@ async function record(script) {
     });
     live.push(stored);
     const before = tracker.currentId;
-    const scores = topicScores(tracker, stored.text);
     // The store's order: the aide first, then the topic tracker.
     aide.onFinalized(stored);
     const topic = tracker.onUtterance({ id: stored.id, text: stored.text, at: stored.timestamp });
@@ -228,8 +202,7 @@ async function record(script) {
       before,
       after: tracker.currentId,
       landed: topic?.id ?? null,
-      held: tracker.pending?.utterance?.id === stored.id,
-      scores,
+      words: contentWords(stored.text).length,
     });
     await flush();
   }
@@ -435,13 +408,10 @@ function printReport({
       : isQuestionCandidate(stored.text)
         ? "  [Q?]"
         : "";
-    const scores = move.scores
-      ? `c${move.scores.current.toFixed(2)}${
-          move.scores.pending != null ? ` p${move.scores.pending.toFixed(2)}` : ""
-        }${move.scores.best ? ` b${move.scores.best.id}:${move.scores.best.score.toFixed(2)}` : ""}${
-          move.held ? " HELD" : ""
-        }`
-      : "";
+    // The words the tracker reads in the turn, and the topic the live view
+    // had the room on once the turn landed (cuts are drawn live once enough
+    // speech has followed them, so a new topic shows a few turns late).
+    const scores = `w${move.words} live ${move.after ?? "-"}`;
     console.log(
       `${clockText(segment.startMs).padStart(5)} ${String(topic ?? "-").padStart(2)}${shift.padEnd(6)} ${scores.padEnd(24)} ${segment.speaker.padEnd(7)} ${segment.text}${flag}${
         arrivals[index + 1] && question

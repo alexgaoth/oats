@@ -277,18 +277,9 @@
       "nodes": [
         {
           "id": 1,
-          "label": "news briefing",
-          "words": [
-            "news",
-            "briefing",
-            "embargo",
-            "analyst",
-            "customer",
-            "exclusive",
-            "quote",
-            "tuesday"
-          ],
-          "durationMs": 40813,
+          "label": "webinar demo",
+          "words": ["webinar", "demo", "news", "embargo", "launch", "date", "analyst", "briefing"],
+          "durationMs": 110834,
           "utteranceIds": [
             "seg-mv1kgrdk-1",
             "seg-mv1kgrdk-2",
@@ -296,54 +287,27 @@
             "seg-mv1kgrdk-4",
             "seg-mv1kgrdk-5",
             "seg-mv1kgrdk-6",
-            "seg-mv1kgrdk-7"
-          ],
-          "firstAt": 1791586803413,
-          "lastAt": 1791586844226,
-          "returns": 0,
-          "state": "open"
-        },
-        {
-          "id": 2,
-          "label": "webinar demo",
-          "words": ["webinar", "demo", "signup", "thursday", "5th", "activity", "call", "every"],
-          "durationMs": 33670,
-          "utteranceIds": [
+            "seg-mv1kgrdk-7",
             "seg-mv1kgrdk-8",
             "seg-mv1kgrdk-9",
             "seg-mv1kgrdk-10",
             "seg-mv1kgrdk-11",
             "seg-mv1kgrdk-12",
             "seg-mv1kgrdk-13",
-            "seg-mv1kgrdk-14"
-          ],
-          "firstAt": 1791586851327,
-          "lastAt": 1791586884997,
-          "returns": 0,
-          "state": "resolved"
-        },
-        {
-          "id": 3,
-          "label": "launch date",
-          "words": ["date", "launch", "readines", "review", "decide", "depend", "i'll", "keep"],
-          "durationMs": 22964,
-          "utteranceIds": [
+            "seg-mv1kgrdk-14",
             "seg-mv1kgrdk-15",
             "seg-mv1kgrdk-16",
             "seg-mv1kgrdk-17",
             "seg-mv1kgrdk-18",
             "seg-mv1kgrdk-19"
           ],
-          "firstAt": 1791586891283,
+          "firstAt": 1791586803413,
           "lastAt": 1791586914247,
           "returns": 0,
-          "state": "open"
+          "state": "resolved"
         }
       ],
-      "edges": [
-        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
-        { "from": 2, "to": 3, "weight": 1, "kind": "new" }
-      ]
+      "edges": []
     },
     "conversation_marks": [],
     "conversation_loudness": {

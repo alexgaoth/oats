@@ -50,8 +50,12 @@ of `script/launch-readiness-review.mjs` explains each):
   Answered, "I don't know" or "no idea" is Unknown, "Hmm." is Unanswered. The
   last question gets no reply, so it stays Open. The builder fails if a reply
   lands near the aide's 8-second silence window.
-- A topic opens with two turns that share its nouns, and each longer turn in a
-  topic carries some of them. `--report` shows the tracker's scores per turn.
+- A topic is a stretch of turns that keep naming its nouns: the tracker
+  compares the words before each pause with the words after it, so a topic
+  needs a minute or so of talk, and a turn to new nouns starts the next one.
+  A two-minute call is usually one topic. A topic is named with the phrase
+  said most in it. `--report` shows, per turn, how many words the tracker
+  read and the topic the live view had the room on.
 
 ## Groups
 
