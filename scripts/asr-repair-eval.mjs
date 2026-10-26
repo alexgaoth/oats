@@ -131,7 +131,6 @@ function editErrors(reference, hypothesis) {
   const m = hypothesis.length;
   let previous = new Int32Array(m + 1);
   let current = new Int32Array(m + 1);
-  const sub = new Int32Array(m + 1);
   for (let j = 0; j <= m; j += 1) previous[j] = j;
   // Track insertions along the best path with a parallel table.
   let prevIns = new Int32Array(m + 1);
@@ -158,7 +157,6 @@ function editErrors(reference, hypothesis) {
     [previous, current] = [current, previous];
     [prevIns, curIns] = [curIns, prevIns];
   }
-  void sub;
   return { errors: previous[m], insertions: prevIns[m] };
 }
 
