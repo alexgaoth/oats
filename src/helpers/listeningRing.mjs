@@ -9,10 +9,12 @@
 // a hot one holds it open. So the level is read against this room, as the live
 // contour reads it: `levelScale` (conversationContour.mjs) learns the room's
 // loud speech from the 97th percentile of the recent level, and that fills the
-// ring. A level the speech segmenter would not call speech leaves the ring at
-// rest, so the dot is still while nobody speaks: under three times the room's
-// floor, or under 0.004 (speechSegmenter.mjs). Ordinary speech sits in the
-// middle of the range and moves the ring visibly.
+// ring. A level under the ring's rest leaves it still, so the dot is still
+// while nobody speaks: under three times the room's floor, or under 0.004.
+// Those were the speech segmenter's own levels until 2026-10-26; it now opens
+// at 2.5 times the floor, down to 0.001, so it transcribes far voices the ring
+// stays still for (speechSegmenter.mjs). Ordinary speech sits in the middle of
+// the range and moves the ring visibly.
 //
 // The floor for that rest is the 5th percentile, as in the segmenter, and not
 // `levelScale`'s 20th: a stretch of steady talk fills more than a fifth of a
@@ -36,9 +38,9 @@ export const RING_DEFAULTS = Object.freeze({
   minSamples: 10,
   /** The room's floor: this percentile of the history (the segmenter's 5th). */
   floorPercentile: 0.05,
-  /** Room tone reaches up to this multiple of the floor (the segmenter's 3). */
+  /** Room tone reaches up to this multiple of the floor (the segmenter's, until 2026-10-26). */
   restRatio: 3,
-  /** And never rests below this level (the segmenter's `minSpeechRms`). */
+  /** And never rests below this level (the segmenter's `minSpeechRms`, until 2026-10-26). */
   minRest: 0.004,
   /** The least level span from rest to full (`levelScale`'s minimum range). */
   minSpan: 0.01,

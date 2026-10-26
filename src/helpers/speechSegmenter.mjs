@@ -18,6 +18,26 @@
 // never hears a pause degrades to fixed cuts. The floor follows the quietest
 // recent frames, and speech is energy well above it.
 //
+// "Well above" has two levels (2026-10-26). A segment opens on a frame 2.5
+// times the floor (8 dB) and stays open while frames pass 1.5 times it
+// (3.5 dB). A voice across the table reaches a laptop a few dB over the room:
+// its loudest syllables pass the first level, its softer words only the
+// second. With one level — every frame three times the floor — such a voice
+// never opened a segment, or opened one on a syllable and lost it 400 ms later
+// as a cough. A real conversation in a room with steady background sound kept
+// segments over 19% of its 28 minutes. AMI meetings replayed at that room's
+// levels kept 23% of their speech, and keep 85% now; at a quiet room's levels,
+// 72% and 98% (scripts/room-replay.js, docs/dictation-accuracy.md).
+//
+// Held open through soft speech, a segment is also held through the soft gap
+// where one person stops and the next starts. So a segment longer than
+// `splitAfterMs` splits at a soft pause — `softPauseMs` under the opening
+// level, though the room is not quiet — at its quietest frame, once
+// `minSpeechMs` of speech follows it. Nothing is dropped at a split, and each
+// turn stays its own segment for the speaker pass. Unsplit, a lively meeting's
+// segments ran 14 s at the median: the speaker pass would give a whole
+// segment's words to one voice, and the question cards would wait for it.
+//
 // Every segment carries its exact sample offsets from the start of the
 // recording, so its words can be placed on the timeline — and matched to the
 // speakers a diarizer finds there — without guessing from wall-clock arrival.
@@ -28,15 +48,27 @@
 export const SAMPLE_RATE = 16000;
 const FRAME_MS = 20;
 const FRAME = (SAMPLE_RATE * FRAME_MS) / 1000;
+/** Frames of the closing pause kept after the last speech. */
+const TAIL_FRAMES = 5;
 
 export const SEGMENTER_DEFAULTS = Object.freeze({
   pauseMs: 400,
   minSpeechMs: 500,
   maxSegmentMs: 20_000,
-  /** Speech is this many times the room's floor (in RMS)… */
-  speechRatio: 3,
-  /** …and never quieter than this, so digital silence is not a floor of zero. */
-  minSpeechRms: 0.004,
+  /** A segment opens on a frame this many times the room's floor (in RMS)… */
+  speechRatio: 2.5,
+  /** …and holds while frames pass this many times it… */
+  holdRatio: 1.5,
+  /**
+   * …and neither level is under this (-60 dBFS), so digital silence is not a
+   * floor of zero. It was 0.004 (-48 dBFS), over a far voice on a quiet
+   * microphone: capture has no automatic gain (meetingRecordingStore.ts).
+   */
+  minSpeechRms: 0.001,
+  /** A segment this long splits at a soft pause, once speech follows it… */
+  splitAfterMs: 2000,
+  /** …a pause this long under the opening level. */
+  softPauseMs: 300,
   /** Frames of context kept before speech starts, so a soft onset is not clipped. */
   leadFrames: 8,
 });
@@ -58,17 +90,30 @@ export class SpeechSegmenter {
     this.frames = []; // { start, rms } of the open region, in samples
     this.speaking = false;
     this.speechFrames = 0;
-    this.quietRun = 0;
+    this.quietRun = 0; // frames in a row under the hold level
+    this.softRun = 0; // frames in a row under the opening level
+    this.splitAt = null; // the frame a soft pause would split the open segment at
+    this.speechAfterSplit = 0;
     this.floor = null; // RMS of the room when nobody is speaking
     this.recent = []; // recent frame RMS, for the floor
     this.buffer = []; // Int16Array pieces of the open segment
     this.segmentStart = null; // sample index the open segment starts at
   }
 
-  _isSpeech(rms) {
-    const { speechRatio, minSpeechRms } = this.options;
+  /** The level a frame must pass to be speech: to open a segment, or to hold one open. */
+  _threshold(open) {
+    const { speechRatio, holdRatio, minSpeechRms } = this.options;
     const floor = this.floor ?? minSpeechRms / speechRatio;
-    return rms > Math.max(minSpeechRms, floor * speechRatio);
+    return Math.max(minSpeechRms, floor * (open ? holdRatio : speechRatio));
+  }
+
+  /** The level speech must pass now: the opening level, or the hold level while open. */
+  get threshold() {
+    return this._threshold(this.speaking);
+  }
+
+  _isSpeech(rms, open = this.speaking) {
+    return rms > this._threshold(open);
   }
 
   _track(rms) {
@@ -111,7 +156,8 @@ export class SpeechSegmenter {
   }
 
   _frame(start, frame, rms, speech, out) {
-    const { pauseMs, minSpeechMs, maxSegmentMs, leadFrames } = this.options;
+    const { pauseMs, minSpeechMs, maxSegmentMs, splitAfterMs, softPauseMs, leadFrames } =
+      this.options;
     if (!this.speaking) {
       this.buffer.push(frame.slice());
       this.frames.push({ start, rms });
@@ -120,9 +166,10 @@ export class SpeechSegmenter {
       // "segment", which Whisper answers with a hallucinated "Thank you".
       if (this.floor === null) return;
       // Once the room is known — including on the frame that teaches it, when
-      // the whole opening is still held — speech starts at its first frame,
-      // with a short lead-in so the first syllable is not cut off.
-      const first = this.frames.findIndex((f) => this._isSpeech(f.rms));
+      // the whole opening is still held — speech starts at its first frame
+      // over the opening level, with a short lead-in so the first syllable is
+      // not cut off.
+      const first = this.frames.findIndex((f) => this._isSpeech(f.rms, false));
       if (first === -1) {
         const excess = this.frames.length - leadFrames;
         if (excess > 0) {
@@ -135,8 +182,9 @@ export class SpeechSegmenter {
       this.buffer = this.buffer.slice(from);
       this.frames = this.frames.slice(from);
       this.speaking = true;
-      this.speechFrames = this.frames.filter((f) => this._isSpeech(f.rms)).length;
+      this.speechFrames = this.frames.filter((f) => this._isSpeech(f.rms, true)).length;
       this.quietRun = 0;
+      this.softRun = 0;
       this.segmentStart = this.frames[0].start;
       return;
     }
@@ -152,12 +200,33 @@ export class SpeechSegmenter {
     if (this.quietRun * FRAME_MS >= pauseMs) {
       if (this.speechFrames * FRAME_MS >= minSpeechMs) {
         // Close at the start of the pause, keeping a little of it as tail.
-        const keep = this.frames.length - this.quietRun + Math.min(this.quietRun, 5);
+        const keep = this.frames.length - this.quietRun + Math.min(this.quietRun, TAIL_FRAMES);
         out.push(this._close(keep));
       } else {
         this._reset(); // a cough, a click: not a segment
       }
       return;
+    }
+    this.softRun = this._isSpeech(rms, false) ? 0 : this.softRun + 1;
+    if (this.softRun * FRAME_MS >= softPauseMs) {
+      // A soft pause in a long segment: its quietest frame is where to split,
+      // if somebody goes on. Until then nothing is cut, so the end of a turn is
+      // never left on its own to be thrown away as a cough.
+      let cut = this.frames.length - this.softRun;
+      for (let i = cut + 1; i < this.frames.length; i += 1) {
+        if (this.frames[i].rms < this.frames[cut].rms) cut = i;
+      }
+      if (cut * FRAME_MS >= splitAfterMs) {
+        this.splitAt = cut;
+        this.speechAfterSplit = 0;
+      }
+    } else if (this.splitAt !== null && speech) {
+      this.speechAfterSplit += 1;
+      if (this.speechAfterSplit * FRAME_MS >= minSpeechMs) {
+        // Somebody went on: one turn ends in the soft pause, the next starts there.
+        out.push(this._close(this.splitAt, true));
+        return;
+      }
     }
     if (lengthMs >= maxSegmentMs) {
       // A monologue: cut at the quietest frame of the last third, carrying the
@@ -175,7 +244,7 @@ export class SpeechSegmenter {
    * The segment still being spoken, as far as it has got — what a live partial
    * transcript reads (partialScheduler.mjs). Null while nobody is speaking.
    * `startSample` names the segment: the next one, a monologue's carry-over
-   * included, starts later.
+   * or a split turn included, starts later.
    *
    * @returns {{ startSample: number, startMs: number, speechMs: number,
    *   lengthMs: number } | null}
@@ -217,6 +286,9 @@ export class SpeechSegmenter {
       this.segmentStart = this.frames.length ? this.frames[0].start : endSample;
       this.speechFrames = this.frames.length;
       this.quietRun = 0;
+      this.softRun = 0;
+      this.splitAt = null;
+      this.speechAfterSplit = 0;
     } else {
       this._reset();
     }
@@ -227,6 +299,9 @@ export class SpeechSegmenter {
     this.speaking = false;
     this.speechFrames = 0;
     this.quietRun = 0;
+    this.softRun = 0;
+    this.splitAt = null;
+    this.speechAfterSplit = 0;
     this.buffer = [];
     this.frames = [];
     this.segmentStart = null;
