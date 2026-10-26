@@ -449,15 +449,17 @@ const SCALE = Object.freeze({
   narrowDepth: 0.9,
   narrowSegment: 30,
   narrowSmoothGaps: 1,
-  // While the conversation goes on, a cut is drawn once it can no longer
-  // move: a window of speech has followed it (a narrow one for a sharp turn)
-  // and it has stayed a cut for half that long. None is drawn before this
-  // many content words, and a slow turn only once the windows are this wide:
-  // windows of a few sentences dip on the same subject in other words.
+  // While the conversation goes on, a cut is drawn once it is sure: a span of
+  // speech has followed it (a narrow window for a sharp turn, at most
+  // `settleSpan` words for a slow one) and it has stayed a cut for half that
+  // long. None is drawn before this many content words, and a slow turn only
+  // once the windows are this wide: windows of a few sentences dip on the
+  // same subject in other words.
   settleWindows: 1,
   settlePersist: 0.5,
   settleMinWords: 100,
   settleWindowMin: 50,
+  settleSpan: 60,
 });
 
 // Window sizes move in steps of about 15%, so the similarities computed for
@@ -830,7 +832,9 @@ class ConversationTopicTracker {
       // often the same subject in other words.
       const sharp = Boolean(narrow) && narrow[cut] >= this.scale.narrowDepth;
       if (!sharp && window < this.scale.settleWindowMin) continue;
-      const span = sharp ? Math.min(window, this.scale.narrowWindow) : window;
+      const span = sharp
+        ? Math.min(window, this.scale.narrowWindow)
+        : Math.min(window, this.scale.settleSpan);
       if (
         total - this.startOf[cut] >= this.scale.settleWindows * span &&
         total - seen.get(id) >= this.scale.settlePersist * span
