@@ -691,6 +691,7 @@ function ConversationSurface() {
         seedSegments: parseSegments(note.transcript),
         seedMoments: note.conversation_marks,
         seedLoudness: note.conversation_loudness ?? null,
+        seedTopics: note.conversation_topics ?? null,
       });
     } finally {
       setStarting(false);

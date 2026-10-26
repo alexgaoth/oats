@@ -84,12 +84,15 @@ export class TopicNamer {
    *   settleMs?: number,
    *   maxSettleMs?: number,
    *   log?: (event: string, detail?: Record<string, unknown>) => void,
+   *   names?: Map<number, { name: string, utteranceIds?: unknown[] }> | null,
    * }} options
    *   `ask` sends one prompt to the writing model and resolves to its answer.
    *   `ready` says whether the model may be used now; nothing is sent when it
    *   says no. `onChange` is called when a topic's shown name changes, so the
    *   snapshot can be published again. `live` false names nothing while
-   *   recording, only at the end.
+   *   recording, only at the end. `names` are the names a continued
+   *   conversation's topics already have (`namesOf` its saved record): each
+   *   is kept as if it had been given here, by topic id while it still fits.
    */
   constructor({
     ask,
@@ -103,6 +106,7 @@ export class TopicNamer {
     settleMs = SETTLE_MS,
     maxSettleMs = MAX_SETTLE_MS,
     log = () => {},
+    names = null,
   }) {
     this.ask = ask;
     this.ready = ready;
@@ -116,8 +120,14 @@ export class TopicNamer {
     this.maxSettleMs = maxSettleMs;
     this.log = log;
 
-    /** @type {Map<number, { name: string, words: number, namings: number, utteranceIds: string[] }>} */
+    /** @type {Map<number, { name: string, words: number | null, namings: number, utteranceIds: string[] }>} */
     this.names = new Map();
+    for (const [id, record] of names ?? []) {
+      if (!record?.name) continue;
+      const utteranceIds = (Array.isArray(record.utteranceIds) ? record.utteranceIds : []).map(String);
+      // Its words are counted once the turns are known (`_index`).
+      this.names.set(id, { name: record.name, words: null, namings: 0, utteranceIds });
+    }
     /** @type {Map<number, { words: number, final: boolean }>} */
     this.failed = new Map();
     this.snapshot = null;
@@ -276,6 +286,11 @@ export class TopicNamer {
       this._byId = new Map();
       for (const segment of this.segments) {
         if (segment && segment.id != null) this._byId.set(String(segment.id), segment);
+      }
+      // A name the conversation already had is weighed by the words of the
+      // turns it was given for, as a name given here is.
+      for (const record of this.names.values()) {
+        if (record.words === null) record.words = this._words(record, this._byId) || null;
       }
     }
     return this._byId;

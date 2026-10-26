@@ -734,8 +734,65 @@ class ConversationTopicTracker {
   // utterance is placed at once. Nothing is held for the next turn, so reading
   // the graph never decides anything.
   onUtterance(utterance) {
+    if (!this._add(utterance)) return null;
+    this._update();
+    return this.topics.find((topic) => topic.id === this.currentId) ?? null;
+  }
+
+  // Reads the turns a conversation already holds into a new tracker, before
+  // its first new turn. Recording again within half an hour continues the
+  // conversation (`conversationResume.mjs`), so its topics, the record saved
+  // at Finish and the names the writing model gives them are every sitting's.
+  //
+  // In one pass, not turn by turn: fed one at a time, the 896 turns of a
+  // two-hour meeting took nine seconds, each one cutting and naming all that
+  // was said before it. The turns keep the times they were said at (a turn
+  // with none takes the time of the turn before it). They are cut with
+  // hindsight, as a finished conversation's record is (`snapshot` with
+  // `final`), and those cuts are settled: nobody is speaking in them now.
+  //
+  // `record` is the snapshot the conversation was saved with. A topic keeps
+  // the id it has there, so a name the writing model gave it, which is kept
+  // by topic id, still finds it.
+  seed(utterances, { record = null } = {}) {
+    const list = Array.isArray(utterances) ? utterances : [];
+    let at = list.find((utterance) => Number.isFinite(utterance?.at))?.at ?? this.now();
+    for (const utterance of list) {
+      if (Number.isFinite(utterance?.at)) at = utterance.at;
+      this._add({ ...utterance, at });
+    }
+    if (!this.utterances.length) return;
+    if (Array.isArray(record?.nodes)) {
+      const held = new Set(this.utterances.map((utterance) => utterance.id));
+      // `_publish` gives each topic the id most of its turns had.
+      this.topics = record.nodes
+        .filter((node) => Number.isInteger(node?.id) && Array.isArray(node.utteranceIds))
+        .map((node) => ({
+          id: node.id,
+          utteranceIds: node.utteranceIds.map(String).filter((id) => held.has(id)),
+        }));
+      for (const topic of this.topics) this.nextId = Math.max(this.nextId, topic.id + 1);
+    }
+    const { segment, wide, narrow, total } = this._depths();
+    const cuts = choosePauses({
+      startOf: this.startOf,
+      total,
+      wide,
+      narrow,
+      segment,
+      scale: this.scale,
+    });
+    for (const cut of cuts) {
+      const sharp = Boolean(narrow) && narrow[cut] >= this.scale.narrowDepth;
+      this.settledCuts.set(this.units[cut].id, sharp);
+    }
+    this._update();
+  }
+
+  // Adds one utterance's words. False when it has none.
+  _add(utterance) {
     const text = String(utterance?.text || "").trim();
-    if (!text) return null;
+    if (!text) return false;
     const tokens = tokenize(text);
     const keys = tokens.filter((token) => token.key).map((token) => token.key);
     const phrases = phrasesOf(tokens);
@@ -753,8 +810,7 @@ class ConversationTopicTracker {
       this.startOf.push(this.flat.length);
       for (const key of keys) this.flat.push(key);
     }
-    this._update();
-    return this.topics.find((topic) => topic.id === this.currentId) ?? null;
+    return true;
   }
 
   // Marks resolved the topic that contains a given utterance. Called when a
@@ -1321,6 +1377,21 @@ class ConversationTopicTracker {
   }
 }
 
+// The topics one sitting spoke on, for what is drawn while it is recorded. A
+// conversation recorded again within half an hour holds its earlier sittings
+// too (`seed`), and the record keeps them all; the recording screen draws
+// this sitting, as its clock and its contour do. A topic of an earlier
+// sitting is drawn once the room comes back to it. The same snapshot when
+// every topic was spoken on since `since`.
+function sittingTopics(snapshot, since) {
+  if (!snapshot || !Array.isArray(snapshot.nodes) || !Number.isFinite(since)) return snapshot;
+  const nodes = snapshot.nodes.filter((node) => node.lastAt >= since);
+  if (nodes.length === snapshot.nodes.length) return snapshot;
+  const kept = new Set(nodes.map((node) => node.id));
+  const edges = (snapshot.edges ?? []).filter((edge) => kept.has(edge.from) && kept.has(edge.to));
+  return { ...snapshot, nodes, edges };
+}
+
 export {
   ConversationTopicTracker,
   LABEL_SCORE,
@@ -1330,6 +1401,7 @@ export {
   labelCandidates,
   phrasesOf,
   rarity,
+  sittingTopics,
   tokenize,
   topicLabel,
 };

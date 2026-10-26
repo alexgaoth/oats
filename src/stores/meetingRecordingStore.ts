@@ -25,10 +25,16 @@ import {
 } from "../utils/transcriptSpeakerState";
 import { ConversationAideSession } from "../helpers/conversationAide";
 import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
-import { namedTopicSnapshot, observeTopics, startTopicNaming } from "./topicNamingRunner";
+import {
+  namedTopicSnapshot,
+  observeTopics,
+  readTopicSnapshot,
+  startTopicNaming,
+} from "./topicNamingRunner";
 import { AGENT_RUNS_PER_RECORDING } from "../helpers/contextCheck.mjs";
-import { ConversationTopicTracker } from "../helpers/conversationTopics";
+import { ConversationTopicTracker, sittingTopics } from "../helpers/conversationTopics";
 import { TopicVectorFeeder } from "../helpers/topicVectors.mjs";
+import { answeredQuestionTurns } from "../helpers/conversationGraph";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
 import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
@@ -107,7 +113,10 @@ interface MeetingRecordingState {
   // `topicSnapshot` instead; nothing on screen reads this list now.
   openThreads: OpenThread[];
   /** The live topic graph, republished on every finalized utterance and when a
-   *  question's answer resolves a topic. The conversation flow card draws it. */
+   *  question's answer resolves a topic. The conversation flow card draws it.
+   *  This sitting's topics only (`sittingTopics`): a continued conversation's
+   *  earlier topics are in the tracker and the record, not drawn here until
+   *  the room comes back to one. */
   topicSnapshot: ConversationTopicSnapshot | null;
   // What else is worth raising (DESIGN.md §9.6). Recomputed as the conversation
   // moves. The flow card shows the `adjacent` ones — subjects from earlier
@@ -654,18 +663,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
       // conversation has usually moved on to something else.
       if (card.state === "answered") {
         conversationTopicTracker?.resolveTopicForUtterance(card.id);
-        useMeetingRecordingStore.setState({
-          openThreads: (conversationTopicTracker?.openThreads(Date.now()) ?? []) as OpenThread[],
-          // Republished so the flow card shows the topic resolved now, not at
-          // the next utterance, which may be a long pause away.
-          ...(conversationTopicTracker
-            ? {
-                topicSnapshot: namedTopicSnapshot(
-                  conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
-                ),
-              }
-            : {}),
-        });
+        publishResolvedTopics();
       }
     },
     onCardRemoved: (cardId: string) => {
@@ -746,9 +744,9 @@ function trackConversationTopic(segment: TranscriptSegment) {
   observeTopics(tracked, useMeetingRecordingStore.getState().segments);
   const snapshot = namedTopicSnapshot(tracked);
   useMeetingRecordingStore.setState({
-    // Already computed on the line above for the suggestions; publishing it
-    // costs nothing and is what the flow card draws.
-    topicSnapshot: snapshot,
+    // Already computed on the line above for the suggestions; what the flow
+    // card draws is this sitting's part of it.
+    topicSnapshot: thisSitting(snapshot),
     openThreads: conversationTopicTracker.openThreads(Date.now()) as OpenThread[],
     suggestions: buildSuggestions({
       snapshot,
@@ -757,15 +755,66 @@ function trackConversationTopic(segment: TranscriptSegment) {
   });
 }
 
+// The topics of a named snapshot that the recording screen draws: this
+// sitting's (`sittingTopics`), as its clock and its contour count this sitting.
+function thisSitting(snapshot: ConversationTopicSnapshot): ConversationTopicSnapshot {
+  const startedAt = useMeetingRecordingStore.getState().recordingStartedAt;
+  return sittingTopics(snapshot, startedAt ?? Number.NaN) as ConversationTopicSnapshot;
+}
+
 // A topic's name from the writing model arrived: the flow card shows it now,
 // not at the next turn, which may be a long pause away.
 function publishTopicNames() {
   if (!conversationTopicTracker || !useMeetingRecordingStore.getState().isRecording) return;
   useMeetingRecordingStore.setState({
-    topicSnapshot: namedTopicSnapshot(
-      conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
+    topicSnapshot: thisSitting(
+      namedTopicSnapshot(conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot)
     ),
   });
+}
+
+// A topic was resolved: republished so the flow card shows it resolved now,
+// not at the next utterance, which may be a long pause away.
+function publishResolvedTopics() {
+  useMeetingRecordingStore.setState({
+    openThreads: (conversationTopicTracker?.openThreads(Date.now()) ?? []) as OpenThread[],
+    ...(conversationTopicTracker
+      ? {
+          topicSnapshot: thisSitting(
+            namedTopicSnapshot(
+              conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
+            )
+          ),
+        }
+      : {}),
+  });
+}
+
+// A continued conversation's earlier sittings answered questions, and each
+// closed the topic it was asked in. The tracker that closed them is gone, so
+// the new one reads them back from the stored question events, a moment after
+// the recording starts, and the record keeps those topics resolved.
+async function restoreResolvedTopics(
+  noteId: number | null,
+  tracker: InstanceType<typeof ConversationTopicTracker>
+) {
+  if (!noteId) return;
+  try {
+    const events = await window.electronAPI?.listConversationEvents?.(noteId);
+    // A newer recording has its own tracker by now.
+    if (tracker !== conversationTopicTracker || !Array.isArray(events)) return;
+    let resolved = false;
+    for (const id of answeredQuestionTurns(events)) {
+      if (tracker.resolveTopicForUtterance(id)) resolved = true;
+    }
+    if (resolved && useMeetingRecordingStore.getState().isRecording) publishResolvedTopics();
+  } catch (error) {
+    logger.info(
+      "Could not read a continued conversation's answered questions",
+      { error: (error as Error)?.message },
+      "conversation-aide"
+    );
+  }
 }
 
 // Topic snapshots of past conversations, loaded once when a recording starts.
@@ -1219,6 +1268,8 @@ export interface StartRecordingArgs {
   seedMoments?: unknown;
   /** The loudness a continued conversation already carries, stored form. */
   seedLoudness?: string | null;
+  /** The topics a continued conversation already carries, stored form. */
+  seedTopics?: string | null;
   diarizationEnabled?: boolean | null;
   expectedCount?: number | null;
   mode?: ConversationRecordingMode;
@@ -1401,8 +1452,23 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     embed: async (texts: string[]) => (await window.electronAPI?.embedTexts?.(texts)) ?? null,
     onChange: publishTopicNames,
   });
+  // A continued conversation is one conversation: the new tracker reads the
+  // earlier sittings' turns before this sitting's first, so the topics the
+  // checkpoints and Finish save, and the ones the writing model names, are the
+  // whole conversation's. Each topic keeps its saved id, which its name from
+  // the model is kept by.
+  const seedTopics = readTopicSnapshot(args.seedTopics);
+  if (seed.length) {
+    conversationTopicTracker.seed(
+      seed.map((segment) => ({ id: segment.id, text: segment.text, at: segment.timestamp })),
+      { record: seedTopics }
+    );
+    // Their meaning too, so the earlier topics are named as they were.
+    for (const segment of seed) topicVectors.observe(segment);
+    void restoreResolvedTopics(args.noteId, conversationTopicTracker);
+  }
   // Names from the writing model, when one is chosen; none is sent otherwise.
-  void startTopicNaming(publishTopicNames);
+  void startTopicNaming(publishTopicNames, seedTopics);
   // The snapshot too: it is published only when an utterance lands, so until
   // the first one the flow card on the recording screen would otherwise draw
   // the previous conversation's topics as if they were this one's.

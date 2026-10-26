@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+let answeredQuestionTurns;
 let buildConversationGraph;
 let questionConfidence;
 let responseReason;
@@ -9,6 +10,7 @@ let suggestionState;
 
 test.before(async () => {
   ({
+    answeredQuestionTurns,
     buildConversationGraph,
     questionConfidence,
     responseReason,
@@ -122,4 +124,26 @@ test("returns null for missing or invalid metadata", () => {
 test("handles a non-array input safely", () => {
   assert.deepEqual(buildConversationGraph(undefined), []);
   assert.deepEqual(buildConversationGraph(null), []);
+});
+
+// A continued conversation's new topic tracker reads these back to keep the
+// topics closed that the earlier sittings' answers closed.
+test("the turns of the answered questions, as their cards settled them", () => {
+  const events = [
+    event({ id: 1, segmentIds: ["seg-a-4"], metadata: { state: "answered" } }),
+    event({ id: 2, segmentIds: ["seg-a-9"], metadata: { state: "denied" } }),
+    event({ id: 3, segmentIds: ["seg-a-12"], metadata: { state: "asked" } }),
+    // The reply's reason is the classifier's; the card's outcome is on the question.
+    event({
+      id: 4,
+      kind: "response",
+      parentEventId: 2,
+      segmentIds: ["seg-a-10"],
+      metadata: { reason: "answered" },
+    }),
+    event({ id: 5, segmentIds: [7], metadata: { state: "answered" } }),
+    event({ id: 6, segmentIds: [], metadata: { state: "answered" } }),
+  ];
+  assert.deepEqual(answeredQuestionTurns(events), ["seg-a-4", "7"]);
+  assert.deepEqual(answeredQuestionTurns(null), []);
 });
