@@ -20,13 +20,13 @@
 //     (Unanswered). The last question is asked as the meeting breaks up and
 //     gets no reply (Open). First replies are short, so they land well inside
 //     the aide's eight seconds.
-//   - The topic tracker follows shared nouns (`conversationTopics.mjs`). A
-//     topic opens with two turns that share theirs; inside a topic every
-//     longer turn carries some of them; the room comes back to a topic by
-//     naming it. Asides that share no nouns with the next turn are folded
-//     into the topic they interrupt.
-//   - No "press": the tracker drops the final s of long words, and the label
-//     would read "pres". The announcement is about the news embargo.
+//   - The topic tracker reads windows of talk (`conversationTopics.mjs`): a
+//     topic is a stretch of turns that keep naming its nouns, the next one
+//     starts where the nouns change, and the room comes back to a topic by
+//     naming it again. A topic is named with the phrase said most in it
+//     ("launch date"), and an aside stays in the topic it interrupts. A
+//     return of under a minute can stay inside the topic around it (the
+//     "back to SSO" passage does).
 
 export default {
   id: "launch-readiness-review",

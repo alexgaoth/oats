@@ -3,12 +3,11 @@ const assert = require("node:assert/strict");
 
 let ConversationTopicTracker;
 let contentWords;
-let similarity;
 let topicLabel;
 let labelCandidates;
 
 test.before(async () => {
-  ({ ConversationTopicTracker, contentWords, similarity, topicLabel, labelCandidates } =
+  ({ ConversationTopicTracker, contentWords, topicLabel, labelCandidates } =
     await import("../../src/helpers/conversationTopics.mjs"));
 });
 
@@ -93,7 +92,11 @@ test("content words leave out contractions, fillers and bare numbers", () => {
   assert.deepEqual(contentWords("Yeah. Okay, sure. Mm-hmm, uh-huh."), []);
   assert.deepEqual(contentWords("Wait, it's, I'm, you're, couldn't, I'll, can't, that's"), []);
   assert.deepEqual(contentWords("It’s fine, we’re not, that’s it"), []);
-  assert.deepEqual(contentWords("connect to port 800 at 2.5 seconds"), ["connect", "port", "second"]);
+  assert.deepEqual(contentWords("connect to port 800 at 2.5 seconds"), [
+    "connect",
+    "port",
+    "second",
+  ]);
 });
 
 test("plurals fold together without cutting words that only end in s", () => {
@@ -105,15 +108,6 @@ test("plurals fold together without cutting words that only end in s", () => {
 
 test("two-letter names survive and two-letter function words do not", () => {
   assert.deepEqual(contentWords("We use AI for the UX of it"), ["ai", "ux"]);
-});
-
-test("similarity is symmetric, bounded, and zero against nothing", () => {
-  const a = new Set(["pricing", "model"]);
-  const b = new Set(["pricing", "model"]);
-  assert.equal(similarity(a, b), 1);
-  assert.equal(similarity(a, b), similarity(b, a));
-  assert.equal(similarity(a, new Set()), 0);
-  assert.ok(similarity(a, new Set(["pricing", "churn"])) < 1);
 });
 
 // ------------------------------------------------------------------ labels
@@ -272,7 +266,10 @@ test("a live topic appears once enough of it has been said", () => {
   });
   const { nodes } = tracker.snapshot(utterances.at(-1).at);
   assert.equal(nodes.length, 2);
-  assert.match(nodes.find((node) => node.state === "live").label, /^(research engineer|interview loop)$/);
+  assert.match(
+    nodes.find((node) => node.state === "live").label,
+    /^(research engineer|interview loop)$/
+  );
 });
 
 // The store reads the graph and the stack after every finalized utterance.

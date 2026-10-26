@@ -291,49 +291,38 @@
       "nodes": [
         {
           "id": 1,
-          "label": "sso saml",
-          "words": ["saml", "sso", "fix", "clock", "library", "review", "security", "failure"],
-          "durationMs": 63323,
+          "label": "SSO login",
+          "words": ["sso", "login", "saml", "library", "security", "review", "event", "soc"],
+          "durationMs": 124973,
           "utteranceIds": [
             "seg-mv4ik7dk-1",
             "seg-mv4ik7dk-2",
             "seg-mv4ik7dk-3",
             "seg-mv4ik7dk-4",
             "seg-mv4ik7dk-5",
+            "seg-mv4ik7dk-6",
             "seg-mv4ik7dk-7",
             "seg-mv4ik7dk-8",
             "seg-mv4ik7dk-9",
             "seg-mv4ik7dk-10",
-            "seg-mv4ik7dk-19"
-          ],
-          "firstAt": 1791765003823,
-          "lastAt": 1791765121218,
-          "returns": 1,
-          "state": "open"
-        },
-        {
-          "id": 2,
-          "label": "soc audit",
-          "words": ["audit", "soc", "auditor", "event", "login", "sso", "31st", "activity"],
-          "durationMs": 39760,
-          "utteranceIds": [
+            "seg-mv4ik7dk-11",
             "seg-mv4ik7dk-12",
             "seg-mv4ik7dk-13",
             "seg-mv4ik7dk-14",
             "seg-mv4ik7dk-15",
             "seg-mv4ik7dk-16",
-            "seg-mv4ik7dk-18"
+            "seg-mv4ik7dk-17",
+            "seg-mv4ik7dk-18",
+            "seg-mv4ik7dk-19",
+            "seg-mv4ik7dk-20"
           ],
-          "firstAt": 1791765075626,
-          "lastAt": 1791765115386,
+          "firstAt": 1791765003823,
+          "lastAt": 1791765128796,
           "returns": 0,
           "state": "resolved"
         }
       ],
-      "edges": [
-        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
-        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
-      ]
+      "edges": []
     },
     "conversation_marks": [],
     "conversation_loudness": {

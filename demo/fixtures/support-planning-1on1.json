@@ -278,7 +278,7 @@
         {
           "id": 1,
           "label": "support staffing",
-          "words": ["support", "staffing", "week", "agent", "launch", "two", "i'll", "sale"],
+          "words": ["support", "staffing", "launch", "agent", "sale", "week", "two", "3rd"],
           "durationMs": 56179,
           "utteranceIds": [
             "seg-muycq3dk-1",
@@ -299,8 +299,8 @@
         },
         {
           "id": 2,
-          "label": "import ticket",
-          "words": ["import", "ticket", "account", "beta", "big", "bug", "fix", "macro"],
+          "label": "import tickets",
+          "words": ["import", "ticket", "beta", "account", "bug", "fix", "ship", "macro"],
           "durationMs": 58991,
           "utteranceIds": [
             "seg-muycq3dk-11",

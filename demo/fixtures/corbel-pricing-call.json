@@ -460,18 +460,9 @@
       "nodes": [
         {
           "id": 1,
-          "label": "sso saml",
-          "words": [
-            "sso",
-            "saml",
-            "admin",
-            "identity",
-            "provider",
-            "setup",
-            "condition",
-            "contract"
-          ],
-          "durationMs": 78505,
+          "label": "SSO",
+          "words": ["sso", "saml", "identity", "provider", "setup", "admin", "login", "ten"],
+          "durationMs": 70591,
           "utteranceIds": [
             "seg-musp3uhk-1",
             "seg-musp3uhk-2",
@@ -483,20 +474,20 @@
             "seg-musp3uhk-8",
             "seg-musp3uhk-9",
             "seg-musp3uhk-10",
-            "seg-musp3uhk-11",
-            "seg-musp3uhk-12"
+            "seg-musp3uhk-11"
           ],
           "firstAt": 1791050403989,
-          "lastAt": 1791050482494,
+          "lastAt": 1791050474580,
           "returns": 0,
           "state": "resolved"
         },
         {
           "id": 2,
-          "label": "seat discount",
-          "words": ["discount", "seat", "hundred", "percent", "term", "thirty", "two", "two-year"],
-          "durationMs": 61055,
+          "label": "discount",
+          "words": ["discount", "bridge", "letter", "thirty", "percent", "soc", "two-year", "term"],
+          "durationMs": 137278,
           "utteranceIds": [
+            "seg-musp3uhk-12",
             "seg-musp3uhk-13",
             "seg-musp3uhk-14",
             "seg-musp3uhk-15",
@@ -505,19 +496,8 @@
             "seg-musp3uhk-18",
             "seg-musp3uhk-19",
             "seg-musp3uhk-20",
-            "seg-musp3uhk-22"
-          ],
-          "firstAt": 1791050487244,
-          "lastAt": 1791050548299,
-          "returns": 0,
-          "state": "open"
-        },
-        {
-          "id": 3,
-          "label": "soc security",
-          "words": ["security", "soc", "bridge", "letter", "audit", "team", "date", "last"],
-          "durationMs": 65025,
-          "utteranceIds": [
+            "seg-musp3uhk-21",
+            "seg-musp3uhk-22",
             "seg-musp3uhk-23",
             "seg-musp3uhk-24",
             "seg-musp3uhk-25",
@@ -527,18 +507,16 @@
             "seg-musp3uhk-29",
             "seg-musp3uhk-30",
             "seg-musp3uhk-31",
+            "seg-musp3uhk-32",
             "seg-musp3uhk-33"
           ],
-          "firstAt": 1791050554747,
+          "firstAt": 1791050482494,
           "lastAt": 1791050619772,
           "returns": 0,
           "state": "resolved"
         }
       ],
-      "edges": [
-        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
-        { "from": 2, "to": 3, "weight": 1, "kind": "new" }
-      ]
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
     },
     "conversation_marks": [],
     "conversation_loudness": {

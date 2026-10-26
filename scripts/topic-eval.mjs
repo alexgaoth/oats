@@ -54,7 +54,8 @@ import { parseArgs } from "node:util";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+const isMain =
+  process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
 
 const { values: args } = parseArgs({
   strict: isMain,
@@ -97,7 +98,8 @@ function decodeXml(text) {
 
 function attributes(tag) {
   const out = {};
-  for (const match of tag.matchAll(/([\w:]+)\s*=\s*"([^"]*)"/g)) out[match[1]] = decodeXml(match[2]);
+  for (const match of tag.matchAll(/([\w:]+)\s*=\s*"([^"]*)"/g))
+    out[match[1]] = decodeXml(match[2]);
   return out;
 }
 
@@ -271,7 +273,8 @@ function loadAmiMeeting(dir, meeting, names) {
     topics,
     utterances: utterances.map((utterance, index) => {
       const counts = new Map();
-      for (const word of utterance.words) counts.set(word.speaker, (counts.get(word.speaker) ?? 0) + 1);
+      for (const word of utterance.words)
+        counts.set(word.speaker, (counts.get(word.speaker) ?? 0) + 1);
       return {
         id: `${meeting}-${index + 1}`,
         text: utterance.words.map((word) => word.text).join(" "),
@@ -411,7 +414,8 @@ function boundariesOf(labels) {
 
 function segmentCount(labels) {
   let count = labels.length ? 1 : 0;
-  for (let index = 1; index < labels.length; index += 1) if (labels[index] !== labels[index - 1]) count += 1;
+  for (let index = 1; index < labels.length; index += 1)
+    if (labels[index] !== labels[index - 1]) count += 1;
   return count;
 }
 
@@ -475,7 +479,9 @@ function boundaryMatches(conversation, wordReference, perUtterance) {
 }
 
 function evenLabels(n, parts) {
-  return Array.from({ length: n }, (_, index) => Math.min(parts - 1, Math.floor((index * parts) / n)));
+  return Array.from({ length: n }, (_, index) =>
+    Math.min(parts - 1, Math.floor((index * parts) / n))
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -654,7 +660,9 @@ function mostCommon(values) {
 
 function scoreConversation(conversation, snapshot, { fine }) {
   const perUtterance = assignment(conversation, snapshot);
-  const textOf = new Map(conversation.utterances.map((utterance) => [utterance.id, utterance.text]));
+  const textOf = new Map(
+    conversation.utterances.map((utterance) => [utterance.id, utterance.text])
+  );
   const nodes = snapshot.nodes.map((node) => {
     const text = node.utteranceIds.map((id) => textOf.get(String(id)) ?? "").join(" ");
     return { node, text, flaws: labelFlaws(node.label), said: saidInTopic(node.label, text) };
@@ -709,7 +717,9 @@ function scoreConversation(conversation, snapshot, { fine }) {
       even: { pk: even.pk, windowDiff: even.windowDiff },
     };
     // What each label names: the reference topic most of its words were in.
-    const utteranceById = new Map(conversation.utterances.map((utterance) => [utterance.id, utterance]));
+    const utteranceById = new Map(
+      conversation.utterances.map((utterance) => [utterance.id, utterance])
+    );
     for (const label of result.labels) {
       const node = snapshot.nodes.find((candidate) => candidate.id === label.id);
       const tops = node.utteranceIds.flatMap((id) => utteranceById.get(String(id))?.refTop ?? []);
@@ -718,9 +728,12 @@ function scoreConversation(conversation, snapshot, { fine }) {
       const fineTopic = conversation.topics.get(mostCommon(fines));
       const topText = top ? topicDescription(top) : "other";
       const fineText = fineTopic && fineTopic !== top ? topicDescription(fineTopic) : "";
-      label.description = fineText && fineText !== topText ? `${topText} (sub-topic: ${fineText})` : topText;
+      label.description =
+        fineText && fineText !== topText ? `${topText} (sub-topic: ${fineText})` : topText;
       label.words = tops.length;
-      label.excerpt = excerptOf(node.utteranceIds.map((id) => utteranceById.get(String(id))?.text ?? ""));
+      label.excerpt = excerptOf(
+        node.utteranceIds.map((id) => utteranceById.get(String(id))?.text ?? "")
+      );
     }
   }
   return result;
@@ -757,10 +770,16 @@ function aggregate(results) {
     countError: mean(ami.map((result) => Math.abs(result.nodes - result.refTopics))),
     boundaryPrecision:
       ami.reduce((sum, result) => sum + result.boundaries.hits, 0) /
-      Math.max(1, ami.reduce((sum, result) => sum + result.boundaries.drawn, 0)),
+      Math.max(
+        1,
+        ami.reduce((sum, result) => sum + result.boundaries.drawn, 0)
+      ),
     boundaryRecall:
       ami.reduce((sum, result) => sum + result.boundaries.hits, 0) /
-      Math.max(1, ami.reduce((sum, result) => sum + result.boundaries.real, 0)),
+      Math.max(
+        1,
+        ami.reduce((sum, result) => sum + result.boundaries.real, 0)
+      ),
     runError: mean(ami.map((result) => Math.abs(result.runs - result.refSegments))),
     labels: labels.length,
     flawed: mean(labels.map((label) => (label.flawed ? 1 : 0))),
@@ -801,7 +820,9 @@ function printAggregate(name, group, summary) {
         `returns ${fmt(summary.returns, 1)}`
     );
   } else {
-    lines.push(`topics ${fmt(summary.nodes, 1)}  runs ${fmt(summary.runs, 1)}  returns ${fmt(summary.returns, 1)}`);
+    lines.push(
+      `topics ${fmt(summary.nodes, 1)}  runs ${fmt(summary.runs, 1)}  returns ${fmt(summary.returns, 1)}`
+    );
   }
   lines.push(
     `labels flawed ${pct(summary.flawed)} (stopword ${pct(summary.stopword)}, contraction ` +
@@ -855,7 +876,9 @@ async function main() {
   const module = await loadTracker(args.tracker);
   let refine = null;
   if (args.refine) {
-    const { createRefiner } = await import(pathToFileURL(path.join(ROOT, "scripts/lib/topic-refine-eval.mjs")).href);
+    const { createRefiner } = await import(
+      pathToFileURL(path.join(ROOT, "scripts/lib/topic-refine-eval.mjs")).href
+    );
     refine = await createRefiner({ module });
   }
 
@@ -902,15 +925,23 @@ async function main() {
     for (const result of results) {
       if (result.private) continue;
       const scores =
-        result.source === "ami" ? ` Pk ${fmt(result.pk)} WD ${fmt(result.windowDiff)} ref ${result.refSegments}` : "";
+        result.source === "ami"
+          ? ` Pk ${fmt(result.pk)} WD ${fmt(result.windowDiff)} ref ${result.refSegments}`
+          : "";
       console.log(`${result.id}${scores} topics ${result.nodes} runs ${result.runs}`);
       for (const label of result.labels) {
-        const marks = [label.flawed ? "flawed" : "", label.said ? "" : "unsaid", label.duplicate ? "repeated" : ""]
+        const marks = [
+          label.flawed ? "flawed" : "",
+          label.said ? "" : "unsaid",
+          label.duplicate ? "repeated" : "",
+        ]
           .filter(Boolean)
           .join(",");
         const judge = Number.isFinite(label.judge) ? ` judge ${label.judge}` : "";
         const about = label.description ? `  [${label.description}]` : "";
-        console.log(`   ${String(label.utterances).padStart(4)}  ${label.label}${marks ? ` (${marks})` : ""}${judge}${about}`);
+        console.log(
+          `   ${String(label.utterances).padStart(4)}  ${label.label}${marks ? ` (${marks})` : ""}${judge}${about}`
+        );
       }
     }
   }
@@ -918,7 +949,10 @@ async function main() {
   if (args.json) {
     const safe = results.map((result) =>
       result.private
-        ? { ...result, labels: result.labels.map(({ label: _label, description: _d, ...rest }) => rest) }
+        ? {
+            ...result,
+            labels: result.labels.map(({ label: _label, description: _d, ...rest }) => rest),
+          }
         : result
     );
     fs.writeFileSync(args.json, JSON.stringify({ name, summaries, results: safe }, null, 2));

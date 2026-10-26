@@ -126,7 +126,15 @@ const APOSTROPHES = /[‘’ʼ`´]/g;
 // The first tracker dropped the final "s" of any word longer than four
 // letters, which also cut "that's" to "that'", "process" to "proces" and
 // "analysis" to "analysi". Only plural endings are folded now.
+// Words that end in "s" without being plurals of another word.
+const NOT_PLURAL = new Set(
+  "news series species lens bias canvas atlas chaos alias ethos kudos physics economics politics mathematics ethics".split(
+    " "
+  )
+);
+
 function keyOf(word) {
+  if (NOT_PLURAL.has(word)) return word;
   if (word.length > 4 && word.endsWith("ies")) return `${word.slice(0, -3)}y`;
   if (word.length > 3 && word.endsWith("ie")) return `${word.slice(0, -2)}y`;
   if (word.length > 4 && /(?:sses|shes|ches|xes|zzes)$/.test(word)) return word.slice(0, -2);
@@ -195,23 +203,6 @@ function rarity(word) {
   const cap = rankMap.size * 2;
   const rank = Math.min(rankMap.get(word) ?? cap, rankMap.get(keyOf(word)) ?? cap);
   return Math.log(rank) / Math.log(cap);
-}
-
-// Jaccard overlap. Symmetric and bounded: kept for callers that compare two
-// bags of words.
-function similarity(a, b) {
-  if (!a.size || !b.size) return 0;
-  let shared = 0;
-  for (const word of a) if (b.has(word)) shared += 1;
-  return shared / (a.size + b.size - shared);
-}
-
-// The share of an utterance's words already in a bag of words.
-function coverage(utteranceBag, topicBag) {
-  if (!utteranceBag.size || !topicBag.size) return 0;
-  let shared = 0;
-  for (const word of utteranceBag) if (topicBag.has(word)) shared += 1;
-  return shared / utteranceBag.size;
 }
 
 function addCount(map, key, by = 1) {
@@ -355,7 +346,11 @@ const LABEL_SCORE = Object.freeze({ count: 1.5, share: 0.25, rarity: 0.5, descri
 // an aside. The share keeps a word the whole meeting uses ("remote control" in
 // a meeting about a remote control) from naming every topic in it. A phrase of
 // two or three words has to have been said at least twice.
-function rankPhrases(phrases, everywhere, { utterances = 0, repeated = null, params = LABEL_SCORE } = {}) {
+function rankPhrases(
+  phrases,
+  everywhere,
+  { utterances = 0, repeated = null, params = LABEL_SCORE } = {}
+) {
   // In a topic of any length, one mention is an aside, not what it was about.
   const minCount = utterances >= 6 ? 2 : 1;
   const keys = minCount > 1 && repeated?.size ? repeated : phrases.keys();
@@ -454,12 +449,15 @@ const SCALE = Object.freeze({
   narrowDepth: 0.9,
   narrowSegment: 30,
   narrowSmoothGaps: 1,
-  // A cut stops moving once this many windows of speech have followed it,
-  // and none is drawn live before the conversation has this many content
-  // words: tiny windows at the start cut on noise.
+  // While the conversation goes on, a cut is drawn once it can no longer
+  // move: a window of speech has followed it (a narrow one for a sharp turn)
+  // and it has stayed a cut for half that long. None is drawn before this
+  // many content words, and a slow turn only once the windows are this wide:
+  // windows of a few sentences dip on the same subject in other words.
   settleWindows: 1,
-  settleMinWords: 100,
   settlePersist: 0.5,
+  settleMinWords: 100,
+  settleWindowMin: 50,
 });
 
 // Window sizes move in steps of about 15%, so the similarities computed for
@@ -580,38 +578,51 @@ function pauseDepths(sims, smoothGaps) {
 // different subject, which wide windows average away: a cut is a dip that
 // falls almost to nothing.
 function choosePauses({ startOf, total, wide, narrow, segment, scale, settled = [] }) {
-  const chosen = [...settled];
+  const near = Math.min(segment, scale.narrowSegment);
+  // Each cut with the distance it keeps: a sharp turn may sit closer to its
+  // neighbours than a slow one, since it needs fewer words to be sure of.
+  const chosen = settled.map((cut) => ({
+    gap: typeof cut === "number" ? cut : cut.gap,
+    spacing: typeof cut === "number" ? segment : cut.sharp ? near : segment,
+  }));
   const accept = (candidates, depth, spacing) => {
     candidates.sort((a, b) => depth[b] - depth[a] || a - b);
     for (const gap of candidates) {
       const at = startOf[gap];
       // A new last topic needs words of its own before it is called one.
       if (total - at < spacing * scale.tailShare) continue;
-      if (chosen.every((other) => Math.abs(startOf[other] - at) >= spacing)) chosen.push(gap);
+      const clear = chosen.every(
+        (other) => Math.abs(startOf[other.gap] - at) >= Math.min(spacing, other.spacing)
+      );
+      if (clear) chosen.push({ gap, spacing });
     }
   };
   if (startOf.length >= 3) {
     const values = wide.slice(1);
     const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-    const spread = Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length);
+    const spread = Math.sqrt(
+      values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length
+    );
     // A short conversation is cut only at a sharp turn: over a minute or two
     // of words, the deepest dip of a single subject still stands out from the
     // rest of its few pauses.
     const short = Math.max(0, 1 - total / scale.shortWords);
     const floor = scale.minDepth + (scale.narrowDepth - scale.minDepth) * short;
     const threshold = Math.max(mean + scale.cut * spread, floor);
-    const candidates = [];
-    for (let gap = 1; gap < wide.length; gap += 1) if (wide[gap] > threshold) candidates.push(gap);
-    accept(candidates, wide, segment);
+    // Sharp turns first: where one is, it is where the subject changed, and a
+    // wide dip beside it is the same turn seen through wider windows.
     if (narrow) {
       const sharp = [];
       for (let gap = 1; gap < narrow.length; gap += 1) {
         if (narrow[gap] >= scale.narrowDepth) sharp.push(gap);
       }
-      accept(sharp, narrow, Math.min(segment, scale.narrowSegment));
+      accept(sharp, narrow, near);
     }
+    const candidates = [];
+    for (let gap = 1; gap < wide.length; gap += 1) if (wide[gap] > threshold) candidates.push(gap);
+    accept(candidates, wide, segment);
   }
-  return chosen.sort((a, b) => a - b);
+  return chosen.map((cut) => cut.gap).sort((a, b) => a - b);
 }
 
 // The cuts for a list of utterances read all at once: for tests, and for the
@@ -628,13 +639,15 @@ function cutPoints(units, { scale = SCALE, settled = [] } = {}) {
     pauseSimilarities(flat, startOf, window, { sims: [0], complete: 1 }),
     scale.smoothGaps
   );
-  const narrow =
-    scale.narrowWindow && window > scale.narrowWindow
-      ? pauseDepths(
-          pauseSimilarities(flat, startOf, scale.narrowWindow, { sims: [0], complete: 1 }),
-          scale.narrowSmoothGaps
-        )
-      : null;
+  const narrow = scale.narrowWindow
+    ? pauseDepths(
+        pauseSimilarities(flat, startOf, Math.min(window, scale.narrowWindow), {
+          sims: [0],
+          complete: 1,
+        }),
+        scale.narrowSmoothGaps
+      )
+    : null;
   return choosePauses({ startOf, total: flat.length, wide, narrow, segment, scale, settled });
 }
 
@@ -675,8 +688,9 @@ class ConversationTopicTracker {
     // How many utterances used each phrase, over the whole conversation.
     this.everywhere = new Map();
     this.resolvedUtterances = new Set();
-    // Cuts that can no longer move, as the id of the utterance they start at.
-    this.settledCuts = new Set();
+    // Cuts that can no longer move: the id of the utterance each starts at,
+    // and whether it was a sharp turn.
+    this.settledCuts = new Map();
     this.labels = new Map();
     this.nextId = 1;
 
@@ -751,10 +765,11 @@ class ConversationTopicTracker {
       if (size !== window && size !== this.scale.narrowWindow) this._similarities.delete(size);
     }
     const wide = depthsAt(window, this.scale.smoothGaps);
-    const narrow =
-      this.scale.narrowWindow && window > this.scale.narrowWindow
-        ? depthsAt(this.scale.narrowWindow, this.scale.narrowSmoothGaps)
-        : null;
+    // The narrow scale, lightly smoothed. While the conversation is short its
+    // windows are the wide ones.
+    const narrow = this.scale.narrowWindow
+      ? depthsAt(Math.min(window, this.scale.narrowWindow), this.scale.narrowSmoothGaps)
+      : null;
     return { window, segment, wide, narrow, total };
   }
 
@@ -762,7 +777,8 @@ class ConversationTopicTracker {
     const { window, segment, wide, narrow, total } = this._depths();
     const settled = [];
     this.units.forEach((unit, index) => {
-      if (this.settledCuts.has(unit.id)) settled.push(index);
+      if (this.settledCuts.has(unit.id))
+        settled.push({ gap: index, sharp: this.settledCuts.get(unit.id) });
     });
     const cuts = choosePauses({
       startOf: this.startOf,
@@ -785,14 +801,18 @@ class ConversationTopicTracker {
     this._candidateSince = seen;
     for (const cut of total >= this.scale.settleMinWords ? cuts : []) {
       const id = this.units[cut].id;
-      // A sharp turn is sure once a narrow window has followed it.
-      const span =
-        narrow && narrow[cut] >= this.scale.narrowDepth ? this.scale.narrowWindow : window;
+      // A sharp turn is sure once a narrow window has followed it. A slow one
+      // is drawn live only once the windows are wide: early in a conversation
+      // the windows are a few sentences, and a dip between two of them is as
+      // often the same subject in other words.
+      const sharp = Boolean(narrow) && narrow[cut] >= this.scale.narrowDepth;
+      if (!sharp && window < this.scale.settleWindowMin) continue;
+      const span = sharp ? Math.min(window, this.scale.narrowWindow) : window;
       if (
         total - this.startOf[cut] >= this.scale.settleWindows * span &&
         total - seen.get(id) >= this.scale.settlePersist * span
       ) {
-        this.settledCuts.add(id);
+        this.settledCuts.set(id, sharp);
       }
     }
     this._depthCache = { window, segment, wide, narrow, total };
@@ -836,7 +856,8 @@ class ConversationTopicTracker {
       this._stretch(start, starts[index + 1] ?? this.utterances.length)
     );
     if (commit) {
-      for (const start of this._stretches.keys()) if (!starts.includes(start)) this._stretches.delete(start);
+      for (const start of this._stretches.keys())
+        if (!starts.includes(start)) this._stretches.delete(start);
     }
 
     // Stretches that are about the same thing are one topic: the room came
@@ -1040,12 +1061,27 @@ class ConversationTopicTracker {
       params: this.labelScore,
     })
       .slice(0, LABEL_CANDIDATES)
-      .map((entry) => ({ key: entry.key, score: entry.score, text: displayForm(entry.stats.forms) }));
-    const words = [...bag.entries()]
+      .map((entry) => ({
+        key: entry.key,
+        score: entry.score,
+        text: displayForm(entry.stats.forms),
+      }));
+    // The words of its best names first, then its most telling other words:
+    // two conversations about the launch date share "launch" and "date"
+    // whatever else each one said.
+    const words = [];
+    for (const entry of ranked) {
+      for (const key of entry.key.split(" ")) if (!words.includes(key)) words.push(key);
+    }
+    const rest = [...bag.entries()]
+      .filter(([key]) => !words.includes(key))
       .map(([key, count]) => ({ key, weight: count * rarity(key) ** 2 }))
-      .sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key))
-      .slice(0, 8)
-      .map((entry) => entry.key);
+      .sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key));
+    for (const entry of rest) {
+      if (words.length >= 8) break;
+      words.push(entry.key);
+    }
+    words.length = Math.min(words.length, 8);
     const result = { ranked, words };
     if (this._rankings.size > 500) this._rankings.clear();
     this._rankings.set(signature, result);
@@ -1153,12 +1189,10 @@ export {
   LABEL_SCORE,
   SCALE,
   contentWords,
-  coverage,
   cutPoints,
   labelCandidates,
   phrasesOf,
   rarity,
-  similarity,
   tokenize,
   topicLabel,
 };
