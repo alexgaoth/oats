@@ -69,6 +69,8 @@
  *                  (OPENAI_API_KEY in the environment) instead of whisper-server,
  *                  `--concurrency` at a time. Public corpora only: never a
  *                  person's own recording.
+ *   --vad-config   VAD settings over the shipped ones, as JSON, e.g.
+ *                  '{"threshold":0.35}' (Settings can change them).
  *   --normalize-rms an experiment, not the app: raise each segment to this RMS
  *                  before it is sent.
  *
@@ -84,7 +86,10 @@ const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 const { pcm16ToWav, downsample24kTo16k } = require("../src/utils/audioUtils.js");
-const { DEFAULT_WHISPER_VAD_CONFIG } = require("../src/helpers/whisperVadConfig.js");
+const {
+  DEFAULT_WHISPER_VAD_CONFIG,
+  sanitizeWhisperVadConfig,
+} = require("../src/helpers/whisperVadConfig.js");
 
 const ROOT = path.join(__dirname, "..");
 const argv = process.argv.slice(2);
@@ -133,6 +138,11 @@ const NOISE_LEVEL = Number(arg("noise-level", "0.01"));
  * Whisper or its VAD.
  */
 const NORMALIZE = arg("normalize-rms") ? Number(arg("normalize-rms")) : null;
+/** The VAD settings a person can change in Settings, over the shipped ones. */
+const VAD_CONFIG = sanitizeWhisperVadConfig({
+  ...DEFAULT_WHISPER_VAD_CONFIG,
+  ...JSON.parse(arg("vad-config", "{}")),
+});
 const SEGMENT_ONLY = flag("segment-only");
 const ABLATE_VAD = flag("ablate-vad");
 const ORACLE = flag("oracle");
@@ -346,7 +356,7 @@ async function startLocal(vadEnabled) {
     useVulkan: false,
     vadEnabled,
     vadModelPath: vadEnabled ? VAD_MODEL : null,
-    vadConfig: DEFAULT_WHISPER_VAD_CONFIG,
+    vadConfig: VAD_CONFIG,
   };
   let stderr = "";
   let listening = null;
@@ -386,6 +396,9 @@ async function startLocal(vadEnabled) {
         parsed = { success: false };
       }
       const ms = Date.now() - started;
+      // The server logs its VAD verdict before it answers, but the pipe and
+      // the socket are read in whatever order they arrive: let the log land.
+      if (vadEnabled) await new Promise((resolve) => setTimeout(resolve, 5));
       // ipcHandlers.js#transcribeInRoomSegment: `result?.success ? text.trim() : ""`.
       const text = parsed?.success ? (parsed.text || "").trim() : "";
       const vadSegments = /detected (\d+) speech segments/.exec(stderr);
@@ -928,7 +941,7 @@ async function replay(recording, backend, ablation) {
       ? null
       : CLOUD
         ? { cloud: CLOUD }
-        : { model: path.basename(MODEL), language: LANGUAGE, vad: VAD },
+        : { model: path.basename(MODEL), language: LANGUAGE, vad: VAD ? VAD_CONFIG : false },
     segments: segments.length,
     segmentSeconds: Number(segmentSeconds.toFixed(1)),
     sentShare: pct(segmentSeconds, seconds),
@@ -957,7 +970,7 @@ async function replay(recording, backend, ablation) {
       (latencies.reduce((a, b) => a + b, 0) / 1000 / seconds).toFixed(4)
     );
     if (!CLOUD && VAD) {
-      summary.vadEmptied = segments.filter((s) => s.vadSegments === 0).length;
+      summary.vadEmptied = segments.filter((s) => !s.text && s.vadSegments === 0).length;
       summary.vadSpeechSeconds = Number(
         segments.reduce((n, s) => n + (s.vadSpeechSeconds || 0), 0).toFixed(1)
       );
