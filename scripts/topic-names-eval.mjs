@@ -91,13 +91,9 @@ const PRICES = {
 // --- The corpus.
 
 const attr = (tag, name) => new RegExp(`${name}="([^"]*)"`).exec(tag)?.[1] ?? null;
-const decode = (text) =>
-  text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+// XML's five entities, in one pass, so "&amp;lt;" stays "&lt;".
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+const decode = (text) => text.replace(/&(amp|lt|gt|quot|apos);/g, (_, name) => ENTITIES[name]);
 
 function loadOntology() {
   const xml = fs.readFileSync(path.join(ANNOTATIONS, "ontologies/default-topics.xml"), "latin1");
