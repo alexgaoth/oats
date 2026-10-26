@@ -361,3 +361,35 @@ test("topic names reach a model only by the writing model's route, and only when
   // No writing model, no namer: nothing is asked at all.
   assert.match(runner, /if \(!route\) return;/);
 });
+
+test("a conversation's names go to Obsidian as its topic links", async () => {
+  const { buildVaultNote } = await import("../../src/helpers/obsidianNote.mjs");
+  const snapshot = {
+    nodes: [
+      node({ id: 1, label: "launch date", durationMs: 120_000 }),
+      node({ id: 2, label: "sso saml", durationMs: 90_000, utteranceIds: ["e", "f"] }),
+    ],
+    edges: [],
+  };
+  const named = naming.applyTopicNames(
+    snapshot,
+    new Map([[1, { name: "Launch date move", utteranceIds: ["a", "b", "c", "d"] }]])
+  );
+  const { markdown } = buildVaultNote({
+    note: { id: 7, title: "Launch review", createdAtMs: Date.UTC(2026, 9, 26) },
+    snapshot: named,
+    strings: {
+      untitled: "Untitled",
+      summary: "Summary",
+      marked: "Marked",
+      openQuestions: "Open questions",
+      topics: "Topics",
+      transcript: "Transcript",
+      speaker: (n) => `Speaker ${n}`,
+      you: "You",
+      room: "Room",
+    },
+  });
+  assert.match(markdown, /^topics: \["Launch date move", "sso saml"\]$/m);
+  assert.match(markdown, /\[\[Launch date move\]\] · \[\[sso saml\]\]/);
+});
