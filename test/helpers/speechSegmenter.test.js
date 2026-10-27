@@ -11,12 +11,17 @@ test.before(async () => {
 let seed = 1;
 const noise = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 2 - 1;
 
-/** `[kind, seconds]` pieces: "speech" is a loud tone with jitter, "quiet" is the room. */
+/**
+ * `[kind, seconds, loudness]` pieces: "speech" is a loud tone with jitter, at
+ * `loudness` (1 by default; a voice across the table is a fraction of it),
+ * "murmur" a steady low tone at `loudness` (a breath, a chair, somebody
+ * starting), "quiet" is the room.
+ */
 function signal(pieces, { room = 0 } = {}) {
   const total = pieces.reduce((n, [, s]) => n + Math.round(s * SAMPLE_RATE), 0);
   const out = new Int16Array(total);
   let at = 0;
-  for (const [kind, seconds] of pieces) {
+  for (const [kind, seconds, loudness = 1] of pieces) {
     const n = Math.round(seconds * SAMPLE_RATE);
     for (let i = 0; i < n; i += 1) {
       const bed = room * noise();
@@ -25,8 +30,12 @@ function signal(pieces, { room = 0 } = {}) {
       const syllable = Math.abs(Math.sin((Math.PI * 4 * i) / SAMPLE_RATE));
       const voice =
         kind === "speech"
-          ? syllable * (0.2 * Math.sin((2 * Math.PI * 220 * i) / SAMPLE_RATE) + 0.02 * noise())
-          : 0;
+          ? loudness *
+            syllable *
+            (0.2 * Math.sin((2 * Math.PI * 220 * i) / SAMPLE_RATE) + 0.02 * noise())
+          : kind === "murmur"
+            ? loudness * 0.2 * Math.sin((2 * Math.PI * 150 * i) / SAMPLE_RATE)
+            : 0;
       out[at + i] = Math.max(-32768, Math.min(32767, Math.round((bed + voice) * 32767)));
     }
     at += n;
@@ -109,6 +118,128 @@ test("pauses are still heard over a steady room noise", () => {
     )
   );
   assert.equal(segments.length, 2);
+});
+
+// A voice across the table reaches a laptop a few dB over the room: its
+// loudest syllables pass 2.5 times the floor, the rest of its words sit under
+// that. Until 2026-10-26 every frame had to pass three times the floor, so a
+// voice like this was never a segment: replayed AMI meetings with a fan under
+// them kept 23% of their speech (scripts/room-replay.js).
+test("a voice a few dB over a fan is one segment, held through its softer syllables", () => {
+  const segments = run(
+    signal(
+      [
+        ["quiet", 3],
+        ["speech", 3, 0.3],
+        ["quiet", 1],
+      ],
+      { room: 0.03 }
+    )
+  );
+  assert.equal(segments.length, 1);
+  assert.ok(segments[0].startMs <= 3100, `starts at ${segments[0].startMs}`);
+  assert.ok(segments[0].endMs >= 5900, `ends at ${segments[0].endMs}`);
+});
+
+test("the fan alone is not speech", () => {
+  assert.equal(run(signal([["quiet", 12]], { room: 0.03 })).length, 0);
+});
+
+// Once a segment is open it holds while frames pass 1.5 times the floor, so a
+// sentence that trails off keeps its end instead of closing at its first soft
+// word and dropping the rest as too short.
+test("a sentence that trails off keeps its end", () => {
+  const segments = run(
+    signal(
+      [
+        ["quiet", 1],
+        ["speech", 1.5],
+        ["speech", 1.5, 0.1],
+        ["quiet", 1],
+      ],
+      { room: 0.01 }
+    )
+  );
+  assert.equal(segments.length, 1);
+  assert.ok(segments[0].endMs >= 3900, `ends at ${segments[0].endMs}`);
+});
+
+// Without automatic gain a microphone can be quiet: a far voice near -50 dBFS
+// over a room near -70. A fixed minimum of 0.004 (-48 dBFS) heard none of it.
+test("a quiet microphone still hears a voice", () => {
+  const segments = run(
+    signal(
+      [
+        ["quiet", 2],
+        ["speech", 2, 0.02],
+        ["quiet", 1],
+      ],
+      { room: 0.0005 }
+    )
+  );
+  assert.equal(segments.length, 1);
+  assert.ok(segments[0].endMs - segments[0].startMs >= 1900);
+});
+
+// Held open through soft speech, a segment would also hold through the soft
+// gap between two people, and the speaker pass labels a whole segment with one
+// voice. So a long one splits in a soft pause once the next turn has gone on
+// for half a second — contiguous, nothing dropped.
+test("two turns with no quiet between them are still two segments", () => {
+  const segments = run(
+    signal(
+      [
+        ["quiet", 1],
+        ["speech", 3],
+        ["murmur", 0.4, 0.07],
+        ["speech", 3],
+        ["quiet", 1],
+      ],
+      { room: 0.01 }
+    )
+  );
+  assert.equal(segments.length, 2);
+  // In the murmur between them (4.0–4.4 s), not in either turn.
+  assert.ok(
+    segments[0].endMs >= 4000 && segments[0].endMs <= 4400,
+    `split at ${segments[0].endMs}`
+  );
+  assert.equal(segments[1].startSample, segments[0].endSample, "nothing between them");
+  assert.ok(segments[1].endMs >= 7400, `ends at ${segments[1].endMs}`);
+});
+
+test("a last word after a soft pause stays with its turn", () => {
+  const segments = run(
+    signal(
+      [
+        ["quiet", 1],
+        ["speech", 3],
+        ["murmur", 0.4, 0.07],
+        ["speech", 0.3],
+        ["quiet", 1.5],
+      ],
+      { room: 0.01 }
+    )
+  );
+  assert.equal(segments.length, 1);
+  assert.ok(segments[0].endMs >= 4650, `ends at ${segments[0].endMs}`);
+});
+
+test("a short turn is not split, however soft its pauses", () => {
+  // A soft pause 1 s in: the piece before it would be under `splitAfterMs`.
+  const segments = run(
+    signal(
+      [
+        ["quiet", 1],
+        ["speech", 1],
+        ["murmur", 0.4, 0.07],
+        ["speech", 1.5],
+        ["quiet", 1],
+      ],
+      { room: 0.01 }
+    )
+  );
+  assert.equal(segments.length, 1);
 });
 
 test("a click or a cough is not a segment", () => {

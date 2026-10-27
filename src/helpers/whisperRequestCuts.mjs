@@ -9,7 +9,8 @@
 // or fewer out of 80–124 — "the princess inquired. But" for 124.
 //
 // So a recording longer than MAX_REQUEST_MS is cut where the speaker pauses,
-// found by the same `SpeechSegmenter` the room path uses, and the pieces are
+// found by the same `SpeechSegmenter` the room path uses (at its former
+// levels, PAUSE_LEVELS below), and the pieces are
 // transcribed in order and joined. A recording that fits one request is not
 // touched: `transcribeInPieces` returns null and the caller sends it whole,
 // exactly as before.
@@ -77,6 +78,23 @@ export function readPcm16Wav(bytes) {
 }
 
 /**
+ * The segmenter's levels from before 2026-10-26, for finding a dictation's
+ * pauses. A room now opens a segment at 2.5 times its floor, holds it at 1.5
+ * and splits it at soft pauses, so a far voice is not lost
+ * (speechSegmenter.mjs). A dictation is one near voice, and a cut wants its
+ * clearest pause: tried with a first version of the room's levels, the cuts
+ * moved in 27 of 40 long dictations and WER moved inside its noise (`base.en`
+ * 4.16% to 4.08%, `base` + `auto` 5.14% to 5.36%). Nothing to gain, so the
+ * cuts keep the levels they were measured with (docs/dictation-accuracy.md).
+ */
+const PAUSE_LEVELS = Object.freeze({
+  speechRatio: 3,
+  holdRatio: 3,
+  minSpeechRms: 0.004,
+  splitAfterMs: Infinity,
+});
+
+/**
  * Every stretch where nobody is speaking, as `[from, to]` sample positions in
  * order: before the first words, between every two segments, after the last.
  * Where the segmenter had to cut a monologue that never paused, the stretch is
@@ -87,7 +105,7 @@ export function readPcm16Wav(bytes) {
  * of audio instead.
  */
 async function quietStretches(samples) {
-  const segmenter = new SpeechSegmenter();
+  const segmenter = new SpeechSegmenter(PAUSE_LEVELS);
   const quiet = [];
   let quietFrom = 0;
   const speech = (segment) => {

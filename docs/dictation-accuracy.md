@@ -299,6 +299,319 @@ first; one voice gets no label at all.
 **Read these as a floor that flatters.** Read speech, clean audio, no crosstalk,
 no real microphone. A café will be worse.
 
+## Conversations in a room (2026-10-26)
+
+A real conversation, 28 minutes around a laptop on a table, came back with
+segments over 19% of it. The room was talking in the gaps: every conversation
+keeps how loud each second was (`helpers/conversationLoudness.mjs`), and in
+this one the median second in the gaps was 6 dB under the median second of
+transcribed speech, and the loudest tenth of the gaps reached the quieter
+quarter of it. 113 of its 146 turns were one voice, the one nearest the laptop.
+
+### The instrument
+
+`scripts/room-replay.js` replays a whole recording through the live room path,
+offline, the way the app hears it: the renderer's 24 kHz chunks and main's own
+`downsample24kTo16k`, the app's `SpeechSegmenter` fed chunk by chunk, every
+closed segment through the app's own `WhisperServerManager` (its start options,
+threads, FFmpeg conversion and request cuts) with Silero VAD and the shipped
+config, and the app's own result filters. Partials are left out: they change
+when words appear, not which words do. Against a reference with word times,
+every reference word gets a fate:
+
+- **under the level**: nothing opened a segment on it;
+- **a cough**: it opened a segment that the segmenter threw away as too short;
+- **an edge**: it had speech frames but fell outside the segment;
+- **VAD** or **Whisper**: its segment was sent and came back empty;
+- **text**: its segment came back with text, and the alignment says whether the
+  word itself is in it.
+
+It also reports coverage (the share of reference speech time inside a segment
+sent to Whisper), words recovered (reference words the transcript has, by
+alignment), WER (one alignment per meeting, the reference in time order),
+segments with no reference speech and the text they produced, **purity** (the
+share of a segment's words spoken by its main speaker: the speaker pass gives a
+whole segment one voice, so this is the best a perfect diarizer can do), the
+**final delay** (from the end of a word to the end of its segment: question
+cards, topics and counters wait for that), and the real-time factor.
+`--ablate-vad` sends every segment to a second server without VAD as well, so
+what VAD costs and what it keeps out are both measured.
+
+```sh
+A=(); for m in ES2004a ES2004b ES2004c ES2004d IS1009a IS1009b TS3003a TS3003b; do
+  A+=(--audio ami/audio/$m.Array1-01.wav); done
+# a quiet room: each meeting at the real conversation's level
+node scripts/room-replay.js "${A[@]}" --ami ami/annotations --level 0.0225 \
+  --model ggml-base.en.bin --language en --ablate-vad --json out.json
+# a room with steady sound under it
+ffmpeg -f lavfi -i "anoisesrc=color=pink:duration=180:sample_rate=48000:amplitude=0.4:seed=11" \
+  -af "highpass=f=80,lowpass=f=6000" -ac 1 pink.wav
+node scripts/room-replay.js "${A[@]}" --ami ami/annotations --level 0.0225 \
+  --noise pink.wav --noise-level 0.012 --model ggml-base.en.bin --language en
+# before: the segmenter as it shipped
+git show ed277e0:src/helpers/speechSegmenter.mjs > /tmp/before.mjs
+node scripts/room-replay.js ... --segmenter /tmp/before.mjs
+# the segmenter alone, seconds per meeting
+node scripts/room-replay.js ... --segment-only
+# near voices: LibriSpeech conversations
+node scripts/room-replay.js --librispeech LibriSpeech/test-clean --conversations 9
+# OpenAI on the same segments (public audio only)
+OPENAI_API_KEY=... node scripts/room-replay.js ... --cloud gpt-4o-transcribe
+```
+
+**The corpus** is the AMI meeting corpus (CC BY 4.0): eight meetings (ES2004a–d,
+IS1009a–b, TS3003a–b), four people around a table in each, heard by the first
+microphone of the array in the middle of the table (`Array1-01`), where a
+laptop would be. 4.0 hours of audio, 3.2 hours of speech, 35,619 reference
+words with their times. Three rooms:
+
+- **A quiet room**: each meeting scaled so its median second has the real
+  conversation's level (0.0225).
+- **A room with steady sound**: the same with pink noise under it, an air
+  conditioner or a fan, its median second at 0.012. As far as the real
+  conversation's loudness can say, this is that room: its seconds spread the
+  same way (5th, 50th and 95th percentiles 0.015, 0.026 and 0.054, against
+  0.015, 0.023 and 0.058), and the shipped segmenter answers it the same way.
+  Its segments with text cover 18% of the timeline (19% in the real one), 4.8
+  a minute (5.2), 1.2, 1.9 and 3.8 s long at the 10th, 50th and 90th
+  percentiles (1.2, 1.9 and 3.8).
+- **A quiet microphone**: the meetings as AMI recorded them, speech near
+  −50 dBFS.
+
+### Where the speech went
+
+The shipped segmenter, then `base.en` with `en` and the shipped VAD. Every
+reference word:
+
+| what happened to the word                | quiet room | steady sound | quiet microphone |
+| ---------------------------------------- | ---------- | ------------ | ---------------- |
+| never opened a segment (under the level) | 4.6%       | 31.8%        | 14.0%            |
+| opened one, thrown away as a cough       | 11.2%      | 37.2%        | 23.3%            |
+| cut off at a segment's edge              | 2.2%       | 2.2%         | 2.3%             |
+| its segment came back empty              | 0.4%       | 0.8%         | 1.3%             |
+| in a segment that came back with text    | 81.6%      | 28.1%        | 59.1%            |
+| **recovered in the transcript**          | **57.4%**  | **14.6%**    | **41.1%**        |
+
+By voice, loudest at the microphone first (each meeting's four, pooled):
+
+| voice: coverage, recovered | quiet room | steady sound | quiet microphone |
+| -------------------------- | ---------- | ------------ | ---------------- |
+| loudest (−29 dBFS)         | 80%, 60%   | 42%, 26%     | 67%, 52%         |
+| second (−31 dBFS)          | 72%, 60%   | 26%, 17%     | 53%, 44%         |
+| third (−32 dBFS)           | 72%, 56%   | 20%, 11%     | 50%, 36%         |
+| quietest (−34 dBFS)        | 71%, 54%   | 15%, 7%      | 47%, 34%         |
+
+(The levels are the quiet room's; as AMI recorded them, the voices are 15 dB
+quieter.)
+
+### Why
+
+1. **Every frame had to be three times the room.** The floor is the 5th
+   percentile of the last 10 s of 20 ms frames, and a frame was speech over
+   three times it (9.5 dB). A voice across the table reaches the laptop a few
+   dB over the room: its loudest syllables pass 9.5 dB now and then, its other
+   words never.
+2. **So a far voice opened a segment and lost it as a cough.** A segment opened
+   on one loud syllable closed once 400 ms in a row stayed under three times
+   the floor, and with under 500 ms of such frames it was thrown away. That
+   was the largest loss in every room.
+3. **A fixed minimum of 0.004 (−48 dBFS).** Capture has no automatic gain, so
+   a quiet microphone left whole voices under it: with the meetings as AMI
+   recorded them (voices at −45 to −49 dBFS), 14% of the words never opened a
+   segment and 23% were thrown away as coughs, and 41% came back.
+4. **Then the model.** Of the words that reach `base.en` in a segment with
+   text, it recovers about two thirds on these far-field meetings, against a
+   5% WER on read speech. That is the model on a far microphone, not the
+   path: see the models below.
+
+Not the cause: VAD and the result filters (the segments that came back empty
+held about 1% of the words), the scheduling (every closed segment is
+transcribed, in order, before Stop returns; partials are previews), and capture
+(echo cancellation, noise suppression and automatic gain are off for a room,
+and the echo check has no system audio to compare against in one).
+
+### The fix
+
+A segment opens on a frame 2.5 times the floor (8 dB) and holds while frames
+pass 1.5 times it (3.5 dB): two levels, so a far voice's softer words keep the
+segment its loud syllables opened. Held through soft speech, a segment would
+also be held through the soft gap between two people, so one longer than 2 s
+splits at the quietest frame of a soft pause (300 ms under the opening level)
+once half a second of speech follows it: contiguous, nothing dropped. The
+minimum is 0.001 (−60 dBFS). `helpers/speechSegmenter.mjs`, pinned by
+`test/helpers/speechSegmenter.test.js`: six of its tests fail on the old
+segmenter.
+
+| AMI, `base.en` + `en` + VAD, before → after              | quiet room              | steady sound            | quiet microphone        |
+| -------------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- |
+| speech in a segment sent to Whisper                      | 72.0% → **98.3%**       | 23.0% → **84.8%**       | 51.6% → **98.2%**       |
+| words recovered                                          | 57.4% → **66.8%**       | 14.6% → **34.9%**       | 41.1% → **61.7%**       |
+| WER                                                      | 43.7% → **34.9%**       | 85.6% → **66.3%**       | 59.6% → **39.5%**       |
+| transcript words per reference word                      | 70% → 82%               | 22% → 61%               | 49% → 75%               |
+| quietest voice: coverage, recovered                      | 71%, 54% → 98%, 66%     | 15%, 7% → 81%, 31%      | 47%, 34% → 98%, 59%     |
+| meetings with more words recovered                       | 8 of 8                  | 8 of 8                  | 8 of 8                  |
+| purity                                                   | 85.4% → 85.7%           | 84.1% → 87.7%           | 85.3% → 85.7%           |
+| final delay, median and p90                              | 1.9, 6.1 s → 2.1, 6.1 s | 1.1, 3.1 s → 1.6, 3.9 s | 1.6, 5.6 s → 2.1, 6.1 s |
+| segments with no speech that came back with text (words) | 15 (78) → 24 (95)       | 2 (3) → 9 (29)          | 4 (36) → 14 (74)        |
+
+**The split costs two points**, and keeps the speaker pass and the question
+cards as they were. Without it the quiet room recovers 68.7% (WER 32.6%) and
+the room with steady sound 36.9% (64.3%), but a lively meeting's segment then
+runs 14 s at the median: purity falls to 79.0% and a word waits 6.6 s to be
+final (14.1 s at the 90th percentile). The words lost are next to the
+seams: within half a second of one, 60% came back against 66% unsplit (63%
+against 68% without VAD), and from 4 s away there is no difference, so it is
+Whisper reading a turn cut close, not VAD. Chosen on three meetings (ES2004a,
+IS1009a, TS3003a; 57 minutes), quiet room, `base.en`:
+
+| split                                                   | recovered | WER       | purity    | final delay, median and p90 |
+| ------------------------------------------------------- | --------- | --------- | --------- | --------------------------- |
+| the shipped segmenter (before)                          | 49.1%     | 52.1%     | 84.0%     | 1.6, 5.6 s                  |
+| two levels, no split                                    | 61.5%     | 40.1%     | 77.7%     | 6.6, 14.1 s                 |
+| in the middle of a 200 ms soft pause                    | 57.3%     | 44.1%     | 86.3%     | 1.9, 4.6 s                  |
+| at the quietest frame of a 200 ms soft pause            | 57.9%     | 43.6%     | 86.3%     | 1.9, 4.9 s                  |
+| the same, the pieces overlapping by 0.2 s               | 58.2%     | 44.5%     | 86.4%     | 2.1, 4.9 s                  |
+| in the middle of a 200 ms soft pause, only after 4 s    | 58.5%     | 43.0%     | 83.7%     | 2.6, 5.9 s                  |
+| **at the quietest frame of a 300 ms soft pause: ships** | **59.2%** | **42.4%** | **85.2%** | **2.1, 6.1 s**              |
+
+**What is still lost** in the room with steady sound is the far voices'
+quietest stretches, and the model. 5.7% of the words never reach the opening
+level; VAD empties segments holding 5.5% of them, and without VAD 37.1% would
+come back against 34.9%, but 93 segments with no speech in them would come
+back with text, against 9. VAD stays. Of the words that reach `base.en` in a
+segment with text, it recovers 40% here against 68% in the quiet room: at this
+level of sound it is the model that loses them (see the models below). A
+gentler VAD (threshold 0.35, not 0.5) empties fewer segments (1.7% of the
+words against 5.5%), but Whisper then returns more of them empty, and the
+words recovered move from 34.9% to 35.7%: not worth a setting that dictation
+shares.
+
+**Two leads, measured, not shipped:**
+
+- **Raise a quiet segment before Whisper.** On the quiet microphone, each
+  segment raised to an RMS of 0.05 (never past a 0.9 peak) before it is sent:
+  61.7% → 67.3% recovered (WER 39.5% → 34.4%), better in 8 of 8 meetings, as
+  good as the quiet room. Silero and Whisper both empty fewer quiet segments
+  (4.1% of the words → 0.6%). The price: segments with no speech that came
+  back with text, 14 → 31. It needs its own guards before it ships
+  (`room-replay.js --normalize-rms 0.05`).
+- **The language, not the model** (below).
+
+### Guards
+
+- **Dictation is unchanged.** The request cutter
+  (`helpers/whisperRequestCuts.mjs`) finds a long dictation's pauses with the
+  segmenter at its former levels. Tried with a first version of the room's
+  levels, its cuts moved in 27 of 40 long dictations and WER moved inside its
+  noise (`base.en` 4.16% to 4.08%, `base` + `auto` 5.14% to 5.36%): nothing to
+  gain, so it keeps the levels it was measured with. `scripts/asr-eval.js` on
+  LibriSpeech, before and after, with VAD: the same cuts, the same text and the
+  same WER in all four rows — 5.34% (`base.en`, n = 200), 4.16% (`base.en`, 40
+  long dictations), 6.48% (`base` + `auto`, n = 200), 5.14% (`base` + `auto`,
+  long).
+- **Near voices are no worse.** Nine LibriSpeech conversations (1,081 s, two or
+  three voices, 12 turns, 0.25–1.15 s between them, over a room at −66 dBFS):
+  WER 4.3% → 4.0% with `base.en`, 5.2% → 4.9% with `base` + `auto`; purity
+  100% both. A word is final later, 2.4 s → 3.1 s after it was said at the
+  median (7.4 s → 8.4 s at the 90th percentile): in a room that quiet, the
+  minimum (0.001) is the level that holds a turn, so a turn stays open until
+  its softest sounds end. At 0.002 the delay would be 2.6 s, but a quiet
+  microphone would keep 91% of its speech instead of 98%.
+- **Noise alone does not become words.** `base.en` and the shipped VAD, the
+  same with `base` + `auto`:
+
+| three minutes of…                      | segments, before → after | seconds sent    | text that came back                          |
+| -------------------------------------- | ------------------------ | --------------- | -------------------------------------------- |
+| a fan (brown noise, −40 and −30 dBFS)  | 0 → 0                    | 0               | none                                         |
+| an air conditioner (pink, −38 dBFS)    | 0 → 0                    | 0               | none                                         |
+| room tone (−74 dBFS)                   | 0 → 0                    | 0               | none                                         |
+| typing on the laptop that records      | 5 → 7                    | 12 → 16 s       | none: VAD empties every one                  |
+| music, 10.6 minutes (−40 and −30 dBFS) | 70 and 66 → 106          | 232–238 → 480 s | 1–4 → 3 segments, "(gentle music)", no words |
+
+The music is sent twice as long as before (76% of it), and VAD empties all
+but three of its segments; without VAD, `base.en` writes 0–2 words for it.
+
+### Models on the same replay
+
+The same segments for every model: the quiet room's 3,284, cut by the segmenter
+as it ships now, and the room with steady sound's 3,584. Local models run with
+the shipped VAD and the app's own arguments; OpenAI gets each segment as one
+request, language `en`, without VAD. Speed is a separate run of three meetings
+(ES2004a, IS1009a, TS3003a; 57 minutes) for each local model, one at a time on
+the M5 Pro (Metal): the real-time factor is the server's time per second of
+conversation; OpenAI's is the round trip per segment from this Mac.
+
+| model + language                    | size   | quiet room: recovered, WER | steady sound: recovered, WER | speed                        |
+| ----------------------------------- | ------ | -------------------------- | ---------------------------- | ---------------------------- |
+| `base` + `auto`: ships              | 148 MB | 62.2%, 39.6%               |                              | RTF 0.020, 88 ms a segment   |
+| `base.en` + `en`: ships for English | 148 MB | 66.8%, 34.9%               | 34.9%, 66.3%                 | RTF 0.013, 58 ms a segment   |
+| `small` + `auto`                    | 488 MB | 58.8%, 42.4%               |                              | RTF 0.048, 218 ms a segment  |
+| `small.en` + `en`                   | 488 MB | 70.4%, 30.9%               | 40.0%, 61.0%                 | RTF 0.028, 134 ms a segment  |
+| `large-v3-turbo` q5_0 + `auto`      | 574 MB | 75.0%, 26.1%               |                              | RTF 0.206, 1089 ms a segment |
+| `large-v3-turbo` q5_0 + `en`        | 574 MB | **75.2%, 25.9%**           | **47.5%, 53.5%**             | RTF 0.118, 603 ms a segment  |
+| `gpt-4o-mini-transcribe` (OpenAI)   | cloud  | 73.0%, 28.4%               | 39.3%, 61.5%                 | 0.7 s a segment              |
+| `gpt-4o-transcribe` (OpenAI)        | cloud  | 47.1%, 53.3%               | 25.9%, 74.2%                 | 0.7 s a segment              |
+
+For scale: `base.en` given the reference's own speech as its segments (a
+perfect segmenter) recovers 68.6% (WER 32.6%), against 66.8% from the
+segmenter.
+
+- **The language matters more than the size.** With `auto`, a multilingual
+  model reads the language of each short segment of a far voice, and gets it
+  wrong: `base` writes about 120 more segments than `base.en` in another
+  language ("MBC 뉴스 김지경입니다.", Hindi, Chinese, Welsh), and `small` about
+  340, so `small` + `auto` recovers less than `base` + `auto`. Turbo reads it
+  right: with `auto` and with `en` it is within a run's noise (75.0% and
+  75.2%).
+- **`gpt-4o-transcribe` returns part of a segment.** For 31% of the segments it
+  returned under 60% of the words `gpt-4o-mini-transcribe` returned for the
+  same audio, and it wrote something for every segment with no speech in it
+  (221; `base.en` with VAD: 24).
+- **Turbo writes no sound labels.** `base.en` and `small.en` answer a far voice
+  they cannot make out with "[inaudible]", "(muffled speaking)" and the like:
+  153 and 198 segments with only that in the room with steady sound. Turbo: 1.
+
+**For Alex** (the default model is not changed here):
+
+1. **The segmenter is the larger gain in every room**, whatever the model:
+   `base.en` +9.4 points of words recovered in the quiet room, +20.3 with
+   steady sound. It ships here.
+2. **For English, `small.en` is the cheap step and `large-v3-turbo` the
+   accurate one.** On the same segments, `small.en` recovers 3.6 points more
+   than `base.en` in the quiet room and 5.1 more with steady sound; turbo 8.4
+   and 12.6 more, and with steady sound more than OpenAI's
+   `gpt-4o-mini-transcribe` (47.5% against 39.3%). They cost 2.1× and 8.8× `base.en`'s time (real-time factor 0.028 and 0.118 against 0.013): every one keeps up with a conversation, but each partial re-reads its segment with the same model, so the live line falls further behind with turbo.
+3. **The language is worth more than the size.** `auto` costs 4.6 points with
+   `base` and 11.6 with `small` on far voices, and nothing with turbo. A conversation
+   speaks one language for minutes at a time, so it could be read once from a
+   longer stretch, or taken from Settings, instead of per segment: a product
+   decision.
+4. **Not `gpt-4o-transcribe`** for this path: it drops parts of short segments.
+
+### What this does not show
+
+- **The real conversation was not replayed.** Its audio is deleted after the
+  speaker pass, so the claim for it rests on the replay reproducing its
+  numbers: the share of the timeline, the turns a minute, their lengths and
+  the spread of its loudness.
+- **AMI is one microphone in a meeting room**, not a MacBook in a café. The
+  steady sound is pink noise; another room's sound may be other people
+  talking, which no level can tell from the conversation.
+- **Purity is a ceiling**: it assumes a diarizer that never errs.
+- **Overlapping speech counts against every configuration**, and the
+  normalisation is a small version of Whisper's: fillers out on both sides,
+  digits spelled out.
+- **Metal is not deterministic.** The same configuration run twice returned
+  different words for 2–6% of its segments, and words recovered moved by up to
+  0.4 points in a meeting: a difference under a point is inside that.
+- **Partials are not replayed.** A heavier model also makes every partial
+  slower, so the live line falls further behind; finals are not affected.
+- **Timestamps lag a second each half hour.** `downsample24kTo16k` keeps 533
+  samples of each 800-sample chunk, a third of a sample short, so the
+  recording's own clock runs 0.06% slow and a segment's `startMs` falls behind
+  the moment it was said: about a second after half an hour. The replay
+  scores on true time; the app does not correct it.
+
 ## Why it feels different from the pre-Oats build
 
 `../oats` (OpenWhispr 1.7.6) defaults `useLocalWhisper` to **false**. With an API
