@@ -25,7 +25,8 @@ import {
   type ColorScheme,
   type ModelPickerStyles,
 } from "../utils/modelPickerStyles";
-import { useSettingsStore } from "../stores/settingsStore";
+import { DEFAULT_WHISPER_MODEL, useSettingsStore } from "../stores/settingsStore";
+import { isEnglish } from "../helpers/whisperEnglishModel.mjs";
 import { getRemoteProviderIcon } from "../utils/providerIcons";
 import { createExternalLinkHandler } from "../utils/externalLinks";
 import { API_ENDPOINTS, normalizeBaseUrl } from "../config/constants";
@@ -306,6 +307,7 @@ export default function TranscriptionModelPicker({
   streamingOnly = false,
 }: TranscriptionModelPickerProps) {
   const { t } = useTranslation();
+  const preferredLanguage = useSettingsStore((s) => s.preferredLanguage);
   const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
   const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
   const groqApiKey = useSettingsStore((s) => s.groqApiKey);
@@ -374,7 +376,14 @@ export default function TranscriptionModelPicker({
     if (!current) return;
 
     const downloaded = loadedModels.filter((m) => m.downloaded);
-    const isCurrentDownloaded = loadedModels.find((m) => m.model === current)?.downloaded;
+    // A size whose English twin is installed is not missing: an English
+    // speaker's requests load the twin, and anybody else's fall back to base
+    // (whisperEnglishModel.mjs). Apple Silicon starts on "small" and ships only
+    // `small.en`, so without this, opening this screen would save "base" over
+    // a default that nobody changed.
+    const isCurrentDownloaded = downloaded.some(
+      (m) => m.model === current || m.model === `${current}.en`
+    );
 
     if (!isCurrentDownloaded && downloaded.length > 0) {
       onLocalModelSelectRef.current(downloaded[0].model);
@@ -768,6 +777,10 @@ export default function TranscriptionModelPicker({
     // configured language is English. Listing it would double this list with a
     // decision nobody should have to make.
     const isOffered = (modelId: string) => !WHISPER_MODEL_INFO[modelId]?.englishOnly;
+    // For an English speaker a size is ready when its twin is, since that is
+    // what their requests load: Apple Silicon ships `small.en` but not `small`.
+    const english = isEnglish(preferredLanguage);
+    const installed = new Set(localModels.filter((m) => m.downloaded).map((m) => m.model));
     const modelsToRender =
       localModels.length === 0
         ? Object.entries(WHISPER_MODEL_INFO)
@@ -792,6 +805,7 @@ export default function TranscriptionModelPicker({
             size: t("common.unknown"),
             recommended: false,
           };
+          const throughTwin = !model.downloaded && english && installed.has(`${modelId}.en`);
 
           return (
             <LocalModelCard
@@ -802,13 +816,14 @@ export default function TranscriptionModelPicker({
               size={info.size}
               actualSizeMb={model.size_mb}
               isSelected={modelId === selectedLocalModel}
-              isDownloaded={model.downloaded ?? false}
+              isDownloaded={(model.downloaded ?? false) || throughTwin}
               isDownloading={isDownloadingModel(modelId)}
               isCancelling={isCancelling}
-              recommended={info.recommended}
+              // The model this build starts on, which its bundle serves.
+              recommended={modelId === DEFAULT_WHISPER_MODEL}
               provider="whisper"
               onSelect={() => handleWhisperModelSelect(modelId)}
-              onDelete={() => handleDelete(modelId)}
+              onDelete={() => handleDelete(throughTwin ? `${modelId}.en` : modelId)}
               onDownload={() =>
                 downloadModel(modelId, (downloadedId) => {
                   setLocalModels((prev) =>

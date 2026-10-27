@@ -40,14 +40,21 @@ test("every platform build bundles the embedding model rather than fetching it a
 test("the build's own pre-hooks are what a mac release runs", () => {
   // npm runs `pre<name>` only for the exact script name. `build:mac` has its
   // prebuild; a release workflow that called `build:mac:arm64` would pack an
-  // app with no speech engine and fail nothing.
+  // app with no speech engine and fail nothing. The two arches ship different
+  // speech models, so each script also names its arch for that prebuild.
   assert.ok(pkg.scripts["prebuild:mac"], "prebuild:mac exists");
   assert.match(pkg.scripts["build:mac"], /electron-builder --mac/);
   for (const arch of ["arm64", "x64"]) {
-    assert.equal(
-      pkg.scripts[`build:mac:${arch}`],
-      `npm run build:mac -- --${arch}`,
+    const script = pkg.scripts[`build:mac:${arch}`];
+    assert.match(
+      script,
+      new RegExp(`npm run build:mac -- --${arch}$`),
       `build:mac:${arch} must go through build:mac, so its prebuild runs`
+    );
+    assert.match(
+      script,
+      new RegExp(`^cross-env TARGET_ARCH=${arch} `),
+      `build:mac:${arch} must name its arch, so its prebuild fetches that arch's speech models`
     );
   }
 });

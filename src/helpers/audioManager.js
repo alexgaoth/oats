@@ -18,6 +18,7 @@ import { reconcileSavedMicSelection } from "./micSelectionRecovery";
 import { isStaleDeviceError } from "./staleMicDevice";
 import { shouldSaveDiscardedRecording } from "./discardedRecording";
 import {
+  DEFAULT_WHISPER_MODEL,
   getSettings,
   getEffectiveCleanupModel,
   isCloudCleanupMode,
@@ -1058,7 +1059,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
-  async processWithLocalWhisper(audioBlob, model = "base", metadata = {}) {
+  async processWithLocalWhisper(audioBlob, model = DEFAULT_WHISPER_MODEL, metadata = {}) {
     const timings = {};
 
     try {
@@ -1814,7 +1815,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const apiSettings = getSettings();
     const language = getBaseLanguageCode(this.getEffectiveSttLanguage(apiSettings));
     const allowLocalFallback = apiSettings.allowLocalFallback;
-    const fallbackModel = apiSettings.fallbackWhisperModel || "base";
+    const fallbackModel = apiSettings.fallbackWhisperModel || DEFAULT_WHISPER_MODEL;
 
     try {
       const durationSeconds = metadata.durationSeconds ?? null;

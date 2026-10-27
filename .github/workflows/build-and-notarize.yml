@@ -68,7 +68,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/bin
-          key: linux-x64-bin-${{ hashFiles('scripts/download-*.js') }}
+          key: linux-x64-bin-${{ hashFiles('scripts/download-*.js', 'src/helpers/bundledWhisperModels.mjs') }}
 
       - name: Download whisper.cpp binaries
         run: node scripts/download-whisper-cpp.js --current
@@ -95,6 +95,9 @@ jobs:
         run: node scripts/download-meeting-aec-helper.js --current
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+
+      - name: Download the bundled speech models
+        run: node scripts/download-default-whisper-model.js --platform linux --arch x64
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -164,11 +167,14 @@ jobs:
           rm -f node_modules/ffmpeg-static/ffmpeg
           npm_config_arch=x64 node node_modules/ffmpeg-static/install.js
 
+      # Keyed on the arch and on the speech-model table, so a job never restores
+      # the other arch's models; the download step also moves aside any file
+      # that its target does not ship.
       - name: Cache native binaries
         uses: actions/cache@v4
         with:
           path: resources/bin
-          key: macos-${{ matrix.arch }}-bin-${{ hashFiles('scripts/download-*.js', 'scripts/build-globe-listener.js', 'resources/macos-globe-listener.swift', 'scripts/build-macos-fast-paste.js', 'resources/macos-fast-paste.swift', 'scripts/build-media-remote.js', 'resources/macos-media-remote.swift', 'scripts/build-macos-audio-tap.js', 'resources/macos-audio-tap.swift') }}
+          key: macos-${{ matrix.arch }}-bin-${{ hashFiles('scripts/download-*.js', 'src/helpers/bundledWhisperModels.mjs', 'scripts/build-globe-listener.js', 'resources/macos-globe-listener.swift', 'scripts/build-macos-fast-paste.js', 'resources/macos-fast-paste.swift', 'scripts/build-media-remote.js', 'resources/macos-media-remote.swift', 'scripts/build-macos-audio-tap.js', 'resources/macos-audio-tap.swift') }}
 
       - name: Compile macos-globe-listener binary
         run: npm run compile:globe -- --arch ${{ matrix.arch }}
@@ -207,6 +213,10 @@ jobs:
         run: node scripts/download-meeting-aec-helper.js --current --platform darwin --arch ${{ matrix.arch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+
+      # arm64 ships small.en and x64 ships base.en (src/helpers/bundledWhisperModels.mjs).
+      - name: Download the bundled speech models
+        run: node scripts/download-default-whisper-model.js --platform darwin --arch ${{ matrix.arch }}
 
       - name: Cache Electron
         uses: actions/cache@v4
@@ -267,6 +277,12 @@ jobs:
           done
           test -x "$APP_PATH/Contents/Resources/bin/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter" || { echo "Missing in bundle: MediaRemoteAdapter.framework"; exit 1; }
           test -f "$APP_PATH/Contents/Resources/bin/mediaremote-adapter.pl" || { echo "Missing in bundle: mediaremote-adapter.pl"; exit 1; }
+
+      - name: Report the bundled speech models and the DMG size
+        run: |
+          APP_PATH=$(ls -d dist/mac*/Oats.app | head -n1)
+          ls -l "$APP_PATH/Contents/Resources/bin/whisper-models"
+          ls -l dist/*.dmg
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
