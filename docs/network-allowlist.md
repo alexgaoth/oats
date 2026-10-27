@@ -77,7 +77,28 @@ own, the names wait for the end, so the two models do not take turns loading).
 With a cloud provider selected, these requests go to the provider during the
 conversation, and the sidebar counts them like any renderer request. With no
 writing model, or one that is not ready, nothing is sent and the topics keep
-their on-device names (`src/stores/topicNamingRunner.ts`).
+their on-device names (`src/stores/topicNamingRunner.ts`). With OpenAI as the
+writing model, the live topic check below names the topics while recording
+instead, and these requests go out only at the end, for the record's topics it
+did not name.
+
+The live topic check runs only with OpenAI as the writing model and an OpenAI
+key, and goes to the same host by the same key, so it adds no destination
+either (`src/helpers/topicLoop.mjs`). During the conversation, the on-device
+tracker proposes changes of subject, and a fast OpenAI model confirms each
+proposed change and names the new topic: gpt-6-luna when the key can use it,
+else gpt-5.6-luna. Once per app session Oats asks OpenAI whether the key can
+use them (`GET /v1/models/{model}`, no conversation text; with no key, nothing
+is sent). Each request carries the topics' names and one-line descriptions and
+at most 3,000 characters of what was said around the proposed change (or at
+the end of a topic that ran 250 words with no change), never audio. About 48
+requests an hour (never more than 120), one at a time, with reasoning off. Each
+request carries a small part, but together they quote most of the
+conversation: 91 to 94% of its lines on 24 test meetings. The sidebar counts
+them like any renderer request. After three failed requests in a row, or when
+the writing model is no longer OpenAI's, the check stops for that recording.
+With any other provider, a custom endpoint, a server of the person's own or a
+model on this computer, the check is off and nothing changes.
 
 The context check (off by default, Settings › Connections) uses the same
 writing model by the same route, so it adds no destination either. When a

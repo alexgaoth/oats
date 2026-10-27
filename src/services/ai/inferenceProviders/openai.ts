@@ -209,6 +209,18 @@ export const openaiProvider: InferenceProvider = {
             requestBody.input = messages;
             requestBody.store = false;
             requestBody.max_output_tokens = maxTokens;
+            // Asked for by one caller only (the live topic check, topicLoop.mjs).
+            if (config.reasoningEffort) requestBody.reasoning = { effort: config.reasoningEffort };
+            if (config.responseSchema) {
+              requestBody.text = {
+                format: {
+                  type: "json_schema",
+                  name: config.responseSchema.name,
+                  schema: config.responseSchema.schema,
+                  strict: true,
+                },
+              };
+            }
           } else {
             requestBody.messages = messages;
             requestBody[apiConfig.tokenParam] = maxTokens;
@@ -216,6 +228,17 @@ export const openaiProvider: InferenceProvider = {
               requestBody.reasoning_effort = "low";
             }
             applyThinkingSuppression(requestBody, model, resolvedProvider, config, openAiBase);
+            if (config.reasoningEffort) requestBody.reasoning_effort = config.reasoningEffort;
+            if (config.responseSchema) {
+              requestBody.response_format = {
+                type: "json_schema",
+                json_schema: {
+                  name: config.responseSchema.name,
+                  schema: config.responseSchema.schema,
+                  strict: true,
+                },
+              };
+            }
           }
 
           if (apiConfig.supportsTemperature) {

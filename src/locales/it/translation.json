@@ -2254,7 +2254,7 @@
         "speechTitle": "Modello vocale",
         "speechScreen": "Un solo modello trascrive le tue conversazioni e le tue dettature. Due modelli si alternerebbero in memoria su questo Mac.",
         "writingTitle": "Modello di scrittura",
-        "writingScreen": "Un solo modello scrive i tuoi riassunti, dà un nome ai temi di ogni conversazione e ripulisce le tue dettature. Con un modello cloud, ciò che si dice su ogni tema viene inviato a quel fornitore durante la conversazione.",
+        "writingScreen": "Un solo modello scrive i tuoi riassunti, dà un nome ai temi di ogni conversazione e ripulisce le tue dettature. Con un modello cloud, ciò che si dice su ogni tema viene inviato a quel fornitore durante la conversazione. Con OpenAI, un modello OpenAI veloce conferma anche ogni cambio di tema durante la conversazione e gli dà un nome, e ogni richiesta contiene fino a 3.000 caratteri di ciò che si è detto intorno al cambio.",
         "none": "Nessuno per ora",
         "selfHosted": "Il tuo server"
       },

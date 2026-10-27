@@ -202,6 +202,16 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   when a newer one arrives. It never goes back to the on-device name, a failed
   or unusable answer changes nothing, and a rename the model keeps changes
   nothing on screen.
+- **Live topic check** (`helpers/topicLoop.mjs`), only with OpenAI as the
+  writing model: the on-device tracker proposes changes of subject early, and a
+  fast OpenAI model (gpt-6-luna, else gpt-5.6-luna) confirms each one, places
+  it, and names the new topic in the same answer. The flow card shows these
+  topics; each line still lands at once in the topic the room is on, and an
+  answer only moves lines shown under 30 s ago to a new or earlier topic. A
+  failed answer changes nothing; after three in a row the card goes back to
+  the on-device topics, named as above. The record keeps the on-device cut at
+  Finish, with the check's names carried over by the lines they were given
+  from, and the writing model names the rest.
 - **Detailed:** adds the question cards and the live transcript below the flow
   card, each in standard card/list styling. The flow card then yields height to
   them (at most 40% of the column) and scrolls inside.

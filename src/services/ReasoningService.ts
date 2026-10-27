@@ -376,6 +376,36 @@ class ReasoningService extends BaseReasoningService {
     }
   }
 
+  /**
+   * Whether this OpenAI key can use a model, by one cheap request
+   * (`GET /models/{id}`, no tokens; counted in the sidebar like any request).
+   * True or false when OpenAI says so of the model; null when it could not be
+   * told (no key or a rejected key, offline, a server error), so the caller
+   * asks again later instead of keeping a no. With no key nothing is sent.
+   */
+  async openAiModelAvailable(model: string): Promise<boolean | null> {
+    let apiKey = "";
+    try {
+      apiKey = await this.getApiKey("openai");
+    } catch {
+      return null;
+    }
+    if (!apiKey) return null;
+    const url = buildApiUrl(getConfiguredOpenAIBase(), `/models/${encodeURIComponent(model)}`);
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (res.ok) return true;
+      // The model is not there for this key; a rejected key (401) may be fixed.
+      if ([400, 403, 404].includes(res.status)) return false;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   async *processTextStreaming(
     messages: Array<{ role: string; content: string }>,
     model: string,

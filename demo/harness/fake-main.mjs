@@ -113,7 +113,7 @@ function noteRow(id, fields) {
 }
 
 /**
- * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean }} options The
+ * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean, openai?: boolean }} options The
  *   sample fixtures to hold, placed relative to `now` exactly as
  *   `insertSampleConversations` places them, and the one the app ships as its
  *   in-app example (`insertExampleConversation`).
@@ -124,6 +124,7 @@ export function createFakeMain({
   now = Date.now(),
   badges = false,
   agent = false,
+  openai = false,
 }) {
   const notes = [];
   const events = [];
@@ -486,6 +487,10 @@ export function createFakeMain({
 
     // --- Conversation groups.
     ...groupApi,
+
+    // --- OpenAI as the writing model (`loop=1`): a placeholder key, for the
+    // stand-in that answers api.openai.com in the page (fastModel.mjs).
+    getOpenAIKey: async () => (openai ? "demo-key-answered-in-page" : ""),
 
     // --- The summary: the built-in action, and the local model behind it.
     getActions: async () => [{ ...BUILTIN_ACTION }],

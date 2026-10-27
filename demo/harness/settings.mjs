@@ -5,7 +5,9 @@
 //   question cards on, read locally (no classifier model), auto-search off
 //   unless `autosearch=1` (the fake main process records the search instead
 //   of opening a browser: `window.oatsDemo.searches()`)
-//   a local summary model, so Finish writes a title and a summary
+//   a local summary model, so Finish writes a title and a summary, unless
+//   `loop=1`: then the writing model is OpenAI's, and the live topic check
+//   runs against the stand-in in fastModel.mjs (nothing leaves the page)
 //   the context check off unless `check=1`, which turns it on with the demo's
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
 //
@@ -40,8 +42,14 @@ export function applyDemoSettings(params) {
   set("conversationAideModel", "");
   set("conversationAutoSearchEnabled", params.get("autosearch") === "1" ? "true" : "false");
   set("meetingUseLocalWhisper", "true");
-  set("cleanupMode", "local");
-  set("cleanupModel", "qwen3.5-4b-q4_k_m");
+  if (params.get("loop") === "1") {
+    set("cleanupMode", "providers");
+    set("cleanupProvider", "openai");
+    set("cleanupModel", "gpt-5.6-luna");
+  } else {
+    set("cleanupMode", "local");
+    set("cleanupModel", "qwen3.5-4b-q4_k_m");
+  }
   set("autoGenerateNoteTitle", "true");
   set("contextCheckEnabled", params.get("check") === "1" ? "true" : "false");
   set("contextFolder", params.get("check") === "1" ? CONTEXT_FOLDER : "");
