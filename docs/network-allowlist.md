@@ -91,10 +91,10 @@ else gpt-5.6-luna. Once per app session Oats asks OpenAI whether the key can
 use them (`GET /v1/models/{model}`, no conversation text; with no key, nothing
 is sent). Each request carries the topics' names and one-line descriptions and
 at most 3,000 characters of what was said around the proposed change (or at
-the end of a topic that ran 250 words with no change), never audio. About 48
-requests an hour (never more than 120), one at a time, with reasoning off. Each
-request carries a small part, but together they quote most of the
-conversation: 91 to 94% of its lines on 24 test meetings. The sidebar counts
+the end of a topic that ran 250 words with no change), never audio. About 40
+to 50 requests an hour (never more than 120), one at a time, with reasoning
+off. Each request carries a small part, but together they quote most of the
+conversation: 91 to 95% of its lines on 24 test meetings. The sidebar counts
 them like any renderer request. After three failed requests in a row, or when
 the writing model is no longer OpenAI's, the check stops for that recording.
 With any other provider, a custom endpoint, a server of the person's own or a
