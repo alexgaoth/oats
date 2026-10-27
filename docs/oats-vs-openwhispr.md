@@ -74,6 +74,13 @@ there is nothing to decide.
 
 **7.18% → 4.83% WER, 584ms → 446ms.**
 
+Since 2026-10-26 Apple Silicon ships `small.en` in place of `base.en`, and starts
+new installs on the `small` size, which an English speaker gets as `small.en`.
+On an M5 Pro with Metal it scores 3.95% against 5.09% for dictation (n = 200) and
+recovers 3.6 points more of a quiet room's words, at 134 ms a segment against
+58 ms. Intel Macs and Linux keep `base.en`. The numbers are in
+[`src/helpers/bundledWhisperModels.mjs`](../src/helpers/bundledWhisperModels.mjs).
+
 ### 3. The pre-Oats build was not doing this locally at all
 
 This is the honest answer to "why does the old one feel better".

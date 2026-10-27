@@ -1,8 +1,9 @@
 # Oats network allowlist
 
 Oats can run a complete conversation offline: a fresh install records, transcribes
-with its bundled Whisper base model, catches questions, creates a note, and shows
-the conversation structure with no connection at all.
+with its bundled Whisper models (`small.en` and `base` on Apple Silicon, `base.en`
+and `base` elsewhere), catches questions, creates a note, and shows the
+conversation structure with no connection at all.
 
 **Audio, transcripts, and summaries never leave the device.** No OpenWhispr
 service, account service, analytics endpoint, calendar service, or automatic
