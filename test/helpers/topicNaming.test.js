@@ -153,6 +153,28 @@ test("a generic name, a refusal or a name of the wrong size is no name", () => {
   assert.equal(naming.parseTopicName("Team offsite planning"), "Team offsite planning");
 });
 
+test("a name one word over the prompt's five is kept, two words over is not", () => {
+  // gpt-6-luna answers six words to about one request in eight; those names
+  // were judged as good as shorter ones (docs/fast-models.md).
+  assert.equal(naming.MAX_NAME_WORDS, 6);
+  assert.equal(
+    naming.parseTopicName("How remote controls transmit button signals"),
+    "How remote controls transmit button signals"
+  );
+  assert.equal(naming.parseTopicName("How the remote controls transmit button signals"), null);
+  assert.equal(
+    naming.parseTopicName("How remote controls transmit button signals", { maxWords: 5 }),
+    null
+  );
+  // The lanes' bound holds whatever the count: six long words are still too long.
+  assert.equal(
+    naming.parseTopicName(
+      "Interdepartmental telecommunications infrastructure standardisation documentation requirements"
+    ),
+    null
+  );
+});
+
 test("the prompt handed back as the answer is no name", () => {
   const prompt = naming.buildTopicNamePrompt({
     turns: ["We need to pick the launch date before the kickoff."],

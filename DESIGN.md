@@ -198,10 +198,10 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   from its words. When a writing model is chosen, it names the topic once the
   topic holds 40 words, again as it grows, and at Finish for the record when
   it is new or changed (`helpers/topicNaming.mjs`, `helpers/topicNamer.mjs`):
-  2 to 5 words, specific, sentence case. A name changes only when a newer one
-  arrives. It never goes back to the on-device name, a failed or unusable
-  answer changes nothing, and a rename the model keeps changes nothing on
-  screen.
+  2 to 5 words asked, 6 kept, specific, sentence case. A name changes only
+  when a newer one arrives. It never goes back to the on-device name, a failed
+  or unusable answer changes nothing, and a rename the model keeps changes
+  nothing on screen.
 - **Detailed:** adds the question cards and the live transcript below the flow
   card, each in standard card/list styling. The flow card then yields height to
   them (at most 40% of the column) and scrolls inside.

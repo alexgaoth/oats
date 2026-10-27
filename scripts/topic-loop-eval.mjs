@@ -285,10 +285,12 @@ function makeAsk(clock, calls) {
 }
 
 /** The app's naming ask (`{ system, text }` to a string), on the experiment's ask. */
-function namerAsk(ask) {
+function namerAsk(ask, answers = null) {
   return async ({ system, text }) => {
     const result = await ask({ kind: "name", system, user: text, maxTokens: 400 });
     if (!result.ok) throw new Error(result.error);
+    // The raw answers of #121's naming requests, to study the names it refuses.
+    answers?.push({ prompt: text, answer: result.text });
     return result.text;
   };
 }
@@ -346,6 +348,7 @@ async function runConversation(conversation) {
   const ask = SPEC ? makeAsk(clock, calls) : null;
   const utterances = conversation.utterances;
   const segments = [];
+  const nameAnswers = [];
   let display;
   let finishLive;
   let variantStats = null;
@@ -359,7 +362,7 @@ async function runConversation(conversation) {
     const namer =
       VARIANT === "v0" || VARIANT === "v1"
         ? new TopicNamer({
-            ask: namerAsk(ask),
+            ask: namerAsk(ask, nameAnswers),
             now: clock.now,
             setTimer: clock.setTimer,
             clearTimer: clock.clearTimer,
@@ -440,7 +443,7 @@ async function runConversation(conversation) {
       variantStats = loop.stats;
       // The app's final naming pass (#121), over the model's own names.
       const namer = new TopicNamer({
-        ask: namerAsk(ask),
+        ask: namerAsk(ask, nameAnswers),
         now: clock.now,
         setTimer: clock.setTimer,
         clearTimer: clock.clearTimer,
@@ -684,6 +687,7 @@ async function runConversation(conversation) {
     ),
   };
   result.variantStats = variantStats;
+  if (!conversation.private) result.nameAnswers = nameAnswers;
   // Names for the judge: per human segment, the live name and the record's.
   const recordNodes = nodesOf(record);
   result.names = human.map((segment) => ({

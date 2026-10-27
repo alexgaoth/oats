@@ -483,6 +483,30 @@ holds it to +0.2.
 - Do not use reasoning for any of these requests: it is 2.5 times slower at the
   median, up to 5 times at p95, and no better.
 
+## Six-word names (#121)
+
+#121's prompt asks for 2 to 5 words, and its check refused a name of six. Its
+naming requests and the answers, from eval24 V1 runs (`nameAnswers` in
+`topic-loop-eval.mjs`'s JSON); the Claude models got gpt-6-luna's prompts again
+(`scripts/topic-name-lengths.mjs --replay`):
+
+| model | answers | kept at 5 words | kept at 6 words | six-word names |
+| --- | --- | --- | --- | --- |
+| gpt-6-luna | 337 | 81.0% | 92.9% | 40 |
+| gpt-5.6-luna | 333 | 95.5% | 99.4% | 13 |
+| Claude Haiku 5.5 | 337 | 94.1% | 98.8% | 16 |
+| Claude Sonnet 5.5 | 337 | 92.3% | 97.6% | 18 |
+
+A blind judge (Claude Sonnet 5.5, twice each, 1 to 5 against what was said;
+`--judge`) scored the 53 six-word names relevance 3.78 [3.63, 3.92] and
+specificity 3.51 [3.39, 3.63], and 60 accepted names of 2 to 5 words 3.62
+[3.47, 3.76] and 2.94 [2.83, 3.06]. A six-word name is as relevant and more
+specific, so the check
+keeps it now (`MAX_NAME_WORDS` 6, `src/helpers/topicNaming.mjs`), for every
+writing model; the prompt still asks for 2 to 5 words, and the 48-character
+limit the lanes and the graph are drawn for stays. Of the names still refused,
+22 of 24 (gpt-6-luna) and 2 of 2 (gpt-5.6-luna) have seven words or more.
+
 ## Other findings
 
 - **The app's Anthropic route fails for three models in its own list.** It
@@ -492,7 +516,8 @@ holds it to +0.2.
   answer). A summary, a topic name or a group sort with one of them fails.
 - **gpt-4.1-nano, in the app's OpenAI list, is retired** (HTTP 404).
 - **#121's name check refuses 14% of gpt-6-luna's names** (six words, against a
-  limit of five); gpt-5.6-luna's are refused 2.7% of the time.
+  limit of five); gpt-5.6-luna's are refused 2.7% of the time. Fixed: a
+  six-word name is kept now (see "Six-word names" above).
 - **On eval24 the two on-device trackers segment about equally** (main's live Pk
   0.356 against 0.339 before #123, record 0.331 against 0.339; neither difference
   is outside its interval), and main's live view scores worse than one topic for
@@ -526,6 +551,9 @@ node scripts/topic-loop-eval.mjs --variant v2 --model openai:gpt-6-luna@none --a
 node scripts/topic-loop-eval.mjs --variant v3 --model local:qwen3.5-2b@grammar \
   --local-model Qwen_Qwen3.5-2B-Q4_K_M.gguf --llama-server resources/bin/llama-server-darwin-arm64 \
   --ami $AMI --set test --json v3-local.json
+
+# Six-word names: refusals by length, the same prompts to other models, and the blind judge
+node scripts/topic-name-lengths.mjs --runs v1.json --replay anthropic:claude-haiku-5-5 --judge anthropic:claude-sonnet-5-5
 
 # The blind judge over any set of runs (cached per name, so added runs cost only their new names)
 node scripts/topic-names-judge.mjs --runs d1.json,v1.json,v3.json --judge anthropic:claude-sonnet-5-5 --repeats 2 --json judge.json
