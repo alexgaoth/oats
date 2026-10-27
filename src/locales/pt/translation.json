@@ -171,6 +171,10 @@
       "shortcutTitle": "Comece de qualquer app",
       "shortcutDescription": "Pressione de novo para encerrar a conversa.",
       "getStarted": "Começar"
+    },
+    "language": {
+      "title": "Idioma",
+      "description": "O idioma falado na sala"
     }
   },
   "streaming": {

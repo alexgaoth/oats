@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
-import { AlertTriangle, Check, Keyboard, Mic, Shield } from "lucide-react";
+import { AlertTriangle, Check, Keyboard, Languages, Mic, Shield } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Kbd } from "./ui/kbd";
+import LanguageSelector from "./ui/LanguageSelector";
 import { OatsMark } from "./shell/OatsMark";
 import { formatHotkey } from "../utils/hotkeyLabel";
 import { getCachedPlatform } from "../utils/platform";
@@ -66,10 +67,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     tinfoilApiKey,
     dictationKey,
     dictationEnabled,
+    preferredLanguage,
     setActivationMode,
     setDictationKey,
     updateTranscriptionSettings,
   } = useSettings();
+  const languageTitleId = useId();
 
   // Onboarding edits only the primary dictation hotkey; extra bindings are
   // preserved via withExtraDictationHotkeys.
@@ -327,6 +330,30 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     {t("onboarding.welcome.allow")}
                   </Button>
                 )}
+              </div>
+              {/* What Oats listens for. English unless somebody here speaks
+                  another language; it saves as it changes, to the setting
+                  Settings › Recording shows. */}
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Languages aria-hidden="true" className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p id={languageTitleId} className="text-sm font-medium text-foreground">
+                    {t("onboarding.language.title")}
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                    {t("onboarding.language.description")}
+                  </p>
+                </div>
+                <LanguageSelector
+                  variant="control"
+                  align="end"
+                  aria-labelledby={languageTitleId}
+                  className="w-36 shrink-0"
+                  value={preferredLanguage}
+                  onChange={(value) => updateTranscriptionSettings({ preferredLanguage: value })}
+                />
               </div>
               {shortcut && (
                 <div className="flex items-center gap-3 px-4 py-3.5">

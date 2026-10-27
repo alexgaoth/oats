@@ -171,6 +171,10 @@
       "shortcutTitle": "どのアプリからでも開始",
       "shortcutDescription": "もう一度押すと会話を終了します。",
       "getStarted": "はじめる"
+    },
+    "language": {
+      "title": "言語",
+      "description": "部屋で話される言語"
     }
   },
   "streaming": {

@@ -171,6 +171,10 @@
       "shortcutTitle": "在任何應用程式中開始",
       "shortcutDescription": "再按一次即可結束對話。",
       "getStarted": "開始使用"
+    },
+    "language": {
+      "title": "語言",
+      "description": "房間裡使用的語言"
     }
   },
   "streaming": {

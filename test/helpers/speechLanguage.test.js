@@ -289,3 +289,14 @@ test("the pickers offer English and still offer auto", () => {
   assert.ok(byCode.has("en-US") && byCode.has("en-GB"), "the spelling variants stay");
 });
 
+test("the setup screen and Settings write the same setting", () => {
+  const write =
+    /onChange=\{\(value\) =>\s*updateTranscriptionSettings\(\{ preferredLanguage: value \}\)\s*\}/;
+  const onboarding = read("src/components/OnboardingFlow.tsx");
+  const at = onboarding.indexOf("<LanguageSelector");
+  assert.ok(at > -1, "no language picker on the setup screen");
+  const picker = onboarding.slice(at, onboarding.indexOf("/>", at));
+  assert.match(picker, /value=\{preferredLanguage\}/);
+  assert.match(picker, write);
+  assert.match(read("src/components/SettingsPage.tsx"), write);
+});

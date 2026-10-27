@@ -171,6 +171,10 @@
       "shortcutTitle": "Start from any app",
       "shortcutDescription": "Press it again to finish the conversation.",
       "getStarted": "Get started"
+    },
+    "language": {
+      "title": "Language",
+      "description": "The language spoken in the room"
     }
   },
   "streaming": {
