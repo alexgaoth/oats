@@ -132,6 +132,14 @@
       "instruction": "LANGUAGE CONTEXT: The user's preferred language is Dutch. The transcribed text will be in Dutch. You MUST write your entire output in Dutch while maintaining proper Dutch grammar, spelling, and punctuation. If the user naturally uses English words or technical terms, preserve those as-is."
     },
     {
+      "code": "en",
+      "label": "English",
+      "flag": "\uD83C\uDDEC\uD83C\uDDE7",
+      "whisper": true,
+      "parakeet": true,
+      "assemblyai": true
+    },
+    {
       "code": "en-US",
       "label": "English (US)",
       "flag": "\uD83C\uDDFA\uD83C\uDDF8",

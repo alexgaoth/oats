@@ -650,7 +650,9 @@ async function startApp() {
   const whisperSettings = {
     localTranscriptionProvider: process.env.LOCAL_TRANSCRIPTION_PROVIDER || "",
     whisperModel: process.env.LOCAL_WHISPER_MODEL,
-    language: process.env.LOCAL_WHISPER_LANGUAGE || null,
+    // English unless the person chose another language; "auto" warms the
+    // multilingual model that detection needs.
+    language: environmentManager.getSpeechLanguage(),
     useCuda,
     useVulkan:
       !useCuda &&

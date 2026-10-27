@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { useSettingsStore, initializeSettings } from "../stores/settingsStore";
 import logger from "../utils/logger";
-import { getBaseLanguageCode } from "../utils/languageSupport";
+import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
 import { useLocalStorage } from "./useLocalStorage";
 import type { LocalTranscriptionProvider, InferenceMode, SelfHostedType } from "../types/electron";
 import type { Snippet } from "../utils/snippets";
@@ -191,8 +191,10 @@ function useSettingsInternal() {
         useLocalWhisper,
         localTranscriptionProvider,
         model: model || undefined,
-        // Sent the way requests send it, so the pre-warm loads the same model.
-        language: getBaseLanguageCode(preferredLanguage),
+        // Sent the way requests send it, so the pre-warm loads the same model,
+        // except that detection is written out as "auto": main reads an unset
+        // language as the default, English.
+        language: startupSpeechLanguage(preferredLanguage),
         cleanupProvider,
         cleanupModel: cleanupProvider === "local" ? cleanupModel : undefined,
         dictationAgentProvider,

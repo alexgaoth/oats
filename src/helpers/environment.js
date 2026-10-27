@@ -493,6 +493,16 @@ class EnvironmentManager {
     return result;
   }
 
+  // The speech language the launch pre-warm loads Whisper for: main's copy of
+  // the renderer's setting, synced by `sync-startup-preferences`. Unset (a new
+  // install, or one that last synced while "auto" was the default and was
+  // stored as nothing) is the default, English. Detection is stored as "auto".
+  // Its twin is `startupSpeechLanguage` in src/helpers/speechLanguage.mjs, and
+  // test/helpers/speechLanguage.test.js holds the two to the same answers.
+  getSpeechLanguage() {
+    return this._getKey("LOCAL_WHISPER_LANGUAGE").trim() || "en";
+  }
+
   getUiLanguage() {
     return normalizeUiLanguage(this._getKey("UI_LANGUAGE"));
   }

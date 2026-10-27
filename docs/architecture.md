@@ -328,6 +328,7 @@ Non-secret env vars persisted to `.env` (via `saveAllKeysToEnvFile()`):
 
 - `LOCAL_TRANSCRIPTION_PROVIDER`: Transcription engine (`nvidia` for Parakeet)
 - `PARAKEET_MODEL`: Selected Parakeet model name (e.g., `parakeet-tdt-0.6b-v3`)
+- `LOCAL_WHISPER_LANGUAGE`: The speech language the launch pre-warm loads Whisper for, synced from the renderer's `preferredLanguage` as a base code (`en`, `de`) or `auto`. Unset means the default, English (`EnvironmentManager.getSpeechLanguage`)
 - `DICTATION_ENABLED`: `true` or `false` once chosen in Settings; unset means the platform default (off on macOS, on elsewhere). Read by the main process before any window exists; the renderer's `dictationEnabled` follows it
 
 ### 6. Language Support
