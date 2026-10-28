@@ -2062,6 +2062,8 @@
       "needsSummaryModel": "Ainda não há um modelo de resumo pronto, então esta conversa não foi resumida.",
       "notSummarized": "Esta conversa ainda não foi resumida.",
       "summarize": "Resumir",
+      "summarizeAgain": "Resumir novamente",
+      "summaryFailed": "Não foi possível criar o resumo: {{reason}}",
       "setUpModel": "Configurar um modelo"
     },
     "global": {
@@ -2305,7 +2307,8 @@
     "errors": {
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",
       "noEndpoint": "Configure o endpoint da API do Oats antes de gravar uma conversa.",
-      "actionFailed": "O Oats não conseguiu gerar inteligência para esta conversa."
+      "actionFailed": "O Oats não conseguiu gerar inteligência para esta conversa.",
+      "noSummary": "O modelo não retornou nenhum resumo."
     },
     "preflight": {
       "no-microphone": "Nenhum microfone encontrado. Ligue um e pressione novamente.",
