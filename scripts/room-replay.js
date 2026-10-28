@@ -83,6 +83,9 @@
  *                  '{"threshold":0.35}' (Settings can change them).
  *   --normalize-rms an experiment, not the app: raise each segment to this RMS
  *                  before it is sent.
+ *   --denoise      an experiment, not the app: each segment through this FFmpeg
+ *                  filter chain before it is sent (and before --normalize-rms),
+ *                  e.g. 'afftdn=nf={nf}' (see DENOISE below).
  *   --every N      send only every Nth segment of each recording (from
  *                  --every-offset, default 0), and score only the reference
  *                  words inside them: a sample for paid models, the same
@@ -165,6 +168,16 @@ const NOISE_LEVEL = Number(arg("noise-level", "0.01"));
  * Whisper or its VAD.
  */
 const NORMALIZE = arg("normalize-rms") ? Number(arg("normalize-rms")) : null;
+/**
+ * An experiment, not the app: an FFmpeg filter chain each segment goes through
+ * first. A room's level varies, and so must a denoiser's settings: in the
+ * chain, `{nf}` is the segment's own noise floor (its quietest tenth of 20 ms
+ * frames, in dBFS) plus `--nf-offset` (default 1 dB), for afftdn's `nf`;
+ * `{gain}` and `{ungain}` move that floor to -38 dBFS and back, so a filter
+ * whose strength is absolute (anlmdn) sees every room at one level.
+ */
+const DENOISE = arg("denoise");
+const NF_OFFSET = Number(arg("nf-offset", "1"));
 /** A sample of the segments, for paid models: every Nth, from the offset. */
 const EVERY = Number(arg("every", "1"));
 const EVERY_OFFSET = Number(arg("every-offset", "0"));
@@ -1192,6 +1205,31 @@ function oracleSegments(words, totalSeconds) {
 
 // ---------------------------------------------------------------------------
 
+/** A segment's own noise floor: the RMS of its quietest tenth of 20 ms frames, in dBFS. */
+function floorDb(samples) {
+  const levels = [];
+  for (let at = 0; at + FRAME <= samples.length; at += FRAME) {
+    let square = 0;
+    for (let i = at; i < at + FRAME; i += 1) square += (samples[i] / 0x8000) ** 2;
+    levels.push(Math.sqrt(square / FRAME));
+  }
+  if (!levels.length) return -90;
+  levels.sort((a, b) => a - b);
+  return 20 * Math.log10(Math.max(1e-5, levels[Math.floor(0.1 * (levels.length - 1))]));
+}
+
+/** `--denoise` with this segment's floor in place of its placeholders. */
+function denoiseChain(chain, samples) {
+  if (!/\{(nf|gain|ungain)\}/.test(chain)) return chain;
+  const floor = floorDb(samples);
+  const nf = Math.max(-80, Math.min(-20, Math.round(floor + NF_OFFSET)));
+  const gain = Math.round((-38 - floor) * 10) / 10;
+  return chain
+    .replace(/\{nf\}/g, String(nf))
+    .replace(/\{gain\}/g, `${gain}dB`)
+    .replace(/\{ungain\}/g, `${-gain}dB`);
+}
+
 /** One recording, start to finish: capture, segmenter, transcription, scoring. */
 async function replay(recording, backend, ablation) {
   const meeting = recording.name;
@@ -1261,6 +1299,23 @@ async function replay(recording, backend, ablation) {
       `, ${seg.discarded.length} openings discarded, segmenter ${seg.cpuMs.toFixed(0)} ms`
   );
 
+  if (DENOISE) {
+    for (const s of segments) {
+      const started = process.hrtime.bigint();
+      const raw = Buffer.from(s.samples.buffer, s.samples.byteOffset, s.samples.byteLength);
+      s.floorDb = Number(floorDb(s.samples).toFixed(1));
+      const chain = denoiseChain(DENOISE, s.samples);
+      s.samples = Int16Array.from(
+        ffmpegPcm(
+          ["-f", "s16le", "-ar", String(RATE), "-ac", "1", "-i", "-", "-af", chain],
+          RATE,
+          raw
+        )
+      );
+      s.denoiseMs = Number(process.hrtime.bigint() - started) / 1e6;
+    }
+  }
+
   if (NORMALIZE) {
     for (const s of segments) {
       let square = 0;
@@ -1329,6 +1384,7 @@ async function replay(recording, backend, ablation) {
     gainDb: Number(gainDb.toFixed(1)),
     noise: NOISE ? { file: path.basename(NOISE), level: NOISE_LEVEL } : null,
     normalizeRms: NORMALIZE,
+    denoise: DENOISE,
     sample: EVERY > 1 ? { every: EVERY, offset: EVERY_OFFSET } : null,
     // Each second's level at the microphone, as the app keeps it: p05 is the room.
     secondLevels: Object.fromEntries(
