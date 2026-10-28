@@ -611,6 +611,69 @@ segmenter.
    screen shows it (see "Language auto-detection" above).
 4. **Not `gpt-4o-transcribe`** for this path: it drops parts of short segments.
 
+### The words that matter
+
+Words recovered and WER count every word the same, and most of a meeting's
+words are ones a summary never needs and Whisper leaves out on purpose:
+"yeah", "okay", "so", "I think". `room-replay.js` also scores three kinds of
+words on their own, as recall, the share of them the transcript has:
+
+- **content words**: the reference once fillers, backchannels and stopwords
+  are gone, by the app's own lists (`tokenize` in
+  `helpers/conversationTopics.mjs`, the words a topic is made of): 9,059 of the
+  35,721 scored words. Topics, summaries and question cards are made of these.
+- **numbers**: the words of what AMI marks as an amount, a measure, a
+  percentage, a count, a date, a time or a duration (its NUMEX and TIMEX
+  entities): 647 words in 422 mentions.
+- **names**: the words of what AMI marks as a person, an organisation or a
+  place (ENAMEX): 139 words in 92 mentions.
+
+Numbers and names are also scored as whole mentions, every word right: a price
+with one word wrong is a wrong price. And the transcript's own content words
+are scored as **content precision**, the share of them that match a reference
+word, so a change that hears more by inventing more shows it.
+
+The runs above, scored again:
+
+| quiet room               | words recovered | content words | numbers (whole)   | names (whole)     | content precision | WER   |
+| ------------------------ | --------------- | ------------- | ----------------- | ----------------- | ----------------- | ----- |
+| `base.en`                | 66.8%           | 69.2%         | 66.5% (63.0%)     | 58.3% (48.9%)     | 80.2%             | 34.9% |
+| `small.en`: ships        | 70.4%           | 74.3%         | 71.1% (68.0%)     | 70.5% (65.2%)     | 85.8%             | 30.9% |
+| `large-v3-turbo` q5_0    | 75.2%           | **80.0%**     | **75.6% (73.0%)** | **74.1% (69.6%)** | **89.8%**         | 25.9% |
+| `gpt-4o-mini-transcribe` | 73.0%           | 76.5%         | 71.7% (70.1%)     | 71.2% (66.3%)     | 86.6%             | 28.4% |
+| `gpt-4o-transcribe`      | 47.1%           | 55.1%         | 54.9% (52.1%)     | 57.6% (53.3%)     | 80.1%             | 53.3% |
+
+| steady sound             | words recovered | content words | numbers (whole)   | names (whole)     | content precision | WER   |
+| ------------------------ | --------------- | ------------- | ----------------- | ----------------- | ----------------- | ----- |
+| `base.en`                | 34.9%           | 30.7%         | 35.2% (30.1%)     | 18.0% (12.0%)     | 51.1%             | 66.3% |
+| `small.en`: ships        | 40.0%           | 37.9%         | 39.3% (35.1%)     | 26.6% (20.7%)     | 60.9%             | 61.0% |
+| `large-v3-turbo` q5_0    | 47.5%           | **46.5%**     | **48.2% (44.8%)** | 34.5% (26.1%)     | **67.5%**         | 53.5% |
+| `gpt-4o-mini-transcribe` | 39.3%           | 38.2%         | 38.8% (36.5%)     | **39.6% (31.5%)** | 59.3%             | 61.5% |
+| `gpt-4o-transcribe`      | 25.9%           | 28.0%         | 33.1% (29.1%)     | 25.9% (19.6%)     | 49.9%             | 74.2% |
+
+On the quiet microphone, `base.en` recovers 64.6% of the content words (61.7%
+of all words), and 69.9% with each segment raised to an RMS of 0.05 (67.3%).
+
+- **The content words set the models further apart than every word does.**
+  In the quiet room, turbo recovers 4.8 points more words than `small.en` and
+  5.7 points more content words; `base.en` 3.6 and 5.1 points fewer. With
+  steady sound, turbo 7.4 and 8.7 points more. Paired 95% intervals, a
+  bootstrap over the meetings' 243 minutes with both runs scored on the same
+  words: turbo against `small.en` on content words 4.8–6.7 (quiet room) and
+  7.7–9.8 (steady sound), better in 8 of 8 meetings each.
+- **In a quiet room, the words lost are mostly the ones that matter least.**
+  Every model recovers more content words than words. With steady sound the
+  content words go with the rest (`small.en` 37.9% against 40.0%), and the
+  transcript's own content words are wrong far more often (precision 60.9%
+  against 85.8%).
+- **Names suffer most from steady sound**: `small.en` hears 70.5% of the name
+  words in the quiet room and 26.6% with steady sound. There are only 92
+  mentions, so a gap under about ten points between two models is noise:
+  `gpt-4o-mini-transcribe` against `small.en` with steady sound is +12.9
+  points (4.4–21.6) on names and +0.3 (−0.8–1.5) on content words.
+- **`gpt-4o-mini-transcribe` against `small.en`**: 2.2 points more content
+  words in the quiet room (1.3–3.1, 8 of 8 meetings), level with steady sound.
+
 ### What this does not show
 
 - **The real conversation was not replayed.** Its audio is deleted after the
