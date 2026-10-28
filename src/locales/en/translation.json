@@ -2419,7 +2419,9 @@
       "detection": "Whisper Turbo is too slow with language detection",
       "detectionDetail": "Choose the transcription language in Settings › Recording, and Oats uses it.",
       "retry": "Try again",
-      "cancelDownload": "Cancel the Whisper Turbo download"
+      "cancelDownload": "Cancel the Whisper Turbo download",
+      "noticeTitle": "Getting a more accurate speech model for this Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo, from Hugging Face. Oats keeps using the model it came with until it is ready."
     }
   },
   "questionCard": {

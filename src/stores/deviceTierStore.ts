@@ -9,9 +9,18 @@ import type { DeviceTierSnapshot } from "../types/electron";
  */
 interface DeviceTierState {
   tier: DeviceTierSnapshot | null;
+  /**
+   * Oats started turbo's download by itself in this window (useSpeechUpgrade),
+   * as opposed to the person pressing Download in Settings: the one-time
+   * notice says so (SpeechUpgradeNotice).
+   */
+  autoStarted: boolean;
 }
 
-export const useDeviceTierStore = create<DeviceTierState>()(() => ({ tier: null }));
+export const useDeviceTierStore = create<DeviceTierState>()(() => ({
+  tier: null,
+  autoStarted: false,
+}));
 
 let started = false;
 

@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useDeviceTierStore } from "../stores/deviceTierStore";
 import {
   speechChoiceFor,
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../stores/settingsStore";
-import { shouldFetchTurbo, turboStatus, TURBO_MODEL } from "../helpers/speechTier.mjs";
+import { turboStatus, TURBO_MODEL } from "../helpers/speechTier.mjs";
 import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
 
 /** A size in megabytes, as the model list writes it ("574 MB"), in the UI's language. */
@@ -67,35 +67,4 @@ export function useSpeechTier() {
     sizeBytes: turbo?.sizeBytes ?? null,
     turboIsDefault: choice.model === TURBO_MODEL,
   };
-}
-
-/**
- * Ask main for turbo when the rule picks it for this Mac and nothing stands in
- * the way (`shouldFetchTurbo`). Mounted once, in the workspace, which shows
- * only after setup. Main checks the rule again before it fetches anything.
- */
-export function useSpeechUpgrade() {
-  const tier = useDeviceTierStore((state) => state.tier);
-  const language = useSettingsStore((state) => state.preferredLanguage);
-  const whisperModel = useSettingsStore((state) => state.whisperModel);
-  const meetingLocal = useSettingsStore((state) => state.meetingUseLocalWhisper);
-  const engine = useSettingsStore((state) => state.localTranscriptionProvider);
-
-  const choice = useMemo(() => speechChoiceFor(tier, language), [tier, language]);
-  const fetch = shouldFetchTurbo({
-    choice,
-    setupDone: localStorage.getItem("onboardingCompleted") === "true",
-    // `whisperModel` is in the effect's list for this: a choice made in
-    // Settings ends it.
-    followsDefault: whisperModelFollowsDefault(),
-    local: meetingLocal && engine === "whisper",
-    turbo: tier?.turbo ?? {},
-  });
-
-  useEffect(() => {
-    if (!fetch) return;
-    void window.electronAPI
-      ?.startSpeechUpgrade?.({ language: startupSpeechLanguage(language) })
-      .catch(() => {});
-  }, [fetch, language, whisperModel]);
 }

@@ -2465,7 +2465,9 @@
       "detection": "Whisper Turbo слишком медленный с определением языка",
       "detectionDetail": "Выберите язык транскрипции в Настройках › Запись, и Oats будет его использовать.",
       "retry": "Повторить",
-      "cancelDownload": "Отменить загрузку Whisper Turbo"
+      "cancelDownload": "Отменить загрузку Whisper Turbo",
+      "noticeTitle": "Загружается более точная модель речи для этого Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo с Hugging Face. Пока она не готова, Oats использует встроенную модель."
     }
   },
   "questionCard": {

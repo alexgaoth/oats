@@ -199,6 +199,23 @@ test("turbo is fetched after setup, for a default, on this Mac, and never twice"
   assert.equal(without({ turbo: { downloading: { receivedBytes: 1 } } }), false, "under way");
   assert.equal(without({ turbo: { checking: true } }), false, "being checked");
   assert.equal(without({ turbo: { failed: "HTTP 503" } }), false, "Settings retries");
+  assert.equal(without({ recording: true }), false, "not while a conversation is recorded");
+  assert.equal(without({ recording: false }), true);
+});
+
+test("the one-time notice: only for a download Oats started by itself, once", () => {
+  const show = (patch) =>
+    tier.shouldShowUpgradeNotice({
+      noticed: false,
+      autoStarted: true,
+      downloading: true,
+      ...patch,
+    });
+  assert.equal(show({}), true);
+  assert.equal(show({ noticed: true }), false, "shown before, on this install");
+  assert.equal(show({ autoStarted: false }), false, "the person pressed Download in Settings");
+  assert.equal(show({ downloading: false }), false, "nothing is under way");
+  assert.equal(tier.UPGRADE_NOTICE_KEY, "speechUpgradeNoticed");
 });
 
 test("what Settings and the sidebar say about turbo", () => {

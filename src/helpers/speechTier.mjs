@@ -214,30 +214,60 @@ export function defaultSpeechModel({ choice, bundleModel, turboInstalled = false
 
 /**
  * Whether to fetch turbo now. Only after setup, only while the setting follows
- * the default and the speech runs on this Mac with Whisper, and not after a
- * failure (Settings retries) or after the person cancelled or deleted it.
+ * the default and the speech runs on this Mac with Whisper, never while a
+ * conversation is recorded (its notice would compete with the room), and not
+ * after a failure (Settings retries) or after the person cancelled or deleted
+ * it.
  *
  * @param {object} input
  * @param {{ model: string }} input.choice
  * @param {boolean} input.setupDone
  * @param {boolean} input.followsDefault
  * @param {boolean} input.local Speech runs on this Mac with Whisper.
+ * @param {boolean} [input.recording] A conversation is being recorded.
  * @param {{ installed?: boolean, declined?: boolean, downloading?: unknown,
  *   checking?: boolean, failed?: unknown }} input.turbo
  * @returns {boolean}
  */
-export function shouldFetchTurbo({ choice, setupDone, followsDefault, local, turbo = {} }) {
+export function shouldFetchTurbo({
+  choice,
+  setupDone,
+  followsDefault,
+  local,
+  recording = false,
+  turbo = {},
+}) {
   return (
     choice?.model === TURBO_MODEL &&
     setupDone === true &&
     followsDefault === true &&
     local === true &&
+    recording !== true &&
     !turbo.installed &&
     !turbo.declined &&
     !turbo.downloading &&
     !turbo.checking &&
     !turbo.failed
   );
+}
+
+/** Set once the notice of turbo's automatic download has been shown (localStorage). */
+export const UPGRADE_NOTICE_KEY = "speechUpgradeNoticed";
+
+/**
+ * Whether to show the one-time notice that turbo is downloading: when Oats
+ * started the download by itself (after setup, or at the first launch of
+ * this version on an existing install), not when the person asked for it in
+ * Settings, and once per install.
+ *
+ * @param {object} input
+ * @param {boolean} input.noticed The notice was shown before.
+ * @param {boolean} input.autoStarted Oats started this download by itself.
+ * @param {boolean} input.downloading It is under way now.
+ * @returns {boolean}
+ */
+export function shouldShowUpgradeNotice({ noticed, autoStarted, downloading }) {
+  return noticed !== true && autoStarted === true && downloading === true;
 }
 
 /**

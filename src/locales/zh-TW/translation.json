@@ -2414,7 +2414,9 @@
       "detection": "開啟語言偵測時 Whisper Turbo 太慢",
       "detectionDetail": "在 設定 › 錄音 中選擇轉錄語言，Oats 就會使用它。",
       "retry": "重試",
-      "cancelDownload": "取消下載 Whisper Turbo"
+      "cancelDownload": "取消下載 Whisper Turbo",
+      "noticeTitle": "正在為這台 Mac 取得更準確的語音模型（{{size}}）",
+      "noticeDetail": "從 Hugging Face 取得 Whisper Turbo。在它就緒之前，Oats 繼續使用內建的模型。"
     }
   },
   "questionCard": {

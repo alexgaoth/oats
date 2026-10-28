@@ -2419,7 +2419,9 @@
       "detection": "言語の自動検出では Whisper Turbo が遅すぎます",
       "detectionDetail": "設定 › 録音 で文字起こし言語を選ぶと、Oats は Whisper Turbo を使います。",
       "retry": "再試行",
-      "cancelDownload": "Whisper Turbo のダウンロードをキャンセル"
+      "cancelDownload": "Whisper Turbo のダウンロードをキャンセル",
+      "noticeTitle": "この Mac 向けに、より正確な音声モデルを取得しています ({{size}})",
+      "noticeDetail": "Hugging Face から Whisper Turbo を取得します。準備ができるまで、Oats は付属のモデルを使います。"
     }
   },
   "questionCard": {

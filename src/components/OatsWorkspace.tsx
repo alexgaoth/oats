@@ -158,6 +158,7 @@ import {
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
+import SpeechUpgradeNotice from "./SpeechUpgradeNotice";
 import PostMigrationOnboarding from "./PostMigrationOnboarding";
 import { useAppBootstrap } from "../hooks/useAppBootstrap";
 import { useConversationPreflight } from "../hooks/useConversationPreflight";
@@ -171,7 +172,7 @@ import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
-import { useSpeechUpgrade } from "../hooks/useSpeechTier";
+import { useSpeechUpgrade } from "../hooks/useSpeechUpgrade";
 import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 import type {
   ConversationEvent,
@@ -4071,6 +4072,7 @@ export default function OatsWorkspace() {
           action-processing store, so without this a conversation could finish,
           its summary could fail, and the user would never be told. */}
         <BackgroundActionToastListener />
+        <SpeechUpgradeNotice />
         {/* Headless too: reports the recording to the tray and the floating oat,
           which are the only parts of Oats visible when this window is not. */}
         <ConversationStateBridge />

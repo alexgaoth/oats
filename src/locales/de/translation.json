@@ -2419,7 +2419,9 @@
       "detection": "Whisper Turbo ist mit Spracherkennung zu langsam",
       "detectionDetail": "Wählen Sie die Transkriptionssprache unter Einstellungen › Aufnahme, dann nutzt Oats es.",
       "retry": "Erneut versuchen",
-      "cancelDownload": "Download von Whisper Turbo abbrechen"
+      "cancelDownload": "Download von Whisper Turbo abbrechen",
+      "noticeTitle": "Ein genaueres Sprachmodell für diesen Mac wird geladen ({{size}})",
+      "noticeDetail": "Whisper Turbo von Hugging Face. Bis es bereit ist, nutzt Oats weiter das mitgelieferte Modell."
     }
   },
   "questionCard": {

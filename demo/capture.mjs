@@ -100,6 +100,8 @@ const SHOTS = [
   // each state the speed check reports (harness/deviceTier.mjs).
   { name: "speech-setup", query: "firstrun=1&tier=fast", ready: "h1", script: "" },
   { name: "speech-sidebar-downloading", query: "tier=downloading", script: "" },
+  // Oats starts the download by itself and says so, once (SpeechUpgradeNotice).
+  { name: "speech-notice", query: "tier=fast", script: "" },
   ...["downloading", "checking", "ready", "declined", "failed", "slow", "intel"].map((tier) => ({
     name: `speech-settings-${tier}`,
     query: `tier=${tier}`,

@@ -57,14 +57,18 @@ Mac's GPU, on its own speech server, with no connection
 (`src/helpers/deviceTier.js`). When the result says the Mac can run
 `large-v3-turbo` live (`src/helpers/speechTier.mjs`), Oats downloads it once
 setup is done, and only while the speech model follows the default: a model
-the person chose stops it. The setup screen says so once the check is done
-(a second or two after launch), the sidebar and Settings › Models show the
-download with a Cancel button, and the sidebar's request count includes it
-(it goes through `downloadUtils.js`, like every model download). Its SHA-256
-is checked before it is used. A cancelled or deleted Turbo is not fetched
-again unless the person asks for it in Settings. A failed download is tried
-again at the next launch. Intel Macs, Linux, and Macs that measure too slow
-never fetch it.
+the person chose stops it. It never starts while a conversation is
+recorded: it waits for the recording to end. The setup screen says so once
+the check is done (a second or two after launch). When the download starts,
+a notice in the corner says so once, with its size, its host and a Cancel
+button: after setup on a new install, and at the first launch of this
+version on an existing one, which never sees the setup screen. The sidebar
+and Settings › Models show its progress with a Cancel button, and the
+sidebar's request count includes it (it goes through `downloadUtils.js`, like
+every model download). Its SHA-256 is checked before it is used. A cancelled
+or deleted Turbo is not fetched again unless the person asks for it in
+Settings. A failed download is tried again at the next launch. Intel Macs,
+Linux, and Macs that measure too slow never fetch it.
 
 ## Explicit user actions
 

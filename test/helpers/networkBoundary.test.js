@@ -253,9 +253,29 @@ test("turbo is fetched only when the workspace asks, after setup, never at launc
   const askers = ALL_SOURCES.filter((file) => /\buseSpeechUpgrade\(\);/.test(read(file)));
   assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["OatsWorkspace.tsx"]);
   assert.match(
-    read("src/hooks/useSpeechTier.ts"),
+    read("src/hooks/useSpeechUpgrade.ts"),
     /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/
   );
+});
+
+test("turbo's automatic start is announced where the person is, and only that start", () => {
+  // A toast, once, when the workspace's own request started the download
+  // (SpeechUpgradeNotice.tsx). Settings' Download button is the person's own
+  // request and is not announced.
+  const notices = ALL_SOURCES.filter((file) => /<SpeechUpgradeNotice \/>/.test(read(file)));
+  assert.deepEqual(
+    notices.map((file) => path.basename(file)),
+    ["OatsWorkspace.tsx"]
+  );
+  const autoStarts = ALL_SOURCES.filter((file) => /autoStarted: true/.test(read(file)));
+  assert.deepEqual(
+    autoStarts.map((file) => path.basename(file)),
+    ["useSpeechUpgrade.ts"]
+  );
+  const notice = read("src/components/SpeechUpgradeNotice.tsx");
+  assert.match(notice, /shouldShowUpgradeNotice\(/);
+  assert.match(notice, /cancelTurbo\(\)/, "its Cancel is the remembered no");
+  assert.match(notice, /oats\.speechTier\.noticeTitle/);
 });
 
 test("turbo comes through the counted download path, from the models' own repository", () => {
