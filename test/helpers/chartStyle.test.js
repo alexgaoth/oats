@@ -335,7 +335,7 @@ test("a label sits on a plate in the card colour, cut to fit, and says where the
   assert.equal(box.top, 50 - 6 - 3);
 });
 
-// A topic name runs to five words (topicNaming.mjs): too long for one line of
+// A topic name runs to six words (topicNaming.mjs): too long for one line of
 // a graph's label, and better in two than cut. Widths here are 6px a character.
 test("a name too long for one line takes two, broken where they come out even", () => {
   const ctx = recorder();

@@ -31,7 +31,7 @@ export default function TopicGraph({
       selectedId={selectedId}
       layoutKey={layoutKey}
       className={className}
-      // Topic names run to five words: two lines before an ellipsis.
+      // Topic names run to six words: two lines before an ellipsis.
       wrapLabels
       nodeDescription={(node) =>
         t("topicGraph.node", {

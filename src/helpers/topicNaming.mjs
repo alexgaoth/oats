@@ -55,6 +55,16 @@ export const TURN_CHARS = 300;
 export const MAX_NAME_CHARS = 48;
 
 /**
+ * The most words a name may have. The prompt asks for 2 to 5; a name one word
+ * over is kept, not thrown away. Measured on 24 AMI meetings (docs/fast-models.md):
+ * gpt-6-luna answered six words to 12% of #121's requests, gpt-5.6-luna, Claude
+ * Haiku 5.5 and Sonnet 5.5 to 4 to 5%, and a blind judge scored those names as
+ * relevant as the shorter ones and more specific. `MAX_NAME_CHARS` still bounds
+ * what the lanes and the graph must fit.
+ */
+export const MAX_NAME_WORDS = 6;
+
+/**
  * A name is a few tokens; this bounds a model that rambles instead of
  * answering. As for the group sort, it is not set for a cloud provider, whose
  * reasoning counts against it, nor while a model on this computer may think.
@@ -317,16 +327,19 @@ function nameWords(name) {
  *
  * Models wrap a name in quotes, bullets, bold, a "Topic:" prefix, a trailing
  * full stop or Title Case, and small ones sometimes explain themselves after
- * it. All of that is taken off. What is left must be 2 to 5 words (for
- * Japanese and Chinese, 1 to 8 words and at least two characters), at most
- * `MAX_NAME_CHARS`, not generic, not a refusal, and not the name another topic
- * already has.
+ * it. All of that is taken off. What is left must be 2 to `maxWords` words
+ * (`MAX_NAME_WORDS`; for Japanese and Chinese, 1 to 8 words and at least two
+ * characters), at most `MAX_NAME_CHARS`, not generic, not a refusal, and not
+ * the name another topic already has.
  *
  * @param {unknown} answer
- * @param {{ others?: string[], excerpt?: string[] }} [context]
+ * @param {{ others?: string[], excerpt?: string[], maxWords?: number }} [context]
  * @returns {string | null}
  */
-export function parseTopicName(answer, { others = [], excerpt = [] } = {}) {
+export function parseTopicName(
+  answer,
+  { others = [], excerpt = [], maxWords = MAX_NAME_WORDS } = {}
+) {
   const text = String(answer ?? "")
     .replace(/<think>[\s\S]*?<\/think>/gi, "")
     .replace(/<think>[\s\S]*$/i, "");
@@ -354,7 +367,7 @@ export function parseTopicName(answer, { others = [], excerpt = [] } = {}) {
   if (REFUSAL.test(name)) return null;
   const unspaced = !/\s/.test(name) && UNSPACED.test(name);
   const words = nameWords(name);
-  if (unspaced ? words > 8 : words < 2 || words > 5) return null;
+  if (unspaced ? words > 8 : words < 2 || words > maxWords) return null;
   if (isGeneric(name)) return null;
   name = sentenceCase(name, excerpt);
   if ((others ?? []).some((other) => sameName(other, name))) return null;
