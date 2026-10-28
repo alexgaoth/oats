@@ -9,7 +9,8 @@
 // Parameters: `demo=live` replays the launch review as a live recording (the
 // other samples are already there; the review is the one being recorded);
 // `from` seeks there once recording starts (seconds); `speed` is the replay
-// rate; `end=hold` keeps recording at the end instead of pressing Stop;
+// rate; `start=click` waits for Record to be pressed instead of pressing it;
+// `end=hold` keeps recording at the end instead of pressing Stop;
 // `edits=0` leaves the voices unnamed after Stop; `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
@@ -161,5 +162,15 @@ if (live) {
   if (speed > 0) replay.speed(speed);
   const from = Number(params.get("from"));
   if (from > 0) void replay.seek(from);
-  void replay.play().catch((error) => console.error(error));
+  if (params.get("start") === "click") {
+    // Wait for Record to be pressed, by a person or by the film's director: the
+    // app's own button and shortcut start the replay, and pressing again stops
+    // it, instead of the page pressing Record as it loads.
+    main.api.requestToggleConversation = async () => {
+      if (replay.status().phase === "recording") await replay.finish();
+      else await replay.play();
+    };
+  } else {
+    void replay.play().catch((error) => console.error(error));
+  }
 }
