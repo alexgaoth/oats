@@ -57,12 +57,44 @@ function anthropicThinking(modelId, disableThinking) {
   return null;
 }
 
+/** The effort levels a request may ask for (`output_config.effort`). */
+const EFFORTS = new Set(["low", "medium", "high", "xhigh", "max"]);
+
+/**
+ * Whether a request to this model asks for Anthropic's server-side refusal
+ * fallback: a request its safety classifiers decline (a meeting about security
+ * work can look like "cyber") is run again on the model Anthropic picks for
+ * that kind of refusal, instead of failing. Opus 5 and 5.5, Fable 5.x and
+ * Sonnet 5.5 have it; Haiku 5.5 has none. Sonnet 5.5's thinking-off form
+ * ("between_tools") is not sent with it.
+ *
+ * @param {string} modelId
+ * @param {{ type: string } | null} thinking
+ */
+function anthropicFallsBack(modelId, thinking) {
+  const id = String(modelId ?? "");
+  if (/^claude-sonnet-5-5(?:-|$)/.test(id)) return !thinking;
+  return /^claude-(?:opus-5(?:-5)?|fable-5(?:-\d)?)(?:-\d{8})?$/.test(id);
+}
+
+/**
+ * The header the server-side refusal fallback ("default" form) needs. The
+ * Message Batches API rejects `fallbacks`; the app sends no batches.
+ */
+const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+
 /**
  * The Messages API body for one request.
  *
+ * `reasoningEffort` sets `output_config.effort` on Claude 4.7 and later (older
+ * models refuse it), and `responseSchema` asks for an answer that is JSON
+ * matching the schema (`output_config.format`); the live topic check asks for
+ * both (topicLoop.mjs).
+ *
  * @param {{ modelId: string, text: string, config?: {
  *   systemPrompt?: string, maxTokens?: number, temperature?: number,
- *   disableThinking?: boolean } }} input
+ *   disableThinking?: boolean, reasoningEffort?: string,
+ *   responseSchema?: { name: string, schema: object } } }} input
  */
 function buildAnthropicRequest({ modelId, text, config = {} }) {
   const base = config.maxTokens || Math.max(100, Math.min(String(text ?? "").length * 2, 4096));
@@ -79,7 +111,19 @@ function buildAnthropicRequest({ modelId, text, config = {} }) {
   };
   if (old) body.temperature = config.temperature ?? 0.3;
   if (thinking) body.thinking = thinking;
+  const output = {};
+  if (!old && EFFORTS.has(config.reasoningEffort)) output.effort = config.reasoningEffort;
+  if (config.responseSchema?.schema) {
+    output.format = { type: "json_schema", schema: config.responseSchema.schema };
+  }
+  if (Object.keys(output).length) body.output_config = output;
+  if (anthropicFallsBack(modelId, thinking)) body.fallbacks = "default";
   return body;
+}
+
+/** Extra request headers a body needs: the beta header of the refusal fallback. */
+function anthropicHeaders(body) {
+  return body?.fallbacks ? { "anthropic-beta": FALLBACK_BETA } : {};
 }
 
 /**
@@ -108,8 +152,11 @@ function anthropicAnswerText(data) {
 module.exports = {
   THINKING_HEADROOM,
   MIN_MAX_TOKENS,
+  FALLBACK_BETA,
   anthropicTakesTemperature,
   anthropicThinking,
+  anthropicFallsBack,
   buildAnthropicRequest,
+  anthropicHeaders,
   anthropicAnswerText,
 };

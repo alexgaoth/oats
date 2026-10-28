@@ -6,8 +6,10 @@
 // propose early and often, proposes changes; a fast model decides each one
 // (the same subject, a new topic, or a return to an earlier one) and names
 // the new topic. The flow card shows the result. Measured on the 24 meetings
-// with gpt-6-luna: live Pk 0.278 to 0.301 against main's 0.356, a change shown
-// after 1.2 to 1.6 minutes instead of 3.9, about 41 requests and $0.006 an hour.
+// (docs/fast-models.md): live Pk 0.255 with OpenAI's gpt-5.6-terra and 0.268
+// with Anthropic's claude-opus-5-5 against main's 0.356, a change shown after
+// about 1.3 minutes instead of 3.9, about 41 requests an hour. Each provider's
+// model and its settings are in topicModels.mjs.
 //
 // The rules, each for a reason:
 //
@@ -25,12 +27,13 @@
 // - **At most 3,000 characters of the conversation per request**
 //   (`MAX_EXCERPT_CHARS`): the lines nearest the proposed change, and the
 //   topics' names. Never audio, never the rest of the transcript.
-// - **One request at a time**, a timeout on each, no reasoning.
+// - **One request at a time**, a timeout on each, the least reasoning or
+//   effort the model was measured best at (topicModels.mjs).
 // - **A failure changes nothing.** An error, a timeout or an answer that is not
 //   the asked JSON leaves the view as the on-device decision put it, and the
 //   next request waits 10 s, then 20 s. Three in a row end the loop for the
-//   recording (`disabled`), and so does a writing model that is no longer
-//   OpenAI's (`ready`): the flow card goes back to the on-device tracker's
+//   recording (`disabled`), and so does a writing model that is no longer the
+//   provider's (`ready`): the flow card goes back to the on-device tracker's
 //   view, named by #121 (topicNamingRunner.ts).
 // - **Names, once.** A topic the model started is named in the same answer; the
 //   first topic of a conversation is named once it holds 40 words; a topic is
@@ -49,9 +52,13 @@
 import { ConversationTopicTracker, contentWords } from "./conversationTopics.mjs";
 import { countWords } from "./recordingCounters.mjs";
 import { nameStillFits, parseTopicName, sameName } from "./topicNaming.mjs";
+import { topicModelIds, topicProvider } from "./topicModels.mjs";
 
-/** The fast models, in order of preference: the first this key can use. */
-export const FAST_MODELS = ["gpt-6-luna", "gpt-5.6-luna"];
+/**
+ * OpenAI's models for the check, in order of preference: the first this key
+ * can use. Each provider's list, with its settings, is in topicModels.mjs.
+ */
+export const FAST_MODELS = topicModelIds("openai", "check");
 
 /** The most of the conversation one request carries, in characters. */
 export const MAX_EXCERPT_CHARS = 3000;
@@ -160,14 +167,15 @@ export const FIRST_NAME_SCHEMA = {
 };
 
 /**
- * Whether the live topic check runs for a writing route: OpenAI's own API,
- * chosen as the writing model. Every other provider, a custom endpoint, a
- * server of the person's own and a model on this computer keep #121's names.
+ * Whether the live topic check runs for a writing route: OpenAI's or
+ * Anthropic's own API, chosen as the writing model (topicModels.mjs). Every
+ * other provider, a custom endpoint, a server of the person's own and a model
+ * on this computer keep #121's names.
  *
  * @param {{ mode?: string, config?: { provider?: string } } | null | undefined} route
  */
 export function loopRouteFor(route) {
-  return Boolean(route && route.mode === "providers" && route.config?.provider === "openai");
+  return topicProvider(route) !== null;
 }
 
 /**
@@ -708,7 +716,7 @@ export class LiveTopicLoop {
     this.running = true;
     let changed = false;
     try {
-      // The writing model is no longer OpenAI's: nothing more is sent.
+      // The writing model is no longer this provider's: nothing more is sent.
       if (!(await this.ready())) {
         this._giveUp("not-ready");
         return;

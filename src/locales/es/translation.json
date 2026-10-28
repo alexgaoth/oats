@@ -2258,7 +2258,7 @@
         "speechTitle": "Modelo de voz",
         "speechScreen": "Un solo modelo transcribe tus conversaciones y tus dictados. Dos modelos se turnarían para cargarse en este Mac.",
         "writingTitle": "Modelo de escritura",
-        "writingScreen": "Un solo modelo escribe tus resúmenes, nombra los temas de cada conversación y pule tus dictados. Con un modelo en la nube, lo que se dice sobre cada tema se envía a ese proveedor durante la conversación. Con OpenAI, un modelo rápido de OpenAI también confirma durante la conversación cada cambio de tema y lo nombra, y cada solicitud lleva hasta 3.000 caracteres de lo que se dijo en torno al cambio.",
+        "writingScreen": "Un solo modelo escribe tus resúmenes, pule tus dictados y nombra los temas de cada conversación. Con OpenAI o Anthropic, en su lugar los nombran los modelos más precisos de ese proveedor para los temas, que además confirman durante la conversación cada cambio de tema. Con un modelo en la nube, lo que se dice sobre cada tema se envía a ese proveedor durante la conversación, hasta 3.000 caracteres por solicitud.",
         "none": "Ninguno todavía",
         "selfHosted": "Tu servidor"
       },

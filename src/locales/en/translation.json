@@ -2258,7 +2258,7 @@
         "speechTitle": "Speech model",
         "speechScreen": "One model transcribes your conversations and your dictation. Two models would take turns loading on this Mac.",
         "writingTitle": "Writing model",
-        "writingScreen": "One model writes your summaries, names the topics of each conversation and tidies your dictation. With a cloud model, what is said on each topic is sent to that provider during the conversation. With OpenAI, a fast OpenAI model also confirms each change of subject during the conversation and names it, and each request carries up to 3,000 characters of what was said around the change.",
+        "writingScreen": "One model writes your summaries and tidies your dictation, and names the topics of each conversation. With OpenAI or Anthropic, that provider's most accurate models for topics name them instead, and confirm each change of subject during the conversation. With a cloud model, what is said on each topic is sent to that provider during the conversation, up to 3,000 characters a request.",
         "none": "None yet",
         "selfHosted": "Your server"
       },

@@ -9,6 +9,175 @@ build. Every number comes from the scripts named here, on public data (the AMI
 meeting corpus, CC BY 4.0), except one private conversation that only models on
 this computer read.
 
+## The most accurate model per provider for each topic job (2026-10-28)
+
+Question (Alex, 2026-10-28): for each remote provider we have a key for
+(OpenAI, Anthropic, Bedrock), which model is the most accurate for naming topics
+and for separating them live? Accuracy decides; latency and cost are reported.
+
+### What the app does now
+
+`src/helpers/topicModels.mjs` holds one list per provider and job, best first;
+a key gets the first model it can use, asked once a session
+(`GET /v1/models/{model}`, no tokens). The writing model still writes the
+summary and the title, sorts the group and tidies dictation.
+
+| writing route | topic names (#121) | live topic check (V4) |
+| --- | --- | --- |
+| OpenAI | **gpt-6-astra**, reasoning low (else gpt-6.1-sol, gpt-6.1-terra) | **gpt-5.6-terra**, reasoning none (else gpt-6.1-terra, gpt-6.1-sol, gpt-6-luna, gpt-5.6-luna) |
+| Anthropic | **claude-opus-5-5**, effort medium (else claude-sonnet-5-5) | **claude-opus-5-5**, effort low (else claude-haiku-5-5), with the refusal fallback |
+| Bedrock | (no writing route in the app) | none: nothing beat main |
+| every other route | the writing model, as before | none, as before |
+
+- **V4 now runs on the Anthropic route too**, with the same limits: at most
+  3,000 characters a request, one request in flight, the 15 s timeout, three
+  failures end the check. The Anthropic route takes a JSON schema
+  (`output_config.format`) and an effort (`output_config.effort`), and asks for
+  Anthropic's server-side refusal fallback (`fallbacks: "default"`) on Opus 5
+  and 5.5, Fable 5.x, and Sonnet 5.5 when it thinks
+  (`src/helpers/anthropicMessages.js`). It stays on
+  `anthropic-version: 2023-06-01`.
+- **The Anthropic route works with Claude 4.7 and later** (#133): it sent
+  `temperature` to every model, and the newer ones answer HTTP 400.
+- **Bedrock is not a writing provider in the app** (Stage 2 removed its
+  route), and on this account Claude 5.x, GPT-6, GLM 5.3 and Grok 4.7 on
+  Bedrock answer HTTP 403. Measured lightly, below; no route was built.
+
+### Live separation: eval24
+
+V4 as the app ships it (`--variant v4app`), each model as the checker. Runs are
+pooled per meeting; Δ is paired against main today (the on-device tracker,
+live Pk 0.356, WindowDiff 0.377) with its 95% interval over the 24 meetings.
+Lower is better; one topic for the whole meeting scores 0.345.
+
+| model (setting) | runs | live Pk | Δ Pk against main | Δ WindowDiff | real change drawn, after | latency p50 / p95 | $ an hour |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **gpt-5.6-terra**, reasoning none | 3 | **0.255** (0.259, 0.271, 0.234) | −0.102 [−0.154, −0.047] | −0.077 [−0.126, −0.027] | 61%, 1.4 min | 1.2 / 1.8 s | $0.116 |
+| **claude-opus-5-5**, effort low | 2 | **0.268** (0.272, 0.263) | −0.089 [−0.147, −0.030] | −0.046 [−0.108, +0.015] | 81%, 1.3 min | 1.6 / 2.5 s | $0.371 |
+| gpt-6.1-terra, none | 3 | 0.277 (0.271, 0.291, 0.270) | −0.079 [−0.140, −0.017] | −0.039 [−0.107, +0.030] | 75%, 1.3 min | 1.4 / 1.9 s | $0.056 |
+| gpt-6.1-sol, low | 1 | 0.280 | −0.076 [−0.138, −0.015] | −0.032 [−0.098, +0.033] | 76%, 1.3 min | 1.8 / 3.2 s | $0.110 |
+| gpt-6-astra, low | 1 | 0.286 | −0.070 [−0.131, −0.013] | −0.027 [−0.093, +0.038] | 75%, 1.3 min | 1.9 / 3.2 s | $0.574 |
+| claude-opus-5-5, effort medium (its default) | 1 | 0.298 | −0.058 [−0.127, +0.013] | −0.008 [−0.079, +0.063] | 82%, 1.3 min | 2.0 / 4.2 s | $0.421 |
+| Bedrock Kimi K3 | 1 | 0.304 | −0.052 [−0.113, +0.008] | +0.008 [−0.061, +0.076] | 79%, 1.2 min | 1.7 / 5.4 s | $0.394 |
+| Bedrock GLM 5 | 1 | 0.310 | −0.047 [−0.107, +0.014] | +0.000 [−0.065, +0.062] | 69%, 1.3 min | 1.1 / 3.1 s | $0.051 |
+| claude-fable-5-1, low | 1 | 0.311 | −0.046 [−0.115, +0.024] | +0.009 [−0.061, +0.079] | 82%, 1.3 min | 1.7 / 4.5 s | $0.979 |
+| gpt-6-luna, none (V4 until now) | 2 | 0.312 (0.307, 0.316) | −0.045 [−0.097, +0.007] | −0.008 [−0.060, +0.043] | 63%, 1.4 min | 1.2 / 1.8 s | $0.006 |
+| claude-haiku-5-5, low | 1 | 0.316 | −0.041 [−0.099, +0.016] | −0.011 [−0.067, +0.042] | 51%, 1.5 min | 1.3 / 2.1 s | $0.010 |
+| claude-sonnet-5-5, low | 1 | 0.334 | −0.023 [−0.082, +0.034] | +0.031 [−0.034, +0.093] | 79%, 1.3 min | 2.1 / 4.6 s | $0.188 |
+
+Paired between models (same meetings): gpt-5.6-terra against gpt-6.1-terra
+−0.023 [−0.066, +0.017], gpt-6.1-sol −0.026 [−0.071, +0.017], gpt-6-astra
+−0.031 [−0.075, +0.007], gpt-6-luna −0.057 [−0.095, −0.020]. claude-opus-5-5 at
+low against Opus at medium −0.031 [−0.063, −0.002], Fable 5.1 −0.043 [−0.087,
+−0.005], Haiku 5.5 −0.048 [−0.092, −0.004], Sonnet 5.5 −0.066 [−0.111, −0.024].
+Every model sends about 40 requests an hour, and 94 to 95% of the lines are
+quoted in at least one request; no request failed and none was malformed.
+
+- **OpenAI: gpt-5.6-terra.** The best live Pk over three runs, and the only
+  model whose WindowDiff gain also excludes 0. It ties gpt-6.1-terra, gpt-6.1-sol
+  and gpt-6-astra (each interval includes 0) and beats gpt-6-luna, the model V4
+  used until now. It is also the fastest of them, and the app's default cloud
+  writing model.
+- **Anthropic: claude-opus-5-5 at effort low**, ahead of every other Claude
+  model and of its own default effort; each interval excludes 0. Fable 5.1 and
+  Sonnet 5.5 cut more often than the annotators (10.3 and 10.5 topics a
+  meeting against 8.0) and lose on false cuts.
+- **Bedrock: none.** Kimi K3 and GLM 5 are no better than main (each interval
+  includes 0); Claude Opus 4.6, the strongest Claude this account can use there,
+  was throttled (HTTP 429) at the replay's pace.
+- **gpt-5.5-pro cannot run the check**: a check took 44 s and used its whole
+  2,200-token cap on reasoning (the app waits 15 s).
+- **Screening on 6 meetings misled**: on 6 tuning meetings Fable 5.1 led
+  (0.254); on the 24 it is ninth. Every strong candidate was therefore run on
+  all 24.
+
+### Topic names
+
+Every model named each topic the annotators drew in the 24 meetings (176
+topics of 40 words or more) with #121's own request: its system prompt, its
+3,000-character excerpt, and the names this model gave the meeting's earlier
+topics (`scripts/topic-names-oracle.mjs`); the answer went through the app's
+check (`parseTopicName`). Two blind judges, Claude Sonnet 5.5 and gpt-6.1-sol,
+graded every model's name for a topic together, shuffled and unlabelled, twice
+each (`scripts/topic-names-judge.mjs --which record`): relevance and
+specificity 1 to 5 against what was said, match 0 to 2 with the annotators'
+label. The first column pools both judges and both repeats over the 147 topics
+every model named.
+
+| model (setting) | (relevance + specificity) / 2 [95%] | Sonnet 5.5: rel, spec, match | gpt-6.1-sol: rel, spec, match | names kept | latency p50 / p95 | $ a name |
+| --- | --- | --- | --- | --- | --- | --- |
+| **claude-opus-5-5**, effort medium | **4.55** [4.49, 4.61] | 4.61, 4.00, 1.71 | 4.87, 4.72, 1.78 | 174/176 | 1.4 / 2.1 s | $0.0040 |
+| claude-opus-5-5, effort low | 4.48 [4.42, 4.53] | 4.50, 3.86, 1.67 | 4.82, 4.65, 1.77 | 175/176 | 1.4 / 2.1 s | $0.0038 |
+| claude-fable-5-1, low | 4.43 [4.36, 4.48] | 4.51, 3.88, 1.68 | 4.87, 4.55, 1.78 | 172/176 | 1.1 / 3.4 s | $0.0094 |
+| claude-sonnet-5-5, low | 4.41 [4.34, 4.48] | 4.45, 3.85, 1.63 | 4.75, 4.55, 1.72 | 175/176 | 1.3 / 2.2 s | $0.0019 |
+| **gpt-6-astra**, reasoning low | **4.25** [4.17, 4.33] | 4.13, 3.62, 1.45 | 4.76, 4.54, 1.62 | 176/176 | 1.5 / 2.4 s | $0.0065 |
+| gpt-5.5-pro, medium | 4.21 [4.14, 4.27] | 4.12, 3.50, 1.48 | 4.79, 4.42, 1.64 | 175/176 | 14.1 / 46.3 s | $0.0726 |
+| gpt-6.1-sol, low | 4.19 [4.12, 4.26] | 4.08, 3.49, 1.43 | 4.77, 4.45, 1.61 | 176/176 | 1.6 / 2.8 s | $0.0013 |
+| gpt-6.1-terra, none | 4.14 [4.07, 4.22] | 4.07, 3.39, 1.45 | 4.76, 4.38, 1.63 | 176/176 | 1.1 / 1.6 s | $0.0006 |
+| Bedrock Kimi K3 | 4.04 [3.95, 4.12] | 4.09, 3.25, 1.54 | 4.70, 4.06, 1.63 | 176/176 | 1.5 / 2.5 s | $0.0063 |
+| Bedrock GLM 5 | 4.03 [3.93, 4.12] | 4.06, 3.38, 1.53 | 4.59, 4.10, 1.60 | 172/176 | 0.8 / 2.0 s | $0.0006 |
+| gpt-6-luna, none | 3.97 [3.87, 4.07] | 3.78, 3.40, 1.27 | 4.43, 4.23, 1.41 | 158/176 | 1.1 / 1.7 s | $0.0001 |
+| claude-haiku-5-5, low | 3.96 [3.86, 4.06] | 3.92, 3.31, 1.46 | 4.52, 4.11, 1.53 | 175/176 | 0.9 / 1.7 s | $0.0001 |
+| gpt-5.6-terra, default reasoning (today's default writing model) | 3.89 [3.79, 3.99] | 3.76, 3.32, 1.26 | 4.41, 4.16, 1.40 | 176/176 | 1.5 / 2.2 s | $0.0017 |
+
+Paired, on the same topics: claude-opus-5-5 at medium against Opus at low
++0.076 [+0.012, +0.138] (the gpt-6.1-sol judge alone, which has no Claude to
+favour: +0.043 [−0.010, +0.097]), Fable 5.1 +0.128 [+0.058, +0.197], Sonnet 5.5
++0.145 [+0.071, +0.214]. gpt-6-astra against gpt-5.5-pro +0.046 [−0.037,
++0.128], gpt-6.1-sol +0.064 [+0.000, +0.126] (the Sonnet 5.5 judge alone, which
+has no GPT to favour: +0.099 [+0.017, +0.182]), gpt-6.1-terra +0.111 [+0.044,
++0.180], gpt-5.6-terra +0.359 [+0.264, +0.457].
+
+- **Anthropic: claude-opus-5-5 at its default effort, medium.** Lower effort
+  helps the check and costs the names a little.
+- **OpenAI: gpt-6-astra.** gpt-5.5-pro ties it at eleven times the cost a name
+  and 14 s a name (46 s at p95), so it is not used.
+- **Every Claude model of the 5.5 tier names better than every OpenAI model,
+  under both judges**, the OpenAI judge too.
+- With the check running, #121 names only the record's topics it did not name:
+  1 to 2.5 requests an hour, under 2 cents an hour with either naming model.
+  Without the check (a key that can use no check model), about 25 an hour:
+  $0.16 an hour with gpt-6-astra, $0.10 with claude-opus-5-5.
+
+### Candidates
+
+From each key's own model list (2026-10-28): OpenAI `GET /v1/models`
+(gpt-6-astra, gpt-6.1-sol, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, the gpt-5.6
+family, gpt-5.5 and gpt-5.5-pro, ...), Anthropic `GET /v1/models` (Haiku 5.5,
+Sonnet 5.5, Opus 5.5, Fable 5.1, and the older Opus 5, Sonnet 5, Fable 5, 4.x),
+and Bedrock's foundation models and inference profiles (us-east-1), each then
+tried with one request. Measured: every current model of each family, with the
+lowest reasoning or effort the model allows (gpt-6-astra and gpt-6.1-sol do not
+take `none`; Opus 5.5 and Fable 5.1 cannot turn thinking off), plus Opus 5.5 at
+its default effort. Not measured: the generations each family replaced
+(gpt-6-sol by gpt-6.1-sol; Opus 5, Sonnet 5 and Fable 5 by their 5.x
+successors). On Bedrock this account can use Claude Opus 4.6, Sonnet 4.6 and
+Haiku 4.5, Kimi K3 and K2.5, GLM 5, Mistral Large 3, DeepSeek V3.2, Qwen3 VL
+235B and Next 80B, MiniMax M2.5, Nemotron 3 Super, gpt-oss-120b, Llama 4 and
+Nova Pro; Claude 5.x, GPT-6, GLM 5.3 and Grok 4.7 answer HTTP 403. Screened on
+Bedrock: Kimi K3, GLM 5 and Claude Opus 4.6.
+
+Screening for the check (V4, live Pk), before eval24, on the 12 tuning meetings
+(main 0.333) and on 6 of them (main 0.316) for the dearer models:
+
+| model | 12 tuning meetings | 6 of them |
+| --- | --- | --- |
+| gpt-6.1-sol, low | 0.253 | 0.281 |
+| gpt-6.1-terra, none | 0.271 | 0.318 |
+| gpt-5.6-terra, none | 0.283 | 0.267 |
+| claude-haiku-5-5 | 0.289 | 0.302 |
+| gpt-6-luna, none | 0.310 | 0.271 |
+| claude-sonnet-5-5 | 0.318 | 0.338 |
+| claude-fable-5-1 | | 0.254 |
+| gpt-6-astra, low | | 0.280 |
+| claude-opus-5-5, low | | 0.291 |
+| Bedrock Kimi K3 | | 0.307 |
+| Bedrock GLM 5 | | 0.332 |
+
+Spend for this section: $84 of API calls (budget stop in the ledger), all on
+public AMI data. Two runs that a budget stop had cut short (the stop was raised
+mid-way) are left out of the tables; each model was run again.
+
 ## Decision (Alex, 2026-10-26) and V4 in the app
 
 - **VF: no.** The record keeps the on-device cut at Finish, with #121's names
@@ -17,6 +186,7 @@ this computer read.
   OpenAI key. Oats uses gpt-6-luna when the key can use it, else gpt-5.6-luna,
   and asks once a session (`GET /v1/models/{model}`, no tokens). Every other
   provider and every model on this computer keep #121's names as they were.
+  (Since 2026-10-28: OpenAI or Anthropic, with the models above.)
 - **No 30 s rule** (2026-10-27). A rule that a line shown more than 30 s ago
   does not move was added to the brief by the coordinating agent, not by
   Alex. Measured, it removed the gain he chose (below), so a confirmed change
@@ -651,11 +821,25 @@ node scripts/topic-names-judge.mjs --runs d1.json,v1.json,v3.json --judge anthro
 
 # Track 2
 node scripts/asr-repair-eval.mjs --replay room-replay.json --ami $AMI --model openai:gpt-6-luna@none --json repair.json
+
+# The most accurate model per provider (2026-10-28): the check with each candidate, three runs of the leaders
+node scripts/topic-loop-eval.mjs --variant v4app --vectors --model openai:gpt-5.6-terra@none --ami $AMI --set eval24 --json v4-terra56.json
+node scripts/topic-loop-eval.mjs --variant v4app --vectors --model anthropic:claude-opus-5-5@low --ami $AMI --set eval24 --json v4-opus55.json
+# Names: each candidate names the annotators' topics with #121's request, then the blind judges grade them together
+node scripts/topic-names-oracle.mjs --model openai:gpt-6-astra@low --ami $AMI --set eval24 --json names-astra.json
+node scripts/topic-names-oracle.mjs --model anthropic:claude-opus-5-5@medium --ami $AMI --set eval24 --json names-opus55.json
+node scripts/topic-names-judge.mjs --runs names-astra.json,names-opus55.json --which record --judge anthropic:claude-sonnet-5-5 --repeats 2 --json judge-sonnet.json
+node scripts/topic-names-judge.mjs --runs names-astra.json,names-opus55.json --which record --judge openai:gpt-6.1-sol@low --repeats 2 --cache judge-cache-gpt.json --json judge-gpt.json
 ```
 
 A model is `provider:model[@options]`: `@none`, `@minimal`, `@low` set OpenAI's
-reasoning effort; `@grammar` constrains a local model's answer to the JSON
-schema; `@us-west-2` picks a Bedrock region. `--set` is `eval24`, `test` (the 12
+reasoning effort (`@low`, `@medium`, `@high` also set Anthropic's
+`output_config.effort`; its default here is low); `@think` lets an Anthropic
+model think; `@grammar` constrains a local model's answer to the JSON schema;
+`@us-west-2` picks a Bedrock region. A model that reasons or thinks gets 2,000
+more output tokens under its cap, and a model with no price in
+`scripts/lib/fast-models.mjs` is refused, so the budget stop counts every
+request. `--set` is `eval24`, `test` (the 12
 standard test meetings) or `all`; `--meetings` lists meetings. A stored note's
 transcript (`--transcript`) is read only by models on this computer, and only
 counts are printed unless `--show-labels`.
