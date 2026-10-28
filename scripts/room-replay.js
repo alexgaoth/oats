@@ -18,7 +18,9 @@
  *                on and the shipped config, as `_resolveWhisperVadOptions`
  *                ("meeting") gives it
  *   4. filters   `WhisperManager#parseWhisperResult` (the blank-audio marker),
- *                then the in-room path's own `trim()` and "no text, no segment"
+ *                then the in-room path's own: a text that is only sound labels
+ *                ("[inaudible]") is empty (soundLabels.mjs), `trim()`, and "no
+ *                text, no segment"
  *
  * Partials are left out on purpose: they are previews read from the same open
  * segment, and a final is always sent, so they change when words appear, not
@@ -75,6 +77,8 @@
  *                  streamed at `--pace` times real time (default 1, as live)
  *                  and committed; its time is from the commit, the end of its
  *                  audio, to its transcript.
+ *   --keep-sound-labels  keep a text that is only sound labels, as the app
+ *                did before it dropped them: "before".
  *   --vad-config   VAD settings over the shipped ones, as JSON, e.g.
  *                  '{"threshold":0.35}' (Settings can change them).
  *   --normalize-rms an experiment, not the app: raise each segment to this RMS
@@ -129,6 +133,8 @@ const CONVERSATIONS = Number(arg("conversations", "9"));
 const MODEL = arg("model", path.join(process.env.HOME, ".cache/oats/whisper-models/ggml-base.bin"));
 const LANGUAGE = arg("language", "auto");
 const VAD = !flag("no-vad");
+/** Drop a text that is only sound labels, as the in-room path does (soundLabels.mjs). */
+const DROP_SOUND_LABELS = !flag("keep-sound-labels");
 const VAD_MODEL = arg(
   "vad-model",
   path.join(ROOT, "resources", "bin", "whisper-vad", "ggml-silero-v5.1.2.bin")
@@ -422,6 +428,7 @@ async function startAlone(manager, model, startOptions) {
  */
 async function startLocal(vadEnabled) {
   const WhisperServerManager = require("../src/helpers/whisperServer.js");
+  const { isOnlySoundLabels } = await import("../src/helpers/soundLabels.mjs");
   const manager = new WhisperServerManager();
   if (!fs.existsSync(MODEL)) throw new Error(`model not found at ${MODEL}`);
   if (vadEnabled && !fs.existsSync(VAD_MODEL))
@@ -479,12 +486,16 @@ async function startLocal(vadEnabled) {
       // The server logs its VAD verdict before it answers, but the pipe and
       // the socket are read in whatever order they arrive: let the log land.
       if (vadEnabled) await new Promise((resolve) => setTimeout(resolve, 5));
-      // ipcHandlers.js#transcribeInRoomSegment: `result?.success ? text.trim() : ""`.
-      const text = parsed?.success ? (parsed.text || "").trim() : "";
+      // ipcHandlers.js: `transcribeInRoomAudio` empties a text of sound labels
+      // only; `transcribeInRoomSegment` keeps `result?.success ? text.trim() : ""`.
+      const said = parsed?.success ? (parsed.text || "").trim() : "";
+      const text = DROP_SOUND_LABELS && isOnlySoundLabels(said) ? "" : said;
       const vadSegments = /detected (\d+) speech segments/.exec(stderr);
       const vadSpeech = /total duration of speech segments: ([\d.]+) seconds/.exec(stderr);
       return {
         text,
+        // A sound label the in-room path dropped, kept for the count.
+        droppedLabel: text === said ? null : said,
         ms,
         failed,
         // The server logs what its VAD found; a request that failed found nothing.
@@ -1332,7 +1343,12 @@ async function replay(recording, backend, ablation) {
         ? { cloud: CLOUD }
         : REALTIME
           ? { realtime: REALTIME, pace: PACE }
-          : { model: path.basename(MODEL), language: LANGUAGE, vad: VAD ? VAD_CONFIG : false },
+          : {
+              model: path.basename(MODEL),
+              language: LANGUAGE,
+              vad: VAD ? VAD_CONFIG : false,
+              dropSoundLabels: DROP_SOUND_LABELS,
+            },
     segments: segments.length,
     segmentSeconds: Number(segmentSeconds.toFixed(1)),
     sentShare: pct(segmentSeconds, seconds),
@@ -1373,8 +1389,10 @@ async function replay(recording, backend, ablation) {
         0
       );
     }
-    // Text that is only a bracketed sound, e.g. "[MUSIC]": the app shows it.
+    // Text that is only a bracketed sound, e.g. "[MUSIC]": the app shows it,
+    // unless the in-room path dropped it (counted apart).
     summary.bracketOnlyTexts = texts.filter((s) => /^[[(*][^\])*]*[\])*]$/.test(s.text)).length;
+    summary.droppedLabels = segments.filter((s) => s.droppedLabel).length;
   }
 
   if (reference) {
@@ -1619,6 +1637,7 @@ function totals(summaries) {
     out.failedRequests = sum((s) => s.failedRequests);
     out.hypothesisWords = sum((s) => s.hypothesisWords);
     out.bracketOnlyTexts = sum((s) => s.bracketOnlyTexts);
+    out.droppedLabels = sum((s) => s.droppedLabels);
     out.vadEmptied = sum((s) => s.vadEmptied);
     out.emptyWithVadOnly = sum((s) => s.emptyWithVadOnly);
     out.hypothesisWordsWithoutVad = sum((s) => s.hypothesisWordsWithoutVad);
