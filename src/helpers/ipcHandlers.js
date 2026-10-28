@@ -5596,16 +5596,24 @@ class IPCHandlers {
     //
     // A segment that comes back as only a sound label ("[inaudible]",
     // "(door closes)") comes back empty: nobody said it (soundLabels.mjs).
+    //
+    // Whisper hears a quiet segment raised (roomSegmentLevel.mjs): a laptop
+    // across the table hands it speech near -50 dBFS, and capture has no gain.
     const transcribeInRoomAudio = async (pcm) => {
+      const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
+      const raised = raiseQuietSegment(new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1));
       const result = await (meetingLocalProvider === "nvidia"
         ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
             model: meetingLocalModel,
           })
-        : this.whisperManager.transcribeLocalWhisper(pcm16ToWav(pcm), {
-            model: meetingLocalModel,
-            language: meetingLocalLanguage,
-            ...this._resolveWhisperVadOptions("meeting"),
-          }));
+        : this.whisperManager.transcribeLocalWhisper(
+            pcm16ToWav(Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength)),
+            {
+              model: meetingLocalModel,
+              language: meetingLocalLanguage,
+              ...this._resolveWhisperVadOptions("meeting"),
+            }
+          ));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
       return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;
     };
