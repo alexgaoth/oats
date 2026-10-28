@@ -753,6 +753,10 @@ same replay".
   the median (10 to 32 ms more) and 0.6 to 0.9 s less at the 95th percentile.
   It costs $0.0045 a minute, against $0.003. With steady sound it hears more
   than turbo on this Mac (49.8% against 47.5%).
+- **Through a realtime session**, the path a conversation with a cloud
+  provider takes, the gap is the same: on every sixth segment, 77.3% of the
+  words against 71.3% in the quiet room and 53.2% against 41.9% with steady
+  sound, the transcript 40–80 ms later after the commit at the median.
 - **`gpt-4o-mini-transcribe` and its 2025-12-15 snapshot hear the same**,
   within 0.2 points in each room, but the snapshot answered 150–185 ms sooner
   at the median in each room: the alias costs time to reach the model it
