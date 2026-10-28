@@ -36,6 +36,84 @@ export const LINK_SIMILARITY = 0.6;
 export const MIN_LINK_TOPIC_MS = 30_000;
 
 /**
+ * How alike (cosine) a topic's stored vector must be to a subject's, when
+ * both have one: the vector of what was said on the topic, not of its name.
+ * Chosen on AMI (docs/link-eval.md): at 0.78 it links 0.86 precise and finds
+ * 0.76 of the scenario links, against 0.80 and 0.81 by names.
+ */
+export const CONTENT_SIMILARITY = 0.78;
+
+/**
+ * A topic's vector as the record keeps it (`node.vector`): one signed byte a
+ * dimension, in base64. 384 dimensions are 512 characters; the cosines move
+ * by less than 0.01.
+ *
+ * @param {ArrayLike<number> | null | undefined} values a unit vector
+ * @returns {string | null}
+ */
+export function encodeTopicVector(values) {
+  if (!values || !values.length) return null;
+  const bytes = new Uint8Array(values.length);
+  for (let index = 0; index < values.length; index += 1) {
+    const value = Math.max(-127, Math.min(127, Math.round(Number(values[index]) * 127)));
+    bytes[index] = value < 0 ? value + 256 : value;
+  }
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+/**
+ * A stored topic vector as a unit vector, or null when there is none or it
+ * cannot be read.
+ *
+ * @param {unknown} text
+ * @returns {Float32Array | null}
+ */
+export function decodeTopicVector(text) {
+  if (typeof text !== "string" || !text) return null;
+  let binary;
+  try {
+    binary = atob(text);
+  } catch {
+    return null;
+  }
+  const values = new Float32Array(binary.length);
+  let norm = 0;
+  for (let index = 0; index < binary.length; index += 1) {
+    const byte = binary.charCodeAt(index);
+    values[index] = (byte > 127 ? byte - 256 : byte) / 127;
+    norm += values[index] * values[index];
+  }
+  norm = Math.sqrt(norm);
+  if (!(norm > 0)) return null;
+  for (let index = 0; index < values.length; index += 1) values[index] /= norm;
+  return values;
+}
+
+/**
+ * The vector of what was said on a topic: the mean of its turns' vectors,
+ * each weighted (by its words), made unit length. Null with no weight.
+ *
+ * @param {Array<{ vector: ArrayLike<number> | null | undefined, weight: number }>} pieces
+ * @returns {Float32Array | null}
+ */
+export function topicContentVector(pieces) {
+  let sum = null;
+  for (const { vector, weight } of Array.isArray(pieces) ? pieces : []) {
+    if (!vector || !vector.length || !(weight > 0)) continue;
+    if (!sum) sum = new Float64Array(vector.length);
+    if (vector.length !== sum.length) continue;
+    for (let index = 0; index < sum.length; index += 1) sum[index] += vector[index] * weight;
+  }
+  if (!sum) return null;
+  let norm = 0;
+  for (const value of sum) norm += value * value;
+  norm = Math.sqrt(norm);
+  return norm > 0 ? Float32Array.from(sum, (value) => value / norm) : null;
+}
+
+/**
  * The text a topic is read by: its name, and when `words` is more than 0, that
  * many of its telling words that the name does not already hold ("Remote
  * control design" with "button" and "battery" reads "Remote control design
@@ -98,8 +176,9 @@ export function linkTexts(
 
 /**
  * The topics of each conversation that can carry a link, with their vectors,
- * in the order the conversations happened. A topic whose vector is not known
- * is left out.
+ * in the order the conversations happened: the vector of the name, and the
+ * stored vector of what was said when the record has one. A topic with
+ * neither is left out.
  */
 function linkable(conversations, { vectorOf, minTopicMs, text }) {
   return (Array.isArray(conversations) ? conversations : [])
@@ -118,9 +197,13 @@ function linkable(conversations, { vectorOf, minTopicMs, text }) {
         .map((node) => {
           const value = text(node);
           const vector = vectorOf(value);
-          return { label: String(node.label).trim(), vector };
+          return {
+            label: String(node.label).trim(),
+            vector: vector && vector.length ? vector : null,
+            content: decodeTopicVector(node.vector),
+          };
         })
-        .filter((topic) => topic.vector && topic.vector.length),
+        .filter((topic) => topic.vector || topic.content),
     }));
 }
 
@@ -132,7 +215,9 @@ function linkable(conversations, { vectorOf, minTopicMs, text }) {
 export function conversationMatch(topicsA, topicsB) {
   let best = { score: -1, a: null, b: null };
   for (const a of topicsA) {
+    if (!a.vector) continue;
     for (const b of topicsB) {
+      if (!b.vector) continue;
       const score = cosine(a.vector, b.vector);
       if (score > best.score) best = { score, a: a.label, b: b.label };
     }
@@ -167,9 +252,15 @@ function add(subject, vector) {
  * its first topic only, which on AMI made the subjects jump about as the
  * threshold moved. A subject is named by the member most alike the others.
  *
+ * What was said decides when the topic and the subject both have it: a topic
+ * recorded since the record kept a vector per topic is compared with the mean
+ * of the subject's stored vectors, at `contentThreshold`. Otherwise its name
+ * is, at `threshold`, as before: old conversations link by name.
+ *
  * @param {Array<{ id: number, createdAt: number, snapshot: { nodes: any[] } | null }>} conversations
  * @param {{ vectorOf: (text: string) => (Float32Array | number[] | null | undefined),
- *   threshold?: number, minTopicMs?: number, text?: (node: any) => string }} options
+ *   threshold?: number, contentThreshold?: number, minTopicMs?: number,
+ *   text?: (node: any) => string }} options
  * @returns {{ subjects: { label: string, conversationIds: number[] }[],
  *   edges: { from: number, to: number, weight: number, kind: string, topics: string[] }[] }}
  */
@@ -178,34 +269,51 @@ export function meaningThreads(
   {
     vectorOf,
     threshold = LINK_SIMILARITY,
+    contentThreshold = CONTENT_SIMILARITY,
     minTopicMs = MIN_LINK_TOPIC_MS,
     text = (node) => topicLinkText(node),
   }
 ) {
   const list = linkable(conversations, { vectorOf, minTopicMs, text });
   const clusters = [];
+  const include = (cluster, key, vector) => {
+    if (!vector) return;
+    if (!cluster[key]) cluster[key] = { sum: new Float64Array(vector.length), norm: 0 };
+    if (cluster[key].sum.length === vector.length) add(cluster[key], vector);
+  };
+  // The subject a topic is most alike by one kind of vector, at its threshold.
+  const nearest = (key, vector, floor) => {
+    let best = null;
+    let bestScore = floor;
+    for (const cluster of clusters) {
+      const side = cluster[key];
+      if (!vector || !side || !(side.norm > 0) || side.sum.length !== vector.length) continue;
+      const score = closeness(side, vector);
+      if (score >= bestScore) {
+        best = cluster;
+        bestScore = score;
+      }
+    }
+    return best;
+  };
+  const newSubject = () => {
+    const cluster = { name: null, content: null, unstored: null, members: [], conversationIds: [] };
+    clusters.push(cluster);
+    return cluster;
+  };
   for (const conversation of list) {
     for (const topic of conversation.topics) {
-      let best = null;
-      let bestScore = threshold;
-      for (const cluster of clusters) {
-        if (cluster.sum.length !== topic.vector.length) continue;
-        const score = closeness(cluster, topic.vector);
-        if (score >= bestScore) {
-          best = cluster;
-          bestScore = score;
-        }
-      }
-      if (!best) {
-        best = {
-          sum: new Float64Array(topic.vector.length),
-          norm: 0,
-          members: [],
-          conversationIds: [],
-        };
-        clusters.push(best);
-      }
-      add(best, topic.vector);
+      // By what was said where both have it, by name where either has not:
+      // a topic with a stored vector meets the subject's topics that have
+      // one by theirs, and the others (older conversations) by their names.
+      const best =
+        (topic.content
+          ? (nearest("content", topic.content, contentThreshold) ??
+            nearest("unstored", topic.vector, threshold))
+          : nearest("name", topic.vector, threshold)) ?? newSubject();
+      include(best, "name", topic.vector);
+      if (topic.content) include(best, "content", topic.content);
+      else include(best, "unstored", topic.vector);
       best.members.push(topic);
       if (!best.conversationIds.includes(conversation.id))
         best.conversationIds.push(conversation.id);
@@ -248,8 +356,11 @@ function subjectName(members) {
   let best = members[0];
   let bestScore = -Infinity;
   for (const member of members) {
+    if (!member.vector) continue;
     let total = 0;
-    for (const other of members) if (other !== member) total += cosine(member.vector, other.vector);
+    for (const other of members) {
+      if (other !== member && other.vector) total += cosine(member.vector, other.vector);
+    }
     if (total > bestScore + 1e-9) {
       best = member;
       bestScore = total;

@@ -331,13 +331,24 @@ async function corpus() {
 }
 
 /** The stored conversations of one variant, as the board reads them. */
-const asBoard = (conversations, variant) =>
-  conversations.map((item) => ({
-    id: item.id,
-    title: item.title,
-    createdAt: item.createdAt,
-    snapshot: item[variant],
-  }));
+/**
+ * The stored conversations of one variant, as the board reads them. Without
+ * `stored`, each topic's stored vector is left out, so the board links by
+ * names alone; `stored` may be a function of the meeting id, to keep the
+ * vectors of some meetings only (old conversations have none).
+ */
+const asBoard = (conversations, variant, { stored = false } = {}) =>
+  conversations.map((item) => {
+    const keep = typeof stored === "function" ? stored(item.id) : stored;
+    return {
+      id: item.id,
+      title: item.title,
+      createdAt: item.createdAt,
+      snapshot: keep
+        ? item[variant]
+        : { nodes: item[variant].nodes.map(({ vector, ...node }) => (void vector, node)) },
+    };
+  });
 
 // The fixed sample the remote linker is scored on, and every method beside it.
 // Each meeting is "the new conversation" once. It is asked about every earlier
@@ -492,6 +503,18 @@ async function localMethods(data) {
         // As the board ships it: the one threshold, for every name.
         const shipped = coMembers(links.meaningThreads(board, { vectorOf, text }).subjects);
         methods.push({ id: `shipped-${variant}`, linked: () => shipped, fixed: true });
+        // With each topic's stored vector (the record keeps one since
+        // they were added): by what was said where both have one, by name
+        // otherwise. Every meeting recorded since, and half of them, for a
+        // history where the older half was recorded before.
+        for (const [suffix, stored] of [
+          ["", true],
+          ["-half", (id) => [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 2 === 0],
+        ]) {
+          const withVectors = asBoard(conversations, variant, { stored });
+          const drawn = coMembers(links.meaningThreads(withVectors, { vectorOf, text }).subjects);
+          methods.push({ id: `stored-${variant}${suffix}`, linked: () => drawn, fixed: true });
+        }
       }
     }
   }
@@ -801,6 +824,10 @@ const LOCAL_SHOWN = {
   "minilm-pairs-content": "2c. MiniLM on what was said (topic vectors), pairs",
   "shipped-device": "Shipped: MiniLM names, drawn, 0.6, tracker names",
   "shipped-model": "Shipped: MiniLM names, drawn, 0.6, writing-model names",
+  "stored-device": "Stored topic vectors (0.78), else tracker names (0.6), drawn",
+  "stored-model": "Stored topic vectors (0.78), else writing-model names (0.6), drawn",
+  "stored-device-half": "Stored topic vectors on half the meetings, tracker names on the rest",
+  "stored-model-half": "Stored topic vectors on half the meetings, writing-model names on the rest",
   "link-all": "Baseline: every pair linked",
 };
 

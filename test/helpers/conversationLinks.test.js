@@ -146,3 +146,76 @@ test("the texts to embed are each linkable topic's, once", () => {
     ["SSO rollout"]
   );
 });
+
+test("a stored topic vector is one byte a dimension, and reads back the same way", () => {
+  const values = unit(0.3, -0.2, 0.9, 0.1);
+  const text = links.encodeTopicVector(values);
+  assert.equal(typeof text, "string");
+  assert.equal(Buffer.from(text, "base64").length, 4, "one byte a dimension");
+  const back = links.decodeTopicVector(text);
+  assert.ok(links.cosine(values, back) > 0.999);
+  assert.equal(links.encodeTopicVector(null), null);
+  assert.equal(links.decodeTopicVector(""), null);
+  assert.equal(links.decodeTopicVector("not base64!"), null);
+  assert.equal(links.decodeTopicVector(links.encodeTopicVector([0, 0, 0])), null, "no direction");
+});
+
+test("what was said on a topic is the mean of its turns, weighted by their words", () => {
+  const vector = links.topicContentVector([
+    { vector: unit(1, 0, 0), weight: 3 },
+    { vector: unit(0, 1, 0), weight: 1 },
+    { vector: unit(0, 0, 1), weight: 0 },
+    { vector: null, weight: 5 },
+  ]);
+  assert.ok(Math.abs(vector[0] - 3 / Math.hypot(3, 1)) < 1e-6);
+  assert.ok(Math.abs(vector[1] - 1 / Math.hypot(3, 1)) < 1e-6);
+  assert.equal(vector[2], 0);
+  assert.equal(links.topicContentVector([]), null);
+});
+
+test("two topics with stored vectors link by what was said, not by their names", () => {
+  const stored = (label, ...values) => ({
+    ...topic(1, label),
+    vector: links.encodeTopicVector(unit(...values)),
+  });
+  // Alike names ("SSO rollout", "Single sign-on setup"), unlike content: not linked.
+  const unlike = links.meaningThreads(
+    [
+      conversation(1, 100, [stored("SSO rollout", 1, 0, 0)]),
+      conversation(2, 200, [stored("Single sign-on setup", 0, 1, 0)]),
+    ],
+    { vectorOf }
+  );
+  assert.deepEqual(unlike.subjects, []);
+  // Unlike names, alike content: linked, and named by name as ever.
+  const alike = links.meaningThreads(
+    [
+      conversation(1, 100, [stored("SSO rollout", 1, 0, 0)]),
+      conversation(2, 200, [stored("Weekend at the lake", 1, 0.05, 0)]),
+    ],
+    { vectorOf }
+  );
+  assert.equal(alike.subjects.length, 1);
+  assert.deepEqual(alike.subjects[0].conversationIds, [1, 2]);
+});
+
+test("a topic with no stored vector (an older conversation) links by name", () => {
+  const stored = (label, ...values) => ({
+    ...topic(1, label),
+    vector: links.encodeTopicVector(unit(...values)),
+  });
+  const { subjects } = links.meaningThreads(
+    [
+      conversation(1, 100, [topic(1, "SSO rollout")]),
+      conversation(2, 200, [stored("Single sign-on setup", 0, 1, 0)]),
+      conversation(3, 300, [stored("SAML clock skew", 0, 0.99, 0.14)]),
+    ],
+    { vectorOf }
+  );
+  assert.equal(subjects.length, 1);
+  assert.deepEqual(
+    subjects[0].conversationIds,
+    [1, 2, 3],
+    "2 meets 1 by name; 3 meets 2 by what was said"
+  );
+});
