@@ -85,6 +85,23 @@ const SHOTS = [
     script: "await oatsDemo.show('global'); await demo.wait(1500)",
   },
   {
+    // The review as a cloud model's link check would leave it: its links are
+    // the check's, with the check's name for the subject. The check is written
+    // the way conversationLinkStore.ts writes one.
+    name: "global-cloud-check",
+    query: "",
+    script: [
+      "await oatsDemo.show('global'); await demo.wait(1200);",
+      "const notes = await window.electronAPI.getNotes('meeting', 50);",
+      "const find = (pattern) => notes.find((note) => pattern.test(note.title));",
+      "const review = find(/Enterprise launch review/), corbel = find(/Corbel/), crit = find(/Design crit/), hiring = find(/Backend hiring/);",
+      "const link = (note, subject, topic, earlierTopic) => ({ id: note.id, subject, topic, earlierTopic });",
+      "await window.electronAPI.updateNote(review.id, { conversation_links: JSON.stringify({ checkedAt: new Date().toISOString(), model: 'claude-opus-5-5', candidates: [corbel.id, crit.id, hiring.id],",
+      "links: [link(corbel, 'SSO as a launch gate', 'SSO', 'SSO'), link(crit, 'SSO as a launch gate', 'SSO', 'SAML errors'), link(hiring, 'Data migration risk', 'data migration', 'data migration')] }) });",
+      "await demo.wait(1500);",
+    ].join(" "),
+  },
+  {
     // Pointing at the newest conversation lights it in both charts.
     name: "global-highlight",
     query: "",

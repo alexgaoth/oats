@@ -23,6 +23,16 @@ export interface BoardConversation {
   groupId: number | null;
   /** Questions left with no verdict, as counted at Finish; null if never counted. */
   openQuestions: number | null;
+  /** A cloud model's links to earlier conversations (`remoteLinks.mjs`), or null. */
+  linkCheck?: LinkCheck | null;
+}
+
+/** A cloud model's link check, as stored on a note (`notes.conversation_links`). */
+export interface LinkCheck {
+  checkedAt: string;
+  model: string;
+  candidates: number[];
+  links: { id: number; subject: string; topic: string; earlierTopic: string }[];
 }
 
 export interface BoardTab {
