@@ -2062,6 +2062,8 @@
       "needsSummaryModel": "No summary model is ready yet, so this conversation has not been summarized.",
       "notSummarized": "This conversation has not been summarized.",
       "summarize": "Summarize",
+      "summarizeAgain": "Summarize again",
+      "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"
     },
     "global": {
@@ -2305,7 +2307,8 @@
     "errors": {
       "noModel": "Configure Oats processing before recording a conversation.",
       "noEndpoint": "Configure the Oats API endpoint before recording a conversation.",
-      "actionFailed": "Oats could not generate intelligence for this conversation."
+      "actionFailed": "Oats could not generate intelligence for this conversation.",
+      "noSummary": "The model returned no summary."
     },
     "preflight": {
       "no-microphone": "No microphone found. Plug one in, then press again.",

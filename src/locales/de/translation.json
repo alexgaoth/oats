@@ -2062,6 +2062,8 @@
       "needsSummaryModel": "Noch ist kein Modell für Zusammenfassungen bereit, daher wurde dieses Gespräch nicht zusammengefasst.",
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
       "summarize": "Zusammenfassen",
+      "summarizeAgain": "Erneut zusammenfassen",
+      "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden: {{reason}}",
       "setUpModel": "Modell einrichten"
     },
     "global": {
@@ -2305,7 +2307,8 @@
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",
       "noEndpoint": "Richte den Oats-API-Endpunkt ein, bevor du ein Gespräch aufnimmst.",
-      "actionFailed": "Oats konnte für dieses Gespräch keine Intelligenz erzeugen."
+      "actionFailed": "Oats konnte für dieses Gespräch keine Intelligenz erzeugen.",
+      "noSummary": "Das Modell hat keine Zusammenfassung geliefert."
     },
     "preflight": {
       "no-microphone": "Kein Mikrofon gefunden. Schließe eines an und drücke erneut.",

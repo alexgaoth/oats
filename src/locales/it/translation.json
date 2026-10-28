@@ -2062,6 +2062,8 @@
       "needsSummaryModel": "Nessun modello di riepilogo è ancora pronto, quindi questa conversazione non è stata riassunta.",
       "notSummarized": "Questa conversazione non è ancora stata riassunta.",
       "summarize": "Riassumi",
+      "summarizeAgain": "Riassumi di nuovo",
+      "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"
     },
     "global": {
@@ -2305,7 +2307,8 @@
     "errors": {
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",
       "noEndpoint": "Configura l'endpoint API di Oats prima di registrare una conversazione.",
-      "actionFailed": "Oats non è riuscito a generare l'intelligenza per questa conversazione."
+      "actionFailed": "Oats non è riuscito a generare l'intelligenza per questa conversazione.",
+      "noSummary": "Il modello non ha restituito alcun riepilogo."
     },
     "preflight": {
       "no-microphone": "Nessun microfono trovato. Collegane uno e premi di nuovo.",

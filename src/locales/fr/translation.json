@@ -2062,6 +2062,8 @@
       "needsSummaryModel": "Aucun modèle de résumé n’est encore prêt, donc cette conversation n’a pas été résumée.",
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
       "summarize": "Résumer",
+      "summarizeAgain": "Résumer à nouveau",
+      "summaryFailed": "Le résumé n'a pas pu être rédigé : {{reason}}",
       "setUpModel": "Configurer un modèle"
     },
     "global": {
@@ -2305,7 +2307,8 @@
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
       "noEndpoint": "Configurez le point de terminaison de l'API Oats avant d'enregistrer une conversation.",
-      "actionFailed": "Oats n'a pas pu générer l'intelligence de cette conversation."
+      "actionFailed": "Oats n'a pas pu générer l'intelligence de cette conversation.",
+      "noSummary": "Le modèle n'a renvoyé aucun résumé."
     },
     "preflight": {
       "no-microphone": "Aucun microphone détecté. Branchez-en un, puis appuyez à nouveau.",

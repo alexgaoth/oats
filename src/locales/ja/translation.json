@@ -2062,6 +2062,8 @@
       "needsSummaryModel": "要約モデルがまだ準備できていないため、この会話は要約されていません。",
       "notSummarized": "この会話はまだ要約されていません。",
       "summarize": "要約する",
+      "summarizeAgain": "もう一度要約する",
+      "summaryFailed": "要約を作成できませんでした：{{reason}}",
       "setUpModel": "モデルを設定"
     },
     "global": {
@@ -2305,7 +2307,8 @@
     "errors": {
       "noModel": "会話を録音する前に Oats の処理を設定してください。",
       "noEndpoint": "会話を録音する前に Oats の API エンドポイントを設定してください。",
-      "actionFailed": "Oats はこの会話のインテリジェンスを生成できませんでした。"
+      "actionFailed": "Oats はこの会話のインテリジェンスを生成できませんでした。",
+      "noSummary": "モデルから要約が返されませんでした。"
     },
     "preflight": {
       "no-microphone": "マイクが見つかりません。接続してからもう一度押してください。",
