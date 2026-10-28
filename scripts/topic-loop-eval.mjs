@@ -19,6 +19,10 @@
  *   v2       the model places new lines every few seconds (TurnsLoop).
  *   v3       the model re-cuts the last few minutes about once a minute (WindowLoop).
  *   v4       the tracker proposes, the model decides and names (HybridLoop).
+ *   v4app    v4 as the app ships it (`helpers/topicLoop.mjs`): the record is
+ *            the tracker's cut at Finish, with the loop's names carried over
+ *            and #121's final pass for the rest. `--options` takes
+ *            `{"loop": {...}}`, the module's options (`checkAfterWords`).
  *   vf       no live view: the model cuts and names the record at Finish.
  *   V2 to V4 get the app's final naming pass at Finish, as V0 and V1 do.
  *
@@ -79,6 +83,7 @@ import { HybridLoop, TurnsLoop, WindowLoop, cutRecord } from "./lib/topic-loop-v
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const helper = (name) => import(pathToFileURL(path.join(ROOT, "src/helpers", name)).href);
 const { TopicNamer } = await helper("topicNamer.mjs");
+const { LiveTopicLoop } = await helper("topicLoop.mjs");
 
 const { values: args } = parseArgs({
   options: {
@@ -106,8 +111,8 @@ const { values: args } = parseArgs({
 });
 
 const VARIANT = args.variant;
-if (!["d0", "d1", "v0", "v1", "v2", "v3", "v4", "vf"].includes(VARIANT)) {
-  console.error("--variant d0|d1|v0|v1|v2|v3|v4|vf");
+if (!["d0", "d1", "v0", "v1", "v2", "v3", "v4", "v4app", "vf"].includes(VARIANT)) {
+  console.error("--variant d0|d1|v0|v1|v2|v3|v4|v4app|vf");
   process.exit(2);
 }
 const SPEC = args.model ?? null;
@@ -338,7 +343,8 @@ function labelsOf(nodes) {
  */
 function modelNamed(node) {
   if (VARIANT.startsWith("d")) return false;
-  if (VARIANT === "v0" || VARIANT === "v1") return typeof node.deviceLabel === "string";
+  if (VARIANT === "v0" || VARIANT === "v1" || VARIANT === "v4app")
+    return typeof node.deviceLabel === "string";
   return !node.deviceNamed;
 }
 
@@ -402,6 +408,69 @@ async function runConversation(conversation) {
             malformed: namer.stats.unusable,
           }
         : null;
+      return named;
+    };
+  } else if (VARIANT === "v4app") {
+    // V4 as the app ships it (helpers/topicLoop.mjs, stores/topicNamingRunner.ts):
+    // the flow card shows the loop; the record is the on-device tracker's cut at
+    // Finish, with the loop's names carried over and #121's final pass on top.
+    const device = new ConversationTopicTracker({
+      now: clock.now,
+      ...(OPTIONS.trackerOptions ?? {}),
+    });
+    const loop = new LiveTopicLoop({
+      ask: async (request) => {
+        const result = await ask({ ...request, maxTokens: request.maxTokens });
+        if (!result.ok) throw new Error(result.error);
+        return result.text;
+      },
+      now: clock.now,
+      setTimer: clock.setTimer,
+      clearTimer: clock.clearTimer,
+      ...(OPTIONS.loop ?? {}),
+    });
+    const namer = new TopicNamer({
+      ask: namerAsk(ask, nameAnswers),
+      now: clock.now,
+      setTimer: clock.setTimer,
+      clearTimer: clock.clearTimer,
+      live: false,
+    });
+    display = {
+      async onUtterance(utterance) {
+        device.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+        if (embedder && typeof device.addVectors === "function") {
+          const phrases = device.phrasesToEmbed(47);
+          const vectors = await embedder.embed([
+            utterance.text,
+            ...phrases.map((phrase) => phrase.text),
+          ]);
+          device.addVectors({
+            utterances: [[utterance.id, vectors[0]]],
+            phrases: phrases.map((phrase, index) => [phrase.key, vectors[index + 1]]),
+          });
+        }
+        segments.push({ id: utterance.id, text: utterance.text, timestamp: utterance.at });
+        loop.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+      },
+      snapshot() {
+        const onDevice = device.snapshot(clock.time);
+        return loop.disabled ? onDevice : loop.snapshot(clock.time, { device: onDevice });
+      },
+    };
+    finishLive = async () => {
+      loop.stop();
+      const final = device.snapshot(clock.time, { final: true });
+      for (const [id, record] of loop.namesFor(final)) namer.names.set(id, record);
+      const named = await drive(clock, namer.finish(final, [...segments]));
+      variantStats = {
+        ...loop.stats,
+        ms: undefined,
+        calls: loop.stats.requests,
+        sentLines: loop.sentIds.size,
+        lines: loop.lines.length,
+        finalNaming: { requests: namer.stats.requests, named: namer.stats.named },
+      };
       return named;
     };
   } else if (VARIANT === "vf") {

@@ -116,7 +116,12 @@ export class TopicNamer {
     this.maxSettleMs = maxSettleMs;
     this.log = log;
 
-    /** @type {Map<number, { name: string, words: number, namings: number, utteranceIds: string[] }>} */
+    /**
+     * The names given, by topic id. `held` marks a name the live topic check
+     * gave (`stores/topicNamingRunner.ts`), which this never asks for again.
+     *
+     * @type {Map<number, { name: string, words: number, namings: number, utteranceIds: string[], held?: boolean }>}
+     */
     this.names = new Map();
     /** @type {Map<number, { words: number, final: boolean }>} */
     this.failed = new Map();
@@ -323,6 +328,9 @@ export class TopicNamer {
       if (!isNameableTopic(node)) continue;
       const words = this._words(node, byId);
       const record = this._record(node);
+      // A name the live topic check gave (topicLoop.mjs `namesFor`) is not
+      // asked for again: one request names a topic, not two.
+      if (record?.held) continue;
       const need = topicNeedsName({ words, record, final });
       if (!need) continue;
       const failed = this.failed.get(node.id);

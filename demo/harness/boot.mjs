@@ -14,11 +14,15 @@
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
 // in three groups instead of the samples (`many.mjs`), to measure Global
-// conversations at size; `theme`, `view` and `flow` as in `settings.mjs`.
-// `panel=true` is the app's own: the workspace window.
+// conversations at size; `loop=1` makes the writing model OpenAI's, so the
+// live topic check runs, against the stand-in in fastModel.mjs, and
+// `oatsDemo.openaiRequests()` lists what it was asked; `theme`, `view` and
+// `flow` as in `settings.mjs`. `panel=true` is the app's own: the workspace
+// window.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
+import { installFakeOpenAI } from "./fastModel.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { installFakeMicrophone } from "./media.mjs";
 import { manyConversations } from "./many.mjs";
@@ -46,6 +50,9 @@ const main = createFakeMain({
   badges: params.get("badges") === "1",
   // The context check's agent (`agent=1`, with `check=1`): see context.mjs.
   agent: params.get("agent") === "1",
+  // OpenAI as the writing model (`loop=1`): a key for the stand-in, which
+  // never leaves the page.
+  openai: params.get("loop") === "1",
 });
 if (many) {
   // Work and Personal are seeded; Research is one the person made, between them.
@@ -65,6 +72,10 @@ const replay = createReplay({
   fixture: mainFixture,
   options: { hold: params.get("end") === "hold", edits: params.get("edits") !== "0" },
 });
+const openai =
+  params.get("loop") === "1"
+    ? installFakeOpenAI({ reason: (request) => main.hooks.reason?.(request) ?? null })
+    : null;
 
 const TABS = ["summary", "transcript", "connections"];
 
@@ -132,6 +143,8 @@ window.oatsDemo = {
     else store.pointAtConversation(id);
     await frame();
   },
+  /** What the app asked OpenAI (`loop=1`), oldest first: kind, model and characters quoted. */
+  openaiRequests: () => openai?.requests() ?? [],
   /** The searches the app opened (auto-search with `autosearch=1`), oldest first. */
   searches: () => main.searches.map((search) => ({ ...search })),
   /** The ids of the sample conversations held, newest first. */

@@ -349,6 +349,35 @@ test("the end waits for the request that is out, renames what grew, and keeps to
   assert.equal(result.nodes[0].label, "topic 1");
 });
 
+test("a name the live topic check gave is not asked for again at the end", async () => {
+  const { namer, asked, answers } = setup({ live: false });
+  const talk = conversation();
+  talk.say(1, 40);
+  talk.say(1, 50); // 90 words, named at 40: grown enough for a rename
+  talk.say(2, 45);
+  // As topicNamingRunner.ts seeds it from the check (topicLoop.mjs `namesFor`).
+  namer.names.set(1, {
+    name: "Launch date move",
+    words: 40,
+    namings: 1,
+    utteranceIds: ["u0"],
+    held: true,
+  });
+  answers.push("SSO login with SAML");
+  const named = await namer.finish(talk.snapshot(), talk.segments);
+  assert.equal(asked.length, 1, "only the topic the check did not name");
+  assert.equal(named.nodes[0].label, "Launch date move");
+  assert.equal(named.nodes[1].label, "SSO login with SAML");
+  // The same name from the namer itself is renamed as it grew.
+  const own = setup({ live: false });
+  own.namer.names.set(1, { name: "Launch date move", words: 40, namings: 1, utteranceIds: ["u0"] });
+  // Unnamed topics go first at the end, then renames.
+  own.answers.push("SSO login with SAML", "Launch date and customer kickoff");
+  const renamed = await own.namer.finish(talk.snapshot(), talk.segments);
+  assert.equal(own.asked.length, 2);
+  assert.equal(renamed.nodes[0].label, "Launch date and customer kickoff");
+});
+
 test("a stopped namer asks nothing more", async () => {
   const { clock, namer, asked, answers } = setup();
   const talk = conversation();

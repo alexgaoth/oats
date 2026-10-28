@@ -9,6 +9,94 @@ build. Every number comes from the scripts named here, on public data (the AMI
 meeting corpus, CC BY 4.0), except one private conversation that only models on
 this computer read.
 
+## Decision (Alex, 2026-10-26) and V4 in the app
+
+- **VF: no.** The record keeps the on-device cut at Finish, with #121's names
+  on top.
+- **Live view: V4**, only when the writing model is OpenAI's and there is an
+  OpenAI key. Oats uses gpt-6-luna when the key can use it, else gpt-5.6-luna,
+  and asks once a session (`GET /v1/models/{model}`, no tokens). Every other
+  provider and every model on this computer keep #121's names as they were.
+- **No 30 s rule** (2026-10-27). A rule that a line shown more than 30 s ago
+  does not move was added to the brief by the coordinating agent, not by
+  Alex. Measured, it removed the gain he chose (below), so a confirmed change
+  moves its lines in one step.
+
+### What the app does
+
+`src/helpers/topicLoop.mjs` is V4 as the app runs it, and
+`src/stores/topicNamingRunner.ts` starts it for the recording.
+
+- A second on-device tracker, set to propose early, proposes changes of
+  subject. The fast model gets the topics' names and one-line descriptions and
+  at most 3,000 characters of the lines around the change (and, after 250
+  words with no check, the end of the current topic). It answers JSON
+  (`text.format` json_schema, `reasoning: none`): the same subject, a new
+  topic (where it starts, a name), or a return. The first topic is named at
+  40 words; a topic is renamed only when it grew two and a half times.
+- One request at a time, a 15 s timeout, about 41 requests an hour. A failed
+  or timed-out request, or an answer that is not the JSON, changes nothing; the
+  next request waits 10 s, then 20 s. Three in a row end the check for the
+  recording, and so does a change of writing model away from OpenAI: the flow
+  card goes back to the on-device topics, and #121 names them.
+- Each line shows at once in the topic the room is on. A confirmed change
+  moves the lines from the change on to the new or earlier topic in one step.
+- Topic ids never change. At Finish the record keeps the tracker's cut; each
+  name the check gave goes to the record topic that holds at least half of the
+  lines it was named from, and #121's final pass names only the record topics
+  without one. A topic the check named is never sent to #121 again.
+- #121's name check keeps a six-word name now ("Six-word names" below). The
+  prompts still ask for 2 to 5 words, and the 48-character limit stays. In the
+  runs below the check's own names were refused 0 to 2 times in about 190;
+  with the five-word limit, 2 and 42 times.
+
+### Verification: the app's code on eval24
+
+`scripts/topic-loop-eval.mjs --variant v4app` replays the 24 meetings through
+the app's module (12.5 hours). Δ is paired against main today (V1), per
+meeting, with its 95% interval.
+
+| | live Pk | Δ against main | real change drawn, after | lines older than 30 s moved per hour | requests per hour | $ per hour |
+| --- | --- | --- | --- | --- | --- | --- |
+| V4 in the experiment (3 runs) | 0.274 to 0.285 | −0.072 to −0.082, each excludes 0 | 67 to 71%, 1.3 min | 69 to 82 | 48 | $0.0067 |
+| **app, gpt-6-luna** (3 runs) | **0.285, 0.301, 0.296** | −0.072 [−0.127, −0.015], −0.055 [−0.105, −0.005], −0.060 [−0.109, −0.013] | 60 to 71%, 1.3 to 1.6 min | 84 to 99 | 41 to 47 | $0.0057 to 0.0063 |
+| **app as shipped**, gpt-6-luna (confirmation) | **0.278** | −0.079 [−0.132, −0.025] | 67%, 1.2 min | 72 | 41 | $0.0057 |
+| app, gpt-5.6-luna (2 runs) | 0.347, 0.336 | −0.009 [−0.076, +0.059], −0.021 [−0.091, +0.049] | 62 to 66%, 1.3 to 1.4 min | 94 to 98 | 41 | $0.012 |
+| main today | 0.356 | | 43%, 3.9 min | 206 | 25 | $0.002 to 0.004 |
+
+One topic for the whole meeting scores 0.345. The record is main's in every
+row (Pk 0.331). No request failed; 0 to 0.4% of answers were not the JSON;
+latency 1.1 to 1.3 s at the median, 1.6 to 2.4 s at p95. The three gpt-6-luna
+runs had the 30 s rule's code with the limit set past any meeting's length;
+the first of them (0.285) also came before the six-word names and the change
+at Finish, and sent 99 final-name requests in the 24 meetings instead of 18
+to 25. The confirmation run is the code as shipped, with the rule's code
+removed and no option set.
+
+- **The app reproduces V4:** live Pk 0.278 to 0.301 (the experiment: 0.274 to
+  0.285), each run better than main with an interval that excludes 0; a change
+  drawn after 1.2 to 1.6 minutes; $0.006 an hour.
+- **A confirmed change moves its lines in one step.** In the three runs: 12 to
+  14 moves an hour, of about 7 lines older than 30 s each (84 to 99 such lines
+  an hour), and no move was undone. In the confirmation run: 13 moves an hour
+  of about 6 such lines (72 an hour), and one move in its 12.5 hours was
+  undone. Main's tracker moves 206 lines older than 30 s an hour.
+- **The 30 s rule, measured and dropped.** With it, live Pk was 0.394 and
+  0.376 with gpt-6-luna and 0.379 with gpt-5.6-luna, no better than main and
+  worse than one topic; with 90 s, 0.360. The model confirms a change a median
+  1.3 minutes after it happened, so under the rule the lines in between stayed
+  in the old topic and every cut landed late.
+- **The requests together carry most of the conversation**: 91 to 95% of the
+  lines are quoted in at least one request, though no request carries more
+  than 3,000 characters.
+
+**Open option for Alex: the fallback model.** As decided, the app uses
+gpt-5.6-luna when the key cannot use gpt-6-luna. With it there is no gain in
+live Pk (0.347 and 0.336; neither interval excludes 0), and it costs twice as
+much ($0.012 an hour against $0.006); it still names topics early. The
+alternative is to run the check only when the key can use gpt-6-luna
+(`FAST_MODELS` in `src/helpers/topicLoop.mjs`).
+
 ## The answer
 
 **Live: yes, a clear win, with the right model.** With gpt-6-luna (no
@@ -543,6 +631,9 @@ node scripts/topic-loop-eval.mjs --variant v0 --tracker /tmp/v0-tracker.mjs --mo
 
 # The loops and the record cut (v2, v3, v4, vf)
 node scripts/topic-loop-eval.mjs --variant v3 --model openai:gpt-6-luna@none --ami $AMI --set eval24 --json v3.json
+
+# V4 as the app ships it (helpers/topicLoop.mjs)
+node scripts/topic-loop-eval.mjs --variant v4app --vectors --model openai:gpt-6-luna@none --ami $AMI --set eval24 --json v4app.json
 
 # The same on the far-field recognition output of scripts/room-replay.js (#122)
 node scripts/topic-loop-eval.mjs --variant v2 --model openai:gpt-6-luna@none --ami $AMI --asr room-replay.json --json v2-far.json

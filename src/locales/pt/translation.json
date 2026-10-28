@@ -2258,7 +2258,7 @@
         "speechTitle": "Modelo de fala",
         "speechScreen": "Um só modelo transcreve suas conversas e seus ditados. Dois modelos se revezariam na memória deste Mac.",
         "writingTitle": "Modelo de escrita",
-        "writingScreen": "Um só modelo escreve seus resumos, nomeia os temas de cada conversa e limpa seus ditados. Com um modelo na nuvem, o que é dito sobre cada tema é enviado a esse provedor durante a conversa.",
+        "writingScreen": "Um só modelo escreve seus resumos, nomeia os temas de cada conversa e limpa seus ditados. Com um modelo na nuvem, o que é dito sobre cada tema é enviado a esse provedor durante a conversa. Com a OpenAI, um modelo rápido da OpenAI também confirma cada mudança de tema durante a conversa e dá nome a ela, e cada solicitação leva até 3.000 caracteres do que foi dito em torno da mudança.",
         "none": "Nenhum ainda",
         "selfHosted": "Seu servidor"
       },

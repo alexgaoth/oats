@@ -29,7 +29,15 @@ import {
 } from "../utils/transcriptSpeakerState";
 import { ConversationAideSession } from "../helpers/conversationAide";
 import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
-import { namedTopicSnapshot, observeTopics, startTopicNaming } from "./topicNamingRunner";
+import {
+  liveTopicSnapshot,
+  namedTopicSnapshot,
+  observeTopics,
+  observeUtterance,
+  resolveLiveTopic,
+  startTopicNaming,
+  stopLiveTopics,
+} from "./topicNamingRunner";
 import { AGENT_RUNS_PER_RECORDING } from "../helpers/contextCheck.mjs";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
 import { TopicVectorFeeder } from "../helpers/topicVectors.mjs";
@@ -658,13 +666,14 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
       // conversation has usually moved on to something else.
       if (card.state === "answered") {
         conversationTopicTracker?.resolveTopicForUtterance(card.id);
+        resolveLiveTopic(card.id);
         useMeetingRecordingStore.setState({
           openThreads: (conversationTopicTracker?.openThreads(Date.now()) ?? []) as OpenThread[],
           // Republished so the flow card shows the topic resolved now, not at
           // the next utterance, which may be a long pause away.
           ...(conversationTopicTracker
             ? {
-                topicSnapshot: namedTopicSnapshot(
+                topicSnapshot: liveTopicSnapshot(
                   conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
                 ),
               }
@@ -742,13 +751,17 @@ function trackConversationTopic(segment: TranscriptSegment) {
     at: segment.timestamp ?? Date.now(),
   });
   topicVectors?.observe(segment);
+  // With OpenAI as the writing model, a fast model checks the changes of
+  // subject as they happen (topicNamingRunner.ts, helpers/topicLoop.mjs).
+  observeUtterance(segment);
   // The tracker is dependency-free ESM (so node:test can import it without a
   // TypeScript build), which is why its output is asserted at this boundary.
   const tracked = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
   // The writing model names topics as they grow, when there is one
-  // (topicNamingRunner.ts); what is published carries its names.
+  // (topicNamingRunner.ts); what is published carries its names, or the live
+  // topic check's topics when it runs.
   observeTopics(tracked, useMeetingRecordingStore.getState().segments);
-  const snapshot = namedTopicSnapshot(tracked);
+  const snapshot = liveTopicSnapshot(tracked);
   useMeetingRecordingStore.setState({
     // Already computed on the line above for the suggestions; publishing it
     // costs nothing and is what the flow card draws.
@@ -761,12 +774,13 @@ function trackConversationTopic(segment: TranscriptSegment) {
   });
 }
 
-// A topic's name from the writing model arrived: the flow card shows it now,
-// not at the next turn, which may be a long pause away.
+// A topic's name from the writing model arrived, or the live topic check drew
+// a change: the flow card shows it now, not at the next turn, which may be a
+// long pause away.
 function publishTopicNames() {
   if (!conversationTopicTracker || !useMeetingRecordingStore.getState().isRecording) return;
   useMeetingRecordingStore.setState({
-    topicSnapshot: namedTopicSnapshot(
+    topicSnapshot: liveTopicSnapshot(
       conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
     ),
   });
@@ -941,6 +955,8 @@ export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null
 }
 
 async function stopConversationAide() {
+  // The live topic check asks nothing more once the recording stopped.
+  stopLiveTopics();
   // Write whatever is pending before dropping the note id, so a conversation
   // that ends mid-debounce still lands its last utterance.
   flushTranscriptCheckpoint();
