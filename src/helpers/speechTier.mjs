@@ -66,13 +66,15 @@ export const BENCHMARK_MODEL = "small.en";
 /** Measured on the reference Mac. */
 export const REFERENCE = Object.freeze({
   mac: "Apple M5 Pro, 16-core GPU, 48 GB",
-  /** Median per-segment time in the AMI room replay (ms). */
+  /** Median per-segment time in the AMI room replay (ms; alexgaoth/oats#122, #131). */
   segmentMs: Object.freeze({ baseEn: 58, smallEn: 134, turboEn: 603, turboAuto: 1089 }),
   /**
-   * The benchmark clip (speechBenchmarkClip.mjs) through the same server,
-   * VAD on, language "en": the median of warm requests (ms).
+   * The speed check's clip (speechCheck.wav) as deviceTier.js reads it: a new
+   * server, VAD on, language "en", the faster of two reads. The median of 12
+   * servers for `small.en` (148–164 ms) and of 8 for turbo (570–666 ms),
+   * 2026-10-28, under the GPU lock this Mac's benchmarks share.
    */
-  clipMs: Object.freeze({ smallEn: 170, turboEn: 640 }),
+  clipMs: Object.freeze({ smallEn: 154, turboEn: 638 }),
 });
 
 /** Segments a busy meeting closes in a minute. */

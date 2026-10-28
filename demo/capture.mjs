@@ -96,6 +96,25 @@ const SHOTS = [
     query: "profile=many",
     script: "await oatsDemo.show('global'); await demo.wait(2500)",
   },
+  // The speech model this Mac's GPU decides (src/helpers/speechTier.mjs), in
+  // each state the speed check reports (harness/deviceTier.mjs).
+  { name: "speech-setup", query: "firstrun=1&tier=fast", ready: "h1", script: "" },
+  { name: "speech-sidebar-downloading", query: "tier=downloading", script: "" },
+  ...["downloading", "checking", "ready", "declined", "failed", "slow", "intel"].map((tier) => ({
+    name: `speech-settings-${tier}`,
+    query: `tier=${tier}`,
+    script: "await oatsDemo.settings('models')",
+  })),
+  {
+    name: "speech-settings-chosen",
+    query: "tier=ready&chosen=small",
+    script: "await oatsDemo.settings('models')",
+  },
+  {
+    name: "speech-settings-detection",
+    query: "tier=ready&speech=auto",
+    script: "await oatsDemo.settings('models')",
+  },
 ];
 
 // Page helpers, evaluated in the page before each shot's script.
@@ -272,12 +291,15 @@ async function main() {
         const loaded = cdp.once("Page.loadEventFired", sessionId);
         await cdp.send("Page.navigate", { url: `${args.url}/demo.html?${query}` }, sessionId);
         await loaded;
+        // What shows once the page is up: the workspace, or a shot's own
+        // `ready` selector (the setup screen has no workspace).
+        const ready = JSON.stringify(shot.ready ?? "main[data-active='true'] section");
         await evaluate(
           cdp,
           sessionId,
           `(async () => {
             const until = performance.now() + 20000;
-            while (!(window.oatsDemo && document.querySelector("main[data-active='true'] section"))) {
+            while (!(window.oatsDemo && document.querySelector(${ready}))) {
               if (performance.now() > until) throw new Error("the app did not render");
               await new Promise((resolve) => setTimeout(resolve, 100));
             }
