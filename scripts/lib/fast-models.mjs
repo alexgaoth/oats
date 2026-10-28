@@ -19,20 +19,24 @@ import path from "node:path";
 import os from "node:os";
 
 // Standard-tier prices in USD per million tokens.
-// OpenAI: developers.openai.com/api/docs/pricing, read 2026-10-26.
+// OpenAI: developers.openai.com/api/docs/pricing, read 2026-10-26 (gpt-6-astra
+// and gpt-5.5-pro 2026-10-28; gpt-5.5-pro has no cached-input discount).
 // Anthropic: first-party rates (prompts under 100K tokens), 2026-10-26.
 // Bedrock: the AWS Price List API (AmazonBedrock, us-east-1, version
-// 20261016210806), on-demand, in-region, read 2026-10-26.
+// 20261016210806), on-demand, in-region, read 2026-10-26; the rows added on
+// 2026-10-28 are from aws.amazon.com/bedrock/pricing (US cross-region rate
+// where the page lists no in-region one; Claude at Anthropic's list price plus
+// 10%, which the page does not show).
 // Local models cost nothing per token.
 export const PRICES = {
+  "openai:gpt-6-astra": { input: 10, cached: 1, output: 50 },
+  "openai:gpt-5.5-pro": { input: 30, cached: 30, output: 180 },
   "openai:gpt-6-luna": { input: 0.1, cached: 0.01, output: 0.5 },
   "openai:gpt-6-sol": { input: 2, cached: 0.2, output: 10 },
   "openai:gpt-6.1-sol": { input: 2, cached: 0.1, output: 10 },
   "openai:gpt-6.1-terra": { input: 1, cached: 0.05, output: 5 },
   // developers.openai.com/api/docs/pricing, standard tier, read 2026-10-28 (Flex and
   // Batch are half: the summary eval books a flex request at half these).
-  "openai:gpt-6-astra": { input: 10, cached: 1, output: 50 },
-  "openai:gpt-5.5-pro": { input: 30, cached: 30, output: 180 },
   "openai:gpt-5.6-luna": { input: 0.2, cached: 0.02, output: 1.2 },
   "openai:gpt-5.6-terra": { input: 2, cached: 0.2, output: 12 },
   "openai:gpt-5.6-sol": { input: 4, cached: 0.4, output: 20 },
@@ -43,17 +47,31 @@ export const PRICES = {
   "openai:gpt-4.1-nano": { input: 0.1, cached: 0.025, output: 0.4 },
   "openai:gpt-4.1-mini": { input: 0.4, cached: 0.1, output: 1.6 },
   "openai:gpt-4o-mini": { input: 0.15, cached: 0.075, output: 0.6 },
+  // The Claude API reference's model table (cached 2026-10-06): $10 / $50,
+  // cache reads $0.25; cache writes at 1.25x the input price, as in the rows below.
+  "anthropic:claude-fable-5-1": { input: 10, cached: 0.25, write: 12.5, output: 50 },
   "anthropic:claude-haiku-5-5": { input: 0.1, cached: 0.01, write: 0.125, output: 0.5 },
   "anthropic:claude-sonnet-5-5": { input: 2, cached: 0.2, write: 2.5, output: 10 },
   "anthropic:claude-opus-5-5": { input: 4, cached: 0.2, write: 5, output: 20 },
   // The models in the app's own Anthropic list (modelRegistryData.json), first-party
   // rates from the Claude API model table (cached 2026-10-06), for the summary eval.
   "anthropic:claude-fable-5": { input: 10, cached: 1, write: 12.5, output: 50 },
-  "anthropic:claude-fable-5-1": { input: 10, cached: 0.25, write: 12.5, output: 50 },
   "anthropic:claude-sonnet-5": { input: 2, cached: 0.2, write: 2.5, output: 10 },
+  "anthropic:claude-opus-5": { input: 5, cached: 0.5, write: 6.25, output: 25 },
   "anthropic:claude-opus-4-8": { input: 5, cached: 0.5, write: 6.25, output: 25 },
   "anthropic:claude-sonnet-4-6": { input: 3, cached: 0.3, write: 3.75, output: 15 },
   "anthropic:claude-haiku-4-5": { input: 1, cached: 0.1, write: 1.25, output: 5 },
+  "bedrock:anthropic.claude-opus-4-6-v1": { input: 5.5, cached: 0.55, output: 27.5 },
+  "bedrock:anthropic.claude-sonnet-4-6": { input: 3.3, cached: 0.33, output: 16.5 },
+  "bedrock:moonshotai.kimi-k3": { input: 3.3, cached: 3.3, output: 16.5 },
+  "bedrock:moonshotai.kimi-k2.5": { input: 0.6, cached: 0.6, output: 3 },
+  "bedrock:zai.glm-5": { input: 1, cached: 1, output: 3.2 },
+  "bedrock:mistral.mistral-large-3-675b-instruct": { input: 0.5, cached: 0.5, output: 1.5 },
+  "bedrock:deepseek.v3.2": { input: 0.62, cached: 0.62, output: 1.85 },
+  "bedrock:qwen.qwen3-vl-235b-a22b": { input: 0.53, cached: 0.53, output: 2.66 },
+  "bedrock:qwen.qwen3-next-80b-a3b": { input: 0.15, cached: 0.15, output: 1.2 },
+  "bedrock:minimax.minimax-m2.5": { input: 0.3, cached: 0.3, output: 1.2 },
+  "bedrock:nvidia.nemotron-super-3-120b": { input: 0.15, cached: 0.15, output: 0.65 },
   "bedrock:amazon.nova-micro-v1:0": { input: 0.035, cached: 0.035, output: 0.14 },
   "bedrock:amazon.nova-lite-v1:0": { input: 0.06, cached: 0.06, output: 0.24 },
   "bedrock:amazon.nova-2-lite-v1:0": { input: 0.33, cached: 0.33, output: 2.75 },
@@ -69,10 +87,6 @@ export const PRICES = {
   "bedrock:qwen.qwen3-32b-v1:0": { input: 0.15, cached: 0.15, output: 0.6 },
   "bedrock:openai.gpt-oss-20b-1:0": { input: 0.07, cached: 0.07, output: 0.3 },
   // aws.amazon.com/bedrock/pricing, us-east-1 on-demand, read 2026-10-28.
-  "bedrock:deepseek.v3.2": { input: 0.62, cached: 0.62, output: 1.85 },
-  "bedrock:zai.glm-5": { input: 1, cached: 1, output: 3.2 },
-  "bedrock:qwen.qwen3-next-80b-a3b": { input: 0.15, cached: 0.15, output: 1.2 },
-  "bedrock:mistral.mistral-large-3-675b-instruct": { input: 0.5, cached: 0.5, output: 1.5 },
   // Not on that page's text; the launch prices.
   "bedrock:openai.gpt-oss-120b-1:0": { input: 0.15, cached: 0.15, output: 0.6 },
   "bedrock:anthropic.claude-haiku-4-5-20251001-v1:0": { input: 1, cached: 0.1, output: 5 },
@@ -146,6 +160,8 @@ export function ledgerTotal() {
 
 function checkBudget(spec) {
   if (parseSpec(spec).provider === "local") return;
+  // A request with no price would be counted as free and slip past the budget.
+  if (!priceOf(spec)) throw new BudgetError(`No price for ${spec}: add it to PRICES first`);
   if (spentAtStart === null) spentAtStart = ledgerTotal();
   // Other processes may be spending too: read the ledger again now and then.
   if (Math.random() < 0.02) spentAtStart = ledgerTotal() - spentHere;
@@ -201,7 +217,21 @@ async function postJson(url, headers, body, timeoutMs) {
   }
 }
 
+/**
+ * Output tokens added to a request's cap when the model reasons or thinks: the
+ * reasoning counts against the cap, and a cap sized for the answer alone (200
+ * tokens for a topic check) would end the answer before it starts.
+ */
+export const REASONING_HEADROOM = 2000;
+
+/** Whether an OpenAI request reasons: any effort but none or minimal, or the model's default. */
+function openaiReasons(model, effort) {
+  if (/^gpt-4/.test(model)) return false;
+  return !effort || !/^(none|minimal)$/.test(effort);
+}
+
 function openaiBody({ model, options }, { system, user, maxTokens, schema }) {
+  const effort = options.find((option) => /^(none|minimal|low|medium|high|xhigh)$/.test(option));
   const body = {
     model,
     input: [
@@ -209,9 +239,8 @@ function openaiBody({ model, options }, { system, user, maxTokens, schema }) {
       { role: "user", content: user },
     ],
     store: false,
-    max_output_tokens: maxTokens,
+    max_output_tokens: openaiReasons(model, effort) ? maxTokens + REASONING_HEADROOM : maxTokens,
   };
-  const effort = options.find((option) => /^(none|minimal|low|medium|high)$/.test(option));
   if (effort) body.reasoning = { effort };
   if (/^gpt-4/.test(model)) body.temperature = 0;
   if (schema && !options.includes("noschema")) {
@@ -248,26 +277,38 @@ async function callOpenai(parsed, request) {
   };
 }
 
+/** Claude models whose thinking cannot be turned off: any explicit off setting is an HTTP 400. */
+export const ALWAYS_THINKS = /opus-5-5|fable-5|mythos-5/;
+
+/** Claude models that take no `effort` (an HTTP 400 if sent). */
+const NO_EFFORT = /haiku-4-5|sonnet-4-5|claude-3/;
+
 async function callAnthropic({ model, options }, { system, user, maxTokens, schema, timeoutMs }) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY is not set");
-  const effort = options.find((option) => /^(low|medium|high)$/.test(option)) ?? "low";
+  const effort = options.find((option) => /^(low|medium|high|xhigh|max)$/.test(option)) ?? "low";
+  // Thinking off where the model allows it: Haiku 5.5 takes "disabled" at
+  // effort high or below; Sonnet 5.5 takes "between_tools", which in a request
+  // without tools means none. Opus 5.5 and Fable 5.x always think (adaptive),
+  // so their effort is the only control and their cap gets headroom.
+  const thinks = options.includes("think") || ALWAYS_THINKS.test(model);
   const body = {
     model,
-    max_tokens: maxTokens,
+    max_tokens: thinks ? maxTokens + REASONING_HEADROOM : maxTokens,
     system: options.includes("cache")
       ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
       : system,
     messages: [{ role: "user", content: user }],
-    output_config: { effort },
   };
-  // Thinking off: Haiku 5.5 takes "disabled" at effort high or below; Sonnet 5.5
-  // takes "between_tools", which in a request without tools means none.
-  if (!options.includes("think")) {
+  if (!NO_EFFORT.test(model)) body.output_config = { effort };
+  if (!thinks) {
     body.thinking = /sonnet-5-5/.test(model) ? { type: "between_tools" } : { type: "disabled" };
   }
   if (schema && !options.includes("noschema")) {
-    body.output_config.format = { type: "json_schema", schema: schema.schema };
+    body.output_config = {
+      ...(body.output_config ?? {}),
+      format: { type: "json_schema", schema: schema.schema },
+    };
   }
   const json = await postJson(
     "https://api.anthropic.com/v1/messages",
@@ -299,10 +340,23 @@ async function callBedrock({ model, options }, { system, user, maxTokens, timeou
   const key = process.env.AWS_BEARER_TOKEN_BEDROCK;
   if (!key) throw new Error("AWS_BEARER_TOKEN_BEDROCK is not set");
   const region = options.find((option) => /^[a-z]{2}-[a-z]+-\d$/.test(option)) ?? "us-east-1";
+  // Reasoning models write their reasoning inside maxTokens; newer Claude and
+  // GPT models refuse a sampling temperature.
+  const reasons =
+    options.includes("think") ||
+    /kimi-k3|kimi-k2-thinking|minimax|gpt-oss|deepseek\.r1/.test(model);
+  const noTemperature =
+    reasons ||
+    /anthropic\.claude-(opus-4-[78]|opus-5|sonnet-5|haiku-5|fable|mythos)|openai\.gpt-(5\.[5-9]|6)/.test(
+      model
+    );
   const body = {
     system: [{ text: system }],
     messages: [{ role: "user", content: [{ text: user }] }],
-    inferenceConfig: { maxTokens, temperature: 0 },
+    inferenceConfig: {
+      maxTokens: reasons ? maxTokens + REASONING_HEADROOM : maxTokens,
+      ...(noTemperature ? {} : { temperature: 0 }),
+    },
   };
   const json = await postJson(
     `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(model)}/converse`,

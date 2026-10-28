@@ -1,4 +1,5 @@
 import reasoningService from "../services/ReasoningService";
+import type { ReasoningConfig } from "../services/BaseReasoningService";
 import { getSettings } from "./settingsStore";
 import {
   currentWritingRoute,
@@ -15,7 +16,15 @@ import {
   namesWhileRecording,
   topicNameConfig,
 } from "../helpers/topicNaming.mjs";
-import { LiveTopicLoop, chooseFastModel, loopRouteFor } from "../helpers/topicLoop.mjs";
+import { LiveTopicLoop, chooseFastModel } from "../helpers/topicLoop.mjs";
+import {
+  checkRequestConfig,
+  nameRequestConfig,
+  topicModelChoice,
+  topicModelIds,
+  topicProvider,
+  type TopicModel,
+} from "../helpers/topicModels.mjs";
 import type { ConversationTopicSnapshot } from "../types/conversationEvents";
 import logger from "../utils/logger";
 
@@ -33,29 +42,35 @@ import logger from "../utils/logger";
 // model is chosen and ready (`writingModelReady`, asked before every request),
 // and the request goes by the summary's own route (`currentWritingRoute`): a
 // model on this computer keeps everything here, and a cloud provider gets the
-// words of each topic it names. Its requests are counted with the rest
-// (docs/network-allowlist.md).
+// words of each topic it names. With OpenAI or Anthropic as the writing
+// model, the names come from that provider's most accurate model for them
+// (topicModels.mjs), by the same key and to the same host. Its requests are
+// counted with the rest (docs/network-allowlist.md).
 
 /** The namer of the recording now, or of the one that just ended, until the next starts. */
 let namer: TopicNamer | null = null;
 let generation = 0;
 
-// The live topic check (helpers/topicLoop.mjs): with OpenAI as the writing
-// model, a fast OpenAI model confirms the changes of subject the on-device
-// tracker proposes, and names the topics, while the conversation goes on. The
-// flow card shows its topics; the record keeps the tracker's cut at Finish,
-// with these names carried over and #121's final names for the topics they do
-// not cover. A topic the check named is not sent to #121 again. When the check
-// ends early (three failures in a row, or the writing model is no longer
-// OpenAI's), the flow card goes back to the tracker's topics and #121 names
+// The live topic check (helpers/topicLoop.mjs): with OpenAI or Anthropic as
+// the writing model, that provider's most accurate model for it
+// (topicModels.mjs) confirms the changes of subject the on-device tracker
+// proposes, and names the topics, while the conversation goes on. The flow
+// card shows its topics; the record keeps the tracker's cut at Finish, with
+// these names carried over and #121's final names for the topics they do not
+// cover. A topic the check named is not sent to #121 again. When the check
+// ends early (three failures in a row, or the writing model is no longer that
+// provider's), the flow card goes back to the tracker's topics and #121 names
 // them as on any other route.
 let loop: LiveTopicLoop | null = null;
+/** The provider of the check that runs now, so a change of writing model ends it. */
+let loopProvider: "openai" | "anthropic" | null = null;
 /**
- * The fast model this session's OpenAI key can use: undefined until asked,
- * null when it can use none. Asked once per session (`chooseFastModel`), again
- * only when the answer could not be told.
+ * The topic model each provider's key can use, per job ("openai:check",
+ * "anthropic:names", ...): absent until asked, null when it can use none.
+ * Asked once per session (`chooseFastModel`), again only when the answer could
+ * not be told.
  */
-let sessionFastModel: string | null | undefined;
+const sessionModels = new Map<string, TopicModel | null>();
 /** This sitting's lines that landed while the fast model was being checked, for the loop once it starts. */
 let waitingLines: TranscriptSegment[] | null = null;
 /** The recording whose check was stopped: one still being set up for it does not start. */
@@ -66,10 +81,24 @@ function log(event: string, detail?: Record<string, unknown>): void {
   void logger.debug(`Topic names: ${event}`, detail, "topics");
 }
 
-/** One prompt to the writing model, by the summary's route. */
-async function askWritingModel(prompt: { system: string; text: string }): Promise<string> {
+/**
+ * One naming prompt, by the summary's route: to the provider's naming model
+ * when the writing model is OpenAI's or Anthropic's and the key can use it
+ * (topicModels.mjs), else to the writing model itself.
+ */
+async function askNamer(prompt: { system: string; text: string }): Promise<string> {
   const route = currentWritingRoute();
   if (!route) throw new Error("No writing model");
+  const provider = topicProvider(route);
+  const choice = provider ? await topicModelFor(provider, "names") : null;
+  if (choice) {
+    return reasoningService.processText(
+      prompt.text,
+      choice.model,
+      null,
+      nameRequestConfig(choice, route, prompt.system)
+    );
+  }
   return reasoningService.processText(
     prompt.text,
     route.modelId,
@@ -83,20 +112,28 @@ function loopLog(event: string, detail?: Record<string, unknown>): void {
   void logger.debug(`Live topics: ${event}`, detail, "topics");
 }
 
-/** The fast model for the live topic check, asked of OpenAI once a session. */
-async function fastModelForSession(): Promise<string | null> {
-  if (sessionFastModel !== undefined) return sessionFastModel;
-  const { model, settled } = await chooseFastModel((candidate: string) =>
-    reasoningService.openAiModelAvailable(candidate)
-  );
-  if (settled) sessionFastModel = model;
-  loopLog("fast-model", { model, settled });
-  return model;
+/** The topic model this session's key can use for a job, asked of the provider once a session. */
+async function topicModelFor(
+  provider: "openai" | "anthropic",
+  job: "names" | "check"
+): Promise<TopicModel | null> {
+  const key = `${provider}:${job}`;
+  if (sessionModels.has(key)) return sessionModels.get(key) ?? null;
+  const available =
+    provider === "openai"
+      ? (candidate: string) => reasoningService.openAiModelAvailable(candidate)
+      : (candidate: string) => reasoningService.anthropicModelAvailable(candidate);
+  const { model, settled } = await chooseFastModel(available, topicModelIds(provider, job));
+  const choice = model ? topicModelChoice(provider, job, model) : null;
+  if (settled) sessionModels.set(key, choice);
+  loopLog("topic-model", { provider, job, model, settled });
+  return choice;
 }
 
-/** One request of the live topic check: reasoning off, the answer as the asked JSON. */
+/** One request of the live topic check: the model's effort, the answer as the asked JSON. */
 async function askFastModel(
-  model: string,
+  provider: "openai" | "anthropic",
+  choice: TopicModel,
   request: {
     system: string;
     user: string;
@@ -104,18 +141,17 @@ async function askFastModel(
     maxTokens: number;
   }
 ): Promise<string> {
-  return reasoningService.processText(request.user, model, null, {
-    provider: "openai",
-    systemPrompt: request.system,
-    maxTokens: request.maxTokens,
-    reasoningEffort: "none",
+  const config = checkRequestConfig(provider, choice, request);
+  return reasoningService.processText(request.user, choice.model, null, {
+    ...config,
+    reasoningEffort: config.reasoningEffort as ReasoningConfig["reasoningEffort"],
     responseSchema: request.schema as { name: string; schema: Record<string, unknown> },
   });
 }
 
-/** Whether the live topic check may still ask: the writing model is still OpenAI's. */
+/** Whether the live topic check may still ask: the writing model is still that provider's. */
 function loopReady(): boolean {
-  return loopRouteFor(currentWritingRoute());
+  return loopProvider !== null && topicProvider(currentWritingRoute()) === loopProvider;
 }
 
 /**
@@ -181,15 +217,18 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   namer = null;
   loop?.stop();
   loop = null;
+  loopProvider = null;
   waitingLines = null;
   const mine = ++generation;
   const route = currentWritingRoute();
   // No writing model: the topics keep their on-device names, and nothing is sent.
   if (!route) return;
-  // OpenAI with a key: the live topic check names the topics while recording,
-  // so the namer only names the record at Finish. Every other route: #121.
-  if (loopRouteFor(route)) waitingLines = [];
-  const fast = loopRouteFor(route) ? await fastModelForSession() : null;
+  // OpenAI or Anthropic with a key: the live topic check names the topics
+  // while recording, so the namer only names the record at Finish. Every other
+  // route: #121.
+  const provider = topicProvider(route);
+  if (provider) waitingLines = [];
+  const fast = provider ? await topicModelFor(provider, "check") : null;
   if (mine !== generation) return;
   const waited = waitingLines ?? [];
   waitingLines = null;
@@ -197,7 +236,7 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     // The recording ended while the fast model was being asked for: no check
     // starts after it, and nothing more is sent while it is not recording.
     namer = new TopicNamer({
-      ask: askWritingModel,
+      ask: askNamer,
       ready: writingModelReady,
       onChange,
       live: false,
@@ -205,14 +244,15 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     });
     return;
   }
-  if (fast) {
+  if (fast && provider) {
+    loopProvider = provider;
     loop = new LiveTopicLoop({
       ask: (request: {
         system: string;
         user: string;
         schema: { name: string; schema: object };
         maxTokens: number;
-      }) => askFastModel(fast, request),
+      }) => askFastModel(provider, fast, request),
       ready: loopReady,
       onChange: () => {
         if (loop?.disabled) namerTakesOver(mine);
@@ -221,21 +261,21 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
       log: loopLog,
     });
     namer = new TopicNamer({
-      ask: askWritingModel,
+      ask: askNamer,
       ready: writingModelReady,
       onChange,
       live: false,
       log,
     });
     for (const segment of waited) observeUtterance(segment);
-    log("started", { mode: route.mode, live: false, loop: fast });
+    log("started", { mode: route.mode, live: false, loop: fast.model });
     if (waited.length) onChange();
     return;
   }
   const live = await namesLive(route);
   if (mine !== generation) return;
   namer = new TopicNamer({
-    ask: askWritingModel,
+    ask: askNamer,
     ready: writingModelReady,
     onChange,
     live,

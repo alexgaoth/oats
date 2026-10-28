@@ -1013,6 +1013,8 @@ declare global {
         agentName: string | null,
         config: any
       ) => Promise<{ success: boolean; text?: string; error?: string }>;
+      /** True or false when Anthropic says whether the key can use the model; null when it could not be told. */
+      anthropicModelAvailable?: (modelId: string) => Promise<boolean | null>;
 
       // Enterprise reasoning (Bedrock, Azure, Vertex)
       processEnterpriseReasoning: (

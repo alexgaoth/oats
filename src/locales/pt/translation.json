@@ -1516,6 +1516,7 @@
         "openai_gpt_4_1": "Base sólida, contexto de 1M",
         "openai_gpt_4_1_mini": "Modelo GPT-4.1 menor",
         "openai_gpt_4_1_nano": "GPT-4.1 com menor latência",
+        "anthropic_claude_opus_5_5": "Resumos precisos, poucos fatos inventados: o modelo de escrita padrão",
         "anthropic_claude_fable_5": "O modelo mais capaz da Anthropic, classe Mythos",
         "anthropic_claude_sonnet_5": "Modelo agêntico rápido e capaz por menor custo",
         "anthropic_claude_sonnet_4_6": "Desempenho equilibrado",
@@ -1536,6 +1537,7 @@
         "groq_compound": "Sistema compound da Groq, 450 T/seg",
         "groq_compound_mini": "Sistema compound rápido, 3x menor latência",
         "groq_kimi_k2_0905": "Moonshot AI 1T MoE, contexto 256K",
+        "openai_gpt_6_1_sol": "Resumos precisos a baixo custo: o modelo de escrita padrão",
         "openai_gpt_5_6_sol": "GPT-5.6 principal para programação e pesquisa complexas",
         "openai_gpt_5_6_terra": "GPT-5.6 equilibrado para o trabalho do dia a dia",
         "openai_gpt_5_6_luna": "O GPT-5.6 mais rápido e econômico",
@@ -2062,6 +2064,8 @@
       "needsSummaryModel": "Ainda não há um modelo de resumo pronto, então esta conversa não foi resumida.",
       "notSummarized": "Esta conversa ainda não foi resumida.",
       "summarize": "Resumir",
+      "summarizeAgain": "Resumir novamente",
+      "summaryFailed": "Não foi possível criar o resumo: {{reason}}",
       "setUpModel": "Configurar um modelo"
     },
     "global": {
@@ -2258,7 +2262,7 @@
         "speechTitle": "Modelo de fala",
         "speechScreen": "Um só modelo transcreve suas conversas e seus ditados. Dois modelos se revezariam na memória deste Mac.",
         "writingTitle": "Modelo de escrita",
-        "writingScreen": "Um só modelo escreve seus resumos, nomeia os temas de cada conversa e limpa seus ditados. Com um modelo na nuvem, o que é dito sobre cada tema é enviado a esse provedor durante a conversa. Com a OpenAI, um modelo rápido da OpenAI também confirma cada mudança de tema durante a conversa e dá nome a ela, e cada solicitação leva até 3.000 caracteres do que foi dito em torno da mudança.",
+        "writingScreen": "Um só modelo escreve seus resumos, limpa seus ditados e nomeia os temas de cada conversa. Com a OpenAI ou a Anthropic, quem nomeia os temas são os modelos mais precisos desse provedor para temas, que também confirmam cada mudança de tema durante a conversa. Com um modelo na nuvem, o que é dito sobre cada tema é enviado a esse provedor durante a conversa, até 3.000 caracteres por solicitação.",
         "none": "Nenhum ainda",
         "selfHosted": "Seu servidor"
       },
@@ -2305,7 +2309,8 @@
     "errors": {
       "noModel": "Configure o processamento do Oats antes de gravar uma conversa.",
       "noEndpoint": "Configure o endpoint da API do Oats antes de gravar uma conversa.",
-      "actionFailed": "O Oats não conseguiu gerar inteligência para esta conversa."
+      "actionFailed": "O Oats não conseguiu gerar inteligência para esta conversa.",
+      "noSummary": "O modelo não retornou nenhum resumo."
     },
     "preflight": {
       "no-microphone": "Nenhum microfone encontrado. Ligue um e pressione novamente.",

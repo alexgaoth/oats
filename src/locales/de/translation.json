@@ -1516,6 +1516,7 @@
         "openai_gpt_4_1": "Starke Basis, 1M Kontext",
         "openai_gpt_4_1_mini": "Kleineres GPT-4.1-Modell",
         "openai_gpt_4_1_nano": "GPT-4.1 mit der niedrigsten Latenz",
+        "anthropic_claude_opus_5_5": "Genaue Zusammenfassungen, kaum erfundene Fakten: das Standard-Schreibmodell",
         "anthropic_claude_fable_5": "Leistungsstärkstes Modell von Anthropic, Mythos-Klasse",
         "anthropic_claude_sonnet_5": "Schnelles, leistungsfähiges Agent-Modell zu geringeren Kosten",
         "anthropic_claude_sonnet_4_6": "Ausgewogene Leistung",
@@ -1536,6 +1537,7 @@
         "groq_compound": "Groqs Compound-System, 450 T/s",
         "groq_compound_mini": "Schnelles Compound-System, 3x niedrigere Latenz",
         "groq_kimi_k2_0905": "Moonshot AI 1T MoE, 256K Kontext",
+        "openai_gpt_6_1_sol": "Genaue Zusammenfassungen zu niedrigem Preis: das Standard-Schreibmodell",
         "openai_gpt_5_6_sol": "Flaggschiff-GPT-5.6 für komplexes Coding und Forschung",
         "openai_gpt_5_6_terra": "Ausgewogenes GPT-5.6 für die tägliche Arbeit",
         "openai_gpt_5_6_luna": "Schnellstes und günstigstes GPT-5.6",
@@ -2062,6 +2064,8 @@
       "needsSummaryModel": "Noch ist kein Modell für Zusammenfassungen bereit, daher wurde dieses Gespräch nicht zusammengefasst.",
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
       "summarize": "Zusammenfassen",
+      "summarizeAgain": "Erneut zusammenfassen",
+      "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden: {{reason}}",
       "setUpModel": "Modell einrichten"
     },
     "global": {
@@ -2258,7 +2262,7 @@
         "speechTitle": "Sprachmodell",
         "speechScreen": "Ein Modell transkribiert Ihre Gespräche und Diktate. Zwei Modelle würden abwechselnd auf diesem Mac geladen.",
         "writingTitle": "Schreibmodell",
-        "writingScreen": "Ein Modell schreibt Ihre Zusammenfassungen, benennt die Themen jedes Gesprächs und bereinigt Ihre Diktate. Bei einem Cloud-Modell wird das, was zu jedem Thema gesagt wird, schon während des Gesprächs an diesen Anbieter gesendet. Bei OpenAI bestätigt außerdem ein schnelles OpenAI-Modell schon während des Gesprächs jeden Themenwechsel und benennt ihn, und jede Anfrage enthält bis zu 3.000 Zeichen des Gesagten rund um den Wechsel.",
+        "writingScreen": "Ein Modell schreibt Ihre Zusammenfassungen, bereinigt Ihre Diktate und benennt die Themen jedes Gesprächs. Bei OpenAI oder Anthropic benennen stattdessen die für Themen genauesten Modelle dieses Anbieters die Themen und bestätigen schon während des Gesprächs jeden Themenwechsel. Bei einem Cloud-Modell wird das, was zu jedem Thema gesagt wird, schon während des Gesprächs an diesen Anbieter gesendet, bis zu 3.000 Zeichen pro Anfrage.",
         "none": "Noch keins",
         "selfHosted": "Ihr Server"
       },
@@ -2305,7 +2309,8 @@
     "errors": {
       "noModel": "Richte die Oats-Verarbeitung ein, bevor du ein Gespräch aufnimmst.",
       "noEndpoint": "Richte den Oats-API-Endpunkt ein, bevor du ein Gespräch aufnimmst.",
-      "actionFailed": "Oats konnte für dieses Gespräch keine Intelligenz erzeugen."
+      "actionFailed": "Oats konnte für dieses Gespräch keine Intelligenz erzeugen.",
+      "noSummary": "Das Modell hat keine Zusammenfassung geliefert."
     },
     "preflight": {
       "no-microphone": "Kein Mikrofon gefunden. Schließe eines an und drücke erneut.",

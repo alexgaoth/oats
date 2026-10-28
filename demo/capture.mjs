@@ -78,6 +78,13 @@ const SHOTS = [
   { name: "conversations", query: "", script: "await oatsDemo.show('conversations')" },
   { name: "global", query: "", script: "await oatsDemo.show('global'); await demo.wait(1500)" },
   {
+    // The board linked by words, as before it read meaning (and as it still is
+    // when Oats listens for a language other than English).
+    name: "global-words",
+    query: "speech=de",
+    script: "await oatsDemo.show('global'); await demo.wait(1500)",
+  },
+  {
     // Pointing at the newest conversation lights it in both charts.
     name: "global-highlight",
     query: "",
