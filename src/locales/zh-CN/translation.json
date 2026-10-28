@@ -2057,6 +2057,8 @@
       "needsSummaryModel": "还没有可用的摘要模型，所以这段对话没有摘要。",
       "notSummarized": "此对话尚未生成摘要。",
       "summarize": "生成摘要",
+      "summarizeAgain": "重新生成摘要",
+      "summaryFailed": "无法生成摘要：{{reason}}",
       "setUpModel": "设置模型"
     },
     "global": {
@@ -2300,7 +2302,8 @@
     "errors": {
       "noModel": "录制对话前请先配置 Oats 的处理方式。",
       "noEndpoint": "录制对话前请先配置 Oats 的 API 端点。",
-      "actionFailed": "Oats 无法为这场对话生成智能内容。"
+      "actionFailed": "Oats 无法为这场对话生成智能内容。",
+      "noSummary": "模型没有返回摘要。"
     },
     "preflight": {
       "no-microphone": "未找到麦克风。请接入一个后再按一次。",

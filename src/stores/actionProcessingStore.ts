@@ -5,13 +5,16 @@ import { appendDictionarySuffix } from "../config/prompts";
 import { generateNoteTitle } from "../utils/generateTitle";
 import { buildNoteFormattingOverrides } from "../helpers/noteFormattingOverrides";
 import { claimWritingModel, sortConversationIntoGroup } from "./conversationGroupSortStore";
+import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs";
 import type { ActionItem } from "../types/electron";
 
-export type ActionProcessingStatus = "idle" | "processing" | "success";
+export type ActionProcessingStatus = "idle" | "processing" | "success" | "failed";
 
 export interface NoteActionState {
   status: ActionProcessingStatus;
   actionName: string | null;
+  /** Why a conversation's summary failed ("failed"), for the record to say. */
+  message?: string | null;
 }
 
 export interface ActionErrorEvent {
@@ -99,6 +102,8 @@ export interface RunActionLabels {
   noModel: string;
   noEndpoint: string;
   actionFailed: string;
+  /** A conversation's summary came back empty, or as the transcript itself. */
+  noSummary?: string;
 }
 
 /**
@@ -131,7 +136,7 @@ export function runBackgroundAction(
 
   cancelledFlags.set(noteId, false);
   processingFlags.set(noteId, true);
-  setNoteState(noteId, { status: "processing", actionName: action.name });
+  setNoteState(noteId, { status: "processing", actionName: action.name, message: null });
 
   (async () => {
     // The model on this computer answers one request at a time, so the
@@ -154,9 +159,16 @@ export function runBackgroundAction(
         temperature: 0.3,
         disableThinking: noteFormatting.disableThinking,
         ...providerOverrides,
+        // A conversation's summary reads the whole transcript: room for a
+        // reasoning model, and a cut or empty answer fails (summaryCall.mjs).
+        ...(options.isMeetingNote ? summaryLimits(noteFormatting.mode) : {}),
       });
 
       if (cancelledFlags.get(noteId)) return;
+      // Never save nothing, or the transcript itself, as the summary.
+      if (options.isMeetingNote && summaryAnswerProblem(enhanced, noteContent)) {
+        throw new Error(labels.noSummary ?? labels.actionFailed);
+      }
 
       let title: string | undefined;
       if (options.allowTitleGeneration && getSettings().autoGenerateNoteTitle) {
@@ -196,8 +208,14 @@ export function runBackgroundAction(
     } catch (err) {
       if (cancelledFlags.get(noteId)) return;
       processingFlags.set(noteId, false);
-      clearNoteState(noteId);
       const message = err instanceof Error ? err.message : labels.actionFailed;
+      // A conversation keeps the failure, so its record says so and offers it
+      // again (OatsWorkspace.tsx); other notes go back to idle.
+      if (options.isMeetingNote) {
+        setNoteState(noteId, { status: "failed", actionName: action.name, message });
+      } else {
+        clearNoteState(noteId);
+      }
       pushErrorEvent({ noteId, message });
     } finally {
       cancelledFlags.delete(noteId);
