@@ -228,3 +228,46 @@ test("whisper-server listens on loopback and loads a model file", () => {
   assert.equal(args[args.indexOf("--model") + 1], "/models/ggml-base.en.bin");
   assert.ok(!args.some((arg) => /^(https?|wss?):\/\//.test(String(arg))));
 });
+
+// The one download Oats starts by itself: Whisper turbo on a Mac whose GPU
+// measured fast enough (speechTier.mjs, deviceTier.js). docs/network-allowlist.md
+// names it; these pin how it can start and that it is counted.
+
+test("turbo is fetched only when the workspace asks, after setup, never at launch", () => {
+  // Main starts it only from its IPC handler, which the renderer calls.
+  for (const file of MAIN_SOURCES) {
+    if (file.endsWith(path.join("helpers", "deviceTier.js"))) continue;
+    const calls = [...read(file).matchAll(/\.startUpgrade\(/g)].length;
+    if (file.endsWith(path.join("helpers", "ipcHandlers.js"))) {
+      assert.equal(calls, 1, "ipcHandlers.js starts it from speech-upgrade-start only");
+      assert.match(read(file), /ipcMain\.handle\("speech-upgrade-start"[\s\S]{0,120}startUpgrade\(/);
+    } else {
+      assert.equal(calls, 0, `${file} must not start the turbo download`);
+    }
+  }
+  // The renderer asks from the workspace, which shows only once setup is done.
+  const askers = ALL_SOURCES.filter((file) => /\buseSpeechUpgrade\(\);/.test(read(file)));
+  assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["OatsWorkspace.tsx"]);
+  assert.match(read("src/hooks/useSpeechTier.ts"), /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/);
+});
+
+test("turbo comes through the counted download path, from the models' own repository", () => {
+  const tier = read("src/helpers/deviceTier.js");
+  assert.match(tier, /this\.whisperManager\.downloadWhisperModel\(/);
+  assert.doesNotMatch(tier, /\bfetch\(|require\(["'](node:)?https?["']\)|\bnet\.request\(/);
+  // downloadWhisperModel → downloadUtils.downloadFile → Electron's net.request,
+  // which the ledger counts (networkLedger.js).
+  assert.match(read("src/helpers/whisper.js"), /await downloadFile\(modelConfig\.url, modelPath/);
+  assert.match(read("src/helpers/downloadUtils.js"), /request = net\.request\(\{ url, method: "GET" \}\)/);
+
+  const registry = JSON.parse(read("src/models/modelRegistryData.json"));
+  const turbo = registry.whisperModels["turbo-q5"];
+  assert.equal(
+    turbo.downloadUrl,
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+  );
+  assert.match(turbo.sha256, /^[0-9a-f]{64}$/, "checked after the download");
+  for (const model of Object.values(registry.whisperModels)) {
+    assert.match(model.downloadUrl, /^https:\/\/huggingface\.co\/ggerganov\/whisper\.cpp\/resolve\/main\//);
+  }
+});

@@ -19,6 +19,7 @@ const { transcribeWithTinfoil } = require("./tinfoilTranscription");
 const AudioStorageManager = require("./audioStorage");
 const { getNetworkLedger } = require("./networkLedger");
 const { createOnDeviceStatus } = require("./onDeviceStatus");
+const { initDeviceTier } = require("./deviceTier");
 
 // Tinfoil's only realtime STT model — fallback when the renderer omits one.
 const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
@@ -325,6 +326,15 @@ class IPCHandlers {
       ledger: getNetworkLedger(),
       speechServer: this.whisperManager?.serverManager,
       publish: (status) => this.broadcastToWindows("on-device-status", status),
+    });
+    // What this Mac can run, and turbo's download (deviceTier.js). Measured
+    // after the pre-warm (main.js); it waits while a conversation is recorded.
+    this.deviceTier = initDeviceTier({
+      whisperManager: this.whisperManager,
+      storePath: path.join(app.getPath("userData"), "device-tier.json"),
+      appVersion: app.getVersion(),
+      isBusy: () => this.isMeetingActive?.() === true,
+      publish: (snapshot) => this.broadcastToWindows("device-tier", snapshot),
     });
     this.setupHandlers();
 
@@ -2051,6 +2061,7 @@ class IPCHandlers {
             event.sender.send("whisper-download-progress", progressData);
           }
         });
+        if (result?.success) this.deviceTier.modelDownloaded(modelName);
         return result;
       } catch (error) {
         if (!event.sender.isDestroyed()) {
@@ -2078,11 +2089,33 @@ class IPCHandlers {
     });
 
     ipcMain.handle("delete-whisper-model", async (event, modelName) => {
-      return this.whisperManager.deleteWhisperModel(modelName);
+      const result = await this.whisperManager.deleteWhisperModel(modelName);
+      if (result?.deleted) this.deviceTier.modelDeleted(modelName);
+      return result;
     });
 
+    // This Mac's tier and turbo's download (deviceTier.js, speechTier.mjs).
+    // Pulled once by each window, then pushed as `device-tier`.
+    ipcMain.handle("get-device-tier", () => this.deviceTier.snapshot());
+
+    // The renderer asks after setup, while the speech setting follows the
+    // default; main checks the rule again before it fetches anything.
+    ipcMain.handle("speech-upgrade-start", (_event, options = {}) =>
+      this.deviceTier.startUpgrade({
+        language: typeof options?.language === "string" ? options.language : "en",
+        force: options?.force === true,
+      })
+    );
+
+    ipcMain.handle("speech-upgrade-cancel", () => this.deviceTier.cancelUpgrade());
+
     ipcMain.handle("delete-all-whisper-models", async () => {
-      return this.whisperManager.deleteAllWhisperModels();
+      // Removing every model removes turbo too, and that is a no to it as well:
+      // otherwise the workspace would fetch its 574 MB again at once.
+      const hadTurbo = this.deviceTier.turboInstalled();
+      const result = await this.whisperManager.deleteAllWhisperModels();
+      if (result?.success && hadTurbo) this.deviceTier.modelDeleted("turbo-q5");
+      return result;
     });
 
     ipcMain.handle("cancel-whisper-download", async (event) => {
@@ -4906,6 +4939,8 @@ class IPCHandlers {
     const MEETING_MIC_STATS_LOG_LIMIT = 200;
     let meetingMicStatsLogCount = 0;
     let meetingStartedAt = null;
+    // A conversation is being recorded: the speed check waits for its end.
+    this.isMeetingActive = () => meetingStartedAt !== null;
     let meetingSendCounts = { mic: 0, system: 0 };
     const meetingEchoLeakDetector = new MeetingEchoLeakDetector();
     let meetingReconnecting = false;
