@@ -1071,7 +1071,7 @@ async function judge() {
     const list = [...names.values()]
       .map((entry) => ({ ...entry, order: random() }))
       .sort((a, b) => a.order - b.order);
-    const file = cachePath("judge", slug(spec), `${item.pair.key.replace("|", "_")}.json`);
+    const file = cachePath("judge", slug(spec), `${item.pair.key.replaceAll("|", "_")}.json`);
     const cached = readJson(file);
     const known = cached && cached.names?.join("\n") === list.map((entry) => entry.name).join("\n");
     let ratings = known ? cached.ratings : null;
