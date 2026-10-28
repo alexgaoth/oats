@@ -38,6 +38,20 @@ export function getCachedPlatform(): Platform {
 }
 
 /**
+ * The app's CPU architecture as Node names it ("arm64", "x64"), or "" outside
+ * Electron. It is the build's arch, so an Intel build under Rosetta says "x64",
+ * which is what decides the speech models the build ships.
+ */
+export function getArch(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.electronAPI?.getArch?.() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Publish the platform to CSS as `<html data-platform="…">`.
  *
  * Some differences between platforms are not a component's business — whether

@@ -21,7 +21,7 @@ Local Whisper also requires a platform-specific `whisper-server` helper. It is d
 npm run setup:local-whisper
 ```
 
-This downloads the helper for the current supported platform. Development speech models are selected and downloaded separately in the application. Release builds bundle Whisper `base`, so installed Oats works offline on first run. On a constrained network it is safe to stop and retry later; the source checkout does not need to be recreated.
+This downloads the helper for the current supported platform. Development speech models are selected and downloaded separately in the application. Release builds bundle two Whisper models, so installed Oats works offline on first run: multilingual `base`, and `small.en` on Apple Silicon or `base.en` on Intel Macs and Linux for English (`src/helpers/bundledWhisperModels.mjs`). `npm run download:default-whisper-model` fetches them into `resources/bin/whisper-models/`, and every `prebuild*` runs it. The build's arch decides the set: `TARGET_ARCH` (or `--arch`), else this machine's, so build the Intel app on an Apple Silicon Mac with `npm run build:mac:x64`, which sets it. Packaging fails when the bundled models are not the set for the arch it packs. On a constrained network it is safe to stop and retry later; the source checkout does not need to be recreated.
 
 ## Linux: dictation paste prerequisites
 

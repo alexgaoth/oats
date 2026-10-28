@@ -32,11 +32,15 @@ import { resolveUiMode } from "../helpers/uiMode.mjs";
 import { resolveFlowView } from "../helpers/conversationFlow.mjs";
 import { resolveDictationEnabled } from "../helpers/dictationSetting.mjs";
 import {
+  defaultWhisperModel,
+  migrateStoredWhisperModel,
+} from "../helpers/bundledWhisperModels.mjs";
+import {
   DEFAULT_SPEECH_LANGUAGE,
   migrateSpeechLanguageDefault,
   resolveSpeechLanguage,
 } from "../helpers/speechLanguage.mjs";
-import { getCachedPlatform } from "../utils/platform";
+import { getArch, getCachedPlatform } from "../utils/platform";
 
 /** Which interface Oats wears. See `uiMode.mjs`. */
 export type UiMode = "work" | "field";
@@ -307,6 +311,19 @@ function migrateUploadTranscription() {
 }
 
 migrateUploadTranscription();
+
+/**
+ * The Whisper size a setting nobody changed resolves to: "small" on Apple
+ * Silicon, whose bundle serves English speakers `small.en`, and "base"
+ * elsewhere (`bundledWhisperModels.mjs`). The main process uses the same table
+ * for a request that names no model.
+ */
+export const DEFAULT_WHISPER_MODEL = defaultWhisperModel(getCachedPlatform(), getArch());
+
+// One time on Apple Silicon: a stored "base" goes, so the setting follows the
+// new default. See migrateStoredWhisperModel for why a stored "base" is not
+// proof that somebody chose it.
+if (isBrowser) migrateStoredWhisperModel(localStorage, DEFAULT_WHISPER_MODEL);
 
 function migrateAgentMode() {
   if (!isBrowser) return;
@@ -976,14 +993,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   // contradicts that and fails on a fresh machine with "requires an API key".
   // Existing installs keep whatever they stored; only new ones see this.
   useLocalWhisper: readBoolean("useLocalWhisper", true),
-  whisperModel: readString("whisperModel", "base"),
+  whisperModel: readString("whisperModel", DEFAULT_WHISPER_MODEL),
   localTranscriptionProvider: (readString("localTranscriptionProvider", "whisper") === "nvidia"
     ? "nvidia"
     : "whisper") as LocalTranscriptionProvider,
   parakeetModel: readString("parakeetModel", ""),
   allowOpenAIFallback: readBoolean("allowOpenAIFallback", false),
   allowLocalFallback: readBoolean("allowLocalFallback", false),
-  fallbackWhisperModel: readString("fallbackWhisperModel", "base"),
+  fallbackWhisperModel: readString("fallbackWhisperModel", DEFAULT_WHISPER_MODEL),
   // English unless the person chose another language (speechLanguage.mjs).
   preferredLanguage: resolveSpeechLanguage(
     readString("preferredLanguage", DEFAULT_SPEECH_LANGUAGE)

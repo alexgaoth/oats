@@ -263,6 +263,20 @@ The default model does not change here; that is the owner's call. The evidence:
   default: a third of its output has no capitals or punctuation, and with VAD
   it once dropped a whole utterance. Both need a fix and a row first.
 
+**The call (2026-10-26).** Apple Silicon now ships `small.en` for English in
+place of `base.en`, and starts new installs on the `small` size
+(`src/helpers/bundledWhisperModels.mjs`). The room replay below agreed: over 8
+AMI meetings, `small.en` recovered 70.4% of a quiet room's words against 66.8%,
+and 40.0% against 34.9% with steady sound, at 134ms a segment against 58ms.
+With the shipped VAD on, as dictation runs, `small.en` scores 3.85% against
+5.34% for `base.en` (n = 200; paired: 1.5 points fewer, 0.9 to 2.1), at a
+159ms median against 70ms. One request for 5, 10 and 20s of speech takes
+146–148, 213–227 and 330–365ms with `small.en`, against 63–74, 100–101 and
+173–177ms with `base.en` and 90, 128 and 200–202ms with `base` + `auto` (median
+of 15 each, two runs, M5 Pro, Metal, VAD on). Intel Macs and Linux keep
+`base.en`, so where a table in this document says "ships for English", it now
+means those two. Turbo stays an opt-in until its punctuation is fixed.
+
 ### The VAD overlap: 0.1s, not 0.5s (2026-10-08)
 
 The one-off run above, repeated as rows. Same corpus and utterances, VAD on,

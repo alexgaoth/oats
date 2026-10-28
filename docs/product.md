@@ -177,13 +177,13 @@ The control panel now renders the minimal Oats workspace in `src/components/Oats
 
 The automatic post-recording intelligence trigger now lives in the new Conversation surface, so it does not depend on opening the legacy Notes UI. Legacy components remain available internally while data/configuration migration and further deletion continue.
 
-All five objectives are implemented and pass the local verification suite (setup check, unit tests, formatting, lint, TypeScript, and the production renderer build). The default Whisper `base` model is bundled into release builds and installed locally on first run, so a fresh offline install needs only the operating-system permissions.
+All five objectives are implemented and pass the local verification suite (setup check, unit tests, formatting, lint, TypeScript, and the production renderer build). Release builds bundle two Whisper models and install them locally on first run, so a fresh offline install needs only the operating-system permissions: multilingual `base` everywhere, for auto-detection and every language but English, and an English model chosen automatically when the language is English. That is `small.en` on Apple Silicon, where it recovers more of a room's words than `base.en` at 134 ms a segment on an M5 Pro, and `base.en` on Intel Macs and Linux, since on a CPU `small.en` took 5.3 times as long ([`bundledWhisperModels.mjs`](../src/helpers/bundledWhisperModels.mjs) has the numbers).
 
 Objectives 3 to 5 are **built but not yet exercised against real speech**. Their pure logic is unit-tested, but question detection, the topic-shift thresholds behind the stack and graph, and design conformance in both colour modes all need a human with a microphone. Outstanding work is tracked in [TODO.md](./TODO.md).
 
 Remaining verification, which requires packaging and hardware rather than further code:
 
-- Install and smoke-test the Fedora 44 RPM on GNOME/Wayland. The RPM itself now builds: `dist/Oats-1.7.6-linux-x86_64.rpm`, with the bundled Whisper model present.
+- Install and smoke-test the Fedora 44 RPM on GNOME/Wayland. The RPM itself now builds: `dist/Oats-1.7.6-linux-x86_64.rpm`, with the bundled Whisper models present.
 - Build and smoke-test a notarized DMG on Apple Silicon.
 - Measure idle and active CPU/memory to confirm question detection stays cheap when idle.
 - Capture the release network trace described in [the allowlist](./docs/network-allowlist.md), including the auto-search case.

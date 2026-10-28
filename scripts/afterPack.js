@@ -12,9 +12,12 @@
 //    on distros that restrict unprivileged user namespaces).
 // 3. Fails the build if required binaries (ffmpeg-static, ps-list vendor exe,
 //    onnx worker script) are missing from app.asar.unpacked/.
+// 4. Fails the build if the bundled speech models are not exactly the ones
+//    its platform and arch ship (src/helpers/bundledWhisperModels.mjs).
 
 const fs = require("fs");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const { execFileSync } = require("child_process");
 const { Arch } = require("app-builder-lib");
 const { scheduleLinuxWrap } = require("./lib/linux-wrap");
@@ -267,6 +270,42 @@ function verifyUnpackedBinaries(context) {
 }
 
 // ---------------------------------------------------------------------------
+// Bundled speech models
+// ---------------------------------------------------------------------------
+
+// Apple Silicon and Intel ship different speech models, and
+// resources/bin/whisper-models holds the set the download script fetched last.
+// A build for one arch on a Mac of the other therefore packs the wrong set
+// unless TARGET_ARCH named the target. This hook knows the arch it packs, so
+// it is where a wrong or missing model stops the build.
+async function verifyBundledWhisperModels(context) {
+  const platform = context.electronPlatformName;
+  const archName = Arch[context.arch];
+  const table = path.join(__dirname, "..", "src", "helpers", "bundledWhisperModels.mjs");
+  const { bundledWhisperModels } = await import(pathToFileURL(table).href);
+  const expected = [...bundledWhisperModels(platform, archName).files].sort();
+
+  const modelsDir = path.join(resolveResourcesDir(context), "bin", "whisper-models");
+  const found = fs.existsSync(modelsDir)
+    ? fs
+        .readdirSync(modelsDir)
+        .filter((name) => name.endsWith(".bin"))
+        .sort()
+    : [];
+
+  if (found.join("\n") !== expected.join("\n")) {
+    throw new Error(
+      `afterPack: a ${platform}-${archName} build ships ${expected.join(" and ")}, but this one ` +
+        `has ${found.length > 0 ? found.join(" and ") : "no speech model"}. Run ` +
+        `"TARGET_ARCH=${archName} npm run download:default-whisper-model" and build again.`
+    );
+  }
+  console.log(
+    `  afterPack: bundled speech models for ${platform}-${archName}: ${found.join(", ")}`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main hook
 // ---------------------------------------------------------------------------
 
@@ -275,5 +314,8 @@ exports.default = async function (context) {
   scheduleLinuxLauncher(context);
   verifyMeetingAecHelper(context);
   verifyUnpackedBinaries(context);
+  await verifyBundledWhisperModels(context);
   registerMacResourceBinariesForSigning(context);
 };
+
+exports.verifyBundledWhisperModels = verifyBundledWhisperModels;

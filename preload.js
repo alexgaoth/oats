@@ -421,6 +421,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   snapToMeetingMode: () => ipcRenderer.invoke("snap-to-meeting-mode"),
   restoreFromMeetingMode: () => ipcRenderer.invoke("restore-from-meeting-mode"),
   getPlatform: () => process.platform,
+  // The build's arch, which decides the bundled speech models: an Intel build
+  // running under Rosetta reports "x64".
+  getArch: () => process.arch,
 
   // Cleanup function
   cleanupApp: () => ipcRenderer.invoke("cleanup-app"),

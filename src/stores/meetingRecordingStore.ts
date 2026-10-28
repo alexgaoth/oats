@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { getSettings, selectResolvedMeetingTranscription } from "./settingsStore";
+import {
+  DEFAULT_WHISPER_MODEL,
+  getSettings,
+  selectResolvedMeetingTranscription,
+} from "./settingsStore";
 import { useStreamingProvidersStore } from "./streamingProvidersStore";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { reconcileSavedMicSelection } from "../helpers/micSelectionRecovery";
@@ -206,7 +210,7 @@ const getMeetingTranscriptionOptions = () => {
       localModel:
         resolved.localTranscriptionProvider === "nvidia"
           ? resolved.parakeetModel || "parakeet-tdt-0.6b-v3"
-          : resolved.whisperModel || "base",
+          : resolved.whisperModel || DEFAULT_WHISPER_MODEL,
       language,
     };
   }
