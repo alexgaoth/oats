@@ -1516,6 +1516,7 @@
         "openai_gpt_4_1": "Base sólida, contexto de 1M",
         "openai_gpt_4_1_mini": "Modelo GPT-4.1 más pequeño",
         "openai_gpt_4_1_nano": "GPT-4.1 de menor latencia",
+        "anthropic_claude_opus_5_5": "Resúmenes precisos, con pocos datos inventados: el modelo de escritura predeterminado",
         "anthropic_claude_fable_5": "El modelo más capaz de Anthropic, clase Mythos",
         "anthropic_claude_sonnet_5": "Modelo agéntico rápido y capaz a menor costo",
         "anthropic_claude_sonnet_4_6": "Rendimiento equilibrado",
