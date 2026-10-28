@@ -19,7 +19,8 @@
  *   local:<registry id>  llama-server with the app's arguments (llamaServer.js: --ctx-size
  *                        min(16384, the model's context), 4 threads, all layers on the GPU,
  *                        --jinja) and request (temperature 0.3, max_tokens 2048 for any
- *                        transcript over 1,024 characters, enable_thinking false).
+ *                        transcript over 1,024 characters, enable_thinking false). A summary
+ *                        cut at the limit fails, as the app fails it (#139).
  *   openai:<model>       the Responses API (inferenceProviders/openai.ts): store false,
  *                        max_output_tokens 4096, no reasoning effort, temperature only for
  *                        models the registry says take it. The app gives up after 30 s.
@@ -247,7 +248,11 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
       ? { input: res.json.usage.prompt_tokens ?? 0, output: res.json.usage.completion_tokens ?? 0 }
       : null;
     record(spec, purpose, usage, { ms: Math.round(res.ms), ok: res.status === 200 });
-    const ok = res.status === 200 && Boolean(text);
+    const stop = res.json?.choices?.[0]?.finish_reason ?? null;
+    // The summary needs the whole answer (#139, `requireComplete`): one cut at the
+    // output limit or by a full context fails, and nothing is saved.
+    const cut = purpose === "summary" && stop === "length";
+    const ok = res.status === 200 && Boolean(text) && !cut;
     return {
       ok,
       text,
@@ -255,11 +260,15 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
       cost: 0,
       ms: res.ms,
       status: res.status,
-      stop: res.json?.choices?.[0]?.finish_reason ?? null,
+      stop,
       timings: res.json?.timings ?? null,
       // The app's request times out at 300 s (llamaServer.js).
-      appOutcome: !ok ? "error" : res.ms > 300_000 ? "timeout" : "ok",
-      error: ok ? null : (res.json?.error?.message ?? res.text).slice(0, 300),
+      appOutcome: cut ? "cut" : !ok ? "error" : res.ms > 300_000 ? "timeout" : "ok",
+      error: ok
+        ? null
+        : cut
+          ? "stopped at the output limit: the app saves no summary (#139)"
+          : (res.json?.error?.message ?? res.text).slice(0, 300),
     };
   }
   if (provider === "openai") {
@@ -441,11 +450,18 @@ async function startLocal(spec) {
     threads: 4,
   });
   localPorts.set(model, port);
+  const log = child.startupLog?.() ?? "";
   return {
     loadMs: performance.now() - started,
     contextSize,
     pid: child.pid,
-    buffers: bufferSizes(child.startupLog?.() ?? ""),
+    buffers: bufferSizes(log),
+    // The log's own memory lines, as printed (the buffer names change between builds).
+    memoryLines: log
+      .split("\n")
+      .filter((line) => /buffer size|KV self size|kv.?cache|RS buffer|memory/i.test(line))
+      .map((line) => line.trim())
+      .slice(0, 60),
   };
 }
 
@@ -481,6 +497,23 @@ async function footprintMb(pid) {
       : match[2].toUpperCase() === "KB"
         ? value / 1024
         : value;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A process's resident memory in MB (`ps -o rss`): with the model file's pages the
+ * GPU has read, which the footprint leaves out (llama-server maps the file).
+ */
+async function residentMb(pid) {
+  if (!pid) return null;
+  const { execFileSync } = await import("node:child_process");
+  try {
+    const kb = Number(
+      execFileSync("/bin/ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8" })
+    );
+    return Number.isFinite(kb) && kb > 0 ? Math.round(kb / 1024) : null;
   } catch {
     return null;
   }
@@ -718,6 +751,7 @@ async function speed() {
   const prompt = appSummaryPrompt(args["prompt-ref"]);
   const load = await startLocal(spec);
   load.footprintLoadedMb = await footprintMb(load.pid);
+  load.residentLoadedMb = await residentMb(load.pid);
   const rows = [];
   try {
     for (const group of (args.meetings ?? "IS1009c,TS3003a+TS3003b").split(",")) {
@@ -748,6 +782,7 @@ async function speed() {
           outputMs: t.predicted_ms,
           outputPerSecond: t.predicted_per_second,
           footprintMb: await footprintMb(load.pid),
+          residentMb: await residentMb(load.pid),
         });
         console.error(JSON.stringify(rows.at(-1)));
       }
