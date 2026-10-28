@@ -20,6 +20,9 @@ it is invented.
 | `harness/`                                                        | The browser harness: a fake main process, a fake microphone, a clock that can pause, and the live replay. Dev-only.                                                  |
 | `lib/conversation.mjs`                                            | Timing and loudness, shared by the builder and the replay, so both play the same conversation.                                                                       |
 | `capture.mjs`                                                     | 2x PNG screenshots of the harness, light and dark, with headless Chrome.                                                                                             |
+| `script-ideas/`                                                   | The second set, for a second film: a 29-minute house meeting at a San Francisco hacker house (`main.mjs`), six work conversations around it and two personal ones.   |
+| `fixtures-ideas/*.json`                                           | The second set, recorded. Its main conversation is here too, marked `meta.main`. Demo only: the app does not ship it.                                                |
+| `script-ideas/SOURCES.md`                                         | The four real-world facts the second set states, with the page each was checked against.                                                                             |
 
 ## The fixtures are recorded, not written
 
@@ -39,6 +42,8 @@ and build again; do not edit the JSON.
 npm run demo:fixtures                 # write the fixtures
 npm run demo:fixtures -- --report     # also print what the pipeline made of every turn
 npm run demo:fixtures -- --check      # exit 1 if a fixture is stale
+npm run demo:fixtures -- --set ideas  # the second set: demo/script-ideas/ into demo/fixtures-ideas/
+npm run demo:fixtures -- --set ideas --check
 ```
 
 The app reads the words literally, so the scripts follow its rules (the header
@@ -56,6 +61,32 @@ of `script/launch-readiness-review.mjs` explains each):
   A two-minute call is usually one topic. A topic is named with the phrase
   said most in it. `--report` shows, per turn, how many words the tracker
   read and the topic the live view had the room on.
+
+## The second set
+
+`script-ideas/` is a second set of conversations for a second film, with
+nothing in common with Pellwood and written to stop a scroll: a Sunday house
+meeting at a San Francisco hacker house. Seven invented people argue AGI
+timelines, poll their p(doom), confess to vibe coding, count their GPUs, stage
+an intervention about founder mode, rehearse demo day, quote the bitter lesson
+and negotiate the 996 grind down to 995. Around it, over the two weeks before,
+are office hours, a GPU poor support group, a pre-seed pitch, an eval sync, a
+coffee line and a demo day dry run (Work), and an afternoon at Dolores Park and
+a call with Mom (Personal). They share subjects, so the board links all nine.
+
+What its film depends on, pinned by `test/helpers/ideasConversations.test.js`:
+
+- The lanes read "agi timeline", "doom number", "vibe coding", "gpu poor",
+  "founder mode", "demo day", "bitter lesson" and "996 grind". The room comes
+  back to AGI timelines at 10:43, and to p(doom) at 26:37.
+- "What's the moat?" is answered at 17:22, and at 18:01 the set's only Unknown
+  is asked: "When is AGI?". With auto-search on, that is the question the app
+  searches for.
+- "p(doom)" is said in exactly three conversations, so a search for it finds
+  three.
+
+It is fiction, and reports no news. The four real-world facts it states are in
+`script-ideas/SOURCES.md`.
 
 ## Groups
 
@@ -155,6 +186,8 @@ npm run demo:harness        # Vite on http://127.0.0.1:5391 (another port if tha
 | `/demo.html?panel=true&demo=live&from=1062&view=words` | Live, from 17:42, in the Words view.                                    |
 | `/demo.html?panel=true&profile=empty`                  | Nothing recorded yet: Home offers the example conversation.             |
 | `/demo.html?panel=true&profile=many`                   | 200 synthetic conversations in three groups, for Global at size.        |
+| `/demo.html?panel=true&set=ideas`                      | The second set: the hacker house and its eight conversations.           |
+| `/demo.html?panel=true&set=ideas&demo=live`            | The hacker house meeting, recorded live from 0:00.                      |
 
 Parameters: `demo=live`, `from` (seconds), `speed` (1 is real time), `end=hold`
 (keep recording at the end; otherwise Stop is pressed 2.6 s after the last
@@ -162,6 +195,8 @@ words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
 it is asked), `profile=many` (two hundred synthetic conversations over a year,
 in three conversation groups, instead of the samples: `harness/many.mjs`),
+`set=ideas` (the second set: the hacker house is the main conversation, for
+`demo=live` and the example, and the other eight are already there),
 `theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
 `connections=lanes|graph`, `badges=1` (show the "Example" badge on the demo's
 conversations), `autosearch=1` (turn auto-search on; the fake main process

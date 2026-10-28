@@ -1,0 +1,386 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "gpu-poor-support-group",
+    "sample": true,
+    "description": "Sample conversation: a GPU poor support group. Invented people.",
+    "company": "A GPU-poor indie lab (fictional)",
+    "participants": [
+      { "name": "Ollie", "role": "Runs a GPU-poor indie lab" },
+      { "name": "Noor", "role": "Post-training engineer" },
+      { "name": "Jasper", "role": "Founder" }
+    ],
+    "startedAt": 1791309600000,
+    "endedAt": 1791309701152,
+    "summarizedAt": 1791309742152,
+    "placement": { "daysAgo": 9, "at": "11:00", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "GPU poor support group: eight GPUs and a dream",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-muwzfehk-1",
+        "text": "Okay, GPU poor support group. Hi, I'm Ollie, and I am GPU poor.",
+        "source": "mic",
+        "timestamp": 1791309603955,
+        "startMs": 3955,
+        "endMs": 11170,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-2",
+        "text": "Hi, Ollie. GPU poor is the first step. Admit the GPU count.",
+        "source": "mic",
+        "timestamp": 1791309611932,
+        "startMs": 11932,
+        "endMs": 18207,
+        "speaker": "speaker_2",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-3",
+        "text": "Eight GPUs. One GPU is cursed. The cursed one is Gerald.",
+        "source": "mic",
+        "timestamp": 1791309618974,
+        "startMs": 18974,
+        "endMs": 24552,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-4",
+        "text": "How cursed is Gerald?",
+        "source": "mic",
+        "timestamp": 1791309625476,
+        "startMs": 25476,
+        "endMs": 27591,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-5",
+        "text": "Gerald crashes every third run.",
+        "source": "mic",
+        "timestamp": 1791309629048,
+        "startMs": 29048,
+        "endMs": 31779,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-6",
+        "text": "GPU poor tip: quantize everything, then quantize the quantized thing.",
+        "source": "mic",
+        "timestamp": 1791309632975,
+        "startMs": 32975,
+        "endMs": 38438,
+        "speaker": "speaker_2",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-7",
+        "text": "GPU poor and quantized. A lifestyle.",
+        "source": "mic",
+        "timestamp": 1791309639420,
+        "startMs": 39420,
+        "endMs": 42777,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-8",
+        "text": "GPU poor is temporary. Unless it is permanent.",
+        "source": "mic",
+        "timestamp": 1791309643500,
+        "startMs": 43500,
+        "endMs": 47606,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-9",
+        "text": "Then the bitter lesson, the sad part.",
+        "source": "mic",
+        "timestamp": 1791309648263,
+        "startMs": 48263,
+        "endMs": 52272,
+        "speaker": "speaker_2",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-10",
+        "text": "Right. The bitter lesson says more compute wins. The bitter lesson has never met Gerald.",
+        "source": "mic",
+        "timestamp": 1791309653250,
+        "startMs": 53250,
+        "endMs": 60798,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-11",
+        "text": "The bitter lesson is a lot of pressure for eight GPUs.",
+        "source": "mic",
+        "timestamp": 1791309662104,
+        "startMs": 62104,
+        "endMs": 67596,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-12",
+        "text": "The bitter lesson for the GPU poor: be clever until you can afford not to.",
+        "source": "mic",
+        "timestamp": 1791309669135,
+        "startMs": 69135,
+        "endMs": 76812,
+        "speaker": "speaker_2",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-13",
+        "text": "Did Sutton say anything about Gerald?",
+        "source": "mic",
+        "timestamp": 1791309678141,
+        "startMs": 78141,
+        "endMs": 81386,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-14",
+        "text": "No idea, honestly.",
+        "source": "mic",
+        "timestamp": 1791309682756,
+        "startMs": 82756,
+        "endMs": 84582,
+        "speaker": "speaker_2",
+        "speakerName": "Noor",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-15",
+        "text": "The bitter lesson, chapter two: raise a round, buy GPUs.",
+        "source": "mic",
+        "timestamp": 1791309686247,
+        "startMs": 86247,
+        "endMs": 91684,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-muwzfehk-16",
+        "text": "Can the support group chip in for a ninth GPU?",
+        "source": "mic",
+        "timestamp": 1791309693235,
+        "startMs": 93235,
+        "endMs": 98552,
+        "speaker": "speaker_1",
+        "speakerName": "Ollie",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Ollie admitted the GPU count at the GPU poor support group, and Noor and Jasper talked him through the bitter lesson.\n\n## Threads\n- **GPU poor.** Eight GPUs, one cursed (Gerald, who crashes every third run). Survival tip: quantize everything, then quantize again.\n- **The bitter lesson.** More compute wins, which is a lot of pressure on eight GPUs. Noor's version for the GPU poor: be clever until you can afford not to.\n\n## Follow-ups\n- Whether the support group chips in for a ninth GPU.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4462-[{\"id\":\"seg-muwzfehk-1\",\"text\":\"Okay, GPU poor sup",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "gpu poor",
+          "words": ["gpu", "poor", "gerald", "group", "ollie", "quantized", "support", "admit"],
+          "durationMs": 39545,
+          "utteranceIds": [
+            "seg-muwzfehk-1",
+            "seg-muwzfehk-2",
+            "seg-muwzfehk-3",
+            "seg-muwzfehk-5",
+            "seg-muwzfehk-6",
+            "seg-muwzfehk-7",
+            "seg-muwzfehk-8",
+            "seg-muwzfehk-16"
+          ],
+          "firstAt": 1791309603955,
+          "lastAt": 1791309693235,
+          "returns": 1,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "bitter lesson",
+          "words": ["bitter", "lesson", "gerald", "gpus", "afford", "anything", "buy", "chapter"],
+          "durationMs": 37984,
+          "utteranceIds": [
+            "seg-muwzfehk-9",
+            "seg-muwzfehk-10",
+            "seg-muwzfehk-11",
+            "seg-muwzfehk-12",
+            "seg-muwzfehk-13",
+            "seg-muwzfehk-15"
+          ],
+          "firstAt": 1791309648263,
+          "lastAt": 1791309686247,
+          "returns": 0,
+          "state": "open"
+        }
+      ],
+      "edges": [
+        { "from": 1, "to": 2, "weight": 1, "kind": "new" },
+        { "from": 2, "to": 1, "weight": 1, "kind": "return" }
+      ]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791309600000,
+          "b": "g4OGhpaprq+vramarK+vrKmtj6yxsbKvqZyspoarrKmHo62usK6ioq6hrqCvrKykn6erq52rra6xrq+xrYSksKqqramHqq+vpJirra2Jqq+rpJOwqIejra+xr6iEpbKysLGohYaF"
+        }
+      ]
+    },
+    "open_questions": 2
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muwzfehk-4"],
+      "text": "How cursed is Gerald?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "cursed gerald",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791309628396
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-muwzfehk-5"],
+      "text": "Gerald crashes every third run.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791309632612
+    },
+    {
+      "id": 3,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muwzfehk-13"],
+      "text": "Did Sutton say anything about Gerald?",
+      "metadata": {
+        "state": "denied",
+        "groupKey": "anything gerald say sutton",
+        "occurrence": 1,
+        "confidence": 0.85,
+        "source": "local"
+      },
+      "createdAt": 1791309682242
+    },
+    {
+      "id": 4,
+      "kind": "response",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muwzfehk-14"],
+      "text": "No idea, honestly.",
+      "metadata": {
+        "reason": "denied",
+        "trigger": "next_utterance",
+        "outcome": "denied",
+        "source": "local"
+      },
+      "createdAt": 1791309685374
+    },
+    {
+      "id": 5,
+      "kind": "search_suggestion",
+      "parentEventId": 3,
+      "segmentIds": ["seg-muwzfehk-13"],
+      "text": "Did Sutton say anything about Gerald?",
+      "metadata": {
+        "query": "Did Sutton say anything about Gerald?",
+        "confidence": 0.85,
+        "reason": "denied",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791309685374
+    },
+    {
+      "id": 6,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-muwzfehk-16"],
+      "text": "Can the support group chip in for a ninth GPU?",
+      "metadata": { "state": "asked", "groupKey": "chip gpu group ninth support", "occurrence": 1 },
+      "createdAt": 1791309699501
+    }
+  ],
+  "replay": {
+    "voices": { "Ollie": { "gain": 1.12 }, "Noor": { "gain": 0.96 }, "Jasper": { "gain": 1.04 } },
+    "loud": {},
+    "stopAtMs": 101152
+  }
+}

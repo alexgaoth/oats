@@ -1,0 +1,361 @@
+{
+  "kind": "oats-sample-conversation",
+  "version": 1,
+  "meta": {
+    "id": "pre-seed-pitch",
+    "sample": true,
+    "description": "Sample conversation: a pre-seed pitch to an angel. Invented people.",
+    "company": "A pre-seed startup (fictional)",
+    "participants": [
+      { "name": "Margo", "role": "Angel investor" },
+      { "name": "Sasha", "role": "Founder" },
+      { "name": "Jasper", "role": "Co-founder" }
+    ],
+    "startedAt": 1791498600000,
+    "endedAt": 1791498690227,
+    "summarizedAt": 1791498731227,
+    "placement": { "daysAgo": 7, "at": "15:30", "weekdays": true },
+    "group": "work",
+    "generatedBy": "demo/build-fixtures.mjs"
+  },
+  "note": {
+    "title": "Pre-seed pitch: founder mode, but make it 996",
+    "content": "",
+    "note_type": "meeting",
+    "transcript": [
+      {
+        "id": "seg-mv03ybtk-1",
+        "text": "Okay, pre-seed pitch. Founder mode questions first.",
+        "source": "mic",
+        "timestamp": 1791498603447,
+        "startMs": 3447,
+        "endMs": 6938,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-2",
+        "text": "Right. Founder mode, full time. Founder mode is the whole plan.",
+        "source": "mic",
+        "timestamp": 1791498608026,
+        "startMs": 8026,
+        "endMs": 13576,
+        "speaker": "speaker_2",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-3",
+        "text": "Founder mode sounds great until the founder needs sleep.",
+        "source": "mic",
+        "timestamp": 1791498614943,
+        "startMs": 14943,
+        "endMs": 19361,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-4",
+        "text": "Sasha in founder mode reads every pull request. Every one.",
+        "source": "mic",
+        "timestamp": 1791498620870,
+        "startMs": 20870,
+        "endMs": 25798,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-5",
+        "text": "Does founder mode scale past ten people?",
+        "source": "mic",
+        "timestamp": 1791498627002,
+        "startMs": 27002,
+        "endMs": 30547,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-6",
+        "text": "Hmm.",
+        "source": "mic",
+        "timestamp": 1791498631529,
+        "startMs": 31529,
+        "endMs": 32236,
+        "speaker": "speaker_2",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-7",
+        "text": "Founder mode scales with good evals. Founder mode with dashboards.",
+        "source": "mic",
+        "timestamp": 1791498632924,
+        "startMs": 32924,
+        "endMs": 37814,
+        "speaker": "speaker_2",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-8",
+        "text": "Then the 996 grind. Your deck says 996 on the culture slide.",
+        "source": "mic",
+        "timestamp": 1791498638326,
+        "startMs": 38326,
+        "endMs": 44182,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-9",
+        "text": "Right. The 996 grind is optional. The 996 grind is also expected.",
+        "source": "mic",
+        "timestamp": 1791498644798,
+        "startMs": 44798,
+        "endMs": 50387,
+        "speaker": "speaker_2",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-10",
+        "text": "The 996 grind with a Sunday off. We call it 995.",
+        "source": "mic",
+        "timestamp": 1791498651535,
+        "startMs": 51535,
+        "endMs": 57180,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-11",
+        "text": "Investors love a 996 grind on the slide, and hate it in the burn rate.",
+        "source": "mic",
+        "timestamp": 1791498658782,
+        "startMs": 58782,
+        "endMs": 66244,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-12",
+        "text": "How much runway does the 996 grind buy?",
+        "source": "mic",
+        "timestamp": 1791498667265,
+        "startMs": 67265,
+        "endMs": 71408,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-13",
+        "text": "Eighteen months, at ramen prices.",
+        "source": "mic",
+        "timestamp": 1791498672326,
+        "startMs": 72326,
+        "endMs": 74992,
+        "speaker": "speaker_2",
+        "speakerName": "Sasha",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-14",
+        "text": "That runway covers the 996 grind until the launch.",
+        "source": "mic",
+        "timestamp": 1791498675913,
+        "startMs": 75913,
+        "endMs": 80795,
+        "speaker": "speaker_3",
+        "speakerName": "Jasper",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      },
+      {
+        "id": "seg-mv03ybtk-15",
+        "text": "Send me the founder mode deck, minus the 996 slide.",
+        "source": "mic",
+        "timestamp": 1791498682299,
+        "startMs": 82299,
+        "endMs": 87627,
+        "speaker": "speaker_1",
+        "speakerName": "Margo",
+        "speakerIsPlaceholder": false,
+        "speakerStatus": "locked",
+        "speakerLocked": false
+      }
+    ],
+    "enhanced_content": "Margo heard Sasha and Jasper's pre-seed pitch: founder mode is the whole plan, and the deck has a 996 slide.\n\n## Threads\n- **Founder mode.** Sasha reads every pull request. Whether founder mode scales past ten people got no answer.\n- **The 996 grind.** Optional, and also expected; with a Sunday off it is 995. Margo: investors love it on the slide and hate it in the burn rate. Eighteen months of runway at ramen prices.\n\n## Action Items\n- [ ] Sasha: send Margo the deck, without the 996 slide.",
+    "enhancement_prompt": "Transform the provided content into clean, well-structured notes in markdown. Preserve the user's intent and all substantive information. Remove filler, small talk, false starts, and redundant content. For personal notes, improve grammar and structure for readability. For meeting transcripts, extract key discussion points, decisions, action items, and follow-ups.",
+    "enhanced_at_content_hash": "4193-[{\"id\":\"seg-mv03ybtk-1\",\"text\":\"Okay, pre-seed pit",
+    "conversation_topics": {
+      "nodes": [
+        {
+          "id": 1,
+          "label": "founder mode",
+          "words": ["founder", "mode", "scale", "dashboard", "eval", "every", "first", "full"],
+          "durationMs": 29477,
+          "utteranceIds": [
+            "seg-mv03ybtk-1",
+            "seg-mv03ybtk-2",
+            "seg-mv03ybtk-3",
+            "seg-mv03ybtk-4",
+            "seg-mv03ybtk-5",
+            "seg-mv03ybtk-7"
+          ],
+          "firstAt": 1791498603447,
+          "lastAt": 1791498632924,
+          "returns": 0,
+          "state": "open"
+        },
+        {
+          "id": 2,
+          "label": "996 grind",
+          "words": ["996", "grind", "slide", "deck", "runway", "995", "burn", "buy"],
+          "durationMs": 43973,
+          "utteranceIds": [
+            "seg-mv03ybtk-8",
+            "seg-mv03ybtk-9",
+            "seg-mv03ybtk-10",
+            "seg-mv03ybtk-11",
+            "seg-mv03ybtk-12",
+            "seg-mv03ybtk-13",
+            "seg-mv03ybtk-14",
+            "seg-mv03ybtk-15"
+          ],
+          "firstAt": 1791498638326,
+          "lastAt": 1791498682299,
+          "returns": 0,
+          "state": "resolved"
+        }
+      ],
+      "edges": [{ "from": 1, "to": 2, "weight": 1, "kind": "new" }]
+    },
+    "conversation_marks": [],
+    "conversation_loudness": {
+      "v": 1,
+      "runs": [
+        {
+          "at": 1791498600000,
+          "b": "g4eHnquurY6orK+uq6iFra2rrp6HrKmcqKmHqauqpp6iqZurraqhqKuqr7Ccqq2xrayinKupq7CpnoqsrKysra2qm6iurq6ipqqoi6qnqq6thqevr6uslYiHhw=="
+        }
+      ]
+    },
+    "open_questions": 1
+  },
+  "events": [
+    {
+      "id": 1,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv03ybtk-5"],
+      "text": "Does founder mode scale past ten people?",
+      "metadata": {
+        "state": "silence",
+        "groupKey": "founder mode past people scale ten",
+        "occurrence": 1,
+        "confidence": 0.8,
+        "source": "local"
+      },
+      "createdAt": 1791498631417
+    },
+    {
+      "id": 2,
+      "kind": "response",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv03ybtk-6"],
+      "text": "Hmm.",
+      "metadata": {
+        "reason": "silence",
+        "trigger": "next_utterance",
+        "outcome": "silence",
+        "source": "local"
+      },
+      "createdAt": 1791498632978
+    },
+    {
+      "id": 3,
+      "kind": "search_suggestion",
+      "parentEventId": 1,
+      "segmentIds": ["seg-mv03ybtk-5"],
+      "text": "Does founder mode scale past ten people?",
+      "metadata": {
+        "query": "Does founder mode scale past ten people?",
+        "confidence": 0.8,
+        "reason": "silence",
+        "state": "shown",
+        "source": "local",
+        "auto": false
+      },
+      "createdAt": 1791498632978
+    },
+    {
+      "id": 4,
+      "kind": "question",
+      "parentEventId": null,
+      "segmentIds": ["seg-mv03ybtk-12"],
+      "text": "How much runway does the 996 grind buy?",
+      "metadata": {
+        "state": "answered",
+        "groupKey": "996 buy grind runway",
+        "occurrence": 1,
+        "confidence": 0.75,
+        "source": "local"
+      },
+      "createdAt": 1791498672304
+    },
+    {
+      "id": 5,
+      "kind": "response",
+      "parentEventId": 4,
+      "segmentIds": ["seg-mv03ybtk-13"],
+      "text": "Eighteen months, at ramen prices.",
+      "metadata": {
+        "reason": "answered",
+        "trigger": "next_utterance",
+        "outcome": "answered",
+        "source": "local"
+      },
+      "createdAt": 1791498675822
+    }
+  ],
+  "replay": {
+    "voices": { "Margo": { "gain": 0.98 }, "Sasha": { "gain": 1.02 }, "Jasper": { "gain": 1.04 } },
+    "loud": {},
+    "stopAtMs": 90227
+  }
+}

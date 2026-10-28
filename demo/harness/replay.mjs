@@ -38,6 +38,7 @@ import {
   timelineFromTranscript,
 } from "../lib/conversation.mjs";
 import { getRate, isPaused, pauseClock, resumeClock, setRate, setVirtualTime } from "./clock.mjs";
+import { PERSONAL_SORT_WORDS } from "./fake-main.mjs";
 import { setLevelProvider } from "./media.mjs";
 
 const TICK_MS = 40;
@@ -215,8 +216,7 @@ export function createReplay({ main, fixture, options = {} }) {
       return name ? { text: name, delayMs: 800 } : null;
     }
     if (/sort conversations into groups/i.test(prompt)) {
-      const personal = /\b(weekend|holiday|trip|family|flat|landlord|rent|kids|birthday)\b/i;
-      return { text: personal.test(text) ? "Personal" : "Work", delayMs: 700 };
+      return { text: PERSONAL_SORT_WORDS.test(text) ? "Personal" : "Work", delayMs: 700 };
     }
     return null;
   };
