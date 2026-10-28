@@ -36,6 +36,8 @@ import logger from "../utils/logger";
 
 /** The namer of the recording now, or of the one that just ended, until the next starts. */
 let namer: TopicNamer | null = null;
+/** The names a continued conversation's saved record has, while it has no namer. */
+let kept: ReturnType<typeof namesOf> | null = null;
 let generation = 0;
 
 function log(event: string, detail?: Record<string, unknown>): void {
@@ -77,11 +79,17 @@ async function namesLive(route: WritingRoute): Promise<boolean> {
 
 /**
  * A recording starts: its topics get a namer when a writing model is chosen.
- * `onChange` publishes the topics again when a name changes.
+ * `onChange` publishes the topics again when a name changes. `record` is the
+ * saved topics of the conversation it continues, if any: the names the model
+ * gave them stay on them, by topic id, as names given in this recording do.
  */
-export async function startTopicNaming(onChange: () => void): Promise<void> {
+export async function startTopicNaming(
+  onChange: () => void,
+  record: ConversationTopicSnapshot | null = null
+): Promise<void> {
   namer?.stop();
   namer = null;
+  kept = record ? namesOf(record) : null;
   const mine = ++generation;
   const route = currentWritingRoute();
   // No writing model: the topics keep their on-device names, and nothing is sent.
@@ -94,8 +102,9 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     onChange,
     live,
     log,
+    names: kept,
   });
-  log("started", { mode: route.mode, live });
+  log("started", { mode: route.mode, live, kept: kept?.size ?? 0 });
 }
 
 /** The tracker's latest snapshot and the segments, on every turn. */
@@ -110,10 +119,12 @@ export function observeTopics(
 export function namedTopicSnapshot<T extends ConversationTopicSnapshot | null | undefined>(
   snapshot: T
 ): T {
-  return namer ? (namer.apply(snapshot) as T) : snapshot;
+  if (namer) return namer.apply(snapshot) as T;
+  return kept ? (applyTopicNames(snapshot, kept) as T) : snapshot;
 }
 
-function readSnapshot(raw: unknown): ConversationTopicSnapshot | null {
+/** A conversation's topics as the note stores them, or null. */
+export function readTopicSnapshot(raw: unknown): ConversationTopicSnapshot | null {
   if (typeof raw !== "string" || !raw.trim()) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -130,7 +141,7 @@ async function writeNames(noteId: number, named: ConversationTopicSnapshot): Pro
   const api = window.electronAPI;
   const note = await api?.getNote?.(noteId);
   if (!note || note.deleted_at) return;
-  const stored = readSnapshot(note.conversation_topics);
+  const stored = readTopicSnapshot(note.conversation_topics);
   if (!stored) return;
   // By topic id, and only where the stored topic is still the one named.
   const merged = applyTopicNames(stored, namesOf(named));

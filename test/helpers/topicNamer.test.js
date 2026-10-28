@@ -398,3 +398,43 @@ test("on this computer a name waits its turn behind the question classifier", as
   assert.equal(labelOf(namer, talk.snapshot(1), 1).label, "Launch date move");
   assert.equal(mostWaiting, 1, "one name in the line at most");
 });
+
+// Stopping and starting again within half an hour continues the conversation,
+// and its new namer starts with the names its saved record has (`namesOf`).
+test("a continued conversation keeps its names, and asks again only for what grew", async () => {
+  const talk = conversation();
+  const first = [talk.say(1, 45)];
+  talk.say(2, 45);
+  const names = new Map([[1, { name: "Launch date move", utteranceIds: first }]]);
+  const { clock, namer, asked, answers } = setup({ names });
+  assert.equal(labelOf(namer, talk.snapshot(2), 1).label, "Launch date move", "shown at once");
+
+  answers.push("SSO login with SAML");
+  namer.observe(talk.snapshot(2), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(asked.length, 1, "only the topic with no name is asked about");
+  assert.match(asked[0].text, /^Other topics: Launch date move$/m);
+  assert.equal(labelOf(namer, talk.snapshot(2), 2).label, "SSO login with SAML");
+
+  // Weighed by the words it was named from, as a name given here is: 45
+  // words, so it is named again at two and a half times that.
+  talk.say(1, 60);
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(30_000);
+  assert.equal(asked.length, 1, "105 words is not two and a half times 45");
+  talk.say(1, 10);
+  answers.push("Launch date and customer kickoff");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(asked.length, 2);
+  assert.match(asked[1].text, /^Current name: Launch date move\./m);
+  assert.equal(labelOf(namer, talk.snapshot(1), 1).label, "Launch date and customer kickoff");
+});
+
+test("a kept name stays off a topic that no longer holds its turns", () => {
+  const talk = conversation();
+  talk.say(1, 45);
+  const names = new Map([[1, { name: "Launch date move", utteranceIds: ["u7", "u8"] }]]);
+  const { namer } = setup({ names });
+  assert.equal(labelOf(namer, talk.snapshot(1), 1).label, "topic 1");
+});

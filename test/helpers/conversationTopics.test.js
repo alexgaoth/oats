@@ -1,13 +1,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+const example = require("../../src/helpers/sampleConversations/launch-readiness-review.json");
+
 let ConversationTopicTracker;
 let contentWords;
 let topicLabel;
 let labelCandidates;
+let sittingTopics;
 
 test.before(async () => {
-  ({ ConversationTopicTracker, contentWords, topicLabel, labelCandidates } =
+  ({ ConversationTopicTracker, contentWords, topicLabel, labelCandidates, sittingTopics } =
     await import("../../src/helpers/conversationTopics.mjs"));
 });
 
@@ -425,4 +428,170 @@ test("each phrase is asked for once, the topics' candidates first", () => {
   const rest = tracker.phrasesToEmbed(500);
   assert.ok(rest.every((phrase) => !first.some((asked) => asked.key === phrase.key)));
   assert.deepEqual(tracker.phrasesToEmbed(500), []);
+});
+
+// ------------------------------------------------------------------ resume
+
+// Stopping and starting again within half an hour continues the conversation
+// (conversationResume.mjs): the same note, its turns seeded into the
+// recording store. The store gave the new sitting a new tracker that heard
+// only the new turns, so the topics saved at Finish were the last sitting's,
+// numbered from 1 again, and a return to an earlier subject was a new topic.
+// The new tracker now reads the earlier turns first (`seed`), with the record
+// they were saved with.
+function resumed(lines, stop) {
+  const turns = utterancesOf(lines);
+  const before = new ConversationTopicTracker();
+  feed(before, turns.slice(0, stop));
+  const saved = before.snapshot(turns[stop - 1].at, { final: true });
+  const tracker = new ConversationTopicTracker();
+  tracker.seed(turns.slice(0, stop), { record: saved });
+  return { tracker, saved, turns, rest: turns.slice(stop), end: turns.at(-1).at };
+}
+
+test("a conversation recorded again keeps every sitting's topics in its record", () => {
+  const lines = [...PRICING, ...HIRING, ...DEMO, ...PRICING.slice(0, 9)];
+  const unbroken = record(lines).tracker.snapshot(lines.length * 6000, { final: true });
+  assert.deepEqual(
+    unbroken.nodes.map((node) => node.label),
+    ["enterprise pricing", "research engineer", "investor demo"]
+  );
+  assert.equal(unbroken.nodes[0].returns, 1, "the room came back to pricing");
+  for (const stop of [PRICING.length + 5, PRICING.length + HIRING.length, lines.length - 9]) {
+    const { tracker, rest, end } = resumed(lines, stop);
+    feed(tracker, rest);
+    // Every turn, the same topics with the same ids, and the return: the
+    // record of the conversation recorded without a stop.
+    assert.deepEqual(
+      tracker.snapshot(end, { final: true }),
+      unbroken,
+      `stopped after turn ${stop}`
+    );
+  }
+});
+
+// A topic's name from the writing model is kept by topic id (topicNaming.mjs).
+test("a continued conversation's topics keep the ids its saved record gave them", () => {
+  const lines = [...PRICING, ...HIRING, ...DEMO];
+  const stop = PRICING.length + HIRING.length;
+  const { saved, turns } = resumed(lines, stop);
+  // Ids are the tracker's own and a record can hold any: a topic split off
+  // with hindsight at Finish takes a new one.
+  const ids = new Map([
+    [saved.nodes[0].id, 7],
+    [saved.nodes[1].id, 3],
+  ]);
+  const record = {
+    ...saved,
+    nodes: saved.nodes.map((node) => ({ ...node, id: ids.get(node.id) })),
+  };
+  const tracker = new ConversationTopicTracker();
+  tracker.seed(turns.slice(0, stop), { record });
+  assert.deepEqual(
+    tracker.snapshot(turns[stop - 1].at).nodes.map((node) => node.id),
+    [7, 3]
+  );
+  feed(tracker, turns.slice(stop));
+  assert.deepEqual(
+    tracker.snapshot(turns.at(-1).at, { final: true }).nodes.map((node) => [node.id, node.label]),
+    [
+      [7, "enterprise pricing"],
+      [3, "research engineer"],
+      [8, "investor demo"],
+    ],
+    "a new topic takes an id no saved topic had"
+  );
+});
+
+// Fed again turn by turn, the earlier sittings would earn their cuts again
+// (a cut is drawn live only once speech has followed it). They are finished
+// speech: cut once with hindsight, as the record was, and drawn at once.
+test("the earlier sittings' topics are there the moment the recording continues", () => {
+  const { tracker, saved, end } = resumed([...PRICING, ...HIRING], PRICING.length + HIRING.length);
+  const live = tracker.snapshot(end);
+  assert.deepEqual(
+    live.nodes.map((node) => [node.id, node.label, node.utteranceIds]),
+    saved.nodes.map((node) => [node.id, node.label, node.utteranceIds])
+  );
+  assert.equal(live.nodes.at(-1).state, "live", "the room is still on the last topic");
+});
+
+test("the live view takes no topic back across the stop", () => {
+  const lines = [...PRICING, ...HIRING, ...DEMO, ...PRICING.slice(0, 6)];
+  const stop = PRICING.length + HIRING.length;
+  const { tracker, rest, turns } = resumed(lines, stop);
+  let previous = tracker.snapshot(turns[stop - 1].at).nodes.map((node) => node.utteranceIds[0]);
+  for (const utterance of rest) {
+    tracker.onUtterance(utterance);
+    const starts = tracker.snapshot(utterance.at).nodes.map((node) => node.utteranceIds[0]);
+    for (const start of previous) assert.ok(starts.includes(start), `${start} stays a topic start`);
+    previous = starts;
+  }
+  assert.ok(previous.length >= 3, "the new sitting's subject became a topic");
+});
+
+test("a long conversation is read back in one pass", () => {
+  // The review four times over: 896 turns, two hours. Fed turn by turn, as
+  // the live tracker hears them, they took 8.8 s; read back in one pass, 21 ms.
+  const turns = [];
+  for (let lap = 0; lap < 4; lap += 1) {
+    for (const segment of example.note.transcript) {
+      turns.push({
+        id: `${segment.id}-${lap}`,
+        text: segment.text,
+        at: segment.timestamp + lap * 30 * 60_000,
+      });
+    }
+  }
+  const tracker = new ConversationTopicTracker();
+  const started = Date.now();
+  tracker.seed(turns);
+  assert.ok(Date.now() - started < 1000);
+  assert.equal(tracker.snapshot(turns.at(-1).at).nodes.length, 8);
+});
+
+test("a turn read back with no time takes the time of the turn before it", () => {
+  const turns = utterancesOf(PRICING);
+  delete turns[0].at;
+  delete turns[5].at;
+  // A clock far from the conversation, so a turn placed at "now" shows.
+  const tracker = new ConversationTopicTracker({ now: () => 1e12 });
+  tracker.seed(turns);
+  const [topic] = tracker.snapshot(turns.at(-1).at, { final: true }).nodes;
+  assert.equal(topic.firstAt, turns[1].at, "the first turn takes the first time known");
+  assert.equal(topic.lastAt, turns.at(-1).at);
+  assert.equal(topic.durationMs, turns.at(-1).at - turns[1].at);
+});
+
+test("reading back nothing leaves the tracker as new", () => {
+  const tracker = new ConversationTopicTracker();
+  tracker.seed([]);
+  tracker.seed([{ id: "x", text: "  " }]);
+  assert.deepEqual(tracker.snapshot(0), { nodes: [], edges: [] });
+  feed(tracker, utterancesOf(PRICING));
+  assert.equal(tracker.snapshot(PRICING.length * 6000).nodes.length, 1);
+});
+
+// The recording screen counts this sitting, as its clock and contour do. A
+// topic of an earlier sitting is drawn once the room comes back to it.
+test("the recording screen draws this sitting's topics, and the record keeps them all", () => {
+  const lines = [...PRICING, ...HIRING, ...DEMO, ...PRICING];
+  const { tracker, rest, end } = resumed(lines, PRICING.length + HIRING.length);
+  feed(tracker, rest);
+  const all = tracker.snapshot(end);
+  assert.equal(all.nodes.length, 3);
+  const sitting = sittingTopics(all, rest[0].at);
+  assert.deepEqual(
+    sitting.nodes.map((node) => node.label),
+    ["enterprise pricing", "investor demo"],
+    "hiring was the first sitting's alone; pricing came back"
+  );
+  assert.deepEqual(
+    sitting.edges.map((edge) => edge.kind),
+    ["return"],
+    "only moves between topics it draws"
+  );
+  assert.equal(sittingTopics(all, 0), all, "the same snapshot when nothing is left out");
+  assert.equal(sittingTopics(all, Number.NaN), all);
+  assert.equal(sittingTopics(null, rest[0].at), null);
 });

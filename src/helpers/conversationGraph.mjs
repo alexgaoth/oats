@@ -29,6 +29,21 @@ function responseReason(event) {
   return readString(event?.metadata?.reason);
 }
 
+// The turns whose questions were answered, by the turn each was asked in. A
+// question event's `state` is its card's (the aide writes the two together),
+// and an answered card closed the topic it was asked in
+// (`resolveTopicForUtterance`), so a conversation recorded again within half
+// an hour reads them back from here to keep those topics closed.
+function answeredQuestionTurns(events) {
+  const turns = [];
+  for (const event of Array.isArray(events) ? events : []) {
+    if (event?.kind !== "question" || event.metadata?.state !== "answered") continue;
+    const id = Array.isArray(event.segmentIds) ? event.segmentIds[0] : null;
+    if (id != null) turns.push(String(id));
+  }
+  return turns;
+}
+
 // Groups a note's time-ordered events into question nodes. Responses and
 // suggestions attach to their parent question by `parentEventId`; anything whose
 // parent is absent becomes its own node so orphans stay visible. Nodes keep the
@@ -84,6 +99,7 @@ function buildConversationGraph(events) {
 }
 
 export {
+  answeredQuestionTurns,
   buildConversationGraph,
   questionConfidence,
   responseReason,
