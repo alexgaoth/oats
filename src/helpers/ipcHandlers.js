@@ -29,6 +29,7 @@ const MeetingEchoLeakDetector = require("./meetingEchoLeakDetector");
 const { partitionPendingMicFinals, isWithinRetractWindow } = require("./meetingMicHoldback");
 const { applySmartSpacing } = require("./smartSpacing");
 const { applyAutoLearnSetting } = require("./autoLearnSetting");
+const { buildAnthropicRequest, anthropicAnswerText } = require("./anthropicMessages");
 const { isWindowSeen } = require("./windowVisibility");
 const {
   transcriptsOverlap,
@@ -3600,20 +3601,13 @@ class IPCHandlers {
             throw new Error("Anthropic API key not configured");
           }
 
-          const systemPrompt = config?.systemPrompt || "";
-          const userPrompt = text;
-
           if (!modelId) {
             throw new Error("No model specified for Anthropic API call");
           }
 
-          const requestBody = {
-            model: modelId,
-            messages: [{ role: "user", content: userPrompt }],
-            system: systemPrompt,
-            max_tokens: config?.maxTokens || Math.max(100, Math.min(text.length * 2, 4096)),
-            temperature: config?.temperature || 0.3,
-          };
+          // No temperature for Claude 4.7 and later, and their thinking off
+          // where they allow it (anthropicMessages.js).
+          const requestBody = buildAnthropicRequest({ modelId, text, config: config || {} });
 
           const response = await proxyFetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
@@ -3640,8 +3634,8 @@ class IPCHandlers {
             );
           }
 
-          const data = await response.json();
-          return { success: true, text: data.content[0].text.trim() };
+          // The text blocks, after any thinking block.
+          return { success: true, text: anthropicAnswerText(await response.json()) };
         } catch (error) {
           debugLogger.error("Anthropic reasoning error:", error);
           return { success: false, error: error.message };
