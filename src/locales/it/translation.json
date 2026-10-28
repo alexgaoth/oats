@@ -1520,6 +1520,7 @@
         "openai_gpt_4_1": "Base solida, contesto da 1M",
         "openai_gpt_4_1_mini": "Modello GPT-4.1 più piccolo",
         "openai_gpt_4_1_nano": "GPT-4.1 con la latenza più bassa",
+        "anthropic_claude_opus_5_5": "Riassunti accurati, pochi fatti inventati: il modello di scrittura predefinito",
         "anthropic_claude_fable_5": "Il modello più capace di Anthropic, classe Mythos",
         "anthropic_claude_sonnet_5": "Modello agentico veloce e capace a costo inferiore",
         "anthropic_claude_sonnet_4_6": "Prestazioni bilanciate",
@@ -1540,6 +1541,7 @@
         "groq_compound": "Sistema compound di Groq, 450 T/sec",
         "groq_compound_mini": "Sistema compound veloce, 3x latenza ridotta",
         "groq_kimi_k2_0905": "Moonshot AI 1T MoE, contesto 256K",
+        "openai_gpt_6_1_sol": "Riassunti accurati a basso costo: il modello di scrittura predefinito",
         "openai_gpt_5_6_sol": "GPT-5.6 di punta per programmazione e ricerca complesse",
         "openai_gpt_5_6_terra": "GPT-5.6 bilanciato per il lavoro quotidiano",
         "openai_gpt_5_6_luna": "Il GPT-5.6 più veloce ed economico",
@@ -2066,6 +2068,8 @@
       "needsSummaryModel": "Nessun modello di riepilogo è ancora pronto, quindi questa conversazione non è stata riassunta.",
       "notSummarized": "Questa conversazione non è ancora stata riassunta.",
       "summarize": "Riassumi",
+      "summarizeAgain": "Riassumi di nuovo",
+      "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"
     },
     "global": {
@@ -2262,7 +2266,7 @@
         "speechTitle": "Modello vocale",
         "speechScreen": "Un solo modello trascrive le tue conversazioni e le tue dettature. Due modelli si alternerebbero in memoria su questo Mac.",
         "writingTitle": "Modello di scrittura",
-        "writingScreen": "Un solo modello scrive i tuoi riassunti, dà un nome ai temi di ogni conversazione e ripulisce le tue dettature. Con un modello cloud, ciò che si dice su ogni tema viene inviato a quel fornitore durante la conversazione. Con OpenAI, un modello OpenAI veloce conferma anche ogni cambio di tema durante la conversazione e gli dà un nome, e ogni richiesta contiene fino a 3.000 caratteri di ciò che si è detto intorno al cambio.",
+        "writingScreen": "Un solo modello scrive i tuoi riassunti, ripulisce le tue dettature e dà un nome ai temi di ogni conversazione. Con OpenAI o Anthropic, i temi li nominano invece i modelli più precisi di quel fornitore per i temi, che confermano anche ogni cambio di tema durante la conversazione. Con un modello cloud, ciò che si dice su ogni tema viene inviato a quel fornitore durante la conversazione, fino a 3.000 caratteri per richiesta.",
         "none": "Nessuno per ora",
         "selfHosted": "Il tuo server"
       },
@@ -2309,7 +2313,8 @@
     "errors": {
       "noModel": "Configura l'elaborazione di Oats prima di registrare una conversazione.",
       "noEndpoint": "Configura l'endpoint API di Oats prima di registrare una conversazione.",
-      "actionFailed": "Oats non è riuscito a generare l'intelligenza per questa conversazione."
+      "actionFailed": "Oats non è riuscito a generare l'intelligenza per questa conversazione.",
+      "noSummary": "Il modello non ha restituito alcun riepilogo."
     },
     "preflight": {
       "no-microphone": "Nessun microfono trovato. Collegane uno e premi di nuovo.",

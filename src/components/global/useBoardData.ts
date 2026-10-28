@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNotes } from "../../stores/noteStore";
 import { parseDbTimestamp } from "../../helpers/dbTime.mjs";
 import { subjectThreads } from "../../helpers/lifetimeGraph";
+import { meaningThreads } from "../../helpers/conversationLinks.mjs";
 import type { NoteItem } from "../../types/electron";
 import { readSnapshot } from "./boardData";
 import type { BoardConversation } from "./boardData";
 import type { Subject } from "./linkedHighlight";
+import type { TopicVectors } from "./topicVectors";
 
 // The board's data, kept current without rebuilding anything that did not
 // change: a recording's checkpoints update its note many times a minute, and
@@ -149,7 +151,17 @@ export interface TabGraph {
   subjects: Subject[];
 }
 
-export function useTabGraph(conversations: BoardConversation[]): TabGraph {
+/**
+ * The graphs' nodes, and the subjects and edges between them: by meaning when
+ * the topics' vectors are known (`conversationLinks.mjs`), else by words
+ * (`subjectThreads`).
+ */
+export function useTabGraph(
+  conversations: BoardConversation[],
+  meaning: TopicVectors | null = null
+): TabGraph {
+  const ready = Boolean(meaning?.ready);
+  const vectorOf = meaning?.vectorOf;
   return useMemo(() => {
     const withTopics = conversations
       .filter((conversation) => conversation.snapshot?.nodes.length)
@@ -168,10 +180,12 @@ export function useTabGraph(conversations: BoardConversation[]): TabGraph {
         state: "open" as const,
       };
     });
-    const threads = subjectThreads(withTopics) as {
+    const threads = (
+      ready && vectorOf ? meaningThreads(withTopics, { vectorOf }) : subjectThreads(withTopics)
+    ) as {
       subjects: Subject[];
       edges: BoardEdge[];
     };
     return { nodes, edges: threads.edges, subjects: threads.subjects };
-  }, [conversations]);
+  }, [conversations, ready, vectorOf]);
 }

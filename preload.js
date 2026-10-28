@@ -566,6 +566,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Anthropic reasoning
   processAnthropicReasoning: (text, modelId, agentName, config) =>
     ipcRenderer.invoke("process-anthropic-reasoning", text, modelId, agentName, config),
+  // Whether the Anthropic key can use a model (GET /v1/models/{id}, no conversation text)
+  anthropicModelAvailable: (modelId) => ipcRenderer.invoke("anthropic-model-available", modelId),
 
   // Enterprise reasoning (Bedrock, Azure, Vertex) — runs in main process so
   // Node-only SDKs (AWS/Azure/Google credential providers) can resolve.

@@ -1515,6 +1515,7 @@
         "openai_gpt_4_1": "穩健基礎，1M 上下文",
         "openai_gpt_4_1_mini": "較小的 GPT-4.1 模型",
         "openai_gpt_4_1_nano": "最低延遲的 GPT-4.1",
+        "anthropic_claude_opus_5_5": "準確的摘要，幾乎不捏造事實：預設的寫作模型",
         "anthropic_claude_fable_5": "Anthropic 最強大的模型，Mythos 級",
         "anthropic_claude_sonnet_5": "快速且強大的智慧代理模型，成本更低",
         "anthropic_claude_sonnet_4_6": "均衡表現",
@@ -1535,6 +1536,7 @@
         "groq_compound": "Groq Compound 系統，450 T/sec",
         "groq_compound_mini": "快速 Compound 系統，3x 更低延遲",
         "groq_kimi_k2_0905": "Moonshot AI 1T MoE，256K 上下文",
+        "openai_gpt_6_1_sol": "以低價格寫出準確的摘要：預設的寫作模型",
         "openai_gpt_5_6_sol": "旗艦 GPT-5.6，適用於複雜編碼與研究",
         "openai_gpt_5_6_terra": "均衡的 GPT-5.6，適合日常工作",
         "openai_gpt_5_6_luna": "速度最快、成本最低的 GPT-5.6",
@@ -2061,6 +2063,8 @@
       "needsSummaryModel": "還沒有可用的摘要模型，所以這段對話沒有摘要。",
       "notSummarized": "此對話尚未產生摘要。",
       "summarize": "產生摘要",
+      "summarizeAgain": "重新產生摘要",
+      "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"
     },
     "global": {
@@ -2257,7 +2261,7 @@
         "speechTitle": "語音模型",
         "speechScreen": "一個模型同時轉寫你的對話與聽寫。兩個模型會在這台 Mac 上輪流載入。",
         "writingTitle": "寫作模型",
-        "writingScreen": "一個模型撰寫摘要、為每段對話的話題命名並整理聽寫。若為雲端模型，每個話題中說的內容會在對話進行時傳送給該服務商。使用 OpenAI 時，一個快速的 OpenAI 模型還會在對話中確認每次話題轉換並為其命名，每次請求最多包含轉換前後所說內容的 3,000 個字元。",
+        "writingScreen": "一個模型撰寫摘要、整理聽寫，並為每段對話的話題命名。使用 OpenAI 或 Anthropic 時，改由該服務商在話題上最準確的模型為話題命名，並在對話中確認每次話題轉換。若為雲端模型，每個話題中說的內容會在對話進行時傳送給該服務商，每次請求最多 3,000 個字元。",
         "none": "尚無",
         "selfHosted": "你的伺服器"
       },
@@ -2304,7 +2308,8 @@
     "errors": {
       "noModel": "錄製對話前請先設定 Oats 的處理方式。",
       "noEndpoint": "錄製對話前請先設定 Oats 的 API 端點。",
-      "actionFailed": "Oats 無法為這場對話產生智慧內容。"
+      "actionFailed": "Oats 無法為這場對話產生智慧內容。",
+      "noSummary": "模型沒有傳回摘要。"
     },
     "preflight": {
       "no-microphone": "找不到麥克風。請接上一個後再按一次。",
