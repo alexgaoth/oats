@@ -87,6 +87,9 @@ export interface NoteItem {
   // A cloud model's link check, as JSON (helpers/remoteLinks.mjs). Optional:
   // absent unless the writing model is a cloud provider.
   conversation_links?: string | null;
+  // Which route and provider wrote the summary ("providers:openai", "local:";
+  // helpers/remoteLinks.mjs). Absent for summaries written before it was kept.
+  summary_route?: string | null;
   // Which bundled example conversation this is (helpers/sampleConversations.mjs),
   // or null for a conversation somebody recorded.
   sample_id?: string | null;
@@ -697,6 +700,7 @@ declare global {
           conversation_marks?: string | null;
           conversation_loudness?: string | null;
           conversation_links?: string | null;
+          summary_route?: string | null;
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;

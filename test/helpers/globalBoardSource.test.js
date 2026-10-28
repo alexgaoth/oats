@@ -226,3 +226,17 @@ test("the cloud link check sends only what the summary's rule allows, by the sum
     "after the summary and its group, never instead of them"
   );
 });
+
+test("a summary records its route, and a check sends only what that provider summarized", () => {
+  const actions = read("src/stores/actionProcessingStore.ts");
+  assert.match(
+    actions,
+    /enhanced_content: enhanced,[\s\S]{0,400}summary_route: summaryRouteKey\(\{\s*mode: options\.isCloudMode \? "cloud" : noteFormatting\.mode,\s*provider: providerOverrides\.provider,/,
+    "written with the summary, in the same update"
+  );
+  const store = read("src/stores/conversationLinkStore.ts");
+  assert.match(store, /item\.created_at < note\.created_at &&\s*sendableTo\(provider, item\)/);
+  const database = read("src/helpers/database.js");
+  assert.match(database, /ALTER TABLE notes ADD COLUMN summary_route TEXT/);
+  assert.match(database, /"conversation_links",\s*"summary_route",/, "updateNote may write both");
+});

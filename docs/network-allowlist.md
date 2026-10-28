@@ -130,14 +130,18 @@ gpt-6-astra, else gpt-5.6-sol, whichever the key can use (asked once per app
 session with `GET /v1/models/{model}`, no conversation text); for Anthropic
 claude-opus-5-5. One request per summarized conversation carries the topic
 names and the opening of the summary (at most 300 characters) of that
-conversation and of at most 12 earlier ones, chosen on this computer as the
-most alike it, each under a letter: no title, id, date, transcript or audio.
-When no earlier conversation is alike enough, nothing is sent. The earlier
-conversations are sent whichever model summarized them, also ones summarized
-on this computer before the cloud provider was chosen (the background group
-sort, above, does not send those). The sidebar counts the request like any
-renderer request. With any other provider, a custom endpoint, a server of the
-person's own or a model on this computer, there is no check.
+conversation and of at most 12 earlier ones, each under a letter: no title,
+id, date, transcript or audio. An earlier conversation is sent only when the
+same provider already wrote its summary: each summary records the route and
+provider that wrote it (`notes.summary_route`, for example
+`providers:openai`), and the check sends only conversations whose record names
+the provider it uses. A conversation summarized on this computer, on the
+person's own server, by another provider, or before the record was kept is
+never sent; it keeps its links on this computer. Of the conversations that may
+be sent, the check takes the ones most alike the new one on this computer;
+when none is alike enough, nothing is sent. The sidebar counts the request
+like any renderer request. With any other provider, a custom endpoint, a server
+of the person's own or a model on this computer, there is no check.
 
 The context check (off by default, Settings › Connections) uses the same
 writing model by the same route, so it adds no destination either. When a

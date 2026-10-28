@@ -6,6 +6,7 @@ import { generateNoteTitle } from "../utils/generateTitle";
 import { buildNoteFormattingOverrides } from "../helpers/noteFormattingOverrides";
 import { claimWritingModel, sortConversationIntoGroup } from "./conversationGroupSortStore";
 import { checkConversationLinks } from "./conversationLinkStore";
+import { summaryRouteKey } from "../helpers/remoteLinks.mjs";
 import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs";
 import type { ActionItem } from "../types/electron";
 
@@ -184,6 +185,12 @@ export function runBackgroundAction(
         enhanced_content: enhanced,
         enhancement_prompt: action.prompt,
         enhanced_at_content_hash: contentHash,
+        // Which route and provider wrote it: a later link check sends this
+        // conversation only to the provider that has already read it.
+        summary_route: summaryRouteKey({
+          mode: options.isCloudMode ? "cloud" : noteFormatting.mode,
+          provider: providerOverrides.provider,
+        }),
       };
       if (title) updates.title = title;
       await window.electronAPI.updateNote(noteId, updates);

@@ -147,18 +147,20 @@ test("the texts to embed are each linkable topic's, once", () => {
   );
 });
 
-test("a checked conversation joins earlier subjects only by the links its check found", () => {
+test("a check decides the links to the conversations it was asked about, and names them", () => {
   const list = [
-    conversation(1, 100, [topic(1, "SSO rollout"), topic(2, "Enterprise pricing")]),
-    conversation(2, 200, [topic(1, "Single sign-on setup"), topic(2, "Discount for annual plans")]),
+    conversation(1, 100, [topic(1, "Enterprise pricing")]),
+    conversation(2, 200, [topic(1, "SSO rollout")]),
+    conversation(3, 300, [topic(1, "Discount for annual plans"), topic(2, "SAML clock skew")]),
   ];
-  // By meaning alone, 2 joins 1 on both subjects.
+  // By meaning alone, 3 joins 1 on pricing and 2 on SSO.
   assert.equal(links.linkThreads(list, { vectorOf }).subjects.length, 2);
-  // The cloud model found only the pricing link, and named it.
+  // Asked about both, the cloud model linked only 1, on pricing, and named it.
   const checks = new Map([
     [
-      2,
+      3,
       {
+        candidates: [1, 2],
         links: [
           {
             id: 1,
@@ -171,10 +173,26 @@ test("a checked conversation joins earlier subjects only by the links its check 
     ],
   ]);
   const { subjects, edges } = links.linkThreads(list, { vectorOf, checks });
-  assert.deepEqual(subjects, [{ label: "Annual plan pricing", conversationIds: [1, 2] }]);
+  assert.deepEqual(subjects, [{ label: "Annual plan pricing", conversationIds: [1, 3] }]);
   assert.deepEqual(
     edges.map((edge) => edge.topics),
     [["Annual plan pricing"]]
+  );
+});
+
+test("a conversation the check was not asked about keeps its links on this computer", () => {
+  const list = [
+    conversation(1, 100, [topic(1, "Enterprise pricing")]),
+    // Summarized on this computer: the check was never asked about it.
+    conversation(2, 200, [topic(1, "SSO rollout")]),
+    conversation(3, 300, [topic(1, "Discount for annual plans"), topic(2, "SAML clock skew")]),
+  ];
+  const checks = new Map([[3, { candidates: [1], links: [] }]]);
+  const { subjects } = links.linkThreads(list, { vectorOf, checks });
+  assert.deepEqual(
+    subjects,
+    [{ label: "SSO rollout", conversationIds: [2, 3] }],
+    "linked to 2 by meaning; not to 1, which the check was asked about and did not link"
   );
 });
 

@@ -326,3 +326,30 @@ export function readLinkCheck(raw) {
       })),
   };
 }
+
+/**
+ * Which route and provider wrote a summary, as the note keeps it
+ * (`notes.summary_route`): "providers:openai", "providers:anthropic",
+ * "local:", "self-hosted:". Written with every summary, so a later link check
+ * knows which provider has already read that conversation.
+ *
+ * @param {{ mode?: string | null, provider?: string | null }} route
+ */
+export function summaryRouteKey({ mode, provider } = {}) {
+  return `${String(mode || "unknown")}:${mode === "providers" ? String(provider || "") : ""}`;
+}
+
+/**
+ * Whether a check by `provider` may send this earlier conversation's topic
+ * names and summary opening: only when the same provider wrote its summary.
+ * A conversation summarized on this computer, by another provider, or before
+ * the route was recorded is never sent, and keeps its links on this computer.
+ *
+ * @param {string} provider
+ * @param {{ summary_route?: string | null } | null | undefined} note
+ */
+export function sendableTo(provider, note) {
+  return (
+    Boolean(provider) && note?.summary_route === summaryRouteKey({ mode: "providers", provider })
+  );
+}

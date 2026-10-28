@@ -165,3 +165,34 @@ test("a stored check is read back, and anything else is no check", () => {
   assert.equal(remote.readLinkCheck("not json"), null);
   assert.equal(remote.readLinkCheck({ links: "x" }), null);
 });
+
+test("a summary's route is kept as mode and provider", () => {
+  assert.equal(
+    remote.summaryRouteKey({ mode: "providers", provider: "openai" }),
+    "providers:openai"
+  );
+  assert.equal(
+    remote.summaryRouteKey({ mode: "providers", provider: "anthropic" }),
+    "providers:anthropic"
+  );
+  assert.equal(remote.summaryRouteKey({ mode: "local", provider: "openai" }), "local:");
+  assert.equal(remote.summaryRouteKey({ mode: "self-hosted" }), "self-hosted:");
+  assert.equal(remote.summaryRouteKey({}), "unknown:");
+});
+
+test("a check sends an earlier conversation only to the provider that wrote its summary", () => {
+  const note = (summary_route) => ({ summary_route });
+  assert.equal(remote.sendableTo("openai", note("providers:openai")), true);
+  assert.equal(remote.sendableTo("anthropic", note("providers:anthropic")), true);
+  assert.equal(remote.sendableTo("openai", note("providers:anthropic")), false, "another provider");
+  assert.equal(remote.sendableTo("openai", note("local:")), false, "summarized on this computer");
+  assert.equal(
+    remote.sendableTo("openai", note("self-hosted:")),
+    false,
+    "on the person's own server"
+  );
+  assert.equal(remote.sendableTo("openai", note(null)), false, "summarized before it was recorded");
+  assert.equal(remote.sendableTo("openai", {}), false);
+  assert.equal(remote.sendableTo("openai", null), false);
+  assert.equal(remote.sendableTo("", note("providers:")), false);
+});

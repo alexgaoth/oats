@@ -555,6 +555,15 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // Which route and provider wrote the note's summary ("providers:openai",
+      // "local:"; `helpers/remoteLinks.mjs`). A cloud link check sends a past
+      // conversation only to the provider that wrote its summary. Null for
+      // summaries written before it was kept: those are never sent.
+      try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN summary_route TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
       // How loud each second of the recording was, one byte a second as JSON
       // (`helpers/conversationLoudness.mjs`), written at Finish so the finished
       // contour keeps the shape the live line had: about 4.8 KB an hour.
@@ -1872,6 +1881,7 @@ class DatabaseManager {
         "conversation_marks",
         "conversation_loudness",
         "conversation_links",
+        "summary_route",
         "sync_status",
         "deleted_at",
         "client_note_id",

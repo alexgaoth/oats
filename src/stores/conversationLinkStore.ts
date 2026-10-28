@@ -16,6 +16,7 @@ import {
   linkProviderFor,
   linkTopicNames,
   parseLinkAnswer,
+  sendableTo,
 } from "../helpers/remoteLinks.mjs";
 import type { NoteItem } from "../types/electron";
 import logger from "../utils/logger";
@@ -30,9 +31,10 @@ import logger from "../utils/logger";
 // cloud provider with a link model (OpenAI or Anthropic), and then only to
 // that provider, by the summary's own route and key. The request carries the
 // topic names and the opening of the summary of this conversation and of at
-// most 12 earlier ones: those most alike it on this computer, none that share
-// nothing with it. Never a transcript, a title or an id
-// (docs/network-allowlist.md).
+// most 12 earlier ones: only ones whose summary the same provider already
+// wrote (`notes.summary_route`), and of those the most alike it on this
+// computer, none that share nothing with it. Never a transcript, a title or
+// an id (docs/network-allowlist.md).
 
 /** How many earlier conversations are read to choose from. */
 const READ_LIMIT = 1000;
@@ -127,8 +129,16 @@ export async function checkConversationLinks(
   if (!current.snapshot?.nodes.length) return { kind: "skipped", reason: "no-topics" };
 
   const notes = (await api.getNotes("meeting", READ_LIMIT)) ?? [];
+  // Only conversations this provider has already summarized: a check never
+  // sends one it has not read. The rest keep their links on this computer.
   const earlier = notes
-    .filter((item) => item.id !== note.id && !item.deleted_at && item.created_at < note.created_at)
+    .filter(
+      (item) =>
+        item.id !== note.id &&
+        !item.deleted_at &&
+        item.created_at < note.created_at &&
+        sendableTo(provider, item)
+    )
     .map((item) => ({ note: item, id: item.id, snapshot: readSnapshot(item.conversation_topics) }))
     .filter((item) => item.snapshot?.nodes.length);
   const vectorOf = await vectorsFor(linkTexts([current, ...earlier]));

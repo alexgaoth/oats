@@ -209,11 +209,13 @@ function namedTopic(topics, name) {
  * member most alike the others. Without vectors, the word rule decides
  * (`subjectThreads`): five leading words, 30% of the smaller set in common.
  *
- * A conversation a cloud model checked (`checks`, `remoteLinks.mjs`) joins
- * earlier subjects only by the links it found: its topic joins the subject of
- * the earlier topic it was linked to, and the subject takes the model's name.
- * The check was asked about the earlier conversations most alike it, so a
- * link it did not find is not drawn either.
+ * A conversation a cloud model checked (`checks`, `remoteLinks.mjs`) is
+ * linked to the earlier conversations the check was asked about (its
+ * `candidates`) by the check alone: its topic joins the subject of the
+ * earlier topic it was linked to, the subject takes the model's name, and a
+ * subject holding a candidate the check did not link is closed to it. To the
+ * conversations the check was not asked about (the provider had not read
+ * them), it links on this computer like any other.
  *
  * @param {Array<{ id: number, createdAt: number, snapshot: { nodes: any[] } | null }>} conversations
  * @param {{ vectorOf?: ((text: string) => (Float32Array | number[] | null | undefined)) | null,
@@ -298,8 +300,17 @@ export function linkThreads(
   const present = new Set(list.map((conversation) => conversation.id));
   for (const conversation of list) {
     const check = checks?.get?.(conversation.id);
+    // The earlier conversations its check was asked about and did not link,
+    // and its topics the check already placed.
+    const refused = new Set();
+    const joined = new Set();
     if (check) {
-      const joined = new Set();
+      const linked = new Set(
+        (Array.isArray(check.links) ? check.links : []).map((link) => link.id)
+      );
+      for (const id of Array.isArray(check.candidates) ? check.candidates : []) {
+        if (!linked.has(id)) refused.add(id);
+      }
       for (const link of Array.isArray(check.links) ? check.links : []) {
         if (!present.has(link.id) || link.id === conversation.id) continue;
         const earlier = list.find((item) => item.id === link.id);
@@ -313,17 +324,20 @@ export function linkThreads(
         cluster.remoteName = String(link.subject ?? "").trim() || cluster.remoteName;
         joined.add(own);
       }
-      for (const topic of conversation.topics) {
-        if (!joined.has(topic)) join(newCluster(topic), topic, conversation.id);
-      }
-      continue;
     }
+    const open = (cluster) =>
+      !refused.size || !cluster.conversationIds.some((id) => refused.has(id));
     for (const topic of conversation.topics) {
+      if (joined.has(topic)) continue;
       let best = null;
       if (meaning) {
-        if (!topic.vector) continue;
+        if (!topic.vector) {
+          if (check) join(newCluster(topic), topic, conversation.id);
+          continue;
+        }
         let bestScore = threshold;
         for (const cluster of clusters) {
+          if (!open(cluster)) continue;
           if (!cluster.sum || cluster.sum.length !== topic.vector.length) continue;
           const score = closeness(cluster, topic.vector);
           if (score >= bestScore) {
@@ -332,8 +346,12 @@ export function linkThreads(
           }
         }
       } else if (topic.bag.size) {
-        best = clusters.find((cluster) => overlap(cluster.seed, topic.bag) >= WORD_OVERLAP) ?? null;
+        best =
+          clusters.find(
+            (cluster) => open(cluster) && overlap(cluster.seed, topic.bag) >= WORD_OVERLAP
+          ) ?? null;
       } else {
+        if (check) join(newCluster(topic), topic, conversation.id);
         continue;
       }
       join(best ?? newCluster(topic), topic, conversation.id);

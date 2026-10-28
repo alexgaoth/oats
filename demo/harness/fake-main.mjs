@@ -30,6 +30,7 @@ const UPDATABLE = new Set([
   "conversation_marks",
   "conversation_loudness",
   "conversation_links",
+  "summary_route",
   "sync_status",
   "deleted_at",
   "client_note_id",
