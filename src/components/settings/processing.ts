@@ -7,7 +7,10 @@ import { useSettingsStore } from "../../stores/settingsStore";
  */
 
 export const DEFAULT_LOCAL_MODEL = "qwen3.5-4b-q4_k_m";
-export const DEFAULT_CLOUD_MODEL = "gpt-5.6-terra";
+// The cloud writing model a person gets when they choose the providers and
+// have not picked one: gpt-6.1-sol, OpenAI's most accurate summaries for the
+// price (docs/summaries.md, #143). A model somebody chose is kept.
+export const DEFAULT_CLOUD_MODEL = "gpt-6.1-sol";
 
 export type ProcessingMode = "local" | "providers";
 
