@@ -5,21 +5,23 @@
 // room moved on, on 24 AMI meetings. Here a second on-device tracker, set to
 // propose early and often, proposes changes; a fast model decides each one
 // (the same subject, a new topic, or a return to an earlier one) and names
-// the new topic. The flow card shows the result. About 48 requests and $0.006
-// an hour with gpt-6-luna; what it gains depends on `MOVE_HORIZON_MS` (below).
+// the new topic. The flow card shows the result. Measured on the 24 meetings
+// with gpt-6-luna: live Pk 0.278 to 0.301 against main's 0.356, a change shown
+// after 1.2 to 1.6 minutes instead of 3.9, about 41 requests and $0.006 an hour.
 //
 // The rules, each for a reason:
 //
 // - **The instant answer.** Every line shows at once in the topic the room is
-//   on. A model's answer only moves recent lines to a new topic or names one.
-// - **Nothing older than 30 s moves** (`MOVE_HORIZON_MS`). When the model places
-//   a change earlier than that, the lines already shown that long keep their
-//   topic, and the new topic starts with the first younger line. The lanes
-//   never redraw the past. This costs the gain: the model confirms a change a
-//   median 1.3 minutes after it, so with the rule the cut lands late and live
-//   Pk is 0.394 on the 24 meetings (main's tracker 0.356, one topic 0.345);
-//   with no horizon it is 0.285, and 87 lines older than 30 s move an hour
-//   (main's tracker moves 206). docs/fast-models.md has the numbers.
+//   on. A model's answer only moves the lines since a change it confirmed, or
+//   names a topic.
+// - **A confirmed change moves its lines in one step.** The model confirms a
+//   change a median 1.3 minutes after it happened, so the lines from the change
+//   on, shown in the old topic until then, all go to the new (or earlier)
+//   topic at once: 12 to 14 moves an hour, of 6 to 7 lines older than 30 s
+//   each, and one taken back in 50 hours of replay (main's tracker moves 206
+//   such lines an hour). Keeping lines older than 30 s in place instead would
+//   land every cut late and cost all the gain: live Pk 0.376 to 0.394
+//   (docs/fast-models.md).
 // - **At most 3,000 characters of the conversation per request**
 //   (`MAX_EXCERPT_CHARS`): the lines nearest the proposed change, and the
 //   topics' names. Never audio, never the rest of the transcript.
@@ -85,10 +87,7 @@ export const MAX_FAILURES = 3;
 /** After a failure, no request for this long, times the failures in a row: a blip is waited out. */
 export const RETRY_AFTER_MS = 10_000;
 
-/** A line shown for longer than this keeps its topic. */
-export const MOVE_HORIZON_MS = 30_000;
-
-/** A ceiling, never reached in the measurements (about 48 an hour). */
+/** A ceiling, never reached in the measurements (40 to 50 an hour). */
 export const MAX_REQUESTS_PER_HOUR = 120;
 
 /** A topic nobody came back to for this long has gone cold (as the tracker). */
@@ -310,16 +309,15 @@ export class LiveTopicLoop {
     clearTimer = (timer) => clearTimeout(/** @type {any} */ (timer)),
     log = () => {},
     timeoutMs = REQUEST_TIMEOUT_MS,
-    moveHorizonMs = MOVE_HORIZON_MS,
     excerptChars = MAX_EXCERPT_CHARS,
     checkAfterWords = CHECK_AFTER_WORDS,
     proposer = null,
   }) {
     Object.assign(this, { ask, ready, onChange, now, setTimer, clearTimer, log, timeoutMs });
-    Object.assign(this, { moveHorizonMs, excerptChars, checkAfterWords });
+    Object.assign(this, { excerptChars, checkAfterWords });
     this.proposer = proposer ?? new ConversationTopicTracker({ now, scale: { ...PROPOSER_SCALE } });
 
-    /** @type {Array<{ id: string, text: string, at: number, shownAt: number, words: number, index: number }>} */
+    /** @type {Array<{ id: string, text: string, at: number, words: number, index: number }>} */
     this.lines = [];
     this.byId = new Map();
     /** @type {Map<string, any>} */
@@ -369,10 +367,8 @@ export class LiveTopicLoop {
     const line = {
       id: String(utterance.id),
       text,
-      // When it was said (for durations, as the tracker counts them) and when
-      // it appeared (for what may still move).
+      // When it was said, for durations, as the tracker counts them.
       at: Number.isFinite(utterance.at) ? utterance.at : this.now(),
-      shownAt: this.now(),
       words: countWords(text),
       index: this.lines.length,
     };
@@ -887,18 +883,16 @@ export class LiveTopicLoop {
   }
 
   /**
-   * A change of subject at AFTER's line `json.at`: the lines from there on
-   * that appeared under `MOVE_HORIZON_MS` ago go to the new (or returned)
-   * topic, and the conversation goes on there. Lines shown longer stay.
+   * A change of subject at AFTER's line `json.at`: the lines from there on go
+   * to the new (or returned) topic in one step, and the conversation goes on
+   * there.
    */
   _move(current, after, json) {
     const from = Math.min(Math.max(1, Number(json.at) || 1), after.length) - 1;
     const start = after[from];
-    const now = this.now();
     const rest = current.utteranceIds
       .map((id) => this.byId.get(id))
       .filter((line) => line.index >= start.index);
-    const movable = rest.filter((line) => now - line.shownAt <= this.moveHorizonMs);
     let target = null;
     let returned = false;
     if (json.decision === "return") {
@@ -913,10 +907,10 @@ export class LiveTopicLoop {
         target = same;
         returned = true;
       } else {
-        target = this._create(movable[0]?.at ?? now);
-        // Named from the lines the model read from the change on, whether or
-        // not they moved: the record (cut again at Finish) may hold them. An
-        // unusable name leaves the topic on its on-device name.
+        target = this._create(start.at);
+        // Named from the lines from the change on, which the record (cut again
+        // at Finish) may also hold. An unusable name leaves the topic on its
+        // on-device name.
         if (json.name) {
           this._nameNew(
             this.topics.get(target),
@@ -931,7 +925,7 @@ export class LiveTopicLoop {
       }
     }
     if (!target) return false;
-    if (movable.length) this._place(movable, target);
+    this._place(rest, target);
     this.currentId = target;
     if (returned) this.stats.returns += 1;
     else this.stats.cuts += 1;

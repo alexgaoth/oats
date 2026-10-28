@@ -214,26 +214,21 @@ test("a change the model does not confirm leaves the view as it was", async () =
   assert.equal(loop.stats.answered, 1);
 });
 
-test("a line shown more than 30 s ago keeps its topic; the new topic starts after it", async () => {
-  for (const [horizon, moved] of [
-    [undefined, ["u5"]],
-    [Infinity, ["u3", "u4", "u5"]],
-  ]) {
-    const { clock, proposer, loop, replies, say } = setup(
-      horizon === undefined ? {} : { moveHorizonMs: horizon }
-    );
-    for (let index = 0; index < 5; index += 1) say();
-    await clock.tick(40_000);
-    // With hindsight, the proposer now sees a change at u3, 40 s back.
-    proposer.moveTo(2, "u3");
-    say();
-    replies.push(check({ name: "Budget for the remote" }));
-    await clock.tick(1_500);
-    const [first, second] = loop.snapshot().nodes;
-    assert.deepEqual(second.utteranceIds, moved, `horizon ${horizon}`);
-    assert.equal(first.utteranceIds.length + second.utteranceIds.length, 6);
-    assert.equal(second.label, "Budget for the remote");
-  }
+test("a confirmed change moves its lines in one step, however long ago they were shown", async () => {
+  const { clock, proposer, loop, replies, say } = setup();
+  for (let index = 0; index < 5; index += 1) say();
+  await clock.tick(40_000);
+  // With hindsight, the proposer now sees a change at u3, 40 s back.
+  proposer.moveTo(2, "u3");
+  say();
+  replies.push(check({ name: "Budget for the remote" }));
+  await clock.tick(1_500);
+  assert.deepEqual(idsOf(loop), [
+    ["u0", "u1", "u2"],
+    ["u3", "u4", "u5"],
+  ]);
+  assert.equal(loop.snapshot().nodes[1].label, "Budget for the remote");
+  assert.equal(loop.stats.cuts, 1);
 });
 
 test("a request carries at most 3,000 characters of the conversation, nearest the change first", async () => {

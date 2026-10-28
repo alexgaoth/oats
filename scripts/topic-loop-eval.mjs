@@ -22,7 +22,7 @@
  *   v4app    v4 as the app ships it (`helpers/topicLoop.mjs`): the record is
  *            the tracker's cut at Finish, with the loop's names carried over
  *            and #121's final pass for the rest. `--options` takes
- *            `{"loop": {...}}`, the module's options (`moveHorizonMs`).
+ *            `{"loop": {...}}`, the module's options (`checkAfterWords`).
  *   vf       no live view: the model cuts and names the record at Finish.
  *   V2 to V4 get the app's final naming pass at Finish, as V0 and V1 do.
  *
