@@ -12,14 +12,17 @@ update feed is contacted. v1 updates are signed manual downloads.
 One outbound action is **on by default**: the question search below. It is the
 only default-on connection in the product, and it is switchable off in Settings.
 
-**Nothing is downloaded at launch.** Every model a conversation needs ships in
-the app: Whisper `base` and `base.en`, the Silero VAD, pyannote segmentation,
-TitaNet for speakers, and MiniLM for search. A development checkout fetches the
-ones it is missing; a packaged build never does. The local vector store (Qdrant)
-listens on 127.0.0.1 only and runs with its anonymous usage statistics turned
-off, by config and by flag (`src/helpers/qdrantManager.js`). Nothing of the
-builder's machine is packed into the app — in particular no `.env`. All of this
-is pinned in `test/helpers/networkBoundary.test.js`.
+**Nothing is downloaded at launch, with one exception after setup.** Every
+model a conversation needs ships in the app: Whisper `base` and `base.en`
+(`small.en` and `base` on Apple Silicon), the Silero VAD, pyannote
+segmentation, TitaNet for speakers, and MiniLM for search. A development
+checkout fetches the ones it is missing; a packaged build does not. The one
+exception: on a Mac whose GPU measures fast enough, Oats downloads Whisper
+Turbo once, after setup (below, "Automatic, once"). The local vector store
+(Qdrant) listens on 127.0.0.1 only and runs with its anonymous usage
+statistics turned off, by config and by flag (`src/helpers/qdrantManager.js`).
+Nothing of the builder's machine is packed into the app — in particular no
+`.env`. All of this is pinned in `test/helpers/networkBoundary.test.js`.
 
 ## Default-on
 
@@ -42,6 +45,30 @@ Scope limits that make this safe to state plainly:
   local lookup, not a network call, and the destination host is unchanged.
 - Turning off auto-search in Settings restores click-only behavior; question
   cards still appear and are still recorded.
+
+## Automatic, once: Whisper Turbo on a fast Mac
+
+| Host                                   | What is fetched                                                                                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `huggingface.co` and its LFS/CDN hosts | `ggml-large-v3-turbo-q5_0.bin` (574 MB) from `ggerganov/whisper.cpp`, the repository of every other Whisper model. Nothing is sent but the request for the file. |
+
+At first launch and after each update, Oats times one 5-second clip on this
+Mac's GPU, on its own speech server, with no connection
+(`src/helpers/deviceTier.js`). When the result says the Mac can run
+`large-v3-turbo` live (`src/helpers/speechTier.mjs`), Oats downloads it once
+setup is done, and only while the speech model follows the default: a model
+the person chose stops it. It never starts while a conversation is
+recorded: it waits for the recording to end. The setup screen says so once
+the check is done (a second or two after launch). When the download starts,
+a notice in the corner says so once, with its size, its host and a Cancel
+button: after setup on a new install, and at the first launch of this
+version on an existing one, which never sees the setup screen. The sidebar
+and Settings › Models show its progress with a Cancel button, and the
+sidebar's request count includes it (it goes through `downloadUtils.js`, like
+every model download). Its SHA-256 is checked before it is used. A cancelled
+or deleted Turbo is not fetched again unless the person asks for it in
+Settings. A failed download is tried again at the next launch. Intel Macs,
+Linux, and Macs that measure too slow never fetch it.
 
 ## Explicit user actions
 
@@ -221,9 +248,11 @@ starts again at zero when Oats launches.
 
 Before a release, capture a fresh-offline session and an online session with no
 provider keys configured and auto-search disabled. Neither should create a
-connection. Then repeat with one deliberate action at a time (model download,
-manual search, optional BYOK request) and record only the expected destination
-above.
+connection, except on a Mac that qualifies for Whisper Turbo: there the online
+session downloads it once after setup, from `huggingface.co` only (cancel it,
+or choose a speech model first, to check the rest). Then repeat with one
+deliberate action at a time (model download, manual search, optional BYOK
+request) and record only the expected destination above.
 
 Then run the auto-search case explicitly: with it enabled, record a conversation
 containing one answered and one unanswered question, and confirm the capture shows

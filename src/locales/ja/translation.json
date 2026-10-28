@@ -175,6 +175,10 @@
     "language": {
       "title": "言語",
       "description": "部屋で話される言語"
+    },
+    "speechModel": {
+      "title": "音声モデル",
+      "description": "この Mac は最も正確なモデル Whisper Turbo を実行できます。設定後に Hugging Face からダウンロードされます: {{size}}。"
     }
   },
   "streaming": {
@@ -2402,6 +2406,27 @@
       "modelOn": "{{backend}} で {{model}}",
       "requests_one": "起動後のネットワーク要求 {{count}} 件",
       "requests_other": "起動後のネットワーク要求 {{count}} 件"
+    },
+    "speechTier": {
+      "downloading": "Whisper Turbo をダウンロード中",
+      "downloadingShort": "Whisper Turbo をダウンロード中: {{percent}}%",
+      "progress": "{{size}} 中 {{percent}}%。準備ができるまで、Oats は付属のモデルを使います。",
+      "checking": "Whisper Turbo を確認中",
+      "checkingDetail": "この Mac の GPU で短いテストを行います",
+      "ready": "この Mac には Whisper Turbo を選択",
+      "readyDetail": "この GPU は会話中も最も正確なモデルに追いつけます",
+      "failed": "Whisper Turbo をダウンロードできませんでした",
+      "failedDetail": "Oats は付属のモデルを使います。",
+      "declined": "この Mac は Whisper Turbo を実行できます",
+      "declinedDetail": "最も正確なモデル: Hugging Face から {{size}}",
+      "slow": "この Mac では Whisper Turbo が遅すぎます",
+      "slowDetail": "ここでは会話に追いつけないため、Oats は付属のモデルを使います。",
+      "detection": "言語の自動検出では Whisper Turbo が遅すぎます",
+      "detectionDetail": "設定 › 録音 で文字起こし言語を選ぶと、Oats は Whisper Turbo を使います。",
+      "retry": "再試行",
+      "cancelDownload": "Whisper Turbo のダウンロードをキャンセル",
+      "noticeTitle": "この Mac 向けに、より正確な音声モデルを取得しています ({{size}})",
+      "noticeDetail": "Hugging Face から Whisper Turbo を取得します。準備ができるまで、Oats は付属のモデルを使います。"
     }
   },
   "questionCard": {

@@ -175,6 +175,10 @@
     "language": {
       "title": "語言",
       "description": "房間裡使用的語言"
+    },
+    "speechModel": {
+      "title": "語音模型",
+      "description": "這台 Mac 可以執行最準確的模型 Whisper Turbo。設定完成後將從 Hugging Face 下載：{{size}}。"
     }
   },
   "streaming": {
@@ -2397,6 +2401,27 @@
       "modelOn": "{{model}} 執行於 {{backend}}",
       "requests_one": "啟動以來 {{count}} 次網路請求",
       "requests_other": "啟動以來 {{count}} 次網路請求"
+    },
+    "speechTier": {
+      "downloading": "正在下載 Whisper Turbo",
+      "downloadingShort": "正在下載 Whisper Turbo：{{percent}}%",
+      "progress": "已完成 {{size}} 中的 {{percent}}%。在它就緒之前，Oats 使用內建的模型。",
+      "checking": "正在檢查 Whisper Turbo",
+      "checkingDetail": "在這台 Mac 的 GPU 上做一次簡短測試",
+      "ready": "已為這台 Mac 選擇 Whisper Turbo",
+      "readyDetail": "它的 GPU 在對話中跟得上最準確的模型",
+      "failed": "Whisper Turbo 未能下載",
+      "failedDetail": "Oats 使用內建的模型。",
+      "declined": "這台 Mac 可以執行 Whisper Turbo",
+      "declinedDetail": "最準確的模型：從 Hugging Face 下載 {{size}}",
+      "slow": "Whisper Turbo 在這台 Mac 上太慢",
+      "slowDetail": "它在這裡跟不上對話，所以 Oats 使用內建的模型。",
+      "detection": "開啟語言偵測時 Whisper Turbo 太慢",
+      "detectionDetail": "在 設定 › 錄音 中選擇轉錄語言，Oats 就會使用它。",
+      "retry": "重試",
+      "cancelDownload": "取消下載 Whisper Turbo",
+      "noticeTitle": "正在為這台 Mac 取得更準確的語音模型（{{size}}）",
+      "noticeDetail": "從 Hugging Face 取得 Whisper Turbo。在它就緒之前，Oats 繼續使用內建的模型。"
     }
   },
   "questionCard": {

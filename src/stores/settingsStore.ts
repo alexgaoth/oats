@@ -36,6 +36,14 @@ import {
   migrateStoredWhisperModel,
 } from "../helpers/bundledWhisperModels.mjs";
 import {
+  chooseSpeechModel,
+  defaultSpeechModel,
+  followsDefaultModel,
+  settingWhisperModel,
+} from "../helpers/speechTier.mjs";
+import { startDeviceTier, useDeviceTierStore } from "./deviceTierStore";
+import type { DeviceTierSnapshot } from "../types/electron";
+import {
   DEFAULT_SPEECH_LANGUAGE,
   migrateSpeechLanguageDefault,
   resolveSpeechLanguage,
@@ -319,6 +327,41 @@ migrateUploadTranscription();
  * for a request that names no model.
  */
 export const DEFAULT_WHISPER_MODEL = defaultWhisperModel(getCachedPlatform(), getArch());
+
+/**
+ * Whether the speech model follows the default: nobody chose one. A choice
+ * is kept as it is, whatever this Mac measures (speechTier.mjs).
+ */
+export function whisperModelFollowsDefault(): boolean {
+  return followsDefaultModel(isBrowser ? localStorage : null);
+}
+
+/** The default speech model this Mac qualifies for in a language (speechTier.mjs). */
+export function speechChoiceFor(tier: DeviceTierSnapshot | null, language: string) {
+  return chooseSpeechModel({
+    platform: tier?.device?.platform ?? getCachedPlatform(),
+    arch: tier?.device?.arch ?? getArch(),
+    memoryBytes: tier?.device?.memoryBytes ?? null,
+    smallClipMs: tier?.smallClipMs ?? null,
+    turboClipMs: tier?.turboClipMs ?? null,
+    language,
+  });
+}
+
+/**
+ * The model a setting nobody changed uses now: turbo on a Mac that measured
+ * fast enough once it is on disk, and this build's own model until then.
+ */
+export function currentDefaultWhisperModel(
+  language: string,
+  tier: DeviceTierSnapshot | null = useDeviceTierStore.getState().tier
+): string {
+  return defaultSpeechModel({
+    choice: speechChoiceFor(tier, language),
+    bundleModel: DEFAULT_WHISPER_MODEL,
+    turboInstalled: tier?.turbo?.installed === true,
+  });
+}
 
 // One time on Apple Silicon: a stored "base" goes, so the setting follows the
 // new default. See migrateStoredWhisperModel for why a stored "base" is not
@@ -2041,6 +2084,32 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       s.setChatAgentCloudMode(settings.chatAgentCloudMode);
   },
 }));
+
+/**
+ * Keep a setting nobody changed on the current default: when this Mac's
+ * measure arrives, when turbo lands on disk or goes, and when the language
+ * changes (turbo with detection costs twice the time). Only the store moves;
+ * nothing is written, so the setting keeps following the default, and a
+ * stored choice is never touched.
+ */
+function followDefaultWhisperModel(): void {
+  if (!whisperModelFollowsDefault()) return;
+  const state = useSettingsStore.getState();
+  const next = settingWhisperModel(
+    localStorage,
+    currentDefaultWhisperModel(state.preferredLanguage)
+  );
+  if (state.whisperModel !== next) useSettingsStore.setState({ whisperModel: next });
+}
+
+if (isBrowser) {
+  startDeviceTier();
+  useDeviceTierStore.subscribe(followDefaultWhisperModel);
+  useSettingsStore.subscribe((state, previous) => {
+    if (state.preferredLanguage !== previous.preferredLanguage) followDefaultWhisperModel();
+  });
+  followDefaultWhisperModel();
+}
 
 // --- Selectors (derived state, not stored) ---
 //

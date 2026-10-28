@@ -175,6 +175,10 @@
     "language": {
       "title": "Idioma",
       "description": "O idioma falado na sala"
+    },
+    "speechModel": {
+      "title": "Modelo de fala",
+      "description": "Este Mac pode executar o Whisper Turbo, o modelo mais preciso. Ele é baixado do Hugging Face após a configuração: {{size}}."
     }
   },
   "streaming": {
@@ -2402,6 +2406,27 @@
       "modelOn": "{{model}} em {{backend}}",
       "requests_one": "{{count}} solicitação de rede desde a inicialização",
       "requests_other": "{{count}} solicitações de rede desde a inicialização"
+    },
+    "speechTier": {
+      "downloading": "Baixando o Whisper Turbo",
+      "downloadingShort": "Baixando o Whisper Turbo: {{percent}}%",
+      "progress": "{{percent}}% de {{size}}. Até ficar pronto, o Oats usa o modelo que veio com ele.",
+      "checking": "Verificando o Whisper Turbo",
+      "checkingDetail": "Um teste curto na GPU deste Mac",
+      "ready": "Whisper Turbo, escolhido para este Mac",
+      "readyDetail": "A GPU dele acompanha o modelo mais preciso durante uma conversa",
+      "failed": "O Whisper Turbo não foi baixado",
+      "failedDetail": "O Oats usa o modelo que veio com ele.",
+      "declined": "Este Mac pode executar o Whisper Turbo",
+      "declinedDetail": "O modelo mais preciso: {{size}} do Hugging Face",
+      "slow": "O Whisper Turbo é lento demais neste Mac",
+      "slowDetail": "Aqui ele não acompanha uma conversa, então o Oats usa o modelo que veio com ele.",
+      "detection": "O Whisper Turbo é lento demais com a detecção de idioma",
+      "detectionDetail": "Escolha o idioma de transcrição em Definições › Gravação, e o Oats passa a usá-lo.",
+      "retry": "Tentar novamente",
+      "cancelDownload": "Cancelar o download do Whisper Turbo",
+      "noticeTitle": "Baixando um modelo de fala mais preciso para este Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo, do Hugging Face. O Oats continua usando o modelo que veio com ele até que fique pronto."
     }
   },
   "questionCard": {

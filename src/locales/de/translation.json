@@ -175,6 +175,10 @@
     "language": {
       "title": "Sprache",
       "description": "Was im Raum gesprochen wird"
+    },
+    "speechModel": {
+      "title": "Sprachmodell",
+      "description": "Dieser Mac kann Whisper Turbo ausführen, das genaueste Modell. Es wird nach der Einrichtung von Hugging Face geladen: {{size}}."
     }
   },
   "streaming": {
@@ -2402,6 +2406,27 @@
       "modelOn": "{{model}} auf {{backend}}",
       "requests_one": "{{count}} Netzwerkanfrage seit dem Start",
       "requests_other": "{{count}} Netzwerkanfragen seit dem Start"
+    },
+    "speechTier": {
+      "downloading": "Whisper Turbo wird heruntergeladen",
+      "downloadingShort": "Whisper Turbo wird heruntergeladen: {{percent}}%",
+      "progress": "{{percent}}% von {{size}}. Bis dahin nutzt Oats das mitgelieferte Modell.",
+      "checking": "Whisper Turbo wird geprüft",
+      "checkingDetail": "Ein kurzer Test auf der GPU dieses Mac",
+      "ready": "Whisper Turbo, für diesen Mac gewählt",
+      "readyDetail": "Seine GPU hält mit dem genauesten Modell während eines Gesprächs mit",
+      "failed": "Whisper Turbo wurde nicht heruntergeladen",
+      "failedDetail": "Oats nutzt das mitgelieferte Modell.",
+      "declined": "Dieser Mac kann Whisper Turbo ausführen",
+      "declinedDetail": "Das genaueste Modell: {{size}} von Hugging Face",
+      "slow": "Whisper Turbo ist auf diesem Mac zu langsam",
+      "slowDetail": "Es hält hier mit keinem Gespräch mit, daher nutzt Oats das mitgelieferte Modell.",
+      "detection": "Whisper Turbo ist mit Spracherkennung zu langsam",
+      "detectionDetail": "Wählen Sie die Transkriptionssprache unter Einstellungen › Aufnahme, dann nutzt Oats es.",
+      "retry": "Erneut versuchen",
+      "cancelDownload": "Download von Whisper Turbo abbrechen",
+      "noticeTitle": "Ein genaueres Sprachmodell für diesen Mac wird geladen ({{size}})",
+      "noticeDetail": "Whisper Turbo von Hugging Face. Bis es bereit ist, nutzt Oats weiter das mitgelieferte Modell."
     }
   },
   "questionCard": {

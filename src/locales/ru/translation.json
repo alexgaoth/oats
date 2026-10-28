@@ -175,6 +175,10 @@
     "language": {
       "title": "Язык",
       "description": "Язык разговора в комнате"
+    },
+    "speechModel": {
+      "title": "Модель речи",
+      "description": "Этот Mac может запускать Whisper Turbo, самую точную модель. Она загрузится с Hugging Face после настройки: {{size}}."
     }
   },
   "streaming": {
@@ -2448,6 +2452,27 @@
       "requests_few": "{{count}} сетевых запроса с момента запуска",
       "requests_many": "{{count}} сетевых запросов с момента запуска",
       "requests_other": "{{count}} сетевого запроса с момента запуска"
+    },
+    "speechTier": {
+      "downloading": "Загрузка Whisper Turbo",
+      "downloadingShort": "Загрузка Whisper Turbo: {{percent}}%",
+      "progress": "{{percent}}% из {{size}}. Пока загрузка идёт, Oats использует встроенную модель.",
+      "checking": "Проверка Whisper Turbo",
+      "checkingDetail": "Короткий тест на GPU этого Mac",
+      "ready": "Whisper Turbo выбран для этого Mac",
+      "readyDetail": "Его GPU успевает за самой точной моделью во время разговора",
+      "failed": "Whisper Turbo не загрузился",
+      "failedDetail": "Oats использует встроенную модель.",
+      "declined": "Этот Mac может запускать Whisper Turbo",
+      "declinedDetail": "Самая точная модель: {{size}} с Hugging Face",
+      "slow": "Whisper Turbo слишком медленный на этом Mac",
+      "slowDetail": "Здесь он не успевает за разговором, поэтому Oats использует встроенную модель.",
+      "detection": "Whisper Turbo слишком медленный с определением языка",
+      "detectionDetail": "Выберите язык транскрипции в Настройках › Запись, и Oats будет его использовать.",
+      "retry": "Повторить",
+      "cancelDownload": "Отменить загрузку Whisper Turbo",
+      "noticeTitle": "Загружается более точная модель речи для этого Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo с Hugging Face. Пока она не готова, Oats использует встроенную модель."
     }
   },
   "questionCard": {

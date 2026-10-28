@@ -175,6 +175,10 @@
     "language": {
       "title": "Lingua",
       "description": "La lingua parlata nella stanza"
+    },
+    "speechModel": {
+      "title": "Modello vocale",
+      "description": "Questo Mac può eseguire Whisper Turbo, il modello più preciso. Si scarica da Hugging Face dopo la configurazione: {{size}}."
     }
   },
   "streaming": {
@@ -2402,6 +2406,27 @@
       "modelOn": "{{model}} su {{backend}}",
       "requests_one": "{{count}} richiesta di rete dall'avvio",
       "requests_other": "{{count}} richieste di rete dall'avvio"
+    },
+    "speechTier": {
+      "downloading": "Download di Whisper Turbo",
+      "downloadingShort": "Download di Whisper Turbo: {{percent}}%",
+      "progress": "{{percent}}% di {{size}}. Finché non è pronto, Oats usa il modello incluso.",
+      "checking": "Verifica di Whisper Turbo",
+      "checkingDetail": "Un breve test sulla GPU di questo Mac",
+      "ready": "Whisper Turbo, scelto per questo Mac",
+      "readyDetail": "La sua GPU regge il modello più preciso durante una conversazione",
+      "failed": "Whisper Turbo non è stato scaricato",
+      "failedDetail": "Oats usa il modello incluso.",
+      "declined": "Questo Mac può eseguire Whisper Turbo",
+      "declinedDetail": "Il modello più preciso: {{size}} da Hugging Face",
+      "slow": "Whisper Turbo è troppo lento su questo Mac",
+      "slowDetail": "Qui non regge una conversazione, quindi Oats usa il modello incluso.",
+      "detection": "Whisper Turbo è troppo lento con il rilevamento della lingua",
+      "detectionDetail": "Scegli la lingua di trascrizione in Impostazioni › Registrazione e Oats lo userà.",
+      "retry": "Riprova",
+      "cancelDownload": "Annulla il download di Whisper Turbo",
+      "noticeTitle": "Download di un modello vocale più preciso per questo Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo, da Hugging Face. Finché non è pronto, Oats continua a usare il modello incluso."
     }
   },
   "questionCard": {

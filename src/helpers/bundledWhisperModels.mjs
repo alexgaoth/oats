@@ -25,6 +25,11 @@
 //
 // Multilingual `base` ships everywhere. Auto-detection and every language other
 // than English need it, and they keep the model they had.
+//
+// What ships is the floor. On an Apple Silicon Mac whose GPU measures fast
+// enough, the default becomes `large-v3-turbo` (q5_0), which is downloaded
+// after setup rather than shipped (speechTier.mjs); until it is on disk, the
+// size below is the default.
 
 /** What a build ships when its target is not listed below. */
 const STANDARD = Object.freeze({
