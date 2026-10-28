@@ -751,8 +751,9 @@ function trackConversationTopic(segment: TranscriptSegment) {
     at: segment.timestamp ?? Date.now(),
   });
   topicVectors?.observe(segment);
-  // With OpenAI as the writing model, a fast model checks the changes of
-  // subject as they happen (topicNamingRunner.ts, helpers/topicLoop.mjs).
+  // With OpenAI or Anthropic as the writing model, that provider's check model
+  // checks the changes of subject as they happen (topicNamingRunner.ts,
+  // helpers/topicLoop.mjs, helpers/topicModels.mjs).
   observeUtterance(segment);
   // The tracker is dependency-free ESM (so node:test can import it without a
   // TypeScript build), which is why its output is asserted at this boundary.

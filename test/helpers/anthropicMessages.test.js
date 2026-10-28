@@ -187,3 +187,84 @@ test("an answer with no text fails with the reason", () => {
   assert.throws(() => anthropicAnswerText({}), /no text/);
   assert.throws(() => anthropicAnswerText(null), /no text/);
 });
+
+const {
+  anthropicFallsBack,
+  anthropicHeaders,
+  FALLBACK_BETA,
+} = require("../../src/helpers/anthropicMessages");
+
+test("effort and a JSON schema go in output_config, on Claude 4.7 and later only", () => {
+  const schema = { name: "topic_check", schema: { type: "object", properties: {} } };
+  const body = buildAnthropicRequest({
+    modelId: "claude-opus-5-5",
+    text: "AFTER: ...",
+    config: { systemPrompt: "check", reasoningEffort: "low", responseSchema: schema },
+  });
+  assert.deepEqual(body.output_config, {
+    effort: "low",
+    format: { type: "json_schema", schema: schema.schema },
+  });
+  // OpenAI's "none" is not an Anthropic effort: none is sent.
+  const none = buildAnthropicRequest({
+    modelId: "claude-haiku-5-5",
+    text: "x",
+    config: { reasoningEffort: "none" },
+  });
+  assert.equal("output_config" in none, false);
+  // Claude 4.6 and older refuse effort; the schema still goes.
+  const old = buildAnthropicRequest({
+    modelId: "claude-haiku-4-5",
+    text: "x",
+    config: { reasoningEffort: "low", responseSchema: schema },
+  });
+  assert.deepEqual(old.output_config, { format: { type: "json_schema", schema: schema.schema } });
+  // A request that asks for neither has no output_config, as before.
+  const plain = buildAnthropicRequest({ modelId: "claude-opus-5-5", text: "x" });
+  assert.equal("output_config" in plain, false);
+});
+
+test("the refusal fallback is asked for where the model has one", () => {
+  for (const model of ["claude-opus-5-5", "claude-opus-5", "claude-fable-5", "claude-fable-5-1"]) {
+    assert.equal(anthropicFallsBack(model, null), true, model);
+    const body = buildAnthropicRequest({ modelId: model, text: "x" });
+    assert.equal(body.fallbacks, "default", model);
+    assert.deepEqual(anthropicHeaders(body), { "anthropic-beta": FALLBACK_BETA });
+  }
+  assert.equal(FALLBACK_BETA, "server-side-fallback-2026-07-01");
+  // Sonnet 5.5: only when its thinking is on, never with "between_tools".
+  const off = buildAnthropicRequest({ modelId: "claude-sonnet-5-5", text: "x" });
+  assert.deepEqual(off.thinking, { type: "between_tools" });
+  assert.equal("fallbacks" in off, false);
+  assert.deepEqual(anthropicHeaders(off), {});
+  const on = buildAnthropicRequest({
+    modelId: "claude-sonnet-5-5",
+    text: "x",
+    config: { disableThinking: false },
+  });
+  assert.equal(on.fallbacks, "default");
+  // Haiku 5.5 has no fallback, and the older models are left as they were.
+  for (const model of [
+    "claude-haiku-5-5",
+    "claude-sonnet-4-6",
+    "claude-opus-4-8",
+    "claude-sonnet-5",
+  ]) {
+    const body = buildAnthropicRequest({ modelId: model, text: "x" });
+    assert.equal("fallbacks" in body, false, model);
+    assert.deepEqual(anthropicHeaders(body), {});
+  }
+});
+
+test("a fallback block before the answer is skipped like a thinking block", () => {
+  assert.equal(
+    anthropicAnswerText({
+      content: [
+        { type: "fallback", model: "claude-opus-4-8" },
+        { type: "text", text: '{"decision":"same"}' },
+      ],
+      stop_reason: "end_turn",
+    }),
+    '{"decision":"same"}'
+  );
+});

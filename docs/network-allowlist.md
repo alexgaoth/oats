@@ -54,6 +54,11 @@ Scope limits that make this safe to state plainly:
 
 The exact provider hostname is controlled by that provider or by the user's
 custom endpoint. Local, LAN, and bundled-model paths do not require this access.
+A request to an Anthropic model that has Anthropic's server-side refusal
+fallback (Opus 5 and 5.5, Fable 5.x, and Sonnet 5.5 with thinking on) asks for
+it: a request that Anthropic's safety classifiers decline is answered instead by
+the model Anthropic picks for that kind of refusal, on the same host
+(`src/helpers/anthropicMessages.js`).
 
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no
@@ -64,11 +69,18 @@ in the background only by a model on this computer or the user's own server.
 With a cloud provider selected, they are not sent: they may have been
 summarized on this computer, before that provider was chosen.
 
-Naming a conversation's topics uses the same writing model by the same route,
-so it adds no destination. Topics are always found and named on this computer;
-when a writing model is chosen and ready, it gives each topic a better name.
-It gets one short request per topic when the topic holds 40 words, again each
-time the topic has grown two and a half times (100, 250, 625 words, and so
+Naming a conversation's topics goes by the writing model's route, so it adds no
+destination. Topics are always found and named on this computer; when a writing
+model is chosen and ready, a model gives each topic a better name: with OpenAI
+or Anthropic as the writing model, that provider's most accurate model for
+names when the key can use it (`src/helpers/topicModels.mjs`: OpenAI's
+gpt-6-astra, else gpt-6.1-sol or gpt-6.1-terra; Anthropic's claude-opus-5-5,
+else claude-sonnet-5-5), by the same key and to the same host; with any other
+route, the writing model itself. Once per app session Oats asks OpenAI or
+Anthropic whether the key can use the naming model (`GET /v1/models/{model}`, no
+conversation text; with no key, nothing is sent). The model gets one short
+request per topic when the topic holds 40 words, again each time the topic has
+grown two and a half times (100, 250, 625 words, and so
 on), and at the end for a topic that is new or changed since: the names the
 other topics already have, and at most 3,000 characters of what was said on
 that topic (`src/helpers/topicNaming.mjs`), never audio and never the rest of
@@ -78,28 +90,33 @@ own, the names wait for the end, so the two models do not take turns loading).
 With a cloud provider selected, these requests go to the provider during the
 conversation, and the sidebar counts them like any renderer request. With no
 writing model, or one that is not ready, nothing is sent and the topics keep
-their on-device names (`src/stores/topicNamingRunner.ts`). With OpenAI as the
-writing model, the live topic check below names the topics while recording
-instead, and these requests go out only at the end, for the record's topics it
-did not name.
+their on-device names (`src/stores/topicNamingRunner.ts`). With OpenAI or
+Anthropic as the writing model, the live topic check below names the topics
+while recording instead, and these requests go out only at the end, for the
+record's topics it did not name.
 
-The live topic check runs only with OpenAI as the writing model and an OpenAI
-key, and goes to the same host by the same key, so it adds no destination
-either (`src/helpers/topicLoop.mjs`). During the conversation, the on-device
-tracker proposes changes of subject, and a fast OpenAI model confirms each
-proposed change and names the new topic: gpt-6-luna when the key can use it,
-else gpt-5.6-luna. Once per app session Oats asks OpenAI whether the key can
-use them (`GET /v1/models/{model}`, no conversation text; with no key, nothing
-is sent). Each request carries the topics' names and one-line descriptions and
-at most 3,000 characters of what was said around the proposed change (or at
-the end of a topic that ran 250 words with no change), never audio. About 40
-to 50 requests an hour (never more than 120), one at a time, with reasoning
-off. Each request carries a small part, but together they quote most of the
-conversation: 91 to 95% of its lines on 24 test meetings. The sidebar counts
-them like any renderer request. After three failed requests in a row, or when
-the writing model is no longer OpenAI's, the check stops for that recording.
-With any other provider, a custom endpoint, a server of the person's own or a
-model on this computer, the check is off and nothing changes.
+The live topic check runs only with OpenAI or Anthropic as the writing model
+and that provider's key, and goes to the same host by the same key, so it adds
+no destination either (`src/helpers/topicLoop.mjs`). During the conversation,
+the on-device tracker proposes changes of subject, and that provider's most
+accurate model for the check confirms each proposed change and names the new
+topic (`src/helpers/topicModels.mjs`): with OpenAI, gpt-5.6-terra with
+reasoning off, else gpt-6.1-terra, gpt-6.1-sol, gpt-6-luna or gpt-5.6-luna;
+with Anthropic, claude-opus-5-5 at effort low, else claude-haiku-5-5. Once per
+app session Oats asks the provider whether the key can use them (`GET
+/v1/models/{model}`, no conversation text; with no key, nothing is sent). Each
+request carries the topics' names and one-line descriptions and at most 3,000
+characters of what was said around the proposed change (or at the end of a
+topic that ran 250 words with no change), never audio. About 40 to 50 requests
+an hour (never more than 120), one at a time. Each request carries a small
+part, but together they quote most of the conversation: 91 to 95% of its lines
+on 24 test meetings. The sidebar counts them like any other request (the
+Anthropic route's go out from the main process, through Chromium's network
+stack). After three failed requests in a row, or when the writing model is no
+longer that provider's, the check stops for that recording. With Anthropic,
+the check asks for the refusal fallback above. With any other provider, a
+custom endpoint, a server of the person's own or a model on this computer, the
+check is off and nothing changes.
 
 Linking conversations on the Global conversations board happens on this
 computer: each topic name is embedded by the bundled all-MiniLM-L6-v2, and
