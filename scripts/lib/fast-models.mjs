@@ -567,7 +567,13 @@ export async function startLocalServer(
   ];
   const child = spawn(binary, args, {
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, DYLD_LIBRARY_PATH: path.dirname(binary) },
+    // As the app starts it (llamaServer.js _buildEnv): no fitting probe at start, offline.
+    env: {
+      ...process.env,
+      DYLD_LIBRARY_PATH: path.dirname(binary),
+      LLAMA_ARG_FIT: "off",
+      LLAMA_ARG_OFFLINE: "1",
+    },
   });
   let stderr = "";
   // The start of the log too (buffer sizes: model, KV cache, compute), for a caller
