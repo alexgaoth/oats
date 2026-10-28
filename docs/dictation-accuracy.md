@@ -113,6 +113,14 @@ and it is the single highest-value thing a user can do for their dictation.
 `small.en` buys another 0.7 points of WER for 5.3× the latency. That is a real
 tradeoff and it belongs to the user, not to a default.
 
+**Superseded on 2026-10-26: English is the default now.** The argument above
+weighed one person dictating. In a room, detection was the bigger risk: in a
+replay of eight AMI meetings (alexgaoth/oats#122) the multilingual models heard
+far voices as Korean, Hindi or Welsh, and `base` + `auto` recovered 62.2% of the
+words against 66.8% for `base.en` + `en`. The setup screen shows the language and
+changes it, `auto` stays a choice in Settings, and an install that still had the
+old default moves to English once (`helpers/speechLanguage.mjs`).
+
 ## Conversations, against OpenWhispr 1.10.2 (2026-10-04)
 
 Dictation is one utterance. A conversation is an unbroken stream that somebody
@@ -599,7 +607,8 @@ segmenter.
    `base` and 11.6 with `small` on far voices, and nothing with turbo. A conversation
    speaks one language for minutes at a time, so it could be read once from a
    longer stretch, or taken from Settings, instead of per segment: a product
-   decision.
+   decision. Decided on 2026-10-26: English is the default, and the setup
+   screen shows it (see "Language auto-detection" above).
 4. **Not `gpt-4o-transcribe`** for this path: it drops parts of short segments.
 
 ### What this does not show

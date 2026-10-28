@@ -187,7 +187,7 @@ export function balancedSplit(label) {
  * when two compete the one the room spent longer on keeps its words.
  *
  * Before a label is hidden it tries the same places in two lines
- * (`balancedSplit`): a topic name of four or five words is often too long for
+ * (`balancedSplit`): a topic name of four to six words is often too long for
  * the room beside its dot and fits in half the width at twice the height. Such
  * a placement says so with `lines`, the two lines to draw.
  *

@@ -653,6 +653,8 @@ English from the OS locale would be right most of the time and catastrophic when
 wrong — a German speaker on an English laptop would get mangled dictation rather
 than merely slow dictation. Slow is recoverable; wrong is not. Setting the
 language in Settings is one click and is the highest-value thing a user can do.
+**Superseded 2026-10-26:** English is the default now; see
+`docs/dictation-accuracy.md`.
 
 **Still open:** the cloud row (`--cloud` exists; running it spends the key
 owner's credits), upstream's `--device` GPU index, and ~3,000 lines of

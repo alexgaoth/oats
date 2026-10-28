@@ -359,7 +359,7 @@ test("a link says whether it was a move back to an earlier topic", () => {
   );
 });
 
-// A topic name from the writing model runs to five words. Where one line has
+// A topic name from the writing model runs to six words. Where one line has
 // no room beside, above or below its dot, two lines of half the width often do.
 test("a name breaks into two even lines, by words, or by characters in Japanese", () => {
   assert.deepEqual(balancedSplit("Data migration risk and rollback"), [

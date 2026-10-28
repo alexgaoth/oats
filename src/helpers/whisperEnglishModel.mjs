@@ -38,9 +38,11 @@ const FALLBACK_MODEL = "base";
  * `auto` is not English.
  *
  * Auto-detection needs the multilingual model — an `.en` build has no language
- * head to detect with. So a user who has never opened Settings keeps the
- * multilingual model and the detection pass, and that is correct rather than a
- * missed optimisation: we do not know what they speak.
+ * head to detect with. So a person who chooses auto-detection keeps the
+ * multilingual model and the detection pass: we do not know what they speak.
+ * The default is English (`speechLanguage.mjs`, since 2026-10-26), so a person
+ * who has never opened Settings gets the `.en` model: `small.en` on Apple
+ * Silicon and `base.en` elsewhere (`bundledWhisperModels.mjs`).
  */
 export function isEnglish(language) {
   if (typeof language !== "string") return false;

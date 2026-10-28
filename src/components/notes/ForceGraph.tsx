@@ -308,7 +308,7 @@ function labelWidth(canvasWidth: number): number {
 
 /**
  * The widest a line of a label in two lines may run: a little wider than one
- * line may, so the five words a topic name runs to (48 characters at most,
+ * line may, so the six words a topic name runs to (48 characters at most,
  * `topicNaming.mjs`) fit in two lines of the reading column's graph.
  */
 function wrappedLabelWidth(canvasWidth: number): number {

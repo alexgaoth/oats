@@ -171,6 +171,10 @@
       "shortcutTitle": "Запуск из любого приложения",
       "shortcutDescription": "Нажмите ещё раз, чтобы завершить разговор.",
       "getStarted": "Начать"
+    },
+    "language": {
+      "title": "Язык",
+      "description": "Язык разговора в комнате"
     }
   },
   "streaming": {
