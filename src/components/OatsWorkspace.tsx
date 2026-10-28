@@ -322,6 +322,7 @@ async function summarizeConversation(
       noModel: t("oats.errors.noModel"),
       noEndpoint: t("oats.errors.noEndpoint"),
       actionFailed: t("oats.errors.actionFailed"),
+      noSummary: t("oats.errors.noSummary"),
     }
   );
 }
@@ -1743,14 +1744,23 @@ function IntelligenceViews({
   const summarizing = useActionProcessingStore((state) =>
     selected ? state.noteStates[selected.id]?.status === "processing" : false
   );
-  const summaryState: "summary" | "preparing" | "needs-model" | "not-summarized" =
+  // Why the last summary of this conversation failed, while the app runs: a
+  // timeout, an error, or an answer that was empty or cut off, which is never
+  // saved as the summary (actionProcessingStore.ts).
+  const summaryFailure = useActionProcessingStore((state) => {
+    const noteState = selected ? state.noteStates[selected.id] : undefined;
+    return noteState?.status === "failed" ? (noteState.message ?? "") : null;
+  });
+  const summaryState: "summary" | "preparing" | "failed" | "needs-model" | "not-summarized" =
     selected?.enhanced_content
       ? "summary"
       : summarizing
         ? "preparing"
-        : summaryReadinessNow && summaryReadinessNow !== "ready"
-          ? "needs-model"
-          : "not-summarized";
+        : summaryFailure !== null
+          ? "failed"
+          : summaryReadinessNow && summaryReadinessNow !== "ready"
+            ? "needs-model"
+            : "not-summarized";
 
   // The opened conversation's own contour: its speech, its questions with the
   // verdicts they actually reached, and its topics — all from the record rather
@@ -2021,9 +2031,11 @@ function IntelligenceViews({
                 >
                   <Sparkles aria-hidden="true" className="size-4 shrink-0" />
                   <p className="min-w-0 flex-1">
-                    {summaryState === "needs-model"
-                      ? t("oats.intelligence.needsSummaryModel")
-                      : t("oats.intelligence.notSummarized")}
+                    {summaryState === "failed"
+                      ? t("oats.intelligence.summaryFailed", { reason: summaryFailure })
+                      : summaryState === "needs-model"
+                        ? t("oats.intelligence.needsSummaryModel")
+                        : t("oats.intelligence.notSummarized")}
                   </p>
                   {summaryState === "needs-model" && (
                     <Button
@@ -2037,7 +2049,7 @@ function IntelligenceViews({
                       {t("oats.intelligence.setUpModel")}
                     </Button>
                   )}
-                  {summaryState === "not-summarized" && (
+                  {(summaryState === "not-summarized" || summaryState === "failed") && (
                     <Button
                       size="sm"
                       onClick={() =>
@@ -2051,7 +2063,9 @@ function IntelligenceViews({
                       }
                     >
                       <Sparkles aria-hidden="true" />
-                      {t("oats.intelligence.summarize")}
+                      {summaryState === "failed"
+                        ? t("oats.intelligence.summarizeAgain")
+                        : t("oats.intelligence.summarize")}
                     </Button>
                   )}
                 </div>

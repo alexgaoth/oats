@@ -182,12 +182,13 @@ export const openaiProvider: InferenceProvider = {
       });
     }
 
+    const timeoutMs = config.timeoutMs ?? REQUEST_TIMEOUT_MS;
     const response = await withRetry(async () => {
       let lastError: Error | null = null;
 
       for (const { url: endpoint, type } of endpointCandidates) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
           const maxTokens =
             config.maxTokens ||
@@ -282,7 +283,7 @@ export const openaiProvider: InferenceProvider = {
           return res.json();
         } catch (error) {
           if ((error as Error).name === "AbortError") {
-            throw new Error("Request timed out after 30s");
+            throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
           }
           lastError = error as Error;
           if (type === "responses") {
@@ -372,6 +373,20 @@ export const openaiProvider: InferenceProvider = {
       success: true,
       isEmpty: responseText.length === 0,
     });
+
+    // A cut answer (the output limit, which a reasoning model can spend on its
+    // reasoning) or an empty one is not a result for a caller that needs the
+    // whole answer: the summary at Finish would save it, or the input, as the summary.
+    if (config.requireComplete) {
+      const cut =
+        response?.status === "incomplete" || response?.choices?.[0]?.finish_reason === "length";
+      if (cut) {
+        throw new Error(
+          `${model} stopped before it finished (${response?.incomplete_details?.reason ?? "length"})`
+        );
+      }
+      if (!responseText) throw new Error(`${model} returned no text`);
+    }
 
     if (!responseText) {
       logger.logReasoning("OPENAI_EMPTY_RESPONSE_FALLBACK", {
