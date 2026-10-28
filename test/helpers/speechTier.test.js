@@ -93,7 +93,10 @@ test("turbo is chosen up to the budget and not past it", () => {
 });
 
 test("a Mac twice as slow as the reference keeps small.en", () => {
-  const choice = tier.chooseSpeechModel({ ...APPLE, smallClipMs: 2 * tier.REFERENCE.clipMs.smallEn });
+  const choice = tier.chooseSpeechModel({
+    ...APPLE,
+    smallClipMs: 2 * tier.REFERENCE.clipMs.smallEn,
+  });
   assert.equal(choice.model, "small");
   assert.equal(Math.round(choice.predictedTurboMs), 1206);
 });
@@ -166,7 +169,11 @@ test("the default is turbo only once it is on disk", () => {
     "turbo-q5"
   );
   assert.equal(
-    tier.defaultSpeechModel({ choice: { model: "small" }, bundleModel: "small", turboInstalled: true }),
+    tier.defaultSpeechModel({
+      choice: { model: "small" },
+      bundleModel: "small",
+      turboInstalled: true,
+    }),
     "small"
   );
   assert.equal(tier.defaultSpeechModel({ choice: { model: "base" }, bundleModel: "base" }), "base");

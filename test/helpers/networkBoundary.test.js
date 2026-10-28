@@ -4,8 +4,9 @@ const fs = require("fs");
 const path = require("path");
 
 // What docs/network-allowlist.md promises, pinned where a build or a launch could
-// quietly break it: no analytics endpoint, no download nobody asked for, and
-// nothing of the builder's own machine inside the app.
+// quietly break it: no analytics endpoint, no download nobody asked for (the
+// one exception, Whisper Turbo after setup on a fast Mac, is pinned at the
+// end), and nothing of the builder's own machine inside the app.
 
 const root = path.join(__dirname, "..", "..");
 const builder = JSON.parse(fs.readFileSync(path.join(root, "electron-builder.json"), "utf8"));
@@ -240,7 +241,10 @@ test("turbo is fetched only when the workspace asks, after setup, never at launc
     const calls = [...read(file).matchAll(/\.startUpgrade\(/g)].length;
     if (file.endsWith(path.join("helpers", "ipcHandlers.js"))) {
       assert.equal(calls, 1, "ipcHandlers.js starts it from speech-upgrade-start only");
-      assert.match(read(file), /ipcMain\.handle\("speech-upgrade-start"[\s\S]{0,120}startUpgrade\(/);
+      assert.match(
+        read(file),
+        /ipcMain\.handle\("speech-upgrade-start"[\s\S]{0,120}startUpgrade\(/
+      );
     } else {
       assert.equal(calls, 0, `${file} must not start the turbo download`);
     }
@@ -248,7 +252,10 @@ test("turbo is fetched only when the workspace asks, after setup, never at launc
   // The renderer asks from the workspace, which shows only once setup is done.
   const askers = ALL_SOURCES.filter((file) => /\buseSpeechUpgrade\(\);/.test(read(file)));
   assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["OatsWorkspace.tsx"]);
-  assert.match(read("src/hooks/useSpeechTier.ts"), /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/);
+  assert.match(
+    read("src/hooks/useSpeechTier.ts"),
+    /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/
+  );
 });
 
 test("turbo comes through the counted download path, from the models' own repository", () => {
@@ -258,7 +265,10 @@ test("turbo comes through the counted download path, from the models' own reposi
   // downloadWhisperModel → downloadUtils.downloadFile → Electron's net.request,
   // which the ledger counts (networkLedger.js).
   assert.match(read("src/helpers/whisper.js"), /await downloadFile\(modelConfig\.url, modelPath/);
-  assert.match(read("src/helpers/downloadUtils.js"), /request = net\.request\(\{ url, method: "GET" \}\)/);
+  assert.match(
+    read("src/helpers/downloadUtils.js"),
+    /request = net\.request\(\{ url, method: "GET" \}\)/
+  );
 
   const registry = JSON.parse(read("src/models/modelRegistryData.json"));
   const turbo = registry.whisperModels["turbo-q5"];
@@ -268,6 +278,9 @@ test("turbo comes through the counted download path, from the models' own reposi
   );
   assert.match(turbo.sha256, /^[0-9a-f]{64}$/, "checked after the download");
   for (const model of Object.values(registry.whisperModels)) {
-    assert.match(model.downloadUrl, /^https:\/\/huggingface\.co\/ggerganov\/whisper\.cpp\/resolve\/main\//);
+    assert.match(
+      model.downloadUrl,
+      /^https:\/\/huggingface\.co\/ggerganov\/whisper\.cpp\/resolve\/main\//
+    );
   }
 });

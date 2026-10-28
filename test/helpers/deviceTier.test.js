@@ -159,16 +159,21 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
     return SYSTEM_PROFILER;
   };
   const totalmem = () => 48 * GIB;
-  assert.deepEqual(await detectDevice({ platform: "darwin", arch: "arm64", run, totalmem }), M5_PRO);
-  assert.deepEqual(calls, [
-    "sysctl -n machdep.cpu.brand_string",
-    "ioreg -rc AGXAccelerator -d 1",
-  ]);
+  assert.deepEqual(
+    await detectDevice({ platform: "darwin", arch: "arm64", run, totalmem }),
+    M5_PRO
+  );
+  assert.deepEqual(calls, ["sysctl -n machdep.cpu.brand_string", "ioreg -rc AGXAccelerator -d 1"]);
 
   // IOKit with nothing to say: the slower system_profiler.
   calls.length = 0;
   const quietIoreg = async (file, args) => (file.endsWith("ioreg") ? "" : run(file, args));
-  const device = await detectDevice({ platform: "darwin", arch: "arm64", run: quietIoreg, totalmem });
+  const device = await detectDevice({
+    platform: "darwin",
+    arch: "arm64",
+    run: quietIoreg,
+    totalmem,
+  });
   assert.equal(device.gpuCores, 16);
 
   calls.length = 0;
@@ -216,7 +221,10 @@ test("first launch: the clip is read twice on a server of its own, and the faste
     assert.equal(saved.appVersion, "0.2.0");
     assert.equal(published.at(-1).smallClipMs, 170);
     assert.equal(published.at(-1).measuring, false);
-    assert.ok(published.some((snapshot) => snapshot.measuring), "the check is announced");
+    assert.ok(
+      published.some((snapshot) => snapshot.measuring),
+      "the check is announced"
+    );
   } finally {
     env.cleanup();
   }
@@ -317,10 +325,14 @@ test("after an update, the last time stands until the new check succeeds", async
   const env = setup();
   try {
     await tierFor(env).tier.ensureMeasured();
-    const updated = tierFor(env, { appVersion: "0.3.0", isBusy: () => true, now: (() => {
-      let clock = 0;
-      return () => (clock += 60_000);
-    })() }).tier;
+    const updated = tierFor(env, {
+      appVersion: "0.3.0",
+      isBusy: () => true,
+      now: (() => {
+        let clock = 0;
+        return () => (clock += 60_000);
+      })(),
+    }).tier;
     await updated.ensureMeasured();
     assert.equal(updated.snapshot().smallClipMs, 170, "kept from the last version");
     // Not saved under the new version, so the next launch reads again.
@@ -372,7 +384,10 @@ test("turbo: downloaded on request, its checksum and clip checked, then ready", 
 
     assert.equal(env.downloads.length, 1);
     assert.equal(env.downloads[0].model, TURBO_MODEL);
-    assert.ok(env.downloads[0].options.download.abort, "with its own signal, so it can be cancelled");
+    assert.ok(
+      env.downloads[0].options.download.abort,
+      "with its own signal, so it can be cancelled"
+    );
     assert.deepEqual(progressSeen, { receivedBytes: 287_000_000, totalBytes: 574_041_195 });
     const turboServer = env.servers.at(-1);
     assert.equal(turboServer.started.model, "ggml-large-v3-turbo-q5_0.bin");
