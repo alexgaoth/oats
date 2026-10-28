@@ -665,14 +665,16 @@ to a short-lived second server, so a model somebody chose is never unloaded.
 
 **The prediction.** Turbo's time for a segment is its replay median scaled by
 how much slower this Mac reads the clip than the M5 Pro:
-603 ms × (this Mac's clip time / 154 ms). With `auto`, turbo pays a second
+603 ms × (this Mac's clip time / 160 ms). With `auto`, turbo pays a second
 encoder pass: × 1089 / 603 = 1.8. Once turbo is on disk, its own clip time
-replaces the prediction: 603 ms × (its clip time / 638 ms).
+replaces the prediction: 603 ms × (its clip time / 639 ms). 160 and 639 ms
+are the medians of every check below (26 and 14), the two slowed ones left
+out.
 
 | on the M5 Pro (16-core GPU, 48 GB, Metal) | clip time, faster of 2 reads | turbo per segment  | default    |
 | ----------------------------------------- | ---------------------------- | ------------------ | ---------- |
-| English                                   | 154 ms                       | 603 ms (fits 804)  | turbo q5_0 |
-| `auto`                                    | 154 ms                       | 1089 ms (over 804) | `small`    |
+| English                                   | 160 ms                       | 603 ms (fits 804)  | turbo q5_0 |
+| `auto`                                    | 160 ms                       | 1089 ms (over 804) | `small`    |
 
 The noise, on the M5 Pro under the GPU lock that this Mac's benchmarks share
 (other work still ran on its CPU, load average 9–18):
@@ -694,7 +696,7 @@ under the same lock, 30 minutes later):
 | turbo q5_0 on a new server (after the download) | 6   | 639 ms | 622–675 ms                                |
 
 So one check moves by about ±5% within a run, and by about 12% between runs.
-On the M5 Pro that moves the prediction between about 580 and 780 ms, inside
+On the M5 Pro that moves the prediction between about 560 and 750 ms, inside
 the budget. But 2 of the 10 first-launch checks read the clip 4 times slower,
 in both of their reads, which points to another program on the GPU at that
 moment. A busy GPU only ever makes a check slower, so **a check that says
@@ -705,7 +707,7 @@ download decides it. From start to finish one check took 2–5 s in these runs
 (the model loads in about 0.3 s).
 
 The boundary is a Mac that reads the clip 1.33 times slower than the M5 Pro
-(about 205 ms).
+(about 213 ms).
 No other Mac was measured, so which chips fall on which side is not shown
 here. The prediction assumes turbo slows down by the same factor as
 `small.en`; turbo's encoder is a larger share of its work, so on a weaker GPU

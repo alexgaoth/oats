@@ -69,12 +69,14 @@ export const REFERENCE = Object.freeze({
   /** Median per-segment time in the AMI room replay (ms; alexgaoth/oats#122, #131). */
   segmentMs: Object.freeze({ baseEn: 58, smallEn: 134, turboEn: 603, turboAuto: 1089 }),
   /**
-   * The speed check's clip (speechCheck.wav) as deviceTier.js reads it: a new
-   * server, VAD on, language "en", the faster of two reads. The median of 12
-   * servers for `small.en` (148–164 ms) and of 8 for turbo (570–666 ms),
-   * 2026-10-28, under the GPU lock this Mac's benchmarks share.
+   * The speed check's clip (speechCheck.wav) as deviceTier.js reads it: VAD
+   * on, language "en", the faster of two reads. The median of 26 checks for
+   * `small.en` (148–200 ms) and of 14 for turbo (570–675 ms), on new servers
+   * and on a pre-warmed one, 2026-10-28, under the GPU lock this Mac's
+   * benchmarks share. Two checks that another program slowed 4 times are left
+   * out (deviceTier.js reads a slow check again for that reason).
    */
-  clipMs: Object.freeze({ smallEn: 154, turboEn: 638 }),
+  clipMs: Object.freeze({ smallEn: 160, turboEn: 639 }),
 });
 
 /** Segments a busy meeting closes in a minute. */
