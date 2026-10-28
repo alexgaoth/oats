@@ -16,6 +16,10 @@
 //   is idle (the pre-warm loads it for an English speaker), the reads go to
 //   it. Otherwise a second, short-lived server loads the model and stops
 //   after, so a model somebody chose is never unloaded for this.
+// - A check that says turbo does not fit is read again, up to twice, 20 s
+//   apart, and the fastest counts: another program on the GPU only ever
+//   makes a check slower (2 of 10 checks on a busy M5 Pro came back 4 times
+//   slow).
 // - It waits while a conversation is recorded or the app's server is
 //   answering, so it never takes the GPU from a recording.
 // - It is kept in userData/device-tier.json with the app version and the
@@ -59,6 +63,12 @@ const BENCHMARK_MODEL = "small.en";
 const BUSY_POLL_MS = 5000;
 const BUSY_GIVE_UP_MS = 10 * 60 * 1000;
 const PROGRESS_PUBLISH_MS = 250;
+// A check that says turbo does not fit is read again, up to twice, this far
+// apart. Another program on the GPU (or Oats' own writing model loading at
+// launch) only ever makes a read slower: 2 of 10 checks on a busy M5 Pro
+// read the clip in 624 and 727 ms against 156-200 ms for the rest.
+const RECHECKS = 2;
+const RECHECK_DELAY_MS = 20 * 1000;
 
 /** Run a system tool and return its output, or "" when it fails. */
 function runTool(file, args, { timeoutMs = 5000 } = {}) {
@@ -366,6 +376,29 @@ class DeviceTier extends EventEmitter {
   }
 
   /**
+   * Read the clip, and again while the result says turbo does not fit, at
+   * most `RECHECKS` more times: the fastest check is this Mac's. Contention
+   * makes a check slower and never faster, so a slow result is the one worth
+   * doubting, and a fast one stands.
+   *
+   * @param {string} modelId
+   * @param {(ms: number) => boolean} fits Whether this time keeps turbo in.
+   * @param {{ waitMs?: number }} [options]
+   */
+  async _measureFastest(modelId, fits, options) {
+    let best = await this.measureClip(modelId, options);
+    const checks = best ? [best.ms] : [];
+    for (let again = 0; again < RECHECKS && best && !fits(best.ms); again += 1) {
+      await this.sleep(RECHECK_DELAY_MS);
+      const next = await this.measureClip(modelId, options);
+      if (!next) break;
+      checks.push(next.ms);
+      if (next.ms < best.ms) best = next;
+    }
+    return best ? { ...best, checks } : null;
+  }
+
+  /**
    * At launch, after the pre-warm: detect this Mac, and read the clip with
    * `small.en` when the stored record is from another version or another
    * Mac. Only Apple Silicon is timed: elsewhere the bundle's model stays.
@@ -388,6 +421,7 @@ class DeviceTier extends EventEmitter {
         device,
         smallClipMs: kept("smallClipMs"),
         smallClipReads: kept("smallClipReads"),
+        smallClipChecks: kept("smallClipChecks"),
         turboClipMs: kept("turboClipMs"),
         measuredAt: kept("measuredAt"),
         // A cancelled download stays cancelled, after an update and on a new Mac.
@@ -399,16 +433,24 @@ class DeviceTier extends EventEmitter {
         this.measuring = true;
         this.publish();
         try {
-          const small = await this.measureClip(BENCHMARK_MODEL);
+          const { predictTurboSegmentMs, SEGMENT_BUDGET_MS } = await loadSpeechTier();
+          const small = await this._measureFastest(
+            BENCHMARK_MODEL,
+            (ms) => predictTurboSegmentMs({ smallClipMs: ms }) <= SEGMENT_BUDGET_MS
+          );
           if (small) {
             fresh = true;
             this.record.smallClipMs = small.ms;
             this.record.smallClipReads = small.reads;
+            this.record.smallClipChecks = small.checks;
             this.record.measuredAt = new Date(this.now()).toISOString();
           }
           // Turbo is on disk from before: time it too, with this version's server.
           if (small && this.turboInstalled()) {
-            const turbo = await this.measureClip(TURBO_MODEL);
+            const turbo = await this._measureFastest(
+              TURBO_MODEL,
+              (ms) => predictTurboSegmentMs({ turboClipMs: ms }) <= SEGMENT_BUDGET_MS
+            );
             this.record.turboClipMs = turbo ? turbo.ms : null;
           }
         } finally {
@@ -501,7 +543,12 @@ class DeviceTier extends EventEmitter {
       this.publish();
       // However long a recording lasts: the default changes only after it,
       // so a conversation never switches models halfway.
-      const turbo = await this.measureClip(TURBO_MODEL, { waitMs: Infinity });
+      const { predictTurboSegmentMs, SEGMENT_BUDGET_MS } = await loadSpeechTier();
+      const turbo = await this._measureFastest(
+        TURBO_MODEL,
+        (ms) => predictTurboSegmentMs({ turboClipMs: ms }) <= SEGMENT_BUDGET_MS,
+        { waitMs: Infinity }
+      );
       if (turbo && this.record) {
         this.record.turboClipMs = turbo.ms;
         this._save();

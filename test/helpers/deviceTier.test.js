@@ -311,11 +311,11 @@ test("the check runs once per app version and per Mac", async () => {
     const other = tierFor(env, {
       appVersion: "0.3.0",
       detect: async () => ({ ...M5_PRO, chip: "Apple M4", gpuCores: 10, memoryBytes: 16 * GIB }),
-      time: scripted([400]),
+      time: scripted([180]),
     }).tier;
     await other.ensureMeasured();
     assert.equal(env.servers.length, 3);
-    assert.equal(other.snapshot().smallClipMs, 400);
+    assert.equal(other.snapshot().smallClipMs, 180);
   } finally {
     env.cleanup();
   }
@@ -598,4 +598,38 @@ test("main and the rule name the same models", () => {
   assert.equal(BENCHMARK_MODEL, speechTier.BENCHMARK_MODEL);
   assert.ok(registry.whisperModels[TURBO_MODEL], "turbo is in the registry");
   assert.equal(registry.whisperModels[TURBO_MODEL].fileName, "ggml-large-v3-turbo-q5_0.bin");
+});
+
+test("a check that says turbo does not fit is read again, and the fastest counts", async () => {
+  const env = setup();
+  try {
+    const waits = [];
+    // A busy GPU: the first check reads 4 times slow, the second does not.
+    const { tier } = tierFor(env, {
+      time: scripted([780, 624, 180, 160]),
+      sleep: async (ms) => waits.push(ms),
+    });
+    const record = await tier.ensureMeasured();
+    assert.equal(record.smallClipMs, 160);
+    assert.deepEqual(record.smallClipChecks, [624, 160]);
+    assert.deepEqual(waits, [20_000], "one more check, 20 s later");
+    assert.equal(env.servers.length, 2);
+
+    // A Mac that is slow every time: three checks, then small.en.
+    const env2 = setup();
+    const slow = tierFor(env2, { time: scripted([700]), sleep: async () => {} }).tier;
+    const slowRecord = await slow.ensureMeasured();
+    assert.deepEqual(slowRecord.smallClipChecks, [700, 700, 700]);
+    env2.cleanup();
+
+    // A fast first check is not doubted: contention never makes a read faster.
+    const env3 = setup();
+    const fast = tierFor(env3, { time: scripted([200, 160]), sleep: async () => {} }).tier;
+    const fastRecord = await fast.ensureMeasured();
+    assert.deepEqual(fastRecord.smallClipChecks, [160]);
+    assert.equal(env3.servers.length, 1);
+    env3.cleanup();
+  } finally {
+    env.cleanup();
+  }
 });

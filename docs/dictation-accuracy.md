@@ -684,12 +684,25 @@ The noise, on the M5 Pro under the GPU lock that this Mac's benchmarks share
 | turbo q5_0, `auto`                                        | 4   | 1251 ms | 1196–1307 ms |
 | `small.en`, one server, 10 warm reads, 17 minutes earlier | 10  | 173 ms  | 164–177 ms   |
 
-So one check moves by about ±5% within a run, and by about 12% between two
-runs 17 minutes apart. On the M5 Pro that moves the prediction between about
-580 and 690 ms, inside the budget either way. A Mac near the boundary can land on
+The app's own check (`DeviceTier` with the real whisper-server, run in Node
+under the same lock, 30 minutes later):
+
+| the check                                       | n   | median | range                                     |
+| ----------------------------------------------- | --- | ------ | ----------------------------------------- |
+| `small.en` on a new server (first launch)       | 10  | 169 ms | 156–200 ms, and 624 and 727 ms in 2 of 10 |
+| `small.en` on the pre-warmed app server         | 6   | 167 ms | 158–188 ms                                |
+| turbo q5_0 on a new server (after the download) | 6   | 639 ms | 622–675 ms                                |
+
+So one check moves by about ±5% within a run, and by about 12% between runs.
+On the M5 Pro that moves the prediction between about 580 and 780 ms, inside
+the budget. But 2 of the 10 first-launch checks read the clip 4 times slower,
+in both of their reads, which points to another program on the GPU at that
+moment. A busy GPU only ever makes a check slower, so **a check that says
+turbo does not fit is read again, up to twice, 20 s apart, and the fastest
+counts**; a fast check stands. A Mac near the boundary can still land on
 either side from one version to the next, and turbo's own time after the
-download is what decides it. The check itself takes under a second here: a
-model load of about 0.3 s and two reads.
+download decides it. From start to finish one check took 2–5 s in these runs
+(the model loads in about 0.3 s).
 
 The boundary is a Mac that reads the clip 1.33 times slower than the M5 Pro
 (about 205 ms).
