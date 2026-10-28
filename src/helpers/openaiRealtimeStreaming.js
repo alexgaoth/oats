@@ -46,7 +46,7 @@ class OpenAIRealtimeStreaming {
     this.connectionTimeout = null;
     this.isDisconnecting = false;
     this.audioBytesSent = 0;
-    this.model = "gpt-4o-mini-transcribe";
+    this.model = "gpt-transcribe";
     this.inputRate = SAMPLE_RATE;
     this.captureRate = SAMPLE_RATE;
     this.coldStartBuffer = [];
@@ -83,7 +83,7 @@ class OpenAIRealtimeStreaming {
     if (!this.bufferingAudio) this.beginConnecting();
 
     this.isConnecting = true;
-    this.model = model || "gpt-4o-mini-transcribe";
+    this.model = model || "gpt-transcribe";
     this.preconfigured = !!preconfigured;
     this.inputRate = inputRate || SAMPLE_RATE;
     this.captureRate = captureRate || this.inputRate;

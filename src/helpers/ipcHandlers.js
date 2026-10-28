@@ -82,7 +82,8 @@ const REALTIME_PROVIDER_CATALOG = [
     name: "OpenAI",
     keySetting: "openaiApiKey",
     models: [
-      { id: "gpt-4o-mini-transcribe", name: "GPT-4o mini Transcribe", default: true },
+      { id: "gpt-transcribe", name: "GPT Transcribe", default: true },
+      { id: "gpt-4o-mini-transcribe", name: "GPT-4o mini Transcribe" },
       { id: "gpt-4o-transcribe", name: "GPT-4o Transcribe" },
     ],
   },
@@ -642,7 +643,8 @@ class IPCHandlers {
     if (provider === "custom") return trimmed || "whisper-1";
     if (trimmed) {
       const isGroq = trimmed.startsWith("whisper-large-v3");
-      const isOpenAI = trimmed.startsWith("gpt-4o") || trimmed === "whisper-1";
+      const isOpenAI =
+        trimmed.startsWith("gpt-4o") || trimmed === "gpt-transcribe" || trimmed === "whisper-1";
       const isMistral = trimmed.startsWith("voxtral-");
       if (provider === "groq" && isGroq) return trimmed;
       if (provider === "openai" && isOpenAI) return trimmed;
@@ -651,7 +653,7 @@ class IPCHandlers {
     if (provider === "groq") return "whisper-large-v3-turbo";
     if (provider === "xai") return "grok-stt";
     if (provider === "mistral") return "voxtral-mini-latest";
-    return "gpt-4o-mini-transcribe";
+    return "gpt-transcribe";
   }
 
   _cleanupTextEditMonitor() {
@@ -6064,7 +6066,7 @@ class IPCHandlers {
           } else {
             await streaming.connect({
               apiKey,
-              model: options.model || "gpt-4o-mini-transcribe",
+              model: options.model || "gpt-transcribe",
               // OpenAI rejects rates below 24kHz; the 16kHz capture is upsampled instead.
               captureRate: 16000,
               preconfigured: isCloud,

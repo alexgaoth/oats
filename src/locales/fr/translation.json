@@ -1501,7 +1501,8 @@
       },
       "transcription": {
         "openai_gpt_4o_mini_transcribe": "Transcription rapide et précise",
-        "openai_gpt_4o_transcribe": "Transcription la plus précise",
+        "openai_gpt_transcribe": "Transcription la plus précise",
+        "openai_gpt_4o_transcribe": "Génération précédente",
         "openai_whisper_1": "Modèle Whisper original",
         "groq_whisper_large_v3": "Reconnaissance vocale haute précision",
         "groq_whisper_large_v3_turbo": "Vitesse 216x en temps réel",

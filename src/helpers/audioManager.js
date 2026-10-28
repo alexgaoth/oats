@@ -50,7 +50,7 @@ import { getDictionaryHintWords } from "../utils/snippets";
 
 const REASONING_CACHE_TTL = 30000; // 30 seconds
 const RECORDING_TIMESLICE_MS = 250; // flush chunks periodically so short recordings still carry audio frames. See #871.
-const REALTIME_MODELS = new Set(["gpt-4o-mini-transcribe", "gpt-4o-transcribe"]);
+const REALTIME_MODELS = new Set(["gpt-transcribe", "gpt-4o-mini-transcribe", "gpt-4o-transcribe"]);
 
 function dictationAgentReachable(settings) {
   return resolveDictationAgentReachability({
@@ -1651,7 +1651,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     if (!normalized || normalized === "whisper-1") {
       return false;
     }
-    if (normalized === "gpt-4o-transcribe" || normalized === "gpt-4o-transcribe-diarize") {
+    if (
+      normalized === "gpt-transcribe" ||
+      normalized === "gpt-4o-transcribe" ||
+      normalized === "gpt-4o-transcribe-diarize"
+    ) {
       return true;
     }
     return normalized.startsWith("gpt-4o-mini-transcribe");
@@ -2256,7 +2260,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       // Validate model matches provider to handle settings migration
       if (trimmedModel) {
         const isGroqModel = trimmedModel.startsWith("whisper-large-v3");
-        const isOpenAIModel = trimmedModel.startsWith("gpt-4o") || trimmedModel === "whisper-1";
+        const isOpenAIModel =
+          trimmedModel.startsWith("gpt-4o") ||
+          trimmedModel === "gpt-transcribe" ||
+          trimmedModel === "whisper-1";
         const isMistralModel = trimmedModel.startsWith("voxtral-");
 
         if (provider === "groq" && isGroqModel) {
@@ -2275,9 +2282,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       if (provider === "groq") return "whisper-large-v3-turbo";
       if (provider === "xai") return "grok-stt";
       if (provider === "mistral") return "voxtral-mini-latest";
-      return "gpt-4o-mini-transcribe";
+      return "gpt-transcribe";
     } catch (error) {
-      return "gpt-4o-mini-transcribe";
+      return "gpt-transcribe";
     }
   }
 

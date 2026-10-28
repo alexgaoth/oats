@@ -234,7 +234,7 @@ const getMeetingTranscriptionOptions = () => {
       {},
       "meeting"
     );
-    return { provider: "openai-realtime" as const, model: "gpt-4o-mini-transcribe", mode };
+    return { provider: "openai-realtime" as const, model: "gpt-transcribe", mode };
   }
   const model =
     provider.models.find((m) => m.id === resolved.cloudTranscriptionModel)?.id ??
