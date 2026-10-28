@@ -57,11 +57,6 @@ export async function wireDownloads() {
   for (const label of document.querySelectorAll("[data-arch-label]")) {
     label.textContent = primary === "x64" ? "Intel" : "Apple Silicon";
   }
-  // The two builds bundle different speech models, so they differ in size:
-  // each element names both sizes and shows the one this button serves.
-  for (const size of document.querySelectorAll("[data-arch-size]")) {
-    size.textContent = primary === "x64" ? size.dataset.x64 : size.dataset.arm64;
-  }
   for (const other of document.querySelectorAll("[data-other-arch]")) {
     const which = primary === "x64" ? "arm64" : "x64";
     other.href = DMG[which];

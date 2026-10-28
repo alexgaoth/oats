@@ -323,7 +323,6 @@ async function Y() {
 		e.href = K[n], e.dataset.download === "primary" && (e.dataset.arch = n);
 	}
 	for (let e of document.querySelectorAll("[data-arch-label]")) e.textContent = t === "x64" ? "Intel" : "Apple Silicon";
-	for (let e of document.querySelectorAll("[data-arch-size]")) e.textContent = t === "x64" ? e.dataset.x64 : e.dataset.arm64;
 	for (let e of document.querySelectorAll("[data-other-arch]")) {
 		let n = t === "x64" ? "arm64" : "x64";
 		e.href = K[n], e.textContent = n === "x64" ? "Intel Mac? Get the Intel build" : "On Apple Silicon? Get that build";
