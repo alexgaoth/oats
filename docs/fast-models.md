@@ -83,8 +83,12 @@ quoted in at least one request; no request failed and none was malformed.
   Sonnet 5.5 cut more often than the annotators (10.3 and 10.5 topics a
   meeting against 8.0) and lose on false cuts.
 - **Bedrock: none.** Kimi K3 and GLM 5 are no better than main (each interval
-  includes 0); Claude Opus 4.6, the strongest Claude this account can use there,
-  was throttled (HTTP 429) at the replay's pace.
+  includes 0). Claude Opus 4.6, the strongest Claude this account can use there,
+  was throttled (HTTP 429) at the replay's pace, so it ran on 6 tuning meetings
+  only, one at a time: 0.290 against main's 0.316 there (Δ −0.026 [−0.085,
+  +0.042]), with 13 of its 105 answers not the asked JSON (the Converse request
+  here carries no JSON schema), 2.4 s p50 and 6.7 s p95, $0.34 an hour. Its
+  naming run was stopped for the same throttling.
 - **gpt-5.5-pro cannot run the check**: a check took 44 s and used its whole
   2,200-token cap on reasoning (the app waits 15 s).
 - **Screening on 6 meetings misled**: on 6 tuning meetings Fable 5.1 led
@@ -171,11 +175,12 @@ Screening for the check (V4, live Pk), before eval24, on the 12 tuning meetings
 | claude-fable-5-1 | | 0.254 |
 | gpt-6-astra, low | | 0.280 |
 | claude-opus-5-5, low | | 0.291 |
+| Bedrock Claude Opus 4.6 | | 0.290 |
 | Bedrock Kimi K3 | | 0.307 |
 | Bedrock GLM 5 | | 0.332 |
 
-Spend for this section: $84 of API calls (budget stop in the ledger), all on
-public AMI data. Two runs that a budget stop had cut short (the stop was raised
+Spend for this section: $85 of API calls (OpenAI $36, Anthropic $40, Bedrock
+$9; budget stop in the ledger), all on public AMI data. Two runs that a budget stop had cut short (the stop was raised
 mid-way) are left out of the tables; each model was run again.
 
 ## Decision (Alex, 2026-10-26) and V4 in the app
