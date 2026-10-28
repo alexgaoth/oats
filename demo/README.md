@@ -166,7 +166,9 @@ in three conversation groups, instead of the samples: `harness/many.mjs`),
 `connections=lanes|graph`, `badges=1` (show the "Example" badge on the demo's
 conversations), `autosearch=1` (turn auto-search on; the fake main process
 writes each search down instead of opening a browser, and
-`oatsDemo.searches()` lists them, so a film can show the browser opening).
+`oatsDemo.searches()` lists them, so a film can show the browser opening),
+`speech=de` (Oats listens for that language instead of English, so Global
+conversations links by words, as before it read meaning).
 `panel=true` is the app's own parameter for the workspace window.
 
 The harness sets the demo's settings on every load: onboarding done, English,
@@ -219,6 +221,12 @@ where the main process and the microphone stand:
   answers the summary action with the sample's title and summary. Then the
   reader's edits are made as the reading view makes them: each voice named,
   and notes added to two marks.
+- Global conversations links topics by the meaning of their names, embedded by
+  the app's all-MiniLM-L6-v2 (`embed-texts`). The browser cannot run that
+  model, so the fake main answers from a table of the samples' topic names
+  made with it (`harness/topicVectors.json`, written by `node
+demo/harness/build-topic-vectors.mjs`; run it again when a fixture's topics
+  change). A name not in the table gets a zero vector and links to nothing.
 - One exception: during a seek, the skipped seconds' microphone levels are
   published as `MeetingRecordingMount` publishes them (`currentMicLevel`), one a
   second, because the meter samples in real time.

@@ -27,6 +27,9 @@ const NAMES = [
   { name: "News embargo timing", words: /\b(embargo|announcement|press|outlets?)\b/gi },
 ];
 
+/** The names it gives, for the harness's topic vectors (`build-topic-vectors.mjs`). */
+export const DEMO_TOPIC_NAMES = NAMES.map((entry) => entry.name);
+
 /** The stub's answer to a topic-naming prompt, or null when it has no name to give. */
 export function demoTopicName(prompt) {
   const text = String(prompt ?? "");
