@@ -2411,6 +2411,8 @@
       "declinedDetail": "最準確的模型：從 Hugging Face 下載 {{size}}",
       "slow": "Whisper Turbo 在這台 Mac 上太慢",
       "slowDetail": "它在這裡跟不上對話，所以 Oats 使用內建的模型。",
+      "detection": "開啟語言偵測時 Whisper Turbo 太慢",
+      "detectionDetail": "在 設定 › 錄音 中選擇轉錄語言，Oats 就會使用它。",
       "retry": "重試",
       "cancelDownload": "取消下載 Whisper Turbo"
     }

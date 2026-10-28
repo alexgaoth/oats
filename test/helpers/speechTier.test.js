@@ -281,3 +281,29 @@ test("this Mac's GPU against the reference, for the next local model", () => {
   assert.equal(tier.gpuSpeed(null), null);
   assert.equal(tier.gpuSpeed(0), null);
 });
+
+test("turbo on disk but idle under detection says how to use it", () => {
+  const smallClipMs = tier.REFERENCE.clipMs.smallEn;
+  const APPLE_EN = tier.chooseSpeechModel({ ...APPLE, smallClipMs, language: "en" });
+  const auto = tier.chooseSpeechModel({ ...APPLE, smallClipMs, language: "auto" });
+  assert.equal(
+    tier.turboStatus({
+      choice: auto,
+      followsDefault: true,
+      turbo: { installed: true },
+      englishChoice: APPLE_EN,
+    }),
+    "detection"
+  );
+  // Too slow in English as well: plain "slow".
+  const slowEnglish = tier.chooseSpeechModel({ ...APPLE, smallClipMs: smallClipMs * 2 });
+  assert.equal(
+    tier.turboStatus({
+      choice: slowEnglish,
+      followsDefault: true,
+      turbo: { installed: true },
+      englishChoice: slowEnglish,
+    }),
+    "slow"
+  );
+});

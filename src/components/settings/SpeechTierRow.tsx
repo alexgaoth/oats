@@ -35,6 +35,7 @@ export function SpeechTierRow() {
     failed: [t("oats.speechTier.failed"), t("oats.speechTier.failedDetail")],
     declined: [t("oats.speechTier.declined"), t("oats.speechTier.declinedDetail", { size })],
     slow: [t("oats.speechTier.slow"), t("oats.speechTier.slowDetail")],
+    detection: [t("oats.speechTier.detection"), t("oats.speechTier.detectionDetail")],
   }[status];
 
   return (

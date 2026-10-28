@@ -37,7 +37,8 @@ export function cancelTurbo(): void {
 /**
  * This Mac's speech tier, for the surfaces that show it: the choice the rule
  * made (speechTier.mjs), whether the setting follows it, and what turbo is
- * doing ("downloading", "checking", "ready", "failed", "declined", "slow").
+ * doing ("downloading", "checking", "ready", "failed", "declined", "slow",
+ * "detection").
  */
 export function useSpeechTier() {
   const tier = useDeviceTierStore((state) => state.tier);
@@ -48,8 +49,9 @@ export function useSpeechTier() {
   useSettingsStore((state) => state.whisperModel);
   const followsDefault = whisperModelFollowsDefault();
   const choice = useMemo(() => speechChoiceFor(tier, language), [tier, language]);
+  const englishChoice = useMemo(() => speechChoiceFor(tier, "en"), [tier]);
   const turbo = tier?.turbo ?? null;
-  const status = turboStatus({ choice, followsDefault, turbo: turbo ?? {} });
+  const status = turboStatus({ choice, followsDefault, turbo: turbo ?? {}, englishChoice });
   const downloading = turbo?.downloading ?? null;
   const total = downloading?.totalBytes || turbo?.sizeBytes || 0;
   const percent =

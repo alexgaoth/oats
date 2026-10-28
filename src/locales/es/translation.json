@@ -2416,6 +2416,8 @@
       "declinedDetail": "El modelo más preciso: {{size}} desde Hugging Face",
       "slow": "Whisper Turbo es demasiado lento en este Mac",
       "slowDetail": "Aquí no sigue el ritmo de una conversación, así que Oats usa el modelo con el que vino.",
+      "detection": "Whisper Turbo es demasiado lento con la detección de idioma",
+      "detectionDetail": "Elige el idioma de transcripción en Ajustes › Grabación y Oats lo usará.",
       "retry": "Reintentar",
       "cancelDownload": "Cancelar la descarga de Whisper Turbo"
     }

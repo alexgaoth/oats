@@ -576,3 +576,11 @@ test("after the download, the switch waits for a recording to end, however long"
     env.cleanup();
   }
 });
+
+test("main and the rule name the same models", () => {
+  const { BENCHMARK_MODEL } = require("../../src/helpers/deviceTier");
+  assert.equal(TURBO_MODEL, speechTier.TURBO_MODEL);
+  assert.equal(BENCHMARK_MODEL, speechTier.BENCHMARK_MODEL);
+  assert.ok(registry.whisperModels[TURBO_MODEL], "turbo is in the registry");
+  assert.equal(registry.whisperModels[TURBO_MODEL].fileName, "ggml-large-v3-turbo-q5_0.bin");
+});

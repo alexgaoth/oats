@@ -2416,6 +2416,8 @@
       "declinedDetail": "最も正確なモデル: Hugging Face から {{size}}",
       "slow": "この Mac では Whisper Turbo が遅すぎます",
       "slowDetail": "ここでは会話に追いつけないため、Oats は付属のモデルを使います。",
+      "detection": "言語の自動検出では Whisper Turbo が遅すぎます",
+      "detectionDetail": "設定 › 録音 で文字起こし言語を選ぶと、Oats は Whisper Turbo を使います。",
       "retry": "再試行",
       "cancelDownload": "Whisper Turbo のダウンロードをキャンセル"
     }

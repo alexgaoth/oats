@@ -244,15 +244,18 @@ export function shouldFetchTurbo({ choice, setupDone, followsDefault, local, tur
  * - "failed", "declined": turbo is the default, and it did not download, or
  *   the person cancelled or deleted it.
  * - "slow": turbo is on disk, but its own time on this Mac does not fit.
+ * - "detection": turbo is on disk and fits in English, but not with language
+ *   detection ("auto"), which is the setting now.
  *
  * @param {object} input
  * @param {{ model: string, reason?: string }} input.choice
  * @param {boolean} input.followsDefault
  * @param {{ installed?: boolean, declined?: boolean, downloading?: unknown,
  *   checking?: boolean, failed?: unknown }} input.turbo
- * @returns {"downloading" | "checking" | "ready" | "failed" | "declined" | "slow" | null}
+ * @param {{ model: string } | null} [input.englishChoice] The same Mac's choice in English.
+ * @returns {"downloading" | "checking" | "ready" | "failed" | "declined" | "slow" | "detection" | null}
  */
-export function turboStatus({ choice, followsDefault, turbo = {} }) {
+export function turboStatus({ choice, followsDefault, turbo = {}, englishChoice = null }) {
   if (turbo.downloading) return "downloading";
   if (turbo.checking) return "checking";
   if (!followsDefault) return null;
@@ -262,7 +265,9 @@ export function turboStatus({ choice, followsDefault, turbo = {} }) {
     if (turbo.declined) return "declined";
     return null;
   }
-  if (turbo.installed && choice?.reason === "too-slow") return "slow";
+  if (turbo.installed && choice?.reason === "too-slow") {
+    return englishChoice?.model === TURBO_MODEL ? "detection" : "slow";
+  }
   return null;
 }
 

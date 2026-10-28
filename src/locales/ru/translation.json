@@ -2462,6 +2462,8 @@
       "declinedDetail": "Самая точная модель: {{size}} с Hugging Face",
       "slow": "Whisper Turbo слишком медленный на этом Mac",
       "slowDetail": "Здесь он не успевает за разговором, поэтому Oats использует встроенную модель.",
+      "detection": "Whisper Turbo слишком медленный с определением языка",
+      "detectionDetail": "Выберите язык транскрипции в Настройках › Запись, и Oats будет его использовать.",
       "retry": "Повторить",
       "cancelDownload": "Отменить загрузку Whisper Turbo"
     }
