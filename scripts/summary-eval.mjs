@@ -219,7 +219,12 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
     const port = localPorts.get(model);
     if (!port) throw new Error(`No llama-server for ${model}`);
     // localReasoningBridge.js: maxTokens from the text's length; llamaServer.js: the body.
-    const maxTokens = Math.max(512, Math.min(user.length * 2, 2048));
+    // @out4096 (a measurement, not the app): room for a model that reasons first.
+    const outLimit = Number(options.find((o) => /^out\d+$/.test(o))?.slice(3)) || 2048;
+    const maxTokens = Math.max(512, Math.min(user.length * 2, outLimit));
+    // @low/@medium/@high (a measurement, not the app): GPT-OSS's reasoning effort,
+    // which its chat template reads; the app sends none, so the template's medium.
+    const effort = options.find((o) => /^(low|medium|high)$/.test(o));
     const res = await postJson(
       `http://127.0.0.1:${port}/v1/chat/completions`,
       {},
@@ -231,7 +236,10 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
         temperature: 0.3,
         max_tokens: maxTokens,
         stream: false,
-        chat_template_kwargs: { enable_thinking: false },
+        chat_template_kwargs: {
+          enable_thinking: false,
+          ...(effort ? { reasoning_effort: effort } : {}),
+        },
         // The speed runs read the same conversation twice: the second must not
         // reuse the first one's prompt cache, as a new conversation cannot.
         ...(freshPrompt ? { cache_prompt: false } : {}),
