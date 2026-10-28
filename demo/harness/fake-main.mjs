@@ -10,6 +10,7 @@
 
 import { placeSampleConversation } from "../../src/helpers/sampleConversations.mjs";
 import { demoAgentAnswer, folderStatus, searchDemoContext } from "./context.mjs";
+import { demoTopicVector } from "./topicVectors.mjs";
 
 // The columns `DatabaseManager.updateNote` accepts.
 const UPDATABLE = new Set([
@@ -504,6 +505,12 @@ export function createFakeMain({
       if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
       return { success: true, text: answer.text };
     },
+
+    // --- Topic vectors, for the board's links by meaning (`embed-texts`).
+    embedTexts: async (texts) => ({
+      success: true,
+      vectors: (Array.isArray(texts) ? texts : []).map(demoTopicVector),
+    }),
 
     // --- Recording, which the replay drives.
     requestToggleConversation: async () => emit("onToggleConversation"),

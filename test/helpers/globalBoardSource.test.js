@@ -36,7 +36,11 @@ test("an open question is drawn with the one question mark, ringed in honey when
   const widget = read("src/components/global/OpenQuestionsWidget.tsx");
   assert.match(widget, /import \{ StateMark \} from "\.\.\/conversation\/ConversationSignalRail";/);
   assert.match(widget, /<StateMark state=\{row\.state\} className="" \/>/);
-  assert.match(widget, /honey && "ring-2 ring-primary"/, "lit as a chart lights a dot: a honey ring");
+  assert.match(
+    widget,
+    /honey && "ring-2 ring-primary"/,
+    "lit as a chart lights a dot: a honey ring"
+  );
   assert.match(widget, /t\("questionCard\.state\.denied"\)/, "nobody knew is said, not only drawn");
 });
 
@@ -168,4 +172,28 @@ test("a label forced on top covers the labels it lands on whole, never leaving a
     named.indexOf("coverLabel(") < named.indexOf("paintLabels(ctx, named"),
     "the labels underneath are covered before the forced one is drawn"
   );
+});
+
+test("the board links by meaning when it can, and by words when it cannot", () => {
+  const data = read("src/components/global/useBoardData.ts");
+  assert.match(
+    data,
+    /ready && vectorOf \? meaningThreads\(withTopics, \{ vectorOf \}\) : subjectThreads\(withTopics\)/,
+    "words until the vectors are there, and whenever they cannot be"
+  );
+  const board = read("src/components/global/GlobalConversations.tsx");
+  assert.match(board, /const meaning = useTopicVectors\(conversations\);/);
+  assert.match(board, /useTabGraph\(inTab, meaning\)/);
+  const vectors = read("src/components/global/topicVectors.ts");
+  assert.match(
+    vectors,
+    /state\.preferredLanguage === "en"/,
+    "the bundled model reads English: another language links by words"
+  );
+  assert.match(
+    vectors,
+    /window\.electronAPI\?\.embedTexts/,
+    "the vectors are the app's own model's"
+  );
+  assert.doesNotMatch(vectors, /fetch\(/, "and nothing leaves the computer");
 });

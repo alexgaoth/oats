@@ -12,6 +12,7 @@
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
 //
 // Page parameters choose the rest: `firstrun=1` (the setup screen),
+// `speech=de` (the language Oats listens for; English by default),
 // `theme=light|dark`, `view=calm|words`
 // (the recording view), `flow=lanes|graph` (the flow card),
 // `connections=lanes|graph` (the reading view's Connections tab).
@@ -32,6 +33,9 @@ export function applyDemoSettings(params) {
     set("onboardingCompleted", "true");
   }
   set("uiLanguage", params.get("lang") || "en");
+  // `speech=de` (any language but English): Oats listens for that language, so
+  // the board links conversations by words, as it did before it read meaning.
+  set("preferredLanguage", params.get("speech") || "en");
   set("uiMode", "work");
   set("theme", params.get("theme") === "dark" ? "dark" : "light");
   set("conversationDetail", VIEWS[params.get("view")] ?? "clean");
