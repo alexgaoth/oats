@@ -175,6 +175,10 @@
     "language": {
       "title": "Language",
       "description": "The language spoken in the room"
+    },
+    "speechModel": {
+      "title": "Speech model",
+      "description": "This Mac can run Whisper Turbo, the most accurate model. It downloads from Hugging Face after setup: {{size}}."
     }
   },
   "streaming": {
@@ -2397,6 +2401,23 @@
       "modelOn": "{{model}} on {{backend}}",
       "requests_one": "{{count}} network request since launch",
       "requests_other": "{{count}} network requests since launch"
+    },
+    "speechTier": {
+      "downloading": "Downloading Whisper Turbo",
+      "downloadingShort": "Downloading Whisper Turbo: {{percent}}%",
+      "progress": "{{percent}}% of {{size}}. Until it is ready, Oats uses the model it came with.",
+      "checking": "Checking Whisper Turbo",
+      "checkingDetail": "A short test on this Mac's GPU",
+      "ready": "Whisper Turbo, chosen for this Mac",
+      "readyDetail": "Its GPU keeps up with the most accurate model during a conversation",
+      "failed": "Whisper Turbo did not download",
+      "failedDetail": "Oats uses the model it came with.",
+      "declined": "This Mac can run Whisper Turbo",
+      "declinedDetail": "The most accurate model: {{size}} from Hugging Face",
+      "slow": "Whisper Turbo is too slow on this Mac",
+      "slowDetail": "It cannot keep up with a conversation here, so Oats uses the model it came with.",
+      "retry": "Try again",
+      "cancelDownload": "Cancel the Whisper Turbo download"
     }
   },
   "questionCard": {

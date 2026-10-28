@@ -171,6 +171,7 @@ import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
+import { useSpeechUpgrade } from "../hooks/useSpeechTier";
 import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 import type {
   ConversationEvent,
@@ -3787,6 +3788,9 @@ function SidebarButton({
 
 export default function OatsWorkspace() {
   const { t } = useTranslation();
+  // The workspace shows only after setup: from here on, a Mac whose GPU
+  // measured fast enough fetches Whisper Turbo (speechTier.mjs).
+  useSpeechUpgrade();
   const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
   // Whether the Conversations page is searching, as it reports it. Search in
