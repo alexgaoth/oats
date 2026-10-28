@@ -1,6 +1,7 @@
 import { getCleanupSystemPrompt } from "../config/prompts";
 import { getSettings } from "../stores/settingsStore";
 import { getDictionaryHintWords } from "../utils/snippets";
+import { DEFAULT_SPEECH_LANGUAGE } from "../helpers/speechLanguage.mjs";
 
 export interface ReasoningConfig {
   maxTokens?: number;
@@ -23,7 +24,7 @@ export abstract class BaseReasoningService {
   }
 
   protected getPreferredLanguage(): string {
-    return getSettings().preferredLanguage || "auto";
+    return getSettings().preferredLanguage || DEFAULT_SPEECH_LANGUAGE;
   }
 
   protected getUiLanguage(): string {

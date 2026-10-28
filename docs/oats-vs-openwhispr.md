@@ -94,12 +94,16 @@ _worst_ of the configurations above, and nobody measured it at the time.
 
 ## What you can still do
 
-**Set your language in Settings.** The default is "auto", which needs the
-multilingual model and costs ~140ms and about two points of WER. One click.
+**Check your language.** The default is English since 2026-10-26, which loads the
+English-only model. The setup screen shows it, and somebody who speaks another
+language chooses it there or in Settings, one click. "auto" is still a choice; it
+needs the multilingual model and costs ~140ms and about two points of WER.
 
-The default stays "auto" on purpose: guessing English from your OS locale would
-be right most of the time and badly wrong for somebody dictating German on an
-English laptop. Slow is recoverable; wrong is not.
+The default was "auto" until then, on purpose: guessing English from your OS
+locale would be badly wrong for somebody dictating German on an English laptop.
+In a room, detection turned out to be the bigger risk: it heard far voices as
+other languages (alexgaoth/oats#122). So English is the default, and the setup
+screen asks.
 
 **If you want the cloud back**, the setting is still there — Oats changed the
 default, not the capability.

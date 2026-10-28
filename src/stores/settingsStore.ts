@@ -31,6 +31,11 @@ import { resolveConversationDetail } from "../helpers/conversationDetail.mjs";
 import { resolveUiMode } from "../helpers/uiMode.mjs";
 import { resolveFlowView } from "../helpers/conversationFlow.mjs";
 import { resolveDictationEnabled } from "../helpers/dictationSetting.mjs";
+import {
+  DEFAULT_SPEECH_LANGUAGE,
+  migrateSpeechLanguageDefault,
+  resolveSpeechLanguage,
+} from "../helpers/speechLanguage.mjs";
 import { getCachedPlatform } from "../utils/platform";
 
 /** Which interface Oats wears. See `uiMode.mjs`. */
@@ -201,6 +206,9 @@ function migratePreferredLanguage() {
   if (stored && LANGUAGE_MIGRATIONS[stored]) {
     localStorage.setItem("preferredLanguage", LANGUAGE_MIGRATIONS[stored]);
   }
+  // English became the default on 2026-10-26. A stored "auto" is the old
+  // default, so it moves to English once; a choice made after that stays.
+  migrateSpeechLanguageDefault(localStorage);
 }
 
 migratePreferredLanguage();
@@ -976,7 +984,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   allowOpenAIFallback: readBoolean("allowOpenAIFallback", false),
   allowLocalFallback: readBoolean("allowLocalFallback", false),
   fallbackWhisperModel: readString("fallbackWhisperModel", "base"),
-  preferredLanguage: readString("preferredLanguage", "auto"),
+  // English unless the person chose another language (speechLanguage.mjs).
+  preferredLanguage: resolveSpeechLanguage(
+    readString("preferredLanguage", DEFAULT_SPEECH_LANGUAGE)
+  ),
   cloudTranscriptionProvider: readString("cloudTranscriptionProvider", "openai"),
   cloudTranscriptionModel: readString("cloudTranscriptionModel", "gpt-4o-mini-transcribe"),
   cloudTranscriptionBaseUrl: readString(

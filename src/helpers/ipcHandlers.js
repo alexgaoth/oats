@@ -3493,7 +3493,8 @@ class IPCHandlers {
           setVars.LOCAL_WHISPER_MODEL = prefs.model;
           clearVars.push("PARAKEET_MODEL");
           // The pre-warm needs the language to warm the English model when
-          // requests will ask for it.
+          // requests will ask for it. Detection arrives as "auto" and is kept
+          // as "auto": unset means the default, English (getSpeechLanguage).
           if (prefs.language) {
             setVars.LOCAL_WHISPER_LANGUAGE = prefs.language;
           } else {
@@ -4068,11 +4069,10 @@ class IPCHandlers {
       if (!buffer) return { success: false, error: "Audio file not found" };
       try {
         let result;
-        const preferredLanguage = settings?.preferredLanguage;
-        const language =
-          preferredLanguage && preferredLanguage !== "auto"
-            ? preferredLanguage.split("-")[0]
-            : undefined;
+        // A missing language is the default, English; only "auto" leaves it
+        // to the provider to detect.
+        const preferredLanguage = settings?.preferredLanguage || "en";
+        const language = preferredLanguage !== "auto" ? preferredLanguage.split("-")[0] : undefined;
         const { resolveSelfHostedRetryRoute } = await import("./retryTranscriptionRouting.js");
         const selfHostedRoute = resolveSelfHostedRetryRoute(settings);
 

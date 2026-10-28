@@ -171,6 +171,10 @@
       "shortcutTitle": "Aus jeder App starten",
       "shortcutDescription": "Drück sie erneut, um das Gespräch zu beenden.",
       "getStarted": "Los geht’s"
+    },
+    "language": {
+      "title": "Sprache",
+      "description": "Was im Raum gesprochen wird"
     }
   },
   "streaming": {
