@@ -302,8 +302,9 @@ node scripts/link-eval.mjs report
 ```
 
 Every stage is cached under `~/.cache/oats/link-eval`, so a rerun costs
-nothing. The whole benchmark cost $30.72 at list prices ($9.21 of it the 9
-gpt-5.5-pro requests).
+nothing. The whole benchmark cost $31.02 at list prices as the ledger counts
+them; $9.21 of it was the 9 gpt-5.5-pro requests, and 4 more of those were cut
+off when the run was stopped, which OpenAI may bill as well.
 
 ## Decisions for Alex
 
