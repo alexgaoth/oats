@@ -99,6 +99,8 @@ const { values: args, positionals } = parseArgs({
     key: { type: "string" },
     pairs: { type: "string" },
     regrade: { type: "string" },
+    "regrade-sets": { type: "string" },
+    dry: { type: "boolean", default: false },
   },
 });
 const command = positionals[0];
@@ -1009,10 +1011,14 @@ function planJudging(spec, pass) {
   // --regrade: these keys are graded again in this pass, beside the new ones,
   // to show whether a later wave grades the same summary the same way.
   const regrade = new Set(args.regrade ? args.regrade.split(",") : []);
+  // --regrade-sets ref: only these inputs of the regraded keys (an anchor on the
+  // manual transcripts, beside new summaries of every set).
+  const regradeSets = args["regrade-sets"] ? new Set(args["regrade-sets"].split(",")) : null;
   const summaries = loadSummaries(args.out, keys ? [...keys, ...regrade] : null).filter(
     (s) =>
       s.summary.ok &&
       (regrade.has(s.key) || !graded.has(`${s.key}/${s.input}`)) &&
+      (!regrade.has(s.key) || !regradeSets || regradeSets.has(s.set)) &&
       (!wanted || wanted.has(s.meeting)) &&
       (!sets || sets.has(s.set))
   );
@@ -1175,6 +1181,8 @@ async function judgeBatch(spec, chunks) {
   console.error(
     `batch of ${requests.length} chunks (${candidatesCount} summaries), about $${estimate.toFixed(2)}`
   );
+  // --dry: the plan and its estimate, nothing sent.
+  if (args.dry) return;
   const headers = { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2026-10-21" };
   const created = await postJson(
     "https://api.anthropic.com/v1/messages/batches",
