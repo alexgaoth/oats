@@ -69,10 +69,20 @@
  *                  (OPENAI_API_KEY in the environment) instead of whisper-server,
  *                  `--concurrency` at a time. Public corpora only: never a
  *                  person's own recording.
+ *   --realtime     or through an OpenAI realtime transcription session, one
+ *                  per recording, for the models that have no other endpoint
+ *                  (gpt-live-transcribe): turn detection off, each segment
+ *                  streamed at `--pace` times real time (default 1, as live)
+ *                  and committed; its time is from the commit, the end of its
+ *                  audio, to its transcript.
  *   --vad-config   VAD settings over the shipped ones, as JSON, e.g.
  *                  '{"threshold":0.35}' (Settings can change them).
  *   --normalize-rms an experiment, not the app: raise each segment to this RMS
  *                  before it is sent.
+ *   --every N      send only every Nth segment of each recording (from
+ *                  --every-offset, default 0), and score only the reference
+ *                  words inside them: a sample for paid models, the same
+ *                  segments for every model.
  *
  * Besides every word, three kinds of words are scored on their own, as the
  * share of them the transcript has (recall): the **content words**, what is
@@ -149,6 +159,9 @@ const NOISE_LEVEL = Number(arg("noise-level", "0.01"));
  * Whisper or its VAD.
  */
 const NORMALIZE = arg("normalize-rms") ? Number(arg("normalize-rms")) : null;
+/** A sample of the segments, for paid models: every Nth, from the offset. */
+const EVERY = Number(arg("every", "1"));
+const EVERY_OFFSET = Number(arg("every-offset", "0"));
 /** The VAD settings a person can change in Settings, over the shipped ones. */
 const VAD_CONFIG = sanitizeWhisperVadConfig({
   ...DEFAULT_WHISPER_VAD_CONFIG,
@@ -158,6 +171,8 @@ const SEGMENT_ONLY = flag("segment-only");
 const ABLATE_VAD = flag("ablate-vad");
 const ORACLE = flag("oracle");
 const CLOUD = arg("cloud");
+const REALTIME = arg("realtime");
+const PACE = Number(arg("pace", "1"));
 const CLOUD_CONCURRENCY = Number(arg("concurrency", "6"));
 const JSON_OUT = arg("json");
 const QUIET = flag("quiet");
@@ -509,8 +524,11 @@ function startCloud(model) {
             }
             throw new Error(`openai ${response.status}: ${body}`);
           }
-          const text = String((await response.json()).text ?? "").trim();
-          return { text, ms: Date.now() - started, failed: null, vadSegments: null };
+          const body = await response.json();
+          const text = String(body.text ?? "").trim();
+          // What the request was billed on (audio tokens or seconds), for the spend.
+          const usage = body.usage ?? null;
+          return { text, ms: Date.now() - started, failed: null, vadSegments: null, usage };
         } catch (error) {
           if (attempt < 5 && !/openai 4\d\d/.test(error.message)) {
             await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
@@ -521,6 +539,115 @@ function startCloud(model) {
       }
     },
     stop: async () => {},
+  };
+}
+
+/**
+ * OpenAI's realtime transcription, a session per recording (`--realtime`). The
+ * segmenter gives the turns, so the session's own turn detection is off; each
+ * segment goes out as the app streams a conversation, 24 kHz PCM in 100 ms
+ * chunks, then is committed.
+ */
+function startRealtime(model) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("--realtime needs OPENAI_API_KEY in the environment");
+  const WebSocket = require("ws");
+  let session = null;
+  const open = () =>
+    new Promise((resolve, reject) => {
+      const ws = new WebSocket("wss://api.openai.com/v1/realtime?intent=transcription", {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      const waiting = new Map();
+      const state = { ws, waiting, committed: null };
+      ws.on("error", reject);
+      ws.on("message", (data) => {
+        const event = JSON.parse(String(data));
+        if (event.type === "session.created") {
+          // gpt-live-transcribe takes a list of languages, the others one.
+          const transcription = { model };
+          if (LANGUAGE !== "auto") {
+            if (model === "gpt-live-transcribe") transcription.languages = [LANGUAGE];
+            else transcription.language = LANGUAGE;
+          }
+          ws.send(
+            JSON.stringify({
+              type: "session.update",
+              session: {
+                type: "transcription",
+                audio: {
+                  input: {
+                    format: { type: "audio/pcm", rate: CAPTURE_RATE },
+                    transcription,
+                    turn_detection: null,
+                  },
+                },
+              },
+            })
+          );
+        } else if (event.type === "session.updated") {
+          resolve(state);
+        } else if (event.type === "input_audio_buffer.committed") {
+          state.committed?.(event.item_id);
+          state.committed = null;
+        } else if (
+          event.type === "conversation.item.input_audio_transcription.completed" ||
+          event.type === "conversation.item.input_audio_transcription.failed"
+        ) {
+          const done = waiting.get(event.item_id);
+          waiting.delete(event.item_id);
+          done?.(
+            event.type.endsWith("completed")
+              ? { text: String(event.transcript ?? "").trim(), usage: event.usage ?? null }
+              : { text: "", failed: JSON.stringify(event.error ?? {}).slice(0, 160) }
+          );
+        } else if (event.type === "error") {
+          // A commit the server refused (an empty buffer) never gets an item.
+          state.committed?.(null);
+          state.committed = null;
+        }
+      });
+    });
+  const timeout = (ms, value) => new Promise((resolve) => setTimeout(() => resolve(value), ms));
+  return {
+    async transcribe(samples) {
+      if (!session) session = await open();
+      const raw = Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength);
+      const up = ffmpegPcm(
+        ["-f", "s16le", "-ar", String(RATE), "-ac", "1", "-i", "-"],
+        CAPTURE_RATE,
+        raw
+      );
+      const pcm = Buffer.from(up.buffer, up.byteOffset, up.byteLength);
+      const chunk = (CAPTURE_RATE / 10) * 2;
+      const started = Date.now();
+      for (let at = 0; at < pcm.length; at += chunk) {
+        const piece = pcm.subarray(at, Math.min(at + chunk, pcm.length));
+        session.ws.send(
+          JSON.stringify({ type: "input_audio_buffer.append", audio: piece.toString("base64") })
+        );
+        const due = started + ((at + chunk) / 2 / CAPTURE_RATE / PACE) * 1000;
+        if (due > Date.now()) await timeout(due - Date.now());
+      }
+      const item = new Promise((resolve) => (session.committed = resolve));
+      const committedAt = Date.now();
+      session.ws.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+      const id = await Promise.race([item, timeout(20_000, null)]);
+      if (!id) return { text: "", ms: Date.now() - committedAt, failed: "not committed" };
+      const result = await Promise.race([
+        new Promise((resolve) => session.waiting.set(id, resolve)),
+        timeout(60_000, { text: "", failed: "no transcript" }),
+      ]);
+      return { ...result, ms: Date.now() - committedAt, failed: result.failed ?? null };
+    },
+    /** A recording is done: its session closes, and the next one opens its own. */
+    async recordingDone() {
+      session?.ws.close();
+      session = null;
+    },
+    async stop() {
+      await this.recordingDone();
+    },
   };
 }
 
@@ -1106,6 +1233,16 @@ async function replay(recording, backend, ablation) {
       };
     });
   }
+  if (EVERY > 1) {
+    // A sample: every Nth segment, and only the reference words inside one.
+    segments = segments.filter((s) => s.index % EVERY === EVERY_OFFSET);
+    if (reference) {
+      const kept = merge(segments.map((s) => [s.start, s.end]));
+      const within = (w) => inside((w.start + w.end) / 2, kept);
+      reference.words = reference.words.filter(within);
+      reference.nonSpeech = reference.nonSpeech.filter(within);
+    }
+  }
   const segmentSeconds = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
   log(
     `${meeting}: ${seconds.toFixed(0)} s, ${segments.length} segments` +
@@ -1151,6 +1288,7 @@ async function replay(recording, backend, ablation) {
         }
       }
     }
+    await backend.recordingDone?.();
     log(`  transcribed in ${((Date.now() - started) / 1000).toFixed(0)} s`);
   }
 
@@ -1180,6 +1318,7 @@ async function replay(recording, backend, ablation) {
     gainDb: Number(gainDb.toFixed(1)),
     noise: NOISE ? { file: path.basename(NOISE), level: NOISE_LEVEL } : null,
     normalizeRms: NORMALIZE,
+    sample: EVERY > 1 ? { every: EVERY, offset: EVERY_OFFSET } : null,
     // Each second's level at the microphone, as the app keeps it: p05 is the room.
     secondLevels: Object.fromEntries(
       Object.entries(levels).map(([k, v]) => [k, Number(v.toFixed(4))])
@@ -1191,7 +1330,9 @@ async function replay(recording, backend, ablation) {
       ? null
       : CLOUD
         ? { cloud: CLOUD }
-        : { model: path.basename(MODEL), language: LANGUAGE, vad: VAD ? VAD_CONFIG : false },
+        : REALTIME
+          ? { realtime: REALTIME, pace: PACE }
+          : { model: path.basename(MODEL), language: LANGUAGE, vad: VAD ? VAD_CONFIG : false },
     segments: segments.length,
     segmentSeconds: Number(segmentSeconds.toFixed(1)),
     sentShare: pct(segmentSeconds, seconds),
@@ -1219,7 +1360,7 @@ async function replay(recording, backend, ablation) {
     summary.realTimeFactor = Number(
       (latencies.reduce((a, b) => a + b, 0) / 1000 / seconds).toFixed(4)
     );
-    if (!CLOUD && VAD) {
+    if (!CLOUD && !REALTIME && VAD) {
       summary.vadEmptied = segments.filter((s) => !s.text && s.vadSegments === 0).length;
       summary.vadSpeechSeconds = Number(
         segments.reduce((n, s) => n + (s.vadSpeechSeconds || 0), 0).toFixed(1)
@@ -1632,12 +1773,21 @@ function table(summaries) {
 
 async function main() {
   await loadContentWords();
-  const backend = SEGMENT_ONLY ? null : CLOUD ? startCloud(CLOUD) : await startLocal(VAD);
-  const ablation = !SEGMENT_ONLY && !CLOUD && ABLATE_VAD && VAD ? await startLocal(false) : null;
+  const remote = CLOUD || REALTIME;
+  const backend = SEGMENT_ONLY
+    ? null
+    : CLOUD
+      ? startCloud(CLOUD)
+      : REALTIME
+        ? startRealtime(REALTIME)
+        : await startLocal(VAD);
+  const ablation = !SEGMENT_ONLY && !remote && ABLATE_VAD && VAD ? await startLocal(false) : null;
   if (backend) {
     const label = CLOUD
       ? `cloud ${CLOUD}`
-      : `${path.basename(MODEL)} language ${LANGUAGE} vad ${VAD ? "on" : "off"}`;
+      : REALTIME
+        ? `realtime ${REALTIME}`
+        : `${path.basename(MODEL)} language ${LANGUAGE} vad ${VAD ? "on" : "off"}`;
     log(`transcribing with ${label}${ablation ? ", and again without VAD" : ""}`);
   }
   const recordings = LIBRISPEECH

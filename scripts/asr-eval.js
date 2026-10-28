@@ -229,21 +229,38 @@ function wavOf(samples) {
   return pcm16ToWav(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
 }
 
+/** One request, with the language the app sends when one is set; the text and what it was billed on. */
 async function cloudInference(wav) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("--cloud needs OPENAI_API_KEY in the environment");
-  const form = new FormData();
-  form.append("file", new Blob([wav], { type: "audio/wav" }), "a.wav");
-  form.append("model", CLOUD_MODEL);
-  form.append("response_format", "json");
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}` },
-    body: form,
-  });
-  if (!response.ok)
-    throw new Error(`openai ${response.status}: ${(await response.text()).slice(0, 160)}`);
-  return (await response.json()).text ?? "";
+  for (let attempt = 0; ; attempt += 1) {
+    const form = new FormData();
+    form.append("file", new Blob([wav], { type: "audio/wav" }), "a.wav");
+    form.append("model", CLOUD_MODEL);
+    form.append("response_format", "json");
+    if (LANGUAGE !== "auto") form.append("language", LANGUAGE);
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}` },
+        body: form,
+      });
+    } catch (error) {
+      // The network, not the model: try again, as the app's retries would.
+      if (attempt >= 5) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
+      continue;
+    }
+    if ((response.status === 429 || response.status >= 500) && attempt < 5) {
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
+      continue;
+    }
+    if (!response.ok)
+      throw new Error(`openai ${response.status}: ${(await response.text()).slice(0, 160)}`);
+    const body = await response.json();
+    return { text: body.text ?? "", usage: body.usage ?? null };
+  }
 }
 
 /** One `/inference` request with the fields the app sends (whisperServer.js#transcribe). */
@@ -424,7 +441,8 @@ function werInterval(rows, rounds = 2000) {
     const started = Date.now();
     let text;
     let pieces = null;
-    if (CLOUD) text = await cloudInference(wav);
+    let usage = null;
+    if (CLOUD) ({ text, usage } = await cloudInference(wav));
     else {
       // What the app does with a recording (whisperServer.js#transcribe): too long
       // for one request, it is cut at its pauses and sent in order.
@@ -453,6 +471,7 @@ function werInterval(rows, rounds = 2000) {
       words,
       reference: item.reference,
       hypothesis: text.trim(),
+      ...(usage ? { usage } : {}),
     });
     process.stdout.write(
       `  ${item.id} ${seconds.toFixed(1).padStart(5)}s ${String(ms).padStart(6)}ms  ${errors}/${words}` +
