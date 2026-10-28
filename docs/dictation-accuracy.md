@@ -377,8 +377,12 @@ node scripts/room-replay.js ... --segmenter /tmp/before.mjs
 node scripts/room-replay.js ... --segment-only
 # near voices: LibriSpeech conversations
 node scripts/room-replay.js --librispeech LibriSpeech/test-clean --conversations 9
-# OpenAI on the same segments (public audio only)
-OPENAI_API_KEY=... node scripts/room-replay.js ... --cloud gpt-4o-transcribe
+# OpenAI on the same segments (public audio only): a file at a time, or a
+# realtime session per meeting; --every 6 for a sample of the segments
+OPENAI_API_KEY=... node scripts/room-replay.js ... --cloud gpt-transcribe --language en --concurrency 1
+OPENAI_API_KEY=... node scripts/room-replay.js ... --realtime gpt-live-transcribe --language en
+# dictation through OpenAI
+OPENAI_API_KEY=... node scripts/asr-eval.js --corpus LibriSpeech/test-clean --cloud --cloud-model gpt-transcribe --language en --n 200
 ```
 
 **The corpus** is the AMI meeting corpus (CC BY 4.0): eight meetings (ES2004a–d,
@@ -674,6 +678,127 @@ of all words), and 69.9% with each segment raised to an RMS of 0.05 (67.3%).
 - **`gpt-4o-mini-transcribe` against `small.en`**: 2.2 points more content
   words in the quiet room (1.3–3.1, 8 of 8 meetings), level with steady sound.
 
+### Remote models on the same replay (2026-10-28)
+
+OpenAI lists nine models that transcribe (`GET /v1/models`): `whisper-1`;
+`gpt-4o-transcribe`, `gpt-4o-mini-transcribe` with its two snapshots
+(2025-03-20 and 2025-12-15), and `gpt-4o-transcribe-diarize`; and three newer
+ones: `gpt-transcribe` (July 2026), which takes a file or a realtime session,
+and `gpt-live-transcribe` and `gpt-realtime-whisper`, which take only a
+realtime session. Each was given every segment of the eight meetings in the
+three rooms, the segments the local models get:
+
+- **a file at a time** (`room-replay.js --cloud`): one request per segment,
+  language `en`, one at a time for each model and room, all of them at once,
+  so that their times share one network. A segment's time is the round trip
+  from this Mac.
+- **a realtime session** (`--realtime`): one session per meeting, turn
+  detection off, each segment streamed as live, then committed. A segment's
+  time is from the commit, the end of its audio, to its transcript.
+
+`gpt-4o-transcribe-diarize` writes about 2,200 tokens of speakers and times
+for each minute of audio (about $0.026 a minute here, four times the others)
+and answers in 3.2 s at the median. It was given every sixth segment of two
+rooms (1,153): 79.0% of the words in the quiet room, 44.9% with steady sound.
+
+| quiet room                                      | words recovered | content words | numbers | names | WER   | no-speech segments with text | time a segment, median and p95 |
+| ----------------------------------------------- | --------------- | ------------- | ------- | ----- | ----- | ---------------------------- | ------------------------------ |
+| `gpt-transcribe` (2026-07)                      | 77.8%           | 81.2%         | 79.0%   | 70.5% | 23.3% | 12 of 221                    | 0.93, 2.62 s                   |
+| `gpt-4o-mini-transcribe`: the default until now | 72.8%           | 76.6%         | 72.0%   | 70.5% | 28.6% | 18 of 221                    | 0.90, 3.50 s                   |
+| `gpt-4o-mini-transcribe-2025-12-15`             | 72.8%           | 76.5%         | 72.3%   | 67.6% | 28.6% | 16 of 221                    | 0.74, 2.40 s                   |
+| `gpt-4o-mini-transcribe-2025-03-20`             | 54.7%           | 62.7%         | 58.7%   | 62.6% | 46.0% | 221 of 221                   | 1.76, 3.48 s                   |
+| `gpt-4o-transcribe`                             | 46.8%           | 55.4%         | 54.9%   | 62.6% | 53.6% | 221 of 221                   | 0.93, 2.67 s                   |
+| `whisper-1`                                     | 76.6%           | 80.1%         | 75.4%   | 70.5% | 27.3% | 183 of 221                   | 1.52, 3.51 s                   |
+| `gpt-live-transcribe` (realtime only)           | 75.4%           | 77.8%         | 75.6%   | 70.5% | 26.1% | 25 of 221                    | 0.61, 2.27 s                   |
+| `gpt-realtime-whisper` (realtime only)          | 72.0%           | 74.9%         | 72.2%   | 69.8% | 29.1% | 16 of 221                    | 0.55, 2.58 s                   |
+| `small.en` on this Mac: ships                   | 70.4%           | 74.3%         | 71.1%   | 70.5% | 30.9% | 25 of 221                    | —                              |
+| `large-v3-turbo` q5_0 on this Mac               | 75.2%           | 80.0%         | 75.6%   | 74.1% | 25.9% | 29 of 221                    | —                              |
+
+| steady sound                                    | words recovered | content words | numbers | names | WER   | no-speech segments with text | time a segment, median and p95 |
+| ----------------------------------------------- | --------------- | ------------- | ------- | ----- | ----- | ---------------------------- | ------------------------------ |
+| `gpt-transcribe` (2026-07)                      | 49.8%           | 50.4%         | 51.5%   | 47.5% | 50.8% | 3 of 132                     | 0.85, 2.23 s                   |
+| `gpt-4o-mini-transcribe`: the default until now | 39.4%           | 38.4%         | 39.7%   | 38.1% | 61.4% | 5 of 132                     | 0.82, 2.83 s                   |
+| `gpt-4o-mini-transcribe-2025-12-15`             | 39.2%           | 38.2%         | 41.0%   | 39.6% | 61.5% | 5 of 132                     | 0.65, 1.82 s                   |
+| `gpt-4o-mini-transcribe-2025-03-20`             | 27.8%           | 29.1%         | 34.6%   | 24.5% | 72.4% | 132 of 132                   | 1.67, 2.90 s                   |
+| `gpt-4o-transcribe`                             | 25.8%           | 28.0%         | 32.3%   | 25.2% | 74.3% | 132 of 132                   | 0.82, 2.23 s                   |
+| `whisper-1`                                     | 50.8%           | 49.0%         | 50.5%   | 33.8% | 52.0% | 109 of 132                   | 1.42, 3.30 s                   |
+| `gpt-live-transcribe` (realtime only)           | 44.1%           | 43.3%         | 49.5%   | 38.8% | 56.6% | 14 of 132                    | 0.62, 1.49 s                   |
+| `gpt-realtime-whisper` (realtime only)          | 37.8%           | 37.2%         | 37.1%   | 32.4% | 62.6% | 4 of 132                     | 0.54, 1.57 s                   |
+| `small.en` on this Mac: ships                   | 40.0%           | 37.9%         | 39.3%   | 26.6% | 61.0% | 9 of 132                     | —                              |
+| `large-v3-turbo` q5_0 on this Mac               | 47.5%           | 46.5%         | 48.2%   | 34.5% | 53.5% | 14 of 132                    | —                              |
+
+| quiet microphone                                | words recovered | content words | numbers | names | WER   | no-speech segments with text | time a segment, median and p95 |
+| ----------------------------------------------- | --------------- | ------------- | ------- | ----- | ----- | ---------------------------- | ------------------------------ |
+| `gpt-transcribe` (2026-07)                      | 75.6%           | 79.1%         | 76.2%   | 69.1% | 25.4% | 9 of 218                     | 0.93, 2.62 s                   |
+| `gpt-4o-mini-transcribe`: the default until now | 72.7%           | 77.0%         | 70.3%   | 68.3% | 28.5% | 12 of 218                    | 0.92, 3.40 s                   |
+| `gpt-4o-mini-transcribe-2025-12-15`             | 72.6%           | 76.8%         | 69.7%   | 69.1% | 28.7% | 12 of 218                    | 0.74, 2.48 s                   |
+| `gpt-4o-mini-transcribe-2025-03-20`             | 54.8%           | 62.1%         | 57.7%   | 59.7% | 45.9% | 218 of 218                   | 1.76, 3.37 s                   |
+| `gpt-4o-transcribe`                             | 46.2%           | 54.6%         | 53.3%   | 57.6% | 54.2% | 218 of 218                   | 0.90, 2.52 s                   |
+| `whisper-1`                                     | 75.8%           | 79.6%         | 75.4%   | 71.9% | 27.0% | 164 of 218                   | 1.47, 3.43 s                   |
+| `gpt-live-transcribe` (realtime only)           | 74.5%           | 77.1%         | 75.7%   | 69.8% | 26.9% | 22 of 218                    | 0.59, 0.83 s                   |
+| `gpt-realtime-whisper` (realtime only)          | 67.6%           | 70.5%         | 63.7%   | 63.3% | 33.4% | 9 of 218                     | 0.51, 0.68 s                   |
+| `small.en` on this Mac: ships                   | 64.5%           | 69.0%         | 62.9%   | 62.6% | 36.4% | 11 of 218                    | —                              |
+| `large-v3-turbo` q5_0 on this Mac               | 69.7%           | 74.5%         | 65.5%   | 66.2% | 31.1% | 15 of 218                    | —                              |
+
+The local rows are the runs above, for scale; their speed is in "Models on the
+same replay".
+
+- **`gpt-transcribe` hears the most, and invents the least.** Against
+  `gpt-4o-mini-transcribe`, the default until now, on the same words (paired
+  95% intervals over the meetings' 243 minutes): 5.0 more points of the words
+  in a quiet room (4.4–5.7) and 4.6 more of the content words (3.7–5.6); 10.4
+  (9.7–11.2) and 12.0 (10.8–13.2) with steady sound; 2.9 (2.1–3.7) and 2.1
+  (1.2–3.1) on the quiet microphone. Fewer segments with no speech came back
+  with text in each room (18 → 12, 5 → 3, 12 → 9). A segment took as long at
+  the median (10 to 32 ms more) and 0.6 to 0.9 s less at the 95th percentile.
+  It costs $0.0045 a minute, against $0.003. With steady sound it hears more
+  than turbo on this Mac (49.8% against 47.5%).
+- **`gpt-4o-mini-transcribe` and its 2025-12-15 snapshot hear the same**,
+  within 0.2 points in each room, but the snapshot answered 150–185 ms sooner
+  at the median in each room: the alias costs time to reach the model it
+  names.
+- **`whisper-1` hears almost as much, and writes over silence**: text for 183
+  of the 221 segments with no speech in the quiet room (`gpt-transcribe`: 12),
+  and 1.5 s a segment at the median.
+- **`gpt-4o-transcribe` and the 2025-03-20 snapshot leave out parts of
+  segments** (47–55% of the words) and write something for every segment with
+  no speech in it: not for this path.
+- **The realtime-only models** hear less than `gpt-transcribe` with a file
+  (`gpt-live-transcribe` 75.4%, 44.1% and 74.5% in the three rooms;
+  `gpt-realtime-whisper` 72.0%, 37.8% and 67.6%) and cost $0.017 a minute,
+  almost four times as much. Their transcript comes 0.5–0.6 s after the
+  commit at the median, as `gpt-transcribe`'s does through the same kind of
+  session (dictation, below).
+
+**Dictation.** LibriSpeech test-clean through `asr-eval.js --cloud`, language
+`en`, scored as `asr-eval` scores it (numbers as written): 200 utterances and
+40 long dictations (30–90 s). With an OpenAI key the app dictates through a
+realtime session with its own server VAD (`openaiRealtimeStreaming.js`), so
+that path was measured too: the same 200 utterances, each streamed as live and
+committed as the key is released, its time from the release to its last
+transcript.
+
+| LibriSpeech, WER                                | 200 utterances | 40 long dictations | realtime with a key: WER; release to transcript, median and p95 |
+| ----------------------------------------------- | -------------- | ------------------ | --------------------------------------------------------------- |
+| `gpt-transcribe`: the default now               | 2.33%          | 2.32%              | 2.46%; 0.66, 1.30 s                                             |
+| `gpt-4o-mini-transcribe`: the default until now | 2.66%          | 2.60%              | 3.01%; 0.67, 2.55 s                                             |
+| `gpt-4o-mini-transcribe-2025-12-15`             | 2.68%          | 2.48%              |                                                                 |
+| `gpt-4o-mini-transcribe-2025-03-20`             | 2.83%          | 2.54%              |                                                                 |
+| `gpt-4o-transcribe`                             | 2.40%          | 2.60%              |                                                                 |
+| `whisper-1`                                     | 3.34%          | 3.88%              |                                                                 |
+
+On read speech every `gpt-4o-*` model and `gpt-transcribe` is within a few
+tenths of a point (`gpt-transcribe` against the default: −0.33 points on the
+200, interval −0.70 to +0.03). Through the realtime path, `gpt-transcribe`'s
+transcript arrives as soon at the median and half as late at the 95th
+percentile.
+
+**`gpt-transcribe` is the default now**, for new settings: first in the
+registry, and the default of the realtime catalog, so dictation with a key and
+conversations with a cloud provider use it too (the app's server-VAD session
+works with it unchanged, and it streams over HTTP as the `gpt-4o-*` models
+do). A model a person chose stays theirs.
+
 ### What this does not show
 
 - **The real conversation was not replayed.** Its audio is deleted after the
@@ -690,6 +815,9 @@ of all words), and 69.9% with each segment raised to an RMS of 0.05 (67.3%).
 - **Metal is not deterministic.** The same configuration run twice returned
   different words for 2–6% of its segments, and words recovered moved by up to
   0.4 points in a meeting: a difference under a point is inside that.
+- **Remote times are one network on one afternoon.** Every model ran at the
+  same time, so they are fair to each other, not to another office. The
+  alias answering later than its own snapshot held in all three rooms.
 - **Partials are not replayed.** A heavier model also makes every partial
   slower, so the live line falls further behind; finals are not affected.
 - **Timestamps lag a second each half hour.** `downsample24kTo16k` keeps 533

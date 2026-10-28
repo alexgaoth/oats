@@ -7,7 +7,7 @@ const registry = require("../../src/models/modelRegistryData.json");
 const OpenAIRealtimeStreaming = require("../../src/helpers/openaiRealtimeStreaming");
 
 // gpt-transcribe heard 5 points more of the words than gpt-4o-mini-transcribe
-// in a quiet room and 11 more with steady sound, at the same speed
+// in a quiet room and 10 more with steady sound, at the same speed
 // (docs/dictation-accuracy.md, "Remote models"). It is the OpenAI default.
 const DEFAULT = "gpt-transcribe";
 
