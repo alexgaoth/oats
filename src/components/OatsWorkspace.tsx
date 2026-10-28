@@ -120,6 +120,7 @@ import {
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { isSearching, shellNav } from "../helpers/shellNav.mjs";
 import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
+import { plainPreview } from "../helpers/summaryMarkdown.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import {
   buildReview,
@@ -211,25 +212,6 @@ const SURFACES: { id: Surface; render: () => React.ReactNode }[] = [
   { id: "settings", render: () => <SettingsSurface /> },
 ];
 
-// The summary is markdown. A two-line preview is no place for "## Threads" or
-// stray asterisks, so the syntax is stripped rather than rendered — the list is
-// scanning, not reading.
-//
-// A heading goes whole, not just its hashes. Stripping only the marker left the
-// heading's words in the run of prose — "only one of them closed. Threads
-// Enterprise pricing is…" — a sentence nobody wrote.
-function plainPreview(raw: string | null | undefined): string {
-  if (!raw) return "";
-  return raw
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/^#{1,6}\s.*$/gm, " ")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/[*_`>]/g, "")
-    .replace(/^\s*[-+]\s+/gm, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /**
  * A stored transcript as readable text.
  *
@@ -309,7 +291,7 @@ async function summarizeConversation(
   const formatted = transcriptText(transcript, t);
   runBackgroundAction(
     noteId,
-    `## Conversation Transcript\n${formatted}`,
+    `## Conversation transcript\n${formatted}`,
     `${transcript.length}-${transcript.slice(0, 50)}`,
     action,
     {

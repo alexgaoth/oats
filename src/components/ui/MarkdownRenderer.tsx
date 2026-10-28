@@ -1,5 +1,10 @@
 import Markdown from "react-markdown";
 import { cn } from "../lib/utils";
+import { remarkPlainTaskItems, remarkSummaryHeadings } from "../../helpers/summaryMarkdown.mjs";
+
+// Task list items as plain items, and the summary's headings in sentence case
+// (helpers/summaryMarkdown.mjs). Module level, so every render passes the same list.
+const REMARK_PLUGINS = [remarkPlainTaskItems, remarkSummaryHeadings];
 
 interface MarkdownRendererProps {
   content: string;
@@ -10,6 +15,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div className={cn("prose prose-sm max-w-none", className)}>
       <Markdown
+        remarkPlugins={REMARK_PLUGINS}
         components={{
           h1: ({ children }) => (
             <h1 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h1>
