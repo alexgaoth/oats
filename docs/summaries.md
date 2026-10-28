@@ -165,8 +165,9 @@ sound. Against the same meeting's manual transcript (Claude Fable 5.1, paired):
 - **Steady sound halves what a summary covers**, whatever the model: 40% of the
   words come back (`docs/dictation-accuracy.md`), and the models fill the gaps
   with guesses (2 to 5 more invented facts). gpt-6.1-sol and gpt-6-astra guess
-  least. Better recognition (`large-v3-turbo` recovers 47.5% here, against 40.0%)
-  is worth more than any writing model in this room.
+  least. The loss is the recognition's: `large-v3-turbo` recovers 47.5% of the
+  words in this room, against 40.0% for `small.en` (summaries from it were not
+  measured).
 
 ### Effort and thinking
 
@@ -199,10 +200,11 @@ The same 40 inputs per model, the app's prompt (`origin/main`) against #142
 | LFM2.5 1.2B | **−1.57 / −1.68** | +2.3 / −0.4 | 0.4 → 0 |
 | Qwen3.5 2B | −0.13 / −0.85 | −3.5 / −3.5 | 1.9 → 0 |
 
-(first judge / second judge; bold: the interval excludes zero). What the judges
-counted as invented with the old prompt was mostly the prompt's own doing:
-"Decision: ... (no decision was made)", "Action: ... (nobody took this on)",
-and 51 of gpt-5.6-terra's 157 were an item given to "You" or "Them".
+(first judge / second judge; bold: the interval excludes zero). For
+gpt-5.6-terra most of what the judges counted as invented with the old prompt
+was the prompt's own doing: "Decision: ... (no decision was made)", "Action:
+... (nobody took this on)", and 51 of its 157 were an item given to "You" or
+"Them".
 
 ### The judges
 
