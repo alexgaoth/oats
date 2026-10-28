@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 
 const {
   THINKING_HEADROOM,
+  MIN_MAX_TOKENS,
   anthropicTakesTemperature,
   anthropicThinking,
   buildAnthropicRequest,
@@ -91,22 +92,38 @@ test("thinking is off where the model allows it, with the form it accepts", () =
   assert.equal(anthropicThinking("claude-sonnet-4-6", true), null);
 });
 
-test("a model that thinks gets room for it under the cap", () => {
+test("a later model gets at least 16,000 output tokens, and room for its thinking", () => {
+  assert.equal(MIN_MAX_TOKENS, 16000);
   const text = "x".repeat(1000);
+  // Claude 4.6 and older keep the cap they had.
   const plain = buildAnthropicRequest({ modelId: "claude-sonnet-4-6", text });
   assert.equal(plain.max_tokens, 2000);
+  const named = buildAnthropicRequest({
+    modelId: "claude-haiku-4-5",
+    text,
+    config: { maxTokens: 48 },
+  });
+  assert.equal(named.max_tokens, 48);
+  // Thinking off: the floor only.
   const off = buildAnthropicRequest({ modelId: "claude-sonnet-5-5", text });
-  assert.equal(off.max_tokens, 2000);
   assert.deepEqual(off.thinking, { type: "between_tools" });
+  assert.equal(off.max_tokens, MIN_MAX_TOKENS);
+  // Thinking on: the asked cap plus the headroom, and never under the floor.
   const thinks = buildAnthropicRequest({ modelId: "claude-opus-5-5", text });
-  assert.equal(thinks.max_tokens, 2000 + THINKING_HEADROOM);
   assert.equal("thinking" in thinks, false);
+  assert.equal(thinks.max_tokens, MIN_MAX_TOKENS);
   const asked = buildAnthropicRequest({
     modelId: "claude-fable-5-1",
     text,
     config: { maxTokens: 48 },
   });
-  assert.equal(asked.max_tokens, 48 + THINKING_HEADROOM);
+  assert.equal(asked.max_tokens, MIN_MAX_TOKENS);
+  const long = buildAnthropicRequest({
+    modelId: "claude-opus-5-5",
+    text,
+    config: { maxTokens: 20000 },
+  });
+  assert.equal(long.max_tokens, 20000 + THINKING_HEADROOM);
 });
 
 test("the body keeps the prompt, the system prompt and the model", () => {
@@ -133,6 +150,28 @@ test("the answer is every text block, after any thinking block", () => {
     "Remote control battery life"
   );
   assert.equal(anthropicAnswerText({ content: [{ type: "text", text: " A name " }] }), "A name");
+});
+
+test("an answer cut at the output limit fails, even with text, so it is never saved", () => {
+  assert.throws(
+    () =>
+      anthropicAnswerText({
+        content: [
+          { type: "thinking", thinking: "" },
+          { type: "text", text: "## Summary\n\nThe team agreed to ship on" },
+        ],
+        stop_reason: "max_tokens",
+      }),
+    /output limit/
+  );
+  // The same text, finished, is the answer.
+  assert.equal(
+    anthropicAnswerText({
+      content: [{ type: "text", text: "## Summary\n\nThe team agreed to ship on Friday." }],
+      stop_reason: "end_turn",
+    }),
+    "## Summary\n\nThe team agreed to ship on Friday."
+  );
 });
 
 test("an answer with no text fails with the reason", () => {
