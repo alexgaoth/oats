@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const EventEmitter = require("events");
 const fs = require("fs");
 const path = require("path");
 
@@ -227,4 +228,63 @@ test("whisper-server listens on loopback and loads a model file", () => {
   assert.equal(args[args.indexOf("--host") + 1], "127.0.0.1");
   assert.equal(args[args.indexOf("--model") + 1], "/models/ggml-base.en.bin");
   assert.ok(!args.some((arg) => /^(https?|wss?):\/\//.test(String(arg))));
+});
+
+// Electron turns spellcheck on by default, and on Linux and Windows Chromium
+// downloads Hunspell dictionaries from Google for each session, whatever its
+// windows say. Nobody asked for that download, so spellcheck is off in every
+// window and in every session (spellcheckOff.js).
+
+test("every window is made from a config with spellcheck off", () => {
+  const configs = require("../../src/helpers/windowConfig");
+  for (const [name, config] of Object.entries(configs)) {
+    if (!config?.webPreferences) continue;
+    assert.equal(config.webPreferences.spellcheck, false, `${name}: Electron's default is on`);
+  }
+  const made = new Set();
+  for (const file of MAIN_SOURCES) {
+    for (const [call, options] of read(file).matchAll(/new BrowserWindow\(([\s\S]*?)\);/g)) {
+      const name = options.match(/^\s*(?:\{\s*\.\.\.)?([A-Z_]+_CONFIG)\b/)?.[1];
+      assert.ok(name, `${file}: ${call} must start from a config in windowConfig.js`);
+      assert.equal(configs[name]?.webPreferences?.spellcheck, false, `${file}: ${call}`);
+      assert.doesNotMatch(options, /webPreferences|spellcheck/, `${file}: ${call}`);
+      made.add(name);
+    }
+  }
+  // The scan must see the floating oat and the control panel, or it sees nothing.
+  assert.ok(made.has("MAIN_WINDOW_CONFIG") && made.has("CONTROL_PANEL_CONFIG"), [...made].join());
+});
+
+test("every session's spellcheck dictionary list is emptied as the session is created", () => {
+  const { install } = require("../../src/helpers/spellcheckOff");
+  const app = new EventEmitter();
+  const makeSession = () => ({
+    languages: ["en-US"],
+    setSpellCheckerLanguages(languages) {
+      this.languages = languages;
+    },
+  });
+  const uninstall = install({ app });
+  try {
+    const defaultSession = makeSession();
+    const updater = makeSession();
+    // Inside the event itself: the download it prevents starts in a later task.
+    app.emit("session-created", defaultSession);
+    assert.deepEqual(defaultSession.languages, []);
+    app.emit("session-created", updater);
+    assert.deepEqual(updater.languages, []);
+    // A build without the built-in spellchecker has no such method.
+    assert.doesNotThrow(() => app.emit("session-created", {}));
+  } finally {
+    uninstall();
+  }
+  assert.equal(app.listenerCount("session-created"), 0);
+});
+
+test("main.js turns spellcheck off before any session can exist", () => {
+  const main = read("main.js");
+  const install = main.indexOf('require("./src/helpers/spellcheckOff").install({ app });');
+  assert.ok(install > 0, "main.js installs it");
+  // Electron makes no session before the app is ready.
+  assert.ok(install < main.indexOf("app.whenReady()"));
 });
