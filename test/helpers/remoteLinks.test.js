@@ -112,3 +112,87 @@ test("only a cloud provider with a link model checks links", () => {
   assert.equal(remote.linkProviderFor({ mode: "self-hosted", config: {} }), null);
   assert.equal(remote.linkProviderFor(null), null);
 });
+
+test("the conversations asked about are the most alike, never one that shares nothing", () => {
+  const unit = (...values) => {
+    const norm = Math.hypot(...values);
+    return Float32Array.from(values, (value) => value / norm);
+  };
+  const vectors = new Map([
+    ["SSO rollout", unit(1, 0, 0)],
+    ["Single sign-on setup", unit(0.95, 0.31, 0)],
+    ["Enterprise pricing", unit(0.3, 0.95, 0)],
+    ["Weekend at the lake", unit(0, 0, 1)],
+  ]);
+  const vectorOf = (text) => vectors.get(text) ?? null;
+  const node = (label, words = []) => ({ label, words, durationMs: 60_000 });
+  const current = { id: 9, snapshot: { nodes: [node("SSO rollout", ["sso"])] } };
+  const earlier = [
+    { id: 1, snapshot: { nodes: [node("Weekend at the lake", ["lake"])] } },
+    { id: 2, snapshot: { nodes: [node("Enterprise pricing", ["pricing", "sso"])] } },
+    { id: 3, snapshot: { nodes: [node("Single sign-on setup", ["login"])] } },
+  ];
+  assert.deepEqual(remote.chooseCandidates(current, earlier, { vectorOf }), [3]);
+  assert.deepEqual(remote.chooseCandidates(current, earlier, { vectorOf, floor: 0.1 }), [3, 2]);
+  assert.deepEqual(
+    remote.chooseCandidates(current, earlier, { vectorOf, floor: 0, limit: 1 }),
+    [3]
+  );
+  // No vectors: by the words they share.
+  assert.deepEqual(remote.chooseCandidates(current, earlier), [2]);
+  assert.deepEqual(remote.chooseCandidates({ id: 9, snapshot: { nodes: [] } }, earlier), []);
+});
+
+test("a stored check is read back, and anything else is no check", () => {
+  const check = remote.readLinkCheck(
+    JSON.stringify({
+      checkedAt: "2026-10-28T19:00:00.000Z",
+      model: "claude-opus-5-5",
+      candidates: [1, 2],
+      links: [
+        { id: 1, subject: " SSO setup ", topic: "a", earlierTopic: "b" },
+        { id: 2, subject: "" },
+      ],
+    })
+  );
+  assert.deepEqual(check, {
+    checkedAt: "2026-10-28T19:00:00.000Z",
+    model: "claude-opus-5-5",
+    candidates: [1, 2],
+    links: [{ id: 1, subject: "SSO setup", topic: "a", earlierTopic: "b" }],
+  });
+  assert.equal(remote.readLinkCheck(null), null);
+  assert.equal(remote.readLinkCheck("not json"), null);
+  assert.equal(remote.readLinkCheck({ links: "x" }), null);
+});
+
+test("a summary's route is kept as mode and provider", () => {
+  assert.equal(
+    remote.summaryRouteKey({ mode: "providers", provider: "openai" }),
+    "providers:openai"
+  );
+  assert.equal(
+    remote.summaryRouteKey({ mode: "providers", provider: "anthropic" }),
+    "providers:anthropic"
+  );
+  assert.equal(remote.summaryRouteKey({ mode: "local", provider: "openai" }), "local:");
+  assert.equal(remote.summaryRouteKey({ mode: "self-hosted" }), "self-hosted:");
+  assert.equal(remote.summaryRouteKey({}), "unknown:");
+});
+
+test("a check sends an earlier conversation only to the provider that wrote its summary", () => {
+  const note = (summary_route) => ({ summary_route });
+  assert.equal(remote.sendableTo("openai", note("providers:openai")), true);
+  assert.equal(remote.sendableTo("anthropic", note("providers:anthropic")), true);
+  assert.equal(remote.sendableTo("openai", note("providers:anthropic")), false, "another provider");
+  assert.equal(remote.sendableTo("openai", note("local:")), false, "summarized on this computer");
+  assert.equal(
+    remote.sendableTo("openai", note("self-hosted:")),
+    false,
+    "on the person's own server"
+  );
+  assert.equal(remote.sendableTo("openai", note(null)), false, "summarized before it was recorded");
+  assert.equal(remote.sendableTo("openai", {}), false);
+  assert.equal(remote.sendableTo("openai", null), false);
+  assert.equal(remote.sendableTo("", note("providers:")), false);
+});
