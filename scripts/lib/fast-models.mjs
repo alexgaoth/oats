@@ -39,6 +39,13 @@ export const PRICES = {
   "openai:gpt-4.1-nano": { input: 0.1, cached: 0.025, output: 0.4 },
   "openai:gpt-4.1-mini": { input: 0.4, cached: 0.1, output: 1.6 },
   "openai:gpt-4o-mini": { input: 0.15, cached: 0.075, output: 0.6 },
+  // developers.openai.com/api/docs/pricing, read 2026-10-28 (standard tier,
+  // prompts up to 272K tokens). gpt-5.5-pro lists no cached-input price.
+  "openai:gpt-6-astra": { input: 10, cached: 1, output: 50 },
+  "openai:gpt-5.5-pro": { input: 30, cached: 30, output: 180 },
+  // The Claude API reference's model table (cached 2026-10-06): $10 / $50,
+  // cache reads $0.25; cache writes at 1.25x the input price, as in the rows below.
+  "anthropic:claude-fable-5-1": { input: 10, cached: 0.25, write: 12.5, output: 50 },
   "anthropic:claude-haiku-5-5": { input: 0.1, cached: 0.01, write: 0.125, output: 0.5 },
   "anthropic:claude-sonnet-5-5": { input: 2, cached: 0.2, write: 2.5, output: 10 },
   "anthropic:claude-opus-5-5": { input: 4, cached: 0.2, write: 5, output: 20 },
