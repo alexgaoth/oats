@@ -1213,8 +1213,10 @@ function loadGrades(spec, effort) {
   const grades = new Map();
   if (!fs.existsSync(root)) return grades;
   for (const dirName of fs.readdirSync(root)) {
-    if (dirName !== base && !new RegExp(`^${base.replace(/[.+]/g, "\\$&")}\\+p\\d+$`).test(dirName))
-      continue;
+    // The first pass's directory, or a later pass's: `${base}+p<n>`. Compared as
+    // text, not as a pattern built from the directory name.
+    const pass = dirName.startsWith(`${base}+p`) ? dirName.slice(base.length + 2) : "";
+    if (dirName !== base && !/^\d+$/.test(pass)) continue;
     const dir = path.join(root, dirName);
     for (const file of fs.readdirSync(dir)) {
       if (!file.endsWith(".json") || file.startsWith("batch-")) continue;
