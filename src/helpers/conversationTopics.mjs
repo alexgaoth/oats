@@ -38,6 +38,7 @@
 // the conversation core.
 
 import { ENGLISH_WORD_RANKS } from "./englishWordRanks.mjs";
+import { encodeTopicVector, topicContentVector } from "./conversationLinks.mjs";
 
 // ---------------------------------------------------------------------------
 // Words
@@ -1316,8 +1317,31 @@ class ConversationTopicTracker {
             : at - topic.lastAt >= this.dropAfterMs
               ? "dropped"
               : "open",
+      ...(final ? this._storedVector(topic) : {}),
     }));
     return { nodes, edges: view.transitions.map((edge) => ({ ...edge })) };
+  }
+
+  // The vector of what was said on a topic, for the record (`final`): the
+  // mean of its turns' vectors, each weighted by its words, stored as one
+  // byte a dimension (`conversationLinks.mjs`). The Global conversations
+  // board links two topics by it when both have one: on AMI it told apart
+  // the subjects of one project better than their names did. Only when most
+  // of the topic's turns have vectors, as for the names (`VECTOR_COVERAGE`).
+  _storedVector(topic) {
+    if (!this.vectors.size) return {};
+    let content = 0;
+    const pieces = [];
+    for (const id of topic.utteranceIds) {
+      const record = this._byId.get(id);
+      if (!record?.keys.length) continue;
+      content += 1;
+      const vector = this.vectors.get(id);
+      if (vector) pieces.push({ vector, weight: record.keys.length });
+    }
+    if (!pieces.length || pieces.length < content * VECTOR_COVERAGE) return {};
+    const vector = encodeTopicVector(topicContentVector(pieces));
+    return vector ? { vector } : {};
   }
 }
 

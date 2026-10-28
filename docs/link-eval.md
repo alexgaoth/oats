@@ -31,10 +31,11 @@ The script is `scripts/link-eval.mjs`; every number below comes from its
   the cost. For OpenAI keys, gpt-6.1-sol at reasoning low links as well as
   gpt-6-astra at a fifth of the cost.
 - **The best local signal is not the names but what was said:** the mean
-  sentence vector of a topic's turns separates the scenario pairs almost as
-  well as the cloud linker (false links 0.51 against 0.25 for Opus and 0.61 for
-  today). The board cannot use it yet, because the record does not keep a vector
-  per topic. That is a decision for Alex (see the end).
+  sentence vector of a topic's turns. The record now keeps one per topic, and
+  the board links by it where both topics have one: of the scenario pairs it
+  links, 0.86 are right, near Claude Opus 5.5's 0.87, and it finds 0.76 of
+  them where Opus finds 0.55 (see "Stored topic vectors" below). Older
+  conversations link by name.
 
 ## What is measured
 
@@ -265,6 +266,27 @@ In the benchmark a check asked about 5 to 8 earlier conversations, about
 1,500 input tokens (Claude's count; OpenAI's is about half). The app asks about
 up to 12.
 
+### Stored topic vectors
+
+Since the record keeps one vector per topic (the word-weighted mean of its
+turns' MiniLM vectors, one byte a dimension: `conversationTopics.mjs`), the
+board compares two topics by those vectors when both have one, at 0.78, and by
+their names otherwise, at 0.6 (`meaningThreads`). The threshold was chosen on
+the same meetings, from a flat curve: 0.76 to 0.80 all give a balanced
+accuracy of 0.33 to 0.36. Every pair, as the board draws them:
+
+|                                                                  | Scenario P            | Scenario R        | Scenario F1       | Scenario false links  | Mixed false links | Non-scenario within | Non-scenario across false links |
+| ---------------------------------------------------------------- | --------------------- | ----------------- | ----------------- | --------------------- | ----------------- | ------------------- | ------------------------------- |
+| By name only (#138)                                              | 0.79 [0.70, 0.87]     | 0.76 [0.70, 0.83] | 0.78 [0.73, 0.82] | 0.63 [0.52, 0.73]     | 0/540             | 2/2                 | 0/4                             |
+| **By stored vectors**                                            | **0.86** [0.78, 0.92] | 0.76 [0.69, 0.83] | 0.80 [0.75, 0.85] | **0.40** [0.26, 0.53] | 0/540             | 2/2                 | 0/4                             |
+| Half the meetings with stored vectors, tracker names on the rest | 0.80 [0.71, 0.88]     | 0.78 [0.72, 0.84] | 0.79 [0.74, 0.83] | 0.60 [0.48, 0.72]     | 0/540             | 2/2                 | 0/4                             |
+| Half with stored vectors, writing-model names on the rest        | 0.81 [0.73, 0.89]     | 0.68 [0.61, 0.75] | 0.74 [0.68, 0.80] | 0.48 [0.37, 0.59]     | 2/540             | 1/2                 | 0/4                             |
+
+The half rows stand for a history recorded partly before the vectors were
+kept: a new topic meets the older conversations' topics by name and the newer
+ones' by stored vector, so the board does between the two until most of the
+history has them.
+
 ## What this does not show
 
 - **The ground truth misses links.** An annotator labels each stretch with one
@@ -308,11 +330,9 @@ off when the run was stopped, which OpenAI may bill as well.
 
 ## Decisions for Alex
 
-1. **Keep a vector per topic.** The mean vector of a topic's turns (2c) is the
-   best local signal measured: false links 0.51 against 0.61 to 0.74 for names,
-   at the same recall. The tracker has those vectors while it records; the
-   record would keep one per topic (384 numbers, about 0.5 KB as int8). Old
-   conversations would keep linking by name.
+1. **Keep a vector per topic.** Decided: yes. The record keeps one per topic
+   (384 bytes, 512 characters of base64), and the board uses it where both
+   topics have one (see "Stored topic vectors").
 2. **Which past conversations a cloud model may read.** The background group
    sort never sends conversations to a cloud provider chosen after they were
    recorded. The cloud linker sends the topic names and gists of up to 12

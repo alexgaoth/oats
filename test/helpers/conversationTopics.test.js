@@ -426,3 +426,36 @@ test("each phrase is asked for once, the topics' candidates first", () => {
   assert.ok(rest.every((phrase) => !first.some((asked) => asked.key === phrase.key)));
   assert.deepEqual(tracker.phrasesToEmbed(500), []);
 });
+
+test("the record keeps a vector of what was said on each topic, when the turns had vectors", async () => {
+  const { ConversationTopicTracker } = await import("../../src/helpers/conversationTopics.mjs");
+  const { decodeTopicVector, cosine } = await import("../../src/helpers/conversationLinks.mjs");
+  const turns = [
+    "The pricing for enterprise customers needs a discount for annual plans",
+    "Annual plans with a discount make enterprise pricing simpler for customers",
+    "Enterprise customers ask about pricing and the annual discount every week",
+  ];
+  const fed = new ConversationTopicTracker({ now: () => 0 });
+  const plain = new ConversationTopicTracker({ now: () => 0 });
+  turns.forEach((text, index) => {
+    const utterance = { id: `u${index}`, text, at: index * 20_000 };
+    fed.onUtterance(utterance);
+    plain.onUtterance(utterance);
+    fed.addVectors({ utterances: [[utterance.id, [1, 0.1 * index, 0]]] });
+  });
+  const stored = fed.snapshot(60_000, { final: true }).nodes;
+  assert.ok(stored.length >= 1);
+  for (const node of stored) {
+    const vector = decodeTopicVector(node.vector);
+    assert.ok(vector, "every topic of the record has one");
+    assert.ok(cosine(vector, [1, 0, 0]) > 0.97);
+  }
+  assert.ok(
+    fed.snapshot(60_000).nodes.every((node) => node.vector === undefined),
+    "the live view carries none"
+  );
+  assert.ok(
+    plain.snapshot(60_000, { final: true }).nodes.every((node) => node.vector === undefined),
+    "and a record made without vectors has none"
+  );
+});
