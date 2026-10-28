@@ -101,6 +101,27 @@ the writing model is no longer OpenAI's, the check stops for that recording.
 With any other provider, a custom endpoint, a server of the person's own or a
 model on this computer, the check is off and nothing changes.
 
+Linking conversations on the Global conversations board happens on this
+computer: each topic name is embedded by the bundled all-MiniLM-L6-v2, and
+nothing leaves (`src/helpers/conversationLinks.mjs`). With OpenAI or Anthropic
+as the writing model, a cloud model also checks the links of each conversation
+once it is summarized, by the summary's route and key, so it adds no
+destination (`src/stores/conversationLinkStore.ts`,
+`src/helpers/remoteLinks.mjs`). It is that provider's most accurate model for
+the job, as measured in `docs/link-eval.md`: for OpenAI gpt-6.1-sol, else
+gpt-6-astra, else gpt-5.6-sol, whichever the key can use (asked once per app
+session with `GET /v1/models/{model}`, no conversation text); for Anthropic
+claude-opus-5-5. One request per summarized conversation carries the topic
+names and the opening of the summary (at most 300 characters) of that
+conversation and of at most 12 earlier ones, chosen on this computer as the
+most alike it, each under a letter: no title, id, date, transcript or audio.
+When no earlier conversation is alike enough, nothing is sent. The earlier
+conversations are sent whichever model summarized them, also ones summarized
+on this computer before the cloud provider was chosen (the background group
+sort, above, does not send those). The sidebar counts the request like any
+renderer request. With any other provider, a custom endpoint, a server of the
+person's own or a model on this computer, there is no check.
+
 The context check (off by default, Settings › Connections) uses the same
 writing model by the same route, so it adds no destination either. When a
 question gets a hedged answer or an "I don't know", the model gets one short

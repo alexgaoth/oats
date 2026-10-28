@@ -146,3 +146,76 @@ test("the texts to embed are each linkable topic's, once", () => {
     ["SSO rollout"]
   );
 });
+
+test("a checked conversation joins earlier subjects only by the links its check found", () => {
+  const list = [
+    conversation(1, 100, [topic(1, "SSO rollout"), topic(2, "Enterprise pricing")]),
+    conversation(2, 200, [topic(1, "Single sign-on setup"), topic(2, "Discount for annual plans")]),
+  ];
+  // By meaning alone, 2 joins 1 on both subjects.
+  assert.equal(links.linkThreads(list, { vectorOf }).subjects.length, 2);
+  // The cloud model found only the pricing link, and named it.
+  const checks = new Map([
+    [
+      2,
+      {
+        links: [
+          {
+            id: 1,
+            subject: "Annual plan pricing",
+            topic: "discount for annual plans",
+            earlierTopic: "Enterprise pricing",
+          },
+        ],
+      },
+    ],
+  ]);
+  const { subjects, edges } = links.linkThreads(list, { vectorOf, checks });
+  assert.deepEqual(subjects, [{ label: "Annual plan pricing", conversationIds: [1, 2] }]);
+  assert.deepEqual(
+    edges.map((edge) => edge.topics),
+    [["Annual plan pricing"]]
+  );
+});
+
+test("a check draws its links without vectors too, and later conversations join by meaning", () => {
+  const list = [
+    conversation(1, 100, [topic(1, "SSO rollout", 120, ["sso", "okta"])]),
+    conversation(2, 200, [topic(1, "Single sign-on setup", 120, ["login", "idp"])]),
+    conversation(3, 300, [topic(1, "SAML clock skew", 120, ["saml", "skew"])]),
+  ];
+  const checks = new Map([
+    [
+      2,
+      {
+        links: [
+          { id: 1, subject: "SSO", topic: "Single sign-on setup", earlierTopic: "SSO rollout" },
+        ],
+      },
+    ],
+  ]);
+  const byWords = links.linkThreads(list, { checks });
+  assert.deepEqual(
+    byWords.subjects,
+    [{ label: "SSO", conversationIds: [1, 2] }],
+    "no shared word, linked by the check"
+  );
+  const byMeaning = links.linkThreads(list, { vectorOf, checks });
+  assert.deepEqual(byMeaning.subjects, [{ label: "SSO", conversationIds: [1, 2, 3] }]);
+});
+
+test("a link to a conversation that is not on the board, or to itself, is left out", () => {
+  const list = [conversation(2, 200, [topic(1, "SSO rollout")])];
+  const checks = new Map([
+    [
+      2,
+      {
+        links: [
+          { id: 9, subject: "SSO", topic: "SSO rollout", earlierTopic: "x" },
+          { id: 2, subject: "Self" },
+        ],
+      },
+    ],
+  ]);
+  assert.deepEqual(links.linkThreads(list, { vectorOf, checks }), { subjects: [], edges: [] });
+});

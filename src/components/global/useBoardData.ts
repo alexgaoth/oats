@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNotes } from "../../stores/noteStore";
 import { parseDbTimestamp } from "../../helpers/dbTime.mjs";
 import { subjectThreads } from "../../helpers/lifetimeGraph";
-import { meaningThreads } from "../../helpers/conversationLinks.mjs";
+import { linkThreads } from "../../helpers/conversationLinks.mjs";
+import { readLinkCheck } from "../../helpers/remoteLinks.mjs";
 import type { NoteItem } from "../../types/electron";
 import { readSnapshot } from "./boardData";
-import type { BoardConversation } from "./boardData";
+import type { BoardConversation, LinkCheck } from "./boardData";
 import type { Subject } from "./linkedHighlight";
 import type { TopicVectors } from "./topicVectors";
 
@@ -27,6 +28,7 @@ function toBoardConversation(note: NoteItem, untitled: string): BoardConversatio
     snapshot: readSnapshot(note.conversation_topics),
     groupId: typeof note.group_id === "number" ? note.group_id : null,
     openQuestions: typeof note.open_questions === "number" ? note.open_questions : null,
+    linkCheck: readLinkCheck(note.conversation_links) as LinkCheck | null,
   };
 }
 
@@ -38,6 +40,7 @@ function boardKey(note: NoteItem): string {
     note.group_id ?? "",
     note.open_questions ?? "",
     note.conversation_topics ?? "",
+    note.conversation_links ?? "",
   ].join("\u0000");
 }
 
@@ -180,8 +183,18 @@ export function useTabGraph(
         state: "open" as const,
       };
     });
+    // A conversation a cloud model checked is linked by its check; the rest
+    // by meaning, or by words until the vectors are there.
+    const checks = new Map(
+      withTopics
+        .filter((conversation) => conversation.linkCheck)
+        .map((conversation) => [conversation.id, conversation.linkCheck as LinkCheck])
+    );
+    const meaning = ready && vectorOf ? vectorOf : null;
     const threads = (
-      ready && vectorOf ? meaningThreads(withTopics, { vectorOf }) : subjectThreads(withTopics)
+      meaning || checks.size
+        ? linkThreads(withTopics, { vectorOf: meaning, checks })
+        : subjectThreads(withTopics)
     ) as {
       subjects: Subject[];
       edges: BoardEdge[];

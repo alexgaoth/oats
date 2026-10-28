@@ -19,6 +19,12 @@
 // DOM-free, so it unit-tests under node:test.
 
 import { parseTopicName } from "./topicNaming.mjs";
+import {
+  conversationMatch,
+  isLinkableTopic,
+  MIN_LINK_TOPIC_MS,
+  topicLinkText,
+} from "./conversationLinks.mjs";
 
 /** How much of each summary the model reads, in characters: its opening sentence or two. */
 export const GIST_CHARS = 300;
@@ -208,4 +214,115 @@ export function linkProviderFor(route) {
   if (!route || route.mode !== "providers") return null;
   const provider = route.config?.provider;
   return Object.prototype.hasOwnProperty.call(LINK_MODELS, provider) ? provider : null;
+}
+
+/**
+ * An earlier conversation less alike the new one than this (its closest topic
+ * names, cosine) is not asked about: on AMI, the closest names of two
+ * meetings about different things score under 0.4 nine times in ten.
+ */
+export const CANDIDATE_FLOOR = 0.35;
+
+/** The words a topic is compared by when there are no vectors (as `lifetimeGraph.mjs`). */
+function bagOf(node) {
+  const words = Array.isArray(node?.words) ? node.words : [];
+  return new Set(words.filter((word) => typeof word === "string" && word).slice(0, 5));
+}
+
+/**
+ * The earlier conversations a check asks about: the most alike the new one,
+ * by their two closest topic names, at most `limit`, none under `floor`. With
+ * no vectors (the model is missing, or Oats listens for another language than
+ * English), by the words they share instead, and none that share no word.
+ * What is not alike enough is never sent.
+ *
+ * @param {{ id: unknown, snapshot: { nodes?: any[] } | null }} current
+ * @param {Array<{ id: unknown, snapshot: { nodes?: any[] } | null }>} earlier
+ * @param {{ vectorOf?: ((text: string) => (Float32Array | number[] | null | undefined)) | null,
+ *   limit?: number, floor?: number, minTopicMs?: number }} [options]
+ * @returns {unknown[]} ids, the most alike first.
+ */
+export function chooseCandidates(
+  current,
+  earlier,
+  {
+    vectorOf = null,
+    limit = MAX_CANDIDATES,
+    floor = CANDIDATE_FLOOR,
+    minTopicMs = MIN_LINK_TOPIC_MS,
+  } = {}
+) {
+  const topicsOf = (item) =>
+    (item?.snapshot?.nodes ?? [])
+      .filter((node) => isLinkableTopic(node, minTopicMs))
+      .map((node) => ({
+        label: String(node.label).trim(),
+        vector: vectorOf ? vectorOf(topicLinkText(node)) : null,
+        bag: bagOf(node),
+      }));
+  const mine = topicsOf(current);
+  if (!mine.length) return [];
+  const scored = [];
+  for (const item of Array.isArray(earlier) ? earlier : []) {
+    const theirs = topicsOf(item);
+    let score = -1;
+    if (vectorOf) {
+      score = conversationMatch(
+        mine.filter((topic) => topic.vector),
+        theirs.filter((topic) => topic.vector)
+      ).score;
+      if (score < floor) continue;
+    } else {
+      for (const a of mine) {
+        for (const b of theirs) {
+          let shared = 0;
+          for (const word of a.bag) if (b.bag.has(word)) shared += 1;
+          score = Math.max(score, shared ? shared / Math.min(a.bag.size, b.bag.size) : 0);
+        }
+      }
+      if (!(score > 0)) continue;
+    }
+    scored.push({ id: item.id, score });
+  }
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((entry) => entry.id);
+}
+
+/**
+ * A note's stored link check (`notes.conversation_links`): which earlier
+ * conversations were asked about, which share a subject with it, and by which
+ * model. Null when there is none, or it cannot be read.
+ *
+ * @param {unknown} raw JSON text or the object.
+ * @returns {{ checkedAt: string, model: string, candidates: unknown[],
+ *   links: Array<{ id: unknown, subject: string, topic: string, earlierTopic: string }> } | null}
+ */
+export function readLinkCheck(raw) {
+  let value = raw;
+  if (typeof value === "string") {
+    if (!value.trim()) return null;
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== "object" || !Array.isArray(value.links)) return null;
+  return {
+    checkedAt: String(value.checkedAt ?? ""),
+    model: String(value.model ?? ""),
+    candidates: Array.isArray(value.candidates) ? value.candidates : [],
+    links: value.links
+      .filter(
+        (link) => link && link.id != null && typeof link.subject === "string" && link.subject.trim()
+      )
+      .map((link) => ({
+        id: link.id,
+        subject: link.subject.trim(),
+        topic: String(link.topic ?? ""),
+        earlierTopic: String(link.earlierTopic ?? ""),
+      })),
+  };
 }

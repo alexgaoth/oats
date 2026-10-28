@@ -156,65 +156,194 @@ function add(subject, vector) {
   subject.norm = Math.sqrt(norm);
 }
 
+/** How many of a topic's leading words the word rule compares (as `lifetimeGraph.mjs`). */
+const FINGERPRINT = 5;
+
+/** The word rule's threshold: the share of the smaller fingerprint both hold. */
+const WORD_OVERLAP = 0.3;
+
+function fingerprint(node) {
+  const words = Array.isArray(node?.words) ? node.words : [];
+  return new Set(words.filter((word) => typeof word === "string" && word).slice(0, FINGERPRINT));
+}
+
+function overlap(a, b) {
+  if (!a.size || !b.size) return 0;
+  let shared = 0;
+  for (const word of a) if (b.has(word)) shared += 1;
+  return shared / Math.min(a.size, b.size);
+}
+
+const topicKey = (conversationId, label) =>
+  `${conversationId}\u0000${String(label ?? "")
+    .trim()
+    .toLowerCase()}`;
+
+/** A conversation's own topic that a checked link names, however exactly it was quoted. */
+function namedTopic(topics, name) {
+  const wanted = String(name ?? "")
+    .trim()
+    .toLowerCase();
+  if (!topics.length) return null;
+  return (
+    topics.find((topic) => topic.label.toLowerCase() === wanted) ??
+    (wanted &&
+      topics.find(
+        (topic) =>
+          topic.label.toLowerCase().includes(wanted) || wanted.includes(topic.label.toLowerCase())
+      )) ??
+    topics[0]
+  );
+}
+
 /**
- * Subjects that came back, by meaning, and the threads through them.
+ * Subjects that came back, and the threads through them.
  *
- * Topics are read in the order the conversations happened. A topic joins the
- * subject it is most alike, measured against the mean of the subject's topics,
- * when that is at least `threshold`; otherwise it starts a subject of its own.
- * Against the mean, and not against the nearest member, so a subject cannot
- * drift one near neighbour at a time into something else; and not against
- * its first topic only, which on AMI made the subjects jump about as the
- * threshold moved. A subject is named by the member most alike the others.
+ * Topics are read in the order the conversations happened. With vectors
+ * (`vectorOf`), a topic joins the subject it is most alike, measured against
+ * the mean of the subject's topics, when that is at least `threshold`;
+ * otherwise it starts a subject of its own. Against the mean, and not against
+ * the nearest member, so a subject cannot drift one near neighbour at a time
+ * into something else; and not against its first topic only, which on AMI made
+ * the subjects jump about as the threshold moved. A subject is named by the
+ * member most alike the others. Without vectors, the word rule decides
+ * (`subjectThreads`): five leading words, 30% of the smaller set in common.
+ *
+ * A conversation a cloud model checked (`checks`, `remoteLinks.mjs`) joins
+ * earlier subjects only by the links it found: its topic joins the subject of
+ * the earlier topic it was linked to, and the subject takes the model's name.
+ * The check was asked about the earlier conversations most alike it, so a
+ * link it did not find is not drawn either.
  *
  * @param {Array<{ id: number, createdAt: number, snapshot: { nodes: any[] } | null }>} conversations
- * @param {{ vectorOf: (text: string) => (Float32Array | number[] | null | undefined),
+ * @param {{ vectorOf?: ((text: string) => (Float32Array | number[] | null | undefined)) | null,
+ *   checks?: Map<unknown, { links: Array<{ id: unknown, subject: string, topic?: string, earlierTopic?: string }> }> | null,
  *   threshold?: number, minTopicMs?: number, text?: (node: any) => string }} options
  * @returns {{ subjects: { label: string, conversationIds: number[] }[],
  *   edges: { from: number, to: number, weight: number, kind: string, topics: string[] }[] }}
  */
-export function meaningThreads(
+export function linkThreads(
   conversations,
   {
-    vectorOf,
+    vectorOf = null,
+    checks = null,
     threshold = LINK_SIMILARITY,
     minTopicMs = MIN_LINK_TOPIC_MS,
     text = (node) => topicLinkText(node),
-  }
+  } = {}
 ) {
-  const list = linkable(conversations, { vectorOf, minTopicMs, text });
+  const meaning = typeof vectorOf === "function";
+  const list = (Array.isArray(conversations) ? conversations : [])
+    .filter((item) => item && Array.isArray(item.snapshot?.nodes) && item.snapshot.nodes.length)
+    .map((item, index) => ({ item, index }))
+    .sort(
+      (a, b) =>
+        (Number(a.item.createdAt) || 0) - (Number(b.item.createdAt) || 0) ||
+        Number(a.item.id) - Number(b.item.id) ||
+        a.index - b.index
+    )
+    .map(({ item }) => ({
+      id: item.id,
+      topics: item.snapshot.nodes
+        .filter((node) => isLinkableTopic(node, minTopicMs))
+        .map((node) => {
+          const vector = meaning ? vectorOf(text(node)) : null;
+          return {
+            label: String(node.label).trim(),
+            vector: vector && vector.length ? vector : null,
+            bag: fingerprint(node),
+          };
+        }),
+    }));
   const clusters = [];
+  const clusterOf = new Map();
+  const newCluster = (topic) => {
+    const cluster = {
+      sum: null,
+      norm: 0,
+      members: [],
+      conversationIds: [],
+      seed: topic.bag,
+      remoteName: null,
+    };
+    clusters.push(cluster);
+    return cluster;
+  };
+  const join = (cluster, topic, conversationId) => {
+    if (topic.vector) {
+      if (!cluster.sum) cluster.sum = new Float64Array(topic.vector.length);
+      if (cluster.sum.length === topic.vector.length) add(cluster, topic.vector);
+    }
+    cluster.members.push(topic);
+    if (!cluster.conversationIds.includes(conversationId))
+      cluster.conversationIds.push(conversationId);
+    clusterOf.set(topicKey(conversationId, topic.label), cluster);
+  };
+  const merge = (into, from) => {
+    if (into === from) return into;
+    for (const member of from.members) {
+      if (member.vector) {
+        if (!into.sum) into.sum = new Float64Array(member.vector.length);
+        if (into.sum.length === member.vector.length) add(into, member.vector);
+      }
+      into.members.push(member);
+    }
+    for (const id of from.conversationIds)
+      if (!into.conversationIds.includes(id)) into.conversationIds.push(id);
+    for (const [key, cluster] of clusterOf) if (cluster === from) clusterOf.set(key, into);
+    into.remoteName = into.remoteName ?? from.remoteName;
+    clusters.splice(clusters.indexOf(from), 1);
+    return into;
+  };
+  const present = new Set(list.map((conversation) => conversation.id));
   for (const conversation of list) {
+    const check = checks?.get?.(conversation.id);
+    if (check) {
+      const joined = new Set();
+      for (const link of Array.isArray(check.links) ? check.links : []) {
+        if (!present.has(link.id) || link.id === conversation.id) continue;
+        const earlier = list.find((item) => item.id === link.id);
+        const earlierTopic = earlier && namedTopic(earlier.topics, link.earlierTopic);
+        const target = earlierTopic && clusterOf.get(topicKey(link.id, earlierTopic.label));
+        const own = namedTopic(conversation.topics, link.topic);
+        if (!target || !own) continue;
+        const already = clusterOf.get(topicKey(conversation.id, own.label));
+        const cluster = already ? merge(target, already) : target;
+        if (!already) join(cluster, own, conversation.id);
+        cluster.remoteName = String(link.subject ?? "").trim() || cluster.remoteName;
+        joined.add(own);
+      }
+      for (const topic of conversation.topics) {
+        if (!joined.has(topic)) join(newCluster(topic), topic, conversation.id);
+      }
+      continue;
+    }
     for (const topic of conversation.topics) {
       let best = null;
-      let bestScore = threshold;
-      for (const cluster of clusters) {
-        if (cluster.sum.length !== topic.vector.length) continue;
-        const score = closeness(cluster, topic.vector);
-        if (score >= bestScore) {
-          best = cluster;
-          bestScore = score;
+      if (meaning) {
+        if (!topic.vector) continue;
+        let bestScore = threshold;
+        for (const cluster of clusters) {
+          if (!cluster.sum || cluster.sum.length !== topic.vector.length) continue;
+          const score = closeness(cluster, topic.vector);
+          if (score >= bestScore) {
+            best = cluster;
+            bestScore = score;
+          }
         }
+      } else if (topic.bag.size) {
+        best = clusters.find((cluster) => overlap(cluster.seed, topic.bag) >= WORD_OVERLAP) ?? null;
+      } else {
+        continue;
       }
-      if (!best) {
-        best = {
-          sum: new Float64Array(topic.vector.length),
-          norm: 0,
-          members: [],
-          conversationIds: [],
-        };
-        clusters.push(best);
-      }
-      add(best, topic.vector);
-      best.members.push(topic);
-      if (!best.conversationIds.includes(conversation.id))
-        best.conversationIds.push(conversation.id);
+      join(best ?? newCluster(topic), topic, conversation.id);
     }
   }
   const subjects = clusters
     .filter((cluster) => cluster.conversationIds.length > 1)
     .map((cluster) => ({
-      label: subjectName(cluster.members),
+      label:
+        cluster.remoteName || (meaning ? subjectName(cluster.members) : cluster.members[0].label),
       conversationIds: cluster.conversationIds,
     }));
   const edges = new Map();
@@ -243,13 +372,24 @@ export function meaningThreads(
   return { subjects, edges: [...edges.values()] };
 }
 
+/**
+ * Subjects and threads by meaning alone: `linkThreads` with vectors and no
+ * checks, as the benchmark measures it.
+ */
+export function meaningThreads(conversations, options) {
+  return linkThreads(conversations, { ...options, checks: null });
+}
+
 /** The member name most alike the others: what the subject is about, not one detail of it. */
 function subjectName(members) {
   let best = members[0];
   let bestScore = -Infinity;
   for (const member of members) {
+    if (!member.vector) continue;
     let total = 0;
-    for (const other of members) if (other !== member) total += cosine(member.vector, other.vector);
+    for (const other of members) {
+      if (other !== member && other.vector) total += cosine(member.vector, other.vector);
+    }
     if (total > bestScore + 1e-9) {
       best = member;
       bestScore = total;

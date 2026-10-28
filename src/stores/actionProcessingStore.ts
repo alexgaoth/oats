@@ -5,6 +5,7 @@ import { appendDictionarySuffix } from "../config/prompts";
 import { generateNoteTitle } from "../utils/generateTitle";
 import { buildNoteFormattingOverrides } from "../helpers/noteFormattingOverrides";
 import { claimWritingModel, sortConversationIntoGroup } from "./conversationGroupSortStore";
+import { checkConversationLinks } from "./conversationLinkStore";
 import type { ActionItem } from "../types/electron";
 
 export type ActionProcessingStatus = "idle" | "processing" | "success";
@@ -192,6 +193,16 @@ export function runBackgroundAction(
           mode: noteFormatting.mode,
           config: { ...providerOverrides, disableThinking: noteFormatting.disableThinking },
         }).catch(() => undefined);
+        // And, with a cloud writing model, its links to earlier conversations
+        // (stores/conversationLinkStore.ts). With any other model it does
+        // nothing, and the board links the conversation on this computer.
+        if (!cancelledFlags.get(noteId)) {
+          await checkConversationLinks(noteId, {
+            modelId,
+            mode: noteFormatting.mode,
+            config: { ...providerOverrides, disableThinking: noteFormatting.disableThinking },
+          }).catch(() => undefined);
+        }
       }
     } catch (err) {
       if (cancelledFlags.get(noteId)) return;

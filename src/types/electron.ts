@@ -84,6 +84,9 @@ export interface NoteItem {
   // How loud each second was, written at Finish (helpers/conversationLoudness.mjs).
   // Optional: absent for conversations recorded before it was kept.
   conversation_loudness?: string | null;
+  // A cloud model's link check, as JSON (helpers/remoteLinks.mjs). Optional:
+  // absent unless the writing model is a cloud provider.
+  conversation_links?: string | null;
   // Which bundled example conversation this is (helpers/sampleConversations.mjs),
   // or null for a conversation somebody recorded.
   sample_id?: string | null;
@@ -693,6 +696,7 @@ declare global {
           conversation_topics?: string | null;
           conversation_marks?: string | null;
           conversation_loudness?: string | null;
+          conversation_links?: string | null;
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;

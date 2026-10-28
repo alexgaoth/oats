@@ -2258,7 +2258,7 @@
         "speechTitle": "Modèle de parole",
         "speechScreen": "Un seul modèle transcrit vos conversations et votre dictée. Deux modèles se relaieraient en mémoire sur ce Mac.",
         "writingTitle": "Modèle d'écriture",
-        "writingScreen": "Un seul modèle rédige vos résumés, nomme les sujets de chaque conversation et nettoie votre dictée. Avec un modèle cloud, ce qui est dit sur chaque sujet est envoyé à ce fournisseur pendant la conversation. Avec OpenAI, un modèle OpenAI rapide confirme aussi chaque changement de sujet pendant la conversation et le nomme, et chaque requête contient jusqu'à 3 000 caractères de ce qui a été dit autour du changement.",
+        "writingScreen": "Un seul modèle rédige vos résumés, nomme les sujets de chaque conversation et nettoie votre dictée. Avec un modèle cloud, ce qui est dit sur chaque sujet est envoyé à ce fournisseur pendant la conversation. Avec OpenAI, un modèle OpenAI rapide confirme aussi chaque changement de sujet pendant la conversation et le nomme, et chaque requête contient jusqu'à 3 000 caractères de ce qui a été dit autour du changement. Avec OpenAI ou Anthropic, une fois une conversation résumée, le modèle le plus précis du fournisseur la relie aussi aux conversations précédentes sur les mêmes sujets : il reçoit les noms des sujets et les premières phrases du résumé de cette conversation et de 12 conversations précédentes au plus, jamais une transcription.",
         "none": "Aucun pour l'instant",
         "selfHosted": "Votre serveur"
       },
