@@ -1511,6 +1511,7 @@
         "openai_gpt_4_1": "稳定基准，1M 上下文",
         "openai_gpt_4_1_mini": "精简版 GPT-4.1",
         "openai_gpt_4_1_nano": "最低延迟 GPT-4.1",
+        "anthropic_claude_opus_5_5": "准确的摘要，几乎不编造事实：默认的写作模型",
         "anthropic_claude_fable_5": "Anthropic 最强大的模型，Mythos 级",
         "anthropic_claude_sonnet_5": "快速且强大的智能体模型，成本更低",
         "anthropic_claude_sonnet_4_6": "均衡性能",

@@ -405,6 +405,12 @@
       "name": "Anthropic",
       "models": [
         {
+          "id": "claude-opus-5-5",
+          "name": "Claude Opus 5.5",
+          "description": "Accurate summaries, few invented facts: the default writing model",
+          "descriptionKey": "models.descriptions.cloud.anthropic_claude_opus_5_5"
+        },
+        {
           "id": "claude-fable-5",
           "name": "Claude Fable 5",
           "description": "Anthropic's most capable model, Mythos-class, 1M context",

@@ -1516,6 +1516,7 @@
         "openai_gpt_4_1": "強力なベースライン、100 万トークンコンテキスト",
         "openai_gpt_4_1_mini": "小型 GPT-4.1 モデル",
         "openai_gpt_4_1_nano": "最低レイテンシーの GPT-4.1",
+        "anthropic_claude_opus_5_5": "捏造の少ない正確な要約：既定の文章モデル",
         "anthropic_claude_fable_5": "Anthropic の最も高性能なモデル、Mythos クラス",
         "anthropic_claude_sonnet_5": "低コストで高速かつ高性能なエージェントモデル",
         "anthropic_claude_sonnet_4_6": "バランスの取れた性能",
