@@ -2260,7 +2260,7 @@
         "speechTitle": "Sprachmodell",
         "speechScreen": "Ein Modell transkribiert Ihre Gespräche und Diktate. Zwei Modelle würden abwechselnd auf diesem Mac geladen.",
         "writingTitle": "Schreibmodell",
-        "writingScreen": "Ein Modell schreibt Ihre Zusammenfassungen, benennt die Themen jedes Gesprächs und bereinigt Ihre Diktate. Bei einem Cloud-Modell wird das, was zu jedem Thema gesagt wird, schon während des Gesprächs an diesen Anbieter gesendet. Bei OpenAI bestätigt außerdem ein schnelles OpenAI-Modell schon während des Gesprächs jeden Themenwechsel und benennt ihn, und jede Anfrage enthält bis zu 3.000 Zeichen des Gesagten rund um den Wechsel.",
+        "writingScreen": "Ein Modell schreibt Ihre Zusammenfassungen, bereinigt Ihre Diktate und benennt die Themen jedes Gesprächs. Bei OpenAI oder Anthropic benennen stattdessen die für Themen genauesten Modelle dieses Anbieters die Themen und bestätigen schon während des Gesprächs jeden Themenwechsel. Bei einem Cloud-Modell wird das, was zu jedem Thema gesagt wird, schon während des Gesprächs an diesen Anbieter gesendet, bis zu 3.000 Zeichen pro Anfrage.",
         "none": "Noch keins",
         "selfHosted": "Ihr Server"
       },

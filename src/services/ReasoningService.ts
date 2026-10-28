@@ -410,6 +410,20 @@ class ReasoningService extends BaseReasoningService {
     }
   }
 
+  /**
+   * Whether the Anthropic key can use a model, asked in the main process, which
+   * holds the key (`GET /v1/models/{id}`, no tokens, no conversation text).
+   * True or false when Anthropic says so; null when it could not be told.
+   */
+  async anthropicModelAvailable(model: string): Promise<boolean | null> {
+    try {
+      const answer = await window.electronAPI?.anthropicModelAvailable?.(model);
+      return typeof answer === "boolean" ? answer : null;
+    } catch {
+      return null;
+    }
+  }
+
   async *processTextStreaming(
     messages: Array<{ role: string; content: string }>,
     model: string,

@@ -29,7 +29,11 @@ const MeetingEchoLeakDetector = require("./meetingEchoLeakDetector");
 const { partitionPendingMicFinals, isWithinRetractWindow } = require("./meetingMicHoldback");
 const { applySmartSpacing } = require("./smartSpacing");
 const { applyAutoLearnSetting } = require("./autoLearnSetting");
-const { buildAnthropicRequest, anthropicAnswerText } = require("./anthropicMessages");
+const {
+  buildAnthropicRequest,
+  anthropicHeaders,
+  anthropicAnswerText,
+} = require("./anthropicMessages");
 const { isWindowSeen } = require("./windowVisibility");
 const {
   transcriptsOverlap,
@@ -3605,8 +3609,9 @@ class IPCHandlers {
             throw new Error("No model specified for Anthropic API call");
           }
 
-          // No temperature for Claude 4.7 and later, and their thinking off
-          // where they allow it (anthropicMessages.js).
+          // No temperature for Claude 4.7 and later, their thinking off where
+          // they allow it, the refusal fallback where the model has one, and
+          // effort and a JSON schema when the caller asks (anthropicMessages.js).
           const requestBody = buildAnthropicRequest({ modelId, text, config: config || {} });
 
           const response = await proxyFetch("https://api.anthropic.com/v1/messages", {
@@ -3614,7 +3619,11 @@ class IPCHandlers {
             headers: {
               "Content-Type": "application/json",
               "X-API-Key": apiKey,
+              // Stays on 2023-06-01. On 2026-10-21 every model refuses
+              // `temperature`, Sonnet 4.6 and Haiku 4.5 too: moving there means
+              // dropping temperature from every request (anthropicMessages.js).
               "anthropic-version": "2023-06-01",
+              ...anthropicHeaders(requestBody),
             },
             body: JSON.stringify(requestBody),
           });
@@ -3642,6 +3651,30 @@ class IPCHandlers {
         }
       }
     );
+
+    // Whether this Anthropic key can use a model: one request with no tokens
+    // and no conversation text (GET /v1/models/{id}), asked once a session for
+    // the topic models (topicNamingRunner.ts). True or false when Anthropic
+    // says so, null when it could not be told (no key, offline, a server error).
+    ipcMain.handle("anthropic-model-available", async (event, modelId) => {
+      const apiKey = this.environmentManager.getAnthropicKey();
+      if (!apiKey || !modelId) return null;
+      try {
+        const response = await proxyFetch(
+          `https://api.anthropic.com/v1/models/${encodeURIComponent(String(modelId))}`,
+          {
+            headers: { "X-API-Key": apiKey, "anthropic-version": "2023-06-01" },
+            signal: AbortSignal.timeout(5_000),
+          }
+        );
+        if (response.ok) return true;
+        // The model is not there for this key; a rejected key (401) may be fixed.
+        if ([400, 403, 404].includes(response.status)) return false;
+        return null;
+      } catch {
+        return null;
+      }
+    });
 
     ipcMain.handle("check-local-reasoning-available", async () => {
       try {

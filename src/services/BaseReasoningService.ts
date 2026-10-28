@@ -14,9 +14,14 @@ export interface ReasoningConfig {
   provider?: string;
   disableThinking?: boolean;
   language?: string;
-  /** OpenAI only: the reasoning effort ("none" for a fast answer). Unset, the model's default. */
-  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high";
-  /** OpenAI only: the answer must be JSON matching this schema (structured output). */
+  /**
+   * The reasoning effort, asked for by the topic jobs only (topicModels.mjs).
+   * OpenAI: `reasoning.effort` ("none" for a fast answer). Anthropic:
+   * `output_config.effort` (low to max), on Claude 4.7 and later. Unset, the
+   * model's default.
+   */
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+  /** OpenAI and Anthropic: the answer must be JSON matching this schema (structured output). */
   responseSchema?: { name: string; schema: Record<string, unknown> };
   /** OpenAI-compatible routes: how long one attempt may take. Unset, 30 s. */
   timeoutMs?: number;

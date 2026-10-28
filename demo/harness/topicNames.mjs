@@ -47,7 +47,7 @@ export function demoTopicName(prompt) {
 
 // --- The live topic check (`loop=1`, fastModel.mjs).
 //
-// The stand-in for the fast OpenAI model that confirms the changes of subject
+// The stand-in for the check model that confirms the changes of subject
 // the on-device tracker proposes (`src/helpers/topicLoop.mjs`). It answers as
 // the model is asked to, in the asked JSON, from the same subjects as above:
 // a change where the lines after it turn to another subject, a return when
