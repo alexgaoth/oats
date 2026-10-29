@@ -18,7 +18,8 @@
  *                on and the shipped config, as `_resolveWhisperVadOptions`
  *                ("meeting") gives it; a quiet segment raised first, and in a
  *                room whose steady floor is -41 dBFS or more its sound taken
- *                out in the conversion, as `transcribeInRoomAudio` does
+ *                out in the conversion (`base` and `small` only), as
+ *                `transcribeInRoomAudio` does
  *                (roomSegmentLevel.mjs, roomSegmentAudio.mjs)
  *   4. filters   `WhisperManager#parseWhisperResult` (the blank-audio marker),
  *                then the in-room path's own: a text that is only sound labels
@@ -142,6 +143,11 @@ const AMI = arg("ami");
 const LIBRISPEECH = arg("librispeech");
 const CONVERSATIONS = Number(arg("conversations", "9"));
 const MODEL = arg("model", path.join(process.env.HOME, ".cache/oats/whisper-models/ggml-base.bin"));
+/** The app's id for that file (ggml-small.en.bin: small.en), which the in-room path's denoise asks for. */
+const MODEL_ID =
+  Object.entries(require("../src/models/modelRegistryData.json").whisperModels).find(
+    ([, model]) => model.fileName === path.basename(MODEL)
+  )?.[0] ?? null;
 const LANGUAGE = arg("language", "auto");
 const VAD = !flag("no-vad");
 /** Raise a quiet segment before Whisper, as the in-room path does (roomSegmentLevel.mjs). */
@@ -498,7 +504,7 @@ async function startLocal(vadEnabled) {
       // `transcribeInRoomAudio` raises a quiet segment before it is sent, and
       // in a loud room asks the conversion to take the room's sound out.
       const heard = SEGMENT_GAIN ? raiseQuietSegment(samples) : samples;
-      const audioFilter = ROOM_DENOISE ? roomDenoiseFilter(heard, steadyFloor) : null;
+      const audioFilter = ROOM_DENOISE ? roomDenoiseFilter(heard, steadyFloor, MODEL_ID) : null;
       const wav = pcm16ToWav(Buffer.from(heard.buffer, heard.byteOffset, heard.byteLength));
       const started = Date.now();
       let parsed;

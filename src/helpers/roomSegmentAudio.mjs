@@ -18,6 +18,11 @@
 // spoke; the quiet microphone's text did not change, nor the quiet room's
 // words.
 //
+// Only for `base` and `small`, English-only or not. Turbo heard more with it
+// too (content words +1.3 with steady sound), but wrote more wrong words
+// (content-word precision 67.7% → 66.2%) and two more phrases where nobody
+// spoke: not a clear gain. The other models were not measured.
+//
 // afftdn's own floor must sit where the room's is: its default (-50 dB) is
 // under a fan's sound and over a quiet microphone's speech. It is the
 // segment's own floor (the RMS of its quietest tenth of 20 ms frames) plus
@@ -27,6 +32,9 @@
 // Pure and DOM-free: 16 kHz mono Int16 in, an FFmpeg filter chain or null out.
 
 const FRAME = 320; // 20 ms at 16 kHz, the segmenter's frame
+
+/** The Whisper models (their ids in modelRegistryData.json) whose rooms are denoised. */
+export const ROOM_DENOISE_MODELS = Object.freeze(["base", "base.en", "small", "small.en"]);
 
 export const ROOM_DENOISE = Object.freeze({
   /** The steady floor (RMS, 0..1) from which a room's sound is taken out: -41 dBFS. */
@@ -59,12 +67,13 @@ export function segmentFloorDb(samples, options = ROOM_DENOISE) {
 
 /**
  * The FFmpeg filter that takes the room's steady sound out of these samples,
- * the ones Whisper will hear; null in a room under the floor that needs it
- * (`steadyFloor`, the segmenter's, in RMS), or for a segment too short to tell
- * its own floor: it is then sent as it is.
+ * the ones Whisper `model` will hear; null for another model, in a room under
+ * the floor that needs it (`steadyFloor`, the segmenter's, in RMS), or for a
+ * segment too short to tell its own floor: it is then sent as it is.
  */
-export function roomDenoiseFilter(samples, steadyFloor, options = ROOM_DENOISE) {
+export function roomDenoiseFilter(samples, steadyFloor, model, options = ROOM_DENOISE) {
   const { minSteadyFloor, floorOffsetDb } = { ...ROOM_DENOISE, ...options };
+  if (!ROOM_DENOISE_MODELS.includes(model)) return null;
   if (!(steadyFloor >= minSteadyFloor)) return null;
   const floor = segmentFloorDb(samples, options);
   if (floor === null) return null;

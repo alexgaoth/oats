@@ -14,6 +14,8 @@ test.before(async () => {
 
 // A room with steady sound: the segmenter's steady floor at -41 dBFS or over.
 const LOUD_ROOM = 0.012;
+// The model Apple Silicon ships for English.
+const MODEL = "small.en";
 
 const RATE = 16000;
 let seed = 3;
@@ -52,7 +54,8 @@ test("in a loud room afftdn is set to the segment's own floor", () => {
       [1, 0.063],
       [0.4, 0.01],
     ]),
-    LOUD_ROOM
+    LOUD_ROOM,
+    MODEL
   );
   assert.match(fan, /^afftdn=nf=-(39|40)$/);
 });
@@ -66,16 +69,16 @@ test("a quiet room or a quiet microphone is sent as it is", () => {
   // The quiet room's steady floor stayed under -41 dBFS for 98% of its
   // segments, the quiet microphone's for all of them: there afftdn cost
   // content words.
-  assert.equal(roomDenoiseFilter(speech, 0.008), null);
-  assert.equal(roomDenoiseFilter(speech, 0.001), null);
+  assert.equal(roomDenoiseFilter(speech, 0.008, MODEL), null);
+  assert.equal(roomDenoiseFilter(speech, 0.001, MODEL), null);
   // A room the segmenter does not know yet is not a loud one.
-  assert.equal(roomDenoiseFilter(speech, null), null);
+  assert.equal(roomDenoiseFilter(speech, null, MODEL), null);
 });
 
 test("afftdn's range holds, and a segment too short to tell is sent as it is", () => {
-  assert.equal(roomDenoiseFilter(new Int16Array(RATE), LOUD_ROOM), "afftdn=nf=-80");
-  assert.equal(roomDenoiseFilter(audio([[1, 0.5]]), LOUD_ROOM), "afftdn=nf=-20");
-  assert.equal(roomDenoiseFilter(audio([[0.1, 0.01]]), LOUD_ROOM), null);
+  assert.equal(roomDenoiseFilter(new Int16Array(RATE), LOUD_ROOM, MODEL), "afftdn=nf=-80");
+  assert.equal(roomDenoiseFilter(audio([[1, 0.5]]), LOUD_ROOM, MODEL), "afftdn=nf=-20");
+  assert.equal(roomDenoiseFilter(audio([[0.1, 0.01]]), LOUD_ROOM, MODEL), null);
 });
 
 test("a segment carries the room's steady floor it closed in", () => {
@@ -95,7 +98,7 @@ test("a segment carries the room's steady floor it closed in", () => {
   for (const segment of closed) {
     const floor = db(segment.steadyFloor);
     assert.ok(Math.abs(floor - db(0.0125)) < 1.5, `steady floor ${floor.toFixed(1)} dB`);
-    assert.ok(roomDenoiseFilter(segment.samples, segment.steadyFloor));
+    assert.ok(roomDenoiseFilter(segment.samples, segment.steadyFloor, MODEL));
   }
 });
 
@@ -119,7 +122,7 @@ test("busy talk in a quiet room does not make it a loud one", () => {
   closed.push(...segmenter.flush());
   assert.ok(closed.length >= 1);
   for (const segment of closed)
-    assert.equal(roomDenoiseFilter(segment.samples, segment.steadyFloor), null);
+    assert.equal(roomDenoiseFilter(segment.samples, segment.steadyFloor, MODEL), null);
 });
 
 test("a room is loud once its sound has not stopped for a minute", () => {
@@ -139,7 +142,26 @@ test("a room is loud once its sound has not stopped for a minute", () => {
     ...segmenter.flush(),
   ];
   assert.ok(closed.length >= 1);
-  for (const segment of closed) assert.ok(roomDenoiseFilter(segment.samples, segment.steadyFloor));
+  for (const segment of closed)
+    assert.ok(roomDenoiseFilter(segment.samples, segment.steadyFloor, MODEL));
+});
+
+test("only base and small have a loud room's sound taken out", () => {
+  const loud = audio([
+    [0.3, 0.01],
+    [1, 0.063],
+    [0.4, 0.01],
+  ]);
+  for (const model of ["base", "base.en", "small", "small.en"])
+    assert.match(roomDenoiseFilter(loud, LOUD_ROOM, model), /^afftdn=/, model);
+  // Turbo heard more with it, but wrote more wrong words and two more phrases
+  // where nobody spoke; the others were not measured. A model the path could
+  // not tell is sent as it is too.
+  const { whisperModels } = require("../../src/models/modelRegistryData.json");
+  const others = Object.keys(whisperModels).filter((id) => !/^(base|small)(\.en)?$/.test(id));
+  assert.ok(others.includes("turbo") && others.includes("turbo-q5"));
+  for (const model of [...others, null, undefined, "small.en.bin"])
+    assert.equal(roomDenoiseFilter(loud, LOUD_ROOM, model), null, String(model));
 });
 
 test("the filter reaches the server's FFmpeg conversion; dictation sends none", async (t) => {

@@ -895,10 +895,10 @@ quiet microphone it loses a point of the words (0.4–1.5). Raised, turbo hears
 with steady sound, and writes eight more phrases where nobody spoke on the
 quiet microphone (5 → 13: "you", "Thank you.").
 
-**Only where the room stays loud.** `afftdn` now runs where the room's own
-sound has not stopped for a minute: where the segmenter's floor (the 5th
-percentile of the last 10 s of 20 ms frames) has not gone under -41 dBFS, an
-RMS of 0.009, in the last minute (`SpeechSegmenter#steadyFloor`,
+**Only where the room stays loud, with `base` and `small`.** `afftdn` now runs
+where the room's own sound has not stopped for a minute: where the segmenter's
+floor (the 5th percentile of the last 10 s of 20 ms frames) has not gone under
+-41 dBFS, an RMS of 0.009, in the last minute (`SpeechSegmenter#steadyFloor`,
 `helpers/roomSegmentAudio.mjs`). With steady sound that floor never went under
 -39.9 dBFS, and on the quiet microphone never over -47.1. In the quiet room 2%
 of the segments reached it: the opening seconds of one meeting, before the
@@ -938,7 +938,10 @@ wrong words than `small.en` does: content-word precision 67.7% → 66.2%, and
 two more phrases where nobody spoke that no other model heard there (11 → 13,
 checked against `small.en`, `gpt-transcribe` and `gpt-4o-mini-transcribe`:
 "Thank you.", "Perfect."), beside seven more that another model also heard
-(5 → 12).
+(5 → 12). That is not a clear gain, so the room's sound is taken out for
+`base` and `small`, with or without `.en`, only (`ROOM_DENOISE_MODELS`, for
+the model the request runs after a missing download falls back): turbo, and
+the models not measured (`tiny`, `medium`, `large`), hear the room as it is.
 
 ### What this does not show
 

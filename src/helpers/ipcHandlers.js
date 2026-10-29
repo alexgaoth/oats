@@ -5664,24 +5664,32 @@ class IPCHandlers {
     //
     // In a room with steady sound (the segmenter's steady floor at -41 dBFS
     // or over) its FFmpeg conversion also takes that sound out, with afftdn at
-    // the segment's own floor (roomSegmentAudio.mjs).
-    const transcribeInRoomAudio = async (pcm, steadyFloor) => {
+    // the segment's own floor, for `base` and `small` (roomSegmentAudio.mjs):
+    // the model the request will run, after a missing download falls back.
+    const transcribeInRoomWhisper = async (pcm, steadyFloor) => {
       const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
       const { roomDenoiseFilter } = await import("./roomSegmentAudio.mjs");
       const raised = raiseQuietSegment(new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1));
+      const model = await this.whisperManager.resolveRequestModel(
+        meetingLocalModel,
+        meetingLocalLanguage
+      );
+      return this.whisperManager.transcribeLocalWhisper(
+        pcm16ToWav(Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength)),
+        {
+          model: meetingLocalModel,
+          language: meetingLocalLanguage,
+          ...this._resolveWhisperVadOptions("meeting"),
+          audioFilter: roomDenoiseFilter(raised, steadyFloor, model),
+        }
+      );
+    };
+    const transcribeInRoomAudio = async (pcm, steadyFloor) => {
       const result = await (meetingLocalProvider === "nvidia"
         ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
             model: meetingLocalModel,
           })
-        : this.whisperManager.transcribeLocalWhisper(
-            pcm16ToWav(Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength)),
-            {
-              model: meetingLocalModel,
-              language: meetingLocalLanguage,
-              ...this._resolveWhisperVadOptions("meeting"),
-              audioFilter: roomDenoiseFilter(raised, steadyFloor),
-            }
-          ));
+        : transcribeInRoomWhisper(pcm, steadyFloor));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
       return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;
     };
