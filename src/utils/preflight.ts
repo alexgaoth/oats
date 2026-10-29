@@ -61,9 +61,11 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
     // while another is present still records, because the resolver falls back.
     if (facts.anyModelDownloaded === false) return "no-model";
   }
-  // Recording still works fully without a summary model, but what Oats promises
-  // after Finish — a title, a summary, the threads — will not happen, and that
-  // used to be discovered at the end, as a toast in a hidden window.
+  // Recording still works fully without a summary model, and the title and
+  // summary are written once one is ready (stores/summaryQueueStore.ts). Until
+  // then a conversation has neither, which used to be discovered at the end,
+  // as a toast in a hidden window. A model still downloading is not reported:
+  // the hook passes null for it.
   if (facts.summaryReady === false) return "no-summary-model";
   // Last, because recording still works fully — but the flagship surface will
   // not, and its own failure mode is silence.
@@ -74,4 +76,17 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
 /** Whether the problem makes starting pointless rather than merely risky. */
 export function blocksRecording(problem: PreflightProblem | null): boolean {
   return problem === "no-microphone";
+}
+
+/**
+ * The Settings page that fixes the problem, so the line under Record can take
+ * the person there in one press, or null when no setting does (a microphone,
+ * a permission, a damaged install).
+ */
+export function preflightSettingsPage(
+  problem: PreflightProblem | null
+): "models" | "recording" | null {
+  if (problem === "no-api-key" || problem === "no-summary-model") return "models";
+  if (problem === "question-cards-off") return "recording";
+  return null;
 }

@@ -2089,9 +2089,12 @@
       "deleteDescription": "它的转录、摘要和标记时刻将从 Oats 中删除。此操作无法撤销。",
       "emptyDescription": "你录制的对话会显示在这里，并附有摘要和可搜索的转录。",
       "noMatchesHint": "搜索范围包括标题、摘要、转录和你的备注。",
-      "needsSummaryModel": "还没有可用的摘要模型，所以这段对话没有摘要。",
+      "needsSummaryModel": "还没有可用的摘要模型。模型就绪后会立即生成摘要。",
       "notSummarized": "此对话尚未生成摘要。",
-      "summarize": "生成摘要",
+      "summaryAfterDownload": "{{model}} 下载完成后将生成摘要：{{percent}}%",
+      "summaryAfterRecording": "这段对话结束后将生成摘要。",
+      "summaryWhenRecordingEnds": "录音结束后将生成摘要。",
+      "summaryTooLong": "这段对话对这台 Mac 上的写作模型来说太长了。使用 API 密钥（设置 › AI 模型）即可生成摘要。",
       "summarizeAgain": "重新生成摘要",
       "summaryFailed": "无法生成摘要：{{reason}}",
       "setUpModel": "设置模型"
@@ -2347,7 +2350,7 @@
       "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
       "question-cards-off": "问题卡片已关闭，问题会被忽略。请在设置的“录音”中开启。",
-      "no-summary-model": "写作模型尚未就绪，对话将以无标题、无摘要的形式保存。请在 设置 › AI 模型 中选择一个。"
+      "no-summary-model": "标题和摘要需要等待写作模型：请在 设置 › AI 模型 中选择一个。"
     },
     "aide": {
       "title": "对话助手",

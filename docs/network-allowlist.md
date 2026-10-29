@@ -87,6 +87,15 @@ it: a request that Anthropic's safety classifiers decline is answered instead by
 the model Anthropic picks for that kind of refusal, on the same host
 (`src/helpers/anthropicMessages.js`).
 
+A conversation's summary goes to the writing model, by its route, at Finish.
+When no writing model is ready then (none chosen yet, or the one on this
+computer still downloading), the conversation waits, and is summarized by the
+same route once one is (`src/stores/summaryQueueStore.ts`): by a model on this
+computer or the person's own server, always; by a cloud provider only if it was
+already the writing model when the conversation finished. A provider chosen
+since gets an earlier conversation only when somebody opens it. A summary that
+fails is asked for once more, after 10 seconds.
+
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no
 destination. After each summary, the model gets one more short request: the

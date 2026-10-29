@@ -8,7 +8,8 @@
 //   of opening a browser: `window.oatsDemo.searches()`)
 //   a local summary model, so Finish writes a title and a summary, unless
 //   `loop=1`: then the writing model is OpenAI's, and the live topic check
-//   runs against the stand-in in fastModel.mjs (nothing leaves the page)
+//   runs against the stand-in in fastModel.mjs (nothing leaves the page);
+//   `writing=` names another local model, or `none`
 //   the context check off unless `check=1`, which turns it on with the demo's
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
 //
@@ -69,9 +70,15 @@ export function applyDemoSettings(params) {
     set("cleanupProvider", "openai");
     set("cleanupModel", "gpt-5.6-luna");
   } else {
+    // `writing=<model>` chooses another local writing model (with `download=`,
+    // one still downloading: boot.mjs), and `writing=none` chooses none yet.
+    const writing = params.get("writing");
     set("cleanupMode", "local");
-    set("cleanupModel", "qwen3.5-4b-q4_k_m");
+    set("cleanupModel", writing === "none" ? "" : writing || "qwen3.5-4b-q4_k_m");
   }
+  // The conversations owed a summary start empty on each page
+  // (stores/summaryQueueStore.ts), unless `owed=keep` keeps the last page's.
+  if (params.get("owed") !== "keep") localStorage.removeItem("oatsPendingSummaries");
   set("autoGenerateNoteTitle", "true");
   set("contextCheckEnabled", params.get("check") === "1" ? "true" : "false");
   set("contextFolder", params.get("check") === "1" ? CONTEXT_FOLDER : "");
