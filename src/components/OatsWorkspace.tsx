@@ -2121,6 +2121,9 @@ function IntelligenceViews({
               ) : (
                 <div
                   role="status"
+                  // A download's percent changes every few seconds: read where it
+                  // stands, not announced at each step.
+                  aria-live={summaryState === "downloading" ? "off" : undefined}
                   className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-5 text-muted-foreground"
                 >
                   <Sparkles aria-hidden="true" className="size-4 shrink-0" />
