@@ -77,6 +77,8 @@
  *                  streamed at `--pace` times real time (default 1, as live)
  *                  and committed; its time is from the commit, the end of its
  *                  audio, to its transcript.
+ *   --no-segment-gain  send a quiet segment at its own level, as the app did
+ *                  before it raised it (roomSegmentLevel.mjs): "before".
  *   --keep-sound-labels  keep a text that is only sound labels, as the app
  *                did before it dropped them: "before".
  *   --vad-config   VAD settings over the shipped ones, as JSON, e.g.
@@ -136,6 +138,8 @@ const CONVERSATIONS = Number(arg("conversations", "9"));
 const MODEL = arg("model", path.join(process.env.HOME, ".cache/oats/whisper-models/ggml-base.bin"));
 const LANGUAGE = arg("language", "auto");
 const VAD = !flag("no-vad");
+/** Raise a quiet segment before Whisper, as the in-room path does (roomSegmentLevel.mjs). */
+const SEGMENT_GAIN = !flag("no-segment-gain");
 /** Drop a text that is only sound labels, as the in-room path does (soundLabels.mjs). */
 const DROP_SOUND_LABELS = !flag("keep-sound-labels");
 const VAD_MODEL = arg(
@@ -442,6 +446,7 @@ async function startAlone(manager, model, startOptions) {
 async function startLocal(vadEnabled) {
   const WhisperServerManager = require("../src/helpers/whisperServer.js");
   const { isOnlySoundLabels } = await import("../src/helpers/soundLabels.mjs");
+  const { raiseQuietSegment } = await import("../src/helpers/roomSegmentLevel.mjs");
   const manager = new WhisperServerManager();
   if (!fs.existsSync(MODEL)) throw new Error(`model not found at ${MODEL}`);
   if (vadEnabled && !fs.existsSync(VAD_MODEL))
@@ -481,7 +486,9 @@ async function startLocal(vadEnabled) {
     manager,
     async transcribe(samples) {
       stderr = "";
-      const wav = pcm16ToWav(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
+      // `transcribeInRoomAudio` raises a quiet segment before it is sent.
+      const heard = SEGMENT_GAIN ? raiseQuietSegment(samples) : samples;
+      const wav = pcm16ToWav(Buffer.from(heard.buffer, heard.byteOffset, heard.byteLength));
       const started = Date.now();
       let parsed;
       let failed = null;
@@ -1409,6 +1416,7 @@ async function replay(recording, backend, ablation) {
               language: LANGUAGE,
               vad: VAD ? VAD_CONFIG : false,
               dropSoundLabels: DROP_SOUND_LABELS,
+              segmentGain: SEGMENT_GAIN,
             },
     segments: segments.length,
     segmentSeconds: Number(segmentSeconds.toFixed(1)),
