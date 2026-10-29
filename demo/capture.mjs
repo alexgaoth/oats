@@ -122,7 +122,8 @@ const SHOTS = [
   },
   // The speech model this Mac's GPU decides (src/helpers/speechTier.mjs), in
   // each state the speed check reports (harness/deviceTier.mjs).
-  { name: "speech-setup", query: "firstrun=1&tier=fast", ready: "h1", script: "" },
+  // Setup names Turbo among the downloads of "On this Mac" (its second step).
+  { name: "speech-setup", query: "firstrun=1&setupStep=1&tier=fast", ready: "h1", script: "" },
   { name: "speech-sidebar-downloading", query: "tier=downloading", script: "" },
   // Oats starts the download by itself and says so, once (SpeechUpgradeNotice).
   { name: "speech-notice", query: "tier=fast", script: "" },
