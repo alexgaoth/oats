@@ -2592,7 +2592,7 @@ const OUTCOME_BADGE: Record<string, BadgeProps["variant"]> = {
  * and nothing Oats had to guess. Each unresolved question is a *place* —
  * pressing it opens the transcript at the turn it was asked in.
  */
-function ConversationReview({
+export function ConversationReview({
   events,
   topics,
   onOpenTurn,
@@ -2879,7 +2879,7 @@ function TranscriptView({
  * (420px), filled down the first column first, so the reading order and the
  * tab order are the same.
  */
-function TalkTime({
+export function TalkTime({
   talk,
   selected,
   onSelect,

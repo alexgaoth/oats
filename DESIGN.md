@@ -160,6 +160,16 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   list and in the reading view. The sidebar's Recent list has none: at 232px
   the badge would take half of the title. Delete removes the example like any
   conversation, and the offer comes back when nothing is left.
+- **The tour** (`onboarding/OatsTour.tsx`, Alex, 2026-10-29). Setup ends with
+  five slides of what Oats does with a conversation. Each is one of the app's
+  own components taken out of its page and given the example conversation:
+  the flow card, the question cards, the contour, talk time, and what was left
+  open (`helpers/oatsTour.mjs`). It shows and does not teach: a title and one
+  sentence, nothing to try. The components cannot act (they get props, never a
+  store, in an `inert` box). It moves only on Back, Next, a dot or an arrow
+  key, never by itself, and under reduced motion nothing in it moves. It opens
+  after setup is saved, so Skip, Start or a quit all land in the app, and it
+  never shows again.
 - Radius: `rounded-md` (8px) for controls, `rounded-xl` (12px) for cards and
   panels. Focus: `ring-[3px] ring-ring/50` on every interactive element.
 
