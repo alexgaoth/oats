@@ -258,3 +258,72 @@ test("a sun with somewhere else to be sets and rises there instead of gliding", 
     assert.ok(sun.r < b.sun.r);
   }
 });
+
+test("the first picture is drawn as it is, and reduced motion never moves", async () => {
+  const { composeField } = await views();
+  const { startPicture, aimPicture, pictureAt, sameComposition } = await model();
+  const a = composeField("home", home);
+  const b = composeField("record", record);
+  const first = startPicture(a);
+  aimPicture(first, b, 0, false);
+  assert.ok(sameComposition(pictureAt(first, 10, 280, false), b), "nothing drawn yet: no move");
+
+  const reduced = startPicture(a);
+  pictureAt(reduced, 0, 280, false);
+  aimPicture(reduced, b, 0, true);
+  assert.equal(reduced.at, null);
+  assert.ok(sameComposition(pictureAt(reduced, 1, 280, true), b));
+});
+
+test("another screen is moved to over the frame's time, from the picture as drawn", async () => {
+  const { composeField } = await views();
+  const { startPicture, aimPicture, pictureAt, sameComposition } = await model();
+  const a = composeField("home", home);
+  const b = composeField("conversations", home);
+  const move = startPicture(a);
+  pictureAt(move, 0, 280, false);
+  aimPicture(move, b, 1000, false);
+  const early = pictureAt(move, 1050, 280, false);
+  assert.ok(early.horizon > a.horizon && early.horizon < b.horizon);
+  assert.ok(sameComposition(pictureAt(move, 1280, 280, false), b));
+  assert.equal(move.at, null, "and then it is at rest");
+});
+
+test("when the layout moves, the clearing follows at once and only the screen's character eases", async () => {
+  const { composeField, VIEW_KNOBS } = await views();
+  const { startPicture, aimPicture, pictureAt } = await model();
+  // A recording starts: the screen changes, then the sidebar glides away.
+  const homePicture = composeField(
+    "home",
+    room({ content: { left: 364, right: 1068, bottom: 680 } })
+  );
+  const recordingAtStart = composeField(
+    "recording",
+    room({ content: { left: 364, right: 1068, bottom: 556 } })
+  );
+  const midGlide = composeField(
+    "recording",
+    room({ sidebar: 116, content: { left: 248, right: 1068, bottom: 556 } })
+  );
+  const move = startPicture(homePicture);
+  pictureAt(move, 0, 280, false);
+  aimPicture(move, recordingAtStart, 1000, false);
+  pictureAt(move, 1040, 280, false);
+  aimPicture(move, midGlide, 1100, false);
+  const drawn = pictureAt(move, 1100, 280, false);
+  assert.deepEqual(drawn.clear, midGlide.clear, "the clearing is where the column is");
+  assert.ok(
+    drawn.horizon > VIEW_KNOBS.home.horizon && drawn.horizon < VIEW_KNOBS.recording.horizon
+  );
+  assert.equal(move.at, 1000, "the move keeps its own time");
+
+  // A window resized at rest: everything follows at once, nothing moves.
+  const resized = composeField(
+    "recording",
+    room({ width: 1300, sidebar: 0, content: { left: 182, right: 1118, bottom: 556 } })
+  );
+  pictureAt(move, 2000, 280, false);
+  aimPicture(move, resized, 2000, false);
+  assert.equal(move.at, null);
+  assert.deepEqual(pictureAt(move, 2001, 280, false).sun, resized.sun);
+});

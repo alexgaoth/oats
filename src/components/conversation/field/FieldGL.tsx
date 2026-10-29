@@ -7,16 +7,16 @@ import {
   HORIZON,
   INTRO_MS,
   SCENE_IDS,
+  aimPicture,
   bandPlacement,
   bandStyle,
   createField,
   defaultComposition,
-  easeOutCubic,
-  mixComposition,
   mixRgb,
   parseHexColor,
-  sameComposition,
+  pictureAt,
   sceneFrame,
+  startPicture,
   type Field,
   type FieldComposition,
   type FieldScene,
@@ -271,17 +271,10 @@ export default function FieldGL({
   const reducedRef = useRef(reduced);
   reducedRef.current = reduced;
 
-  // The picture, and the move toward a new one. Kept outside the GL effect so a
-  // context rebuilt mid-move picks up where the old one was. `at` is the wall
-  // clock the move started at (null when settled), `drawn` whether any frame
-  // has been: the first picture is drawn as it is, with nothing to move from.
-  const pictureRef = useRef({
-    from: composition ?? defaultComposition(intensity),
-    to: composition ?? defaultComposition(intensity),
-    now: composition ?? defaultComposition(intensity),
-    at: null as number | null,
-    drawn: false,
-  });
+  // The picture, and the move toward a new one (`aimPicture` in fieldModel.ts),
+  // on the wall clock. Kept outside the GL effect so a context rebuilt
+  // mid-move picks up where the old one was.
+  const pictureRef = useRef(startPicture(composition ?? defaultComposition(intensity)));
 
   // Set by the GL effect below. Anything that changes what a settled frame
   // should look like calls it: the loop is not running to notice for itself.
@@ -298,19 +291,15 @@ export default function FieldGL({
   // drawn as it is when there is nothing to move from, nobody to see the move,
   // or a person who asked for no motion.
   useEffect(() => {
-    const picture = pictureRef.current;
-    const next = composition ?? defaultComposition(intensity);
-    if (sameComposition(picture.to, next)) return;
-    if (!picture.drawn || reducedRef.current || !visibleRef.current) {
-      picture.from = next;
-      picture.now = next;
-      picture.at = null;
-    } else {
-      picture.from = picture.now;
-      picture.at = performance.now();
-    }
-    picture.to = next;
-    wakeRef.current?.();
+    const move = pictureRef.current;
+    const before = move.to;
+    aimPicture(
+      move,
+      composition ?? defaultComposition(intensity),
+      performance.now(),
+      reducedRef.current || !visibleRef.current
+    );
+    if (move.to !== before) wakeRef.current?.();
   }, [composition, intensity]);
 
   useEffect(() => {
@@ -560,19 +549,6 @@ export default function FieldGL({
           easing: pictureRef.current.at !== null,
         });
 
-      /** The picture this frame draws: where the move toward the next one has got to. */
-      const pictureAt = (now: number) => {
-        const picture = pictureRef.current;
-        picture.drawn = true;
-        if (picture.at === null) return (picture.now = picture.to);
-        const p = (now - picture.at) / MOVE_MS;
-        if (p >= 1 || reduced || !visibleRef.current) {
-          picture.at = null;
-          return (picture.now = picture.to);
-        }
-        return (picture.now = mixComposition(picture.from, picture.to, easeOutCubic(p)));
-      };
-
       /** The composition's calm, in device pixels with GL's origin at the bottom-left. */
       const setCalm = (
         calm: ReturnType<typeof calmU>,
@@ -625,7 +601,13 @@ export default function FieldGL({
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         const sceneH = sceneFrame(height, sceneHeightRef.current).scale;
-        const picture = pictureAt(performance.now());
+        // Where the move toward the next picture has got to.
+        const picture = pictureAt(
+          pictureRef.current,
+          performance.now(),
+          MOVE_MS,
+          reduced || !visibleRef.current
+        );
 
         // 1. Backdrop — the world.
         gl.useProgram(backdrop);

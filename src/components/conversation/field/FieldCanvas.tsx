@@ -8,20 +8,20 @@ import {
   SKY_BLOOM_ALPHA,
   SKY_BLUE,
   SKY_LIGHT_BOOST,
+  aimPicture,
   bandPlacement,
   bandStyle,
   calmAt,
   createField,
   defaultComposition,
-  easeOutCubic,
   growthAt,
   minkaHalfWidthAt,
-  mixComposition,
   mixRgb,
   parseHexColor,
+  pictureAt,
   rgbToCss,
-  sameComposition,
   sceneFrame,
+  startPicture,
   windAt,
   type Field,
   type FieldComposition,
@@ -207,13 +207,7 @@ export default function FieldCanvas({
   // once, so a resize has to draw it again or the old frame is stretched.
   const redrawRef = useRef<(() => void) | null>(null);
   // The picture, and the move toward a new one, as in FieldGL.
-  const pictureRef = useRef({
-    from: composition ?? defaultComposition(intensity),
-    to: composition ?? defaultComposition(intensity),
-    now: composition ?? defaultComposition(intensity),
-    at: null as number | null,
-    drawn: false,
-  });
+  const pictureRef = useRef(startPicture(composition ?? defaultComposition(intensity)));
   const maskRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
 
   useEffect(() => {
@@ -263,29 +257,12 @@ export default function FieldCanvas({
     if (!canvas) return;
 
     // A new picture: moved to over MOVE_MS, or drawn as it is (see FieldGL).
-    const picture = pictureRef.current;
-    const next = composition ?? defaultComposition(intensity);
-    if (!sameComposition(picture.to, next)) {
-      if (!picture.drawn || reduced || !visible) {
-        picture.from = next;
-        picture.now = next;
-        picture.at = null;
-      } else {
-        picture.from = picture.now;
-        picture.at = performance.now();
-      }
-      picture.to = next;
-    }
-    const pictureAt = (now: number) => {
-      picture.drawn = true;
-      if (picture.at === null) return (picture.now = picture.to);
-      const p = (now - picture.at) / MOVE_MS;
-      if (p >= 1 || reduced || !visible) {
-        picture.at = null;
-        return (picture.now = picture.to);
-      }
-      return (picture.now = mixComposition(picture.from, picture.to, easeOutCubic(p)));
-    };
+    const picture = aimPicture(
+      pictureRef.current,
+      composition ?? defaultComposition(intensity),
+      performance.now(),
+      reduced || !visible
+    );
 
     // See FieldGL: the world only moves on Conversation, for a user who wants
     // motion, while somebody can see it, and for the length of a move to
@@ -382,7 +359,7 @@ export default function FieldCanvas({
       // explicit that faking the grain with noise looks cheap rather than
       // intentional. Better to omit the texture than to counterfeit it.
       // The scene stands on the canvas's bottom edge at its own scale.
-      const view = pictureAt(performance.now());
+      const view = pictureAt(picture, performance.now(), MOVE_MS, reduced || !visible);
       const frame = sceneFrame(height, sceneHeight);
       const sceneH = frame.scale;
       const horizonY = frame.y(view.horizon);

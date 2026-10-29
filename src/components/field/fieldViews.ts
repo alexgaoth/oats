@@ -22,10 +22,10 @@ import {
 //   * The horizon, the sky, the wheat and the light are set per screen. The two
 //     Home screens are the field's own and get all of it; the reading screens
 //     get a lower horizon and a quieter world, in the margins.
-//   * The sun stands where there is room for all of it: on the open ground
-//     under short content, or in the wider margin, low over the horizon. Where
-//     no whole disc fits it is not drawn, and only its light stays on the
-//     horizon: a card never cuts it in half.
+//   * The sun stands where the largest whole disc fits, low over the horizon:
+//     on the open ground under short content, or in a margin. Where no whole
+//     disc fits it is not drawn, and only its light stays on the horizon: a
+//     card never cuts it in half.
 //
 // Pure and DOM-free, so the compositions can be pinned (test/helpers/
 // fieldViews.test.js). FieldBackdrop measures the room; this decides the picture.
@@ -197,8 +197,8 @@ function placeSun(
   ];
   margins.forEach((margin, index) => {
     const across = (margin.to - margin.from - 2 * SUN_GAP) / 2;
-    const under = (horizonY - skyTop) / (SUN_RISE + 1);
-    const r = Math.min(rMax, across, under);
+    const below = (horizonY - skyTop) / (SUN_RISE + 1);
+    const r = Math.min(rMax, across, below);
     const x = (margin.from + margin.to) / 2;
     places.push({ x, r, top: skyTop, score: r * (index === 0 ? 1.05 : 1) });
   });
@@ -259,8 +259,8 @@ export function composeField(view: FieldView, room: FieldRoom): FieldComposition
   const sun: FieldDisc = place
     ? { x: place.x, y: horizonY - place.r * SUN_RISE, r: place.r }
     : { x: 0, y: 0, r: 0 };
-  // The moon stands in the same free space, higher, a little to the side, so
-  // the light it leaves on the horizon is the sun's, set.
+  // The moon stands in the same free space, higher, so the warm light left on
+  // the horizon under it is the sun's, set.
   const moonR = place ? place.r * MOON_SCALE : 0;
   const moon: FieldDisc = place
     ? {
@@ -286,6 +286,7 @@ export function composeField(view: FieldView, room: FieldRoom): FieldComposition
     minkaX: placeMinka(room, clear, horizonY, place ? place.x : null),
     clear,
     calmTop: pane.top,
+    layout: [width, height, pane.left, pane.top, pane.right, pane.bottom].join(","),
   };
 }
 

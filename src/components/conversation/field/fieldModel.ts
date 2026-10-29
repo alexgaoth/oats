@@ -59,8 +59,9 @@ export function sceneFrame(height: number, sceneHeight?: number) {
 }
 
 /**
- * Where the sun sits, as a fraction of viewport width. Off-centre on a thirds
- * line: a light source dead centre reads as a target rather than as weather.
+ * Where the light comes from, as a fraction of viewport width, when no
+ * composition places a sun (the sidebar's field). Off-centre on a thirds line:
+ * a light source dead centre reads as a target rather than as weather.
  */
 export const SUN_X = 0.34;
 
@@ -524,6 +525,13 @@ export interface FieldComposition {
    * the window's title band, which no column covers. 0 means none.
    */
   calmTop: number;
+  /**
+   * The layout this picture was composed for (the window and the pane), as a
+   * key. When it changes, the layout itself has moved — a resized window, the
+   * sidebar gliding away — and what is pinned to it follows at once
+   * (`aimPicture`). Empty for a picture pinned to nothing.
+   */
+  layout: string;
 }
 
 /** How far below `calmTop` the grain takes to come back, in CSS px. */
@@ -551,6 +559,7 @@ export function defaultComposition(intensity = 1): FieldComposition {
     minkaX: MINKA.x,
     clear: NO_CLEARING,
     calmTop: 0,
+    layout: "",
   };
 }
 
@@ -635,6 +644,7 @@ export function mixComposition(
     minkaX: c < 0.5 ? a.minkaX : b.minkaX,
     clear: mixClearing(a.clear, b.clear, c),
     calmTop: lerp(a.calmTop, b.calmTop, c),
+    layout: b.layout,
   };
 }
 
@@ -658,8 +668,114 @@ export function sameComposition(a: FieldComposition, b: FieldComposition): boole
     px(a.clear.right, b.clear.right) &&
     px(a.clear.bottom, b.clear.bottom) &&
     px(a.clear.feather, b.clear.feather) &&
-    px(a.calmTop, b.calmTop)
+    px(a.calmTop, b.calmTop) &&
+    a.layout === b.layout
   );
+}
+
+/** A renderer's picture: where it is, where it is going, and since when. */
+export interface PictureMove {
+  from: FieldComposition;
+  to: FieldComposition;
+  /** The picture as last drawn. */
+  now: FieldComposition;
+  /** When the move started, in ms on the caller's clock; null when settled at `to`. */
+  at: number | null;
+  /** Whether a frame has been drawn: the first picture has nothing to move from. */
+  drawn: boolean;
+}
+
+export function startPicture(first: FieldComposition): PictureMove {
+  return { from: first, to: first, now: first, at: null, drawn: false };
+}
+
+/**
+ * Point `move` at `next` (mutates it).
+ *
+ *   * The first picture, or `instant` (prefers-reduced-motion, nobody can see
+ *     it): drawn as it is, no move.
+ *   * The layout moved (`layout` differs): what is pinned to the layout — the
+ *     clearing, the calm top, where the light and the farmhouse stand, and the
+ *     sun and moon — follows at once, in both ends of any move under way, so
+ *     the clearing never trails a column the frame is sliding. Only the
+ *     screen's own character eases on, and while the horizon is still moving
+ *     the sun's height and size move with it rather than float off it.
+ *   * Anything else (another screen, content that arrived): a move from the
+ *     picture as last drawn, starting `now`.
+ */
+export function aimPicture(
+  move: PictureMove,
+  next: FieldComposition,
+  now: number,
+  instant: boolean
+): PictureMove {
+  if (sameComposition(move.to, next)) return move;
+  if (!move.drawn || instant) {
+    move.from = next;
+    move.now = next;
+    move.at = null;
+  } else if (move.to.layout !== next.layout) {
+    const pinned = (picture: FieldComposition): FieldComposition => {
+      const settled = Math.abs(picture.horizon - next.horizon) < 0.0005;
+      return {
+        ...picture,
+        clear: next.clear,
+        calmTop: next.calmTop,
+        lightX: next.lightX,
+        minkaX: next.minkaX,
+        sun: settled ? next.sun : { ...picture.sun, x: next.sun.x },
+        moon: settled ? next.moon : { ...picture.moon, x: next.moon.x },
+        layout: next.layout,
+      };
+    };
+    if (move.at !== null) {
+      move.from = pinned(move.from);
+    } else if (sameCharacter(move.to, next)) {
+      move.from = next;
+    } else {
+      // The screen changed with the layout: its character still eases.
+      move.from = pinned(move.to);
+      move.at = now;
+    }
+    move.now = pinned(move.now);
+  } else {
+    move.from = move.now;
+    move.at = now;
+  }
+  move.to = next;
+  return move;
+}
+
+/** Whether two pictures differ only in what is pinned to the layout. */
+function sameCharacter(a: FieldComposition, b: FieldComposition): boolean {
+  const near = (x: number, y: number) => Math.abs(x - y) < 0.0005;
+  return (
+    near(a.horizon, b.horizon) &&
+    near(a.sky, b.sky) &&
+    near(a.skyTone, b.skyTone) &&
+    near(a.wheat, b.wheat) &&
+    near(a.warmth, b.warmth)
+  );
+}
+
+/**
+ * The picture to draw at `now`, `duration` ms into a move, eased; settles the
+ * move once it is over, or at once when `instant`.
+ */
+export function pictureAt(
+  move: PictureMove,
+  now: number,
+  duration: number,
+  instant: boolean
+): FieldComposition {
+  move.drawn = true;
+  if (move.at === null) return (move.now = move.to);
+  const p = (now - move.at) / duration;
+  if (p >= 1 || instant) {
+    move.at = null;
+    return (move.now = move.to);
+  }
+  return (move.now = mixComposition(move.from, move.to, easeOutCubic(p)));
 }
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
