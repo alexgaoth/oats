@@ -157,29 +157,39 @@ test("a summary model that could not be checked is never reported missing", asyn
   assert.equal(resolvePreflight({ ...READY, summaryReady: undefined }), null);
 });
 
-test("a writing model on its way is said as one, not as one to choose", async () => {
+test("without an API key, the line says the key is missing", async () => {
   const { resolvePreflight, blocksRecording } = await load();
-  const downloading = resolvePreflight({
-    ...READY,
-    summaryReady: false,
-    summaryWaiting: "downloading",
-  });
-  assert.equal(downloading, "summary-model-downloading");
-  assert.equal(blocksRecording(downloading), false);
-  assert.equal(
-    resolvePreflight({ ...READY, summaryReady: false, summaryWaiting: "no-key" }),
-    "no-writing-key"
-  );
-  // Only while the summary is not ready: a model downloading for later says nothing.
-  assert.equal(resolvePreflight({ ...READY, summaryWaiting: "downloading" }), null);
+  const noKey = resolvePreflight({ ...READY, summaryReady: false, summaryWaiting: "no-key" });
+  assert.equal(noKey, "no-writing-key");
+  assert.equal(blocksRecording(noKey), false);
+  // Only while the summary is not ready.
+  assert.equal(resolvePreflight({ ...READY, summaryWaiting: "no-key" }), null);
   // And it still ranks below anything that stops transcription.
   assert.equal(
     resolvePreflight({
       ...READY,
       summaryReady: false,
-      summaryWaiting: "downloading",
+      summaryWaiting: "no-key",
       anyModelDownloaded: false,
     }),
     "no-model"
   );
+});
+
+test("a line that a setting fixes takes the person to that page in one press", async () => {
+  const { preflightSettingsPage } = await load();
+  assert.equal(preflightSettingsPage("no-summary-model"), "models");
+  assert.equal(preflightSettingsPage("no-api-key"), "models");
+  assert.equal(preflightSettingsPage("no-writing-key"), "models");
+  assert.equal(preflightSettingsPage("question-cards-off"), "recording");
+  // No setting brings a microphone, a permission or a damaged install back.
+  for (const problem of [
+    "no-microphone",
+    "microphone-permission",
+    "no-speech-engine",
+    "no-model",
+  ]) {
+    assert.equal(preflightSettingsPage(problem), null);
+  }
+  assert.equal(preflightSettingsPage(null), null);
 });

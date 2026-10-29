@@ -2104,9 +2104,12 @@
       "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
       "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
       "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
-      "needsSummaryModel": "Aún no hay un modelo de resumen listo, así que esta conversación no se ha resumido.",
+      "needsSummaryModel": "Aún no hay un modelo de resumen listo. El resumen se escribirá en cuanto lo haya.",
       "notSummarized": "Esta conversación aún no se ha resumido.",
-      "summarize": "Resumir",
+      "summaryAfterDownload": "El resumen se escribirá cuando {{model}} termine de descargarse: {{percent}}%",
+      "summaryAfterRecording": "El resumen se escribirá cuando termine esta conversación.",
+      "summaryWhenRecordingEnds": "El resumen se escribirá cuando termine la grabación.",
+      "summaryTooLong": "Esta conversación es demasiado larga para el modelo de escritura de este Mac. Con una clave API (Ajustes › Modelos de IA) se puede resumir.",
       "summarizeAgain": "Resumir de nuevo",
       "summaryFailed": "No se pudo crear el resumen: {{reason}}",
       "setUpModel": "Configurar un modelo"
@@ -2320,7 +2323,7 @@
       "microphoneDescription": "El micrófono que usa Oats para conversaciones y dictado.",
       "fieldBackdrop": {
         "label": "Fondo de campo",
-        "description": "Dibuja el campo de trigo animado detrás de la app."
+        "description": "Un aspecto más relajado para Oats."
       },
       "dictationButton": "Mientras dictas",
       "instructionsDescription": "Cómo el modelo reescribe cada dictado. La opción predeterminada sirve para casi todos.",
@@ -2360,9 +2363,8 @@
       "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
       "question-cards-off": "Las tarjetas de preguntas están desactivadas, así que las preguntas pasarán en silencio. Actívalas en Ajustes, en Grabación.",
-      "no-summary-model": "Las conversaciones se guardarán sin título ni resumen: no hay ningún modelo de escritura listo. Elige uno en Ajustes › Modelos de IA.",
-      "summary-model-downloading": "El modelo de escritura aún se está descargando. Hasta que esté listo, las conversaciones se guardan sin título ni resumen.",
-      "no-writing-key": "Las conversaciones se guardarán sin título ni resumen: el modelo de escritura necesita una clave de API. Añade una en Ajustes › Modelos de IA."
+      "no-summary-model": "Los títulos y resúmenes esperan a un modelo de escritura: elige uno en Ajustes › Modelos de IA.",
+      "no-writing-key": "Los títulos y resúmenes esperan una clave de API: añade una en Ajustes › Modelos de IA."
     },
     "aide": {
       "title": "Asistente de conversación",
@@ -2502,7 +2504,7 @@
       "speechSent": "Con una clave de OpenAI, el audio de cada conversación se envía en directo a OpenAI para transcribirlo. Sin ella, la voz se queda en este ordenador."
     },
     "writingModel": {
-      "progress": "{{percent}}% de {{size}}. Hasta que esté listo, las conversaciones se guardan sin título ni resumen.",
+      "progress": "{{percent}}% de {{size}}. Las conversaciones reciben su título y resumen en cuanto esté listo.",
       "downloadingShort": "Descargando {{model}}: {{percent}}%",
       "cancelDownload": "Cancelar la descarga de {{model}}",
       "missing": "Aún no descargado: {{size}} desde Hugging Face.",
@@ -2521,6 +2523,7 @@
       "works": "Guardada. Funciona con {{model}}.",
       "noAccess": "Guardada, pero esta clave no puede usar {{model}}. Elige otro modelo en Avanzado.",
       "unchecked": "Guardada. Oats no pudo comprobarla ahora.",
+      "limited": "Guardada. Esta clave tiene permisos limitados, así que Oats no pudo comprobar si puede usar {{model}}.",
       "saved": "Guardada.",
       "getKey": "Consigue una clave de {{provider}}",
       "savedKey": "Tu clave de {{provider}}",

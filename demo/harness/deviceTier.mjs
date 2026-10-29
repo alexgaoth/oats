@@ -17,17 +17,17 @@
 // `oatsDemo.tier("downloading")` switches state on a running page.
 //
 // The writing model on this Mac (src/helpers/writingModelFetch.js), by
-// `writing=`:
+// `writingState=`:
 //
-//   writing=ready        the model this Mac's memory holds is on disk (default)
-//   writing=none         nothing on disk yet: the workspace fetches it (about 12 s)
-//   writing=downloading  at 34%
-//   writing=declined     the person cancelled it
-//   writing=failed       the download failed
-//   writing=small        only Qwen3.5 4B is on disk, from before
+//   writingState=ready        the model this Mac's memory holds is on disk (default)
+//   writingState=none         nothing on disk yet: the workspace fetches it (about 12 s)
+//   writingState=downloading  at 34%
+//   writingState=declined     the person cancelled it
+//   writingState=failed       the download failed
+//   writingState=small        only Qwen3.5 4B is on disk, from before
 //
 // `memory=8` makes this an 8 GB Mac, whose model is Qwen3.5 4B; otherwise
-// 48 GB and Gemma 4 E4B. `oatsDemo.writing("downloading")` switches state.
+// 48 GB and Gemma 4 E4B. `oatsDemo.writingState("downloading")` switches state.
 
 import { REFERENCE } from "../../src/helpers/speechTier.mjs";
 
@@ -52,10 +52,12 @@ const GEMMA = { id: "gemma-4-e4b-it-q4_k_m", bytes: 5_812_137_984 };
 const QWEN = { id: "qwen3.5-4b-q4_k_m", bytes: 2_871_743_520 };
 
 /** The writing model's report (WritingModelSnapshot) for a state. */
-function writingReport(state, model, received = 0.34 * model.bytes) {
+function writingReport(state, model, received = 0.34 * model.bytes, autoDeclined = false) {
   return {
     installed: state === "ready" ? [model.id] : state === "small" ? [QWEN.id] : [],
     declined: state === "declined" ? [model.id] : [],
+    autoDeclined,
+    waiting: null,
     downloading:
       state === "downloading"
         ? { modelId: model.id, receivedBytes: received, totalBytes: model.bytes }
@@ -108,6 +110,8 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
   const memoryBytes = (Number(memory) > 0 ? Number(memory) : 48) * GIB;
   const writingModel = memoryBytes >= 16 * GIB ? GEMMA : QWEN;
   let writingState = initialWriting || "ready";
+  // A writing model was deleted: nothing is fetched by itself until a choice.
+  let autoDeclined = false;
   let writing = writingReport(writingState, writingModel);
   let current = snapshot(state, undefined, writing, memoryBytes);
   let timer = null;
@@ -129,7 +133,7 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
       writingTimer = null;
     }
     writingState = next;
-    writing = writingReport(next, writingModel, received);
+    writing = writingReport(next, writingModel, received, autoDeclined);
     publish({ ...current, writing });
   };
   // The writing model's download, as main runs it: about 12 s, then on disk.
@@ -168,15 +172,25 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
     getArch: () => (state === "intel" ? "x64" : "arm64"),
     getDeviceTier: async () => current,
     startWritingModelDownload: async ({ modelId, force = false } = {}) => {
+      if (force) autoDeclined = false;
       const startable =
-        writingState === "none" ||
-        writingState === "small" ||
+        (!autoDeclined && (writingState === "none" || writingState === "small")) ||
         (force && (writingState === "declined" || writingState === "failed"));
       if (modelId === writingModel.id && startable && !writingTimer) runWriting();
       return current;
     },
-    cancelWritingModelDownload: async () => {
-      if (writingState === "downloading") setWriting("declined");
+    // The person's Cancel is a no; moving on (`decline: false`) is not.
+    cancelWritingModelDownload: async ({ decline = true, keep = null } = {}) => {
+      if (writingState === "downloading" && keep !== writingModel.id) {
+        setWriting(decline === false ? "none" : "declined");
+      }
+      return current;
+    },
+    writingModelChosen: async () => {
+      if (autoDeclined) {
+        autoDeclined = false;
+        setWriting(writingState);
+      }
       return current;
     },
     /** The speech models on disk, as `list-whisper-models` would say. */
@@ -188,10 +202,20 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
     ],
     /** The local writing models on disk, as `model-get-all` would say. */
     writingInstalled: () => [...writing.installed],
-    /** A local writing model was deleted in Settings: a no to it. */
+    /**
+     * A local writing model was deleted in Settings: a no to it, and to
+     * fetching any writing model by itself until a choice.
+     */
     writingDeleted: (modelId) => {
-      if (writing.installed.includes(modelId))
-        setWriting(modelId === writingModel.id ? "declined" : writingState);
+      if (!writing.installed.includes(modelId)) return;
+      autoDeclined = true;
+      setWriting(
+        modelId === writingModel.id
+          ? "declined"
+          : writingState === "small" && modelId === QWEN.id
+            ? "none"
+            : writingState
+      );
     },
     /** Switch the writing model's state on a running page (`oatsDemo.writing`). */
     setWriting: (next) => setWriting(next),

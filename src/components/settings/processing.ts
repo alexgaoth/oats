@@ -7,9 +7,11 @@ import {
 } from "../../stores/settingsStore";
 import {
   isStoredDefault,
+  switchWritingSide,
   WRITING_MODEL_KEY,
   WRITING_PROVIDER_KEY,
 } from "../../helpers/writingTier.mjs";
+import { leaveWritingDownload } from "../../hooks/useWritingModel";
 
 /**
  * The one Processing switch: every feature on this Mac, or every feature on
@@ -22,7 +24,9 @@ import {
  * API keys gpt-6.1-sol with an OpenAI key, OpenAI's most accurate summaries
  * for the price (docs/summaries.md, #143), or Claude Opus 5.5 with only an
  * Anthropic key (#145). A model somebody chose is kept, and comes back when
- * the switch comes back to its side.
+ * the switch comes back to its side, also from "mixed" (`switchWritingSide`).
+ * Moving to the providers stops a local writing download (the automatic one,
+ * or the one setup started): nothing would use it, and nothing would show it.
  */
 
 export type ProcessingMode = "local" | "providers";
@@ -95,12 +99,14 @@ function storedWritingChoice(): RememberedModels | null {
 /** Point every feature at this Mac or at the providers, in one choice. */
 export function setProcessing(mode: ProcessingMode) {
   const store = useSettingsStore.getState();
-  const current = processingMode(store);
-  const memory = readMemory();
-  if (current !== "mixed") {
-    memory[current] = storedWritingChoice();
-    writeMemory(memory);
-  }
+  // The choice in use is kept under the side the writing is on, "mixed" or not.
+  const { memory, restore: remembered } = switchWritingSide({
+    memory: readMemory(),
+    writingMode: store.cleanupMode,
+    stored: storedWritingChoice(),
+    target: mode,
+  });
+  writeMemory(memory);
 
   // Speech. On this Mac, every scope local. With API keys, OpenAI when its key
   // is stored and this Mac without it (applyProvidersSpeech).
@@ -113,12 +119,13 @@ export function setProcessing(mode: ProcessingMode) {
     store.setMeetingTranscriptionMode(mode);
   } else {
     applyProvidersSpeech();
+    // Not a no: the default may fetch it again on the way back to this Mac.
+    leaveWritingDownload();
   }
 
   // Writing: summaries take the cleanup scope's whole configuration.
   store.setCleanupMode(mode);
   store.setNoteFormattingMode(mode);
-  const remembered = memory[mode];
   if (remembered) chooseWritingModel(remembered.cleanupProvider, remembered.cleanupModel);
   else forgetWritingChoice();
 }

@@ -117,7 +117,15 @@ test("switching processing does not leave the other mode's model behind", () => 
   const body = PROCESSING.slice(start, start + 2000);
   assert.match(body, /store\.setCleanupMode\(mode\);/);
   assert.match(body, /store\.setNoteFormattingMode\(mode\);/);
-  assert.match(body, /memory\[current\] = storedWritingChoice\(\);/);
+  // The choice in use is kept under the side the writing is on, also from
+  // "mixed" (writingTier.mjs `switchWritingSide`, tested in writingTier.test.js).
+  assert.match(
+    body,
+    /switchWritingSide\(\{\s*memory: readMemory\(\),\s*writingMode: store\.cleanupMode,\s*stored: storedWritingChoice\(\),\s*target: mode,\s*\}\);/
+  );
+  assert.match(body, /writeMemory\(memory\);/);
+  // Moving to the providers stops a local writing download nothing would use.
+  assert.match(body, /applyProvidersSpeech\(\);[^}]*leaveWritingDownload\(\);/);
   assert.match(
     body,
     /if \(remembered\) chooseWritingModel\(remembered\.cleanupProvider, remembered\.cleanupModel\);/

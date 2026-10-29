@@ -329,7 +329,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-start", options),
   cancelSpeechUpgrade: () => ipcRenderer.invoke("speech-upgrade-cancel"),
   startWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-start", options),
-  cancelWritingModelDownload: () => ipcRenderer.invoke("writing-model-cancel"),
+  cancelWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-cancel", options),
+  writingModelChosen: () => ipcRenderer.invoke("writing-model-chosen"),
 
   // The context agent (contextAgentIpc.js): the user's Claude Code checks a
   // question against GitHub, Linear, Notion and Slack, read-only.

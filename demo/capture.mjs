@@ -75,6 +75,62 @@ const SHOTS = [
     script:
       "await oatsDemo.open(undefined, { tab: 'connections' }); await demo.scrollTo('Summary', 'tab'); await demo.wait(2500)",
   },
+  // Summaries that start by themselves (stores/summaryQueueStore.ts), in each
+  // state the record can say instead of a summary. `bare=` takes the review's
+  // summary away, as from a conversation recorded before a model was ready.
+  {
+    // Opened with the model ready: it starts at once, with nothing to press.
+    name: "summary-starting",
+    query: "bare=launch-readiness-review",
+    script: "await oatsDemo.open(); await demo.toSummary()",
+  },
+  {
+    // The writing model on this Mac still downloading.
+    name: "summary-downloading",
+    query: "writing=gemma-4-e4b-it-q4_k_m&download=40&bare=launch-readiness-review",
+    script: "await oatsDemo.open(); await demo.toSummary()",
+  },
+  {
+    // No writing model chosen yet.
+    name: "summary-needs-model",
+    query: "writing=none&bare=launch-readiness-review",
+    script: "await oatsDemo.open(); await demo.toSummary()",
+  },
+  {
+    // Both tries failed: only now does the record say so.
+    name: "summary-failed",
+    query: "summary=fail&bare=launch-readiness-review",
+    script:
+      "await oatsDemo.open(); await demo.until(() => /could not be written/.test(document.body.innerText), 30000); await demo.wait(6500); await demo.toSummary()",
+  },
+  {
+    // Too long for the model on this Mac: why, and the way to a model that can.
+    name: "summary-too-long",
+    query: "summary=too-long&bare=launch-readiness-review",
+    script:
+      "await oatsDemo.open(); await demo.until(() => /too long for the writing model/.test(document.body.innerText), 30000); await demo.wait(6500); await demo.toSummary()",
+  },
+  {
+    // The conversation being recorded: its Finish writes the summary.
+    name: "summary-while-recording",
+    query: "demo=live&end=hold&from=120&edits=0",
+    script:
+      "await demo.untilSeconds(121); await oatsDemo.open(oatsDemo.status().noteId); await demo.toSummary()",
+  },
+  {
+    // Another conversation, opened during a recording with the model on this
+    // Mac: it waits, so the model does not compete with the transcription.
+    name: "summary-after-recording",
+    query: "demo=live&end=hold&from=120&edits=0&bare=all",
+    script:
+      "await demo.untilSeconds(121); await oatsDemo.open(oatsDemo.samples()[0].id); await demo.toSummary()",
+  },
+  {
+    // The line under Record names the setting, and goes there in one press.
+    name: "home-no-writing-model",
+    query: "writing=none",
+    script: "",
+  },
   { name: "conversations", query: "", script: "await oatsDemo.show('conversations')" },
   { name: "global", query: "", script: "await oatsDemo.show('global'); await demo.wait(1500)" },
   {
@@ -132,6 +188,32 @@ const SHOTS = [
     query: `tier=${tier}`,
     script: "await oatsDemo.settings('models')",
   })),
+  // Field mode (Settings › General › Advanced): the backdrop composed for each
+  // screen in front of it (src/components/field/fieldViews.ts).
+  { name: "field-home", query: "field=1", script: "" },
+  { name: "field-home-empty", query: "field=1&profile=empty", script: "" },
+  {
+    name: "field-conversations",
+    query: "field=1",
+    script: "await oatsDemo.show('conversations')",
+  },
+  {
+    name: "field-conversations-empty",
+    query: "field=1&profile=empty",
+    script: "await oatsDemo.show('conversations')",
+  },
+  {
+    name: "field-global",
+    query: "field=1",
+    script: "await oatsDemo.show('global'); await demo.wait(1500)",
+  },
+  { name: "field-record", query: "field=1", script: "await oatsDemo.open()" },
+  {
+    name: "field-live",
+    query: "field=1&demo=live&from=560&end=hold&view=calm",
+    script: "await demo.untilSeconds(563)",
+  },
+  { name: "field-settings", query: "field=1", script: "await oatsDemo.settings('general')" },
   {
     name: "speech-settings-chosen",
     query: "tier=ready&chosen=small",
@@ -147,11 +229,11 @@ const SHOTS = [
   // model on this Mac follows its memory (src/helpers/writingTier.mjs).
   ...[
     ["local-ready", ""],
-    ["local-downloading", "tier=downloading&writing=downloading"],
-    ["local-declined", "writing=declined&tier=declined"],
-    ["local-failed", "writing=failed&tier=failed"],
-    ["local-8gb", "memory=8&writing=small&tier=none"],
-    ["local-chosen", "writingChosen=qwen3.5-9b-q4_k_m&chosen=small"],
+    ["local-downloading", "tier=downloading&writingState=downloading"],
+    ["local-declined", "writingState=declined&tier=declined"],
+    ["local-failed", "writingState=failed&tier=failed"],
+    ["local-8gb", "memory=8&writingState=small&tier=none"],
+    ["local-chosen", "writing=qwen3.5-9b-q4_k_m&chosen=small"],
     ["providers-nokey", "processing=providers"],
     ["providers-openai", "processing=providers&keys=openai"],
     ["providers-anthropic", "processing=providers&keys=anthropic"],
@@ -175,7 +257,7 @@ const SHOTS = [
   {
     // The writing chooser under Advanced, on its own: the rows of one family.
     name: "models-advanced-writing",
-    query: "writing=downloading",
+    query: "writingState=downloading",
     script: [
       "await oatsDemo.settings('models');",
       "await demo.openAdvanced();",
@@ -228,8 +310,8 @@ const SHOTS = [
   },
   // Oats starts the writing model's download by itself and says so, once
   // (WritingModelNotice), and Home says what it means for a conversation now.
-  { name: "writing-notice", query: "writing=none&tier=ready", script: "await demo.wait(1500)" },
-  { name: "writing-home-downloading", query: "writing=downloading&noticedWriting=1", script: "" },
+  { name: "writing-notice", query: "writingState=none&tier=ready", script: "await demo.wait(1500)" },
+  { name: "writing-home-downloading", query: "writingState=downloading&noticedWriting=1", script: "" },
   { name: "writing-home-nokey", query: "processing=providers", script: "" },
   // The tour at the end of setup (components/onboarding/OatsTour.tsx): setup
   // finished the way a person finishes it, then Next to each slide. The
@@ -333,6 +415,20 @@ window.demo = {
   async point(id) {
     await oatsDemo.point(id);
     await demo.wait(200);
+  },
+  async until(test, ms = 20000) {
+    const end = performance.now() + ms;
+    while (!test()) {
+      if (performance.now() > end) throw new Error("timed out");
+      await demo.wait(100);
+    }
+  },
+  // The record's summary area, or what it says instead, in the middle of the window.
+  async toSummary() {
+    const panel = document.querySelector('[role="tabpanel"][data-state="active"]');
+    const status = [...(panel?.querySelectorAll('[role="status"]') ?? [])].at(-1);
+    status?.scrollIntoView({ block: "center", behavior: "instant" });
+    await demo.wait(300);
   },
   async scrollTo(text, role) {
     const candidates = role === "heading"

@@ -12,7 +12,6 @@ export type PreflightProblem =
   | "no-model"
   | "no-api-key"
   | "no-summary-model"
-  | "summary-model-downloading"
   | "no-writing-key"
   | "question-cards-off";
 
@@ -35,9 +34,8 @@ export interface PreflightFacts {
   /** Whether the title and summary can be written after Finish. Without them
    *  the conversation is saved untitled and is never filed to the vault. */
   summaryReady: boolean | null;
-  /** Why not, when that changes what to say: the writing model is still
-   *  downloading, or the provider has no key. */
-  summaryWaiting?: "downloading" | "no-key" | null;
+  /** Why not, when that changes what to say: the provider has no key. */
+  summaryWaiting?: "no-key" | null;
 }
 
 /**
@@ -66,15 +64,14 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
     // while another is present still records, because the resolver falls back.
     if (facts.anyModelDownloaded === false) return "no-model";
   }
-  // Recording still works fully without a summary model, but what Oats promises
-  // after Finish — a title, a summary, the threads — will not happen, and that
-  // used to be discovered at the end, as a toast in a hidden window.
-  // While Oats downloads the writing model there is nothing to choose, only
-  // to wait for; without a key, the key is what is missing.
+  // Recording still works fully without a summary model, and the title and
+  // summary are written once one is ready (stores/summaryQueueStore.ts). Until
+  // then a conversation has neither, which used to be discovered at the end,
+  // as a toast in a hidden window. A model still downloading is not reported:
+  // the hook passes null for it. Without an API key, the key is what is
+  // missing, and the line says so.
   if (facts.summaryReady === false) {
-    if (facts.summaryWaiting === "downloading") return "summary-model-downloading";
-    if (facts.summaryWaiting === "no-key") return "no-writing-key";
-    return "no-summary-model";
+    return facts.summaryWaiting === "no-key" ? "no-writing-key" : "no-summary-model";
   }
   // Last, because recording still works fully — but the flagship surface will
   // not, and its own failure mode is silence.
@@ -85,4 +82,19 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
 /** Whether the problem makes starting pointless rather than merely risky. */
 export function blocksRecording(problem: PreflightProblem | null): boolean {
   return problem === "no-microphone";
+}
+
+/**
+ * The Settings page that fixes the problem, so the line under Record can take
+ * the person there in one press, or null when no setting does (a microphone,
+ * a permission, a damaged install).
+ */
+export function preflightSettingsPage(
+  problem: PreflightProblem | null
+): "models" | "recording" | null {
+  if (problem === "no-api-key" || problem === "no-summary-model" || problem === "no-writing-key") {
+    return "models";
+  }
+  if (problem === "question-cards-off") return "recording";
+  return null;
 }

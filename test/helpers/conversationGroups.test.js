@@ -184,7 +184,11 @@ test("the summary sorts its conversation by the same model and route, after it i
     body.slice(sorted, sorted + 260),
     /modelId,\s*mode: noteFormatting\.mode,\s*config: \{ \.\.\.providerOverrides, disableThinking: noteFormatting\.disableThinking \},\s*\}\)\.catch\(/
   );
-  assert.match(body, /finally \{\s*cancelledFlags\.delete\(noteId\);\s*release\(\);/);
+  // Each try releases its claim on the model, whatever happens to it (a failed
+  // summary is tried twice: helpers/summaryQueue.mjs), and the cancel flag goes
+  // when the last try ends.
+  assert.match(body, /finally \{\s*release\(\);\s*\}/);
+  assert.match(body, /finally \{\s*cancelledFlags\.delete\(noteId\);\s*\}/);
 });
 
 test("sorting opens no connection of its own: its one request is the reasoning service's", () => {

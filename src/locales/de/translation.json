@@ -2104,9 +2104,12 @@
       "deleteDescription": "Transkript, Zusammenfassung und markierte Momente werden aus Oats entfernt. Das lässt sich nicht rückgängig machen.",
       "emptyDescription": "Aufgenommene Gespräche erscheinen hier, mit einer Zusammenfassung und einem durchsuchbaren Transkript.",
       "noMatchesHint": "Die Suche umfasst Titel, Zusammenfassungen, Transkripte und deine Notizen.",
-      "needsSummaryModel": "Noch ist kein Modell für Zusammenfassungen bereit, daher wurde dieses Gespräch nicht zusammengefasst.",
+      "needsSummaryModel": "Noch ist kein Modell für Zusammenfassungen bereit. Die Zusammenfassung wird erstellt, sobald eines bereit ist.",
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
-      "summarize": "Zusammenfassen",
+      "summaryAfterDownload": "Die Zusammenfassung wird erstellt, sobald {{model}} heruntergeladen ist: {{percent}}%",
+      "summaryAfterRecording": "Die Zusammenfassung wird erstellt, wenn dieses Gespräch beendet ist.",
+      "summaryWhenRecordingEnds": "Die Zusammenfassung wird erstellt, wenn die Aufnahme endet.",
+      "summaryTooLong": "Dieses Gespräch ist zu lang für das Schreibmodell auf diesem Mac. Mit einem API-Schlüssel (Einstellungen › KI-Modelle) lässt es sich zusammenfassen.",
       "summarizeAgain": "Erneut zusammenfassen",
       "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden: {{reason}}",
       "setUpModel": "Modell einrichten"
@@ -2320,7 +2323,7 @@
       "microphoneDescription": "Das Mikrofon, das Oats für Gespräche und Diktate nutzt.",
       "fieldBackdrop": {
         "label": "Feld-Hintergrund",
-        "description": "Zeigt das animierte Weizenfeld hinter der App."
+        "description": "Ein entspannteres Aussehen für Oats."
       },
       "dictationButton": "Beim Diktieren",
       "instructionsDescription": "Wie das Modell jedes Diktat überarbeitet. Die Standardeinstellung passt für die meisten.",
@@ -2360,9 +2363,8 @@
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
       "question-cards-off": "Fragekarten sind ausgeschaltet, Fragen gehen also still vorbei. Schalte sie in den Einstellungen unter Aufnahme ein.",
-      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Schreibmodell bereit. Wählen Sie eines unter Einstellungen › KI-Modelle.",
-      "summary-model-downloading": "Das Schreibmodell wird noch heruntergeladen. Bis dahin werden Gespräche ohne Titel und Zusammenfassung gespeichert.",
-      "no-writing-key": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Das Schreibmodell braucht einen API-Schlüssel. Fügen Sie einen unter Einstellungen › KI-Modelle hinzu."
+      "no-summary-model": "Titel und Zusammenfassungen warten auf ein Schreibmodell: Wählen Sie eines unter Einstellungen › KI-Modelle.",
+      "no-writing-key": "Titel und Zusammenfassungen warten auf einen API-Schlüssel: Fügen Sie einen unter Einstellungen › KI-Modelle hinzu."
     },
     "aide": {
       "title": "Gesprächshilfe",
@@ -2502,7 +2504,7 @@
       "speechSent": "Mit einem OpenAI-Schlüssel wird das Audio jedes Gesprächs zum Transkribieren live an OpenAI gesendet. Ohne Schlüssel bleibt die Sprache auf diesem Computer."
     },
     "writingModel": {
-      "progress": "{{percent}}% von {{size}}. Bis dahin werden Gespräche ohne Titel und Zusammenfassung gespeichert.",
+      "progress": "{{percent}}% von {{size}}. Gespräche erhalten Titel und Zusammenfassung, sobald es bereit ist.",
       "downloadingShort": "{{model}} wird heruntergeladen: {{percent}}%",
       "cancelDownload": "Download von {{model}} abbrechen",
       "missing": "Noch nicht heruntergeladen: {{size}} von Hugging Face.",
@@ -2521,6 +2523,7 @@
       "works": "Gespeichert. Er funktioniert mit {{model}}.",
       "noAccess": "Gespeichert, aber dieser Schlüssel kann {{model}} nicht nutzen. Wählen Sie unter Erweitert ein anderes Modell.",
       "unchecked": "Gespeichert. Oats konnte ihn gerade nicht prüfen.",
+      "limited": "Gespeichert. Dieser Schlüssel hat eingeschränkte Rechte, daher konnte Oats nicht prüfen, ob er {{model}} nutzen kann.",
       "saved": "Gespeichert.",
       "getKey": "Schlüssel von {{provider}} holen",
       "savedKey": "Ihr {{provider}}-Schlüssel",

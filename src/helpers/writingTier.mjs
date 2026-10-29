@@ -148,14 +148,23 @@ export function followsDefaultWritingModel(storage) {
 export const WRITING_MIGRATION_KEY = "writingModelDefaultMigrated";
 
 /**
+ * The cloud models the processing switch stored by itself under OpenAI, by
+ * version: gpt-5.6-terra from its start (2026-07-30) through 0.1.0, and
+ * gpt-6.1-sol after #144 (2026-10-28). Nothing else ever stored a cloud model
+ * without the person picking a provider.
+ */
+const STORED_CLOUD_DEFAULTS = Object.freeze(["gpt-5.6-terra", CLOUD_WRITING_MODELS.openai]);
+
+/**
  * Whether a stored writing model is one an earlier version stored by itself:
  * the switch to "On this Mac" stored Qwen3.5 4B under the provider "local",
- * and the switch to the providers stored gpt-6.1-sol under OpenAI
- * (processing.ts before 0.2). The model pickers store a local model under its
- * family ("qwen"), never "local", so the pair tells the two apart. Forgetting
- * either loses nothing: the default resolves to the same model wherever that
- * model can run, and Qwen3.5 4B stays in use while it is the one on disk
- * (`defaultLocalWritingModel`).
+ * and the switch to the providers stored gpt-5.6-terra, later gpt-6.1-sol,
+ * under OpenAI (processing.ts before 0.2; OatsWorkspace.tsx before that). The
+ * model pickers store a local model under its family ("qwen"), never "local",
+ * so the pair tells the two apart. Forgetting one loses nothing a person chose:
+ * the default resolves to OpenAI's model wherever an OpenAI key is stored, to
+ * Anthropic's where only that key is, and Qwen3.5 4B stays in use while it is
+ * the one on disk (`defaultLocalWritingModel`).
  *
  * @param {{ mode?: string | null, provider?: string | null, model?: string | null }} stored
  * @returns {boolean}
@@ -165,7 +174,7 @@ export function isStoredDefault({ mode = null, provider = null, model = null } =
     return model === SMALL_WRITING_MODEL && (provider === null || provider === "local");
   }
   if (mode === "providers") {
-    return model === CLOUD_WRITING_MODELS.openai && provider === "openai";
+    return provider === "openai" && STORED_CLOUD_DEFAULTS.includes(model);
   }
   return false;
 }
@@ -204,12 +213,12 @@ export function migrateStoredWritingModel(storage) {
  * - "ready": on disk.
  * - "downloading": its download is under way.
  * - "failed": its last download failed (Settings offers it again).
- * - "declined": the person cancelled or deleted it; Oats does not fetch it
- *   again by itself.
+ * - "declined": the person cancelled or deleted it, or deleted another
+ *   writing model (`autoDeclined`); Oats does not fetch it by itself.
  * - "missing": not on disk, and nothing stands in the way of fetching it.
  *
  * @param {string} model
- * @param {{ installed?: readonly string[], declined?: readonly string[],
+ * @param {{ installed?: readonly string[], declined?: readonly string[], autoDeclined?: boolean,
  *   downloading?: { modelId: string } | null, failed?: { modelId: string } | null }} [writing]
  * @returns {"ready" | "downloading" | "failed" | "declined" | "missing"}
  */
@@ -217,7 +226,9 @@ export function localWritingStatus(model, writing = {}) {
   if (writing.downloading?.modelId === model) return "downloading";
   if ((writing.installed ?? []).includes(model)) return "ready";
   if (writing.failed?.modelId === model) return "failed";
-  if ((writing.declined ?? []).includes(model)) return "declined";
+  if ((writing.declined ?? []).includes(model) || writing.autoDeclined === true) {
+    return "declined";
+  }
   return "missing";
 }
 
@@ -227,7 +238,10 @@ export function localWritingStatus(model, writing = {}) {
  * and runs on this Mac, only once this Mac's memory is known, never while a
  * conversation is recorded (its notice would compete with the room), and only
  * when no writing model is ready: not while another download runs, not after
- * a failure (Settings retries), and not after the person cancelled or deleted it.
+ * a failure (Settings retries), not after the person cancelled or deleted it,
+ * and not after the person removed a writing model at all (`autoDeclined`):
+ * removing Qwen3.5 4B must not start Gemma 4 E4B. That lasts until the person
+ * chooses a model or presses Download.
  *
  * @param {object} input
  * @param {{ model: string, reason: string } | null} input.choice `defaultWritingModel` for "local".
@@ -254,8 +268,29 @@ export function shouldFetchWritingModel({
     local === true &&
     recording !== true &&
     !writing.downloading &&
+    writing.autoDeclined !== true &&
     localWritingStatus(choice.model, writing) === "missing"
   );
+}
+
+/**
+ * The processing switch moving to `target`: the writing choice it keeps for
+ * each side, and the one to restore. The choice in use is kept under the side
+ * the writing scope is on, which is also where it is when the switch reads
+ * "mixed" (a cloud model with speech on this Mac, for example), so leaving
+ * "mixed" never loses it: moving to that side keeps it, and moving to the
+ * other side remembers it for the way back. A server of the person's own is
+ * on neither side and is not remembered. Null means: follow the default.
+ *
+ * @template T
+ * @param {{ memory: Partial<Record<"local" | "providers", T | null>>,
+ *   writingMode: string, stored: T | null, target: "local" | "providers" }} input
+ * @returns {{ memory: Partial<Record<"local" | "providers", T | null>>, restore: T | null }}
+ */
+export function switchWritingSide({ memory, writingMode, stored, target }) {
+  const next = { ...memory };
+  if (writingMode === "local" || writingMode === "providers") next[writingMode] = stored ?? null;
+  return { memory: next, restore: next[target] ?? null };
 }
 
 /** Set once the notice of the writing model's automatic download has been shown (localStorage). */

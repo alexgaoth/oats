@@ -59,8 +59,9 @@ export function sceneFrame(height: number, sceneHeight?: number) {
 }
 
 /**
- * Where the sun sits, as a fraction of viewport width. Off-centre on a thirds
- * line: a light source dead centre reads as a target rather than as weather.
+ * Where the light comes from, as a fraction of viewport width, when no
+ * composition places a sun (the sidebar's field). Off-centre on a thirds line:
+ * a light source dead centre reads as a target rather than as weather.
  */
 export const SUN_X = 0.34;
 
@@ -460,4 +461,343 @@ export function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
 export function rgbToCss(rgb: Rgb): string {
   const to255 = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
   return `rgb(${to255(rgb[0])} ${to255(rgb[1])} ${to255(rgb[2])})`;
+}
+
+// ---------------------------------------------------------------------------
+// Composition — one picture of the field, per view.
+//
+// The field mode backdrop stands behind every screen, and each screen has its
+// own room: Home has open ground under its card, the recording view has wheat
+// under its two cards, a record is a long column of text. So the backdrop
+// composes the field for the screen it is behind (`components/field/
+// fieldViews.ts`): where the horizon is, how present the sky, the wheat and the
+// light are, where the sun stands, and the column the world keeps clear of.
+// The renderers only draw a composition; they do not know about screens.
+
+/** A disc in the sky, in CSS px from the canvas's top-left. `r` 0 draws none. */
+export interface FieldDisc {
+  x: number;
+  y: number;
+  r: number;
+}
+
+/**
+ * A calm area: nothing of the world is drawn inside it, and the grain thins out
+ * over `feather` CSS px around it. CSS px from the canvas's top-left. A
+ * `feather` of 0 means there is no clearing at all.
+ */
+export interface FieldClearing {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  feather: number;
+}
+
+export interface FieldComposition {
+  /** The horizon, as a fraction of the scene's height from its top. */
+  horizon: number;
+  /** How strong the sky's grain is, 0..1: how many of its dots are drawn. */
+  sky: number;
+  /**
+   * How dark each of the sky's dots is on oat milk, 0..1 of the field's own.
+   * Blue over near-white needs its deeper pour to read as sky in a small band
+   * (the sidebar's), but over a whole window it is a grey wall; on charcoal the
+   * sky is drawn as it always was.
+   */
+  skyTone: number;
+  /** How present the wheat is, 0..1: it scales every band's opacity. */
+  wheat: number;
+  /** The warm light along the horizon and the earth under it, 0..1. */
+  warmth: number;
+  /** Where the warm light is strongest, as a fraction of the canvas's width. */
+  lightX: number;
+  /** The sun, drawn on a light theme. */
+  sun: FieldDisc;
+  /** The moon, drawn on a dark theme in the sun's place. */
+  moon: FieldDisc;
+  /** The farmhouse, as a fraction of the canvas's width; below 0 it is not drawn. */
+  minkaX: number;
+  /** Where the content stands, which the world keeps clear of. */
+  clear: FieldClearing;
+  /**
+   * Everything above this line (CSS px) is calm too, across the whole width:
+   * the window's title band, which no column covers. 0 means none.
+   */
+  calmTop: number;
+  /**
+   * The layout this picture was composed for (the window and the pane), as a
+   * key. When it changes, the layout itself has moved — a resized window, the
+   * sidebar gliding away — and what is pinned to it follows at once
+   * (`aimPicture`). Empty for a picture pinned to nothing.
+   */
+  layout: string;
+}
+
+/** How far below `calmTop` the grain takes to come back, in CSS px. */
+export const CALM_TOP_FEATHER = 56;
+
+const NO_DISC: FieldDisc = { x: 0, y: 0, r: 0 };
+const NO_CLEARING: FieldClearing = { left: 0, top: 0, right: 0, bottom: 0, feather: 0 };
+
+/**
+ * The field as it was before screens had compositions: the horizon at HORIZON,
+ * every layer at `intensity`, the light from SUN_X with no disc drawn, the
+ * farmhouse in its place, and nothing kept clear. The sidebar's field draws
+ * this, so the backdrop's compositions leave it exactly as it was.
+ */
+export function defaultComposition(intensity = 1): FieldComposition {
+  return {
+    horizon: HORIZON,
+    sky: intensity,
+    skyTone: 1,
+    wheat: intensity,
+    warmth: intensity,
+    lightX: SUN_X,
+    sun: NO_DISC,
+    moon: NO_DISC,
+    minkaX: MINKA.x,
+    clear: NO_CLEARING,
+    calmTop: 0,
+    layout: "",
+  };
+}
+
+/**
+ * How much the ground is scaled when the horizon moves. The ground below the
+ * horizon keeps its proportions, so a lower horizon is the same field further
+ * away (shorter wheat over less ground), never the same wheat cut off by the
+ * bottom of the window.
+ */
+export function groundScale(horizon: number): number {
+  return Math.max(0.05, (1 - horizon) / (1 - HORIZON));
+}
+
+/**
+ * A band's root, blade height and spread, as fractions of the scene's height,
+ * under a composition's horizon. At HORIZON this is `bandStyle` unchanged.
+ */
+export function bandPlacement(band: number, horizon: number) {
+  const style = bandStyle(band);
+  const scale = groundScale(horizon);
+  return {
+    baseY: horizon + (style.baseY - HORIZON) * scale,
+    height: style.height * scale,
+    spread: bandSpread(band) * scale,
+  };
+}
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+function mixDisc(a: FieldDisc, b: FieldDisc, t: number): FieldDisc {
+  // A disc that has somewhere else to be sets and rises there rather than
+  // gliding across the window: a sun sliding over the page reads as a cursor,
+  // not as light. In the same place across (the horizon rising or falling
+  // under it), it simply follows, as a sun does.
+  const far = Math.abs(a.x - b.x) > 2 * Math.max(a.r, b.r, 1);
+  if (a.r <= 0 || b.r <= 0 || far) {
+    return t < 0.5 ? { ...a, r: a.r * (1 - 2 * t) } : { ...b, r: b.r * (2 * t - 1) };
+  }
+  return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), r: lerp(a.r, b.r, t) };
+}
+
+function mixClearing(a: FieldClearing, b: FieldClearing, t: number): FieldClearing {
+  // A clearing that comes or goes grows out of, or shrinks into, the other's
+  // place, so the world leaves the column rather than vanishing from it.
+  const from =
+    a.feather > 0
+      ? a
+      : { ...b, left: (b.left + b.right) / 2, right: (b.left + b.right) / 2, feather: 0 };
+  const to =
+    b.feather > 0
+      ? b
+      : { ...a, left: (a.left + a.right) / 2, right: (a.left + a.right) / 2, feather: 0 };
+  return {
+    left: lerp(from.left, to.left, t),
+    top: lerp(from.top, to.top, t),
+    right: lerp(from.right, to.right, t),
+    bottom: lerp(from.bottom, to.bottom, t),
+    feather: lerp(from.feather, to.feather, t),
+  };
+}
+
+/** The composition `t` of the way from `a` to `b` (0..1, already eased). */
+export function mixComposition(
+  a: FieldComposition,
+  b: FieldComposition,
+  t: number
+): FieldComposition {
+  const c = t < 0 ? 0 : t > 1 ? 1 : t;
+  if (c === 0) return a;
+  if (c === 1) return b;
+  return {
+    horizon: lerp(a.horizon, b.horizon, c),
+    sky: lerp(a.sky, b.sky, c),
+    skyTone: lerp(a.skyTone, b.skyTone, c),
+    wheat: lerp(a.wheat, b.wheat, c),
+    warmth: lerp(a.warmth, b.warmth, c),
+    lightX: lerp(a.lightX, b.lightX, c),
+    sun: mixDisc(a.sun, b.sun, c),
+    moon: mixDisc(a.moon, b.moon, c),
+    // The farmhouse has no place in between: it moves at the midpoint, where
+    // the grain of both pictures hides the step.
+    minkaX: c < 0.5 ? a.minkaX : b.minkaX,
+    clear: mixClearing(a.clear, b.clear, c),
+    calmTop: lerp(a.calmTop, b.calmTop, c),
+    layout: b.layout,
+  };
+}
+
+/** Whether two compositions draw the same picture, to a fraction of a CSS pixel. */
+export function sameComposition(a: FieldComposition, b: FieldComposition): boolean {
+  const px = (x: number, y: number) => Math.abs(x - y) < 0.5;
+  const fraction = (x: number, y: number) => Math.abs(x - y) < 0.0005;
+  const disc = (p: FieldDisc, q: FieldDisc) => px(p.x, q.x) && px(p.y, q.y) && px(p.r, q.r);
+  return (
+    fraction(a.horizon, b.horizon) &&
+    fraction(a.sky, b.sky) &&
+    fraction(a.skyTone, b.skyTone) &&
+    fraction(a.wheat, b.wheat) &&
+    fraction(a.warmth, b.warmth) &&
+    fraction(a.lightX, b.lightX) &&
+    disc(a.sun, b.sun) &&
+    disc(a.moon, b.moon) &&
+    fraction(a.minkaX, b.minkaX) &&
+    px(a.clear.left, b.clear.left) &&
+    px(a.clear.top, b.clear.top) &&
+    px(a.clear.right, b.clear.right) &&
+    px(a.clear.bottom, b.clear.bottom) &&
+    px(a.clear.feather, b.clear.feather) &&
+    px(a.calmTop, b.calmTop) &&
+    a.layout === b.layout
+  );
+}
+
+/** A renderer's picture: where it is, where it is going, and since when. */
+export interface PictureMove {
+  from: FieldComposition;
+  to: FieldComposition;
+  /** The picture as last drawn. */
+  now: FieldComposition;
+  /** When the move started, in ms on the caller's clock; null when settled at `to`. */
+  at: number | null;
+  /** Whether a frame has been drawn: the first picture has nothing to move from. */
+  drawn: boolean;
+}
+
+export function startPicture(first: FieldComposition): PictureMove {
+  return { from: first, to: first, now: first, at: null, drawn: false };
+}
+
+/**
+ * Point `move` at `next` (mutates it).
+ *
+ *   * The first picture, or `instant` (prefers-reduced-motion, nobody can see
+ *     it): drawn as it is, no move.
+ *   * The layout moved (`layout` differs): what is pinned to the layout — the
+ *     clearing, the calm top, where the light and the farmhouse stand, and the
+ *     sun and moon — follows at once, in both ends of any move under way, so
+ *     the clearing never trails a column the frame is sliding. Only the
+ *     screen's own character eases on, and while the horizon is still moving
+ *     the sun's height and size move with it rather than float off it.
+ *   * Anything else (another screen, content that arrived): a move from the
+ *     picture as last drawn, starting `now`.
+ */
+export function aimPicture(
+  move: PictureMove,
+  next: FieldComposition,
+  now: number,
+  instant: boolean
+): PictureMove {
+  if (sameComposition(move.to, next)) return move;
+  if (!move.drawn || instant) {
+    move.from = next;
+    move.now = next;
+    move.at = null;
+  } else if (move.to.layout !== next.layout) {
+    const pinned = (picture: FieldComposition): FieldComposition => {
+      const settled = Math.abs(picture.horizon - next.horizon) < 0.0005;
+      return {
+        ...picture,
+        clear: next.clear,
+        calmTop: next.calmTop,
+        lightX: next.lightX,
+        minkaX: next.minkaX,
+        sun: settled ? next.sun : { ...picture.sun, x: next.sun.x },
+        moon: settled ? next.moon : { ...picture.moon, x: next.moon.x },
+        layout: next.layout,
+      };
+    };
+    if (move.at !== null) {
+      move.from = pinned(move.from);
+    } else if (sameCharacter(move.to, next)) {
+      move.from = next;
+    } else {
+      // The screen changed with the layout: its character still eases.
+      move.from = pinned(move.to);
+      move.at = now;
+    }
+    move.now = pinned(move.now);
+  } else {
+    move.from = move.now;
+    move.at = now;
+  }
+  move.to = next;
+  return move;
+}
+
+/** Whether two pictures differ only in what is pinned to the layout. */
+function sameCharacter(a: FieldComposition, b: FieldComposition): boolean {
+  const near = (x: number, y: number) => Math.abs(x - y) < 0.0005;
+  return (
+    near(a.horizon, b.horizon) &&
+    near(a.sky, b.sky) &&
+    near(a.skyTone, b.skyTone) &&
+    near(a.wheat, b.wheat) &&
+    near(a.warmth, b.warmth)
+  );
+}
+
+/**
+ * The picture to draw at `now`, `duration` ms into a move, eased; settles the
+ * move once it is over, or at once when `instant`.
+ */
+export function pictureAt(
+  move: PictureMove,
+  now: number,
+  duration: number,
+  instant: boolean
+): FieldComposition {
+  move.drawn = true;
+  if (move.at === null) return (move.now = move.to);
+  const p = (now - move.at) / duration;
+  if (p >= 1 || instant) {
+    move.at = null;
+    return (move.now = move.to);
+  }
+  return (move.now = mixComposition(move.from, move.to, easeOutCubic(p)));
+}
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * How calm a point is, 0..1: 1 inside the clearing or above `calmTop`, 0 once
+ * past their feathers. The 2D fallback and the tests use this; the shaders
+ * compute the same distance (`CALM` in shaders.ts).
+ */
+export function calmAt(composition: FieldComposition, x: number, y: number): number {
+  const { clear, calmTop } = composition;
+  let calm = 0;
+  if (clear.feather > 0) {
+    const dx = Math.max(clear.left - x, x - clear.right, 0);
+    const dy = Math.max(clear.top - y, y - clear.bottom, 0);
+    calm = 1 - smoothstep(0, clear.feather, Math.hypot(dx, dy));
+  }
+  if (calmTop > 0) {
+    calm = Math.max(calm, 1 - smoothstep(calmTop, calmTop + CALM_TOP_FEATHER, y));
+  }
+  return calm;
 }

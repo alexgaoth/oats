@@ -11,9 +11,10 @@
 // `from` seeks there once recording starts (seconds); `speed` is the replay
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
 // `edits=0` leaves the voices unnamed after Stop; `tier` is the speed check's
-// state and `chosen` a speech model the person chose, `writing` and `memory`
-// the writing model's state and this Mac's memory (deviceTier.mjs,
-// settings.mjs); `processing=providers` and `keys=openai,anthropic` set up
+// state and `chosen` a speech model the person chose, `writingState` and
+// `memory` the writing model's state on disk and this Mac's memory
+// (deviceTier.mjs), `writing` a writing model the person chose, or `none`
+// (settings.mjs); `processing=providers` and `keys=openai,anthropic` set up
 // "With an API key" (settings.mjs); `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
@@ -23,6 +24,14 @@
 // `oatsDemo.openaiRequests()` lists what it was asked; `theme`, `view` and
 // `flow` as in `settings.mjs`. `panel=true` is the app's own: the workspace
 // window.
+//
+// Summaries that start by themselves (stores/summaryQueueStore.ts):
+// `download=<percent>` holds the local writing model (`writing=`, or the
+// default for `memory=`) mid-download there, until `oatsDemo.download()` runs
+// it to the end; `bare=<sample id>` or `bare=all` takes the summaries away, as from a
+// conversation recorded before any model was ready; `summary=fail` fails every
+// summary, `summary=fail-once` the first try of each, and `summary=too-long`
+// answers as the server on this Mac does to a conversation over its context.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import registry from "../../src/models/modelRegistryData.json";
@@ -48,6 +57,17 @@ installClock();
 applyDemoSettings(params);
 installFakeMicrophone();
 
+// The local writing model: the one settings.mjs stored as chosen, else the
+// default this Mac's memory holds (writingTier.mjs); and whether it is still
+// on its way.
+const writingModel =
+  params.get("writing") && params.get("writing") !== "none"
+    ? params.get("writing")
+    : (Number(params.get("memory")) > 0 ? Number(params.get("memory")) : 48) >= 16
+      ? "gemma-4-e4b-it-q4_k_m"
+      : "qwen3.5-4b-q4_k_m";
+const downloadAt = params.get("loop") === "1" ? null : params.get("download");
+
 const main = createFakeMain({
   fixtures: empty || many ? [] : live ? supporting : [mainFixture, ...supporting],
   example: mainFixture,
@@ -60,7 +80,17 @@ const main = createFakeMain({
   // never leaves the page. `keys=` stores the keys a person added.
   openai: params.get("loop") === "1" || (params.get("keys") ?? "").includes("openai"),
   anthropic: (params.get("keys") ?? "").includes("anthropic"),
+  missingModels: downloadAt === null ? [] : [writingModel],
 });
+if (downloadAt !== null) {
+  void main.downloadModel(writingModel, { from: Number(downloadAt) || 0, hold: true });
+}
+const bare = params.get("bare");
+if (bare) {
+  for (const note of main.db.notes) {
+    if (bare === "all" || note.demo_sample === bare) note.enhanced_content = null;
+  }
+}
 if (many) {
   // Work and Personal are seeded; Research is one the person made, between them.
   const seeded = Object.fromEntries(main.db.groups.map((group) => [group.seed_key, group]));
@@ -73,10 +103,12 @@ if (many) {
   for (const question of questions) main.insertEvent(question);
 }
 // The speed check's report (deviceTier.mjs): `tier=` picks the state, and
-// `writing=` and `memory=` the writing model's.
+// `writingState=` and `memory=` the writing model's. `writing=none` (no
+// writing model ready) is nothing on disk, its download declined.
 const deviceTier = createFakeDeviceTier({
   state: params.get("tier"),
-  writing: params.get("writing"),
+  writing:
+    params.get("writingState") ?? (params.get("writing") === "none" ? "declined" : null),
   memory: params.get("memory"),
   emit: main.emit,
 });
@@ -87,6 +119,7 @@ Object.assign(main.api, {
   cancelSpeechUpgrade: deviceTier.cancelSpeechUpgrade,
   startWritingModelDownload: deviceTier.startWritingModelDownload,
   cancelWritingModelDownload: deviceTier.cancelWritingModelDownload,
+  writingModelChosen: deviceTier.writingModelChosen,
 });
 main.hooks.whisperModels = deviceTier.whisperModels;
 main.hooks.writingInstalled = deviceTier.writingInstalled;
@@ -117,6 +150,36 @@ const openai =
 // A key typed into Settings or setup is checked with OpenAI (keyCheck.ts); here
 // the check is answered in the page, and nothing leaves it.
 if (!openai) installFakeKeyCheck();
+// A summary that fails, as a model that stops early does: every time
+// (`summary=fail`), or only the first try of each conversation (`fail-once`).
+// `summary=too-long` answers as llama-server does to a conversation that does
+// not fit its context, through main's error.
+const failing = params.get("summary");
+const CONTEXT_OVERFLOW = `Inference failed: llama-server returned status 400: ${JSON.stringify({
+  error: {
+    code: 400,
+    message:
+      "request (20123 tokens) exceeds the available context size (16384 tokens), try increasing it",
+    type: "exceed_context_size_error",
+    n_prompt_tokens: 20123,
+    n_ctx: 16384,
+  },
+})}`;
+if (failing === "fail" || failing === "fail-once" || failing === "too-long") {
+  const answer = main.hooks.reason;
+  const tried = new Set();
+  main.hooks.reason = (request) => {
+    if (/meeting notes assistant/i.test(request.prompt)) {
+      if (failing === "too-long") return { error: CONTEXT_OVERFLOW, delayMs: 600 };
+      const first = !tried.has(request.text);
+      tried.add(request.text);
+      if (failing === "fail" || first) {
+        return { error: "The model on this Mac stopped before it finished.", delayMs: 1500 };
+      }
+    }
+    return answer?.(request) ?? null;
+  };
+}
 
 const TABS = ["summary", "transcript", "connections"];
 
@@ -190,8 +253,30 @@ window.oatsDemo = {
   searches: () => main.searches.map((search) => ({ ...search })),
   /** Put the speed check in another state: see deviceTier.mjs. */
   tier: (state) => deviceTier.set(state),
-  /** Put the writing model in another state: see deviceTier.mjs. */
-  writing: (state) => deviceTier.setWriting(state),
+  /** Put the writing model on disk in another state: see deviceTier.mjs. */
+  writingState: (state) => deviceTier.setWriting(state),
+  /**
+   * The local writing model's download: run on from where it is to the end
+   * over `ms` (resolves when it lands), or held at `from` with `hold`
+   * (resolves at once).
+   */
+  download: async ({ from, ms = 8000, hold = false } = {}) => {
+    const landed = main.downloadModel(writingModel, { from, ms, hold });
+    if (!hold) await landed;
+  },
+  /** The conversations owed a summary, newest first (stores/summaryQueueStore.ts). */
+  owed: () => {
+    try {
+      return JSON.parse(localStorage.getItem("oatsPendingSummaries") || "[]");
+    } catch {
+      return [];
+    }
+  },
+  /** A conversation as main holds it, by sample id or note id. */
+  note: (sampleId) => {
+    const note = main.db.noteBySample(sampleId) ?? main.db.findNote(Number(sampleId));
+    return note ? { ...note } : null;
+  },
   /** Open a Settings page, as any screen can ("models", "recording", ...). */
   async settings(page = "general") {
     window.dispatchEvent(new CustomEvent("oats-open-settings", { detail: page }));

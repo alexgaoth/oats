@@ -12,8 +12,10 @@ import { useTinfoilModels } from "../../hooks/useTinfoilModels";
 import {
   cancelWritingModel,
   formatGigabytes,
+  leaveWritingDownload,
   requestWritingModel,
   useWritingReport,
+  writingModelChosen,
 } from "../../hooks/useWritingModel";
 import {
   chooseWritingModel,
@@ -63,8 +65,10 @@ const CUSTOM = "custom";
  * and its key. A custom endpoint and a server of the person's own stay here,
  * at the end of the pills. The processing choice decides the side; this
  * never moves it, except that a server of the person's own is its own place.
- * Choosing Oats' own default again (Use on a Recommended model, or the
- * button) goes back to following the default.
+ * Use is always a choice, Recommended model or not: it stays when the
+ * default changes. Only "Use Oats' choice" goes back to following the default.
+ * Either one stops a writing download the person left behind, and lets Oats
+ * fetch by itself again after a deleted model (writingModelFetch.js).
  */
 export function WritingModelChoice() {
   const { t, i18n } = useTranslation();
@@ -118,23 +122,37 @@ export function WritingModelChoice() {
     memoryBytes: tier?.memoryBytes ?? tier?.device?.memoryBytes ?? null,
   }).model;
 
-  /** Use a model: Oats' default again when it is the default, else a choice. */
-  const use = (useProvider: string, id: string) => {
+  // A model downloaded from here is used once it is on disk, unless it is the
+  // default, which the setting then follows by itself.
+  const pending = useRef<string | null>(null);
+
+  const toSide = () => {
     const store = useSettingsStore.getState();
     if (store.cleanupMode !== side) {
       store.setCleanupMode(side);
       store.setNoteFormattingMode(side);
     }
-    if (sideDefault && sideDefault.model === id && sideDefault.provider === useProvider) {
-      forgetWritingChoice();
-    } else {
-      chooseWritingModel(useProvider, id);
-    }
   };
 
-  // A model downloaded from here is used once it is on disk, unless it is the
-  // default, which the setting then follows by itself.
-  const pending = useRef<string | null>(null);
+  /** Use a model: a choice, kept when the default changes. */
+  const use = (useProvider: string, id: string) => {
+    toSide();
+    chooseWritingModel(useProvider, id);
+    pending.current = null;
+    leaveWritingDownload(id);
+    writingModelChosen();
+  };
+
+  /** Follow Oats' default again. */
+  const useDefault = () => {
+    toSide();
+    forgetWritingChoice();
+    pending.current = null;
+    leaveWritingDownload(sideDefault?.provider === "local" ? sideDefault.model : null);
+    writingModelChosen();
+  };
+
+  // The model downloaded from here, once it is on disk.
   useEffect(() => {
     const id = pending.current;
     if (id && writing.installed.includes(id)) {
@@ -279,18 +297,7 @@ export function WritingModelChoice() {
         description={t("oats.settings.models.writingDescription")}
         action={
           chosen ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const store = useSettingsStore.getState();
-                if (store.cleanupMode !== side) {
-                  store.setCleanupMode(side);
-                  store.setNoteFormattingMode(side);
-                }
-                forgetWritingChoice();
-              }}
-            >
+            <Button variant="ghost" size="sm" onClick={useDefault}>
               <RotateCcw aria-hidden="true" />
               {t("oats.models.useDefault")}
             </Button>

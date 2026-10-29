@@ -2130,8 +2130,20 @@ class IPCHandlers {
       return this.deviceTier.snapshot();
     });
 
-    ipcMain.handle("writing-model-cancel", () => {
-      this.deviceTier.writing.cancel();
+    // `decline: false` when the person moved to another model or to the
+    // providers: the download stops, and nothing is remembered as a no.
+    ipcMain.handle("writing-model-cancel", (_event, options = {}) => {
+      this.deviceTier.writing.cancel({
+        decline: options?.decline !== false,
+        keep: typeof options?.keep === "string" ? options.keep : null,
+      });
+      return this.deviceTier.snapshot();
+    });
+
+    // The person chose a writing model in Settings: after a deleted model,
+    // Oats may fetch the default by itself again.
+    ipcMain.handle("writing-model-chosen", () => {
+      this.deviceTier.writing.chosen();
       return this.deviceTier.snapshot();
     });
 
@@ -3714,12 +3726,11 @@ class IPCHandlers {
       }
     );
 
-    // What Anthropic says of a key and a model: one request with no tokens and
-    // no conversation text (GET /v1/models/{id}). "ok"; "rejected", the key
-    // itself (401); "no-access", the key cannot use the model; "unknown" when
-    // it could not be told (no key, offline, a server error).
-    const anthropicModelStatus = async (modelId, apiKey) => {
-      if (!apiKey || !modelId) return "unknown";
+    // Anthropic's answer to `GET /v1/models/{id}` for a key: one request with
+    // no tokens and no conversation text, to Anthropic's own host. Null when
+    // nothing came back. helpers/keyStatus.mjs reads it.
+    const anthropicModelResponse = async (modelId, apiKey) => {
+      if (!apiKey || !modelId) return null;
       try {
         const response = await proxyFetch(
           `https://api.anthropic.com/v1/models/${encodeURIComponent(String(modelId))}`,
@@ -3728,31 +3739,37 @@ class IPCHandlers {
             signal: AbortSignal.timeout(5_000),
           }
         );
-        if (response.ok) return "ok";
-        if (response.status === 401) return "rejected";
-        if ([400, 403, 404].includes(response.status)) return "no-access";
-        return "unknown";
+        return response.status;
       } catch {
-        return "unknown";
+        return null;
       }
     };
+    let keyStatusModule = null;
+    const loadKeyStatus = () => (keyStatusModule ??= import("./keyStatus.mjs"));
 
     // Whether the stored key can use a model, asked once a session for the
     // topic models (topicNamingRunner.ts). True or false when Anthropic says
     // so of the model; null when it could not be told, and for a rejected key,
     // which may be fixed.
     ipcMain.handle("anthropic-model-available", async (event, modelId) => {
-      const status = await anthropicModelStatus(modelId, this.environmentManager.getAnthropicKey());
-      return status === "ok" ? true : status === "no-access" ? false : null;
+      const status = await anthropicModelResponse(
+        modelId,
+        this.environmentManager.getAnthropicKey()
+      );
+      if (status === null) return null;
+      return (await loadKeyStatus()).modelAvailability(status);
     });
 
-    // A key the person is adding, checked before it is saved (Settings and setup).
-    ipcMain.handle("anthropic-key-check", async (event, request = {}) =>
-      anthropicModelStatus(
+    // A key the person is adding, checked before it is saved (Settings and
+    // setup): "ok", "rejected", "limited", "no-access" or "unknown".
+    ipcMain.handle("anthropic-key-check", async (event, request = {}) => {
+      const status = await anthropicModelResponse(
         typeof request?.modelId === "string" ? request.modelId : "",
         typeof request?.key === "string" ? request.key.trim() : ""
-      )
-    );
+      );
+      if (status === null) return "unknown";
+      return (await loadKeyStatus()).anthropicKeyStatus(status);
+    });
 
     ipcMain.handle("check-local-reasoning-available", async () => {
       try {

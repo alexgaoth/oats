@@ -48,7 +48,8 @@ type Message = { tone: "success" | "warning" | "danger" | "muted"; text: string 
  * takes an OpenAI or an Anthropic key and tells them apart by their prefix,
  * so nobody has to say which provider first. An OpenAI or Anthropic key is
  * checked with the provider before it is saved (keyCheck.ts): a key the
- * provider rejects is not saved, and every other answer is said in one line.
+ * provider calls invalid is not saved, and every other answer is said in one
+ * line.
  * Other providers' keys are saved as they are.
  */
 export function ProviderKeyField({
@@ -74,10 +75,11 @@ export function ProviderKeyField({
   const [saved, setSaved] = useState<{ provider: string; tail: string } | null>(null);
   const checked = provider === "any" || provider === "openai" || provider === "anthropic";
 
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
+  // Check the key in the field and save it. True once it is saved; false
+  // when there is nothing to save or the key is refused (the reason is shown).
+  const commit = async (): Promise<boolean> => {
     const key = draft.trim();
-    if (!key || checking) return;
+    if (!key || checking) return false;
     let target: string = provider;
     if (checked) {
       const detected = detectKeyProvider(key);
@@ -89,7 +91,7 @@ export function ProviderKeyField({
               ? t("oats.keys.notAKey")
               : t("oats.keys.notThisKey", { provider: PROVIDER_NAMES[provider] }),
         });
-        return;
+        return false;
       }
       target = detected;
       setChecking(true);
@@ -99,12 +101,14 @@ export function ProviderKeyField({
       });
       const status = await checkKey(detected, key);
       setChecking(false);
+      // Only a key the provider calls invalid is refused. A real key with
+      // limited permissions is saved (helpers/keyStatus.mjs).
       if (status === "rejected") {
         setMessage({
           tone: "danger",
           text: t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
         });
-        return;
+        return false;
       }
       const model = writingModelName(CLOUD_WRITING_MODELS[detected]);
       setMessage(
@@ -112,7 +116,9 @@ export function ProviderKeyField({
           ? { tone: "success", text: t("oats.keys.works", { model }) }
           : status === "no-access"
             ? { tone: "warning", text: t("oats.keys.noAccess", { model }) }
-            : { tone: "muted", text: t("oats.keys.unchecked") }
+            : status === "limited"
+              ? { tone: "muted", text: t("oats.keys.limited", { model }) }
+              : { tone: "muted", text: t("oats.keys.unchecked") }
       );
     } else {
       setMessage({ tone: "success", text: t("oats.keys.saved") });
@@ -121,6 +127,12 @@ export function ProviderKeyField({
     setDraft("");
     setSaved({ provider: target, tail: key.slice(-4) });
     onSaved?.(target);
+    return true;
+  };
+
+  const save = (event: React.FormEvent) => {
+    event.preventDefault();
+    void commit();
   };
 
   const pages =
@@ -170,7 +182,7 @@ export function ProviderKeyField({
 
   return (
     <div className={className}>
-      <form onSubmit={(event) => void save(event)} className="flex gap-2">
+      <form onSubmit={save} className="flex gap-2">
         <div className="relative min-w-0 flex-1">
           <KeyRound
             aria-hidden="true"

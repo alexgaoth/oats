@@ -1,8 +1,6 @@
 import {
   WIND,
   POINTER_RADIUS,
-  HORIZON,
-  SUN_X,
   SKY_BLUE,
   SKY_BLOOM_ALPHA,
   SKY_LIGHT_BOOST,
@@ -35,6 +33,31 @@ float bayerThreshold() {
 }
 `;
 
+// Where the world keeps clear of the content (FieldComposition's clearing and
+// calm top, calmAt() in fieldModel.ts). Every pass discards a fragment whose
+// calm reaches its dither threshold, so the grain thins out across the
+// feather, dot by dot, rather than fading, and inside it nothing is drawn at
+// all. Device pixels, with GL's origin at the bottom-left: FieldGL converts.
+const CALM = `
+uniform vec4  uClear;      // the clearing: x0, y0, x1, y1
+uniform float uClearSoft;  // its feather; 0 when there is no clearing
+uniform float uCalmTop;    // above this line is calm too
+uniform float uCalmSoft;   // its feather; 0 when there is no calm top
+
+float calm() {
+  vec2 p = gl_FragCoord.xy;
+  float c = 0.0;
+  if (uClearSoft > 0.0) {
+    vec2 d = max(max(uClear.xy - p, p - uClear.zw), 0.0);
+    c = 1.0 - smoothstep(0.0, uClearSoft, length(d));
+  }
+  if (uCalmSoft > 0.0) {
+    c = max(c, smoothstep(uCalmTop - uCalmSoft, uCalmTop, p.y));
+  }
+  return c;
+}
+`;
+
 // A fullscreen triangle. Cheaper than a quad and avoids the diagonal seam.
 export const BACKDROP_VERTEX = `#version 300 es
 precision highp float;
@@ -61,19 +84,37 @@ uniform float uGrow;         // 0 idle, 1 fully live — warms the whole world
 uniform vec3  uGold;
 uniform vec3  uInk;
 uniform float uWarmScale;    // gold is darker than paper and lighter than charcoal
-uniform float uSkyStrength;
+uniform float uSky;          // the composition's sky grain, 0..1
+uniform float uSkyTone;      // how dark each sky dot is on oat milk, 0..1
+uniform float uWarmth;       // its warm light on the horizon and the earth, 0..1
+uniform float uHorizon;      // its horizon, a fraction of the scene's height from the top
+uniform float uLightX;       // where its warm light is strongest, a fraction of the width
+uniform float uMinkaX;       // where its farmhouse stands, a fraction of the width; < 0: none
+uniform vec3  uSun;          // its sun: x, y (CSS px from the top-left), r (CSS px)
+uniform vec3  uMoon;         // its moon, the same way; drawn instead of the sun on charcoal
 uniform float uTime;         // seconds — only the scenery's birds read it
 uniform int   uScene;        // 0 off, 1 clear sky, 2 minka, 3 full dithered scene
 uniform float uSceneH;       // the scene's height, CSS px (see sceneFrame in fieldModel.ts)
 
 out vec4 fragColor;
 ${BAYER}
+${CALM}
 
 void main() {
+  float threshold = bayerThreshold();
+  // The content's column, and the title band: nothing of the world there, and
+  // across the feather around them the grain drops out dot by dot. The sun may
+  // stand over the feather's outer half (fieldViews.ts), and is drawn in front
+  // of the dissolve there, so only the inner half discards outright.
+  float quiet = calm();
+  bool calmed = quiet >= threshold;
+  if (calmed && quiet >= 0.5) discard;
+  float world = calmed ? 0.0 : 1.0;
+
   // The scene stands on the canvas's bottom edge at its own scale. Where the
   // canvas is taller than the scene, the extra height is more sky.
   float k = uSceneH / max(uResolution.y, 1.0);
-  float horizon = (1.0 - ${f(HORIZON)}) * k;   // measured from the bottom here
+  float horizon = (1.0 - uHorizon) * k;   // measured from the bottom here
   float y = vUv.y;
 
   // Light on this surface is a wash, not a disc.
@@ -84,13 +125,14 @@ void main() {
   // what a watercolourist would do — warm the horizon asymmetrically, so the
   // light has a direction and an origin without ever drawing its source. The
   // same term reads as a genuine glow in Steel-cut, where gold is brighter than
-  // the charcoal.
+  // the charcoal. (The sun's disc, where a composition places one, is drawn
+  // below in grain, as a honey disc on paper and a moon on charcoal.)
   float above = clamp((y - horizon) / (1.0 - horizon), 0.0, 1.0);
   float glow = pow(1.0 - above, 2.6) * step(horizon, y);
 
   // Horizontal distances in units of the scene's height, as the scene's own are.
   float aspect = uResolution.x / max(uSceneH, 1.0);
-  float dx = (vUv.x - ${f(SUN_X)}) * aspect;
+  float dx = (vUv.x - uLightX) * aspect;
   // Never fully dark on the far side — this is one light source in an open
   // field, not a spotlight.
   float sunward = 0.42 + 0.58 * exp(-dx * dx / 0.42);
@@ -106,20 +148,19 @@ void main() {
   float line = exp(-linePx * linePx / 2.2);
   float edgeFade = smoothstep(0.0, 0.22, vUv.x) * smoothstep(1.0, 0.78, vUv.x);
 
-  float warmth = (glow * 0.5 + earth * 0.3) * sunward * uSkyStrength;
+  float warmth = (glow * 0.5 + earth * 0.3) * sunward * uWarmth;
   warmth *= mix(0.6, 1.0, uGrow) * uWarmScale;
 
   // The hairline falls away faster than the wash. On a reading surface a wash is
   // atmosphere, but a hard 1px line drawn straight through a paragraph is the
   // exact thing §9.8 forbids.
-  float inkAmount = line * edgeFade * 0.42 * mix(0.45, 1.0, uGrow) * uSkyStrength * uSkyStrength;
+  float inkAmount = line * edgeFade * 0.42 * mix(0.45, 1.0, uGrow) * uWarmth * uWarmth;
 
   float coverage = clamp(warmth + inkAmount, 0.0, 1.0);
-  float threshold = bayerThreshold();
 
   // Dither the warm world as one field of grain. Banding becomes deliberate.
   float warmAlpha =
-    coverage >= max(threshold, 0.004) ? clamp(coverage * 1.1, 0.0, 0.45) : 0.0;
+    coverage >= max(threshold, 0.004) ? clamp(coverage * 1.1, 0.0, 0.45) * world : 0.0;
   vec3 warmColour = mix(uGold, uInk, clamp(inkAmount / max(coverage, 0.0001), 0.0, 1.0));
 
   // --- The countryside: what recording brings into the world ---------------
@@ -130,24 +171,66 @@ void main() {
   // keeps the horizon — a clear evening, not a new wallpaper. Scene 1 is the
   // smooth 'normal style'; scene 3 spells the same gradient in dither density,
   // so the whole sky is grain.
+  vec2 at = vec2(vUv.x * uResolution.x, (1.0 - vUv.y) * uResolution.y);
+  bool paper = uWarmScale < 0.75;
+
   vec3 sceneryRgb = vec3(0.0);
   float sceneryAlpha = 0.0;
   if ((uScene == 1 || uScene == 3) && uGrow > 0.001) {
-    float bloom = pow(above, 0.85) * uGrow * uSkyStrength;
+    float bloom = pow(above, 0.85) * uGrow * uSky;
+    // Around the sun the sky gives way to its light: blue grain under a honey
+    // halo mixes to grey, and a grey ring is not a glow.
+    if (paper && uSun.z > 0.5) {
+      bloom *= smoothstep(1.1 * uSun.z, 3.0 * uSun.z, length(at - uSun.xy));
+    }
     sceneryRgb = vec3(${f(SKY_BLUE[0])}, ${f(SKY_BLUE[1])}, ${f(SKY_BLUE[2])});
     // Blue over near-white paper washes out, so oat milk gets a deeper pour.
     // warmScale < 0.75 is exactly the renderer's "this is paper" signal.
-    float skyAlpha = ${f(SKY_BLOOM_ALPHA)} * (uWarmScale < 0.75 ? ${f(SKY_LIGHT_BOOST)} : 1.0);
+    float skyAlpha = ${f(SKY_BLOOM_ALPHA)} * (paper ? ${f(SKY_LIGHT_BOOST)} * uSkyTone : 1.0);
     if (uScene == 3) {
       sceneryAlpha = bloom * 0.9 >= threshold ? min(skyAlpha * 1.35, 0.5) : 0.0;
     } else {
       sceneryAlpha = bloom * skyAlpha;
     }
+    sceneryAlpha *= world;
   }
 
   // Composite: the warm atmosphere sits in front of the far sky.
   float alpha = warmAlpha + sceneryAlpha * (1.0 - warmAlpha);
   vec3 colour = warmColour * warmAlpha + sceneryRgb * sceneryAlpha * (1.0 - warmAlpha);
+
+  // The light's source, where the composition found room for all of it.
+  // In grain, like everything else here: on oat milk a low honey sun, dense at
+  // its middle and thinning at its rim, in a halo of sparser grain; on
+  // steel-cut a pale crescent moon with a faint halo, and the sun's warm light
+  // left on the horizon. Never a flat disc: a solid circle on paper is the
+  // stain the wash above was written to avoid.
+  float discAlpha = 0.0;
+  vec3 discRgb = uGold;
+  if (paper && uSun.z > 0.5) {
+    float r = uSun.z;
+    float d = length(at - uSun.xy);
+    float disc = 1.0 - smoothstep(r - 1.5, r + 1.0, d);
+    float body = disc * mix(0.94, 0.66, smoothstep(0.35 * r, r, d));
+    float halo = (1.0 - disc) * 0.36 * exp(-pow(max(d - r, 0.0) / (0.8 * r), 1.5));
+    float cover = max(body, halo);
+    discAlpha = cover >= threshold ? (disc > 0.5 ? 0.92 : 0.55) : 0.0;
+  } else if (!paper && uMoon.z > 0.5) {
+    float r = uMoon.z;
+    float d = length(at - uMoon.xy);
+    float disc = 1.0 - smoothstep(r - 1.2, r + 0.8, d);
+    // The crescent: the disc less a slightly smaller one, shifted toward the
+    // upper right. What the shadow covers keeps a trace of earthshine.
+    float shade = 1.0 - smoothstep(0.84 * r - 1.0, 0.84 * r + 1.0, length(at - uMoon.xy - vec2(0.42 * r, -0.3 * r)));
+    float lit = disc * (1.0 - shade);
+    // Both faint: at any more, halo and earthshine read as a disc of their own.
+    float halo = (1.0 - disc) * 0.07 * exp(-pow(max(d - r, 0.0) / (0.6 * r), 1.4));
+    float cover = max(max(lit * 0.86, disc * shade * 0.05), halo);
+    discAlpha = cover >= threshold ? (lit > 0.5 ? 0.82 : 0.4) : 0.0;
+    discRgb = mix(uInk, uGold, 0.16);
+  }
+  colour = discRgb * discAlpha + colour * (1.0 - discAlpha);
+  alpha = discAlpha + alpha * (1.0 - discAlpha);
 
   // Scenes 2 and 3, "minka": the irimoya farmhouse on the horizon, opposite
   // the light. It condenses out of grain — dither density rides uGrow, the
@@ -155,9 +238,9 @@ void main() {
   // sliding in. Geometry mirrors minkaHalfWidthAt() in fieldModel.ts, same
   // constants. The concave roof sweep is the cultural cue; straight edges
   // read as a barn.
-  if (uScene >= 2 && uGrow > 0.001) {
+  if (uScene >= 2 && uGrow > 0.001 && uMinkaX >= 0.0) {
     float hy = (y - horizon) / k;                  // scene heights above the horizon
-    float hx = abs((vUv.x - ${f(MINKA.x)}) * aspect);
+    float hx = abs((vUv.x - uMinkaX) * aspect);
     float px = 1.5 / max(uSceneH, 1.0);            // soften edges by ~1.5 CSS px
 
     float halfW = 0.0;
@@ -182,7 +265,7 @@ void main() {
     float inside = halfW > 0.0 ? smoothstep(halfW, halfW - px, hx) : 0.0;
 
     float density = inside * 0.68 * uGrow;
-    float minkaAlpha = density >= threshold ? 0.5 * uSkyStrength : 0.0;
+    float minkaAlpha = density >= threshold ? 0.5 * uSky * world : 0.0;
     vec3 minkaRgb = mix(uInk, uGold, 0.3);
 
     colour = minkaRgb * minkaAlpha + colour * (1.0 - minkaAlpha);
@@ -200,15 +283,15 @@ void main() {
       float bx = 1.1 - fract(uTime * ${f(BIRDS.speed)} + bphase) * 1.2;
       float byTop = ${f(BIRDS.yMin)} + fract(bphase * 7.31) * ${f(BIRDS.yMax - BIRDS.yMin)};
       // As high above the horizon as they fly in a scene the canvas's size.
-      float by = horizon + (${f(HORIZON)} - byTop + sin(uTime * 0.7 + fi) * 0.006) * k;
+      float by = horizon + (uHorizon - byTop + sin(uTime * 0.7 + fi) * 0.006) * k;
 
       vec2 d = vec2((vUv.x - bx) * uResolution.x, (vUv.y - by) * uResolution.y);
       float r = length(d);
       float size = 1.6 + 0.9 * sin(uTime * 9.0 + fi * 2.4);
       birdCoverage = max(birdCoverage, smoothstep(size + 1.0, size - 0.5, r));
     }
-    float birdDensity = birdCoverage * 0.8 * uGrow * uSkyStrength;
-    float birdAlpha = birdDensity >= threshold ? 0.55 : 0.0;
+    float birdDensity = birdCoverage * 0.8 * uGrow * uSky;
+    float birdAlpha = birdDensity >= threshold ? 0.55 * world : 0.0;
     vec3 birdRgb = mix(uInk, uGold, 0.2);
 
     colour = birdRgb * birdAlpha + colour * (1.0 - birdAlpha);
@@ -232,6 +315,7 @@ uniform vec2  uResolution;
 uniform float uTime;
 uniform float uGrow;
 uniform float uSceneH;   // the scene's height, CSS px; the canvas may be taller
+uniform float uLift;     // how far the composition's horizon stands above HORIZON, scene heights
 
 out float vFade;
 
@@ -242,7 +326,8 @@ void main() {
   // carried by size, so bigger motes also drift faster.
   float speed = 0.006 + aMote.z * 0.02;
   float x = fract(aMote.x + uTime * speed + phase * 0.13);
-  float y = aMote.y + sin(uTime * 0.19 + phase) * 0.018 + cos(uTime * 0.11 + phase * 1.7) * 0.012;
+  // Around and above the horizon, wherever the composition puts it.
+  float y = aMote.y + uLift + sin(uTime * 0.19 + phase) * 0.018 + cos(uTime * 0.11 + phase * 1.7) * 0.012;
 
   // Fade in and out over the crossing so nothing pops at the wrap point.
   vFade = sin(x * 3.14159) * uGrow;
@@ -268,10 +353,13 @@ uniform vec3 uColor;
 
 out vec4 fragColor;
 ${BAYER}
+${CALM}
 
 void main() {
+  float threshold = bayerThreshold();
+  if (calm() >= threshold) discard;
   float coverage = clamp(vFade, 0.0, 1.0) * 0.34;
-  if (coverage < bayerThreshold()) discard;
+  if (coverage < threshold) discard;
   float alpha = 0.5;
   fragColor = vec4(uColor * alpha, alpha);
 }
@@ -407,9 +495,12 @@ uniform float uSolidity;   // 0 = dissolved into grain, 1 = solid
 
 out vec4 fragColor;
 ${BAYER}
+${CALM}
 
 void main() {
   float threshold = bayerThreshold();
+  // The content's column: the wheat thins out toward it and stands clear of it.
+  if (calm() >= threshold) discard;
 
   // Coverage is a pure depth cue: distant blades survive on few pixels and read
   // as grain, near blades are almost solid. Dividing the target opacity back out
