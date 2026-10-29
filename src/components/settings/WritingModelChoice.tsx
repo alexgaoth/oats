@@ -25,7 +25,11 @@ import {
   writingModelFollowsDefault,
 } from "../../stores/settingsStore";
 import { modelRegistry, REASONING_PROVIDERS } from "../../models/ModelRegistry";
-import { chooseLocalWritingModel, localWritingStatus } from "../../helpers/writingTier.mjs";
+import {
+  chooseLocalWritingModel,
+  CLOUD_WRITING_MODELS,
+  localWritingStatus,
+} from "../../helpers/writingTier.mjs";
 import { useDeviceTierStore } from "../../stores/deviceTierStore";
 import { API_ENDPOINTS } from "../../config/constants";
 import { getCachedPlatform } from "../../utils/platform";
@@ -137,7 +141,14 @@ export function WritingModelChoice() {
       pending.current = null;
       use("local", id);
     }
-    if (id && !writing.downloading && writing.failed?.modelId === id) pending.current = null;
+    // A failed or cancelled download is not used later by surprise.
+    if (
+      id &&
+      !writing.downloading &&
+      (writing.failed?.modelId === id || writing.declined.includes(id))
+    ) {
+      pending.current = null;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the report changes
   }, [writing]);
 
@@ -183,9 +194,7 @@ export function WritingModelChoice() {
     return list.map((item) => ({
       id: item.value,
       name: item.label,
-      recommended:
-        (view === "openai" || view === "anthropic") &&
-        item.value === (view === "openai" ? "gpt-6.1-sol" : "claude-opus-5-5"),
+      recommended: item.value === CLOUD_WRITING_MODELS[view as keyof typeof CLOUD_WRITING_MODELS],
       state: mode === "providers" && provider === view && model === item.value ? "in-use" : "ready",
     }));
   }, [view, side, writing, mode, model, provider, preferred, i18n.language, tinfoil.models]);
