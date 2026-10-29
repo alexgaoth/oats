@@ -179,6 +179,34 @@
     "speechModel": {
       "title": "Modelo de voz",
       "description": "Este Mac puede ejecutar Whisper Turbo, el modelo más preciso. Se descarga desde Hugging Face después de la configuración: {{size}}."
+    },
+    "tour": {
+      "label": "Un recorrido por Oats",
+      "announce": "{{current}} de {{count}}: {{title}}",
+      "skip": "Omitir",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "start": "Empezar",
+      "topics": {
+        "title": "Los temas se nombran solos",
+        "body": "Oats sigue el asunto mientras la gente habla y pone nombre a cada tema a partir de lo que se dijo."
+      },
+      "questions": {
+        "title": "Cada pregunta tiene su tarjeta",
+        "body": "En la vista Palabras, cada pregunta hecha en voz alta recibe una tarjeta al instante, y la tarjeta dice cómo terminó."
+      },
+      "shape": {
+        "title": "La forma de la conversación",
+        "body": "Después, la conversación se dibuja a partir de cómo sonó, con cada pregunta y cada momento marcado en su sitio."
+      },
+      "voices": {
+        "title": "Cada voz de la sala",
+        "body": "Un solo micrófono oye toda la sala, y Oats distingue las voces para mostrar cuánto habló cada uno."
+      },
+      "open": {
+        "title": "Lo que quedó abierto",
+        "body": "Al abrir una conversación, las preguntas que nadie respondió aparecen encima de su resumen."
+      }
     }
   },
   "streaming": {

@@ -397,6 +397,7 @@ function QuestionGroup({
 export default function ConversationSignalRail({
   onFocus,
   announceOnly = false,
+  cards: givenCards,
 }: {
   /**
    * Mount the announcements without drawing the annotations.
@@ -413,9 +414,16 @@ export default function ConversationSignalRail({
   /** Reports which question group the pointer or keyboard is on, so the
    *  contour can raise the matching mark. Null when nothing is focused. */
   onFocus: (groupKey: string | null) => void;
+  /**
+   * Cards to show instead of the recording's. The tour at the end of setup
+   * (`onboarding/OatsTour.tsx`) shows the example conversation's here, inside
+   * an inert box, so its Search and Dismiss can never be pressed.
+   */
+  cards?: ConversationCard[];
 }) {
   const { t } = useTranslation();
-  const cards = useMeetingRecordingStore((state) => state.questionCards);
+  const recordingCards = useMeetingRecordingStore((state) => state.questionCards);
+  const cards = givenCards ?? recordingCards;
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // Dismiss is the only destructive action in the rail and it is one small button
   // beside a moving list. A short undo window costs nothing and removes the whole

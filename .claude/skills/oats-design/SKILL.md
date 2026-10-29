@@ -75,8 +75,10 @@ condescended to.
 
 Design consequences that follow directly:
 
-- **No hand-holding.** No onboarding tours, no empty-state tutorials, no tips.
-  Show the thing; they will work it out.
+- **No hand-holding.** No onboarding tutorials, no empty-state tutorials, no
+  tips. Show the thing; they will work it out. The one tour, at the end of
+  setup (`DESIGN.md` §4), is that: the real components, shown once, with
+  nothing to learn.
 - **No hype.** This audience can smell marketing copy. See `DESIGN.md` §11.
 - **Density is respect, but only where it carries meaning.** A wall of chrome is
   not density. A transcript is.
