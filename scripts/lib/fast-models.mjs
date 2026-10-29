@@ -566,16 +566,27 @@ export async function startLocalServer(
     "99",
   ];
   const child = spawn(binary, args, {
-    stdio: ["ignore", "ignore", "pipe"],
-    env: { ...process.env, DYLD_LIBRARY_PATH: path.dirname(binary) },
+    stdio: ["ignore", "pipe", "pipe"],
+    // As the app starts it (llamaServer.js _buildEnv): no fitting probe at start, offline.
+    env: {
+      ...process.env,
+      DYLD_LIBRARY_PATH: path.dirname(binary),
+      LLAMA_ARG_FIT: "off",
+      LLAMA_ARG_OFFLINE: "1",
+    },
   });
   let stderr = "";
   // The start of the log too (buffer sizes: model, KV cache, compute), for a caller
-  // that measures memory (summary-eval.mjs speed).
+  // that measures memory (summary-eval.mjs speed). llama-server writes some of it
+  // to stdout, so both streams are read.
   let startup = "";
+  const keep = (chunk) => {
+    if (startup.length < 400_000) startup += chunk;
+  };
+  child.stdout.on("data", keep);
   child.stderr.on("data", (chunk) => {
     stderr = (stderr + chunk).slice(-4000);
-    if (startup.length < 400_000) startup += chunk;
+    keep(chunk);
   });
   child.startupLog = () => startup;
   const deadline = Date.now() + 120_000;
