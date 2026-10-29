@@ -498,14 +498,22 @@ class LlamaServerManager {
               return;
             }
 
+            let response;
             try {
-              const response = JSON.parse(data);
-              const message = response.choices?.[0]?.message;
-              const text = message?.content || message?.reasoning_content || "";
-              resolve(text.trim());
+              response = JSON.parse(data);
             } catch (e) {
               reject(new Error(`Failed to parse llama-server response: ${e.message}`));
+              return;
             }
+            // Stopped by max_tokens or a full context: for a caller that needs the
+            // whole answer (the summary at Finish), a cut answer is a failure.
+            if (options.requireComplete && response.choices?.[0]?.finish_reason === "length") {
+              reject(new Error("The local model stopped at its output limit before it finished"));
+              return;
+            }
+            const message = response.choices?.[0]?.message;
+            const text = message?.content || message?.reasoning_content || "";
+            resolve(text.trim());
           });
         }
       );

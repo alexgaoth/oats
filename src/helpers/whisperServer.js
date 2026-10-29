@@ -231,8 +231,20 @@ function shouldRetryAfterServerReplaced({
 }
 
 class WhisperServerManager extends EventEmitter {
-  constructor() {
+  /**
+   * @param {{ pidName?: string, ports?: [number, number] }} [options] For a
+   *   second, short-lived server (the speed check in deviceTier.js). `pidName`
+   *   names the PID file the reaper reads after a crash (sidecarReaper.js):
+   *   the app's server is "whisper", and a second server with the same name
+   *   would overwrite and then clear the app's. `ports` is the range it
+   *   listens in. whisper-server binds its port only after its model has
+   *   loaded, and with SO_REUSEPORT, so two servers that start at once in one
+   *   range can take the same port and answer each other's requests.
+   */
+  constructor({ pidName = "whisper", ports = [PORT_RANGE_START, PORT_RANGE_END] } = {}) {
     super();
+    this.pidName = pidName;
+    this.ports = ports;
     this.process = null;
     this.hostname = "127.0.0.1";
     this.port = null;
@@ -453,10 +465,11 @@ class WhisperServerManager extends EventEmitter {
   }
 
   async findAvailablePort() {
-    for (let port = PORT_RANGE_START; port <= PORT_RANGE_END; port++) {
+    const [first, last] = this.ports;
+    for (let port = first; port <= last; port++) {
       if (await isPortAvailable(port)) return port;
     }
-    throw new Error(`No available ports in range ${PORT_RANGE_START}-${PORT_RANGE_END}`);
+    throw new Error(`No available ports in range ${first}-${last}`);
   }
 
   async start(modelPath, options = {}) {
@@ -574,7 +587,7 @@ class WhisperServerManager extends EventEmitter {
       cwd: serverBinaryDir,
       detached: process.platform !== "win32",
     });
-    sidecarPidFile.write("whisper", this.process.pid);
+    sidecarPidFile.write(this.pidName, this.process.pid);
 
     let stderrBuffer = "";
     let exitCode = null;
@@ -603,7 +616,7 @@ class WhisperServerManager extends EventEmitter {
       this.ready = false;
       this.process = null;
       this.stopHealthCheck();
-      sidecarPidFile.clear("whisper");
+      sidecarPidFile.clear(this.pidName);
       this.emit("status");
     });
 
@@ -766,6 +779,27 @@ class WhisperServerManager extends EventEmitter {
     this.inFlight += 1;
     try {
       return await this._transcribeAudio(audioBuffer, options);
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
+
+  /**
+   * One request for a WAV that is already 16 kHz mono PCM: no conversion and
+   * no cuts, so the time it takes is the server's. For the speed check
+   * (deviceTier.js), whose clip is made that way; a recording goes through
+   * `transcribe`.
+   */
+  async transcribePreparedWav(wav, options = {}) {
+    if (!this.ready || (!this.process && !this.isRemote)) {
+      throw new Error("whisper-server is not running");
+    }
+    this.inFlight += 1;
+    try {
+      return await this._requestInference(wav, {
+        language: options.language,
+        initialPrompt: options.initialPrompt ?? null,
+      });
     } finally {
       this.inFlight -= 1;
     }

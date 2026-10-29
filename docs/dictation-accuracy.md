@@ -282,11 +282,11 @@ means those two. Turbo stays an opt-in until its punctuation is fixed.
 The one-off run above, repeated as rows. Same corpus and utterances, VAD on,
 only `samplesOverlap` changed, both runs on the M5 Pro:
 
-| configuration (VAD on)              | n   | 0.5s (shipped)  | 0.1s            | utterances better / worse | repeated phrases |
-| ----------------------------------- | --- | --------------- | --------------- | ------------------------- | ---------------- |
-| `base.en` + `en`                    | 200 | 5.69% (4.6–6.9) | 5.34% (4.4–6.4) | 12 / 5                    | 4 → 1            |
-| `base` + `auto` (out of the box)    | 200 | 6.61% (5.5–7.8) | 6.48% (5.4–7.7) | 12 / 6                    | 2 → 0            |
-| long dictation, `base.en`, cut      | 40  | 4.63% (3.7–5.6) | 4.16% (3.4–4.9) | 15 / 5                    | 6 → 1            |
+| configuration (VAD on)           | n   | 0.5s (shipped)  | 0.1s            | utterances better / worse | repeated phrases |
+| -------------------------------- | --- | --------------- | --------------- | ------------------------- | ---------------- |
+| `base.en` + `en`                 | 200 | 5.69% (4.6–6.9) | 5.34% (4.4–6.4) | 12 / 5                    | 4 → 1            |
+| `base` + `auto` (out of the box) | 200 | 6.61% (5.5–7.8) | 6.48% (5.4–7.7) | 12 / 6                    | 2 → 0            |
+| long dictation, `base.en`, cut   | 40  | 4.63% (3.7–5.6) | 4.16% (3.4–4.9) | 15 / 5                    | 6 → 1            |
 
 Every row moves the same way, the repeated-phrase count (the mechanism)
 falls in each, and median latency moves by 1–3ms. The intervals overlap, so
@@ -829,6 +829,91 @@ do). A model a person chose stays theirs.
   recording's own clock runs 0.06% slow and a segment's `startMs` falls behind
   the moment it was said: about a second after half an hour. The replay
   scores on true time; the app does not correct it.
+
+## The default by GPU (2026-10-28)
+
+Apple Silicon ships `small.en`, and on a Mac whose GPU is fast enough the
+default becomes `large-v3-turbo` q5_0, which recovered the most words in the
+replay above (75.2% and 47.5% against 70.4% and 40.0%). Chips keep coming, so
+Oats does not look the chip up in a table: it times one clip on the Mac
+itself, at first launch and after each update. The rule is
+`src/helpers/speechTier.mjs`, the measurement `src/helpers/deviceTier.js`.
+
+**The budget.** A busy meeting closes about 14 segments a minute, one every
+4.3 s. While a segment is open, the live line reads it again once it holds
+1 s of speech and then once a beat (1.2 s): at 1.0, 2.2 and 3.4 s. Then the
+final reads it once more. The server answers one request at a time, so it
+keeps up with all four reads when one takes at most 4.3 s / 4 = 1.07 s. At
+that speed it is busy the whole time somebody talks. The default may use
+three quarters of it: **about 804 ms a segment**. The last quarter is the
+margin for a dictation, a hot laptop, the writing model on the same GPU, and
+the error of the prediction below.
+
+**The speed check.** One 5.1 s clip (LibriSpeech test-clean 7127-75946-0024,
+13 words, `src/helpers/speechCheck.wav`) goes to whisper-server as a 16 kHz
+WAV, with `small.en`, language `en` and VAD on, as the pre-warm starts the
+server. It is read twice, and the faster read counts: the first read on a
+new server pays a warm-up (172–184 ms against 148–164 ms on the M5 Pro, and
+280 ms for the first server after a cold start). The reads go to the app's
+own server when the pre-warm left `small.en` loaded and idle, and otherwise
+to a short-lived second server, so a model somebody chose is never unloaded.
+
+**The prediction.** Turbo's time for a segment is its replay median scaled by
+how much slower this Mac reads the clip than the M5 Pro:
+603 ms × (this Mac's clip time / 160 ms). With `auto`, turbo pays a second
+encoder pass: × 1089 / 603 = 1.8. Once turbo is on disk, its own clip time
+replaces the prediction: 603 ms × (its clip time / 639 ms). 160 and 639 ms
+are the medians of every check below (26 and 14), the two slowed ones left
+out.
+
+| on the M5 Pro (16-core GPU, 48 GB, Metal) | clip time, faster of 2 reads | turbo per segment  | default    |
+| ----------------------------------------- | ---------------------------- | ------------------ | ---------- |
+| English                                   | 160 ms                       | 603 ms (fits 804)  | turbo q5_0 |
+| `auto`                                    | 160 ms                       | 1089 ms (over 804) | `small`    |
+
+The noise, on the M5 Pro under the GPU lock that this Mac's benchmarks share
+(other work still ran on its CPU, load average 9–18):
+
+| the clip, faster of 2 reads on a new server               | n   | median  | range        |
+| --------------------------------------------------------- | --- | ------- | ------------ |
+| `small.en`                                                | 12  | 154 ms  | 148–164 ms   |
+| turbo q5_0, `en`                                          | 8   | 638 ms  | 570–666 ms   |
+| turbo q5_0, `auto`                                        | 4   | 1251 ms | 1196–1307 ms |
+| `small.en`, one server, 10 warm reads, 17 minutes earlier | 10  | 173 ms  | 164–177 ms   |
+
+The app's own check (`DeviceTier` with the real whisper-server, run in Node
+under the same lock, 30 minutes later):
+
+| the check                                       | n   | median | range                                     |
+| ----------------------------------------------- | --- | ------ | ----------------------------------------- |
+| `small.en` on a new server (first launch)       | 10  | 169 ms | 156–200 ms, and 624 and 727 ms in 2 of 10 |
+| `small.en` on the pre-warmed app server         | 6   | 167 ms | 158–188 ms                                |
+| turbo q5_0 on a new server (after the download) | 6   | 639 ms | 622–675 ms                                |
+
+So one check moves by about ±5% within a run, and by about 12% between runs.
+On the M5 Pro that moves the prediction between about 560 and 750 ms, inside
+the budget. But 2 of the 10 first-launch checks read the clip 4 times slower,
+in both of their reads, which points to another program on the GPU at that
+moment. A busy GPU only ever makes a check slower, so **a check that says
+turbo does not fit is read again, up to twice, 20 s apart, and the fastest
+counts**; a fast check stands. A Mac near the boundary can still land on
+either side from one version to the next, and turbo's own time after the
+download decides it. From start to finish one check took 2–5 s in these runs
+(the model loads in about 0.3 s).
+
+The boundary is a Mac that reads the clip 1.33 times slower than the M5 Pro
+(about 213 ms).
+No other Mac was measured, so which chips fall on which side is not shown
+here. The prediction assumes turbo slows down by the same factor as
+`small.en`; turbo's encoder is a larger share of its work, so on a weaker GPU
+it may slow down more. That is what its own clip time, read after the
+download, corrects: a Mac that predicted under the budget and then measures
+over it keeps `small.en`, and Settings says why.
+
+**What stays.** Intel Macs and Linux keep `base.en`. Under 16 GB of memory,
+Apple Silicon keeps `small.en`. A model the person chose is never moved. The
+default is a setting with nothing stored, and the settings store follows the
+rule in memory only.
 
 ## Why it feels different from the pre-Oats build
 

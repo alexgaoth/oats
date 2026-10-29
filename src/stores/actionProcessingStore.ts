@@ -5,13 +5,18 @@ import { appendDictionarySuffix } from "../config/prompts";
 import { generateNoteTitle } from "../utils/generateTitle";
 import { buildNoteFormattingOverrides } from "../helpers/noteFormattingOverrides";
 import { claimWritingModel, sortConversationIntoGroup } from "./conversationGroupSortStore";
+import { checkConversationLinks } from "./conversationLinkStore";
+import { summaryRouteKey } from "../helpers/remoteLinks.mjs";
+import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs";
 import type { ActionItem } from "../types/electron";
 
-export type ActionProcessingStatus = "idle" | "processing" | "success";
+export type ActionProcessingStatus = "idle" | "processing" | "success" | "failed";
 
 export interface NoteActionState {
   status: ActionProcessingStatus;
   actionName: string | null;
+  /** Why a conversation's summary failed ("failed"), for the record to say. */
+  message?: string | null;
 }
 
 export interface ActionErrorEvent {
@@ -65,7 +70,7 @@ FORMAT RULES (strict):
 
 Instructions: `;
 
-const MEETING_SYSTEM_PROMPT = `You are a professional meeting notes assistant. You will receive a dual-speaker transcript where "You:" marks the user's speech and "Them:" marks the other participant(s), along with any manual notes the user took.
+const MEETING_SYSTEM_PROMPT = `You are a professional meeting notes assistant. You will receive the transcript of a conversation, written by speech recognition, along with any manual notes the user took. The transcript can contain misheard words. A line may start with a speaker label ("You:", "Them:", "Speaker 1:"); a conversation recorded in one room often has no labels at all.
 
 Your job is to produce clean, actionable meeting notes in markdown. Follow these rules:
 
@@ -76,9 +81,10 @@ FORMAT RULES (strict):
 - Start with a concise 1–2 sentence summary of what the meeting was about.
 - Use clear section headings: ## Threads, ## Key Discussion Points, ## Decisions Made, ## Action Items, ## Follow-ups (omit any section that has no content).
 - Under ## Threads, capture the 2–5 important lines of thought: the starting question or claim, how it developed, and what remains unresolved. Write each as a concise bullet; this is the conversation's intellectual map, not a chronological recap.
-- Under Action Items, use checkboxes (\`- [ ]\`) and attribute each item to "You" or "Them" where clear.
+- Under Action Items, use checkboxes (\`- [ ]\`). Name who will do an item only when the transcript says so (a speaker label or a name); otherwise leave the item unattributed.
 
 CONTENT RULES:
+- Write only what the transcript supports. List a decision only if the participants agreed on it, and an action item only if someone took it on. Leave out what you cannot make out; never guess a number, a name or a date.
 - Preserve important quotes or specific commitments verbatim when they carry meaning.
 - Remove filler, small talk, false starts, and repeated/redundant content.
 - Where speakers refer to the same topic across multiple turns, consolidate into a coherent point rather than listing every utterance.
@@ -99,6 +105,8 @@ export interface RunActionLabels {
   noModel: string;
   noEndpoint: string;
   actionFailed: string;
+  /** A conversation's summary came back empty, or as the transcript itself. */
+  noSummary?: string;
 }
 
 /**
@@ -131,7 +139,7 @@ export function runBackgroundAction(
 
   cancelledFlags.set(noteId, false);
   processingFlags.set(noteId, true);
-  setNoteState(noteId, { status: "processing", actionName: action.name });
+  setNoteState(noteId, { status: "processing", actionName: action.name, message: null });
 
   (async () => {
     // The model on this computer answers one request at a time, so the
@@ -154,9 +162,16 @@ export function runBackgroundAction(
         temperature: 0.3,
         disableThinking: noteFormatting.disableThinking,
         ...providerOverrides,
+        // A conversation's summary reads the whole transcript: room for a
+        // reasoning model, and a cut or empty answer fails (summaryCall.mjs).
+        ...(options.isMeetingNote ? summaryLimits(noteFormatting.mode) : {}),
       });
 
       if (cancelledFlags.get(noteId)) return;
+      // Never save nothing, or the transcript itself, as the summary.
+      if (options.isMeetingNote && summaryAnswerProblem(enhanced, noteContent)) {
+        throw new Error(labels.noSummary ?? labels.actionFailed);
+      }
 
       let title: string | undefined;
       if (options.allowTitleGeneration && getSettings().autoGenerateNoteTitle) {
@@ -170,6 +185,12 @@ export function runBackgroundAction(
         enhanced_content: enhanced,
         enhancement_prompt: action.prompt,
         enhanced_at_content_hash: contentHash,
+        // Which route and provider wrote it: a later link check sends this
+        // conversation only to the provider that has already read it.
+        summary_route: summaryRouteKey({
+          mode: options.isCloudMode ? "cloud" : noteFormatting.mode,
+          provider: providerOverrides.provider,
+        }),
       };
       if (title) updates.title = title;
       await window.electronAPI.updateNote(noteId, updates);
@@ -192,12 +213,28 @@ export function runBackgroundAction(
           mode: noteFormatting.mode,
           config: { ...providerOverrides, disableThinking: noteFormatting.disableThinking },
         }).catch(() => undefined);
+        // And, with a cloud writing model, its links to earlier conversations
+        // (stores/conversationLinkStore.ts). With any other model it does
+        // nothing, and the board links the conversation on this computer.
+        if (!cancelledFlags.get(noteId)) {
+          await checkConversationLinks(noteId, {
+            modelId,
+            mode: noteFormatting.mode,
+            config: { ...providerOverrides, disableThinking: noteFormatting.disableThinking },
+          }).catch(() => undefined);
+        }
       }
     } catch (err) {
       if (cancelledFlags.get(noteId)) return;
       processingFlags.set(noteId, false);
-      clearNoteState(noteId);
       const message = err instanceof Error ? err.message : labels.actionFailed;
+      // A conversation keeps the failure, so its record says so and offers it
+      // again (OatsWorkspace.tsx); other notes go back to idle.
+      if (options.isMeetingNote) {
+        setNoteState(noteId, { status: "failed", actionName: action.name, message });
+      } else {
+        clearNoteState(noteId);
+      }
       pushErrorEvent({ noteId, message });
     } finally {
       cancelledFlags.delete(noteId);

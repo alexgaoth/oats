@@ -198,14 +198,17 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   from its words. When a writing model is chosen, it names the topic once the
   topic holds 40 words, again as it grows, and at Finish for the record when
   it is new or changed (`helpers/topicNaming.mjs`, `helpers/topicNamer.mjs`):
-  2 to 5 words asked, 6 kept, specific, sentence case. A name changes only
+  2 to 5 words asked, 6 kept, specific, sentence case. With OpenAI or
+  Anthropic as the writing model, that provider's most accurate model for
+  names gives them instead (`helpers/topicModels.mjs`). A name changes only
   when a newer one arrives. It never goes back to the on-device name, a failed
   or unusable answer changes nothing, and a rename the model keeps changes
   nothing on screen.
-- **Live topic check** (`helpers/topicLoop.mjs`), only with OpenAI as the
-  writing model: the on-device tracker proposes changes of subject early, and a
-  fast OpenAI model (gpt-6-luna, else gpt-5.6-luna) confirms each one, places
-  it, and names the new topic in the same answer. The flow card shows these
+- **Live topic check** (`helpers/topicLoop.mjs`), only with OpenAI or
+  Anthropic as the writing model: the on-device tracker proposes changes of
+  subject early, and that provider's most accurate model for the check
+  (`helpers/topicModels.mjs`) confirms each one, places it, and names the new
+  topic in the same answer. The flow card shows these
   topics; each line still lands at once in the topic the room is on, and a
   confirmed change moves the lines since it to the new or earlier topic in one
   step. A failed answer changes nothing; after three in a row the card goes

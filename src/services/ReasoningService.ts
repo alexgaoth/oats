@@ -215,9 +215,10 @@ class ReasoningService extends BaseReasoningService {
       requestBody: JSON.stringify(requestBody).substring(0, 200),
     });
 
+    const timeoutMs = config.timeoutMs ?? 30000;
     const response = await withRetry(async () => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
@@ -276,7 +277,7 @@ class ReasoningService extends BaseReasoningService {
         return jsonResponse;
       } catch (error) {
         if ((error as Error).name === "AbortError") {
-          throw new Error("Request timed out after 30s");
+          throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
         }
         throw error;
       } finally {
@@ -295,6 +296,9 @@ class ReasoningService extends BaseReasoningService {
     }
 
     const choice = response.choices[0];
+    if (config.requireComplete && choice.finish_reason === "length") {
+      throw new Error(`${providerName} stopped at its output limit before it finished`);
+    }
     // Reasoning models leak <think> blocks into non-streamed output; strip them
     // unless the user explicitly enabled thinking (same default as streaming).
     const rawContent = choice.message?.content?.trim() || "";
@@ -401,6 +405,20 @@ class ReasoningService extends BaseReasoningService {
       // The model is not there for this key; a rejected key (401) may be fixed.
       if ([400, 403, 404].includes(res.status)) return false;
       return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Whether the Anthropic key can use a model, asked in the main process, which
+   * holds the key (`GET /v1/models/{id}`, no tokens, no conversation text).
+   * True or false when Anthropic says so; null when it could not be told.
+   */
+  async anthropicModelAvailable(model: string): Promise<boolean | null> {
+    try {
+      const answer = await window.electronAPI?.anthropicModelAvailable?.(model);
+      return typeof answer === "boolean" ? answer : null;
     } catch {
       return null;
     }

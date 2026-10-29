@@ -88,6 +88,8 @@ export interface WhisperModelInfo {
    * in the picker, because it is not a quality tier to weigh against the others.
    */
   englishOnly?: boolean;
+  /** The file's SHA-256, checked after a download when it is given. */
+  sha256?: string;
 }
 
 export interface WhisperModelConfig {

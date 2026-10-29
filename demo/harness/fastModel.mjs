@@ -2,10 +2,12 @@
 //
 // With OpenAI as the writing model the app runs the live topic check
 // (`src/helpers/topicLoop.mjs`): once a session it asks whether the key can use
-// a fast model (`GET /v1/models/{model}`), and during the conversation it sends
-// that model the proposed changes of subject. The summary, the title, the
-// topic names at Finish and the group go to the writing model by the same
-// host. Here every request to api.openai.com is answered in the page and none
+// a check model (`GET /v1/models/{model}`, `src/helpers/topicModels.mjs`), and
+// during the conversation it sends that model the proposed changes of subject.
+// The summary, the title and the group go to the writing model by the same
+// host. The topic names at Finish go to OpenAI's naming model when the key can
+// use it; this demo key can use the check models only, so they go to the
+// writing model. Here every request to api.openai.com is answered in the page and none
 // leaves it: the check and its first names by the stand-ins in topicNames.mjs,
 // everything else by the replay's own stub (`hooks.reason`, replay.mjs), as the
 // model on this computer is answered in the other demos.
