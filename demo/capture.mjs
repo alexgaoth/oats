@@ -284,26 +284,26 @@ const SHOTS = [
   { name: "setup-permissions", query: "firstrun=1&tier=fast", ready: "h1", script: "" },
   {
     name: "setup-processing-local",
-    query: "firstrun=1&setupStep=1&tier=fast&writing=none",
+    query: "firstrun=1&setupStep=1&tier=fast&writingState=none",
     ready: "h1",
     script: "await demo.wait(600)",
   },
   {
     name: "setup-processing-8gb",
-    query: "firstrun=1&setupStep=1&tier=none&writing=none&memory=8",
+    query: "firstrun=1&setupStep=1&tier=none&writingState=none&memory=8",
     ready: "h1",
     script: "await demo.wait(600)",
   },
   {
     name: "setup-processing-key",
-    query: "firstrun=1&setupStep=1&tier=fast&writing=none",
+    query: "firstrun=1&setupStep=1&tier=fast&writingState=none",
     ready: "h1",
     script:
       "await demo.wait(600); [...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300)",
   },
   {
     name: "setup-processing-key-saved",
-    query: "firstrun=1&setupStep=1&tier=fast&writing=none",
+    query: "firstrun=1&setupStep=1&tier=fast&writingState=none",
     ready: "h1",
     script:
       "await demo.wait(600); [...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300); await demo.typeKey('sk-proj-demo-key-0123456789'); await demo.wait(800)",

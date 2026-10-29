@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useId, useState } from "react";
+import { useId, useImperativeHandle, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, KeyRound, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -43,6 +43,12 @@ const SETTERS: Record<string, (state: SettingsState) => Setter> = {
 
 type Message = { tone: "success" | "warning" | "danger" | "muted"; text: string } | null;
 
+/** What setup asks of the field: Get started checks and saves the key in it. */
+export interface ProviderKeyHandle {
+  /** Check the key in the field and save it: true once saved, false when there is none or it is refused. */
+  commit: () => Promise<boolean>;
+}
+
 /**
  * One field for an API key, the same in setup and in Settings. With `any` it
  * takes an OpenAI or an Anthropic key and tells them apart by their prefix,
@@ -50,19 +56,28 @@ type Message = { tone: "success" | "warning" | "danger" | "muted"; text: string 
  * checked with the provider before it is saved (keyCheck.ts): a key the
  * provider calls invalid is not saved, and every other answer is said in one
  * line.
- * Other providers' keys are saved as they are.
+ * Other providers' keys are saved as they are. In setup there is no Save:
+ * Get started checks and saves the key (`ref`, `showSave`).
  */
 export function ProviderKeyField({
   provider = "any",
   onSaved,
   className,
   autoFocus = false,
+  showSave = true,
+  onDraftChange,
+  ref,
 }: {
   /** "any" for OpenAI or Anthropic, or one provider's id. */
   provider?: "any" | KeyProvider | string;
   onSaved?: (provider: string) => void;
   className?: string;
   autoFocus?: boolean;
+  /** False where another button saves the key (setup's Get started). */
+  showSave?: boolean;
+  /** The text in the field, whenever it changes. */
+  onDraftChange?: (draft: string) => void;
+  ref?: React.Ref<ProviderKeyHandle>;
 }) {
   const { t } = useTranslation();
   const fieldId = useId();
@@ -125,10 +140,12 @@ export function ProviderKeyField({
     }
     SETTERS[target]?.(useSettingsStore.getState())(key);
     setDraft("");
+    onDraftChange?.("");
     setSaved({ provider: target, tail: key.slice(-4) });
     onSaved?.(target);
     return true;
   };
+  useImperativeHandle(ref, () => ({ commit }));
 
   const save = (event: React.FormEvent) => {
     event.preventDefault();
@@ -194,6 +211,7 @@ export function ProviderKeyField({
             value={draft}
             onChange={(event) => {
               setDraft(event.target.value);
+              onDraftChange?.(event.target.value);
               if (message?.tone === "danger") setMessage(null);
             }}
             placeholder={
@@ -215,14 +233,16 @@ export function ProviderKeyField({
             className={cn("pl-9 text-[13px]", draft && "font-mono")}
           />
         </div>
-        <Button type="submit" variant="outline" disabled={!draft.trim() || checking}>
-          {checking ? (
-            <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
-          ) : (
-            <Check aria-hidden="true" />
-          )}
-          {t("common.save")}
-        </Button>
+        {showSave && (
+          <Button type="submit" variant="outline" disabled={!draft.trim() || checking}>
+            {checking ? (
+              <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
+            ) : (
+              <Check aria-hidden="true" />
+            )}
+            {t("common.save")}
+          </Button>
+        )}
       </form>
       <p
         id={messageId}

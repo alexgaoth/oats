@@ -428,8 +428,9 @@ test("setup starts the downloads only when the person continues with On this Mac
   // The flow commits the choice in one place: leaving the processing step.
   const flow = read("src/components/OnboardingFlow.tsx");
   assert.equal([...flow.matchAll(/commitProcessing\(/g)].length, 1);
+  // After the pasted key, if any, is checked and saved (setupProcessing.test.js).
   assert.match(
     flow,
-    /if \(currentStepId === "processing"\) \{\s*commitProcessing\(processingChoice, localDownloads, preferredLanguage\);/
+    /if \(currentStepId === "processing"\) \{[\s\S]{0,400}?\n {6}commitProcessing\(processingChoice, localDownloads, preferredLanguage\);/
   );
 });

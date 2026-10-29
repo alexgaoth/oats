@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ProcessingChoice, WhatIsSent } from "../settings/ProcessingChoice";
-import { ProviderKeyField } from "../settings/ProviderKeyField";
+import { ProviderKeyField, type ProviderKeyHandle } from "../settings/ProviderKeyField";
 import type { ProcessingMode } from "../settings/processing";
 import { OatsMark } from "../shell/OatsMark";
 import type { LocalDownloads } from "./processingSetup";
@@ -11,7 +11,8 @@ import { getCachedPlatform } from "../../utils/platform";
  * Setup's second step, "Where Oats thinks": the same processing choice as
  * Settings › AI models (ProcessingChoice). On this Mac, it names what will be
  * downloaded and how big it is; with an API key, it takes the key in place,
- * checked before it is saved. The choice is committed when the person
+ * checked before it is saved: Get started checks and saves a key pasted there
+ * (`keyField`), so there is no Save. The choice is committed when the person
  * continues (OnboardingFlow), so trying both options changes nothing.
  */
 export const ProcessingStep = forwardRef<
@@ -20,8 +21,10 @@ export const ProcessingStep = forwardRef<
     value: ProcessingMode;
     onChange: (mode: ProcessingMode) => void;
     downloads: LocalDownloads;
+    keyField: React.Ref<ProviderKeyHandle>;
+    onKeyDraft: (draft: string) => void;
   }
->(function ProcessingStep({ value, onChange, downloads }, headingRef) {
+>(function ProcessingStep({ value, onChange, downloads, keyField, onKeyDraft }, headingRef) {
   const { t, i18n } = useTranslation();
   const mac = getCachedPlatform() === "darwin";
   const list = (() => {
@@ -64,7 +67,12 @@ export const ProcessingStep = forwardRef<
           ),
           providers: (
             <div className="space-y-3">
-              <ProviderKeyField provider="any" />
+              <ProviderKeyField
+                ref={keyField}
+                provider="any"
+                showSave={false}
+                onDraftChange={onKeyDraft}
+              />
               <WhatIsSent />
             </div>
           ),

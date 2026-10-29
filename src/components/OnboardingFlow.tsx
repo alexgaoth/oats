@@ -18,6 +18,7 @@ import { selectProcessingMode, useSettingsStore } from "../stores/settingsStore"
 import { ProcessingStep } from "./onboarding/ProcessingStep";
 import { commitProcessing, useLocalDownloads } from "./onboarding/processingSetup";
 import type { ProcessingMode } from "./settings/processing";
+import type { ProviderKeyHandle } from "./settings/ProviderKeyField";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
@@ -92,6 +93,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const providerKeySaved = useSettingsStore((state) =>
     Boolean(state.openaiApiKey.trim() || state.anthropicApiKey.trim())
   );
+  // A key pasted in the step and not saved yet: Get started checks and saves it.
+  const keyField = useRef<ProviderKeyHandle>(null);
+  const [keyDraft, setKeyDraft] = useState("");
+  const [checkingKey, setCheckingKey] = useState(false);
 
   // Onboarding edits only the primary dictation hotkey; extra bindings are
   // preserved via withExtraDictationHotkeys.
@@ -316,9 +321,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [currentStep]);
 
   // Continue, or Get started on the last step. Leaving the processing step
-  // commits its choice, and on this Mac starts its downloads at once.
+  // commits its choice, and on this Mac starts its downloads at once. With an
+  // API key, a key pasted and not saved yet is checked and saved by this one
+  // press; a key the provider refuses keeps the step, its reason under the field.
   const goForward = async () => {
     if (currentStepId === "processing") {
+      if (processingChoice === "providers" && keyDraft.trim()) {
+        setCheckingKey(true);
+        const saved = (await keyField.current?.commit()) ?? false;
+        setCheckingKey(false);
+        if (!saved) return;
+      }
       commitProcessing(processingChoice, localDownloads, preferredLanguage);
     }
     if (isLastStep) await finishOnboarding();
@@ -456,6 +469,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             value={processingChoice}
             onChange={setProcessingChoice}
             downloads={localDownloads}
+            keyField={keyField}
+            onKeyDraft={setKeyDraft}
           />
         );
 
@@ -495,8 +510,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case "permissions":
         return areRequiredPermissionsMet(permissionsHook.micPermissionGranted);
       case "processing":
-        // With an API key, the key comes first: OpenAI's or Anthropic's.
-        return processingChoice === "local" || providerKeySaved;
+        // With an API key, the key comes first: OpenAI's or Anthropic's, saved
+        // or pasted (Get started checks and saves it).
+        return processingChoice === "local" || providerKeySaved || keyDraft.trim().length > 0;
       default:
         return false;
     }
@@ -556,7 +572,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 variant="ghost"
                 size="lg"
                 onClick={() => setCurrentStep(currentStep - 1)}
-                disabled={isFinishing}
+                disabled={isFinishing || checkingKey}
               >
                 {t("onboarding.back")}
               </Button>
@@ -566,7 +582,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               size="lg"
               className="flex-1"
               onClick={() => void goForward()}
-              disabled={!canProceed() || isFinishing}
+              disabled={!canProceed() || isFinishing || checkingKey}
             >
               {isLastStep ? t("onboarding.welcome.getStarted") : t("onboarding.continue")}
             </Button>
