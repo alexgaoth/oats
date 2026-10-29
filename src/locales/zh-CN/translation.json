@@ -1500,7 +1500,8 @@
       },
       "transcription": {
         "openai_gpt_4o_mini_transcribe": "快速且准确的转录",
-        "openai_gpt_4o_transcribe": "最准确的转录",
+        "openai_gpt_transcribe": "最准确的转录",
+        "openai_gpt_4o_transcribe": "上一代模型",
         "openai_whisper_1": "原始 Whisper 模型",
         "groq_whisper_large_v3_turbo": "216 倍实时速度",
         "groq_whisper_large_v3": "Large v3 模型，快速且精准",

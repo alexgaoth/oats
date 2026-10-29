@@ -1049,7 +1049,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     readString("preferredLanguage", DEFAULT_SPEECH_LANGUAGE)
   ),
   cloudTranscriptionProvider: readString("cloudTranscriptionProvider", "openai"),
-  cloudTranscriptionModel: readString("cloudTranscriptionModel", "gpt-4o-mini-transcribe"),
+  cloudTranscriptionModel: readString("cloudTranscriptionModel", "gpt-transcribe"),
   cloudTranscriptionBaseUrl: readString(
     "cloudTranscriptionBaseUrl",
     API_ENDPOINTS.TRANSCRIPTION_BASE
