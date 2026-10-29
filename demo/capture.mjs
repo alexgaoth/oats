@@ -182,12 +182,58 @@ const SHOTS = [
     query: "tier=ready&speech=auto",
     script: "await oatsDemo.settings('models')",
   },
+  // The tour at the end of setup (components/onboarding/OatsTour.tsx): setup
+  // finished the way a person finishes it, then Next to each slide. The
+  // questions slide is taken twice: while its newest card is still open, and
+  // once the reply has settled it.
+  ...[
+    ["tour-topics", 0, 0],
+    ["tour-questions-asked", 1, 0],
+    ["tour-questions", 1, 1200],
+    ["tour-shape", 2, 0],
+    ["tour-voices", 3, 0],
+    ["tour-open", 4, 0],
+  ].map(([name, slide, settle]) => ({
+    name,
+    query: "firstrun=1",
+    ready: "h1",
+    script: [
+      "await demo.press('Allow'); await demo.wait(400);",
+      "await demo.press('Get started');",
+      "await demo.until(() => document.querySelector('section[aria-label] h1'));",
+      ...Array.from({ length: slide }, () => "await demo.press('Next');"),
+      `await demo.wait(${settle});`,
+      // The tour gives Next the focus; a script is not a keyboard.
+      "document.activeElement?.blur();",
+    ].join(" "),
+  })),
+  // The questions slide under reduced motion: its cards are settled at once.
+  {
+    name: "tour-questions-still",
+    query: "firstrun=1",
+    ready: "h1",
+    reducedMotion: true,
+    script: [
+      "await demo.press('Allow'); await demo.wait(400);",
+      "await demo.press('Get started');",
+      "await demo.until(() => document.querySelector('section[aria-label] h1'));",
+      "await demo.press('Next');",
+      "document.activeElement?.blur();",
+    ].join(" "),
+  },
 ];
 
 // Page helpers, evaluated in the page before each shot's script.
 const PAGE_HELPERS = `
 window.demo = {
   wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  async until(test, ms = 10000) {
+    const until = performance.now() + ms;
+    while (!test()) {
+      if (performance.now() > until) throw new Error("demo.until: timed out");
+      await demo.wait(100);
+    }
+  },
   async untilSeconds(seconds) {
     const until = performance.now() + 60000;
     while (!(oatsDemo.status().phase === "recording" && oatsDemo.status().seconds >= seconds)) {
@@ -362,12 +408,22 @@ async function main() {
     );
     const shots = SHOTS.filter((shot) => !args.only || args.only.includes(shot.name));
     for (const theme of args.themes) {
-      await cdp.send(
-        "Emulation.setEmulatedMedia",
-        { features: [{ name: "prefers-color-scheme", value: theme }] },
-        sessionId
-      );
       for (const shot of shots) {
+        // A shot with `reducedMotion` is taken as somebody who asked the
+        // system for less motion sees the app.
+        await cdp.send(
+          "Emulation.setEmulatedMedia",
+          {
+            features: [
+              { name: "prefers-color-scheme", value: theme },
+              {
+                name: "prefers-reduced-motion",
+                value: shot.reducedMotion ? "reduce" : "no-preference",
+              },
+            ],
+          },
+          sessionId
+        );
         const query = ["panel=true", `theme=${theme}`, shot.query].filter(Boolean).join("&");
         const loaded = cdp.once("Page.loadEventFired", sessionId);
         await cdp.send("Page.navigate", { url: `${args.url}/demo.html?${query}` }, sessionId);

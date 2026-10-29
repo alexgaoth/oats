@@ -406,7 +406,9 @@ export function createFakeMain({
   const explicit = {
     // --- The platform, and the boot-time questions.
     getPlatform: () => "darwin",
-    getUiLanguage: async () => "en",
+    // What main holds is what the page asked for (`lang=`, settings.mjs):
+    // answering English here switched every `lang=` page back at startup.
+    getUiLanguage: async () => localStorage.getItem("uiLanguage") || "en",
     getConversationKey: async () => "CommandOrControl+Shift+O",
     getUpdateStatus: async () => ({
       updateAvailable: false,
