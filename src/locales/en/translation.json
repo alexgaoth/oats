@@ -175,6 +175,10 @@
     "language": {
       "title": "Language",
       "description": "The language spoken in the room"
+    },
+    "speechModel": {
+      "title": "Speech model",
+      "description": "This Mac can run Whisper Turbo, the most accurate model. It downloads from Hugging Face after setup: {{size}}."
     }
   },
   "streaming": {
@@ -2262,7 +2266,7 @@
         "speechTitle": "Speech model",
         "speechScreen": "One model transcribes your conversations and your dictation. Two models would take turns loading on this Mac.",
         "writingTitle": "Writing model",
-        "writingScreen": "One model writes your summaries and tidies your dictation, and names the topics of each conversation. With OpenAI or Anthropic, that provider's most accurate models for topics name them instead, and confirm each change of subject during the conversation. With a cloud model, what is said on each topic is sent to that provider during the conversation, up to 3,000 characters a request.",
+        "writingScreen": "One model writes your summaries and tidies your dictation, and names the topics of each conversation. With OpenAI or Anthropic, that provider's most accurate models for topics name them instead, and confirm each change of subject during the conversation. With a cloud model, what is said on each topic is sent to that provider during the conversation, up to 3,000 characters a request. With OpenAI or Anthropic, once a conversation is summarized, that provider's most accurate model also links it to earlier conversations on the same subjects. It gets the topic names and the first sentences of the summary of this conversation and of up to 12 earlier ones whose summaries the same provider wrote, never a transcript. Earlier conversations summarized on this Mac or by another provider are never sent.",
         "none": "None yet",
         "selfHosted": "Your server"
       },
@@ -2402,6 +2406,27 @@
       "modelOn": "{{model}} on {{backend}}",
       "requests_one": "{{count}} network request since launch",
       "requests_other": "{{count}} network requests since launch"
+    },
+    "speechTier": {
+      "downloading": "Downloading Whisper Turbo",
+      "downloadingShort": "Downloading Whisper Turbo: {{percent}}%",
+      "progress": "{{percent}}% of {{size}}. Until it is ready, Oats uses the model it came with.",
+      "checking": "Checking Whisper Turbo",
+      "checkingDetail": "A short test on this Mac's GPU",
+      "ready": "Whisper Turbo, chosen for this Mac",
+      "readyDetail": "Its GPU keeps up with the most accurate model during a conversation",
+      "failed": "Whisper Turbo did not download",
+      "failedDetail": "Oats uses the model it came with.",
+      "declined": "This Mac can run Whisper Turbo",
+      "declinedDetail": "The most accurate model: {{size}} from Hugging Face",
+      "slow": "Whisper Turbo is too slow on this Mac",
+      "slowDetail": "It cannot keep up with a conversation here, so Oats uses the model it came with.",
+      "detection": "Whisper Turbo is too slow with language detection",
+      "detectionDetail": "Choose the transcription language in Settings › Recording, and Oats uses it.",
+      "retry": "Try again",
+      "cancelDownload": "Cancel the Whisper Turbo download",
+      "noticeTitle": "Getting a more accurate speech model for this Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo, from Hugging Face. Oats keeps using the model it came with until it is ready."
     }
   },
   "questionCard": {

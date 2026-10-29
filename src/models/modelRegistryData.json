@@ -214,6 +214,17 @@
       "fileName": "ggml-large-v3-turbo.bin",
       "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
       "descriptionKey": "models.descriptions.whisper.turbo"
+    },
+    "turbo-q5": {
+      "name": "Turbo (q5)",
+      "description": "Turbo in 5-bit: a third of the size",
+      "size": "574MB",
+      "sizeMb": 574,
+      "expectedSizeBytes": 574041195,
+      "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+      "fileName": "ggml-large-v3-turbo-q5_0.bin",
+      "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+      "descriptionKey": "models.descriptions.whisper.turbo"
     }
   },
   "transcriptionProviders": [
@@ -954,9 +965,9 @@
           "id": "gpt-oss-20b-mxfp4",
           "name": "GPT-OSS 20B",
           "size": "12.1GB",
-          "sizeBytes": 12999763968,
+          "sizeBytes": 12109566624,
           "description": "OpenAI's open-weight model for consumer hardware",
-          "fileName": "gpt-oss-20b-mxfp4.gguf",
+          "fileName": "gpt-oss-20b-MXFP4.gguf",
           "quantization": "mxfp4",
           "contextLength": 128000,
           "hfRepo": "ggml-org/gpt-oss-20b-GGUF",

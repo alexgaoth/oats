@@ -175,6 +175,10 @@
     "language": {
       "title": "言語",
       "description": "部屋で話される言語"
+    },
+    "speechModel": {
+      "title": "音声モデル",
+      "description": "この Mac は最も正確なモデル Whisper Turbo を実行できます。設定後に Hugging Face からダウンロードされます: {{size}}。"
     }
   },
   "streaming": {
@@ -2262,7 +2266,7 @@
         "speechTitle": "音声モデル",
         "speechScreen": "1つのモデルで会話とディクテーションの両方を文字起こしします。2つのモデルだと、このMacで交互に読み込まれます。",
         "writingTitle": "文章モデル",
-        "writingScreen": "1つのモデルで要約を書き、ディクテーションを整え、会話の話題に名前を付けます。OpenAIまたはAnthropicの場合は、そのプロバイダで話題に最も正確なモデルが代わりに名前を付け、会話中に話題の切り替わりも確かめます。クラウドのモデルでは、各話題で話された内容が会話中にそのプロバイダに送られます。1回のリクエストで送られるのは最大3,000文字です。",
+        "writingScreen": "1つのモデルで要約を書き、ディクテーションを整え、会話の話題に名前を付けます。OpenAIまたはAnthropicの場合は、そのプロバイダで話題に最も正確なモデルが代わりに名前を付け、会話中に話題の切り替わりも確かめます。クラウドのモデルでは、各話題で話された内容が会話中にそのプロバイダに送られます。1回のリクエストで送られるのは最大3,000文字です。OpenAI または Anthropic では、会話を要約したあと、そのプロバイダで最も精度の高いモデルが、同じ話題を扱った過去の会話ともその会話を結び付けます。送られるのは、この会話と、同じプロバイダが要約を書いた過去の最大 12 件の会話の話題名と要約の最初の文だけで、文字起こしは送りません。この Mac や別のプロバイダで要約した過去の会話は送りません。",
         "none": "まだありません",
         "selfHosted": "自分のサーバー"
       },
@@ -2402,6 +2406,27 @@
       "modelOn": "{{backend}} で {{model}}",
       "requests_one": "起動後のネットワーク要求 {{count}} 件",
       "requests_other": "起動後のネットワーク要求 {{count}} 件"
+    },
+    "speechTier": {
+      "downloading": "Whisper Turbo をダウンロード中",
+      "downloadingShort": "Whisper Turbo をダウンロード中: {{percent}}%",
+      "progress": "{{size}} 中 {{percent}}%。準備ができるまで、Oats は付属のモデルを使います。",
+      "checking": "Whisper Turbo を確認中",
+      "checkingDetail": "この Mac の GPU で短いテストを行います",
+      "ready": "この Mac には Whisper Turbo を選択",
+      "readyDetail": "この GPU は会話中も最も正確なモデルに追いつけます",
+      "failed": "Whisper Turbo をダウンロードできませんでした",
+      "failedDetail": "Oats は付属のモデルを使います。",
+      "declined": "この Mac は Whisper Turbo を実行できます",
+      "declinedDetail": "最も正確なモデル: Hugging Face から {{size}}",
+      "slow": "この Mac では Whisper Turbo が遅すぎます",
+      "slowDetail": "ここでは会話に追いつけないため、Oats は付属のモデルを使います。",
+      "detection": "言語の自動検出では Whisper Turbo が遅すぎます",
+      "detectionDetail": "設定 › 録音 で文字起こし言語を選ぶと、Oats は Whisper Turbo を使います。",
+      "retry": "再試行",
+      "cancelDownload": "Whisper Turbo のダウンロードをキャンセル",
+      "noticeTitle": "この Mac 向けに、より正確な音声モデルを取得しています ({{size}})",
+      "noticeDetail": "Hugging Face から Whisper Turbo を取得します。準備ができるまで、Oats は付属のモデルを使います。"
     }
   },
   "questionCard": {

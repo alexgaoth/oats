@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const path = require("path");
@@ -31,7 +32,19 @@ function getWhisperModelConfig(modelName) {
     url: modelInfo.downloadUrl,
     size: modelInfo.expectedSizeBytes || modelInfo.sizeMb * 1_000_000,
     fileName: modelInfo.fileName,
+    sha256: modelInfo.sha256 || null,
   };
+}
+
+/** A file's SHA-256 in hex, read as a stream so a 574 MB model never sits in memory. */
+function sha256File(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    fs.createReadStream(filePath)
+      .on("error", reject)
+      .on("data", (chunk) => hash.update(chunk))
+      .on("end", () => resolve(hash.digest("hex")));
+  });
 }
 
 function getValidModelNames() {
@@ -83,6 +96,8 @@ class WhisperManager {
     this.cachedVadModelPath = undefined;
     this._transcribing = false;
     this._rewarmInFlight = false;
+    // Downloads in flight, by model: { abort, listeners, promise }.
+    this._downloads = new Map();
   }
 
   getModelsDir() {
@@ -162,14 +177,22 @@ class WhisperManager {
       loadEnglishModel(),
       loadBundledModels(),
     ]);
-    const requested = model || defaultWhisperModel(process.platform, process.arch);
-    return resolveWhisperModel(requested, language || null, (id) => {
-      try {
-        return fs.existsSync(this.getModelPath(id));
-      } catch {
-        return false;
-      }
-    });
+    const bundled = defaultWhisperModel(process.platform, process.arch);
+    const requested = model || bundled;
+    // A model that is not on disk (turbo before it has downloaded, or after
+    // it was deleted) falls back to the size this build ships, then to base.
+    return resolveWhisperModel(
+      requested,
+      language || null,
+      (id) => {
+        try {
+          return fs.existsSync(this.getModelPath(id));
+        } catch {
+          return false;
+        }
+      },
+      [bundled]
+    );
   }
 
   getModelPath(modelName) {
@@ -619,8 +642,59 @@ class WhisperManager {
     return normalized === "[blank_audio]" || normalized === "[ blank_audio ]";
   }
 
-  async downloadWhisperModel(modelName, progressCallback = null) {
+  /**
+   * Download a model into the models dir.
+   *
+   * One download per model at a time: a second caller for the same model
+   * (Settings, while the speed upgrade fetches turbo in the background,
+   * deviceTier.js) joins the one in flight, so two writers never share its
+   * `.tmp` file. `options.download` is a signal from `createDownloadSignal`
+   * that its caller aborts itself; without it, the download is the one
+   * `cancelDownload` cancels.
+   *
+   * @param {string} modelName
+   * @param {((progress: object) => void) | null} [progressCallback]
+   * @param {{ download?: { signal: object, abort: () => void } }} [options]
+   */
+  async downloadWhisperModel(modelName, progressCallback = null, options = {}) {
     this.validateModelName(modelName);
+    const inFlight = this._downloads.get(modelName);
+    if (inFlight) {
+      if (progressCallback) inFlight.listeners.add(progressCallback);
+      // Whoever joins can cancel it: Settings by `cancelDownload`, the speed
+      // upgrade by its own signal.
+      if (options.download) options.download.signal.onAbort = inFlight.abort;
+      else this.currentDownloadProcess = { abort: inFlight.abort };
+      try {
+        return await inFlight.promise;
+      } finally {
+        inFlight.listeners.delete(progressCallback);
+      }
+    }
+    const download = options.download ?? createDownloadSignal();
+    const entry = {
+      abort: download.abort,
+      listeners: new Set(progressCallback ? [progressCallback] : []),
+      promise: null,
+    };
+    if (!options.download) this.currentDownloadProcess = { abort: download.abort };
+    const progress = (data) => {
+      for (const listener of entry.listeners) listener(data);
+    };
+    entry.promise = this._downloadWhisperModel(modelName, progress, download.signal).finally(() => {
+      this._downloads.delete(modelName);
+      if (this.currentDownloadProcess?.abort === download.abort) this.currentDownloadProcess = null;
+    });
+    this._downloads.set(modelName, entry);
+    return entry.promise;
+  }
+
+  /** Whether a model is downloading now, by either path. */
+  isDownloading(modelName) {
+    return this._downloads.has(modelName);
+  }
+
+  async _downloadWhisperModel(modelName, progressCallback, signal) {
     const modelConfig = getWhisperModelConfig(modelName);
 
     const modelPath = this.getModelPath(modelName);
@@ -648,9 +722,6 @@ class WhisperManager {
       );
     }
 
-    const { signal, abort } = createDownloadSignal();
-    this.currentDownloadProcess = { abort };
-
     try {
       await downloadFile(modelConfig.url, modelPath, {
         timeout: 600000,
@@ -670,6 +741,19 @@ class WhisperManager {
       });
 
       await validateFileSize(modelPath, modelConfig.size);
+      if (modelConfig.sha256) {
+        if (progressCallback) progressCallback({ type: "installing", model: modelName });
+        const digest = await sha256File(modelPath);
+        if (digest !== modelConfig.sha256) {
+          await fsPromises.unlink(modelPath).catch(() => {});
+          throw Object.assign(
+            new Error("Download appears corrupted: its checksum does not match"),
+            {
+              code: "ERR_CHECKSUM",
+            }
+          );
+        }
+      }
 
       const stats = await fsPromises.stat(modelPath);
 
@@ -687,11 +771,9 @@ class WhisperManager {
       };
     } catch (error) {
       if (error.isAbort) {
-        throw new Error("Download interrupted by user");
+        throw Object.assign(new Error("Download interrupted by user"), { isAbort: true });
       }
       throw error;
-    } finally {
-      this.currentDownloadProcess = null;
     }
   }
 

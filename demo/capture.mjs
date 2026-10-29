@@ -85,6 +85,23 @@ const SHOTS = [
     script: "await oatsDemo.show('global'); await demo.wait(1500)",
   },
   {
+    // The review as a cloud model's link check would leave it: its links are
+    // the check's, with the check's name for the subject. The check is written
+    // the way conversationLinkStore.ts writes one.
+    name: "global-cloud-check",
+    query: "",
+    script: [
+      "await oatsDemo.show('global'); await demo.wait(1200);",
+      "const notes = await window.electronAPI.getNotes('meeting', 50);",
+      "const find = (pattern) => notes.find((note) => pattern.test(note.title));",
+      "const review = find(/Enterprise launch review/), corbel = find(/Corbel/), crit = find(/Design crit/), hiring = find(/Backend hiring/);",
+      "const link = (note, subject, topic, earlierTopic) => ({ id: note.id, subject, topic, earlierTopic });",
+      "await window.electronAPI.updateNote(review.id, { conversation_links: JSON.stringify({ checkedAt: new Date().toISOString(), model: 'claude-opus-5-5', candidates: [corbel.id, crit.id, hiring.id],",
+      "links: [link(corbel, 'SSO as a launch gate', 'SSO', 'SSO'), link(crit, 'SSO as a launch gate', 'SSO', 'SAML errors'), link(hiring, 'Data migration risk', 'data migration', 'data migration')] }) });",
+      "await demo.wait(1500);",
+    ].join(" "),
+  },
+  {
     // Pointing at the newest conversation lights it in both charts.
     name: "global-highlight",
     query: "",
@@ -102,6 +119,27 @@ const SHOTS = [
     name: "global-many",
     query: "profile=many",
     script: "await oatsDemo.show('global'); await demo.wait(2500)",
+  },
+  // The speech model this Mac's GPU decides (src/helpers/speechTier.mjs), in
+  // each state the speed check reports (harness/deviceTier.mjs).
+  { name: "speech-setup", query: "firstrun=1&tier=fast", ready: "h1", script: "" },
+  { name: "speech-sidebar-downloading", query: "tier=downloading", script: "" },
+  // Oats starts the download by itself and says so, once (SpeechUpgradeNotice).
+  { name: "speech-notice", query: "tier=fast", script: "" },
+  ...["downloading", "checking", "ready", "declined", "failed", "slow", "intel"].map((tier) => ({
+    name: `speech-settings-${tier}`,
+    query: `tier=${tier}`,
+    script: "await oatsDemo.settings('models')",
+  })),
+  {
+    name: "speech-settings-chosen",
+    query: "tier=ready&chosen=small",
+    script: "await oatsDemo.settings('models')",
+  },
+  {
+    name: "speech-settings-detection",
+    query: "tier=ready&speech=auto",
+    script: "await oatsDemo.settings('models')",
   },
 ];
 
@@ -279,12 +317,15 @@ async function main() {
         const loaded = cdp.once("Page.loadEventFired", sessionId);
         await cdp.send("Page.navigate", { url: `${args.url}/demo.html?${query}` }, sessionId);
         await loaded;
+        // What shows once the page is up: the workspace, or a shot's own
+        // `ready` selector (the setup screen has no workspace).
+        const ready = JSON.stringify(shot.ready ?? "main[data-active='true'] section");
         await evaluate(
           cdp,
           sessionId,
           `(async () => {
             const until = performance.now() + 20000;
-            while (!(window.oatsDemo && document.querySelector("main[data-active='true'] section"))) {
+            while (!(window.oatsDemo && document.querySelector(${ready}))) {
               if (performance.now() > until) throw new Error("the app did not render");
               await new Promise((resolve) => setTimeout(resolve, 100));
             }

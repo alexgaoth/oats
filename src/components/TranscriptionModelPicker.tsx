@@ -25,7 +25,8 @@ import {
   type ColorScheme,
   type ModelPickerStyles,
 } from "../utils/modelPickerStyles";
-import { DEFAULT_WHISPER_MODEL, useSettingsStore } from "../stores/settingsStore";
+import { useSettingsStore, whisperModelFollowsDefault } from "../stores/settingsStore";
+import { useSpeechTier } from "../hooks/useSpeechTier";
 import { isEnglish } from "../helpers/whisperEnglishModel.mjs";
 import { getRemoteProviderIcon } from "../utils/providerIcons";
 import { createExternalLinkHandler } from "../utils/externalLinks";
@@ -308,6 +309,9 @@ export default function TranscriptionModelPicker({
 }: TranscriptionModelPickerProps) {
   const { t } = useTranslation();
   const preferredLanguage = useSettingsStore((s) => s.preferredLanguage);
+  // The model this Mac's default is (speechTier.mjs): turbo where the GPU
+  // measured fast enough, the bundle's model elsewhere.
+  const recommendedWhisperModel = useSpeechTier().choice.model;
   const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
   const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
   const groqApiKey = useSettingsStore((s) => s.groqApiKey);
@@ -374,6 +378,10 @@ export default function TranscriptionModelPicker({
   const validateAndSelectModel = useCallback((loadedModels: LocalModel[]) => {
     const current = selectedLocalModelRef.current;
     if (!current) return;
+    // A setting nobody changed is not repaired by saving a model over it: the
+    // default already resolves to a model on disk (settingsStore.ts), and a
+    // saved one would end the default for good, turbo on a fast Mac included.
+    if (whisperModelFollowsDefault()) return;
 
     const downloaded = loadedModels.filter((m) => m.downloaded);
     // A size whose English twin is installed is not missing: an English
@@ -819,8 +827,8 @@ export default function TranscriptionModelPicker({
               isDownloaded={(model.downloaded ?? false) || throughTwin}
               isDownloading={isDownloadingModel(modelId)}
               isCancelling={isCancelling}
-              // The model this build starts on, which its bundle serves.
-              recommended={modelId === DEFAULT_WHISPER_MODEL}
+              // The model this Mac's default is: what it measured it can run.
+              recommended={modelId === recommendedWhisperModel}
               provider="whisper"
               onSelect={() => handleWhisperModelSelect(modelId)}
               onDelete={() => handleDelete(throughTwin ? `${modelId}.en` : modelId)}
