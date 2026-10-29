@@ -3022,11 +3022,11 @@ class IPCHandlers {
     ipcMain.handle("model-delete-all", async () => {
       try {
         const modelManager = require("./modelManagerBridge").default;
-        // Removing every model is a no to each one that was there, or the
-        // workspace would fetch the writing model again at once.
-        const hadModels = this.deviceTier.writing.installed();
+        // Removing every model is a no to each one that was there and to the
+        // one downloading, which stops first, or the workspace would fetch the
+        // writing model again at once, or at the next launch.
+        this.deviceTier.writing.removedAll(this.deviceTier.writing.installed());
         await modelManager.deleteAllModels();
-        this.deviceTier.writing.deleted(hadModels);
         return { success: true };
       } catch (error) {
         return {

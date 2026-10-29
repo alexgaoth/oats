@@ -217,8 +217,10 @@ export function useWritingModelDownload(): void {
     void window.electronAPI
       ?.startWritingModelDownload?.({ modelId })
       .then((snapshot) => {
-        // Oats started it by itself: the one-time notice says so.
-        if (snapshot?.writing?.downloading?.modelId === modelId) {
+        // Oats started it by itself, now or once a recording ends in main
+        // (`waiting`): the one-time notice says so when it starts.
+        const report = snapshot?.writing;
+        if (report?.downloading?.modelId === modelId || report?.waiting === modelId) {
           useDeviceTierStore.setState({ writingAutoStarted: true });
         }
       })

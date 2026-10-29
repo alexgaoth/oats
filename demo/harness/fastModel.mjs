@@ -128,6 +128,14 @@ export function installFakeKeyCheck() {
     if (auth.includes("bad")) {
       return reply(401, { error: { message: "Incorrect API key provided.", code: "invalid_api_key" } });
     }
+    if (auth.includes("deactivated")) {
+      return reply(401, {
+        error: {
+          message: "This key is associated with a deactivated account.",
+          code: "account_deactivated",
+        },
+      });
+    }
     if (auth.includes("limited")) {
       return reply(401, {
         error: {

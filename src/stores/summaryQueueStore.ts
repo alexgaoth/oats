@@ -16,11 +16,8 @@ import { useMeetingRecordingStore } from "./meetingRecordingStore";
 import { useActionProcessingStore, type BackgroundActionOutcome } from "./actionProcessingStore";
 import { currentWritingRoute } from "./conversationGroupSortStore";
 import { watchModelDownloads } from "./modelDownloadStore";
-import {
-  localSummaryModelDownloaded,
-  useSummaryReadinessState,
-} from "../hooks/useSummaryReadiness";
-import { summaryReadiness } from "../utils/summaryReadiness";
+import { summaryReadinessNow, useSummaryReadinessState } from "../hooks/useSummaryReadiness";
+import { writingKeyPresent } from "../utils/writingKeys";
 import type { NoteItem } from "../types/electron";
 import logger from "../utils/logger";
 
@@ -39,7 +36,9 @@ import logger from "../utils/logger";
 // model the person chose, by the route Finish uses (`summarizeConversation` in
 // OatsWorkspace.tsx), and the queue sends a conversation to a cloud provider
 // only if that provider was already the writing model when it finished
-// (`queueMaySend`). One chosen since gets it when somebody opens it.
+// (`queueMaySend`). One chosen since gets it when somebody opens it. A
+// conversation finished with "With an API key" and no key yet goes to the
+// provider whose key the person adds: nothing could be sent before.
 
 interface PendingSummary {
   id: number;
@@ -78,6 +77,20 @@ export function writingRouteKey(): string {
   });
 }
 
+/**
+ * The route an owed conversation records: the writing route now, or
+ * "providers:" with no provider while the provider has no key. Nothing could
+ * be sent then, so the provider whose key the person adds may write it
+ * (`queueMaySend`, helpers/summaryQueue.mjs).
+ */
+function owedRouteKey(): string {
+  const state = getSettings();
+  const formatting = selectResolvedNoteFormatting(state);
+  const keyless =
+    formatting.mode === "providers" && writingKeyPresent(state, formatting.provider) === false;
+  return keyless ? summaryRouteKey({ mode: "providers", provider: "" }) : writingRouteKey();
+}
+
 function loadQueue(): PendingSummary[] {
   try {
     return readPendingSummaries(localStorage.getItem(PENDING_SUMMARIES_KEY));
@@ -107,9 +120,7 @@ function log(event: string, detail?: Record<string, unknown>): void {
  * leave it to the queue.
  */
 export function holdForFinish(noteId: number): () => void {
-  saveQueue(
-    withPendingSummary(loadQueue(), { id: noteId, at: Date.now(), route: writingRouteKey() })
-  );
+  saveQueue(withPendingSummary(loadQueue(), { id: noteId, at: Date.now(), route: owedRouteKey() }));
   setMark("finishing", noteId, true);
   let released = false;
   return () => {
@@ -133,7 +144,7 @@ export function oweSummary(note: Pick<NoteItem, "id" | "created_at">): void {
     withPendingSummary(queue, {
       id: note.id,
       at: Number.isFinite(at) ? at : Date.now(),
-      route: writingRouteKey(),
+      route: owedRouteKey(),
     })
   );
 }
@@ -196,17 +207,14 @@ function busy(): boolean {
   );
 }
 
-/** Whether the writing model can answer now: chosen, and on disk if it runs here. */
+/**
+ * Whether the writing model can answer now: chosen, on disk if it runs here,
+ * and with its key if it is a provider's. Without the key the list waits, and
+ * saving one starts it (`useSummaryQueue`).
+ */
 async function readyNow(): Promise<boolean> {
   if (!currentWritingRoute()) return false;
-  const formatting = selectResolvedNoteFormatting(getSettings());
-  const verdict = summaryReadiness({
-    mode: formatting.mode,
-    model: formatting.model,
-    remoteUrl: formatting.remoteUrl,
-    localModelDownloaded: await localSummaryModelDownloaded(formatting.mode, formatting.model),
-  });
-  return verdict === "ready";
+  return (await summaryReadinessNow()) === "ready";
 }
 
 async function drain(): Promise<void> {

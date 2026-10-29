@@ -160,8 +160,12 @@ const STORED_CLOUD_DEFAULTS = Object.freeze(["gpt-5.6-terra", CLOUD_WRITING_MODE
  * the switch to "On this Mac" stored Qwen3.5 4B under the provider "local",
  * and the switch to the providers stored gpt-5.6-terra, later gpt-6.1-sol,
  * under OpenAI (processing.ts before 0.2; OatsWorkspace.tsx before that). The
- * model pickers store a local model under its family ("qwen"), never "local",
- * so the pair tells the two apart. Forgetting one loses nothing a person chose:
+ * pickers of those versions stored a local model under its family ("qwen"),
+ * never "local", so the pair tells the two apart there. This version's chooser
+ * stores "local" (WritingModelChoice.tsx), so the check is for the stored
+ * values of earlier versions only: `migrateStoredWritingModel` runs it once,
+ * as 0.2 starts, before that chooser can be used. Forgetting one loses
+ * nothing a person chose:
  * the default resolves to OpenAI's model wherever an OpenAI key is stored, to
  * Anthropic's where only that key is, and Qwen3.5 4B stays in use while it is
  * the one on disk (`defaultLocalWritingModel`).

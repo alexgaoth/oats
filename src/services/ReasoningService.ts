@@ -21,7 +21,7 @@ import { detectEndpointDialect } from "./ai/thinkingSuppressionDialects";
 import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { clearTinfoilClientCache } from "./ai/tinfoilClient";
 import { resolveChatRoute } from "../helpers/chatRouting";
-import { modelAvailability, openAiKeyStatus } from "../helpers/keyStatus.mjs";
+import { modelAvailability, openAiKeyStatus, providerReason } from "../helpers/keyStatus.mjs";
 
 /** What a provider says of an API key and a model (helpers/keyStatus.mjs). */
 export type KeyStatus = "ok" | "rejected" | "limited" | "no-access" | "unknown";
@@ -420,13 +420,18 @@ class ReasoningService extends BaseReasoningService {
 
   /**
    * What OpenAI says of a key and a model (helpers/keyStatus.mjs): "ok";
-   * "rejected", the key itself is invalid; "limited", a real key the check
-   * cannot judge (a restricted key without Models read); "no-access", the key
-   * cannot use the model; "unknown" when it could not be told.
+   * "rejected", with OpenAI's reason when it gave one beyond "invalid key";
+   * "limited", a restricted key that may not read the model list; "no-access",
+   * the key cannot use the model; "unknown" when it could not be told.
    */
-  async openAiKeyStatus(model: string, key?: string): Promise<KeyStatus> {
+  async openAiKeyCheck(
+    model: string,
+    key?: string
+  ): Promise<{ status: KeyStatus; reason: string | null }> {
     const answer = await this.openAiModelResponse(model, key);
-    return answer ? openAiKeyStatus(answer.status, answer.body) : "unknown";
+    if (!answer) return { status: "unknown", reason: null };
+    const status = openAiKeyStatus(answer.status, answer.body) as KeyStatus;
+    return { status, reason: status === "rejected" ? providerReason(answer.body) : null };
   }
 
   /**

@@ -2520,6 +2520,7 @@
       "notThisKey": "Esto no es una clave de {{provider}}.",
       "checking": "Comprobando la clave con {{provider}}…",
       "rejected": "{{provider}} no aceptó esta clave.",
+      "rejectedReason": "{{provider}} no aceptó esta clave: {{reason}}",
       "works": "Guardada. Funciona con {{model}}.",
       "noAccess": "Guardada, pero esta clave no puede usar {{model}}. Elige otro modelo en Avanzado.",
       "unchecked": "Guardada. Oats no pudo comprobarla ahora.",

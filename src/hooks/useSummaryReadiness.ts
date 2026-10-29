@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
+import {
+  getSettings,
+  selectResolvedNoteFormatting,
+  useSettingsStore,
+} from "../stores/settingsStore";
 import { useModelDownloadFinished } from "../stores/modelDownloadStore";
 import { summaryReadiness, type SummaryReadiness } from "../utils/summaryReadiness";
 import { writingKeyPresent } from "../utils/writingKeys";
@@ -16,6 +20,27 @@ export async function localSummaryModelDownloaded(
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether this machine can summarize a conversation right now, outside React:
+ * the facts the hook below gathers, the provider's key included. Finish, the
+ * summary queue and the requests that share the writing model ask it
+ * (conversationGroupSortStore.ts `writingModelReady`, summaryQueueStore.ts),
+ * so with "With an API key" and no key a summary waits for the key instead of
+ * failing.
+ */
+export async function summaryReadinessNow(): Promise<SummaryReadiness | null> {
+  const state = getSettings();
+  const formatting = selectResolvedNoteFormatting(state);
+  return summaryReadiness({
+    mode: formatting.mode,
+    model: formatting.model,
+    remoteUrl: formatting.remoteUrl,
+    localModelDownloaded: await localSummaryModelDownloaded(formatting.mode, formatting.model),
+    providerKey:
+      formatting.mode === "providers" ? writingKeyPresent(state, formatting.provider) : null,
+  });
 }
 
 // When a download reaches its end, the file is moved into place a moment after

@@ -2520,6 +2520,7 @@
       "notThisKey": "これは {{provider}} のキーではありません。",
       "checking": "{{provider}} でキーを確認中…",
       "rejected": "{{provider}} はこのキーを受け付けませんでした。",
+      "rejectedReason": "{{provider}} はこのキーを受け付けませんでした: {{reason}}",
       "works": "保存しました。{{model}} で使えます。",
       "noAccess": "保存しましたが、このキーでは {{model}} を使えません。詳細設定で別のモデルを選んでください。",
       "unchecked": "保存しました。今は確認できませんでした。",

@@ -19,14 +19,20 @@ export function detectKeyProvider(key: string): KeyProvider | null {
   return null;
 }
 
+/** What the provider said of a key: its status, and its reason for a refusal. */
+export interface KeyCheck {
+  status: KeyStatus;
+  /** The provider's own words for a refusal other than "invalid key", or null. */
+  reason: string | null;
+}
+
 /**
  * Ask the provider about a key before it is saved, with the request the app
  * already makes to check a model (`GET /models/{id}`, no tokens, no
  * conversation text), for the model Oats would write with.
  */
-export function checkKey(provider: KeyProvider, key: string): Promise<KeyStatus> {
+export async function checkKey(provider: KeyProvider, key: string): Promise<KeyCheck> {
   const model = CLOUD_WRITING_MODELS[provider];
-  return provider === "openai"
-    ? reasoningService.openAiKeyStatus(model, key)
-    : reasoningService.anthropicKeyStatus(model, key);
+  if (provider === "openai") return reasoningService.openAiKeyCheck(model, key);
+  return { status: await reasoningService.anthropicKeyStatus(model, key), reason: null };
 }

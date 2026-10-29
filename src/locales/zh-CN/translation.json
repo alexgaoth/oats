@@ -2515,6 +2515,7 @@
       "notThisKey": "这不是 {{provider}} 的密钥。",
       "checking": "正在向 {{provider}} 验证密钥…",
       "rejected": "{{provider}} 没有接受这个密钥。",
+      "rejectedReason": "{{provider}} 未接受此密钥：{{reason}}",
       "works": "已保存。可用于 {{model}}。",
       "noAccess": "已保存，但这个密钥不能使用 {{model}}。请在“高级”中选择其他模型。",
       "unchecked": "已保存。Oats 暂时无法验证。",
