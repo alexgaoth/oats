@@ -818,14 +818,16 @@ class WhisperServerManager extends EventEmitter {
           : "too short",
     });
 
-    const { language, initialPrompt } = options;
+    const { language, initialPrompt, audioFilter = null } = options;
 
-    // Always convert to 16kHz mono WAV - whisper.cpp requires this exact format
+    // Always convert to 16kHz mono WAV - whisper.cpp requires this exact format.
+    // A conversation in a room also has its steady sound taken out on the way
+    // (`audioFilter`, helpers/roomSegmentAudio.mjs); dictation has none.
     let finalBuffer = audioBuffer;
     if (!this.canConvert) {
       throw new Error("FFmpeg not found - required for audio conversion");
     }
-    finalBuffer = await this._convertToWav(audioBuffer);
+    finalBuffer = await this._convertToWav(audioBuffer, audioFilter);
 
     // With `--no-timestamps` (buildWhisperServerArgs) whisper.cpp cannot resume
     // inside a 30 s window, so one request for a long recording loses words:
@@ -1039,7 +1041,7 @@ class WhisperServerManager extends EventEmitter {
     return true;
   }
 
-  async _convertToWav(audioBuffer) {
+  async _convertToWav(audioBuffer, filter = null) {
     const tempDir = getSafeTempDir();
     // Unique per request, not per millisecond: a room's live partial and its
     // final can be converted at once, and one must not read or delete the
@@ -1050,7 +1052,7 @@ class WhisperServerManager extends EventEmitter {
 
     try {
       fs.writeFileSync(tempInputPath, audioBuffer);
-      await convertToWav(tempInputPath, tempWavPath, { sampleRate: 16000, channels: 1 });
+      await convertToWav(tempInputPath, tempWavPath, { sampleRate: 16000, channels: 1, filter });
       return fs.readFileSync(tempWavPath);
     } finally {
       for (const f of [tempInputPath, tempWavPath]) {

@@ -108,8 +108,13 @@ function isWavFormat(buffer) {
   );
 }
 
+/**
+ * Any audio file to 16-bit WAV. `filter`, if given, is an FFmpeg audio filter
+ * chain applied on the way (`-af`), e.g. a room's denoiser
+ * (helpers/roomSegmentAudio.mjs).
+ */
 function convertToWav(inputPath, outputPath, options = {}) {
-  const { sampleRate = 16000, channels = 1 } = options;
+  const { sampleRate = 16000, channels = 1, filter = null } = options;
 
   return new Promise((resolve, reject) => {
     const ffmpegPath = getFFmpegPath();
@@ -125,6 +130,7 @@ function convertToWav(inputPath, outputPath, options = {}) {
     const args = [
       "-i",
       inputPath,
+      ...(filter ? ["-af", filter] : []),
       "-ar",
       String(sampleRate),
       "-ac",
@@ -140,6 +146,7 @@ function convertToWav(inputPath, outputPath, options = {}) {
       output: outputPath,
       sampleRate,
       channels,
+      filter,
     });
 
     const proc = spawn(ffmpegPath, args, {

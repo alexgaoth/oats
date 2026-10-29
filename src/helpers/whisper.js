@@ -461,6 +461,7 @@ class WhisperManager {
     const initialPrompt = options.initialPrompt || null;
     const vadEnabled = options.vadEnabled === true;
     const vadConfig = options.vadConfig || null;
+    const audioFilter = options.audioFilter || null;
     const modelPath = this.getModelPath(model);
 
     if (!fs.existsSync(modelPath)) {
@@ -470,6 +471,7 @@ class WhisperManager {
     return await this.transcribeViaServer(audioBlob, model, language, initialPrompt, {
       vadEnabled,
       vadConfig,
+      audioFilter,
     });
   }
 
@@ -530,7 +532,11 @@ class WhisperManager {
     });
 
     const startTime = Date.now();
-    const result = await this.serverManager.transcribe(audioBuffer, { language, initialPrompt });
+    const result = await this.serverManager.transcribe(audioBuffer, {
+      language,
+      initialPrompt,
+      audioFilter: options.audioFilter || null,
+    });
     const elapsed = Date.now() - startTime;
 
     debugLogger.logWhisperPipeline("transcribeViaServer - completed", {

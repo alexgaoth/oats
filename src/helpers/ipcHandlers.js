@@ -5661,8 +5661,13 @@ class IPCHandlers {
     //
     // Whisper hears a quiet segment raised (roomSegmentLevel.mjs): a laptop
     // across the table hands it speech near -50 dBFS, and capture has no gain.
-    const transcribeInRoomAudio = async (pcm) => {
+    //
+    // In a room with steady sound (the segmenter's steady floor at -41 dBFS
+    // or over) its FFmpeg conversion also takes that sound out, with afftdn at
+    // the segment's own floor (roomSegmentAudio.mjs).
+    const transcribeInRoomAudio = async (pcm, steadyFloor) => {
       const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
+      const { roomDenoiseFilter } = await import("./roomSegmentAudio.mjs");
       const raised = raiseQuietSegment(new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1));
       const result = await (meetingLocalProvider === "nvidia"
         ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
@@ -5674,6 +5679,7 @@ class IPCHandlers {
               model: meetingLocalModel,
               language: meetingLocalLanguage,
               ...this._resolveWhisperVadOptions("meeting"),
+              audioFilter: roomDenoiseFilter(raised, steadyFloor),
             }
           ));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
@@ -5711,7 +5717,10 @@ class IPCHandlers {
       // Where this partial's audio ends, as the moment it was heard.
       const audioEndedAt = session.clock.wallAt((openAt ?? 0) + samples.length);
       let read = false;
-      transcribeInRoomAudio(Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength))
+      transcribeInRoomAudio(
+        Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength),
+        session.segmenter.steadyFloor
+      )
         .then((result) => {
           read = Boolean(result?.success);
           return read ? result.text : "";
@@ -5754,7 +5763,7 @@ class IPCHandlers {
       );
       let sent = false;
       try {
-        const result = await transcribeInRoomAudio(pcm);
+        const result = await transcribeInRoomAudio(pcm, segment.steadyFloor);
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
         meetingLocalTranscript = meetingLocalTranscript
