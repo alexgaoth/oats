@@ -147,8 +147,9 @@ export function settleSummary(noteId: number): void {
 
 /**
  * Run one conversation's summary with the queue's bookkeeping: never two at
- * once for one conversation, struck from the list once saved or failed, and a
- * refusal remembered so the record does not ask again and again.
+ * once for one conversation, struck from the list once saved or failed (too
+ * long for the model on this Mac included: the queue does not ask again), and
+ * a refusal remembered so the record does not ask again and again.
  */
 export async function runSummary(
   noteId: number,
@@ -162,7 +163,9 @@ export async function runSummary(
   } catch {
     outcome = "refused";
   } finally {
-    if (outcome === "saved" || outcome === "failed") settleSummary(noteId);
+    if (outcome === "saved" || outcome === "failed" || outcome === "too-long") {
+      settleSummary(noteId);
+    }
     setMark("refused", noteId, outcome === "refused");
     setMark("running", noteId, false);
     kickSummaryQueue();
@@ -243,7 +246,8 @@ async function drain(): Promise<void> {
     if (outcome === "refused" || outcome === "cancelled") return;
     // One conversation that fails twice is that conversation; its record says
     // so. Several in a row is the model, and the rest wait for the next kick
-    // rather than each failing in turn (helpers/summaryQueue.mjs).
+    // rather than each failing in turn (helpers/summaryQueue.mjs). Too long
+    // for the model is the conversation's length, never the model's fault.
     failedInARow = outcome === "failed" ? failedInARow + 1 : 0;
     if (queueStopsAfter(failedInARow)) return;
   }

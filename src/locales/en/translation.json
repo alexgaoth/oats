@@ -2099,6 +2099,7 @@
       "summaryAfterDownload": "The summary is written when {{model}} has downloaded: {{percent}}%",
       "summaryAfterRecording": "The summary is written when this conversation is finished.",
       "summaryWhenRecordingEnds": "The summary is written when the recording ends.",
+      "summaryTooLong": "This conversation is too long for the writing model on this Mac. With an API key (Settings › AI models) it can be summarized.",
       "summarizeAgain": "Summarize again",
       "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"

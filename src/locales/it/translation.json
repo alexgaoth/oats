@@ -2099,6 +2099,7 @@
       "summaryAfterDownload": "Il riepilogo verrà scritto quando il download di {{model}} sarà completato: {{percent}}%",
       "summaryAfterRecording": "Il riepilogo verrà scritto quando questa conversazione sarà terminata.",
       "summaryWhenRecordingEnds": "Il riepilogo verrà scritto quando la registrazione sarà terminata.",
+      "summaryTooLong": "Questa conversazione è troppo lunga per il modello di scrittura di questo Mac. Con una chiave API (Impostazioni › Modelli di IA) si può riassumere.",
       "summarizeAgain": "Riassumi di nuovo",
       "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"

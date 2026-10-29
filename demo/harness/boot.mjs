@@ -27,7 +27,8 @@
 // by default) mid-download there, until `oatsDemo.download()` runs it to the
 // end; `bare=<sample id>` or `bare=all` takes the summaries away, as from a
 // conversation recorded before any model was ready; `summary=fail` fails every
-// summary and `summary=fail-once` the first try of each.
+// summary, `summary=fail-once` the first try of each, and `summary=too-long`
+// answers as the server on this Mac does to a conversation over its context.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
@@ -113,12 +114,25 @@ const openai =
     : null;
 // A summary that fails, as a model that stops early does: every time
 // (`summary=fail`), or only the first try of each conversation (`fail-once`).
+// `summary=too-long` answers as llama-server does to a conversation that does
+// not fit its context, through main's error.
 const failing = params.get("summary");
-if (failing === "fail" || failing === "fail-once") {
+const CONTEXT_OVERFLOW = `Inference failed: llama-server returned status 400: ${JSON.stringify({
+  error: {
+    code: 400,
+    message:
+      "request (20123 tokens) exceeds the available context size (16384 tokens), try increasing it",
+    type: "exceed_context_size_error",
+    n_prompt_tokens: 20123,
+    n_ctx: 16384,
+  },
+})}`;
+if (failing === "fail" || failing === "fail-once" || failing === "too-long") {
   const answer = main.hooks.reason;
   const tried = new Set();
   main.hooks.reason = (request) => {
     if (/meeting notes assistant/i.test(request.prompt)) {
+      if (failing === "too-long") return { error: CONTEXT_OVERFLOW, delayMs: 600 };
       const first = !tried.has(request.text);
       tried.add(request.text);
       if (failing === "fail" || first) {

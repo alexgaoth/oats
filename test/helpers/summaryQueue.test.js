@@ -244,6 +244,31 @@ test("only a second failure is shown, and then nothing starts again by itself", 
   assert.equal(state({ failed: true, readiness: "model-missing" }), "failed");
 });
 
+test("too long for the model on this Mac: said plainly, and not offered again there", () => {
+  assert.equal(state({ failed: true, tooLong: true, writingLocal: true }), "too-long");
+  assert.equal(
+    state({ failed: true, tooLong: true, writingLocal: true, recordingElsewhere: true }),
+    "too-long"
+  );
+  // Being written again (another model chosen, or pressed): that is what shows.
+  assert.equal(
+    state({ failed: true, tooLong: true, writingLocal: true, processing: true }),
+    "preparing"
+  );
+  // Another writing model chosen since: what failed no longer stands in the
+  // way, and it starts as any conversation does.
+  assert.equal(
+    state({ failed: true, tooLong: true, writingLocal: false, routeAtHome: false }),
+    "starting"
+  );
+  assert.equal(
+    state({ failed: true, tooLong: true, writingLocal: false, readiness: "no-model" }),
+    "needs-model"
+  );
+  // Any other failure keeps its own state and its "Summarize again".
+  assert.equal(state({ failed: true, tooLong: false, writingLocal: true }), "failed");
+});
+
 test("a conversation being recorded is summarized by its Finish, never before", () => {
   assert.equal(state({ recording: true }), "recording");
   assert.equal(state({ recording: true, readiness: "no-model" }), "recording");
@@ -294,4 +319,84 @@ test("nothing to summarize, or refused this session: nothing starts", () => {
   assert.equal(state({ hasTranscript: false }), "not-summarized");
   assert.equal(state({ hasTranscript: false, readiness: "no-model" }), "not-summarized");
   assert.equal(state({ unavailable: true }), "not-summarized");
+});
+
+// Too long for the model on this Mac (#156 makes it every "On this Mac"
+// writer's default): never asked again, and the record says why.
+
+test("the server on this Mac saying the request does not fit is 'too-long'", () => {
+  // As the bundled llama-server answers, carried through main's error.
+  const now = `Inference failed: llama-server returned status 400: ${JSON.stringify({
+    error: {
+      code: 400,
+      message:
+        "request (20123 tokens) exceeds the available context size (16384 tokens), try increasing it",
+      type: "exceed_context_size_error",
+      n_prompt_tokens: 20123,
+      n_ctx: 16384,
+    },
+  })}`;
+  assert.equal(queue.summaryFailureKind(new Error(now), "local"), "too-long");
+  assert.equal(queue.summaryFailureKind(now, "local"), "too-long");
+  // An older build's words.
+  assert.equal(
+    queue.summaryFailureKind(
+      "llama-server returned status 400: the request exceeds the available context size, try increasing it",
+      "local"
+    ),
+    "too-long"
+  );
+  assert.equal(
+    queue.summaryFailureKind('{"type":"exceed_context_size_error"}', "local"),
+    "too-long"
+  );
+  // Stopped by the check before anything was sent.
+  const stopped = Object.assign(new Error("too long"), { code: queue.SUMMARY_TOO_LONG });
+  assert.equal(queue.summaryFailureKind(stopped, "local"), "too-long");
+});
+
+test("every other failure, and any failure off this Mac, is 'other'", () => {
+  for (const message of [
+    "llama-server request timed out",
+    "The local model stopped at its output limit before it finished",
+    "llama-server returned status 500: Internal Server Error",
+    "Inference failed: llama-server is not running",
+    "The summary came back empty.",
+    "context",
+    "",
+  ]) {
+    assert.equal(queue.summaryFailureKind(new Error(message), "local"), "other", message);
+  }
+  const overflow = "request (20123 tokens) exceeds the available context size (16384 tokens)";
+  // A provider's context is its own: whatever it says is shown as it said it.
+  assert.equal(queue.summaryFailureKind(new Error(overflow), "providers"), "other");
+  assert.equal(queue.summaryFailureKind(new Error(overflow), "self-hosted"), "other");
+  const stopped = Object.assign(new Error("too long"), { code: queue.SUMMARY_TOO_LONG });
+  assert.equal(queue.summaryFailureKind(stopped, "providers"), "other");
+  assert.equal(queue.summaryFailureKind(null, "local"), "other");
+  assert.equal(queue.summaryFailureKind(undefined, "local"), "other");
+});
+
+test("the check before sending says 'too long' only of what cannot fit", () => {
+  const limit = queue.LOCAL_CONTEXT_TOKENS * queue.GENEROUS_CHARS_PER_TOKEN;
+  assert.equal(queue.tooLongForLocalModel(limit), false);
+  assert.equal(queue.tooLongForLocalModel(limit + 1), true);
+  // An hour of speech is about 50,000 characters: sent, and the server answers.
+  assert.equal(queue.tooLongForLocalModel(50_000), false);
+  // Counted generously: even at 4 characters a token, the limit holds 1.5×
+  // the tokens the model takes, so nothing that fits is stopped.
+  assert.ok(limit / 4 >= queue.LOCAL_CONTEXT_TOKENS * 1.5);
+  assert.equal(queue.tooLongForLocalModel(Number.NaN), false);
+  assert.equal(queue.tooLongForLocalModel(10, 1), true);
+});
+
+test("the check counts the context the server on this Mac is started with", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const source = fs.readFileSync(
+    path.join(__dirname, "../../src/helpers/modelManagerBridge.js"),
+    "utf8"
+  );
+  const size = Number(/const SERVER_CONTEXT_SIZE = (\d+);/.exec(source)?.[1]);
+  assert.equal(size, queue.LOCAL_CONTEXT_TOKENS);
 });

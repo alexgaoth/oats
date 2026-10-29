@@ -2099,6 +2099,7 @@
       "summaryAfterDownload": "El resumen se escribirá cuando {{model}} termine de descargarse: {{percent}}%",
       "summaryAfterRecording": "El resumen se escribirá cuando termine esta conversación.",
       "summaryWhenRecordingEnds": "El resumen se escribirá cuando termine la grabación.",
+      "summaryTooLong": "Esta conversación es demasiado larga para el modelo de escritura de este Mac. Con una clave API (Ajustes › Modelos de IA) se puede resumir.",
       "summarizeAgain": "Resumir de nuevo",
       "summaryFailed": "No se pudo crear el resumen: {{reason}}",
       "setUpModel": "Configurar un modelo"

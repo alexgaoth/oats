@@ -206,6 +206,59 @@ export function shouldRetrySummary(attempt, elapsedMs) {
 }
 
 /**
+ * The context the server on this Mac runs a writing model with
+ * (SERVER_CONTEXT_SIZE in helpers/modelManagerBridge.js, pinned by a test):
+ * the instructions, the transcript and the answer must all fit in it.
+ */
+export const LOCAL_CONTEXT_TOKENS = 16_384;
+
+/**
+ * Characters per token, counted generously. Tokenizers average about 4 on
+ * English speech, fewer on most other languages, so counting 6 never finds
+ * more tokens than there are: the check below says "too long" only of a
+ * request that cannot fit, and leaves the rest to the server's own answer.
+ */
+export const GENEROUS_CHARS_PER_TOKEN = 6;
+
+/** The code of the error a summary fails with when the check below stops it. */
+export const SUMMARY_TOO_LONG = "summary-too-long";
+
+/**
+ * Whether a summary request of this many characters (instructions and
+ * transcript) certainly does not fit the model on this Mac.
+ *
+ * @param {number} chars
+ * @param {number} [contextTokens]
+ */
+export function tooLongForLocalModel(chars, contextTokens = LOCAL_CONTEXT_TOKENS) {
+  return Number.isFinite(chars) && chars / GENEROUS_CHARS_PER_TOKEN > contextTokens;
+}
+
+// What llama-server answers when a request does not fit its context: "request
+// (20123 tokens) exceeds the available context size (16384 tokens), try
+// increasing it", of type exceed_context_size_error (older builds: "the request
+// exceeds the available context size").
+const CONTEXT_OVERFLOW = /exceeds? the available context size|exceed_context_size_error/i;
+
+/**
+ * What a failed summary means for what happens next. "too-long": the
+ * conversation does not fit the writing model on this Mac, so asking again
+ * fails the same way, and the record says so plainly. "other": anything else.
+ * Only the route on this Mac is read: a provider's context is its own, and
+ * whatever it says is shown as it said it.
+ *
+ * @param {{ message?: string, code?: string } | string | null | undefined} error
+ * @param {string} mode The writing mode: "local", "providers" or "self-hosted".
+ * @returns {"too-long" | "other"}
+ */
+export function summaryFailureKind(error, mode) {
+  if (mode !== "local") return "other";
+  if (error && typeof error === "object" && error.code === SUMMARY_TOO_LONG) return "too-long";
+  const message = typeof error === "string" ? error : String(error?.message ?? "");
+  return CONTEXT_OVERFLOW.test(message) ? "too-long" : "other";
+}
+
+/**
  * How many owed conversations in a row may fail (each after its second try)
  * before the queue stops until its next start. One is that conversation, and
  * the next one is tried; two in a row is more likely the model, and each of
@@ -239,9 +292,9 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
 }
 
 /**
- * @typedef {"summary" | "preparing" | "failed" | "recording" | "after-recording"
- *   | "downloading" | "needs-model" | "checking" | "starting" | "not-summarized"}
- *   RecordSummaryState
+ * @typedef {"summary" | "preparing" | "failed" | "too-long" | "recording"
+ *   | "after-recording" | "downloading" | "needs-model" | "checking" | "starting"
+ *   | "not-summarized"} RecordSummaryState
  */
 
 /**
@@ -251,6 +304,10 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  * - "preparing": it is being written, including the pause before a second
  *   try, or Finish is about to write it.
  * - "failed": the second try failed too; the record offers it again.
+ * - "too-long": it does not fit the writing model on this Mac. Asking again
+ *   would fail the same way, so the record says why and points to a writing
+ *   model with an API key instead. Once another writing model is chosen, what
+ *   failed no longer stands in the way, and it is summarized as any other.
  * - "recording": the conversation is being recorded; Finish writes it.
  * - "after-recording": another conversation is being recorded or finished,
  *   and the writing model runs on this Mac or the person's own server, where
@@ -269,6 +326,8 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  * @param {boolean} facts.hasSummary
  * @param {boolean} facts.processing A summary of it is being written.
  * @param {boolean} facts.failed Its last summary failed, this session.
+ * @param {boolean} [facts.tooLong] That failure was "too-long" (`summaryFailureKind`).
+ * @param {boolean} [facts.writingLocal] The writing model runs on this Mac now.
  * @param {boolean} facts.recording It is being recorded.
  * @param {boolean} facts.finishing Finish has it and has not asked for the summary yet.
  * @param {boolean} facts.hasTranscript
@@ -285,7 +344,8 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
 export function recordSummaryState(facts) {
   if (facts.hasSummary) return "summary";
   if (facts.processing) return "preparing";
-  if (facts.failed) return "failed";
+  if (facts.failed && !facts.tooLong) return "failed";
+  if (facts.failed && facts.writingLocal) return "too-long";
   if (facts.recording) return "recording";
   if (!facts.hasTranscript) return "not-summarized";
   if (facts.readiness && facts.readiness !== "ready") {

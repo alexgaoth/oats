@@ -2099,6 +2099,7 @@
       "summaryAfterDownload": "Die Zusammenfassung wird erstellt, sobald {{model}} heruntergeladen ist: {{percent}}%",
       "summaryAfterRecording": "Die Zusammenfassung wird erstellt, wenn dieses Gespräch beendet ist.",
       "summaryWhenRecordingEnds": "Die Zusammenfassung wird erstellt, wenn die Aufnahme endet.",
+      "summaryTooLong": "Dieses Gespräch ist zu lang für das Schreibmodell auf diesem Mac. Mit einem API-Schlüssel (Einstellungen › KI-Modelle) lässt es sich zusammenfassen.",
       "summarizeAgain": "Erneut zusammenfassen",
       "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden: {{reason}}",
       "setUpModel": "Modell einrichten"

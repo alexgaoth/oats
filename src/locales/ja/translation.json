@@ -2099,6 +2099,7 @@
       "summaryAfterDownload": "{{model}} のダウンロードが終わると要約が作成されます: {{percent}}%",
       "summaryAfterRecording": "この会話が終わると要約が作成されます。",
       "summaryWhenRecordingEnds": "録音が終わると要約が作成されます。",
+      "summaryTooLong": "この会話はこの Mac の文章モデルには長すぎます。API キー（設定 › AI モデル）を使えば要約できます。",
       "summarizeAgain": "もう一度要約する",
       "summaryFailed": "要約を作成できませんでした：{{reason}}",
       "setUpModel": "モデルを設定"

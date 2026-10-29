@@ -8,7 +8,13 @@ import { claimWritingModel, sortConversationIntoGroup } from "./conversationGrou
 import { checkConversationLinks } from "./conversationLinkStore";
 import { summaryRouteKey } from "../helpers/remoteLinks.mjs";
 import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs";
-import { SUMMARY_RETRY_DELAY_MS, shouldRetrySummary } from "../helpers/summaryQueue.mjs";
+import {
+  SUMMARY_RETRY_DELAY_MS,
+  SUMMARY_TOO_LONG,
+  shouldRetrySummary,
+  summaryFailureKind,
+  tooLongForLocalModel,
+} from "../helpers/summaryQueue.mjs";
 import type { ActionItem } from "../types/electron";
 
 export type ActionProcessingStatus = "idle" | "processing" | "success" | "failed";
@@ -18,6 +24,11 @@ export interface NoteActionState {
   actionName: string | null;
   /** Why a conversation's summary failed ("failed"), for the record to say. */
   message?: string | null;
+  /**
+   * "too-long" when it does not fit the writing model on this Mac, so asking
+   * again there fails the same way (helpers/summaryQueue.mjs).
+   */
+  kind?: "too-long" | "other" | null;
 }
 
 export interface ActionErrorEvent {
@@ -112,10 +123,12 @@ export interface RunActionOptions {
 
 /**
  * How an action ended: its result saved, failed (a conversation's summary
- * after its second try), cancelled, refused before it started (no model, no
+ * after its second try), too long for the writing model on this Mac (never
+ * tried again there), cancelled, refused before it started (no model, no
  * endpoint), or not started because one is already running for the note.
  */
-export type BackgroundActionOutcome = "saved" | "failed" | "cancelled" | "refused" | "busy";
+export type BackgroundActionOutcome =
+  "saved" | "failed" | "too-long" | "cancelled" | "refused" | "busy";
 
 export interface RunActionLabels {
   noModel: string;
@@ -123,6 +136,8 @@ export interface RunActionLabels {
   actionFailed: string;
   /** A conversation's summary came back empty, or as the transcript itself. */
   noSummary?: string;
+  /** A conversation too long for the writing model on this Mac. */
+  tooLong?: string;
 }
 
 /**
@@ -157,7 +172,12 @@ export function runBackgroundAction(
 
   cancelledFlags.set(noteId, false);
   processingFlags.set(noteId, true);
-  setNoteState(noteId, { status: "processing", actionName: action.name, message: null });
+  setNoteState(noteId, {
+    status: "processing",
+    actionName: action.name,
+    message: null,
+    kind: null,
+  });
 
   const attempt = async (): Promise<"saved" | "cancelled"> => {
     // The model on this computer answers one request at a time, so the
@@ -175,6 +195,17 @@ export function runBackgroundAction(
         options.isMeetingNote ? settings.customDictionary : undefined,
         settings.uiLanguage
       );
+      // A conversation that certainly does not fit the model on this Mac is
+      // not sent to it: loading the model to hear the same answer helps nobody.
+      if (
+        options.isMeetingNote &&
+        noteFormatting.mode === "local" &&
+        tooLongForLocalModel(systemPrompt.length + noteContent.length)
+      ) {
+        throw Object.assign(new Error(labels.tooLong ?? labels.actionFailed), {
+          code: SUMMARY_TOO_LONG,
+        });
+      }
       const enhanced = await reasoningService.processText(noteContent, modelId, null, {
         systemPrompt,
         temperature: 0.3,
@@ -262,6 +293,11 @@ export function runBackgroundAction(
           return await attempt();
         } catch (err) {
           if (cancelledFlags.get(noteId)) return "cancelled";
+          // Too long for the model on this Mac fails the same way every time:
+          // never asked again, and said plainly instead of the server's words.
+          const kind = options.isMeetingNote
+            ? summaryFailureKind(err as { message?: string; code?: string }, noteFormatting.mode)
+            : "other";
           // A conversation's summary is asked for once more, after a pause,
           // before its record says it failed: a model still loading, a dropped
           // connection or one empty answer has usually passed by then. Until
@@ -269,22 +305,27 @@ export function runBackgroundAction(
           // Only a quick failure: a slow one was a timeout the request code
           // already repeated, or a long local run (helpers/summaryQueue.mjs).
           const tookMs = performance.now() - startedAt;
-          if (options.isMeetingNote && shouldRetrySummary(tries, tookMs)) {
+          if (options.isMeetingNote && kind !== "too-long" && shouldRetrySummary(tries, tookMs)) {
             await delay(SUMMARY_RETRY_DELAY_MS);
             if (cancelledFlags.get(noteId)) return "cancelled";
             continue;
           }
           processingFlags.set(noteId, false);
-          const message = err instanceof Error ? err.message : labels.actionFailed;
+          const message =
+            kind === "too-long" && labels.tooLong
+              ? labels.tooLong
+              : err instanceof Error
+                ? err.message
+                : labels.actionFailed;
           // A conversation keeps the failure, so its record says so and offers it
           // again (OatsWorkspace.tsx); other notes go back to idle.
           if (options.isMeetingNote) {
-            setNoteState(noteId, { status: "failed", actionName: action.name, message });
+            setNoteState(noteId, { status: "failed", actionName: action.name, message, kind });
           } else {
             clearNoteState(noteId);
           }
           pushErrorEvent({ noteId, message });
-          return "failed";
+          return kind === "too-long" ? "too-long" : "failed";
         }
       }
     } finally {

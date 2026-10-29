@@ -104,6 +104,13 @@ const SHOTS = [
       "await oatsDemo.open(); await demo.until(() => /could not be written/.test(document.body.innerText), 30000); await demo.wait(6500); await demo.toSummary()",
   },
   {
+    // Too long for the model on this Mac: why, and the way to a model that can.
+    name: "summary-too-long",
+    query: "summary=too-long&bare=launch-readiness-review",
+    script:
+      "await oatsDemo.open(); await demo.until(() => /too long for the writing model/.test(document.body.innerText), 30000); await demo.wait(6500); await demo.toSummary()",
+  },
+  {
     // The conversation being recorded: its Finish writes the summary.
     name: "summary-while-recording",
     query: "demo=live&end=hold&from=120&edits=0",

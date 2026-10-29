@@ -2094,6 +2094,7 @@
       "summaryAfterDownload": "{{model}} 下載完成後將產生摘要：{{percent}}%",
       "summaryAfterRecording": "這段對話結束後將產生摘要。",
       "summaryWhenRecordingEnds": "錄音結束後將產生摘要。",
+      "summaryTooLong": "這段對話對這台 Mac 上的寫作模型來說太長了。使用 API 金鑰（設定 › AI 模型）即可產生摘要。",
       "summarizeAgain": "重新產生摘要",
       "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"

@@ -351,6 +351,7 @@ async function summarizeConversation(
         noEndpoint: t("oats.errors.noEndpoint"),
         actionFailed: t("oats.errors.actionFailed"),
         noSummary: t("oats.errors.noSummary"),
+        tooLong: t("oats.intelligence.summaryTooLong"),
       }
     );
   });
@@ -1836,6 +1837,12 @@ function IntelligenceViews({
     const noteState = selected ? state.noteStates[selected.id] : undefined;
     return noteState?.status === "failed" ? (noteState.message ?? "") : null;
   });
+  // Too long for the writing model on this Mac: asking again there fails the
+  // same way, so the record says why and points to an API key instead.
+  const summaryTooLong = useActionProcessingStore((state) => {
+    const noteState = selected ? state.noteStates[selected.id] : undefined;
+    return noteState?.status === "failed" && noteState.kind === "too-long";
+  });
   const summaryMarks = useSummaryQueueMarks(selected?.id ?? null);
   const recordingSelected = useMeetingRecordingStore(
     (state) =>
@@ -1857,6 +1864,8 @@ function IntelligenceViews({
     hasSummary: Boolean(selected?.enhanced_content),
     processing: summarizing || summaryMarks.running,
     failed: summaryFailure !== null,
+    tooLong: summaryTooLong,
+    writingLocal: writingMode === "local",
     recording: recordingSelected,
     finishing: summaryMarks.finishing,
     hasTranscript: selected?.note_type === "meeting" && Boolean(selected.transcript?.trim()),
@@ -2164,18 +2173,20 @@ function IntelligenceViews({
                   <p className="min-w-0 flex-1">
                     {summaryState === "failed"
                       ? t("oats.intelligence.summaryFailed", { reason: summaryFailure })
-                      : summaryState === "downloading"
-                        ? t("oats.intelligence.summaryAfterDownload", {
-                            model: localModelName(writingModel),
-                            percent: writingDownload,
-                          })
-                        : summaryState === "needs-model"
-                          ? t("oats.intelligence.needsSummaryModel")
-                          : summaryState === "recording"
-                            ? t("oats.intelligence.summaryAfterRecording")
-                            : summaryState === "after-recording"
-                              ? t("oats.intelligence.summaryWhenRecordingEnds")
-                              : t("oats.intelligence.notSummarized")}
+                      : summaryState === "too-long"
+                        ? t("oats.intelligence.summaryTooLong")
+                        : summaryState === "downloading"
+                          ? t("oats.intelligence.summaryAfterDownload", {
+                              model: localModelName(writingModel),
+                              percent: writingDownload,
+                            })
+                          : summaryState === "needs-model"
+                            ? t("oats.intelligence.needsSummaryModel")
+                            : summaryState === "recording"
+                              ? t("oats.intelligence.summaryAfterRecording")
+                              : summaryState === "after-recording"
+                                ? t("oats.intelligence.summaryWhenRecordingEnds")
+                                : t("oats.intelligence.notSummarized")}
                   </p>
                   {summaryState === "needs-model" && (
                     <Button
@@ -2193,6 +2204,21 @@ function IntelligenceViews({
                     <Button size="sm" onClick={() => void summarizeLater(selected, t)}>
                       <Sparkles aria-hidden="true" />
                       {t("oats.intelligence.summarizeAgain")}
+                    </Button>
+                  )}
+                  {/* Asking the model on this Mac again would fail the same way:
+                      the way forward is a writing model with an API key. */}
+                  {summaryState === "too-long" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent("oats-open-settings", { detail: "models" })
+                        )
+                      }
+                    >
+                      {t("oats.settings.pages.models.title")}
                     </Button>
                   )}
                 </div>
