@@ -880,12 +880,18 @@ sides:
   what a louder room writes over silence: four short phrases in four hours
   ("Thank you.", "3.10 days left."), against none, and one more in the quiet
   room. With steady sound it brings back a point and invents nothing more;
-  LibriSpeech conversations do not move (2.7% WER). `base.en`: +5.6 points on
-  the quiet microphone, four more phrases.
+  LibriSpeech conversations do not move (2.7% WER), and noise alone (a fan, an
+  air conditioner, typing, music) comes back with no words, raised or not.
+  `base.en`: +5.6 points on the quiet microphone with four more phrases, +0.6
+  with steady sound, +0.7 in a quiet room.
 
 **Turbo** answers the same way. `afftdn` brings back 1.8 points with steady
 sound (content words 1.1–2.7) and writes four more phrases where nobody spoke
-(11 → 15: turbo writes "Thank you." where `small.en` writes a label).
+(11 → 15: turbo writes "Thank you." where `small.en` writes a label); on the
+quiet microphone it loses a point of the words (0.4–1.5). Raised, turbo hears
+5.9 more points on the quiet microphone (5.0–6.8; content words 5.6) and 0.7
+with steady sound, and writes eight more phrases where nobody spoke on the
+quiet microphone (5 → 13: "you", "Thank you.").
 
 ### What this does not show
 
