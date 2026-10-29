@@ -2511,6 +2511,7 @@
       "works": "Gespeichert. Er funktioniert mit {{model}}.",
       "noAccess": "Gespeichert, aber dieser Schlüssel kann {{model}} nicht nutzen. Wählen Sie unter Erweitert ein anderes Modell.",
       "unchecked": "Gespeichert. Oats konnte ihn gerade nicht prüfen.",
+      "limited": "Gespeichert. Dieser Schlüssel hat eingeschränkte Rechte, daher konnte Oats nicht prüfen, ob er {{model}} nutzen kann.",
       "saved": "Gespeichert.",
       "getKey": "Schlüssel von {{provider}} holen",
       "savedKey": "Ihr {{provider}}-Schlüssel",

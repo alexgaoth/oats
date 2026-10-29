@@ -44,9 +44,26 @@ export function requestWritingModel(modelId: string): void {
   void window.electronAPI?.startWritingModelDownload?.({ modelId, force: true }).catch(() => {});
 }
 
-/** Stop the writing model's download; Oats will not start it again by itself. */
+/** The person's Cancel: stop the writing model's download; Oats will not start it again by itself. */
 export function cancelWritingModel(): void {
-  void window.electronAPI?.cancelWritingModelDownload?.().catch(() => {});
+  void window.electronAPI?.cancelWritingModelDownload?.({ decline: true }).catch(() => {});
+}
+
+/**
+ * The person moved on, to another writing model or to the providers: stop a
+ * writing download they left behind, except `keep`'s. Nothing is remembered
+ * as a no, so Oats may fetch it by itself again when it is the default.
+ */
+export function leaveWritingDownload(keep: string | null = null): void {
+  void window.electronAPI?.cancelWritingModelDownload?.({ decline: false, keep }).catch(() => {});
+}
+
+/**
+ * The person chose a writing model (Settings › AI models › Advanced): after a
+ * deleted model, Oats may fetch the default by itself again (writingModelFetch.js).
+ */
+export function writingModelChosen(): void {
+  void window.electronAPI?.writingModelChosen?.().catch(() => {});
 }
 
 /** A writing model's name, as Settings shows it: "Gemma 4 E4B", "GPT-6.1 Sol". */

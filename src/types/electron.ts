@@ -62,7 +62,14 @@ export interface WritingModelSnapshot {
   installed: string[];
   /** Models the person cancelled or deleted: Oats does not fetch them by itself. */
   declined: string[];
+  /**
+   * A writing model was deleted: Oats fetches none by itself until the person
+   * chooses a model or presses Download.
+   */
+  autoDeclined?: boolean;
   downloading: { modelId: string; receivedBytes: number; totalBytes: number } | null;
+  /** A download Oats started by itself that waits for the recording to end. */
+  waiting?: string | null;
   /** The last download that failed, and why. */
   failed: { modelId: string; error: string } | null;
 }
@@ -540,7 +547,13 @@ declare global {
         modelId: string;
         force?: boolean;
       }) => Promise<DeviceTierSnapshot>;
-      cancelWritingModelDownload?: () => Promise<DeviceTierSnapshot>;
+      cancelWritingModelDownload?: (options?: {
+        /** False when the person moved on rather than pressing Cancel. */
+        decline?: boolean;
+        /** A model whose download goes on. */
+        keep?: string | null;
+      }) => Promise<DeviceTierSnapshot>;
+      writingModelChosen?: () => Promise<DeviceTierSnapshot>;
       // The context agent (helpers/contextAgentIpc.js): the user's Claude Code
       // checks a question against GitHub, Linear, Notion and Slack, read-only.
       // `sources` are the services it read, as labels ("Notion"). `busy` means

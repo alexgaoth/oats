@@ -218,11 +218,20 @@ class DeviceTier extends EventEmitter {
     this.checkServer = null; // the check's own whisper-server while it runs
     this._publishTimer = null;
     this.totalmem = totalmem;
-    // The writing model's automatic download, reported in this snapshot.
+    // The writing model's automatic download, reported in this snapshot. It
+    // waits for a recording to end on the same signal as the clip check.
     this.writing = new WritingModelFetch({
       storePath: writingStorePath ?? path.join(path.dirname(storePath), "writing-model.json"),
       modelManager,
       publish: (options) => this.publish(options),
+      isBusy: () => {
+        try {
+          return this.isBusy() === true;
+        } catch {
+          return false;
+        }
+      },
+      sleep: (ms) => this.sleep(ms),
     });
   }
 

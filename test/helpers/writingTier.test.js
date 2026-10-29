@@ -148,17 +148,20 @@ test("the defaults earlier versions stored by themselves are forgotten once; cho
   });
   assert.equal(run.forgot, false);
   assert.equal(run.storage.getItem("cleanupModel"), "qwen3.5-4b-q4_k_m");
-  // The switch to the providers stored gpt-6.1-sol under OpenAI.
-  run = migrate({
-    cleanupMode: "providers",
-    cleanupProvider: "openai",
-    cleanupModel: "gpt-6.1-sol",
-  });
-  assert.equal(run.forgot, true);
-  // Older defaults and other choices are kept as they are.
+  // The switch to the providers stored gpt-5.6-terra under OpenAI through
+  // 0.1.0, and gpt-6.1-sol after #144.
+  for (const model of ["gpt-5.6-terra", "gpt-6.1-sol"]) {
+    run = migrate({ cleanupMode: "providers", cleanupProvider: "openai", cleanupModel: model });
+    assert.equal(run.forgot, true, model);
+    assert.equal(run.storage.getItem("cleanupModel"), null);
+  }
+  // Choices are kept as they are, also a provider's first model, which 0.1.0's
+  // editor stored when the person picked that provider.
   for (const entries of [
-    { cleanupMode: "providers", cleanupProvider: "openai", cleanupModel: "gpt-5.6-terra" },
+    { cleanupMode: "providers", cleanupProvider: "openai", cleanupModel: "gpt-5.6-sol" },
+    { cleanupMode: "providers", cleanupProvider: "anthropic", cleanupModel: "claude-fable-5" },
     { cleanupMode: "providers", cleanupProvider: "anthropic", cleanupModel: "claude-opus-5-5" },
+    { cleanupMode: "providers", cleanupProvider: "custom", cleanupModel: "gpt-5.6-terra" },
     { cleanupMode: "local", cleanupProvider: "local", cleanupModel: "qwen3.5-9b-q4_k_m" },
   ]) {
     assert.equal(migrate(entries).forgot, false, JSON.stringify(entries));
@@ -184,6 +187,9 @@ test("a local model's state comes from main's report", () => {
   assert.equal(tier.localWritingStatus(id, { downloading: { modelId: id } }), "downloading");
   assert.equal(tier.localWritingStatus(id, { failed: { modelId: id } }), "failed");
   assert.equal(tier.localWritingStatus(id, { declined: [id] }), "declined");
+  // After a deleted writing model, none is fetched by itself.
+  assert.equal(tier.localWritingStatus(id, { autoDeclined: true }), "declined");
+  assert.equal(tier.localWritingStatus(id, { autoDeclined: true, installed: [id] }), "ready");
   // Another model's download or failure says nothing of this one.
   assert.equal(
     tier.localWritingStatus(id, {
@@ -217,6 +223,8 @@ test("Oats fetches the local model only after setup, following the default, when
   for (const writing of [
     { installed: [choice.model] },
     { declined: [choice.model] },
+    // Removing Qwen3.5 4B does not start Gemma 4 E4B.
+    { autoDeclined: true },
     { failed: { modelId: choice.model } },
     { downloading: { modelId: choice.model } },
     { downloading: { modelId: "another-model" } },
@@ -236,6 +244,56 @@ test("Oats fetches the local model only after setup, following the default, when
     }),
     false
   );
+});
+
+test("the processing switch keeps the writing choice of the side the writing is on", () => {
+  const fable = { cleanupProvider: "anthropic", cleanupModel: "claude-fable-5" };
+  const qwen9 = { cleanupProvider: "qwen", cleanupModel: "qwen3.5-9b-q4_k_m" };
+  // "Mixed": a cloud writing model chosen, speech on this Mac. To the providers:
+  // the choice stays.
+  let run = tier.switchWritingSide({
+    memory: { local: qwen9, providers: null },
+    writingMode: "providers",
+    stored: fable,
+    target: "providers",
+  });
+  assert.deepEqual(run.restore, fable);
+  assert.deepEqual(run.memory, { local: qwen9, providers: fable });
+  // To this Mac: remembered for the way back, and this Mac's own choice returns.
+  run = tier.switchWritingSide({
+    memory: { local: qwen9, providers: null },
+    writingMode: "providers",
+    stored: fable,
+    target: "local",
+  });
+  assert.deepEqual(run.restore, qwen9);
+  assert.deepEqual(run.memory.providers, fable);
+  // A setting that follows the default is remembered as following it.
+  run = tier.switchWritingSide({
+    memory: { local: qwen9, providers: fable },
+    writingMode: "local",
+    stored: null,
+    target: "providers",
+  });
+  assert.equal(run.memory.local, null);
+  assert.deepEqual(run.restore, fable);
+  // A server of the person's own is on neither side.
+  run = tier.switchWritingSide({
+    memory: { local: qwen9, providers: fable },
+    writingMode: "self-hosted",
+    stored: { cleanupProvider: "", cleanupModel: "llama3" },
+    target: "local",
+  });
+  assert.deepEqual(run.memory, { local: qwen9, providers: fable });
+  assert.deepEqual(run.restore, qwen9);
+  // Nothing remembered: follow the default.
+  run = tier.switchWritingSide({
+    memory: {},
+    writingMode: "local",
+    stored: null,
+    target: "providers",
+  });
+  assert.equal(run.restore, null);
 });
 
 test("the notice shows once, and only for a download Oats started by itself", () => {

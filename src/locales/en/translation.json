@@ -2511,6 +2511,7 @@
       "works": "Saved. It works with {{model}}.",
       "noAccess": "Saved, but this key cannot use {{model}}. Choose another model under Advanced.",
       "unchecked": "Saved. Oats could not check it now.",
+      "limited": "Saved. This key has limited permissions, so Oats could not check that it can use {{model}}.",
       "saved": "Saved.",
       "getKey": "Get a key from {{provider}}",
       "savedKey": "Your key from {{provider}}",

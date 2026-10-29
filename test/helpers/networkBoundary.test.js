@@ -355,6 +355,50 @@ test("the writing model's automatic start is announced, once, with its Cancel", 
   assert.match(notice, /cancelWritingModel\(\)/, "its Cancel is the remembered no");
 });
 
+test("a writing download waits in main for a recording to end", () => {
+  const fetcher = read("src/helpers/writingModelFetch.js");
+  assert.match(fetcher, /if \(this\.isBusy\(\)\) \{[\s\S]{0,200}void this\._startWhenFree\(entry\);/);
+  assert.match(fetcher, /while \(this\.waiting === entry && this\.isBusy\(\)\)/);
+  // The device tier's recording signal, the one its clip check waits on.
+  assert.match(read("src/helpers/deviceTier.js"), /new WritingModelFetch\(\{[\s\S]{0,400}isBusy: \(\) => \{/);
+  assert.match(
+    read("src/helpers/ipcHandlers.js"),
+    /isBusy: \(\) => this\.isMeetingActive\?\.\(\) === true/
+  );
+});
+
+// Checking a key before it is saved: one request to the provider's own host
+// (docs/network-allowlist.md, "Checking a key").
+test("a key is checked with its own provider's host only, never a custom endpoint", () => {
+  const service = read("src/services/ReasoningService.ts");
+  const start = service.indexOf("private async openAiModelResponse(");
+  assert.ok(start > -1, "openAiModelResponse not found");
+  const body = service.slice(start, service.indexOf("\n  }\n", start));
+  assert.match(
+    body,
+    /buildApiUrl\(API_ENDPOINTS\.OPENAI_BASE, `\/models\/\$\{encodeURIComponent\(model\)\}`\)/
+  );
+  assert.doesNotMatch(body, /getConfiguredOpenAIBase|BaseUrl/);
+  // The key check and the model check both use it.
+  assert.equal([...service.matchAll(/this\.openAiModelResponse\(/g)].length, 2);
+  // OpenAI's own host: a build may set another one, a person's setting cannot.
+  assert.match(
+    read("src/config/constants.ts"),
+    /const DEFAULT_OPENAI_BASE = computeBaseUrl\(\s*\[env\.OATS_OPENAI_BASE_URL[^\]]*\],\s*"https:\/\/api\.openai\.com\/v1"\s*\);/
+  );
+  const main = read("src/helpers/ipcHandlers.js");
+  const anthropic = main.slice(main.indexOf("const anthropicModelResponse = async"));
+  assert.match(
+    anthropic.slice(0, 700),
+    /proxyFetch\(\s*`https:\/\/api\.anthropic\.com\/v1\/models\/\$\{encodeURIComponent\(String\(modelId\)\)\}`/
+  );
+  assert.match(main, /ipcMain\.handle\("anthropic-key-check"[\s\S]{0,200}anthropicModelResponse\(/);
+  assert.match(main, /ipcMain\.handle\("anthropic-model-available"[\s\S]{0,200}anthropicModelResponse\(/);
+  const doc = read("docs/network-allowlist.md");
+  assert.match(doc, /\| `api\.openai\.com` or `api\.anthropic\.com` +\| Adding an OpenAI or Anthropic key/);
+  assert.match(doc, /Checking a key: adding an OpenAI or Anthropic key/);
+});
+
 test("the writing model comes through the counted download path, from Hugging Face", () => {
   const fetcher = read("src/helpers/writingModelFetch.js");
   assert.match(fetcher, /this\.modelManager\.downloadModel\(/);

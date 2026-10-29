@@ -517,7 +517,8 @@ export function createFakeMain({
     getAnthropicKey: async () => (anthropic ? "sk-ant-demo-key-answered-in-page" : ""),
     // A key typed into Settings or setup, checked before it is saved: a key
     // with "bad" in it is rejected, as Anthropic would answer 401.
-    anthropicKeyCheck: async (_model, key) => (String(key).includes("bad") ? "rejected" : "ok"),
+    anthropicKeyCheck: async (_model, key) =>
+      String(key).includes("bad") ? "rejected" : String(key).includes("limited") ? "limited" : "ok",
 
     // --- The summary: the built-in action, and the local model behind it.
     getActions: async () => [{ ...BUILTIN_ACTION }],

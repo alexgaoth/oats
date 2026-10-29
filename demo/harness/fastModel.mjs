@@ -123,7 +123,19 @@ export function installFakeKeyCheck() {
     const auth = String(new Headers(init.headers ?? {}).get("Authorization") ?? "");
     const model = /^\/v1\/models\/(.+)$/.exec(new URL(url).pathname)?.[1];
     if (!model) return reply(404, { error: { message: "The demo answers model checks only." } });
-    if (auth.includes("bad")) return reply(401, { error: { message: "Incorrect API key." } });
+    // OpenAI's own answers: an invalid key, and a restricted key that may not
+    // read models (helpers/keyStatus.mjs refuses only the first).
+    if (auth.includes("bad")) {
+      return reply(401, { error: { message: "Incorrect API key provided.", code: "invalid_api_key" } });
+    }
+    if (auth.includes("limited")) {
+      return reply(401, {
+        error: {
+          message: "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
+          code: null,
+        },
+      });
+    }
     return reply(200, { id: decodeURIComponent(model), object: "model", owned_by: "openai" });
   };
 }

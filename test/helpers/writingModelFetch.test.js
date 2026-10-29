@@ -180,8 +180,185 @@ test("deleting a model in Settings is a no; downloading it there undoes the no",
     const fetcher = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
     fetcher.deleted([GEMMA, "not-a-model"]);
     assert.deepEqual(fetcher.snapshot().declined, [GEMMA]);
+    assert.equal(fetcher.snapshot().autoDeclined, true);
     fetcher.downloaded(GEMMA);
     assert.deepEqual(fetcher.snapshot().declined, []);
+    assert.equal(fetcher.snapshot().autoDeclined, false);
+    // Deleting something that is not a writing model changes nothing.
+    fetcher.deleted(["turbo-q5"]);
+    assert.equal(fetcher.snapshot().autoDeclined, false);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("deleting a writing model stops Oats fetching any by itself, until the person chooses one", () => {
+  // Qwen3.5 4B stood in on a 16 GB Mac. Deleting it must not start Gemma 4
+  // E4B's 5.4 GB by itself.
+  const env = setup({ installed: [QWEN] });
+  try {
+    const fetcher = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    fs.rmSync(path.join(env.manager.getModelsDir(), LOCAL_MODELS.get(QWEN).fileName));
+    fetcher.deleted([QWEN]);
+    assert.equal(fetcher.snapshot().autoDeclined, true);
+    assert.equal(fetcher.start({ modelId: GEMMA }), false);
+    assert.deepEqual(env.calls, []);
+
+    // Kept after a restart.
+    const later = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    assert.equal(later.snapshot().autoDeclined, true);
+    assert.equal(later.start({ modelId: GEMMA }), false);
+
+    // The person chose a model: Oats may fetch by itself again. The deleted
+    // model itself stays a no.
+    assert.equal(later.chosen(), true);
+    assert.equal(later.chosen(), false, "nothing left to undo");
+    assert.equal(later.snapshot().autoDeclined, false);
+    assert.deepEqual(later.snapshot().declined, [QWEN]);
+    assert.equal(later.start({ modelId: GEMMA }), true);
+    assert.deepEqual(env.calls, [GEMMA]);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("pressing Download undoes the automatic no too", () => {
+  const env = setup();
+  try {
+    const fetcher = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    fetcher.deleted([QWEN]);
+    assert.equal(fetcher.start({ modelId: GEMMA, force: true }), true);
+    assert.equal(fetcher.snapshot().autoDeclined, false);
+    const later = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    assert.equal(later.snapshot().autoDeclined, false, "and it is saved");
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("a download the person left behind stops without a no; only their Cancel is a no", async () => {
+  const env = setup();
+  try {
+    const fetcher = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    fetcher.start({ modelId: GEMMA });
+    // They chose the providers, or another model.
+    assert.equal(fetcher.cancel({ decline: false }), true);
+    await tick();
+    assert.equal(fetcher.snapshot().downloading, null);
+    assert.deepEqual(fetcher.snapshot().declined, []);
+    assert.equal(fetcher.snapshot().failed, null);
+    // So Oats may fetch it by itself again when it is the default.
+    assert.equal(fetcher.start({ modelId: GEMMA }), true);
+
+    // The model they chose keeps its own download.
+    assert.equal(fetcher.cancel({ decline: false, keep: GEMMA }), false);
+    assert.equal(fetcher.snapshot().downloading.modelId, GEMMA);
+
+    // Their Cancel.
+    assert.equal(fetcher.cancel(), true);
+    await tick();
+    assert.deepEqual(fetcher.snapshot().declined, [GEMMA]);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("pressing Download on another model takes the place of a download in progress, without a no", async () => {
+  const env = setup();
+  try {
+    const fetcher = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    assert.equal(fetcher.start({ modelId: GEMMA }), true);
+    assert.equal(fetcher.start({ modelId: QWEN }), false, "not by itself");
+    assert.equal(fetcher.start({ modelId: QWEN, force: true }), true);
+    await tick();
+    assert.equal(fetcher.snapshot().downloading.modelId, QWEN);
+    assert.deepEqual(fetcher.snapshot().declined, []);
+    assert.deepEqual(env.calls, [GEMMA, QWEN]);
+    env.settle.succeed();
+    await tick();
+    assert.deepEqual(fetcher.snapshot().installed, [QWEN]);
+    assert.equal(fetcher.snapshot().downloading, null);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("a start Oats makes by itself waits for a recording to end; the person's own does not", async () => {
+  const env = setup();
+  try {
+    let busy = true;
+    let wake = null;
+    let looks = 0;
+    const fetcher = new WritingModelFetch({
+      storePath: env.storePath,
+      modelManager: env.manager,
+      isBusy: () => busy,
+      sleep: () =>
+        new Promise((resolve) => {
+          looks += 1;
+          wake = resolve;
+        }),
+    });
+    assert.equal(fetcher.start({ modelId: GEMMA }), true);
+    assert.equal(fetcher.snapshot().waiting, GEMMA);
+    assert.equal(fetcher.snapshot().downloading, null);
+    assert.deepEqual(env.calls, []);
+    assert.equal(fetcher.start({ modelId: GEMMA }), false, "asked twice, waits once");
+
+    // Still recording at the next look.
+    wake();
+    await tick();
+    assert.deepEqual(env.calls, []);
+    assert.equal(looks, 2);
+
+    busy = false;
+    wake();
+    await tick();
+    assert.deepEqual(env.calls, [GEMMA]);
+    assert.equal(fetcher.snapshot().waiting, null);
+    assert.equal(fetcher.snapshot().downloading.modelId, GEMMA);
+    env.settle.succeed();
+    await tick();
+
+    // Leaving a waiting start is not a no; the person's Cancel is.
+    busy = true;
+    const other = "qwen3.5-9b-q4_k_m";
+    assert.equal(fetcher.start({ modelId: QWEN }), true);
+    assert.equal(fetcher.cancel({ decline: false }), true);
+    assert.equal(fetcher.snapshot().waiting, null);
+    assert.deepEqual(fetcher.snapshot().declined, []);
+    wake();
+    await tick();
+    assert.deepEqual(env.calls, [GEMMA], "a left start never runs");
+    assert.equal(fetcher.start({ modelId: QWEN }), true);
+    assert.equal(fetcher.cancel(), true);
+    assert.deepEqual(fetcher.snapshot().declined, [QWEN]);
+
+    // The person's own Download goes at once, recording or not.
+    assert.equal(fetcher.start({ modelId: other, force: true }), true);
+    assert.deepEqual(env.calls, [GEMMA, other]);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("the writing model waits on the device tier's recording signal", () => {
+  const env = setup();
+  try {
+    let recording = true;
+    const tier = new DeviceTier({
+      whisperManager: { getModelPath: () => path.join(env.dir, "none.bin"), serverManager: null },
+      storePath: path.join(env.dir, "userData", "device-tier.json"),
+      appVersion: "0.2.0",
+      modelManager: env.manager,
+      isBusy: () => recording,
+      sleep: () => new Promise(() => {}),
+    });
+    assert.equal(tier.writing.start({ modelId: GEMMA }), true);
+    assert.equal(tier.snapshot().writing.waiting, GEMMA);
+    assert.deepEqual(env.calls, []);
+    recording = false;
+    assert.equal(tier.writing.isBusy(), false);
   } finally {
     env.cleanup();
   }
@@ -205,6 +382,7 @@ test("the device tier's snapshot carries the memory and the writing model's stat
     assert.equal(snapshot.writing.downloading, null);
     // Kept beside the speed check's record.
     assert.equal(tier.writing.storePath, path.join(env.dir, "userData", "writing-model.json"));
+    assert.equal(tier.writing.isBusy(), false);
   } finally {
     env.cleanup();
   }

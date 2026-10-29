@@ -2511,6 +2511,7 @@
       "works": "Salva. Funciona com {{model}}.",
       "noAccess": "Salva, mas esta chave não pode usar {{model}}. Escolha outro modelo em Avançado.",
       "unchecked": "Salva. O Oats não conseguiu verificá-la agora.",
+      "limited": "Salva. Esta chave tem permissões limitadas, por isso o Oats não conseguiu verificar se ela pode usar {{model}}.",
       "saved": "Salva.",
       "getKey": "Obter uma chave de {{provider}}",
       "savedKey": "Sua chave de {{provider}}",

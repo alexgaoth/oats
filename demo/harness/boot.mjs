@@ -87,6 +87,7 @@ Object.assign(main.api, {
   cancelSpeechUpgrade: deviceTier.cancelSpeechUpgrade,
   startWritingModelDownload: deviceTier.startWritingModelDownload,
   cancelWritingModelDownload: deviceTier.cancelWritingModelDownload,
+  writingModelChosen: deviceTier.writingModelChosen,
 });
 main.hooks.whisperModels = deviceTier.whisperModels;
 main.hooks.writingInstalled = deviceTier.writingInstalled;

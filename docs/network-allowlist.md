@@ -82,14 +82,18 @@ With processing on this computer ("On this Mac", the default), the title and
 summary of each conversation are written by a local model. When none is ready
 and the writing setting follows the default, Oats downloads the one this
 computer's memory holds (`src/helpers/writingTier.mjs`): once setup is done,
-and never while a conversation is recorded. A model the person chose stops it, and so does a
+and never while a conversation is recorded: it waits for the recording to
+end. A model the person chose stops it, and so does a
 writing model already on disk. When Oats starts it by itself, a notice in the
 corner says so once, with its size, its host and a Cancel button; the sidebar
 and Settings › AI models show its progress with a Cancel button. It goes
 through `downloadUtils.js`, like every model download, so the sidebar's
 request count includes it, and its disk-space check runs first. A cancelled or
 deleted model is not fetched again unless the person asks for it in Settings
-(`src/helpers/writingModelFetch.js`). With an API key, nothing is fetched.
+(`src/helpers/writingModelFetch.js`). After the person deletes any writing
+model, Oats fetches none by itself until they choose a model or press
+Download. Choosing another model, or "With an API key", stops the download.
+With an API key, nothing is fetched.
 
 ## Explicit user actions
 
@@ -99,9 +103,20 @@ deleted model is not fetched again unless the person asks for it in Settings
 | `huggingface.co` and its LFS/CDN hosts                                                                    | Downloading an optional speech, embedding, or reasoning model, or creating a release bundle. |
 | `github.com` and `objects.githubusercontent.com`                                                          | Downloading an optional runtime helper or a signed release manually.                         |
 | A provider selected by the user (OpenAI, Anthropic, Gemini, Groq, Mistral, Tinfoil, or a custom endpoint) | Only after the user adds a key and selects that provider.                                    |
+| `api.openai.com` or `api.anthropic.com`                                                                   | Adding an OpenAI or Anthropic key, in setup or Settings: one request checks it first.        |
 
 The exact provider hostname is controlled by that provider or by the user's
 custom endpoint. Local, LAN, and bundled-model paths do not require this access.
+
+Checking a key: adding an OpenAI or Anthropic key, in setup or in Settings ›
+AI models, checks it with that provider before it is saved. One request,
+`GET /v1/models/{model}` for the model Oats would write with, with no tokens
+and no conversation text. It goes to the provider's own host,
+`api.openai.com` or `api.anthropic.com`, never to a custom endpoint the
+writing model may use (`src/services/ReasoningService.ts`; the Anthropic
+check runs in the main process, `src/helpers/ipcHandlers.js`). Only a key the
+provider calls invalid is refused; a real key with limited permissions is
+saved (`src/helpers/keyStatus.mjs`).
 A request to an Anthropic model that has Anthropic's server-side refusal
 fallback (Opus 5 and 5.5, Fable 5.x, and Sonnet 5.5 with thinking on) asks for
 it: a request that Anthropic's safety classifiers decline is answered instead by

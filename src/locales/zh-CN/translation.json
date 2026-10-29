@@ -2506,6 +2506,7 @@
       "works": "已保存。可用于 {{model}}。",
       "noAccess": "已保存，但这个密钥不能使用 {{model}}。请在“高级”中选择其他模型。",
       "unchecked": "已保存。Oats 暂时无法验证。",
+      "limited": "已保存。此密钥的权限受限，Oats 无法验证它能否使用 {{model}}。",
       "saved": "已保存。",
       "getKey": "获取 {{provider}} 密钥",
       "savedKey": "你的 {{provider}} 密钥",

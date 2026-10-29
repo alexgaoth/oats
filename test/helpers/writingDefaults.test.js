@@ -72,3 +72,24 @@ test("a model somebody chose is kept: the default is followed only while nothing
   // Nothing rewrites a stored model to the new default.
   assert.doesNotMatch(PROCESSING, /gpt-5\.6-terra/);
 });
+
+test("Use in Settings is a choice, even of the Recommended model; only Use Oats' choice follows the default", () => {
+  const chooser = read("src/components/settings/WritingModelChoice.tsx");
+  const body = (name) => {
+    const start = chooser.indexOf(`const ${name} = (`);
+    assert.ok(start > -1, `${name} not found`);
+    return chooser.slice(start, chooser.indexOf("\n  };", start));
+  };
+  const use = body("use");
+  assert.match(use, /chooseWritingModel\(useProvider, id\);/);
+  assert.doesNotMatch(use, /forgetWritingChoice\(|sideDefault|if \(/, "no case forgets");
+  // Either one stops a download the person left behind (not a no), and lets
+  // Oats fetch by itself again after a deleted model.
+  assert.match(use, /leaveWritingDownload\(id\);/);
+  assert.match(use, /writingModelChosen\(\);/);
+  const useDefault = body("useDefault");
+  assert.match(useDefault, /forgetWritingChoice\(\);/);
+  assert.match(useDefault, /writingModelChosen\(\);/);
+  // forgetWritingChoice appears nowhere else in the chooser.
+  assert.equal([...chooser.matchAll(/forgetWritingChoice\(\)/g)].length, 1);
+});

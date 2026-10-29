@@ -2511,6 +2511,7 @@
       "works": "Guardada. Funciona con {{model}}.",
       "noAccess": "Guardada, pero esta clave no puede usar {{model}}. Elige otro modelo en Avanzado.",
       "unchecked": "Guardada. Oats no pudo comprobarla ahora.",
+      "limited": "Guardada. Esta clave tiene permisos limitados, así que Oats no pudo comprobar si puede usar {{model}}.",
       "saved": "Guardada.",
       "getKey": "Consigue una clave de {{provider}}",
       "savedKey": "Tu clave de {{provider}}",

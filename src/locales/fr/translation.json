@@ -2511,6 +2511,7 @@
       "works": "Enregistrée. Elle fonctionne avec {{model}}.",
       "noAccess": "Enregistrée, mais cette clé ne peut pas utiliser {{model}}. Choisissez un autre modèle dans Avancé.",
       "unchecked": "Enregistrée. Oats n’a pas pu la vérifier pour l’instant.",
+      "limited": "Enregistrée. Cette clé a des droits limités, donc Oats n’a pas pu vérifier qu’elle peut utiliser {{model}}.",
       "saved": "Enregistrée.",
       "getKey": "Obtenir une clé {{provider}}",
       "savedKey": "Votre clé {{provider}}",
