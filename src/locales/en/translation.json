@@ -175,6 +175,10 @@
     "language": {
       "title": "Language",
       "description": "The language spoken in the room"
+    },
+    "speechModel": {
+      "title": "Speech model",
+      "description": "This Mac can run Whisper Turbo, the most accurate model. It downloads from Hugging Face after setup: {{size}}."
     }
   },
   "streaming": {
@@ -1523,6 +1527,7 @@
         "openai_gpt_4_1": "Strong baseline, 1M context",
         "openai_gpt_4_1_mini": "Smaller GPT-4.1 model",
         "openai_gpt_4_1_nano": "Lowest latency GPT-4.1",
+        "anthropic_claude_opus_5_5": "Accurate summaries, few invented facts: the default writing model",
         "anthropic_claude_fable_5": "Anthropic's most capable model, Mythos-class",
         "anthropic_claude_sonnet_5": "Fast, capable agentic model at lower cost",
         "anthropic_claude_sonnet_4_6": "Balanced performance",
@@ -1543,6 +1548,7 @@
         "groq_compound": "Groq's compound system, 450 T/sec",
         "groq_compound_mini": "Fast compound system, 3x lower latency",
         "groq_kimi_k2_0905": "Moonshot AI's 1T MoE, 256K context",
+        "openai_gpt_6_1_sol": "Accurate summaries at a low price: the default writing model",
         "openai_gpt_5_6_sol": "Flagship GPT-5.6 for complex coding and research",
         "openai_gpt_5_6_terra": "Balanced GPT-5.6 for everyday work",
         "openai_gpt_5_6_luna": "Fastest, lowest-cost GPT-5.6",
@@ -2062,6 +2068,8 @@
       "needsSummaryModel": "No summary model is ready yet, so this conversation has not been summarized.",
       "notSummarized": "This conversation has not been summarized.",
       "summarize": "Summarize",
+      "summarizeAgain": "Summarize again",
+      "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"
     },
     "global": {
@@ -2258,7 +2266,7 @@
         "speechTitle": "Speech model",
         "speechScreen": "One model transcribes your conversations and your dictation. Two models would take turns loading on this Mac.",
         "writingTitle": "Writing model",
-        "writingScreen": "One model writes your summaries, names the topics of each conversation and tidies your dictation. With a cloud model, what is said on each topic is sent to that provider during the conversation. With OpenAI, a fast OpenAI model also confirms each change of subject during the conversation and names it, and each request carries up to 3,000 characters of what was said around the change.",
+        "writingScreen": "One model writes your summaries and tidies your dictation, and names the topics of each conversation. With OpenAI or Anthropic, that provider's most accurate models for topics name them instead, and confirm each change of subject during the conversation. With a cloud model, what is said on each topic is sent to that provider during the conversation, up to 3,000 characters a request. With OpenAI or Anthropic, once a conversation is summarized, that provider's most accurate model also links it to earlier conversations on the same subjects. It gets the topic names and the first sentences of the summary of this conversation and of up to 12 earlier ones whose summaries the same provider wrote, never a transcript. Earlier conversations summarized on this Mac or by another provider are never sent.",
         "none": "None yet",
         "selfHosted": "Your server"
       },
@@ -2305,7 +2313,8 @@
     "errors": {
       "noModel": "Configure Oats processing before recording a conversation.",
       "noEndpoint": "Configure the Oats API endpoint before recording a conversation.",
-      "actionFailed": "Oats could not generate intelligence for this conversation."
+      "actionFailed": "Oats could not generate intelligence for this conversation.",
+      "noSummary": "The model returned no summary."
     },
     "preflight": {
       "no-microphone": "No microphone found. Plug one in, then press again.",
@@ -2397,6 +2406,27 @@
       "modelOn": "{{model}} on {{backend}}",
       "requests_one": "{{count}} network request since launch",
       "requests_other": "{{count}} network requests since launch"
+    },
+    "speechTier": {
+      "downloading": "Downloading Whisper Turbo",
+      "downloadingShort": "Downloading Whisper Turbo: {{percent}}%",
+      "progress": "{{percent}}% of {{size}}. Until it is ready, Oats uses the model it came with.",
+      "checking": "Checking Whisper Turbo",
+      "checkingDetail": "A short test on this Mac's GPU",
+      "ready": "Whisper Turbo, chosen for this Mac",
+      "readyDetail": "Its GPU keeps up with the most accurate model during a conversation",
+      "failed": "Whisper Turbo did not download",
+      "failedDetail": "Oats uses the model it came with.",
+      "declined": "This Mac can run Whisper Turbo",
+      "declinedDetail": "The most accurate model: {{size}} from Hugging Face",
+      "slow": "Whisper Turbo is too slow on this Mac",
+      "slowDetail": "It cannot keep up with a conversation here, so Oats uses the model it came with.",
+      "detection": "Whisper Turbo is too slow with language detection",
+      "detectionDetail": "Choose the transcription language in Settings › Recording, and Oats uses it.",
+      "retry": "Try again",
+      "cancelDownload": "Cancel the Whisper Turbo download",
+      "noticeTitle": "Getting a more accurate speech model for this Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo, from Hugging Face. Oats keeps using the model it came with until it is ready."
     }
   },
   "questionCard": {

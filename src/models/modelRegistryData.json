@@ -214,6 +214,17 @@
       "fileName": "ggml-large-v3-turbo.bin",
       "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
       "descriptionKey": "models.descriptions.whisper.turbo"
+    },
+    "turbo-q5": {
+      "name": "Turbo (q5)",
+      "description": "Turbo in 5-bit: a third of the size",
+      "size": "574MB",
+      "sizeMb": 574,
+      "expectedSizeBytes": 574041195,
+      "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+      "fileName": "ggml-large-v3-turbo-q5_0.bin",
+      "downloadUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+      "descriptionKey": "models.descriptions.whisper.turbo"
     }
   },
   "transcriptionProviders": [
@@ -311,6 +322,14 @@
       "name": "OpenAI",
       "models": [
         {
+          "id": "gpt-6.1-sol",
+          "name": "GPT-6.1 Sol",
+          "description": "Accurate summaries at a low price: the default writing model",
+          "descriptionKey": "models.descriptions.cloud.openai_gpt_6_1_sol",
+          "tokenParam": "max_completion_tokens",
+          "supportsTemperature": false
+        },
+        {
           "id": "gpt-5.6-sol",
           "name": "GPT-5.6 Sol",
           "description": "Flagship GPT-5.6 for complex coding, research, and agentic work, 1M context",
@@ -396,6 +415,12 @@
       "id": "anthropic",
       "name": "Anthropic",
       "models": [
+        {
+          "id": "claude-opus-5-5",
+          "name": "Claude Opus 5.5",
+          "description": "Accurate summaries, few invented facts: the default writing model",
+          "descriptionKey": "models.descriptions.cloud.anthropic_claude_opus_5_5"
+        },
         {
           "id": "claude-fable-5",
           "name": "Claude Fable 5",
@@ -940,9 +965,9 @@
           "id": "gpt-oss-20b-mxfp4",
           "name": "GPT-OSS 20B",
           "size": "12.1GB",
-          "sizeBytes": 12999763968,
+          "sizeBytes": 12109566624,
           "description": "OpenAI's open-weight model for consumer hardware",
-          "fileName": "gpt-oss-20b-mxfp4.gguf",
+          "fileName": "gpt-oss-20b-MXFP4.gguf",
           "quantization": "mxfp4",
           "contextLength": 128000,
           "hfRepo": "ggml-org/gpt-oss-20b-GGUF",

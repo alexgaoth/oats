@@ -62,14 +62,19 @@ export function isEnglish(language) {
  * model every build ships. An upgrade that fails to load is worse than the
  * model the user already had, and so is a model that is not there.
  *
+ * `fallbackSizes` come before `base`, each with the same English ladder: the
+ * main process passes the size its build ships ("small" on Apple Silicon), so
+ * turbo that is not on disk yet falls back to `small.en`, not to `base`.
+ *
  * @param {string} model The configured size, e.g. "small". An `.en` id is read
  *   as its size.
  * @param {string|null} language The resolved STT language.
  * @param {(id: string) => boolean} isInstalled Whether a model id is on disk.
+ * @param {string[]} [fallbackSizes] Sizes to try, in order, before `base`.
  * @returns {string} The model to load. With no `isInstalled` there is nothing
  *   to check, so `model` comes back unchanged, and empty input comes back empty.
  */
-export function resolveWhisperModel(model, language, isInstalled) {
+export function resolveWhisperModel(model, language, isInstalled, fallbackSizes = []) {
   const id = typeof model === "string" ? model.trim() : "";
   if (!id || typeof isInstalled !== "function") return id;
   const installed = (candidate) => {
@@ -82,8 +87,11 @@ export function resolveWhisperModel(model, language, isInstalled) {
   const english = isEnglish(language);
   const ladder = (size) =>
     english && HAS_ENGLISH_VARIANT.has(size) ? [`${size}.en`, size] : [size];
-  const size = id.endsWith(".en") ? id.slice(0, -".en".length) : id;
-  return [...ladder(size), ...ladder(FALLBACK_MODEL)].find(installed) ?? FALLBACK_MODEL;
+  const sizeOf = (value) => (value.endsWith(".en") ? value.slice(0, -".en".length) : value);
+  const sizes = [id, ...(Array.isArray(fallbackSizes) ? fallbackSizes : []), FALLBACK_MODEL]
+    .filter((value) => typeof value === "string" && value.trim())
+    .map((value) => sizeOf(value.trim()));
+  return [...new Set(sizes)].flatMap(ladder).find(installed) ?? FALLBACK_MODEL;
 }
 
 export { HAS_ENGLISH_VARIANT };

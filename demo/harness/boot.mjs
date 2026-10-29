@@ -10,7 +10,9 @@
 // other samples are already there; the review is the one being recorded);
 // `from` seeks there once recording starts (seconds); `speed` is the replay
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
-// `edits=0` leaves the voices unnamed after Stop; `profile=empty` starts with
+// `edits=0` leaves the voices unnamed after Stop; `tier` is the speed check's
+// state and `chosen` a speech model the person chose (deviceTier.mjs,
+// settings.mjs); `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
 // in three groups instead of the samples (`many.mjs`), to measure Global
@@ -24,6 +26,7 @@ import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-
 import { installClock } from "./clock.mjs";
 import { installFakeOpenAI } from "./fastModel.mjs";
 import { createFakeMain } from "./fake-main.mjs";
+import { createFakeDeviceTier } from "./deviceTier.mjs";
 import { installFakeMicrophone } from "./media.mjs";
 import { manyConversations } from "./many.mjs";
 import { createReplay } from "./replay.mjs";
@@ -65,6 +68,14 @@ if (many) {
   main.db.notes.push(...notes);
   for (const question of questions) main.insertEvent(question);
 }
+// The speed check's report (deviceTier.mjs): `tier=` picks the state.
+const deviceTier = createFakeDeviceTier({ state: params.get("tier"), emit: main.emit });
+Object.assign(main.api, {
+  getArch: deviceTier.getArch,
+  getDeviceTier: deviceTier.getDeviceTier,
+  startSpeechUpgrade: deviceTier.startSpeechUpgrade,
+  cancelSpeechUpgrade: deviceTier.cancelSpeechUpgrade,
+});
 window.electronAPI = main.api;
 
 const replay = createReplay({
@@ -147,6 +158,13 @@ window.oatsDemo = {
   openaiRequests: () => openai?.requests() ?? [],
   /** The searches the app opened (auto-search with `autosearch=1`), oldest first. */
   searches: () => main.searches.map((search) => ({ ...search })),
+  /** Put the speed check in another state: see deviceTier.mjs. */
+  tier: (state) => deviceTier.set(state),
+  /** Open a Settings page, as any screen can ("models", "recording", ...). */
+  async settings(page = "general") {
+    window.dispatchEvent(new CustomEvent("oats-open-settings", { detail: page }));
+    await frame();
+  },
   /** The ids of the sample conversations held, newest first. */
   samples: () =>
     main.db.notes

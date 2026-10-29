@@ -175,6 +175,10 @@
     "language": {
       "title": "Langue",
       "description": "La langue parlée dans la pièce"
+    },
+    "speechModel": {
+      "title": "Modèle de parole",
+      "description": "Ce Mac peut exécuter Whisper Turbo, le modèle le plus précis. Il se télécharge depuis Hugging Face après la configuration : {{size}}."
     }
   },
   "streaming": {
@@ -1516,6 +1520,7 @@
         "openai_gpt_4_1": "Base solide, contexte 1M",
         "openai_gpt_4_1_mini": "Modèle GPT-4.1 plus petit",
         "openai_gpt_4_1_nano": "GPT-4.1 à la latence la plus faible",
+        "anthropic_claude_opus_5_5": "Résumés précis, peu de faits inventés : le modèle d'écriture par défaut",
         "anthropic_claude_fable_5": "Le modèle le plus performant d'Anthropic, classe Mythos",
         "anthropic_claude_sonnet_5": "Modèle agentique rapide et performant à moindre coût",
         "anthropic_claude_sonnet_4_6": "Performances équilibrées",
@@ -1536,6 +1541,7 @@
         "groq_compound": "Système compound de Groq, 450 T/s",
         "groq_compound_mini": "Système compound rapide, 3x latence réduite",
         "groq_kimi_k2_0905": "Moonshot AI 1T MoE, contexte 256K",
+        "openai_gpt_6_1_sol": "Résumés précis à petit prix : le modèle d'écriture par défaut",
         "openai_gpt_5_6_sol": "GPT-5.6 phare pour le codage et la recherche complexes",
         "openai_gpt_5_6_terra": "GPT-5.6 équilibré pour le travail quotidien",
         "openai_gpt_5_6_luna": "Le GPT-5.6 le plus rapide et le plus économique",
@@ -2062,6 +2068,8 @@
       "needsSummaryModel": "Aucun modèle de résumé n’est encore prêt, donc cette conversation n’a pas été résumée.",
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
       "summarize": "Résumer",
+      "summarizeAgain": "Résumer à nouveau",
+      "summaryFailed": "Le résumé n'a pas pu être rédigé : {{reason}}",
       "setUpModel": "Configurer un modèle"
     },
     "global": {
@@ -2258,7 +2266,7 @@
         "speechTitle": "Modèle de parole",
         "speechScreen": "Un seul modèle transcrit vos conversations et votre dictée. Deux modèles se relaieraient en mémoire sur ce Mac.",
         "writingTitle": "Modèle d'écriture",
-        "writingScreen": "Un seul modèle rédige vos résumés, nomme les sujets de chaque conversation et nettoie votre dictée. Avec un modèle cloud, ce qui est dit sur chaque sujet est envoyé à ce fournisseur pendant la conversation. Avec OpenAI, un modèle OpenAI rapide confirme aussi chaque changement de sujet pendant la conversation et le nomme, et chaque requête contient jusqu'à 3 000 caractères de ce qui a été dit autour du changement.",
+        "writingScreen": "Un seul modèle rédige vos résumés, nettoie votre dictée et nomme les sujets de chaque conversation. Avec OpenAI ou Anthropic, ce sont plutôt les modèles les plus précis de ce fournisseur pour les sujets qui les nomment, et ils confirment aussi chaque changement de sujet pendant la conversation. Avec un modèle cloud, ce qui est dit sur chaque sujet est envoyé à ce fournisseur pendant la conversation, jusqu'à 3 000 caractères par requête. Avec OpenAI ou Anthropic, une fois une conversation résumée, le modèle le plus précis du fournisseur la relie aussi aux conversations précédentes sur les mêmes sujets. Il reçoit les noms des sujets et les premières phrases du résumé de cette conversation et de 12 conversations précédentes au plus dont le même fournisseur a écrit le résumé, jamais une transcription. Les conversations précédentes résumées sur ce Mac ou par un autre fournisseur ne sont jamais envoyées.",
         "none": "Aucun pour l'instant",
         "selfHosted": "Votre serveur"
       },
@@ -2305,7 +2313,8 @@
     "errors": {
       "noModel": "Configurez le traitement Oats avant d'enregistrer une conversation.",
       "noEndpoint": "Configurez le point de terminaison de l'API Oats avant d'enregistrer une conversation.",
-      "actionFailed": "Oats n'a pas pu générer l'intelligence de cette conversation."
+      "actionFailed": "Oats n'a pas pu générer l'intelligence de cette conversation.",
+      "noSummary": "Le modèle n'a renvoyé aucun résumé."
     },
     "preflight": {
       "no-microphone": "Aucun microphone détecté. Branchez-en un, puis appuyez à nouveau.",
@@ -2397,6 +2406,27 @@
       "modelOn": "{{model}} sur {{backend}}",
       "requests_one": "{{count}} requête réseau depuis le lancement",
       "requests_other": "{{count}} requêtes réseau depuis le lancement"
+    },
+    "speechTier": {
+      "downloading": "Téléchargement de Whisper Turbo",
+      "downloadingShort": "Téléchargement de Whisper Turbo : {{percent}}%",
+      "progress": "{{percent}}% de {{size}}. En attendant, Oats utilise le modèle fourni avec l'app.",
+      "checking": "Vérification de Whisper Turbo",
+      "checkingDetail": "Un court test sur le GPU de ce Mac",
+      "ready": "Whisper Turbo, choisi pour ce Mac",
+      "readyDetail": "Son GPU suit le modèle le plus précis pendant une conversation",
+      "failed": "Whisper Turbo n'a pas été téléchargé",
+      "failedDetail": "Oats utilise le modèle fourni avec l'app.",
+      "declined": "Ce Mac peut exécuter Whisper Turbo",
+      "declinedDetail": "Le modèle le plus précis : {{size}} depuis Hugging Face",
+      "slow": "Whisper Turbo est trop lent sur ce Mac",
+      "slowDetail": "Il ne suit pas une conversation ici, donc Oats utilise le modèle fourni avec l'app.",
+      "detection": "Whisper Turbo est trop lent avec la détection de la langue",
+      "detectionDetail": "Choisissez la langue de transcription dans Réglages › Enregistrement, et Oats l'utilisera.",
+      "retry": "Réessayer",
+      "cancelDownload": "Annuler le téléchargement de Whisper Turbo",
+      "noticeTitle": "Téléchargement d'un modèle de parole plus précis pour ce Mac ({{size}})",
+      "noticeDetail": "Whisper Turbo, depuis Hugging Face. Oats garde le modèle fourni avec l'app jusqu'à ce qu'il soit prêt."
     }
   },
   "questionCard": {
