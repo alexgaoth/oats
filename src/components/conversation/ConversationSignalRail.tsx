@@ -395,10 +395,16 @@ function QuestionGroup({
 }
 
 export default function ConversationSignalRail({
+  cards: givenCards,
   onFocus,
   announceOnly = false,
-  cards: givenCards,
 }: {
+  /**
+   * Cards to show instead of the recording's. The tour at the end of setup
+   * (`onboarding/OatsTour.tsx`) shows the example conversation's here, inside
+   * an inert box, so its Search and Dismiss can never be pressed.
+   */
+  cards?: ConversationCard[];
   /**
    * Mount the announcements without drawing the annotations.
    *
@@ -414,12 +420,6 @@ export default function ConversationSignalRail({
   /** Reports which question group the pointer or keyboard is on, so the
    *  contour can raise the matching mark. Null when nothing is focused. */
   onFocus: (groupKey: string | null) => void;
-  /**
-   * Cards to show instead of the recording's. The tour at the end of setup
-   * (`onboarding/OatsTour.tsx`) shows the example conversation's here, inside
-   * an inert box, so its Search and Dismiss can never be pressed.
-   */
-  cards?: ConversationCard[];
 }) {
   const { t } = useTranslation();
   const recordingCards = useMeetingRecordingStore((state) => state.questionCards);
