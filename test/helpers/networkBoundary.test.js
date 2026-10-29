@@ -436,6 +436,6 @@ test("setup starts the downloads only when the person continues with On this Mac
   // After the pasted key, if any, is checked and saved (setupProcessing.test.js).
   assert.match(
     flow,
-    /if \(currentStepId === "processing"\) \{[\s\S]{0,400}?\n {6}commitProcessing\(processingChoice, localDownloads, preferredLanguage\);/
+    /if \(currentStepId === "processing"\) \{[\s\S]{0,900}?\n {6}commitProcessing\(processingChoice, localDownloads, preferredLanguage\);/
   );
 });

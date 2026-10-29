@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useId, useImperativeHandle, useState } from "react";
+import { useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, KeyRound, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -149,6 +149,11 @@ export function ProviderKeyField({
     return true;
   };
   useImperativeHandle(ref, () => ({ commit }));
+  // A field that goes away takes its text with it: whoever was told of the
+  // text (setup's Get started) is told it is gone.
+  const draftListener = useRef(onDraftChange);
+  draftListener.current = onDraftChange;
+  useEffect(() => () => draftListener.current?.(""), []);
 
   const save = (event: React.FormEvent) => {
     event.preventDefault();

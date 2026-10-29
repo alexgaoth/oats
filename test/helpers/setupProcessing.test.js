@@ -45,7 +45,7 @@ test("setup has no Save: Get started checks and saves the pasted key, and stays 
   const forward = FLOW.slice(FLOW.indexOf("const goForward = async () => {"));
   assert.match(
     forward,
-    /if \(processingChoice === "providers" && keyDraft\.trim\(\)\) \{\s*setCheckingKey\(true\);\s*const saved = \(await keyField\.current\?\.commit\(\)\) \?\? false;\s*setCheckingKey\(false\);\s*if \(!saved\) return;\s*\}\s*commitProcessing\(/
+    /if \(processingChoice === "providers" && keyDraft\.trim\(\)\) \{\s*if \(field\) \{\s*setCheckingKey\(true\);\s*const saved = await field\.commit\(\);\s*setCheckingKey\(false\);\s*if \(!saved\) return;\s*\} else \{[\s\S]{0,160}setKeyDraft\(""\);\s*if \(!providerKeySaved\) return;\s*\}\s*\}\s*commitProcessing\(/
   );
   // A pasted key is enough to press Get started; a saved one too.
   assert.match(
@@ -55,4 +55,18 @@ test("setup has no Save: Get started checks and saves the pasted key, and stays 
   // Nothing else can be pressed while the key is checked.
   assert.match(FLOW, /disabled=\{!canProceed\(\) \|\| isFinishing \|\| checkingKey\}/);
   assert.match(FLOW, /disabled=\{isFinishing \|\| checkingKey\}/);
+});
+
+test("the pasted key's text goes with its field: Get started never does nothing", () => {
+  // Another option hides the field; going back shows it empty, so the text the
+  // flow knows of is cleared with it.
+  assert.match(
+    FLOW,
+    /onChange=\{\(mode\) => \{[\s\S]{0,120}setProcessingChoice\(mode\);\s*setKeyDraft\(""\);\s*\}\}/
+  );
+  // And a field that unmounts for any other reason (Back) says so.
+  assert.match(FIELD, /useEffect\(\(\) => \(\) => draftListener\.current\?\.\(""\), \[\]\);/);
+  // The commit refuses an empty field without a word, so nothing calls it then.
+  assert.match(FIELD, /if \(!key \|\| checking\) return false;/);
+  assert.match(FLOW, /if \(processingChoice === "providers" && keyDraft\.trim\(\)\) \{/);
 });

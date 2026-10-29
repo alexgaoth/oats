@@ -323,14 +323,23 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   // Continue, or Get started on the last step. Leaving the processing step
   // commits its choice, and on this Mac starts its downloads at once. With an
   // API key, a key pasted and not saved yet is checked and saved by this one
-  // press; a key the provider refuses keeps the step, its reason under the field.
+  // press; a key the provider refuses keeps the step, its reason under the
+  // field. With no text in the field, a saved key goes on, and no key at all
+  // keeps the button disabled (`canProceed`): never a press that does nothing.
   const goForward = async () => {
     if (currentStepId === "processing") {
+      const field = keyField.current;
       if (processingChoice === "providers" && keyDraft.trim()) {
-        setCheckingKey(true);
-        const saved = (await keyField.current?.commit()) ?? false;
-        setCheckingKey(false);
-        if (!saved) return;
+        if (field) {
+          setCheckingKey(true);
+          const saved = await field.commit();
+          setCheckingKey(false);
+          if (!saved) return;
+        } else {
+          // The field went away with its text (it clears the draft when it does).
+          setKeyDraft("");
+          if (!providerKeySaved) return;
+        }
       }
       commitProcessing(processingChoice, localDownloads, preferredLanguage);
     }
@@ -467,7 +476,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <ProcessingStep
             ref={stepHeadingRef}
             value={processingChoice}
-            onChange={setProcessingChoice}
+            onChange={(mode) => {
+              // The key field shows only under its option: its text goes with it.
+              setProcessingChoice(mode);
+              setKeyDraft("");
+            }}
             downloads={localDownloads}
             keyField={keyField}
             onKeyDraft={setKeyDraft}
