@@ -5655,8 +5655,11 @@ class IPCHandlers {
     // Finals and partials both go through this, so a partial is read with
     // exactly the model and options its final will be. Async, so whatever
     // goes wrong arrives as a rejection, never as a throw into the audio path.
-    const transcribeInRoomAudio = async (pcm) =>
-      meetingLocalProvider === "nvidia"
+    //
+    // A segment that comes back as only a sound label ("[inaudible]",
+    // "(door closes)") comes back empty: nobody said it (soundLabels.mjs).
+    const transcribeInRoomAudio = async (pcm) => {
+      const result = await (meetingLocalProvider === "nvidia"
         ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
             model: meetingLocalModel,
           })
@@ -5664,7 +5667,10 @@ class IPCHandlers {
             model: meetingLocalModel,
             language: meetingLocalLanguage,
             ...this._resolveWhisperVadOptions("meeting"),
-          });
+          }));
+      const { isOnlySoundLabels } = await import("./soundLabels.mjs");
+      return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;
+    };
 
     const sendInRoomPartial = (session, text, audioEndedAt = null) => {
       const win = meetingLocalWin;

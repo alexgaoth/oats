@@ -383,6 +383,11 @@ OPENAI_API_KEY=... node scripts/room-replay.js ... --cloud gpt-transcribe --lang
 OPENAI_API_KEY=... node scripts/room-replay.js ... --realtime gpt-live-transcribe --language en
 # dictation through OpenAI
 OPENAI_API_KEY=... node scripts/asr-eval.js --corpus LibriSpeech/test-clean --cloud --cloud-model gpt-transcribe --language en --n 200
+# before sound labels were dropped; and the experiments: noise out, a quiet segment raised
+node scripts/room-replay.js ... --keep-sound-labels
+node scripts/room-replay.js ... --denoise "afftdn=nf={nf}"
+node scripts/room-replay.js ... --denoise "aformat=sample_fmts=flt,volume={gain},anlmdn=s=10,volume={ungain}"
+node scripts/room-replay.js ... --normalize-rms 0.05
 ```
 
 **The corpus** is the AMI meeting corpus (CC BY 4.0): eight meetings (ES2004a–d,
@@ -802,6 +807,91 @@ registry, and the default of the realtime catalog, so dictation with a key and
 conversations with a cloud provider use it too (the app's server-VAD session
 works with it unchanged, and it streams over HTTP as the `gpt-4o-*` models
 do). A model a person chose stays theirs.
+
+### Before and after Whisper (2026-10-28)
+
+With steady sound, most of what the segmenter sends is lost in the model. Two
+things can be done to a segment before Whisper hears it, and one to what comes
+back. Each was replayed with `small.en`, which ships on Apple Silicon, on all
+eight meetings in each room, alone and together, and scored on the same words
+as without it (paired 95% intervals over the meetings' 243 minutes). A change
+ships if it brings back words and writes no more where nobody spoke.
+
+- **The room's sound taken out** (`room-replay.js --denoise`), with FFmpeg's
+  own filters. `afftdn` (FFT) needs its noise floor where the room's is, and a
+  fixed one fits one room: at -35 dB, right for the steady sound, it took 9 dB
+  out of the quiet microphone's speech. So its floor is the segment's own (the
+  RMS of its quietest tenth of 20 ms frames) plus 1 dB, chosen on three
+  meetings with steady sound (plus 5 dB: +2.0 points; plus 1: +3.2; a fixed
+  -35: +3.1). `anlmdn` (non-local means) at strength 10, each segment moved so
+  its floor is at -38 dBFS, and back.
+- **A quiet segment raised** to an RMS of 0.05, never past a 0.9 peak
+  (`--normalize-rms 0.05`).
+- **A segment that comes back as only a sound label** ("[inaudible]",
+  "(muffled speaking)", "(door closes)") dropped.
+
+| `small.en`, against none               | steady sound: words; content words        | quiet microphone                           | quiet room                               |
+| -------------------------------------- | ----------------------------------------- | ------------------------------------------ | ---------------------------------------- |
+| none (what ships)                      | 40.0%; 37.9%                              | 64.5%; 69.0%                               | 70.4%; 74.3%                             |
+| `afftdn` at the segment's floor + 1 dB | +2.1 (+1.4 to +2.7); +2.1 (+1.2 to +2.9)  | −0.3 (−0.9 to +0.2); −1.0 (−1.8 to −0.3)   | −0.1 (−0.6 to +0.4); −0.4 (−1.0 to +0.2) |
+| `anlmdn`, strength 10                  | −7.1 (−7.9 to −6.2); −8.8 (−10.0 to −7.7) | −8.4 (−9.3 to −7.5); −11.0 (−12.3 to −9.7) | —                                        |
+| raised to an RMS of 0.05               | +1.0 (+0.7 to +1.3); +0.9 (+0.4 to +1.4)  | +6.4 (+5.5 to +7.4); +5.7 (+4.6 to +6.9)   | +0.6 (+0.2 to +0.9); +0.4 (−0.1 to +0.9) |
+| `afftdn`, then raised                  | +3.0 (+2.3 to +3.6); +2.6 (+1.7 to +3.5)  | +6.1 (+5.2 to +7.0); +4.7 (+3.7 to +5.8)   | —                                        |
+
+**Text where nobody spoke.** The segments with no reference speech that come
+back with words are not all invented: AMI leaves the talk before and after a
+meeting untranscribed. So each was checked against the same stretch in three
+other runs (turbo, `gpt-transcribe` and `gpt-4o-mini-transcribe`, quiet room):
+words one of them also heard there are speech the reference does not have;
+words only this run wrote are invented. With sound labels dropped on both
+sides:
+
+| segments with no speech that came back with words: heard by another run; only this one | steady sound | quiet microphone | quiet room |
+| -------------------------------------------------------------------------------------- | ------------ | ---------------- | ---------- |
+| none (what ships)                                                                      | 4; 5         | 10; 0            | 16; 3      |
+| `afftdn` at the segment's floor + 1 dB                                                 | 7; 5         | 11; 1            | 16; 9      |
+| `anlmdn`, strength 10                                                                  | 1; 3         | 8; 0             | —          |
+| raised to an RMS of 0.05                                                               | 4; 4         | 17; 4            | 17; 4      |
+| `afftdn`, then raised                                                                  | 8; 5         | 16; 9            | —          |
+
+- **Dropping sound labels ships**: a segment whose text is only labels comes
+  back empty (`helpers/soundLabels.mjs`, for finals and partials). With steady
+  sound, `small.en` wrote 200 of them in four hours and `base.en` 154, about
+  one a minute, and the app showed each as a line somebody said (quiet room 21
+  and 19, quiet microphone 30 and 19). Turbo writes a lone "-" instead (27);
+  `gpt-transcribe` none. The words recovered and WER do not move: a label is
+  not a word. Three minutes of music, which `base.en` labelled "(gentle
+  music)", now come back with nothing; LibriSpeech conversations have no
+  labels to drop.
+- **Taking the sound out does not ship.** `afftdn` brings back 2.1 points of
+  the words with steady sound (8 of 8 meetings) and invents nothing more
+  there, but in a quiet room it brings back nothing and writes six more
+  phrases where nobody spoke ("Thank you.", "Happy birthday."), and on the
+  quiet microphone it loses a point of the content words; `base.en` the same
+  (+2.7 with steady sound, -1.4 content words in a quiet room). Together with
+  the raise it gains less than the raise alone on the quiet microphone and
+  invents more. `anlmdn` loses words in every room, and its traces make
+  `small.en` write labels: 570 with steady sound. Dictation would not gain
+  either (LibriSpeech, `small.en`, 200 utterances: 3.85% → 3.64% with
+  `afftdn`, interval −0.46 to +0.07).
+- **A quiet segment raised does not ship, and it comes closest.** On the quiet microphone it brings back 6.4 points of the words
+  and 5.7 of the content words, in 8 of 8 meetings: the quiet microphone then
+  hears as the quiet room does (70.9% against 70.4%). It also writes there
+  what a louder room writes over silence: four short phrases in four hours
+  ("Thank you.", "3.10 days left."), against none, and one more in the quiet
+  room. With steady sound it brings back a point and invents nothing more;
+  LibriSpeech conversations do not move (2.7% WER), and noise alone (a fan, an
+  air conditioner, typing, music) comes back with no words, raised or not.
+  `base.en`: +5.6 points on the quiet microphone with four more phrases, +0.6
+  with steady sound, +0.7 in a quiet room.
+
+**Turbo** answers the same way. `afftdn` brings back 1.8 points with steady
+sound (content words 1.1–2.7) and writes four more phrases where nobody spoke
+(11 → 15: turbo writes "Thank you." where `small.en` writes a label); on the
+quiet microphone it loses a point of the words (0.4–1.5). Raised, turbo hears
+5.9 more points on the quiet microphone (5.0–6.8; content words 5.6) and 0.7
+with steady sound, and writes eight more phrases where nobody spoke on the
+quiet microphone (5 → 13: "you", "Thank you.").
 
 ### What this does not show
 
