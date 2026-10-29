@@ -227,7 +227,10 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   given from, and the writing model names the rest.
 - **Detailed:** adds the question cards and the live transcript below the flow
   card, each in standard card/list styling. The flow card then yields height to
-  them (at most 40% of the column) and scrolls inside.
+  them (at most 40% of the column) and scrolls inside, by whole lanes, so no
+  topic is cut through its label. The newest question card stays whole: when a
+  context check grows it, the cards scroll just far enough to show all of it
+  (at once under reduced motion), unless you have scrolled them away from it.
 - Health warnings (silent microphone, not saving, not transcribing) are alerts
   directly under the status card, so a busy conversation can never push them away.
 - **Lag** (`conversation/TranscriptLagBadge.tsx`): nothing while the text keeps

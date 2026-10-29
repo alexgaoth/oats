@@ -338,3 +338,26 @@ export function lanePath({
   d += ` L ${round(x(last.to))} ${round(y(last))}`;
   return d;
 }
+
+/**
+ * The lanes' height in whole rows, when the card they sit in is what caps them.
+ *
+ * While recording, the lanes keep the topic now in view, and now is usually the
+ * last row, so a height that is not a whole number of rows slices the first
+ * row instead. In the Detailed composition the card is capped and the lanes get
+ * whatever it leaves them: measured at 1440x900, 24:03 into the demo, seven
+ * rows in 194px, scrolled 16px, "launch date" cut through its label. In whole
+ * rows the first one scrolls away entire, and the caption still counts it.
+ *
+ * `room` is the height the card leaves the lanes, `need` the rows' height, and
+ * `cap` the lanes' own limit, whose half row is the deliberate cue that there
+ * is more (`LANE_ROWS_SHOWN` in TopicLanes.tsx). Null when the rows fit, or
+ * when that limit is what stops them. Never under one row: now stays in view.
+ *
+ * @param {{ room: number, need: number, cap: number, rowHeight?: number }} input
+ * @returns {number | null}
+ */
+export function wholeLanes({ room, need, cap, rowHeight = LANE_ROW_PX }) {
+  if (need <= room + 0.5 || room >= cap - 0.5) return null;
+  return Math.max(1, Math.floor((room + 0.5) / rowHeight)) * rowHeight;
+}

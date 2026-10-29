@@ -94,7 +94,8 @@ import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import GlobalConversations from "./global/GlobalConversations";
 import FieldBackdrop from "./field/FieldBackdrop";
 import ConversationFlow from "./conversation/ConversationFlow";
-import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
+import { StateMark } from "./conversation/ConversationSignalRail";
+import QuestionBand from "./conversation/QuestionBand";
 import ConversationContour from "./conversation/ConversationContour";
 import DitherBar from "./charts/DitherBar";
 import ListeningRing from "./conversation/ListeningRing";
@@ -103,7 +104,6 @@ import ConversationDialogue from "./conversation/ConversationDialogue";
 import RecordingCounters from "./conversation/RecordingCounters";
 import { ExampleBadge, ExampleOffer } from "./conversation/ExampleConversation";
 import { MoveToGroupMenu, NewGroupDialog, type GroupMove } from "./conversation/MoveToGroup";
-import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
 import {
   FOCUS_AT_REST,
   focusApplies,
@@ -567,17 +567,7 @@ function ConversationSurface() {
   });
 
   const [focusedGroup, setFocusedGroup] = useState<string | null>(null);
-  // The fade says "more below", so it must be measured rather than remembered.
-  //
-  // It used to be an `atEnd` flag starting `false` and updated only by
-  // `onScroll` — so a band that never scrolls never fired the event and the
-  // fade stayed on forever. Measured with a single question card: band
-  // `clientHeight 68 === scrollHeight 68`, the card's outcome line at **1.58:1**
-  // against paper and its Search control's focus ring at 1.00:1 along the
-  // bottom. The ordinary one-question case, permanently half-erased.
-  const bandRef = useRef<HTMLDivElement | null>(null);
   const cardCount = useMeetingRecordingStore((s) => s.questionCards.length);
-  const { faded: bandFaded, measure: measureBand } = useScrollFade(bandRef, cardCount);
   const wasRecording = useRef(false);
   // Announced once when a recording ends, then cleared, so an idle screen the
   // user merely navigated to says nothing.
@@ -985,21 +975,7 @@ function ConversationSurface() {
                 detailed && "flex-1 [@media(max-height:640px)]:min-h-[13rem]"
               )}
             >
-              <div
-                className={cn(
-                  "group relative flex min-h-0 shrink-0 flex-col",
-                  detailed ? "max-h-[52%]" : "max-h-0"
-                )}
-              >
-                <div
-                  ref={bandRef}
-                  onScroll={measureBand}
-                  className={cn("min-h-0", detailed ? "overflow-y-auto" : "overflow-hidden")}
-                >
-                  <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
-                </div>
-                <ScrollFade edges={detailed ? bandFaded : { top: false, bottom: false }} />
-              </div>
+              <QuestionBand detailed={detailed} onFocus={setFocusedGroup} />
               {detailed && (
                 <ConversationDialogue
                   className={cn(

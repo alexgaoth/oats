@@ -6,11 +6,19 @@ const assert = require("node:assert/strict");
 
 const example = require("../../src/helpers/sampleConversations/launch-readiness-review.json");
 
-let topicLanes, runAt, questionTopics, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX;
+let topicLanes, runAt, questionTopics, lanePath, wholeLanes, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX;
 
 test.before(async () => {
-  ({ topicLanes, runAt, questionTopics, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX } =
-    await import("../../src/helpers/topicLanes.mjs"));
+  ({
+    topicLanes,
+    runAt,
+    questionTopics,
+    lanePath,
+    wholeLanes,
+    MIN_RUN_MS,
+    LANE_ROW_PX,
+    LANE_BEND_PX,
+  } = await import("../../src/helpers/topicLanes.mjs"));
 });
 
 const START = 1_800_000_000_000;
@@ -582,4 +590,23 @@ test("a run on a topic with no row is skipped, and nothing is drawn unmeasured",
   assert.equal(lanePath({ runs, rows, width: 400 }), `M 0 15 L 200 15`);
   assert.equal(lanePath({ runs, rows, width: 0 }), null);
   assert.equal(lanePath({ runs: [], rows, width: 400 }), null);
+});
+
+// The flow card in the Detailed composition, which caps the card and leaves the
+// lanes the rest. Measured at 1440x900: five rows in 147px at 18:08, seven in
+// 194px at 24:03, both following now in the last row.
+test("lanes the card squeezes take whole rows, so following now never slices the first", () => {
+  const cap = 8.5 * LANE_ROW_PX - 1;
+  assert.equal(wholeLanes({ room: 194, need: 7 * LANE_ROW_PX, cap }), 6 * LANE_ROW_PX);
+  assert.equal(wholeLanes({ room: 147, need: 5 * LANE_ROW_PX, cap }), 4 * LANE_ROW_PX);
+  // Never under one row: now stays in view.
+  assert.equal(wholeLanes({ room: 20, need: 7 * LANE_ROW_PX, cap }), LANE_ROW_PX);
+});
+
+test("lanes that fit, or that their own eight and a half rows stop, are left alone", () => {
+  const cap = 8.5 * LANE_ROW_PX - 1;
+  assert.equal(wholeLanes({ room: 210, need: 210, cap }), null);
+  assert.equal(wholeLanes({ room: 209.6, need: 210, cap }), null);
+  // The half row under the eighth is the cue that there is more.
+  assert.equal(wholeLanes({ room: cap, need: 12 * LANE_ROW_PX, cap }), null);
 });

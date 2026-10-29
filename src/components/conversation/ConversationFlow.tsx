@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../ui/badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "../ui/card";
@@ -7,7 +7,7 @@ import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { buildThreadMap, placeLabels, quotedUtterance } from "../../helpers/liveThreadMap.mjs";
 import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
-import { LANE_ROW_PX, topicLanes } from "../../helpers/topicLanes.mjs";
+import { LANE_ROW_PX, topicLanes, wholeLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
 import { flowCaption, flowViewOptions, stateLabel } from "./flowText";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
@@ -67,6 +67,50 @@ const PLATE_Y_PX = 4;
 
 const NO_SEGMENTS: TranscriptSegment[] = [];
 const NO_SUGGESTIONS: ConversationSuggestion[] = [];
+
+/** The lanes' own limit: eight rows and half of the next, which shows there is more. */
+const LANES_MAX_PX = (LANE_ROWS_SHOWN + 0.5) * LANE_ROW_PX;
+
+/**
+ * The lanes' height in whole rows while the card's cap squeezes them
+ * (`wholeLanes`), or null. The Detailed composition caps the card, so the
+ * lanes get whatever is left, and following now then sliced the first row.
+ *
+ * The room is read with this height lifted for a moment, so the card's cap and
+ * not the last answer decides it; and again whenever the card or the column
+ * around it changes size (a topic, the quote line, the footer, the window).
+ */
+function useWholeLanes(box: RefObject<HTMLDivElement | null>, enabled: boolean, rows: number) {
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const element = box.current;
+    const card = element?.parentElement;
+    if (!enabled || !element || !card) {
+      setHeight(null);
+      return undefined;
+    }
+    const measure = () => {
+      const kept = element.style.maxHeight;
+      element.style.maxHeight = `${LANES_MAX_PX}px`;
+      // The box's own rule over the rows (`border-t`) is inside its height.
+      const style = getComputedStyle(element);
+      const rule = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+      const whole = wholeLanes({
+        room: element.clientHeight,
+        need: element.scrollHeight,
+        cap: LANES_MAX_PX - rule,
+      });
+      element.style.maxHeight = kept;
+      setHeight(whole === null ? null : whole + rule);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(card);
+    if (card.parentElement) observer.observe(card.parentElement);
+    return () => observer.disconnect();
+  }, [box, enabled, rows]);
+  return height;
+}
 
 /**
  * Where a node's button goes so that its *dot* lands on the point, for each
@@ -203,6 +247,12 @@ export default function ConversationFlow({
     [snapshot, startedAt, live]
   );
   const empty = lanes.empty;
+  const lanesBox = useRef<HTMLDivElement | null>(null);
+  const lanesHeight = useWholeLanes(
+    lanesBox,
+    compact && view === "lanes" && !empty,
+    lanes.rows.length
+  );
   const caption = flowCaption(
     t,
     view === "graph"
@@ -277,12 +327,11 @@ export default function ConversationFlow({
         <>
           {/* Past eight rows the lanes scroll here, as the Detailed
               composition's shorter card already does. Half a row more shows
-              that there is more. */}
+              that there is more; in that shorter card they take whole rows. */}
           <div
+            ref={lanesBox}
             className="min-h-0 overflow-y-auto border-t border-border"
-            style={
-              view === "lanes" ? { maxHeight: (LANE_ROWS_SHOWN + 0.5) * LANE_ROW_PX } : undefined
-            }
+            style={view === "lanes" ? { maxHeight: lanesHeight ?? LANES_MAX_PX } : undefined}
           >
             {view === "lanes" ? (
               <TopicLanes lanes={lanes} selected={selected} onSelect={toggle} live={live} />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BookOpen,
@@ -328,6 +328,7 @@ function QuestionGroup({
   onDismiss,
   onSearch,
   onFocus,
+  itemRef,
 }: {
   group: CardGroup;
   now: number;
@@ -337,6 +338,7 @@ function QuestionGroup({
   onSearch: (card: ConversationCard) => void;
   /** Tells the contour which mark this annotation belongs to. */
   onFocus: (groupKey: string | null) => void;
+  itemRef?: Ref<HTMLLIElement>;
 }) {
   const { t } = useTranslation();
   const [first, ...repeats] = group.cards;
@@ -346,6 +348,7 @@ function QuestionGroup({
     // state is the mark beside the words, not a coloured bar: status is never
     // a border.
     <li
+      ref={itemRef}
       className="oats-enter relative py-3 first:pt-0 last:pb-0"
       style={{ animationDelay: `${index * STAGGER_MS}ms` }}
       onMouseEnter={() => onFocus(group.key)}
@@ -398,6 +401,7 @@ export default function ConversationSignalRail({
   cards: givenCards,
   onFocus,
   announceOnly = false,
+  newestRef,
 }: {
   /**
    * Cards to show instead of the recording's. The tour at the end of setup
@@ -420,6 +424,9 @@ export default function ConversationSignalRail({
   /** Reports which question group the pointer or keyboard is on, so the
    *  contour can raise the matching mark. Null when nothing is focused. */
   onFocus: (groupKey: string | null) => void;
+  /** The newest card's row, so the band can keep it whole while a check line
+   *  grows it (QuestionBand). */
+  newestRef?: Ref<HTMLLIElement>;
 }) {
   const { t } = useTranslation();
   const recordingCards = useMeetingRecordingStore((state) => state.questionCards);
@@ -635,6 +642,7 @@ export default function ConversationSignalRail({
                 onDismiss={onDismiss}
                 onSearch={onSearch}
                 onFocus={onFocus}
+                itemRef={index === 0 ? newestRef : undefined}
               />
             ))}
           </ol>
