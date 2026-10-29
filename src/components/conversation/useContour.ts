@@ -5,8 +5,9 @@ import {
   buildLiveContour,
   contourStrip,
 } from "../../helpers/conversationContour.mjs";
-import { buildConversationGraph, responseReason } from "../../helpers/conversationGraph";
+import { buildConversationGraph } from "../../helpers/conversationGraph";
 import { addLevelSample, decodeLoudness } from "../../helpers/conversationLoudness.mjs";
+import { questionOutcome } from "../../helpers/questionOutcome.mjs";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { ContourData } from "./ConversationContour";
 import type {
@@ -183,26 +184,11 @@ export function useLiveContour(startedAt: number | null): ContourData {
 }
 
 /**
- * The §4 outcome a persisted response records.
- *
- * The same mapping `ConversationGraph` uses, so the contour, the graph and the
- * rail cannot disagree about what a question came to. A question with no
- * response event at all never got a verdict, which is `asked`; a response whose
- * reason is none of the settled ones is a denial, and terracotta.
- */
-function storedOutcome(reason: string | null, hasResponse: boolean): string {
-  if (!hasResponse) return "asked";
-  if (reason === "answered") return "answered";
-  if (reason === "uncertain_response") return "uncertain";
-  if (reason === "silence") return "silence";
-  return "denied";
-}
-
-/**
  * The contour of a conversation that is already on disk.
  *
  * Questions come from the persisted event graph rather than from live cards,
- * because the cards do not outlive the recording — the record does.
+ * because the cards do not outlive the recording — the record does. Each is
+ * read by `questionOutcome`, the rule the review and Connections read too.
  *
  * `loudness` is the note's stored per-second loudness
  * (`notes.conversation_loudness`). It is passed as the stored string, a value
@@ -223,7 +209,7 @@ export function useStoredContour(
       .map((node) => ({
         id: node.key,
         question: node.question?.text ?? "",
-        state: storedOutcome(responseReason(node.response), Boolean(node.response)),
+        state: questionOutcome(node),
         createdAt: node.question?.createdAt ?? node.createdAt,
         groupKey: node.key,
         occurrence: 1,

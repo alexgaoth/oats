@@ -7,7 +7,6 @@ import { StateMark } from "../conversation/ConversationSignalRail";
 import type {
   ConversationEvent,
   ConversationGraphNode,
-  QuestionOutcome,
   SuggestionState,
 } from "../../types/conversationEvents";
 import {
@@ -18,15 +17,7 @@ import {
   suggestionState,
 } from "../../helpers/conversationGraph";
 import { buildSearchUrl, validateSearchUrl } from "../../helpers/conversationAide";
-
-/** The verdict, in the same vocabulary the rail and the contour draw. */
-function graphOutcome(reason: string | null): QuestionOutcome {
-  if (reason === "answered") return "answered";
-  if (reason === "denied_knowledge") return "denied";
-  if (reason === "uncertain_response") return "uncertain";
-  if (reason === "silence") return "silence";
-  return "asked";
-}
+import { questionOutcome } from "../../helpers/questionOutcome.mjs";
 
 /** A search that was opened is the one state worth setting apart. */
 function suggestionBadge(state: SuggestionState): "secondary" | "outline" {
@@ -120,7 +111,8 @@ function ConversationGraphNodeCard({
   const state: SuggestionState | null = suggestionState(node.suggestion);
   const query: string | null = suggestionQuery(node.suggestion);
   const responseText = node.response?.text?.trim();
-  const outcome = graphOutcome(reason);
+  // The verdict, by the rule the contour and the review read too.
+  const outcome = questionOutcome(node);
 
   let searchable = false;
   if (query) {

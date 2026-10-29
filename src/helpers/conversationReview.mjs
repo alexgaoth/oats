@@ -22,20 +22,8 @@
 //
 // Pure and DOM-free so the classification can be pinned rather than eyeballed.
 
-import { buildConversationGraph, responseReason, suggestionState } from "./conversationGraph.mjs";
-
-/** Outcomes that mean nobody in the room supplied an answer. */
-const UNRESOLVED = new Set(["denied", "silence", "uncertain_response"]);
-
-function outcomeOf(node) {
-  const reason = responseReason(node.response);
-  if (reason === "answered") return "answered";
-  if (reason === "uncertain_response") return "uncertain";
-  if (reason === "silence") return "silence";
-  if (reason === "denied" || reason === "denied_knowledge") return "denied";
-  // No response event at all: the question was asked and never resolved.
-  return node.response ? "uncertain" : "open";
-}
+import { buildConversationGraph, suggestionState } from "./conversationGraph.mjs";
+import { questionOutcome } from "./questionOutcome.mjs";
 
 /**
  * @param {object} input
@@ -61,7 +49,7 @@ export function buildReview({ events, topics } = {}) {
 
   for (const node of nodes) {
     if (!node.question) continue;
-    const outcome = outcomeOf(node);
+    const outcome = questionOutcome(node);
     // Opened, not offered. Every question that was not answered gets a
     // suggestion row at `shown`, so counting rows marked a question "searched"
     // when nothing was ever sent — and an automatic search that failed stays at
@@ -111,17 +99,18 @@ export function buildReview({ events, topics } = {}) {
 }
 
 /** Settled first, open last: the order a reader scans for, and the legend's. */
-const OUTCOME_ORDER = ["answered", "denied", "uncertain", "silence", "open"];
+const OUTCOME_ORDER = ["answered", "denied", "uncertain", "silence", "asked"];
 
 /**
  * How the questions came out, counted: for the line under a record's title.
  *
- * Each question is read by `outcomeOf`, the reading the transcript's margin
- * marks and the review use, so the counts and the marks on the same page
- * cannot disagree. Only outcomes that occurred are listed, in a fixed order.
+ * Each question is read by `questionOutcome`, the reading the transcript's
+ * margin marks, the review and the contour use, so the counts and the marks on
+ * the same page cannot disagree. Only outcomes that occurred are listed, in a
+ * fixed order.
  *
  * @returns {{ total: number, outcomes: Array<{ outcome: string, count: number }> }}
- *   `outcome` is "answered" | "denied" | "uncertain" | "silence" | "open".
+ *   `outcome` is "answered" | "denied" | "uncertain" | "silence" | "asked".
  */
 export function questionOutcomes(events) {
   const counts = new Map();
@@ -129,7 +118,7 @@ export function questionOutcomes(events) {
   for (const node of buildConversationGraph(Array.isArray(events) ? events : [])) {
     if (!node.question) continue;
     total += 1;
-    const outcome = outcomeOf(node);
+    const outcome = questionOutcome(node);
     counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
   }
   return {
@@ -146,7 +135,7 @@ export function questionOutcomes(events) {
  * knew. The contour's label counts the same three as "still unanswered"; a
  * hedged answer is an answer of a kind, and is not counted.
  */
-const LEFT_OPEN = new Set(["open", "silence", "denied"]);
+const LEFT_OPEN = new Set(["asked", "silence", "denied"]);
 
 /**
  * How many questions a conversation left open, for the lists: stored on the
@@ -199,16 +188,14 @@ export function questionMoments(events, segments = []) {
  * margin. Keyed by the segment the question started in.
  *
  * @returns {Map<string, string>} segment id → "answered" | "uncertain" |
- *   "silence" | "denied" | "open"
+ *   "silence" | "denied" | "asked"
  */
 export function questionTurns(events) {
   const turns = new Map();
   for (const node of buildConversationGraph(Array.isArray(events) ? events : [])) {
     const segmentId = node.question?.segmentIds?.[0];
     if (segmentId == null || turns.has(String(segmentId))) continue;
-    turns.set(String(segmentId), outcomeOf(node));
+    turns.set(String(segmentId), questionOutcome(node));
   }
   return turns;
 }
-
-export { UNRESOLVED };

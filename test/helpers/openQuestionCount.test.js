@@ -58,7 +58,7 @@ test("the count agrees with the line under the record's title", () => {
   }
   const line = questionOutcomes(events).outcomes;
   const open = line
-    .filter(({ outcome }) => ["open", "silence", "denied"].includes(outcome))
+    .filter(({ outcome }) => ["asked", "silence", "denied"].includes(outcome))
     .reduce((total, { count }) => total + count, 0);
   assert.equal(openQuestionCount(events), open);
   assert.equal(open, 3);
