@@ -336,6 +336,15 @@ jobs:
           cp "dmg/macos-arm64-dmg/Oats-$version-arm64.dmg" Oats-arm64.dmg
           cp "dmg/macos-x64-dmg/Oats-$version.dmg" Oats-x64.dmg
           sha256sum Oats-arm64.dmg Oats-x64.dmg > SHA256SUMS.txt
-          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "Oats $version" \
-            --notes-file ".github/release-notes/$TAG.md" \
-            Oats-arm64.dmg Oats-x64.dmg SHA256SUMS.txt
+          # A draft of this tag that nobody has published yet is rebuilt in
+          # place: its target, notes and files are replaced. A published
+          # release is never touched: `gh release create` fails on its tag.
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = "true" ]; then
+            gh release edit "$TAG" --draft --target "$GITHUB_SHA" --title "Oats $version" \
+              --notes-file ".github/release-notes/$TAG.md"
+            gh release upload "$TAG" --clobber Oats-arm64.dmg Oats-x64.dmg SHA256SUMS.txt
+          else
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "Oats $version" \
+              --notes-file ".github/release-notes/$TAG.md" \
+              Oats-arm64.dmg Oats-x64.dmg SHA256SUMS.txt
+          fi
