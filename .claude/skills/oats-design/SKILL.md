@@ -75,7 +75,7 @@ condescended to.
 
 Design consequences that follow directly:
 
-- **No hand-holding.** No onboarding tutorials, no empty-state tutorials, no
+- **No hand-holding.** No tutorials, in setup or in an empty state, and no
   tips. Show the thing; they will work it out. The one tour, at the end of
   setup (`DESIGN.md` §4), is that: the real components, shown once, with
   nothing to learn.
