@@ -116,7 +116,7 @@ function noteRow(id, fields) {
 }
 
 /**
- * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean, openai?: boolean }} options The
+ * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean, openai?: boolean, missingModels?: string[] }} options The
  *   sample fixtures to hold, placed relative to `now` exactly as
  *   `insertSampleConversations` places them, and the one the app ships as its
  *   in-app example (`insertExampleConversation`).
@@ -128,8 +128,12 @@ export function createFakeMain({
   badges = false,
   agent = false,
   openai = false,
+  missingModels = [],
 }) {
   const notes = [];
+  // Local models not on disk yet (`download=` in boot.mjs): `modelCheck` says
+  // false for them until their download reaches its end (`downloadModel`).
+  const missing = new Set(missingModels);
   const events = [];
   const groups = SEEDED_GROUPS.map((group, index) => ({
     id: index + 1,
@@ -151,6 +155,13 @@ export function createFakeMain({
     if (!listeners.has(name)) listeners.set(name, new Set());
     listeners.get(name).add(callback);
     hooks.listening?.(name);
+    // A download under way is reported to a window that starts listening, at
+    // its next chunk; here at once, so a held download shows without a wait.
+    if (name === "onModelDownloadProgress") {
+      setTimeout(() => {
+        for (const [modelId, download] of downloads) reportDownload(modelId, download.percent);
+      }, 0);
+    }
     return () => listeners.get(name)?.delete(callback);
   };
   const emit = (name, ...args) => {
@@ -356,6 +367,42 @@ export function createFakeMain({
         .map((note) => note.id),
   };
 
+  // --- Local models: a download as the model manager reports it to this
+  // window (`model-download-progress`). `downloadModel` steps a model from
+  // `from` percent (where it is, by default) to the end over `ms`, or holds it
+  // at `from` (`hold`), saying so every few seconds as a slow download does.
+  // At the end its file is in place, and `modelCheck` says so.
+  const downloads = new Map();
+  const reportDownload = (modelId, progress) =>
+    emit("onModelDownloadProgress", null, { modelId, progress, downloadedSize: 0, totalSize: 0 });
+  const stopDownload = (modelId) => {
+    clearInterval(downloads.get(modelId)?.timer);
+    downloads.get(modelId)?.done();
+    downloads.delete(modelId);
+  };
+  const downloadModel = (modelId, { from, ms = 12_000, hold = false } = {}) => {
+    const start = Number(from ?? downloads.get(modelId)?.percent ?? 0) || 0;
+    stopDownload(modelId);
+    missing.add(modelId);
+    const download = { percent: Math.max(0, Math.min(99, start)) };
+    reportDownload(modelId, download.percent);
+    const tick = hold ? 4000 : 250;
+    const step = hold ? 0 : ((100 - download.percent) * tick) / Math.max(tick, ms);
+    const finished = new Promise((resolve) => {
+      download.done = resolve;
+    });
+    download.timer = setInterval(() => {
+      download.percent = Math.min(100, download.percent + step);
+      if (download.percent >= 100) {
+        missing.delete(modelId);
+        stopDownload(modelId);
+      }
+      reportDownload(modelId, download.percent);
+    }, tick);
+    downloads.set(modelId, download);
+    return finished;
+  };
+
   const explicit = {
     // --- The platform, and the boot-time questions.
     getPlatform: () => "darwin",
@@ -374,7 +421,11 @@ export function createFakeMain({
       success: true,
       models: [{ model: "base.en", downloaded: true }],
     }),
-    modelCheck: async () => true,
+    modelCheck: async (modelId) => !missing.has(modelId),
+    modelDownload: async (modelId) => {
+      if (missing.has(modelId)) await downloadModel(modelId);
+      return { success: true };
+    },
     checkLocalReasoningAvailable: async () => true,
 
     // --- Notes.
@@ -505,6 +556,8 @@ export function createFakeMain({
       });
       if (!answer) return { success: false, error: "The demo has no model for this request." };
       if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
+      // A failure the stand-in was told to give (`summary=fail` in boot.mjs).
+      if (answer.error) return { success: false, error: answer.error };
       return { success: true, text: answer.text };
     },
 
@@ -544,5 +597,16 @@ export function createFakeMain({
     },
   });
 
-  return { api, db, emit, listen, listenerCount, hooks, insertEvent, searches };
+  return {
+    api,
+    db,
+    emit,
+    listen,
+    listenerCount,
+    hooks,
+    insertEvent,
+    searches,
+    downloadModel,
+    stopDownload,
+  };
 }

@@ -2066,9 +2066,10 @@
       "deleteDescription": "Its transcript, summary and marked moments are removed from Oats. This cannot be undone.",
       "emptyDescription": "Conversations you record appear here, with a summary and a transcript you can search.",
       "noMatchesHint": "Search looks through titles, summaries, transcripts and your notes.",
-      "needsSummaryModel": "No summary model is ready yet, so this conversation has not been summarized.",
+      "needsSummaryModel": "No summary model is ready yet. The summary is written as soon as one is.",
       "notSummarized": "This conversation has not been summarized.",
-      "summarize": "Summarize",
+      "summaryAfterDownload": "The summary is written when {{model}} has downloaded: {{percent}}%",
+      "summaryAfterRecording": "The summary is written when this conversation is finished.",
       "summarizeAgain": "Summarize again",
       "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"
@@ -2324,7 +2325,7 @@
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to use an API key, but none is saved yet. Add one in Settings.",
       "question-cards-off": "Question cards are off, so questions will pass silently. Turn them on in Settings, under Recording.",
-      "no-summary-model": "Conversations will be saved without a title or summary: no writing model is ready. Choose one in Settings › AI models."
+      "no-summary-model": "Titles and summaries wait for a writing model: choose one in Settings › AI models."
     },
     "aide": {
       "title": "Conversation aide",

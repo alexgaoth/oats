@@ -2066,9 +2066,10 @@
       "deleteDescription": "Trascrizione, riepilogo e momenti segnati vengono rimossi da Oats. L’operazione non si può annullare.",
       "emptyDescription": "Le conversazioni che registri compaiono qui, con un riepilogo e una trascrizione in cui cercare.",
       "noMatchesHint": "La ricerca copre titoli, riepiloghi, trascrizioni e le tue note.",
-      "needsSummaryModel": "Nessun modello di riepilogo è ancora pronto, quindi questa conversazione non è stata riassunta.",
+      "needsSummaryModel": "Nessun modello di riepilogo è ancora pronto. Il riepilogo verrà scritto appena ce ne sarà uno.",
       "notSummarized": "Questa conversazione non è ancora stata riassunta.",
-      "summarize": "Riassumi",
+      "summaryAfterDownload": "Il riepilogo verrà scritto quando il download di {{model}} sarà completato: {{percent}}%",
+      "summaryAfterRecording": "Il riepilogo verrà scritto quando questa conversazione sarà terminata.",
       "summarizeAgain": "Riassumi di nuovo",
       "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"
@@ -2324,7 +2325,7 @@
       "no-model": "Il modello vocale incluso non si è installato. Riavvia Oats; se persiste, reinstalla.",
       "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni.",
       "question-cards-off": "Le schede delle domande sono disattivate, quindi le domande passeranno in silenzio. Attivale nelle Impostazioni, in Registrazione.",
-      "no-summary-model": "Le conversazioni verranno salvate senza titolo né riassunto: nessun modello di scrittura è pronto. Scegline uno in Impostazioni › Modelli di IA."
+      "no-summary-model": "Titoli e riassunti attendono un modello di scrittura: scegline uno in Impostazioni › Modelli di IA."
     },
     "aide": {
       "title": "Assistente di conversazione",

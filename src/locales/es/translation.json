@@ -2066,9 +2066,10 @@
       "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
       "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
       "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
-      "needsSummaryModel": "Aún no hay un modelo de resumen listo, así que esta conversación no se ha resumido.",
+      "needsSummaryModel": "Aún no hay un modelo de resumen listo. El resumen se escribirá en cuanto lo haya.",
       "notSummarized": "Esta conversación aún no se ha resumido.",
-      "summarize": "Resumir",
+      "summaryAfterDownload": "El resumen se escribirá cuando {{model}} termine de descargarse: {{percent}}%",
+      "summaryAfterRecording": "El resumen se escribirá cuando termine esta conversación.",
       "summarizeAgain": "Resumir de nuevo",
       "summaryFailed": "No se pudo crear el resumen: {{reason}}",
       "setUpModel": "Configurar un modelo"
@@ -2324,7 +2325,7 @@
       "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
       "question-cards-off": "Las tarjetas de preguntas están desactivadas, así que las preguntas pasarán en silencio. Actívalas en Ajustes, en Grabación.",
-      "no-summary-model": "Las conversaciones se guardarán sin título ni resumen: no hay ningún modelo de escritura listo. Elige uno en Ajustes › Modelos de IA."
+      "no-summary-model": "Los títulos y resúmenes esperan a un modelo de escritura: elige uno en Ajustes › Modelos de IA."
     },
     "aide": {
       "title": "Asistente de conversación",

@@ -21,6 +21,13 @@
 // `oatsDemo.openaiRequests()` lists what it was asked; `theme`, `view` and
 // `flow` as in `settings.mjs`. `panel=true` is the app's own: the workspace
 // window.
+//
+// Summaries that start by themselves (stores/summaryQueueStore.ts):
+// `download=<percent>` holds the local writing model (`writing=`, Qwen3.5 4B
+// by default) mid-download there, until `oatsDemo.download()` runs it to the
+// end; `bare=<sample id>` or `bare=all` takes the summaries away, as from a
+// conversation recorded before any model was ready; `summary=fail` fails every
+// summary and `summary=fail-once` the first try of each.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import { installClock } from "./clock.mjs";
@@ -45,6 +52,13 @@ installClock();
 applyDemoSettings(params);
 installFakeMicrophone();
 
+// The local writing model settings.mjs chose, and whether it is still on its way.
+const writingModel =
+  params.get("writing") && params.get("writing") !== "none"
+    ? params.get("writing")
+    : "qwen3.5-4b-q4_k_m";
+const downloadAt = params.get("loop") === "1" ? null : params.get("download");
+
 const main = createFakeMain({
   fixtures: empty || many ? [] : live ? supporting : [mainFixture, ...supporting],
   example: mainFixture,
@@ -56,7 +70,17 @@ const main = createFakeMain({
   // OpenAI as the writing model (`loop=1`): a key for the stand-in, which
   // never leaves the page.
   openai: params.get("loop") === "1",
+  missingModels: downloadAt === null ? [] : [writingModel],
 });
+if (downloadAt !== null) {
+  void main.downloadModel(writingModel, { from: Number(downloadAt) || 0, hold: true });
+}
+const bare = params.get("bare");
+if (bare) {
+  for (const note of main.db.notes) {
+    if (bare === "all" || note.demo_sample === bare) note.enhanced_content = null;
+  }
+}
 if (many) {
   // Work and Personal are seeded; Research is one the person made, between them.
   const seeded = Object.fromEntries(main.db.groups.map((group) => [group.seed_key, group]));
@@ -87,6 +111,23 @@ const openai =
   params.get("loop") === "1"
     ? installFakeOpenAI({ reason: (request) => main.hooks.reason?.(request) ?? null })
     : null;
+// A summary that fails, as a model that stops early does: every time
+// (`summary=fail`), or only the first try of each conversation (`fail-once`).
+const failing = params.get("summary");
+if (failing === "fail" || failing === "fail-once") {
+  const answer = main.hooks.reason;
+  const tried = new Set();
+  main.hooks.reason = (request) => {
+    if (/meeting notes assistant/i.test(request.prompt)) {
+      const first = !tried.has(request.text);
+      tried.add(request.text);
+      if (failing === "fail" || first) {
+        return { error: "The model on this Mac stopped before it finished.", delayMs: 1500 };
+      }
+    }
+    return answer?.(request) ?? null;
+  };
+}
 
 const TABS = ["summary", "transcript", "connections"];
 
@@ -160,6 +201,28 @@ window.oatsDemo = {
   searches: () => main.searches.map((search) => ({ ...search })),
   /** Put the speed check in another state: see deviceTier.mjs. */
   tier: (state) => deviceTier.set(state),
+  /**
+   * The local writing model's download: run on from where it is to the end
+   * over `ms` (resolves when it lands), or held at `from` with `hold`
+   * (resolves at once).
+   */
+  download: async ({ from, ms = 8000, hold = false } = {}) => {
+    const landed = main.downloadModel(writingModel, { from, ms, hold });
+    if (!hold) await landed;
+  },
+  /** The conversations owed a summary, newest first (stores/summaryQueueStore.ts). */
+  owed: () => {
+    try {
+      return JSON.parse(localStorage.getItem("oatsPendingSummaries") || "[]");
+    } catch {
+      return [];
+    }
+  },
+  /** A conversation as main holds it, by sample id or note id. */
+  note: (sampleId) => {
+    const note = main.db.noteBySample(sampleId) ?? main.db.findNote(Number(sampleId));
+    return note ? { ...note } : null;
+  },
   /** Open a Settings page, as any screen can ("models", "recording", ...). */
   async settings(page = "general") {
     window.dispatchEvent(new CustomEvent("oats-open-settings", { detail: page }));

@@ -8,6 +8,7 @@ import { claimWritingModel, sortConversationIntoGroup } from "./conversationGrou
 import { checkConversationLinks } from "./conversationLinkStore";
 import { summaryRouteKey } from "../helpers/remoteLinks.mjs";
 import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs";
+import { SUMMARY_RETRY_DELAY_MS, shouldRetrySummary } from "../helpers/summaryQueue.mjs";
 import type { ActionItem } from "../types/electron";
 
 export type ActionProcessingStatus = "idle" | "processing" | "success" | "failed";
@@ -32,6 +33,8 @@ interface ActionProcessingStoreState {
 const cancelledFlags = new Map<number, boolean>();
 const processingFlags = new Map<number, boolean>();
 const successTimers = new Map<number, NodeJS.Timeout>();
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const IDLE_STATE: NoteActionState = { status: "idle", actionName: null };
 
@@ -99,7 +102,20 @@ export interface RunActionOptions {
   isMeetingNote?: boolean;
   /** Opt-in so enhancement never renames a note the user has titled. */
   allowTitleGeneration?: boolean;
+  /**
+   * The note's title when the action started. A generated title is written
+   * only if the title is still this one: a summary takes a while, and somebody
+   * may rename the conversation while it is written.
+   */
+  titleAtStart?: string | null;
 }
+
+/**
+ * How an action ended: its result saved, failed (a conversation's summary
+ * after its second try), cancelled, refused before it started (no model, no
+ * endpoint), or not started because one is already running for the note.
+ */
+export type BackgroundActionOutcome = "saved" | "failed" | "cancelled" | "refused" | "busy";
 
 export interface RunActionLabels {
   noModel: string;
@@ -112,6 +128,8 @@ export interface RunActionLabels {
 /**
  * Start processing an action on a note. Runs in the background — survives
  * component unmounts and navigation so the user can switch notes mid-action.
+ * The promise says how it ended, for a caller that waits (the summary queue,
+ * stores/summaryQueueStore.ts); nobody has to.
  */
 export function runBackgroundAction(
   noteId: number,
@@ -120,13 +138,13 @@ export function runBackgroundAction(
   action: ActionItem,
   options: RunActionOptions,
   labels: RunActionLabels
-): void {
-  if (processingFlags.get(noteId)) return;
+): Promise<BackgroundActionOutcome> {
+  if (processingFlags.get(noteId)) return Promise.resolve("busy");
 
   const modelId = options.modelId;
   if (!modelId && !options.isCloudMode) {
     pushErrorEvent({ noteId, message: labels.noModel });
-    return;
+    return Promise.resolve("refused");
   }
 
   const settings = getSettings();
@@ -134,14 +152,14 @@ export function runBackgroundAction(
   // A self-hosted config without a URL would fall through to a cloud provider.
   if (!options.isCloudMode && noteFormatting.mode === "self-hosted" && !noteFormatting.remoteUrl) {
     pushErrorEvent({ noteId, message: labels.noEndpoint });
-    return;
+    return Promise.resolve("refused");
   }
 
   cancelledFlags.set(noteId, false);
   processingFlags.set(noteId, true);
   setNoteState(noteId, { status: "processing", actionName: action.name, message: null });
 
-  (async () => {
+  const attempt = async (): Promise<"saved" | "cancelled"> => {
     // The model on this computer answers one request at a time, so the
     // background group sort steps aside before the summary asks.
     const release = await claimWritingModel().catch(() => () => {});
@@ -167,7 +185,7 @@ export function runBackgroundAction(
         ...(options.isMeetingNote ? summaryLimits(noteFormatting.mode) : {}),
       });
 
-      if (cancelledFlags.get(noteId)) return;
+      if (cancelledFlags.get(noteId)) return "cancelled";
       // Never save nothing, or the transcript itself, as the summary.
       if (options.isMeetingNote && summaryAnswerProblem(enhanced, noteContent)) {
         throw new Error(labels.noSummary ?? labels.actionFailed);
@@ -178,8 +196,13 @@ export function runBackgroundAction(
         const generated = await generateNoteTitle(enhanced, modelId, providerOverrides);
         if (generated) title = generated;
       }
+      // Renamed while it was written: the name somebody just gave it stays.
+      if (title && options.titleAtStart !== undefined) {
+        const now = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(() => null);
+        if (now && (now.title ?? "") !== (options.titleAtStart ?? "")) title = undefined;
+      }
 
-      if (cancelledFlags.get(noteId)) return;
+      if (cancelledFlags.get(noteId)) return "cancelled";
 
       const updates: Record<string, string> = {
         enhanced_content: enhanced,
@@ -224,21 +247,44 @@ export function runBackgroundAction(
           }).catch(() => undefined);
         }
       }
-    } catch (err) {
-      if (cancelledFlags.get(noteId)) return;
-      processingFlags.set(noteId, false);
-      const message = err instanceof Error ? err.message : labels.actionFailed;
-      // A conversation keeps the failure, so its record says so and offers it
-      // again (OatsWorkspace.tsx); other notes go back to idle.
-      if (options.isMeetingNote) {
-        setNoteState(noteId, { status: "failed", actionName: action.name, message });
-      } else {
-        clearNoteState(noteId);
+      return "saved";
+    } finally {
+      release();
+    }
+  };
+
+  return (async (): Promise<BackgroundActionOutcome> => {
+    try {
+      for (let tries = 1; ; tries += 1) {
+        try {
+          return await attempt();
+        } catch (err) {
+          if (cancelledFlags.get(noteId)) return "cancelled";
+          // A conversation's summary is asked for once more, after a pause,
+          // before its record says it failed: a model still loading, a dropped
+          // connection or one empty answer has usually passed by then. Until
+          // that try ends it is still being written, so nothing says otherwise
+          // (helpers/summaryQueue.mjs).
+          if (options.isMeetingNote && shouldRetrySummary(tries)) {
+            await delay(SUMMARY_RETRY_DELAY_MS);
+            if (cancelledFlags.get(noteId)) return "cancelled";
+            continue;
+          }
+          processingFlags.set(noteId, false);
+          const message = err instanceof Error ? err.message : labels.actionFailed;
+          // A conversation keeps the failure, so its record says so and offers it
+          // again (OatsWorkspace.tsx); other notes go back to idle.
+          if (options.isMeetingNote) {
+            setNoteState(noteId, { status: "failed", actionName: action.name, message });
+          } else {
+            clearNoteState(noteId);
+          }
+          pushErrorEvent({ noteId, message });
+          return "failed";
+        }
       }
-      pushErrorEvent({ noteId, message });
     } finally {
       cancelledFlags.delete(noteId);
-      release();
     }
   })();
 }

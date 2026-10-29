@@ -2061,9 +2061,10 @@
       "deleteDescription": "它的逐字稿、摘要與標記時刻將從 Oats 中刪除。此動作無法復原。",
       "emptyDescription": "你錄製的對話會顯示在這裡，並附上摘要與可搜尋的逐字稿。",
       "noMatchesHint": "搜尋範圍包括標題、摘要、逐字稿與你的筆記。",
-      "needsSummaryModel": "還沒有可用的摘要模型，所以這段對話沒有摘要。",
+      "needsSummaryModel": "還沒有可用的摘要模型。模型就緒後會立即產生摘要。",
       "notSummarized": "此對話尚未產生摘要。",
-      "summarize": "產生摘要",
+      "summaryAfterDownload": "{{model}} 下載完成後將產生摘要：{{percent}}%",
+      "summaryAfterRecording": "這段對話結束後將產生摘要。",
       "summarizeAgain": "重新產生摘要",
       "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"
@@ -2319,7 +2320,7 @@
       "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
       "question-cards-off": "問題卡片已關閉，問題會被略過。請在設定的「錄音」中開啟。",
-      "no-summary-model": "寫作模型尚未就緒，對話將以無標題、無摘要的形式儲存。請在 設定 › AI 模型 中選擇一個。"
+      "no-summary-model": "標題和摘要需要等待寫作模型：請在 設定 › AI 模型 中選擇一個。"
     },
     "aide": {
       "title": "對話助手",

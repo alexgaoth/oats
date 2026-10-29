@@ -171,6 +171,17 @@ writes each search down instead of opening a browser, and
 conversations links by words, as before it read meaning).
 `panel=true` is the app's own parameter for the workspace window.
 
+Summaries that start by themselves (`src/stores/summaryQueueStore.ts`):
+`writing=<model>` chooses another local writing model, or `writing=none` none
+yet; `download=<percent>` holds that model mid-download there, until
+`await oatsDemo.download()` runs it to the end; `bare=<sample id>` or
+`bare=all` takes the summaries away, as from a conversation recorded before a
+model was ready, so opening one starts its summary; `summary=fail` fails every
+summary and `summary=fail-once` the first try of each; `owed=keep` keeps the
+list of conversations owed a summary from the last page (`oatsDemo.owed()`
+reads it). For example
+`/demo.html?panel=true&writing=gemma-4-e4b-it-q4_k_m&download=40&bare=launch-readiness-review`.
+
 The harness sets the demo's settings on every load: onboarding done, English,
 question cards on and read locally (no classifier model), auto-search off
 (unless `autosearch=1`), and

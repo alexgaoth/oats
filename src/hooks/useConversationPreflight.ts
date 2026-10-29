@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
-import { localSummaryModelDownloaded } from "./useSummaryReadiness";
+import { localSummaryModelDownloaded, useSummaryReadiness } from "./useSummaryReadiness";
+import { useModelDownloadPercent } from "../stores/modelDownloadStore";
 import { summaryReadiness } from "../utils/summaryReadiness";
 import {
   blocksRecording,
@@ -99,24 +100,38 @@ export function useConversationPreflight(): Preflight {
   const summaryMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
   const summaryModel = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
   const summaryUrl = useSettingsStore((state) => selectResolvedNoteFormatting(state).remoteUrl);
+  // A writing model still downloading on this Mac is on its way, not missing:
+  // the summaries wait for it and are written by themselves
+  // (summaryQueueStore.ts), so there is nothing to warn about. The readiness
+  // hook looks again when the download lands, and so does this check.
+  const summaryDownloading =
+    useModelDownloadPercent(summaryMode === "local" ? summaryModel : null) !== null;
+  const summaryReadyNow = useSummaryReadiness();
+  // Only the newest check says what is shown. Checks overlap (on mount, on a
+  // change of setting, when a download starts), and one that skipped a slow
+  // question used to land first and be overwritten by an older answer.
+  const asked = useRef(0);
 
   const check = useCallback(async (): Promise<PreflightProblem | null> => {
+    const mine = ++asked.current;
     const found = resolvePreflight({
       ...(await microphoneFacts()),
       useLocalWhisper,
       localProvider,
       ...(await transcriptionFacts(useLocalWhisper, localProvider)),
       questionCardsOn: aideEnabled && aideInRoom,
-      summaryReady: readinessFact(
-        summaryReadiness({
-          mode: summaryMode,
-          model: summaryModel,
-          remoteUrl: summaryUrl,
-          localModelDownloaded: await localSummaryModelDownloaded(summaryMode, summaryModel),
-        })
-      ),
+      summaryReady: summaryDownloading
+        ? null
+        : readinessFact(
+            summaryReadiness({
+              mode: summaryMode,
+              model: summaryModel,
+              remoteUrl: summaryUrl,
+              localModelDownloaded: await localSummaryModelDownloaded(summaryMode, summaryModel),
+            })
+          ),
     });
-    setProblem(found);
+    if (mine === asked.current) setProblem(found);
     return found;
   }, [
     useLocalWhisper,
@@ -126,11 +141,13 @@ export function useConversationPreflight(): Preflight {
     summaryMode,
     summaryModel,
     summaryUrl,
+    summaryDownloading,
   ]);
 
+  // Asked again when the model lands too (`summaryReadyNow` changes then).
   useEffect(() => {
     void check();
-  }, [check]);
+  }, [check, summaryReadyNow]);
 
   // A microphone plugged in while this window sat open should clear the warning
   // by itself, and one unplugged mid-session should raise it — neither is worth

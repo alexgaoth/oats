@@ -156,3 +156,20 @@ test("a summary model that could not be checked is never reported missing", asyn
   assert.equal(resolvePreflight({ ...READY, summaryReady: null }), null);
   assert.equal(resolvePreflight({ ...READY, summaryReady: undefined }), null);
 });
+
+test("a line that a setting fixes takes the person to that page in one press", async () => {
+  const { preflightSettingsPage } = await load();
+  assert.equal(preflightSettingsPage("no-summary-model"), "models");
+  assert.equal(preflightSettingsPage("no-api-key"), "models");
+  assert.equal(preflightSettingsPage("question-cards-off"), "recording");
+  // No setting brings a microphone, a permission or a damaged install back.
+  for (const problem of [
+    "no-microphone",
+    "microphone-permission",
+    "no-speech-engine",
+    "no-model",
+  ]) {
+    assert.equal(preflightSettingsPage(problem), null);
+  }
+  assert.equal(preflightSettingsPage(null), null);
+});
