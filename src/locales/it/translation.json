@@ -2312,7 +2312,7 @@
       "microphoneDescription": "Il microfono che Oats usa per conversazioni e dettatura.",
       "fieldBackdrop": {
         "label": "Sfondo campo",
-        "description": "Mostra il campo di grano animato dietro l'app."
+        "description": "Un aspetto più rilassato per Oats."
       },
       "dictationButton": "Durante la dettatura",
       "instructionsDescription": "Come il modello riscrive ogni dettatura. L'impostazione predefinita va bene per quasi tutti.",

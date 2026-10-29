@@ -78,7 +78,8 @@ test("every pass places the scene by its own height, not the canvas's", () => {
   // from the canvas's bottom edge.
   assert.equal(SHADERS.split("uniform float uSceneH;").length - 1, 3);
   assert.match(SHADERS, /float baseY {2}= uResolution\.y - \(1\.0 - bandDepth\) \* uSceneH;/);
-  assert.match(SHADERS, /float horizon = \(1\.0 - \$\{f\(HORIZON\)\}\) \* k;/);
+  // The horizon is the composition's (uHorizon), placed by the scene's height.
+  assert.match(SHADERS, /float horizon = \(1\.0 - uHorizon\) \* k;/);
   for (const program of ["backdropU", "bladeU", "chaffU"]) {
     assert.match(GL, new RegExp(`gl\\.uniform1f\\(${program}\\.sceneH, sceneH\\);`));
   }
