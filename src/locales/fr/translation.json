@@ -2314,7 +2314,7 @@
       "microphoneDescription": "Le micro qu’Oats utilise pour les conversations et la dictée.",
       "fieldBackdrop": {
         "label": "Arrière-plan champ",
-        "description": "Affiche le champ de blé animé derrière l'app."
+        "description": "Une apparence plus détendue pour Oats."
       },
       "dictationButton": "Pendant la dictée",
       "instructionsDescription": "Comment le modèle réécrit chaque dictée. Le réglage par défaut convient à la plupart des gens.",

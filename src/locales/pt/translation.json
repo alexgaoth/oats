@@ -2314,7 +2314,7 @@
       "microphoneDescription": "O microfone que o Oats usa para conversas e ditado.",
       "fieldBackdrop": {
         "label": "Fundo de campo",
-        "description": "Mostra o campo de trigo animado atrás do app."
+        "description": "Um visual mais descontraído para o Oats."
       },
       "dictationButton": "Enquanto você dita",
       "instructionsDescription": "Como o modelo reescreve cada ditado. O padrão serve para a maioria das pessoas.",

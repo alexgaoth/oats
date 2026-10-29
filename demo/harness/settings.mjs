@@ -1,7 +1,8 @@
 // The settings a demo runs with, written to localStorage before the app reads
 // them (the settings store reads localStorage once, as it loads).
 //
-//   onboarding done, English, the work interface
+//   onboarding done, English, the work interface unless `field=1` (the field
+//   backdrop, Settings › General › Advanced)
 //   question cards on, read locally (no classifier model), auto-search off
 //   unless `autosearch=1` (the fake main process records the search instead
 //   of opening a browser: `window.oatsDemo.searches()`)
@@ -36,7 +37,7 @@ export function applyDemoSettings(params) {
     set("onboardingCompleted", "true");
   }
   set("uiLanguage", params.get("lang") || "en");
-  set("uiMode", "work");
+  set("uiMode", params.get("field") === "1" ? "field" : "work");
   set("theme", params.get("theme") === "dark" ? "dark" : "light");
   set("conversationDetail", VIEWS[params.get("view")] ?? "clean");
   set("conversationFlowView", params.get("flow") === "graph" ? "graph" : "lanes");

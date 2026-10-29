@@ -180,6 +180,32 @@ const SHOTS = [
     query: `tier=${tier}`,
     script: "await oatsDemo.settings('models')",
   })),
+  // Field mode (Settings › General › Advanced): the backdrop composed for each
+  // screen in front of it (src/components/field/fieldViews.ts).
+  { name: "field-home", query: "field=1", script: "" },
+  { name: "field-home-empty", query: "field=1&profile=empty", script: "" },
+  {
+    name: "field-conversations",
+    query: "field=1",
+    script: "await oatsDemo.show('conversations')",
+  },
+  {
+    name: "field-conversations-empty",
+    query: "field=1&profile=empty",
+    script: "await oatsDemo.show('conversations')",
+  },
+  {
+    name: "field-global",
+    query: "field=1",
+    script: "await oatsDemo.show('global'); await demo.wait(1500)",
+  },
+  { name: "field-record", query: "field=1", script: "await oatsDemo.open()" },
+  {
+    name: "field-live",
+    query: "field=1&demo=live&from=560&end=hold&view=calm",
+    script: "await demo.untilSeconds(563)",
+  },
+  { name: "field-settings", query: "field=1", script: "await oatsDemo.settings('general')" },
   {
     name: "speech-settings-chosen",
     query: "tier=ready&chosen=small",

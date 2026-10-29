@@ -93,6 +93,7 @@ import { flowCaption, flowViewOptions } from "./conversation/flowText";
 import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import GlobalConversations from "./global/GlobalConversations";
 import FieldBackdrop from "./field/FieldBackdrop";
+import { useFieldColumn } from "./field/fieldColumns";
 import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
@@ -534,6 +535,9 @@ function useElapsed(startedAt: number | null): number {
 
 function ConversationSurface() {
   const recording = useMeetingRecordingStore((s) => s.isRecording);
+  // Where the field mode backdrop keeps clear of (field/fieldColumns.ts).
+  const homeColumn = useFieldColumn("home");
+  const recordingColumn = useFieldColumn("recording");
   // Still true for a moment after Finish, while the last words since the final
   // pause are transcribed. The save below waits for them.
   const transcribing = useMeetingRecordingStore((s) => s.isTranscribing);
@@ -874,7 +878,10 @@ function ConversationSurface() {
       <section className="oats-surface flex min-h-0 flex-1 flex-col overflow-y-auto">
         {recording ? (
           // Capped in index.css, where the frame widens it (focus on record).
-          <div className="oats-record-column mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 px-8 py-6">
+          <div
+            ref={recordingColumn}
+            className="oats-record-column mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 px-8 py-6"
+          >
             {/* Announcements: a mark on its own, and the recording's health. */}
             <p aria-live="polite" className="sr-only">
               {markedAt !== null && sessionStartedAt !== null
@@ -1061,7 +1068,7 @@ function ConversationSurface() {
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">
+          <div ref={homeColumn} className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">
             <p aria-live="polite" role="status" className="sr-only">
               {justStopped ? t("oats.conversation.statusStopped") : ""}
             </p>
@@ -1455,6 +1462,10 @@ function IntelligenceViews({
 }) {
   const { t, i18n } = useTranslation();
   const notes = useNotes();
+  // Where the field mode backdrop keeps clear of (field/fieldColumns.ts).
+  const listColumn = useFieldColumn("conversations");
+  const globalColumn = useFieldColumn("global");
+  const recordColumn = useFieldColumn("record");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [tab, setTab] = useState<DetailTab>("summary");
   // Global conversations is a lens on the same conversations, not a fourth
@@ -1965,7 +1976,7 @@ function IntelligenceViews({
         key="reading"
         className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
+        <div ref={recordColumn} className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
           {/* The way back, and what can be done with the whole record. */}
           <div className="flex items-center justify-between gap-4">
             <BackButton onClick={() => setReading(false)} label={t("oats.shell.conversations")} />
@@ -2383,7 +2394,11 @@ function IntelligenceViews({
       </div>
 
       {view === "global" ? (
-        <div key="global" className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col">
+        <div
+          key="global"
+          ref={globalColumn}
+          className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col"
+        >
           <GlobalConversations
             onOpen={(noteId, segmentId) => {
               setSelectedId(noteId);
@@ -2395,7 +2410,7 @@ function IntelligenceViews({
           />
         </div>
       ) : (
-        <div key="list" className="oats-enter mx-auto w-full max-w-3xl px-8 pb-16">
+        <div key="list" ref={listColumn} className="oats-enter mx-auto w-full max-w-3xl px-8 pb-16">
           {/* Its line is kept while there is a query, so the list below does not
               move when a receipt arrives or changes. */}
           {searched && (
@@ -3834,13 +3849,14 @@ function SettingsSurface() {
   const page = shownSettingsPage(requested, dictationEnabled);
   const entry = SETTINGS_PAGES.find((item) => item.id === page) ?? SETTINGS_PAGES[0];
   const scroller = useRef<HTMLElement | null>(null);
+  const column = useFieldColumn("settings");
   // A new page starts at its top, not where the last one was scrolled to.
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
   }, [page]);
   return (
     <section ref={scroller} className="oats-surface relative min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-8 pb-16 pt-8">
+      <div ref={column} className="mx-auto w-full max-w-2xl px-8 pb-16 pt-8">
         <SettingsPageHeader title={t(entry.title)} description={t(entry.description)} />
         <Suspense
           fallback={

@@ -2309,7 +2309,7 @@
       "microphoneDescription": "Oats 用於對話與聽寫的麥克風。",
       "fieldBackdrop": {
         "label": "田野背景",
-        "description": "在應用程式後方顯示動態麥田。"
+        "description": "讓 Oats 的外觀更輕鬆愜意。"
       },
       "dictationButton": "聽寫時",
       "instructionsDescription": "模型如何改寫每段聽寫。預設設定適合大多數人。",

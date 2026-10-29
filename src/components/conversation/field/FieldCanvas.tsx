@@ -2,29 +2,35 @@ import { useEffect, useRef } from "react";
 import {
   BANDS,
   BIRDS,
-  HORIZON,
   INTRO_MS,
   MINKA,
   POINTER_RADIUS,
   SKY_BLOOM_ALPHA,
   SKY_BLUE,
   SKY_LIGHT_BOOST,
-  bandSpread,
+  aimPicture,
+  bandPlacement,
   bandStyle,
+  calmAt,
   createField,
+  defaultComposition,
   growthAt,
   minkaHalfWidthAt,
   mixRgb,
   parseHexColor,
+  pictureAt,
   rgbToCss,
   sceneFrame,
+  startPicture,
   windAt,
   type Field,
+  type FieldComposition,
   type FieldScene,
   type Rgb,
 } from "./fieldModel";
 import {
   FRAME_INTERVAL_MS,
+  MOVE_MS,
   createFieldClock,
   easeToward,
   fieldLoopState,
@@ -60,6 +66,10 @@ interface CanvasPalette {
   colors: string[];
   /** SKY_LIGHT_BOOST on paper, 1 on charcoal — mirrors FieldGL's warmScale test. */
   skyBoost: number;
+  /** Paper rather than charcoal: the sun is drawn, not the moon. */
+  light: boolean;
+  gold: Rgb;
+  ink: Rgb;
 }
 
 function readCanvasPalette(element: HTMLElement): CanvasPalette {
@@ -72,17 +82,74 @@ function readCanvasPalette(element: HTMLElement): CanvasPalette {
     parseHexColor(styles.getPropertyValue("--color-background")) ??
     ([1, 0.99, 0.97] as Rgb);
   const luminance = (c: Rgb) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const light = luminance(surface) > luminance(ink);
   return {
     colors: Array.from({ length: BANDS }, (_, band) =>
       rgbToCss(mixRgb(haze, gold, bandStyle(band).goldMix))
     ),
-    skyBoost: luminance(surface) > luminance(ink) ? SKY_LIGHT_BOOST : 1,
+    skyBoost: light ? SKY_LIGHT_BOOST : 1,
+    light,
+    gold,
+    ink,
   };
+}
+
+/** `rgb` at `alpha`, for a gradient stop. */
+function rgba([r, g, b]: Rgb, alpha: number): string {
+  const to255 = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
+  return `rgba(${to255(r)}, ${to255(g)}, ${to255(b)}, ${alpha})`;
+}
+
+/** The calm mask is drawn at a quarter of the canvas's size: it is all feather. */
+const MASK_SCALE = 0.25;
+
+/**
+ * The composition's calm as an alpha mask, for one `destination-out` draw over
+ * the finished frame. Built once per picture and size, from `calmAt`, the same
+ * distance the shaders compute; null when nothing is kept clear. The disc in
+ * the sky (`light`: the sun, else the moon) is left whole where it stands over
+ * the feather's outer half, as the shader leaves it.
+ */
+function calmMask(
+  picture: FieldComposition,
+  light: boolean,
+  width: number,
+  height: number,
+  cache: { key: string; canvas: HTMLCanvasElement } | null
+): { key: string; canvas: HTMLCanvasElement } | null {
+  if (picture.clear.feather <= 0 && picture.calmTop <= 0) return null;
+  const w = Math.max(1, Math.ceil(width * MASK_SCALE));
+  const h = Math.max(1, Math.ceil(height * MASK_SCALE));
+  const { clear } = picture;
+  const disc = light ? picture.sun : picture.moon;
+  const key = [w, h, clear.left, clear.top, clear.right, clear.bottom, clear.feather]
+    .concat(picture.calmTop, disc.x, disc.y, disc.r)
+    .map((n) => Math.round(n))
+    .join(",");
+  if (cache?.key === key) return cache;
+  const canvas = cache?.canvas ?? document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const image = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      const px = (x + 0.5) / MASK_SCALE;
+      const py = (y + 0.5) / MASK_SCALE;
+      let calm = calmAt(picture, px, py);
+      if (calm < 0.5 && disc.r > 0 && Math.hypot(px - disc.x, py - disc.y) < disc.r + 2) calm = 0;
+      image.data[(y * w + x) * 4 + 3] = Math.round(calm * 255);
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+  return { key, canvas };
 }
 
 export default function FieldCanvas({
   live,
   intensity,
+  composition,
   animate,
   visible,
   scene,
@@ -91,6 +158,8 @@ export default function FieldCanvas({
 }: {
   live: boolean;
   intensity: number;
+  /** The picture to draw (fieldModel.ts); a change eases there over MOVE_MS. */
+  composition?: FieldComposition;
   /** Whether the world moves. False on the reading surfaces: one settled frame
    *  and no loop at all. */
   animate: boolean;
@@ -137,6 +206,9 @@ export default function FieldCanvas({
   // Set by the drawing effect while the field is still: a still frame is drawn
   // once, so a resize has to draw it again or the old frame is stretched.
   const redrawRef = useRef<(() => void) | null>(null);
+  // The picture, and the move toward a new one, as in FieldGL.
+  const pictureRef = useRef(startPicture(composition ?? defaultComposition(intensity)));
+  const maskRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -184,15 +256,24 @@ export default function FieldCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // A new picture: moved to over MOVE_MS, or drawn as it is (see FieldGL).
+    const picture = aimPicture(
+      pictureRef.current,
+      composition ?? defaultComposition(intensity),
+      performance.now(),
+      reduced || !visible
+    );
+
     // See FieldGL: the world only moves on Conversation, for a user who wants
-    // motion, while somebody can see it. Everywhere else it is a photograph of
-    // itself.
-    const state = fieldLoopState({ animate, reduced, visible });
-    const still = state === "still";
+    // motion, while somebody can see it, and for the length of a move to
+    // another screen's picture. Everywhere else it is a photograph of itself.
+    const state = fieldLoopState({ animate, reduced, visible, easing: picture.at !== null });
+    // Still frames: no wind, no cursor. A move between pictures draws still
+    // frames too, so its last frame is the settled one.
+    const still = state === "still" || state === "easing";
 
     const field = (fieldRef.current ??= createField(BLADE_COUNT));
     const styles = Array.from({ length: BANDS }, (_, b) => bandStyle(b));
-    const spreads = Array.from({ length: BANDS }, (_, b) => bandSpread(b));
 
     // Read once, and again only when the theme changes — never per frame.
     paletteRef.current = readCanvasPalette(canvas);
@@ -278,9 +359,10 @@ export default function FieldCanvas({
       // explicit that faking the grain with noise looks cheap rather than
       // intentional. Better to omit the texture than to counterfeit it.
       // The scene stands on the canvas's bottom edge at its own scale.
+      const view = pictureAt(picture, performance.now(), MOVE_MS, reduced || !visible);
       const frame = sceneFrame(height, sceneHeight);
       const sceneH = frame.scale;
-      const horizonY = frame.y(HORIZON);
+      const horizonY = frame.y(view.horizon);
 
       // The recording's cleared sky (scenes "sky" and "scene"): a slate-blue
       // wash blooming from the top of the frame down toward the horizon,
@@ -295,7 +377,9 @@ export default function FieldCanvas({
           1,
           `rgba(${to255(SKY_BLUE[0])}, ${to255(SKY_BLUE[1])}, ${to255(SKY_BLUE[2])}, 0)`
         );
-        ctx.globalAlpha = Math.min(SKY_BLOOM_ALPHA * palette.skyBoost, 0.5) * grow * intensity;
+        const tone = palette.light ? view.skyTone : 1;
+        ctx.globalAlpha =
+          Math.min(SKY_BLOOM_ALPHA * palette.skyBoost * tone, 0.5) * grow * view.sky;
         ctx.fillStyle = bloom;
         ctx.fillRect(0, 0, width, horizonY);
       }
@@ -303,27 +387,71 @@ export default function FieldCanvas({
       const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
       sky.addColorStop(0, "transparent");
       sky.addColorStop(1, colors[BANDS - 1]);
-      ctx.globalAlpha = (0.1 + 0.05 * grow) * intensity;
+      ctx.globalAlpha = (0.1 + 0.05 * grow) * view.warmth;
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, width, horizonY);
 
       const earth = ctx.createLinearGradient(0, horizonY, 0, height);
       earth.addColorStop(0, colors[BANDS - 1]);
       earth.addColorStop(1, "transparent");
-      ctx.globalAlpha = (0.09 + 0.05 * grow) * intensity;
+      ctx.globalAlpha = (0.09 + 0.05 * grow) * view.warmth;
       ctx.fillStyle = earth;
       ctx.fillRect(0, horizonY, width, height - horizonY);
+
+      // The light's source, where the picture found room for all of it: a low
+      // honey sun in a soft glow on paper, a pale crescent moon on charcoal.
+      // Smooth here, as the rest of this renderer is.
+      if (palette.light && view.sun.r > 0.5) {
+        const { x, y, r } = view.sun;
+        const halo = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * 2.8);
+        halo.addColorStop(0, rgba(palette.gold, 0.32));
+        halo.addColorStop(1, rgba(palette.gold, 0));
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = halo;
+        ctx.fillRect(x - r * 2.8, y - r * 2.8, r * 5.6, r * 5.6);
+        const disc = ctx.createRadialGradient(x, y, 0, x, y, r);
+        disc.addColorStop(0, rgba(palette.gold, 0.9));
+        disc.addColorStop(0.55, rgba(palette.gold, 0.84));
+        disc.addColorStop(1, rgba(palette.gold, 0.62));
+        ctx.fillStyle = disc;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (!palette.light && view.moon.r > 0.5) {
+        const { x, y, r } = view.moon;
+        const pale = mixRgb(palette.ink, palette.gold, 0.16);
+        const halo = ctx.createRadialGradient(x, y, r, x, y, r * 2);
+        halo.addColorStop(0, rgba(pale, 0.06));
+        halo.addColorStop(1, rgba(pale, 0));
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = halo;
+        ctx.fillRect(x - r * 2, y - r * 2, r * 4, r * 4);
+        // The crescent: the disc less a smaller one shifted to the upper right,
+        // clipped to the disc so nothing of the second circle shows outside it.
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = rgba(pale, 0.05);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.arc(x + 0.42 * r, y - 0.3 * r, 0.84 * r, 0, Math.PI * 2, true);
+        ctx.fillStyle = rgba(pale, 0.78);
+        ctx.fill("evenodd");
+        ctx.restore();
+      }
 
       // The recording's farmhouse (scenes "minka" and "scene"): drawn from
       // the same half-width function as the shader, sampled into a path so
       // the concave irimoya sweep is the same curve in both renderers.
       // Smooth fade here; never counterfeit grain. Rides `grow`.
-      if (grow > 0.001 && (scene === "minka" || scene === "scene")) {
-        const cx = MINKA.x * width;
+      if (grow > 0.001 && (scene === "minka" || scene === "scene") && view.minkaX >= 0) {
+        const cx = view.minkaX * width;
         const top = MINKA.bodyH + MINKA.hipH + MINKA.gableH + MINKA.capH;
         const steps = 36;
 
-        ctx.globalAlpha = 0.45 * grow * intensity;
+        ctx.globalAlpha = 0.45 * grow * view.sky;
         ctx.fillStyle = colors[0];
         ctx.beginPath();
         // Up the right side, across the top, down the left.
@@ -348,14 +476,14 @@ export default function FieldCanvas({
       // positions as the shader's specks, from the same BIRDS constants.
       if (grow > 0.001 && scene === "scene" && !still) {
         ctx.strokeStyle = colors[0];
-        ctx.globalAlpha = 0.5 * grow * intensity;
+        ctx.globalAlpha = 0.5 * grow * view.sky;
         ctx.lineWidth = 1;
         for (let i = 0; i < BIRDS.count; i += 1) {
           const phase = (i * 0.618 + 0.21) % 1;
           const bx = (1.1 - ((time * BIRDS.speed + phase) % 1) * 1.2) * width;
           const byTop = BIRDS.yMin + ((phase * 7.31) % 1) * (BIRDS.yMax - BIRDS.yMin);
           // As high above the horizon as they fly in a scene the canvas's size.
-          const by = horizonY - (HORIZON - byTop - Math.sin(time * 0.7 + i) * 0.006) * sceneH;
+          const by = horizonY - (view.horizon - byTop - Math.sin(time * 0.7 + i) * 0.006) * sceneH;
           const wing = 3.2;
           const beat = 1.6 * Math.sin(time * 9 + i * 2.4);
           ctx.beginPath();
@@ -371,14 +499,25 @@ export default function FieldCanvas({
       line.addColorStop(0, "transparent");
       line.addColorStop(0.5, colors[0]);
       line.addColorStop(1, "transparent");
-      ctx.globalAlpha = 0.22 * intensity;
+      ctx.globalAlpha = 0.22 * view.warmth;
       ctx.fillStyle = line;
       ctx.fillRect(0, horizonY, width, 1);
 
       ctx.globalAlpha = 1;
       ctx.lineCap = "round";
 
+      // Last: the content's column, and the title band, kept clear of all of it.
+      const keepClear = () => {
+        maskRef.current = calmMask(view, palette.light, width, height, maskRef.current);
+        if (!maskRef.current) return;
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.drawImage(maskRef.current.canvas, 0, 0, width, height);
+        ctx.globalCompositeOperation = "source-over";
+      };
+
       if (grow <= 0.001) {
+        keepClear();
         ctx.globalAlpha = 1;
         return;
       }
@@ -387,6 +526,8 @@ export default function FieldCanvas({
       // Far to near, so nearer blades overlap the ones behind them.
       for (let band = 0; band < BANDS; band += 1) {
         const style = styles[band];
+        // Where this band stands under the picture's horizon.
+        const place = bandPlacement(band, view.horizon);
         const range = field.bands[band];
         ctx.strokeStyle = colors[band];
         ctx.lineWidth = style.width;
@@ -397,11 +538,11 @@ export default function FieldCanvas({
           if (growth <= 0) continue;
 
           const bladeHeight =
-            style.height * (0.86 + blade.spread * 0.28) * sceneH * blade.height * growth;
+            place.height * (0.86 + blade.spread * 0.28) * sceneH * blade.height * growth;
           if (bladeHeight < 1.5) continue;
 
           const baseX = blade.x * width + parallax * style.parallax;
-          const baseY = frame.y(style.baseY + blade.spread * spreads[band]);
+          const baseY = frame.y(place.baseY + blade.spread * place.spread);
 
           let bend = windAt(blade, time, growth) * bladeHeight * style.windScale * 0.3;
 
@@ -415,7 +556,7 @@ export default function FieldCanvas({
             }
           }
 
-          ctx.globalAlpha = style.alpha * growth * intensity;
+          ctx.globalAlpha = style.alpha * growth * view.wheat;
           ctx.beginPath();
           ctx.moveTo(baseX, baseY);
           ctx.quadraticCurveTo(
@@ -428,13 +569,31 @@ export default function FieldCanvas({
         }
       }
 
+      keepClear();
       ctx.globalAlpha = 1;
     };
 
-    if (still) {
+    if (state === "still") {
       draw(INTRO_MS);
       redrawRef.current = () => draw(INTRO_MS);
       return () => {
+        redrawRef.current = null;
+        themeObserver.disconnect();
+      };
+    }
+
+    // Moving to another screen's picture, with no wind: a still frame per
+    // vsync for MOVE_MS, the last of them the settled picture.
+    if (state === "easing") {
+      let easeFrame = 0;
+      const ease = () => {
+        draw(INTRO_MS);
+        easeFrame = picture.at !== null ? requestAnimationFrame(ease) : 0;
+      };
+      easeFrame = requestAnimationFrame(ease);
+      redrawRef.current = () => draw(INTRO_MS);
+      return () => {
+        cancelAnimationFrame(easeFrame);
         redrawRef.current = null;
         themeObserver.disconnect();
       };
@@ -481,7 +640,7 @@ export default function FieldCanvas({
       window.clearTimeout(timer);
       themeObserver.disconnect();
     };
-  }, [live, intensity, animate, visible, scene, sceneHeight, reduced]);
+  }, [live, intensity, composition, animate, visible, scene, sceneHeight, reduced]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />;
 }
