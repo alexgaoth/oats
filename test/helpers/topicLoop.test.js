@@ -534,8 +534,8 @@ test("the fast model is the first this key can use, and an unknown answer is ask
     if (answer instanceof Error) throw answer;
     return answer;
   };
-  const choose = loopModule.chooseFastModel;
-  assert.deepEqual(loopModule.FAST_MODELS, ["gpt-6-luna", "gpt-5.6-luna"]);
+  const models = ["gpt-6-luna", "gpt-5.6-luna"];
+  const choose = (available) => loopModule.chooseFastModel(available, models);
   assert.deepEqual(await choose(answers({ "gpt-6-luna": true })), {
     model: "gpt-6-luna",
     settled: true,
@@ -553,14 +553,22 @@ test("the fast model is the first this key can use, and an unknown answer is ask
     model: null,
     settled: false,
   });
+  // With no list, OpenAI's check models (topicModels.mjs), best first.
+  const first = loopModule.FAST_MODELS[0];
+  assert.deepEqual(await loopModule.chooseFastModel(answers({ [first]: true })), {
+    model: first,
+    settled: true,
+  });
 });
 
-test("the check runs only when the writing model is OpenAI's own", () => {
+test("the check runs only when the writing model is OpenAI's or Anthropic's own", () => {
   const route = loopModule.loopRouteFor;
   assert.equal(route({ mode: "providers", config: { provider: "openai" } }), true);
+  assert.equal(route({ mode: "providers", config: { provider: "anthropic" } }), true);
   for (const other of [
-    { mode: "providers", config: { provider: "anthropic" } },
     { mode: "providers", config: { provider: "gemini" } },
+    { mode: "providers", config: { provider: "groq" } },
+    { mode: "providers", config: { provider: "openrouter" } },
     { mode: "providers", config: { provider: "custom" } },
     { mode: "local", config: { provider: "local" } },
     { mode: "lan", config: { provider: "openai" } },

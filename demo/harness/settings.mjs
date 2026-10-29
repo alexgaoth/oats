@@ -12,6 +12,9 @@
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
 //
 // Page parameters choose the rest: `firstrun=1` (the setup screen),
+// `chosen=<model>` (a speech model the person chose), `speech=<language>` (the
+// language Oats listens for, `auto` or `de` for example; English by default),
+// `noticed=1` (the download's notice was shown before),
 // `theme=light|dark`, `view=calm|words`
 // (the recording view), `flow=lanes|graph` (the flow card),
 // `connections=lanes|graph` (the reading view's Connections tab).
@@ -42,6 +45,24 @@ export function applyDemoSettings(params) {
   set("conversationAideModel", "");
   set("conversationAutoSearchEnabled", params.get("autosearch") === "1" ? "true" : "false");
   set("meetingUseLocalWhisper", "true");
+  // The speech model follows the default, as it does for somebody who never
+  // chose one, unless `chosen=<model>` stores a choice (speechTier.mjs).
+  if (params.get("chosen")) set("whisperModel", params.get("chosen"));
+  else localStorage.removeItem("whisperModel");
+  // The one-time notice of turbo's download shows again on each page, unless
+  // `noticed=1` says it was shown before.
+  if (params.get("noticed") === "1") set("speechUpgradeNoticed", "1");
+  else localStorage.removeItem("speechUpgradeNoticed");
+  // The speech language: English unless `speech=` names another. With "auto",
+  // the speech model stays small (speechTier.mjs). With any language but
+  // English (`speech=de`), the board links conversations by words, as it did
+  // before it read meaning.
+  if (params.get("speech")) {
+    set("preferredLanguage", params.get("speech"));
+    set("speechLanguageDefaultMigrated", "1");
+  } else {
+    localStorage.removeItem("preferredLanguage");
+  }
   if (params.get("loop") === "1") {
     set("cleanupMode", "providers");
     set("cleanupProvider", "openai");

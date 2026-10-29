@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { cn } from "../lib/utils";
+import { Button } from "../ui/button";
+import { cancelTurbo, useSpeechTier } from "../../hooks/useSpeechTier";
 import { selectResolvedNoteFormatting, useSettingsStore } from "../../stores/settingsStore";
 import { useStreamingProvidersStore } from "../../stores/streamingProvidersStore";
 import { getProviderDisplayName, getTranscriptionProvider } from "../../models/ModelRegistry";
@@ -148,6 +151,40 @@ export function OnDeviceFooter({ className }: { className?: string }) {
           {line}
         </p>
       ))}
+      <SpeechUpgradeLine />
+    </div>
+  );
+}
+
+/**
+ * Turbo's download, where the request count it adds to is: the one download
+ * Oats starts by itself (speechTier.mjs), so it is visible wherever the
+ * person is, and it can be stopped from here. While a conversation is
+ * recorded the sidebar is aside, so this never competes with the room.
+ */
+function SpeechUpgradeLine() {
+  const { t } = useTranslation();
+  const { status, percent } = useSpeechTier();
+  if (status !== "downloading" && status !== "checking") return null;
+  return (
+    <div className="mt-1 flex min-h-6 items-center gap-1">
+      <p className="min-w-0 flex-1 text-balance break-words">
+        {status === "downloading"
+          ? t("oats.speechTier.downloadingShort", { percent })
+          : t("oats.speechTier.checking")}
+      </p>
+      {status === "downloading" && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t("oats.speechTier.cancelDownload")}
+          title={t("oats.speechTier.cancelDownload")}
+          onClick={cancelTurbo}
+          className="text-muted-foreground"
+        >
+          <X aria-hidden="true" />
+        </Button>
+      )}
     </div>
   );
 }

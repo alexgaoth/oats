@@ -31,6 +31,7 @@ import { boardTabs, conversationsInTab } from "./boardData";
 import { useBoardStore } from "./boardStore";
 import { highlightSource, useGlobalHighlight } from "./highlightStore";
 import { useBoardConversations, useTabGraph } from "./useBoardData";
+import { useTopicVectors } from "./topicVectors";
 import { groupDisplayName, useConversationGroups } from "../../stores/conversationGroupStore";
 import { ArcTimelineWidget, ForceGraphWidget, SubjectsWidget } from "./widgets";
 
@@ -82,7 +83,8 @@ export default function GlobalConversations({
   const tab = tabs.find((item) => item.id === activeTab) ?? tabs[0];
 
   const inTab = useMemo(() => conversationsInTab(conversations, tab), [conversations, tab]);
-  const graph = useTabGraph(inTab);
+  const meaning = useTopicVectors(conversations);
+  const graph = useTabGraph(inTab, meaning);
   const days = useMemo(() => conversationsByDay(inTab), [inTab]);
   const highlight = useMemo(() => highlightSource(graph, graph.subjects, days), [graph, days]);
   const board = useRef<BoardHandle | null>(null);

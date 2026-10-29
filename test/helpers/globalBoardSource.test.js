@@ -36,7 +36,11 @@ test("an open question is drawn with the one question mark, ringed in honey when
   const widget = read("src/components/global/OpenQuestionsWidget.tsx");
   assert.match(widget, /import \{ StateMark \} from "\.\.\/conversation\/ConversationSignalRail";/);
   assert.match(widget, /<StateMark state=\{row\.state\} className="" \/>/);
-  assert.match(widget, /honey && "ring-2 ring-primary"/, "lit as a chart lights a dot: a honey ring");
+  assert.match(
+    widget,
+    /honey && "ring-2 ring-primary"/,
+    "lit as a chart lights a dot: a honey ring"
+  );
   assert.match(widget, /t\("questionCard\.state\.denied"\)/, "nobody knew is said, not only drawn");
 });
 
@@ -168,4 +172,71 @@ test("a label forced on top covers the labels it lands on whole, never leaving a
     named.indexOf("coverLabel(") < named.indexOf("paintLabels(ctx, named"),
     "the labels underneath are covered before the forced one is drawn"
   );
+});
+
+test("the board links by meaning when it can, by a cloud check where there is one, and by words otherwise", () => {
+  const data = read("src/components/global/useBoardData.ts");
+  assert.match(data, /const meaning = ready && vectorOf \? vectorOf : null;/);
+  assert.match(
+    data,
+    /meaning \|\| checks\.size\s*\? linkThreads\(withTopics, \{ vectorOf: meaning, checks \}\)\s*: subjectThreads\(withTopics\)/,
+    "words until the vectors are there, and whenever they cannot be"
+  );
+  assert.match(data, /linkCheck: readLinkCheck\(note\.conversation_links\)/);
+  assert.match(data, /note\.conversation_links \?\? ""/, "a new check redraws the conversation");
+  const board = read("src/components/global/GlobalConversations.tsx");
+  assert.match(board, /const meaning = useTopicVectors\(conversations\);/);
+  assert.match(board, /useTabGraph\(inTab, meaning\)/);
+  const vectors = read("src/components/global/topicVectors.ts");
+  assert.match(
+    vectors,
+    /state\.preferredLanguage === "en"/,
+    "the bundled model reads English: another language links by words"
+  );
+  assert.match(
+    vectors,
+    /window\.electronAPI\?\.embedTexts/,
+    "the vectors are the app's own model's"
+  );
+  assert.doesNotMatch(vectors, /fetch\(/, "and nothing leaves the computer");
+});
+
+test("the cloud link check sends only what the summary's rule allows, by the summary's route", () => {
+  const store = read("src/stores/conversationLinkStore.ts");
+  assert.match(
+    store,
+    /const provider = linkProviderFor\(route\)/,
+    "only a cloud provider with a link model"
+  );
+  assert.match(store, /reasoningService\.processText\(prompt\.text, model, null, config\)/);
+  assert.match(store, /\.\.\.route\.config,/, "the summary's own route and key");
+  assert.doesNotMatch(store, /fetch\(/, "no connection of its own");
+  assert.doesNotMatch(
+    store,
+    /\.transcript\b|\bnote\.content\b/,
+    "never a transcript: the summary's opening and topic names"
+  );
+  assert.match(store, /if \(!candidates\.length\) \{/, "nothing alike enough: nothing is sent");
+  const prompt = read("src/helpers/remoteLinks.mjs");
+  assert.match(prompt, /describe\(key, item\)/, "earlier conversations go under letters");
+  const actions = read("src/stores/actionProcessingStore.ts");
+  assert.match(
+    actions,
+    /await sortConversationIntoGroup\(noteId, \{[\s\S]{0,600}await checkConversationLinks\(noteId, \{\s*modelId,\s*mode: noteFormatting\.mode,/,
+    "after the summary and its group, never instead of them"
+  );
+});
+
+test("a summary records its route, and a check sends only what that provider summarized", () => {
+  const actions = read("src/stores/actionProcessingStore.ts");
+  assert.match(
+    actions,
+    /enhanced_content: enhanced,[\s\S]{0,400}summary_route: summaryRouteKey\(\{\s*mode: options\.isCloudMode \? "cloud" : noteFormatting\.mode,\s*provider: providerOverrides\.provider,/,
+    "written with the summary, in the same update"
+  );
+  const store = read("src/stores/conversationLinkStore.ts");
+  assert.match(store, /item\.created_at < note\.created_at &&\s*sendableTo\(provider, item\)/);
+  const database = read("src/helpers/database.js");
+  assert.match(database, /ALTER TABLE notes ADD COLUMN summary_route TEXT/);
+  assert.match(database, /"conversation_links",\s*"summary_route",/, "updateNote may write both");
 });

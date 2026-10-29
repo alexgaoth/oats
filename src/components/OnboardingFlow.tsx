@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
-import { AlertTriangle, Check, Keyboard, Languages, Mic, Shield } from "lucide-react";
+import { AlertTriangle, AudioLines, Check, Keyboard, Languages, Mic, Shield } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Kbd } from "./ui/kbd";
@@ -15,6 +15,7 @@ import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
 import { useSettings } from "../hooks/useSettings";
 import { useSettingsStore } from "../stores/settingsStore";
+import { formatMegabytes, useSpeechTier } from "../hooks/useSpeechTier";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
@@ -28,7 +29,7 @@ interface OnboardingFlowProps {
 }
 
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [currentStep, setCurrentStep, removeCurrentStep] = useLocalStorage(
     "onboardingCurrentStep",
@@ -73,6 +74,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     updateTranscriptionSettings,
   } = useSettings();
   const languageTitleId = useId();
+  // On a Mac whose GPU measured fast enough, Whisper Turbo downloads after
+  // setup (speechTier.mjs): said here, before it happens. The row appears
+  // when the speed check is done, a second or two after launch.
+  const speechTier = useSpeechTier();
+  const turboAfterSetup =
+    useLocalWhisper &&
+    localTranscriptionProvider === "whisper" &&
+    speechTier.followsDefault &&
+    speechTier.turboIsDefault &&
+    !speechTier.tier?.turbo?.installed &&
+    !speechTier.tier?.turbo?.declined;
 
   // Onboarding edits only the primary dictation hotkey; extra bindings are
   // preserved via withExtraDictationHotkeys.
@@ -355,6 +367,23 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   onChange={(value) => updateTranscriptionSettings({ preferredLanguage: value })}
                 />
               </div>
+              {turboAfterSetup && (
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <AudioLines aria-hidden="true" className="size-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t("onboarding.speechModel.title")}
+                    </p>
+                    <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
+                      {t("onboarding.speechModel.description", {
+                        size: formatMegabytes(speechTier.sizeBytes, i18n.language),
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
               {shortcut && (
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">

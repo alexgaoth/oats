@@ -22,6 +22,37 @@ export interface OnDeviceStatus {
   speech: { model: string; backend: string | null } | null;
 }
 
+/** What this Mac can run, as main measured it (deviceTier.js). */
+export interface DeviceTierSnapshot {
+  device: {
+    platform: string;
+    arch: string;
+    /** `machdep.cpu.brand_string`, e.g. "Apple M5 Pro". */
+    chip: string | null;
+    gpuCores: number | null;
+    memoryBytes: number | null;
+  } | null;
+  /** The speed check's clip with `small.en`, in ms (Apple Silicon only). */
+  smallClipMs: number | null;
+  /** The same clip with turbo, once it is on disk. */
+  turboClipMs: number | null;
+  measuredAt: string | null;
+  /** The clip is being read now. */
+  measuring: boolean;
+  turbo: {
+    model: string;
+    sizeBytes: number | null;
+    installed: boolean;
+    /** The person cancelled the download or deleted the model. */
+    declined: boolean;
+    downloading: { receivedBytes: number; totalBytes: number | null } | null;
+    /** Its checksum and its own clip time, after the download. */
+    checking: boolean;
+    /** Why the last download failed, or null. */
+    failed: string | null;
+  };
+}
+
 export type TranscriptionErrorCode =
   | "TIMEOUT"
   | "NETWORK"
@@ -84,6 +115,12 @@ export interface NoteItem {
   // How loud each second was, written at Finish (helpers/conversationLoudness.mjs).
   // Optional: absent for conversations recorded before it was kept.
   conversation_loudness?: string | null;
+  // A cloud model's link check, as JSON (helpers/remoteLinks.mjs). Optional:
+  // absent unless the writing model is a cloud provider.
+  conversation_links?: string | null;
+  // Which route and provider wrote the summary ("providers:openai", "local:";
+  // helpers/remoteLinks.mjs). Absent for summaries written before it was kept.
+  summary_route?: string | null;
   // Which bundled example conversation this is (helpers/sampleConversations.mjs),
   // or null for a conversation somebody recorded.
   sample_id?: string | null;
@@ -472,6 +509,16 @@ declare global {
       // The sidebar's footer: pulled once on mount, then pushed on every change.
       getOnDeviceStatus?: () => Promise<OnDeviceStatus>;
       onOnDeviceStatus?: (callback: (status: OnDeviceStatus) => void) => () => void;
+      // What this Mac can run, and turbo's download (helpers/deviceTier.js):
+      // pulled once, then pushed. `startSpeechUpgrade` fetches turbo when the
+      // rule in main agrees; `force` is the person asking again in Settings.
+      getDeviceTier?: () => Promise<DeviceTierSnapshot | null>;
+      onDeviceTier?: (callback: (tier: DeviceTierSnapshot) => void) => () => void;
+      startSpeechUpgrade?: (options: {
+        language: string;
+        force?: boolean;
+      }) => Promise<DeviceTierSnapshot>;
+      cancelSpeechUpgrade?: () => Promise<DeviceTierSnapshot>;
       // The context agent (helpers/contextAgentIpc.js): the user's Claude Code
       // checks a question against GitHub, Linear, Notion and Slack, read-only.
       // `sources` are the services it read, as labels ("Notion"). `busy` means
@@ -693,6 +740,8 @@ declare global {
           conversation_topics?: string | null;
           conversation_marks?: string | null;
           conversation_loudness?: string | null;
+          conversation_links?: string | null;
+          summary_route?: string | null;
         }
       ) => Promise<{ success: boolean; note?: NoteItem }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;
@@ -1013,6 +1062,8 @@ declare global {
         agentName: string | null,
         config: any
       ) => Promise<{ success: boolean; text?: string; error?: string }>;
+      /** True or false when Anthropic says whether the key can use the model; null when it could not be told. */
+      anthropicModelAvailable?: (modelId: string) => Promise<boolean | null>;
 
       // Enterprise reasoning (Bedrock, Azure, Vertex)
       processEnterpriseReasoning: (

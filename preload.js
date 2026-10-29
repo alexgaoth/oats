@@ -322,6 +322,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => (_event, status) => callback(status)
   ),
 
+  // What this Mac can run, and turbo's download (deviceTier.js). Pulled once,
+  // then pushed.
+  getDeviceTier: () => ipcRenderer.invoke("get-device-tier"),
+  onDeviceTier: registerListener("device-tier", (callback) => (_event, tier) => callback(tier)),
+  startSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-start", options),
+  cancelSpeechUpgrade: () => ipcRenderer.invoke("speech-upgrade-cancel"),
+
   // The context agent (contextAgentIpc.js): the user's Claude Code checks a
   // question against GitHub, Linear, Notion and Slack, read-only.
   contextAgentStatus: () => ipcRenderer.invoke("context-agent-status"),
@@ -559,6 +566,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Anthropic reasoning
   processAnthropicReasoning: (text, modelId, agentName, config) =>
     ipcRenderer.invoke("process-anthropic-reasoning", text, modelId, agentName, config),
+  // Whether the Anthropic key can use a model (GET /v1/models/{id}, no conversation text)
+  anthropicModelAvailable: (modelId) => ipcRenderer.invoke("anthropic-model-available", modelId),
 
   // Enterprise reasoning (Bedrock, Azure, Vertex) — runs in main process so
   // Node-only SDKs (AWS/Azure/Google credential providers) can resolve.
