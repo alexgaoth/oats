@@ -247,6 +247,8 @@ const SHOTS = [
     ready: "h1",
     script: [
       "await demo.press('Allow'); await demo.wait(400);",
+      // Where Oats thinks: On this Mac, as it comes.
+      "await demo.press('Continue'); await demo.wait(400);",
       "await demo.press('Get started');",
       "await demo.until(() => document.querySelector('section[aria-label] h1'));",
       ...Array.from({ length: slide }, () => "await demo.press('Next');"),
@@ -263,6 +265,8 @@ const SHOTS = [
     reducedMotion: true,
     script: [
       "await demo.press('Allow'); await demo.wait(400);",
+      // Where Oats thinks: On this Mac, as it comes.
+      "await demo.press('Continue'); await demo.wait(400);",
       "await demo.press('Get started');",
       "await demo.until(() => document.querySelector('section[aria-label] h1'));",
       "await demo.press('Next');",
