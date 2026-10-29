@@ -74,6 +74,17 @@
  *   --normalize-rms an experiment, not the app: raise each segment to this RMS
  *                  before it is sent.
  *
+ * Besides every word, three kinds of words are scored on their own, as the
+ * share of them the transcript has (recall): the **content words**, what is
+ * left of the reference once fillers, backchannels and stopwords are gone, by
+ * the app's own lists (`contentWords` in helpers/conversationTopics.mjs): the
+ * words topics, summaries and questions are made of. Whisper drops "yeah" and
+ * "mm-hmm" on purpose, and every word counts them. Then, where the reference
+ * marks them (AMI's named entities), the **numbers** (amounts, measures,
+ * percentages, dates, times and durations) and the **names** (people,
+ * organisations and places), each also as whole mentions: a price with one
+ * word wrong is a wrong price.
+ *
  * Words are scored after the normalisation the Whisper paper uses for English,
  * in small: case and punctuation dropped, the fillers (um, uh, mm, hmm and the
  * like) removed on both sides, hyphens split, digits spelled out, and AMI's
@@ -526,6 +537,63 @@ function decodeEntities(text) {
     .replace(/&amp;/g, "&");
 }
 
+/**
+ * AMI's named-entity types, each by the class it belongs to at the top of the
+ * ontology: ENAMEX (people, organisations, places), NUMEX (amounts, measures,
+ * percentages, counts), TIMEX (dates, times, durations), and the design
+ * meetings' own (ARTEFACT, COLOUR, SHAPE, MATERIALS).
+ */
+function amiEntityClasses(dir) {
+  const file = path.join(dir, "ontologies", "ne-types.xml");
+  if (!fs.existsSync(file)) return null;
+  const classes = new Map();
+  const open = [];
+  for (const [tag] of fs
+    .readFileSync(file, "latin1")
+    .matchAll(/<\/ne-type>|<ne-type\b[^>]*?\/?>/g)) {
+    if (tag === "</ne-type>") {
+      open.pop();
+      continue;
+    }
+    const id = /nite:id="([^"]+)"/.exec(tag)?.[1];
+    const name = /\bname="([^"]+)"/.exec(tag)?.[1];
+    // open[0] is the root; open[1], once pushed, the class every type below it belongs to.
+    if (id && open.length >= 1) classes.set(id, open.length === 1 ? name : open[1]);
+    if (!tag.endsWith("/>")) open.push(name);
+  }
+  return classes;
+}
+
+/** Which of the scored kinds an AMI entity class counts as, if any. */
+const ENTITY_KIND = { ENAMEX: "names", NUMEX: "numbers", TIMEX: "numbers" };
+
+/**
+ * The named entities of one speaker's words file, as a map from a word's place
+ * in that file to its entity: `{ kind, span }`. A NITE range `id(a)..id(b)`
+ * covers every element between the two, in the order of the words file.
+ */
+function loadAmiEntities(dir, meeting, speaker, order, classes) {
+  const file = path.join(dir, "namedEntities", `${meeting}.${speaker}.ne.xml`);
+  const out = new Map();
+  if (!classes || !fs.existsSync(file)) return out;
+  const xml = fs.readFileSync(file, "latin1");
+  for (const [block] of xml.matchAll(/<named-entity\b[\s\S]*?<\/named-entity>/g)) {
+    const type = /ne-types\.xml#id\(([^)]+)\)/.exec(block)?.[1];
+    const kind = ENTITY_KIND[classes.get(type)];
+    if (!kind) continue;
+    const span = /nite:id="([^"]+)"/.exec(block)?.[1];
+    for (const [, from, to] of block.matchAll(
+      /<nite:child href="[^#"]*#id\(([^)]+)\)(?:\.\.id\(([^)]+)\))?"/g
+    )) {
+      const a = order.get(from);
+      const b = order.get(to ?? from);
+      if (a === undefined || b === undefined) continue;
+      for (let at = a; at <= b; at += 1) out.set(at, { kind, span });
+    }
+  }
+  return out;
+}
+
 /** Every word of an AMI meeting, with its speaker and its time in the recording. */
 function loadAmi(dir, meeting) {
   const wordsDir = path.join(dir, "words");
@@ -533,11 +601,16 @@ function loadAmi(dir, meeting) {
     .readdirSync(wordsDir)
     .filter((name) => name.startsWith(`${meeting}.`) && name.endsWith(".words.xml"));
   if (!files.length) throw new Error(`no AMI words for ${meeting} in ${wordsDir}`);
+  const classes = amiEntityClasses(dir);
   const words = [];
   const nonSpeech = [];
   for (const file of files.sort()) {
     const speaker = file.split(".")[1];
     const xml = fs.readFileSync(path.join(wordsDir, file), "latin1");
+    // Every element's place in the file, for the entities' ranges.
+    const order = new Map();
+    for (const [, id] of xml.matchAll(/nite:id="([^"]+)"/g)) order.set(id, order.size);
+    const entities = loadAmiEntities(dir, meeting, speaker, order, classes);
     for (const match of xml.matchAll(
       /<(w|vocalsound|nonvocalsound)\b([^>]*?)(?:\/>|>([^<]*)<\/\1>)/g
     )) {
@@ -560,6 +633,7 @@ function loadAmi(dir, meeting) {
         end: Math.max(start, end),
         text: decodeEntities(body || "").trim(),
         truncated: read("trunc") === "true",
+        entity: entities.get(order.get(read("nite:id"))) ?? null,
       });
     }
   }
@@ -752,6 +826,10 @@ function align(reference, hypothesis) {
     [previous, current] = [current, previous];
   }
   const heard = new Uint8Array(n);
+  // Which transcript words match a reference word, and how many words were
+  // inserted before each reference word (the last slot: after them all).
+  const matched = new Uint8Array(m);
+  const inserted = new Uint32Array(n + 1);
   let substitutions = 0;
   let deletions = 0;
   let insertions = 0;
@@ -759,6 +837,7 @@ function align(reference, hypothesis) {
     const move = i === 0 ? 3 : j === 0 ? 2 : back[i * (m + 1) + j];
     if (move === 0) {
       heard[i - 1] = 1;
+      matched[j - 1] = 1;
       i -= 1;
       j -= 1;
     } else if (move === 1) {
@@ -770,16 +849,133 @@ function align(reference, hypothesis) {
       i -= 1;
     } else {
       insertions += 1;
+      inserted[i] += 1;
       j -= 1;
     }
   }
   return {
     heard,
+    matched,
+    inserted,
     substitutions,
     deletions,
     insertions,
     errors: substitutions + deletions + insertions,
   };
+}
+
+/**
+ * Whether a scored word is a content word: one the app's topic tracker keeps
+ * (`tokenize` in helpers/conversationTopics.mjs gives it a key), so not a
+ * filler, a backchannel ("yeah", "okay", "right"), a function word, a light
+ * verb ("get", "know", "think") or a contraction. Loaded once, before scoring.
+ */
+let contentKey = null;
+async function loadContentWords() {
+  if (contentKey) return contentKey;
+  const { tokenize } = await import("../src/helpers/conversationTopics.mjs");
+  const cache = new Map();
+  contentKey = (token) => {
+    if (!cache.has(token)) cache.set(token, tokenize(token)[0]?.key ?? null);
+    return cache.get(token);
+  };
+  return contentKey;
+}
+
+/**
+ * The words that matter, scored on one alignment: the content words, and the
+ * numbers and names the reference marks, as recall (the share of them heard);
+ * and the transcript's own content words, as precision (the share of them
+ * that match a reference word), so a change that hears more by inventing more
+ * shows it. Counts, so recordings can be pooled.
+ */
+function wordsThatMatter(scored, hypothesis, alignment) {
+  if (!contentKey) throw new Error("loadContentWords() first");
+  const out = {
+    content: { words: 0, heard: 0 },
+    numbers: { words: 0, heard: 0, mentions: 0, wholeMentions: 0 },
+    names: { words: 0, heard: 0, mentions: 0, wholeMentions: 0 },
+    transcriptContent: { words: 0, matched: 0 },
+  };
+  const mentions = new Map();
+  scored.forEach((x, k) => {
+    const heard = alignment.heard[k];
+    if (contentKey(x.token)) {
+      out.content.words += 1;
+      out.content.heard += heard;
+    }
+    const entity = x.word.entity;
+    if (entity) {
+      out[entity.kind].words += 1;
+      out[entity.kind].heard += heard;
+      const mention = mentions.get(entity.span) ?? { kind: entity.kind, whole: true };
+      mention.whole = mention.whole && heard === 1;
+      mentions.set(entity.span, mention);
+    }
+  });
+  for (const mention of mentions.values()) {
+    out[mention.kind].mentions += 1;
+    if (mention.whole) out[mention.kind].wholeMentions += 1;
+  }
+  hypothesis.forEach((token, j) => {
+    if (!contentKey(token)) return;
+    out.transcriptContent.words += 1;
+    out.transcriptContent.matched += alignment.matched[j];
+  });
+  return out;
+}
+
+/** Shares from the counts of `wordsThatMatter`, pooled or not. */
+function matterShares(counts) {
+  const share = ({ words, heard }) => pct(heard, words);
+  return {
+    contentRecall: share(counts.content),
+    contentWords: counts.content.words,
+    numberRecall: share(counts.numbers),
+    numberWords: counts.numbers.words,
+    wholeNumbers: pct(counts.numbers.wholeMentions, counts.numbers.mentions),
+    numberMentions: counts.numbers.mentions,
+    nameRecall: share(counts.names),
+    nameWords: counts.names.words,
+    wholeNames: pct(counts.names.wholeMentions, counts.names.mentions),
+    nameMentions: counts.names.mentions,
+    contentPrecision: pct(counts.transcriptContent.matched, counts.transcriptContent.words),
+  };
+}
+
+/** Counts of `wordsThatMatter` added up over recordings. */
+function addMatter(list) {
+  const total = {};
+  for (const counts of list) {
+    for (const [kind, values] of Object.entries(counts)) {
+      total[kind] ??= {};
+      for (const [k, v] of Object.entries(values)) total[kind][k] = (total[kind][k] || 0) + v;
+    }
+  }
+  return total;
+}
+
+/**
+ * A recording's scored reference words, in time order, and its transcript's,
+ * aligned: the segments' texts in the order they were said. Without segments,
+ * the reference alone.
+ */
+function scoreTranscript(words, segments) {
+  const scored = [];
+  for (const w of words) {
+    if (w.truncated) continue;
+    for (const token of normalise(w.text)) scored.push({ token, word: w });
+  }
+  if (!segments) return { scored, hypothesis: [], alignment: null };
+  const hypothesis = [];
+  for (const s of [...segments].sort((a, b) => a.start - b.start)) {
+    hypothesis.push(...normalise(s.text));
+  }
+  const alignment = align(
+    scored.map((x) => x.token),
+    hypothesis
+  );
+  return { scored, hypothesis, alignment };
 }
 
 /** Total length of a set of [from, to] intervals once merged. */
@@ -1090,23 +1286,9 @@ async function replay(recording, backend, ablation) {
     });
 
     // Scored words, in time order.
-    const scored = [];
-    words.forEach((w, k) => {
-      if (w.truncated) return;
-      for (const token of normalise(w.text)) scored.push({ token, word: w, fate: fate[k] });
-    });
-    const hypothesis = [];
-    if (backend) {
-      for (const s of [...segments].sort((a, b) => a.start - b.start)) {
-        hypothesis.push(...normalise(s.text));
-      }
-    }
-    const alignment = backend
-      ? align(
-          scored.map((x) => x.token),
-          hypothesis
-        )
-      : null;
+    const { scored, hypothesis, alignment } = scoreTranscript(words, backend ? segments : null);
+    const fateOf = new Map(words.map((w, k) => [w, fate[k]]));
+    for (const x of scored) x.fate = fateOf.get(x.word);
 
     const stageCounts = (filter) => {
       const out = {};
@@ -1244,6 +1426,8 @@ async function replay(recording, backend, ablation) {
         reached.filter((v) => v === 1).length,
         reached.length
       );
+      summary.reference.matterCounts = wordsThatMatter(scored, hypothesis, alignment);
+      Object.assign(summary.reference, matterShares(summary.reference.matterCounts));
     }
     if (ablation) {
       // The same segments read without VAD: what VAD costs speech, and what it
@@ -1381,6 +1565,9 @@ function totals(summaries) {
           words
         ),
       });
+      const matter = addMatter(refs.map((x) => x.matterCounts));
+      out.reference.matterCounts = matter;
+      Object.assign(out.reference, matterShares(matter));
     }
     // Voices by how loud they reach the microphone, loudest first in each
     // meeting: whether the far end of the table is heard.
@@ -1419,12 +1606,23 @@ function table(summaries) {
       String(s.segments),
       r.coverage ?? "",
       r.recovered ?? "",
+      r.contentRecall ?? "",
       r.wer ?? "",
       r.falseSegments ?? "",
       s.realTimeFactor ?? "",
     ];
   });
-  const head = ["recording", "s", "segments", "coverage%", "recovered%", "WER%", "false", "RTF"];
+  const head = [
+    "recording",
+    "s",
+    "segments",
+    "coverage%",
+    "recovered%",
+    "content%",
+    "WER%",
+    "false",
+    "RTF",
+  ];
   const widths = head.map((h, k) =>
     Math.max(h.length, ...rows.map((row) => String(row[k]).length))
   );
@@ -1433,6 +1631,7 @@ function table(summaries) {
 }
 
 async function main() {
+  await loadContentWords();
   const backend = SEGMENT_ONLY ? null : CLOUD ? startCloud(CLOUD) : await startLocal(VAD);
   const ablation = !SEGMENT_ONLY && !CLOUD && ABLATE_VAD && VAD ? await startLocal(false) : null;
   if (backend) {
@@ -1476,4 +1675,13 @@ if (require.main === module) {
   });
 }
 
-module.exports = { normalise, align, loadAmi };
+module.exports = {
+  normalise,
+  align,
+  loadAmi,
+  loadContentWords,
+  scoreTranscript,
+  wordsThatMatter,
+  matterShares,
+  addMatter,
+};
