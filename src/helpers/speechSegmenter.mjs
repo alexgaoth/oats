@@ -97,6 +97,8 @@ export class SpeechSegmenter {
     this.speechAfterSplit = 0;
     this.floor = null; // RMS of the room when nobody is speaking
     this.recent = []; // recent frame RMS, for the floor
+    this.floors = []; // the floor every 100 ms over the last minute, for steadyFloor
+    this.tracked = 0; // frames tracked
     this.buffer = []; // Int16Array pieces of the open segment
     this.segmentStart = null; // sample index the open segment starts at
   }
@@ -128,6 +130,24 @@ export class SpeechSegmenter {
       const sorted = [...this.recent].sort((a, b) => a - b);
       this.floor = sorted[Math.floor(sorted.length * 0.05)];
     }
+    // The floor every 100 ms over the last minute, for steadyFloor.
+    this.tracked += 1;
+    if (this.tracked % 5 === 0 && this.floor !== null) {
+      this.floors.push(this.floor);
+      if (this.floors.length > 600) this.floors.shift();
+    }
+  }
+
+  /**
+   * The lowest the floor went over the last minute: the sound that never
+   * stopped, an air conditioner rather than a minute of busy talk, whose
+   * quietest frames are still speech. Null until the room is known.
+   */
+  get steadyFloor() {
+    if (!this.floors.length) return this.floor;
+    let low = Infinity;
+    for (const floor of this.floors) if (floor < low) low = floor;
+    return low;
   }
 
   /**
@@ -135,7 +155,9 @@ export class SpeechSegmenter {
    *
    * @param {Int16Array} samples 16 kHz mono
    * @returns {Array<{ samples: Int16Array, startSample: number, endSample: number,
-   *   startMs: number, endMs: number }>}
+   *   startMs: number, endMs: number, steadyFloor: number|null }>}
+   *   `steadyFloor` is the room's steady floor (RMS) when the segment closed,
+   *   for what is done to it before Whisper (roomSegmentAudio.mjs).
    */
   push(samples) {
     const joined = new Int16Array(this.pending.length + samples.length);
@@ -280,6 +302,7 @@ export class SpeechSegmenter {
       endSample,
       startMs: Math.round((startSample / SAMPLE_RATE) * 1000),
       endMs: Math.round((endSample / SAMPLE_RATE) * 1000),
+      steadyFloor: this.steadyFloor,
     };
     if (carryOn) {
       this.buffer = this.buffer.slice(keepFrames);

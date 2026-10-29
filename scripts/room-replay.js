@@ -16,7 +16,11 @@
  *                `WhisperServerManager` (start options, threads, FFmpeg
  *                conversion, request cuts, `/inference` fields) with Silero VAD
  *                on and the shipped config, as `_resolveWhisperVadOptions`
- *                ("meeting") gives it
+ *                ("meeting") gives it; a quiet segment raised first, and in a
+ *                room whose steady floor is -41 dBFS or more its sound taken
+ *                out in the conversion (`base` and `small` only), as
+ *                `transcribeInRoomAudio` does
+ *                (roomSegmentLevel.mjs, roomSegmentAudio.mjs)
  *   4. filters   `WhisperManager#parseWhisperResult` (the blank-audio marker),
  *                then the in-room path's own: a text that is only sound labels
  *                ("[inaudible]") is empty (soundLabels.mjs), `trim()`, and "no
@@ -79,6 +83,8 @@
  *                  audio, to its transcript.
  *   --no-segment-gain  send a quiet segment at its own level, as the app did
  *                  before it raised it (roomSegmentLevel.mjs): "before".
+ *   --no-room-denoise  never take a loud room's sound out, as the app did
+ *                  before it did (roomSegmentAudio.mjs): "before".
  *   --keep-sound-labels  keep a text that is only sound labels, as the app
  *                did before it dropped them: "before".
  *   --vad-config   VAD settings over the shipped ones, as JSON, e.g.
@@ -87,7 +93,8 @@
  *                  before it is sent.
  *   --denoise      an experiment, not the app: each segment through this FFmpeg
  *                  filter chain before it is sent (and before --normalize-rms),
- *                  e.g. 'afftdn=nf={nf}' (see DENOISE below).
+ *                  e.g. 'afftdn=nf={nf}' (see DENOISE below). With
+ *                  --no-room-denoise, or a loud room is denoised twice.
  *   --every N      send only every Nth segment of each recording (from
  *                  --every-offset, default 0), and score only the reference
  *                  words inside them: a sample for paid models, the same
@@ -136,10 +143,17 @@ const AMI = arg("ami");
 const LIBRISPEECH = arg("librispeech");
 const CONVERSATIONS = Number(arg("conversations", "9"));
 const MODEL = arg("model", path.join(process.env.HOME, ".cache/oats/whisper-models/ggml-base.bin"));
+/** The app's id for that file (ggml-small.en.bin: small.en), which the in-room path's denoise asks for. */
+const MODEL_ID =
+  Object.entries(require("../src/models/modelRegistryData.json").whisperModels).find(
+    ([, model]) => model.fileName === path.basename(MODEL)
+  )?.[0] ?? null;
 const LANGUAGE = arg("language", "auto");
 const VAD = !flag("no-vad");
 /** Raise a quiet segment before Whisper, as the in-room path does (roomSegmentLevel.mjs). */
 const SEGMENT_GAIN = !flag("no-segment-gain");
+/** Take a loud room's sound out, as the in-room path does (roomSegmentAudio.mjs). */
+const ROOM_DENOISE = !flag("no-room-denoise");
 /** Drop a text that is only sound labels, as the in-room path does (soundLabels.mjs). */
 const DROP_SOUND_LABELS = !flag("keep-sound-labels");
 const VAD_MODEL = arg(
@@ -447,6 +461,7 @@ async function startLocal(vadEnabled) {
   const WhisperServerManager = require("../src/helpers/whisperServer.js");
   const { isOnlySoundLabels } = await import("../src/helpers/soundLabels.mjs");
   const { raiseQuietSegment } = await import("../src/helpers/roomSegmentLevel.mjs");
+  const { roomDenoiseFilter } = await import("../src/helpers/roomSegmentAudio.mjs");
   const manager = new WhisperServerManager();
   if (!fs.existsSync(MODEL)) throw new Error(`model not found at ${MODEL}`);
   if (vadEnabled && !fs.existsSync(VAD_MODEL))
@@ -484,10 +499,12 @@ async function startLocal(vadEnabled) {
   await ensure();
   return {
     manager,
-    async transcribe(samples) {
+    async transcribe(samples, steadyFloor = null) {
       stderr = "";
-      // `transcribeInRoomAudio` raises a quiet segment before it is sent.
+      // `transcribeInRoomAudio` raises a quiet segment before it is sent, and
+      // in a loud room asks the conversion to take the room's sound out.
       const heard = SEGMENT_GAIN ? raiseQuietSegment(samples) : samples;
+      const audioFilter = ROOM_DENOISE ? roomDenoiseFilter(heard, steadyFloor, MODEL_ID) : null;
       const wav = pcm16ToWav(Buffer.from(heard.buffer, heard.byteOffset, heard.byteLength));
       const started = Date.now();
       let parsed;
@@ -496,7 +513,11 @@ async function startLocal(vadEnabled) {
         // `transcribeLocalWhisper` → `transcribeViaServer` → this, with the
         // language the meeting was started with and no prompt.
         await ensure();
-        const raw = await manager.transcribe(wav, { language: LANGUAGE, initialPrompt: null });
+        const raw = await manager.transcribe(wav, {
+          language: LANGUAGE,
+          initialPrompt: null,
+          audioFilter,
+        });
         parsed = parseResult(raw);
       } catch (error) {
         failed = error.message;
@@ -1270,6 +1291,8 @@ async function replay(recording, backend, ablation) {
     endSample: s.endSample,
     start: trueSeconds(s.startSample),
     end: trueSeconds(s.endSample),
+    // The room's steady floor when the segment closed: what the in-room path gates on.
+    steadyFloor: s.steadyFloor ?? null,
     samples: s.samples,
   }));
   if (ORACLE) {
@@ -1350,15 +1373,15 @@ async function replay(recording, backend, ablation) {
       const worker = async () => {
         while (next < segments.length) {
           const s = segments[next++];
-          Object.assign(s, await backend.transcribe(s.samples));
+          Object.assign(s, await backend.transcribe(s.samples, s.steadyFloor));
         }
       };
       await Promise.all(Array.from({ length: CLOUD_CONCURRENCY }, worker));
     } else {
       for (const s of segments) {
-        Object.assign(s, await backend.transcribe(s.samples));
+        Object.assign(s, await backend.transcribe(s.samples, s.steadyFloor));
         if (ablation) {
-          const plain = await ablation.transcribe(s.samples);
+          const plain = await ablation.transcribe(s.samples, s.steadyFloor);
           s.textWithoutVad = plain.text;
         }
         if (!QUIET && s.index % 100 === 99) {
@@ -1417,6 +1440,7 @@ async function replay(recording, backend, ablation) {
               vad: VAD ? VAD_CONFIG : false,
               dropSoundLabels: DROP_SOUND_LABELS,
               segmentGain: SEGMENT_GAIN,
+              roomDenoise: ROOM_DENOISE,
             },
     segments: segments.length,
     segmentSeconds: Number(segmentSeconds.toFixed(1)),

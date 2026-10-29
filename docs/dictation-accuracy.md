@@ -832,7 +832,7 @@ ships if it brings back words and writes no more where nobody spoke.
 
 | `small.en`, against none               | steady sound: words; content words        | quiet microphone                           | quiet room                               |
 | -------------------------------------- | ----------------------------------------- | ------------------------------------------ | ---------------------------------------- |
-| none (what ships)                      | 40.0%; 37.9%                              | 64.5%; 69.0%                               | 70.4%; 74.3%                             |
+| none                                   | 40.0%; 37.9%                              | 64.5%; 69.0%                               | 70.4%; 74.3%                             |
 | `afftdn` at the segment's floor + 1 dB | +2.1 (+1.4 to +2.7); +2.1 (+1.2 to +2.9)  | −0.3 (−0.9 to +0.2); −1.0 (−1.8 to −0.3)   | −0.1 (−0.6 to +0.4); −0.4 (−1.0 to +0.2) |
 | `anlmdn`, strength 10                  | −7.1 (−7.9 to −6.2); −8.8 (−10.0 to −7.7) | −8.4 (−9.3 to −7.5); −11.0 (−12.3 to −9.7) | —                                        |
 | raised to an RMS of 0.05               | +1.0 (+0.7 to +1.3); +0.9 (+0.4 to +1.4)  | +6.4 (+5.5 to +7.4); +5.7 (+4.6 to +6.9)   | +0.6 (+0.2 to +0.9); +0.4 (−0.1 to +0.9) |
@@ -848,7 +848,7 @@ sides:
 
 | segments with no speech that came back with words: heard by another run; only this one | steady sound | quiet microphone | quiet room |
 | -------------------------------------------------------------------------------------- | ------------ | ---------------- | ---------- |
-| none (what ships)                                                                      | 4; 5         | 10; 0            | 16; 3      |
+| none                                                                                   | 4; 5         | 10; 0            | 16; 3      |
 | `afftdn` at the segment's floor + 1 dB                                                 | 7; 5         | 11; 1            | 16; 9      |
 | `anlmdn`, strength 10                                                                  | 1; 3         | 8; 0             | —          |
 | raised to an RMS of 0.05                                                               | 4; 4         | 17; 4            | 17; 4      |
@@ -863,18 +863,20 @@ sides:
   not a word. Three minutes of music, which `base.en` labelled "(gentle
   music)", now come back with nothing; LibriSpeech conversations have no
   labels to drop.
-- **Taking the sound out does not ship.** `afftdn` brings back 2.1 points of
-  the words with steady sound (8 of 8 meetings) and invents nothing more
-  there, but in a quiet room it brings back nothing and writes six more
+- **Taking the sound out everywhere does not ship.** `afftdn` brings back 2.1
+  points of the words with steady sound (8 of 8 meetings) and invents nothing
+  more there, but in a quiet room it brings back nothing and writes six more
   phrases where nobody spoke ("Thank you.", "Happy birthday."), and on the
   quiet microphone it loses a point of the content words; `base.en` the same
   (+2.7 with steady sound, -1.4 content words in a quiet room). Together with
   the raise it gains less than the raise alone on the quiet microphone and
-  invents more. `anlmdn` loses words in every room, and its traces make
-  `small.en` write labels: 570 with steady sound. Dictation would not gain
-  either (LibriSpeech, `small.en`, 200 utterances: 3.85% → 3.64% with
-  `afftdn`, interval −0.46 to +0.07).
-- **A quiet segment raised does not ship, and it comes closest.** On the quiet microphone it brings back 6.4 points of the words
+  invents more. So it ships only where the room stays loud (below). `anlmdn`
+  loses words in every room, and its traces make `small.en` write labels: 570
+  with steady sound. Dictation would not gain either (LibriSpeech,
+  `small.en`, 200 utterances: 3.85% → 3.64% with `afftdn`, interval −0.46 to
+  +0.07), and is never denoised.
+- **A quiet segment raised ships** (`helpers/roomSegmentLevel.mjs`), **and it
+  gains the most.** On the quiet microphone it brings back 6.4 points of the words
   and 5.7 of the content words, in 8 of 8 meetings: the quiet microphone then
   hears as the quiet room does (70.9% against 70.4%). It also writes there
   what a louder room writes over silence: four short phrases in four hours
@@ -892,6 +894,54 @@ quiet microphone it loses a point of the words (0.4–1.5). Raised, turbo hears
 5.9 more points on the quiet microphone (5.0–6.8; content words 5.6) and 0.7
 with steady sound, and writes eight more phrases where nobody spoke on the
 quiet microphone (5 → 13: "you", "Thank you.").
+
+**Only where the room stays loud, with `base` and `small`.** `afftdn` now runs
+where the room's own sound has not stopped for a minute: where the segmenter's
+floor (the 5th percentile of the last 10 s of 20 ms frames) has not gone under
+-41 dBFS, an RMS of 0.009, in the last minute (`SpeechSegmenter#steadyFloor`,
+`helpers/roomSegmentAudio.mjs`). With steady sound that floor never went under
+-39.9 dBFS, and on the quiet microphone never over -47.1. In the quiet room 2%
+of the segments reached it: the opening seconds of one meeting, before the
+segmenter has heard the room, and two stretches of TS3003a, whose room sits at
+-40 to -43 dBFS. The floor of the moment was the first gate tried, and it is
+not enough: a minute of busy talk lifts it into the talk, and 6.7% of the quiet
+room's segments passed -40 dBFS on it (content words -0.2, -0.6 to +0.1).
+Against the raise and labels, `small.en`, all eight meetings:
+
+| `small.en`, `afftdn` where the room stays loud, against the raise and labels | steady sound                       | quiet microphone           | quiet room                |
+| ---------------------------------------------------------------------------- | ---------------------------------- | -------------------------- | ------------------------- |
+| segments denoised                                                            | 3,584 of 3,584                     | none of 3,285              | 66 of 3,284               |
+| words recovered                                                              | +1.8 (+1.2 to +2.4): 41.0% → 42.8% | 70.9%, every text the same | 0.0 (−0.1 to +0.1): 71.0% |
+| content words                                                                | +1.4 (+0.5 to +2.2): 38.8% → 40.1% | 74.7%                      | 0.0 (−0.1 to +0.1): 74.7% |
+| WER                                                                          | −1.7 (−2.3 to −1.2): 60.2% → 58.5% | 30.4%                      | 0.0 (−0.1 to +0.1): 30.4% |
+| no speech, came back with words: heard by another run; only this one         | 4; 4 → 8; 4                        | 17; 4 → 17; 4              | 17; 4 → 17; 4             |
+
+With steady sound it brings back words in 8 of 8 meetings and content words
+in 6. The four phrases only one run wrote are other short ones each time
+("Well.", "Howdy." before; "Wow.", "Okay." after); the four more that another
+run also heard are talk the reference leaves out. In the quiet room the same
+four phrases come back with or without it, and TS3003a, where it ran on 63
+segments, keeps its content words (55.6%). Run twice, the steady-sound replay
+returned the same text for every segment.
+
+LibriSpeech conversations, a near voice in a quiet room, are never denoised:
+the same text for all 168 segments, 2.7% WER. Noise alone: a fan (-40 and -30
+dBFS), an air conditioner and room tone open no segment, typing opens seven
+that come back empty either way, and music at -40 dBFS is never denoised. Music
+at -30 dBFS is denoised on 36 of its 106 segments and comes back with one more
+word in three minutes: "Bye!", beside the "you" it writes either way.
+
+Turbo with steady sound, against the raise and labels: +1.2 points of the
+words (+0.7 to +1.8) and +1.3 of the content words (+0.5 to +2.0), in 8 and 7
+of 8 meetings, and +6.5 of the names (+1.1 to +11.3). It also writes more
+wrong words than `small.en` does: content-word precision 67.7% → 66.2%, and
+two more phrases where nobody spoke that no other model heard there (11 → 13,
+checked against `small.en`, `gpt-transcribe` and `gpt-4o-mini-transcribe`:
+"Thank you.", "Perfect."), beside seven more that another model also heard
+(5 → 12). That is not a clear gain, so the room's sound is taken out for
+`base` and `small`, with or without `.en`, only (`ROOM_DENOISE_MODELS`, for
+the model the request runs after a missing download falls back): turbo, and
+the models not measured (`tiny`, `medium`, `large`), hear the room as it is.
 
 ### What this does not show
 
