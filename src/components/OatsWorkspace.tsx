@@ -180,10 +180,15 @@ import {
   runSummary,
   useSummaryQueue,
   useSummaryQueueMarks,
+  useWritingRouteKey,
 } from "../stores/summaryQueueStore";
 import { writingModelReady } from "../stores/conversationGroupSortStore";
 import { localModelName, useModelDownloadPercent } from "../stores/modelDownloadStore";
-import { recordSummaryState, summaryContentHash } from "../helpers/summaryQueue.mjs";
+import {
+  recordSummaryState,
+  routeStaysHome,
+  summaryContentHash,
+} from "../helpers/summaryQueue.mjs";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
@@ -1824,6 +1829,12 @@ function IntelligenceViews({
       state.recordingNoteId === selected.id &&
       (state.isRecording || state.isTranscribing)
   );
+  // A conversation being recorded or finished now, whichever: a writing model
+  // at home would compete with its live transcription for the GPU and memory.
+  const anyRecording = useMeetingRecordingStore(
+    (state) => state.isRecording || state.isTranscribing
+  );
+  const writingRoute = useWritingRouteKey();
   // How far the writing model on this Mac has downloaded, while it does.
   const writingMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
   const writingModel = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
@@ -1839,11 +1850,14 @@ function IntelligenceViews({
     settled: summaryReadinessSettled,
     downloading: writingDownload !== null,
     unavailable: summaryMarks.refused,
+    recordingElsewhere: anyRecording || summaryMarks.anyFinishing,
+    routeAtHome: routeStaysHome(writingRoute),
   });
 
   // Opened with nothing in the way, a conversation without a summary starts
-  // one at once. Opened while no writing model is ready, it is owed one, and
-  // the queue writes it when the model is (stores/summaryQueueStore.ts).
+  // one at once. Opened while no writing model is ready, or while another
+  // conversation is recorded with the model at home, it is owed one, and the
+  // queue writes it when it can (stores/summaryQueueStore.ts).
   const openedRecord = useRef(selected);
   openedRecord.current = selected;
   const openedRecordId = reading ? (selected?.id ?? null) : null;
@@ -1851,7 +1865,13 @@ function IntelligenceViews({
     const note = openedRecord.current;
     if (openedRecordId === null || !note || note.id !== openedRecordId) return;
     if (summaryState === "starting") void summarizeLater(note, t);
-    else if (summaryState === "needs-model" || summaryState === "downloading") oweSummary(note);
+    else if (
+      summaryState === "needs-model" ||
+      summaryState === "downloading" ||
+      summaryState === "after-recording"
+    ) {
+      oweSummary(note);
+    }
   }, [openedRecordId, summaryState, t]);
 
   // The opened conversation's own contour: its speech, its questions with the
@@ -2139,7 +2159,9 @@ function IntelligenceViews({
                           ? t("oats.intelligence.needsSummaryModel")
                           : summaryState === "recording"
                             ? t("oats.intelligence.summaryAfterRecording")
-                            : t("oats.intelligence.notSummarized")}
+                            : summaryState === "after-recording"
+                              ? t("oats.intelligence.summaryWhenRecordingEnds")
+                              : t("oats.intelligence.notSummarized")}
                   </p>
                   {summaryState === "needs-model" && (
                     <Button

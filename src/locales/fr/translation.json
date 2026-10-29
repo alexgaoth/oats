@@ -2070,6 +2070,7 @@
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
       "summaryAfterDownload": "Le résumé sera rédigé une fois {{model}} téléchargé : {{percent}}%",
       "summaryAfterRecording": "Le résumé sera rédigé à la fin de cette conversation.",
+      "summaryWhenRecordingEnds": "Le résumé sera rédigé à la fin de l’enregistrement.",
       "summarizeAgain": "Résumer à nouveau",
       "summaryFailed": "Le résumé n'a pas pu être rédigé : {{reason}}",
       "setUpModel": "Configurer un modèle"

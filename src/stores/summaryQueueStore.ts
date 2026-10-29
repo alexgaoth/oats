@@ -286,13 +286,7 @@ export function useSummaryQueue(summarize: (note: NoteItem) => Promise<Backgroun
   }, []);
 
   const { readiness } = useSummaryReadinessState();
-  const route = useSettingsStore((state) => {
-    const formatting = selectResolvedNoteFormatting(state);
-    return summaryRouteKey({
-      mode: formatting.mode,
-      provider: formatting.mode === "providers" ? formatting.provider : undefined,
-    });
-  });
+  const route = useWritingRouteKey();
   useEffect(() => {
     if (readiness !== "ready") return;
     // A model that is ready again may write what it refused before.
@@ -303,11 +297,24 @@ export function useSummaryQueue(summarize: (note: NoteItem) => Promise<Backgroun
   }, [readiness, route]);
 }
 
+/** The writing route now, as a summary records it, kept current. */
+export function useWritingRouteKey(): string {
+  return useSettingsStore((state) => {
+    const formatting = selectResolvedNoteFormatting(state);
+    return summaryRouteKey({
+      mode: formatting.mode,
+      provider: formatting.mode === "providers" ? formatting.provider : undefined,
+    });
+  });
+}
+
 /** What the queue knows of one conversation, for its record. */
 export function useSummaryQueueMarks(noteId: number | null): {
   finishing: boolean;
   running: boolean;
   refused: boolean;
+  /** Finish holds some conversation now: this one or another. */
+  anyFinishing: boolean;
 } {
   const finishing = useSummaryQueueStore((state) =>
     noteId === null ? false : state.finishing.includes(noteId)
@@ -318,5 +325,6 @@ export function useSummaryQueueMarks(noteId: number | null): {
   const refused = useSummaryQueueStore((state) =>
     noteId === null ? false : state.refused.includes(noteId)
   );
-  return { finishing, running, refused };
+  const anyFinishing = useSummaryQueueStore((state) => state.finishing.length > 0);
+  return { finishing, running, refused, anyFinishing };
 }

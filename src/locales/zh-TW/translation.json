@@ -2065,6 +2065,7 @@
       "notSummarized": "此對話尚未產生摘要。",
       "summaryAfterDownload": "{{model}} 下載完成後將產生摘要：{{percent}}%",
       "summaryAfterRecording": "這段對話結束後將產生摘要。",
+      "summaryWhenRecordingEnds": "錄音結束後將產生摘要。",
       "summarizeAgain": "重新產生摘要",
       "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"

@@ -2070,6 +2070,7 @@
       "notSummarized": "Esta conversación aún no se ha resumido.",
       "summaryAfterDownload": "El resumen se escribirá cuando {{model}} termine de descargarse: {{percent}}%",
       "summaryAfterRecording": "El resumen se escribirá cuando termine esta conversación.",
+      "summaryWhenRecordingEnds": "El resumen se escribirá cuando termine la grabación.",
       "summarizeAgain": "Resumir de nuevo",
       "summaryFailed": "No se pudo crear el resumen: {{reason}}",
       "setUpModel": "Configurar un modelo"

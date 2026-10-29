@@ -2104,6 +2104,7 @@
       "notSummarized": "Сводка для этого разговора ещё не составлена.",
       "summaryAfterDownload": "Сводка будет составлена, когда {{model}} загрузится: {{percent}}%",
       "summaryAfterRecording": "Сводка будет составлена, когда этот разговор закончится.",
+      "summaryWhenRecordingEnds": "Сводка будет составлена, когда запись закончится.",
       "summarizeAgain": "Составить сводку снова",
       "summaryFailed": "Не удалось составить сводку: {{reason}}",
       "setUpModel": "Настроить модель"

@@ -2070,6 +2070,7 @@
       "notSummarized": "この会話はまだ要約されていません。",
       "summaryAfterDownload": "{{model}} のダウンロードが終わると要約が作成されます: {{percent}}%",
       "summaryAfterRecording": "この会話が終わると要約が作成されます。",
+      "summaryWhenRecordingEnds": "録音が終わると要約が作成されます。",
       "summarizeAgain": "もう一度要約する",
       "summaryFailed": "要約を作成できませんでした：{{reason}}",
       "setUpModel": "モデルを設定"

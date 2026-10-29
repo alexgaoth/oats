@@ -2070,6 +2070,7 @@
       "notSummarized": "This conversation has not been summarized.",
       "summaryAfterDownload": "The summary is written when {{model}} has downloaded: {{percent}}%",
       "summaryAfterRecording": "The summary is written when this conversation is finished.",
+      "summaryWhenRecordingEnds": "The summary is written when the recording ends.",
       "summarizeAgain": "Summarize again",
       "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"

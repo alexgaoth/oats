@@ -256,6 +256,8 @@ export function runBackgroundAction(
   return (async (): Promise<BackgroundActionOutcome> => {
     try {
       for (let tries = 1; ; tries += 1) {
+        // A monotonic clock: the try's length decides whether it is repeated.
+        const startedAt = performance.now();
         try {
           return await attempt();
         } catch (err) {
@@ -263,9 +265,11 @@ export function runBackgroundAction(
           // A conversation's summary is asked for once more, after a pause,
           // before its record says it failed: a model still loading, a dropped
           // connection or one empty answer has usually passed by then. Until
-          // that try ends it is still being written, so nothing says otherwise
-          // (helpers/summaryQueue.mjs).
-          if (options.isMeetingNote && shouldRetrySummary(tries)) {
+          // that try ends it is still being written, so nothing says otherwise.
+          // Only a quick failure: a slow one was a timeout the request code
+          // already repeated, or a long local run (helpers/summaryQueue.mjs).
+          const tookMs = performance.now() - startedAt;
+          if (options.isMeetingNote && shouldRetrySummary(tries, tookMs)) {
             await delay(SUMMARY_RETRY_DELAY_MS);
             if (cancelledFlags.get(noteId)) return "cancelled";
             continue;

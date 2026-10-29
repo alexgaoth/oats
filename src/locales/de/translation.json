@@ -2070,6 +2070,7 @@
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
       "summaryAfterDownload": "Die Zusammenfassung wird erstellt, sobald {{model}} heruntergeladen ist: {{percent}}%",
       "summaryAfterRecording": "Die Zusammenfassung wird erstellt, wenn dieses Gespräch beendet ist.",
+      "summaryWhenRecordingEnds": "Die Zusammenfassung wird erstellt, wenn die Aufnahme endet.",
       "summarizeAgain": "Erneut zusammenfassen",
       "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden: {{reason}}",
       "setUpModel": "Modell einrichten"

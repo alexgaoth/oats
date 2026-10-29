@@ -2070,6 +2070,7 @@
       "notSummarized": "Questa conversazione non è ancora stata riassunta.",
       "summaryAfterDownload": "Il riepilogo verrà scritto quando il download di {{model}} sarà completato: {{percent}}%",
       "summaryAfterRecording": "Il riepilogo verrà scritto quando questa conversazione sarà terminata.",
+      "summaryWhenRecordingEnds": "Il riepilogo verrà scritto quando la registrazione sarà terminata.",
       "summarizeAgain": "Riassumi di nuovo",
       "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"

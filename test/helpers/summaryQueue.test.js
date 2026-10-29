@@ -112,13 +112,37 @@ test("a cloud provider gets only what finished while it was the writing model", 
 
 test("a failed summary is tried once more, and only once", () => {
   assert.equal(queue.SUMMARY_ATTEMPTS, 2);
-  assert.equal(queue.shouldRetrySummary(1), true);
-  assert.equal(queue.shouldRetrySummary(2), false);
-  assert.equal(queue.shouldRetrySummary(3), false);
-  assert.equal(queue.shouldRetrySummary(0), false);
-  assert.equal(queue.shouldRetrySummary(Number.NaN), false);
+  assert.equal(queue.shouldRetrySummary(1, 1500), true);
+  assert.equal(queue.shouldRetrySummary(2, 1500), false);
+  assert.equal(queue.shouldRetrySummary(3, 1500), false);
+  assert.equal(queue.shouldRetrySummary(0, 1500), false);
+  assert.equal(queue.shouldRetrySummary(Number.NaN, 1500), false);
   // "After a short delay": long enough to pass a blip, short enough to wait for.
   assert.ok(queue.SUMMARY_RETRY_DELAY_MS >= 5_000 && queue.SUMMARY_RETRY_DELAY_MS <= 30_000);
+});
+
+test("only a try that failed within two minutes is tried again", () => {
+  assert.equal(queue.SUMMARY_RETRY_WITHIN_MS, 120_000);
+  assert.equal(queue.shouldRetrySummary(1, 0), true);
+  assert.equal(queue.shouldRetrySummary(1, 119_999), true);
+  assert.equal(queue.shouldRetrySummary(1, 120_000), true);
+  // Slower: a timeout the request code already tried three times (#139), or
+  // a long run on this Mac that would fail the same way. Shown at once.
+  assert.equal(queue.shouldRetrySummary(1, 120_001), false);
+  assert.equal(queue.shouldRetrySummary(1, 180_000 * 4), false);
+  // A time that cannot be read is not a reason to send it again.
+  assert.equal(queue.shouldRetrySummary(1), false);
+  assert.equal(queue.shouldRetrySummary(1, Number.NaN), false);
+  assert.equal(queue.shouldRetrySummary(1, -1), false);
+});
+
+test("the routes that run at home are this Mac and the person's own server", () => {
+  assert.equal(queue.routeStaysHome(LOCAL), true);
+  assert.equal(queue.routeStaysHome("self-hosted:"), true);
+  assert.equal(queue.routeStaysHome(OPENAI), false);
+  assert.equal(queue.routeStaysHome("providers:custom"), false);
+  assert.equal(queue.routeStaysHome(""), false);
+  assert.equal(queue.routeStaysHome(null), false);
 });
 
 test("a summary records the transcript it was written from, as Finish always has", () => {
@@ -196,6 +220,8 @@ const FACTS = {
   settled: true,
   downloading: false,
   unavailable: false,
+  recordingElsewhere: false,
+  routeAtHome: true,
 };
 const state = (facts) => queue.recordSummaryState({ ...FACTS, ...facts });
 
@@ -224,6 +250,32 @@ test("a conversation being recorded is summarized by its Finish, never before", 
   // Stopped, and Finish has not asked yet: it is about to be written.
   assert.equal(state({ finishing: true }), "preparing");
   assert.equal(state({ finishing: true, settled: false }), "preparing");
+});
+
+test("while another conversation is recorded, a model at home waits for the recording to end", () => {
+  // On this Mac or the person's own server the model would compete with the
+  // live transcription for the GPU and memory: owed, written afterwards.
+  assert.equal(state({ recordingElsewhere: true }), "after-recording");
+  assert.equal(
+    state({ recordingElsewhere: true, routeAtHome: true, readiness: null }),
+    "after-recording"
+  );
+  // A cloud provider takes nothing from this Mac: it starts at once.
+  assert.equal(state({ recordingElsewhere: true, routeAtHome: false }), "starting");
+  // What the record already says is not replaced.
+  assert.equal(state({ recordingElsewhere: true, processing: true }), "preparing");
+  assert.equal(state({ recordingElsewhere: true, failed: true }), "failed");
+  assert.equal(state({ recordingElsewhere: true, hasSummary: true }), "summary");
+  assert.equal(state({ recordingElsewhere: true, recording: true }), "recording");
+  assert.equal(state({ recordingElsewhere: true, finishing: true }), "preparing");
+  assert.equal(
+    state({ recordingElsewhere: true, readiness: "model-missing", downloading: true }),
+    "downloading"
+  );
+  assert.equal(state({ recordingElsewhere: true, readiness: "no-model" }), "needs-model");
+  assert.equal(state({ recordingElsewhere: true, settled: false }), "checking");
+  // Nothing else recorded: it starts.
+  assert.equal(state({ recordingElsewhere: false, routeAtHome: true }), "starting");
 });
 
 test("without a model ready, the record says why, and how far a download is", () => {

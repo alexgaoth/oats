@@ -33,6 +33,15 @@ export const SUMMARY_ATTEMPTS = 2;
 export const SUMMARY_RETRY_DELAY_MS = 10_000;
 
 /**
+ * A failed try is followed by another only if it failed within this long. A
+ * slower failure is a timeout that the request code has already tried again
+ * three times (#139, each attempt billed by a cloud provider), or a long run
+ * on this Mac that would most likely fail the same way, so the record says so
+ * at once and offers it again.
+ */
+export const SUMMARY_RETRY_WITHIN_MS = 120_000;
+
+/**
  * How long a download may say nothing and still be shown as running. The
  * progress event has no "failed" or "cancelled", and a download that stalls is
  * retried after 30 s of silence plus a few seconds' backoff
@@ -105,9 +114,15 @@ export function withoutPendingSummary(queue, id) {
   return queue.some((item) => item.id === id) ? queue.filter((item) => item.id !== id) : queue;
 }
 
-/** Whether the writing route keeps everything on this Mac or the person's own server. */
-function routeStaysHome(route) {
-  return route.startsWith("local:") || route.startsWith("self-hosted:");
+/**
+ * Whether the writing route keeps everything on this Mac or the person's own
+ * server ("local:", "self-hosted:"), rather than a cloud provider.
+ *
+ * @param {string | null | undefined} route
+ */
+export function routeStaysHome(route) {
+  const key = String(route ?? "");
+  return key.startsWith("local:") || key.startsWith("self-hosted:");
 }
 
 /**
@@ -173,12 +188,21 @@ export function needsSummary(note) {
 }
 
 /**
- * Whether a failed try is followed by another. `attempt` counts from 1.
+ * Whether a failed try is followed by another: only the first, and only if it
+ * failed within SUMMARY_RETRY_WITHIN_MS of starting.
  *
- * @param {number} attempt
+ * @param {number} attempt Which try failed, counting from 1.
+ * @param {number} elapsedMs How long that try took before it failed.
  */
-export function shouldRetrySummary(attempt) {
-  return Number.isInteger(attempt) && attempt >= 1 && attempt < SUMMARY_ATTEMPTS;
+export function shouldRetrySummary(attempt, elapsedMs) {
+  return (
+    Number.isInteger(attempt) &&
+    attempt >= 1 &&
+    attempt < SUMMARY_ATTEMPTS &&
+    Number.isFinite(elapsedMs) &&
+    elapsedMs >= 0 &&
+    elapsedMs <= SUMMARY_RETRY_WITHIN_MS
+  );
 }
 
 /**
@@ -215,8 +239,9 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
 }
 
 /**
- * @typedef {"summary" | "preparing" | "failed" | "recording" | "downloading"
- *   | "needs-model" | "checking" | "starting" | "not-summarized"} RecordSummaryState
+ * @typedef {"summary" | "preparing" | "failed" | "recording" | "after-recording"
+ *   | "downloading" | "needs-model" | "checking" | "starting" | "not-summarized"}
+ *   RecordSummaryState
  */
 
 /**
@@ -227,6 +252,10 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  *   try, or Finish is about to write it.
  * - "failed": the second try failed too; the record offers it again.
  * - "recording": the conversation is being recorded; Finish writes it.
+ * - "after-recording": another conversation is being recorded or finished,
+ *   and the writing model runs on this Mac or the person's own server, where
+ *   it would compete with the live transcription for the GPU and memory. It is
+ *   owed, and the queue writes it when the recording ends.
  * - "downloading": the writing model is downloading; the record says how far.
  * - "needs-model": no writing model is ready, and none is coming.
  * - "checking": whether the model on this Mac is there has not been answered
@@ -247,6 +276,10 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  * @param {boolean} facts.settled Whether the readiness check has answered.
  * @param {boolean} facts.downloading The writing model is downloading now.
  * @param {boolean} [facts.unavailable] A summary was refused this session.
+ * @param {boolean} [facts.recordingElsewhere] A conversation (another one) is
+ *   being recorded or finished now.
+ * @param {boolean} [facts.routeAtHome] The writing route runs on this Mac or
+ *   the person's own server (`routeStaysHome`).
  * @returns {RecordSummaryState}
  */
 export function recordSummaryState(facts) {
@@ -261,5 +294,6 @@ export function recordSummaryState(facts) {
   if (facts.finishing) return "preparing";
   if (!facts.settled) return "checking";
   if (facts.unavailable) return "not-summarized";
+  if (facts.recordingElsewhere && facts.routeAtHome) return "after-recording";
   return "starting";
 }
