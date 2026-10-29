@@ -62,24 +62,39 @@ export const FRAME_BUDGET_MS = FRAME_INTERVAL_MS * 1.5;
  *            so the canvas is right the moment somebody can. One frame per
  *            change costs nothing.
  *   moving — the wind, at FIELD_FPS.
+ *   easing — no wind, but the picture is moving to another screen's
+ *            composition (MOVE_MS): a frame per vsync for that long, then
+ *            still again. Only while somebody can see it; otherwise the move
+ *            is skipped and the new picture drawn once.
  *   paused — the wind, with nobody to see it: the window is minimized, closed
  *            to the tray or covered, or the backdrop is off screen. No frames
  *            and no timers until that changes.
  */
-export type FieldLoopState = "still" | "moving" | "paused";
+export type FieldLoopState = "still" | "moving" | "easing" | "paused";
 
 export function fieldLoopState({
   animate,
   reduced,
   visible,
+  easing = false,
 }: {
   animate: boolean;
   reduced: boolean;
   visible: boolean;
+  /** A move between compositions is under way. */
+  easing?: boolean;
 }): FieldLoopState {
-  if (reduced || !animate) return "still";
-  return visible ? "moving" : "paused";
+  if (reduced) return "still";
+  if (animate) return visible ? "moving" : "paused";
+  return easing && visible ? "easing" : "still";
 }
+
+/**
+ * How long the field takes to move from one screen's picture to the next: the
+ * frame's own time (`--motion-frame`), so the horizon settles as the sidebar
+ * and the panes do. Under prefers-reduced-motion there is no move at all.
+ */
+export const MOVE_MS = 280;
 
 export interface FieldClock {
   /** Stop the clock at `now`. Stopping a stopped clock does nothing. */

@@ -93,6 +93,7 @@ import { flowCaption, flowViewOptions } from "./conversation/flowText";
 import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import GlobalConversations from "./global/GlobalConversations";
 import FieldBackdrop from "./field/FieldBackdrop";
+import { useFieldColumn } from "./field/fieldColumns";
 import ConversationFlow from "./conversation/ConversationFlow";
 import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
 import ConversationContour from "./conversation/ConversationContour";
@@ -162,13 +163,33 @@ import SpeechUpgradeNotice from "./SpeechUpgradeNotice";
 import PostMigrationOnboarding from "./PostMigrationOnboarding";
 import { useAppBootstrap } from "../hooks/useAppBootstrap";
 import { useConversationPreflight } from "../hooks/useConversationPreflight";
+import { preflightSettingsPage } from "../utils/preflight";
 import { getCachedPlatform } from "../utils/platform";
 import { ariaKeyShortcuts, formatHotkey } from "../utils/hotkeyLabel";
 import { initializeActions } from "../stores/actionStore";
-import { runBackgroundAction, useActionProcessingStore } from "../stores/actionProcessingStore";
+import {
+  runBackgroundAction,
+  useActionProcessingStore,
+  type BackgroundActionOutcome,
+} from "../stores/actionProcessingStore";
 import { nameFinalTopics } from "../stores/topicNamingRunner";
-import { useSummaryReadiness } from "../hooks/useSummaryReadiness";
+import { useSummaryReadinessState } from "../hooks/useSummaryReadiness";
 import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
+import {
+  holdForFinish,
+  oweSummary,
+  runSummary,
+  useSummaryQueue,
+  useSummaryQueueMarks,
+  useWritingRouteKey,
+} from "../stores/summaryQueueStore";
+import { writingModelReady } from "../stores/conversationGroupSortStore";
+import { localModelName, useModelDownloadPercent } from "../stores/modelDownloadStore";
+import {
+  recordSummaryState,
+  routeStaysHome,
+  summaryContentHash,
+} from "../helpers/summaryQueue.mjs";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
@@ -293,40 +314,58 @@ function parseSegments(raw: string | null): TranscriptSegment[] {
 /**
  * Write a conversation's title, summary and threads.
  *
- * Finish runs this once, automatically. The record runs it again on request —
- * for a conversation recorded before a summary model existed, or one whose
- * summary was cut off by a quit — which until now could never be retried,
- * because nothing but the Finish effect ever called it.
+ * Finish runs this once, automatically. So does the record, when somebody
+ * opens a conversation that has none, and the summary queue, for one that
+ * finished before its writing model was ready or whose summary a quit cut off
+ * (stores/summaryQueueStore.ts). It resolves once the summary is saved or has
+ * failed twice; nobody has to wait for it.
  */
 async function summarizeConversation(
   noteId: number,
   transcript: string,
   t: TFunction,
   { allowTitleGeneration }: { allowTitleGeneration: boolean }
-): Promise<void> {
-  const action = (await initializeActions()).find((item) => item.is_builtin);
-  if (!action) return;
-  const settings = useSettingsStore.getState();
-  const config = selectResolvedNoteFormatting(settings);
-  const formatted = transcriptText(transcript, t);
-  runBackgroundAction(
-    noteId,
-    `## Conversation Transcript\n${formatted}`,
-    `${transcript.length}-${transcript.slice(0, 50)}`,
-    action,
-    {
-      isCloudMode: selectIsCloudNoteFormattingMode(settings),
-      modelId: config.model,
-      isMeetingNote: true,
-      allowTitleGeneration,
-    },
-    {
-      noModel: t("oats.errors.noModel"),
-      noEndpoint: t("oats.errors.noEndpoint"),
-      actionFailed: t("oats.errors.actionFailed"),
-      noSummary: t("oats.errors.noSummary"),
-    }
-  );
+): Promise<BackgroundActionOutcome> {
+  return runSummary(noteId, async () => {
+    const action = (await initializeActions()).find((item) => item.is_builtin);
+    if (!action) return "refused";
+    // The title now: renamed while the summary is written, it keeps the new name.
+    const note = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(() => null);
+    const settings = useSettingsStore.getState();
+    const config = selectResolvedNoteFormatting(settings);
+    const formatted = transcriptText(transcript, t);
+    return runBackgroundAction(
+      noteId,
+      `## Conversation Transcript\n${formatted}`,
+      summaryContentHash(transcript),
+      action,
+      {
+        isCloudMode: selectIsCloudNoteFormattingMode(settings),
+        modelId: config.model,
+        isMeetingNote: true,
+        allowTitleGeneration,
+        titleAtStart: note ? (note.title ?? "") : undefined,
+      },
+      {
+        noModel: t("oats.errors.noModel"),
+        noEndpoint: t("oats.errors.noEndpoint"),
+        actionFailed: t("oats.errors.actionFailed"),
+        noSummary: t("oats.errors.noSummary"),
+        tooLong: t("oats.intelligence.summaryTooLong"),
+      }
+    );
+  });
+}
+
+/**
+ * The same, for a conversation that is not being finished: the record opening
+ * it, the queue, "Summarize again". A title somebody wrote is theirs; only a
+ * placeholder is replaced.
+ */
+function summarizeLater(note: NoteItem, t: TFunction): Promise<BackgroundActionOutcome> {
+  return summarizeConversation(note.id, note.transcript ?? "", t, {
+    allowTitleGeneration: isRegenerableNoteTitle(note.title, [t("oats.untitled")]),
+  });
 }
 
 /**
@@ -497,6 +536,9 @@ function useElapsed(startedAt: number | null): number {
 
 function ConversationSurface() {
   const recording = useMeetingRecordingStore((s) => s.isRecording);
+  // Where the field mode backdrop keeps clear of (field/fieldColumns.ts).
+  const homeColumn = useFieldColumn("home");
+  const recordingColumn = useFieldColumn("recording");
   // Still true for a moment after Finish, while the last words since the final
   // pause are transcribed. The save below waits for them.
   const transcribing = useMeetingRecordingStore((s) => s.isTranscribing);
@@ -627,6 +669,10 @@ function ConversationSurface() {
     // How loud each second was, so the finished contour keeps the shape the
     // live line had. Taken now, with the topics, before anything awaits.
     const loudness = sittingLoudness();
+    // From here the conversation is owed a summary, written down before
+    // anything can stop it: a writing model that is not ready yet, or a quit,
+    // leaves it to the summary queue instead of losing it.
+    const releaseFinish = holdForFinish(recordingNoteId);
     void (async () => {
       try {
         // For the lists' open-question count. Every question has landed by
@@ -648,10 +694,14 @@ function ConversationSurface() {
       // model on this computer they go before the summary, which would
       // otherwise hold them behind it (topicNamingRunner.ts).
       await nameFinalTopics(recordingNoteId, topics, state.segments);
-      await summarizeConversation(recordingNoteId, finalTranscript, t, {
-        allowTitleGeneration: true,
-      });
-    })();
+      // With no writing model ready (none chosen yet, or the one on this Mac
+      // still downloading), the queue writes it as soon as one is.
+      if (await writingModelReady()) {
+        await summarizeConversation(recordingNoteId, finalTranscript, t, {
+          allowTitleGeneration: true,
+        });
+      }
+    })().finally(releaseFinish);
     // `t` is a dependency only because the failure messages are translated. A
     // language change re-runs this, but the `wasRecording` guard above makes that
     // an immediate no-op rather than a second intelligence run.
@@ -797,8 +847,9 @@ function ConversationSurface() {
     return () => cleanup?.();
   }, []);
 
-  // One alert line for anything worth saying before or around a recording.
-  const notice = (tone: "warning" | "danger", text: string) => (
+  // One alert line for anything worth saying before or around a recording,
+  // with the press that fixes it when there is one.
+  const notice = (tone: "warning" | "danger", text: string, action?: React.ReactNode) => (
     <div
       role="note"
       className={cn(
@@ -815,16 +866,23 @@ function ConversationSurface() {
           tone === "danger" ? "text-destructive" : "text-warning"
         )}
       />
-      <span>{text}</span>
+      <span className={cn(action && "min-w-0 flex-1")}>{text}</span>
+      {action}
     </div>
   );
+  // The Settings page that fixes the line under Record, one press away rather
+  // than two (Settings, then the page).
+  const fixPage = preflightSettingsPage(preflight.problem);
 
   return (
     <>
       <section className="oats-surface flex min-h-0 flex-1 flex-col overflow-y-auto">
         {recording ? (
           // Capped in index.css, where the frame widens it (focus on record).
-          <div className="oats-record-column mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 px-8 py-6">
+          <div
+            ref={recordingColumn}
+            className="oats-record-column mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 px-8 py-6"
+          >
             {/* Announcements: a mark on its own, and the recording's health. */}
             <p aria-live="polite" className="sr-only">
               {markedAt !== null && sessionStartedAt !== null
@@ -1011,7 +1069,7 @@ function ConversationSurface() {
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">
+          <div ref={homeColumn} className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">
             <p aria-live="polite" role="status" className="sr-only">
               {justStopped ? t("oats.conversation.statusStopped") : ""}
             </p>
@@ -1052,7 +1110,21 @@ function ConversationSurface() {
                     ? notice("warning", t("oats.conversation.nothingHeard"))
                     : notice(
                         preflight.blocking ? "danger" : "warning",
-                        t(`oats.preflight.${preflight.problem}`)
+                        t(`oats.preflight.${preflight.problem}`),
+                        fixPage && (
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="-my-0.5 shrink-0"
+                            onClick={() =>
+                              window.dispatchEvent(
+                                new CustomEvent("oats-open-settings", { detail: fixPage })
+                              )
+                            }
+                          >
+                            {t(`oats.settings.pages.${fixPage}.title`)}
+                          </Button>
+                        )
                       )}
                 </div>
               )}
@@ -1391,6 +1463,10 @@ function IntelligenceViews({
 }) {
   const { t, i18n } = useTranslation();
   const notes = useNotes();
+  // Where the field mode backdrop keeps clear of (field/fieldColumns.ts).
+  const listColumn = useFieldColumn("conversations");
+  const globalColumn = useFieldColumn("global");
+  const recordColumn = useFieldColumn("record");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [tab, setTab] = useState<DetailTab>("summary");
   // Global conversations is a lens on the same conversations, not a fourth
@@ -1541,8 +1617,11 @@ function IntelligenceViews({
       window.removeEventListener("oats-find", find);
     };
   }, [setReading, setView]);
+  // The newest, until something is chosen. Set through the current value: on
+  // a first visit the conversation that was pressed is chosen in the same
+  // pass, and a plain set here replaced it with the newest one.
   useEffect(() => {
-    if (notes.length && selectedId == null) setSelectedId(notes[0].id);
+    if (notes.length && selectedId == null) setSelectedId((current) => current ?? notes[0].id);
   }, [notes, selectedId]);
 
   // What the list does not hold. It holds the hundred most recently updated
@@ -1741,28 +1820,82 @@ function IntelligenceViews({
   };
 
   // What the summary area can honestly say. "Being prepared" only while it is;
-  // otherwise why there is none, and the way to get one.
-  const summaryReadinessNow = useSummaryReadiness();
-  const summarizing = useActionProcessingStore((state) =>
-    selected ? state.noteStates[selected.id]?.status === "processing" : false
-  );
+  // otherwise why there is none, and when it will be written. Nothing here
+  // waits for a press: a conversation opened without a summary starts one
+  // (helpers/summaryQueue.mjs, `recordSummaryState`).
+  const { readiness: summaryReadinessNow, settled: summaryReadinessSettled } =
+    useSummaryReadinessState();
+  const summarizing = useActionProcessingStore((state) => {
+    const status = selected ? state.noteStates[selected.id]?.status : undefined;
+    // "success" lasts the moment until the saved summary reaches the list.
+    return status === "processing" || status === "success";
+  });
   // Why the last summary of this conversation failed, while the app runs: a
   // timeout, an error, or an answer that was empty or cut off, which is never
-  // saved as the summary (actionProcessingStore.ts).
+  // saved as the summary (actionProcessingStore.ts). Only a second failure.
   const summaryFailure = useActionProcessingStore((state) => {
     const noteState = selected ? state.noteStates[selected.id] : undefined;
     return noteState?.status === "failed" ? (noteState.message ?? "") : null;
   });
-  const summaryState: "summary" | "preparing" | "failed" | "needs-model" | "not-summarized" =
-    selected?.enhanced_content
-      ? "summary"
-      : summarizing
-        ? "preparing"
-        : summaryFailure !== null
-          ? "failed"
-          : summaryReadinessNow && summaryReadinessNow !== "ready"
-            ? "needs-model"
-            : "not-summarized";
+  // Too long for the writing model on this Mac: asking again there fails the
+  // same way, so the record says why and points to an API key instead.
+  const summaryTooLong = useActionProcessingStore((state) => {
+    const noteState = selected ? state.noteStates[selected.id] : undefined;
+    return noteState?.status === "failed" && noteState.kind === "too-long";
+  });
+  const summaryMarks = useSummaryQueueMarks(selected?.id ?? null);
+  const recordingSelected = useMeetingRecordingStore(
+    (state) =>
+      selected != null &&
+      state.recordingNoteId === selected.id &&
+      (state.isRecording || state.isTranscribing)
+  );
+  // A conversation being recorded or finished now, whichever: a writing model
+  // at home would compete with its live transcription for the GPU and memory.
+  const anyRecording = useMeetingRecordingStore(
+    (state) => state.isRecording || state.isTranscribing
+  );
+  const writingRoute = useWritingRouteKey();
+  // How far the writing model on this Mac has downloaded, while it does.
+  const writingMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
+  const writingModel = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
+  const writingDownload = useModelDownloadPercent(writingMode === "local" ? writingModel : null);
+  const summaryState = recordSummaryState({
+    hasSummary: Boolean(selected?.enhanced_content),
+    processing: summarizing || summaryMarks.running,
+    failed: summaryFailure !== null,
+    tooLong: summaryTooLong,
+    writingLocal: writingMode === "local",
+    recording: recordingSelected,
+    finishing: summaryMarks.finishing,
+    hasTranscript: selected?.note_type === "meeting" && Boolean(selected.transcript?.trim()),
+    readiness: summaryReadinessNow,
+    settled: summaryReadinessSettled,
+    downloading: writingDownload !== null,
+    unavailable: summaryMarks.refused,
+    recordingElsewhere: anyRecording || summaryMarks.anyFinishing,
+    routeAtHome: routeStaysHome(writingRoute),
+  });
+
+  // Opened with nothing in the way, a conversation without a summary starts
+  // one at once. Opened while no writing model is ready, or while another
+  // conversation is recorded with the model at home, it is owed one, and the
+  // queue writes it when it can (stores/summaryQueueStore.ts).
+  const openedRecord = useRef(selected);
+  openedRecord.current = selected;
+  const openedRecordId = reading ? (selected?.id ?? null) : null;
+  useEffect(() => {
+    const note = openedRecord.current;
+    if (openedRecordId === null || !note || note.id !== openedRecordId) return;
+    if (summaryState === "starting") void summarizeLater(note, t);
+    else if (
+      summaryState === "needs-model" ||
+      summaryState === "downloading" ||
+      summaryState === "after-recording"
+    ) {
+      oweSummary(note);
+    }
+  }, [openedRecordId, summaryState, t]);
 
   // The opened conversation's own contour: its speech, its questions with the
   // verdicts they actually reached, and its topics — all from the record rather
@@ -1852,7 +1985,7 @@ function IntelligenceViews({
         key="reading"
         className="oats-surface oats-enter relative min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
+        <div ref={recordColumn} className="mx-auto w-full max-w-3xl px-8 pb-16 pt-6">
           {/* The way back, and what can be done with the whole record. */}
           <div className="flex items-center justify-between gap-4">
             <BackButton onClick={() => setReading(false)} label={t("oats.shell.conversations")} />
@@ -2005,14 +2138,16 @@ function IntelligenceViews({
               />
               <ConversationReview events={events} topics={selectedTopics} onOpenTurn={openTurn} />
               {/* The summary is markdown — the pipeline emits headings and bold.
-                  Without one, the page says why before anything else, and
-                  offers to write it when it can. */}
+                  Without one, the page says why, and when it will be written:
+                  it starts by itself, so the only press left is after a
+                  failure, or to choose a model when there is none. */}
               {summaryState === "summary" ? (
                 <MarkdownRenderer
                   content={selected.enhanced_content ?? ""}
                   className="max-w-[70ch] pt-2 text-[15px] leading-7 text-foreground"
                 />
-              ) : summaryState === "preparing" ? (
+              ) : summaryState === "checking" ? null : summaryState === "preparing" ||
+                summaryState === "starting" ? (
                 // While it is written: what is happening, then the shape of the
                 // paragraph it will become. Still under reduced motion.
                 <div role="status" className="flex max-w-[70ch] flex-col gap-3 pt-2">
@@ -2029,15 +2164,29 @@ function IntelligenceViews({
               ) : (
                 <div
                   role="status"
+                  // A download's percent changes every few seconds: read where it
+                  // stands, not announced at each step.
+                  aria-live={summaryState === "downloading" ? "off" : undefined}
                   className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-5 text-muted-foreground"
                 >
                   <Sparkles aria-hidden="true" className="size-4 shrink-0" />
                   <p className="min-w-0 flex-1">
                     {summaryState === "failed"
                       ? t("oats.intelligence.summaryFailed", { reason: summaryFailure })
-                      : summaryState === "needs-model"
-                        ? t("oats.intelligence.needsSummaryModel")
-                        : t("oats.intelligence.notSummarized")}
+                      : summaryState === "too-long"
+                        ? t("oats.intelligence.summaryTooLong")
+                        : summaryState === "downloading"
+                          ? t("oats.intelligence.summaryAfterDownload", {
+                              model: localModelName(writingModel),
+                              percent: writingDownload,
+                            })
+                          : summaryState === "needs-model"
+                            ? t("oats.intelligence.needsSummaryModel")
+                            : summaryState === "recording"
+                              ? t("oats.intelligence.summaryAfterRecording")
+                              : summaryState === "after-recording"
+                                ? t("oats.intelligence.summaryWhenRecordingEnds")
+                                : t("oats.intelligence.notSummarized")}
                   </p>
                   {summaryState === "needs-model" && (
                     <Button
@@ -2051,23 +2200,25 @@ function IntelligenceViews({
                       {t("oats.intelligence.setUpModel")}
                     </Button>
                   )}
-                  {(summaryState === "not-summarized" || summaryState === "failed") && (
+                  {summaryState === "failed" && (
+                    <Button size="sm" onClick={() => void summarizeLater(selected, t)}>
+                      <Sparkles aria-hidden="true" />
+                      {t("oats.intelligence.summarizeAgain")}
+                    </Button>
+                  )}
+                  {/* Asking the model on this Mac again would fail the same way:
+                      the way forward is a writing model with an API key. */}
+                  {summaryState === "too-long" && (
                     <Button
                       size="sm"
+                      variant="outline"
                       onClick={() =>
-                        void summarizeConversation(selected.id, selected.transcript ?? "", t, {
-                          // A title somebody wrote is theirs; only a placeholder
-                          // is replaced.
-                          allowTitleGeneration: isRegenerableNoteTitle(selected.title, [
-                            t("oats.untitled"),
-                          ]),
-                        })
+                        window.dispatchEvent(
+                          new CustomEvent("oats-open-settings", { detail: "models" })
+                        )
                       }
                     >
-                      <Sparkles aria-hidden="true" />
-                      {summaryState === "failed"
-                        ? t("oats.intelligence.summarizeAgain")
-                        : t("oats.intelligence.summarize")}
+                      {t("oats.settings.pages.models.title")}
                     </Button>
                   )}
                 </div>
@@ -2269,7 +2420,11 @@ function IntelligenceViews({
       </div>
 
       {view === "global" ? (
-        <div key="global" className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col">
+        <div
+          key="global"
+          ref={globalColumn}
+          className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col"
+        >
           <GlobalConversations
             onOpen={(noteId, segmentId) => {
               setSelectedId(noteId);
@@ -2281,7 +2436,7 @@ function IntelligenceViews({
           />
         </div>
       ) : (
-        <div key="list" className="oats-enter mx-auto w-full max-w-3xl px-8 pb-16">
+        <div key="list" ref={listColumn} className="oats-enter mx-auto w-full max-w-3xl px-8 pb-16">
           {/* Its line is kept while there is a query, so the list below does not
               move when a receipt arrives or changes. */}
           {searched && (
@@ -2590,7 +2745,7 @@ const OUTCOME_BADGE: Record<string, BadgeProps["variant"]> = {
  * and nothing Oats had to guess. Each unresolved question is a *place* —
  * pressing it opens the transcript at the turn it was asked in.
  */
-function ConversationReview({
+export function ConversationReview({
   events,
   topics,
   onOpenTurn,
@@ -2877,7 +3032,7 @@ function TranscriptView({
  * (420px), filled down the first column first, so the reading order and the
  * tab order are the same.
  */
-function TalkTime({
+export function TalkTime({
   talk,
   selected,
   onSelect,
@@ -3720,13 +3875,14 @@ function SettingsSurface() {
   const page = shownSettingsPage(requested, dictationEnabled);
   const entry = SETTINGS_PAGES.find((item) => item.id === page) ?? SETTINGS_PAGES[0];
   const scroller = useRef<HTMLElement | null>(null);
+  const column = useFieldColumn("settings");
   // A new page starts at its top, not where the last one was scrolled to.
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
   }, [page]);
   return (
     <section ref={scroller} className="oats-surface relative min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-8 pb-16 pt-8">
+      <div ref={column} className="mx-auto w-full max-w-2xl px-8 pb-16 pt-8">
         <SettingsPageHeader title={t(entry.title)} description={t(entry.description)} />
         <Suspense
           fallback={
@@ -3806,6 +3962,10 @@ export default function OatsWorkspace() {
   // The workspace shows only after setup: from here on, a Mac whose GPU
   // measured fast enough fetches Whisper Turbo (speechTier.mjs).
   useSpeechUpgrade();
+  // A conversation that finished before its writing model was ready, or whose
+  // summary a quit cut off, is summarized once the model is ready
+  // (stores/summaryQueueStore.ts).
+  useSummaryQueue((note) => summarizeLater(note, t));
   const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
   // Whether the Conversations page is searching, as it reports it. Search in

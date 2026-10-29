@@ -8,6 +8,13 @@ import { claimWritingModel, sortConversationIntoGroup } from "./conversationGrou
 import { checkConversationLinks } from "./conversationLinkStore";
 import { summaryRouteKey } from "../helpers/remoteLinks.mjs";
 import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs";
+import {
+  SUMMARY_RETRY_DELAY_MS,
+  SUMMARY_TOO_LONG,
+  shouldRetrySummary,
+  summaryFailureKind,
+  tooLongForLocalModel,
+} from "../helpers/summaryQueue.mjs";
 import type { ActionItem } from "../types/electron";
 
 export type ActionProcessingStatus = "idle" | "processing" | "success" | "failed";
@@ -17,6 +24,11 @@ export interface NoteActionState {
   actionName: string | null;
   /** Why a conversation's summary failed ("failed"), for the record to say. */
   message?: string | null;
+  /**
+   * "too-long" when it does not fit the writing model on this Mac, so asking
+   * again there fails the same way (helpers/summaryQueue.mjs).
+   */
+  kind?: "too-long" | "other" | null;
 }
 
 export interface ActionErrorEvent {
@@ -32,6 +44,8 @@ interface ActionProcessingStoreState {
 const cancelledFlags = new Map<number, boolean>();
 const processingFlags = new Map<number, boolean>();
 const successTimers = new Map<number, NodeJS.Timeout>();
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const IDLE_STATE: NoteActionState = { status: "idle", actionName: null };
 
@@ -99,7 +113,22 @@ export interface RunActionOptions {
   isMeetingNote?: boolean;
   /** Opt-in so enhancement never renames a note the user has titled. */
   allowTitleGeneration?: boolean;
+  /**
+   * The note's title when the action started. A generated title is written
+   * only if the title is still this one: a summary takes a while, and somebody
+   * may rename the conversation while it is written.
+   */
+  titleAtStart?: string | null;
 }
+
+/**
+ * How an action ended: its result saved, failed (a conversation's summary
+ * after its second try), too long for the writing model on this Mac (never
+ * tried again there), cancelled, refused before it started (no model, no
+ * endpoint), or not started because one is already running for the note.
+ */
+export type BackgroundActionOutcome =
+  "saved" | "failed" | "too-long" | "cancelled" | "refused" | "busy";
 
 export interface RunActionLabels {
   noModel: string;
@@ -107,11 +136,15 @@ export interface RunActionLabels {
   actionFailed: string;
   /** A conversation's summary came back empty, or as the transcript itself. */
   noSummary?: string;
+  /** A conversation too long for the writing model on this Mac. */
+  tooLong?: string;
 }
 
 /**
  * Start processing an action on a note. Runs in the background — survives
  * component unmounts and navigation so the user can switch notes mid-action.
+ * The promise says how it ended, for a caller that waits (the summary queue,
+ * stores/summaryQueueStore.ts); nobody has to.
  */
 export function runBackgroundAction(
   noteId: number,
@@ -120,13 +153,13 @@ export function runBackgroundAction(
   action: ActionItem,
   options: RunActionOptions,
   labels: RunActionLabels
-): void {
-  if (processingFlags.get(noteId)) return;
+): Promise<BackgroundActionOutcome> {
+  if (processingFlags.get(noteId)) return Promise.resolve("busy");
 
   const modelId = options.modelId;
   if (!modelId && !options.isCloudMode) {
     pushErrorEvent({ noteId, message: labels.noModel });
-    return;
+    return Promise.resolve("refused");
   }
 
   const settings = getSettings();
@@ -134,14 +167,19 @@ export function runBackgroundAction(
   // A self-hosted config without a URL would fall through to a cloud provider.
   if (!options.isCloudMode && noteFormatting.mode === "self-hosted" && !noteFormatting.remoteUrl) {
     pushErrorEvent({ noteId, message: labels.noEndpoint });
-    return;
+    return Promise.resolve("refused");
   }
 
   cancelledFlags.set(noteId, false);
   processingFlags.set(noteId, true);
-  setNoteState(noteId, { status: "processing", actionName: action.name, message: null });
+  setNoteState(noteId, {
+    status: "processing",
+    actionName: action.name,
+    message: null,
+    kind: null,
+  });
 
-  (async () => {
+  const attempt = async (): Promise<"saved" | "cancelled"> => {
     // The model on this computer answers one request at a time, so the
     // background group sort steps aside before the summary asks.
     const release = await claimWritingModel().catch(() => () => {});
@@ -157,6 +195,17 @@ export function runBackgroundAction(
         options.isMeetingNote ? settings.customDictionary : undefined,
         settings.uiLanguage
       );
+      // A conversation that certainly does not fit the model on this Mac is
+      // not sent to it: loading the model to hear the same answer helps nobody.
+      if (
+        options.isMeetingNote &&
+        noteFormatting.mode === "local" &&
+        tooLongForLocalModel(systemPrompt.length + noteContent.length)
+      ) {
+        throw Object.assign(new Error(labels.tooLong ?? labels.actionFailed), {
+          code: SUMMARY_TOO_LONG,
+        });
+      }
       const enhanced = await reasoningService.processText(noteContent, modelId, null, {
         systemPrompt,
         temperature: 0.3,
@@ -167,7 +216,7 @@ export function runBackgroundAction(
         ...(options.isMeetingNote ? summaryLimits(noteFormatting.mode) : {}),
       });
 
-      if (cancelledFlags.get(noteId)) return;
+      if (cancelledFlags.get(noteId)) return "cancelled";
       // Never save nothing, or the transcript itself, as the summary.
       if (options.isMeetingNote && summaryAnswerProblem(enhanced, noteContent)) {
         throw new Error(labels.noSummary ?? labels.actionFailed);
@@ -178,8 +227,13 @@ export function runBackgroundAction(
         const generated = await generateNoteTitle(enhanced, modelId, providerOverrides);
         if (generated) title = generated;
       }
+      // Renamed while it was written: the name somebody just gave it stays.
+      if (title && options.titleAtStart !== undefined) {
+        const now = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(() => null);
+        if (now && (now.title ?? "") !== (options.titleAtStart ?? "")) title = undefined;
+      }
 
-      if (cancelledFlags.get(noteId)) return;
+      if (cancelledFlags.get(noteId)) return "cancelled";
 
       const updates: Record<string, string> = {
         enhanced_content: enhanced,
@@ -224,21 +278,58 @@ export function runBackgroundAction(
           }).catch(() => undefined);
         }
       }
-    } catch (err) {
-      if (cancelledFlags.get(noteId)) return;
-      processingFlags.set(noteId, false);
-      const message = err instanceof Error ? err.message : labels.actionFailed;
-      // A conversation keeps the failure, so its record says so and offers it
-      // again (OatsWorkspace.tsx); other notes go back to idle.
-      if (options.isMeetingNote) {
-        setNoteState(noteId, { status: "failed", actionName: action.name, message });
-      } else {
-        clearNoteState(noteId);
+      return "saved";
+    } finally {
+      release();
+    }
+  };
+
+  return (async (): Promise<BackgroundActionOutcome> => {
+    try {
+      for (let tries = 1; ; tries += 1) {
+        // A monotonic clock: the try's length decides whether it is repeated.
+        const startedAt = performance.now();
+        try {
+          return await attempt();
+        } catch (err) {
+          if (cancelledFlags.get(noteId)) return "cancelled";
+          // Too long for the model on this Mac fails the same way every time:
+          // never asked again, and said plainly instead of the server's words.
+          const kind = options.isMeetingNote
+            ? summaryFailureKind(err as { message?: string; code?: string }, noteFormatting.mode)
+            : "other";
+          // A conversation's summary is asked for once more, after a pause,
+          // before its record says it failed: a model still loading, a dropped
+          // connection or one empty answer has usually passed by then. Until
+          // that try ends it is still being written, so nothing says otherwise.
+          // Only a quick failure: a slow one was a timeout the request code
+          // already repeated, or a long local run (helpers/summaryQueue.mjs).
+          const tookMs = performance.now() - startedAt;
+          if (options.isMeetingNote && kind !== "too-long" && shouldRetrySummary(tries, tookMs)) {
+            await delay(SUMMARY_RETRY_DELAY_MS);
+            if (cancelledFlags.get(noteId)) return "cancelled";
+            continue;
+          }
+          processingFlags.set(noteId, false);
+          const message =
+            kind === "too-long" && labels.tooLong
+              ? labels.tooLong
+              : err instanceof Error
+                ? err.message
+                : labels.actionFailed;
+          // A conversation keeps the failure, so its record says so and offers it
+          // again (OatsWorkspace.tsx); other notes go back to idle.
+          if (options.isMeetingNote) {
+            setNoteState(noteId, { status: "failed", actionName: action.name, message, kind });
+          } else {
+            clearNoteState(noteId);
+          }
+          pushErrorEvent({ noteId, message });
+          return kind === "too-long" ? "too-long" : "failed";
+        }
       }
-      pushErrorEvent({ noteId, message });
     } finally {
       cancelledFlags.delete(noteId);
-      release();
     }
   })();
 }

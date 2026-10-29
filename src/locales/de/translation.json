@@ -179,6 +179,34 @@
     "speechModel": {
       "title": "Sprachmodell",
       "description": "Dieser Mac kann Whisper Turbo ausführen, das genaueste Modell. Es wird nach der Einrichtung von Hugging Face geladen: {{size}}."
+    },
+    "tour": {
+      "label": "Ein Rundgang durch Oats",
+      "announce": "{{current}} von {{count}}: {{title}}",
+      "skip": "Überspringen",
+      "back": "Zurück",
+      "next": "Weiter",
+      "start": "Loslegen",
+      "topics": {
+        "title": "Themen benennen sich selbst",
+        "body": "Oats folgt dem Gespräch, während alle reden, und benennt jedes Thema nach dem, was gesagt wurde."
+      },
+      "questions": {
+        "title": "Jede Frage bekommt eine Karte",
+        "body": "In der Ansicht Worte bekommt jede laut gestellte Frage sofort eine Karte, und die Karte zeigt, wie die Frage ausging."
+      },
+      "shape": {
+        "title": "Die Form des Gesprächs",
+        "body": "Danach wird das Gespräch so gezeichnet, wie es klang, mit jeder Frage und jedem markierten Moment an seiner Stelle."
+      },
+      "voices": {
+        "title": "Jede Stimme im Raum",
+        "body": "Ein Mikrofon hört den ganzen Raum, und Oats unterscheidet die Stimmen und zeigt, wer wie viel gesprochen hat."
+      },
+      "open": {
+        "title": "Was offen geblieben ist",
+        "body": "Wenn du ein Gespräch öffnest, stehen die Fragen, die niemand beantwortet hat, über seiner Zusammenfassung."
+      }
     }
   },
   "streaming": {
@@ -2066,9 +2094,12 @@
       "deleteDescription": "Transkript, Zusammenfassung und markierte Momente werden aus Oats entfernt. Das lässt sich nicht rückgängig machen.",
       "emptyDescription": "Aufgenommene Gespräche erscheinen hier, mit einer Zusammenfassung und einem durchsuchbaren Transkript.",
       "noMatchesHint": "Die Suche umfasst Titel, Zusammenfassungen, Transkripte und deine Notizen.",
-      "needsSummaryModel": "Noch ist kein Modell für Zusammenfassungen bereit, daher wurde dieses Gespräch nicht zusammengefasst.",
+      "needsSummaryModel": "Noch ist kein Modell für Zusammenfassungen bereit. Die Zusammenfassung wird erstellt, sobald eines bereit ist.",
       "notSummarized": "Dieses Gespräch wurde noch nicht zusammengefasst.",
-      "summarize": "Zusammenfassen",
+      "summaryAfterDownload": "Die Zusammenfassung wird erstellt, sobald {{model}} heruntergeladen ist: {{percent}}%",
+      "summaryAfterRecording": "Die Zusammenfassung wird erstellt, wenn dieses Gespräch beendet ist.",
+      "summaryWhenRecordingEnds": "Die Zusammenfassung wird erstellt, wenn die Aufnahme endet.",
+      "summaryTooLong": "Dieses Gespräch ist zu lang für das Schreibmodell auf diesem Mac. Mit einem API-Schlüssel (Einstellungen › KI-Modelle) lässt es sich zusammenfassen.",
       "summarizeAgain": "Erneut zusammenfassen",
       "summaryFailed": "Die Zusammenfassung konnte nicht erstellt werden: {{reason}}",
       "setUpModel": "Modell einrichten"
@@ -2284,7 +2315,7 @@
       "microphoneDescription": "Das Mikrofon, das Oats für Gespräche und Diktate nutzt.",
       "fieldBackdrop": {
         "label": "Feld-Hintergrund",
-        "description": "Zeigt das animierte Weizenfeld hinter der App."
+        "description": "Ein entspannteres Aussehen für Oats."
       },
       "dictationButton": "Beim Diktieren",
       "instructionsDescription": "Wie das Modell jedes Diktat überarbeitet. Die Standardeinstellung passt für die meisten.",
@@ -2324,7 +2355,7 @@
       "no-model": "Das mitgelieferte Sprachmodell wurde nicht installiert. Starte Oats neu; wenn das Problem bleibt, installiere neu.",
       "no-api-key": "Die Verarbeitung läuft über einen API-Schlüssel, aber es ist keiner gespeichert – siehe Einstellungen.",
       "question-cards-off": "Fragekarten sind ausgeschaltet, Fragen gehen also still vorbei. Schalte sie in den Einstellungen unter Aufnahme ein.",
-      "no-summary-model": "Gespräche werden ohne Titel und Zusammenfassung gespeichert: Es ist kein Schreibmodell bereit. Wählen Sie eines unter Einstellungen › KI-Modelle."
+      "no-summary-model": "Titel und Zusammenfassungen warten auf ein Schreibmodell: Wählen Sie eines unter Einstellungen › KI-Modelle."
     },
     "aide": {
       "title": "Gesprächshilfe",

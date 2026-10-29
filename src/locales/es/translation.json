@@ -179,6 +179,34 @@
     "speechModel": {
       "title": "Modelo de voz",
       "description": "Este Mac puede ejecutar Whisper Turbo, el modelo más preciso. Se descarga desde Hugging Face después de la configuración: {{size}}."
+    },
+    "tour": {
+      "label": "Un recorrido por Oats",
+      "announce": "{{current}} de {{count}}: {{title}}",
+      "skip": "Omitir",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "start": "Empezar",
+      "topics": {
+        "title": "Los temas se nombran solos",
+        "body": "Oats sigue el asunto mientras la gente habla y pone nombre a cada tema a partir de lo que se dijo."
+      },
+      "questions": {
+        "title": "Cada pregunta tiene su tarjeta",
+        "body": "En la vista Palabras, cada pregunta hecha en voz alta recibe una tarjeta al instante, y la tarjeta dice cómo terminó."
+      },
+      "shape": {
+        "title": "La forma de la conversación",
+        "body": "Después, la conversación se dibuja a partir de cómo sonó, con cada pregunta y cada momento marcado en su sitio."
+      },
+      "voices": {
+        "title": "Cada voz de la sala",
+        "body": "Un solo micrófono oye toda la sala, y Oats distingue las voces para mostrar cuánto habló cada uno."
+      },
+      "open": {
+        "title": "Lo que quedó abierto",
+        "body": "Al abrir una conversación, las preguntas que nadie respondió aparecen encima de su resumen."
+      }
     }
   },
   "streaming": {
@@ -2066,9 +2094,12 @@
       "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
       "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
       "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
-      "needsSummaryModel": "Aún no hay un modelo de resumen listo, así que esta conversación no se ha resumido.",
+      "needsSummaryModel": "Aún no hay un modelo de resumen listo. El resumen se escribirá en cuanto lo haya.",
       "notSummarized": "Esta conversación aún no se ha resumido.",
-      "summarize": "Resumir",
+      "summaryAfterDownload": "El resumen se escribirá cuando {{model}} termine de descargarse: {{percent}}%",
+      "summaryAfterRecording": "El resumen se escribirá cuando termine esta conversación.",
+      "summaryWhenRecordingEnds": "El resumen se escribirá cuando termine la grabación.",
+      "summaryTooLong": "Esta conversación es demasiado larga para el modelo de escritura de este Mac. Con una clave API (Ajustes › Modelos de IA) se puede resumir.",
       "summarizeAgain": "Resumir de nuevo",
       "summaryFailed": "No se pudo crear el resumen: {{reason}}",
       "setUpModel": "Configurar un modelo"
@@ -2284,7 +2315,7 @@
       "microphoneDescription": "El micrófono que usa Oats para conversaciones y dictado.",
       "fieldBackdrop": {
         "label": "Fondo de campo",
-        "description": "Dibuja el campo de trigo animado detrás de la app."
+        "description": "Un aspecto más relajado para Oats."
       },
       "dictationButton": "Mientras dictas",
       "instructionsDescription": "Cómo el modelo reescribe cada dictado. La opción predeterminada sirve para casi todos.",
@@ -2324,7 +2355,7 @@
       "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
       "question-cards-off": "Las tarjetas de preguntas están desactivadas, así que las preguntas pasarán en silencio. Actívalas en Ajustes, en Grabación.",
-      "no-summary-model": "Las conversaciones se guardarán sin título ni resumen: no hay ningún modelo de escritura listo. Elige uno en Ajustes › Modelos de IA."
+      "no-summary-model": "Los títulos y resúmenes esperan a un modelo de escritura: elige uno en Ajustes › Modelos de IA."
     },
     "aide": {
       "title": "Asistente de conversación",

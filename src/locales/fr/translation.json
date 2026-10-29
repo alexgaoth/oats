@@ -179,6 +179,34 @@
     "speechModel": {
       "title": "Modèle de parole",
       "description": "Ce Mac peut exécuter Whisper Turbo, le modèle le plus précis. Il se télécharge depuis Hugging Face après la configuration : {{size}}."
+    },
+    "tour": {
+      "label": "Visite d’Oats",
+      "announce": "{{current}} sur {{count}} : {{title}}",
+      "skip": "Passer",
+      "back": "Retour",
+      "next": "Suivant",
+      "start": "Commencer",
+      "topics": {
+        "title": "Les sujets se nomment d’eux-mêmes",
+        "body": "Oats suit la conversation pendant que les gens parlent et nomme chaque sujet d’après ce qui a été dit."
+      },
+      "questions": {
+        "title": "Chaque question a sa carte",
+        "body": "Dans la vue Mots, chaque question posée à voix haute reçoit aussitôt une carte, qui indique comment elle s’est terminée."
+      },
+      "shape": {
+        "title": "La forme de la conversation",
+        "body": "Ensuite, la conversation est dessinée d’après son volume sonore, avec chaque question et chaque moment marqué à sa place."
+      },
+      "voices": {
+        "title": "Chaque voix de la pièce",
+        "body": "Un seul microphone entend toute la pièce, et Oats distingue les voix pour montrer qui a parlé combien de temps."
+      },
+      "open": {
+        "title": "Ce qui reste ouvert",
+        "body": "Quand vous ouvrez une conversation, les questions restées sans réponse sont listées au-dessus de son résumé."
+      }
     }
   },
   "streaming": {
@@ -2066,9 +2094,12 @@
       "deleteDescription": "Sa transcription, son résumé et ses moments marqués sont supprimés d’Oats. Cette action est irréversible.",
       "emptyDescription": "Les conversations que vous enregistrez apparaissent ici, avec un résumé et une transcription dans laquelle chercher.",
       "noMatchesHint": "La recherche porte sur les titres, les résumés, les transcriptions et vos notes.",
-      "needsSummaryModel": "Aucun modèle de résumé n’est encore prêt, donc cette conversation n’a pas été résumée.",
+      "needsSummaryModel": "Aucun modèle de résumé n’est encore prêt. Le résumé sera rédigé dès qu’il le sera.",
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
-      "summarize": "Résumer",
+      "summaryAfterDownload": "Le résumé sera rédigé une fois {{model}} téléchargé : {{percent}}%",
+      "summaryAfterRecording": "Le résumé sera rédigé à la fin de cette conversation.",
+      "summaryWhenRecordingEnds": "Le résumé sera rédigé à la fin de l’enregistrement.",
+      "summaryTooLong": "Cette conversation est trop longue pour le modèle de rédaction de ce Mac. Avec une clé API (Réglages › Modèles d’IA), elle peut être résumée.",
       "summarizeAgain": "Résumer à nouveau",
       "summaryFailed": "Le résumé n'a pas pu être rédigé : {{reason}}",
       "setUpModel": "Configurer un modèle"
@@ -2284,7 +2315,7 @@
       "microphoneDescription": "Le micro qu’Oats utilise pour les conversations et la dictée.",
       "fieldBackdrop": {
         "label": "Arrière-plan champ",
-        "description": "Affiche le champ de blé animé derrière l'app."
+        "description": "Une apparence plus détendue pour Oats."
       },
       "dictationButton": "Pendant la dictée",
       "instructionsDescription": "Comment le modèle réécrit chaque dictée. Le réglage par défaut convient à la plupart des gens.",
@@ -2324,7 +2355,7 @@
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
       "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Activez-les dans les Réglages, section Enregistrement.",
-      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de rédaction n’est prêt. Choisissez-en un dans Réglages › Modèles d’IA."
+      "no-summary-model": "Les titres et les résumés attendent un modèle de rédaction : choisissez-en un dans Réglages › Modèles d’IA."
     },
     "aide": {
       "title": "Assistant de conversation",

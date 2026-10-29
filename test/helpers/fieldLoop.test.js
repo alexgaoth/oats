@@ -84,6 +84,23 @@ test("a still field draws once; a moving one only while somebody can see it", as
   assert.equal(at(true, true, false), "still");
 });
 
+test("a move to another screen's picture draws frames only while it lasts and is seen", async () => {
+  const { fieldLoopState, MOVE_MS } = await load();
+  const at = (animate, reduced, visible) =>
+    fieldLoopState({ animate, reduced, visible, easing: true });
+
+  // On a reading screen the move is the only reason to draw more than one frame.
+  assert.equal(at(false, false, true), "easing");
+  // Nobody to see it, or somebody who asked for no motion: the new picture at once.
+  assert.equal(at(false, false, false), "still");
+  assert.equal(at(false, true, true), "still");
+  // With the wind blowing the loop is already running, and carries the move.
+  assert.equal(at(true, false, true), "moving");
+  assert.equal(at(true, false, false), "paused");
+  // A move takes the frame's own time, so the horizon settles as the panes do.
+  assert.equal(MOVE_MS, 280);
+});
+
 test("the clock is the wall clock while it runs", async () => {
   const { createFieldClock } = await load();
   const clock = createFieldClock(1000);
