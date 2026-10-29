@@ -15,6 +15,8 @@ const EXPECTED_BINARY_FRAGMENTS = {
   // `pactl set-sink-volume`.
   pactl: ["pactl subscribe"],
   whisper: ["whisper-server"],
+  // The short-lived server that times the speed check's clip (deviceTier.js).
+  "whisper-check": ["whisper-server"],
   llama: ["llama-server"],
   qdrant: ["qdrant"],
   diarization: ["sherpa-onnx-diarize"],

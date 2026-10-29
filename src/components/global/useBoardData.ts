@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNotes } from "../../stores/noteStore";
 import { parseDbTimestamp } from "../../helpers/dbTime.mjs";
 import { subjectThreads } from "../../helpers/lifetimeGraph";
+import { linkThreads } from "../../helpers/conversationLinks.mjs";
+import { readLinkCheck } from "../../helpers/remoteLinks.mjs";
 import type { NoteItem } from "../../types/electron";
 import { readSnapshot } from "./boardData";
-import type { BoardConversation } from "./boardData";
+import type { BoardConversation, LinkCheck } from "./boardData";
 import type { Subject } from "./linkedHighlight";
+import type { TopicVectors } from "./topicVectors";
 
 // The board's data, kept current without rebuilding anything that did not
 // change: a recording's checkpoints update its note many times a minute, and
@@ -25,6 +28,7 @@ function toBoardConversation(note: NoteItem, untitled: string): BoardConversatio
     snapshot: readSnapshot(note.conversation_topics),
     groupId: typeof note.group_id === "number" ? note.group_id : null,
     openQuestions: typeof note.open_questions === "number" ? note.open_questions : null,
+    linkCheck: readLinkCheck(note.conversation_links) as LinkCheck | null,
   };
 }
 
@@ -36,6 +40,7 @@ function boardKey(note: NoteItem): string {
     note.group_id ?? "",
     note.open_questions ?? "",
     note.conversation_topics ?? "",
+    note.conversation_links ?? "",
   ].join("\u0000");
 }
 
@@ -149,7 +154,17 @@ export interface TabGraph {
   subjects: Subject[];
 }
 
-export function useTabGraph(conversations: BoardConversation[]): TabGraph {
+/**
+ * The graphs' nodes, and the subjects and edges between them: by meaning when
+ * the topics' vectors are known (`conversationLinks.mjs`), else by words
+ * (`subjectThreads`).
+ */
+export function useTabGraph(
+  conversations: BoardConversation[],
+  meaning: TopicVectors | null = null
+): TabGraph {
+  const ready = Boolean(meaning?.ready);
+  const vectorOf = meaning?.vectorOf;
   return useMemo(() => {
     const withTopics = conversations
       .filter((conversation) => conversation.snapshot?.nodes.length)
@@ -168,10 +183,22 @@ export function useTabGraph(conversations: BoardConversation[]): TabGraph {
         state: "open" as const,
       };
     });
-    const threads = subjectThreads(withTopics) as {
+    // A conversation a cloud model checked is linked by its check; the rest
+    // by meaning, or by words until the vectors are there.
+    const checks = new Map(
+      withTopics
+        .filter((conversation) => conversation.linkCheck)
+        .map((conversation) => [conversation.id, conversation.linkCheck as LinkCheck])
+    );
+    const meaning = ready && vectorOf ? vectorOf : null;
+    const threads = (
+      meaning || checks.size
+        ? linkThreads(withTopics, { vectorOf: meaning, checks })
+        : subjectThreads(withTopics)
+    ) as {
       subjects: Subject[];
       edges: BoardEdge[];
     };
     return { nodes, edges: threads.edges, subjects: threads.subjects };
-  }, [conversations]);
+  }, [conversations, ready, vectorOf]);
 }

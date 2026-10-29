@@ -331,6 +331,10 @@ function initializeCoreManagers() {
 
 function registerSidecars() {
   if (whisperManager) sidecarRegistry.register("whisper", () => whisperManager.stopServer());
+  // The speed check's own short-lived whisper-server, if one is up at quit.
+  if (ipcHandlers?.deviceTier) {
+    sidecarRegistry.register("whisper-check", () => ipcHandlers.deviceTier.stopCheckServer());
+  }
   if (parakeetManager) sidecarRegistry.register("parakeet", () => parakeetManager.stopServer());
   if (diarizationManager) {
     sidecarRegistry.register("diarization", () => diarizationManager.shutdown());
@@ -659,9 +663,17 @@ async function startApp() {
       process.env.WHISPER_VULKAN_ENABLED === "true" &&
       whisperVulkanManager?.isDownloaded(),
   };
-  whisperManager.initializeAtStartup(whisperSettings).catch((err) => {
-    debugLogger.debug("Whisper startup init error (non-fatal)", { error: err.message });
-  });
+  whisperManager
+    .initializeAtStartup(whisperSettings)
+    .catch((err) => {
+      debugLogger.debug("Whisper startup init error (non-fatal)", { error: err.message });
+    })
+    // Then the speed check, once per app version (deviceTier.js): after the
+    // pre-warm, so it can read its clip on the server that just loaded small.en.
+    .then(() => ipcHandlers?.deviceTier?.ensureMeasured())
+    .catch((err) => {
+      debugLogger.debug("Device tier error (non-fatal)", { error: err.message });
+    });
 
   const parakeetSettings = {
     localTranscriptionProvider: process.env.LOCAL_TRANSCRIPTION_PROVIDER || "",

@@ -27,6 +27,9 @@ const NAMES = [
   { name: "News embargo timing", words: /\b(embargo|announcement|press|outlets?)\b/gi },
 ];
 
+/** The names it gives, for the harness's topic vectors (`build-topic-vectors.mjs`). */
+export const DEMO_TOPIC_NAMES = NAMES.map((entry) => entry.name);
+
 /** The stub's answer to a topic-naming prompt, or null when it has no name to give. */
 export function demoTopicName(prompt) {
   const text = String(prompt ?? "");
@@ -47,7 +50,7 @@ export function demoTopicName(prompt) {
 
 // --- The live topic check (`loop=1`, fastModel.mjs).
 //
-// The stand-in for the fast OpenAI model that confirms the changes of subject
+// The stand-in for the check model that confirms the changes of subject
 // the on-device tracker proposes (`src/helpers/topicLoop.mjs`). It answers as
 // the model is asked to, in the asked JSON, from the same subjects as above:
 // a change where the lines after it turn to another subject, a return when

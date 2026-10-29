@@ -66,6 +66,7 @@ import { SegmentedControl } from "./ui/segmented";
 import type { InferenceModeOption } from "./ui/SettingsSection";
 import type { SettingsPageId } from "./settings/settingsPages";
 import { SettingRow, SettingsSection } from "./settings/SettingsKit";
+import { SpeechTierRow } from "./settings/SpeechTierRow";
 import { useShallow } from "zustand/react/shallow";
 import { selectResolvedLLMConfig } from "../stores/settingsStore";
 import {
@@ -1865,6 +1866,11 @@ EOF`,
                   {t("oats.settings.models.choose")}
                 </Button>
               </SettingRow>
+              {/* What turbo is doing on this Mac, while the speech model
+                  follows the default (speechTier.mjs). */}
+              {transcriptionMode === "local" && localTranscriptionProvider !== "nvidia" && (
+                <SpeechTierRow />
+              )}
               <SettingRow
                 label={t("oats.settings.models.writing")}
                 description={t("oats.settings.models.writingDescription")}

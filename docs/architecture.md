@@ -292,6 +292,9 @@ Models stored in `~/.cache/openwhispr/whisper-models/`:
 - medium: ~1.5GB (high quality)
 - large: ~3GB (best quality)
 - turbo: ~1.6GB (fast with good quality)
+- turbo-q5: ~574MB (`large-v3-turbo` in 5-bit; the default on an Apple Silicon
+  Mac whose GPU measures fast enough, downloaded after setup:
+  `src/helpers/speechTier.mjs`, `src/helpers/deviceTier.js`)
 
 ### 4. Database Schema
 
