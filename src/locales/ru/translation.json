@@ -139,6 +139,7 @@
       "welcome": "Приветствие",
       "setup": "Настройка",
       "permissions": "Разрешения",
+      "processing": "Обработка",
       "activation": "Диктовка",
       "useCase": "О вас",
       "meeting": "Встречи",
@@ -172,6 +173,15 @@
       "shortcutDescription": "Нажмите ещё раз, чтобы завершить разговор.",
       "getStarted": "Начать"
     },
+    "processing": {
+      "title": "Где думает Oats",
+      "description": "Две модели расшифровывают разговор в комнате и пишут каждую сводку. Они работают здесь или с вашим API-ключом. Позже это можно изменить в разделе Настройки › Модели ИИ.",
+      "downloads": "Oats загрузит {{models}} с Hugging Face, когда вы продолжите, в фоне.",
+      "nothingToDownload": "Всё, что нужно Oats, уже есть на этом Mac.",
+      "nothingToDownloadComputer": "Всё, что нужно Oats, уже есть на этом компьютере."
+    },
+    "continue": "Продолжить",
+    "back": "Назад",
     "language": {
       "title": "Язык",
       "description": "Язык разговора в комнате"

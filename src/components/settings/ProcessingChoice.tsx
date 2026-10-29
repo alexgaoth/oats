@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { Cpu, KeyRound } from "lucide-react";
+import { ChevronRight, Cpu, KeyRound } from "lucide-react";
 import { cn } from "../lib/utils";
 import { getCachedPlatform } from "../../utils/platform";
 import type { ProcessingMode } from "./processing";
@@ -127,5 +127,29 @@ export function ProcessingChoice({
       </div>
       {detail && <div className="mt-3">{detail}</div>}
     </div>
+  );
+}
+
+/**
+ * What goes to the provider with an API key, said where that choice is made
+ * (Settings and setup), closed until somebody asks: the audio with an OpenAI
+ * key, and what the writing model reads (docs/network-allowlist.md).
+ */
+export function WhatIsSent() {
+  const { t } = useTranslation();
+  return (
+    <details className="group px-1">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          aria-hidden="true"
+          className="size-3.5 transition-transform duration-150 group-open:rotate-90 motion-reduce:transition-none"
+        />
+        {t("oats.models.whatIsSent")}
+      </summary>
+      <div className="mt-2 space-y-2 text-xs leading-5 text-muted-foreground">
+        <p>{t("oats.models.speechSent")}</p>
+        <p>{t("oats.settings.models.writingScreen")}</p>
+      </div>
+    </details>
   );
 }

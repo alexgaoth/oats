@@ -196,6 +196,35 @@ const SHOTS = [
     script:
       "await oatsDemo.settings('models'); await demo.typeKey('AIzaSyD-not-an-openai-key'); await demo.wait(400)",
   },
+  // Setup's second step, "Where Oats thinks" (components/onboarding/): the
+  // same processing choice as Settings, with what "On this Mac" downloads.
+  { name: "setup-permissions", query: "firstrun=1&tier=fast", ready: "h1", script: "" },
+  {
+    name: "setup-processing-local",
+    query: "firstrun=1&setupStep=1&tier=fast&writing=none",
+    ready: "h1",
+    script: "await demo.wait(600)",
+  },
+  {
+    name: "setup-processing-8gb",
+    query: "firstrun=1&setupStep=1&tier=none&writing=none&memory=8",
+    ready: "h1",
+    script: "await demo.wait(600)",
+  },
+  {
+    name: "setup-processing-key",
+    query: "firstrun=1&setupStep=1&tier=fast&writing=none",
+    ready: "h1",
+    script:
+      "await demo.wait(600); [...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300)",
+  },
+  {
+    name: "setup-processing-key-saved",
+    query: "firstrun=1&setupStep=1&tier=fast&writing=none",
+    ready: "h1",
+    script:
+      "await demo.wait(600); [...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300); await demo.typeKey('sk-proj-demo-key-0123456789'); await demo.wait(800)",
+  },
   // Oats starts the writing model's download by itself and says so, once
   // (WritingModelNotice), and Home says what it means for a conversation now.
   { name: "writing-notice", query: "writing=none&tier=ready", script: "await demo.wait(1500)" },

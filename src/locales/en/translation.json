@@ -139,6 +139,7 @@
       "welcome": "Welcome",
       "setup": "Setup",
       "permissions": "Permissions",
+      "processing": "Processing",
       "activation": "Dictation",
       "useCase": "About you",
       "meeting": "Meetings",
@@ -172,6 +173,15 @@
       "shortcutDescription": "Press it again to finish the conversation.",
       "getStarted": "Get started"
     },
+    "processing": {
+      "title": "Where Oats thinks",
+      "description": "Two models transcribe the room and write each summary. They run here, or with your own API key. You can change this later in Settings › AI models.",
+      "downloads": "Oats downloads {{models}} from Hugging Face when you continue, in the background.",
+      "nothingToDownload": "Everything Oats needs is already on this Mac.",
+      "nothingToDownloadComputer": "Everything Oats needs is already on this computer."
+    },
+    "continue": "Continue",
+    "back": "Back",
     "language": {
       "title": "Language",
       "description": "The language spoken in the room"

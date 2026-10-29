@@ -60,10 +60,12 @@ Mac's GPU, on its own speech server, with no connection
 `large-v3-turbo` live (`src/helpers/speechTier.mjs`), Oats downloads it once
 setup is done, and only while the speech model follows the default: a model
 the person chose stops it. It never starts while a conversation is
-recorded: it waits for the recording to end. The setup screen says so once
-the check is done (a second or two after launch). When the download starts,
-a notice in the corner says so once, with its size, its host and a Cancel
-button: after setup on a new install, and at the first launch of this
+recorded: it waits for the recording to end. Setup's step "Where Oats
+thinks" names it with its size once the check is done (a second or two
+after launch), and when the person continues with "On this Mac" it starts
+at once. When Oats starts it by itself, a notice in the corner says so once,
+with its size, its host and a Cancel button: after setup on a new install
+that went on before the check was done, and at the first launch of this
 version on an existing one, which never sees the setup screen. The sidebar
 and Settings › Models show its progress with a Cancel button, and the
 sidebar's request count includes it (it goes through `downloadUtils.js`, like
@@ -81,8 +83,10 @@ Linux, and Macs that measure too slow never fetch it.
 With processing on this computer ("On this Mac", the default), the title and
 summary of each conversation are written by a local model. When none is ready
 and the writing setting follows the default, Oats downloads the one this
-computer's memory holds (`src/helpers/writingTier.mjs`): once setup is done,
-and never while a conversation is recorded. A model the person chose stops it, and so does a
+computer's memory holds (`src/helpers/writingTier.mjs`): at once when the
+person continues past setup's step "Where Oats thinks" with "On this Mac",
+which names it with its size, or else once setup is done, and never while a
+conversation is recorded. A model the person chose stops it, and so does a
 writing model already on disk. When Oats starts it by itself, a notice in the
 corner says so once, with its size, its host and a Cancel button; the sidebar
 and Settings › AI models show its progress with a Cancel button. It goes

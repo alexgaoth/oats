@@ -139,6 +139,7 @@
       "welcome": "Bienvenido",
       "setup": "Configuración",
       "permissions": "Permisos",
+      "processing": "Procesamiento",
       "activation": "Dictado",
       "useCase": "Sobre ti",
       "meeting": "Reuniones",
@@ -172,6 +173,15 @@
       "shortcutDescription": "Púlsalo otra vez para terminar la conversación.",
       "getStarted": "Empezar"
     },
+    "processing": {
+      "title": "Dónde piensa Oats",
+      "description": "Dos modelos transcriben la sala y escriben cada resumen. Funcionan aquí o con tu propia clave de API. Puedes cambiarlo después en Ajustes › Modelos de IA.",
+      "downloads": "Oats descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
+      "nothingToDownload": "Todo lo que Oats necesita ya está en este Mac.",
+      "nothingToDownloadComputer": "Todo lo que Oats necesita ya está en este ordenador."
+    },
+    "continue": "Continuar",
+    "back": "Atrás",
     "language": {
       "title": "Idioma",
       "description": "El idioma que se habla en la sala"

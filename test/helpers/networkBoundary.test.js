@@ -371,3 +371,21 @@ test("the writing model comes through the counted download path, from Hugging Fa
     assert.equal(provider.baseUrl, "https://huggingface.co", `${id} comes from Hugging Face`);
   }
 });
+
+test("setup starts the downloads only when the person continues with On this Mac", () => {
+  // The step names what "On this Mac" fetches; nothing starts while it is shown.
+  const setup = read("src/components/onboarding/processingSetup.ts");
+  assert.match(
+    setup,
+    /setProcessing\(mode\);\s*if \(mode === "local"\) downloads\.start\(language\);/
+  );
+  const step = read("src/components/onboarding/ProcessingStep.tsx");
+  assert.doesNotMatch(step, /requestTurbo|requestWritingModel|commitProcessing|\.start\(/);
+  // The flow commits the choice in one place: leaving the processing step.
+  const flow = read("src/components/OnboardingFlow.tsx");
+  assert.equal([...flow.matchAll(/commitProcessing\(/g)].length, 1);
+  assert.match(
+    flow,
+    /if \(currentStepId === "processing"\) \{\s*commitProcessing\(processingChoice, localDownloads, preferredLanguage\);/
+  );
+});

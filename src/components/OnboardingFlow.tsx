@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
-import { AlertTriangle, AudioLines, Check, Keyboard, Languages, Mic, Shield } from "lucide-react";
+import { AlertTriangle, Check, Cpu, Keyboard, Languages, Mic, Shield } from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Kbd } from "./ui/kbd";
@@ -14,8 +14,10 @@ import { useDialogs } from "../hooks/useDialogs";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
 import { useSettings } from "../hooks/useSettings";
-import { useSettingsStore } from "../stores/settingsStore";
-import { formatMegabytes, useSpeechTier } from "../hooks/useSpeechTier";
+import { selectProcessingMode, useSettingsStore } from "../stores/settingsStore";
+import { ProcessingStep } from "./onboarding/ProcessingStep";
+import { commitProcessing, useLocalDownloads } from "./onboarding/processingSetup";
+import type { ProcessingMode } from "./settings/processing";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
@@ -74,17 +76,16 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     updateTranscriptionSettings,
   } = useSettings();
   const languageTitleId = useId();
-  // On a Mac whose GPU measured fast enough, Whisper Turbo downloads after
-  // setup (speechTier.mjs): said here, before it happens. The row appears
-  // when the speed check is done, a second or two after launch.
-  const speechTier = useSpeechTier();
-  const turboAfterSetup =
-    useLocalWhisper &&
-    localTranscriptionProvider === "whisper" &&
-    speechTier.followsDefault &&
-    speechTier.turboIsDefault &&
-    !speechTier.tier?.turbo?.installed &&
-    !speechTier.tier?.turbo?.declined;
+  // Where Oats thinks (the processing step): chosen here, committed when the
+  // person continues, so trying both options changes nothing. On this Mac by
+  // default; what it downloads is named in the step (processingSetup.ts).
+  const [processingChoice, setProcessingChoice] = useState<ProcessingMode>(() =>
+    selectProcessingMode(useSettingsStore.getState()) === "providers" ? "providers" : "local"
+  );
+  const localDownloads = useLocalDownloads();
+  const providerKeySaved = useSettingsStore((state) =>
+    Boolean(state.openaiApiKey.trim() || state.anthropicApiKey.trim())
+  );
 
   // Onboarding edits only the primary dictation hotkey; extra bindings are
   // preserved via withExtraDictationHotkeys.
@@ -116,13 +117,18 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setAccessibilitySkipped,
   ]);
 
-  // One step, because exactly one thing genuinely blocks a first conversation:
-  // permission to use the microphone. The dictation shortcut moved out (it
-  // configures a feature that is not one of Oats' three surfaces, and the
-  // conversation shortcut now ships with a working default), and the
-  // congratulations screen went with it. Show the product; they will work it out.
+  // The steps, in order: one screen each, with one way forward. The
+  // microphone first, because it is the one thing that blocks a first
+  // conversation; then where Oats thinks, because that decides the downloads
+  // and the key. The dictation shortcut and the congratulations screen went
+  // long ago. To add a step: an entry here, its body in renderStep (kept in
+  // its own file), and its condition in canProceed. The last step's button
+  // says "Get started"; every other step's says "Continue".
   const steps = useMemo(() => {
-    return [{ id: "permissions", title: t("onboarding.steps.permissions"), icon: Shield }];
+    return [
+      { id: "permissions", title: t("onboarding.steps.permissions"), icon: Shield },
+      { id: "processing", title: t("onboarding.steps.processing"), icon: Cpu },
+    ];
   }, [t]);
 
   const currentStepId = steps[currentStep]?.id;
@@ -285,6 +291,27 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     [saveSettings, removeCurrentStep, onComplete]
   );
 
+  const isLastStep = currentStep >= steps.length - 1;
+  // A step's heading takes focus when the step comes, so a screen reader reads
+  // the new screen from its top. The first screen keeps focus where it was.
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const shownStep = useRef(currentStep);
+  useEffect(() => {
+    if (shownStep.current === currentStep) return;
+    shownStep.current = currentStep;
+    stepHeadingRef.current?.focus();
+  }, [currentStep]);
+
+  // Continue, or Get started on the last step. Leaving the processing step
+  // commits its choice, and on this Mac starts its downloads at once.
+  const goForward = async () => {
+    if (currentStepId === "processing") {
+      commitProcessing(processingChoice, localDownloads, preferredLanguage);
+    }
+    if (isLastStep) await finishOnboarding();
+    else setCurrentStep(currentStep + 1);
+  };
+
   const renderStep = () => {
     switch (currentStepId) {
       case "permissions": {
@@ -292,7 +319,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return (
           <div className="flex flex-col items-center text-center">
             <OatsMark className="size-12" shadow spinOnMount />
-            <h1 className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-foreground">
+            <h1
+              ref={stepHeadingRef}
+              tabIndex={-1}
+              className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-foreground outline-none"
+            >
               {t("onboarding.permissions.title")}
             </h1>
             <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
@@ -367,23 +398,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   onChange={(value) => updateTranscriptionSettings({ preferredLanguage: value })}
                 />
               </div>
-              {turboAfterSetup && (
-                <div className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <AudioLines aria-hidden="true" className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {t("onboarding.speechModel.title")}
-                    </p>
-                    <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
-                      {t("onboarding.speechModel.description", {
-                        size: formatMegabytes(speechTier.sizeBytes, i18n.language),
-                      })}
-                    </p>
-                  </div>
-                </div>
-              )}
               {shortcut && (
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
@@ -422,6 +436,16 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         );
       }
 
+      case "processing":
+        return (
+          <ProcessingStep
+            ref={stepHeadingRef}
+            value={processingChoice}
+            onChange={setProcessingChoice}
+            downloads={localDownloads}
+          />
+        );
+
       default:
         return null;
     }
@@ -457,6 +481,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
       case "permissions":
         return areRequiredPermissionsMet(permissionsHook.micPermissionGranted);
+      case "processing":
+        // With an API key, the key comes first: OpenAI's or Anthropic's.
+        return processingChoice === "local" || providerKeySaved;
       default:
         return false;
     }
@@ -466,11 +493,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     // First run, in the same system as the workspace.
     //
     // This used to be a wizard chassis — title bar, step progress, a rounded
-    // card, and a footer of pill buttons — around a flow that has had exactly
-    // one step since the dictation and congratulations steps were removed. It
+    // card, and a footer of pill buttons — around a flow that had one step. It
     // announced itself as a different product from the three surfaces behind
-    // it, on the first screen anybody sees. There is one thing to do here, so
-    // there is one column, one heading, and one action.
+    // it, on the first screen anybody sees. Each step is one column, one
+    // heading, and one way forward, with Back from the second step on.
     <div
       className="oats-surface flex h-screen flex-col bg-background antialiased"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
@@ -503,15 +529,27 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       <div className="flex min-h-0 flex-1 items-center overflow-y-auto px-8 pb-8">
         <div className="mx-auto flex w-full max-w-md flex-col items-stretch">
           {renderStep()}
-          <Button
-            ref={doneRef}
-            size="lg"
-            className="mt-8 w-full"
-            onClick={() => void finishOnboarding()}
-            disabled={!canProceed() || isFinishing}
-          >
-            {t("onboarding.welcome.getStarted")}
-          </Button>
+          <div className="mt-8 flex gap-3">
+            {currentStep > 0 && (
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                disabled={isFinishing}
+              >
+                {t("onboarding.back")}
+              </Button>
+            )}
+            <Button
+              ref={doneRef}
+              size="lg"
+              className="flex-1"
+              onClick={() => void goForward()}
+              disabled={!canProceed() || isFinishing}
+            >
+              {isLastStep ? t("onboarding.welcome.getStarted") : t("onboarding.continue")}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
