@@ -2510,6 +2510,7 @@
       "notThisKey": "Questa non è una chiave {{provider}}.",
       "checking": "Verifica della chiave con {{provider}}…",
       "rejected": "{{provider}} non ha accettato questa chiave.",
+      "rejectedReason": "{{provider}} non ha accettato questa chiave: {{reason}}",
       "works": "Salvata. Funziona con {{model}}.",
       "noAccess": "Salvata, ma questa chiave non può usare {{model}}. Scegli un altro modello in Avanzate.",
       "unchecked": "Salvata. Oats non è riuscito a verificarla ora.",

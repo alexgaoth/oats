@@ -243,12 +243,16 @@ export function WritingModelChoice() {
       <OpenAICompatiblePanel
         baseUrl={remoteUrl}
         setBaseUrl={(url) => {
-          // Entering an address is choosing the server: it takes the writing.
+          // Entering an address is choosing the server: it takes the writing,
+          // and, like Use, stops a download left behind.
           setResolvedLLMConfig("dictationCleanup", { remoteUrl: url });
           if (url.trim()) {
             const store = useSettingsStore.getState();
             store.setCleanupMode("self-hosted");
             store.setNoteFormattingMode("self-hosted");
+            pending.current = null;
+            leaveWritingDownload();
+            writingModelChosen();
           }
         }}
         apiKey={customKey}

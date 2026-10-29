@@ -3,12 +3,12 @@
 // for the models it picks itself (topic names, link checks). One request, no
 // tokens, no conversation text.
 //
-// A key the provider calls invalid is refused, and only that one. OpenAI also
-// answers 401 to a real key that may not read the model list (a restricted
-// project key without "Models: read"), which still transcribes and writes; so
-// for OpenAI a 401 is a refusal only when the error's code says the key itself
-// is invalid. A real key the check cannot judge is "limited": it is saved, and
-// the person is told it could not be checked.
+// A key the provider refuses is not saved. One answer is not a refusal:
+// OpenAI's to a restricted project key without "Models: read" (insufficient
+// permissions, missing scopes). That key still transcribes and writes, so it
+// is "limited": saved, with a line that says it could not be checked. Any
+// other 401 from OpenAI (an invalid key, a deactivated account) is refused,
+// with OpenAI's own reason (`providerReason`).
 //
 // Pure: the renderer (ReasoningService.ts) and the main process (the Anthropic
 // check, ipcHandlers.js) share it, and test/helpers/keyStatus.test.js pins it.
@@ -17,6 +17,15 @@
 
 const ok = (status) => status >= 200 && status < 300;
 
+/** OpenAI's answer to a restricted key that may not read the model list. */
+const RESTRICTED = /insufficient permissions|missing scopes/i;
+
+/** The error OpenAI gave, or an empty object. */
+function openAiError(body) {
+  const error = /** @type {any} */ (body)?.error;
+  return error && typeof error === "object" ? error : {};
+}
+
 /**
  * @param {number} status The HTTP status of `GET /v1/models/{id}` at api.openai.com.
  * @param {unknown} [body] Its JSON body, when it has one.
@@ -24,12 +33,31 @@ const ok = (status) => status >= 200 && status < 300;
  */
 export function openAiKeyStatus(status, body = null) {
   if (ok(status)) return "ok";
-  if (status === 401) {
-    return /** @type {any} */ (body)?.error?.code === "invalid_api_key" ? "rejected" : "limited";
-  }
-  if (status === 403) return "limited";
+  const error = openAiError(body);
+  const restricted = RESTRICTED.test(String(error.message ?? ""));
+  if (status === 401) return restricted ? "limited" : "rejected";
+  if (status === 403) return restricted ? "limited" : "no-access";
   if (status === 400 || status === 404) return "no-access";
   return "unknown";
+}
+
+/**
+ * The reason a provider gave for refusing a key, to show beside the refusal:
+ * its own words, at most 200 characters, or null when it gave none or when
+ * the plain refusal says it (an invalid key, whose message repeats part of
+ * the key).
+ *
+ * @param {unknown} [body]
+ * @returns {string | null}
+ */
+export function providerReason(body = null) {
+  const error = openAiError(body);
+  if (error.code === "invalid_api_key") return null;
+  const message = String(error.message ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!message) return null;
+  return message.length > 200 ? `${message.slice(0, 199)}…` : message;
 }
 
 /**
@@ -40,8 +68,8 @@ export function anthropicKeyStatus(status) {
   if (ok(status)) return "ok";
   // Anthropic answers 401 only for a key it does not know (authentication_error).
   if (status === 401) return "rejected";
-  if (status === 403) return "limited";
-  if (status === 400 || status === 404) return "no-access";
+  // 403 is a key that may not use this model, as 400 and 404 are.
+  if (status === 400 || status === 403 || status === 404) return "no-access";
   return "unknown";
 }
 

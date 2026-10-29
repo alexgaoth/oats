@@ -2510,6 +2510,7 @@
       "notThisKey": "This is not a key from {{provider}}.",
       "checking": "Checking the key with {{provider}}…",
       "rejected": "{{provider}} did not accept this key.",
+      "rejectedReason": "{{provider}} did not accept this key: {{reason}}",
       "works": "Saved. It works with {{model}}.",
       "noAccess": "Saved, but this key cannot use {{model}}. Choose another model under Advanced.",
       "unchecked": "Saved. Oats could not check it now.",

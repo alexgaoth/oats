@@ -2505,6 +2505,7 @@
       "notThisKey": "這不是 {{provider}} 的金鑰。",
       "checking": "正在向 {{provider}} 驗證金鑰…",
       "rejected": "{{provider}} 沒有接受這個金鑰。",
+      "rejectedReason": "{{provider}} 未接受此金鑰：{{reason}}",
       "works": "已儲存。可用於 {{model}}。",
       "noAccess": "已儲存，但這個金鑰不能使用 {{model}}。請在「進階」中選擇其他模型。",
       "unchecked": "已儲存。Oats 暫時無法驗證。",

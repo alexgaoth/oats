@@ -119,18 +119,21 @@ AI models, checks it with that provider before it is saved. One request,
 and no conversation text. It goes to the provider's own host,
 `api.openai.com` or `api.anthropic.com`, never to a custom endpoint the
 writing model may use (`src/services/ReasoningService.ts`; the Anthropic
-check runs in the main process, `src/helpers/ipcHandlers.js`). Only a key the
-provider calls invalid is refused; a real key with limited permissions is
-saved (`src/helpers/keyStatus.mjs`).
+check runs in the main process, `src/helpers/ipcHandlers.js`). A key the
+provider refuses is not saved, and the provider's reason is shown; an OpenAI
+project key that may not read the model list is saved without the check
+(`src/helpers/keyStatus.mjs`).
 
 A conversation's summary goes to the writing model, by its route, at Finish.
-When no writing model is ready then (none chosen yet, or the one on this
-computer still downloading), the conversation waits, and is summarized by the
-same route once one is (`src/stores/summaryQueueStore.ts`): by a model on this
-computer or the person's own server, always; by a cloud provider only if it was
-already the writing model when the conversation finished. A provider chosen
-since gets an earlier conversation only when somebody opens it. A summary that
-fails is asked for once more, after 10 seconds.
+When no writing model is ready then (none chosen yet, the one on this
+computer still downloading, or "With an API key" and no key yet), the
+conversation waits, and is summarized by the same route once one is
+(`src/stores/summaryQueueStore.ts`): by a model on this computer or the
+person's own server, always; by a cloud provider only if it was already the
+writing model when the conversation finished. A provider chosen since gets an
+earlier conversation only when somebody opens it. A conversation that finished
+with no key goes to the provider whose key the person adds: nothing could be
+sent before. A summary that fails is asked for once more, after 10 seconds.
 
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no

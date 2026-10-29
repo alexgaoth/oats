@@ -93,3 +93,17 @@ test("Use in Settings is a choice, even of the Recommended model; only Use Oats'
   // forgetWritingChoice appears nowhere else in the chooser.
   assert.equal([...chooser.matchAll(/forgetWritingChoice\(\)/g)].length, 1);
 });
+
+test("choosing your own server stops a download left behind, as Use does", () => {
+  const chooser = read("src/components/settings/WritingModelChoice.tsx");
+  const server = chooser.slice(chooser.indexOf("view === SERVER ? ("));
+  assert.match(
+    server.slice(0, 900),
+    /store\.setCleanupMode\("self-hosted"\);\s*store\.setNoteFormattingMode\("self-hosted"\);\s*pending\.current = null;\s*leaveWritingDownload\(\);\s*writingModelChosen\(\);/
+  );
+  // "Remove models" is a no to the download too (writingModelFetch.test.js).
+  assert.match(
+    read("src/helpers/ipcHandlers.js"),
+    /this\.deviceTier\.writing\.removedAll\(this\.deviceTier\.writing\.installed\(\)\);\s*await modelManager\.deleteAllModels\(\);/
+  );
+});

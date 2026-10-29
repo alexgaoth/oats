@@ -351,6 +351,7 @@ async function summarizeConversation(
       {
         noModel: t("oats.errors.noModel"),
         noEndpoint: t("oats.errors.noEndpoint"),
+        noKey: t("oats.preflight.no-writing-key"),
         actionFailed: t("oats.errors.actionFailed"),
         noSummary: t("oats.errors.noSummary"),
         tooLong: t("oats.intelligence.summaryTooLong"),

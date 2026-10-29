@@ -21,7 +21,8 @@
 //   the providers) stops without a no.
 // - Deleting a writing model in Settings is a no to it, and to fetching any
 //   writing model by itself (`autoDeclined`): deleting Qwen3.5 4B on a large
-//   Mac does not start Gemma 4 E4B's 5.4 GB. Choosing a model, or pressing
+//   Mac does not start Gemma 4 E4B's 5.4 GB. "Remove models" is a no to all of
+//   them, the one downloading included. Choosing a model, or pressing
 //   Download, undoes that.
 // - It reports through the device tier's snapshot (deviceTier.js, `writing`),
 //   which every window gets.
@@ -319,6 +320,22 @@ class WritingModelFetch {
       this.autoDeclined = true;
       this._save();
     }
+    this.publish();
+  }
+
+  /**
+   * Every model was removed in Settings ("Remove models"): a no to each one
+   * that was there, to the one downloading or waiting to, and to fetching any
+   * writing model by itself, even when none was on disk yet.
+   *
+   * @param {string[]} [hadModels] The writing models that were on disk.
+   */
+  removedAll(hadModels = []) {
+    this.cancel({ decline: true });
+    const local = hadModels.filter((id) => LOCAL_MODELS.has(id));
+    this.declined = [...new Set([...this.declined, ...local])];
+    this.autoDeclined = true;
+    this._save();
     this.publish();
   }
 

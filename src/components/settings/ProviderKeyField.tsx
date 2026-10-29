@@ -99,14 +99,17 @@ export function ProviderKeyField({
         tone: "muted",
         text: t("oats.keys.checking", { provider: PROVIDER_NAMES[target] }),
       });
-      const status = await checkKey(detected, key);
+      const { status, reason } = await checkKey(detected, key);
       setChecking(false);
-      // Only a key the provider calls invalid is refused. A real key with
-      // limited permissions is saved (helpers/keyStatus.mjs).
+      // A key the provider refuses is not saved, and the provider's reason is
+      // said when it gave one. A restricted key that may not read the model
+      // list is saved (helpers/keyStatus.mjs).
       if (status === "rejected") {
         setMessage({
           tone: "danger",
-          text: t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
+          text: reason
+            ? t("oats.keys.rejectedReason", { provider: PROVIDER_NAMES[target], reason })
+            : t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
         });
         return false;
       }

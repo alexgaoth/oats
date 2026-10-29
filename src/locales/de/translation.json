@@ -2510,6 +2510,7 @@
       "notThisKey": "Das ist kein {{provider}}-Schlüssel.",
       "checking": "Schlüssel wird bei {{provider}} geprüft…",
       "rejected": "{{provider}} hat diesen Schlüssel nicht angenommen.",
+      "rejectedReason": "{{provider}} hat diesen Schlüssel nicht angenommen: {{reason}}",
       "works": "Gespeichert. Er funktioniert mit {{model}}.",
       "noAccess": "Gespeichert, aber dieser Schlüssel kann {{model}} nicht nutzen. Wählen Sie unter Erweitert ein anderes Modell.",
       "unchecked": "Gespeichert. Oats konnte ihn gerade nicht prüfen.",

@@ -222,6 +222,38 @@ test("deleting a writing model stops Oats fetching any by itself, until the pers
   }
 });
 
+test("Remove models during the automatic download is a no, even with nothing on disk yet", async () => {
+  const env = setup();
+  try {
+    const fetcher = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    assert.equal(fetcher.start({ modelId: GEMMA }), true);
+    fetcher.removedAll(fetcher.installed());
+    await tick();
+    assert.equal(fetcher.snapshot().downloading, null);
+    assert.deepEqual(fetcher.snapshot().declined, [GEMMA]);
+    assert.equal(fetcher.snapshot().autoDeclined, true);
+    // Not again at the next launch.
+    const later = new WritingModelFetch({ storePath: env.storePath, modelManager: env.manager });
+    assert.equal(later.start({ modelId: GEMMA }), false);
+    assert.equal(later.start({ modelId: QWEN }), false);
+    // A start that waited for a recording is a no as well.
+    let busy = true;
+    const waiting = new WritingModelFetch({
+      storePath: path.join(env.dir, "other.json"),
+      modelManager: env.manager,
+      isBusy: () => busy,
+      sleep: () => new Promise(() => {}),
+    });
+    assert.equal(waiting.start({ modelId: QWEN }), true);
+    waiting.removedAll([]);
+    assert.equal(waiting.snapshot().waiting, null);
+    assert.deepEqual(waiting.snapshot().declined, [QWEN]);
+    busy = false;
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("pressing Download undoes the automatic no too", () => {
   const env = setup();
   try {

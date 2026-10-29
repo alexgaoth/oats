@@ -350,6 +350,11 @@ test("the writing model's automatic start is announced, once, with its Cancel", 
     autoStarts.map((file) => path.basename(file)),
     ["useWritingModel.ts"]
   );
+  // Also a start that waited in main for a recording: its notice shows when it starts.
+  assert.match(
+    read("src/hooks/useWritingModel.ts"),
+    /if \(report\?\.downloading\?\.modelId === modelId \|\| report\?\.waiting === modelId\) \{\s*useDeviceTierStore\.setState\(\{ writingAutoStarted: true \}\);/
+  );
   const notice = read("src/components/WritingModelNotice.tsx");
   assert.match(notice, /shouldShowWritingNotice\(/);
   assert.match(notice, /cancelWritingModel\(\)/, "its Cancel is the remembered no");
