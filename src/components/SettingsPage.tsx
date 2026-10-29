@@ -634,8 +634,8 @@ export default function SettingsPage({
       case "general":
         return (
           <div className="space-y-8">
-            {/* Appearance: how Oats looks, including the field behind it (D11:
-                a one-click switch, not a setting hidden on the About page). */}
+            {/* Appearance: how Oats looks. The field behind it is one switch
+                under Advanced: a second look, not a theme. */}
             <div>
               <SectionHeader title={t("settingsPage.general.appearance.title")} />
               <SettingsPanel>
@@ -653,17 +653,6 @@ export default function SettingsPage({
                         { value: "light", label: t("settingsPage.general.appearance.light") },
                         { value: "dark", label: t("settingsPage.general.appearance.dark") },
                       ]}
-                    />
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("oats.settings.fieldBackdrop.label")}
-                    description={t("oats.settings.fieldBackdrop.description")}
-                  >
-                    <Toggle
-                      checked={uiMode === "field"}
-                      onChange={(on: boolean) => setUiMode(on ? "field" : "work")}
                     />
                   </SettingsRow>
                 </SettingsPanelRow>
@@ -737,14 +726,28 @@ export default function SettingsPage({
               </SettingsPanel>
             </div>
 
-            {/* Advanced: dictation, a second feature beside the conversation
-                recorder, off by default on macOS. Turning it on adds the oat,
-                the Dictation page and the rows below; its shortcut and how the
-                key behaves moved here from Shortcuts, and show only while it is
-                on, because a key for something that is off does nothing. */}
+            {/* Advanced: the field backdrop, a second look for the whole app,
+                and dictation, a second feature beside the conversation
+                recorder, off by default on macOS. Turning dictation on adds the
+                oat, the Dictation page and the rows below it; its shortcut and
+                how the key behaves moved here from Shortcuts, and show only
+                while it is on, because a key for something that is off does
+                nothing. */}
             <div>
               <SectionHeader title={t("oats.settings.advanced.title")} />
               <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("oats.settings.fieldBackdrop.label")}
+                    description={t("oats.settings.fieldBackdrop.description")}
+                  >
+                    <Toggle
+                      checked={uiMode === "field"}
+                      onChange={(on: boolean) => setUiMode(on ? "field" : "work")}
+                      aria-label={t("oats.settings.fieldBackdrop.label")}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("oats.settings.advanced.dictation")}

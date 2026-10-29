@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
-import { useDeviceTierStore } from "../stores/deviceTierStore";
+import { useModelDownloadFinished } from "../stores/modelDownloadStore";
 import { summaryReadiness, type SummaryReadiness } from "../utils/summaryReadiness";
 import { writingKeyPresent } from "../utils/writingKeys";
 
@@ -18,28 +18,48 @@ export async function localSummaryModelDownloaded(
   }
 }
 
+// When a download reaches its end, the file is moved into place a moment after
+// the last chunk (helpers/downloadUtils.js), so the check is asked again a few
+// times rather than once.
+const AFTER_DOWNLOAD_CHECKS_MS = [300, 1500, 5000];
+
+export interface SummaryReadinessState {
+  readiness: SummaryReadiness | null;
+  /**
+   * Whether the answer is known: false only while the model on this Mac is
+   * still being looked for, so "not answered yet" is not taken for "could not
+   * be told".
+   */
+  settled: boolean;
+}
+
 /**
- * Whether this machine can summarize a conversation right now.
+ * Whether this machine can summarize a conversation right now, and whether
+ * that is known yet.
  *
  * Primitive selectors, because `selectResolvedNoteFormatting` builds a fresh
- * object on every call. Re-checked when the window regains focus: a model is
- * downloaded in Advanced, not here, and the answer should follow it back.
+ * object on every call. Re-checked when the window regains focus, and when a
+ * download of the model finishes: a model is downloaded by setup or in
+ * Settings, not here, and the answer should follow it.
  */
-export function useSummaryReadiness(): SummaryReadiness | null {
+export function useSummaryReadinessState(): SummaryReadinessState {
   const mode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
   const model = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
   const remoteUrl = useSettingsStore((state) => selectResolvedNoteFormatting(state).remoteUrl);
+  // With API keys, the provider's key: without it the summary waits for one.
   const provider = useSettingsStore((state) => selectResolvedNoteFormatting(state).provider);
   const providerKey = useSettingsStore((state) => writingKeyPresent(state, provider));
-  // The local writing models on disk, as main reports them: a download that
-  // ends here (Oats' own, or Settings') checks again without a focus change.
-  const installed = useDeviceTierStore((state) => (state.tier?.writing?.installed ?? []).join(" "));
-  const [downloaded, setDownloaded] = useState<boolean | null>(null);
+  const key = `${mode}:${model}`;
+  const [checked, setChecked] = useState<{ key: string; downloaded: boolean | null } | null>(null);
+  // Only the newest answer counts: an older check that comes back late would
+  // put back the "missing" that a finished download has just replaced.
+  const asked = useRef(0);
 
   const recheck = useCallback(async () => {
-    setDownloaded(await localSummaryModelDownloaded(mode, model));
-    // `installed` is read for its change, not its value.
-  }, [mode, model, installed]); // eslint-disable-line react-hooks/exhaustive-deps
+    const mine = ++asked.current;
+    const downloaded = await localSummaryModelDownloaded(mode, model);
+    if (mine === asked.current) setChecked({ key, downloaded });
+  }, [mode, model, key]);
 
   useEffect(() => {
     void recheck();
@@ -47,11 +67,29 @@ export function useSummaryReadiness(): SummaryReadiness | null {
     return () => window.removeEventListener("focus", recheck);
   }, [recheck]);
 
-  return summaryReadiness({
-    mode,
-    model,
-    remoteUrl,
-    localModelDownloaded: downloaded,
-    providerKey: mode === "providers" ? providerKey : null,
-  });
+  const finished = useModelDownloadFinished(mode === "local" ? model : null);
+  useEffect(() => {
+    if (!finished) return undefined;
+    const timers = AFTER_DOWNLOAD_CHECKS_MS.map((ms) =>
+      window.setTimeout(() => void recheck(), ms)
+    );
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [finished, recheck]);
+
+  const current = checked?.key === key ? checked : null;
+  return {
+    readiness: summaryReadiness({
+      mode,
+      model,
+      remoteUrl,
+      localModelDownloaded: current?.downloaded ?? null,
+      providerKey: mode === "providers" ? providerKey : null,
+    }),
+    settled: mode !== "local" || !model.trim() || current !== null,
+  };
+}
+
+/** Whether this machine can summarize a conversation right now (see above). */
+export function useSummaryReadiness(): SummaryReadiness | null {
+  return useSummaryReadinessState().readiness;
 }

@@ -2094,9 +2094,12 @@
       "deleteDescription": "Sa transcription, son résumé et ses moments marqués sont supprimés d’Oats. Cette action est irréversible.",
       "emptyDescription": "Les conversations que vous enregistrez apparaissent ici, avec un résumé et une transcription dans laquelle chercher.",
       "noMatchesHint": "La recherche porte sur les titres, les résumés, les transcriptions et vos notes.",
-      "needsSummaryModel": "Aucun modèle de résumé n’est encore prêt, donc cette conversation n’a pas été résumée.",
+      "needsSummaryModel": "Aucun modèle de résumé n’est encore prêt. Le résumé sera rédigé dès qu’il le sera.",
       "notSummarized": "Cette conversation n'a pas encore été résumée.",
-      "summarize": "Résumer",
+      "summaryAfterDownload": "Le résumé sera rédigé une fois {{model}} téléchargé : {{percent}}%",
+      "summaryAfterRecording": "Le résumé sera rédigé à la fin de cette conversation.",
+      "summaryWhenRecordingEnds": "Le résumé sera rédigé à la fin de l’enregistrement.",
+      "summaryTooLong": "Cette conversation est trop longue pour le modèle de rédaction de ce Mac. Avec une clé API (Réglages › Modèles d’IA), elle peut être résumée.",
       "summarizeAgain": "Résumer à nouveau",
       "summaryFailed": "Le résumé n'a pas pu être rédigé : {{reason}}",
       "setUpModel": "Configurer un modèle"
@@ -2310,7 +2313,7 @@
       "microphoneDescription": "Le micro qu’Oats utilise pour les conversations et la dictée.",
       "fieldBackdrop": {
         "label": "Arrière-plan champ",
-        "description": "Affiche le champ de blé animé derrière l'app."
+        "description": "Une apparence plus détendue pour Oats."
       },
       "dictationButton": "Pendant la dictée",
       "instructionsDescription": "Comment le modèle réécrit chaque dictée. Le réglage par défaut convient à la plupart des gens.",
@@ -2350,9 +2353,8 @@
       "no-model": "Le modèle vocal fourni ne s'est pas installé. Redémarrez Oats ; si cela persiste, réinstallez.",
       "no-api-key": "Le traitement passe par une clé API, mais aucune n'est enregistrée — voir les Réglages.",
       "question-cards-off": "Les cartes de questions sont désactivées : les questions passeront en silence. Activez-les dans les Réglages, section Enregistrement.",
-      "no-summary-model": "Les conversations seront enregistrées sans titre ni résumé : aucun modèle de rédaction n’est prêt. Choisissez-en un dans Réglages › Modèles d’IA.",
-      "summary-model-downloading": "Le modèle de rédaction est encore en cours de téléchargement. En attendant, les conversations sont enregistrées sans titre ni résumé.",
-      "no-writing-key": "Les conversations seront enregistrées sans titre ni résumé : le modèle de rédaction a besoin d’une clé d’API. Ajoutez-en une dans Réglages › Modèles d’IA."
+      "no-summary-model": "Les titres et les résumés attendent un modèle de rédaction : choisissez-en un dans Réglages › Modèles d’IA.",
+      "no-writing-key": "Les titres et les résumés attendent une clé d’API : ajoutez-en une dans Réglages › Modèles d’IA."
     },
     "aide": {
       "title": "Assistant de conversation",
@@ -2492,7 +2494,7 @@
       "speechSent": "Avec une clé OpenAI, l’audio de chaque conversation est envoyé en direct à OpenAI pour être transcrit. Sans clé, la parole reste sur cet ordinateur."
     },
     "writingModel": {
-      "progress": "{{percent}}% de {{size}}. En attendant, les conversations sont enregistrées sans titre ni résumé.",
+      "progress": "{{percent}}% de {{size}}. Les conversations reçoivent leur titre et leur résumé dès qu’il est prêt.",
       "downloadingShort": "Téléchargement de {{model}} : {{percent}}%",
       "cancelDownload": "Annuler le téléchargement de {{model}}",
       "missing": "Pas encore téléchargé : {{size}} depuis Hugging Face.",

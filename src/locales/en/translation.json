@@ -2094,9 +2094,12 @@
       "deleteDescription": "Its transcript, summary and marked moments are removed from Oats. This cannot be undone.",
       "emptyDescription": "Conversations you record appear here, with a summary and a transcript you can search.",
       "noMatchesHint": "Search looks through titles, summaries, transcripts and your notes.",
-      "needsSummaryModel": "No summary model is ready yet, so this conversation has not been summarized.",
+      "needsSummaryModel": "No summary model is ready yet. The summary is written as soon as one is.",
       "notSummarized": "This conversation has not been summarized.",
-      "summarize": "Summarize",
+      "summaryAfterDownload": "The summary is written when {{model}} has downloaded: {{percent}}%",
+      "summaryAfterRecording": "The summary is written when this conversation is finished.",
+      "summaryWhenRecordingEnds": "The summary is written when the recording ends.",
+      "summaryTooLong": "This conversation is too long for the writing model on this Mac. With an API key (Settings › AI models) it can be summarized.",
       "summarizeAgain": "Summarize again",
       "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"
@@ -2310,7 +2313,7 @@
       "microphoneDescription": "The microphone Oats uses for conversations and dictation.",
       "fieldBackdrop": {
         "label": "Field backdrop",
-        "description": "Draw the animated wheat field behind the app."
+        "description": "A more relaxed look for Oats."
       },
       "dictationButton": "While you dictate",
       "instructionsDescription": "How the model rewrites each dictation. The default works for most people.",
@@ -2350,9 +2353,8 @@
       "no-model": "The bundled speech model did not install. Restart Oats; if it persists, reinstall.",
       "no-api-key": "Processing is set to use an API key, but none is saved yet. Add one in Settings.",
       "question-cards-off": "Question cards are off, so questions will pass silently. Turn them on in Settings, under Recording.",
-      "no-summary-model": "Conversations will be saved without a title or summary: no writing model is ready. Choose one in Settings › AI models.",
-      "summary-model-downloading": "The writing model is still downloading. Until it is ready, conversations are saved without a title or summary.",
-      "no-writing-key": "Conversations will be saved without a title or summary: the writing model needs an API key. Add one in Settings › AI models."
+      "no-summary-model": "Titles and summaries wait for a writing model: choose one in Settings › AI models.",
+      "no-writing-key": "Titles and summaries wait for an API key: add one in Settings › AI models."
     },
     "aide": {
       "title": "Conversation aide",
@@ -2492,7 +2494,7 @@
       "speechSent": "With an OpenAI key, the audio of each conversation streams to OpenAI to be transcribed. Without one, speech stays on this computer."
     },
     "writingModel": {
-      "progress": "{{percent}}% of {{size}}. Until it is ready, conversations are saved without a title or summary.",
+      "progress": "{{percent}}% of {{size}}. Conversations get their title and summary once it is ready.",
       "downloadingShort": "Downloading {{model}}: {{percent}}%",
       "cancelDownload": "Cancel the {{model}} download",
       "missing": "Not downloaded yet: {{size}} from Hugging Face.",

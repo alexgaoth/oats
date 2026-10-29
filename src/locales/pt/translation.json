@@ -2094,9 +2094,12 @@
       "deleteDescription": "A transcrição, o resumo e os momentos marcados são removidos do Oats. Isso não pode ser desfeito.",
       "emptyDescription": "As conversas que você gravar aparecem aqui, com um resumo e uma transcrição pesquisável.",
       "noMatchesHint": "A busca abrange títulos, resumos, transcrições e suas notas.",
-      "needsSummaryModel": "Ainda não há um modelo de resumo pronto, então esta conversa não foi resumida.",
+      "needsSummaryModel": "Ainda não há um modelo de resumo pronto. O resumo será escrito assim que houver um.",
       "notSummarized": "Esta conversa ainda não foi resumida.",
-      "summarize": "Resumir",
+      "summaryAfterDownload": "O resumo será escrito quando o download de {{model}} terminar: {{percent}}%",
+      "summaryAfterRecording": "O resumo será escrito quando esta conversa terminar.",
+      "summaryWhenRecordingEnds": "O resumo será escrito quando a gravação terminar.",
+      "summaryTooLong": "Esta conversa é longa demais para o modelo de escrita deste Mac. Com uma chave de API (Definições › Modelos de IA), ela pode ser resumida.",
       "summarizeAgain": "Resumir novamente",
       "summaryFailed": "Não foi possível criar o resumo: {{reason}}",
       "setUpModel": "Configurar um modelo"
@@ -2310,7 +2313,7 @@
       "microphoneDescription": "O microfone que o Oats usa para conversas e ditado.",
       "fieldBackdrop": {
         "label": "Fundo de campo",
-        "description": "Mostra o campo de trigo animado atrás do app."
+        "description": "Um visual mais descontraído para o Oats."
       },
       "dictationButton": "Enquanto você dita",
       "instructionsDescription": "Como o modelo reescreve cada ditado. O padrão serve para a maioria das pessoas.",
@@ -2350,9 +2353,8 @@
       "no-model": "O modelo de voz incluído não foi instalado. Reinicie o Oats; se continuar, reinstale.",
       "no-api-key": "O processamento usa uma chave de API, mas nenhuma foi salva — veja as Configurações.",
       "question-cards-off": "Os cartões de perguntas estão desativados, então as perguntas passarão em silêncio. Ative-os em Configurações, em Gravação.",
-      "no-summary-model": "As conversas serão salvas sem título nem resumo: nenhum modelo de escrita está pronto. Escolha um em Definições › Modelos de IA.",
-      "summary-model-downloading": "O modelo de escrita ainda está sendo baixado. Até ficar pronto, as conversas são salvas sem título nem resumo.",
-      "no-writing-key": "As conversas serão salvas sem título nem resumo: o modelo de escrita precisa de uma chave de API. Adicione uma em Definições › Modelos de IA."
+      "no-summary-model": "Os títulos e resumos aguardam um modelo de escrita: escolha um em Definições › Modelos de IA.",
+      "no-writing-key": "Os títulos e resumos aguardam uma chave de API: adicione uma em Definições › Modelos de IA."
     },
     "aide": {
       "title": "Assistente de conversa",
@@ -2492,7 +2494,7 @@
       "speechSent": "Com uma chave da OpenAI, o áudio de cada conversa é enviado ao vivo para a OpenAI para ser transcrito. Sem ela, a fala fica neste computador."
     },
     "writingModel": {
-      "progress": "{{percent}}% de {{size}}. Até ficar pronto, as conversas são salvas sem título nem resumo.",
+      "progress": "{{percent}}% de {{size}}. As conversas recebem título e resumo assim que ele estiver pronto.",
       "downloadingShort": "Baixando {{model}}: {{percent}}%",
       "cancelDownload": "Cancelar o download de {{model}}",
       "missing": "Ainda não baixado: {{size}} do Hugging Face.",

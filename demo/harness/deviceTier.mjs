@@ -17,17 +17,17 @@
 // `oatsDemo.tier("downloading")` switches state on a running page.
 //
 // The writing model on this Mac (src/helpers/writingModelFetch.js), by
-// `writing=`:
+// `writingState=`:
 //
-//   writing=ready        the model this Mac's memory holds is on disk (default)
-//   writing=none         nothing on disk yet: the workspace fetches it (about 12 s)
-//   writing=downloading  at 34%
-//   writing=declined     the person cancelled it
-//   writing=failed       the download failed
-//   writing=small        only Qwen3.5 4B is on disk, from before
+//   writingState=ready        the model this Mac's memory holds is on disk (default)
+//   writingState=none         nothing on disk yet: the workspace fetches it (about 12 s)
+//   writingState=downloading  at 34%
+//   writingState=declined     the person cancelled it
+//   writingState=failed       the download failed
+//   writingState=small        only Qwen3.5 4B is on disk, from before
 //
 // `memory=8` makes this an 8 GB Mac, whose model is Qwen3.5 4B; otherwise
-// 48 GB and Gemma 4 E4B. `oatsDemo.writing("downloading")` switches state.
+// 48 GB and Gemma 4 E4B. `oatsDemo.writingState("downloading")` switches state.
 
 import { REFERENCE } from "../../src/helpers/speechTier.mjs";
 

@@ -2094,9 +2094,12 @@
       "deleteDescription": "Trascrizione, riepilogo e momenti segnati vengono rimossi da Oats. L’operazione non si può annullare.",
       "emptyDescription": "Le conversazioni che registri compaiono qui, con un riepilogo e una trascrizione in cui cercare.",
       "noMatchesHint": "La ricerca copre titoli, riepiloghi, trascrizioni e le tue note.",
-      "needsSummaryModel": "Nessun modello di riepilogo è ancora pronto, quindi questa conversazione non è stata riassunta.",
+      "needsSummaryModel": "Nessun modello di riepilogo è ancora pronto. Il riepilogo verrà scritto appena ce ne sarà uno.",
       "notSummarized": "Questa conversazione non è ancora stata riassunta.",
-      "summarize": "Riassumi",
+      "summaryAfterDownload": "Il riepilogo verrà scritto quando il download di {{model}} sarà completato: {{percent}}%",
+      "summaryAfterRecording": "Il riepilogo verrà scritto quando questa conversazione sarà terminata.",
+      "summaryWhenRecordingEnds": "Il riepilogo verrà scritto quando la registrazione sarà terminata.",
+      "summaryTooLong": "Questa conversazione è troppo lunga per il modello di scrittura di questo Mac. Con una chiave API (Impostazioni › Modelli di IA) si può riassumere.",
       "summarizeAgain": "Riassumi di nuovo",
       "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"
@@ -2310,7 +2313,7 @@
       "microphoneDescription": "Il microfono che Oats usa per conversazioni e dettatura.",
       "fieldBackdrop": {
         "label": "Sfondo campo",
-        "description": "Mostra il campo di grano animato dietro l'app."
+        "description": "Un aspetto più rilassato per Oats."
       },
       "dictationButton": "Durante la dettatura",
       "instructionsDescription": "Come il modello riscrive ogni dettatura. L'impostazione predefinita va bene per quasi tutti.",
@@ -2350,9 +2353,8 @@
       "no-model": "Il modello vocale incluso non si è installato. Riavvia Oats; se persiste, reinstalla.",
       "no-api-key": "L'elaborazione usa una chiave API, ma non ne è stata salvata nessuna — vedi Impostazioni.",
       "question-cards-off": "Le schede delle domande sono disattivate, quindi le domande passeranno in silenzio. Attivale nelle Impostazioni, in Registrazione.",
-      "no-summary-model": "Le conversazioni verranno salvate senza titolo né riassunto: nessun modello di scrittura è pronto. Scegline uno in Impostazioni › Modelli di IA.",
-      "summary-model-downloading": "Il modello di scrittura è ancora in download. Finché non è pronto, le conversazioni vengono salvate senza titolo né riassunto.",
-      "no-writing-key": "Le conversazioni verranno salvate senza titolo né riassunto: il modello di scrittura richiede una chiave API. Aggiungine una in Impostazioni › Modelli di IA."
+      "no-summary-model": "Titoli e riassunti attendono un modello di scrittura: scegline uno in Impostazioni › Modelli di IA.",
+      "no-writing-key": "Titoli e riassunti attendono una chiave API: aggiungine una in Impostazioni › Modelli di IA."
     },
     "aide": {
       "title": "Assistente di conversazione",
@@ -2492,7 +2494,7 @@
       "speechSent": "Con una chiave OpenAI, l’audio di ogni conversazione viene inviato in diretta a OpenAI per la trascrizione. Senza, la voce resta su questo computer."
     },
     "writingModel": {
-      "progress": "{{percent}}% di {{size}}. Finché non è pronto, le conversazioni vengono salvate senza titolo né riassunto.",
+      "progress": "{{percent}}% di {{size}}. Le conversazioni ricevono titolo e riassunto appena è pronto.",
       "downloadingShort": "Download di {{model}}: {{percent}}%",
       "cancelDownload": "Annulla il download di {{model}}",
       "missing": "Non ancora scaricato: {{size}} da Hugging Face.",

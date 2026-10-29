@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useDeviceTierStore } from "../stores/deviceTierStore";
+import { endModelDownload, noteModelDownload } from "../stores/modelDownloadStore";
 import { useMeetingRecordingStore } from "../stores/meetingRecordingStore";
 import {
   currentDefaultWritingModel,
@@ -185,6 +186,31 @@ export function useWritingModelDownload(): void {
     writing: tier?.writing ?? NO_WRITING,
   });
   const modelId = choice?.model ?? "";
+
+  // The summaries and the record hear model downloads through the download
+  // store (stores/modelDownloadStore.ts). Oats' own download of the writing
+  // model reports through the device tier instead, so it is told there: each
+  // step, and then its end, or its stop.
+  const report = tier?.writing ?? NO_WRITING;
+  const step = report.downloading;
+  const installedKey = report.installed.join(" ");
+  const told = useRef<string | null>(null);
+  useEffect(() => {
+    if (step) {
+      told.current = step.modelId;
+      noteModelDownload(
+        step.modelId,
+        step.totalBytes > 0 ? (step.receivedBytes / step.totalBytes) * 100 : 0
+      );
+      return;
+    }
+    const last = told.current;
+    if (!last) return;
+    told.current = null;
+    if (installedKey.split(" ").includes(last)) noteModelDownload(last, 100);
+    else endModelDownload(last);
+    // `step` is read through its fields.
+  }, [step?.modelId, step?.receivedBytes, step?.totalBytes, installedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!fetch || !modelId) return;

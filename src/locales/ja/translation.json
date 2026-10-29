@@ -2094,9 +2094,12 @@
       "deleteDescription": "文字起こし、要約、マークした瞬間が Oats から削除されます。元に戻すことはできません。",
       "emptyDescription": "録音した会話がここに表示されます。要約と、検索できる文字起こしが付きます。",
       "noMatchesHint": "タイトル、要約、文字起こし、あなたのメモを検索します。",
-      "needsSummaryModel": "要約モデルがまだ準備できていないため、この会話は要約されていません。",
+      "needsSummaryModel": "要約モデルがまだ準備できていません。準備ができ次第、要約が作成されます。",
       "notSummarized": "この会話はまだ要約されていません。",
-      "summarize": "要約する",
+      "summaryAfterDownload": "{{model}} のダウンロードが終わると要約が作成されます: {{percent}}%",
+      "summaryAfterRecording": "この会話が終わると要約が作成されます。",
+      "summaryWhenRecordingEnds": "録音が終わると要約が作成されます。",
+      "summaryTooLong": "この会話はこの Mac の文章モデルには長すぎます。API キー（設定 › AI モデル）を使えば要約できます。",
       "summarizeAgain": "もう一度要約する",
       "summaryFailed": "要約を作成できませんでした：{{reason}}",
       "setUpModel": "モデルを設定"
@@ -2310,7 +2313,7 @@
       "microphoneDescription": "Oats が会話と音声入力に使うマイク。",
       "fieldBackdrop": {
         "label": "フィールド背景",
-        "description": "アプリの背後に動く麦畑を表示します。"
+        "description": "Oats を、よりゆったりとした見た目にします。"
       },
       "dictationButton": "ディクテーション中",
       "instructionsDescription": "モデルが各ディクテーションをどう書き直すか。ほとんどの人は既定のままで問題ありません。",
@@ -2350,9 +2353,8 @@
       "no-model": "同梱の音声モデルがインストールされませんでした。Oats を再起動し、続く場合は再インストールしてください。",
       "no-api-key": "処理は API キーを使う設定ですが、キーが保存されていません — 設定を確認してください。",
       "question-cards-off": "質問カードがオフのため、質問は見過ごされます。設定の「録音」でオンにしてください。",
-      "no-summary-model": "文章モデルが準備できていないため、会話はタイトルと要約なしで保存されます。設定 › AI モデル で選んでください。",
-      "summary-model-downloading": "文章モデルをまだダウンロード中です。準備ができるまで、会話はタイトルと要約なしで保存されます。",
-      "no-writing-key": "文章モデルに API キーが必要なため、会話はタイトルと要約なしで保存されます。設定 › AI モデル で追加してください。"
+      "no-summary-model": "タイトルと要約は文章モデルを待っています。設定 › AI モデル で選んでください。",
+      "no-writing-key": "タイトルと要約は API キーを待っています。設定 › AI モデル で追加してください。"
     },
     "aide": {
       "title": "会話アシスタント",
@@ -2492,7 +2494,7 @@
       "speechSent": "OpenAI キーがあると、各会話の音声は文字起こしのために OpenAI へストリーミングされます。キーがなければ、音声はこのコンピューターに残ります。"
     },
     "writingModel": {
-      "progress": "{{size}} 中 {{percent}}%。準備ができるまで、会話はタイトルと要約なしで保存されます。",
+      "progress": "{{size}} 中 {{percent}}%。準備ができ次第、会話にタイトルと要約が付きます。",
       "downloadingShort": "{{model}} をダウンロード中: {{percent}}%",
       "cancelDownload": "{{model}} のダウンロードをキャンセル",
       "missing": "まだダウンロードされていません: Hugging Face から {{size}}。",

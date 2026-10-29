@@ -107,6 +107,11 @@ With an API key, nothing is fetched.
 
 The exact provider hostname is controlled by that provider or by the user's
 custom endpoint. Local, LAN, and bundled-model paths do not require this access.
+A request to an Anthropic model that has Anthropic's server-side refusal
+fallback (Opus 5 and 5.5, Fable 5.x, and Sonnet 5.5 with thinking on) asks for
+it: a request that Anthropic's safety classifiers decline is answered instead by
+the model Anthropic picks for that kind of refusal, on the same host
+(`src/helpers/anthropicMessages.js`).
 
 Checking a key: adding an OpenAI or Anthropic key, in setup or in Settings ›
 AI models, checks it with that provider before it is saved. One request,
@@ -117,11 +122,15 @@ writing model may use (`src/services/ReasoningService.ts`; the Anthropic
 check runs in the main process, `src/helpers/ipcHandlers.js`). Only a key the
 provider calls invalid is refused; a real key with limited permissions is
 saved (`src/helpers/keyStatus.mjs`).
-A request to an Anthropic model that has Anthropic's server-side refusal
-fallback (Opus 5 and 5.5, Fable 5.x, and Sonnet 5.5 with thinking on) asks for
-it: a request that Anthropic's safety classifiers decline is answered instead by
-the model Anthropic picks for that kind of refusal, on the same host
-(`src/helpers/anthropicMessages.js`).
+
+A conversation's summary goes to the writing model, by its route, at Finish.
+When no writing model is ready then (none chosen yet, or the one on this
+computer still downloading), the conversation waits, and is summarized by the
+same route once one is (`src/stores/summaryQueueStore.ts`): by a model on this
+computer or the person's own server, always; by a cloud provider only if it was
+already the writing model when the conversation finished. A provider chosen
+since gets an earlier conversation only when somebody opens it. A summary that
+fails is asked for once more, after 10 seconds.
 
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no

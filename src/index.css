@@ -1394,56 +1394,20 @@ body:has(.agent-overlay-window) #root {
    The second interface (helpers/uiMode.mjs). The world itself is drawn by
    `conversation/field/` — WebGL, with a 2D canvas fallback — not by CSS.
 
-   What CSS owns is the one rule that lets a world and an interface share a
-   screen: **the world never goes behind text.** Wheat is a dithered texture at
-   the contrast of body copy, and a paragraph laid over it is unreadable however
-   pretty the frame is — DESIGN.md §9.8 says so and every review of this mode
-   said so again. So the reading column gets its own paper, feathered at the
-   edges so the field is still visible either side of it rather than boxed off
-   behind a card. Static gradients: no frame cost. */
+   The one rule that lets a world and an interface share a screen is that **the
+   world never goes behind text**, and the field keeps it itself now: each
+   screen's content column is a clearing the world is not drawn in, from the top
+   of the window down to where the content ends (`field/fieldViews.ts`). There
+   is no paper here any more. It was a disc, which showed as a white circle in
+   the middle of the field, and the 150vmax box that painted it overflowed every
+   scroller, which gave each screen a horizontal scrollbar in field mode only. */
 
-.oats-field-mode .oats-surface {
-  position: relative;
-  isolation: isolate;
-}
-
-.oats-field-mode .oats-surface::before {
-  content: "";
-  position: absolute;
-  /* Square, and larger than the column, so the circle is a circle rather than
-     an ellipse squeezed by the box it is drawn in. */
-  left: 50%;
-  top: 50%;
-  width: 150vmax;
-  height: 150vmax;
-  transform: translate(-50%, -50%);
-  z-index: -1;
-  pointer-events: none;
-  /* One circular gradient, not two composited masks.
-     
-     The first attempt was a radial sized in percentages of a tall narrow
-     column, which made an *ellipse* and showed its own edge as an arc across
-     the sky. The retreat to two `mask-composite` masks fixed the arc and
-     introduced a rectangle — and costs two mask layers plus a composite on a
-     full-height element. A circle whose falloff completes well inside its own
-     box has neither problem, and is one static paint. */
-  background: radial-gradient(
-    circle closest-side at 50% 50%,
-    var(--color-background) 0%,
-    var(--color-background) 17%,
-    color-mix(in oklab, var(--color-background) 86%, transparent) 23%,
-    color-mix(in oklab, var(--color-background) 45%, transparent) 29%,
-    transparent 36%
-  );
-}
-
-/* A scroll fade paints paper. On the ledger that is invisible; over the field
-   the reading paper is the circle above, opaque only near the column's centre,
-   so a full-width fade drew a paper bar with hard ends — measured at 1200x800
-   in Detailed, two of them, cutting the farmhouse at the column's right edge.
-   Feathered at both ends it gives way to the field the same way the paper
-   does. A mask on the fade itself, never on the scroller, which would clip the
-   focus ring of whatever is scrolled to the edge (`useScrollFade.tsx`). */
+/* A scroll fade paints paper. Over the field that paper must not reach past
+   the clearing, so a full-width fade would draw a paper bar with hard ends
+   across the margins: feathered at both ends it gives way to the field the way
+   the clearing does. A mask on the fade itself, never on the scroller, which
+   would clip the focus ring of whatever is scrolled to the edge
+   (`useScrollFade.tsx`). */
 .oats-field-mode .oats-scroll-fade {
   mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
 }

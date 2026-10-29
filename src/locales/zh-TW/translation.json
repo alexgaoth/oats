@@ -2089,9 +2089,12 @@
       "deleteDescription": "它的逐字稿、摘要與標記時刻將從 Oats 中刪除。此動作無法復原。",
       "emptyDescription": "你錄製的對話會顯示在這裡，並附上摘要與可搜尋的逐字稿。",
       "noMatchesHint": "搜尋範圍包括標題、摘要、逐字稿與你的筆記。",
-      "needsSummaryModel": "還沒有可用的摘要模型，所以這段對話沒有摘要。",
+      "needsSummaryModel": "還沒有可用的摘要模型。模型就緒後會立即產生摘要。",
       "notSummarized": "此對話尚未產生摘要。",
-      "summarize": "產生摘要",
+      "summaryAfterDownload": "{{model}} 下載完成後將產生摘要：{{percent}}%",
+      "summaryAfterRecording": "這段對話結束後將產生摘要。",
+      "summaryWhenRecordingEnds": "錄音結束後將產生摘要。",
+      "summaryTooLong": "這段對話對這台 Mac 上的寫作模型來說太長了。使用 API 金鑰（設定 › AI 模型）即可產生摘要。",
       "summarizeAgain": "重新產生摘要",
       "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"
@@ -2305,7 +2308,7 @@
       "microphoneDescription": "Oats 用於對話與聽寫的麥克風。",
       "fieldBackdrop": {
         "label": "田野背景",
-        "description": "在應用程式後方顯示動態麥田。"
+        "description": "讓 Oats 的外觀更輕鬆愜意。"
       },
       "dictationButton": "聽寫時",
       "instructionsDescription": "模型如何改寫每段聽寫。預設設定適合大多數人。",
@@ -2345,9 +2348,8 @@
       "no-model": "隨附的語音模型未安裝。請重新啟動 Oats；若仍未解決，請重新安裝。",
       "no-api-key": "處理方式設為 API 金鑰，但尚未儲存金鑰 — 請查看設定。",
       "question-cards-off": "問題卡片已關閉，問題會被略過。請在設定的「錄音」中開啟。",
-      "no-summary-model": "寫作模型尚未就緒，對話將以無標題、無摘要的形式儲存。請在 設定 › AI 模型 中選擇一個。",
-      "summary-model-downloading": "寫作模型仍在下載。在它就緒之前，對話儲存時沒有標題與摘要。",
-      "no-writing-key": "寫作模型需要 API 金鑰，對話將以無標題、無摘要的形式儲存。請在 設定 › AI 模型 中新增。"
+      "no-summary-model": "標題和摘要需要等待寫作模型：請在 設定 › AI 模型 中選擇一個。",
+      "no-writing-key": "標題和摘要需要等待 API 金鑰：請在 設定 › AI 模型 中新增一個。"
     },
     "aide": {
       "title": "對話助手",
@@ -2487,7 +2489,7 @@
       "speechSent": "有 OpenAI 金鑰時，每段對話的音訊會即時傳送到 OpenAI 進行轉寫。沒有金鑰時，語音留在這台電腦上。"
     },
     "writingModel": {
-      "progress": "已完成 {{size}} 中的 {{percent}}%。在它就緒之前，對話儲存時沒有標題與摘要。",
+      "progress": "已完成 {{size}} 中的 {{percent}}%。它就緒後，對話會獲得標題與摘要。",
       "downloadingShort": "正在下載 {{model}}：{{percent}}%",
       "cancelDownload": "取消下載 {{model}}",
       "missing": "尚未下載：從 Hugging Face 下載 {{size}}。",

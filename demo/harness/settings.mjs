@@ -1,20 +1,22 @@
 // The settings a demo runs with, written to localStorage before the app reads
 // them (the settings store reads localStorage once, as it loads).
 //
-//   onboarding done, English, the work interface
+//   onboarding done, English, the work interface unless `field=1` (the field
+//   backdrop, Settings › General › Advanced)
 //   question cards on, read locally (no classifier model), auto-search off
 //   unless `autosearch=1` (the fake main process records the search instead
 //   of opening a browser: `window.oatsDemo.searches()`)
 //   a local summary model on disk, so Finish writes a title and a summary,
 //   unless `loop=1`: then the writing model is OpenAI's, and the live topic
-//   check runs against the stand-in in fastModel.mjs (nothing leaves the page)
+//   check runs against the stand-in in fastModel.mjs (nothing leaves the page);
+//   `writing=` stores a model the person chose, or `none`: none is ready
 //   the context check off unless `check=1`, which turns it on with the demo's
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
 //
 //   the writing model following the default (writingTier.mjs): on the fake
-//   48 GB Mac Gemma 4 E4B, on disk unless `writing=` says otherwise
+//   48 GB Mac Gemma 4 E4B, on disk unless `writingState=` says otherwise
 //   (deviceTier.mjs); `processing=providers`, `keys=openai,anthropic`,
-//   `writingChosen=<model>` and `noticedWriting=1` change that
+//   `writing=<model>` and `noticedWriting=1` change that
 //
 // Page parameters choose the rest: `firstrun=1` (the setup screen),
 // `chosen=<model>` (a speech model the person chose), `speech=<language>` (the
@@ -40,7 +42,7 @@ export function applyDemoSettings(params) {
     set("onboardingCompleted", "true");
   }
   set("uiLanguage", params.get("lang") || "en");
-  set("uiMode", "work");
+  set("uiMode", params.get("field") === "1" ? "field" : "work");
   set("theme", params.get("theme") === "dark" ? "dark" : "light");
   set("conversationDetail", VIEWS[params.get("view")] ?? "clean");
   set("conversationFlowView", params.get("flow") === "graph" ? "graph" : "lanes");
@@ -68,7 +70,7 @@ export function applyDemoSettings(params) {
     localStorage.removeItem("preferredLanguage");
   }
   // The writing model follows the default unless `loop=1` stores OpenAI's
-  // fast model, or `writingChosen=<model>` stores a local one the person chose
+  // fast model, or `writing=<model>` stores one the person chose
   // (writingTier.mjs); `processing=providers` is "With an API key" for both
   // models, whose keys come from `keys=` (boot.mjs).
   for (const key of ["cleanupModel", "cleanupProvider", "oats.processing.models"]) {
@@ -99,10 +101,17 @@ export function applyDemoSettings(params) {
   if (params.get("loop") === "1") {
     set("cleanupProvider", "openai");
     set("cleanupModel", "gpt-5.6-luna");
-  } else if (params.get("writingChosen")) {
+  } else if (params.get("writing") && params.get("writing") !== "none") {
+    // `writing=<model>` stores a model the person chose (with `download=`, one
+    // still downloading: boot.mjs). `writing=none` follows the default with
+    // nothing on disk and its download declined, so none is ready
+    // (deviceTier.mjs, boot.mjs).
     set("cleanupProvider", providers ? "openai" : "local");
-    set("cleanupModel", params.get("writingChosen"));
+    set("cleanupModel", params.get("writing"));
   }
+  // The conversations owed a summary start empty on each page
+  // (stores/summaryQueueStore.ts), unless `owed=keep` keeps the last page's.
+  if (params.get("owed") !== "keep") localStorage.removeItem("oatsPendingSummaries");
   set("autoGenerateNoteTitle", "true");
   set("contextCheckEnabled", params.get("check") === "1" ? "true" : "false");
   set("contextFolder", params.get("check") === "1" ? CONTEXT_FOLDER : "");
