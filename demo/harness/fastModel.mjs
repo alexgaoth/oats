@@ -109,3 +109,21 @@ export function installFakeOpenAI({ reason, models = FAST_MODELS }) {
   };
   return { requests: () => requests.map((request) => ({ ...request })) };
 }
+
+/**
+ * The key check Settings and setup run on a key before saving it
+ * (`openAiKeyStatus`, ReasoningService.ts), answered in the page: a key with
+ * "bad" in it is rejected, any other is accepted. Nothing reaches OpenAI.
+ */
+export function installFakeKeyCheck() {
+  const pageFetch = window.fetch.bind(window);
+  window.fetch = async (input, init = {}) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (!url.startsWith(HOST)) return pageFetch(input, init);
+    const auth = String(new Headers(init.headers ?? {}).get("Authorization") ?? "");
+    const model = /^\/v1\/models\/(.+)$/.exec(new URL(url).pathname)?.[1];
+    if (!model) return reply(404, { error: { message: "The demo answers model checks only." } });
+    if (auth.includes("bad")) return reply(401, { error: { message: "Incorrect API key." } });
+    return reply(200, { id: decodeURIComponent(model), object: "model", owned_by: "openai" });
+  };
+}

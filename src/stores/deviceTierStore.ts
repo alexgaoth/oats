@@ -5,7 +5,7 @@ import type { DeviceTierSnapshot } from "../types/electron";
  * What this Mac can run, as the main process measured it (deviceTier.js):
  * pulled once, then pushed whenever it changes. Every window keeps its own
  * copy, because each window's settings store resolves the default speech
- * model from it (settingsStore.ts, speechTier.mjs).
+ * and writing models from it (settingsStore.ts, speechTier.mjs, writingTier.mjs).
  */
 interface DeviceTierState {
   tier: DeviceTierSnapshot | null;
@@ -15,11 +15,17 @@ interface DeviceTierState {
    * notice says so (SpeechUpgradeNotice).
    */
   autoStarted: boolean;
+  /**
+   * The same for the writing model's download (useWritingModelDownload): its
+   * one-time notice (WritingModelNotice).
+   */
+  writingAutoStarted: boolean;
 }
 
 export const useDeviceTierStore = create<DeviceTierState>()(() => ({
   tier: null,
   autoStarted: false,
+  writingAutoStarted: false,
 }));
 
 let started = false;

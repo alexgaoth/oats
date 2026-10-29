@@ -5,11 +5,16 @@
 //   question cards on, read locally (no classifier model), auto-search off
 //   unless `autosearch=1` (the fake main process records the search instead
 //   of opening a browser: `window.oatsDemo.searches()`)
-//   a local summary model, so Finish writes a title and a summary, unless
-//   `loop=1`: then the writing model is OpenAI's, and the live topic check
-//   runs against the stand-in in fastModel.mjs (nothing leaves the page)
+//   a local summary model on disk, so Finish writes a title and a summary,
+//   unless `loop=1`: then the writing model is OpenAI's, and the live topic
+//   check runs against the stand-in in fastModel.mjs (nothing leaves the page)
 //   the context check off unless `check=1`, which turns it on with the demo's
 //   team folder (context.mjs); `agent=1` adds its stand-in Claude Code
+//
+//   the writing model following the default (writingTier.mjs): on the fake
+//   48 GB Mac Gemma 4 E4B, on disk unless `writing=` says otherwise
+//   (deviceTier.mjs); `processing=providers`, `keys=openai,anthropic`,
+//   `writingChosen=<model>` and `noticedWriting=1` change that
 //
 // Page parameters choose the rest: `firstrun=1` (the setup screen),
 // `chosen=<model>` (a speech model the person chose), `speech=<language>` (the
@@ -44,7 +49,6 @@ export function applyDemoSettings(params) {
   set("conversationAideInRoomEnabled", "true");
   set("conversationAideModel", "");
   set("conversationAutoSearchEnabled", params.get("autosearch") === "1" ? "true" : "false");
-  set("meetingUseLocalWhisper", "true");
   // The speech model follows the default, as it does for somebody who never
   // chose one, unless `chosen=<model>` stores a choice (speechTier.mjs).
   if (params.get("chosen")) set("whisperModel", params.get("chosen"));
@@ -63,13 +67,41 @@ export function applyDemoSettings(params) {
   } else {
     localStorage.removeItem("preferredLanguage");
   }
+  // The writing model follows the default unless `loop=1` stores OpenAI's
+  // fast model, or `writingChosen=<model>` stores a local one the person chose
+  // (writingTier.mjs); `processing=providers` is "With an API key" for both
+  // models, whose keys come from `keys=` (boot.mjs).
+  for (const key of ["cleanupModel", "cleanupProvider", "oats.processing.models"]) {
+    localStorage.removeItem(key);
+  }
+  set("writingModelDefaultMigrated", "1");
+  // A profile that has run before: the one-time provider migration would
+  // derive the transcription modes from the speech switch again
+  // (settingsStore.ts), and "With an API key" without an OpenAI key keeps the
+  // switch on this Mac by design.
+  set("_providerSettingsMigrated", "1");
+  if (params.get("noticedWriting") === "1") set("writingModelNoticed", "1");
+  else localStorage.removeItem("writingModelNoticed");
+  const providers = params.get("loop") === "1" || params.get("processing") === "providers";
+  const mode = providers ? "providers" : "local";
+  for (const key of [
+    "cleanupMode",
+    "noteFormattingMode",
+    "transcriptionMode",
+    "meetingTranscriptionMode",
+  ]) {
+    set(key, mode);
+  }
+  // With API keys, speech goes to OpenAI only with its key (settingsStore.ts).
+  const openaiKey = params.get("loop") === "1" || (params.get("keys") ?? "").includes("openai");
+  set("meetingUseLocalWhisper", providers && openaiKey ? "false" : "true");
+  set("useLocalWhisper", providers && openaiKey ? "false" : "true");
   if (params.get("loop") === "1") {
-    set("cleanupMode", "providers");
     set("cleanupProvider", "openai");
     set("cleanupModel", "gpt-5.6-luna");
-  } else {
-    set("cleanupMode", "local");
-    set("cleanupModel", "qwen3.5-4b-q4_k_m");
+  } else if (params.get("writingChosen")) {
+    set("cleanupProvider", providers ? "openai" : "local");
+    set("cleanupModel", params.get("writingChosen"));
   }
   set("autoGenerateNoteTitle", "true");
   set("contextCheckEnabled", params.get("check") === "1" ? "true" : "false");

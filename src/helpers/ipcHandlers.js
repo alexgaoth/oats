@@ -341,6 +341,9 @@ class IPCHandlers {
       appVersion: app.getVersion(),
       isBusy: () => this.isMeetingActive?.() === true,
       publish: (snapshot) => this.broadcastToWindows("device-tier", snapshot),
+      // The writing model's automatic download goes the way every local
+      // writing model does (writingModelFetch.js).
+      modelManager: require("./modelManagerBridge").default,
     });
     this.setupHandlers();
 
@@ -2116,6 +2119,22 @@ class IPCHandlers {
 
     ipcMain.handle("speech-upgrade-cancel", () => this.deviceTier.cancelUpgrade());
 
+    // The writing model on this Mac (writingTier.mjs, writingModelFetch.js).
+    // The renderer asks after setup, or when setup chose "On this Mac", while
+    // the writing setting follows the default; main checks again here.
+    ipcMain.handle("writing-model-start", (_event, options = {}) => {
+      this.deviceTier.writing.start({
+        modelId: typeof options?.modelId === "string" ? options.modelId : "",
+        force: options?.force === true,
+      });
+      return this.deviceTier.snapshot();
+    });
+
+    ipcMain.handle("writing-model-cancel", () => {
+      this.deviceTier.writing.cancel();
+      return this.deviceTier.snapshot();
+    });
+
     ipcMain.handle("delete-all-whisper-models", async () => {
       // Removing every model removes turbo too, and that is a no to it as well:
       // otherwise the workspace would fetch its 574 MB again at once.
@@ -2958,6 +2977,8 @@ class IPCHandlers {
             }
           }
         );
+        // Settings' own Download undoes an earlier no to this model.
+        this.deviceTier.writing.downloaded(modelId);
         return { success: true, path: result };
       } catch (error) {
         return {
@@ -2973,6 +2994,8 @@ class IPCHandlers {
       try {
         const modelManager = require("./modelManagerBridge").default;
         await modelManager.deleteModel(modelId);
+        // Deleting the writing model is a no to it: Oats does not fetch it again by itself.
+        this.deviceTier.writing.deleted([modelId]);
         return { success: true };
       } catch (error) {
         return {
@@ -2987,7 +3010,11 @@ class IPCHandlers {
     ipcMain.handle("model-delete-all", async () => {
       try {
         const modelManager = require("./modelManagerBridge").default;
+        // Removing every model is a no to each one that was there, or the
+        // workspace would fetch the writing model again at once.
+        const hadModels = this.deviceTier.writing.installed();
         await modelManager.deleteAllModels();
+        this.deviceTier.writing.deleted(hadModels);
         return { success: true };
       } catch (error) {
         return {
@@ -3687,13 +3714,12 @@ class IPCHandlers {
       }
     );
 
-    // Whether this Anthropic key can use a model: one request with no tokens
-    // and no conversation text (GET /v1/models/{id}), asked once a session for
-    // the topic models (topicNamingRunner.ts). True or false when Anthropic
-    // says so, null when it could not be told (no key, offline, a server error).
-    ipcMain.handle("anthropic-model-available", async (event, modelId) => {
-      const apiKey = this.environmentManager.getAnthropicKey();
-      if (!apiKey || !modelId) return null;
+    // What Anthropic says of a key and a model: one request with no tokens and
+    // no conversation text (GET /v1/models/{id}). "ok"; "rejected", the key
+    // itself (401); "no-access", the key cannot use the model; "unknown" when
+    // it could not be told (no key, offline, a server error).
+    const anthropicModelStatus = async (modelId, apiKey) => {
+      if (!apiKey || !modelId) return "unknown";
       try {
         const response = await proxyFetch(
           `https://api.anthropic.com/v1/models/${encodeURIComponent(String(modelId))}`,
@@ -3702,14 +3728,31 @@ class IPCHandlers {
             signal: AbortSignal.timeout(5_000),
           }
         );
-        if (response.ok) return true;
-        // The model is not there for this key; a rejected key (401) may be fixed.
-        if ([400, 403, 404].includes(response.status)) return false;
-        return null;
+        if (response.ok) return "ok";
+        if (response.status === 401) return "rejected";
+        if ([400, 403, 404].includes(response.status)) return "no-access";
+        return "unknown";
       } catch {
-        return null;
+        return "unknown";
       }
+    };
+
+    // Whether the stored key can use a model, asked once a session for the
+    // topic models (topicNamingRunner.ts). True or false when Anthropic says
+    // so of the model; null when it could not be told, and for a rejected key,
+    // which may be fixed.
+    ipcMain.handle("anthropic-model-available", async (event, modelId) => {
+      const status = await anthropicModelStatus(modelId, this.environmentManager.getAnthropicKey());
+      return status === "ok" ? true : status === "no-access" ? false : null;
     });
+
+    // A key the person is adding, checked before it is saved (Settings and setup).
+    ipcMain.handle("anthropic-key-check", async (event, request = {}) =>
+      anthropicModelStatus(
+        typeof request?.modelId === "string" ? request.modelId : "",
+        typeof request?.key === "string" ? request.key.trim() : ""
+      )
+    );
 
     ipcMain.handle("check-local-reasoning-available", async () => {
       try {

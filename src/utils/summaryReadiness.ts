@@ -8,7 +8,7 @@
 //
 // Pure, so the rule can be pinned; `useSummaryReadiness` gathers the facts.
 
-export type SummaryReadiness = "ready" | "no-model" | "model-missing" | "no-endpoint";
+export type SummaryReadiness = "ready" | "no-model" | "model-missing" | "no-endpoint" | "no-key";
 
 export interface SummaryFacts {
   /** InferenceMode for note formatting: "local" | "providers" | "self-hosted". */
@@ -17,6 +17,11 @@ export interface SummaryFacts {
   remoteUrl: string;
   /** Whether the local model's file is on disk; null when it could not be checked. */
   localModelDownloaded: boolean | null;
+  /**
+   * With a provider: whether its key is stored. Null or absent when the
+   * provider needs none (a custom endpoint) or it could not be told.
+   */
+  providerKey?: boolean | null;
 }
 
 /**
@@ -34,5 +39,8 @@ export function summaryReadiness(facts: SummaryFacts): SummaryReadiness | null {
     if (facts.localModelDownloaded === false) return "model-missing";
     if (facts.localModelDownloaded === null) return null;
   }
+  // With API keys and no key, the speech stays on this Mac and records well,
+  // and the summary fails at Finish: said before, while a key can be added.
+  if (facts.mode === "providers" && facts.providerKey === false) return "no-key";
   return "ready";
 }

@@ -304,3 +304,70 @@ test("turbo comes through the counted download path, from the models' own reposi
     );
   }
 });
+
+// The other download Oats starts by itself: the writing model on this Mac,
+// when no writing model is ready and the setting follows the default
+// (writingTier.mjs, writingModelFetch.js). docs/network-allowlist.md names it.
+
+test("the writing model is fetched only when the renderer asks, never at launch", () => {
+  // Main starts it only from its IPC handler.
+  for (const file of MAIN_SOURCES) {
+    if (file.endsWith(path.join("helpers", "writingModelFetch.js"))) continue;
+    const calls = [...read(file).matchAll(/\.writing\.start\(/g)].length;
+    if (file.endsWith(path.join("helpers", "ipcHandlers.js"))) {
+      assert.equal(calls, 1, "ipcHandlers.js starts it from writing-model-start only");
+      assert.match(
+        read(file),
+        /ipcMain\.handle\("writing-model-start"[\s\S]{0,120}\.writing\.start\(/
+      );
+    } else {
+      assert.equal(calls, 0, `${file} must not start the writing model's download`);
+    }
+  }
+  // The renderer asks from one module: the workspace's hook (after setup) and
+  // Settings' own button both live in useWritingModel.ts.
+  const askers = ALL_SOURCES.filter((file) => /startWritingModelDownload\?\.\(/.test(read(file)));
+  assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["useWritingModel.ts"]);
+  const hooks = ALL_SOURCES.filter((file) => /\buseWritingModelDownload\(\);/.test(read(file)));
+  assert.deepEqual(
+    hooks.map((file) => path.basename(file)),
+    ["OatsWorkspace.tsx"]
+  );
+  assert.match(
+    read("src/hooks/useWritingModel.ts"),
+    /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/
+  );
+});
+
+test("the writing model's automatic start is announced, once, with its Cancel", () => {
+  const notices = ALL_SOURCES.filter((file) => /<WritingModelNotice \/>/.test(read(file)));
+  assert.deepEqual(
+    notices.map((file) => path.basename(file)),
+    ["OatsWorkspace.tsx"]
+  );
+  const autoStarts = ALL_SOURCES.filter((file) => /writingAutoStarted: true/.test(read(file)));
+  assert.deepEqual(
+    autoStarts.map((file) => path.basename(file)),
+    ["useWritingModel.ts"]
+  );
+  const notice = read("src/components/WritingModelNotice.tsx");
+  assert.match(notice, /shouldShowWritingNotice\(/);
+  assert.match(notice, /cancelWritingModel\(\)/, "its Cancel is the remembered no");
+});
+
+test("the writing model comes through the counted download path, from Hugging Face", () => {
+  const fetcher = read("src/helpers/writingModelFetch.js");
+  assert.match(fetcher, /this\.modelManager\.downloadModel\(/);
+  assert.doesNotMatch(fetcher, /\bfetch\(|require\(["'](node:)?https?["']\)|\bnet\.request\(/);
+  // downloadModel → downloadUtils.downloadFile → Electron's net.request,
+  // which the ledger counts (networkLedger.js).
+  assert.match(
+    read("src/helpers/modelManagerBridge.js"),
+    /await sharedDownloadFile\(downloadUrl, modelPath/
+  );
+  const registry = JSON.parse(read("src/models/modelRegistryData.json"));
+  for (const id of ["gemma-4-e4b-it-q4_k_m", "qwen3.5-4b-q4_k_m"]) {
+    const provider = registry.localProviders.find((item) => item.models.some((m) => m.id === id));
+    assert.equal(provider.baseUrl, "https://huggingface.co", `${id} comes from Hugging Face`);
+  }
+});

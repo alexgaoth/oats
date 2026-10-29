@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { cn } from "./lib/utils";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Download, Trash2, Cloud, Lock, X, Zap, Check } from "lucide-react";
+import { Download, Trash2, Cloud, Lock, X, Check } from "lucide-react";
 import { ProviderIcon } from "./ui/ProviderIcon";
 import { ProviderTabs } from "./ui/ProviderTabs";
 import ModelCardList from "./ui/ModelCardList";
@@ -12,7 +12,7 @@ import { DownloadProgressBar } from "./ui/DownloadProgressBar";
 import ApiKeyInput from "./ui/ApiKeyInput";
 import { ConfirmDialog } from "./ui/dialog";
 import { useDialogs } from "../hooks/useDialogs";
-import { useModelDownload, type DownloadProgress } from "../hooks/useModelDownload";
+import { useModelDownload } from "../hooks/useModelDownload";
 import {
   getTranscriptionProviders,
   getStreamingTranscriptionProviders,
@@ -33,6 +33,7 @@ import { createExternalLinkHandler } from "../utils/externalLinks";
 import { API_ENDPOINTS, normalizeBaseUrl } from "../config/constants";
 import { GetApiKeyLink } from "./ui/GetApiKeyLink";
 import { getCachedPlatform } from "../utils/platform";
+import { WhisperAcceleration } from "./settings/WhisperAcceleration";
 import logger from "../utils/logger";
 
 interface LocalModel {
@@ -330,15 +331,6 @@ export default function TranscriptionModelPicker({
   const [internalLocalProvider, setInternalLocalProvider] = useState(selectedLocalProvider);
   const hasLoadedRef = useRef(false);
   const hasLoadedParakeetRef = useRef(false);
-  const [gpuBackend, setGpuBackend] = useState<"cuda" | "vulkan" | null>(null);
-  const [gpuDownloaded, setGpuDownloaded] = useState(false);
-  const [gpuDownloading, setGpuDownloading] = useState(false);
-  const [gpuProgress, setGpuProgress] = useState<DownloadProgress>({
-    downloadedBytes: 0,
-    totalBytes: 0,
-    percentage: 0,
-  });
-  const [gpuDismissed, setGpuDismissed] = useState(false);
 
   useEffect(() => {
     if (selectedLocalProvider !== internalLocalProvider) {
@@ -510,63 +502,6 @@ export default function TranscriptionModelPicker({
     window.addEventListener("oats-models-cleared", handleModelsCleared);
     return () => window.removeEventListener("oats-models-cleared", handleModelsCleared);
   }, [loadLocalModels, loadParakeetModels]);
-
-  useEffect(() => {
-    if (!effectiveLocal || internalLocalProvider !== "whisper") return;
-    if (getCachedPlatform() === "darwin") return;
-    const detect = async () => {
-      try {
-        const cuda = await window.electronAPI?.getCudaWhisperStatus?.();
-        if (cuda?.gpuInfo.hasNvidiaGpu) {
-          setGpuBackend("cuda");
-          setGpuDownloaded(cuda.downloaded);
-          return;
-        }
-        const vulkan = await window.electronAPI?.getVulkanWhisperStatus?.();
-        if (vulkan?.vulkan.available) {
-          setGpuBackend("vulkan");
-          setGpuDownloaded(vulkan.downloaded);
-        }
-      } catch {}
-    };
-    detect();
-  }, [effectiveLocal, internalLocalProvider]);
-
-  useEffect(() => {
-    if (!gpuDownloading || !gpuBackend) return;
-    const subscribe =
-      gpuBackend === "cuda"
-        ? window.electronAPI?.onCudaDownloadProgress
-        : window.electronAPI?.onVulkanWhisperDownloadProgress;
-    return subscribe?.((data) => setGpuProgress(data));
-  }, [gpuDownloading, gpuBackend]);
-
-  const handleGpuDownload = async () => {
-    setGpuDownloading(true);
-    try {
-      const result =
-        gpuBackend === "cuda"
-          ? await window.electronAPI?.downloadCudaWhisperBinary?.()
-          : await window.electronAPI?.downloadVulkanWhisperBinary?.();
-      if (result?.success) setGpuDownloaded(true);
-    } finally {
-      setGpuDownloading(false);
-    }
-  };
-
-  const handleGpuDelete = async () => {
-    const result =
-      gpuBackend === "cuda"
-        ? await window.electronAPI?.deleteCudaWhisperBinary?.()
-        : await window.electronAPI?.deleteVulkanWhisperBinary?.();
-    if (result?.success) setGpuDownloaded(false);
-  };
-
-  const handleGpuCancel = async () => {
-    if (gpuBackend === "cuda") await window.electronAPI?.cancelCudaWhisperDownload?.();
-    else await window.electronAPI?.cancelVulkanWhisperDownload?.();
-    setGpuDownloading(false);
-  };
 
   const {
     downloadingModel,
@@ -1065,68 +1000,10 @@ export default function TranscriptionModelPicker({
 
           {progressDisplay}
 
-          {gpuDownloading && internalLocalProvider === "whisper" && (
-            <div>
-              <DownloadProgressBar modelName={t("models.progress.gpu")} progress={gpuProgress} />
-              <div className="px-2.5 pb-1 flex justify-end">
-                <button
-                  onClick={handleGpuCancel}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t("gpu.cancel")}
-                </button>
-              </div>
-            </div>
+          {/* The GPU build of the speech server, on Linux and Windows. */}
+          {internalLocalProvider === "whisper" && getCachedPlatform() !== "darwin" && (
+            <WhisperAcceleration />
           )}
-
-          {internalLocalProvider === "whisper" &&
-            !gpuDismissed &&
-            !gpuDownloading &&
-            gpuBackend && (
-              <div className="rounded-md border border-border bg-surface-1 p-2.5">
-                {gpuDownloaded ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Check size={13} className="text-success" />
-                      <span className="text-xs font-medium text-foreground">{t("gpu.active")}</span>
-                    </div>
-                    <Button
-                      onClick={handleGpuDelete}
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-                    >
-                      {t("gpu.remove")}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-2.5">
-                    <Zap size={13} className="text-brand-ink shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">
-                        {t("gpu.transcriptionBanner")}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <Button
-                          onClick={handleGpuDownload}
-                          size="sm"
-                          variant="default"
-                          className="h-6 px-2.5 text-xs"
-                        >
-                          {t("gpu.enableButton")}
-                        </Button>
-                        <button
-                          onClick={() => setGpuDismissed(true)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {t("gpu.dismiss")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
           <div>
             {internalLocalProvider === "whisper" && renderLocalModels()}

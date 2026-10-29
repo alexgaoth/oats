@@ -12,13 +12,15 @@ update feed is contacted. v1 updates are signed manual downloads.
 One outbound action is **on by default**: the question search below. It is the
 only default-on connection in the product, and it is switchable off in Settings.
 
-**Nothing is downloaded at launch, with one exception after setup.** Every
+**Nothing is downloaded at launch, with two exceptions after setup.** Every
 model a conversation needs ships in the app: Whisper `base` and `base.en`
 (`small.en` and `base` on Apple Silicon), the Silero VAD, pyannote
 segmentation, TitaNet for speakers, and MiniLM for search. A development
-checkout fetches the ones it is missing; a packaged build does not. The one
-exception: on a Mac whose GPU measures fast enough, Oats downloads Whisper
-Turbo once, after setup (below, "Automatic, once"). The local vector store
+checkout fetches the ones it is missing; a packaged build does not. The two
+exceptions: on a Mac whose GPU measures fast enough, Oats downloads Whisper
+Turbo once, after setup; and with processing on this computer, it downloads
+the writing model once when no writing model is ready (below, "Automatic,
+once"). The local vector store
 (Qdrant) listens on 127.0.0.1 only and runs with its anonymous usage
 statistics turned off, by config and by flag (`src/helpers/qdrantManager.js`).
 Nothing of the builder's machine is packed into the app — in particular no
@@ -69,6 +71,26 @@ every model download). Its SHA-256 is checked before it is used. A cancelled
 or deleted Turbo is not fetched again unless the person asks for it in
 Settings. A failed download is tried again at the next launch. Intel Macs,
 Linux, and Macs that measure too slow never fetch it.
+
+## Automatic, once: the writing model on this computer
+
+| Host                                   | What is fetched                                                                                                                                                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `huggingface.co` and its LFS/CDN hosts | One GGUF file: `google_gemma-4-E4B-it-Q4_K_M.gguf` (5.4 GB, `bartowski/google_gemma-4-E4B-it-GGUF`) with 16 GB of memory or more, else `Qwen_Qwen3.5-4B-Q4_K_M.gguf` (2.7 GB, `bartowski/Qwen_Qwen3.5-4B-GGUF`). Nothing is sent but the request for the file. |
+
+With processing on this computer ("On this Mac", the default), the title and
+summary of each conversation are written by a local model. When none is ready
+and the writing setting follows the default, Oats downloads the one this
+computer's memory holds (`src/helpers/writingTier.mjs`): once setup is done,
+or at once when the person chooses "On this Mac" in setup, and never while a
+conversation is recorded. A model the person chose stops it, and so does a
+writing model already on disk. When Oats starts it by itself, a notice in the
+corner says so once, with its size, its host and a Cancel button; the sidebar
+and Settings › AI models show its progress with a Cancel button. It goes
+through `downloadUtils.js`, like every model download, so the sidebar's
+request count includes it, and its disk-space check runs first. A cancelled or
+deleted model is not fetched again unless the person asks for it in Settings
+(`src/helpers/writingModelFetch.js`). With an API key, nothing is fetched.
 
 ## Explicit user actions
 

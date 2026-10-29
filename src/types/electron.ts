@@ -51,6 +51,20 @@ export interface DeviceTierSnapshot {
     /** Why the last download failed, or null. */
     failed: string | null;
   };
+  /** This Mac's memory, read at once (the device above waits for the speed check). */
+  memoryBytes?: number | null;
+  /** The local writing models on disk, and the automatic download (writingModelFetch.js). */
+  writing?: WritingModelSnapshot;
+}
+
+export interface WritingModelSnapshot {
+  /** Local writing models whose files are on disk. */
+  installed: string[];
+  /** Models the person cancelled or deleted: Oats does not fetch them by itself. */
+  declined: string[];
+  downloading: { modelId: string; receivedBytes: number; totalBytes: number } | null;
+  /** The last download that failed, and why. */
+  failed: { modelId: string; error: string } | null;
 }
 
 export type TranscriptionErrorCode =
@@ -519,6 +533,14 @@ declare global {
         force?: boolean;
       }) => Promise<DeviceTierSnapshot>;
       cancelSpeechUpgrade?: () => Promise<DeviceTierSnapshot>;
+      // The writing model on this Mac (writingModelFetch.js): fetched when
+      // nothing is ready and the setting follows the default, or when setup
+      // chose "On this Mac". `force` is the person asking in Settings.
+      startWritingModelDownload?: (options: {
+        modelId: string;
+        force?: boolean;
+      }) => Promise<DeviceTierSnapshot>;
+      cancelWritingModelDownload?: () => Promise<DeviceTierSnapshot>;
       // The context agent (helpers/contextAgentIpc.js): the user's Claude Code
       // checks a question against GitHub, Linear, Notion and Slack, read-only.
       // `sources` are the services it read, as labels ("Notion"). `busy` means
@@ -1064,6 +1086,8 @@ declare global {
       ) => Promise<{ success: boolean; text?: string; error?: string }>;
       /** True or false when Anthropic says whether the key can use the model; null when it could not be told. */
       anthropicModelAvailable?: (modelId: string) => Promise<boolean | null>;
+      // A key not saved yet: "ok", "rejected", "no-access" or "unknown".
+      anthropicKeyCheck?: (modelId: string, key: string) => Promise<string>;
 
       // Enterprise reasoning (Bedrock, Azure, Vertex)
       processEnterpriseReasoning: (

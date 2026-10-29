@@ -159,6 +159,7 @@ import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
 import SpeechUpgradeNotice from "./SpeechUpgradeNotice";
+import WritingModelNotice from "./WritingModelNotice";
 import PostMigrationOnboarding from "./PostMigrationOnboarding";
 import { useAppBootstrap } from "../hooks/useAppBootstrap";
 import { useConversationPreflight } from "../hooks/useConversationPreflight";
@@ -173,6 +174,7 @@ import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
 import { useSpeechUpgrade } from "../hooks/useSpeechUpgrade";
+import { useWritingModelDownload } from "../hooks/useWritingModel";
 import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 import type {
   ConversationEvent,
@@ -3804,8 +3806,10 @@ function SidebarButton({
 export default function OatsWorkspace() {
   const { t } = useTranslation();
   // The workspace shows only after setup: from here on, a Mac whose GPU
-  // measured fast enough fetches Whisper Turbo (speechTier.mjs).
+  // measured fast enough fetches Whisper Turbo (speechTier.mjs), and "On this
+  // Mac" fetches its writing model when none is ready (writingTier.mjs).
   useSpeechUpgrade();
+  useWritingModelDownload();
   const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
   // Whether the Conversations page is searching, as it reports it. Search in
@@ -4087,6 +4091,7 @@ export default function OatsWorkspace() {
           its summary could fail, and the user would never be told. */}
         <BackgroundActionToastListener />
         <SpeechUpgradeNotice />
+        <WritingModelNotice />
         {/* Headless too: reports the recording to the tray and the floating oat,
           which are the only parts of Oats visible when this window is not. */}
         <ConversationStateBridge />

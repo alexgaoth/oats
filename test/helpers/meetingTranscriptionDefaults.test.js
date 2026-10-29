@@ -52,9 +52,10 @@ test("the one visible processing choice configures the meeting scope too", () =>
   assert.ok(start > -1, "setProcessing not found");
   const body = PROCESSING.slice(start, start + 2000);
 
+  // On this Mac: every scope's switch together, the meeting scope included.
   assert.match(
     body,
-    /setMeetingUseLocalWhisper\(mode === "local"\)/,
+    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: true,/,
     "choosing on-device processing must set meetingUseLocalWhisper, or recording still goes to the cloud"
   );
   assert.match(
@@ -62,14 +63,24 @@ test("the one visible processing choice configures the meeting scope too", () =>
     /setMeetingTranscriptionMode\(mode\)/,
     "the meeting transcription mode must follow the visible choice"
   );
+  // With API keys: the store's rule, which follows the OpenAI key.
+  assert.match(body, /applyProvidersSpeech\(\);/);
+  const rule = STORE.slice(STORE.indexOf("export function applyProvidersSpeech("));
+  assert.match(
+    rule.slice(0, 800),
+    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: !cloud,/,
+    "every scope moves together, the meeting scope included"
+  );
+  assert.match(rule.slice(0, 800), /setMeetingTranscriptionMode\("providers"\)/);
 });
 
 test("the Settings toggle reflects the meeting scope, not just dictation", () => {
   // Otherwise the button can read "On this computer" while recording is cloud —
   // which is exactly how the bug stayed invisible.
-  const start = PROCESSING.indexOf("function processingMode(");
-  assert.ok(start > -1, "processingMode not found");
-  const body = PROCESSING.slice(start, start + 600);
+  assert.match(PROCESSING, /return selectProcessingMode\(state\);/);
+  const start = STORE.indexOf("export function selectProcessingMode(");
+  assert.ok(start > -1, "selectProcessingMode not found");
+  const body = STORE.slice(start, start + 600);
   for (const scope of ["transcriptionMode", "cleanupMode", "meetingTranscriptionMode"]) {
     assert.ok(body.includes(`state.${scope}`), `the selected state must include ${scope}`);
   }
@@ -99,16 +110,22 @@ test("summaries use the cleanup scope's whole configuration", () => {
 
 test("switching processing does not leave the other mode's model behind", () => {
   // A cloud model id used to survive the switch to local, so summaries kept
-  // going to the provider while the switch read "On this Mac".
+  // going to the provider while the switch read "On this Mac". Now the switch
+  // sets the writing scope's mode and either restores that side's own choice
+  // or forgets the stored model, so the default for the new side applies.
   const start = PROCESSING.indexOf("export function setProcessing(");
   const body = PROCESSING.slice(start, start + 2000);
+  assert.match(body, /store\.setCleanupMode\(mode\);/);
+  assert.match(body, /store\.setNoteFormattingMode\(mode\);/);
+  assert.match(body, /memory\[current\] = storedWritingChoice\(\);/);
   assert.match(
     body,
-    /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_LOCAL_MODEL\)/
+    /if \(remembered\) chooseWritingModel\(remembered\.cleanupProvider, remembered\.cleanupModel\);/
   );
-  assert.match(
-    body,
-    /setNoteFormattingModel\(remembered\?\.noteFormattingModel \|\| DEFAULT_CLOUD_MODEL\)/
-  );
-  assert.match(body, /setCleanupModel\(remembered\?\.cleanupModel \|\| DEFAULT_LOCAL_MODEL\)/);
+  assert.match(body, /else forgetWritingChoice\(\);/);
+  const forget = STORE.slice(STORE.indexOf("export function forgetWritingChoice("));
+  assert.match(forget.slice(0, 400), /localStorage\.removeItem\(WRITING_MODEL_KEY\);/);
+  assert.match(forget.slice(0, 400), /localStorage\.removeItem\(WRITING_PROVIDER_KEY\);/);
+  // The default the forgotten side then follows is that side's own.
+  assert.match(STORE, /mode: state\.cleanupMode,/);
 });

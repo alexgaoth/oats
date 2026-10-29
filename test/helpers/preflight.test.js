@@ -156,3 +156,30 @@ test("a summary model that could not be checked is never reported missing", asyn
   assert.equal(resolvePreflight({ ...READY, summaryReady: null }), null);
   assert.equal(resolvePreflight({ ...READY, summaryReady: undefined }), null);
 });
+
+test("a writing model on its way is said as one, not as one to choose", async () => {
+  const { resolvePreflight, blocksRecording } = await load();
+  const downloading = resolvePreflight({
+    ...READY,
+    summaryReady: false,
+    summaryWaiting: "downloading",
+  });
+  assert.equal(downloading, "summary-model-downloading");
+  assert.equal(blocksRecording(downloading), false);
+  assert.equal(
+    resolvePreflight({ ...READY, summaryReady: false, summaryWaiting: "no-key" }),
+    "no-writing-key"
+  );
+  // Only while the summary is not ready: a model downloading for later says nothing.
+  assert.equal(resolvePreflight({ ...READY, summaryWaiting: "downloading" }), null);
+  // And it still ranks below anything that stops transcription.
+  assert.equal(
+    resolvePreflight({
+      ...READY,
+      summaryReady: false,
+      summaryWaiting: "downloading",
+      anyModelDownloaded: false,
+    }),
+    "no-model"
+  );
+});

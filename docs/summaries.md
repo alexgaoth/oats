@@ -61,8 +61,12 @@ of a person was sent anywhere.
    and Settings does not offer it). If it becomes one: GLM 5 (73% covered, 1.9
    invented, $0.009). DeepSeek V3.2 and Amazon Nova 2 Lite are worse, and the
    Claude models this account can reach on Bedrock stop at Haiku 4.5.
-4. **No local writing model by default, on any Mac, and D2 (download one at
-   first run): no.** Decided 2026-10-28 (Alex delegated it), after measuring
+4. **Superseded on 2026-10-29 (Alex's review of 0.2):** "On this Mac" now
+   downloads a writing model by itself when none is ready: Gemma 4 E4B with
+   16 GB of memory or more, Qwen3.5 4B under that (decision 7 below,
+   `src/helpers/writingTier.mjs`), chosen in setup or after it. The decision
+   as it was taken: **No local writing model by default, on any Mac, and D2
+   (download one at first run): no.** Decided 2026-10-28 (Alex delegated it), after measuring
    all six models. None clears the bar, which was set before the results: at
    most 1.2 invented facts in a summary and at least 65% covered ("The rule for
    a default" below). A first-run download (3 to 12 GB) would give every new
@@ -77,12 +81,14 @@ of a person was sent anywhere.
    tokens (`modelManagerBridge.js`). About 14,700 tokens of transcript fit: 56
    minutes of the busiest meeting, 76 at the median pace, 95 at a slow one.
    Longer, the answer is cut, and since #139 the summary fails and says so. Not
-   fixed here, because no Mac gets a local default; it still meets a person who
-   chooses a local model. A context sized to the transcript for the summary
+   fixed here, because no Mac got a local default; since 2026-10-29 every Mac
+   on "On this Mac" does (decision 4), so this now meets every one of them. A context sized to the transcript for the summary
    (the models were trained on 128K to 262K tokens), or a summary written in
    parts, would fix it.
 7. **The model that "on this Mac" picks (`DEFAULT_LOCAL_MODEL`: Qwen3.5 4B, on
-   every Mac).** On the same 24 meetings Gemma 4 E4B invents 4.0 fewer facts in
+   every Mac).** Done 2026-10-29: Gemma 4 E4B with 16 GB or more, Qwen3.5 4B
+   under that (`src/helpers/writingTier.mjs`); its dictation cleanup is still
+   not measured. On the same 24 meetings Gemma 4 E4B invents 4.0 fewer facts in
    a summary [3.0, 5.1] (second judge: 5.2 fewer), for 4.9 points less
    coverage [−11.3, +1.2] (second judge: 7.0, [−13.5, −0.8]). It needs a 16 GB
    Mac (6.8 GB at its peak), and the same model also cleans dictation

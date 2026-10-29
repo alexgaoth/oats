@@ -11,8 +11,10 @@
 // `from` seeks there once recording starts (seconds); `speed` is the replay
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
 // `edits=0` leaves the voices unnamed after Stop; `tier` is the speed check's
-// state and `chosen` a speech model the person chose (deviceTier.mjs,
-// settings.mjs); `profile=empty` starts with
+// state and `chosen` a speech model the person chose, `writing` and `memory`
+// the writing model's state and this Mac's memory (deviceTier.mjs,
+// settings.mjs); `processing=providers` and `keys=openai,anthropic` set up
+// "With an API key" (settings.mjs); `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
 // in three groups instead of the samples (`many.mjs`), to measure Global
@@ -23,8 +25,9 @@
 // window.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
+import registry from "../../src/models/modelRegistryData.json";
 import { installClock } from "./clock.mjs";
-import { installFakeOpenAI } from "./fastModel.mjs";
+import { installFakeKeyCheck, installFakeOpenAI } from "./fastModel.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { createFakeDeviceTier } from "./deviceTier.mjs";
 import { installFakeMicrophone } from "./media.mjs";
@@ -54,8 +57,9 @@ const main = createFakeMain({
   // The context check's agent (`agent=1`, with `check=1`): see context.mjs.
   agent: params.get("agent") === "1",
   // OpenAI as the writing model (`loop=1`): a key for the stand-in, which
-  // never leaves the page.
-  openai: params.get("loop") === "1",
+  // never leaves the page. `keys=` stores the keys a person added.
+  openai: params.get("loop") === "1" || (params.get("keys") ?? "").includes("openai"),
+  anthropic: (params.get("keys") ?? "").includes("anthropic"),
 });
 if (many) {
   // Work and Personal are seeded; Research is one the person made, between them.
@@ -68,14 +72,37 @@ if (many) {
   main.db.notes.push(...notes);
   for (const question of questions) main.insertEvent(question);
 }
-// The speed check's report (deviceTier.mjs): `tier=` picks the state.
-const deviceTier = createFakeDeviceTier({ state: params.get("tier"), emit: main.emit });
+// The speed check's report (deviceTier.mjs): `tier=` picks the state, and
+// `writing=` and `memory=` the writing model's.
+const deviceTier = createFakeDeviceTier({
+  state: params.get("tier"),
+  writing: params.get("writing"),
+  memory: params.get("memory"),
+  emit: main.emit,
+});
 Object.assign(main.api, {
   getArch: deviceTier.getArch,
   getDeviceTier: deviceTier.getDeviceTier,
   startSpeechUpgrade: deviceTier.startSpeechUpgrade,
   cancelSpeechUpgrade: deviceTier.cancelSpeechUpgrade,
+  startWritingModelDownload: deviceTier.startWritingModelDownload,
+  cancelWritingModelDownload: deviceTier.cancelWritingModelDownload,
 });
+main.hooks.whisperModels = deviceTier.whisperModels;
+main.hooks.writingInstalled = deviceTier.writingInstalled;
+main.hooks.writingDeleted = deviceTier.writingDeleted;
+// `model-get-all`: every local writing model, marked on disk as the report says.
+main.hooks.localModels = () => {
+  const installed = deviceTier.writingInstalled();
+  return registry.localProviders.flatMap((provider) =>
+    provider.models.map((model) => ({
+      ...model,
+      providerId: provider.id,
+      providerName: provider.name,
+      isDownloaded: installed.includes(model.id),
+    }))
+  );
+};
 window.electronAPI = main.api;
 
 const replay = createReplay({
@@ -87,6 +114,9 @@ const openai =
   params.get("loop") === "1"
     ? installFakeOpenAI({ reason: (request) => main.hooks.reason?.(request) ?? null })
     : null;
+// A key typed into Settings or setup is checked with OpenAI (keyCheck.ts); here
+// the check is answered in the page, and nothing leaves it.
+if (!openai) installFakeKeyCheck();
 
 const TABS = ["summary", "transcript", "connections"];
 
@@ -160,6 +190,8 @@ window.oatsDemo = {
   searches: () => main.searches.map((search) => ({ ...search })),
   /** Put the speed check in another state: see deviceTier.mjs. */
   tier: (state) => deviceTier.set(state),
+  /** Put the writing model in another state: see deviceTier.mjs. */
+  writing: (state) => deviceTier.setWriting(state),
   /** Open a Settings page, as any screen can ("models", "recording", ...). */
   async settings(page = "general") {
     window.dispatchEvent(new CustomEvent("oats-open-settings", { detail: page }));

@@ -61,7 +61,7 @@ interface ReasoningModelSelectorProps {
   mode?: "cloud" | "local";
 }
 
-function GpuStatusBadge() {
+export function GpuStatusBadge() {
   const { t } = useTranslation();
   const [serverStatus, setServerStatus] = useState<LlamaServerStatus | null>(null);
   const [vulkanStatus, setVulkanStatus] = useState<LlamaVulkanStatus | null>(null);

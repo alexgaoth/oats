@@ -12,6 +12,8 @@ export type PreflightProblem =
   | "no-model"
   | "no-api-key"
   | "no-summary-model"
+  | "summary-model-downloading"
+  | "no-writing-key"
   | "question-cards-off";
 
 export interface PreflightFacts {
@@ -33,6 +35,9 @@ export interface PreflightFacts {
   /** Whether the title and summary can be written after Finish. Without them
    *  the conversation is saved untitled and is never filed to the vault. */
   summaryReady: boolean | null;
+  /** Why not, when that changes what to say: the writing model is still
+   *  downloading, or the provider has no key. */
+  summaryWaiting?: "downloading" | "no-key" | null;
 }
 
 /**
@@ -64,7 +69,13 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
   // Recording still works fully without a summary model, but what Oats promises
   // after Finish — a title, a summary, the threads — will not happen, and that
   // used to be discovered at the end, as a toast in a hidden window.
-  if (facts.summaryReady === false) return "no-summary-model";
+  // While Oats downloads the writing model there is nothing to choose, only
+  // to wait for; without a key, the key is what is missing.
+  if (facts.summaryReady === false) {
+    if (facts.summaryWaiting === "downloading") return "summary-model-downloading";
+    if (facts.summaryWaiting === "no-key") return "no-writing-key";
+    return "no-summary-model";
+  }
   // Last, because recording still works fully — but the flagship surface will
   // not, and its own failure mode is silence.
   if (facts.questionCardsOn === false) return "question-cards-off";

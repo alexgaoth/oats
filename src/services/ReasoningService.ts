@@ -22,6 +22,9 @@ import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { clearTinfoilClientCache } from "./ai/tinfoilClient";
 import { resolveChatRoute } from "../helpers/chatRouting";
 
+/** What a provider says of an API key and a model (`openAiKeyStatus`). */
+export type KeyStatus = "ok" | "rejected" | "no-access" | "unknown";
+
 export type AgentStreamChunk =
   | { type: "content"; text: string }
   | { type: "tool_calls"; calls: Array<{ id: string; name: string; arguments: string }> }
@@ -381,33 +384,47 @@ class ReasoningService extends BaseReasoningService {
   }
 
   /**
-   * Whether this OpenAI key can use a model, by one cheap request
-   * (`GET /models/{id}`, no tokens; counted in the sidebar like any request).
-   * True or false when OpenAI says so of the model; null when it could not be
-   * told (no key or a rejected key, offline, a server error), so the caller
-   * asks again later instead of keeping a no. With no key nothing is sent.
+   * What OpenAI says of a key and a model, by one cheap request
+   * (`GET /models/{id}`, no tokens; counted in the sidebar like any request):
+   * "ok"; "rejected", the key itself (401); "no-access", the key cannot use
+   * the model; "unknown" when it could not be told (offline, a server error).
+   * `key` checks a key before it is saved; without it, the stored key. With
+   * no key nothing is sent.
    */
-  async openAiModelAvailable(model: string): Promise<boolean | null> {
-    let apiKey = "";
-    try {
-      apiKey = await this.getApiKey("openai");
-    } catch {
-      return null;
+  async openAiKeyStatus(model: string, key?: string): Promise<KeyStatus> {
+    let apiKey = key?.trim() ?? "";
+    if (!apiKey) {
+      try {
+        apiKey = await this.getApiKey("openai");
+      } catch {
+        return "unknown";
+      }
     }
-    if (!apiKey) return null;
+    if (!apiKey) return "unknown";
     const url = buildApiUrl(getConfiguredOpenAIBase(), `/models/${encodeURIComponent(model)}`);
     try {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(5_000),
       });
-      if (res.ok) return true;
-      // The model is not there for this key; a rejected key (401) may be fixed.
-      if ([400, 403, 404].includes(res.status)) return false;
-      return null;
+      if (res.ok) return "ok";
+      if (res.status === 401) return "rejected";
+      if ([400, 403, 404].includes(res.status)) return "no-access";
+      return "unknown";
     } catch {
-      return null;
+      return "unknown";
     }
+  }
+
+  /**
+   * Whether this OpenAI key can use a model (`openAiKeyStatus`): true or false
+   * when OpenAI says so of the model; null when it could not be told (no key
+   * or a rejected key, offline, a server error), so the caller asks again
+   * later instead of keeping a no.
+   */
+  async openAiModelAvailable(model: string): Promise<boolean | null> {
+    const status = await this.openAiKeyStatus(model);
+    return status === "ok" ? true : status === "no-access" ? false : null;
   }
 
   /**
@@ -421,6 +438,22 @@ class ReasoningService extends BaseReasoningService {
       return typeof answer === "boolean" ? answer : null;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * What Anthropic says of a key that is not saved yet and a model, by the
+   * request `anthropicModelAvailable` makes, from the main process
+   * (`openAiKeyStatus` has the four answers).
+   */
+  async anthropicKeyStatus(model: string, key: string): Promise<KeyStatus> {
+    try {
+      const answer = await window.electronAPI?.anthropicKeyCheck?.(model, key);
+      return answer === "ok" || answer === "rejected" || answer === "no-access"
+        ? answer
+        : "unknown";
+    } catch {
+      return "unknown";
     }
   }
 

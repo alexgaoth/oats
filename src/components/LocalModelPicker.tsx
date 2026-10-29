@@ -96,15 +96,14 @@ export default function LocalModelPicker({
     }
   }, [modelType]);
 
+  // Opening the list never changes the setting. It used to store "" over a
+  // model whose file was not on disk yet, so merely looking at the writing
+  // model's screen left a fresh "On this Mac" install with no writing model
+  // and Home warning about it. A model that is not on disk shows its Download
+  // button instead; rows that are not on disk cannot be selected.
   useEffect(() => {
-    const initAndValidate = async () => {
-      const downloaded = await loadDownloadedModels();
-      if (selectedModel && !downloaded.has(selectedModel)) {
-        onModelSelect("");
-      }
-    };
-    initAndValidate();
-  }, [loadDownloadedModels, selectedModel, onModelSelect]);
+    void loadDownloadedModels();
+  }, [loadDownloadedModels]);
 
   const handleDownloadComplete = useCallback(() => {
     loadDownloadedModels();

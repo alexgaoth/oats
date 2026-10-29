@@ -4,31 +4,34 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 // The cloud writing model a person gets when they choose the providers and pick
-// none (components/settings/processing.ts). Measured in docs/summaries.md (#143):
-// gpt-6.1-sol covers as much of a meeting as gpt-6-astra for a fifth of the
-// price, and invents 0.67 facts in a summary against gpt-5.6-terra's 3.0.
+// none (src/helpers/writingTier.mjs, components/settings/processing.ts).
+// Measured in docs/summaries.md (#143): gpt-6.1-sol covers as much of a meeting
+// as gpt-6-astra for a fifth of the price, and invents 0.67 facts in a summary
+// against gpt-5.6-terra's 3.0. With only an Anthropic key, Claude Opus 5.5.
 
 const ROOT = path.join(__dirname, "..", "..");
-const PROCESSING = fs.readFileSync(
-  path.join(ROOT, "src/components/settings/processing.ts"),
-  "utf8"
-);
-const REGISTRY = JSON.parse(
-  fs.readFileSync(path.join(ROOT, "src/models/modelRegistryData.json"), "utf8")
-);
+const read = (relative) => fs.readFileSync(path.join(ROOT, relative), "utf8");
+const PROCESSING = read("src/components/settings/processing.ts");
+const STORE = read("src/stores/settingsStore.ts");
+const REGISTRY = JSON.parse(read("src/models/modelRegistryData.json"));
 
-const defaultCloudModel = () =>
-  /export const DEFAULT_CLOUD_MODEL = "([^"]+)";/.exec(PROCESSING)?.[1];
+let tier;
+test.before(async () => {
+  tier = await import("../../src/helpers/writingTier.mjs");
+});
+
 const openai = () => REGISTRY.cloudProviders.find((provider) => provider.id === "openai");
 
-test("the cloud default is gpt-6.1-sol", () => {
-  assert.equal(defaultCloudModel(), "gpt-6.1-sol");
+test("the cloud default is gpt-6.1-sol, and Claude Opus 5.5 with only an Anthropic key", () => {
+  assert.equal(tier.CLOUD_WRITING_MODELS.openai, "gpt-6.1-sol");
+  assert.equal(tier.CLOUD_WRITING_MODELS.anthropic, "claude-opus-5-5");
+  // The store resolves the default from the rule, not from a copy of it.
+  assert.match(STORE, /return defaultWritingModel\(\{/);
 });
 
 test("the default is in the registry, first in OpenAI's list, so Advanced settings offers it first", () => {
-  // ReasoningModelSelector selects a provider's first model when somebody switches to it.
   const [first] = openai().models;
-  assert.equal(first.id, defaultCloudModel());
+  assert.equal(first.id, tier.CLOUD_WRITING_MODELS.openai);
   // GPT-5 and later take no temperature and count reasoning in max_completion_tokens.
   assert.equal(first.tokenParam, "max_completion_tokens");
   assert.equal(first.supportsTemperature, false);
@@ -48,10 +51,24 @@ test("the default's description is translated in every locale", () => {
   }
 });
 
-test("a model somebody chose is kept: the default is used only when nothing is remembered", () => {
+test("a model somebody chose is kept: the default is followed only while nothing is stored", () => {
   const start = PROCESSING.indexOf("export function setProcessing(");
   const body = PROCESSING.slice(start, start + 2000);
-  assert.match(body, /setCleanupModel\(remembered\?\.cleanupModel \|\| DEFAULT_CLOUD_MODEL\)/);
+  // The switch restores the side's last choice, or follows the default; it
+  // never stores a default by itself.
+  assert.match(body, /if \(remembered\) chooseWritingModel\(/);
+  assert.match(body, /else forgetWritingChoice\(\);/);
+  assert.doesNotMatch(body, /setCleanupModel\(/);
+  // The store moves a setting that follows the default in memory only.
+  const follow = STORE.slice(STORE.indexOf("function followDefaultWritingModel("));
+  assert.match(
+    follow,
+    /^function followDefaultWritingModel\(\): void \{\s*if \(!writingModelFollowsDefault\(\)\) return;/
+  );
+  assert.match(
+    follow.slice(0, 600),
+    /useSettingsStore\.setState\(\{ cleanupModel: next\.model, cleanupProvider: next\.provider \}\)/
+  );
   // Nothing rewrites a stored model to the new default.
   assert.doesNotMatch(PROCESSING, /gpt-5\.6-terra/);
 });

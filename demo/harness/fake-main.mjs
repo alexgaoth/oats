@@ -116,7 +116,8 @@ function noteRow(id, fields) {
 }
 
 /**
- * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean, openai?: boolean }} options The
+ * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean,
+ *   openai?: boolean, anthropic?: boolean }} options The
  *   sample fixtures to hold, placed relative to `now` exactly as
  *   `insertSampleConversations` places them, and the one the app ships as its
  *   in-app example (`insertExampleConversation`).
@@ -128,6 +129,7 @@ export function createFakeMain({
   badges = false,
   agent = false,
   openai = false,
+  anthropic = false,
 }) {
   const notes = [];
   const events = [];
@@ -370,12 +372,27 @@ export function createFakeMain({
     getPostMigrationState: async () => ({ justMigrated: false }),
     consumePendingFocusSearch: async () => false,
     checkWhisperInstallation: async () => ({ installed: true, working: true }),
+    // What an Apple Silicon build ships, and Turbo when the speed check's
+    // report says it is on disk (deviceTier.mjs).
     listWhisperModels: async () => ({
       success: true,
-      models: [{ model: "base.en", downloaded: true }],
+      models: hooks.whisperModels?.() ?? [{ model: "base.en", downloaded: true }],
     }),
-    modelCheck: async () => true,
+    // The local writing models on disk: the device tier's report says which
+    // (deviceTier.mjs, `writing=`); without it, every model is there.
+    modelCheck: async (modelId) => hooks.writingInstalled?.().includes(modelId) ?? true,
+    // Every local writing model, marked as main marks one on disk (boot.mjs
+    // reads the registry; this file stays importable under plain node).
+    modelGetAll: async () => hooks.localModels?.() ?? [],
+    modelDelete: async (modelId) => {
+      hooks.writingDeleted?.(modelId);
+      return { success: true };
+    },
     checkLocalReasoningAvailable: async () => true,
+    // One GPU, as on every Mac: no GPU to choose.
+    listGpus: async () => [],
+    getGpuDeviceIndex: async () => "",
+    listParakeetModels: async () => ({ success: true, models: [], cache_dir: "" }),
 
     // --- Notes.
     getNotes: async (noteType = null, limit = 100) =>
@@ -494,6 +511,11 @@ export function createFakeMain({
     // --- OpenAI as the writing model (`loop=1`): a placeholder key, for the
     // stand-in that answers api.openai.com in the page (fastModel.mjs).
     getOpenAIKey: async () => (openai ? "demo-key-answered-in-page" : ""),
+    // `keys=anthropic`: a key the person added, for the Anthropic route.
+    getAnthropicKey: async () => (anthropic ? "sk-ant-demo-key-answered-in-page" : ""),
+    // A key typed into Settings or setup, checked before it is saved: a key
+    // with "bad" in it is rejected, as Anthropic would answer 401.
+    anthropicKeyCheck: async (_model, key) => (String(key).includes("bad") ? "rejected" : "ok"),
 
     // --- The summary: the built-in action, and the local model behind it.
     getActions: async () => [{ ...BUILTIN_ACTION }],

@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
 import { cancelTurbo, useSpeechTier } from "../../hooks/useSpeechTier";
+import { cancelWritingModel, useWritingModel } from "../../hooks/useWritingModel";
 import { selectResolvedNoteFormatting, useSettingsStore } from "../../stores/settingsStore";
 import { useStreamingProvidersStore } from "../../stores/streamingProvidersStore";
 import { getProviderDisplayName, getTranscriptionProvider } from "../../models/ModelRegistry";
@@ -152,6 +153,35 @@ export function OnDeviceFooter({ className }: { className?: string }) {
         </p>
       ))}
       <SpeechUpgradeLine />
+      <WritingDownloadLine />
+    </div>
+  );
+}
+
+/**
+ * The writing model's download, beside Turbo's: Oats starts it by itself on
+ * this Mac when no writing model is ready (writingTier.mjs), so it is visible
+ * wherever the person is, and it can be stopped from here.
+ */
+function WritingDownloadLine() {
+  const { t } = useTranslation();
+  const { status, percent, name } = useWritingModel();
+  if (status !== "downloading") return null;
+  return (
+    <div className="mt-1 flex min-h-6 items-center gap-1">
+      <p className="min-w-0 flex-1 text-balance break-words">
+        {t("oats.writingModel.downloadingShort", { model: name, percent })}
+      </p>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={t("oats.writingModel.cancelDownload", { model: name })}
+        title={t("oats.writingModel.cancelDownload", { model: name })}
+        onClick={cancelWritingModel}
+        className="text-muted-foreground"
+      >
+        <X aria-hidden="true" />
+      </Button>
     </div>
   );
 }

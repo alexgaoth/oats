@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
+import { useDeviceTierStore } from "../stores/deviceTierStore";
 import { localSummaryModelDownloaded } from "./useSummaryReadiness";
+import { writingKeyPresent } from "../utils/writingKeys";
 import { summaryReadiness } from "../utils/summaryReadiness";
 import {
   blocksRecording,
@@ -99,6 +101,16 @@ export function useConversationPreflight(): Preflight {
   const summaryMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
   const summaryModel = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
   const summaryUrl = useSettingsStore((state) => selectResolvedNoteFormatting(state).remoteUrl);
+  const summaryProvider = useSettingsStore((state) => selectResolvedNoteFormatting(state).provider);
+  const summaryKey = useSettingsStore((state) => writingKeyPresent(state, summaryProvider));
+  // The writing model Oats is downloading, and every model on disk: a
+  // download that ends clears the line without a restart.
+  const downloadingModel = useDeviceTierStore(
+    (state) => state.tier?.writing?.downloading?.modelId ?? null
+  );
+  const installedModels = useDeviceTierStore((state) =>
+    (state.tier?.writing?.installed ?? []).join(" ")
+  );
 
   const check = useCallback(async (): Promise<PreflightProblem | null> => {
     const found = resolvePreflight({
@@ -113,8 +125,15 @@ export function useConversationPreflight(): Preflight {
           model: summaryModel,
           remoteUrl: summaryUrl,
           localModelDownloaded: await localSummaryModelDownloaded(summaryMode, summaryModel),
+          providerKey: summaryMode === "providers" ? summaryKey : null,
         })
       ),
+      summaryWaiting:
+        summaryMode === "local" && downloadingModel === summaryModel
+          ? "downloading"
+          : summaryMode === "providers" && summaryKey === false
+            ? "no-key"
+            : null,
     });
     setProblem(found);
     return found;
@@ -126,11 +145,14 @@ export function useConversationPreflight(): Preflight {
     summaryMode,
     summaryModel,
     summaryUrl,
+    summaryKey,
+    downloadingModel,
   ]);
 
+  // Again when a writing model lands on disk, so the line clears by itself.
   useEffect(() => {
     void check();
-  }, [check]);
+  }, [check, installedModels]);
 
   // A microphone plugged in while this window sat open should clear the warning
   // by itself, and one unplugged mid-session should raise it — neither is worth
