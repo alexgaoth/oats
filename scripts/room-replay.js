@@ -594,13 +594,18 @@ function startRealtime(model) {
           event.type === "conversation.item.input_audio_transcription.completed" ||
           event.type === "conversation.item.input_audio_transcription.failed"
         ) {
-          const done = waiting.get(event.item_id);
-          waiting.delete(event.item_id);
-          done?.(
-            event.type.endsWith("completed")
-              ? { text: String(event.transcript ?? "").trim(), usage: event.usage ?? null }
-              : { text: "", failed: JSON.stringify(event.error ?? {}).slice(0, 160) }
-          );
+          // Only an id this replay committed has a waiting request; the server's
+          // item_id is a key into that table, never a method name.
+          const id = String(event.item_id ?? "");
+          const done = waiting.get(id);
+          waiting.delete(id);
+          if (typeof done === "function") {
+            done(
+              event.type.endsWith("completed")
+                ? { text: String(event.transcript ?? "").trim(), usage: event.usage ?? null }
+                : { text: "", failed: JSON.stringify(event.error ?? {}).slice(0, 160) }
+            );
+          }
         } else if (event.type === "error") {
           // A commit the server refused (an empty buffer) never gets an item.
           state.committed?.(null);
