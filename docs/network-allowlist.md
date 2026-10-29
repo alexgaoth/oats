@@ -82,8 +82,7 @@ With processing on this computer ("On this Mac", the default), the title and
 summary of each conversation are written by a local model. When none is ready
 and the writing setting follows the default, Oats downloads the one this
 computer's memory holds (`src/helpers/writingTier.mjs`): once setup is done,
-or at once when the person chooses "On this Mac" in setup, and never while a
-conversation is recorded. A model the person chose stops it, and so does a
+and never while a conversation is recorded. A model the person chose stops it, and so does a
 writing model already on disk. When Oats starts it by itself, a notice in the
 corner says so once, with its size, its host and a Cancel button; the sidebar
 and Settings › AI models show its progress with a Cancel button. It goes
