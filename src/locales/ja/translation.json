@@ -2284,7 +2284,7 @@
       "microphoneDescription": "Oats が会話と音声入力に使うマイク。",
       "fieldBackdrop": {
         "label": "フィールド背景",
-        "description": "アプリの背後に動く麦畑を表示します。"
+        "description": "Oats を、よりゆったりとした見た目にします。"
       },
       "dictationButton": "ディクテーション中",
       "instructionsDescription": "モデルが各ディクテーションをどう書き直すか。ほとんどの人は既定のままで問題ありません。",

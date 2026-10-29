@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import FieldCanvas from "./field/FieldCanvas";
 import FieldGL from "./field/FieldGL";
-import type { FieldScene } from "./field/fieldModel";
+import type { FieldComposition, FieldScene } from "./field/fieldModel";
 
 // The field (DESIGN.md §9.8) — the world Oats lives in.
 //
@@ -130,6 +130,7 @@ function useWindowSeen(): boolean {
 export default function Field({
   live,
   intensity = 1,
+  composition,
   animate = true,
   sceneHeight,
   className,
@@ -142,6 +143,14 @@ export default function Field({
    * strength the horizon line draws straight through a paragraph.
    */
   intensity?: number;
+  /**
+   * The picture in full: where the horizon is, how present each layer is,
+   * where the sun stands and what the world keeps clear of. The field mode
+   * backdrop composes one per screen (`field/fieldViews.ts`) and the renderers
+   * ease between them; without one, the field is drawn as it always was, at
+   * `intensity`.
+   */
+  composition?: FieldComposition;
   /**
    * Whether the world moves. The reading surfaces get a still frame of it: the
    * wind is a backdrop for a conversation, and a renderer that keeps drawing it
@@ -184,6 +193,7 @@ export default function Field({
         <FieldGL
           live={live}
           intensity={intensity}
+          composition={composition}
           animate={animate}
           visible={visible}
           scene={scene}
@@ -195,6 +205,7 @@ export default function Field({
         <FieldCanvas
           live={live}
           intensity={intensity}
+          composition={composition}
           animate={animate}
           visible={visible}
           scene={scene}

@@ -2,22 +2,30 @@ import { useEffect, useRef } from "react";
 import {
   BANDS,
   BLADE_SEGMENTS,
+  CALM_TOP_FEATHER,
   CHAFF_COUNT,
+  HORIZON,
   INTRO_MS,
   SCENE_IDS,
-  bandSpread,
+  bandPlacement,
   bandStyle,
   createField,
+  defaultComposition,
+  easeOutCubic,
+  mixComposition,
   mixRgb,
   parseHexColor,
+  sameComposition,
   sceneFrame,
   type Field,
+  type FieldComposition,
   type FieldScene,
   type Rgb,
 } from "./fieldModel";
 import {
   FRAME_BUDGET_MS,
   FRAME_INTERVAL_MS,
+  MOVE_MS,
   createFieldClock,
   easeToward,
   fieldLoopState,
@@ -210,6 +218,7 @@ function chaffData(): Float32Array {
 export default function FieldGL({
   live,
   intensity,
+  composition,
   animate,
   visible,
   scene,
@@ -219,8 +228,10 @@ export default function FieldGL({
 }: {
   /** True while a conversation is recording. Drives the wheat, not the world. */
   live: boolean;
-  /** How present the world is on this surface, 0..1. */
+  /** How present the world is on this surface, 0..1, when no composition is given. */
   intensity: number;
+  /** The picture to draw (fieldModel.ts); a change eases there over MOVE_MS. */
+  composition?: FieldComposition;
   /**
    * Whether the world is in motion. False on the reading surfaces, where the
    * field is a still image: the loop draws one settled frame and then stops
@@ -251,14 +262,26 @@ export default function FieldGL({
   const failedRef = useRef(false);
   const liveRef = useRef(live);
   liveRef.current = live;
-  const intensityRef = useRef(intensity);
-  intensityRef.current = intensity;
   const animateRef = useRef(animate);
   animateRef.current = animate;
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
   const sceneHeightRef = useRef(sceneHeight);
   sceneHeightRef.current = sceneHeight;
+  const reducedRef = useRef(reduced);
+  reducedRef.current = reduced;
+
+  // The picture, and the move toward a new one. Kept outside the GL effect so a
+  // context rebuilt mid-move picks up where the old one was. `at` is the wall
+  // clock the move started at (null when settled), `drawn` whether any frame
+  // has been: the first picture is drawn as it is, with nothing to move from.
+  const pictureRef = useRef({
+    from: composition ?? defaultComposition(intensity),
+    to: composition ?? defaultComposition(intensity),
+    now: composition ?? defaultComposition(intensity),
+    at: null as number | null,
+    drawn: false,
+  });
 
   // Set by the GL effect below. Anything that changes what a settled frame
   // should look like calls it: the loop is not running to notice for itself.
@@ -269,7 +292,26 @@ export default function FieldGL({
   // also means a change to either draws nothing until the loop is woken.
   useEffect(() => {
     wakeRef.current?.();
-  }, [animate, intensity, live, visible, sceneHeight]);
+  }, [animate, live, visible, sceneHeight]);
+
+  // A new picture: moved to over MOVE_MS from wherever the field is now, or
+  // drawn as it is when there is nothing to move from, nobody to see the move,
+  // or a person who asked for no motion.
+  useEffect(() => {
+    const picture = pictureRef.current;
+    const next = composition ?? defaultComposition(intensity);
+    if (sameComposition(picture.to, next)) return;
+    if (!picture.drawn || reducedRef.current || !visibleRef.current) {
+      picture.from = next;
+      picture.now = next;
+      picture.at = null;
+    } else {
+      picture.from = picture.now;
+      picture.at = performance.now();
+    }
+    picture.to = next;
+    wakeRef.current?.();
+  }, [composition, intensity]);
 
   useEffect(() => {
     if (reduced) return;
@@ -331,16 +373,32 @@ export default function FieldGL({
 
       const u = (program: WebGLProgram, name: string) => gl.getUniformLocation(program, name);
 
+      // The calm term every pass shares (CALM in shaders.ts).
+      const calmU = (program: WebGLProgram) => ({
+        clear: u(program, "uClear"),
+        clearSoft: u(program, "uClearSoft"),
+        calmTop: u(program, "uCalmTop"),
+        calmSoft: u(program, "uCalmSoft"),
+      });
+
       const backdropU = {
         resolution: u(backdrop, "uResolution"),
         grow: u(backdrop, "uGrow"),
         gold: u(backdrop, "uGold"),
         ink: u(backdrop, "uInk"),
         warmScale: u(backdrop, "uWarmScale"),
-        skyStrength: u(backdrop, "uSkyStrength"),
+        sky: u(backdrop, "uSky"),
+        skyTone: u(backdrop, "uSkyTone"),
+        warmth: u(backdrop, "uWarmth"),
+        horizon: u(backdrop, "uHorizon"),
+        lightX: u(backdrop, "uLightX"),
+        minkaX: u(backdrop, "uMinkaX"),
+        sun: u(backdrop, "uSun"),
+        moon: u(backdrop, "uMoon"),
         time: u(backdrop, "uTime"),
         scene: u(backdrop, "uScene"),
         sceneH: u(backdrop, "uSceneH"),
+        calm: calmU(backdrop),
       };
       const bladeU = {
         resolution: u(blades, "uResolution"),
@@ -358,6 +416,7 @@ export default function FieldGL({
         color: u(blades, "uColor"),
         alpha: u(blades, "uAlpha"),
         solidity: u(blades, "uSolidity"),
+        calm: calmU(blades),
       };
       const chaffU = {
         resolution: u(chaff, "uResolution"),
@@ -365,11 +424,12 @@ export default function FieldGL({
         time: u(chaff, "uTime"),
         grow: u(chaff, "uGrow"),
         color: u(chaff, "uColor"),
+        lift: u(chaff, "uLift"),
+        calm: calmU(chaff),
       };
 
       const field = createField(BLADE_COUNT);
       const styles = Array.from({ length: BANDS }, (_, b) => bandStyle(b));
-      const spreads = Array.from({ length: BANDS }, (_, b) => bandSpread(b));
 
       // Blades
       const bladeVao = gl.createVertexArray();
@@ -490,13 +550,50 @@ export default function FieldGL({
       let lastElapsed = 0;
 
       // The world only moves on the Conversation surface, for a user who wants
-      // motion, and while somebody can see it.
+      // motion, and while somebody can see it; and for the length of a move to
+      // another screen's picture.
       const loopState = () =>
         fieldLoopState({
           animate: animateRef.current,
           reduced,
           visible: visibleRef.current,
+          easing: pictureRef.current.at !== null,
         });
+
+      /** The picture this frame draws: where the move toward the next one has got to. */
+      const pictureAt = (now: number) => {
+        const picture = pictureRef.current;
+        picture.drawn = true;
+        if (picture.at === null) return (picture.now = picture.to);
+        const p = (now - picture.at) / MOVE_MS;
+        if (p >= 1 || reduced || !visibleRef.current) {
+          picture.at = null;
+          return (picture.now = picture.to);
+        }
+        return (picture.now = mixComposition(picture.from, picture.to, easeOutCubic(p)));
+      };
+
+      /** The composition's calm, in device pixels with GL's origin at the bottom-left. */
+      const setCalm = (
+        calm: ReturnType<typeof calmU>,
+        picture: FieldComposition,
+        cssW: number,
+        cssH: number
+      ) => {
+        const sx = canvas.width / cssW;
+        const sy = canvas.height / cssH;
+        const { clear, calmTop } = picture;
+        gl.uniform4f(
+          calm.clear,
+          clear.left * sx,
+          (cssH - clear.bottom) * sy,
+          clear.right * sx,
+          (cssH - clear.top) * sy
+        );
+        gl.uniform1f(calm.clearSoft, clear.feather * sx);
+        gl.uniform1f(calm.calmTop, (cssH - calmTop) * sy);
+        gl.uniform1f(calm.calmSoft, calmTop > 0 ? CALM_TOP_FEATHER * sy : 0);
+      };
 
       const drawFrame = (elapsedMs: number, still: boolean) => {
         if (!applySize()) return;
@@ -528,6 +625,7 @@ export default function FieldGL({
 
         gl.clear(gl.COLOR_BUFFER_BIT);
         const sceneH = sceneFrame(height, sceneHeightRef.current).scale;
+        const picture = pictureAt(performance.now());
 
         // 1. Backdrop — the world.
         gl.useProgram(backdrop);
@@ -537,19 +635,28 @@ export default function FieldGL({
         gl.uniform3f(backdropU.gold, palette.gold[0], palette.gold[1], palette.gold[2]);
         gl.uniform3f(backdropU.ink, palette.ink[0], palette.ink[1], palette.ink[2]);
         gl.uniform1f(backdropU.warmScale, palette.warmScale);
-        gl.uniform1f(backdropU.skyStrength, intensityRef.current);
+        gl.uniform1f(backdropU.sky, picture.sky);
+        gl.uniform1f(backdropU.skyTone, picture.skyTone);
+        gl.uniform1f(backdropU.warmth, picture.warmth);
+        gl.uniform1f(backdropU.horizon, picture.horizon);
+        gl.uniform1f(backdropU.lightX, picture.lightX);
+        gl.uniform1f(backdropU.minkaX, picture.minkaX);
+        gl.uniform3f(backdropU.sun, picture.sun.x, picture.sun.y, picture.sun.r);
+        gl.uniform3f(backdropU.moon, picture.moon.x, picture.moon.y, picture.moon.r);
         gl.uniform1f(backdropU.time, time);
         gl.uniform1i(backdropU.scene, sceneId);
         gl.uniform1f(backdropU.sceneH, sceneH);
+        setCalm(backdropU.calm, picture, width, height);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
         // 2. Blades — far to near, so nearer ones draw over the ones behind.
-        const strength = intensityRef.current;
+        const strength = picture.wheat;
         if (grow > 0.001 && strength > 0.01) {
           gl.useProgram(blades);
           gl.bindVertexArray(bladeVao);
           gl.uniform2f(bladeU.resolution, width, height);
           gl.uniform1f(bladeU.sceneH, sceneH);
+          setCalm(bladeU.calm, picture, width, height);
           gl.uniform1f(bladeU.time, time);
           gl.uniform1f(bladeU.intro, grow);
           // Ease toward presence rather than switching. As a flag the parting
@@ -571,6 +678,8 @@ export default function FieldGL({
           gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
           for (let band = 0; band < BANDS; band += 1) {
             const style = styles[band];
+            // Where this band stands under the picture's horizon.
+            const place = bandPlacement(band, picture.horizon);
             const range = field.bands[band];
             const count = Math.max(1, Math.floor(range.count * density));
             const offset = range.start * STRIDE_BYTES;
@@ -578,12 +687,12 @@ export default function FieldGL({
             gl.vertexAttribPointer(1, 4, gl.FLOAT, false, STRIDE_BYTES, offset);
             gl.vertexAttribPointer(2, 4, gl.FLOAT, false, STRIDE_BYTES, offset + 16);
 
-            gl.uniform1f(bladeU.baseY, style.baseY);
-            gl.uniform1f(bladeU.height, style.height);
+            gl.uniform1f(bladeU.baseY, place.baseY);
+            gl.uniform1f(bladeU.height, place.height);
             gl.uniform1f(bladeU.width, style.width);
             gl.uniform1f(bladeU.windScale, style.windScale);
             gl.uniform1f(bladeU.parallax, style.parallax);
-            gl.uniform1f(bladeU.bandSpread, spreads[band]);
+            gl.uniform1f(bladeU.bandSpread, place.spread);
             gl.uniform1f(bladeU.alpha, style.alpha * strength);
             gl.uniform1f(bladeU.solidity, style.solidity);
             const colour = palette.bandColors[band];
@@ -603,6 +712,8 @@ export default function FieldGL({
           gl.uniform1f(chaffU.time, time);
           gl.uniform1f(chaffU.grow, grow);
           gl.uniform3f(chaffU.color, palette.gold[0], palette.gold[1], palette.gold[2]);
+          gl.uniform1f(chaffU.lift, HORIZON - picture.horizon);
+          setCalm(chaffU.calm, picture, width, height);
           gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, CHAFF_COUNT);
         }
 
@@ -633,6 +744,15 @@ export default function FieldGL({
         // this is here to avoid.
         if (state === "still") {
           drawFrame(clock.elapsed(now), true);
+          return;
+        }
+
+        // Moving to another screen's picture, with no wind: a frame per vsync
+        // for MOVE_MS (a move at 30 fps steps visibly), each the still frame of
+        // the picture so far, and the last one is the settled picture.
+        if (state === "easing") {
+          drawFrame(clock.elapsed(now), true);
+          if (pictureRef.current.at !== null) raf = requestAnimationFrame(tick);
           return;
         }
 
@@ -699,7 +819,7 @@ export default function FieldGL({
         }
         clock.resume(now);
         // Already moving: the next frame picks the change up.
-        if (state === "moving" && (raf || timer)) return;
+        if ((state === "moving" || state === "easing") && (raf || timer)) return;
         // A frame interval measured across a stop is not a frame that was
         // slow; left in, it would thin the field on the first frame back.
         sampling = false;
