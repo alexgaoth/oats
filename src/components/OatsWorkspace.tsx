@@ -1605,8 +1605,11 @@ function IntelligenceViews({
       window.removeEventListener("oats-find", find);
     };
   }, [setReading, setView]);
+  // The newest, until something is chosen. Set through the current value: on
+  // a first visit the conversation that was pressed is chosen in the same
+  // pass, and a plain set here replaced it with the newest one.
   useEffect(() => {
-    if (notes.length && selectedId == null) setSelectedId(notes[0].id);
+    if (notes.length && selectedId == null) setSelectedId((current) => current ?? notes[0].id);
   }, [notes, selectedId]);
 
   // What the list does not hold. It holds the hundred most recently updated

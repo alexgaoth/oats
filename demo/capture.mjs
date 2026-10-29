@@ -111,6 +111,14 @@ const SHOTS = [
       "await demo.untilSeconds(121); await oatsDemo.open(oatsDemo.status().noteId); await demo.toSummary()",
   },
   {
+    // Another conversation, opened during a recording with the model on this
+    // Mac: it waits, so the model does not compete with the transcription.
+    name: "summary-after-recording",
+    query: "demo=live&end=hold&from=120&edits=0&bare=all",
+    script:
+      "await demo.untilSeconds(121); await oatsDemo.open(oatsDemo.samples()[0].id); await demo.toSummary()",
+  },
+  {
     // The line under Record names the setting, and goes there in one press.
     name: "home-no-writing-model",
     query: "writing=none",
