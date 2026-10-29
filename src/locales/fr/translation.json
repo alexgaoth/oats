@@ -189,6 +189,34 @@
     "speechModel": {
       "title": "Modèle de parole",
       "description": "Ce Mac peut exécuter Whisper Turbo, le modèle le plus précis. Il se télécharge depuis Hugging Face après la configuration : {{size}}."
+    },
+    "tour": {
+      "label": "Visite d’Oats",
+      "announce": "{{current}} sur {{count}} : {{title}}",
+      "skip": "Passer",
+      "back": "Retour",
+      "next": "Suivant",
+      "start": "Commencer",
+      "topics": {
+        "title": "Les sujets se nomment d’eux-mêmes",
+        "body": "Oats suit la conversation pendant que les gens parlent et nomme chaque sujet d’après ce qui a été dit."
+      },
+      "questions": {
+        "title": "Chaque question a sa carte",
+        "body": "Dans la vue Mots, chaque question posée à voix haute reçoit aussitôt une carte, qui indique comment elle s’est terminée."
+      },
+      "shape": {
+        "title": "La forme de la conversation",
+        "body": "Ensuite, la conversation est dessinée d’après son volume sonore, avec chaque question et chaque moment marqué à sa place."
+      },
+      "voices": {
+        "title": "Chaque voix de la pièce",
+        "body": "Un seul microphone entend toute la pièce, et Oats distingue les voix pour montrer qui a parlé combien de temps."
+      },
+      "open": {
+        "title": "Ce qui reste ouvert",
+        "body": "Quand vous ouvrez une conversation, les questions restées sans réponse sont listées au-dessus de son résumé."
+      }
     }
   },
   "streaming": {

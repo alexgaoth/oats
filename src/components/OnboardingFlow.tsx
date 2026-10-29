@@ -26,6 +26,12 @@ import { ACCESSIBILITY_SKIPPED_KEY, areRequiredPermissionsMet } from "../utils/p
 
 const MAX_STEP_INDEX = 2;
 
+// The tour of what Oats does, shown once setup is saved (onboarding/OatsTour.tsx).
+// Its own chunk, because it carries the example conversation it shows; fetched
+// while setup is on screen, so it is there the moment setup is done.
+const loadTour = () => import("./onboarding/OatsTour");
+const OatsTour = React.lazy(loadTour);
+
 interface OnboardingFlowProps {
   onComplete: (options?: { openSettings?: boolean }) => void;
 }
@@ -272,7 +278,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const [isFinishing, setIsFinishing] = useState(false);
   const openSettingsOnCompleteRef = useRef(false);
+  const [touring, setTouring] = useState(false);
+  useEffect(() => {
+    loadTour().catch(() => {});
+  }, []);
 
+  // Setup is saved before the tour opens, so the tour is never a step of
+  // setup: Start, Skip or a quit in the middle of it all land in the app, and
+  // it never shows again.
   const finishOnboarding = useCallback(
     async (openSettings = false) => {
       openSettingsOnCompleteRef.current = openSettings;
@@ -283,12 +296,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           return;
         }
         removeCurrentStep();
-        onComplete({ openSettings });
+        setTouring(true);
       } finally {
         setIsFinishing(false);
       }
     },
-    [saveSettings, removeCurrentStep, onComplete]
+    [saveSettings, removeCurrentStep]
   );
 
   const isLastStep = currentStep >= steps.length - 1;
@@ -488,6 +501,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return false;
     }
   };
+
+  if (touring) {
+    return (
+      <React.Suspense fallback={null}>
+        <OatsTour onDone={() => onComplete({ openSettings: openSettingsOnCompleteRef.current })} />
+      </React.Suspense>
+    );
+  }
 
   return (
     // First run, in the same system as the workspace.
