@@ -139,6 +139,7 @@
       "welcome": "ようこそ",
       "setup": "セットアップ",
       "permissions": "権限",
+      "processing": "処理",
       "activation": "ディクテーション",
       "useCase": "あなたについて",
       "meeting": "会議",
@@ -172,6 +173,15 @@
       "shortcutDescription": "もう一度押すと会話を終了します。",
       "getStarted": "はじめる"
     },
+    "processing": {
+      "title": "Oats が考える場所",
+      "description": "2つのモデルが部屋の会話を文字起こしし、要約を書きます。ここで動かすか、自分の API キーで使います。あとで 設定 › AI モデル で変更できます。",
+      "downloads": "続けると、Oats は {{models}} を Hugging Face からバックグラウンドでダウンロードします。",
+      "nothingToDownload": "Oats に必要なものはすべてこの Mac にあります。",
+      "nothingToDownloadComputer": "Oats に必要なものはすべてこのコンピューターにあります。"
+    },
+    "continue": "続ける",
+    "back": "戻る",
     "language": {
       "title": "言語",
       "description": "部屋で話される言語"

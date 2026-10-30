@@ -139,6 +139,7 @@
       "welcome": "Willkommen",
       "setup": "Einrichtung",
       "permissions": "Berechtigungen",
+      "processing": "Verarbeitung",
       "activation": "Diktat",
       "useCase": "Über dich",
       "meeting": "Meetings",
@@ -172,6 +173,15 @@
       "shortcutDescription": "Drück sie erneut, um das Gespräch zu beenden.",
       "getStarted": "Los geht’s"
     },
+    "processing": {
+      "title": "Wo Oats denkt",
+      "description": "Zwei Modelle transkribieren den Raum und schreiben jede Zusammenfassung. Sie laufen hier oder mit Ihrem eigenen API-Schlüssel. Ändern lässt sich das später unter Einstellungen › KI-Modelle.",
+      "downloads": "Oats lädt {{models}} von Hugging Face herunter, sobald Sie fortfahren, im Hintergrund.",
+      "nothingToDownload": "Alles, was Oats braucht, ist schon auf diesem Mac.",
+      "nothingToDownloadComputer": "Alles, was Oats braucht, ist schon auf diesem Computer."
+    },
+    "continue": "Weiter",
+    "back": "Zurück",
     "language": {
       "title": "Sprache",
       "description": "Was im Raum gesprochen wird"
