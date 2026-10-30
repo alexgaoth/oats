@@ -81,6 +81,15 @@ const main = createFakeMain({
   openai: params.get("loop") === "1" || (params.get("keys") ?? "").includes("openai"),
   anthropic: (params.get("keys") ?? "").includes("anthropic"),
   missingModels: downloadAt === null ? [] : [writingModel],
+  // What main measured, for the sidebar foot (`footer=small.en`): that speech
+  // model loaded on Metal, and nothing sent since launch. The site's
+  // sidebar-foot.webp is this shot.
+  onDevice: params.get("footer")
+    ? {
+        requests: { outbound: 0, since: Date.now() },
+        speech: { model: params.get("footer"), backend: "Metal" },
+      }
+    : null,
 });
 if (downloadAt !== null) {
   void main.downloadModel(writingModel, { from: Number(downloadAt) || 0, hold: true });

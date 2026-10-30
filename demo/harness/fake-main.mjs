@@ -131,6 +131,7 @@ export function createFakeMain({
   openai = false,
   anthropic = false,
   missingModels = [],
+  onDevice = null,
 }) {
   const notes = [];
   // Local models not on disk yet (`download=` in boot.mjs): `modelCheck` says
@@ -412,6 +413,9 @@ export function createFakeMain({
     // answering English here switched every `lang=` page back at startup.
     getUiLanguage: async () => localStorage.getItem("uiLanguage") || "en",
     getConversationKey: async () => "CommandOrControl+Shift+O",
+    // The sidebar foot's measured lines (`footer=<model>` in boot.mjs): the
+    // speech model whisper-server loaded, and requests since launch.
+    getOnDeviceStatus: async () => onDevice,
     getUpdateStatus: async () => ({
       updateAvailable: false,
       updateDownloaded: false,

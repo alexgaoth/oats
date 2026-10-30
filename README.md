@@ -89,7 +89,7 @@ The board lays out every conversation as a graph and as a timeline, so a subject
 
 ## Privacy you can check
 
-<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Oats sidebar: Settings, then On this Mac, base on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
+<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Oats sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
 
 On this Mac, audio and transcripts never leave it: transcription runs on whisper.cpp with Metal, and summaries on a local model. There is no Oats account and no Oats server. With your own API key, transcripts go to your provider for summaries, and with an OpenAI key the audio goes to OpenAI for transcription.
 
