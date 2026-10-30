@@ -37,9 +37,10 @@
       "name": "sidebar-foot.webp",
       "width": 464,
       "height": 704,
-      "bytes": 73204,
+      "bytes": 78390,
       "shows": "Crop of the sidebar's foot: where processing runs, the speech model and the network request count, above the wheat field.",
-      "alt": "The bottom of the Oats sidebar: Settings, then On this Mac, base on Metal and 0 network requests since launch, above a dithered sky and wheat field."
+      "alt": "The bottom of the Oats sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.",
+      "source": "0.2.0 code: `node demo/capture.mjs --only sidebar-foot --themes light` (harness `footer=small.en`: small.en loaded on Metal, 0 requests, what a packaged build shows at rest), the sidebar's last 352 CSS px at 2x, `cwebp -q 85 -m 6 -crop 0 1096 464 704`."
     },
     {
       "name": "oats-film.mp4",

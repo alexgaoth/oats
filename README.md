@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <sub>Version 0.1.0 for Apple Silicon, macOS 12 or later. Also as an <a href="https://github.com/alexgaoth/oats/releases/latest/download/Oats-x64.dmg">Intel build</a>, not yet tested on an Intel Mac.</sub><br>
+  <sub>Version 0.2.0 for Apple Silicon, macOS 12 or later. Also as an <a href="https://github.com/alexgaoth/oats/releases/latest/download/Oats-x64.dmg">Intel build</a>, not yet tested on an Intel Mac.</sub><br>
   <sub><a href="https://oats-mac.vercel.app">Website</a> · <a href="https://github.com/alexgaoth/oats/releases/latest">Release notes</a></sub>
 </p>
 
@@ -65,7 +65,7 @@ Optional, and off by default: when the folder has no answer, Oats can ask Claude
 
 ### The conversation, given back in order
 
-Stop, and the conversation comes back with a title, a summary and the threads it followed, talk time for each person, how each question ended, and the transcript with the speakers told apart. Titles and summaries come from a writing model you choose: a local one, or your own API key. The transcript, the speakers, the questions and the shape of the conversation need neither.
+Stop, and the conversation comes back with a title, a summary and the threads it followed, talk time for each person, how each question ended, and the transcript with the speakers told apart. Titles and summaries come from a writing model on your Mac, which Oats downloads at setup, or from your own API key. The transcript, the speakers, the questions and the shape of the conversation need neither.
 
 <p align="center">
   <img src="site/media/outcomes.webp" width="560" alt="The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one.">
@@ -89,9 +89,9 @@ The board lays out every conversation as a graph and as a timeline, so a subject
 
 ## Privacy you can check
 
-<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Oats sidebar: Settings, then On this Mac, base on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
+<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Oats sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
 
-Audio and transcripts stay on your Mac. Transcription runs on whisper.cpp with Metal. There is no Oats account and no Oats server. Summaries run on a local model, or on your own API key if you add one.
+On this Mac, audio and transcripts never leave it: transcription runs on whisper.cpp with Metal, and summaries on a local model. There is no Oats account and no Oats server. With your own API key, transcripts go to your provider for summaries, and with an OpenAI key the audio goes to OpenAI for transcription.
 
 One thing is on by default, and you can turn it off in Settings: when a question meets a clear "I don't know", Oats opens a web search for the question text in your browser.
 

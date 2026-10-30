@@ -24,6 +24,8 @@ import path from "node:path";
 
 const SHOTS = [
   { name: "home", query: "", script: "" },
+  // The site's sidebar-foot.webp: crop the sidebar's last 352 CSS px.
+  { name: "sidebar-foot", query: "footer=small.en", script: "" },
   // Nothing recorded yet: the offer of the example, then the example opened.
   { name: "first-run", query: "profile=empty", script: "" },
   {
