@@ -304,3 +304,119 @@ test("turbo comes through the counted download path, from the models' own reposi
     );
   }
 });
+
+// The other download Oats starts by itself: the writing model on this Mac,
+// when no writing model is ready and the setting follows the default
+// (writingTier.mjs, writingModelFetch.js). docs/network-allowlist.md names it.
+
+test("the writing model is fetched only when the renderer asks, never at launch", () => {
+  // Main starts it only from its IPC handler.
+  for (const file of MAIN_SOURCES) {
+    if (file.endsWith(path.join("helpers", "writingModelFetch.js"))) continue;
+    const calls = [...read(file).matchAll(/\.writing\.start\(/g)].length;
+    if (file.endsWith(path.join("helpers", "ipcHandlers.js"))) {
+      assert.equal(calls, 1, "ipcHandlers.js starts it from writing-model-start only");
+      assert.match(
+        read(file),
+        /ipcMain\.handle\("writing-model-start"[\s\S]{0,120}\.writing\.start\(/
+      );
+    } else {
+      assert.equal(calls, 0, `${file} must not start the writing model's download`);
+    }
+  }
+  // The renderer asks from one module: the workspace's hook (after setup) and
+  // Settings' own button both live in useWritingModel.ts.
+  const askers = ALL_SOURCES.filter((file) => /startWritingModelDownload\?\.\(/.test(read(file)));
+  assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["useWritingModel.ts"]);
+  const hooks = ALL_SOURCES.filter((file) => /\buseWritingModelDownload\(\);/.test(read(file)));
+  assert.deepEqual(
+    hooks.map((file) => path.basename(file)),
+    ["OatsWorkspace.tsx"]
+  );
+  assert.match(
+    read("src/hooks/useWritingModel.ts"),
+    /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/
+  );
+});
+
+test("the writing model's automatic start is announced, once, with its Cancel", () => {
+  const notices = ALL_SOURCES.filter((file) => /<WritingModelNotice \/>/.test(read(file)));
+  assert.deepEqual(
+    notices.map((file) => path.basename(file)),
+    ["OatsWorkspace.tsx"]
+  );
+  const autoStarts = ALL_SOURCES.filter((file) => /writingAutoStarted: true/.test(read(file)));
+  assert.deepEqual(
+    autoStarts.map((file) => path.basename(file)),
+    ["useWritingModel.ts"]
+  );
+  // Also a start that waited in main for a recording: its notice shows when it starts.
+  assert.match(
+    read("src/hooks/useWritingModel.ts"),
+    /if \(report\?\.downloading\?\.modelId === modelId \|\| report\?\.waiting === modelId\) \{\s*useDeviceTierStore\.setState\(\{ writingAutoStarted: true \}\);/
+  );
+  const notice = read("src/components/WritingModelNotice.tsx");
+  assert.match(notice, /shouldShowWritingNotice\(/);
+  assert.match(notice, /cancelWritingModel\(\)/, "its Cancel is the remembered no");
+});
+
+test("a writing download waits in main for a recording to end", () => {
+  const fetcher = read("src/helpers/writingModelFetch.js");
+  assert.match(fetcher, /if \(this\.isBusy\(\)\) \{[\s\S]{0,200}void this\._startWhenFree\(entry\);/);
+  assert.match(fetcher, /while \(this\.waiting === entry && this\.isBusy\(\)\)/);
+  // The device tier's recording signal, the one its clip check waits on.
+  assert.match(read("src/helpers/deviceTier.js"), /new WritingModelFetch\(\{[\s\S]{0,400}isBusy: \(\) => \{/);
+  assert.match(
+    read("src/helpers/ipcHandlers.js"),
+    /isBusy: \(\) => this\.isMeetingActive\?\.\(\) === true/
+  );
+});
+
+// Checking a key before it is saved: one request to the provider's own host
+// (docs/network-allowlist.md, "Checking a key").
+test("a key is checked with its own provider's host only, never a custom endpoint", () => {
+  const service = read("src/services/ReasoningService.ts");
+  const start = service.indexOf("private async openAiModelResponse(");
+  assert.ok(start > -1, "openAiModelResponse not found");
+  const body = service.slice(start, service.indexOf("\n  }\n", start));
+  assert.match(
+    body,
+    /buildApiUrl\(API_ENDPOINTS\.OPENAI_BASE, `\/models\/\$\{encodeURIComponent\(model\)\}`\)/
+  );
+  assert.doesNotMatch(body, /getConfiguredOpenAIBase|BaseUrl/);
+  // The key check and the model check both use it.
+  assert.equal([...service.matchAll(/this\.openAiModelResponse\(/g)].length, 2);
+  // OpenAI's own host: a build may set another one, a person's setting cannot.
+  assert.match(
+    read("src/config/constants.ts"),
+    /const DEFAULT_OPENAI_BASE = computeBaseUrl\(\s*\[env\.OATS_OPENAI_BASE_URL[^\]]*\],\s*"https:\/\/api\.openai\.com\/v1"\s*\);/
+  );
+  const main = read("src/helpers/ipcHandlers.js");
+  const anthropic = main.slice(main.indexOf("const anthropicModelResponse = async"));
+  assert.match(
+    anthropic.slice(0, 700),
+    /proxyFetch\(\s*`https:\/\/api\.anthropic\.com\/v1\/models\/\$\{encodeURIComponent\(String\(modelId\)\)\}`/
+  );
+  assert.match(main, /ipcMain\.handle\("anthropic-key-check"[\s\S]{0,200}anthropicModelResponse\(/);
+  assert.match(main, /ipcMain\.handle\("anthropic-model-available"[\s\S]{0,200}anthropicModelResponse\(/);
+  const doc = read("docs/network-allowlist.md");
+  assert.match(doc, /\| `api\.openai\.com` or `api\.anthropic\.com` +\| Adding an OpenAI or Anthropic key/);
+  assert.match(doc, /Checking a key: adding an OpenAI or Anthropic key/);
+});
+
+test("the writing model comes through the counted download path, from Hugging Face", () => {
+  const fetcher = read("src/helpers/writingModelFetch.js");
+  assert.match(fetcher, /this\.modelManager\.downloadModel\(/);
+  assert.doesNotMatch(fetcher, /\bfetch\(|require\(["'](node:)?https?["']\)|\bnet\.request\(/);
+  // downloadModel → downloadUtils.downloadFile → Electron's net.request,
+  // which the ledger counts (networkLedger.js).
+  assert.match(
+    read("src/helpers/modelManagerBridge.js"),
+    /await sharedDownloadFile\(downloadUrl, modelPath/
+  );
+  const registry = JSON.parse(read("src/models/modelRegistryData.json"));
+  for (const id of ["gemma-4-e4b-it-q4_k_m", "qwen3.5-4b-q4_k_m"]) {
+    const provider = registry.localProviders.find((item) => item.models.some((m) => m.id === id));
+    assert.equal(provider.baseUrl, "https://huggingface.co", `${id} comes from Hugging Face`);
+  }
+});

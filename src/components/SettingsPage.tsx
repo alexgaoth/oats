@@ -8,13 +8,10 @@ import {
   CircleCheck,
   CircleX,
   Copy,
-  Cpu,
   FolderOpen,
   Info,
-  Key,
   Loader2,
   Mic,
-  Network,
   RotateCw,
   Shield,
 } from "lucide-react";
@@ -23,8 +20,6 @@ import MicrophoneSettings from "./ui/MicrophoneSettings";
 import PermissionCard from "./ui/PermissionCard";
 import PasteToolsInfo from "./ui/PasteToolsInfo";
 import NixOsPasteInfo from "./ui/NixOsPasteInfo";
-import TranscriptionModelPicker from "./TranscriptionModelPicker";
-import SelfHostedPanel from "./SelfHostedPanel";
 import {
   ConfirmDialog,
   AlertDialog,
@@ -54,37 +49,22 @@ import { ActivationModeSelector } from "./ui/ActivationModeSelector";
 import LinuxPttSetupInfo from "./ui/LinuxPttSetupInfo";
 import { Toggle } from "./ui/toggle";
 import DeveloperSection from "./DeveloperSection";
-import InferenceConfigEditor from "./settings/InferenceConfigEditor";
 import LanguageSelector from "./ui/LanguageSelector";
 import { useToast } from "./ui/useToast";
 import { useTheme } from "../hooks/useTheme";
-import type { GpuDevice, LocalTranscriptionProvider, InferenceMode } from "../types/electron";
 import logger from "../utils/logger";
-import { SettingsRow, InferenceModeSelector } from "./ui/SettingsSection";
+import { SettingsRow } from "./ui/SettingsSection";
 import { NativeSelect } from "./ui/native-select";
 import { SegmentedControl } from "./ui/segmented";
-import type { InferenceModeOption } from "./ui/SettingsSection";
 import type { SettingsPageId } from "./settings/settingsPages";
-import { SettingRow, SettingsSection } from "./settings/SettingsKit";
-import { SpeechTierRow } from "./settings/SpeechTierRow";
-import { useShallow } from "zustand/react/shallow";
-import { selectResolvedLLMConfig } from "../stores/settingsStore";
-import {
-  getLocalModel,
-  getParakeetModelInfo,
-  getProviderDisplayName,
-  getReasoningModelLabel,
-  getTranscriptionProviders,
-  getWhisperModelInfo,
-} from "../models/ModelRegistry";
+import { SettingsSection } from "./settings/SettingsKit";
+import { ModelsPage } from "./settings/ModelsPage";
 import {
   ContextCheckSettings,
   ConversationShortcutRow,
   DictionaryEditor,
   InAppShortcuts,
-  ProcessingCard,
   QuestionCardSettings,
-  QuestionModelSettings,
   VaultRow,
 } from "./settings/OatsSettingsSections";
 import { useSettingsLayout } from "./ui/useSettingsLayout";
@@ -114,8 +94,6 @@ const UI_LANGUAGE_OPTIONS: import("./ui/LanguageSelector").LanguageOption[] = [
   { value: "zh-CN", label: "简体中文", flag: "🇨🇳" },
   { value: "zh-TW", label: "繁體中文", flag: "🇹🇼" },
 ];
-
-const noop = () => {};
 
 function SettingsPanel({
   children,
@@ -165,183 +143,6 @@ function SectionHeader({
   );
 }
 
-interface TranscriptionSectionProps {
-  cloudTranscriptionMode: string;
-  setCloudTranscriptionMode: (mode: string) => void;
-  useLocalWhisper: boolean;
-  setUseLocalWhisper: (value: boolean) => void;
-  updateTranscriptionSettings: (settings: { useLocalWhisper: boolean }) => void;
-  cloudTranscriptionProvider: string;
-  setCloudTranscriptionProvider: (provider: string) => void;
-  cloudTranscriptionModel: string;
-  setCloudTranscriptionModel: (model: string) => void;
-  localTranscriptionProvider: string;
-  setLocalTranscriptionProvider: (provider: LocalTranscriptionProvider) => void;
-  whisperModel: string;
-  setWhisperModel: (model: string) => void;
-  parakeetModel: string;
-  setParakeetModel: (model: string) => void;
-  cloudTranscriptionBaseUrl?: string;
-  setCloudTranscriptionBaseUrl: (url: string) => void;
-  transcriptionMode: InferenceMode;
-  setTranscriptionMode: (mode: InferenceMode) => void;
-  remoteTranscriptionUrl: string;
-  setRemoteTranscriptionUrl: (url: string) => void;
-  remoteTranscriptionModel: string;
-  setRemoteTranscriptionModel: (model: string) => void;
-  /** In the model screen the processing switch decides where speech runs, so
-   *  its own local/cloud/self-hosted selector is hidden. */
-  hideModeSelector?: boolean;
-  /** Offer only cloud models that stream, the ones conversations can use. */
-  streamingOnly?: boolean;
-  showTranscriptionPreview: boolean;
-  setShowTranscriptionPreview: (value: boolean) => void;
-  toast: (opts: {
-    title: string;
-    description: string;
-    variant?: "default" | "destructive" | "success";
-    duration?: number;
-  }) => void;
-}
-
-function TranscriptionSection({
-  cloudTranscriptionMode,
-  setCloudTranscriptionMode,
-  useLocalWhisper,
-  setUseLocalWhisper,
-  updateTranscriptionSettings,
-  cloudTranscriptionProvider,
-  setCloudTranscriptionProvider,
-  cloudTranscriptionModel,
-  setCloudTranscriptionModel,
-  localTranscriptionProvider,
-  setLocalTranscriptionProvider,
-  whisperModel,
-  setWhisperModel,
-  parakeetModel,
-  setParakeetModel,
-  cloudTranscriptionBaseUrl,
-  setCloudTranscriptionBaseUrl,
-  transcriptionMode,
-  setTranscriptionMode,
-  remoteTranscriptionUrl,
-  setRemoteTranscriptionUrl,
-  remoteTranscriptionModel,
-  setRemoteTranscriptionModel,
-  hideModeSelector = false,
-  streamingOnly = false,
-  toast,
-}: TranscriptionSectionProps) {
-  const { t } = useTranslation();
-
-  const transcriptionModes: InferenceModeOption[] = [
-    {
-      id: "providers",
-      label: t("settingsPage.transcription.modes.providers"),
-      description: t("settingsPage.transcription.modes.providersDesc"),
-      icon: <Key className="w-4 h-4" />,
-    },
-    {
-      id: "local",
-      label: t("settingsPage.transcription.modes.local"),
-      description: t("settingsPage.transcription.modes.localDesc"),
-      icon: <Cpu className="w-4 h-4" />,
-    },
-    {
-      id: "self-hosted",
-      label: t("settingsPage.transcription.modes.selfHosted"),
-      description: t("settingsPage.transcription.modes.selfHostedDesc"),
-      icon: <Network className="w-4 h-4" />,
-    },
-  ];
-
-  const handleTranscriptionModeSelect = (mode: InferenceMode) => {
-    if (mode === transcriptionMode) return;
-    setTranscriptionMode(mode);
-    setUseLocalWhisper(mode === "local");
-    updateTranscriptionSettings({ useLocalWhisper: mode === "local" });
-    setCloudTranscriptionMode("byok");
-
-    const toastKey = {
-      providers: "switchedProviders",
-      local: "switchedLocal",
-      "self-hosted": "switchedSelfHosted",
-    }[mode];
-    toast({
-      title: t(`settingsPage.transcription.toasts.${toastKey}.title`),
-      description: t(`settingsPage.transcription.toasts.${toastKey}.description`),
-      variant: "success",
-      duration: 3000,
-    });
-  };
-
-  const handleLocalModelSelect = useCallback(
-    (modelId: string) => {
-      if (localTranscriptionProvider === "nvidia") {
-        setParakeetModel(modelId);
-      } else {
-        setWhisperModel(modelId);
-      }
-    },
-    [localTranscriptionProvider, setParakeetModel, setWhisperModel]
-  );
-
-  const renderTranscriptionPicker = (mode?: "cloud" | "local") => (
-    <TranscriptionModelPicker
-      selectedCloudProvider={cloudTranscriptionProvider}
-      onCloudProviderSelect={setCloudTranscriptionProvider}
-      selectedCloudModel={cloudTranscriptionModel}
-      onCloudModelSelect={setCloudTranscriptionModel}
-      selectedLocalModel={localTranscriptionProvider === "nvidia" ? parakeetModel : whisperModel}
-      onLocalModelSelect={handleLocalModelSelect}
-      selectedLocalProvider={localTranscriptionProvider}
-      onLocalProviderSelect={setLocalTranscriptionProvider}
-      useLocalWhisper={mode === "local" || (!mode && useLocalWhisper)}
-      onModeChange={
-        mode
-          ? noop
-          : (isLocal) => {
-              setUseLocalWhisper(isLocal);
-              updateTranscriptionSettings({ useLocalWhisper: isLocal });
-              if (isLocal) setCloudTranscriptionMode("byok");
-            }
-      }
-      mode={mode}
-      cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
-      setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
-      streamingOnly={streamingOnly}
-      variant="settings"
-    />
-  );
-
-  return (
-    <div className="space-y-4">
-      {!hideModeSelector && (
-        <InferenceModeSelector
-          modes={transcriptionModes}
-          activeMode={transcriptionMode}
-          onSelect={handleTranscriptionModeSelect}
-        />
-      )}
-
-      {transcriptionMode === "providers" && renderTranscriptionPicker("cloud")}
-      {transcriptionMode === "local" && renderTranscriptionPicker("local")}
-
-      {transcriptionMode === "self-hosted" && (
-        <SelfHostedPanel
-          service="transcription"
-          url={remoteTranscriptionUrl}
-          onUrlChange={setRemoteTranscriptionUrl}
-          model={remoteTranscriptionModel}
-          onModelChange={setRemoteTranscriptionModel}
-        />
-      )}
-
-      <GpuDeviceSelector purpose="transcription" />
-    </div>
-  );
-}
-
 interface AiModelsSectionProps {
   useCleanupModel: boolean;
   setUseCleanupModel: (value: boolean) => void;
@@ -352,12 +153,6 @@ interface AiModelsSectionProps {
     duration?: number;
   }) => void;
 }
-
-const CLEANUP_MODE_TOAST_KEY: Record<InferenceMode, string> = {
-  providers: "switchedProviders",
-  local: "switchedLocal",
-  "self-hosted": "switchedSelfHosted",
-};
 
 function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModelsSectionProps) {
   const { t } = useTranslation();
@@ -372,93 +167,6 @@ function AiModelsSection({ useCleanupModel, setUseCleanupModel, toast }: AiModel
           >
             <Toggle checked={useCleanupModel} onChange={setUseCleanupModel} />
           </SettingsRow>
-        </SettingsPanelRow>
-      </SettingsPanel>
-    </div>
-  );
-}
-
-/**
- * The writing model: one language model for summaries and dictation cleanup
- * (`selectResolvedLLMConfig` resolves summaries from the cleanup scope).
- */
-function WritingModelEditor({ toast }: { toast: AiModelsSectionProps["toast"] }) {
-  const { t } = useTranslation();
-  const handleModeChange = (mode: InferenceMode) => {
-    const toastKey = CLEANUP_MODE_TOAST_KEY[mode];
-    toast({
-      title: t(`settingsPage.aiModels.toasts.${toastKey}.title`),
-      description: t(`settingsPage.aiModels.toasts.${toastKey}.description`),
-      variant: "success",
-      duration: 3000,
-    });
-  };
-  return (
-    <div className="space-y-4">
-      <InferenceConfigEditor scope="dictationCleanup" onModeChange={handleModeChange} />
-      <GpuDeviceSelector purpose="intelligence" />
-    </div>
-  );
-}
-
-function GpuDeviceSelector({ purpose }: { purpose: "transcription" | "intelligence" }) {
-  const { t } = useTranslation();
-  const [gpus, setGpus] = useState<GpuDevice[]>([]);
-  const [selectedUuid, setSelectedUuid] = useState("");
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    Promise.all([
-      window.electronAPI?.listGpus?.() ?? Promise.resolve([]),
-      window.electronAPI?.getGpuDeviceIndex?.(purpose) ?? Promise.resolve(""),
-    ])
-      .then(([gpuList, savedUuid]) => {
-        setGpus(gpuList);
-        setSelectedUuid(savedUuid || gpuList[0]?.uuid || "");
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, [purpose]);
-
-  if (!loaded || gpus.length < 2) return null;
-
-  return (
-    <div className="border-t border-border/40 pt-4 mt-4">
-      <SectionHeader
-        title={t(`settingsPage.${purpose}.gpuDevice.title`)}
-        description={t(`settingsPage.${purpose}.gpuDevice.description`)}
-      />
-      <SettingsPanel>
-        <SettingsPanelRow>
-          <div className="relative w-full">
-            <select
-              value={selectedUuid}
-              onChange={async (e) => {
-                const uuid = e.target.value;
-                setSelectedUuid(uuid);
-                await window.electronAPI?.setGpuDeviceIndex?.(purpose, uuid);
-              }}
-              className="w-full appearance-none rounded-md border border-border bg-background px-3 pr-10 py-2 text-sm"
-            >
-              {gpus.map((gpu) => (
-                <option key={gpu.uuid} value={gpu.uuid}>
-                  GPU {gpu.index}: {gpu.name} ({Math.round(gpu.vramMb / 1024)}GB)
-                </option>
-              ))}
-            </select>
-            <svg
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </div>
         </SettingsPanelRow>
       </SettingsPanel>
     </div>
@@ -480,15 +188,8 @@ export default function SettingsPage({
   } = useDialogs();
 
   const {
-    useLocalWhisper,
-    whisperModel,
-    localTranscriptionProvider,
-    parakeetModel,
     uiLanguage,
     preferredLanguage,
-    cloudTranscriptionProvider,
-    cloudTranscriptionModel,
-    cloudTranscriptionBaseUrl,
     useCleanupModel,
     dictationKey,
     activationMode,
@@ -498,26 +199,11 @@ export default function SettingsPage({
     selectedMicDeviceLabel,
     setPreferBuiltInMic,
     setSelectedMicDevice,
-    setUseLocalWhisper,
     setUiLanguage,
-    setWhisperModel,
-    setLocalTranscriptionProvider,
-    setParakeetModel,
-    setCloudTranscriptionProvider,
-    setCloudTranscriptionModel,
-    setCloudTranscriptionBaseUrl,
     setDictationKey,
     meetingKey,
     updateTranscriptionSettings,
     updateCleanupSettings,
-    cloudTranscriptionMode,
-    setCloudTranscriptionMode,
-    transcriptionMode,
-    setTranscriptionMode,
-    remoteTranscriptionUrl,
-    setRemoteTranscriptionUrl,
-    remoteTranscriptionModel,
-    setRemoteTranscriptionModel,
     notificationsEnabled,
     setNotificationsEnabled,
     notifyMeetingDetection,
@@ -558,34 +244,6 @@ export default function SettingsPage({
   const [currentVersion, setCurrentVersion] = useState<string>("");
   const [isRemovingModels, setIsRemovingModels] = useState(false);
   const [promptsOpen, setPromptsOpen] = useState(false);
-  const [modelScreen, setModelScreen] = useState<"speech" | "writing" | null>(null);
-  const writing = useSettingsStore(
-    useShallow((state) => selectResolvedLLMConfig(state, "dictationCleanup"))
-  );
-  // What each model is called, for its row on the Models page. Where it runs
-  // is the processing switch above it, so a local model is just its name.
-  const speechModelLabel = (() => {
-    if (transcriptionMode === "self-hosted") return t("oats.settings.models.selfHosted");
-    if (transcriptionMode === "providers") {
-      const provider = getTranscriptionProviders().find(
-        (item) => item.id === cloudTranscriptionProvider
-      );
-      const model = provider?.models.find((item) => item.id === cloudTranscriptionModel);
-      return `${model?.name ?? cloudTranscriptionModel} · ${provider?.name ?? cloudTranscriptionProvider}`;
-    }
-    if (localTranscriptionProvider === "nvidia") {
-      const id = parakeetModel || "parakeet-tdt-0.6b-v3";
-      return getParakeetModelInfo(id)?.name ?? id;
-    }
-    const info = getWhisperModelInfo(whisperModel);
-    return info ? `Whisper ${info.name}` : whisperModel;
-  })();
-  const writingModelLabel = (() => {
-    if (writing.mode === "self-hosted") return t("oats.settings.models.selfHosted");
-    if (!writing.model) return t("oats.settings.models.none");
-    if (writing.mode === "local") return getLocalModel(writing.model)?.name ?? writing.model;
-    return `${getReasoningModelLabel(writing.model)} · ${getProviderDisplayName(writing.provider)}`;
-  })();
   const cachePathHint =
     typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent)
       ? "%USERPROFILE%\\.cache\\oats"
@@ -1847,103 +1505,7 @@ EOF`,
         );
 
       case "models":
-        return (
-          <div className="space-y-8">
-            <ProcessingCard />
-
-            {/* Two models, each behind its own screen. The lists of every
-                model Oats can run are useful once, when choosing; on the page
-                they were three long lists, two of them the same. */}
-            <SettingsSection
-              title={t("oats.settings.models.title")}
-              description={t("oats.settings.models.description")}
-            >
-              <SettingRow
-                label={t("oats.settings.models.speech")}
-                description={t("oats.settings.models.speechDescription")}
-              >
-                <span className="max-w-48 truncate text-[13px] text-muted-foreground">
-                  {speechModelLabel}
-                </span>
-                <Button variant="outline" size="sm" onClick={() => setModelScreen("speech")}>
-                  {t("oats.settings.models.choose")}
-                </Button>
-              </SettingRow>
-              {/* What turbo is doing on this Mac, while the speech model
-                  follows the default (speechTier.mjs). */}
-              {transcriptionMode === "local" && localTranscriptionProvider !== "nvidia" && (
-                <SpeechTierRow />
-              )}
-              <SettingRow
-                label={t("oats.settings.models.writing")}
-                description={t("oats.settings.models.writingDescription")}
-              >
-                <span className="max-w-48 truncate text-[13px] text-muted-foreground">
-                  {writingModelLabel}
-                </span>
-                <Button variant="outline" size="sm" onClick={() => setModelScreen("writing")}>
-                  {t("oats.settings.models.choose")}
-                </Button>
-              </SettingRow>
-            </SettingsSection>
-
-            <Dialog
-              open={modelScreen === "speech"}
-              onOpenChange={(open) => setModelScreen(open ? "speech" : null)}
-            >
-              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{t("oats.settings.models.speechTitle")}</DialogTitle>
-                  <DialogDescription>{t("oats.settings.models.speechScreen")}</DialogDescription>
-                </DialogHeader>
-                <TranscriptionSection
-                  cloudTranscriptionMode={cloudTranscriptionMode}
-                  setCloudTranscriptionMode={setCloudTranscriptionMode}
-                  useLocalWhisper={useLocalWhisper}
-                  setUseLocalWhisper={setUseLocalWhisper}
-                  updateTranscriptionSettings={updateTranscriptionSettings}
-                  cloudTranscriptionProvider={cloudTranscriptionProvider}
-                  setCloudTranscriptionProvider={setCloudTranscriptionProvider}
-                  cloudTranscriptionModel={cloudTranscriptionModel}
-                  setCloudTranscriptionModel={setCloudTranscriptionModel}
-                  localTranscriptionProvider={localTranscriptionProvider}
-                  setLocalTranscriptionProvider={setLocalTranscriptionProvider}
-                  whisperModel={whisperModel}
-                  setWhisperModel={setWhisperModel}
-                  parakeetModel={parakeetModel}
-                  setParakeetModel={setParakeetModel}
-                  cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
-                  setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
-                  transcriptionMode={transcriptionMode}
-                  setTranscriptionMode={setTranscriptionMode}
-                  remoteTranscriptionUrl={remoteTranscriptionUrl}
-                  setRemoteTranscriptionUrl={setRemoteTranscriptionUrl}
-                  remoteTranscriptionModel={remoteTranscriptionModel}
-                  setRemoteTranscriptionModel={setRemoteTranscriptionModel}
-                  showTranscriptionPreview={showTranscriptionPreview}
-                  setShowTranscriptionPreview={setShowTranscriptionPreview}
-                  hideModeSelector
-                  streamingOnly
-                  toast={toast}
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog
-              open={modelScreen === "writing"}
-              onOpenChange={(open) => setModelScreen(open ? "writing" : null)}
-            >
-              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{t("oats.settings.models.writingTitle")}</DialogTitle>
-                  <DialogDescription>{t("oats.settings.models.writingScreen")}</DialogDescription>
-                </DialogHeader>
-                <WritingModelEditor toast={toast} />
-                <QuestionModelSettings />
-              </DialogContent>
-            </Dialog>
-          </div>
-        );
+        return <ModelsPage />;
 
       case "connections":
         return (

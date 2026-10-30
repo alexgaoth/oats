@@ -8,11 +8,12 @@ import { DOWNLOAD_QUIET_MS, downloadShown } from "../helpers/summaryQueue.mjs";
 // owning it.
 //
 // Main sends `model-download-progress` to the window that asked for the
-// download (ipcHandlers.js, `model-download`). The writing model is downloaded
-// from this window, by setup or by Settings, so one subscription hears every
-// download of it, whichever screen started it. The event has no "failed" or
-// "cancelled": a download that has said nothing for a while is shown as not
-// running (`downloadShown`, helpers/summaryQueue.mjs).
+// download (ipcHandlers.js, `model-download`). The writing model Oats fetches
+// by itself (helpers/writingModelFetch.js) reports through the device tier
+// instead, and the workspace tells it here (`useWritingModelDownload`), with
+// its end or its stop. The event has no "failed" or "cancelled": a download
+// that has said nothing for a while is shown as not running
+// (`downloadShown`, helpers/summaryQueue.mjs).
 
 interface ModelDownload {
   percent: number;
@@ -40,33 +41,48 @@ export function watchModelDownloads(): void {
   if (typeof subscribe !== "function") return;
   watching = true;
   subscribe((_event: unknown, data: { modelId?: unknown; progress?: unknown } | undefined) => {
-    const modelId = typeof data?.modelId === "string" ? data.modelId : "";
-    const percent = Number(data?.progress);
-    if (!modelId || !Number.isFinite(percent)) return;
-    const { downloads, finished } = useModelDownloadStore.getState();
-    const previous = downloads[modelId];
-    const now = Date.now();
-    if (percent >= 100) {
-      useModelDownloadStore.setState({
-        downloads: { ...downloads, [modelId]: { percent: 100, at: now } },
-        finished: { ...finished, [modelId]: (finished[modelId] ?? 0) + 1 },
-      });
-      return;
-    }
-    // A screen shows whole percents: a chunk that changes none of them only
-    // says the download is alive, at most once a second.
-    if (
-      previous &&
-      previous.percent < 100 &&
-      Math.floor(previous.percent) === Math.floor(percent) &&
-      now - previous.at < 1000
-    ) {
-      return;
-    }
-    useModelDownloadStore.setState({
-      downloads: { ...downloads, [modelId]: { percent, at: now } },
-    });
+    noteModelDownload(
+      typeof data?.modelId === "string" ? data.modelId : "",
+      Number(data?.progress)
+    );
   });
+}
+
+/** One step of a local model's download, as a percent; 100 is its end. */
+export function noteModelDownload(modelId: string, percent: number): void {
+  if (!modelId || !Number.isFinite(percent)) return;
+  const { downloads, finished } = useModelDownloadStore.getState();
+  const previous = downloads[modelId];
+  const now = Date.now();
+  if (percent >= 100) {
+    useModelDownloadStore.setState({
+      downloads: { ...downloads, [modelId]: { percent: 100, at: now } },
+      finished: { ...finished, [modelId]: (finished[modelId] ?? 0) + 1 },
+    });
+    return;
+  }
+  // A screen shows whole percents: a chunk that changes none of them only
+  // says the download is alive, at most once a second.
+  if (
+    previous &&
+    previous.percent < 100 &&
+    Math.floor(previous.percent) === Math.floor(percent) &&
+    now - previous.at < 1000
+  ) {
+    return;
+  }
+  useModelDownloadStore.setState({
+    downloads: { ...downloads, [modelId]: { percent, at: now } },
+  });
+}
+
+/** A download that stopped before its end (cancelled, left or failed): not shown any more. */
+export function endModelDownload(modelId: string): void {
+  const { downloads } = useModelDownloadStore.getState();
+  if (!downloads[modelId] || downloads[modelId].percent >= 100) return;
+  const rest = { ...downloads };
+  delete rest[modelId];
+  useModelDownloadStore.setState({ downloads: rest });
 }
 
 /**

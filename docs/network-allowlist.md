@@ -12,13 +12,15 @@ update feed is contacted. v1 updates are signed manual downloads.
 One outbound action is **on by default**: the question search below. It is the
 only default-on connection in the product, and it is switchable off in Settings.
 
-**Nothing is downloaded at launch, with one exception after setup.** Every
+**Nothing is downloaded at launch, with two exceptions after setup.** Every
 model a conversation needs ships in the app: Whisper `base` and `base.en`
 (`small.en` and `base` on Apple Silicon), the Silero VAD, pyannote
 segmentation, TitaNet for speakers, and MiniLM for search. A development
-checkout fetches the ones it is missing; a packaged build does not. The one
-exception: on a Mac whose GPU measures fast enough, Oats downloads Whisper
-Turbo once, after setup (below, "Automatic, once"). The local vector store
+checkout fetches the ones it is missing; a packaged build does not. The two
+exceptions: on a Mac whose GPU measures fast enough, Oats downloads Whisper
+Turbo once, after setup; and with processing on this computer, it downloads
+the writing model once when no writing model is ready (below, "Automatic,
+once"). The local vector store
 (Qdrant) listens on 127.0.0.1 only and runs with its anonymous usage
 statistics turned off, by config and by flag (`src/helpers/qdrantManager.js`).
 Nothing of the builder's machine is packed into the app — in particular no
@@ -70,6 +72,29 @@ or deleted Turbo is not fetched again unless the person asks for it in
 Settings. A failed download is tried again at the next launch. Intel Macs,
 Linux, and Macs that measure too slow never fetch it.
 
+## Automatic, once: the writing model on this computer
+
+| Host                                   | What is fetched                                                                                                                                                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `huggingface.co` and its LFS/CDN hosts | One GGUF file: `google_gemma-4-E4B-it-Q4_K_M.gguf` (5.4 GB, `bartowski/google_gemma-4-E4B-it-GGUF`) with 16 GB of memory or more, else `Qwen_Qwen3.5-4B-Q4_K_M.gguf` (2.7 GB, `bartowski/Qwen_Qwen3.5-4B-GGUF`). Nothing is sent but the request for the file. |
+
+With processing on this computer ("On this Mac", the default), the title and
+summary of each conversation are written by a local model. When none is ready
+and the writing setting follows the default, Oats downloads the one this
+computer's memory holds (`src/helpers/writingTier.mjs`): once setup is done,
+and never while a conversation is recorded: it waits for the recording to
+end. A model the person chose stops it, and so does a
+writing model already on disk. When Oats starts it by itself, a notice in the
+corner says so once, with its size, its host and a Cancel button; the sidebar
+and Settings › AI models show its progress with a Cancel button. It goes
+through `downloadUtils.js`, like every model download, so the sidebar's
+request count includes it, and its disk-space check runs first. A cancelled or
+deleted model is not fetched again unless the person asks for it in Settings
+(`src/helpers/writingModelFetch.js`). After the person deletes any writing
+model, Oats fetches none by itself until they choose a model or press
+Download. Choosing another model, or "With an API key", stops the download.
+With an API key, nothing is fetched.
+
 ## Explicit user actions
 
 | Host                                                                                                      | When it is contacted                                                                         |
@@ -78,6 +103,7 @@ Linux, and Macs that measure too slow never fetch it.
 | `huggingface.co` and its LFS/CDN hosts                                                                    | Downloading an optional speech, embedding, or reasoning model, or creating a release bundle. |
 | `github.com` and `objects.githubusercontent.com`                                                          | Downloading an optional runtime helper or a signed release manually.                         |
 | A provider selected by the user (OpenAI, Anthropic, Gemini, Groq, Mistral, Tinfoil, or a custom endpoint) | Only after the user adds a key and selects that provider.                                    |
+| `api.openai.com` or `api.anthropic.com`                                                                   | Adding an OpenAI or Anthropic key, in setup or Settings: one request checks it first.        |
 
 The exact provider hostname is controlled by that provider or by the user's
 custom endpoint. Local, LAN, and bundled-model paths do not require this access.
@@ -87,14 +113,27 @@ it: a request that Anthropic's safety classifiers decline is answered instead by
 the model Anthropic picks for that kind of refusal, on the same host
 (`src/helpers/anthropicMessages.js`).
 
+Checking a key: adding an OpenAI or Anthropic key, in setup or in Settings ›
+AI models, checks it with that provider before it is saved. One request,
+`GET /v1/models/{model}` for the model Oats would write with, with no tokens
+and no conversation text. It goes to the provider's own host,
+`api.openai.com` or `api.anthropic.com`, never to a custom endpoint the
+writing model may use (`src/services/ReasoningService.ts`; the Anthropic
+check runs in the main process, `src/helpers/ipcHandlers.js`). A key the
+provider refuses is not saved, and the provider's reason is shown; an OpenAI
+project key that may not read the model list is saved without the check
+(`src/helpers/keyStatus.mjs`).
+
 A conversation's summary goes to the writing model, by its route, at Finish.
-When no writing model is ready then (none chosen yet, or the one on this
-computer still downloading), the conversation waits, and is summarized by the
-same route once one is (`src/stores/summaryQueueStore.ts`): by a model on this
-computer or the person's own server, always; by a cloud provider only if it was
-already the writing model when the conversation finished. A provider chosen
-since gets an earlier conversation only when somebody opens it. A summary that
-fails is asked for once more, after 10 seconds.
+When no writing model is ready then (none chosen yet, the one on this
+computer still downloading, or "With an API key" and no key yet), the
+conversation waits, and is summarized by the same route once one is
+(`src/stores/summaryQueueStore.ts`): by a model on this computer or the
+person's own server, always; by a cloud provider only if it was already the
+writing model when the conversation finished. A provider chosen since gets an
+earlier conversation only when somebody opens it. A conversation that finished
+with no key goes to the provider whose key the person adds: nothing could be
+sent before. A summary that fails is asked for once more, after 10 seconds.
 
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no

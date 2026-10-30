@@ -41,6 +41,13 @@ import {
   followsDefaultModel,
   settingWhisperModel,
 } from "../helpers/speechTier.mjs";
+import {
+  defaultWritingModel,
+  followsDefaultWritingModel,
+  migrateStoredWritingModel,
+  WRITING_MODEL_KEY,
+  WRITING_PROVIDER_KEY,
+} from "../helpers/writingTier.mjs";
 import { startDeviceTier, useDeviceTierStore } from "./deviceTierStore";
 import type { DeviceTierSnapshot } from "../types/electron";
 import {
@@ -367,6 +374,37 @@ export function currentDefaultWhisperModel(
 // new default. See migrateStoredWhisperModel for why a stored "base" is not
 // proof that somebody chose it.
 if (isBrowser) migrateStoredWhisperModel(localStorage, DEFAULT_WHISPER_MODEL);
+
+// One time: a writing model an earlier version stored by itself goes, so the
+// setting follows the default (isStoredDefault in writingTier.mjs).
+if (isBrowser) migrateStoredWritingModel(localStorage);
+
+/**
+ * Whether the writing model follows the default: nobody chose one. A choice
+ * is kept as it is, whatever this Mac or the keys say (writingTier.mjs).
+ */
+export function writingModelFollowsDefault(): boolean {
+  return followsDefaultWritingModel(isBrowser ? localStorage : null);
+}
+
+/**
+ * The writing model a setting nobody changed uses now, in the writing scope's
+ * mode: on this Mac the model its memory holds (once it is on disk, the small
+ * one until then if that is there already), with API keys the provider whose
+ * key is stored. Null for a server of the person's own.
+ */
+export function currentDefaultWritingModel(
+  state: Pick<SettingsState, "cleanupMode" | "openaiApiKey" | "anthropicApiKey">,
+  tier: DeviceTierSnapshot | null = useDeviceTierStore.getState().tier
+) {
+  return defaultWritingModel({
+    mode: state.cleanupMode,
+    memoryBytes: tier?.memoryBytes ?? tier?.device?.memoryBytes ?? null,
+    installed: tier?.writing?.installed ?? [],
+    openaiKey: Boolean(state.openaiApiKey?.trim()),
+    anthropicKey: Boolean(state.anthropicApiKey?.trim()),
+  });
+}
 
 function migrateAgentMode() {
   if (!isBrowser) return;
@@ -2102,13 +2140,140 @@ function followDefaultWhisperModel(): void {
   if (state.whisperModel !== next) useSettingsStore.setState({ whisperModel: next });
 }
 
+/**
+ * Keep a writing setting nobody changed on the current default: when this
+ * Mac's report arrives or a writing model lands on disk, when the processing
+ * choice changes, and when a key is added or removed. Only the store moves;
+ * nothing is written, so the setting keeps following the default, and a
+ * stored choice is never touched.
+ */
+function followDefaultWritingModel(): void {
+  if (!writingModelFollowsDefault()) return;
+  const state = useSettingsStore.getState();
+  const next = currentDefaultWritingModel(state);
+  if (!next) return;
+  if (state.cleanupModel !== next.model || state.cleanupProvider !== next.provider) {
+    useSettingsStore.setState({ cleanupModel: next.model, cleanupProvider: next.provider });
+  }
+}
+
+/**
+ * A cloud speech model somebody chose, for every scope at once. Only the
+ * model and its provider: where speech runs is the processing choice's
+ * (`applyProvidersSpeech`). A conversation streams only to OpenAI, so this is
+ * one of OpenAI's realtime models.
+ */
+export function chooseCloudSpeechModel(provider: string, model: string): void {
+  const store = useSettingsStore.getState();
+  store.setCloudTranscriptionProvider(provider);
+  store.setCloudTranscriptionModel(model);
+  store.setMeetingCloudTranscriptionProvider(provider);
+  store.setMeetingCloudTranscriptionModel(model);
+  store.setUploadCloudTranscriptionProvider(provider);
+  store.setUploadCloudTranscriptionModel(model);
+}
+
+/**
+ * A local speech model somebody chose: its engine for dictation and
+ * conversations alike (the preflight reads the meeting's), and the model,
+ * stored, so the speech tier never moves it.
+ */
+export function chooseLocalSpeechModel(engine: LocalTranscriptionProvider, model: string): void {
+  const store = useSettingsStore.getState();
+  store.setLocalTranscriptionProvider(engine);
+  store.setMeetingLocalTranscriptionProvider(engine);
+  if (engine === "nvidia") store.setParakeetModel(model);
+  else store.setWhisperModel(model);
+}
+
+/**
+ * Forget the speech model somebody chose: Whisper again, on the size this
+ * Mac's tier picks (speechTier.mjs), and OpenAI's most accurate model in the
+ * cloud.
+ */
+export function forgetSpeechChoice(): void {
+  if (isBrowser) localStorage.removeItem("whisperModel");
+  const store = useSettingsStore.getState();
+  store.setLocalTranscriptionProvider("whisper");
+  store.setMeetingLocalTranscriptionProvider("whisper");
+  chooseCloudSpeechModel("openai", "gpt-transcribe");
+  followDefaultWhisperModel();
+}
+
+/** A writing model somebody chose: stored, so no default moves it. */
+export function chooseWritingModel(provider: string, model: string): void {
+  const store = useSettingsStore.getState();
+  store.setCleanupProvider(provider);
+  store.setCleanupModel(model);
+}
+
+/** Forget the writing model somebody chose: the setting follows the default again. */
+export function forgetWritingChoice(): void {
+  if (isBrowser) {
+    localStorage.removeItem(WRITING_MODEL_KEY);
+    localStorage.removeItem(WRITING_PROVIDER_KEY);
+  }
+  followDefaultWritingModel();
+}
+
+/**
+ * The one processing choice, read from the scopes it sets: "local" or
+ * "providers" when they agree, "mixed" when they differ. Summaries follow the
+ * cleanup scope (`selectResolvedLLMConfig`), so their own mode is left out.
+ */
+export function selectProcessingMode(
+  state: Pick<SettingsState, "transcriptionMode" | "cleanupMode" | "meetingTranscriptionMode">
+): "local" | "providers" | "mixed" {
+  const modes = [state.transcriptionMode, state.cleanupMode, state.meetingTranscriptionMode];
+  if (modes.every((mode) => mode === "local")) return "local";
+  if (modes.every((mode) => mode === "providers")) return "providers";
+  return "mixed";
+}
+
+/**
+ * Speech with API keys. A conversation streams to OpenAI's realtime API and
+ * no other (`selectResolvedMeetingTranscription`), so speech goes to OpenAI
+ * when an OpenAI key is stored and stays on this Mac without one. Every
+ * scope's switch is written together, as the trap in CLAUDE.md requires
+ * (`setCloudTranscriptionForAllScopes`); then the modes are set back to
+ * "providers", which the helper would derive from the switch, so the
+ * processing choice still reads "With an API key".
+ */
+export function applyProvidersSpeech(): void {
+  const store = useSettingsStore.getState();
+  const cloud = Boolean(store.openaiApiKey.trim());
+  store.setCloudTranscriptionForAllScopes({
+    useLocalWhisper: !cloud,
+    cloudTranscriptionMode: "byok",
+  });
+  store.setTranscriptionMode("providers");
+  store.setMeetingTranscriptionMode("providers");
+  store.setUploadTranscriptionMode("providers");
+}
+
 if (isBrowser) {
   startDeviceTier();
   useDeviceTierStore.subscribe(followDefaultWhisperModel);
+  useDeviceTierStore.subscribe(followDefaultWritingModel);
   useSettingsStore.subscribe((state, previous) => {
     if (state.preferredLanguage !== previous.preferredLanguage) followDefaultWhisperModel();
+    if (
+      state.cleanupMode !== previous.cleanupMode ||
+      state.openaiApiKey !== previous.openaiApiKey ||
+      state.anthropicApiKey !== previous.anthropicApiKey
+    ) {
+      followDefaultWritingModel();
+    }
+    // An OpenAI key added or removed with API keys chosen moves speech with it.
+    if (
+      Boolean(state.openaiApiKey.trim()) !== Boolean(previous.openaiApiKey.trim()) &&
+      selectProcessingMode(state) === "providers"
+    ) {
+      applyProvidersSpeech();
+    }
   });
   followDefaultWhisperModel();
+  followDefaultWritingModel();
 }
 
 // --- Selectors (derived state, not stored) ---

@@ -19,8 +19,7 @@ import {
   topicLabels,
 } from "../helpers/conversationGroupSort.mjs";
 import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
-import { localSummaryModelDownloaded } from "../hooks/useSummaryReadiness";
-import { summaryReadiness } from "../utils/summaryReadiness";
+import { summaryReadinessNow } from "../hooks/useSummaryReadiness";
 import logger from "../utils/logger";
 
 // The writing model sorts conversations into groups: once after each summary,
@@ -132,22 +131,15 @@ export function currentWritingRoute(): WritingRoute | null {
 }
 
 /**
- * Whether the writing model can answer now: chosen, and on disk if it runs on
- * this computer. What the context check and the topic names ask before every
- * request, so neither sends anything a summary would not.
+ * Whether the writing model can answer now: chosen, on disk if it runs on
+ * this computer, and with its key if it is a provider's. What Finish, the
+ * context check and the topic names ask before every request, so none of them
+ * sends anything a summary would not.
  */
 export async function writingModelReady(): Promise<boolean> {
   if (!currentWritingRoute()) return false;
-  const noteFormatting = selectResolvedNoteFormatting(getSettings());
-  const verdict = summaryReadiness({
-    mode: noteFormatting.mode,
-    model: noteFormatting.model,
-    remoteUrl: noteFormatting.remoteUrl,
-    localModelDownloaded: await localSummaryModelDownloaded(
-      noteFormatting.mode,
-      noteFormatting.model
-    ),
-  });
+  // A provider without its key is not ready (summaryReadinessNow).
+  const verdict = await summaryReadinessNow();
   // Unknown (null) is let through: the call itself will say.
   return verdict === "ready" || verdict === null;
 }
@@ -265,16 +257,7 @@ async function backgroundReadiness(): Promise<true | ConversationSortStop> {
   const route = currentWritingRoute();
   if (!route) return "no-model";
   if (!BACKGROUND_MODES.has(route.mode)) return "cloud-model";
-  const noteFormatting = selectResolvedNoteFormatting(getSettings());
-  const verdict = summaryReadiness({
-    mode: noteFormatting.mode,
-    model: noteFormatting.model,
-    remoteUrl: noteFormatting.remoteUrl,
-    localModelDownloaded: await localSummaryModelDownloaded(
-      noteFormatting.mode,
-      noteFormatting.model
-    ),
-  });
+  const verdict = await summaryReadinessNow();
   return verdict === "ready" ? true : "no-model";
 }
 

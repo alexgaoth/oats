@@ -160,6 +160,7 @@ import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
 import SpeechUpgradeNotice from "./SpeechUpgradeNotice";
+import WritingModelNotice from "./WritingModelNotice";
 import PostMigrationOnboarding from "./PostMigrationOnboarding";
 import { useAppBootstrap } from "../hooks/useAppBootstrap";
 import { useConversationPreflight } from "../hooks/useConversationPreflight";
@@ -194,6 +195,7 @@ import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
 import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
 import { useSpeechUpgrade } from "../hooks/useSpeechUpgrade";
+import { useWritingModelDownload } from "../hooks/useWritingModel";
 import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 import type {
   ConversationEvent,
@@ -349,6 +351,7 @@ async function summarizeConversation(
       {
         noModel: t("oats.errors.noModel"),
         noEndpoint: t("oats.errors.noEndpoint"),
+        noKey: t("oats.preflight.no-writing-key"),
         actionFailed: t("oats.errors.actionFailed"),
         noSummary: t("oats.errors.noSummary"),
         tooLong: t("oats.intelligence.summaryTooLong"),
@@ -3960,8 +3963,10 @@ function SidebarButton({
 export default function OatsWorkspace() {
   const { t } = useTranslation();
   // The workspace shows only after setup: from here on, a Mac whose GPU
-  // measured fast enough fetches Whisper Turbo (speechTier.mjs).
+  // measured fast enough fetches Whisper Turbo (speechTier.mjs), and "On this
+  // Mac" fetches its writing model when none is ready (writingTier.mjs).
   useSpeechUpgrade();
+  useWritingModelDownload();
   // A conversation that finished before its writing model was ready, or whose
   // summary a quit cut off, is summarized once the model is ready
   // (stores/summaryQueueStore.ts).
@@ -4247,6 +4252,7 @@ export default function OatsWorkspace() {
           its summary could fail, and the user would never be told. */}
         <BackgroundActionToastListener />
         <SpeechUpgradeNotice />
+        <WritingModelNotice />
         {/* Headless too: reports the recording to the tray and the floating oat,
           which are the only parts of Oats visible when this window is not. */}
         <ConversationStateBridge />

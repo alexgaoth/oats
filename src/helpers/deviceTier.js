@@ -33,7 +33,9 @@
 //   Oats does not fetch it again by itself.
 //
 // `deviceTier()` returns the same snapshot the renderer gets, for any other
-// local model that wants to size itself to this Mac (the writing model next).
+// local model that wants to size itself to this Mac. The writing model does:
+// the snapshot carries this Mac's memory, which decides it (writingTier.mjs),
+// and the state of its own automatic download (writingModelFetch.js).
 
 const EventEmitter = require("events");
 const fs = require("fs");
@@ -44,6 +46,7 @@ const debugLogger = require("./debugLogger");
 const WhisperServerManager = require("./whisperServer");
 const { createDownloadSignal } = require("./downloadUtils");
 const { DEFAULT_WHISPER_VAD_CONFIG } = require("./whisperVadConfig");
+const { WritingModelFetch } = require("./writingModelFetch");
 const registry = require("../models/modelRegistryData.json");
 
 let speechTierModule = null;
@@ -172,6 +175,10 @@ class DeviceTier extends EventEmitter {
    * @param {() => object} [options.createServer] A second whisper-server, for tests.
    * @param {string} [options.clipPath]
    * @param {(read: () => Promise<unknown>) => Promise<number>} [options.time] Times one read, for tests.
+   * @param {object | null} [options.modelManager] modelManagerBridge's manager, for the
+   *   writing model's download (writingModelFetch.js).
+   * @param {string} [options.writingStorePath] Where the writing model's state is kept.
+   * @param {() => number} [options.totalmem] os.totalmem, for tests.
    */
   constructor({
     whisperManager,
@@ -186,6 +193,9 @@ class DeviceTier extends EventEmitter {
     time = timeRead,
     sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now = () => Date.now(),
+    modelManager = null,
+    writingStorePath = null,
+    totalmem = os.totalmem,
   }) {
     super();
     this.whisperManager = whisperManager;
@@ -207,6 +217,22 @@ class DeviceTier extends EventEmitter {
     this.failed = null;
     this.checkServer = null; // the check's own whisper-server while it runs
     this._publishTimer = null;
+    this.totalmem = totalmem;
+    // The writing model's automatic download, reported in this snapshot. It
+    // waits for a recording to end on the same signal as the clip check.
+    this.writing = new WritingModelFetch({
+      storePath: writingStorePath ?? path.join(path.dirname(storePath), "writing-model.json"),
+      modelManager,
+      publish: (options) => this.publish(options),
+      isBusy: () => {
+        try {
+          return this.isBusy() === true;
+        } catch {
+          return false;
+        }
+      },
+      sleep: (ms) => this.sleep(ms),
+    });
   }
 
   _load() {
@@ -248,6 +274,9 @@ class DeviceTier extends EventEmitter {
     const expected = registry.whisperModels[TURBO_MODEL]?.expectedSizeBytes ?? null;
     return {
       device: record.device ?? null,
+      // Read at once, before the speed check detects the device: the writing
+      // model is chosen by it (writingTier.mjs), and setup names that model.
+      memoryBytes: record.device?.memoryBytes ?? this._memoryBytes(),
       smallClipMs: record.smallClipMs ?? null,
       turboClipMs: record.turboClipMs ?? null,
       measuredAt: record.measuredAt ?? null,
@@ -266,7 +295,16 @@ class DeviceTier extends EventEmitter {
         checking: this.checking,
         failed: this.failed,
       },
+      writing: this.writing.snapshot(),
     };
+  }
+
+  _memoryBytes() {
+    try {
+      return Number(this.totalmem()) || null;
+    } catch {
+      return null;
+    }
   }
 
   /** Push the snapshot now, or, for download progress, at most every 250 ms. */

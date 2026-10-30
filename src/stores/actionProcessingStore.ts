@@ -124,8 +124,8 @@ export interface RunActionOptions {
 /**
  * How an action ended: its result saved, failed (a conversation's summary
  * after its second try), too long for the writing model on this Mac (never
- * tried again there), cancelled, refused before it started (no model, no
- * endpoint), or not started because one is already running for the note.
+ * tried again there), cancelled, refused (no model, no endpoint, no key for
+ * the provider), or not started because one is already running for the note.
  */
 export type BackgroundActionOutcome =
   "saved" | "failed" | "too-long" | "cancelled" | "refused" | "busy";
@@ -133,6 +133,8 @@ export type BackgroundActionOutcome =
 export interface RunActionLabels {
   noModel: string;
   noEndpoint: string;
+  /** The writing provider has no key: what to add, and where. */
+  noKey?: string;
   actionFailed: string;
   /** A conversation's summary came back empty, or as the transcript itself. */
   noSummary?: string;
@@ -293,6 +295,15 @@ export function runBackgroundAction(
           return await attempt();
         } catch (err) {
           if (cancelledFlags.get(noteId)) return "cancelled";
+          // No key for the provider: refused, as with no model. Nothing was
+          // sent; the conversation stays owed and is written once a key is
+          // saved (stores/summaryQueueStore.ts), never tried again before.
+          if ((err as { code?: string } | null)?.code === "API_KEY_MISSING") {
+            processingFlags.set(noteId, false);
+            clearNoteState(noteId);
+            if (labels.noKey) pushErrorEvent({ noteId, message: labels.noKey });
+            return "refused";
+          }
           // Too long for the model on this Mac fails the same way every time:
           // never asked again, and said plainly instead of the server's words.
           const kind = options.isMeetingNote
