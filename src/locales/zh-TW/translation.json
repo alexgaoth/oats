@@ -139,6 +139,7 @@
       "welcome": "歡迎",
       "setup": "設定",
       "permissions": "權限",
+      "processing": "處理方式",
       "activation": "聽寫",
       "useCase": "關於你",
       "meeting": "會議",
@@ -172,6 +173,15 @@
       "shortcutDescription": "再按一次即可結束對話。",
       "getStarted": "開始使用"
     },
+    "processing": {
+      "title": "Oats 在哪裡思考",
+      "description": "兩個模型負責轉寫房間裡的對話並撰寫每份摘要。它們在這裡執行，或使用你自己的 API 金鑰。之後可以在 設定 › AI 模型 中更改。",
+      "downloads": "繼續後，Oats 會在背景從 Hugging Face 下載 {{models}}。",
+      "nothingToDownload": "Oats 需要的一切已在這台 Mac 上。",
+      "nothingToDownloadComputer": "Oats 需要的一切已在這台電腦上。"
+    },
+    "continue": "繼續",
+    "back": "返回",
     "language": {
       "title": "語言",
       "description": "房間裡使用的語言"

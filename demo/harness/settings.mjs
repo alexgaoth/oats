@@ -18,7 +18,8 @@
 //   (deviceTier.mjs); `processing=providers`, `keys=openai,anthropic`,
 //   `writing=<model>` and `noticedWriting=1` change that
 //
-// Page parameters choose the rest: `firstrun=1` (the setup screen),
+// Page parameters choose the rest: `firstrun=1` (the setup screen, at the step
+// `setupStep=` names),
 // `chosen=<model>` (a speech model the person chose), `speech=<language>` (the
 // language Oats listens for, `auto` or `de` for example; English by default),
 // `noticed=1` (the download's notice was shown before),
@@ -38,6 +39,8 @@ export function applyDemoSettings(params) {
     for (const key of ["onboardingCompleted", "onboardingCurrentStep", "micPermissionGranted"]) {
       localStorage.removeItem(key);
     }
+    // `setupStep=1` opens setup at its second step, "Where Oats thinks".
+    if (params.get("setupStep")) set("onboardingCurrentStep", params.get("setupStep"));
   } else {
     set("onboardingCompleted", "true");
   }
