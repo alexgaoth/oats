@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
 import { localSummaryModelDownloaded, useSummaryReadiness } from "./useSummaryReadiness";
 import { useModelDownloadPercent } from "../stores/modelDownloadStore";
+import { writingKeyPresent } from "../utils/writingKeys";
 import { summaryReadiness } from "../utils/summaryReadiness";
 import {
   blocksRecording,
@@ -106,6 +107,9 @@ export function useConversationPreflight(): Preflight {
   // hook looks again when the download lands, and so does this check.
   const summaryDownloading =
     useModelDownloadPercent(summaryMode === "local" ? summaryModel : null) !== null;
+  // With API keys and no key, the key is what is missing (the line says so).
+  const summaryProvider = useSettingsStore((state) => selectResolvedNoteFormatting(state).provider);
+  const summaryKey = useSettingsStore((state) => writingKeyPresent(state, summaryProvider));
   const summaryReadyNow = useSummaryReadiness();
   // Only the newest check says what is shown. Checks overlap (on mount, on a
   // change of setting, when a download starts), and one that skipped a slow
@@ -128,8 +132,10 @@ export function useConversationPreflight(): Preflight {
               model: summaryModel,
               remoteUrl: summaryUrl,
               localModelDownloaded: await localSummaryModelDownloaded(summaryMode, summaryModel),
+              providerKey: summaryMode === "providers" ? summaryKey : null,
             })
           ),
+      summaryWaiting: summaryMode === "providers" && summaryKey === false ? "no-key" : null,
     });
     if (mine === asked.current) setProblem(found);
     return found;
@@ -142,6 +148,7 @@ export function useConversationPreflight(): Preflight {
     summaryModel,
     summaryUrl,
     summaryDownloading,
+    summaryKey,
   ]);
 
   // Asked again when the model lands too (`summaryReadyNow` changes then).

@@ -12,6 +12,7 @@ export type PreflightProblem =
   | "no-model"
   | "no-api-key"
   | "no-summary-model"
+  | "no-writing-key"
   | "question-cards-off";
 
 export interface PreflightFacts {
@@ -33,6 +34,8 @@ export interface PreflightFacts {
   /** Whether the title and summary can be written after Finish. Without them
    *  the conversation is saved untitled and is never filed to the vault. */
   summaryReady: boolean | null;
+  /** Why not, when that changes what to say: the provider has no key. */
+  summaryWaiting?: "no-key" | null;
 }
 
 /**
@@ -65,8 +68,11 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
   // summary are written once one is ready (stores/summaryQueueStore.ts). Until
   // then a conversation has neither, which used to be discovered at the end,
   // as a toast in a hidden window. A model still downloading is not reported:
-  // the hook passes null for it.
-  if (facts.summaryReady === false) return "no-summary-model";
+  // the hook passes null for it. Without an API key, the key is what is
+  // missing, and the line says so.
+  if (facts.summaryReady === false) {
+    return facts.summaryWaiting === "no-key" ? "no-writing-key" : "no-summary-model";
+  }
   // Last, because recording still works fully — but the flagship surface will
   // not, and its own failure mode is silence.
   if (facts.questionCardsOn === false) return "question-cards-off";
@@ -86,7 +92,9 @@ export function blocksRecording(problem: PreflightProblem | null): boolean {
 export function preflightSettingsPage(
   problem: PreflightProblem | null
 ): "models" | "recording" | null {
-  if (problem === "no-api-key" || problem === "no-summary-model") return "models";
+  if (problem === "no-api-key" || problem === "no-summary-model" || problem === "no-writing-key") {
+    return "models";
+  }
   if (problem === "question-cards-off") return "recording";
   return null;
 }

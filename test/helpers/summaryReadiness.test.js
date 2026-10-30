@@ -50,3 +50,14 @@ test("a self-hosted endpoint needs its address", async () => {
     "no-endpoint"
   );
 });
+
+test("a provider without its key is not ready; one that needs none, or could not be told, is", async () => {
+  const { summaryReadiness } = await load();
+  const providers = { mode: "providers", model: "gpt-6.1-sol", remoteUrl: "", localModelDownloaded: null };
+  assert.equal(summaryReadiness({ ...providers, providerKey: false }), "no-key");
+  assert.equal(summaryReadiness({ ...providers, providerKey: true }), "ready");
+  assert.equal(summaryReadiness({ ...providers, providerKey: null }), "ready");
+  assert.equal(summaryReadiness(providers), "ready");
+  // A key says nothing of a model on this Mac.
+  assert.equal(summaryReadiness({ ...LOCAL, providerKey: false }), "ready");
+});

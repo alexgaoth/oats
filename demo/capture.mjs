@@ -223,6 +223,66 @@ const SHOTS = [
     query: "tier=ready&speech=auto",
     script: "await oatsDemo.settings('models')",
   },
+  // Settings › AI models: the processing choice, one row per model with its
+  // state, and Advanced (src/components/settings/ModelsPage.tsx). The writing
+  // model on this Mac follows its memory (src/helpers/writingTier.mjs).
+  ...[
+    ["local-ready", ""],
+    ["local-downloading", "tier=downloading&writingState=downloading"],
+    ["local-declined", "writingState=declined&tier=declined"],
+    ["local-failed", "writingState=failed&tier=failed"],
+    ["local-8gb", "memory=8&writingState=small&tier=none"],
+    ["local-chosen", "writing=qwen3.5-9b-q4_k_m&chosen=small"],
+    ["providers-nokey", "processing=providers"],
+    ["providers-openai", "processing=providers&keys=openai"],
+    ["providers-anthropic", "processing=providers&keys=anthropic"],
+  ].map(([name, query]) => ({
+    name: `models-${name}`,
+    query,
+    script: "await oatsDemo.settings('models')",
+  })),
+  ...[
+    ["advanced-local", ""],
+    ["advanced-providers", "processing=providers&keys=openai"],
+  ].map(([name, query]) => ({
+    name: `models-${name}`,
+    query,
+    script: [
+      "await oatsDemo.settings('models');",
+      "await demo.openAdvanced();",
+      "await demo.scrollTo('Choose models yourself')",
+    ].join(" "),
+  })),
+  {
+    // The writing chooser under Advanced, on its own: the rows of one family.
+    name: "models-advanced-writing",
+    query: "writingState=downloading",
+    script: [
+      "await oatsDemo.settings('models');",
+      "await demo.openAdvanced();",
+      "await demo.scrollTo('Writing', 'heading')",
+    ].join(" "),
+  },
+  {
+    // An Anthropic key pasted where the writing row asks for one: checked,
+    // saved, and the row turns to Claude Opus 5.5 (ProviderKeyField).
+    name: "models-key-saved",
+    query: "processing=providers",
+    script:
+      "await oatsDemo.settings('models'); await demo.typeKey('sk-ant-api03-demo-key-0123456789'); await demo.wait(800)",
+  },
+  {
+    // A key that is neither OpenAI's nor Anthropic's is not saved.
+    name: "models-key-wrong",
+    query: "processing=providers",
+    script:
+      "await oatsDemo.settings('models'); await demo.typeKey('AIzaSyD-not-an-openai-key'); await demo.wait(400)",
+  },
+  // Oats starts the writing model's download by itself and says so, once
+  // (WritingModelNotice), and Home says what it means for a conversation now.
+  { name: "writing-notice", query: "writingState=none&tier=ready", script: "await demo.wait(1500)" },
+  { name: "writing-home-downloading", query: "writingState=downloading&noticedWriting=1", script: "" },
+  { name: "writing-home-nokey", query: "processing=providers", script: "" },
   // The tour at the end of setup (components/onboarding/OatsTour.tsx): setup
   // finished the way a person finishes it, then Next to each slide. The
   // questions slide is taken twice: while its newest card is still open, and
@@ -288,6 +348,34 @@ window.demo = {
     button?.blur();
     await demo.wait(300);
   },
+  // Paste a key into the first key field on the page and save it.
+  async typeKey(text) {
+    const until = performance.now() + 10000;
+    let input;
+    while (!(input = document.querySelector("form input[type='password']"))) {
+      if (performance.now() > until) throw new Error("no key field on the page");
+      await demo.wait(100);
+    }
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+    setValue.call(input, text);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await demo.wait(100);
+    input.form.requestSubmit();
+    input.blur();
+  },
+  // Settings › AI models: open "Choose models yourself" once the page is there.
+  async openAdvanced() {
+    const until = performance.now() + 10000;
+    let button;
+    while (!(button = [...document.querySelectorAll("button[aria-expanded]")].find((b) =>
+      b.textContent.includes("Choose models yourself")))) {
+      if (performance.now() > until) throw new Error("no Advanced on the models page");
+      await demo.wait(100);
+    }
+    button.click();
+    button.blur();
+    await demo.wait(400);
+  },
   // Point at a conversation on the Global conversations board, as the pointer
   // would (oatsDemo.point, in the harness).
   async point(id) {
@@ -309,7 +397,9 @@ window.demo = {
     await demo.wait(300);
   },
   async scrollTo(text, role) {
-    const candidates = role
+    const candidates = role === "heading"
+      ? [...document.querySelectorAll("h1, h2, h3, h4")]
+      : role
       ? [...document.querySelectorAll('[role="' + role + '"]')]
       : [...document.querySelectorAll("h1, h2, h3, h4, [data-slot='card-title'], div, p, span")];
     const target = candidates.find((element) => element.textContent.trim() === text);

@@ -21,6 +21,10 @@ import { detectEndpointDialect } from "./ai/thinkingSuppressionDialects";
 import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { clearTinfoilClientCache } from "./ai/tinfoilClient";
 import { resolveChatRoute } from "../helpers/chatRouting";
+import { modelAvailability, openAiKeyStatus, providerReason } from "../helpers/keyStatus.mjs";
+
+/** What a provider says of an API key and a model (helpers/keyStatus.mjs). */
+export type KeyStatus = "ok" | "rejected" | "limited" | "no-access" | "unknown";
 
 export type AgentStreamChunk =
   | { type: "content"; text: string }
@@ -381,33 +385,64 @@ class ReasoningService extends BaseReasoningService {
   }
 
   /**
-   * Whether this OpenAI key can use a model, by one cheap request
-   * (`GET /models/{id}`, no tokens; counted in the sidebar like any request).
-   * True or false when OpenAI says so of the model; null when it could not be
-   * told (no key or a rejected key, offline, a server error), so the caller
-   * asks again later instead of keeping a no. With no key nothing is sent.
+   * OpenAI's answer to `GET /models/{id}` for a key: one cheap request, no
+   * tokens, counted in the sidebar like any request. Always OpenAI's own
+   * host: an OpenAI key is never sent to a custom endpoint the writing model
+   * may use (`getConfiguredOpenAIBase`), which could be a plain-http server on
+   * a LAN. `key` checks a key before it is saved; without it, the stored key.
+   * Null with no key (nothing is sent) or when nothing came back.
    */
-  async openAiModelAvailable(model: string): Promise<boolean | null> {
-    let apiKey = "";
-    try {
-      apiKey = await this.getApiKey("openai");
-    } catch {
-      return null;
+  private async openAiModelResponse(
+    model: string,
+    key?: string
+  ): Promise<{ status: number; body: unknown } | null> {
+    let apiKey = key?.trim() ?? "";
+    if (!apiKey) {
+      try {
+        apiKey = await this.getApiKey("openai");
+      } catch {
+        return null;
+      }
     }
     if (!apiKey) return null;
-    const url = buildApiUrl(getConfiguredOpenAIBase(), `/models/${encodeURIComponent(model)}`);
+    const url = buildApiUrl(API_ENDPOINTS.OPENAI_BASE, `/models/${encodeURIComponent(model)}`);
     try {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(5_000),
       });
-      if (res.ok) return true;
-      // The model is not there for this key; a rejected key (401) may be fixed.
-      if ([400, 403, 404].includes(res.status)) return false;
-      return null;
+      const body = res.ok ? null : await res.json().catch(() => null);
+      return { status: res.status, body };
     } catch {
       return null;
     }
+  }
+
+  /**
+   * What OpenAI says of a key and a model (helpers/keyStatus.mjs): "ok";
+   * "rejected", with OpenAI's reason when it gave one beyond "invalid key";
+   * "limited", a restricted key that may not read the model list; "no-access",
+   * the key cannot use the model; "unknown" when it could not be told.
+   */
+  async openAiKeyCheck(
+    model: string,
+    key?: string
+  ): Promise<{ status: KeyStatus; reason: string | null }> {
+    const answer = await this.openAiModelResponse(model, key);
+    if (!answer) return { status: "unknown", reason: null };
+    const status = openAiKeyStatus(answer.status, answer.body) as KeyStatus;
+    return { status, reason: status === "rejected" ? providerReason(answer.body) : null };
+  }
+
+  /**
+   * Whether this OpenAI key can use a model: true or false when OpenAI says
+   * so of the model; null when it could not be told (no key or a rejected
+   * key, offline, a server error), so the caller asks again later instead of
+   * keeping a no.
+   */
+  async openAiModelAvailable(model: string): Promise<boolean | null> {
+    const answer = await this.openAiModelResponse(model);
+    return answer ? modelAvailability(answer.status) : null;
   }
 
   /**
@@ -421,6 +456,25 @@ class ReasoningService extends BaseReasoningService {
       return typeof answer === "boolean" ? answer : null;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * What Anthropic says of a key that is not saved yet and a model, by the
+   * request `anthropicModelAvailable` makes, from the main process, to
+   * Anthropic's own host (helpers/keyStatus.mjs has the answers).
+   */
+  async anthropicKeyStatus(model: string, key: string): Promise<KeyStatus> {
+    try {
+      const answer = await window.electronAPI?.anthropicKeyCheck?.(model, key);
+      return answer === "ok" ||
+        answer === "rejected" ||
+        answer === "limited" ||
+        answer === "no-access"
+        ? answer
+        : "unknown";
+    } catch {
+      return "unknown";
     }
   }
 

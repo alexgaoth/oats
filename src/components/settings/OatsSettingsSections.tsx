@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Cpu, Download, FolderOpen, KeyRound, Plus, X } from "lucide-react";
+import { Download, FolderOpen, Plus, X } from "lucide-react";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useSettings } from "../../hooks/useSettings";
 import { formatHotkey } from "../../utils/hotkeyLabel";
@@ -11,62 +11,18 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Kbd } from "../ui/kbd";
 import { NativeSelect } from "../ui/native-select";
-import { SegmentedControl } from "../ui/segmented";
 import { Toggle } from "../ui/toggle";
 import HotkeyInput from "../ui/HotkeyInput";
 import { SettingRow, SettingsSection } from "./SettingsKit";
-import { processingMode, setProcessing, type ProcessingMode } from "./processing";
 import { useSummaryReadiness } from "../../hooks/useSummaryReadiness";
 import type { ContextStatus } from "../../types/conversationEvents";
 
 /**
- * The parts of Settings that are Oats's own rather than inherited: the one
- * Processing switch, the conversation shortcut, the shortcuts reference, the
- * question cards, the vault and the dictionary.
+ * The parts of Settings that are Oats's own rather than inherited: the
+ * conversation shortcut, the shortcuts reference, the question cards, the
+ * vault and the dictionary. The processing choice and the models are
+ * ModelsPage.tsx.
  */
-
-export function ProcessingCard() {
-  const { t } = useTranslation();
-  // Subscribing to the four modes is what re-renders this when a per-feature
-  // choice below makes the whole "mixed".
-  const mode = useSettingsStore((state) => processingMode(state));
-  return (
-    <SettingsSection footer={mode === "mixed" ? t("oats.settings.processingMixed") : undefined}>
-      <SettingRow
-        label={t("oats.settings.processing")}
-        description={t("oats.settings.processingDescription")}
-      >
-        <SegmentedControl<ProcessingMode | "mixed">
-          aria-label={t("oats.settings.processing")}
-          value={mode}
-          onValueChange={(next) => {
-            if (next !== "mixed") setProcessing(next);
-          }}
-          options={[
-            {
-              value: "local",
-              label: (
-                <span className="flex items-center gap-1.5">
-                  <Cpu aria-hidden="true" className="size-4" />
-                  {t("oats.settings.processingLocal")}
-                </span>
-              ),
-            },
-            {
-              value: "providers",
-              label: (
-                <span className="flex items-center gap-1.5">
-                  <KeyRound aria-hidden="true" className="size-4" />
-                  {t("oats.settings.processingProviders")}
-                </span>
-              ),
-            },
-          ]}
-        />
-      </SettingRow>
-    </SettingsSection>
-  );
-}
 
 /** Start and stop a conversation from anywhere. */
 export function ConversationShortcutRow() {
@@ -202,8 +158,8 @@ export function QuestionCardSettings() {
 }
 
 /**
- * The optional model that refines question cards, shown in the writing-model
- * screen with the other models. Detection works without it (local pattern
+ * The optional model that refines question cards, under Settings › AI models ›
+ * Advanced with the other models. Detection works without it (local pattern
  * matching), so it is a download offered, never a requirement.
  */
 export function QuestionModelSettings() {
@@ -226,7 +182,6 @@ export function QuestionModelSettings() {
     <SettingsSection
       title={t("oats.settings.questions.title")}
       description={t("oats.settings.questions.modelDescription")}
-      className="mt-6"
     >
       <SettingRow label={t("oats.settings.questions.model")}>
         <NativeSelect

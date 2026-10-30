@@ -11,8 +11,11 @@
 // `from` seeks there once recording starts (seconds); `speed` is the replay
 // rate; `end=hold` keeps recording at the end instead of pressing Stop;
 // `edits=0` leaves the voices unnamed after Stop; `tier` is the speed check's
-// state and `chosen` a speech model the person chose (deviceTier.mjs,
-// settings.mjs); `profile=empty` starts with
+// state and `chosen` a speech model the person chose, `writingState` and
+// `memory` the writing model's state on disk and this Mac's memory
+// (deviceTier.mjs), `writing` a writing model the person chose, or `none`
+// (settings.mjs); `processing=providers` and `keys=openai,anthropic` set up
+// "With an API key" (settings.mjs); `profile=empty` starts with
 // no conversations at all, as a new install does, so Home and Conversations
 // offer the example; `profile=many` holds two hundred synthetic conversations
 // in three groups instead of the samples (`many.mjs`), to measure Global
@@ -23,16 +26,17 @@
 // window.
 //
 // Summaries that start by themselves (stores/summaryQueueStore.ts):
-// `download=<percent>` holds the local writing model (`writing=`, Qwen3.5 4B
-// by default) mid-download there, until `oatsDemo.download()` runs it to the
-// end; `bare=<sample id>` or `bare=all` takes the summaries away, as from a
+// `download=<percent>` holds the local writing model (`writing=`, or the
+// default for `memory=`) mid-download there, until `oatsDemo.download()` runs
+// it to the end; `bare=<sample id>` or `bare=all` takes the summaries away, as from a
 // conversation recorded before any model was ready; `summary=fail` fails every
 // summary, `summary=fail-once` the first try of each, and `summary=too-long`
 // answers as the server on this Mac does to a conversation over its context.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
+import registry from "../../src/models/modelRegistryData.json";
 import { installClock } from "./clock.mjs";
-import { installFakeOpenAI } from "./fastModel.mjs";
+import { installFakeKeyCheck, installFakeOpenAI } from "./fastModel.mjs";
 import { createFakeMain } from "./fake-main.mjs";
 import { createFakeDeviceTier } from "./deviceTier.mjs";
 import { installFakeMicrophone } from "./media.mjs";
@@ -53,11 +57,15 @@ installClock();
 applyDemoSettings(params);
 installFakeMicrophone();
 
-// The local writing model settings.mjs chose, and whether it is still on its way.
+// The local writing model: the one settings.mjs stored as chosen, else the
+// default this Mac's memory holds (writingTier.mjs); and whether it is still
+// on its way.
 const writingModel =
   params.get("writing") && params.get("writing") !== "none"
     ? params.get("writing")
-    : "qwen3.5-4b-q4_k_m";
+    : (Number(params.get("memory")) > 0 ? Number(params.get("memory")) : 48) >= 16
+      ? "gemma-4-e4b-it-q4_k_m"
+      : "qwen3.5-4b-q4_k_m";
 const downloadAt = params.get("loop") === "1" ? null : params.get("download");
 
 const main = createFakeMain({
@@ -69,8 +77,9 @@ const main = createFakeMain({
   // The context check's agent (`agent=1`, with `check=1`): see context.mjs.
   agent: params.get("agent") === "1",
   // OpenAI as the writing model (`loop=1`): a key for the stand-in, which
-  // never leaves the page.
-  openai: params.get("loop") === "1",
+  // never leaves the page. `keys=` stores the keys a person added.
+  openai: params.get("loop") === "1" || (params.get("keys") ?? "").includes("openai"),
+  anthropic: (params.get("keys") ?? "").includes("anthropic"),
   missingModels: downloadAt === null ? [] : [writingModel],
 });
 if (downloadAt !== null) {
@@ -93,14 +102,40 @@ if (many) {
   main.db.notes.push(...notes);
   for (const question of questions) main.insertEvent(question);
 }
-// The speed check's report (deviceTier.mjs): `tier=` picks the state.
-const deviceTier = createFakeDeviceTier({ state: params.get("tier"), emit: main.emit });
+// The speed check's report (deviceTier.mjs): `tier=` picks the state, and
+// `writingState=` and `memory=` the writing model's. `writing=none` (no
+// writing model ready) is nothing on disk, its download declined.
+const deviceTier = createFakeDeviceTier({
+  state: params.get("tier"),
+  writing:
+    params.get("writingState") ?? (params.get("writing") === "none" ? "declined" : null),
+  memory: params.get("memory"),
+  emit: main.emit,
+});
 Object.assign(main.api, {
   getArch: deviceTier.getArch,
   getDeviceTier: deviceTier.getDeviceTier,
   startSpeechUpgrade: deviceTier.startSpeechUpgrade,
   cancelSpeechUpgrade: deviceTier.cancelSpeechUpgrade,
+  startWritingModelDownload: deviceTier.startWritingModelDownload,
+  cancelWritingModelDownload: deviceTier.cancelWritingModelDownload,
+  writingModelChosen: deviceTier.writingModelChosen,
 });
+main.hooks.whisperModels = deviceTier.whisperModels;
+main.hooks.writingInstalled = deviceTier.writingInstalled;
+main.hooks.writingDeleted = deviceTier.writingDeleted;
+// `model-get-all`: every local writing model, marked on disk as the report says.
+main.hooks.localModels = () => {
+  const installed = deviceTier.writingInstalled();
+  return registry.localProviders.flatMap((provider) =>
+    provider.models.map((model) => ({
+      ...model,
+      providerId: provider.id,
+      providerName: provider.name,
+      isDownloaded: installed.includes(model.id),
+    }))
+  );
+};
 window.electronAPI = main.api;
 
 const replay = createReplay({
@@ -112,6 +147,9 @@ const openai =
   params.get("loop") === "1"
     ? installFakeOpenAI({ reason: (request) => main.hooks.reason?.(request) ?? null })
     : null;
+// A key typed into Settings or setup is checked with OpenAI (keyCheck.ts); here
+// the check is answered in the page, and nothing leaves it.
+if (!openai) installFakeKeyCheck();
 // A summary that fails, as a model that stops early does: every time
 // (`summary=fail`), or only the first try of each conversation (`fail-once`).
 // `summary=too-long` answers as llama-server does to a conversation that does
@@ -215,6 +253,8 @@ window.oatsDemo = {
   searches: () => main.searches.map((search) => ({ ...search })),
   /** Put the speed check in another state: see deviceTier.mjs. */
   tier: (state) => deviceTier.set(state),
+  /** Put the writing model on disk in another state: see deviceTier.mjs. */
+  writingState: (state) => deviceTier.setWriting(state),
   /**
    * The local writing model's download: run on from where it is to the end
    * over `ms` (resolves when it lands), or held at `from` with `hold`
