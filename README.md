@@ -2,15 +2,19 @@
   <a href="https://oats-mac.vercel.app">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/media/banner-dark.png">
-      <img src="docs/media/banner-light.png" width="800" alt="Oats. High-signal tool for high-signal conversations.">
+      <img src="docs/media/banner-light.png" width="800" alt="Oats. The conversation, mapped as it happens.">
     </picture>
   </a>
 </p>
 
 <p align="center">
-  Oats records the conversation in the room and transcribes it on your Mac.<br>
-  It tracks the questions people ask and whether the room answered them, checks an unsure<br>
-  answer against your team's notes, and hands you the summary when you stop.
+  Oats maps the conversation in the room as it happens: topics as they turn,<br>
+  questions as they're asked, and whether anyone answered.
+</p>
+
+<p align="center">
+  Notes after the meeting come too late.<br>
+  Oats shows you the conversation while you can still steer it.
 </p>
 
 <p align="center">
@@ -23,24 +27,36 @@
 </p>
 
 <p align="center">
-  <img src="site/media/summary-window-2240.webp" width="880" alt="Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person.">
+  <img src="site/media/live-window-2240.webp" width="880" alt="Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.">
 </p>
 
 The conversations that matter happen around a table. Taking notes pulls you out of them, and meeting bots join calls, not rooms. Oats sits on the table with one microphone. While you talk, the screen shows the shape of the conversation and nothing that competes with the people in front of you.
 
 ## What it does
 
-### Make room for the conversation
+### Watch the conversation take shape
 
-Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> in any app and talk. The sidebar steps aside, and one line draws the conversation as it happens: its height is how loud the room is, a notch marks where the subject turned, and a mark shows where someone asked a question. Under the clock, two quiet counters keep the words and the questions so far. Choose **Words** to add the live transcript and the question cards.
+Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> and talk. One line draws the conversation live: a notch where the subject turns, a mark where someone asks. Its height is how loud the room is. The sidebar steps aside while you record, and under the clock two quiet counters keep the words and the questions so far. Speech is transcribed on your Mac with whisper.cpp, on the GPU, and <kbd>M</kbd> marks a moment.
 
 <p align="center">
   <img src="docs/media/loop-record.webp" width="840" alt="Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes">
 </p>
 
-### Walk out knowing what is still open
+### Topics name themselves
 
-Oats hears a question and watches what the room does with it. Its card says how it ended, in place, while people are still talking. A question asked twice is kept as a signal, not dropped as a repeat.
+Each topic gets its name from what was said. When the room comes back to one, the line goes back too.
+
+The conversation flow under the line keeps one lane per topic, in the order raised, with the minutes spent on each. **Graph** shows the same topics by when each was raised and how unsettled it still is. Oats finds the topics on your Mac and names each with a phrase said in it, and the writing model names it more exactly as it grows. Under the lanes are subjects that came up with these in earlier conversations and have not come up yet.
+
+<p align="center">
+  <img src="site/media/topic-lanes.webp" width="840" alt="Conversation flow at 12:33, three topics and one return to an earlier topic. The line steps down from Pellwood launch date decision to SAML clock skew fix and SOC 2 audit timeline, then goes back up to Pellwood launch date decision, where the room is now.">
+</p>
+
+### Every question, caught as it's asked
+
+Each question shows up the moment it's asked, and changes when the room answers it, or doesn't. Ask again before anyone leaves.
+
+On the line, a question is a mark. With the transcript shown, it is also a card that says how it ended, in place, while people are still talking. A question asked twice is kept as a signal, not dropped as a repeat.
 
 | Card | When |
 |---|---|
@@ -53,35 +69,41 @@ Oats hears a question and watches what the room does with it. Its card says how 
   <img src="docs/media/loop-questions.webp" width="560" alt="A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web">
 </p>
 
-### Checked against what your team wrote down
+### Unsure answers, checked on the spot
 
-Turn on the context check in Settings and choose a folder of your team's notes. When an answer in the room sounds unsure, Oats finds the passage that settles it, in that folder or in your past conversations, and says so under the question: **That's right**, **Wait, that's wrong**, or **Found it** when the room did not know, with the answer and the file it came from.
+When an answer sounds unsure, Oats looks it up in your notes and past conversations while people are still talking.
 
-Optional, and off by default: when the folder has no answer, Oats can ask Claude Code to look in GitHub, Linear and Notion, read only.
+It is off by default: turn on the context check in Settings and choose a folder of notes. Under the question, Oats says **That's right**, **Wait, that's wrong**, or **Found it** when the room did not know, with the answer and the file it came from. When the folder and your past conversations have no answer, Oats can also ask Claude Code, if you turn that on too: it reads your GitHub, Linear, Notion and Slack connections, read only, and the question and the reply go to Anthropic, and the search text to those services.
 
 <p align="center">
-  <img src="site/media/check-live.webp" width="640" alt="A recording at 8 minutes 25 seconds. Under the question Do we have a date from the auditors yet, marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates.">
+  <img src="site/media/check-live.webp" width="640" alt="A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet.">
 </p>
 
-### The conversation, given back in order
+### Written up when you stop
 
-Stop, and the conversation comes back with a title, a summary and the threads it followed, talk time for each person, how each question ended, and the transcript with the speakers told apart. Titles and summaries come from a writing model on your Mac, which Oats downloads at setup, or from your own API key. The transcript, the speakers, the questions and the shape of the conversation need neither.
+Title, summary, talk time for each person, and the transcript with every voice told apart.
+
+The summary starts by itself when you stop, with the threads the conversation followed, the decisions and the action items, next to how each question ended. It is written by a model on your Mac, which Oats downloads by itself, or with your own API key. The transcript, the voices, the questions and the shape of the conversation need no writing model.
 
 <p align="center">
-  <img src="site/media/outcomes.webp" width="560" alt="The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one.">
+  <img src="site/media/conversation-finished.webp" width="560" alt="The finished conversation, Enterprise launch review: SSO gates the date. 29 minutes, 9 speakers, 3 marked moments, and 15 questions: 9 answered, 3 unknown, 2 unanswered, 1 open. Below, the shape of the conversation with each question in its place, and talk time for each person, from Maya at 18 percent to Omar at 2 percent.">
 </p>
 
 ### Find anything anyone said
 
-Search reads every transcript on your Mac, including the oldest. It finds a word inside a longer one, so "rice" finds "price", and it works in Chinese and Japanese, which are written without spaces. Each search says how many matches it found and how long it took.
+Search every transcript at once, even for part of a word. Chinese and Japanese too.
+
+Search reads every transcript on your Mac, including the oldest. It finds a word inside a longer one, so "rice" finds "price", and it works in Chinese and Japanese, which are written without spaces. Each search says how many matches it found and how long it took, and each match says when in the conversation it was said. Press <kbd>/</kbd> to search from anywhere in the app.
 
 <p align="center">
   <img src="docs/media/loop-search.webp" width="730" alt="A search for import bug finds 15 matches in 3 conversations in under a tenth of a millisecond, with the words highlighted">
 </p>
 
-### See how your conversations connect
+### See what keeps coming back
 
-The board lays out every conversation as a graph and as a timeline, so a subject that keeps coming back shows as the arcs between the days it came up. Each conversation is filed into Work, Personal or a group you make. A local model files it from its title, topics and summary, never from the transcript.
+Conversations on the same subject link up, so you see it come back across weeks.
+
+The board lays out every conversation as a graph and as a timeline, so a subject that keeps coming back shows as the arcs between the days it came up. Each conversation is sorted into Work, Personal or a group you make by the model that writes your summaries, from its title, its topics and the start of its summary, never from the transcript.
 
 <p align="center">
   <img src="docs/media/loop-global.webp" width="840" alt="The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back">

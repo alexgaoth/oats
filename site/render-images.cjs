@@ -130,8 +130,8 @@ async function ogImage() {
   context.textAlign = "center";
   context.font = '400 76px "EB Garamond"';
   context.letterSpacing = "-2.6px";
-  context.fillText("High-signal tool for", width / 2, 330);
-  context.fillText("high-signal conversations", width / 2, 412);
+  context.fillText("The conversation,", width / 2, 330);
+  context.fillText("mapped as it happens", width / 2, 412);
   context.letterSpacing = "0px";
   context.font = "500 26px Inter";
   context.fillStyle = "#71717a";
@@ -149,7 +149,7 @@ function roundedRect(context, x, y, width, height, radius) {
   context.closePath();
 }
 
-const HEADLINE = "High-signal tool for high-signal conversations";
+const HEADLINE = "The conversation, mapped as it happens";
 
 /** The grain beside the wordmark, centred on cx with its baseline at baseline. */
 function signature(context, cx, baseline, size, ink, shadow) {
