@@ -378,8 +378,10 @@ export function parseTopicName(
  * Whether a topic needs a name from the model now: "first" when it has none,
  * "rename" when it has changed size enough since its last one, or null.
  *
- * `words` is how many words the topic holds now. `record` is what the topic
- * was last named: `{ name, words }`, or null. `final` is the pass at the end
+ * `words` is how many words the topic holds now (for the topic the room is
+ * on, before a change the tracker proposes in it: topicNamer.mjs
+ * `namedTurnIds`). `record` is what the topic was last named:
+ * `{ name, words }`, or null. `final` is the pass at the end
  * of the conversation, which names smaller topics and renames on less change,
  * because the record keeps what it decides.
  *

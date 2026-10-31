@@ -219,6 +219,40 @@ test("a rename that keeps the name changes nothing on screen", async () => {
   assert.equal(labelOf(namer, talk.snapshot(1), 1).label, "Launch date move");
 });
 
+test("the live topic is named only from its turns before a change the tracker proposes", async () => {
+  const { clock, namer, asked, answers } = setup();
+  const talk = conversation();
+  // The tracker shows the next subject's first turns in the live topic until
+  // it draws the change it proposes there (`unsettledFrom`).
+  const proposing = (from) => {
+    const snapshot = talk.snapshot(1);
+    return { ...snapshot, nodes: snapshot.nodes.map((node) => ({ ...node, unsettledFrom: from })) };
+  };
+  talk.say(1, 45);
+  answers.push("Launch date move", "Launch date and its blockers");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(asked.length, 1);
+
+  const change = talk.say(1, 40);
+  talk.say(1, 40);
+  namer.observe(proposing(change), talk.segments);
+  await clock.tick(namerModule.MAX_SETTLE_MS);
+  assert.equal(asked.length, 1, "what was said from the proposed change on does not count");
+
+  // The tracker now proposes the change later: 125 words come before it.
+  const later = talk.say(1, 30);
+  namer.observe(proposing(later), talk.segments);
+  await clock.tick(namerModule.MAX_SETTLE_MS);
+  assert.equal(asked.length, 2, "renamed at two and a half times the words it was named from");
+  const quoted = asked[1].text.split("What was said on this topic:\n")[1].split("\n");
+  assert.equal(quoted.length, 3);
+  assert.ok(!asked[1].text.includes(talk.segments[3].text), "nothing from the proposed change on");
+  assert.deepEqual(namer.names.get(1).utteranceIds, ["u0", change, "u2"]);
+  assert.equal(namer.names.get(1).words, 125);
+  assert.equal(labelOf(namer, talk.snapshot(1), 1).label, "Launch date and its blockers");
+});
+
 test("a request that does not answer in time fails, and the topic waits to grow by half", async () => {
   const { clock, namer, asked } = setup();
   const talk = conversation();

@@ -706,6 +706,9 @@ class ConversationTopicTracker {
     // Cuts that can no longer move: the id of the utterance each starts at,
     // and whether it was a sharp turn.
     this.settledCuts = new Map();
+    // The id of the utterance a proposed, unsettled cut after the last drawn
+    // one starts at, or null (`_update`).
+    this._proposedFrom = null;
     this.labels = new Map();
     this.nextId = 1;
 
@@ -847,6 +850,12 @@ class ConversationTopicTracker {
     this._final = null;
     const shown = cuts.filter((cut) => this.settledCuts.has(this.units[cut].id));
     this._shownCuts = shown;
+    // The first cut chosen after the last drawn one that is not sure yet: a
+    // change of subject the tracker proposes. Until it settles, the turns from
+    // it on are shown in the live topic, and they may still go to the next one.
+    const last = shown.at(-1) ?? 0;
+    const proposed = cuts.find((cut) => cut > last && !this.settledCuts.has(this.units[cut].id));
+    this._proposedFrom = proposed === undefined ? null : this.units[proposed].id;
     Object.assign(this, this._topicsFor(shown, { commit: true }));
   }
 
@@ -1283,6 +1292,13 @@ class ConversationTopicTracker {
   // stored with the topic that happened to be current at stop marked `live`,
   // the reading view drew it in the accent on a subject nobody was discussing
   // any more, and hid whether it had been resolved.
+  //
+  // While the conversation goes on, the live topic carries `unsettledFrom`
+  // when the tracker proposes a change of subject inside it that it has not
+  // drawn yet: the id of the turn the change starts at. That turn and the ones
+  // after it are shown in the live topic until the cut settles, and then they
+  // go to the next topic. What reads a topic for its subject (the writing
+  // model's names, topicNamer.mjs) reads it only up to there.
   snapshot(at = this.now(), { final = false } = {}) {
     let view = this;
     if (final && this._depthCache) {
@@ -1300,6 +1316,7 @@ class ConversationTopicTracker {
       }
       view = this._final;
     }
+    const live = (topic) => !final && topic.id === view.currentId;
     const nodes = view.topics.map((topic) => ({
       id: topic.id,
       label: topic.label,
@@ -1309,14 +1326,16 @@ class ConversationTopicTracker {
       firstAt: topic.firstAt,
       lastAt: topic.lastAt,
       returns: topic.returns,
-      state:
-        !final && topic.id === view.currentId
-          ? "live"
-          : topic.resolved || topic.utteranceIds.some((id) => this.resolvedUtterances.has(id))
-            ? "resolved"
-            : at - topic.lastAt >= this.dropAfterMs
-              ? "dropped"
-              : "open",
+      state: live(topic)
+        ? "live"
+        : topic.resolved || topic.utteranceIds.some((id) => this.resolvedUtterances.has(id))
+          ? "resolved"
+          : at - topic.lastAt >= this.dropAfterMs
+            ? "dropped"
+            : "open",
+      ...(live(topic) && this._proposedFrom && topic.utteranceIds.includes(this._proposedFrom)
+        ? { unsettledFrom: this._proposedFrom }
+        : {}),
       ...(final ? this._storedVector(topic) : {}),
     }));
     return { nodes, edges: view.transitions.map((edge) => ({ ...edge })) };
