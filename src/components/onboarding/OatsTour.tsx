@@ -1,27 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
-import { Card } from "../ui/card";
-import ConversationFlow from "../conversation/ConversationFlow";
-import ConversationSignalRail from "../conversation/ConversationSignalRail";
-import ConversationContour from "../conversation/ConversationContour";
-import ContourLegend from "../conversation/ContourLegend";
 import { ScrollFade, useScrollFade } from "../conversation/useScrollFade";
-import { useStoredContour } from "../conversation/useContour";
-import { ConversationReview, TalkTime } from "../OatsWorkspace";
-import { talkTime } from "../../helpers/talkTime.mjs";
+import { DemoFlow, DemoOpen, DemoQuestions, DemoShape, DemoVoices } from "../demo";
 import {
-  CARD_STEP_MS,
-  LAST_CARD_STEP,
   TOUR_SLIDES,
-  tourCards,
+  tourArrow,
   tourConversation,
   tourStep,
   type TourConversation,
 } from "../../helpers/oatsTour.mjs";
 import example from "../../helpers/sampleConversations/launch-readiness-review.json";
-import type { ConversationSuggestion } from "../../types/conversationEvents";
 
 // The tour at the end of setup: what Oats does with a conversation, one slide
 // at a time, each slide one of the app's own components taken out of its page.
@@ -32,104 +22,36 @@ import type { ConversationSuggestion } from "../../types/conversationEvents";
 // (`helpers/oatsTour.mjs` reads it). So the tour cannot drift from the product,
 // and what it shows is what the person can open next.
 //
-// It shows; it does not teach. There is no "press here", nothing to try and
-// nothing to remember, and it never comes back: setup is already saved when it
-// opens (OnboardingFlow.tsx), so Skip, Start or a quit all land in the app.
+// It shows; it does not teach. There is no "press here" and nothing to
+// remember, and it never comes back: setup is already saved when it opens
+// (OnboardingFlow.tsx), so Skip, Start or a quit all land in the app.
 //
-// Nothing on a slide can do anything. Each component gets its data as props,
-// never through a store, and the box it is drawn in is `inert`: no click, key
-// or focus reaches a Search, a Dismiss, a view switch or a row, so nothing is
-// recorded, sent, opened or saved. The tour moves only when asked to: Back,
-// Next, the dots and the arrow keys, never by itself.
-
-/** The flow card's footer lists past conversations' subjects; the example has none. */
-const NO_SUGGESTIONS: ConversationSuggestion[] = [];
-
-const ignore = () => {};
-
-const prefersReducedMotion = () =>
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+// The components can be used, as in the app: Lanes or Graph, a topic's quote,
+// a press on the contour, a voice's turns, the answers, a card dismissed and
+// brought back. Nothing in the tour is saved or sent. The slides are the demo
+// pieces (`components/demo/`): they read no store, never call the main
+// process, and are given none of the actions that would leave the window (a
+// web search, opening a turn or a source, naming a voice), so those are not
+// drawn. The tour moves only when asked to: Back, Next, the dots and the arrow
+// keys, never by itself.
 
 interface SlideProps {
   conversation: TourConversation;
 }
 
-/** Topics found and named as the subject moves: the recording screen's flow card. */
-function TopicsSlide({ conversation }: SlideProps) {
-  return (
-    <ConversationFlow
-      snapshot={conversation.snapshot}
-      segments={conversation.segments}
-      suggestions={NO_SUGGESTIONS}
-    />
-  );
-}
-
 /**
- * The question rail, as it runs: two questions already settled, then a third
- * is asked and its card appears, then the reply settles that same card
- * (`CARD_STEP_MS`). Once, each time the slide is shown. Under reduced motion
- * the cards are simply there, settled.
+ * Room kept under a slide when it arrives, in px: what a press adds under the
+ * flow card or the contour (the quote line, 63 to 67px), so the flow card
+ * still fits the stage whole once a topic is quoted, in Lanes or Graph.
  */
-function QuestionsSlide({ conversation }: SlideProps) {
-  const [now] = useState(() => Date.now());
-  const [reduced] = useState(prefersReducedMotion);
-  const [step, setStep] = useState(() => (reduced ? LAST_CARD_STEP : 0));
-  useEffect(() => {
-    if (reduced) return undefined;
-    const timers = CARD_STEP_MS.slice(1).map((at, index) =>
-      window.setTimeout(() => setStep(index + 1), at)
-    );
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [reduced]);
-  const cards = useMemo(() => tourCards(conversation, { now, step }), [conversation, now, step]);
-  return <ConversationSignalRail cards={cards} onFocus={ignore} />;
-}
-
-/** The contour and its key, as the top of a conversation's record draws them. */
-function ShapeSlide({ conversation }: SlideProps) {
-  const contour = useStoredContour(
-    conversation.segments,
-    conversation.events,
-    conversation.topics,
-    conversation.moments,
-    conversation.loudness
-  );
-  return (
-    <Card className="px-5 pb-4 pt-7">
-      <ConversationContour contour={contour} height={92} />
-      <ContourLegend contour={contour} className="mt-4" />
-    </Card>
-  );
-}
-
-/** Who talked how much, once Finish has told the voices apart. */
-function VoicesSlide({ conversation }: SlideProps) {
-  const talk = useMemo(() => talkTime(conversation.segments), [conversation.segments]);
-  return (
-    <Card className="px-5 py-4">
-      <TalkTime talk={talk} selected={null} onSelect={ignore} />
-    </Card>
-  );
-}
-
-/** What nobody answered, the first thing in a record's summary tab. */
-function OpenSlide({ conversation }: SlideProps) {
-  return (
-    <ConversationReview
-      events={conversation.events}
-      topics={conversation.topics}
-      onOpenTurn={ignore}
-    />
-  );
-}
+const ROOM_FOR_PRESS = 64;
 
 const VIEWS: Record<string, (props: SlideProps) => React.ReactElement> = {
-  topics: TopicsSlide,
-  questions: QuestionsSlide,
-  shape: ShapeSlide,
-  voices: VoicesSlide,
-  open: OpenSlide,
+  topics: DemoFlow,
+  questions: DemoQuestions,
+  shape: DemoShape,
+  voices: DemoVoices,
+  open: DemoOpen,
 };
 
 export default function OatsTour({ onDone }: { onDone: () => void }) {
@@ -157,12 +79,21 @@ export default function OatsTour({ onDone }: { onDone: () => void }) {
     [t]
   );
 
-  // The arrow keys, from anywhere in the window. There is nothing here to type
-  // into, and the stage cannot hold focus, so an arrow is always for the tour.
+  // The arrow keys, while the focus is on the tour's own controls or on
+  // nothing (`tourArrow`). On a control in a slide they are that control's:
+  // the Lanes / Graph switch moves between its choices with them.
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    const focusOf = (target: EventTarget | null) => {
+      if (!(target instanceof Node)) return "none";
+      if (target === document.body || target === document.documentElement) return "none";
+      if (stageRef.current?.contains(target)) return "slide";
+      if (sectionRef.current?.contains(target)) return "tour";
+      return "other";
+    };
     const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-      const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+      const delta = tourArrow(event, focusOf(event.target));
       if (!delta) return;
       event.preventDefault();
       setIndex((current) => tourStep(current, delta, count));
@@ -199,10 +130,35 @@ export default function OatsTour({ onDone }: { onDone: () => void }) {
     setSpoken(t("onboarding.tour.announce", { current: index + 1, count, title: current.title }));
   }, [t, index, count, current.title]);
 
-  // A slide taller than the stage (the review, in a short window) is cut at
-  // the stage's foot, with the fade the app puts on any band that holds more.
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const { faded } = useScrollFade(stageRef, slide);
+  // A slide taller than the stage (the review with its answers, a voice's
+  // turns, or the review in a short window) scrolls inside the stage, with the
+  // fade the app puts on any band that holds more.
+  const { faded, measure } = useScrollFade(stageRef, slide);
+
+  // A slide arrives a little above the middle of the stage, leaving room under
+  // it for what a press adds (`ROOM_FOR_PRESS`), and stays where it arrived:
+  // a quote, a voice's turns or the answers grow downward, so nothing moves
+  // under the pointer, and past the stage's foot the stage scrolls. Placed
+  // again only for a new slide or a new stage height.
+  const slideRef = useRef<HTMLDivElement | null>(null);
+  const [offset, setOffset] = useState(0);
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const content = slideRef.current;
+    if (!stage || !content) return undefined;
+    // A new slide starts at its top, whatever the last one was scrolled to.
+    stage.scrollTop = 0;
+    let height = -1;
+    const place = () => {
+      if (stage.clientHeight === height) return;
+      height = stage.clientHeight;
+      setOffset(Math.max(0, Math.floor((height - content.offsetHeight - ROOM_FOR_PRESS) / 2)));
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [slide]);
 
   const go = (delta: number) => setIndex((value) => tourStep(value, delta, count));
 
@@ -221,6 +177,7 @@ export default function OatsTour({ onDone }: { onDone: () => void }) {
 
       <div className="flex min-h-0 flex-1 items-center-safe overflow-y-auto px-8 pb-8">
         <section
+          ref={sectionRef}
           aria-label={t("onboarding.tour.label")}
           className="mx-auto flex w-full max-w-3xl flex-col"
         >
@@ -240,18 +197,18 @@ export default function OatsTour({ onDone }: { onDone: () => void }) {
             </p>
           </div>
 
-          {/* The stage: the component, as the app draws it, in a box that
-              takes no input. One height for every slide, so the controls
-              under it never move: the tallest slide's (the review, about
-              400px), or what the window has left, whichever is less. */}
+          {/* The stage: the component, as the app draws it, and usable. One
+              height for every slide, so the controls under it never move:
+              the tallest slide's at rest (the review, about 400px), or what
+              the window has left, whichever is less. */}
           <div className="group relative mt-6">
             <div
               ref={stageRef}
-              inert
-              className="flex h-[clamp(320px,calc(100vh-260px),408px)] flex-col justify-center-safe overflow-clip"
+              onScroll={measure}
+              className="h-[clamp(320px,calc(100vh-260px),408px)] overflow-y-auto overscroll-contain"
             >
-              <div>
-                <div key={slide} className="oats-enter">
+              <div style={{ paddingTop: offset }}>
+                <div key={slide} ref={slideRef} className="oats-enter">
                   <View conversation={conversation} />
                 </div>
               </div>

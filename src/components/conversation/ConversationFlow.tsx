@@ -10,9 +10,8 @@ import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
 import { LANE_ROW_PX, topicLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
 import { flowCaption, flowViewOptions, stateLabel } from "./flowText";
-import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
-import { useSettingsStore, type ConversationFlowView } from "../../stores/settingsStore";
+import type { ConversationFlowView } from "../../stores/settingsStore";
 import type {
   ConversationSuggestion,
   ConversationTopicSnapshot,
@@ -35,6 +34,11 @@ import type {
 //
 // There is no animation loop. Positions are a function of the data and are
 // recomputed only when the data changes.
+//
+// It reads no store. The recording screen's card is `LiveConversationFlow.tsx`,
+// which gives it the recording's topics and the Lanes / Graph setting; the
+// demo pieces (`components/demo/`) give it the example conversation and keep
+// the choice of view to themselves, so nothing they do is saved.
 
 /**
  * The graph's dots (DESIGN.md §6): one size, in a ring of the card colour.
@@ -146,18 +150,28 @@ function firstActivity(snapshot: ConversationTopicSnapshot | null): number {
 }
 
 export default function ConversationFlow({
-  snapshot: snapshotProp,
-  segments: segmentsProp,
+  snapshot,
+  segments = NO_SEGMENTS,
   startedAt: startedAtProp,
-  suggestions: suggestionsProp,
+  suggestions = NO_SUGGESTIONS,
+  live = false,
+  view,
+  onViewChange,
   compact = false,
   className,
 }: {
-  /** A stored conversation's topics. Omitted, the live recording's. */
-  snapshot?: ConversationTopicSnapshot | null;
+  /** The topics: a stored conversation's, or the recording's. */
+  snapshot: ConversationTopicSnapshot | null;
   segments?: TranscriptSegment[];
+  /** Where the axis starts. Omitted, a stored snapshot's first topic. */
   startedAt?: number | null;
   suggestions?: ConversationSuggestion[];
+  /** A recording: the axis runs from the press to now and the line ends at
+   *  now, in honey. */
+  live?: boolean;
+  /** Lanes or Graph, and where a choice of it goes. */
+  view: ConversationFlowView;
+  onViewChange: (view: ConversationFlowView) => void;
   /** Beside the live dialogue (the Detailed composition): a shorter graph, so
    *  the words being said keep most of the column. */
   compact?: boolean;
@@ -166,19 +180,8 @@ export default function ConversationFlow({
   const { t } = useTranslation();
   const titleId = useId();
 
-  const storeSnapshot = useMeetingRecordingStore((s) => s.topicSnapshot);
-  const storeSegments = useMeetingRecordingStore((s) => s.segments);
-  const storeStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
-  const storeSuggestions = useMeetingRecordingStore((s) => s.suggestions);
-  const live = snapshotProp === undefined;
-  const snapshot = live ? storeSnapshot : snapshotProp;
-  const segments = segmentsProp ?? storeSegments ?? NO_SEGMENTS;
   const startedAt =
-    startedAtProp !== undefined ? startedAtProp : live ? storeStartedAt : firstActivity(snapshot);
-  const suggestions = suggestionsProp ?? storeSuggestions ?? NO_SUGGESTIONS;
-
-  const view = useSettingsStore((s) => s.conversationFlowView);
-  const setView = useSettingsStore((s) => s.setConversationFlowView);
+    startedAtProp !== undefined ? startedAtProp : live ? null : firstActivity(snapshot);
 
   // Recomputed when a topic or an utterance lands, never per frame. While
   // recording the axis runs from the press to now, so the line ends at now.
@@ -268,7 +271,7 @@ export default function ConversationFlow({
           className="h-8"
           aria-label={t("oats.flow.viewLabel")}
           value={view}
-          onValueChange={setView}
+          onValueChange={onViewChange}
           options={flowViewOptions(t)}
         />
       </CardHeader>

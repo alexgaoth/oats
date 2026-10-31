@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import type { QuestionOutcome } from "../../types/conversationEvents";
 import type { ContourData } from "./ConversationContour";
-import { StateMark } from "./ConversationSignalRail";
+import { StateMark } from "./StateMark";
 import { markKind, type MarkKind } from "./questionMarks";
 
 // The key to a contour. It lists only what this contour actually draws, the way

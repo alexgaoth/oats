@@ -165,11 +165,20 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   own components taken out of its page and given the example conversation:
   the flow card, the question cards, the contour, talk time, and what was left
   open (`helpers/oatsTour.mjs`). It shows and does not teach: a title and one
-  sentence, nothing to try. The components cannot act (they get props, never a
-  store, in an `inert` box). It moves only on Back, Next, a dot or an arrow
-  key, never by itself, and under reduced motion nothing in it moves. It opens
-  after setup is saved, so Skip, Start or a quit all land in the app, and it
-  never shows again.
+  sentence, and no "press here". The components can be used as in the app,
+  and nothing in the tour is saved or sent (2026-10-30): Lanes or Graph, a
+  topic's quote, a press on the contour (it shows the turn said then), a
+  voice's turns, the answers, a card dismissed and brought back. The slides
+  are the demo pieces (`components/demo/`). They read no store and never call
+  the main process, and an action that would leave the window (a web search,
+  opening a turn or a source, naming a voice) is not drawn there. A slide
+  arrives a little above the middle and grows downward, so nothing moves under
+  the pointer; past the stage's foot the stage scrolls. The arrow keys move the
+  tour only while the focus is on its own controls or on nothing; on a
+  slide's control they are that control's. It moves only on Back, Next, a dot
+  or an arrow key, never by itself, and under reduced motion nothing in it
+  moves. It opens after setup is saved, so Skip, Start or a quit all land in
+  the app, and it never shows again.
 - Radius: `rounded-md` (8px) for controls, `rounded-xl` (12px) for cards and
   panels. Focus: `ring-[3px] ring-ring/50` on every interactive element.
 

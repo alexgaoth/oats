@@ -15,18 +15,14 @@ import {
 import { cn } from "../lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { useSettingsStore } from "../../stores/settingsStore";
-import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { searchHostLabel } from "../../utils/searchHost";
-import type {
-  ContextCheck,
-  ContextSource,
-  ConversationCard,
-  QuestionOutcome,
-} from "../../types/conversationEvents";
+import type { ContextCheck, ContextSource, ConversationCard } from "../../types/conversationEvents";
 import { nextAnnouncement, nextCheckAnnouncement } from "../../helpers/questionAnnouncement.mjs";
 import { questionAge } from "../../helpers/questionAge.mjs";
-import { markFill, markTone, TONE_TOKEN, type MarkTone } from "./questionMarks";
+import { StateMark } from "./StateMark";
+
+// Kept here too, for the surfaces that import the mark with the rail.
+export { StateMark };
 
 /** What the live region is currently saying. See `questionAnnouncement.mjs`. */
 interface Announcement {
@@ -48,6 +44,9 @@ interface Announcement {
 // the product rather than as part of it. Living here, it shares the store the
 // cards are already in, so there is no wire, no sanitiser, no window to show at
 // the right moment, and no second copy of card state to disagree with the first.
+// The store is read by `LiveSignalRail.tsx`, which hands this rail the cards
+// and the actions that leave the window; this file reads no store, so the same
+// rail draws the example conversation in the tour and on the site.
 //
 // What that costs, and it was chosen deliberately: a conversation recorded with
 // the panel hidden — which the global shortcut makes the normal case — shows no
@@ -63,19 +62,6 @@ const VISIBLE_GROUPS = 4;
 // Each card enters on `base` with a 24ms stagger, so a burst of questions arrives
 // as a sequence rather than a slab (§9.2).
 const STAGGER_MS = 24;
-
-// The mark's shape and colour come from `questionMarks.ts`, the vocabulary the
-// contour canvas draws in too, so the rail, the transcript margin and the trace
-// above them cannot drift apart.
-const TONE_CLASS: Record<MarkTone, { fill: string; soft: string; ring: string }> = {
-  success: { fill: "bg-success", soft: "bg-success/35", ring: "border-success" },
-  warning: { fill: "bg-warning", soft: "bg-warning/35", ring: "border-warning" },
-  muted: {
-    fill: "bg-muted-foreground",
-    soft: "bg-muted-foreground/35",
-    ring: "border-muted-foreground",
-  },
-};
 
 // Searching is always offered by hand. Automatic search is restricted to a
 // confirmed negative, but *asking* to search is the user's call and gating that
@@ -106,54 +92,32 @@ function groupCards(cards: ConversationCard[]): CardGroup[] {
     .sort((a, b) => latest(a.cards) - latest(b.cards));
 }
 
-/**
- * A question's state mark, always a complete circle of one size: filled when
- * settled, a soft fill inside a ring when the answer was hedged, an empty ring
- * when nobody gave a verdict.
- *
- * Exported so the transcript's margin speaks the same vocabulary as the rail:
- * one mark component, so the surfaces cannot drift apart.
- */
-export function StateMark({
-  state,
-  className = "mt-[5px]",
-}: {
-  state: QuestionOutcome;
-  /** Placement only; the default aligns it with the rail's first line. */
-  className?: string;
-}) {
-  const fill = markFill(state);
-  const tone = TONE_CLASS[markTone(state)];
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "size-2 shrink-0 rounded-full",
-        fill === "solid" && tone.fill,
-        fill !== "solid" && cn("border-[1.5px]", tone.ring),
-        fill === "soft" && tone.soft,
-        className
-      )}
-    />
-  );
-}
-
 const VERDICT = {
   right: { badge: "success", icon: CircleCheck },
   wrong: { badge: "warning", icon: TriangleAlert },
   answer: { badge: "info", icon: BookOpen },
 } as const;
 
-/** Where a verdict came from, and the way to open it when there is one. */
-function CheckSource({ source, quote }: { source: ContextSource; quote: string }) {
+/**
+ * Where a verdict came from, and the way to open it when there is one: a file
+ * or a link, when the caller can open it (`onOpenSource`). Without one (the
+ * demo pieces), the source is named and not offered.
+ */
+function CheckSource({
+  source,
+  quote,
+  onOpenSource,
+}: {
+  source: ContextSource;
+  quote: string;
+  onOpenSource?: (source: ContextSource) => void;
+}) {
   const { t } = useTranslation();
   const Icon = source.kind === "file" ? FileText : source.kind === "link" ? Link2 : MessagesSquare;
   const open =
-    source.kind === "file"
-      ? () => void window.electronAPI?.openContextFile?.(source.path)
-      : source.kind === "link"
-        ? () => void window.electronAPI?.openExternal?.(source.url)
-        : null;
+    onOpenSource && (source.kind === "file" || source.kind === "link")
+      ? () => onOpenSource(source)
+      : null;
   // The exact words that settle it are the hover text, not a line of their
   // own: beside a live conversation the verdict, the answer and where it is
   // written are enough, and the words are one look away.
@@ -192,7 +156,13 @@ function CheckSource({ source, quote }: { source: ContextSource; quote: string }
  * then right, wrong, or the answer nobody had, and where it is written.
  * Spoken through the rail's live region, never from here.
  */
-function CheckLine({ check }: { check: ContextCheck }) {
+function CheckLine({
+  check,
+  onOpenSource,
+}: {
+  check: ContextCheck;
+  onOpenSource?: (source: ContextSource) => void;
+}) {
   const { t } = useTranslation();
   if (check.state === "checking") {
     // Its shape, under one status line, not a spinner (DESIGN.md §7).
@@ -223,7 +193,7 @@ function CheckLine({ check }: { check: ContextCheck }) {
         </Badge>
         <span className="min-w-0 text-[13px] font-medium text-foreground">{check.answer}</span>
       </div>
-      <CheckSource source={check.source} quote={check.quote} />
+      <CheckSource source={check.source} quote={check.quote} onOpenSource={onOpenSource} />
     </div>
   );
 }
@@ -240,12 +210,15 @@ function Asking({
   nested,
   searchHost,
   onSearch,
+  onOpenSource,
 }: {
   card: ConversationCard;
   now: number;
   nested: boolean;
   searchHost: string;
-  onSearch: (card: ConversationCard) => void;
+  /** Absent (the demo pieces), a card offers no search: nothing may leave. */
+  onSearch?: (card: ConversationCard) => void;
+  onOpenSource?: (source: ContextSource) => void;
 }) {
   const { t } = useTranslation();
 
@@ -285,7 +258,7 @@ function Asking({
                 return host ? t("questionCard.searchedHost", { host }) : t("questionCard.searched");
               })()}
             </span>
-          ) : (
+          ) : onSearch ? (
             // The card's one action, offered for every outcome that did not
             // auto-search, so "the search is one click away" is true rather than
             // aspirational. A ghost button: four questions in the rail must not
@@ -300,9 +273,9 @@ function Asking({
               <Search aria-hidden="true" />
               {t("topicGraph.search")}
             </Button>
-          )}
+          ) : null}
         </div>
-        {card.check && <CheckLine check={card.check} />}
+        {card.check && <CheckLine check={card.check} onOpenSource={onOpenSource} />}
       </div>
     </div>
   );
@@ -327,6 +300,7 @@ function QuestionGroup({
   searchHost,
   onDismiss,
   onSearch,
+  onOpenSource,
   onFocus,
 }: {
   group: CardGroup;
@@ -334,7 +308,8 @@ function QuestionGroup({
   index: number;
   searchHost: string;
   onDismiss: (cards: ConversationCard[]) => void;
-  onSearch: (card: ConversationCard) => void;
+  onSearch?: (card: ConversationCard) => void;
+  onOpenSource?: (source: ContextSource) => void;
   /** Tells the contour which mark this annotation belongs to. */
   onFocus: (groupKey: string | null) => void;
 }) {
@@ -354,7 +329,14 @@ function QuestionGroup({
       onBlur={() => onFocus(null)}
     >
       <div className="pr-8">
-        <Asking card={first} now={now} nested={false} searchHost={searchHost} onSearch={onSearch} />
+        <Asking
+          card={first}
+          now={now}
+          nested={false}
+          searchHost={searchHost}
+          onSearch={onSearch}
+          onOpenSource={onOpenSource}
+        />
       </div>
 
       {repeats.length > 0 && (
@@ -370,6 +352,7 @@ function QuestionGroup({
               nested
               searchHost={searchHost}
               onSearch={onSearch}
+              onOpenSource={onOpenSource}
             />
           ))}
         </div>
@@ -394,17 +377,24 @@ function QuestionGroup({
   );
 }
 
+/**
+ * The rail itself, with no store and no main process behind it: it draws the
+ * cards it is given and keeps its own dismissals. What reaches outside the
+ * window comes in as a prop: the recording's rail (`LiveSignalRail.tsx`) is
+ * given the web search, the dismissal's record and the opening of a source;
+ * the demo pieces (`components/demo/`) are given none, so a card there offers
+ * no Search and a dismissal stays on the screen it was made on.
+ */
 export default function ConversationSignalRail({
-  cards: givenCards,
+  cards,
   onFocus,
   announceOnly = false,
+  searchHost = "",
+  onSearch,
+  onDismiss,
+  onOpenSource,
 }: {
-  /**
-   * Cards to show instead of the recording's. The tour at the end of setup
-   * (`onboarding/OatsTour.tsx`) shows the example conversation's here, inside
-   * an inert box, so its Search and Dismiss can never be pressed.
-   */
-  cards?: ConversationCard[];
+  cards: ConversationCard[];
   /**
    * Mount the announcements without drawing the annotations.
    *
@@ -420,10 +410,16 @@ export default function ConversationSignalRail({
   /** Reports which question group the pointer or keyboard is on, so the
    *  contour can raise the matching mark. Null when nothing is focused. */
   onFocus: (groupKey: string | null) => void;
+  /** The search host to name on a searched card when the card names none. */
+  searchHost?: string;
+  /** The card's one action. Absent, a card offers no search. */
+  onSearch?: (card: ConversationCard) => void;
+  /** Told of a dismissal, after the rail has taken the cards away. */
+  onDismiss?: (cards: ConversationCard[]) => void;
+  /** Opens a verdict's file or link. Absent, the source is only named. */
+  onOpenSource?: (source: ContextSource) => void;
 }) {
   const { t } = useTranslation();
-  const recordingCards = useMeetingRecordingStore((state) => state.questionCards);
-  const cards = givenCards ?? recordingCards;
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // Dismiss is the only destructive action in the rail and it is one small button
   // beside a moving list. A short undo window costs nothing and removes the whole
@@ -431,8 +427,6 @@ export default function ConversationSignalRail({
   const [undoable, setUndoable] = useState<ConversationCard[] | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const searchBaseUrl = useSettingsStore((state) => state.conversationAideSearchBaseUrl);
-  const searchHost = useMemo(() => searchHostLabel(searchBaseUrl), [searchBaseUrl]);
 
   // Ages tick once every 15s, not every second: this sits beside a live
   // conversation and must not be the thing moving in the corner of an eye.
@@ -446,17 +440,18 @@ export default function ConversationSignalRail({
     [cards, dismissed]
   );
 
-  const onDismiss = useCallback((groupCards: ConversationCard[]) => {
-    setDismissed((current) => {
-      const next = new Set(current);
-      for (const card of groupCards) next.add(card.id);
-      return next;
-    });
-    setUndoable(groupCards);
-    for (const card of groupCards) {
-      void window.electronAPI?.dismissConversationCard?.(card.suggestionId);
-    }
-  }, []);
+  const dismiss = useCallback(
+    (groupCards: ConversationCard[]) => {
+      setDismissed((current) => {
+        const next = new Set(current);
+        for (const card of groupCards) next.add(card.id);
+        return next;
+      });
+      setUndoable(groupCards);
+      onDismiss?.(groupCards);
+    },
+    [onDismiss]
+  );
 
   const undoDismiss = useCallback(() => {
     const cards = undoable;
@@ -474,28 +469,6 @@ export default function ConversationSignalRail({
     const timer = window.setTimeout(() => setUndoable(null), 6000);
     return () => window.clearTimeout(timer);
   }, [undoable]);
-
-  // The one audited outbound path (`docs/network-allowlist.md`), the same one
-  // the automatic search and the topic graph's re-search already use.
-  //
-  // The old `conversation-card-search` channel existed because the rail was the
-  // least trustworthy window in the app and was allowed to name a card and
-  // nothing else. The rail is the control panel's own renderer now — the one
-  // that already calls this directly — so that indirection bought nothing and
-  // was removed with the window it protected against.
-  //
-  // A card with no verdict yet has no derived query, but asking to search it is
-  // reason enough: the question itself is the query.
-  const onSearch = useCallback(
-    (card: ConversationCard) => {
-      void window.electronAPI?.openConversationSearch?.({
-        eventId: card.suggestionId,
-        query: card.query || card.question,
-        searchBaseUrl: card.searchBaseUrl || searchBaseUrl,
-      });
-    },
-    [searchBaseUrl]
-  );
 
   // What has already been announced, so the live region can only ever move
   // forwards. The selection is `helpers/questionAnnouncement.mjs` — pure, and
@@ -632,8 +605,9 @@ export default function ConversationSignalRail({
                 now={now}
                 index={index}
                 searchHost={searchHost}
-                onDismiss={onDismiss}
+                onDismiss={dismiss}
                 onSearch={onSearch}
+                onOpenSource={onOpenSource}
                 onFocus={onFocus}
               />
             ))}
