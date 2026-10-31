@@ -35,7 +35,7 @@ const REVIEW = read("src/components/conversation/ConversationReview.tsx");
 const TRANSCRIPT = read("src/components/conversation/Transcript.tsx");
 const WORKSPACE = read("src/components/OatsWorkspace.tsx");
 const DEMO = Object.fromEntries(
-  ["DemoFlow", "DemoQuestions", "DemoShape", "DemoVoices", "DemoOpen"].map((name) => [
+  ["DemoFlow", "DemoQuestions", "DemoShape", "DemoVoices", "DemoOpen", "DemoReplay"].map((name) => [
     name,
     read(`src/components/demo/${name}.tsx`),
   ])
@@ -224,7 +224,7 @@ test("the slides can be used: the stage takes input, and each is the app's own c
   assert.match(DEMO.DemoFlow, /<ConversationFlow\s+snapshot=\{conversation\.snapshot\}/);
   assert.match(
     DEMO.DemoQuestions,
-    /<ConversationSignalRail cards=\{cards\} onFocus=\{ignore\} \/>/
+    /<ConversationSignalRail key=\{run\} cards=\{cards\} onFocus=\{ignore\} className="mt-0" \/>/
   );
   assert.match(DEMO.DemoShape, /<ConversationContour\s/);
   assert.match(DEMO.DemoShape, /<ContourLegend contour=\{contour\}/);
@@ -388,7 +388,11 @@ test("the tour moves only when asked, and holds still under reduced motion", () 
   // The only timers are the questions piece's cards, and not under reduced motion.
   const questions = between(DEMO.DemoQuestions, "export default function DemoQuestions(", "\n}\n");
   assert.match(questions, /useState\(\(\) => \(reduced \? LAST_CARD_STEP : 0\)\)/);
-  assert.match(questions, /if \(reduced\) return undefined;/);
+  assert.match(questions, /if \(reduced \|\| !started\) return undefined;/);
+  // In the tour the cards run as the slide appears; on a page they wait until
+  // seen, and only there is there a Replay, never under reduced motion.
+  assert.match(questions, /const \[started, setStarted\] = useState\(!replay\);/);
+  assert.match(questions, /\{replay && !reduced && \(/);
   assert.equal((DEMO.DemoQuestions.match(/setTimeout\(/g) ?? []).length, 1);
   assert.match(read("src/components/demo/demoMotion.ts"), /prefers-reduced-motion: reduce/);
   // Slides arrive with the app's own entrance, which reduced motion turns off.

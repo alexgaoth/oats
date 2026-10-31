@@ -2568,5 +2568,16 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜尋",
     "noQuestions": "這條脈絡中沒有問題。"
+  },
+  "demo": {
+    "replay": {
+      "play": "播放",
+      "pause": "暫停",
+      "position": "對話中的時間點",
+      "at": "{{at}} / {{length}}"
+    },
+    "questions": {
+      "replay": "重播"
+    }
   }
 }

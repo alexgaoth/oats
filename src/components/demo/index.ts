@@ -1,6 +1,8 @@
 // The demo pieces: the app's own components, given the example conversation
 // (`helpers/oatsTour.mjs`, `tourConversation`), and usable. The tour at the end
-// of setup (`onboarding/OatsTour.tsx`) shows them one at a time.
+// of setup (`onboarding/OatsTour.tsx`) shows them one at a time, and the site
+// draws them in its figures (`site/src/live/`), the replay of the live view
+// (`DemoReplay`) first.
 //
 // What may happen here: anything that only changes what is shown (Lanes or
 // Graph, a topic's quote, a voice's turns, the answers, a card dismissed and
@@ -18,3 +20,4 @@ export { default as DemoQuestions } from "./DemoQuestions";
 export { default as DemoShape } from "./DemoShape";
 export { default as DemoVoices } from "./DemoVoices";
 export { default as DemoOpen } from "./DemoOpen";
+export { default as DemoReplay } from "./DemoReplay";

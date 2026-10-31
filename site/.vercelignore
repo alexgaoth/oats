@@ -4,3 +4,6 @@ sources.mjs
 render-images.cjs
 README.md
 assets/site.js.sources
+live-strings.mjs
+measure-live.mjs
+assets/live.js.sources

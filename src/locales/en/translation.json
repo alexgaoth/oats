@@ -2573,5 +2573,16 @@
     "returned_other": "returned {{count}}×",
     "search": "Search",
     "noQuestions": "No questions in this thread."
+  },
+  "demo": {
+    "replay": {
+      "play": "Play",
+      "pause": "Pause",
+      "position": "Time in the conversation",
+      "at": "{{at}} of {{length}}"
+    },
+    "questions": {
+      "replay": "Replay"
+    }
   }
 }

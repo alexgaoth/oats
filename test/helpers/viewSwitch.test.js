@@ -13,7 +13,11 @@ const SWITCH = read("src/components/ui/view-switch.tsx");
 const FLOW = read("src/components/conversation/ConversationFlow.tsx");
 const FLOW_TEXT = read("src/components/conversation/flowText.ts");
 const WORKSPACE = read("src/components/OatsWorkspace.tsx");
-const CSS = read("src/index.css");
+// The app's styles: index.css and the files it imports (src/styles/), where the
+// tokens and the shared motion live since the site's live figures use them too.
+const CSS = ["src/index.css", "src/styles/oats-tokens.css", "src/styles/oats-motion.css"]
+  .map((file) => read(file))
+  .join("\n");
 
 test("it is a radio group with one tab stop and the arrow keys, like SegmentedControl", () => {
   assert.match(SWITCH, /role="radiogroup"/);
