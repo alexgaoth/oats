@@ -36,7 +36,7 @@ The conversations that matter happen around a table. Taking notes pulls you out 
 
 ### Watch the conversation take shape
 
-Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> and talk. One line draws the conversation live: a notch where the subject turns, a mark where someone asks. Its height is how loud the room is. The sidebar steps aside while you record, and under the clock two quiet counters keep the words and the questions so far. Speech is transcribed on your Mac with whisper.cpp, on the GPU, and <kbd>M</kbd> marks a moment.
+Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> and talk. One line draws the conversation live: a notch where the topic changes, a mark where someone asks. Its height is how loud the room is. The sidebar steps aside while you record, and under the clock two quiet counters keep the words and the questions so far. Speech is transcribed on your Mac with whisper.cpp, on the GPU, and <kbd>M</kbd> marks a moment.
 
 <p align="center">
   <img src="docs/media/loop-record.webp" width="840" alt="Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes">
@@ -46,7 +46,7 @@ Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> and talk. One line draws the conv
 
 Each topic gets its name from what was said. When the room comes back to one, the line goes back too.
 
-The conversation flow under the line keeps one lane per topic, in the order raised, with the minutes spent on each. **Graph** shows the same topics by when each was raised and how unsettled it still is. Oats finds the topics on your Mac and names each with a phrase said in it, and the writing model names it more exactly as it grows. Under the lanes are subjects that came up with these in earlier conversations and have not come up yet.
+The conversation flow under the line keeps one lane per topic, in the order raised, with the minutes spent on each. **Graph** shows the same topics by when each was raised and how unsettled it still is. Oats finds the topics on your Mac and names each with a phrase said in it, and the writing model names it more exactly as it grows. Under the lanes are topics that came up with these in earlier conversations and have not come up yet.
 
 <p align="center">
   <img src="site/media/topic-lanes.webp" width="840" alt="Conversation flow at 12:33, three topics and one return to an earlier topic. The line steps down from Pellwood launch date decision to SAML clock skew fix and SOC 2 audit timeline, then goes back up to Pellwood launch date decision, where the room is now.">
@@ -101,12 +101,12 @@ Search reads every transcript on your Mac, including the oldest. It finds a word
 
 ### See what keeps coming back
 
-Conversations on the same subject link up, so you see it come back across weeks.
+Conversations on the same topic link up, so you see it come back across weeks.
 
-The board lays out every conversation as a graph and as a timeline, so a subject that keeps coming back shows as the arcs between the days it came up. Each conversation is sorted into Work, Personal or a group you make by the model that writes your summaries, from its title, its topics and the start of its summary, never from the transcript.
+The board lays out every conversation as a graph and as a timeline, so a topic that keeps coming back shows as the arcs between the days it came up. Each conversation is sorted into Work, Personal or a group you make by the model that writes your summaries, from its title, its topics and the start of its summary, never from the transcript.
 
 <p align="center">
-  <img src="docs/media/loop-global.webp" width="840" alt="The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back">
+  <img src="docs/media/loop-global.webp" width="840" alt="The board of all conversations: a force graph of how they connect, and an arc timeline of the topics that came back">
 </p>
 
 ## Privacy you can check

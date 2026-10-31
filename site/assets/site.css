@@ -29,6 +29,7 @@
   --ink-soft: #3f3f46;
   --muted: #71717a;
   --line: #e4e4e7;
+  --bullet: #a1a1aa;
   --honey: #f5a30f;
   --honey-top: #f8b52e;
   --honey-label: #1a1306;
@@ -143,7 +144,7 @@ p {
 
 kbd {
   font-family: var(--mono);
-  font-size: 0.82em;
+  font-size: 14px;
   padding: 1px 6px 2px;
   border-radius: 6px;
   background: #f4f4f5;
@@ -629,7 +630,7 @@ q {
   width: 6px;
   height: 6px;
   border-radius: 1px;
-  background: var(--honey);
+  background: var(--bullet);
   transform: translateY(-2px);
 }
 
@@ -984,6 +985,26 @@ q {
   .mark-hero {
     width: 96px;
     height: 96px;
+  }
+
+  /* On a phone the lead runs to four lines: the hero reads from the left. */
+  .hero-copy {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .hero .lead,
+  .hero .why {
+    margin-inline: 0;
+  }
+
+  .hero .facts {
+    justify-content: flex-start;
+  }
+
+  /* The grain sits inside its square: pulled left so it lines up with the words. */
+  .hero .mark-button {
+    margin-left: -20px;
   }
 
   .cta-row .button {

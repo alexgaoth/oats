@@ -125,7 +125,7 @@
       "height": 1050,
       "bytes": 441313,
       "shows": "The board: the force graph, the arc timeline, a conversation pointed at, and the Work tab. From scene h-global, 3 to 17 s.",
-      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back"
+      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the topics that came back"
     },
     {
       "name": "loop-global.webp",
@@ -133,7 +133,7 @@
       "height": 1050,
       "bytes": 76614,
       "shows": "Poster for loop-global: what reduced motion shows. The board: the force graph, the arc timeline, a conversation pointed at, and the Work tab. From scene h-global, 3 to 17 s.",
-      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back"
+      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the topics that came back"
     }
   ]
 }
