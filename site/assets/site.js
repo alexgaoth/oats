@@ -194,13 +194,13 @@ var P = [
 		206,
 		104
 	]
-], F = new Map(s.map((e, t) => [e.join(","), P[t]])), I = 110, L = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-function R(e, { shadow: t = !1, toss: n = "none", interactive: i = !1 } = {}) {
+], F = new Map(s.map((e, t) => [e.join(","), P[t]])), ee = 110, te = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+function ne(e, { shadow: t = !1, toss: n = "none", interactive: i = !1 } = {}) {
 	let a = document.createElement("canvas"), o = a.getContext("2d", { willReadFrequently: !0 }), s = p, c = 0;
 	function l() {
 		let n = e.width;
 		if (!n || !o) return;
-		let r = Math.max(1, Math.round(n / I)), i = Math.max(8, Math.floor(n / r));
+		let r = Math.max(1, Math.round(n / ee)), i = Math.max(8, Math.floor(n / r));
 		a.width = i, a.height = i, N(o, i, i, s, t);
 		let c = o.getImageData(0, 0, i, i), l = c.data;
 		for (let e = 0; e < l.length; e += 4) {
@@ -217,7 +217,7 @@ function R(e, { shadow: t = !1, toss: n = "none", interactive: i = !1 } = {}) {
 		n && (e.width !== n || e.height !== n) && (e.width = n, e.height = n, l());
 	}
 	function d() {
-		if (L()) return;
+		if (te()) return;
 		cancelAnimationFrame(c);
 		let e = performance.now(), t = (n) => {
 			let i = Math.min(1, (n - e) / 1150);
@@ -235,13 +235,13 @@ function R(e, { shadow: t = !1, toss: n = "none", interactive: i = !1 } = {}) {
 }
 //#endregion
 //#region site/src/field.js
-var z = "\nattribute vec2 position;\nvoid main() { gl_Position = vec4(position, 0.0, 1.0); }\n", B = "\nprecision highp float;\nuniform vec2 size;\nuniform float time;\nuniform float scale;\n\nfloat hash(vec2 p) {\n  p = fract(p * vec2(0.1031, 0.1030));\n  p += dot(p, p.yx + 33.33);\n  return fract((p.x + p.y) * p.x);\n}\n\nfloat noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  float a = hash(i);\n  float b = hash(i + vec2(1.0, 0.0));\n  float c = hash(i + vec2(0.0, 1.0));\n  float d = hash(i + vec2(1.0, 1.0));\n  return a + (b - a) * u.x + (c - a) * u.y + (a - b - c + d) * u.x * u.y;\n}\n\nfloat fbm(vec2 p) {\n  float value = 0.0;\n  float amplitude = 0.5;\n  for (int octave = 0; octave < 4; octave++) {\n    value += amplitude * noise(p);\n    p *= 2.03;\n    amplitude *= 0.5;\n  }\n  return value / 0.9375;\n}\n\nfloat bayer(vec2 pixel) {\n  vec2 q = mod(floor(pixel), 4.0);\n  float i = q.y * 4.0 + q.x;\n  float m[16];\n  m[0] = 0.0; m[1] = 8.0; m[2] = 2.0; m[3] = 10.0;\n  m[4] = 12.0; m[5] = 4.0; m[6] = 14.0; m[7] = 6.0;\n  m[8] = 3.0; m[9] = 11.0; m[10] = 1.0; m[11] = 9.0;\n  m[12] = 15.0; m[13] = 7.0; m[14] = 13.0; m[15] = 5.0;\n  float v = 0.0;\n  for (int k = 0; k < 16; k++) { if (float(k) == i) v = m[k]; }\n  return (v + 0.5) / 16.0 - 0.5;\n}\n\nvoid main() {\n  vec2 pixel = vec2(gl_FragCoord.x, size.y - gl_FragCoord.y);\n  vec2 p = pixel / scale;\n  float t = time;\n  float qx = fbm(p + vec2(0.07 * t, -0.05 * t));\n  float qy = fbm(p + vec2(5.2 - 0.04 * t, 1.3 + 0.06 * t));\n  float value = fbm(p + 1.8 * vec2(qx, qy) + vec2(0.03 * t, -0.02 * t));\n  float grey = 243.0 + 7.0 * (value * 2.0 - 1.0) + bayer(gl_FragCoord.xy);\n  float level = clamp(floor(grey + 0.5), 0.0, 255.0) / 255.0;\n  gl_FragColor = vec4(vec3(level), 1.0);\n}\n", V = 640, H = 1e3 / 30;
-function U(e, t, n) {
+var re = "\nattribute vec2 position;\nvoid main() { gl_Position = vec4(position, 0.0, 1.0); }\n", I = "\nprecision highp float;\nuniform vec2 size;\nuniform float time;\nuniform float scale;\n\nfloat hash(vec2 p) {\n  p = fract(p * vec2(0.1031, 0.1030));\n  p += dot(p, p.yx + 33.33);\n  return fract((p.x + p.y) * p.x);\n}\n\nfloat noise(vec2 p) {\n  vec2 i = floor(p);\n  vec2 f = fract(p);\n  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n  float a = hash(i);\n  float b = hash(i + vec2(1.0, 0.0));\n  float c = hash(i + vec2(0.0, 1.0));\n  float d = hash(i + vec2(1.0, 1.0));\n  return a + (b - a) * u.x + (c - a) * u.y + (a - b - c + d) * u.x * u.y;\n}\n\nfloat fbm(vec2 p) {\n  float value = 0.0;\n  float amplitude = 0.5;\n  for (int octave = 0; octave < 4; octave++) {\n    value += amplitude * noise(p);\n    p *= 2.03;\n    amplitude *= 0.5;\n  }\n  return value / 0.9375;\n}\n\nfloat bayer(vec2 pixel) {\n  vec2 q = mod(floor(pixel), 4.0);\n  float i = q.y * 4.0 + q.x;\n  float m[16];\n  m[0] = 0.0; m[1] = 8.0; m[2] = 2.0; m[3] = 10.0;\n  m[4] = 12.0; m[5] = 4.0; m[6] = 14.0; m[7] = 6.0;\n  m[8] = 3.0; m[9] = 11.0; m[10] = 1.0; m[11] = 9.0;\n  m[12] = 15.0; m[13] = 7.0; m[14] = 13.0; m[15] = 5.0;\n  float v = 0.0;\n  for (int k = 0; k < 16; k++) { if (float(k) == i) v = m[k]; }\n  return (v + 0.5) / 16.0 - 0.5;\n}\n\nvoid main() {\n  vec2 pixel = vec2(gl_FragCoord.x, size.y - gl_FragCoord.y);\n  vec2 p = pixel / scale;\n  float t = time;\n  float qx = fbm(p + vec2(0.07 * t, -0.05 * t));\n  float qy = fbm(p + vec2(5.2 - 0.04 * t, 1.3 + 0.06 * t));\n  float value = fbm(p + 1.8 * vec2(qx, qy) + vec2(0.03 * t, -0.02 * t));\n  float grey = 243.0 + 7.0 * (value * 2.0 - 1.0) + bayer(gl_FragCoord.xy);\n  float level = clamp(floor(grey + 0.5), 0.0, 255.0) / 255.0;\n  gl_FragColor = vec4(vec3(level), 1.0);\n}\n", L = 640, R = 40;
+function z(e, t, n) {
 	let r = e.createShader(t);
 	if (e.shaderSource(r, n), e.compileShader(r), !e.getShaderParameter(r, e.COMPILE_STATUS)) throw Error(e.getShaderInfoLog(r));
 	return r;
 }
-function W(e) {
+function B(e) {
 	let t = e.getContext("webgl", {
 		antialias: !1,
 		alpha: !1,
@@ -250,7 +250,7 @@ function W(e) {
 	if (!t) return !1;
 	let n;
 	try {
-		if (n = t.createProgram(), t.attachShader(n, U(t, t.VERTEX_SHADER, z)), t.attachShader(n, U(t, t.FRAGMENT_SHADER, B)), t.linkProgram(n), !t.getProgramParameter(n, t.LINK_STATUS)) throw Error(t.getProgramInfoLog(n));
+		if (n = t.createProgram(), t.attachShader(n, z(t, t.VERTEX_SHADER, re)), t.attachShader(n, z(t, t.FRAGMENT_SHADER, I)), t.linkProgram(n), !t.getProgramParameter(n, t.LINK_STATUS)) throw Error(t.getProgramInfoLog(n));
 	} catch (e) {
 		return console.warn("field:", e), !1;
 	}
@@ -272,36 +272,24 @@ function W(e) {
 	function l() {
 		c = Math.min(window.devicePixelRatio || 1, 1.5);
 		let n = Math.max(1, Math.round(e.clientWidth * c)), r = Math.max(1, Math.round(e.clientHeight * c));
-		(e.width !== n || e.height !== r) && (e.width = n, e.height = r, t.viewport(0, 0, n, r), f(d()));
+		(e.width !== n || e.height !== r) && (e.width = n, e.height = r, t.viewport(0, 0, n, r), u());
 	}
-	let u = performance.now(), d = () => (performance.now() - u) / 1e3 + 40;
-	function f(n) {
-		t.uniform2f(a, e.width, e.height), t.uniform1f(o, n), t.uniform1f(s, V * c), t.drawArrays(t.TRIANGLE_STRIP, 0, 4);
+	function u() {
+		t.uniform2f(a, e.width, e.height), t.uniform1f(o, R), t.uniform1f(s, L * c), t.drawArrays(t.TRIANGLE_STRIP, 0, 4);
 	}
-	let p = window.matchMedia?.("(prefers-reduced-motion: reduce)"), m = !1, h = 0, g = 0;
-	function _(e) {
-		h = 0, !(!m || document.hidden || p?.matches) && (e - g >= H && (g = e, f(d())), h = requestAnimationFrame(_));
-	}
-	function v() {
-		!h && m && !document.hidden && !p?.matches && (h = requestAnimationFrame(_));
-	}
-	return l(), new ResizeObserver(l).observe(e), new IntersectionObserver((e) => {
-		m = e.some((e) => e.isIntersecting), v();
-	}).observe(e), document.addEventListener("visibilitychange", v), p?.addEventListener?.("change", () => {
-		f(d()), v();
-	}), e.classList.add("is-live"), !0;
+	return l(), new ResizeObserver(l).observe(e), e.classList.add("is-live"), !0;
 }
 //#endregion
 //#region site/src/download.js
-var G = "https://github.com/alexgaoth/oats/releases", K = {
-	arm64: `${G}/latest/download/Oats-arm64.dmg`,
-	x64: `${G}/latest/download/Oats-x64.dmg`
+var V = "https://github.com/alexgaoth/oats/releases", H = {
+	arm64: `${V}/latest/download/Oats-arm64.dmg`,
+	x64: `${V}/latest/download/Oats-x64.dmg`
 };
-function q() {
+function U() {
 	let e = navigator.userAgentData?.platform || navigator.platform || "";
 	return /mac/i.test(e) && !(navigator.maxTouchPoints > 1);
 }
-async function J() {
+async function W() {
 	try {
 		let e = await navigator.userAgentData?.getHighEntropyValues?.(["architecture"]);
 		if (e?.architecture === "arm") return "arm64";
@@ -314,46 +302,56 @@ async function J() {
 	} catch {}
 	return null;
 }
-async function Y() {
-	let e = q();
+async function G() {
+	let e = U();
 	document.documentElement.dataset.platform = e ? "mac" : "other";
-	let t = (e ? await J() : null) === "x64" ? "x64" : "arm64";
+	let t = (e ? await W() : null) === "x64" ? "x64" : "arm64";
 	for (let e of document.querySelectorAll("[data-download]")) {
 		let n = e.dataset.download === "primary" ? t : e.dataset.download;
-		e.href = K[n], e.dataset.download === "primary" && (e.dataset.arch = n);
+		e.href = H[n], e.dataset.download === "primary" && (e.dataset.arch = n);
 	}
 	for (let e of document.querySelectorAll("[data-arch-label]")) e.textContent = t === "x64" ? "Intel" : "Apple Silicon";
 	for (let e of document.querySelectorAll("[data-arch-size]")) e.textContent = t === "x64" ? e.dataset.x64 : e.dataset.arm64;
 	for (let e of document.querySelectorAll("[data-other-arch]")) {
 		let n = t === "x64" ? "arm64" : "x64";
-		e.href = K[n], e.textContent = n === "x64" ? "Intel Mac? Get the Intel build" : "On Apple Silicon? Get that build";
+		e.href = H[n], e.textContent = n === "x64" ? "Intel Mac? Get the Intel build" : "On Apple Silicon? Get that build";
 	}
 }
 //#endregion
 //#region site/src/site.js
-for (let e of document.querySelectorAll("canvas[data-mark]")) R(e, {
+for (let e of document.querySelectorAll("canvas[data-mark]")) ne(e, {
 	shadow: e.dataset.mark === "large",
 	toss: e.dataset.toss || "none",
 	interactive: e.hasAttribute("data-interactive")
 });
-for (let e of document.querySelectorAll("canvas[data-field]")) W(e);
-Y();
-var X = document.querySelector("#film video");
-function Z() {
-	X && (X.closest("section")?.scrollIntoView({
-		behavior: "smooth",
+for (let e of document.querySelectorAll("canvas[data-field]")) B(e);
+G();
+var K = window.matchMedia?.("(prefers-reduced-motion: reduce)"), q = document.querySelector("#film video");
+function J() {
+	q && (q.closest("section")?.scrollIntoView({
+		behavior: K?.matches ? "auto" : "smooth",
 		block: "center"
-	}), X.play().catch(() => {}));
+	}), q.play().catch(() => {}));
 }
 for (let e of document.querySelectorAll("[data-play-film]")) e.addEventListener("click", (e) => {
-	e.preventDefault(), Z();
+	e.preventDefault(), J();
 });
-X?.addEventListener("play", () => X.closest(".film")?.classList.add("is-playing"));
-var Q = window.matchMedia?.("(prefers-reduced-motion: reduce)"), $ = document.querySelectorAll("video[data-loop]"), ee = new IntersectionObserver((e) => {
-	for (let { target: t, isIntersecting: n } of e) n && !Q?.matches ? t.play().catch(() => {}) : t.pause();
+q?.addEventListener("play", () => q.closest(".film")?.classList.add("is-playing"));
+var Y = /* @__PURE__ */ new Map(), X = /* @__PURE__ */ new Set(), Z = /* @__PURE__ */ new Map(), Q = (e) => Y.get(e) ?? !K?.matches;
+function $(e) {
+	let t = Q(e), n = Z.get(e);
+	n?.toggleAttribute("data-paused", !t), n?.setAttribute("aria-label", t ? "Pause this loop" : "Play this loop"), X.has(e) && t ? e.play().catch(() => {}) : e.pause();
+}
+var ie = new IntersectionObserver((e) => {
+	for (let { target: t, isIntersecting: n } of e) n ? X.add(t) : X.delete(t), $(t);
 }, { threshold: .35 });
-for (let e of $) ee.observe(e);
-Q?.addEventListener?.("change", () => {
-	if (Q.matches) for (let e of $) e.pause();
+for (let e of document.querySelectorAll("video[data-loop]")) {
+	let t = document.createElement("button");
+	t.type = "button", t.className = "loop-toggle", t.innerHTML = "<svg class=\"icon-pause\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M7 5h3v14H7zM14 5h3v14h-3z\" /></svg><svg class=\"icon-play\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z\" /></svg>", t.addEventListener("click", () => {
+		Y.set(e, !Q(e)), $(e);
+	}), Z.set(e, t), e.closest("figure")?.append(t), $(e), ie.observe(e);
+}
+K?.addEventListener?.("change", () => {
+	for (let e of Z.keys()) $(e);
 });
 //#endregion

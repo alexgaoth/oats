@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Oats · High-signal tool for high-signal conversations</title>
+    <title>Oats · A live map of the conversation in the room</title>
     <meta
       name="description"
-      content="Oats records the conversation in the room and transcribes it on your Mac. It tracks the questions people ask and whether the room answered them. Free and open source."
+      content="Oats maps the conversation in the room as it happens: topics as they turn, questions as they're asked, and whether anyone answered. Free and open source."
     />
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#f3f3f3" />
@@ -16,15 +16,20 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://oats.alexgaoth.com/" />
-    <meta property="og:title" content="Oats · High-signal tool for high-signal conversations" />
+    <meta property="og:title" content="Oats · A live map of the conversation in the room" />
     <meta
       property="og:description"
-      content="Records the conversation in the room, transcribes it on your Mac, and tracks the questions people ask and whether the room answered them."
+      content="Oats maps the conversation in the room as it happens: topics as they turn, questions as they're asked, and whether anyone answered. Free and open source."
     />
     <meta property="og:image" content="https://oats.alexgaoth.com/assets/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Oats · A live map of the conversation in the room" />
+    <meta
+      name="twitter:description"
+      content="Oats maps the conversation in the room as it happens: topics as they turn, questions as they're asked, and whether anyone answered. Free and open source."
+    />
     <link rel="preload" href="assets/fonts/eb-garamond-latin-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="assets/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="assets/site.css" />
@@ -40,10 +45,10 @@
           <span class="wordmark">Oats</span>
         </a>
         <nav class="nav-links" aria-label="Sections">
-          <a href="#room">How it works</a>
+          <a href="#map">How it works</a>
           <a href="#privacy">Privacy</a>
           <a href="https://github.com/alexgaoth/oats">GitHub</a>
-          <a class="button button-small button-honey" data-download="primary" href="https://github.com/alexgaoth/oats/releases/latest">
+          <a class="button button-small button-quiet" data-download="primary" href="https://github.com/alexgaoth/oats/releases/latest">
             Download
           </a>
         </nav>
@@ -57,12 +62,12 @@
           <button class="mark-button" type="button" aria-label="Toss the oat">
             <canvas class="mark mark-hero" data-mark="large" data-toss="load" data-interactive aria-hidden="true"></canvas>
           </button>
-          <h1>High-signal tool for high-signal conversations</h1>
+          <h1>The conversation, mapped as it happens</h1>
           <p class="lead">
-            Oats records the conversation in the room and transcribes it on your Mac. It tracks the questions people
-            ask and whether the room answered them, checks an unsure answer against your team's notes, and hands you
-            the summary when you stop.
+            Oats maps the conversation in the room as it happens: topics as they turn, questions as they're asked, and
+            whether anyone answered.
           </p>
+          <p class="why"><span>Notes after the meeting come too late.</span> <span>Oats shows you the conversation while you can still steer it.</span></p>
           <div class="cta-row">
             <a class="button button-honey button-large" data-download="primary" href="https://github.com/alexgaoth/oats/releases/latest">
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg>
@@ -77,41 +82,40 @@
             <li>Version 0.2.0 for <span data-arch-label>Apple Silicon</span></li>
             <li>macOS 12 or later</li>
             <li>Free and open source</li>
+            <li>One microphone on the table</li>
           </ul>
           <p class="other-arch"><a data-other-arch href="https://github.com/alexgaoth/oats/releases/latest">Intel Mac? Get the Intel build</a></p>
           <p class="not-mac">Oats is a Mac app. Open this page on a Mac to download it.</p>
         </div>
-        <figure class="window hero-window">
+        <figure class="window hero-window" data-live-slot="hero">
           <img
-            src="media/summary-window-1120.webp"
-            srcset="media/summary-window-1120.webp 1120w, media/summary-window-2240.webp 2240w"
+            src="media/live-window-1120.webp"
+            srcset="media/live-window-1120.webp 1120w, media/live-window-2240.webp 2240w"
             sizes="(min-width: 1180px) 1120px, calc(100vw - 32px)"
             width="1120"
-            height="700"
-            alt="Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person."
+            height="616"
+            alt="Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on."
             fetchpriority="high"
           />
         </figure>
       </section>
 
-      <section class="feature feature-stack" id="room">
+      <section class="feature feature-stack" id="map">
         <div class="wrap">
           <div class="feature-head">
-            <h2>Make room for the conversation</h2>
+            <h2>Watch the conversation take shape</h2>
             <div class="feature-copy">
               <p>
-                Press <kbd>⇧⌘O</kbd> in any app and talk. Oats listens through one microphone and steps aside while people
-                speak. One line draws the conversation as it happens: its height is how loud the room is, a notch marks
-                where the subject turned, and a mark shows where someone asked a question.
+                Press <kbd>⇧⌘O</kbd> and talk. One line draws the conversation live: a notch where the topic changes, a
+                mark where someone asks.
               </p>
               <ul class="points">
                 <li>Transcribed on your Mac with whisper.cpp, on the GPU</li>
                 <li>Press <kbd>M</kbd> to mark a moment</li>
-                <li>Calm shows the line only. Words adds the live transcript</li>
               </ul>
             </div>
           </div>
-          <figure class="window feature-wide">
+          <figure class="window feature-wide" data-live-slot="map">
             <video data-loop muted loop playsinline preload="none" poster="media/loop-record.webp" width="1680" height="1050" aria-label="Recording starts: the sidebar steps aside, and over a few minutes the line grows and the topics fill their lanes">
               <source src="media/loop-record.mp4" type="video/mp4" />
             </video>
@@ -119,13 +123,27 @@
         </div>
       </section>
 
+      <section class="feature feature-stack" id="topics">
+        <div class="wrap">
+          <div class="feature-head">
+            <h2>Topics name themselves</h2>
+            <div class="feature-copy">
+              <p>Each topic gets its name from what was said. When the room comes back to one, the line goes back too.</p>
+            </div>
+          </div>
+          <figure class="window feature-wide feature-card" data-live-slot="topics">
+            <img src="media/topic-lanes.webp" width="1912" height="372" loading="lazy" decoding="async" alt="Conversation flow at 12:33, three topics and one return to an earlier topic. The line steps down from Pellwood launch date decision to SAML clock skew fix and SOC 2 audit timeline, then goes back up to Pellwood launch date decision, where the room is now." />
+          </figure>
+        </div>
+      </section>
+
       <section class="feature" id="questions">
         <div class="wrap feature-row">
           <div class="feature-copy">
-            <h2>Walk out knowing what is still open</h2>
+            <h2>Every question, caught as it's asked</h2>
             <p>
-              Oats hears a question and watches what the room does with it. The card says how it ended, in place, while
-              people are still talking. A question asked twice is kept as a signal.
+              Each question shows up the moment it's asked, and changes when the room answers it, or doesn't. Ask again
+              before anyone leaves.
             </p>
             <dl class="verdicts">
               <div><dt class="verdict"><span class="dot dot-answered" aria-hidden="true"></span>Answered</dt><dd>Someone gave an answer.</dd></div>
@@ -134,7 +152,7 @@
               <div><dt class="verdict"><span class="dot dot-ring" aria-hidden="true"></span>Open</dt><dd>Nobody has replied yet.</dd></div>
             </dl>
           </div>
-          <figure class="window feature-visual">
+          <figure class="window feature-visual" data-live-slot="questions">
             <video data-loop muted loop playsinline preload="none" poster="media/loop-questions.webp" width="1040" height="900" aria-label="A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web">
               <source src="media/loop-questions.mp4" type="video/mp4" />
             </video>
@@ -145,20 +163,18 @@
       <section class="feature feature-flip" id="check">
         <div class="wrap feature-row">
           <div class="feature-copy">
-            <h2>Checked against what your team wrote down</h2>
+            <h2>Unsure answers, checked on the spot</h2>
             <p>
-              Turn it on in Settings and choose a folder of your team's notes. When an answer in the room sounds unsure,
-              Oats finds the passage that settles it, in that folder or in your past conversations, and says so under the
-              question: <q>That's right</q>, <q>Wait, that's wrong</q>, or <q>Found it</q> when the room did not know,
-              with the answer and the file it came from.
+              When an answer sounds unsure, Oats looks it up in your notes and past conversations while people are still
+              talking.
             </p>
             <p class="aside">
-              Optional, and off by default: when the folder has no answer, Oats can ask Claude Code to look in GitHub,
-              Linear and Notion, read only.
+              Off by default: choose a folder of notes in Settings. Claude Code can also search GitHub, Linear, Notion and
+              Slack, read only. When it does, the question and the reply go to Anthropic, and the search text to those services.
             </p>
           </div>
           <figure class="window feature-visual">
-            <img src="media/check-live.webp" width="1968" height="1464" loading="lazy" decoding="async" alt="A recording at 8 minutes 25 seconds. Under the question Do we have a date from the auditors yet, marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates." />
+            <img src="media/check-live.webp" width="1728" height="1592" loading="lazy" decoding="async" alt="A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet." />
           </figure>
         </div>
       </section>
@@ -166,15 +182,12 @@
       <section class="feature" id="after">
         <div class="wrap feature-row">
           <div class="feature-copy">
-            <h2>The conversation, given back in order</h2>
-            <p>
-              A title, a summary and the threads the conversation followed. Talk time for each person, how each
-              question ended, and the transcript with the speakers told apart.
-            </p>
-            <p class="aside">Titles and summaries come from a writing model on your Mac, which Oats downloads at setup, or from your own API key.</p>
+            <h2>Written up when you stop</h2>
+            <p>Title, summary, talk time for each person, and the transcript with every voice told apart.</p>
+            <p class="aside">Written by a model on your Mac, or with your own API key.</p>
           </div>
-          <figure class="window feature-visual">
-            <img src="media/outcomes.webp" width="1504" height="1662" loading="lazy" decoding="async" alt="The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one." />
+          <figure class="window feature-visual" data-live-slot="after">
+            <img src="media/conversation-finished.webp" width="1504" height="1244" loading="lazy" decoding="async" alt="The finished conversation, Enterprise launch review: SSO gates the date. 29 minutes, 9 speakers, 3 marked moments, and 15 questions: 9 answered, 3 unknown, 2 unanswered, 1 open. Below, the shape of the conversation with each question in its place, and talk time for each person, from Maya at 18 percent to Omar at 2 percent." />
           </figure>
         </div>
       </section>
@@ -183,10 +196,7 @@
         <div class="wrap feature-row">
           <div class="feature-copy">
             <h2>Find anything anyone said</h2>
-            <p>
-              Search every transcript, part words included: <q>rice</q> finds <q>price</q>. Chinese and Japanese work
-              too. Each search shows how many matches it found and how long it took.
-            </p>
+            <p>Search every transcript at once, even for part of a word. Chinese and Japanese too.</p>
             <ul class="points">
               <li>Press <kbd>/</kbd> to search from anywhere in the app</li>
               <li>Each match shows when in the conversation it was said</li>
@@ -203,17 +213,17 @@
       <section class="feature feature-stack" id="board">
         <div class="wrap">
           <div class="feature-head">
-            <h2>See how your conversations connect</h2>
+            <h2>See what keeps coming back</h2>
             <div class="feature-copy">
-              <p>
-                The board lays out every conversation as a graph and as a timeline, so a subject that keeps coming back
-                shows as the arcs between the days it came up. Each one is filed into Work, Personal or a group you make.
+              <p>Conversations on the same topic link up, so you see it come back across weeks.</p>
+              <p class="aside">
+                Sorted into Work, Personal or your own groups by the model that writes your summaries, from the title,
+                topics and summary, never the transcript.
               </p>
-              <p class="aside">A local model files each conversation from its title, topics and summary, never from the transcript.</p>
             </div>
           </div>
           <figure class="window feature-wide">
-            <video data-loop muted loop playsinline preload="none" poster="media/loop-global.webp" width="1680" height="1050" aria-label="The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back">
+            <video data-loop muted loop playsinline preload="none" poster="media/loop-global.webp" width="1680" height="1050" aria-label="The board of all conversations: a force graph of how they connect, and an arc timeline of the topics that came back">
               <source src="media/loop-global.mp4" type="video/mp4" />
             </video>
           </figure>
@@ -226,19 +236,18 @@
             <h2>Privacy you can check</h2>
           </div>
           <div class="privacy-copy">
-            <p>
-              There is no Oats account and no Oats server. On this Mac, audio and transcripts never leave it. With your
-              own API key, transcripts go to your provider for summaries, and with an OpenAI key the audio goes to
-              OpenAI for transcription.
-            </p>
+            <ul class="privacy-lines">
+              <li>No account. No Oats server.</li>
+              <li>On this Mac, audio and transcripts never leave it.</li>
+              <li>With your API key, transcripts go to your provider, and the audio too if it's an OpenAI key.</li>
+            </ul>
             <p>
               When a question meets a clear <q>I don't know</q>, Oats opens a web search for the question text in your
               browser. You can turn that off in Settings.
             </p>
             <p>
-              The sidebar counts every network request since launch. Calls to the speech, writing and search servers
-              that run on your Mac are not counted, because they never leave it.
-              <a href="https://github.com/alexgaoth/oats/blob/main/docs/network-allowlist.md">Every destination is listed</a>.
+              The sidebar counts every request that leaves your Mac, and
+              <a href="https://github.com/alexgaoth/oats/blob/main/docs/network-allowlist.md">every destination is listed</a>.
             </p>
           </div>
           <figure class="counter">
@@ -249,8 +258,8 @@
 
       <section class="numbers" aria-label="Measured">
         <div class="wrap numbers-grid">
+          <div><p class="number">1.2<span> s</span></p><p>from speech to screen, median, in a live room, with whisper small.en on an M5 Pro</p></div>
           <div><p class="number">147<span> ms</span></p><p>to transcribe 5 seconds of audio, with whisper small.en on an M5 Pro</p></div>
-          <div><p class="number">1.3<span> s</span></p><p>until the first words show in a live room, median, in a replay at real speed</p></div>
           <div><p class="number">10</p><p>languages in the interface</p></div>
           <div><p class="number">MIT</p><p>licence. The whole app is <a href="https://github.com/alexgaoth/oats">on GitHub</a></p></div>
         </div>
@@ -303,6 +312,7 @@
               <li>Open System Settings, then Privacy &amp; Security. Scroll down and click Open Anyway next to <q>Oats was blocked</q>.</li>
               <li>Confirm with your password or Touch ID. macOS asks only once.</li>
             </ol>
+            <p class="first-run-next">In setup, choose where Oats runs: on this Mac, or with your own API key.</p>
           </div>
           <p class="consent">Tell people before you record. Some places, for example California, need everyone's consent.</p>
         </div>

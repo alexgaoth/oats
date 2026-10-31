@@ -11,7 +11,8 @@
 //   --chrome <path>   Chrome or Chromium (default: CHROME_PATH, then the macOS app)
 //   --only a,b        shot names (see SHOTS below)
 //   --themes a,b      light, dark (default both)
-//   --size WxH        the window, in CSS pixels (default 1440x900)
+//   --size WxH        the window, in CSS pixels (default 1440x900; a shot's
+//                     own `size` wins)
 //   --scale n         device pixel ratio (default 2)
 //
 // Chrome runs with a throwaway profile in the system temp directory. The
@@ -26,6 +27,35 @@ const SHOTS = [
   { name: "home", query: "", script: "" },
   // The site's sidebar-foot.webp: crop the sidebar's last 352 CSS px.
   { name: "sidebar-foot", query: "footer=small.en", script: "" },
+  // The site's screens (site/media/manifest.json says how each is cropped).
+  // A window the app can have: its default is 1200x800, its minimum 880x680.
+  // The live takes stay before 14:00: from there the first topic can be
+  // renamed from the discount talk the tracker has not cut away from it yet,
+  // and keep that name.
+  // The hero: the live view at 11:09, three topics, and an answered, an
+  // unknown and an unanswered question on the line.
+  {
+    name: "site-live",
+    size: "1120x700",
+    query: "demo=live&from=665&end=hold&view=calm",
+    script: "await demo.untilSeconds(668)",
+  },
+  // The lanes at 12:33, just after the room went back to the first topic.
+  {
+    name: "site-topics",
+    size: "1120x700",
+    query: "demo=live&from=750&end=hold&view=calm",
+    script: "await demo.untilSeconds(753)",
+  },
+  // The context check under an unknown question, from the demo's team folder.
+  {
+    name: "site-check",
+    size: "880x900",
+    query: "check=1&demo=live&from=470&end=hold&view=words",
+    script: "await demo.untilSeconds(512)",
+  },
+  // The finished conversation, at the app's default window.
+  { name: "site-after", size: "1200x800", query: "", script: "await oatsDemo.open()" },
   // Nothing recorded yet: the offer of the example, then the example opened.
   { name: "first-run", query: "profile=empty", script: "" },
   {
@@ -568,14 +598,17 @@ async function main() {
     const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
     await cdp.send("Page.enable", {}, sessionId);
     await cdp.send("Runtime.enable", {}, sessionId);
-    await cdp.send(
-      "Emulation.setDeviceMetricsOverride",
-      { width: args.width, height: args.height, deviceScaleFactor: args.scale, mobile: false },
-      sessionId
-    );
     const shots = SHOTS.filter((shot) => !args.only || args.only.includes(shot.name));
     for (const theme of args.themes) {
       for (const shot of shots) {
+        const [width, height] = shot.size
+          ? shot.size.split("x").map(Number)
+          : [args.width, args.height];
+        await cdp.send(
+          "Emulation.setDeviceMetricsOverride",
+          { width, height, deviceScaleFactor: args.scale, mobile: false },
+          sessionId
+        );
         // A shot with `reducedMotion` is taken as somebody who asked the
         // system for less motion sees the app.
         await cdp.send(

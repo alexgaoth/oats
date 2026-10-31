@@ -1,37 +1,50 @@
 {
-  "source": "Real renderer in the demo harness (alex/website-build, the 0.1.0 code), headless Chrome at 2x, light theme. Sample data: the fictional Pellwood launch review. The sidebar footer's status (whisper base on Metal, 0 requests) was supplied to the harness, which has no main process; it is what a packaged build shows at rest.",
+  "source": "Real renderer in the demo harness, headless Chrome at 2x, light theme. Sample data: the fictional Pellwood launch review. The loops, the film and its poster were taken from the 0.1.0 code (alex/website-build, demo/video's scenes); each still made from the 0.2.0 code says how in its own source. The sidebar footer's status (small.en on Metal, 0 requests) was supplied to the harness, which has no main process; it is what a packaged build shows at rest.",
   "files": [
     {
-      "name": "summary-window-2240.webp",
+      "name": "live-window-2240.webp",
       "width": 2240,
-      "height": 1400,
-      "bytes": 110948,
-      "shows": "Full window: a finished conversation, with its title, how each question ended, the shape of the talk and talk time per person.",
-      "alt": "Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person."
+      "height": 1232,
+      "bytes": 113874,
+      "shows": "The hero: the live view mid-conversation, with the line, a mark for each question asked, and the topic lanes.",
+      "alt": "Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.",
+      "source": "0.2.0 code: `node demo/capture.mjs --only site-live --themes light` (a 1120x700 window; the review replayed live from 11:05 with the line and the lanes, taken at 11:09), the top 616 CSS px at 2x: `cwebp -q 85 -m 6 -crop 0 0 2240 1232`."
     },
     {
-      "name": "summary-window-1120.webp",
+      "name": "live-window-1120.webp",
       "width": 1120,
-      "height": 700,
-      "bytes": 33722,
-      "shows": "The same finished conversation at half size, for narrow screens.",
-      "alt": "Oats showing a finished conversation, Enterprise launch review: SSO gates the date, with 15 questions (9 answered, 3 unknown, 2 unanswered, 1 open), a line of the conversation marked where each question was asked, and talk time per person."
+      "height": 616,
+      "bytes": 26392,
+      "shows": "The same live view at half size, for narrow screens.",
+      "alt": "Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.",
+      "source": "0.2.0 code: `node demo/capture.mjs --only site-live --themes light` (a 1120x700 window; the review replayed live from 11:05 with the line and the lanes, taken at 11:09), the top 616 CSS px at 2x: `cwebp -q 85 -m 6 -crop 0 0 2240 1232` `-resize 1120 616`."
+    },
+    {
+      "name": "topic-lanes.webp",
+      "width": 1912,
+      "height": 372,
+      "bytes": 16742,
+      "shows": "The Conversation flow card in its lanes view, just after the room went back to the first topic.",
+      "alt": "Conversation flow at 12:33, three topics and one return to an earlier topic. The line steps down from Pellwood launch date decision to SAML clock skew fix and SOC 2 audit timeline, then goes back up to Pellwood launch date decision, where the room is now.",
+      "source": "0.2.0 code: `node demo/capture.mjs --only site-topics --themes light` (a 1120x700 window; the review replayed live from 12:30, taken at 12:33), the card alone at 2x: `cwebp -q 85 -m 6 -crop 164 710 1912 372`."
     },
     {
       "name": "check-live.webp",
-      "width": 1968,
-      "height": 1464,
-      "bytes": 103630,
-      "shows": "Crop of a recording where the context check answers an unknown question from the team's notes, with the recording and topic cards above it.",
-      "alt": "A recording at 8 minutes 25 seconds. Under the question Do we have a date from the auditors yet, marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates."
+      "width": 1728,
+      "height": 1592,
+      "bytes": 130346,
+      "shows": "A recording where the context check answers an unknown question from the team's notes, with the line, the topic lanes and the transcript around it.",
+      "alt": "A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet.",
+      "source": "0.2.0 code: `node demo/capture.mjs --only site-check --themes light` (an 880x900 window, the app's narrowest; `check=1` turns the context check on with the harness's team folder, demo/harness/context.mjs; the review replayed live from 7:50 with the transcript shown, taken at 8:33), the window below its top bar at 2x: `cwebp -q 85 -m 6 -crop 16 104 1728 1592`."
     },
     {
-      "name": "outcomes.webp",
+      "name": "conversation-finished.webp",
       "width": 1504,
-      "height": 1662,
-      "bytes": 95050,
-      "shows": "Crop of What this left open: every question with its verdict, and the answer under each answered one.",
-      "alt": "The list What this left open, 15 asked and 9 answered: questions marked Unknown, Unanswered, Open and Answered, with the answer under each answered one."
+      "height": 1244,
+      "bytes": 99942,
+      "shows": "The finished conversation as it opens: its title, how the questions ended, the shape of the talk with each question in its place, and talk time per person.",
+      "alt": "The finished conversation, Enterprise launch review: SSO gates the date. 29 minutes, 9 speakers, 3 marked moments, and 15 questions: 9 answered, 3 unknown, 2 unanswered, 1 open. Below, the shape of the conversation with each question in its place, and talk time for each person, from Maya at 18 percent to Omar at 2 percent.",
+      "source": "0.2.0 code: `node demo/capture.mjs --only site-after --themes light` (the app's default 1200x800 window, the review opened), the reading column from the back link to talk time at 2x: `cwebp -q 85 -m 6 -crop 680 104 1504 1244`."
     },
     {
       "name": "sidebar-foot.webp",
@@ -112,7 +125,7 @@
       "height": 1050,
       "bytes": 441313,
       "shows": "The board: the force graph, the arc timeline, a conversation pointed at, and the Work tab. From scene h-global, 3 to 17 s.",
-      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back"
+      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the topics that came back"
     },
     {
       "name": "loop-global.webp",
@@ -120,7 +133,7 @@
       "height": 1050,
       "bytes": 76614,
       "shows": "Poster for loop-global: what reduced motion shows. The board: the force graph, the arc timeline, a conversation pointed at, and the Work tab. From scene h-global, 3 to 17 s.",
-      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the subjects that came back"
+      "alt": "The board of all conversations: a force graph of how they connect, and an arc timeline of the topics that came back"
     }
   ]
 }

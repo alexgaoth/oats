@@ -1,9 +1,9 @@
 // The film's stage behind the app window (demo/video/src/brand/Fluid.tsx): light
-// grey that moves slowly, like smoke in still air. Domain-warped noise, spanning
-// a dozen grey levels around #f3f3f3, with an ordered (Bayer) dither so the
-// shallow ramp never bands. The film works it out on the CPU, frame by frame;
-// here a fragment shader draws the same field live, at most 30 times a second,
-// only while it is on screen, and once only under prefers-reduced-motion.
+// grey like smoke in still air. Domain-warped noise, spanning a dozen grey
+// levels around #f3f3f3, with an ordered (Bayer) dither so the shallow ramp
+// never bands. The film works it out on the CPU, frame by frame, and lets it
+// move; here a fragment shader draws one frame of it and holds it, because on
+// the page nothing moves at rest: it is drawn again only when its size changes.
 
 const VERTEX = `
 attribute vec2 position;
@@ -72,7 +72,8 @@ void main() {
 
 /** One unit of the noise, in CSS pixels: the size of a fold, as in the film. */
 const FOLD = 640;
-const FRAME_MS = 1000 / 30;
+/** The moment of the film's clock the field holds, in seconds: where it started. */
+const MOMENT = 40;
 
 function compile(gl, type, source) {
   const shader = gl.createShader(type);
@@ -119,50 +120,19 @@ export function mountField(canvas) {
       canvas.width = width;
       canvas.height = height;
       gl.viewport(0, 0, width, height);
-      draw(clock());
+      draw();
     }
   }
 
-  // The film's clock, continued from the page's own start, so the field does
-  // not jump between frames or when it comes back on screen.
-  const started = performance.now();
-  const clock = () => (performance.now() - started) / 1000 + 40;
-
-  function draw(seconds) {
+  function draw() {
     gl.uniform2f(uSize, canvas.width, canvas.height);
-    gl.uniform1f(uTime, seconds);
+    gl.uniform1f(uTime, MOMENT);
     gl.uniform1f(uScale, FOLD * ratio);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
-  const still = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  let visible = false;
-  let raf = 0;
-  let last = 0;
-  function loop(now) {
-    raf = 0;
-    if (!visible || document.hidden || still?.matches) return;
-    if (now - last >= FRAME_MS) {
-      last = now;
-      draw(clock());
-    }
-    raf = requestAnimationFrame(loop);
-  }
-  function wake() {
-    if (!raf && visible && !document.hidden && !still?.matches) raf = requestAnimationFrame(loop);
-  }
-
   fit();
   new ResizeObserver(fit).observe(canvas);
-  new IntersectionObserver((entries) => {
-    visible = entries.some((entry) => entry.isIntersecting);
-    wake();
-  }).observe(canvas);
-  document.addEventListener("visibilitychange", wake);
-  still?.addEventListener?.("change", () => {
-    draw(clock());
-    wake();
-  });
   canvas.classList.add("is-live");
   return true;
 }
