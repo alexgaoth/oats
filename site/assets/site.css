@@ -118,8 +118,9 @@ h3 {
   text-wrap: balance;
 }
 
+/* Below 364 px the headline shrinks, so its second line still fits. */
 h1 {
-  font-size: clamp(44px, 7.4vw, 92px);
+  font-size: clamp(36px, min((100vw - 32px) / 7.6, max(44px, 7.4vw)), 92px);
   line-height: 0.98;
   letter-spacing: -0.035em;
 }
@@ -326,9 +327,12 @@ q {
   color: var(--ink);
 }
 
-/* The stage: the film's grey fluid, behind the hero and the download. */
+/* The stage: the film's grey fluid, behind the hero and the download. Quiet
+   text on it is zinc-600: zinc-500 (--muted) is 4.4:1 on #f3f3f3 and less on
+   the fluid's darker greys, under the 4.5:1 that small text needs. */
 
 .stage {
+  --muted: #52525b;
   position: relative;
   isolation: isolate;
   background: var(--stage);
@@ -362,8 +366,9 @@ q {
   text-align: center;
 }
 
+/* Two lines: "The conversation," over "mapped as it happens". */
 .hero h1 {
-  max-width: 13ch;
+  max-width: 16ch;
   margin-top: 24px;
 }
 
@@ -373,6 +378,21 @@ q {
   font-size: clamp(17px, 1.55vw, 20px);
   line-height: 1.55;
   color: var(--ink-soft);
+}
+
+/* Why it matters, under the lead and quieter than it. Each sentence wraps
+   as one piece, so a break falls between them, and within one only when it
+   must. */
+.why {
+  max-width: 36em;
+  margin: 14px auto 0;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.why span {
+  display: inline-block;
+  text-wrap: balance;
 }
 
 .cta-row {
@@ -400,6 +420,13 @@ q {
   margin: 10px 0 0;
   font-size: 14px;
   color: var(--muted);
+}
+
+/* A link alone on its line is a target: 24 px tall at least. */
+.other-arch a,
+.footer-links a {
+  display: inline-block;
+  padding-block: 4px;
 }
 
 .other-arch a,
@@ -441,6 +468,7 @@ q {
 }
 
 .window {
+  position: relative;
   margin: 0;
   overflow: hidden;
   border-radius: 12px;
@@ -453,6 +481,60 @@ q {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* Pause or play a loop (site.js adds it). 44 px to press, a 32 px disc to see. */
+.loop-toggle {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.loop-toggle::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow:
+    0 0 0 1px rgb(24 24 27 / 0.14),
+    0 1px 3px rgb(24 24 27 / 0.14);
+  transition: background-color 150ms var(--ease);
+}
+
+.loop-toggle:hover::before {
+  background: #fff;
+}
+
+/* The ring around the disc, not around the larger target. */
+.loop-toggle:focus-visible {
+  outline-offset: -4px;
+}
+
+.loop-toggle svg {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.loop-toggle .icon-play,
+.loop-toggle[data-paused] .icon-pause {
+  display: none;
+}
+
+.loop-toggle[data-paused] .icon-play {
+  display: block;
 }
 
 .hero-window {
@@ -518,6 +600,11 @@ q {
   margin-top: clamp(36px, 5vw, 56px);
 }
 
+/* One card of the window (the topic lanes), at the size the app draws it. */
+.feature-card {
+  max-width: 956px;
+}
+
 .points {
   display: grid;
   gap: 10px;
@@ -528,13 +615,15 @@ q {
   color: var(--ink-soft);
 }
 
-.points li {
+.points li,
+.privacy-lines li {
   display: flex;
   align-items: baseline;
   gap: 12px;
 }
 
-.points li::before {
+.points li::before,
+.privacy-lines li::before {
   content: "";
   flex: none;
   width: 6px;
@@ -609,9 +698,25 @@ q {
   align-items: start;
 }
 
+/* The words take the right column; the counter sits under the heading. */
+.privacy-copy {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
 .privacy-copy p {
   margin: 0 0 18px;
   color: var(--ink-soft);
+}
+
+/* What leaves the Mac, in three lines, above the details. */
+.privacy-lines {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 26px;
+  padding: 0;
+  list-style: none;
+  color: var(--ink);
 }
 
 .counter {
@@ -776,6 +881,12 @@ q {
   margin-top: 6px;
 }
 
+/* What comes after the steps: setup's one choice. */
+.first-run .first-run-next {
+  margin-top: 14px;
+  color: var(--ink-soft);
+}
+
 .consent {
   max-width: 34em;
   margin: 24px 0 0;
@@ -840,7 +951,8 @@ q {
     order: 0;
   }
 
-  .counter {
+  .counter,
+  .privacy-copy {
     grid-column: auto;
     grid-row: auto;
   }

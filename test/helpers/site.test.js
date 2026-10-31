@@ -69,6 +69,35 @@ test("every image says what it shows and keeps its space", () => {
   }
 });
 
+// The figures the app's own components will replace, live, keep a stable hook,
+// with the still or the loop inside as what shows until then.
+test("the live slots are figures with their media inside", () => {
+  for (const slot of ["hero", "map", "topics", "questions", "after"]) {
+    const figure = new RegExp(
+      `<figure\\b[^>]*\\bdata-live-slot="${slot}"[^>]*>([\\s\\S]*?)</figure>`
+    ).exec(HTML);
+    assert.ok(figure, `a figure with data-live-slot="${slot}"`);
+    assert.match(figure[1], /<(?:img|video)\b/, `the ${slot} slot keeps its media`);
+  }
+});
+
+// media/manifest.json says what each file shows and how it was made; its sizes
+// tell when a file changed without the manifest.
+test("the media manifest lists every file at its size", () => {
+  const media = path.join(SITE, "media");
+  const { files } = JSON.parse(fs.readFileSync(path.join(media, "manifest.json"), "utf8"));
+  const listed = new Map(files.map((entry) => [entry.name, entry]));
+  for (const name of fs.readdirSync(media)) {
+    if (name === "manifest.json") continue;
+    assert.ok(listed.has(name), `site/media/${name} is in the manifest`);
+    assert.equal(listed.get(name).bytes, fs.statSync(path.join(media, name)).size, name);
+  }
+  for (const entry of files) {
+    assert.ok(fs.existsSync(path.join(media, entry.name)), `missing: site/media/${entry.name}`);
+    assert.match(entry.alt ?? "", /.{12,}/, `${entry.name} has an alt text`);
+  }
+});
+
 // DESIGN.md §8: no em or en dash, and no exclamation mark, in visible English.
 // The page keeps its script and styles in files, so everything after the
 // doctype is markup or words a reader sees (text, alt, labels, titles).
