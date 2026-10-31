@@ -4,7 +4,7 @@ import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { formatSpan } from "../../helpers/ledgerDate.mjs";
 import { LANE_ROW_PX, lanePath, runAt } from "../../helpers/topicLanes.mjs";
-import { StateMark } from "./ConversationSignalRail";
+import { StateMark } from "./StateMark";
 import { stateLabel } from "./flowText";
 import { markFill } from "./questionMarks";
 import type { QuestionOutcome } from "../../types/conversationEvents";

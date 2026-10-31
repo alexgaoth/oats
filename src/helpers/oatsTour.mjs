@@ -5,8 +5,9 @@
 // with the bundled example conversation (`sampleConversations/
 // launch-readiness-review.json`): the same conversation Home offers until the
 // first recording, so what the tour shows is what the person can open next.
-// Nothing here touches a store, the database or the main process. The
-// component is `components/onboarding/OatsTour.tsx`.
+// Nothing here touches a store, the database or the main process. The slides
+// are the demo pieces (`components/demo/`), and the tour that shows them is
+// `components/onboarding/OatsTour.tsx`.
 //
 // Pure and DOM-free, so the slides' data is pinned against the example itself
 // (test/helpers/oatsTour.test.js), and a change to the example cannot leave a
@@ -40,6 +41,27 @@ export function tourStep(index, delta, count = TOUR_SLIDES.length) {
   const last = Math.max(0, count - 1);
   const next = Math.trunc(index) + Math.sign(delta);
   return Math.min(last, Math.max(0, Number.isFinite(next) ? next : 0));
+}
+
+/**
+ * Which way an arrow key moves the tour: 1, -1, or 0 when the key is not the
+ * tour's.
+ *
+ * The slides can be used, so an arrow belongs to the tour only while the focus
+ * is on the tour's own controls (Skip, Back, Next, Start, a dot) or on nothing.
+ * On a control in a slide it is that control's: the Lanes / Graph switch
+ * moves between its choices with the arrows, and a row, a voice or a card
+ * keeps its place. A key some control already handled, or one held with a
+ * modifier, is never the tour's either.
+ *
+ * @param {{ key: string, altKey?: boolean, ctrlKey?: boolean, metaKey?: boolean, defaultPrevented?: boolean }} event
+ * @param {"none" | "tour" | "slide" | "other"} focus Where the focus is.
+ * @returns {-1 | 0 | 1}
+ */
+export function tourArrow(event, focus) {
+  if (!event || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return 0;
+  if (focus !== "none" && focus !== "tour") return 0;
+  return event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
 }
 
 /**

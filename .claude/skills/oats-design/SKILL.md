@@ -78,7 +78,8 @@ Design consequences that follow directly:
 - **No hand-holding.** No tutorials, in setup or in an empty state, and no
   tips. Show the thing; they will work it out. The one tour, at the end of
   setup (`DESIGN.md` §4), is that: the real components, shown once, with
-  nothing to learn.
+  nothing to learn. Its components can be used, and nothing in it is saved
+  or sent.
 - **No hype.** This audience can smell marketing copy. See `DESIGN.md` §11.
 - **Density is respect, but only where it carries meaning.** A wall of chrome is
   not density. A transcript is.

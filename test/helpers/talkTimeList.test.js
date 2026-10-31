@@ -9,14 +9,15 @@ const path = require("node:path");
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 const code = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-const WORKSPACE = code(read("src/components/OatsWorkspace.tsx"));
+// Its own module since the demo pieces draw it outside the app (components/demo/).
+const MODULE = code(read("src/components/conversation/TalkTime.tsx"));
 const BAR = code(read("src/components/charts/DitherBar.tsx"));
 
-const start = WORKSPACE.indexOf("function TalkTime(");
-const TALK = WORKSPACE.slice(start, WORKSPACE.indexOf("\nfunction ", start + 1));
+const start = MODULE.indexOf("function TalkTime(");
+const TALK = MODULE.slice(start);
 
 test("each voice is a row: its name, a bar, and its share", () => {
-  assert.ok(start > 0, "TalkTime is in OatsWorkspace.tsx");
+  assert.ok(start > 0, "TalkTime is in conversation/TalkTime.tsx");
   assert.match(TALK, /text-\[13px\] text-foreground/);
   assert.match(TALK, /"max-w-40 truncate", pressed && "font-medium"/);
   assert.match(TALK, /"h-1\.5 min-w-1\.5 overflow-hidden rounded-\[3px\]"/);
@@ -33,7 +34,7 @@ test("bars are the chart fill: the dither, honey when shown, rule grey when unat
   assert.match(TALK, /pressed && "bg-primary"/);
   assert.match(TALK, /entry\.key === null && "bg-border"/);
   // No tones by rank and no dimming: one fill, one accent (rules 2 and 3).
-  assert.doesNotMatch(WORKSPACE, /TALK_TONES/);
+  assert.doesNotMatch(MODULE, /TALK_TONES/);
   assert.doesNotMatch(TALK, /opacity-/);
 });
 

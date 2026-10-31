@@ -46,7 +46,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
 import { Button } from "./ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "./ui/card";
-import { Badge, type BadgeProps } from "./ui/badge";
+import { Badge } from "./ui/badge";
 import { Kbd } from "./ui/kbd";
 import { Input } from "./ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -94,10 +94,10 @@ import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import GlobalConversations from "./global/GlobalConversations";
 import FieldBackdrop from "./field/FieldBackdrop";
 import { useFieldColumn } from "./field/fieldColumns";
-import ConversationFlow from "./conversation/ConversationFlow";
-import ConversationSignalRail, { StateMark } from "./conversation/ConversationSignalRail";
+import LiveConversationFlow from "./conversation/LiveConversationFlow";
+import LiveSignalRail from "./conversation/LiveSignalRail";
+import { StateMark } from "./conversation/StateMark";
 import ConversationContour from "./conversation/ConversationContour";
-import DitherBar from "./charts/DitherBar";
 import ListeningRing from "./conversation/ListeningRing";
 import ContourLegend from "./conversation/ContourLegend";
 import ConversationDialogue from "./conversation/ConversationDialogue";
@@ -105,6 +105,10 @@ import RecordingCounters from "./conversation/RecordingCounters";
 import { ExampleBadge, ExampleOffer } from "./conversation/ExampleConversation";
 import { MoveToGroupMenu, NewGroupDialog, type GroupMove } from "./conversation/MoveToGroup";
 import { ScrollFade, useScrollFade } from "./conversation/useScrollFade";
+import { ConversationReview } from "./conversation/ConversationReview";
+import { TalkTime } from "./conversation/TalkTime";
+import { ShownSpeaker, TranscriptView } from "./conversation/Transcript";
+import { contourLabel } from "./conversation/contourLabel";
 import {
   FOCUS_AT_REST,
   focusApplies,
@@ -123,11 +127,9 @@ import { isSearching, shellNav } from "../helpers/shellNav.mjs";
 import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import {
-  buildReview,
   openQuestionCount,
   questionMoments,
   questionOutcomes,
-  questionTurns,
 } from "../helpers/conversationReview.mjs";
 import { readingExport } from "../helpers/obsidianNote.mjs";
 import {
@@ -149,13 +151,8 @@ import TranscriptLagBadge from "./conversation/TranscriptLagBadge";
 import { speakerKey, talkTime } from "../helpers/talkTime.mjs";
 import { findResumableConversation } from "../helpers/conversationResume.mjs";
 import { parseDbTimestamp } from "../helpers/dbTime.mjs";
-import type { ContourData } from "./conversation/ConversationContour";
-import {
-  NO_EVENTS,
-  useContourStrip,
-  useLiveContour,
-  useStoredContour,
-} from "./conversation/useContour";
+import { NO_EVENTS, useContourStrip, useStoredContour } from "./conversation/useContour";
+import { useLiveContour } from "./conversation/useLiveContour";
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
@@ -192,7 +189,7 @@ import {
   summaryContentHash,
 } from "../helpers/summaryQueue.mjs";
 import { serializeTranscriptSegments } from "../utils/transcriptSpeakerState";
-import { matchTarget, splitOnMatches } from "../utils/conversationSearch";
+import { matchTarget } from "../utils/conversationSearch";
 import { consumePendingNote, parkPendingNote } from "../utils/pendingNote";
 import { useSpeechUpgrade } from "../hooks/useSpeechUpgrade";
 import { useWritingModelDownload } from "../hooks/useWritingModel";
@@ -474,33 +471,6 @@ function RecentConversations() {
       </Card>
     </section>
   );
-}
-
-/**
- * What the contour says, in words.
- *
- * A canvas is a rectangle to a screen reader, and the fixed string it used to
- * carry ("The shape of this conversation so far") described the frame rather
- * than the picture. This is the same information the drawing carries — how many
- * questions were asked, how many are still unanswered, how many times the
- * subject turned, how many threads the room came back to — so the element the
- * code itself calls "the one part of this document that is not words" is not
- * simply absent for anyone who cannot see it.
- */
-function contourLabel(contour: ContourData, t: TFunction): string {
-  if (contour.empty) return t("oats.conversation.contourEmpty");
-  // A live contour shows the last four minutes; its label is the whole sitting.
-  if (contour.summary) return t("oats.conversation.contourSummary", contour.summary);
-  const unresolved = contour.marks.filter(
-    (mark) => mark.state === "asked" || mark.state === "silence" || mark.state === "denied"
-  ).length;
-  return t("oats.conversation.contourSummary", {
-    minutes: Math.max(1, Math.round(contour.span / 60000)),
-    questions: contour.marks.length,
-    unresolved,
-    shifts: contour.shifts.length,
-    returns: contour.returns.length,
-  });
 }
 
 /** mm:ss, or h:mm:ss once a conversation has run past the hour. */
@@ -1033,7 +1003,7 @@ function ConversationSurface() {
                 the topic, every few minutes, not with the words. In Detailed it
                 is compact and yields height to the live dialogue below,
                 scrolling inside when it must — the share the thread map used. */}
-            <ConversationFlow
+            <LiveConversationFlow
               compact={detailed}
               className={cn("shrink-0", detailed && "max-h-[34%]")}
             />
@@ -1057,7 +1027,7 @@ function ConversationSurface() {
                   onScroll={measureBand}
                   className={cn("min-h-0", detailed ? "overflow-y-auto" : "overflow-hidden")}
                 >
-                  <ConversationSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
+                  <LiveSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
                 </div>
                 <ScrollFade edges={detailed ? bandFaded : { top: false, bottom: false }} />
               </div>
@@ -1983,6 +1953,25 @@ function IntelligenceViews({
       setSpeakerFilter(key);
       setTab("transcript");
     };
+    // Naming a voice ("Speaker 2"), once, for every turn it said here.
+    const renameSpeaker = async (speaker: string, name: string) => {
+      const next = selectedSegments.map((s) =>
+        s.speaker === speaker
+          ? name
+            ? {
+                ...s,
+                speakerName: name,
+                speakerIsPlaceholder: false,
+                speakerStatus: "locked" as const,
+              }
+            : { ...s, speakerName: undefined, speakerIsPlaceholder: true }
+          : s
+      );
+      await window.electronAPI?.updateNote?.(selected.id, {
+        transcript: serializeTranscriptSegments(next),
+      });
+      await initializeNotes("meeting", 100);
+    };
     return (
       <section
         key="reading"
@@ -2230,23 +2219,10 @@ function IntelligenceViews({
 
             <TabsContent value="transcript">
               {shownSpeaker && (
-                // Why the other turns are missing, and the way back to them.
-                <div className="mb-4 flex items-center gap-2 text-[13px] text-muted-foreground">
-                  <Users aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="min-w-0 truncate">
-                    {t("oats.intelligence.talkTime.only", {
-                      speaker: speakerText(shownSpeaker.segment, t),
-                    })}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-my-1 ml-auto shrink-0"
-                    onClick={() => setSpeakerFilter(null)}
-                  >
-                    {t("oats.intelligence.talkTime.everyone")}
-                  </Button>
-                </div>
+                <ShownSpeaker
+                  label={speakerText(shownSpeaker.segment, t)}
+                  onEveryone={() => setSpeakerFilter(null)}
+                />
               )}
               {finding !== null && (
                 // Find in this conversation. It stays at the top of the scroll
@@ -2324,13 +2300,19 @@ function IntelligenceViews({
                 </div>
               )}
               <TranscriptView
-                note={selected}
+                segments={selectedSegments}
+                fallback={
+                  selectedSegments.length
+                    ? ""
+                    : transcriptText(selected.transcript, t) || t("oats.intelligence.noTranscript")
+                }
                 query={findQuery || query}
                 scrollToId={landedOnSegment}
                 events={events}
                 moments={selectedMoments}
                 currentMatch={findQuery && shownFindCount ? findAt : null}
                 speaker={shownSpeaker?.key ?? null}
+                onRenameSpeaker={(speaker, name) => void renameSpeaker(speaker, name)}
               />
             </TabsContent>
 
@@ -2720,552 +2702,6 @@ function MarkedMoments({
         })}
       </ul>
     </Card>
-  );
-}
-
-/**
- * How a question came out, as a status badge. Amber for the ones worth chasing
- * (unknown, or uncertain); red is for recording and danger only.
- */
-const OUTCOME_BADGE: Record<string, BadgeProps["variant"]> = {
-  asked: "secondary",
-  silence: "secondary",
-  uncertain: "warning",
-  denied: "warning",
-  answered: "success",
-};
-
-/**
- * What the conversation certainly contained, above what a model wrote about it.
- *
- * Oats knows some things exactly: which questions were asked, how each came
- * out, which it went and searched, and which threads were left open. The
- * summary is prose from a small local model. So the certain part goes first and
- * the inferred part follows — an evidence tool that leads with a summary is
- * asking you to trust the weakest thing on the page.
- *
- * It is a review, not a task manager: no checkboxes, no owners, no due dates,
- * and nothing Oats had to guess. Each unresolved question is a *place* —
- * pressing it opens the transcript at the turn it was asked in.
- */
-export function ConversationReview({
-  events,
-  topics,
-  onOpenTurn,
-}: {
-  events: ConversationEvent[];
-  topics: ConversationTopicNode[];
-  onOpenTurn: (segmentId: string | null) => void;
-}) {
-  const { t } = useTranslation();
-  const review = useMemo(() => buildReview({ events, topics }), [events, topics]);
-  // The answered half, on request: what was left open is the reason to come
-  // back; what was answered is one press away.
-  const [showAnswers, setShowAnswers] = useState(false);
-  useEffect(() => setShowAnswers(false), [events]);
-
-  // Nothing observed means nothing to review, and no "0 questions" panel.
-  if (review.empty) return null;
-
-  return (
-    <Card className="gap-0 overflow-hidden">
-      <CardHeader className="flex-row items-center justify-between gap-4 pb-4">
-        <CardTitle>{t("oats.review.title")}</CardTitle>
-        {/* The denominator for "three went unanswered". */}
-        <span className="text-[13px] tabular-nums text-muted-foreground">
-          {t("oats.review.tally", { asked: review.asked, answered: review.answered })}
-        </span>
-      </CardHeader>
-
-      {review.unresolved.length > 0 && (
-        <ul className="divide-y divide-border border-t border-border">
-          {review.unresolved.map((item) => {
-            const outcome = item.outcome === "open" ? "asked" : item.outcome;
-            return (
-              <li key={item.key}>
-                <button
-                  type="button"
-                  onClick={() => onOpenTurn(item.segmentId)}
-                  disabled={!item.segmentId}
-                  className={cn(
-                    "flex w-full items-start gap-4 px-5 py-3 text-left outline-none transition-colors",
-                    "focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
-                    item.segmentId ? "hover:bg-muted/60" : "cursor-default"
-                  )}
-                >
-                  <span className="min-w-0 flex-1 text-sm leading-6 text-foreground">
-                    {item.question}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5">
-                    {item.searched && <Badge variant="info">{t("questionCard.searched")}</Badge>}
-                    <Badge variant={OUTCOME_BADGE[outcome] ?? "secondary"}>
-                      {t(`questionCard.state.${outcome}`)}
-                    </Badge>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {showAnswers && (
-        <ul className="divide-y divide-border border-t border-border">
-          {review.answers.map((item) => (
-            <li key={item.key} className="px-5 py-3">
-              <p className="flex items-start gap-4 text-sm leading-6 text-foreground">
-                <span className="min-w-0 flex-1">{item.question}</span>
-                <Badge variant="success" className="mt-0.5">
-                  {t("questionCard.state.answered")}
-                </Badge>
-              </p>
-              {/* The words that answered it, and a place: pressing them opens
-                  the transcript there. */}
-              {item.reply ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenTurn(item.segmentId)}
-                  disabled={!item.segmentId}
-                  className="mt-1 line-clamp-2 w-full rounded-sm text-left text-[13px] leading-5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                >
-                  {item.reply}
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {(review.openThreads.length > 0 || review.answers.length > 0) && (
-        <CardFooter className="justify-between gap-4 text-[13px] text-muted-foreground">
-          {/* The labels go through the string, not beside it: appended as markup
-              they read as part of the count, and the colon is spaced differently
-              in French and full-width in Chinese and Japanese. */}
-          <span className="min-w-0">
-            {review.openThreads.length > 0 &&
-              t("oats.review.openThreads", {
-                count: review.openThreads.length,
-                threads: review.openThreads.map((thread) => thread.label).join(", "),
-              })}
-          </span>
-          {review.answers.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="-my-1 -mr-2 shrink-0"
-              aria-expanded={showAnswers}
-              onClick={() => setShowAnswers((open) => !open)}
-            >
-              {showAnswers ? t("oats.review.hideAnswers") : t("oats.review.showAnswers")}
-              <ChevronDown
-                aria-hidden="true"
-                className={cn("transition-transform", showAnswers && "rotate-180")}
-              />
-            </Button>
-          )}
-        </CardFooter>
-      )}
-    </Card>
-  );
-}
-
-/**
- * The transcript as the timed record it is, rather than as one wall of text.
- *
- * Each turn carries its offset from the first thing said, in a quiet gutter that
- * is `aria-hidden` (a screen reader working through a transcript does not want a
- * timestamp read before every line; the time is on the paragraph as a `title`).
- * The speaker is named once per run of turns, the way every transcript reader
- * does it, and the gutter also carries the margin marks: which turns asked a
- * question, and which the reader marked.
- *
- * `transcriptText` is untouched: copy still produces the plain text it always
- * did. The saved `.txt` carries the same offsets as this gutter, written by
- * `helpers/transcriptFormatter.js` from the same first turn.
- */
-function TranscriptView({
-  note,
-  query,
-  scrollToId,
-  events,
-  moments,
-  currentMatch = null,
-  speaker = null,
-}: {
-  note: NoteItem;
-  query: string;
-  /** The segment a search matched, so arriving from a result lands on it. */
-  scrollToId?: string | null;
-  events: ConversationEvent[];
-  moments: { id: string; at: number; note: string }[];
-  /** Which highlighted match the find bar is on, or null when it is not open. */
-  currentMatch?: number | null;
-  /** Only this speaker's turns (a `talkTime.mjs` key), or everyone's. */
-  speaker?: string | null;
-}) {
-  const { t } = useTranslation();
-  const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
-  const target = useRef<HTMLLIElement | null>(null);
-  // The match the find bar is on: marked, and brought to the middle of the
-  // screen. Children's effects run first, so this lands after `Highlighted`
-  // has scrolled to the first match on a new query.
-  const transcriptRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const marks = transcriptRef.current?.querySelectorAll("mark") ?? [];
-    marks.forEach((mark, index) => {
-      if (index === currentMatch) mark.setAttribute("data-current", "");
-      else mark.removeAttribute("data-current");
-    });
-    if (currentMatch == null) return;
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    marks[currentMatch]?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
-  }, [currentMatch, query]);
-  const asked = useMemo(() => questionTurns(events), [events]);
-  const marked = useMemo(() => {
-    const ids = new Set<string>();
-    for (const moment of moments) {
-      const segment = momentSegment(moment, segments);
-      if (segment?.id != null) ids.add(String(segment.id));
-    }
-    return ids;
-  }, [moments, segments]);
-
-  useEffect(() => {
-    if (!target.current) return;
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    target.current.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
-  }, [scrollToId, segments]);
-
-  // No segments means no timings — an imported or legacy transcript. Fall back
-  // to the plain text rather than to an empty page.
-  if (!segments.length) {
-    return (
-      <div ref={transcriptRef}>
-        <article className="whitespace-pre-wrap text-[15px] leading-7 text-foreground/90">
-          <Highlighted
-            text={transcriptText(note.transcript, t) || t("oats.intelligence.noTranscript")}
-            query={query}
-          />
-        </article>
-      </div>
-    );
-  }
-
-  const startedAt = segments.find((segment) => Number.isFinite(segment.timestamp))?.timestamp;
-  // With one speaker showing, their runs keep their breaks: a turn after
-  // somebody else's starts a new run under their name, as it would unfiltered.
-  let shown = 0;
-
-  return (
-    <div ref={transcriptRef}>
-      <ol>
-        {segments.map((segment, index) => {
-          if (speaker && speakerKey(segment) !== speaker) return null;
-          const first = shown === 0;
-          shown += 1;
-          const at =
-            Number.isFinite(segment.timestamp) && Number.isFinite(startedAt)
-              ? clock(Math.max(0, (segment.timestamp as number) - (startedAt as number)))
-              : null;
-          const matched = scrollToId != null && String(segment.id) === scrollToId;
-          const outcome = asked.get(String(segment.id));
-          const isMarked = marked.has(String(segment.id));
-          const previous = index > 0 ? segments[index - 1] : null;
-          const newSpeaker = !previous || speakerText(previous, t) !== speakerText(segment, t);
-          return (
-            <li
-              key={segment.id}
-              ref={matched ? target : undefined}
-              className={cn(
-                "grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-4 rounded-md",
-                !first && (newSpeaker ? "mt-5" : "mt-1.5"),
-                // The turn a search landed on. Not a highlight — a semantic match
-                // has no span to highlight — but "this is the one".
-                matched && "-mx-2 bg-muted/70 px-2 py-1"
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "flex items-center justify-end gap-1.5 self-start text-xs leading-5 tabular-nums text-muted-foreground",
-                  newSpeaker ? "pt-0" : "pt-1"
-                )}
-              >
-                {isMarked && <Bookmark className="size-3 fill-current text-foreground" />}
-                {outcome && (
-                  <StateMark
-                    state={(outcome === "open" ? "asked" : outcome) as QuestionOutcome}
-                    className=""
-                  />
-                )}
-                {at ?? ""}
-              </span>
-              <div className="min-w-0">
-                {newSpeaker && <SpeakerName note={note} segments={segments} segment={segment} />}
-                <p
-                  title={at ?? undefined}
-                  className="max-w-[70ch] text-[15px] leading-7 text-foreground/90"
-                >
-                  {isMarked && <span className="sr-only">{t("oats.review.markedTurn")} </span>}
-                  <Highlighted text={String(segment.text ?? "")} query={query} />
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-}
-
-/**
- * Who did the talking: one row per voice, with its name, a bar as long as its
- * share against the voice that talked most, and the share. A row is also the
- * transcript's filter: pressing a voice shows only its turns, and pressing it
- * again shows everyone.
- *
- * Measured from each turn's place in the recording (`talkTime.mjs`) and
- * labelled the way the transcript labels speakers, names included. One voice,
- * or a room whose voices were never told apart, draws nothing: a list of one
- * says nothing. Speech no voice was put on is the last row, with a rule-grey
- * bar, and is not a filter.
- *
- * The bars are the chart fill (DESIGN.md §6): the dither of the quiet grey,
- * and honey for the voice being shown. Two columns when the card has room
- * (420px), filled down the first column first, so the reading order and the
- * tab order are the same.
- */
-export function TalkTime({
-  talk,
-  selected,
-  onSelect,
-  className,
-}: {
-  talk: ReturnType<typeof talkTime>;
-  /** The speaker whose turns the transcript shows, or null for everyone. */
-  selected: string | null;
-  onSelect: (key: string) => void;
-  className?: string;
-}) {
-  const { t, i18n } = useTranslation();
-  const percent = useMemo(
-    () => new Intl.NumberFormat(i18n.language, { style: "percent" }),
-    [i18n.language]
-  );
-  if (talk.speakers.length < 2) return null;
-  const rows = [
-    ...talk.speakers.map((speaker) => ({
-      key: speaker.key as string | null,
-      ms: speaker.ms,
-      percent: speaker.percent,
-      label: speakerText(speaker.segment, t) ?? "",
-    })),
-    ...(talk.unattributedMs > 0
-      ? [
-          {
-            key: null,
-            ms: talk.unattributedMs,
-            percent: talk.unattributedPercent,
-            label: t("oats.intelligence.talkTime.unattributed"),
-          },
-        ]
-      : []),
-  ];
-  // The longest bar is the voice that talked most (or the unattributed speech,
-  // when there was more of it): every other bar is a share of that one.
-  const longest = Math.max(...rows.map((entry) => entry.ms));
-  const firstColumn = Math.ceil(rows.length / 2);
-  // Each row spans the list's three columns (name, bar, share) through
-  // subgrid, so the bars in a column start on one line.
-  const row = "col-span-3 grid grid-cols-subgrid items-center px-1.5 py-1";
-  return (
-    <div
-      role="group"
-      aria-label={t("oats.intelligence.talkTime.label")}
-      className={cn("@container", className)}
-    >
-      <ul className="-mx-1.5 grid grid-flow-row-dense grid-cols-[minmax(0,max-content)_minmax(0,1fr)_auto] gap-x-3 text-[13px] text-foreground @min-[420px]:grid-cols-[minmax(0,max-content)_minmax(0,1fr)_auto_0.25rem_minmax(0,max-content)_minmax(0,1fr)_auto]">
-        {rows.map((entry, index) => {
-          const pressed = entry.key !== null && selected === entry.key;
-          const content = (
-            <>
-              <span className={cn("max-w-40 truncate", pressed && "font-medium")}>
-                {entry.label}
-              </span>
-              <span aria-hidden="true" className="flex h-1.5 min-w-0">
-                <span
-                  className={cn(
-                    "h-1.5 min-w-1.5 overflow-hidden rounded-[3px]",
-                    entry.key === null && "bg-border",
-                    pressed && "bg-primary"
-                  )}
-                  style={{ width: `${(entry.ms / longest) * 100}%` }}
-                >
-                  {entry.key !== null && !pressed && <DitherBar />}
-                </span>
-              </span>
-              {/* The measurement, set apart from a label that may end in a number. */}
-              <span className="text-right font-medium tabular-nums">
-                {percent.format(entry.percent / 100)}
-              </span>
-            </>
-          );
-          const column =
-            index < firstColumn ? "@min-[420px]:col-start-1" : "@min-[420px]:col-start-5";
-          if (entry.key === null) {
-            return (
-              <li key="unattributed" className={cn(row, column)}>
-                {content}
-              </li>
-            );
-          }
-          const key = entry.key;
-          return (
-            <li key={key} className={cn("col-span-3 grid grid-cols-subgrid", column)}>
-              <button
-                type="button"
-                aria-pressed={pressed}
-                title={
-                  pressed
-                    ? t("oats.intelligence.talkTime.everyone")
-                    : t("oats.intelligence.talkTime.show", { speaker: entry.label })
-                }
-                onClick={() => onSelect(key)}
-                className={cn(
-                  row,
-                  "rounded-md text-left outline-none transition-colors",
-                  "hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                )}
-              >
-                {content}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * A run of turns' speaker, and the way to name them.
- *
- * Oats tells voices apart after a conversation stops and numbers them by who
- * spoke first; it cannot know names, and guessing one would put words in a
- * stranger's mouth. Pressing "Speaker 2" names them — once, for every turn
- * that voice said in this conversation.
- */
-function SpeakerName({
-  note,
-  segments,
-  segment,
-}: {
-  note: NoteItem;
-  segments: TranscriptSegment[];
-  segment: TranscriptSegment;
-}) {
-  const { t } = useTranslation();
-  const [naming, setNaming] = useState(false);
-  const label = speakerText(segment, t);
-  if (!label) return null;
-  const nameable = Boolean(segment.speaker && /^speaker_\d+$/.test(segment.speaker));
-
-  const save = async (value: string) => {
-    setNaming(false);
-    const name = value.replace(/\s+/g, " ").trim().slice(0, 60);
-    const next = segments.map((s) =>
-      s.speaker === segment.speaker
-        ? name
-          ? {
-              ...s,
-              speakerName: name,
-              speakerIsPlaceholder: false,
-              speakerStatus: "locked" as const,
-            }
-          : { ...s, speakerName: undefined, speakerIsPlaceholder: true }
-        : s
-    );
-    await window.electronAPI?.updateNote?.(note.id, {
-      transcript: serializeTranscriptSegments(next),
-    });
-    await initializeNotes("meeting", 100);
-  };
-
-  if (naming) {
-    return (
-      <Input
-        autoFocus
-        defaultValue={segment.speakerIsPlaceholder ? "" : (segment.speakerName ?? "")}
-        placeholder={label}
-        aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
-        maxLength={60}
-        spellCheck={false}
-        onBlur={(event) => void save(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-          if (event.key === "Escape") setNaming(false);
-        }}
-        className="mb-1 h-7 w-48 px-2 text-[13px]"
-      />
-    );
-  }
-
-  return (
-    <span className="block select-none text-[13px] font-medium leading-5 text-foreground">
-      {nameable ? (
-        <button
-          type="button"
-          onClick={() => setNaming(true)}
-          aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
-          title={t("oats.intelligence.nameSpeaker", { speaker: label })}
-          className="rounded-sm outline-none decoration-muted-foreground/50 underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          {label}
-        </button>
-      ) : (
-        label
-      )}
-      <span className="sr-only">: </span>
-    </span>
-  );
-}
-
-/** Plain text with the search term marked, scrolled so the first hit is on screen. */
-function Highlighted({ text, query }: { text: string; query: string }) {
-  const first = useRef<HTMLElement | null>(null);
-  const parts = useMemo(() => splitOnMatches(text, query), [text, query]);
-
-  useEffect(() => {
-    if (!first.current) return;
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    first.current.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
-  }, [parts]);
-
-  let seen = false;
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (!part.match) return <span key={index}>{part.text}</span>;
-        const isFirst = !seen;
-        seen = true;
-        return (
-          <mark
-            key={index}
-            ref={
-              isFirst
-                ? (node) => {
-                    first.current = node;
-                  }
-                : undefined
-            }
-            // The one the find bar is on is the stronger of the two marks.
-            className="rounded-sm bg-highlight px-0.5 text-foreground data-[current]:bg-highlight-strong"
-          >
-            {part.text}
-          </mark>
-        );
-      })}
-    </>
   );
 }
 
