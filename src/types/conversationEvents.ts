@@ -103,6 +103,12 @@ export interface ConversationTopicNode {
   lastAt: number;
   returns: number;
   state: ThreadState;
+  /**
+   * The live topic only: the first turn of a change of subject the tracker
+   * proposes in it and has not drawn yet (conversationTopics.mjs). The turns
+   * from it on may still go to the next topic.
+   */
+  unsettledFrom?: string;
 }
 
 // A directed transition between topics: the conversation moved from → to.

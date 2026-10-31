@@ -17,6 +17,14 @@
 //   turns rather than in the middle of one.
 // - **The topic the room is on goes first**, then topics with no name in the
 //   order they were raised, then the ones that grew.
+// - **The topic the room is on is read up to a change the tracker proposed.**
+//   The tracker draws a change of subject only once enough talk has followed
+//   it, and until then the next subject's turns are shown in the live topic.
+//   When the room comes back to a topic and then moves on, a rename read from
+//   all of the live topic's turns is read from the next subject, and the name
+//   stays after the cut is drawn (`nameStillFits`). So a request quotes, and
+//   the naming rules count (`topicNeedsName`), only the live topic's turns
+//   before a change the tracker proposes in it (`namedTurnIds`).
 // - **A name never goes back.** A topic shows its on-device name until the
 //   model's arrives, and that name until a newer one arrives. Nothing on screen
 //   changes while a request is out, and a failure changes nothing at all.
@@ -68,6 +76,20 @@ function race(work, ms, setTimer, clearTimer, message) {
     timer = setTimer(() => reject(new Error(message)), Math.max(0, ms));
   });
   return Promise.race([work, timeout]).finally(() => clearTimer(timer));
+}
+
+/**
+ * The ids of the turns a topic is named from, in the order said: all of its
+ * turns, except in the topic the room is on when the tracker proposes a
+ * change of subject in it that it has not drawn yet (`unsettledFrom`). Then
+ * only the turns before the change: the ones from it on may still go to the
+ * next topic.
+ */
+export function namedTurnIds(node) {
+  const ids = Array.isArray(node?.utteranceIds) ? node.utteranceIds : [];
+  if (node?.unsettledFrom == null) return ids;
+  const from = ids.findIndex((id) => String(id) === String(node.unsettledFrom));
+  return from >= 0 ? ids.slice(0, from) : ids;
 }
 
 export class TopicNamer {
@@ -288,7 +310,7 @@ export class TopicNamer {
 
   _words(node, byId) {
     let total = 0;
-    for (const id of node.utteranceIds) {
+    for (const id of namedTurnIds(node)) {
       const segment = byId.get(String(id));
       if (!segment) continue;
       let count = this._wordCounts.get(segment);
@@ -352,7 +374,8 @@ export class TopicNamer {
    */
   async _name({ node, words, record }, { final, timeoutMs }) {
     const byId = this._index();
-    const turns = node.utteranceIds
+    const ids = namedTurnIds(node);
+    const turns = ids
       .map((id) => byId.get(String(id))?.text)
       .filter((text) => typeof text === "string" && text.trim());
     const others = this._others(node.id);
@@ -395,7 +418,9 @@ export class TopicNamer {
       name: kept ? record.name : name,
       words,
       namings: (record?.namings ?? 0) + 1,
-      utteranceIds: node.utteranceIds.map(String),
+      // The turns it was read from: `nameStillFits` asks whether the topic
+      // still holds them.
+      utteranceIds: ids.map(String),
     });
     this.stats.named += 1;
     this.log("named", { topic: node.id, final, ms, words, kept, renamed: Boolean(record) });

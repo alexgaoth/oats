@@ -273,6 +273,122 @@ test("a live topic appears once enough of it has been said", () => {
   );
 });
 
+// The room comes back to pricing, then moves on to the investor demo. The
+// tracker draws that change only once enough of the demo has been said, so for
+// a while the demo's first turns are shown in the pricing topic.
+const BACK_THEN_ON = [...PRICING.slice(0, 12), ...HIRING, ...PRICING, ...DEMO];
+const DEMO_FROM = 12 + HIRING.length + PRICING.length;
+
+test("the live topic marks where the tracker proposes a change it has not drawn yet", () => {
+  const tracker = new ConversationTopicTracker();
+  const first = `u${DEMO_FROM}`;
+  let marked = null;
+  for (const utterance of utterancesOf(BACK_THEN_ON)) {
+    tracker.onUtterance(utterance);
+    const { nodes } = tracker.snapshot(utterance.at);
+    const live = nodes.find((node) => node.state === "live");
+    for (const node of nodes) {
+      if (node !== live) assert.equal(node.unsettledFrom, undefined, "only the live topic");
+    }
+    if (live.unsettledFrom) assert.ok(live.utteranceIds.includes(live.unsettledFrom));
+    if (live.unsettledFrom === first) marked ??= live;
+  }
+  assert.ok(marked, "the change to the demo was proposed before it was drawn");
+  assert.equal(marked.id, 1, "in the pricing topic");
+  assert.equal(marked.returns, 1, "which the room had come back to");
+  assert.ok(marked.utteranceIds.includes(first), "and which showed the demo's first turns");
+
+  const end = BACK_THEN_ON.length * 6000;
+  const live = tracker.snapshot(end).nodes.find((node) => node.state === "live");
+  assert.equal(live.utteranceIds[0], first, "the cut is drawn where it was proposed");
+  assert.equal(live.unsettledFrom, undefined, "and then nothing is proposed");
+  const { nodes } = tracker.snapshot(end, { final: true });
+  assert.ok(
+    nodes.every((node) => !("unsettledFrom" in node)),
+    "a record has nothing live"
+  );
+});
+
+// What the writing model reads of a topic while the room talks (topicNamer.mjs).
+test("a topic the room came back to is not renamed from the next subject", async () => {
+  const { TopicNamer } = await import("../../src/helpers/topicNamer.mjs");
+  let now = 0;
+  let nextTimer = 1;
+  const timers = new Map();
+  const setTimer = (fn, ms) => {
+    timers.set(nextTimer, { at: now + Math.max(0, ms), fn });
+    return nextTimer++;
+  };
+  const clearTimer = (id) => timers.delete(id);
+  const tick = async (ms) => {
+    const until = now + ms;
+    for (;;) {
+      const due = [...timers]
+        .filter(([, timer]) => timer.at <= until)
+        .sort((a, b) => a[1].at - b[1].at)[0];
+      if (!due) break;
+      timers.delete(due[0]);
+      now = due[1].at;
+      due[1].fn();
+      for (let pass = 0; pass < 4; pass += 1) await new Promise((resolve) => setImmediate(resolve));
+    }
+    now = until;
+  };
+  // A stand-in for the model: the subject most of the quoted lines are on.
+  const SUBJECTS = [
+    ["Enterprise pricing", /pricing|discount|renewal/gi],
+    ["Research engineer hiring", /research engineer|interview loop|job post/gi],
+    ["Investor demo build", /investor demo|demo build|charts/gi],
+  ];
+  const quotedByRequest = [];
+  const namer = new TopicNamer({
+    now: () => now,
+    setTimer,
+    clearTimer,
+    ask: async ({ text }) => {
+      const quoted = text
+        .split("What was said on this topic:\n")[1]
+        .split("\n")
+        .map((line) => line.slice(2));
+      quotedByRequest.push(quoted);
+      const said = quoted.join(" ");
+      const [name, hits] = SUBJECTS.map(([subject, words]) => [
+        subject,
+        (said.match(words) ?? []).length,
+      ]).sort((a, b) => b[1] - a[1])[0];
+      return hits ? name : "";
+    },
+  });
+
+  const tracker = new ConversationTopicTracker({ now: () => now });
+  const segments = [];
+  let demoInPricing = false;
+  for (const [index, text] of BACK_THEN_ON.entries()) {
+    const id = `u${index}`;
+    tracker.onUtterance({ id, text, at: now });
+    segments.push({ id, text, timestamp: now });
+    const snapshot = tracker.snapshot(now);
+    const live = snapshot.nodes.find((node) => node.state === "live");
+    if (live.id === 1 && index >= DEMO_FROM) demoInPricing = true;
+    namer.observe(snapshot, [...segments]);
+    await tick(6000);
+  }
+  assert.ok(demoInPricing, "the demo's first turns were shown in the pricing topic");
+  assert.ok(quotedByRequest.length >= 3);
+  for (const quoted of quotedByRequest) {
+    const pricing = quoted.some((line) => PRICING.includes(line));
+    const demo = quoted.some((line) => DEMO.includes(line));
+    assert.ok(
+      !(pricing && demo),
+      `a request read pricing and the demo together:\n${quoted.join("\n")}`
+    );
+  }
+  assert.deepEqual(
+    namer.apply(tracker.snapshot(now)).nodes.map((node) => node.label),
+    ["Enterprise pricing", "Research engineer hiring", "Investor demo build"]
+  );
+});
+
 // The store reads the graph and the stack after every finalized utterance.
 // Reading must not decide anything.
 test("reading after every utterance decides nothing the tracker would not", () => {

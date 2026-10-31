@@ -29,9 +29,6 @@ const SHOTS = [
   { name: "sidebar-foot", query: "footer=small.en", script: "" },
   // The site's screens (site/media/manifest.json says how each is cropped).
   // A window the app can have: its default is 1200x800, its minimum 880x680.
-  // The live takes stay before 14:00: from there the first topic can be
-  // renamed from the discount talk the tracker has not cut away from it yet,
-  // and keep that name.
   // The hero: the live view at 11:09, three topics, and an answered, an
   // unknown and an unanswered question on the line.
   {
