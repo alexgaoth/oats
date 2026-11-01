@@ -14,6 +14,8 @@ const {
   extractArchive,
   fetchLatestRelease,
   setExecutable,
+  verifyExistingOrRemove,
+  installVerifiedFile,
 } = require("./lib/download-utils");
 
 const REPO = "OpenWhispr/openwhispr";
@@ -34,23 +36,31 @@ const PLATFORM_CONFIG = {
     archiveName: "windows-text-monitor-win32-x64.zip",
     binaryName: "windows-text-monitor.exe",
     versionEnv: "WINDOWS_TEXT_MONITOR_VERSION",
+    defaultVersion: "windows-text-monitor-v1.0.0",
+    expectedSha256: "6e9a6677decdd834c1f7c1c7d498334ff5dcb2315d23e83b0a1718eeecc5ee1c",
     compileHint: "install Visual Studio Build Tools or MinGW-w64",
   },
 };
 
 async function main() {
-  const config = PLATFORM_CONFIG[process.platform];
+  // --platform win32 (or TARGET_PLATFORM) stages another platform's binary for a cross build.
+  const platformIndex = process.argv.indexOf("--platform");
+  const targetPlatform =
+    (platformIndex !== -1 && process.argv[platformIndex + 1]) ||
+    process.env.TARGET_PLATFORM ||
+    process.platform;
+  const config = PLATFORM_CONFIG[targetPlatform];
   if (!config) {
-    console.log(`[text-monitor] Skipping download (unsupported platform: ${process.platform})`);
+    console.log(`[text-monitor] Skipping download (unsupported platform: ${targetPlatform})`);
     return;
   }
 
-  const { label, tagPrefix, archiveName, binaryName, versionEnv, compileHint } = config;
+  const { label, tagPrefix, archiveName, binaryName, versionEnv, compileHint, defaultVersion = null, expectedSha256 = null } = config;
   const versionOverride = process.env[versionEnv] || null;
   const forceDownload = process.argv.includes("--force");
   const outputPath = path.join(BIN_DIR, binaryName);
 
-  if (fs.existsSync(outputPath) && !forceDownload) {
+  if (!forceDownload && verifyExistingOrRemove(outputPath, expectedSha256, label)) {
     console.log(`[${label}] Already exists (use --force to re-download)`);
     console.log(`  ${outputPath}`);
     return;
@@ -59,13 +69,16 @@ async function main() {
   if (versionOverride) {
     console.log(`\n[${label}] Using pinned version: ${versionOverride}`);
   } else {
-    console.log(`\n[${label}] Fetching latest release...`);
+    console.log(`\n[${label}] Fetching pinned release...`);
   }
-  const tagToFind = versionOverride || tagPrefix;
-  const release = await fetchLatestRelease(REPO, { tagPrefix: tagToFind });
+  const tagToFind = versionOverride || defaultVersion || tagPrefix;
+  const release = await fetchLatestRelease(
+    REPO,
+    versionOverride || defaultVersion ? { tag: tagToFind } : { tagPrefix: tagToFind }
+  );
 
   if (!release) {
-    console.error(`[${label}] Could not find a release matching prefix:`, tagPrefix);
+    console.error(`[${label}] Could not find pinned release tag:`, tagPrefix);
     console.log(`[${label}] Auto-learn correction monitoring will be disabled`);
     return;
   }
@@ -95,7 +108,7 @@ async function main() {
 
     const binaryPath = path.join(extractDir, binaryName);
     if (fs.existsSync(binaryPath)) {
-      fs.copyFileSync(binaryPath, outputPath);
+      await installVerifiedFile(binaryPath, outputPath, expectedSha256, label);
       setExecutable(outputPath);
       console.log(`  Extracted to: ${binaryName}`);
     } else {

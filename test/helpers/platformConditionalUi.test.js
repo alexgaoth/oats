@@ -160,6 +160,23 @@ test("the drag region occupies layout rather than floating over the surfaces", (
   assert.match(element, /className="[^"]*\bshrink-0\b[^"]*"/, "it must hold its own height");
 });
 
+test("Windows gets its native window controls back via the controls overlay", () => {
+  // `frame: false` removes every native control on Windows, and the darwin
+  // traffic lights do not exist there, so a frameless Windows window has no
+  // minimize/maximize/close at all. The window controls overlay restores
+  // them, gated to win32 so macOS and Linux keep their existing behaviour.
+  const win32 = WINDOW_CONFIG.match(
+    /process\.platform === "win32" && \{(?<body>[\s\S]*?)\n  \}\),/
+  );
+  assert.ok(win32?.groups?.body, "expected a win32-gated block in the window config");
+  assert.match(win32.groups.body, /titleBarStyle: "hidden"/, "win32 must hide the stock title bar");
+  assert.match(win32.groups.body, /titleBarOverlay/, "win32 must enable the window controls overlay");
+
+  // The overlay fills the 52px header/sidebar drag bands it sits on.
+  assert.match(win32.groups.body, /height: 52/, "overlay must fill the drag band height");
+  assert.match(WORKSPACE, /h-\[52px\][^\n]*shrink-0/, "the header band it matches is 52px");
+});
+
 test("macOS traffic lights have the band to themselves", () => {
   const position = WINDOW_CONFIG.match(/trafficLightPosition: \{ x: (\d+), y: (\d+) \}/);
   assert.ok(position, "expected an explicit traffic light position");

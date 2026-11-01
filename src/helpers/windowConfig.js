@@ -111,6 +111,29 @@ const CONTROL_PANEL_CONFIG = {
     // Centred in the sidebar's 52px drag band (a 16px-tall button row at y 18).
     trafficLightPosition: { x: 18, y: 18 },
   }),
+  // Windows draws no chrome at all on a frameless window (the darwin traffic
+  // lights above are the window's only native controls, and they are macOS
+  // only). The window controls overlay restores the native
+  // minimize/maximize/close buttons, top-right, while the window stays
+  // frameless. The header and sidebar 52px bands stay the drag regions.
+  ...(process.platform === "win32" && {
+    titleBarStyle: "hidden",
+    get titleBarOverlay() {
+      // The win32 spread condition gates this getter to Windows, where the
+      // config is built in the Electron main process, so requiring electron
+      // here is safe. Tests never execute it: they read this file as text,
+      // and on other platforms the spread short-circuits before it exists.
+      const dark = Boolean(require("electron")?.nativeTheme?.shouldUseDarkColors);
+      return {
+        // Match the header band (index.css --color-background) so the buttons
+        // read as part of the window, not a strip on top of it.
+        color: dark ? "#09090b" : "#ffffff",
+        symbolColor: dark ? "#ffffff" : "#09090b",
+        // Fill the 52px drag bands the buttons overlay.
+        height: 52,
+      };
+    },
+  }),
   transparent: false,
   minimizable: true,
   maximizable: true,
