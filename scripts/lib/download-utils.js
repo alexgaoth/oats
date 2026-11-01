@@ -372,6 +372,45 @@ function assertSafeArchivePaths(names, archivePath) {
   }
 }
 
+function sha256FileSync(filePath) {
+  const crypto = require("crypto");
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+// Skip-gate helper: returns true only when filePath exists and matches the pin
+// (or no pin is configured). A pinned mismatch is deleted on the spot so a
+// later run cannot mistake a tampered binary for a completed download.
+function verifyExistingOrRemove(filePath, expectedHex, label) {
+  if (!fs.existsSync(filePath)) return false;
+  if (!expectedHex) return true;
+  const actual = sha256FileSync(filePath);
+  if (actual === expectedHex.toLowerCase()) return true;
+  console.error(
+    `[${label}] Existing ${path.basename(filePath)} failed SHA256 verification ` +
+      `(expected ${expectedHex.slice(0, 12)}..., got ${actual.slice(0, 12)}...); removing it.`
+  );
+  fs.unlinkSync(filePath);
+  return false;
+}
+
+// Verifies sourcePath against the pin BEFORE it lands at outputPath, then
+// re-verifies the installed copy. Any mismatch removes the output and throws:
+// a bad binary never survives at the install location.
+async function installVerifiedFile(sourcePath, outputPath, expectedHex, label) {
+  if (expectedHex) {
+    await verifySha256(sourcePath, expectedHex, label);
+  }
+  fs.copyFileSync(sourcePath, outputPath);
+  try {
+    if (expectedHex) {
+      await verifySha256(outputPath, expectedHex, label);
+    }
+  } catch (err) {
+    fs.rmSync(outputPath, { force: true });
+    throw err;
+  }
+}
+
 async function verifySha256(filePath, expectedHex, label) {
   const crypto = require("crypto");
   const hash = crypto.createHash("sha256");
@@ -492,7 +531,11 @@ function cleanupFiles(binDir, prefix, keepPrefix) {
 }
 
 module.exports = {
+  assertSafeArchivePaths,
   verifySha256,
+  sha256FileSync,
+  verifyExistingOrRemove,
+  installVerifiedFile,
   downloadFile,
   extractArchive,
   extractZip,

@@ -14,7 +14,8 @@ const {
   extractArchive,
   fetchLatestRelease,
   setExecutable,
-  verifySha256,
+  verifyExistingOrRemove,
+  installVerifiedFile,
 } = require("./lib/download-utils");
 
 const REPO = "OpenWhispr/openwhispr";
@@ -59,7 +60,7 @@ async function main() {
   const forceDownload = process.argv.includes("--force");
   const outputPath = path.join(BIN_DIR, binaryName);
 
-  if (fs.existsSync(outputPath) && !forceDownload) {
+  if (!forceDownload && verifyExistingOrRemove(outputPath, expectedSha256, label)) {
     console.log(`[${label}] Already exists (use --force to re-download)`);
     console.log(`  ${outputPath}`);
     return;
@@ -107,9 +108,8 @@ async function main() {
 
     const binaryPath = path.join(extractDir, binaryName);
     if (fs.existsSync(binaryPath)) {
-      fs.copyFileSync(binaryPath, outputPath);
+      await installVerifiedFile(binaryPath, outputPath, expectedSha256, label);
       setExecutable(outputPath);
-      if (expectedSha256) await verifySha256(outputPath, expectedSha256, label);
       console.log(`  Extracted to: ${binaryName}`);
     } else {
       throw new Error(`Binary not found in archive: ${binaryName}`);

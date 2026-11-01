@@ -17,7 +17,8 @@ const {
   extractZip,
   fetchLatestRelease,
   setExecutable,
-  verifySha256,
+  verifyExistingOrRemove,
+  installVerifiedFile,
 } = require("./lib/download-utils");
 
 const REPO = "OpenWhispr/openwhispr";
@@ -44,7 +45,7 @@ async function main() {
   const outputPath = path.join(BIN_DIR, BINARY_NAME);
 
   // Check if already exists
-  if (fs.existsSync(outputPath) && !forceDownload) {
+  if (!forceDownload && verifyExistingOrRemove(outputPath, EXPECTED_SHA256, "windows-mic-listener")) {
     console.log("[windows-mic-listener] Already exists (use --force to re-download)");
     console.log(`  ${outputPath}`);
     return;
@@ -96,9 +97,8 @@ async function main() {
     // Find and copy the binary
     const binaryPath = path.join(extractDir, BINARY_NAME);
     if (fs.existsSync(binaryPath)) {
-      fs.copyFileSync(binaryPath, outputPath);
+      await installVerifiedFile(binaryPath, outputPath, EXPECTED_SHA256, "windows-mic-listener");
       setExecutable(outputPath);
-      await verifySha256(outputPath, EXPECTED_SHA256, "windows-mic-listener");
       console.log(`  Extracted to: ${BINARY_NAME}`);
     } else {
       throw new Error(`Binary not found in archive: ${BINARY_NAME}`);

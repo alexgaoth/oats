@@ -14,12 +14,19 @@
 
 const fs = require("fs");
 const path = require("path");
-const { downloadFile, extractZip, verifySha256 } = require("./lib/download-utils");
+const { downloadFile, extractZip, verifySha256, verifyExistingOrRemove } = require("./lib/download-utils");
 
 const NIRCMD_URL = "https://www.nirsoft.net/utils/nircmd-x64.zip";
 // nirsoft publishes no versioned URL; pin the archive by hash instead.
 const NIRCMD_ZIP_SHA256 = "51e34ed379dd099a96bbf0a2266003361e2864fe3ef2f8baed76634909763a7c";
 const PACKAGE_FILES = ["nircmd.exe", "nircmdc.exe", "NirCmd.chm"];
+// SHA256 of each file inside the pinned archive, for verifying an already-
+// extracted install before skipping a re-download.
+const PACKAGE_SHA256 = {
+  "nircmd.exe": "2e81e048ab419fdc6e5f4336a951bd282ed6b740048dc38d7673678ee3490cda",
+  "nircmdc.exe": "c3e28c6e201d5c0206d941bed96c1c6219397da9b563771d856da1b6cc390554",
+  "NirCmd.chm": "573aa5b8db5f7b73cd0cb166514a197553e73659e881707c781691cbf2034516",
+};
 const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
 
 async function main() {
@@ -36,8 +43,15 @@ async function main() {
 
   // Check if already exists
   if (!process.argv.includes("--force") && PACKAGE_FILES.every((name) => fs.existsSync(path.join(BIN_DIR, name)))) {
-    console.log("  nircmd package already exists, skipping\n");
-    return;
+    const allValid = PACKAGE_FILES.every((name) =>
+      verifyExistingOrRemove(path.join(BIN_DIR, name), PACKAGE_SHA256[name], "nircmd")
+    );
+    if (allValid) {
+      console.log("  nircmd package already exists, skipping\n");
+      return;
+    }
+    // A bad or partial set must not ship: drop whatever remains and re-download.
+    for (const name of PACKAGE_FILES) fs.rmSync(path.join(BIN_DIR, name), { force: true });
   }
 
   const zipPath = path.join(BIN_DIR, "nircmd-x64.zip");
@@ -59,6 +73,7 @@ async function main() {
         console.error(`  ✗ ${name} not found in archive\n`);
         process.exit(1);
       }
+      await verifySha256(extractedPath, PACKAGE_SHA256[name], "nircmd");
       fs.copyFileSync(extractedPath, path.join(BIN_DIR, name));
       console.log(`  ✓ ${name}`);
     }
