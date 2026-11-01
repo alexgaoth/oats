@@ -6,16 +6,21 @@
  * and other system commands. Used for fast clipboard paste operations.
  *
  * Source: https://www.nirsoft.net/utils/nircmd.html
- * License: Free for non-commercial use
+ * License (nirsoft.net/utils/nircmd.html, verified 2026-10-31): freeware; free
+ * redistribution is allowed as long as nothing is charged and ALL files of the
+ * distribution package are included unmodified - so nircmd.exe, nircmdc.exe and
+ * NirCmd.chm all ship together.
  */
 
 const fs = require("fs");
 const path = require("path");
-const { downloadFile, extractZip } = require("./lib/download-utils");
+const { downloadFile, extractZip, verifySha256 } = require("./lib/download-utils");
 
 const NIRCMD_URL = "https://www.nirsoft.net/utils/nircmd-x64.zip";
+// nirsoft publishes no versioned URL; pin the archive by hash instead.
+const NIRCMD_ZIP_SHA256 = "51e34ed379dd099a96bbf0a2266003361e2864fe3ef2f8baed76634909763a7c";
+const PACKAGE_FILES = ["nircmd.exe", "nircmdc.exe", "NirCmd.chm"];
 const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
-const NIRCMD_PATH = path.join(BIN_DIR, "nircmd.exe");
 
 async function main() {
   // Skip if not Windows and not building for all platforms
@@ -30,8 +35,8 @@ async function main() {
   fs.mkdirSync(BIN_DIR, { recursive: true });
 
   // Check if already exists
-  if (fs.existsSync(NIRCMD_PATH)) {
-    console.log("  nircmd.exe already exists, skipping\n");
+  if (!process.argv.includes("--force") && PACKAGE_FILES.every((name) => fs.existsSync(path.join(BIN_DIR, name)))) {
+    console.log("  nircmd package already exists, skipping\n");
     return;
   }
 
@@ -40,21 +45,22 @@ async function main() {
   try {
     console.log(`  Downloading from ${NIRCMD_URL}`);
     await downloadFile(NIRCMD_URL, zipPath);
+    await verifySha256(zipPath, NIRCMD_ZIP_SHA256, "nircmd");
 
     console.log("  Extracting...");
     const extractDir = path.join(BIN_DIR, "temp-nircmd");
     fs.mkdirSync(extractDir, { recursive: true });
     await extractZip(zipPath, extractDir);
 
-    // Copy nircmd.exe to bin directory
-    const extractedPath = path.join(extractDir, "nircmd.exe");
-    if (fs.existsSync(extractedPath)) {
-      fs.copyFileSync(extractedPath, NIRCMD_PATH);
-      const stats = fs.statSync(NIRCMD_PATH);
-      console.log(`  ✓ nircmd.exe downloaded (${Math.round(stats.size / 1024)}KB)\n`);
-    } else {
-      console.error("  ✗ nircmd.exe not found in archive\n");
-      process.exit(1);
+    // The license requires shipping every file of the distribution package.
+    for (const name of PACKAGE_FILES) {
+      const extractedPath = path.join(extractDir, name);
+      if (!fs.existsSync(extractedPath)) {
+        console.error(`  ✗ ${name} not found in archive\n`);
+        process.exit(1);
+      }
+      fs.copyFileSync(extractedPath, path.join(BIN_DIR, name));
+      console.log(`  ✓ ${name}`);
     }
 
     // Cleanup

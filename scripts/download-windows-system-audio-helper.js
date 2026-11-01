@@ -17,6 +17,7 @@ const {
   extractZip,
   fetchLatestRelease,
   setExecutable,
+  verifySha256,
 } = require("./lib/download-utils");
 
 const REPO = "OpenWhispr/openwhispr";
@@ -26,6 +27,9 @@ const BINARY_NAME = "windows-system-audio-helper.exe";
 
 // Version can be pinned via environment variable for reproducible builds
 const VERSION_OVERRIDE = process.env.WINDOWS_SYSTEM_AUDIO_HELPER_VERSION || null;
+// Pinned default: an exact release tag + the SHA256 of the binary it ships.
+const DEFAULT_VERSION = "windows-system-audio-helper-v1.2.0";
+const EXPECTED_SHA256 = "c175666177ffede8ed54f6e36d301c9d238af48058e494380b4cf01d9b2d2432";
 
 const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
 
@@ -50,12 +54,9 @@ async function main() {
   if (VERSION_OVERRIDE) {
     console.log(`\n[windows-system-audio-helper] Using pinned version: ${VERSION_OVERRIDE}`);
   } else {
-    console.log("\n[windows-system-audio-helper] Fetching latest release...");
+    console.log("\n[windows-system-audio-helper] Fetching pinned release...");
   }
-  const release = await fetchLatestRelease(
-    REPO,
-    VERSION_OVERRIDE ? { tag: VERSION_OVERRIDE } : { tagPrefix: TAG_PREFIX }
-  );
+  const release = await fetchLatestRelease(REPO, { tag: VERSION_OVERRIDE || DEFAULT_VERSION });
 
   if (!release) {
     console.error(
@@ -103,6 +104,7 @@ async function main() {
     if (fs.existsSync(binaryPath)) {
       fs.copyFileSync(binaryPath, outputPath);
       setExecutable(outputPath);
+      await verifySha256(outputPath, EXPECTED_SHA256, "windows-system-audio-helper");
       console.log(`  Extracted to: ${BINARY_NAME}`);
     } else {
       throw new Error(`Binary not found in archive: ${BINARY_NAME}`);

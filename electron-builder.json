@@ -121,10 +121,11 @@
         "windows-system-audio-helper*",
         "windows-text-monitor*",
         "windows-fast-paste*",
-        "nircmd.exe",
         "*.dylib",
         "*.dll",
-        "*.so*"
+        "*.so*",
+        "nircmd*",
+        "NirCmd*"
       ]
     },
     {

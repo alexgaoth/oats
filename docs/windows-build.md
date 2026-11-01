@@ -12,9 +12,10 @@ the upstream Azure signing config nulled out if one is ever added back.
 - whisper.cpp / llama.cpp / sherpa-onnx / qdrant / meeting-aec-helper win32-x64
   binaries (downloaded from their upstream releases, like the mac/linux builds)
 - the Windows helper binaries (`windows-key-listener`, `windows-fast-paste`,
-  `windows-mic-listener`, `windows-system-audio-helper`, `nircmd`), downloaded
-  from OpenWhispr's helper releases. Their C sources live in `resources/` and
-  the `build-windows-*.js` scripts rebuild them with MSVC when they change.
+  `windows-mic-listener`, `windows-system-audio-helper`, `windows-text-monitor`,
+  `nircmd`), downloaded from OpenWhispr's helper releases. Their C sources live
+  in `resources/` and the `build-windows-*.js` scripts rebuild them with MSVC
+  when they change.
 - the bundled speech/embedding models (`ggml-base.bin`, `ggml-base.en.bin`,
   MiniLM, VAD, diarization), the same set every desktop target ships.
 
@@ -36,9 +37,25 @@ Runtime smoke-testing still needs a real Windows machine or VM: push-to-talk,
 loopback audio capture, and the mic listener only degrade gracefully, and this
 build has not been run on Windows yet.
 
+## Download integrity and licensing
+
+Every prebuilt helper is pinned to an exact upstream release tag and verified
+against a SHA256 constant in its download script before use; a mismatch aborts
+the build rather than shipping an unexpected binary:
+
+- `windows-key-listener` v1.0.0, `windows-fast-paste` v2.0.0,
+  `windows-mic-listener` v1.1.0, `windows-system-audio-helper` v1.2.0,
+  `windows-text-monitor` v1.0.0 (all OpenWhispr helper releases, MIT)
+- `nircmd-x64.zip` (NirSoft) pinned by archive SHA256, since NirSoft publishes
+  no versioned URL. nircmd is freeware whose license permits redistribution at
+  no charge only when the entire distribution package ships unmodified, so
+  `nircmd.exe`, `nircmdc.exe` and `NirCmd.chm` are all extracted and shipped
+  together. Do not charge for builds that bundle it, and keep all three files.
+
+Pinned tags are fetched by exact tag: helper releases older than the 50 most
+recent OpenWhispr releases are invisible to prefix-scan lookups. Archive
+extraction refuses absolute paths and `..` segments (zip-slip defense).
+
 ## Known limits of the first build
 
 - Unsigned: SmartScreen will warn on first run until a certificate exists.
-- `windows-key-listener.exe` is pinned to the upstream v1.0.0 helper release;
-  its unpinned lookup falls outside the 50 most recent OpenWhispr releases, so
-  the download script fetches an exact tag when a version is pinned.

@@ -17,6 +17,7 @@ const {
   extractZip,
   fetchLatestRelease,
   setExecutable,
+  verifySha256,
 } = require("./lib/download-utils");
 
 const REPO = "OpenWhispr/openwhispr";
@@ -26,6 +27,9 @@ const BINARY_NAME = "windows-mic-listener.exe";
 
 // Version can be pinned via environment variable for reproducible builds
 const VERSION_OVERRIDE = process.env.WINDOWS_MIC_LISTENER_VERSION || null;
+// Pinned default: an exact release tag + the SHA256 of the binary it ships.
+const DEFAULT_VERSION = "windows-mic-listener-v1.1.0";
+const EXPECTED_SHA256 = "2fdad06a09b25a6169b90fcfd225057724ba6bd93d07701ab3bd030264354a7e";
 
 const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
 
@@ -50,18 +54,12 @@ async function main() {
   if (VERSION_OVERRIDE) {
     console.log(`\n[windows-mic-listener] Using pinned version: ${VERSION_OVERRIDE}`);
   } else {
-    console.log("\n[windows-mic-listener] Fetching latest release...");
+    console.log("\n[windows-mic-listener] Fetching pinned release...");
   }
-  const tagToFind = VERSION_OVERRIDE || TAG_PREFIX;
-  const release = await fetchLatestRelease(
-    REPO,
-    // A pinned version is an exact tag: it can fall outside the 50
-    // most recent releases that a prefix scan sees.
-    VERSION_OVERRIDE ? { tag: VERSION_OVERRIDE } : { tagPrefix: tagToFind }
-  );
+  const release = await fetchLatestRelease(REPO, { tag: VERSION_OVERRIDE || DEFAULT_VERSION });
 
   if (!release) {
-    console.error("[windows-mic-listener] Could not find a release matching prefix:", TAG_PREFIX);
+    console.error("[windows-mic-listener] Could not find pinned release tag:", TAG_PREFIX);
     console.log("[windows-mic-listener] Mic detection will use fallback mode (polling)");
     return;
   }
@@ -100,6 +98,7 @@ async function main() {
     if (fs.existsSync(binaryPath)) {
       fs.copyFileSync(binaryPath, outputPath);
       setExecutable(outputPath);
+      await verifySha256(outputPath, EXPECTED_SHA256, "windows-mic-listener");
       console.log(`  Extracted to: ${BINARY_NAME}`);
     } else {
       throw new Error(`Binary not found in archive: ${BINARY_NAME}`);
