@@ -5638,6 +5638,7 @@ class IPCHandlers {
      */
     const startInRoomSegmenting = async () => {
       const { SpeechSegmenter, SAMPLE_RATE } = await import("./speechSegmenter.mjs");
+      const { DcBlocker } = await import("./dcBlocker.mjs");
       const { PartialScheduler } = await import("./partialScheduler.mjs");
       const { AudioClock, speechChanges } = await import("./transcriptLag.mjs");
       const os = require("os");
@@ -5646,6 +5647,9 @@ class IPCHandlers {
       // A header now, its sizes patched at Stop.
       stream.write(pcm16ToWav(Buffer.alloc(0)));
       meetingInRoom = {
+        // Before anything measures loudness: a microphone's DC offset reads as
+        // a room too loud for any voice to clear (dcBlocker.mjs).
+        dcBlocker: new DcBlocker(),
         segmenter: new SpeechSegmenter(),
         // Whisper only: the default, and the path measured with a second
         // request on its server. Parakeet keeps finals only until it is.
@@ -5663,10 +5667,13 @@ class IPCHandlers {
 
     const feedInRoomAudio = (buffer24k) => {
       const session = meetingInRoom;
-      const pcm16k = downsample24kTo16k(buffer24k);
+      const raw = downsample24kTo16k(buffer24k);
+      const samples = session.dcBlocker.process(
+        new Int16Array(raw.buffer, raw.byteOffset, raw.length >> 1)
+      );
+      const pcm16k = Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength);
       session.audio.stream.write(pcm16k);
       session.audio.bytes += pcm16k.length;
-      const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
       const closed = session.segmenter.push(samples);
       // When this audio reached main: what every moment sent below is counted
       // back from, so a moment can come out late but never early.
