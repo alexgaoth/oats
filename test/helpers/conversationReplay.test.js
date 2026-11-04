@@ -108,6 +108,32 @@ test("nothing goes backwards as it plays: turns, topics and lanes only grow", ()
   assert.equal(rows, 8, "every topic has its lane by the end");
 });
 
+test("the graph's links grow with the replay, returns when the room came back", () => {
+  const { conversation, timeline } = setUp();
+  const returns = (frame) => frame.snapshot.edges.filter((edge) => edge.kind === "return");
+  const firstReturn = Math.min(...[...timeline.returnsAt.values()].flat()) - timeline.start;
+
+  assert.equal(returns(replay.replayFrame(timeline, firstReturn - 1)).length, 0);
+  assert.equal(returns(replay.replayFrame(timeline, firstReturn)).length, 1);
+
+  let links = 0;
+  for (let at = 0; at <= timeline.duration; at += MINUTE) {
+    const { snapshot } = replay.replayFrame(timeline, at);
+    assert.ok(snapshot.edges.length >= links, `the links went backwards at ${at}`);
+    links = snapshot.edges.length;
+    const raised = new Set(snapshot.nodes.map((node) => node.id));
+    for (const edge of snapshot.edges) {
+      assert.ok(raised.has(edge.from) && raised.has(edge.to), "a link to a topic not raised yet");
+    }
+  }
+  const moved = replay.replayFrame(timeline, 24 * MINUTE).snapshot;
+  assert.ok(moved.edges.length >= moved.nodes.length - 1, "a moment with topics and no links");
+
+  // The last frame is the record's own map.
+  const end = replay.replayFrame(timeline, timeline.duration);
+  assert.deepEqual(end.snapshot.edges, conversation.snapshot.edges);
+});
+
 test("the end is the record itself, finished", () => {
   const { conversation, timeline } = setUp();
   const end = replay.replayFrame(timeline, timeline.duration);

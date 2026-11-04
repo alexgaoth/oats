@@ -15351,7 +15351,21 @@ function ms({ conversation: e }) {
 //#endregion
 //#region src/helpers/conversationReplay.mjs
 var hs = 4e4, gs = 5e3;
-function _s(e) {
+function _s(e, t, n) {
+	let r = new Map(t.map((e) => [e.id, e.firstAt])), i = /* @__PURE__ */ new Map();
+	return e.map((e) => {
+		if (e?.kind !== "return") return {
+			edge: e,
+			at: r.get(e?.to) ?? Infinity
+		};
+		let t = i.get(e.to) ?? 0;
+		return i.set(e.to, t + 1), {
+			edge: e,
+			at: n.get(e.to)?.[t] ?? Infinity
+		};
+	});
+}
+function vs(e) {
 	let t = (e?.segments ?? []).filter((e) => Number.isFinite(e?.timestamp)).sort((e, t) => e.timestamp - t.timestamp), n = Array.isArray(e?.snapshot?.nodes) ? e.snapshot.nodes : [], r = Bi({
 		snapshot: e?.snapshot ?? null,
 		segments: t
@@ -15360,24 +15374,26 @@ function _s(e) {
 		let t = r.start + e.at * r.span;
 		o.set(e.topic, [...o.get(e.topic) ?? [], t]);
 	}
-	let s = new Map(t.map((e) => [String(e.id), e.timestamp])), c = Array.isArray(e?.events) ? e.events : [];
+	let s = new Map(t.map((e) => [String(e.id), e.timestamp])), c = Array.isArray(e?.events) ? e.events : [], l = Array.isArray(e?.snapshot?.edges) ? e.snapshot.edges : [];
 	return {
 		start: i,
 		end: a,
 		duration: Math.max(0, a - i),
 		segments: t,
 		nodes: n,
+		edges: l,
+		moves: _s(l, n, o),
 		timeOf: s,
 		returnsAt: o,
 		events: [...c].sort((e, t) => e.createdAt - t.createdAt || e.id - t.id)
 	};
 }
-function vs(e, t, n) {
+function ys(e, t, n) {
 	let r = 0;
 	for (; r < e.segments.length && e.segments[r].timestamp <= t;) r += 1;
 	return n && n.length === r ? n : e.segments.slice(0, r);
 }
-function ys(e, t, n) {
+function bs(e, t, n) {
 	let r = [];
 	for (let i of e.nodes) {
 		if (!Number.isFinite(i?.firstAt) || i.firstAt > t) continue;
@@ -15393,20 +15409,21 @@ function ys(e, t, n) {
 			state: i.id === n ? "live" : "open"
 		});
 	}
+	let i = new Set(r.map((e) => e.id));
 	return {
 		nodes: r,
-		edges: []
+		edges: e.moves.filter(({ edge: e, at: n }) => n <= t && i.has(e.from) && i.has(e.to)).map(({ edge: e }) => e)
 	};
 }
-function bs(e, t) {
+function xs(e, t) {
 	for (let n = t.length - 1; n >= 0; --n) {
 		let r = String(t[n].id), i = e.nodes.find((e) => (e.utteranceIds ?? []).some((e) => String(e) === r));
 		if (i) return i.id;
 	}
 	return null;
 }
-function xs(e, t, n) {
-	let r = Math.min(e.duration, Math.max(0, Number(t) || 0)), i = e.start + r, a = r >= e.duration, o = vs(e, i, n?.segments), s = bs(e, o);
+function Ss(e, t, n) {
+	let r = Math.min(e.duration, Math.max(0, Number(t) || 0)), i = e.start + r, a = r >= e.duration, o = ys(e, i, n?.segments), s = xs(e, o);
 	return {
 		at: r,
 		now: i,
@@ -15415,11 +15432,11 @@ function xs(e, t, n) {
 		events: e.events.filter((e) => e.createdAt <= i),
 		snapshot: a ? {
 			nodes: e.nodes,
-			edges: []
-		} : ys(e, i, s)
+			edges: e.edges
+		} : bs(e, i, s)
 	};
 }
-function Ss(e, t, n) {
+function Cs(e, t, n) {
 	if (!e || e.empty || !(e.span > 0)) return e;
 	let r = t.start + Math.min(t.duration, Math.max(0, Number(n) || 0)), i = Math.min(1, Math.max(0, (r - e.start) / e.span));
 	if (i >= 1) return e;
@@ -15456,23 +15473,23 @@ function Ss(e, t, n) {
 		moments: (e.moments ?? []).filter((e) => e.x <= i)
 	};
 }
-function Cs(e, t, n) {
+function ws(e, t, n) {
 	if (!(e.duration > 0)) return 0;
 	let r = e.duration / hs;
 	return Math.min(e.duration, Math.max(0, t + Math.max(0, n) * r));
 }
 //#endregion
 //#region src/components/demo/DemoReplay.tsx
-var ws = [], Ts = 100, Es = 33;
-function Ds({ conversation: e, from: t = 0 }) {
-	let { t: n } = ot(), r = (0, _.useMemo)(() => _s(e), [e]), i = Go(e.segments, e.events, e.topics, e.moments, e.loudness), [a] = (0, _.useState)(So), [o, s] = (0, _.useState)(() => a ? r.duration : Math.min(r.duration, Math.max(0, t))), [c, l] = (0, _.useState)(() => !a), [u, d] = (0, _.useState)("lanes"), f = (0, _.useRef)(null), p = Co(f), m = (0, _.useRef)(o), h = (0, _.useRef)(!1);
+var Ts = [], Es = 100, Ds = 33;
+function Os({ conversation: e, from: t = 0 }) {
+	let { t: n } = ot(), r = (0, _.useMemo)(() => vs(e), [e]), i = Go(e.segments, e.events, e.topics, e.moments, e.loudness), [a] = (0, _.useState)(So), [o, s] = (0, _.useState)(() => a ? r.duration : Math.min(r.duration, Math.max(0, t))), [c, l] = (0, _.useState)(() => !a), [u, d] = (0, _.useState)("lanes"), f = (0, _.useRef)(null), p = Co(f), m = (0, _.useRef)(o), h = (0, _.useRef)(!1);
 	(0, _.useEffect)(() => {
 		if (!c || !p) return;
 		let e = 0, t = null, n = -Infinity, i = (a) => {
-			let o = t === null ? 0 : Math.min(Ts, a - t);
-			t = a, h.current || (m.current = Cs(r, m.current, o));
+			let o = t === null ? 0 : Math.min(Es, a - t);
+			t = a, h.current || (m.current = ws(r, m.current, o));
 			let c = m.current >= r.duration;
-			if ((c || a - n >= Es) && (n = a, s(m.current)), c) {
+			if ((c || a - n >= Ds) && (n = a, s(m.current)), c) {
 				l(!1);
 				return;
 			}
@@ -15484,11 +15501,11 @@ function Ds({ conversation: e, from: t = 0 }) {
 		p,
 		r
 	]);
-	let g = (0, _.useRef)(void 0), v = (0, _.useMemo)(() => xs(r, o, g.current), [r, o]);
+	let g = (0, _.useRef)(void 0), v = (0, _.useMemo)(() => Ss(r, o, g.current), [r, o]);
 	(0, _.useEffect)(() => {
 		g.current = v;
 	}, [v]);
-	let y = (0, _.useMemo)(() => Ss(i, r, o), [
+	let y = (0, _.useMemo)(() => Cs(i, r, o), [
 		i,
 		r,
 		o
@@ -15562,7 +15579,7 @@ function Ds({ conversation: e, from: t = 0 }) {
 				segments: v.segments,
 				startedAt: r.start,
 				now: v.now,
-				suggestions: ws,
+				suggestions: Ts,
 				view: u,
 				onViewChange: d
 			})
@@ -15571,8 +15588,8 @@ function Ds({ conversation: e, from: t = 0 }) {
 }
 //#endregion
 //#region site/src/live.js
-var Os = 669e3, ks = new URL("live.css", import.meta.url).href, As = Pe();
-As.use($e).init({
+var ks = 669e3, As = new URL("live.css", import.meta.url).href, js = Pe();
+js.use($e).init({
 	lng: "en",
 	fallbackLng: "en",
 	resources: { en: { translation: ct } },
@@ -15584,29 +15601,29 @@ As.use($e).init({
 for (let e of lt) try {
 	window.CSS?.registerProperty?.(e);
 } catch {}
-var js = jt(ut), Ms = {
-	hero: () => (0, _.createElement)(Ds, {
-		conversation: js,
-		from: Os
+var Ms = jt(ut), Ns = {
+	hero: () => (0, _.createElement)(Os, {
+		conversation: Ms,
+		from: ks
 	}),
-	map: () => (0, _.createElement)(Ds, { conversation: js }),
-	topics: () => (0, _.createElement)(Wa, { conversation: js }),
+	map: () => (0, _.createElement)(Os, { conversation: Ms }),
+	topics: () => (0, _.createElement)(Wa, { conversation: Ms }),
 	questions: () => (0, _.createElement)(To, {
-		conversation: js,
+		conversation: Ms,
 		replay: !0
 	}),
-	after: () => (0, _.createElement)("div", { className: "flex flex-col gap-6" }, (0, _.createElement)(ms, { conversation: js }), (0, _.createElement)(ds, { conversation: js }))
+	after: () => (0, _.createElement)("div", { className: "flex flex-col gap-6" }, (0, _.createElement)(ms, { conversation: Ms }), (0, _.createElement)(ds, { conversation: Ms }))
 };
-function Ns({ onDrawn: e, children: t }) {
+function Ps({ onDrawn: e, children: t }) {
 	return (0, _.useEffect)(() => e(), [e]), t;
 }
-function Ps(e) {
-	let t = Ms[e.dataset.liveSlot];
+function Fs(e) {
+	let t = Ns[e.dataset.liveSlot];
 	if (!t || e.querySelector(":scope > .live-host")) return Promise.resolve(!1);
 	let n = document.createElement("div");
 	n.className = "live-host";
 	let r = n.attachShadow({ mode: "open" }), i = document.createElement("link");
-	i.rel = "stylesheet", i.href = ks;
+	i.rel = "stylesheet", i.href = As;
 	let a = new Promise((e, t) => {
 		i.addEventListener("load", e, { once: !0 }), i.addEventListener("error", t, { once: !0 });
 	}), o = document.createElement("div");
@@ -15614,11 +15631,11 @@ function Ps(e) {
 	let s, c = new Promise((e) => {
 		s = e;
 	});
-	return (0, v.createRoot)(o).render((0, _.createElement)(_.StrictMode, null, (0, _.createElement)(st, { i18n: As }, (0, _.createElement)(Ns, { onDrawn: s }, t())))), Promise.all([
+	return (0, v.createRoot)(o).render((0, _.createElement)(_.StrictMode, null, (0, _.createElement)(st, { i18n: js }, (0, _.createElement)(Ps, { onDrawn: s }, t())))), Promise.all([
 		a,
 		c,
 		document.fonts?.ready
 	]).then(() => (e.dataset.live = "ready", !0));
 }
 //#endregion
-export { Os as HERO_FROM_MS, Ps as mount };
+export { ks as HERO_FROM_MS, Fs as mount };

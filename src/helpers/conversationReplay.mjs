@@ -21,9 +21,28 @@ export const REPLAY_MS = 40_000;
 export const REPLAY_STEP_MS = 5_000;
 
 /**
+ * When the room made each move between topics. The record's edges carry no
+ * time, and they are its own, so each takes the time the record gives its
+ * target: a move to a new topic is made when that topic is raised, and a
+ * return when the lanes say the room came back. A return the lanes merged away
+ * has no time of its own, and shows only at the end, with the record.
+ */
+function movesOf(edges, nodes, returnsAt) {
+  const firstAt = new Map(nodes.map((node) => [node.id, node.firstAt]));
+  const used = new Map();
+  return edges.map((edge) => {
+    if (edge?.kind !== "return") return { edge, at: firstAt.get(edge?.to) ?? Infinity };
+    const index = used.get(edge.to) ?? 0;
+    used.set(edge.to, index + 1);
+    return { edge, at: returnsAt.get(edge.to)?.[index] ?? Infinity };
+  });
+}
+
+/**
  * What a replay of one conversation needs, worked out once: when it starts
  * and ends, its turns in order, which topic each turn was placed in, when
- * each topic came back, and when each question was asked and settled.
+ * each topic came back, when the room made each move between topics, and when
+ * each question was asked and settled.
  *
  * @param {import("./oatsTour.mjs").TourConversation} conversation
  */
@@ -44,12 +63,15 @@ export function replayTimeline(conversation) {
   }
   const timeOf = new Map(segments.map((segment) => [String(segment.id), segment.timestamp]));
   const events = Array.isArray(conversation?.events) ? conversation.events : [];
+  const edges = Array.isArray(conversation?.snapshot?.edges) ? conversation.snapshot.edges : [];
   return {
     start,
     end,
     duration: Math.max(0, end - start),
     segments,
     nodes,
+    edges,
+    moves: movesOf(edges, nodes, returnsAt),
     timeOf,
     returnsAt,
     events: [...events].sort((a, b) => a.createdAt - b.createdAt || a.id - b.id),
@@ -95,7 +117,11 @@ function snapshotAt(timeline, now, live) {
       state: node.id === live ? "live" : "open",
     });
   }
-  return { nodes, edges: [] };
+  const raised = new Set(nodes.map((node) => node.id));
+  const edges = timeline.moves
+    .filter(({ edge, at }) => at <= now && raised.has(edge.from) && raised.has(edge.to))
+    .map(({ edge }) => edge);
+  return { nodes, edges };
 }
 
 /** The topic the room was on at `now`: the one its last placed turn was in. */
@@ -129,7 +155,9 @@ export function replayFrame(timeline, at, previous) {
     finished,
     segments,
     events: timeline.events.filter((event) => event.createdAt <= now),
-    snapshot: finished ? { nodes: timeline.nodes, edges: [] } : snapshotAt(timeline, now, live),
+    snapshot: finished
+      ? { nodes: timeline.nodes, edges: timeline.edges }
+      : snapshotAt(timeline, now, live),
   };
 }
 
