@@ -66,6 +66,15 @@ every voice in time order.
   words are aligned to the manual words inside its time span, so a word of a
   quote maps to a word of a gold question.
 
+Two additions came after this section was first committed, and neither touches
+test meetings. **Tuning recognition**: all 8 meetings with audio are test meetings,
+so nothing could be tuned on real recognition without reading test. The 11 tuning
+meetings' Array1-01 audio (600 MB, the AMI mirror, CC BY 4.0) went through
+`room-replay.js` with track S's settings, in both rooms. **A view for tuning**,
+`unasked`: the manual text with every "?" turned into ".". Sentence ends stay, so a
+detector has to find a question by its words alone. It is a stand-in used before
+recognition arrived, and no result below rests on it.
+
 ### The scores
 
 - **A card is right** when its quote and a gold question share at least half of
