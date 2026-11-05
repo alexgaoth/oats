@@ -100,6 +100,7 @@ const { values: args, positionals } = parseArgs({
     key: { type: "string" },
     "key-b": { type: "string" },
     reader: { type: "string" },
+    "no-hold": { type: "boolean", default: false },
     replay: { type: "string" },
     replays: {
       type: "string",
@@ -236,8 +237,10 @@ async function replaySession(turns) {
       return eventId;
     },
     updateEvent: async () => null,
-    // Words are arriving: a turn has started and is not final yet.
-    isSpeaking: () => turns.some((turn) => turn.start * 1000 <= now && now < turn.at),
+    // Words are arriving: a turn has started and is not final yet. `--no-hold` is
+    // a recognizer with no partials (Parakeet in a room): the app cannot tell.
+    isSpeaking: () =>
+      !args["no-hold"] && turns.some((turn) => turn.start * 1000 <= now && now < turn.at),
     onCard: (card) => cards.set(card.id, { ...cards.get(card.id), ...card }),
     onCardRemoved: (id) => cards.delete(id),
     openSearch: async ({ query }) => {

@@ -222,6 +222,12 @@ was scored on test.
   the highest with recall above the app's on tuning recognition.
 - **Refine prompt**: `v1` in `scripts/question-eval.mjs`.
 
+After the test run, review found that the noise check could backtrack without end on
+a long hum (see "The patterns under attack"). Its fix is in the rules at 50e3b67, and
+`isSpeaking` reads both partials in the replies at 240e35a. Neither changes a card: on
+all 71,809 lines of text the benchmark reads, in every view and on every engine,
+old and new give the same card and the same quote. So the scores stand.
+
 ## Results on test
 
 Every number here was scored once, after the freeze above. The test meetings stay
@@ -359,20 +365,27 @@ What the reply branch changed, each with tests in both directions:
 A note on the proxies: on manual text the silence problem looked three times larger
 (0.6), because manual turns run long. Measured on recognition it is 0.18.
 
+**One limit.** "Still speaking" reads the partial on screen, and Parakeet in a room has
+no partials (`partials: null`), so the hold never engages there. The eval's `--no-hold`
+measures that case: on parakeet-ultra outcomes are right 0.727 (quiet) and 0.745
+(steady) rather than 0.820 and 0.798, and 19% and 13% of answered questions stay
+silence. The search fixes hold either way. If Parakeet becomes the room default, the
+main process needs to tell the renderer that a segment is open, whatever the engine.
+
 ### Branches
 
 Tuning meetings, real recognition, F1 unless it says otherwise.
 
-| Branch                     | Result                                                                                              | Verdict                    |
-| -------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------- |
-| 1. Rules                   | 0.464 against 0.286 (small.en), recall up. On test: table above.                                    | **Ships**                  |
-| 2. Tiny classifier         | 0.504. On test +0.022 [-0.004, 0.051] over the rules, recall -0.023 [-0.043, -0.006]. Plain: 0.406  | No: see below              |
-| 3. MiniLM + linear         | 0.41 to 0.45 at the act level, against 0.66 for the words: mean-pooled vectors lose word order      | Stopped                    |
-| 4. Pitch rise, last 400 ms | AUC 0.52 alone, against 0.92 for the words. Words + pitch 0.651, words 0.645, leave one meeting out | Stopped: one try           |
-| 5. Context lines           | Act level: 0.664 with none, 0.667 with the next line. Would add delay                               | Stopped                    |
-| 6. Local model refining    | QUEUED                                                                                              | QUEUED                     |
-| 7. Cloud refining          | gpt-6-luna on test: +0.041 [0.025, 0.065] quiet, +0.008 [-0.008, 0.028] steady                      | Under the bar              |
-| 8. Engine punctuation      | Table above. Prompts: no effect shown                                                               | Pick the engine for speech |
+| Branch                     | Result                                                                                                                                                           | Verdict                    |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 1. Rules                   | 0.464 against 0.286 (small.en), recall up. On test: table above.                                                                                                 | **Ships**                  |
+| 2. Tiny classifier         | 0.504. On test +0.022 [-0.004, 0.051] over the rules, recall -0.023 [-0.043, -0.006]. Plain: 0.406                                                               | No: see below              |
+| 3. MiniLM + linear         | 0.41 to 0.45 at the act level, against 0.66 for the words: mean-pooled vectors lose word order                                                                   | Stopped                    |
+| 4. Pitch rise, last 400 ms | AUC 0.49 to 0.52 per segment, against 0.81 for the words. F1 0.519 with or without pitch, leave one meeting out. Per dialogue act: AUC 0.52, 0.651 against 0.645 | Stopped: one try           |
+| 5. Context lines           | Act level: 0.664 with none, 0.667 with the next line. Would add delay                                                                                            | Stopped                    |
+| 6. Local model refining    | QUEUED                                                                                                                                                           | QUEUED                     |
+| 7. Cloud refining          | gpt-6-luna on test: +0.041 [0.025, 0.065] quiet, +0.008 [-0.008, 0.028] steady                                                                                   | Under the bar              |
+| 8. Engine punctuation      | Table above. Prompts: no effect shown                                                                                                                            | Pick the engine for speech |
 
 **Why the classifier does not ship.** It is good: hashed word and position n-grams,
 logistic regression, 39 KB, 25 µs a turn, no key, no download. On words alone at the
@@ -437,6 +450,33 @@ they added 1 card in 614, so they do not leak into English. The reply changes ap
 English yes/no questions and to the English bare "no". `DENIAL_INTL` and its tests are
 as they were. The 9 in 10 false-card finding may well hold for the anywhere patterns
 of other languages, but it has not been read.
+
+### The patterns under attack
+
+These patterns run in the renderer on every final segment, so a slow one freezes the
+app. Review of the rules caught exactly that: the first noise check was one repeated
+pattern with an optional separator, so `mm+` could cut a run of m's in Fibonacci-many
+ways, and a hum of sixty m's meant half an hour. It now reads one word at a time with
+a sticky pattern that never goes back. `test/helpers/conversationAide.test.js` pins
+long runs at the 600-character cap.
+
+Every regex in the file was then attacked, by measurement: strings built from each
+pattern's own words and separators at 600 characters, random mixes, then 500 mutations
+keeping the slowest, and growth from 150 to 2,400 characters.
+
+- Every pattern added or changed: 0.87 ms or less on first sight (`EN_YES_NO`), 0.01 ms
+  or less re-timed, and no growth with length.
+- The whole path on 23,465 hostile lines: 6 µs (`isQuestionCandidate`), 9 µs
+  (`extractQuestionSentence`), 42 µs (`questionGroupKey`) and 34 µs
+  (`assessResponseLocally`, three replies) on average. The worst single run was 6.6 ms
+  on a machine at load 150, and that line re-timed alone takes 0.03 ms or less.
+- One existing pattern does grow: `QUESTION_LEAD_IN` on main, 89 ms at 600 characters on
+  a long run of spaces, from adjacent `\s+` and `\s*`. It cannot be reached that way,
+  because `questionGroupKey` collapses white space first.
+
+The noise check keeps what it counted: of 2.7 million random token strings none stopped
+being noise. Hums that end in `-hmm`, such as "mmm-hmm" and "um-hmm", now count as noise
+where they did not. None of those occurs in the text above.
 
 ### Grouping
 
