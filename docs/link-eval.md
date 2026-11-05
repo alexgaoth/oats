@@ -1055,7 +1055,7 @@ what lights up when a person points at a chip.
 - **The cloud check does not move.** On the cached checks of the test split, precision,
   recall and false links change by at most 0.001 for Opus and gpt-6.1-sol.
 - **Each rebuild reads every pair of topics, on the render thread.** At the board's limit of
-  1,000 conversations that is 9 to 18 s on a loaded Mac, against 0.1 to 2.4 s on main. Taking
+  1,000 conversations that is 13 to 14 s on a loaded Mac, against 0.1 to 1.9 s on main. Taking
   the rule needs a follow-up for large boards.
 
 The number of neighbours is a dial, read once on test as frozen above. Chips, each cell
