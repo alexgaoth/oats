@@ -20,12 +20,12 @@ this before. The site says "Every question, caught as it's asked".
   room and 29% in steady sound. A question that is not in the text cannot get a
   card. Parakeet Ultra keeps 80% and 45%, and writes the best "?" of the engines
   measured.
-- **The fix is rules, on device, with no weights** (`alex/question-rules`). English
+- **The fix is rules, on device, with no weights** (#168). English
   questions are found where they open a clause. False cards fall from 99 to 34 an
   hour, F1 rises by 0.150 [0.108, 0.181] in a quiet room and by 0.089 [0.054,
   0.118] in steady sound, recall does not fall, and the first card is no later.
   It clears the default bar in all eight rooms, on four engines.
-- **Replies** (`alex/question-replies`). The outcome is right 84% of the time, up
+- **Replies** (#169). The outcome is right 84% of the time, up
   from 75%. Answered questions left as silence fall from 18% to 3%. Searches that
   opened on a reply that did not say "I don't know" fall from 2 to 0 in 4 hours.
 - **What did not earn its place.** A tiny classifier (2,571 weights) adds 0.022
@@ -214,10 +214,10 @@ reported, not scored.
 Chosen on tuning and training meetings only, and written here before any of it
 was scored on test.
 
-- **Rules**: branch `alex/question-rules` at 986acd1. `QUESTION_ANYWHERE` is gone.
+- **Rules**: #168 at 986acd1. `QUESTION_ANYWHERE` is gone.
   English questions are found where they open a clause, and adjacent asking
   sentences are quoted together.
-- **Replies**: branch `alex/question-replies` at e33c2bc, on top of the rules.
+- **Replies**: #169 at e33c2bc, on top of the rules.
 - **Classifier**: `node scripts/question-eval.mjs train --out words-tiny.json
 --alpha 0.1 --l1 6 --l2 1 --epochs 3`: 2,571 weights, 39 KB, trained on the 116
   training meetings. Threshold 0, mark 3 (`--threshold=0 --mark 3`). Threshold 0 is
