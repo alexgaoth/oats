@@ -1,0 +1,494 @@
+kind	meeting	label	text
+false-card-plain	ES2003b	statement, no question	Okay so um we did some research we asked one hundred people their opinions on remote controls we asked some uh open ende
+false-card-plain	ES2003b	statement, no question	To its sort of earliest models where with you know so so many buttons on it so about the size of the television set um g
+false-card-plain	ES2003b	statement, no question	I'm just closing it now where I've saved it
+false-card-plain	ES2003b	statement, no question	The uh remote control so we have the energy source we have the user interface this this is what I've seen uh the sender 
+false-card-plain	ES2003b	statement, no question	That's the design of the the the layout of the uh electronic design but um obviously there'll be more details once we've
+false-card-plain	ES2003b	statement, no question	Does cover a very large section of the people out there sure I think that's fair um yeah mm I mean I imagine as well tha
+false-card-plain	ES2003b	statement, no question	Um there is that possibility yes however I don't know exactly where we'll be going with that but mm it might not even be
+false-card-plain	ES2003b	statement, no question	Um digital telephones uh for example one unit has of course you have to have that base unit somewhere where there's a bu
+false-card-plain	ES2003b	fragment	So we're having very very few buttons involved actually but how navigation around a menu for most things
+false-card-plain	ES2003b	statement, no question	And what a basically a small microphone um on the actual unit can maybe hide it in light the base bulb as oh well no sor
+false-card-plain	ES2003b	statement, no question	You know a small LCD joystick I think it leaves you open to a a potential wide range of shapes something that can make i
+false-card-plain	ES2007a	statement, no question	I haven't looked at it but let's just start it off and we'll see what happens
+false-card-plain	ES2007a	statement, no question	Not quite sure how this is gonna work there go
+false-card-plain	ES2007a	statement, no question	Um yeah I think you can just draw the face but then you'll have to describe in writing how the rest of it looks ooh
+false-card-plain	ES2007a	statement, no question	It's a cat that's a very pretty cat which also has what a big fat body and
+false-card-plain	ES2007a	statement, no question	So I think before we close uh we are expected I mean the last slide wanted us to maybe discuss longer what our
+false-card-plain	ES2007a	statement, no question	To do next yeah but I think this is just the preliminary get some rough ideas for what our experiences with remote contr
+false-card-plain	ES2007a	statement, no question	Keep it really really simple on one side and the other side be very complicated one side for kids one side for adults ye
+false-card-plain	ES2007a	statement, no question	Industrial designer ah um okay which is these are requirement specification that's um
+false-card-plain	ES2007a	statement, no question	User interface designer that's that's me that's okay that's you so you gotta you go you're you're gonna be the one that'
+false-card-plain	ES2009c	statement, no question	Right so um this meeting will be about the conceptual design don't ask me precisely what conceptual design is it's just 
+false-card-plain	ES2009c	statement, no question	Mister uh participant two that is nice okay nice um basically what I'm gonna have to talk to you about today is um compo
+false-card-plain	ES2009c	statement, no question	Um one thing that I noticed was that most remotes operate on a on the infrared part of the spectrum so you notice when y
+false-card-plain	ES2009c	statement, no question	Screen um basically I was looking at what's going on in the remote control market right now and what's going on in other
+false-card-plain	ES2009c	statement, no question	I like the idea of of rubber too because it's tends to be associated with being durable something that you can drop and 
+false-card-plain	ES2009c	statement, no question	Lot of single people on the um on the on the remote control on the remote research control yeah team at right the very t
+false-card-plain	ES2009c	statement, no question	Uh the jumbo universal remote control is almost impossible to misplace or yeah lose I can see um again probably not what
+false-card-plain	ES2009c	statement, no question	That's what they need it's like a little dongle it just sticks up this further so you don't have to stand up every time 
+false-card-plain	ES2009c	statement, no question	Though I think that's what people would pay for I mean if you're gonna pay for an expensive high class remote you're gon
+false-card-plain	ES2009c	statement, no question	I think if we we do both the obviously production costs are going to go way up um but it does put it into it'd become th
+false-card-plain	ES2009c	statement, no question	I can't see how it wouldn't I mean there's you know the old aphorism you can have it fast you can have it cheap or you c
+false-card-plain	ES2009c	statement, no question	Do as much right design work and sometimes the design work is what push the costs up right if you know what I mean right
+false-card-plain	ES2009c	statement, no question	Um I definitely have to agree with that last and comment we're still not then we don't have to deal with this battery is
+false-card-plain	ES2009c	fragment	Think then we're hitting our cost issue again true we're yeah still we've yeah also not making got the it easier the the
+false-card-plain	ES2009c	real question the gold rejects (annotator)	Um right what are our broad constraints before we design a prototype and um ron if you can
+false-card-plain	ES2009c	statement, no question	Figure out how probably best to lay out this idea of this simple design with the voice recognition built in and also thi
+false-card-plain	ES2009c	statement, no question	Um and if you can check product evaluation with some pilots and stuff um I need you guys to work together on making a pr
+false-card-plain	ES2012a	statement, no question	Person for this uh for this meeting and this uh project for creating this new remote control and uh yeah I'll be uh pres
+false-card-plain	ES2012a	statement, no question	Okay very very quickly um this I don't want to make this meeting too structured because the the whole idea is that it's 
+false-card-plain	ES2012a	statement, no question	This is what we want to do the the remote control needs to be original there has to be something about it that uh other 
+false-card-plain	ES2012a	statement, no question	Uh scenario user-friendly as as we all know remote controls can be uh uh very user-unfriendly so we want to make ours on
+false-card-plain	ES2012a	statement, no question	Um badger mm and why uh it's it's got nice contrast with uh-huh black and white and uh I feel they're underdog kind of s
+false-card-plain	ES2012a	statement, no question	Right okay uh 's horses no particular reason why uh-huh fair enough yeah I'm not sure that I've got any favourite animal
+false-card-plain	ES2012a	statement, no question	It needs to be very effective very always dependable uh I don't think we should make it too small I 'cause I think it ne
+false-card-plain	ES2012a	statement, no question	Kendra anyone well most I think most of the remote controls now are either just black or grey so maybe we should go with
+false-card-plain	ES2014c	statement, no question	Enable us to complete the project in time we're gonna have uh effectively two pages a front page which had the uh featur
+false-card-plain	ES2014c	statement, no question	For the components design um next step is basically the the way the remote's gonna work is still the same idea as before
+false-card-plain	ES2014c	statement, no question	Um there's a dynamo any of you think of kind of like the the old torches which you wind up um there's a kinetic option w
+false-card-plain	ES2014c	statement, no question	Which is you know the new mouse has just got like the centre section which you can scroll up and down which may be for t
+false-card-plain	ES2014c	real question the gold rejects (annotator)	So are we able to make that decision yeah now yeah in a sense that this is the point at which we mm-hmm decide we're dis
+false-card-plain	ES2014c	statement, no question	'cause at that point then you've got the details up there so if we wanted to know for instance that the scroll wheel req
+false-card-plain	ES2014c	statement, no question	Ah it's alright um okay there wasn't much more to say about that right just rambling um some of the uh remotes that I lo
+false-card-plain	ES2014c	statement, no question	Have additional features in you know like a you'd have model one model two and model three and therefore you can sub-div
+false-card-plain	ES2014c	statement, no question	Yeah and ours is quite a cheap device so I don't know how much we'll be able to put into it
+false-card-plain	ES2014c	statement, no question	So so maybe we could have be like careful what you put on the buttons and be careful of the shape that you make them mm-
+false-card-plain	ES2014c	statement, no question	Contradicting yeah kind I I of know shapes what you mean so maybe we could have volume written on the side and then up a
+false-card-plain	ES2014c	statement, no question	In in sort of basically fashion on top of doing the um research into the remote control market the the one that's the on
+false-card-plain	ES2014c	statement, no question	I think if you start making the buttons fruit shaped it might make it more complicated to use well you were just talking
+false-card-plain	ES2014c	statement, no question	Those kinds of fashion yeah trends yeah to something which is maybe more universal
+false-card-plain	ES2014c	tag or check	Um rubber buttons require rubber case and that would fit in with what we want wouldn't it for the mm-hmm spongy feel to 
+false-card-plain	ES2014c	statement, no question	Caboodle yeah yeah you're just changing one aspect like like the standby button or something like that and especially 'c
+false-card-plain	ES2014c	statement, no question	'cause you mm-hmm you know you're sort of you're badging it and in fact a lot of companies get somebody else to make the
+false-card-plain	ES2014c	real question the gold rejects (annotator)	A a packaging box that that does that and the cost of packaging could be quite important vis-a-vis the total cost of the
+false-card-plain	ES2014c	statement, no question	Have got kind of bulges like mm the second yep one and the end one right uh where there's a curve there I'm not
+false-card-plain	IS1002b	statement, no question	I think yeah one of the things that we should also keep in mind um when we're doing this I mean our company's slogan is 
+false-card-plain	IS1002b	statement, no question	And we've some basic components that um our remote is gonna need just basically every remote'll need 'em we need some ki
+false-card-plain	IS1002b	statement, no question	Um so here's just a basic layout of how how the remote would work you the the power source is in the upper right-hand co
+false-card-plain	IS1002b	statement, no question	And we have participant three which I believe is pedro
+false-card-plain	IS1002b	statement, no question	Recommending the teletext so I'll remove that I guess but um we should go for but the I I think what the the management 
+false-card-plain	IS1002b	statement, no question	The the idea of uh internet through the TV for example so that might play on what yeah we can they're do basically aimin
+false-card-plain	IS1002b	statement, no question	We're a then we're losing the the necessity of the remote yeah well there there is a for example on digital TV systems y
+false-card-plain	IS1002b	rhetorical	Concern we we're doing is trying alright for to find time a marketing niche for this product and if I'm coming in with a
+false-card-plain	IS1002b	statement, no question	Continuing teletext and those would be the basic commands um as for you know the the case design uh maybe I'll come up w
+false-card-plain	IS1002b	statement, no question	Like these trainable remotes and things like that where you know it's just so confusing to do to use all these functions
+false-card-plain	IS1002b	statement, no question	I'm I I go along with this because this is what we're given to try to market but I I don't see the market niche for this
+false-card-plain	IS1002b	statement, no question	And so the the twenty-five euros that we've identified as the sale price is a wholesale price mm-hmm rather than a retai
+false-card-plain	IS1002b	statement, no question	Itself so what we've identified here as our main marketing stratagem is is in design we're making the most beautiful att
+false-card-plain	IS1002b	statement, no question	Product that that we can sell easily so I say inspiration so having something beauty something attractive uh something t
+false-card-plain	IS1002b	statement, no question	Uh I wanted to talk about uh who we are as a as a corporation that we're new we're aggressive we're competitive we're we
+false-card-plain	IS1002b	statement, no question	Idea please and it's kind of along the lines of environmentally sensitive and it may even fit into ergonomics and even k
+false-card-plain	IS1002b	statement, no question	Um what we can do is well you know that batteries throwing
+false-card-plain	IS1002b	statement, no question	Well pedro and I can look into how much this might increase our our costs mm-hmm and you can look into what kind of effe
+false-card-plain	IS1002b	statement, no question	Handing us mm right now I don't I see it I I I have to disagree though I think our market niche is basically people who 
+false-card-plain	IS1002b	statement, no question	If if you can't get that all-in-one ultimate remote that just you can throw all your other remotes away I'm not gonna bu
+false-card-plain	IS1002b	statement, no question	We're trying to get mind-share about uh real reaction to to the people who are gonna buy consumer electronics we want pe
+false-card-plain	IS1002b	statement, no question	Have a modern have a traditional have a you know and so so instead of them all looking the same people can have maybe fo
+false-card-plain	IS1002b	statement, no question	Yeah we we need to I mean have a few designs to look at and then come up with something that I think we all agree is you
+false-card-plain	IS1002b	statement, no question	Okay yeah because I really think in a certain sense it almost like for me I would want to have that just because I know 
+false-card-plain	IS1004d	fragment	Which is so final design final design
+false-card-plain	IS1004d	statement, no question	Yeah well when you stop scrolling the wheel it stops but uh normally with uh it will just uh
+false-card-plain	IS1004d	statement, no question	Stay on each station briefly so you can see uh-huh the and the we picture we do have one more functionality if you take 
+false-card-plain	IS1004d	fragment	How with the wheel it's easy well then you can you you have like a little uh number selection thing you press the the th
+false-card-plain	IS1004d	backchannel or echo	The what sorry the autonomy
+false-card-plain	IS1004d	statement, no question	Wow yeah so there was there was a constraint that the surface area which we have on this banana on one side because of t
+false-card-plain	IS1004d	statement, no question	So we are targeting a segment which is which is just very trendy kind of thing they they don't care about the buttons an
+false-card-plain	IS1004d	statement, no question	The standards what is available in the market off the shelf yeah I have to say four actually I don't know what are the t
+false-card-plain	IS1004d	statement, no question	Five I would say six it's quite cheap actually I'd say two why I don't want a banana on my living room table a aw banana
+false-card-plain	IS1004d	statement, no question	At least ask once what is this
+false-card-plain	IS1004d	statement, no question	Yeah oops yeah the so uh maybe maybe we can we should stick to general feeling yeah we can had uh have a out of these nu
+false-card-plain	IS1004d	statement, no question	Only have one for battery uh then for electronics um so I didn't put anything for the so we have the regular chip on the
+false-card-plain	IS1004d	statement, no question	Ye the cost is increasing well so we actually are that that no that sample speaker is not we we're not using that we're 
+false-card-plain	IS1004d	statement, no question	And uh that much money will be required for the base station which is not there
+false-card-plain	IS1004d	statement, no question	Okay so now we have a product which nobody would would buy would yeah would buy
+false-card-plain	IS1004d	statement, no question	Sorry no we have yeah a product because which none of us would buy the evaluation which is project different which is di
+false-card-plain	IS1004d	statement, no question	Yeah the cost of the thing can be made more than might be because I think it's just the optimal what we have done for th
+false-card-plain	IS1004d	statement, no question	Interface well mm-hmm just the the the circuit board that we're using inside I'm mm-hmm not sure really how complicated 
+false-card-plain	IS1004d	fragment	What else
+false-card-plain	IS1007c	statement, no question	We didn't decide yet which kind of battery
+false-card-plain	IS1007c	fragment	So what I have
+false-card-plain	IS1007c	statement, no question	So ah by the way I receive an email from the from one our departments saying that the voice recognition has been used in
+false-card-plain	IS1007c	statement, no question	And uh you see this is the one where you have the protection cover
+false-card-plain	IS1007c	statement, no question	You you they only see the buttons outside and for adults where you have more control you can see the one inside so the a
+false-card-plain	IS1007c	statement, no question	Yeah into our uh new remote control yeah and uh this is another one where you can uh the the the part that's a v standin
+false-card-plain	IS1007c	statement, no question	People mm I mean so it just showed us the remote with an cap which could be used for kids and if you remove the so it's 
+false-card-plain	IS1007c	statement, no question	Computer they want lots of controls maybe for kids kids they like uh small no uh well they so like yeah to let's see wha
+false-card-plain	IS1007c	statement, no question	Could which would be helpful for our design so seventy percent of the users they find their remote controls very ugly th
+false-card-plain	IS1007c	statement, no question	Remote and navigate it it's the same menu mm yeah as we have saw that ipod yeah remote yeah control mm we just play the 
+false-card-plain	IS1007c	statement, no question	After all the LCD just to display hmm and if you have the colourful screen you can make the display colourful fancy yeah
+false-card-plain	IS1007c	statement, no question	Increasing and lower these signs here to change the programs and this menu when you press the menu in the LCD displays a
+false-card-plain	IS1007c	statement, no question	Speech recogniser you can I mean yeah better if we could just check all the cost with LCD and also with the speech recog
+false-card-plain	IS1007c	statement, no question	See if it's like that even a kid who wants to have a control he could just plug it and yeah use it you can't avoid him b
+false-card-plain	IS1007c	statement, no question	I think these other four points they're the market demands and so it's for the user interface design so for and mm mm in
+false-card-plain	IS1007c	statement, no question	Uh if when the user press a button to choose the channel for example then what you can do is that the you can make the T
+false-card-plain	TS3005a	statement, no question	A I lot always of buttons lose them yeah and you always lose them yes a lot of buttons which yeah you don't use mm-hmm o
+false-card-plain	TS3005a	statement, no question	To put those buttons uh behind some uh kind of uh flap protection so yeah that if right you only get to see them when yo
+false-card-plain	TS3005a	statement, no question	Most televisions nowadays do this yeah but uh they well don't not everywhere use so the same signal I think numerals uh 
+false-card-plain	TS3005a	statement, no question	So I should look at uh what you should be able to do with the remote or uh or how uh I don't well really those instructi
+false-card-plain	TS3005a	statement, no question	She didn't know who
+false-card-plain	TS3007c	statement, no question	Uh when I finish it off I have some uh input from uh a master class I uh visited information during lunch yeah
+false-card-plain	TS3007c	statement, no question	He's the master yeah master the of the the the the concepts on uh we uh where we uh must reach a decision on um uh our f
+false-card-plain	TS3007c	statement, no question	Interface concept uh with the type and uh the the supplements so uh where to put what button
+false-card-plain	TS3007c	statement, no question	Uh what I did was I reviewed previously used items uh by uh two two uh different uh age groups mm-hmm uh below forty fiv
+false-card-plain	TS3007c	statement, no question	We uh aim at uh the target group well uh what I found was that a senior um
+false-card-plain	TS3007c	statement, no question	You uh well first off let's start start with the energy I uh I had a choice between uh a few different uh sources mm-hmm
+false-card-plain	TS3007c	statement, no question	Yeah well uh actually it is okay and it it if it isn't you just shake it a bit and and add add with power up again yeah 
+false-card-plain	TS3007c	rhetorical	It leaves more space for creativity okay okay uh that might be an idea but just a well furthermore uh well uh plastic ve
+false-card-plain	TS3007c	statement, no question	Yeah it it shouldn't it shouldn't okay flop over when you oh hold it in your hand uh no that that that that's gonna the 
+false-card-plain	TS3007c	statement, no question	Uh a third material being used uh could well be stuff like rubber um two advantages uh it fits within the current market
+false-card-plain	TS3007c	statement, no question	Yeah okay when you're at college you take uh you your take uh your remote take remote control with no you to school with
+false-card-plain	TS3007c	real question the gold rejects (annotator)	Um have some other options that are not programmable with one horizontal button and um other buttons can may be displaye
+false-card-plain	TS3007c	statement, no question	Spend on it because well it's a simple function but it's gonna take a lot of resources and a lot of time um to programmi
+false-card-plain	TS3007c	statement, no question	Yeah um I well still yeah some question I have about how to incorporate those ones you're thinking about some channels t
+false-card-plain	TS3007c	statement, no question	Yeah maybe it can work with show view uh you you can control your video recorder with show view uh when you tick in a nu
+false-card-plain	TS3007c	statement, no question	Uh when you install another device uh children can still go up to the TV
+false-card-plain	TS3007c	statement, no question	Yeah go that's to a channel true that's true but uh at same instant same happens when uh you have remote yeah control ye
+false-card-plain	TS3007c	statement, no question	Yeah remote you could you could easily just some rules yeah you could easily you could easily to the control but you sti
+false-card-plain	TS3007c	real question the gold rejects (annotator)	Okay go on what other companies uh had to uh also with the the the the marketing campaign when they put on a newer remot
+false-card-plain	TS3007c	statement, no question	I uh couldn't uh okay uh another uh thing is uh there were there there was a survey and um uh it came out that um people
+false-card-plain	TS3010a	statement, no question	And um yeah uh on our website we can see what products we already have and it should work with as many uh as possible of
+missed-plain	ES2003b	fragment	Uh. Is yours the
+missed-plain	ES2003b	real miss: question in its words	do you want me to just cycle through it for you or?
+missed-plain	ES2003b	real miss: question in its words	but is it practical to have a voice recognition system in a remote control,
+missed-plain	ES2003b	real miss: question in its words	Are you finding it okay
+missed-plain	ES2003b	real miss: question in its words	would we need more um components in there to supply the power?
+missed-plain	ES2003b	annotator: a statement	I'm I'm interrupting you.
+missed-plain	ES2003b	real miss: question in its words	Do you think that people will get mixed up,
+missed-plain	ES2003b	real miss: question in its words	would it be a bit confusing?
+missed-plain	ES2003b	real miss: question in its words	um would that include um access to say interactive functions on digital or cable?
+missed-plain	ES2003b	annotator: a statement	So the joystick is just for differentness.
+missed-plain	ES2003b	real miss: question in its words	Is this gonna be enough to to sell?
+missed-plain	ES2003b	real miss: question in its words	Do we incorporate the idea of trying to locate the remote control again via a beeping noise?
+missed-plain	ES2003b	fragment	The ability to locate it again.
+missed-plain	ES2003b	real miss: question in its words	Um any last comments that anybody would like to put forward?
+missed-plain	ES2003b	real miss: question in its words	Anything that they think has been missed out.
+missed-plain	ES2003b	annotator: a statement	I should just look at um the speaker, the speaker and an L_E_D_.
+missed-plain	ES2007a	fragment	So we're 'kay? On the or
+missed-plain	ES2007a	real miss: question in its words	Is that alright?
+missed-plain	ES2007a	real miss: question in its words	Does anybody know?
+missed-plain	ES2007a	real miss: question in its words	Are we free to take notes uh
+missed-plain	ES2007a	annotator: a statement	If you're all ready.
+missed-plain	ES2007a	real miss: question in its words	Is it rude?
+missed-plain	ES2007a	real miss: question in its words	Can I just draw the face?
+missed-plain	ES2007a	fragment	A prairie dog?
+missed-plain	ES2007a	tag or check	Oh so we're actually supposed to be doing this discussion like right now are we or
+missed-plain	ES2007a	real miss: question in its words	Is this a T_V_ one we are supposed to make?
+missed-plain	ES2007a	real miss: question in its words	You want it big do you want it small.
+missed-plain	ES2007a	real miss: question in its words	Are we are we going for like like telephones are going little teeny tiny things or we are going for something that's tha
+missed-plain	ES2007a	real miss: question in its words	So do we have to be realistic within the budget or
+missed-plain	ES2007a	real miss: question in its words	So, do we take these off?
+missed-plain	ES2009c	annotator: a statement	uh whoever wants to go first is fine by me
+missed-plain	ES2009c	tag or check	It is Nathan right?
+missed-plain	ES2009c	real miss: statement form, needs intonation	I'm not calling you the wrong name over and over again?
+missed-plain	ES2009c	real miss: question in its words	but with our time constraints, is that really a feasible option?
+missed-plain	ES2009c	real miss: question in its words	But can we really afford it
+missed-plain	ES2009c	fragment	To produce each one.
+missed-plain	ES2009c	real miss: question in its words	Does having both really up our costs?
+missed-plain	ES2009c	real miss: question in its words	Would the solar power be enough to fuel a voice recognition?
+missed-plain	ES2009c	real miss: question in its words	Or this kinesthetic one, would that be enough to fuel a voice recognition remote control?
+missed-plain	ES2009c	real miss: question in its words	Do you think people that are people that buy a remote, are they always gonna wanna use the voice recognition
+missed-plain	ES2009c	real miss: question in its words	or is it just something that they do sometimes.
+missed-plain	ES2009c	real miss: question in its words	any other final thoughts before we go ahead and
+missed-plain	ES2009c	real miss: question in its words	have we decided that we are gonna go with different style cases for different people?
+missed-plain	ES2009c	real miss: question in its words	Or are we just going to go with one?
+missed-plain	ES2009c	real miss: question in its words	is that alright,
+missed-plain	ES2012a	real miss: question in its words	would anybody like like to to start by giving their um sort of quick views of of current remote controls.
+missed-plain	ES2012a	real miss: question in its words	Any other thoughts about um the physical appearance of a of remote controls?
+missed-plain	ES2012a	real miss: question in its words	Um any thoughts about buttons or flat screens or uh uh
+missed-plain	ES2012a	real miss: question in its words	Do we do we want uh
+missed-plain	ES2012a	fragment	Like a like a mobile phone?
+missed-plain	ES2012a	fragment	first thoughts on um
+missed-plain	ES2012a	fragment	the the industrial design side.
+missed-plain	ES2012a	fragment	and um colours, materials? Kendra, anyone?.
+missed-plain	ES2014c	fragment	with the printed circuit boards you were going for the
+missed-plain	ES2014c	fragment	But are we going
+missed-plain	ES2014c	tag or check	So if we go for the simple push button, so effectively we're going for the simple printed circuit board are we?
+missed-plain	ES2014c	real miss: question in its words	Or are we going for the regular?
+missed-plain	ES2014c	fragment	Would that be
+missed-plain	ES2014c	real miss: question in its words	'Kay shall I pass on to you now?
+missed-plain	ES2014c	real miss: question in its words	Does that move it?
+missed-plain	ES2014c	annotator: a statement	unless something else comes up.
+missed-plain	ES2014c	real miss: statement form, needs intonation	And you were talking about scroll buttons?
+missed-plain	ES2014c	real miss: question in its words	was that right?
+missed-plain	ES2014c	real miss: question in its words	Are we are we gonna go through the design of all the buttons at the moment,
+missed-plain	ES2014c	real miss: question in its words	Was that in the sort of fashion sense that this Or was the spongy feel was that uh sort of fashion?
+missed-plain	ES2014c	real miss: question in its words	Did we decide on the rubber case?
+missed-plain	ES2014c	real miss: question in its words	or did we think that that might go as a trend?
+missed-plain	ES2014c	real miss: question in its words	so do you wanna go for curves, more curves?
+missed-plain	ES2014c	real miss: question in its words	Shall we go for single curve, just to compromise?
+missed-plain	ES2014c	real miss: question in its words	So did we did we decide on the kinetic power supply?
+missed-plain	ES2014c	real miss: question in its words	Are we gonna go for the simple circuit board just to keep the cost down?
+missed-plain	ES2014c	tag or check	So we've got spongy feel buttons as well, have we?
+missed-plain	ES2014c	tag or check	With a rubber case right?
+missed-plain	ES2014c	real miss: question in its words	are you gonna work on keeping the button design quite simple?
+missed-plain	ES2014c	real miss: question in its words	Is that the end?
+missed-plain	IS1002b	annotator: a statement	I just wanted to put those in there to see if you guys had any comments on them.
+missed-plain	IS1002b	real miss: question in its words	Uh did you all receive that email?
+missed-plain	IS1002b	real miss: question in its words	So does anyone have any overall
+missed-plain	IS1002b	fragment	So then the double R_ will be our our
+missed-plain	IS1002b	real miss: question in its words	Can you handle that black and yellow?
+missed-plain	IS1002b	real miss: statement form, needs intonation	So you have this?
+missed-plain	IS1002b	real miss: question in its words	Now is would this be considered just a standard uh um
+missed-plain	IS1002b	real miss: question in its words	Do we have an idea of costs of different components?
+missed-plain	IS1002b	real miss: question in its words	Have to do you have to do it in the box?
+missed-plain	IS1002b	real miss: question in its words	Does any of the um the features that Pedro's spoken about here have any implications we might not have thought about on 
+missed-plain	IS1002b	fragment	In terms of making it work or the cost of that or
+missed-plain	IS1002b	real miss: question in its words	Now the the question is can we make this for less than twelve-fifty per?
+missed-plain	IS1002b	real miss: question in its words	Is twenty-five Euros a mid-market price for a remote?
+missed-plain	IS1002b	real miss: question in its words	Are we gonna make this selling selling the cost as a high high-tech uh um environmentally sensitive whatever, or are we 
+missed-plain	IS1002b	real miss: question in its words	Can can can we have multiple designs?
+missed-plain	IS1004d	real miss: statement form, needs intonation	But if you want to go to page seven hundred?
+missed-plain	IS1004d	real miss: question in its words	Can you repeat it?
+missed-plain	IS1004d	real miss: statement form, needs intonation	And the the leaves plays the roles of of antennas?
+missed-plain	IS1004d	real miss: question in its words	Is it really weight?
+missed-plain	IS1004d	real miss: question in its words	Is it light or
+missed-plain	IS1004d	annotator: a statement	So for the power source, apparently you still you you want to use both solar cells and batteries.
+missed-plain	IS1004d	real miss: statement form, needs intonation	Nothing else to add?
+missed-plain	IS1004d	real miss: statement form, needs intonation	You want to have more functional buttons?
+missed-plain	IS1004d	fragment	And the volume button will will become
+missed-plain	IS1004d	real miss: question in its words	Because have you thought about configuration and all this kind of uh stuff?
+missed-plain	IS1004d	real miss: statement form, needs intonation	So your slides are ready?
+missed-plain	IS1004d	annotator: a statement	I'm um answering your question.
+missed-plain	IS1004d	annotator: a statement	Okay let's let's evaluate if it's fancy or
+missed-plain	IS1004d	fragment	So seven, seven,
+missed-plain	IS1004d	real miss: statement form, needs intonation	Ah it's not an but it's for all kind of T_V_s?
+missed-plain	IS1004d	fragment	So four point two?
+missed-plain	IS1004d	fragment	Okay cool? Cool device.
+missed-plain	IS1004d	real miss: statement form, needs intonation	so the target price is for all Europe, or only for rich countries?
+missed-plain	IS1004d	real miss: statement form, needs intonation	It's more targeting U_K_ or
+missed-plain	IS1004d	real miss: statement form, needs intonation	the initial specifications were for the whole all Europe or
+missed-plain	IS1004d	annotator: a statement	So this is selling costs, not production costs.
+missed-plain	IS1004d	fragment	So we are
+missed-plain	IS1004d	real miss: question in its words	will I change my change my remote control from Mando banana.
+missed-plain	IS1004d	real miss: statement form, needs intonation	you said five?
+missed-plain	IS1004d	real miss: question in its words	Is there some some formula you're using that says you have to sum them up?
+missed-plain	IS1004d	real miss: question in its words	Do you want me to sum
+missed-plain	IS1004d	fragment	Problem with connectors?
+missed-plain	IS1004d	annotator: a statement	You mean, charging it by shaking the banana.
+missed-plain	IS1004d	real miss: question in its words	Well no didn't we say we wanted to do a rubber
+missed-plain	IS1004d	fragment	if you drop it?
+missed-plain	IS1004d	real miss: statement form, needs intonation	it does nothing actually?
+missed-plain	IS1004d	annotator: a statement	Okay so um project process.
+missed-plain	IS1004d	real miss: question in its words	Should it be more like um like a status of of the these meetings in fact.
+missed-plain	IS1004d	real miss: question in its words	Any any new ideas we could uh we could investigate next time?
+missed-plain	IS1004d	real miss: question in its words	do we really need an integrated circuit to
+missed-plain	IS1004d	fragment	you know to process that.
+missed-plain	IS1007c	annotator: a statement	So I um keep in touch with the R_ and D_ department.
+missed-plain	IS1007c	annotator: a statement	and you tell me whether they are titanium case or not.
+missed-plain	IS1007c	annotator: a statement	We should have an L_C_D_ on the remote control.
+missed-plain	IS1007c	fragment	Well uh compared to the to the simpler simplest button.
+missed-plain	IS1007c	annotator: a statement	So you you don't use the speech recogniser in that way.
+missed-plain	TS3005a	fragment	Uh for the use of different uh devices.
+missed-plain	TS3005a	real miss: question in its words	any more ideas?
+missed-plain	TS3005a	real miss: question in its words	Is it my laptop?
+missed-plain	TS3005a	real miss: statement form, needs intonation	And this was the Interface Designer?
+missed-plain	TS3005a	fragment	Or the Interaction Designer.
+missed-plain	TS3005a	real miss: question in its words	Or what was it, I_D_?
+missed-plain	TS3007c	fragment	Uh a soft material for a remote control?
+missed-plain	TS3007c	real miss: question in its words	Oh, have you considered the option of using a solar panel?
+missed-plain	TS3007c	real miss: statement form, needs intonation	But you prefer kinetic?
+missed-plain	TS3007c	annotator: a statement	And that's enough to to keep the energy level uh
+missed-plain	TS3007c	real miss: question in its words	Uh, is it possible uh of is it necessary to make a touch-screen square?
+missed-plain	TS3007c	tag or check	It isn't, I think, yeah?
+missed-plain	TS3007c	real miss: statement form, needs intonation	You you weren't in Paris?
+missed-plain	TS3007c	real miss: question in its words	Would you prefer uh uh that you can choose the colour of your uh remote control or
+missed-plain	TS3007c	annotator: a statement	So that you say um S_P_S_S_, and it goes to uh
+missed-plain	TS3007c	real miss: statement form, needs intonation	That's a that's a better idea?
+missed-plain	TS3007c	tag or check	So that will uh that that that must be in it, you think?
+missed-plain	TS3007c	real miss: question in its words	Like the first idea uh from uh You can buy it without and uh with parental contr control? Or are we going to put it in a
+missed-plain	TS3007c	backchannel or echo	Yeah? I'm listening.
+missed-plain	TS3007c	real miss: question in its words	or did I said management?
+missed-plain	TS3007c	real miss: statement form, needs intonation	So we're going to work together right now?
+missed-plain	TS3010a	annotator: a statement	Okay next one.
+missed-plain	TS3010a	real miss: question in its words	Is this positive or negative, that uh big buttons?
+missed-plain	TS3010a	real miss: question in its words	So and do they always have that?
+rejected-qmark	ES2003b	fragment	Ah, okay. Technical functions?
+rejected-qmark	ES2003b	tag or check	Are No, you it's finished, is it yeah. yeah?
+rejected-qmark	ES2003b	real question the gold rejects (annotator)	Do Um, I think you because mind looking?
+rejected-qmark	ES2003b	fragment	And a light bulb?
+rejected-qmark	ES2003b	tag or check	the slogan's we put the fashion in electronics, isn't it?
+rejected-qmark	ES2007a	backchannel or echo	Mm-hmm?
+rejected-qmark	ES2007a	real question the gold rejects (annotator)	So is the agenda?
+rejected-qmark	ES2007a	real question the gold rejects (annotator)	Uh Miss Industrial Designer, would you like to Okay. go first?
+rejected-qmark	ES2007a	backchannel or echo	Does it?
+rejected-qmark	ES2007a	statement, no question	what my favourite animal is.
+rejected-qmark	ES2007a	fragment	Miss Miss Marketing?
+rejected-qmark	ES2007a	backchannel or echo	Uh. Really?
+rejected-qmark	ES2007a	backchannel or echo	no uh Oh a squirrel?
+rejected-qmark	ES2007a	real question the gold rejects (annotator)	Couldn't we have like one that comes out?
+rejected-qmark	ES2009c	tag or check	We can isn't have a it?
+rejected-qmark	ES2009c	tag or check	you guys feel That clear sounds about this?
+rejected-qmark	ES2012a	fragment	Mm and why?
+rejected-qmark	ES2012a	rhetorical	So if you want, something that looks like uh something that makes you think oh what's this?
+rejected-qmark	ES2012a	fragment	um the planet with?
+rejected-qmark	ES2012a	fragment	Well, most I think most of the remote controls now are either just black or grey, so maybe we should go with something d
+rejected-qmark	ES2014c	tag or check	Does that Yes. make sense?
+rejected-qmark	ES2014c	tag or check	But I think that's maybe as far as that one could go?
+rejected-qmark	ES2014c	tag or check	In fact, it wouldn't really cost anymore, would it?
+rejected-qmark	ES2014c	statement, no question	was going up, whereas the one underneath would see the volume going down.
+rejected-qmark	ES2014c	tag or check	that can't be right, can it?
+rejected-qmark	ES2014c	fragment	get in the way of like kinda one Now?
+rejected-qmark	ES2014c	tag or check	It was, wasn't it?
+rejected-qmark	ES2014c	fragment	Oh Um right, that oh fits, no no doesn't no sorry it?
+rejected-qmark	ES2014c	real question the gold rejects (annotator)	The the main problem is how how frequently do the fashions change?
+rejected-qmark	ES2014c	real question the gold rejects (annotator)	four do you want, as long as it's black?
+rejected-qmark	ES2014c	tag or check	um company colour scheme, aren't we?
+rejected-qmark	ES2014c	statement, no question	what I was trying to work out.
+rejected-qmark	ES2014c	real question the gold rejects (annotator)	curved or double curved?
+rejected-qmark	IS1002b	real question the gold rejects (annotator)	What are we bringing in to take the place of this, and we have to Mm 'kay.
+rejected-qmark	IS1002b	fragment	But uh click it on off?
+rejected-qmark	IS1002b	fragment	like that, Mm the I shell?
+rejected-qmark	IS1002b	tag or check	make because as far as I understand it, it can be operated with the same set of buttons, yeah?
+rejected-qmark	IS1002b	tag or check	'Cause we really don't have anything else there, do we?
+rejected-qmark	IS1002b	statement, no question	what you say, but what I'm what I'm, okay we probably need to move along, Yeah but we probably my should.
+rejected-qmark	IS1002b	rhetorical	a marketing niche for this product, and if I'm coming in with a with with twenty-five Euros, which is mid-market price, 
+rejected-qmark	IS1002b	fragment	the um of the market is actually gonna use that?
+rejected-qmark	IS1002b	tag or check	Well it's kinda both of us. Is it?
+rejected-qmark	IS1002b	real question the gold rejects (annotator)	Can we can we do that without uh changing it twelve-fifty per product, if we basically can sell more based on this?
+rejected-qmark	IS1002b	fragment	a television Right. remote?
+rejected-qmark	IS1002b	rhetorical	The other the the problem with that in my mind I just think off-hand as a as a consumer, would I wanna buy that?
+rejected-qmark	IS1002b	fragment	a remote that's that doesn't maybe look like a remote?
+rejected-qmark	IS1002b	backchannel or echo	As a watch?
+rejected-qmark	IS1002b	real question the gold rejects (annotator)	So how many remotes do they wanna buy?
+rejected-qmark	IS1002b	real question the gold rejects (annotator)	How does this happen?
+rejected-qmark	IS1004d	backchannel or echo	The what sorry?
+rejected-qmark	IS1004d	fragment	it be held off Ah. a station?
+rejected-qmark	IS1004d	fragment	Next slide?
+rejected-qmark	IS1004d	fragment	real buttons?
+rejected-qmark	IS1004d	fragment	a I So to I'm have in order to have enough granularity Sorry?
+rejected-qmark	IS1004d	fragment	Handy?
+rejected-qmark	IS1004d	fragment	So uh four?
+rejected-qmark	IS1004d	backchannel or echo	Five?
+rejected-qmark	IS1004d	fragment	four. So four?
+rejected-qmark	IS1004d	fragment	So it's You six. said seven?
+rejected-qmark	IS1004d	fragment	I'd say two. Why?
+rejected-qmark	IS1004d	fragment	You say?
+rejected-qmark	IS1004d	fragment	I stick What to five. range?
+rejected-qmark	IS1004d	backchannel or echo	Five?
+rejected-qmark	IS1004d	statement, no question	Which is different.
+rejected-qmark	IS1004d	fragment	Home?
+rejected-qmark	IS1007c	backchannel or echo	It's Mm-hmm?
+rejected-qmark	TS3005a	real question the gold rejects (annotator)	Would you like to go next?
+rejected-qmark	TS3005a	tag or check	I can see we have some uh drawing talent uh in this group, Not huh?
+rejected-qmark	TS3005a	real question the gold rejects (annotator)	are there any more questions?
+rejected-qmark	TS3007c	real question the gold rejects (annotator)	Can you uh can you reload it or uh just have batteries which you must exchange?
+rejected-qmark	TS3007c	real question the gold rejects (annotator)	And uh uh I would say uh Jans, can you begin?
+rejected-qmark	TS3007c	real question the gold rejects (annotator)	But, are you going to draw it?
+rejected-qmark	TS3007c	tag or check	the younger people want uh, Yeah, ain't yeah it?
+rejected-qmark	TS3007c	fragment	Yeah? Both?
+rejected-qmark	TS3007c	fragment	Uh, Yeah. rubber?
+rejected-qmark	TS3007c	backchannel or echo	in electronics, so Hmm?
+rejected-qmark	TS3007c	real question the gold rejects (annotator)	Can I uh do my thing?
+rejected-qmark	TS3007c	real question the gold rejects (annotator)	Is uh volume plus and minus?
+rejected-qmark	TS3007c	fragment	But Okay. And games?
+rejected-qmark	TS3007c	fragment	And the parental control are Optional optional?
+rejected-qmark	TS3007c	tag or check	put put it on in always. Yeah?
+rejected-qmark	TS3007c	tag or check	Yes they are. Yeah?
+rejected-qmark	TS3007c	tag or check	it to the other meeting, okay?
+rejected-qmark	TS3007c	backchannel or echo	Bling. Yeah?
+rejected-qmark	TS3007c	fragment	The master class? Ronald Betenberg?
+rejected-qmark	TS3007c	fragment	Yeah. Here?
+rejected-qmark	TS3010a	fragment	Now save?
+rejected-qmark	TS3010a	backchannel or echo	Yes?
+rejected-qmark	TS3010a	fragment	So more ideas?
+false-card-rules-recognition	ES2003b	statement, no question	Channel five, channel seven, you know, how many, you can't have that many words.
+false-card-rules-recognition	ES2003b	tag or check	We have the fancy bit, right?
+false-card-rules-recognition	ES2003b	statement, no question	Does it getting off your backside.
+false-card-rules-recognition	ES2003b	real question the gold rejects (annotator)	Have you got the next slide, Ian?
+false-card-rules-recognition	ES2003b	real question the gold rejects (annotator)	Judo, do we concern about our market?
+false-card-rules-recognition	ES2003b	real question the gold rejects (annotator)	Can we go for maybe a more control?
+false-card-rules-recognition	ES2003b	fragment	And what, basically a small microphone.
+false-card-rules-recognition	ES2003b	fragment	Uh, light bulb?
+false-card-rules-recognition	ES2003b	statement, no question	Is an LCD screen requires too much power or charge.
+false-card-rules-recognition	ES2007a	real question the gold rejects (annotator)	Do you want to go next?
+false-card-rules-recognition	ES2007a	real question the gold rejects (annotator)	Okay, do you want to do some write? Do you want to just write some words about it? Why?
+false-card-rules-recognition	ES2007a	real question the gold rejects (annotator)	Who's used what? Any ideas?
+false-card-rules-recognition	ES2007a	rhetorical	What would I like?
+false-card-rules-recognition	ES2007a	statement, no question	Maybe we should just concentrate on having a good TV remote and have it be—
+false-card-rules-recognition	ES2007a	fragment	Does have a lid or.
+false-card-rules-recognition	ES2007a	statement, no question	What buttons are used more often and stuff like that.
+false-card-rules-recognition	ES2009c	real question the gold rejects (annotator)	Is there an option that we can have that off or on so a person could select, like...
+false-card-rules-recognition	ES2009c	statement, no question	Basically, I was looking at what's going on in the remote control market right now and what's going on in other design f
+false-card-rules-recognition	ES2009c	fragment	Like, what if...
+false-card-rules-recognition	ES2009c	real question the gold rejects (annotator)	Why not have a little rounded kind of thing?
+false-card-rules-recognition	ES2009c	fragment	And we also got the thing of if we're gonna have a non-remote looking remote, how do we, yeah.
+false-card-rules-recognition	ES2009c	real question the gold rejects (annotator)	What can we accomplish?
+false-card-rules-recognition	ES2012a	real question the gold rejects (annotator)	How do you feel that they need to?
+false-card-rules-recognition	ES2012a	real question the gold rejects (annotator)	What do you get from listening design?
+false-card-rules-recognition	ES2012a	fragment	And Badger. Why?
+false-card-rules-recognition	ES2012a	statement, no question	looks, doesn't look like remote control.
+false-card-rules-recognition	ES2012a	rhetorical	So, something that looks like something that makes you think, oh, what's this?
+false-card-rules-recognition	ES2012a	real question the gold rejects (annotator)	Do you want to get some of these ideas?
+false-card-rules-recognition	ES2014c	real question the gold rejects (annotator)	This is the point at which we discussion that issue, so would it not be best to...
+false-card-rules-recognition	ES2014c	fragment	Is there any other?
+false-card-rules-recognition	ES2014c	rhetorical	It might be useful to see, like, where are you remote.
+false-card-rules-recognition	ES2014c	real question the gold rejects (annotator)	Yeah, so do we say it didn't affect the circle or just...
+false-card-rules-recognition	ES2014c	tag or check	Oh, that's what I thought, but maybe, maybe it does, doesn't it?
+false-card-rules-recognition	ES2014c	tag or check	What a fashion it was, wasn't it?
+false-card-rules-recognition	ES2014c	real question the gold rejects (annotator)	How pliable is plasticine?
+false-card-rules-recognition	ES2014c	tag or check	And the market research has been on that side of things, hasn't it?
+false-card-rules-recognition	ES2014c	real question the gold rejects (annotator)	So should we quickly just work out what we decide on?
+false-card-rules-recognition	ES2014c	tag or check	Yeah, and the voice recognition, we can use that, can't we, just to find it?
+false-card-rules-recognition	IS1002b	fragment	Who doesn't have to give?
+false-card-rules-recognition	IS1002b	tag or check	Yeah, well, we understand why you're project manager and not technical director, don't we?
+false-card-rules-recognition	IS1002b	statement, no question	Well, what comes up for me is that if we're going to—
+false-card-rules-recognition	IS1002b	statement, no question	Is that we have to find something that is going to be very attractive about this product because some people are going t
+false-card-rules-recognition	IS1002b	tag or check	Well, for me, the remote is used for television, okay?
+false-card-rules-recognition	IS1002b	fragment	That there's going to be more functionality?
+false-card-rules-recognition	IS1002b	rhetorical	Then what am I going to give these people for this?
+false-card-rules-recognition	IS1002b	real question the gold rejects (annotator)	Sorry, can I cut into you then?
+false-card-rules-recognition	IS1002b	real question the gold rejects (annotator)	How many people actually use every feature that are, you know, in...
+false-card-rules-recognition	IS1002b	tag or check	I don't know what I'm marketing right now, okay?
+false-card-rules-recognition	IS1002b	real question the gold rejects (annotator)	Well, do we necessarily have to change the end cost because...
+false-card-rules-recognition	IS1002b	tag or check	One thing I don't understand is they've given us this package, okay?
+false-card-rules-recognition	IS1002b	real question the gold rejects (annotator)	Do we follow their directives or do we make—
+false-card-rules-recognition	IS1002b	statement, no question	And it's like, whoa, we, in my opinion, we have to go with something that's extremely exclusive to make this thing marke
+false-card-rules-recognition	IS1002b	real question the gold rejects (annotator)	Or what if it looks like a pen?
+false-card-rules-recognition	IS1002b	statement, no question	Who's lost or broken, they're, they're robbed.
+false-card-rules-recognition	IS1002b	real question the gold rejects (annotator)	How many remotes do they want to buy? Can we, can we sell them a remote that can maybe guarantee they will not need to b
+false-card-rules-recognition	IS1004d	real question the gold rejects (annotator)	TV, yeah. Which one?
+false-card-rules-recognition	IS1004d	tag or check	This is located, right?
+false-card-rules-recognition	IS1004d	real question the gold rejects (annotator)	Does he have all the capabilities?
+false-card-rules-recognition	IS1004d	rhetorical	Anybody who comes here, anybody who comes here at home, he'll at least ask once, what is this?
+false-card-rules-recognition	IS1004d	fragment	Um, zero?
+false-card-rules-recognition	IS1004d	fragment	So don't we need a...
+false-card-rules-recognition	IS1004d	tag or check	Here in the backer instead of single, right?
+false-card-rules-recognition	IS1004d	tag or check	So, for, we have no button supplements, right?
+false-card-rules-recognition	IS1004d	backchannel or echo	Yeah. What?
+false-card-rules-recognition	IS1004d	rhetorical	In the streets, like asking to young people, well, do you like to have a banana as a remote control?
+false-card-rules-recognition	IS1004d	real question the gold rejects (annotator)	So, what else?
+false-card-rules-recognition	IS1007c	statement, no question	Come.
+false-card-rules-recognition	IS1007c	real question the gold rejects (annotator)	So can you please open...
+false-card-rules-recognition	IS1007c	fragment	And does this allow to use.
+false-card-rules-recognition	IS1007c	real question the gold rejects (annotator)	So can you go to the next slide, please?
+false-card-rules-recognition	IS1007c	rhetorical	TV remote controller, where are you?
+false-card-rules-recognition	IS1007c	real question the gold rejects (annotator)	Which ones are important to be used?
+false-card-rules-recognition	IS1007c	real question the gold rejects (annotator)	Can I write to code or...
+false-card-rules-recognition	IS1007c	statement, no question	Who's watching TV.
+false-card-rules-recognition	IS1007c	real question the gold rejects (annotator)	What is it?
+false-card-rules-recognition	TS3005a	statement, no question	Come on.
+false-card-rules-recognition	TS3005a	fragment	Dit niet veel mailtjes. Hè?
+false-card-rules-recognition	TS3005a	statement, no question	Do it on a blank sheet with different colors, and I just show you how to pick a color.
+false-card-rules-recognition	TS3005a	statement, no question	Work to a good result and do it as fast as we can.
+false-card-rules-recognition	TS3005a	fragment	Recognize?
+false-card-rules-recognition	TS3005a	statement, no question	Is that being, it's called in Dutch.
+false-card-rules-recognition	TS3005a	tag or check	So I should look at what you should be able to do with the remote, or?
+false-card-rules-recognition	TS3005a	real question the gold rejects (annotator)	Are there any more questions?
+false-card-rules-recognition	TS3007c	statement, no question	Do our project.
+false-card-rules-recognition	TS3007c	fragment	So, so it, it, what's actually, I...
+false-card-rules-recognition	TS3007c	real question the gold rejects (annotator)	Are you going to draw it? What?
+false-card-rules-recognition	TS3007c	real question the gold rejects (annotator)	What, what's better, plastic or rubber?
+false-card-rules-recognition	TS3007c	real question the gold rejects (annotator)	What else you need?
+false-card-rules-recognition	TS3007c	real question the gold rejects (annotator)	What if a child just goes up to the TV and presses up?
+false-card-rules-recognition	TS3007c	backchannel or echo	Yeah?
+false-card-rules-recognition	TS3007c	statement, no question	Doesn't transmit when it's off the clock.
+false-card-rules-recognition	TS3007c	real question the gold rejects (annotator)	Yeah, which buttons do you want in it?
+false-card-rules-recognition	TS3007c	tag or check	We'll take it to the other meeting, okay?
+false-card-rules-recognition	TS3010a	real question the gold rejects (annotator)	What will we make?
+false-card-rules-recognition	TS3010a	real question the gold rejects (annotator)	Do I not know what they're working for?
+false-card-rules-recognition	TS3010a	real question the gold rejects (annotator)	Do we make it?
+false-card-rules-recognition	TS3010a	real question the gold rejects (annotator)	Wait, not, not too heavy?
+false-card-rules-recognition	TS3010a	real question the gold rejects (annotator)	Where are these?
+false-card-rules-recognition	TS3010a	real question the gold rejects (annotator)	Or you gonna tell it?
+false-card-rules-recognition	TS3010a	fragment	Well, what are we going to do now is...
