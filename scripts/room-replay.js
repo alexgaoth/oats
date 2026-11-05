@@ -99,6 +99,20 @@
  *                  --every-offset, default 0), and score only the reference
  *                  words inside them: a sample for paid models, the same
  *                  segments for every model.
+ *   --engine CMD   any other recognizer, as a process that stays up: CMD is a
+ *                  JSON array, the command line. It prints {"ready":true} once
+ *                  loaded, reads one JSON line per segment on stdin,
+ *                  {"id":1,"wav":"/path.wav"} (16 kHz mono PCM), with a quiet
+ *                  segment raised first as the in-room path does, and answers
+ *                  {"id":1,"text":"..."} or {"id":1,"error":"..."}. The same
+ *                  filters and the same scoring as every other backend. Its
+ *                  name in the output is --engine-label.
+ *   --vad-gate F   with --engine, leave out the segments an earlier run (its
+ *                  --json file F, the same segments) found no speech in: the
+ *                  app's VAD as a gate, for engines that have none.
+ *   --from-run F   take every segment's text from an earlier run (its --json
+ *                  file F, the same segments) instead of transcribing: to score
+ *                  a run again, on a sample (--every), or behind --vad-gate.
  *   --publish DIR  after each recording, write DIR/<recording>.json: every
  *                  segment's start, end and text (punctuation kept, empty
  *                  segments too) and the recording's metrics. The other evals
@@ -125,7 +139,9 @@
 
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
+const os = require("os");
+const readline = require("readline");
+const { spawn, spawnSync } = require("child_process");
 const { pcm16ToWav, downsample24kTo16k } = require("../src/utils/audioUtils.js");
 const {
   DEFAULT_WHISPER_VAD_CONFIG,
@@ -213,6 +229,10 @@ const ABLATE_VAD = flag("ablate-vad");
 const ORACLE = flag("oracle");
 const CLOUD = arg("cloud");
 const REALTIME = arg("realtime");
+const ENGINE = arg("engine");
+const ENGINE_LABEL = arg("engine-label", "engine");
+const VAD_GATE = arg("vad-gate");
+const FROM_RUN = arg("from-run");
 const PACE = Number(arg("pace", "1"));
 const CLOUD_CONCURRENCY = Number(arg("concurrency", "6"));
 const JSON_OUT = arg("json");
@@ -710,6 +730,117 @@ function startRealtime(model) {
     async stop() {
       await this.recordingDone();
     },
+  };
+}
+
+/**
+ * Any other recognizer (`--engine`): a process that stays up and answers on
+ * stdio, one JSON line for each. See the header for the lines.
+ */
+async function startEngine(command) {
+  const { isOnlySoundLabels } = await import("../src/helpers/soundLabels.mjs");
+  const { raiseQuietSegment } = await import("../src/helpers/roomSegmentLevel.mjs");
+  const [binary, ...args] = JSON.parse(command);
+  const child = spawn(binary, args, { stdio: ["pipe", "pipe", "inherit"] });
+  // One file, written over for each segment: nothing to clean up after.
+  const wavPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "room-replay-")), "segment.wav");
+  const waiting = new Map();
+  let ready;
+  const started = new Promise((resolve, reject) => {
+    ready = { resolve, reject };
+  });
+  let lastError = null;
+  const finish = (id, answer) => {
+    const done = waiting.get(id);
+    waiting.delete(id);
+    done?.(answer);
+  };
+  readline.createInterface({ input: child.stdout }).on("line", (line) => {
+    let answer;
+    try {
+      answer = JSON.parse(line);
+    } catch {
+      return; // A library's print on stdout: not an answer.
+    }
+    if (answer.ready) ready.resolve();
+    else finish(answer.id, answer);
+  });
+  child.on("exit", (code) => {
+    lastError = `engine exited with ${code}`;
+    ready.reject(new Error(lastError));
+    for (const id of [...waiting.keys()]) finish(id, { error: lastError });
+  });
+  await started;
+  let nextId = 0;
+  return {
+    async transcribe(samples, _steadyFloor, extra = {}) {
+      if (lastError) return { text: "", ms: 0, failed: lastError };
+      const heard = SEGMENT_GAIN ? raiseQuietSegment(samples) : samples;
+      fs.writeFileSync(
+        wavPath,
+        pcm16ToWav(Buffer.from(heard.buffer, heard.byteOffset, heard.byteLength))
+      );
+      const id = (nextId += 1);
+      const begun = Date.now();
+      const answered = new Promise((resolve) => waiting.set(id, resolve));
+      child.stdin.write(`${JSON.stringify({ id, wav: wavPath, ...extra })}\n`);
+      const answer = await answered;
+      const ms = Date.now() - begun;
+      const said = String(answer.text ?? "").trim();
+      const text = DROP_SOUND_LABELS && isOnlySoundLabels(said) ? "" : said;
+      return {
+        text,
+        droppedLabel: text === said ? null : said,
+        ms,
+        failed: answer.error ? String(answer.error).slice(0, 200) : null,
+        vadSegments: null,
+      };
+    },
+    async stop() {
+      child.stdin.end();
+      await new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          child.kill();
+          resolve();
+        }, 5000);
+        child.once("exit", () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    },
+  };
+}
+
+/** Each recording's VAD verdicts from an earlier run, by segment (`--vad-gate`). */
+function loadVadGate(file) {
+  const run = JSON.parse(fs.readFileSync(file, "utf8"));
+  return new Map(
+    run.recordings.map((r) => [r.summary.meeting, r.segments.map((s) => s.vadSegments)])
+  );
+}
+
+/** An earlier run's answers (`--from-run`): each recording's segments, by index. */
+function startFromRun(file) {
+  const run = JSON.parse(fs.readFileSync(file, "utf8"));
+  const answers = new Map(
+    run.recordings.map((r) => [r.summary.meeting, new Map(r.segments.map((s) => [s.index, s]))])
+  );
+  return {
+    answers,
+    read(meeting, index) {
+      const s = answers.get(meeting)?.get(index);
+      if (!s) throw new Error(`--from-run has no segment ${index} of ${meeting}`);
+      return {
+        text: s.text ?? "",
+        droppedLabel: s.droppedLabel ?? null,
+        ms: s.ms ?? null,
+        failed: s.failed ?? null,
+        vadSegments: s.vadSegments ?? null,
+        vadSpeechSeconds: s.vadSpeechSeconds ?? null,
+      };
+    },
+    async stop() {},
   };
 }
 
@@ -1269,7 +1400,7 @@ function denoiseChain(chain, samples) {
 }
 
 /** One recording, start to finish: capture, segmenter, transcription, scoring. */
-async function replay(recording, backend, ablation) {
+async function replay(recording, backend, ablation, vadGate = null) {
   const meeting = recording.name;
   const { samples: samples24k, gainDb, levels } = prepare(recording.load());
   const seconds = samples24k.length / CAPTURE_RATE;
@@ -1321,6 +1452,15 @@ async function replay(recording, backend, ablation) {
         samples: stream.slice(startSample, endSample),
       };
     });
+  }
+  if (vadGate) {
+    const verdicts = vadGate.get(meeting);
+    if (verdicts?.length !== segments.length) {
+      throw new Error(
+        `--vad-gate has ${verdicts?.length} segments of ${meeting}, not ${segments.length}`
+      );
+    }
+    for (const s of segments) s.gated = verdicts[s.index] === 0;
   }
   if (EVERY > 1) {
     // A sample: every Nth segment, and only the reference words inside one.
@@ -1384,7 +1524,14 @@ async function replay(recording, backend, ablation) {
       await Promise.all(Array.from({ length: CLOUD_CONCURRENCY }, worker));
     } else {
       for (const s of segments) {
-        Object.assign(s, await backend.transcribe(s.samples, s.steadyFloor));
+        Object.assign(
+          s,
+          s.gated
+            ? { text: "", vadSegments: 0, failed: null }
+            : FROM_RUN
+              ? backend.read(meeting, s.index)
+              : await backend.transcribe(s.samples, s.steadyFloor)
+        );
         if (ablation) {
           const plain = await ablation.transcribe(s.samples, s.steadyFloor);
           s.textWithoutVad = plain.text;
@@ -1439,14 +1586,22 @@ async function replay(recording, backend, ablation) {
         ? { cloud: CLOUD }
         : REALTIME
           ? { realtime: REALTIME, pace: PACE }
-          : {
-              model: path.basename(MODEL),
-              language: LANGUAGE,
-              vad: VAD ? VAD_CONFIG : false,
-              dropSoundLabels: DROP_SOUND_LABELS,
-              segmentGain: SEGMENT_GAIN,
-              roomDenoise: ROOM_DENOISE,
-            },
+          : ENGINE || FROM_RUN
+            ? {
+                engine: ENGINE_LABEL,
+                fromRun: FROM_RUN ? path.basename(FROM_RUN) : undefined,
+                vadGate: Boolean(VAD_GATE),
+                dropSoundLabels: DROP_SOUND_LABELS,
+                segmentGain: SEGMENT_GAIN,
+              }
+            : {
+                model: path.basename(MODEL),
+                language: LANGUAGE,
+                vad: VAD ? VAD_CONFIG : false,
+                dropSoundLabels: DROP_SOUND_LABELS,
+                segmentGain: SEGMENT_GAIN,
+                roomDenoise: ROOM_DENOISE,
+              },
     segments: segments.length,
     segmentSeconds: Number(segmentSeconds.toFixed(1)),
     sentShare: pct(segmentSeconds, seconds),
@@ -1474,7 +1629,7 @@ async function replay(recording, backend, ablation) {
     summary.realTimeFactor = Number(
       (latencies.reduce((a, b) => a + b, 0) / 1000 / seconds).toFixed(4)
     );
-    if (!CLOUD && !REALTIME && VAD) {
+    if (!CLOUD && !REALTIME && (ENGINE || FROM_RUN ? VAD_GATE : VAD)) {
       summary.vadEmptied = segments.filter((s) => !s.text && s.vadSegments === 0).length;
       summary.vadSpeechSeconds = Number(
         segments.reduce((n, s) => n + (s.vadSpeechSeconds || 0), 0).toFixed(1)
@@ -1916,14 +2071,26 @@ async function main() {
       ? startCloud(CLOUD)
       : REALTIME
         ? startRealtime(REALTIME)
-        : await startLocal(VAD);
-  const ablation = !SEGMENT_ONLY && !remote && ABLATE_VAD && VAD ? await startLocal(false) : null;
+        : FROM_RUN
+          ? startFromRun(FROM_RUN)
+          : ENGINE
+            ? await startEngine(ENGINE)
+            : await startLocal(VAD);
+  const vadGate = VAD_GATE ? loadVadGate(VAD_GATE) : null;
+  const ablation =
+    !SEGMENT_ONLY && !remote && !ENGINE && !FROM_RUN && ABLATE_VAD && VAD
+      ? await startLocal(false)
+      : null;
   if (backend) {
     const label = CLOUD
       ? `cloud ${CLOUD}`
       : REALTIME
         ? `realtime ${REALTIME}`
-        : `${path.basename(MODEL)} language ${LANGUAGE} vad ${VAD ? "on" : "off"}`;
+        : FROM_RUN
+          ? `the texts of ${path.basename(FROM_RUN)}`
+          : ENGINE
+            ? `engine ${ENGINE_LABEL}`
+            : `${path.basename(MODEL)} language ${LANGUAGE} vad ${VAD ? "on" : "off"}`;
     log(`transcribing with ${label}${ablation ? ", and again without VAD" : ""}`);
   }
   const recordings = LIBRISPEECH
@@ -1940,7 +2107,7 @@ async function main() {
   const results = [];
   try {
     for (const recording of recordings) {
-      const result = await replay(recording, backend, ablation);
+      const result = await replay(recording, backend, ablation, vadGate);
       results.push(result);
       if (PUBLISH) publish(PUBLISH, result);
     }
@@ -1968,6 +2135,8 @@ if (require.main === module) {
 module.exports = {
   normalise,
   align,
+  merge,
+  covered,
   loadAmi,
   loadContentWords,
   scoreTranscript,
