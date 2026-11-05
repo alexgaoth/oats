@@ -235,3 +235,47 @@ far voices, which is what this app exists to hear. The energy segmenter stays.
 TEN VAD was not run: its license adds a no-compete condition to Apache-2.0
 ("You may not Deploy the ten-vad in a way that competes with Agora's offerings"),
 which an MIT app cannot pass on.
+
+## How to run it
+
+`room-replay.js` runs any recognizer through the app's segmenter and scoring:
+`--engine` takes a process that answers on stdio (the line protocol is in the
+script's header). `scripts/engines/` holds the ones used here. `room-compare.js`
+gives the intervals, the invented phrases and the question marks.
+
+```sh
+A=(); for m in ES2004a ES2004b ES2004c ES2004d IS1009a IS1009b TS3003a TS3003b; do
+  A+=(--audio ami/audio/$m.Array1-01.wav); done
+ROOM=(--level 0.0225 --noise pink.wav --noise-level 0.012)   # steady sound
+
+# Apple's on-device model: macOS 26+, nothing to download by hand
+swiftc -parse-as-library -O -target arm64-apple-macos26.0 \
+  scripts/engines/speech-analyzer.swift -o speech-analyzer
+node scripts/room-replay.js "${A[@]}" --ami ami/annotations $ROOM \
+  --engine '["./speech-analyzer"]' --engine-label apple --json apple.json
+
+# any MLX model (mlx-audio from PyPI), a sample of every sixth segment
+node scripts/room-replay.js "${A[@]}" --ami ami/annotations $ROOM --every 6 \
+  --engine '["python","-I","scripts/engines/mlx_engine.py","--model","<dir>"]'
+
+# the same run behind the app's VAD, without running the model again
+node scripts/room-replay.js "${A[@]}" --ami ami/annotations $ROOM \
+  --from-run apple.json --vad-gate small.en.json --json apple-gated.json
+
+# the path a room takes with an OpenAI key
+OPENAI_API_KEY=... node scripts/room-replay.js "${A[@]}" --ami ami/annotations $ROOM \
+  --realtime-stream gpt-transcribe --pace 8
+
+# a room outside AMI (DiPCo, local models only)
+node scripts/room-replay.js --dipco DiPCo --dipco-array U01 --level 0.0225 \
+  --engine '["./speech-analyzer"]' --json dipco.json
+
+# two runs compared, a 95% interval over meetings
+node scripts/room-compare.js --base a.json --run b.json --ami ami/annotations \
+  --others c.json,d.json
+```
+
+FluidAudio has no prebuilt CLI for this. On this Mac `swift build` crashes (the
+Command Line Tools' `swift-package` has a missing symbol), so its engine was
+built with `swiftc` directly from the v0.18.2 sources, and `scripts/engines/`
+does not hold it.
