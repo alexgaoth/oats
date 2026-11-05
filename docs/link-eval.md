@@ -581,6 +581,31 @@ recall with a false-link rate at or below 0.25. That is **0.84** (precision 0.89
 recall 0.57, false links 0.25). Read once on the 15 test meetings (105 pairs), against
 0.78, in both rooms, with every meeting on the board recognized. The same bar applies.
 
+## Frozen before the test read: scoring a pair against its history
+
+Added at main's request, after the board on recognized text. `scripts/link-relative.mjs`
+scores on sampled histories. A history takes up to four meetings of a series together,
+as a team holds them. Tuned on tuning meetings only: 8 meetings as heard (28 pairs, 6
+unlinked, so thin), the manual tuning pool, and a mixed pool with ICSI groups Bed and Bns.
+ICSI is read on this computer only; its keys are not approved.
+
+Five methods against main (`greedy:0.78`), read once:
+
+- `link:abs:0.8`: order-free clustering at a fixed threshold, chosen as heard.
+- `own:abs:0`: a threshold from the history's own scores: the mean of each topic's best
+  match in another conversation.
+- `mutual:abs:3:0.78`: two topics link only when each is among the other's 3 nearest.
+- `csls:abs:5:0`: cross-domain similarity local scaling, so a hub cannot link everything.
+- `idf:0.1`: words a history shares count for little.
+
+Stopped on tuning: centring on the history and removing its top component. Both drew
+false links between unrelated meetings on the mixed pool, where main draws none.
+
+Read on recognized text at the sizes it allows (5 and 15), on manual text at 5, 20 and 47,
+and on the mixed pool (AMI test series and ICSI groups Bmr and Bro) at 5, 20 and 100. No
+recognized history of 100 exists. A one-product history of 100 needs tuning meetings too
+and is reported as such.
+
 <!-- round 2 results -->
 ## Results
 
