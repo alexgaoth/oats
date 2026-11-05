@@ -232,6 +232,14 @@ class LlamaServerManager {
     // option ignore the variable.
     env.LLAMA_ARG_OFFLINE = "1";
 
+    // By default llama-server keeps the state of past prompts in memory, up to
+    // 8 GiB on top of the model (--cache-ram). Measured on Gemma 4 E4B: 5.7 GB
+    // grew by about 130 MB a request, to 11.2 GB, and stayed at 6.0 GB with this
+    // at 0, reading at the same speed (docs/summaries.md). On a 16 GB Mac beside
+    // the speech model that is memory it does not have. Builds that predate the
+    // option ignore the variable.
+    env.LLAMA_ARG_CACHE_RAM = process.env.LLAMA_ARG_CACHE_RAM || "0";
+
     return env;
   }
 
