@@ -1055,6 +1055,29 @@ what lights up when a person points at a chip.
   1,000 conversations that is 9 to 18 s on a loaded Mac, against 0.1 to 2.4 s on main. Taking
   the rule needs a follow-up for large boards.
 
+The number of neighbours is a dial, read once on test as frozen above. Chips, each cell
+false links, recall, precision:
+
+| History | Main | 3 (#172) | 5 | 8 | 12 |
+| --- | --- | --- | --- | --- | --- |
+| As heard, 5 | 0.92, 0.95, 0.88 | 0.81, 0.84, 0.88 | 1.00, 0.94, 0.87 | 1.00, 0.97, 0.88 | 1.00, 0.97, 0.88 |
+| As heard, 15 (thin) | 0.50, 0.78, 0.95 | 0.13, 0.28, 0.96 | 0.13, 0.50, 0.98 | 0.38, 0.78, 0.96 | 0.88, 0.89, 0.93 |
+| Steady sound, 15 (thin) | 1.00, 1.00, 0.92 | 0.25, 0.19, 0.90 | 0.38, 0.32, 0.91 | 0.63, 0.58, 0.92 | 0.75, 0.80, 0.93 |
+| Manual, 5 | 0.42, 0.79, 0.81 | 0.37, 0.63, 0.80 | 0.41, 0.77, 0.81 | 0.42, 0.78, 0.81 | 0.42, 0.78, 0.81 |
+| Manual, 20 | 0.50, 0.78, 0.79 | 0.08, 0.21, 0.86 | 0.15, 0.33, 0.84 | 0.27, 0.50, 0.82 | 0.39, 0.66, 0.81 |
+| Manual, 100 | 0.41, 0.68, 0.84 | 0.01, 0.06, 0.94 | 0.03, 0.10, 0.93 | 0.05, 0.18, 0.92 | 0.09, 0.29, 0.91 |
+| Mixed, 5 | 0.28, 0.80, 0.66 | 0.23, 0.70, 0.67 | 0.26, 0.80, 0.67 | 0.26, 0.80, 0.67 | 0.26, 0.80, 0.67 |
+| Mixed, 20 | 0.21, 0.80, 0.75 | 0.07, 0.24, 0.74 | 0.11, 0.37, 0.74 | 0.15, 0.54, 0.74 | 0.18, 0.70, 0.75 |
+| Mixed, 100 | 0.22, 0.78, 0.45 | 0.08, 0.11, 0.24 | 0.12, 0.19, 0.27 | 0.15, 0.29, 0.30 | 0.18, 0.40, 0.33 |
+
+- **No count clears the bar.** At 8, manual 20 reads recall 0.50 with false links 0.27 and
+  precision 0.82. Against main that is recall −0.29 [−0.33, −0.24], false links −0.23
+  [−0.28, −0.19] and precision +0.03 [0.01, 0.05].
+- **Only 3 does anything at size 5.** From 5 up, a history of 5 reads as main does, or a
+  little worse, because 5 meetings hold few topics.
+- **5 is the mild step up.** It doubles recall at 15 and 20 against 3 on most rows, and false
+  links stay near 3's as heard. 12 is main again on recognized text.
+
 ### What a model change would cost
 
 No model cleared the bar, so nothing here is planned. For the record, a change from
@@ -1107,7 +1130,8 @@ MiniLM means:
    Recommended: (b), as a design choice, not as a bar cleared. A wrong link is a visible
    error, a sparse board is not, and #166 already gives anyone with a key the better path.
    #172 builds (b). It costs a chip list about as long as the history, and a follow-up for
-   large boards.
+   large boards. The count of neighbours is one constant: 3 draws the fewest false links and
+   is the only count that helps at 5 meetings, and 5 doubles recall at 15 to 20.
 3. **The embedding model.** Recommended: keep MiniLM. bge-small at 0.96 misses the precision
    bar by 0.035 on manual text and falls apart on recognized text.
 4. **Typed relations.** Recommended: no.
