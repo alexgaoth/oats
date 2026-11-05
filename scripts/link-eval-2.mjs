@@ -2046,10 +2046,9 @@ async function recognitionBoards() {
   // `--configs`: another model's vectors, in place of the MiniLM vectors stored.
   const other =
     args.configs && args.configs !== "minilm"
-      ? (await import(pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href)).readStore(
-          path.join(CACHE, "embed"),
-          args.configs
-        )
+      ? (
+          await import(pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href)
+        ).readStore(path.join(CACHE, "embed"), args.configs)
       : null;
   const vectorFor = (node, turns) => {
     if (!other) return node.vector;
