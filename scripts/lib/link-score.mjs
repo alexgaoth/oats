@@ -231,7 +231,9 @@ export function pairedRates(
 ) {
   const metrics = (weightOf, predicted) => {
     const { precision, recall, falseLinks } = rates(confusion(pairs, predicted, weightOf));
-    return { precision, recall, falseLinks, balance: (recall ?? 0) - (falseLinks ?? 0) };
+    // A replicate can hold no pair of a kind (pairs that touch few series): it says nothing.
+    const balance = recall == null || falseLinks == null ? null : recall - falseLinks;
+    return { precision, recall, falseLinks, balance };
   };
   const a = metrics(pairWeight, predictedA);
   const b = metrics(pairWeight, predictedB);

@@ -37,6 +37,8 @@ const { values: args, positionals } = parseArgs({
     "llama-server": { type: "string" },
     center: { type: "string", default: "0.81" },
     kind: { type: "string", default: "excerpt" },
+    replay: { type: "string" },
+    touching: { type: "string" },
     orders: { type: "string", default: "12" },
     methods: { type: "string" },
     "links-module": { type: "string" },
@@ -1007,8 +1009,13 @@ function runDecides(run) {
  */
 function sampleTable(corpus, scoreLib, methods, split, reference) {
   const { truth } = corpus;
+  // `--touching <replay>`: only the pairs with a meeting that recognizer heard.
+  const heard = args.touching ? recognizedMeetings(args.touching) : null;
   const items = samplePairs(corpus).filter(
-    (item) => (split === "all" || item.pair.split === split) && methods.every((m) => m.decide(item) != null)
+    (item) =>
+      (split === "all" || item.pair.split === split) &&
+      methods.every((m) => m.decide(item) != null) &&
+      (!heard || heard.has(item.pair.a) || heard.has(item.pair.b))
   );
   const all = corpus.pairs.filter((pair) => split === "all" || pair.split === split);
   const sampledIn = (category) => items.filter((item) => item.pair.category === category).length;
@@ -1151,8 +1158,10 @@ async function linker() {
   const tracker = await load("src/helpers/conversationTopics.mjs");
   const { summaryExcerpt } = await load("src/helpers/conversationGroupSort.mjs");
   const meetings = new Map(loadMeetings().map((meeting) => [meeting.id, meeting]));
+  // `--replay`: the meetings a recognizer heard go as the app would send them.
+  const replaced = args.replay ? recognizedMeetings(args.replay) : null;
   const described = (id) => {
-    const meeting = meetings.get(id);
+    const meeting = replaced?.get(id) ?? meetings.get(id);
     const snapshot = {
       nodes: meeting.nodes.map((node) => ({
         ...node,
@@ -1188,8 +1197,11 @@ async function linker() {
     throw new Error("The app's prompt has changed");
   }
   const base = linkerRun(BASE_RUN);
+  const heard = args.touching ? recognizedMeetings(args.touching) : replaced;
   const calls = [...base.calls.values()].filter(
-    (call) => args.calls === "all" || splitOfMeeting(call.id) === args.calls
+    (call) =>
+      (args.calls === "all" || splitOfMeeting(call.id) === args.calls) &&
+      (!heard || heard.has(call.id) || call.candidates.some((id) => heard.has(id)))
   );
   const seededOrder = (id) => {
     let state = [...id].reduce((sum, char) => sum * 31 + char.charCodeAt(0), 7) >>> 0 || 1;
@@ -1198,7 +1210,7 @@ async function linker() {
       return state / 2 ** 32;
     };
   };
-  const slug = `${spec.replace(/[^a-zA-Z0-9.-]+/g, "_")}~${variant}`;
+  const slug = `${spec.replace(/[^a-zA-Z0-9.-]+/g, "_")}~${variant}${args.replay ? `~${args.replay}` : ""}`;
   const dir = path.join(CACHE, "linker", slug);
   fs.mkdirSync(dir, { recursive: true });
   let next = 0;
@@ -1663,6 +1675,184 @@ async function appPathFinal() {
 }
 
 // ---------------------------------------------------------------------------
+// The reason a person reads: the subject the board drew on a link, graded blind
+// with round 1's rubric. Round 1 graded each method's name pair by pair; here
+// each board's label is the name of the subject that holds the pair.
+
+const LABEL_JUDGE = [
+  "You grade names for a link between two meetings. The meetings were linked because they talk about the same thing; each name is meant to say what that thing is.",
+  "",
+  "You get the subjects each meeting covered, as human annotators labelled them, and the subjects both meetings covered. Then a numbered list of proposed names.",
+  "",
+  "Grade every name:",
+  "- match: 2 if it names a subject both meetings covered; 1 if it is related to a shared subject but broader, narrower or vaguer (for example it names only the whole project); 0 if it names something they do not share, or nothing in particular",
+  "- specific: 1 to 5, how specifically it says what the two meetings have in common (5: a precise subject; 1: could describe almost any meeting)",
+  "",
+  'Reply with JSON only: {"ratings":[{"id":1,"match":2,"specific":4}]}, one rating per name.',
+].join("\n");
+
+const LABEL_SCHEMA = {
+  name: "link_name_ratings",
+  schema: {
+    type: "object",
+    properties: {
+      ratings: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "integer" },
+            match: { type: "integer" },
+            specific: { type: "integer" },
+          },
+          required: ["id", "match", "specific"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["ratings"],
+    additionalProperties: false,
+  },
+};
+
+/** Test pairs the annotators link, each board's label on them, graded by two judges. */
+async function labels() {
+  const load = (file) => import(pathToFileURL(path.join(ROOT, file)).href);
+  const { ask, ledgerTotal, bootstrapMean } = await load("scripts/lib/fast-models.mjs");
+  const { readStore } = await load("scripts/lib/embed-store.mjs");
+  const { createEmbedder } = await load("scripts/lib/minilm.mjs");
+  const fixed = await import(pathToFileURL(path.resolve(args["links-module"])).href);
+  const corpus = await loadCorpus();
+  const store = readStore(path.join(CACHE, "embed"), "minilm");
+  const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
+  const boardOn = (variant) =>
+    corpus.meetings.map((meeting) => ({
+      id: meeting.id,
+      title: meeting.id,
+      createdAt: meeting.createdAt,
+      summaryRoute: "providers:same",
+      snapshot: {
+        nodes: meeting.nodes.map((node) => ({ ...node, label: nameOf(meeting, node, variant) })),
+      },
+    }));
+  const boards = {
+    "on this computer, tracker names": coMembers(
+      corpus.links.meaningThreads(boardOn("device"), { vectorOf: store.get }).subjects
+    ),
+    "on this computer, writing-model names": coMembers(
+      corpus.links.meaningThreads(boardOn("model"), { vectorOf: store.get }).subjects
+    ),
+  };
+  for (const name of args.runs.split("+")) {
+    const checks = new Map();
+    for (const meeting of corpus.meetings) {
+      const value = readJson(path.join(CACHE, "app-path", name, `${meeting.id}.json`));
+      if (value?.candidates.length) checks.set(meeting.id, value);
+    }
+    const subjects = [
+      ...new Set([...checks.values()].flatMap((check) => check.links.map((link) => link.subject))),
+    ];
+    const embedded = await embedder.embed(subjects);
+    const vectors = new Map(subjects.map((text, index) => [text, embedded[index]]));
+    const vectorOf = (text) => vectors.get(text) ?? store.get(text);
+    const short = name.split("_").slice(0, 2).join(" ");
+    boards[`${short}, today`] = coMembers(
+      corpus.links.linkThreads(boardOn("model"), { vectorOf: store.get, checks }).subjects
+    );
+    boards[`${short}, fixed`] = coMembers(
+      fixed.linkThreads(boardOn("model"), { vectorOf, checks }).subjects
+    );
+  }
+  const names = Object.keys(boards);
+  let state = 20261105;
+  const random = () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+  const eligible = corpus.pairs.filter(
+    (pair) =>
+      pair.split === args.split &&
+      pair.linked &&
+      pair.category.startsWith("scenario") &&
+      names.some((name) => boards[name].has(pair.key) && /fixed/.test(name))
+  );
+  const items = [];
+  while (items.length < 100 && eligible.length) {
+    items.push(eligible.splice(Math.floor(random() * eligible.length), 1)[0]);
+  }
+  const subjectsOf = (id) =>
+    [...corpus.byMeeting.get(id).subjects]
+      .filter(([, words]) => words >= 100)
+      .sort((a, b) => b[1] - a[1])
+      .map(([subject]) => subject);
+  const dir = path.join(CACHE, "labels");
+  fs.mkdirSync(dir, { recursive: true });
+  const f = (value) => (value == null ? "-" : value.toFixed(2));
+  for (const judge of args.judges.split("+")) {
+    const slug = judge.replace(/[^a-zA-Z0-9.-]+/g, "_");
+    let next = 0;
+    const rows = new Array(items.length);
+    const work = async () => {
+      while (next < items.length) {
+        const index = next;
+        next += 1;
+        const pair = items[index];
+        const shown = [...new Set(names.map((name) => boards[name].get(pair.key)).filter(Boolean))]
+          .map((label) => ({ label, key: random() }))
+          .sort((a, b) => a.key - b.key)
+          .map((item) => item.label);
+        const file = path.join(dir, `${slug}~${pair.key.replace("|", "_")}.json`);
+        let stored = readJson(file);
+        if (!stored || stored.shown.slice().sort().join("\n") !== shown.slice().sort().join("\n")) {
+          const user = [
+            `Meeting 1 covered: ${subjectsOf(pair.a).join("; ") || "nothing specific"}`,
+            `Meeting 2 covered: ${subjectsOf(pair.b).join("; ") || "nothing specific"}`,
+            `Both covered: ${pair.shared.join("; ")}`,
+            "",
+            "Proposed names:",
+            ...shown.map((label, at) => `${at + 1}. ${label}`),
+          ].join("\n");
+          const answer = await ask(judge, {
+            system: LABEL_JUDGE,
+            user,
+            schema: LABEL_SCHEMA,
+            maxTokens: 2000,
+            timeoutMs: 120_000,
+            parseJson: true,
+            purpose: "link-eval-2:labels",
+          });
+          stored = { shown, ratings: answer.json?.ratings ?? [] };
+          fs.writeFileSync(file, JSON.stringify(stored));
+        }
+        rows[index] = { pair, ...stored };
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, work));
+    console.log(`${judge}: ${items.length} pairs, $${ledgerTotal().toFixed(3)} in the ledger`);
+    for (const name of names) {
+      const match = [];
+      const specific = [];
+      const exact = [];
+      for (const row of rows) {
+        const label = boards[name].get(row.pair.key);
+        if (!label) continue;
+        const rating = row.ratings.find((item) => Number(item.id) === row.shown.indexOf(label) + 1);
+        if (!rating) continue;
+        match.push(Number(rating.match));
+        specific.push(Number(rating.specific));
+        exact.push(Number(rating.match) === 2 ? 1 : 0);
+      }
+      const m = bootstrapMean(match);
+      const e = bootstrapMean(exact);
+      const s = bootstrapMean(specific);
+      console.log(
+        `  ${name.padEnd(42)} n ${String(match.length).padStart(3)}  match ${f(m.mean)} [${f(m.low)}, ${f(m.high)}]  shared subject ${f(e.mean)}  specific ${f(s.mean)} [${f(s.low)}, ${f(s.high)}]`
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // What recognition costs. The eight meetings a recognizer heard replace their
 // manual selves on the board, and every pair that touches one is scored with
 // the same pair on manual text. Eight meetings alone make 28 pairs, so each is
@@ -1921,6 +2111,7 @@ const COMMANDS = {
   "app-path-score": appPathScore,
   "app-path-final": appPathFinal,
   "recognition-boards": recognitionBoards,
+  labels,
   "rerank-texts": rerankTexts,
 };
 
