@@ -389,7 +389,9 @@ can be checked in the history. The summary and "Results" came after.
   fewer false links, at about the same precision. Mixed histories are not the problem:
   main draws 0 of 1,139 false links between unrelated meetings. A history about one
   product is, and the signal is not there. With no key, the recommendation is to show
-  fewer links: mutual nearest neighbours draws the fewest false ones.
+  fewer links: mutual nearest neighbours draws the fewest false ones. #172 builds it,
+  held as a design call. At 20 meetings recall falls from 0.78 to 0.18 and false links
+  from 0.50 to 0.06. The lines stay about as many; what falls is what a chip claims.
 - **A threshold for recognized text did not carry over.** 0.84 read false links of 0.25 on
   tuning meetings and 0.65 on test. Tune again when more meetings have been through
   recognition.
@@ -991,6 +993,47 @@ is a floor, and it is why they read low.
 **What the board should do with no key:** show fewer links, and the ones it can stand
 behind. See the decision below.
 
+### Mutual nearest, as the app would build it
+
+#172 builds the rule, and it is held as a design call: two topics link only when each is
+among the other's 3 nearest in other conversations and they reach the bar. Each cell is
+false links, recall, precision, on test meetings, 40 histories at each size. This differs
+a little from the table above, which read 12 to 40 histories a size. "Lines" scores each
+line the board draws. "Chips" scores a pair as linked when one chip holds both, which is
+what lights up when a person points at a chip.
+
+| History | Main | Lines | Chips |
+| --- | --- | --- | --- |
+| As heard, 5 | 0.92, 0.95, 0.88 | 0.73, 0.73, 0.88 | 0.81, 0.84, 0.88 |
+| As heard, 15 | 0.50, 0.78, 0.95 | 0.13, 0.22, 0.96 | 0.13, 0.28, 0.96 |
+| Steady, 15 | 1.00, 1.00, 0.92 | 0.13, 0.14, 0.93 | 0.25, 0.19, 0.90 |
+| Manual, 5 | 0.42, 0.79, 0.81 | 0.29, 0.55, 0.81 | 0.37, 0.63, 0.80 |
+| Manual, 20 | 0.50, 0.78, 0.79 | 0.06, 0.18, 0.87 | 0.08, 0.21, 0.86 |
+| Manual, 100 | 0.41, 0.68, 0.84 | 0.01, 0.04, 0.94 | 0.01, 0.06, 0.94 |
+| Mixed, 5 | 0.28, 0.80, 0.66 | 0.18, 0.67, 0.71 | 0.23, 0.70, 0.67 |
+| Mixed, 20 | 0.21, 0.80, 0.75 | 0.05, 0.20, 0.77 | 0.07, 0.24, 0.74 |
+| Mixed, 100 | 0.22, 0.78, 0.45 | 0.01, 0.08, 0.66 | 0.08, 0.11, 0.24 |
+
+- **The build is the rule that was measured.** "Lines" equals `mutual:abs:3:0.78` to three
+  places in every row.
+- **Mutual pairs must not chain.** Joined into connected subjects on tuning meetings, they
+  gave back the false links: 0.03 to 0.16 on manual text at 20, and 0.38 to 0.83 as heard
+  at 5. So a subject is a topic and the later topics that link to it.
+- **It does not draw fewer lines.** At manual 20 main draws 26 lines and its chips claim 133
+  of 190 pairs, because a chain stands for a whole subject. The rule draws 27 lines and its
+  chips claim 33. Meetings with a link fall from 19.4 to 18.7. Chips rise from 6.3 to 21.6,
+  and the biggest falls from 15 meetings to 4.
+- **The nine demo samples do not change.** On `profile=many`, 200 invented conversations
+  with names only, chips rise from 68 to 229: invented one-off names clear the name bar.
+- **Mixed, 100, chips, is worse than main on precision.** One chip, "re", holds 32 ICSI
+  meetings, because ICSI has the tracker's names only and subjects with one name are one
+  chip to a reader. Main has "digits 44" and "re 13" too.
+- **The cloud check does not move.** On the cached checks of the test split, precision,
+  recall and false links change by at most 0.001 for Opus and gpt-6.1-sol.
+- **Each rebuild reads every pair of topics, on the render thread.** At the board's limit of
+  1,000 conversations that is 9 to 18 s on a loaded Mac, against 0.1 to 2.4 s on main. Taking
+  the rule needs a follow-up for large boards.
+
 ### What a model change would cost
 
 No model cleared the bar, so nothing here is planned. For the record, a change from
@@ -1042,6 +1085,8 @@ MiniLM means:
    recall; (c) (b) plus a line that says the board shows only its surest links.
    Recommended: (b), as a design choice, not as a bar cleared. A wrong link is a visible
    error, a sparse board is not, and #166 already gives anyone with a key the better path.
+   #172 builds (b). It costs a chip list about as long as the history, and a follow-up for
+   large boards.
 3. **The embedding model.** Recommended: keep MiniLM. bge-small at 0.96 misses the precision
    bar by 0.035 on manual text and falls apart on recognized text.
 4. **Typed relations.** Recommended: no.
@@ -1081,6 +1126,13 @@ node scripts/link-eval.mjs snapshots --replay <dir> --cache <cache> --meetings <
 node scripts/link-relative.mjs icsi                        # ICSI through track T's export, on this computer
 node scripts/link-relative.mjs read --pool test-heard --size 5 --histories 40 \
   --methods "greedy:0.78+mutual:abs:3:0.78"
+# A build of the rule from another worktree: lines, then chips, then what a board shows
+node scripts/link-relative.mjs read --app-module <conversationLinks.mjs> --pool test-one \
+  --size 20 --histories 40 --methods "greedy-chips:0.78+app-edges:0.78+app:0.78"
+node scripts/link-relative.mjs chips --app-module <conversationLinks.mjs> --pool test-one \
+  --size 20 --histories 40
+node scripts/link-eval-2.mjs app-path-final --split test --orders 1 --links-named \
+  --links-module <conversationLinks.mjs> --runs "<runs>"
 node scripts/link-eval-2.mjs recognition-boards --center 0.78 --orders 8 --runs "small.en__quiet-room"
 ANTHROPIC_API_KEY=… node scripts/link-eval-2.mjs recognition-history --center 0.78 --orders 12 \
   --runs "apple-speech__quiet-room" --model "anthropic:claude-opus-5-5@think,medium"

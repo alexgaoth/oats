@@ -10,6 +10,11 @@
 //   node scripts/link-relative.mjs sweep --pool tune-one --size 20
 //   node scripts/link-relative.mjs read --pool test-one --size 20 --methods "a+b"
 //
+// `--app-module <file>` reads the app's rule from another worktree, for the method
+// `app:<t>`: its board as a person sees it, a pair linked when one chip holds both;
+// `app-edges:<t>` counts only the edges it draws. `greedy-chips:<t>` is this
+// worktree's rule read the same way as `app:<t>`.
+//
 // Pools: `one` is a history of AMI scenario meetings, one product throughout, the
 // worst case. `mixed` is AMI series, the non-scenario meetings and ICSI meetings
 // together. `heard-*` is AMI as Apple Speech heard it. tune and test keep the
@@ -48,8 +53,11 @@ const { values: args, positionals } = parseArgs({
     histories: { type: "string", default: "24" },
     methods: { type: "string" },
     spread: { type: "boolean", default: false },
+    "app-module": { type: "string" },
   },
 });
+
+const candidate = args["app-module"] ? await import(path.resolve(args["app-module"])) : null;
 
 const CACHE = args.cache;
 const DIR = annotationsDir(args.ami);
@@ -420,6 +428,96 @@ function mutualLinks(topics, matrix, k, floor) {
   return linked;
 }
 
+/** A candidate build's board, by what was said, with the names a person would see. */
+function candidateBoard(history, threshold, rule = candidate) {
+  const board = history.map((meeting, index) => ({
+    id: index,
+    title: String(index),
+    createdAt: index,
+    snapshot: {
+      nodes: meeting.topics.map((topic, at) => ({
+        id: at,
+        label: topic.label,
+        durationMs: 60_000,
+        words: topic.words,
+        vector: rule.encodeTopicVector(topic.vector),
+      })),
+    },
+  }));
+  return rule.meaningThreads(board, { vectorOf: () => null, contentThreshold: threshold });
+}
+
+/**
+ * Two meetings are linked when one chip holds both. A person points at a name, so
+ * subjects with one name are one chip whichever rule drew them (`linkedHighlight`).
+ */
+function chipLinks(subjects) {
+  const byName = new Map();
+  for (const subject of subjects) {
+    if (!byName.has(subject.label)) byName.set(subject.label, new Set());
+    for (const id of subject.conversationIds) byName.get(subject.label).add(id);
+  }
+  const linked = new Set();
+  for (const ids of byName.values()) {
+    const list = [...ids].sort((a, b) => a - b);
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) linked.add(`${list[i]}|${list[j]}`);
+    }
+  }
+  return linked;
+}
+
+const candidateLinks = (history, threshold) =>
+  chipLinks(candidateBoard(history, threshold).subjects);
+
+function candidateEdges(history, threshold) {
+  const { edges } = candidateBoard(history, threshold);
+  return new Set(
+    edges.map((edge) => `${Math.min(edge.from, edge.to)}|${Math.max(edge.from, edge.to)}`)
+  );
+}
+
+/**
+ * Mutual pairs joined into subjects, as the board would have to draw them: two
+ * conversations are linked when any chain of mutual topics joins them.
+ */
+function mutualSubjects(topics, matrix, k, floor) {
+  const n = topics.length;
+  const nearest = topics.map((topic, i) => {
+    const others = [];
+    for (let j = 0; j < n; j += 1) if (topics[j].owner !== topic.owner) others.push(j);
+    return new Set(others.sort((x, y) => matrix[i][y] - matrix[i][x]).slice(0, k));
+  });
+  const parent = Array.from({ length: n }, (_, index) => index);
+  const find = (index) => {
+    let at = index;
+    while (parent[at] !== at) {
+      parent[at] = parent[parent[at]];
+      at = parent[at];
+    }
+    return at;
+  };
+  for (let i = 0; i < n; i += 1) {
+    for (const j of nearest[i]) {
+      if (i < j && nearest[j].has(i) && matrix[i][j] >= floor) parent[find(j)] = find(i);
+    }
+  }
+  const groups = new Map();
+  topics.forEach((topic, index) => {
+    const root = find(index);
+    if (!groups.has(root)) groups.set(root, new Set());
+    groups.get(root).add(topic.owner);
+  });
+  const linked = new Set();
+  for (const owners of groups.values()) {
+    const list = [...owners].sort((a, b) => a - b);
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) linked.add(`${list[i]}|${list[j]}`);
+    }
+  }
+  return linked;
+}
+
 /** The app's board at one threshold, in the order of this history. */
 function greedyLinks(history, threshold) {
   const board = history.map((meeting, index) => ({
@@ -460,10 +558,20 @@ function greedyLinks(history, threshold) {
  *   own:<kind>:<z>            a threshold from this history's own scores
  *   own-floor:<kind>:<z>:<f>  the same, never under an absolute floor
  *   mutual:<kind>:<k>:<floor> mutual nearest topics, over a floor
+ *   mutual-subjects:<kind>:<k>:<floor>  the same, chained into subjects
+ *   app:<t>, app-edges:<t>    a candidate build of the app's rule (`--app-module`)
+ *   greedy-chips:<t>          the app's rule, a pair linked when one chip holds both
  */
 function linksOf(spec, history) {
   const [kind, ...rest] = spec.split(":");
   if (kind === "greedy") return greedyLinks(history, Number(rest[0]));
+  if (kind === "app") return candidateLinks(history, Number(rest[0]));
+  if (kind === "greedy-chips") {
+    return chipLinks(
+      candidateBoard(history, Number(rest[0]), { encodeTopicVector, meaningThreads }).subjects
+    );
+  }
+  if (kind === "app-edges") return candidateEdges(history, Number(rest[0]));
   const topics = flatten(history);
   if (kind === "link") {
     return clusterLinks(topics, matrixOf(topics, rest[0]), Number(rest[1]));
@@ -487,6 +595,9 @@ function linksOf(spec, history) {
     const threshold = ownThreshold(topics, matrix, Number(rest[1]));
     const floor = kind === "own-floor" ? Number(rest[2]) : -Infinity;
     return clusterLinks(topics, matrix, Math.max(threshold, floor));
+  }
+  if (kind === "mutual-subjects") {
+    return mutualSubjects(topics, matrixOf(topics, rest[0]), Number(rest[1]), Number(rest[2]));
   }
   if (kind === "mutual") {
     return mutualLinks(topics, matrixOf(topics, rest[0]), Number(rest[1]), Number(rest[2]));
@@ -640,7 +751,39 @@ function read() {
   }
 }
 
-const COMMANDS = { icsi, sweep, read };
+/** What a board shows: its chips, the biggest first, under this rule and the candidate's. */
+function chips() {
+  const { histories } = historiesOf();
+  const size = (list) => list.map((subject) => subject.conversationIds.length);
+  const threshold = 0.78;
+  const summary = (name, boards) => {
+    const counts = boards.map((board) => board.subjects.length);
+    const edges = boards.map((board) => board.edges.length);
+    const mean = (list) => list.reduce((sum, value) => sum + value, 0) / list.length;
+    const biggest = boards.map((board) => Math.max(0, ...size(board.subjects)));
+    const linked = boards.map(
+      (board) => new Set(board.edges.flatMap((edge) => [edge.from, edge.to])).size
+    );
+    console.log(
+      `${name.padEnd(10)} ${mean(counts).toFixed(1)} chips, ${mean(edges).toFixed(1)} edges, biggest ${mean(biggest).toFixed(1)}, ${mean(linked).toFixed(1)} of ${histories[0].length} meetings linked`
+    );
+  };
+  const main = histories.map((history) =>
+    candidateBoard(history, threshold, { encodeTopicVector, meaningThreads })
+  );
+  const next = histories.map((history) => candidateBoard(history, threshold));
+  summary("main", main);
+  summary("candidate", next);
+  const top = (subjects) =>
+    subjects
+      .slice(0, 10)
+      .map((subject) => `${subject.label} ${subject.conversationIds.length}`)
+      .join(" | ");
+  console.log(`main: ${top(main[0].subjects)}`);
+  console.log(`candidate: ${top(next[0].subjects)}`);
+}
+
+const COMMANDS = { icsi, sweep, read, chips };
 if (!COMMANDS[positionals[0]]) {
   console.error(`Usage: node scripts/link-relative.mjs <${Object.keys(COMMANDS).join("|")}>`);
   process.exit(1);

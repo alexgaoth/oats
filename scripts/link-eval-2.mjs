@@ -22,7 +22,8 @@
 // The whole path a cloud user gets:
 //   app-path       the app's candidates, and the check on them
 //   app-path-score what the board draws, on tuning pairs
-//   app-path-final the board before #166 (`--links-module`) against the app's
+//   app-path-final the board before #166 (`--links-module`) against the app's;
+//                  `--links-named` gives another build the vectors of named subjects
 //
 // What a person reads, and what recognition costs:
 //   labels              each board's reason on a link, graded blind
@@ -78,6 +79,7 @@ const { values: args, positionals } = parseArgs({
     methods: { type: "string" },
     subset: { type: "string" },
     "links-module": { type: "string" },
+    "links-named": { type: "boolean", default: false },
     judges: { type: "string", default: "anthropic:claude-sonnet-5-5+openai:gpt-6.1-sol@low" },
   },
 });
@@ -1810,7 +1812,11 @@ async function appPathFinal() {
     const embedded = await embedder.embed(subjects);
     const vectors = new Map(subjects.map((text, index) => [text, embedded[index]]));
     const vectorOf = (text) => vectors.get(text) ?? store.get(text);
-    const drawnToday = before.linkThreads(board, { vectorOf: store.get, checks }).subjects;
+    // Before #166 the board had no vectors of the subjects a check named.
+    const drawnToday = before.linkThreads(board, {
+      vectorOf: args["links-named"] ? vectorOf : store.get,
+      checks,
+    }).subjects;
     const drawnFix = corpus.links.linkThreads(board, { vectorOf, checks }).subjects;
     const today = coMembers(drawnToday);
     const fix = coMembers(drawnFix);
