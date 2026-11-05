@@ -174,3 +174,17 @@ turns run together and the transcript loses 10 points.
 `gpt-transcribe` stays the cloud model. Its realtime session already gives each
 turn the turns before it, so a prompt would add nothing on the app's path. The
 question marks do not move with context (precision about 58, recall 32 to 34).
+
+## A second pass at Finish: the audio is there
+
+`startInRoomSegmenting` writes the whole conversation to
+`os.tmpdir()/oats-conversation-<time>.wav` (16 kHz, 16-bit, 115 MB an hour) while
+it records. `finishInRoomSegmenting` closes it at Stop, the speaker pass reads
+it, and `runInRoomSpeakerPass` deletes it when it ends, "whatever happened"
+(`ipcHandlers.js`). So a second pass costs no new storage. It must run before
+that delete, and the promise holds as long as it does: nothing of the room
+outlives the transcript. On a cloud route no WAV is written today, because the
+microphone goes straight to the realtime session.
+
+The title and the summary do not wait for the speaker pass, so a second pass
+must either hold them or redo them. Holding them is what the bar below pays for.
