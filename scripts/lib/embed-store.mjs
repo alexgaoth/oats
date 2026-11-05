@@ -17,10 +17,7 @@ const keyOf = (text) => crypto.createHash("sha1").update(text).digest("hex");
  */
 export function readStore(root, config, { dims } = {}) {
   const folder = path.join(root, config);
-  const keys = fs
-    .readFileSync(path.join(folder, "keys.txt"), "utf8")
-    .split("\n")
-    .filter(Boolean);
+  const keys = fs.readFileSync(path.join(folder, "keys.txt"), "utf8").split("\n").filter(Boolean);
   const bytes = fs.readFileSync(path.join(folder, "vectors.f32"));
   const all = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
   const dimension = all.length / keys.length;

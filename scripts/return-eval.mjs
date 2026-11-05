@@ -16,12 +16,7 @@ import { parseArgs } from "node:util";
 import { amiRecognized, amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
 import { splitOfMeeting } from "./lib/link-split.mjs";
 import { meetingReturns } from "./lib/return-truth.mjs";
-import {
-  chancePairs,
-  scoreMeeting,
-  summarizeReturns,
-  verdictOf,
-} from "./lib/return-score.mjs";
+import { chancePairs, scoreMeeting, summarizeReturns, verdictOf } from "./lib/return-score.mjs";
 import { percentile } from "./lib/fast-models.mjs";
 
 const { values: args, positionals } = parseArgs({
@@ -56,7 +51,8 @@ export function meetingsOf(results, split, level) {
             DIR,
             result.id,
             NAMES,
-            JSON.parse(fs.readFileSync(path.join(args.replay, `${result.id}.json`), "utf8")).segments
+            JSON.parse(fs.readFileSync(path.join(args.replay, `${result.id}.json`), "utf8"))
+              .segments
           )
         : amiReference(DIR, result.id, NAMES);
       return {
@@ -103,24 +99,38 @@ function score() {
   console.log(`${summary?.label ?? args.input}, split ${args.split}`);
   for (const level of args.level.split(",")) {
     const meetings = meetingsOf(results, args.split, level);
-    console.log(`\n${level}: ${meetings.length} meetings, ${meetings.reduce((n, m) => n + m.gold.returns.length, 0)} gold returns`);
+    console.log(
+      `\n${level}: ${meetings.length} meetings, ${meetings.reduce((n, m) => n + m.gold.returns.length, 0)} gold returns`
+    );
     const record = rowsOf(meetings, (meeting) => meeting.result.lanes.record.returns);
     line("record (Connections)", record);
     const chance = rowsOf(meetings, (meeting) => chancePairs(meeting.result.lanes.record.runs));
     const c = chance.reduce(
-      (sum, row) => ({ right: sum.right + row.right, wrong: sum.wrong + row.wrong, un: sum.un + row.unverifiable }),
+      (sum, row) => ({
+        right: sum.right + row.right,
+        wrong: sum.wrong + row.wrong,
+        un: sum.un + row.unverifiable,
+      }),
       { right: 0, wrong: 0, un: 0 }
     );
-    console.log(`${"chance, all non-adjacent runs".padEnd(30)} P ${fmt(c.right / (c.right + c.wrong))}  strict ${fmt(c.right / (c.right + c.wrong + c.un))} (${c.right + c.wrong + c.un} pairs)`);
-    const live = rowsOf(meetings, (meeting) => meeting.result.lanes.live.filter((item) => item.current));
+    console.log(
+      `${"chance, all non-adjacent runs".padEnd(30)} P ${fmt(c.right / (c.right + c.wrong))}  strict ${fmt(c.right / (c.right + c.wrong + c.un))} (${c.right + c.wrong + c.un} pairs)`
+    );
+    const live = rowsOf(meetings, (meeting) =>
+      meeting.result.lanes.live.filter((item) => item.current)
+    );
     line("live, still drawn at the end", live);
     const ever = rowsOf(meetings, (meeting) => meeting.result.lanes.live);
     line("live, ever drawn", ever);
     const delays = ever.flatMap((row) =>
-      row.found.filter((item) => item.match).map((item) => (item.match.shownAt - item.gold.start * 1000) / 1000)
+      row.found
+        .filter((item) => item.match)
+        .map((item) => (item.match.shownAt - item.gold.start * 1000) / 1000)
     );
     const placement = ever.flatMap((row) =>
-      row.found.filter((item) => item.match).map((item) => (item.match.at - item.gold.start * 1000) / 1000)
+      row.found
+        .filter((item) => item.match)
+        .map((item) => (item.match.at - item.gold.start * 1000) / 1000)
     );
     if (delays.length) {
       console.log(
@@ -130,7 +140,9 @@ function score() {
     if (args.show && level === "fine") {
       for (const row of record) {
         for (const item of row.verdicts) {
-          console.log(`  ${row.id} ${item.verdict.padEnd(12)} at ${Math.round(item.drawn.at / 1000)} s topic ${item.drawn.topic} ${item.subject ?? ""}`);
+          console.log(
+            `  ${row.id} ${item.verdict.padEnd(12)} at ${Math.round(item.drawn.at / 1000)} s topic ${item.drawn.topic} ${item.subject ?? ""}`
+          );
         }
       }
     }
@@ -386,7 +398,10 @@ async function decided() {
       const dir = path.join(CACHE, "decide", run);
       const drawn = new Map();
       for (const meeting of meetings) drawn.set(meeting.id, await decidedReturns(meeting, dir));
-      line(run, rowsOf(meetings, (meeting) => drawn.get(meeting.id)));
+      line(
+        run,
+        rowsOf(meetings, (meeting) => drawn.get(meeting.id))
+      );
     }
   }
 }
@@ -499,13 +514,18 @@ async function judge() {
       });
       fs.writeFileSync(
         item.file,
-        JSON.stringify({ verdict: answer.json?.verdict ?? null, subject: answer.json?.subject ?? "" })
+        JSON.stringify({
+          verdict: answer.json?.verdict ?? null,
+          subject: answer.json?.subject ?? "",
+        })
       );
     }
   };
   await Promise.all(Array.from({ length: 6 }, work));
   const sets = [...new Set(items.map((item) => item.set))];
-  console.log(`${args.model}, ${args.split}: ${items.length} items, $${ledgerTotal().toFixed(3)} in the ledger`);
+  console.log(
+    `${args.model}, ${args.split}: ${items.length} items, $${ledgerTotal().toFixed(3)} in the ledger`
+  );
   for (const set of sets) {
     const counts = {};
     for (const item of items.filter((other) => other.set === set)) {

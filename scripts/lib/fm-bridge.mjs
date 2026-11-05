@@ -11,7 +11,14 @@ import os from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
 
-const BINARY = path.join(os.homedir(), "oats-asr-cache", "fidelity-2", "fm-bridge", "bin", "fm-bridge");
+const BINARY = path.join(
+  os.homedir(),
+  "oats-asr-cache",
+  "fidelity-2",
+  "fm-bridge",
+  "bin",
+  "fm-bridge"
+);
 
 /**
  * @returns {{ ask: (request: { system: string, user: string, schema?: object, maxTokens?: number }) =>

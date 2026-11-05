@@ -237,9 +237,7 @@ const inSplit = (pairs, split, category) =>
   pairs.filter(
     (pair) =>
       (split === "all" || pair.split === split) &&
-      (category === "scenario"
-        ? pair.category.startsWith("scenario")
-        : pair.category === category)
+      (category === "scenario" ? pair.category.startsWith("scenario") : pair.category === category)
   );
 
 /** The curve of a score on tuning pairs: the best balanced accuracy, and the most recall at the bar. */
@@ -266,24 +264,34 @@ function operatingPoints(pairs, scores, grid, scoreLib) {
  */
 async function screen() {
   const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
-  const { readStore } = await import(pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href);
+  const { readStore } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href
+  );
   const corpus = await loadCorpus();
   const split = args.split;
   const scenario = inSplit(corpus.pairs, split, "scenario");
   const mixed = inSplit(corpus.pairs, split, "mixed");
   const within = inSplit(corpus.pairs, split, "non-scenario-within");
-  console.log(`${split}: ${scenario.length} scenario pairs (${scenario.filter((pair) => pair.linked).length} linked), ${mixed.length} mixed, ${within.length} non-scenario within`);
-  const grid = Array.from({ length: 160 }, (_, index) => Math.round((0.2 + index * 0.005) * 1000) / 1000);
+  console.log(
+    `${split}: ${scenario.length} scenario pairs (${scenario.filter((pair) => pair.linked).length} linked), ${mixed.length} mixed, ${within.length} non-scenario within`
+  );
+  const grid = Array.from(
+    { length: 160 },
+    (_, index) => Math.round((0.2 + index * 0.005) * 1000) / 1000
+  );
   const out = [];
   for (const spec of args.configs.split(",")) {
     const [config, dims] = spec.split(":");
-    const store = readStore(path.join(CACHE, "embed"), config, { dims: dims ? Number(dims) : undefined });
+    const store = readStore(path.join(CACHE, "embed"), config, {
+      dims: dims ? Number(dims) : undefined,
+    });
     const topics = topicVectors(corpus, store);
     const content = bestPairScores(corpus, topics, "content");
     const names = bestPairScores(corpus, topics, "name");
     const auc = (scores) => scoreLib.auc(scenario, (pair) => scores.get(pair.key));
     const points = operatingPoints(scenario, content, grid, scoreLib);
-    const pairMixed = (threshold) => mixed.filter((pair) => content.get(pair.key) >= threshold).length;
+    const pairMixed = (threshold) =>
+      mixed.filter((pair) => content.get(pair.key) >= threshold).length;
     const row = {
       spec,
       dimension: store.dimension,
@@ -298,8 +306,9 @@ async function screen() {
       const board = boardOf(corpus, topics, "device");
       const vectorOf = (text) => store.get(text);
       const drawnScores = new Map();
-      const thresholds = Array.from({ length: 12 }, (_, index) =>
-        Math.round((points.best.threshold - 0.02 + index * 0.01) * 1000) / 1000
+      const thresholds = Array.from(
+        { length: 12 },
+        (_, index) => Math.round((points.best.threshold - 0.02 + index * 0.01) * 1000) / 1000
       );
       for (const threshold of thresholds) {
         const linked = coMembers(
@@ -403,8 +412,7 @@ function historyOrders(board, truth, count) {
     const rank = new Map(shuffled.map((name, position) => [name, position]));
     const sorted = [...board].sort(
       (a, b) =>
-        rank.get(truth.seriesOf(a.id)) - rank.get(truth.seriesOf(b.id)) ||
-        a.id.localeCompare(b.id)
+        rank.get(truth.seriesOf(a.id)) - rank.get(truth.seriesOf(b.id)) || a.id.localeCompare(b.id)
     );
     return sorted.map((item, position) => ({ ...item, createdAt: T0 + position * DAY_MS }));
   });
@@ -440,12 +448,12 @@ function softRow(pairsBy, shares, threshold, scoreLib) {
  * the order of the history. One pass gives every threshold: the merges are
  * kept with their score, and a threshold keeps those at or above it.
  */
-function dendrogram(vectors) {
+function dendrogram(vectors, alike = dot) {
   const n = vectors.length;
   const similarity = Array.from({ length: n }, () => new Float64Array(n));
   for (let i = 0; i < n; i += 1) {
     for (let j = i + 1; j < n; j += 1) {
-      const value = dot(vectors[i], vectors[j]);
+      const value = alike(vectors[i], vectors[j]);
       similarity[i][j] = value;
       similarity[j][i] = value;
     }
@@ -501,6 +509,58 @@ function cutDendrogram(merges, count, threshold, owners) {
     groups.get(root).add(owners[index]);
   }
   return coMembers([...groups.values()].map((ids) => ({ conversationIds: [...ids], label: "" })));
+}
+
+/**
+ * Order-free clustering on what was said and the names together: the mean of
+ * the two cosines, `--mix` of it the name's. Tuning pairs.
+ */
+async function mixCurve() {
+  const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
+  const { readStore } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href
+  );
+  const corpus = await loadCorpus();
+  const split = args.split;
+  const pairsBy = {
+    scenario: inSplit(corpus.pairs, split, "scenario"),
+    mixed: inSplit(corpus.pairs, split, "mixed"),
+    within: inSplit(corpus.pairs, split, "non-scenario-within"),
+  };
+  const f = (value) => (value == null ? " -  " : value.toFixed(3));
+  for (const spec of args.configs.split(",")) {
+    const [config, variant, mix, from, to, step] = spec.split(":");
+    const store = readStore(path.join(CACHE, "embed"), config);
+    const topics = topicVectors(corpus, store, { variant });
+    const kept = new Set(boardOf(corpus, topics, variant).map((item) => item.id));
+    const flat = [...topics]
+      .filter(([id]) => kept.has(id))
+      .flatMap(([id, list]) =>
+        list.filter((topic) => topic.content && topic.name).map((topic) => ({ ...topic, id }))
+      );
+    const weight = Number(mix);
+    const alike = (a, b) => (1 - weight) * dot(a.content, b.content) + weight * dot(a.name, b.name);
+    const merges = dendrogram(flat, alike);
+    console.log(`${spec}: ${flat.length} topics`);
+    for (let value = Number(from); value <= Number(to) + 1e-9; value += Number(step)) {
+      const threshold = Math.round(value * 1000) / 1000;
+      const linked = cutDendrogram(
+        merges,
+        flat.length,
+        threshold,
+        flat.map((item) => item.id)
+      );
+      const row = softRow(
+        pairsBy,
+        new Map([...linked.keys()].map((key) => [key, 1])),
+        threshold,
+        scoreLib
+      );
+      console.log(
+        `  t ${row.threshold.toFixed(3)} P ${f(row.precision)} R ${f(row.recall)} FL ${f(row.falseLinks)} mixed ${row.mixed} ns-within ${row.nsWithin}`
+      );
+    }
+  }
 }
 
 /**
@@ -562,7 +622,9 @@ async function curve() {
         threshold,
         flat.map((item) => item.id)
       );
-      show(softRow(pairsBy, new Map([...linked.keys()].map((key) => [key, 1])), threshold, scoreLib));
+      show(
+        softRow(pairsBy, new Map([...linked.keys()].map((key) => [key, 1])), threshold, scoreLib)
+      );
     }
   }
 }
@@ -585,7 +647,10 @@ async function explore() {
     const plain = Array.from({ length: 11 }, (_, index) =>
       Number((center - 0.05 + index * 0.01).toFixed(2))
     );
-    printCurve(`${spec}: the app's rule`, drawnCurve(corpus, topics, store, plain, scoreLib, split));
+    printCurve(
+      `${spec}: the app's rule`,
+      drawnCurve(corpus, topics, store, plain, scoreLib, split)
+    );
 
     // Centred on the history: each topic vector minus the mean of all of them.
     const everything = [...topics.values()].flat().map((topic) => topic.content);
@@ -831,7 +896,9 @@ async function hybridFeatures(corpus, store) {
   const features = new Map();
   corpus.pairs.forEach((pair, index) => {
     const top = contentBest.get(pair.key);
-    const shared = [...fingerprints.get(pair.a)].filter((word) => fingerprints.get(pair.b).has(word));
+    const shared = [...fingerprints.get(pair.a)].filter((word) =>
+      fingerprints.get(pair.b).has(word)
+    );
     const row = {
       content: top.score,
       nameDevice: nameDevice.get(pair.key),
@@ -864,7 +931,8 @@ function fitLogistic(rows, labels, { rounds = 400, rate = 0.5, l2 = 0.001 } = {}
   const means = new Array(width).fill(0);
   const scales = new Array(width).fill(0);
   for (const row of rows) row.forEach((value, k) => (means[k] += value / rows.length));
-  for (const row of rows) row.forEach((value, k) => (scales[k] += (value - means[k]) ** 2 / rows.length));
+  for (const row of rows)
+    row.forEach((value, k) => (scales[k] += (value - means[k]) ** 2 / rows.length));
   for (let k = 0; k < width; k += 1) scales[k] = Math.sqrt(scales[k]) || 1;
   const scaled = rows.map((row) => row.map((value, k) => (value - means[k]) / scales[k]));
   const weights = new Array(width).fill(0);
@@ -905,7 +973,8 @@ async function hybrid() {
   const store = readStore(path.join(CACHE, "embed"), args.configs.split(",")[0]);
   const features = await hybridFeatures(corpus, store);
   const pairs = corpus.pairs.filter(
-    (pair) => pair.split === "tune" && (pair.category.startsWith("scenario") || pair.category === "mixed")
+    (pair) =>
+      pair.split === "tune" && (pair.category.startsWith("scenario") || pair.category === "mixed")
   );
   const scenario = pairs.filter((pair) => pair.category.startsWith("scenario"));
   const series = [
@@ -920,10 +989,12 @@ async function hybrid() {
     const held = new Map();
     for (let fold = 0; fold < 5; fold += 1) {
       const train = pairs.filter(
-        (pair) => foldOf.get(truth.seriesOf(pair.a)) !== fold && foldOf.get(truth.seriesOf(pair.b)) !== fold
+        (pair) =>
+          foldOf.get(truth.seriesOf(pair.a)) !== fold && foldOf.get(truth.seriesOf(pair.b)) !== fold
       );
       const test = pairs.filter(
-        (pair) => foldOf.get(truth.seriesOf(pair.a)) === fold || foldOf.get(truth.seriesOf(pair.b)) === fold
+        (pair) =>
+          foldOf.get(truth.seriesOf(pair.a)) === fold || foldOf.get(truth.seriesOf(pair.b)) === fold
       );
       const fit = fitLogistic(
         train.map((pair) => subset.map((name) => features.get(pair.key)[name])),
@@ -935,12 +1006,19 @@ async function hybrid() {
       }
     }
     const sorted = [...held.values()].sort((a, b) => a - b);
-    const grid = Array.from({ length: 200 }, (_, index) => sorted[Math.floor((index * sorted.length) / 200)]);
+    const grid = Array.from(
+      { length: 200 },
+      (_, index) => sorted[Math.floor((index * sorted.length) / 200)]
+    );
     const auc = scoreLib.auc(scenario, (pair) => held.get(pair.key));
     let bar = null;
     for (const threshold of grid) {
       const r = ratesOf(scenario, (pair) => held.get(pair.key) >= threshold, scoreLib);
-      if ((r.precision ?? 0) >= 0.9 && (r.falseLinks ?? 1) <= 0.25 && (!bar || r.recall > bar.recall)) {
+      if (
+        (r.precision ?? 0) >= 0.9 &&
+        (r.falseLinks ?? 1) <= 0.25 &&
+        (!bar || r.recall > bar.recall)
+      ) {
         bar = r;
       }
     }
@@ -961,7 +1039,10 @@ async function hybrid() {
   show("content + shared terms", ["content", "sharedTerms"]);
   show("content + people + recency", ["content", "samePeople", "recency"]);
   if (cross.length) show("content + cross-encoders", ["content", ...cross]);
-  show("everything but people", names.filter((name) => name !== "samePeople"));
+  show(
+    "everything but people",
+    names.filter((name) => name !== "samePeople")
+  );
   show("everything", names);
 }
 
@@ -1027,7 +1108,9 @@ function sampleTable(corpus, scoreLib, methods, split, reference) {
     if (!weightCache.has(pair.category)) weightCache.set(pair.category, weightOf(pair));
     return weightCache.get(pair.category);
   };
-  const scenario = items.filter((item) => item.pair.category.startsWith("scenario")).map((item) => item.pair);
+  const scenario = items
+    .filter((item) => item.pair.category.startsWith("scenario"))
+    .map((item) => item.pair);
   const options = { seriesOf: truth.seriesOf, groupOf: truth.groupOf, pairWeight };
   const decided = new Map(
     methods.map((method) => [
@@ -1049,7 +1132,14 @@ function sampleTable(corpus, scoreLib, methods, split, reference) {
     const mixed = items.filter((item) => item.pair.category === "mixed");
     const mixedFalse = mixed.filter((item) => yes(item.pair)).length;
     const nsWithin = items.filter((item) => item.pair.category === "non-scenario-within");
-    const row = { name: method.name, scenario: s, within: w, across: a, mixedFalse, mixed: mixed.length };
+    const row = {
+      name: method.name,
+      scenario: s,
+      within: w,
+      across: a,
+      mixedFalse,
+      mixed: mixed.length,
+    };
     console.log(
       `${method.name.padEnd(48)} P ${f(s.precision)} ${interval(s.intervals.precision)} R ${f(s.recall)} ${interval(s.intervals.recall)} FL ${f(s.falseLinks)} ${interval(s.intervals.falseLinks)} | within P ${f(w.precision)} R ${f(w.recall)} across P ${f(a.precision)} R ${f(a.recall)} | mixed ${mixedFalse}/${mixed.length} ns-within ${nsWithin.filter((item) => yes(item.pair)).length}/${nsWithin.length}`
     );
@@ -1174,9 +1264,7 @@ async function linker() {
       topics: remote.linkTopicNames(snapshot, { minTopicMs: links.MIN_LINK_TOPIC_MS }),
       threads: variant === "threads" || variant === "both" ? threadHeads(meeting.summary) : [],
       questions:
-        variant === "questions" || variant === "both"
-          ? questionsAsked(meeting, aide, tracker)
-          : [],
+        variant === "questions" || variant === "both" ? questionsAsked(meeting, aide, tracker) : [],
     };
   };
   const block = (title, item) => {
@@ -1309,7 +1397,9 @@ async function cloud() {
   const rows = sampleTable(corpus, scoreLib, methods, args.split, names[0]);
   fs.writeFileSync(
     path.join(CACHE, "results", `cloud-${args.split}.json`),
-    JSON.stringify(rows.map(({ name, scenario, paired, mixedFalse }) => ({ name, scenario, paired, mixedFalse })))
+    JSON.stringify(
+      rows.map(({ name, scenario, paired, mixedFalse }) => ({ name, scenario, paired, mixedFalse }))
+    )
   );
 }
 
@@ -1393,14 +1483,24 @@ async function finalBoards() {
   const iv = (value) => (value ? `[${value[0].toFixed(3)}, ${value[1].toFixed(3)}]` : "");
   const out = [];
   const shares = new Map();
-  console.log(`${split}: ${scenario.length} scenario pairs, ${strict.length} with both in test series`);
+  console.log(
+    `${split}: ${scenario.length} scenario pairs, ${strict.length} with both in test series`
+  );
   for (const spec of specs) {
     const linked = await boardShares(corpus, spec, orderCount);
     shares.set(spec, linked);
     const yes = (pair) => linked.get(pair.key) ?? 0;
     const s = scoreLib.scoreWithIntervals(scenario, yes, options);
-    const w = ratesOf(scenario.filter((pair) => pair.category === "scenario-within"), yes, scoreLib);
-    const a = ratesOf(scenario.filter((pair) => pair.category === "scenario-across"), yes, scoreLib);
+    const w = ratesOf(
+      scenario.filter((pair) => pair.category === "scenario-within"),
+      yes,
+      scoreLib
+    );
+    const a = ratesOf(
+      scenario.filter((pair) => pair.category === "scenario-across"),
+      yes,
+      scoreLib
+    );
     const b = ratesOf(strict, yes, scoreLib);
     const mixedFalse = mixed.reduce((sum, pair) => sum + yes(pair), 0);
     const nsWithin = within.reduce((sum, pair) => sum + yes(pair), 0);
@@ -1408,10 +1508,24 @@ async function finalBoards() {
       `${spec.padEnd(26)} P ${f(s.precision)} ${iv(s.intervals.precision)} R ${f(s.recall)} ${iv(s.intervals.recall)} FL ${f(s.falseLinks)} ${iv(s.intervals.falseLinks)}\n` +
         `${"".padEnd(26)} within P ${f(w.precision)} R ${f(w.recall)} FL ${f(w.falseLinks)}; across P ${f(a.precision)} R ${f(a.recall)} FL ${f(a.falseLinks)}; both in test P ${f(b.precision)} R ${f(b.recall)} FL ${f(b.falseLinks)}; mixed ${mixedFalse.toFixed(1)}/${mixed.length}; ns-within ${nsWithin.toFixed(1)}/${within.length}`
     );
-    const row = { spec, scenario: s, within: w, across: a, strict: b, mixedFalse, mixed: mixed.length, nsWithin };
+    const row = {
+      spec,
+      scenario: s,
+      within: w,
+      across: a,
+      strict: b,
+      mixedFalse,
+      mixed: mixed.length,
+      nsWithin,
+    };
     if (spec !== specs[0]) {
       const reference = shares.get(specs[0]);
-      const paired = scoreLib.pairedRates(scenario, yes, (pair) => reference.get(pair.key) ?? 0, options);
+      const paired = scoreLib.pairedRates(
+        scenario,
+        yes,
+        (pair) => reference.get(pair.key) ?? 0,
+        options
+      );
       row.paired = paired;
       console.log(
         `${"".padEnd(26)} minus main: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
@@ -1548,7 +1662,8 @@ async function appPathScore() {
     const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
     const pairsOfLinks = [];
     for (const [id, check] of checks) {
-      for (const link of check.links) pairsOfLinks.push({ a: id, b: link.id, subject: link.subject });
+      for (const link of check.links)
+        pairsOfLinks.push({ a: id, b: link.id, subject: link.subject });
     }
     const names = [...new Set(pairsOfLinks.map((item) => item.subject))];
     const embedded = await embedder.embed(names);
@@ -1898,7 +2013,9 @@ async function recognitionBoards() {
       };
     });
   const drawOver = async (board) => {
-    const texts = [...new Set(board.flatMap((item) => item.snapshot.nodes.map((node) => node.label)))];
+    const texts = [
+      ...new Set(board.flatMap((item) => item.snapshot.nodes.map((node) => node.label))),
+    ];
     const embedded = await embedder.embed(texts);
     const vectors = new Map(texts.map((text, index) => [text, embedded[index]]));
     return linkShares(historyOrders(board, corpus.truth, Number(args.orders)), (item) =>
@@ -2095,13 +2212,18 @@ async function relations() {
     for (const value of list) counts[value] = (counts[value] ?? 0) + 1;
     return JSON.stringify(counts);
   };
-  const f = ({ agreement, kappa: k, n }) => `agreement ${agreement.toFixed(2)} kappa ${k.toFixed(2)} (n ${n})`;
-  console.log(`${items.length} within-series links on ${args.split}; $${ledgerTotal().toFixed(3)} in the ledger`);
+  const f = ({ agreement, kappa: k, n }) =>
+    `agreement ${agreement.toFixed(2)} kappa ${k.toFixed(2)} (n ${n})`;
+  console.log(
+    `${items.length} within-series links on ${args.split}; $${ledgerTotal().toFixed(3)} in the ledger`
+  );
   console.log(`judge 1 ${spread(first)}\njudge 2 ${spread(second)}`);
   console.log(`judge 1 against judge 2: ${f(kappa(first, second))}`);
   args.runs.split("+").forEach((spec, index) => {
     console.log(`${spec} ${spread(models[index])}`);
-    console.log(`  against judge 1: ${f(kappa(models[index], first))}; judge 2: ${f(kappa(models[index], second))}`);
+    console.log(
+      `  against judge 1: ${f(kappa(models[index], first))}; judge 2: ${f(kappa(models[index], second))}`
+    );
   });
 }
 
@@ -2110,6 +2232,7 @@ const COMMANDS = {
   screen,
   explore,
   curve,
+  "mix-curve": mixCurve,
   cloud,
   linker,
   hybrid,
