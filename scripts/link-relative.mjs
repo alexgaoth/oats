@@ -429,7 +429,7 @@ function mutualLinks(topics, matrix, k, floor) {
 }
 
 /** A candidate build's board, by what was said, with the names a person would see. */
-function candidateBoard(history, threshold, rule = candidate) {
+function candidateBoard(history, threshold, rule = candidate, share = 0) {
   const board = history.map((meeting, index) => ({
     id: index,
     title: String(index),
@@ -444,7 +444,16 @@ function candidateBoard(history, threshold, rule = candidate) {
       })),
     },
   }));
-  return rule.meaningThreads(board, { vectorOf: () => null, contentThreshold: threshold });
+  const topics = board.reduce((sum, item) => sum + item.snapshot.nodes.length, 0);
+  return rule.meaningThreads(board, {
+    vectorOf: () => null,
+    contentThreshold: threshold,
+    // A count, or a share of the history's topics and never under the app's own.
+    ...(share >= 1 ? { neighbours: share } : {}),
+    ...(share > 0 && share < 1
+      ? { neighbours: Math.max(3, Math.round(share * (topics - 1))) }
+      : {}),
+  });
 }
 
 /**
@@ -467,11 +476,11 @@ function chipLinks(subjects) {
   return linked;
 }
 
-const candidateLinks = (history, threshold) =>
-  chipLinks(candidateBoard(history, threshold).subjects);
+const candidateLinks = (history, threshold, share) =>
+  chipLinks(candidateBoard(history, threshold, candidate, share).subjects);
 
-function candidateEdges(history, threshold) {
-  const { edges } = candidateBoard(history, threshold);
+function candidateEdges(history, threshold, share) {
+  const { edges } = candidateBoard(history, threshold, candidate, share);
   return new Set(
     edges.map((edge) => `${Math.min(edge.from, edge.to)}|${Math.max(edge.from, edge.to)}`)
   );
@@ -559,19 +568,22 @@ function greedyLinks(history, threshold) {
  *   own-floor:<kind>:<z>:<f>  the same, never under an absolute floor
  *   mutual:<kind>:<k>:<floor> mutual nearest topics, over a floor
  *   mutual-subjects:<kind>:<k>:<floor>  the same, chained into subjects
- *   app:<t>, app-edges:<t>    a candidate build of the app's rule (`--app-module`)
+ *   mutual-share:<kind>:<share>:<least>:<floor>  mutual, k a share of the history's topics
+ *   app:<t>[:<k>], app-edges:<t>[:<k>]  a candidate build of the app's rule
+ *                             (`--app-module`), with k neighbours, or under 1 a share of
+ *                             the history's topics
  *   greedy-chips:<t>          the app's rule, a pair linked when one chip holds both
  */
 function linksOf(spec, history) {
   const [kind, ...rest] = spec.split(":");
   if (kind === "greedy") return greedyLinks(history, Number(rest[0]));
-  if (kind === "app") return candidateLinks(history, Number(rest[0]));
+  if (kind === "app") return candidateLinks(history, Number(rest[0]), Number(rest[1] ?? 0));
   if (kind === "greedy-chips") {
     return chipLinks(
       candidateBoard(history, Number(rest[0]), { encodeTopicVector, meaningThreads }).subjects
     );
   }
-  if (kind === "app-edges") return candidateEdges(history, Number(rest[0]));
+  if (kind === "app-edges") return candidateEdges(history, Number(rest[0]), Number(rest[1] ?? 0));
   const topics = flatten(history);
   if (kind === "link") {
     return clusterLinks(topics, matrixOf(topics, rest[0]), Number(rest[1]));
@@ -601,6 +613,10 @@ function linksOf(spec, history) {
   }
   if (kind === "mutual") {
     return mutualLinks(topics, matrixOf(topics, rest[0]), Number(rest[1]), Number(rest[2]));
+  }
+  if (kind === "mutual-share") {
+    const k = Math.max(Number(rest[2]), Math.round(Number(rest[1]) * (topics.length - 1)));
+    return mutualLinks(topics, matrixOf(topics, rest[0]), k, Number(rest[3]));
   }
   throw new Error(`Unknown method ${spec}`);
 }

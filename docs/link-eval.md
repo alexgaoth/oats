@@ -612,6 +612,26 @@ and on the mixed pool (AMI test series and ICSI groups Bmr and Bro) at 5, 20 and
 recognized history of 100 exists. A one-product history of 100 needs tuning meetings too
 and is reported as such.
 
+## Frozen before the test read: how many neighbours
+
+Three neighbours cost most of the recall, so the count is a dial worth reading. On tuning
+meetings, as chips, in the build of #172 (precision, recall, false links):
+
+| Neighbours | Manual, 20 | Manual, 60 | Mixed, 20 | As heard, 5 |
+| --- | --- | --- | --- | --- |
+| Main | 0.85, 0.70, 0.46 | 0.82, 0.67, 0.45 | 0.84, 0.71, 0.26 | 0.79, 0.97, 1.00 |
+| 3 | 0.91, 0.20, 0.07 | 0.92, 0.08, 0.02 | 0.87, 0.22, 0.06 | 0.83, 0.82, 0.62 |
+| 5 | 0.90, 0.33, 0.14 | 0.91, 0.15, 0.04 | 0.87, 0.38, 0.10 | 0.80, 0.96, 0.92 |
+| 8 | 0.88, 0.51, 0.25 | 0.90, 0.26, 0.09 | 0.86, 0.55, 0.17 | 0.79, 0.97, 1.00 |
+| 12 | 0.86, 0.67, 0.39 | 0.88, 0.39, 0.17 | 0.84, 0.67, 0.24 | 0.79, 0.97, 1.00 |
+
+A count that grows with the history (a share of its topics) holds recall on lines, but its
+chips grow with it and give the false links back: false links 0.11 on lines and 0.42 on
+chips at manual 60, share 0.1. It is stopped here.
+
+Read once on the test pools of #172, as chips and as lines, against main: 5, 8 and 12
+neighbours. This is a dial for a design call, not a new default. The bar stays as written.
+
 <!-- round 2 results -->
 ## Results
 
@@ -728,6 +748,7 @@ costs about 41 turns and 43 phrases.
 | EmbeddingGemma 1, 256 | 176 | 256 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.71 | 0.82, 0.66, 0.49 | 0.90, 0.44, 0.17 |
 | mxbai-embed-large-v1 (over the size) | 337 | 1024 | 51 / 19 | 2.9 s | 644 MB | Apache-2.0 | 0.71 | 0.86, 0.44, 0.25 | 0.89, 0.57, 0.24 |
 | nomic-embed-text-v2-moe (over the size) | 344 | 768 | GGUF, not timed | | | Apache-2.0 | 0.70 | 0.89, 0.37, 0.15 | 0.89, 0.67, 0.27 |
+| Qwen3-Embedding-0.6B (over the size) | 639 | 1024 | GGUF, not timed | | | Apache-2.0 | 0.70 | 0.88, 0.26, 0.12 | 0.87, 0.53, 0.27 |
 
 Time a topic is CPU time for 41 turns and 43 phrases, on a loaded Mac, so these wait
 for a quiet-machine run. MB is what the app would ship. Not screened: jina-embeddings-v5 (CC BY-NC), LFM2.5-Embedding (license
