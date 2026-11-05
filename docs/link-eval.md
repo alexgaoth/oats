@@ -346,6 +346,41 @@ board and between topics inside one conversation. Everything under this heading
 was written before the runs it describes. The bars and the split below were
 committed first, in this order, so they can be checked in the history.
 
+<!-- round 2 summary -->
+## In brief (written after the runs)
+
+The sections from "The bar" to "Models screened", and each "Frozen" list, were
+committed before the runs they govern. This summary and "Results" came after.
+
+- **A bug, fixed in #166.** With a cloud check on, the Global board collapses into
+  one subject: 132 of 139 conversations with Claude Opus 5.5, 135 with gpt-6.1-sol.
+  Round 1's false-link rate of 0.25 was pair by pair and never reached the screen,
+  where it is 0.90. The fix takes it to 0.19 (Opus) and 0.46 (gpt-6.1-sol), and
+  lifts the grade of the reason a link shows from 0.39 to 0.85 of 2 to 1.17 to 1.29 (Opus).
+- **On this computer nothing cleared the bar, so main stays.** The nearest is
+  bge-small-en-v1.5 at 0.96: false links 0.41 to 0.25, recall 0.68 to 0.53, and
+  precision 0.87 against a bar of 0.90. Balanced accuracy does not move.
+- **EmbeddingGemma 2 loses.** It scores below MiniLM at 36 times the CPU. Topic
+  vectors alone reach AUC 0.69 to 0.72 whatever the model; nothing small changes that.
+- **Reranking and hybrids add little.** BM25, shared terms, people and recency leave
+  AUC at 0.71. Names lift it to 0.74, three cross-encoders to 0.73, and all of it to 0.75.
+- **The board's numbers rest on one subject, and on the order of the history.** One
+  subject holds most of the links on AMI, and one order of the history is one draw:
+  precision moved by 0.07 with no change of method. Every board here is now read
+  over many orders.
+- **Cloud: no new default.** No model's gain over Opus excludes 0. Giving it more per
+  conversation does not lift recall.
+- **Returns: about half of what is drawn is real.** The app's "came back" had not
+  been measured. Under AMI's labels it scores 0.13 on the record and 0.24 on the
+  loop. Under two blind judges, 0.44 to 0.56 and 0.43, with controls at 0.23 to 0.28.
+  The best reader, Opus at Finish, reaches 0.62 to 0.65. Nothing reaches 0.80.
+- **Typed relations stop here.** One type is the answer 86% of the time, and a model
+  reading names and gists cannot tell the rest apart.
+- **Recognition.** The cloud check shows no measurable cost, even at 59% WER. The
+  local board loses recall against manual text, and whether that holds when both
+  sides are recognized, as in the app, needs more meetings.
+<!-- /round 2 summary -->
+
 ## The bar, written before the runs
 
 **On-device default.** A new default for everyone on this computer needs all
@@ -521,3 +556,374 @@ reference:
 
 Slot five is held for the best local writing model, if one earns it on tuning
 pairs. Twenty orders of the history for each.
+
+<!-- round 2 results -->
+## Results
+
+Everything below comes from `scripts/link-eval-2.mjs` and `scripts/return-eval.mjs`
+on main at f7bd563. Unless a table says otherwise, numbers are test pairs of the
+scenario meetings, with 95% series bootstrap intervals. Lower false-link rates are
+better. "BA" is balanced accuracy (recall minus the false-link rate).
+
+### The cloud check as the board draws it: a bug
+
+Round 1 scored the cloud check pair by pair. Nobody had measured what a cloud user
+sees: the app chooses up to 12 candidates, the model answers, and `linkThreads`
+draws the answer. Round 2 ran that whole path over all 139 meetings, in the
+corpus' order, as if one provider had summarized every conversation.
+
+**The board collapses.** `linkThreads` merged two subjects whenever a check linked
+one topic twice, so links chained through topics. With Claude Opus 5.5, 132 of 139
+conversations land on one subject. With gpt-6.1-sol, 135 of 139, and the board then
+scores exactly as "link every pair" does.
+
+| Test pairs | Precision | Recall | False-link rate | Largest subject | Mixed false links |
+| --- | --- | --- | --- | --- | --- |
+| Opus 5.5, today | 0.76 [0.66, 0.86] | 0.98 [0.95, 1.00] | 0.90 [0.75, 1.00] | 132 of 139 | 0/366 |
+| Opus 5.5, fixed | 0.86 [0.76, 0.94] | 0.39 [0.30, 0.49] | 0.19 [0.09, 0.29] | 60 of 139 | 0/366 |
+| gpt-6.1-sol, today | 0.75 [0.64, 0.85] | 1.00 | 1.00 | 135 of 139 | 0/366 |
+| gpt-6.1-sol, fixed | 0.79 [0.69, 0.90] | 0.60 [0.52, 0.68] | 0.46 [0.32, 0.57] | 65 of 139 | 0/366 |
+
+Paired, fixed minus today:
+
+| | Precision | Recall | False-link rate | BA |
+| --- | --- | --- | --- | --- |
+| Opus 5.5 | +0.10 [0.03, 0.17] | −0.59 [−0.69, −0.48] | −0.71 [−0.83, −0.59] | +0.12 [−0.02, 0.27] |
+| gpt-6.1-sol | +0.05 [0.01, 0.09] | −0.40 [−0.48, −0.32] | −0.54 [−0.67, −0.43] | +0.14 [0.02, 0.29] |
+
+**The fix** is PR #166. A link joins two conversations on the subject the model
+named, and subjects are one only when their names are alike (0.8, chosen on tuning
+pairs). The check also speaks for every earlier conversation its provider has read,
+not only the 12 it was asked about, so a subject it passed over is not rebuilt on
+this computer. Under the cloud bar, gpt-6.1-sol's gain excludes 0, and Opus's
+balanced accuracy holds 0 while its precision and false-link rate do not. Recall
+falls hard because today's board links nearly everything. AMI is the worst case for
+this bug, because every scenario meeting is about one product; a varied history
+collapses less, so the gain may be smaller there.
+
+### The cloud check, pair by pair
+
+`/v1/models` on 2026-11-05 holds nothing newer for this job than round 1's list.
+Three models had never been tried as linkers. All ran round 1's fixed sample, so they
+pair with Opus. Test pairs: 495 sampled, 467 of them scenario.
+
+| Model | Precision | Recall | False-link rate | BA minus Opus | Cost a check | Time, median |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Opus 5.5, medium | 0.84 [0.74, 0.93] | 0.54 [0.45, 0.64] | 0.27 [0.14, 0.42] | | $0.0145 | 5.7 s |
+| Claude Sonnet 5.5, medium | 0.89 [0.77, 0.99] | 0.40 [0.31, 0.50] | 0.13 [0.02, 0.26] | 0.00 [−0.16, 0.18] | $0.0045 | 2.4 s |
+| Claude Haiku 5.5, low | 0.81 [0.68, 0.91] | 0.69 [0.60, 0.78] | 0.45 [0.29, 0.63] | −0.03 [−0.22, 0.16] | $0.0003 | 1.8 s |
+| gpt-6.1-sol, low | 0.81 [0.70, 0.92] | 0.57 [0.47, 0.67] | 0.35 [0.22, 0.48] | −0.05 [−0.23, 0.12] | $0.0041 | 7.1 s |
+| gpt-6.1-terra, low | 0.82 [0.70, 0.92] | 0.49 [0.40, 0.59] | 0.29 [0.17, 0.43] | −0.07 [−0.23, 0.11] | $0.0018 | 3.7 s |
+
+**No gain excludes 0, so no new default.** These models move along one curve:
+Sonnet trades recall for precision, Haiku the reverse. Haiku ties Opus on balanced
+accuracy at a fiftieth of the cost, which is worth knowing for a cheap tier.
+
+### More per conversation
+
+Tuning pairs only (402 sampled, Claude Opus 5.5). Each kept the gist and topic names
+and added one thing. All of it is already in the summary or the question cards, so
+the strict rule on what goes to the cloud holds.
+
+| Sent | Precision | Recall | False-link rate | BA minus today |
+| --- | --- | --- | --- | --- |
+| Today: 300 characters and topic names | 0.91 | 0.56 | 0.20 | |
+| Up to 5 thread headings | 0.88 | 0.54 | 0.27 | −0.09 [−0.31, 0.09] |
+| Up to 5 questions asked | 0.93 | 0.45 | 0.13 | −0.04 [−0.17, 0.14] |
+| 900 characters of summary | 0.89 | 0.57 | 0.28 | −0.06 [−0.28, 0.13] |
+
+**Stopped on tuning pairs.** Recall did not rise above 0.55 without more false links.
+None went to test.
+
+### The board on this computer
+
+**One order of the history is one draw.** The board is greedy, so what it links
+depends on what came first. MiniLM at 0.81 scored precision 0.905 on tuning pairs
+with the test meetings on the board, and 0.835 without them. That first number looked
+like a win from a one-line change. It was not. Every board below is the expected
+board over random orders of the series: 12 while tuning, 20 on test. A prediction is
+then the share of orders that link a pair.
+
+**One subject is most of the board.** At 0.82 on the tuning meetings, in one order, one subject
+("Remote control design features") holds 61 of 89 meetings, 275 of the 285 false
+pairs, and 88% of the true ones. Its precision is 0.85, against a base rate of 0.77.
+Every other subject is 0.94 to 1.00 pure. On AMI recall above 0.2 means accepting that
+subject. This is why no threshold moved precision far.
+
+**Embedding models.** Tuning meetings, the board's rule (over orders), at the point
+nearest recall 0.50. CPU time is one thread, one text at a time, which holds up on a
+busy machine where wall time does not. A topic costs about 41 turns and 43 phrases.
+
+| Model | MB | Dim | CPU ms, turn / name | Time a topic | Memory | License | Pair AUC | Greedy: P, R, FL | No order: P, R, FL |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all-MiniLM-L6-v2 (main) | 90 | 384 | 4.5 / 2.2 | 0.3 s | 230 MB | Apache-2.0 | 0.71 | 0.87, 0.46, 0.23 | 0.89, 0.49, 0.21 |
+| **bge-small-en-v1.5** | 133 | 384 | 8.4 / 3.8 | 0.5 s | 275 MB | MIT | **0.72** | **0.88, 0.54, 0.24** | **0.89, 0.52, 0.21** |
+| snowflake-arctic-embed-m-v1.5 | 110 | 768 | 16.1 / 4.6 | 0.9 s | 287 MB | Apache-2.0 | 0.71 | 0.87, 0.54, 0.27 | 0.86, 0.58, 0.32 |
+| granite-embedding-small-english-r2 | 97 | 384 | 14.9 / 3.6 | 0.8 s | 197 MB | Apache-2.0 | 0.70 | 0.89, 0.47, 0.20 | 0.88, 0.63, 0.30 |
+| granite-embedding-97m-multilingual-r2 | 98 | 384 | 9.3 / 2.4 | 0.5 s | 571 MB | Apache-2.0 | 0.69 | 0.82, 0.66, 0.47 | 0.88, 0.53, 0.25 |
+| EmbeddingGemma 2, 768 | 175 | 768 | 164 / 77 | 10 s | 527 MB | Apache-2.0 | 0.69 | 0.82, 0.61, 0.45 | 0.83, 0.69, 0.47 |
+| EmbeddingGemma 2, 256 | 175 | 256 | 164 / 77 | 10 s | 527 MB | Apache-2.0 | 0.69 | 0.81, 0.80, 0.65 | 0.83, 0.30, 0.21 |
+| EmbeddingGemma 1, 768 | 176 | 768 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.70 | 0.82, 0.55, 0.40 | 0.87, 0.40, 0.20 |
+| EmbeddingGemma 1, 256 | 176 | 256 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.71 | 0.82, 0.66, 0.49 | 0.90, 0.44, 0.17 |
+
+Time a topic is CPU time for 41 turns and 43 phrases. MB is what the app would ship.
+A base 16 GB M-series Mac should take about twice as long; that is an estimate, not a
+measurement. Not screened: jina-embeddings-v5 (CC BY-NC), LFM2.5-Embedding (license
+other, custom code), harrier-oss and Octen (no ONNX or GGUF from the publisher),
+pplx-embed (399 MB at its smallest).
+
+- **bge-small-en-v1.5 is the best of them**, and the only one that is a near drop-in:
+  the same tokenizer as MiniLM, 384 dimensions, 133 MB against 90 MB, about twice the
+  CPU.
+- **EmbeddingGemma 2 loses.** It is new, Apache-2.0 and large on benchmarks, and here
+  it scores below MiniLM at 36 times the CPU. Its prefix for sentence similarity is
+  the publisher's. 256 dimensions lose little against 768, and neither helps.
+- Cosines near 1 are a real cost. granite and EmbeddingGemma 2 put every useful
+  threshold between 0.97 and 0.99, where one byte a dimension loses resolution.
+
+**No order at all.** Average-linkage clustering of topic vectors gives one board for
+one history. On tuning pairs it matched or passed the greedy rule at equal recall,
+and it removes the order noise. It does redraw old subjects as new conversations
+arrive, which the greedy board never does.
+
+**Test pairs.** Named before the read, each against main. Twenty orders.
+
+| Method | Precision | Recall | False-link rate | Precision minus main | BA minus main |
+| --- | --- | --- | --- | --- | --- |
+| Main: MiniLM, 0.78 | 0.83 [0.75, 0.90] | 0.68 [0.63, 0.74] | 0.41 [0.32, 0.51] | | |
+| MiniLM, 0.82 | 0.85 [0.77, 0.92] | 0.49 [0.41, 0.57] | 0.26 [0.18, 0.34] | +0.02 [−0.00, 0.04] | −0.04 [−0.09, 0.01] |
+| MiniLM, no order, 0.74 | 0.86 [0.77, 0.93] | 0.49 [0.39, 0.59] | 0.24 [0.16, 0.33] | +0.03 [−0.01, 0.05] | −0.03 [−0.10, 0.05] |
+| bge-small, 0.96 | 0.87 [0.79, 0.93] | 0.53 [0.49, 0.59] | 0.25 [0.19, 0.31] | +0.04 [0.02, 0.05] | +0.02 [−0.05, 0.09] |
+| bge-small, no order, 0.944 | 0.89 [0.81, 0.96] | 0.41 [0.34, 0.47] | 0.15 [0.07, 0.22] | +0.06 [0.03, 0.10] | −0.01 [−0.09, 0.07] |
+
+Every method drew 0 of 366 mixed false links and kept the non-scenario link. With both
+meetings in test series the picture is the same (main 0.82 and 0.68, bge-small at 0.96
+0.85 and 0.54).
+
+**Nothing clears the on-device bar, so main stays.** bge-small at 0.96 is the nearest:
+recall, false links and the interval all pass, and precision is 0.865 against 0.90.
+The gain is a trade along the curve, not a better curve: balanced accuracy does not
+move. So there is no default change and no migration PR.
+
+**Reranking and hybrids stopped on tuning pairs.** A small logistic model read every
+signal, with series folds inside tuning. AUC on scenario pairs:
+
+| Signals | AUC, cross-validated |
+| --- | --- |
+| Topic vectors alone (bge-small) | 0.71 |
+| + BM25 on gists | 0.71 |
+| + tf-idf of what was said | 0.71 |
+| + shared terms | 0.71 |
+| + shared people, recency | 0.71 |
+| + topic names | 0.74 |
+| + three cross-encoders, on excerpts, gists and names | 0.73 |
+| Everything | 0.75 |
+
+The best cross-encoder alone reached 0.66 (ms-marco-TinyBERT on gists, 1 ms a pair);
+jina-tiny on excerpts fell below chance at 0.46. People and recency are 0.49 to
+0.50 alone: on AMI a pair in one series is as likely to be linked as a pair across, so
+AMI cannot show what they would do. The ettin rerankers' ONNX export has no scoring
+head, so they did not run. Blending names into the clustering gained nothing either.
+Names carry what little there is to add, and a pair-level score cannot draw a subject
+without the chaining this round found in the cloud check.
+
+### A local writing model as the linker
+
+Pending: these runs wait for the GPU lock. This section is filled in when they land.
+
+### Inside one conversation
+
+This had not been measured. On the test meetings (50 meetings, 111 fine and 13
+top-level gold returns), under the rule written before the runs:
+
+| What is drawn | Drawn | Right | Wrong | Unverifiable | Precision | Recall | Chance |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Tracker, the record (Connections) | 27 | 3 | 20 | 4 | 0.13 [0.00, 0.26] | 0.08 [0.04, 0.13] | 0.07 |
+| Tracker, live (flow card) | 24 | 2 | 15 | 7 | 0.12 [0.00, 0.32] | 0.03 [0.00, 0.07] | |
+| Loop, live (gpt-5.6-terra) | 44 | 7 | 22 | 15 | 0.24 [0.08, 0.42] | 0.08 [0.02, 0.15] | |
+| Opus 5.5 reads the parts at Finish | 26 | 2 | 13 | 11 | 0.13 [0.00, 0.28] | 0.03 [0.00, 0.06] | |
+| gpt-5.6-luna reads the parts at Finish | 11 | 0 | 5 | 6 | 0.00 | 0.00 | |
+
+**Nothing is near the bar of 0.80.** But the same rule gives Opus 1 of 22 on tuning
+meetings, which says as much about the rule as about Opus: AMI gives each stretch one
+broad label. So two judges read the transcript, blind, with 40 control pairs mixed in:
+
+| What is drawn | Sonnet 5.5: came back | gpt-6.1-sol: came back |
+| --- | --- | --- |
+| Tracker, the record | 0.44 (n 27) | 0.56 |
+| Loop, live | 0.43 (n 44) | 0.43 |
+| Opus 5.5 at Finish | 0.65 (n 26) | 0.62 |
+| gpt-5.6-luna at Finish | 0.45 (n 11) | 0.36 |
+| Controls: two stretches, no return drawn | 0.23 (n 40) | 0.28 |
+
+**Under the judges too, nothing reaches 0.80.** About half of what the app draws is
+real, and a pair of stretches picked at random reads a quarter. On tuning meetings the
+loop read 0.88, on 8 returns; on test it is 0.43, on 44. That was noise, and the test
+split is why it is not in the app now.
+
+**Timing.** The loop shows a found return 101 s after the room came back (median), and
+its bend is 31 s off. The tracker takes 264 s, and 45 s off. So the loop's gain is
+speed, not truth. Each found few: at most 9 of 111.
+
+**Other ways to decide, all on tuning meetings.** Vectors on the record's cuts never
+passed the tracker at any threshold (0.12 to 0.19, against 0.19), and centring on the
+conversation was worse. A stricter or looser lexical threshold moved the count and not the precision,
+under the labels and under the judges (0.50 to 0.63). On the annotators' own fine cuts
+vectors reach only 0.43, so better cuts alone would not fix it.
+
+### The reason a link shows
+
+Round 1 graded each method's name pair by pair. The person reads the name of the
+subject the board drew, so that is graded here, blind, on 100 test pairs the
+annotators link. Match is 0 to 2, and "shared" is the share graded 2.
+
+| Board | Sonnet 5.5: match | shared | gpt-6.1-terra: match | shared |
+| --- | --- | --- | --- | --- |
+| On this computer, tracker names | 0.72 [0.62, 0.82] | 0.00 | 0.91 [0.84, 0.98] | 0.01 |
+| On this computer, writing-model names | 1.09 [1.01, 1.16] | 0.11 | 1.22 [1.13, 1.30] | 0.22 |
+| Opus 5.5, today | 0.39 [0.29, 0.49] | 0.01 | 0.85 [0.72, 0.99] | 0.16 |
+| Opus 5.5, fixed | 1.17 [1.00, 1.35] | 0.29 | 1.29 [1.13, 1.46] | 0.35 |
+| gpt-6.1-sol, today | 0.35 [0.26, 0.44] | 0.00 | 0.79 [0.67, 0.92] | 0.10 |
+| gpt-6.1-sol, fixed | 0.93 [0.81, 1.05] | 0.13 | 1.05 [0.93, 1.18] | 0.21 |
+
+Today one name stands for 132 conversations, so a cloud user's reason is worse than a
+local user's. The fix puts it on top.
+
+**Typed relations stopped early.** Two judges read the transcript of 44 within-series
+links on tuning meetings and picked continues, depends on, conflicts, same open
+question, or other. Both said "continues" for 38 of them. Between themselves they
+reach kappa 0.63. Opus and gpt-6.1-terra, reading names and gists, reach −0.06 to 0.29
+against them. On AMI one type is the answer most of the time and a model cannot tell
+the rest apart, so a typed label would add a word and no information.
+
+### On real recognition
+
+Recognition output covers 8 meetings, all in test series. Parakeet Ultra's numbers are
+provisional: AMI is in its training data.
+
+**The cloud check shows no cost.** Claude Opus 5.5 on the 95 sampled pairs that touch
+a recognized meeting. A second run on manual text sets the noise: false links move by
+0.08 between two runs on the same text.
+
+| Text | Mean WER | Precision | Recall | False-link rate |
+| --- | --- | --- | --- | --- |
+| Manual | | 0.89 | 0.48 | 0.33 |
+| Parakeet Ultra, quiet room (provisional) | 21.7 | 0.89 | 0.47 | 0.32 |
+| gpt-transcribe, quiet room | 25.2 | 0.86 | 0.45 | 0.41 |
+| Apple Speech, quiet room | 28.5 | 0.87 | 0.43 | 0.34 |
+| small.en, quiet room | 32.0 | 0.95 | 0.55 | 0.16 |
+| Parakeet Ultra, steady sound (provisional) | 45.3 | 0.89 | 0.49 | 0.33 |
+| small.en, steady sound | 59.1 | 0.88 | 0.44 | 0.32 |
+
+Every interval holds 0. The check reads names and gists, which a writing model makes
+from the whole transcript, and that seems to absorb the errors.
+
+**The board on this computer loses recall, not precision.** Main's rule on 1,044
+scenario pairs with one side recognized and the other on manual text:
+
+| Text | Precision | Recall | False-link rate | Recall minus manual | BA minus manual |
+| --- | --- | --- | --- | --- | --- |
+| Manual | 0.88 | 0.65 | 0.43 | | |
+| Parakeet Ultra, quiet room (provisional) | 0.88 | 0.43 | 0.30 | −0.22 [−0.35, −0.14] | −0.09 [−0.18, −0.02] |
+| gpt-transcribe, quiet room | 0.87 | 0.49 | 0.36 | −0.16 [−0.22, −0.12] | −0.10 [−0.15, −0.04] |
+| Apple Speech, quiet room | 0.88 | 0.47 | 0.33 | −0.18 [−0.32, −0.07] | −0.08 [−0.17, −0.03] |
+| small.en, quiet room | 0.88 | 0.44 | 0.29 | −0.21 [−0.29, −0.14] | −0.08 [−0.15, −0.02] |
+| Parakeet Ultra, steady sound (provisional) | 0.83 | 0.17 | 0.17 | −0.48 [−0.58, −0.41] | −0.22 [−0.32, −0.12] |
+| small.en, steady sound | 0.88 | 0.05 | 0.03 | −0.60 [−0.77, −0.50] | −0.21 [−0.39, −0.10] |
+
+**Read that table with care: it is the wrong way round for the app.** The app compares
+recognized text with recognized text, and here the other side is manual. On the 28
+pairs with both sides recognized, recall rises (0.70 to 0.97 against 0.57 on manual
+text), so transcripts seem to pull together on their shared errors. Only 2 of those 28
+pairs are unlinked, so what that does to false links cannot be read. It needs more
+meetings through recognition.
+
+**Returns on recognized text** are too few to rate: the tracker draws 1 to 6 returns on
+the 8 meetings, against 12 to 18 gold ones, and none verifies as right under the labels.
+
+### What a model change would cost
+
+No model cleared the bar, so nothing here is planned. For the record, a change from
+MiniLM means:
+
+- **Stored vectors have no model tag.** `node.vector` is base64 of one byte a dimension.
+  A 768-dimension vector is left out by the length checks in `linkThreads`, but
+  bge-small is also 384 dimensions, so old and new vectors would compare silently and
+  mean nothing. The record needs a model name beside each vector first.
+- **Old conversations fall back to names until they are read again.** Round 1's half
+  rows show that state is worse than either end (precision 0.80 to 0.81). Re-embedding
+  needs only the transcript: 8.4 ms a turn for bge-small, so about 3 s for an hour-long
+  conversation, and about 1 min for EmbeddingGemma 2.
+- **Search shares the model.** `vectorIndex.js` keeps its Qdrant collection on the same
+  embedder, so a change means a rebuild, or two bundled models.
+- **The worker reads one shape.** `onnxWorker.js` has one tokenizer (WordPiece) and mean
+  pooling. bge-small needs first-token pooling and `token_type_ids` only. EmbeddingGemma,
+  granite, nomic and Qwen need another tokenizer in the worker, or llama-server.
+- **Every threshold moves.** `CONTENT_SIMILARITY`, `LINK_SIMILARITY`, `CANDIDATE_FLOOR`,
+  and the tracker's `VECTOR_WEIGHT`, which picks on-device names by cosine to the fourth
+  power and so would need the name judge again.
+
+### What the gold can and cannot show, after this round
+
+- The label rule and the judges disagree by a factor of three on returns. Every
+  precision here is a lower bound, and a judge is also a model.
+- On the scenario meetings "linked" holds for 76% of pairs, so a blob scores well.
+  False-link rate and the size of the largest subject say more than recall does.
+- AMI cannot show what shared people or recency are worth, or how often a real history
+  chains into one subject.
+- The cloud board was measured in one order of the history. Each order costs a new set
+  of checks.
+- Only 8 meetings have recognition output, and only 2 of their 28 pairs are unlinked.
+  Whether a whole history of recognized text links more falsely is open.
+
+## Decisions for Alex
+
+1. **Merge #166.** Recommended. A cloud user's board stops being one subject. It reads
+   stored checks as they are, so no migration. Recall on AMI falls from "everything".
+2. **What to do with "came back".** Nothing reached 0.80, and about half of what is drawn
+   is real. Options: (a) leave it; (b) keep the line's move and drop the count from the
+   caption ("3 returns to earlier topics"), which is the sentence that makes the claim;
+   (c) with a writing model, keep in the record only returns a model confirms at Finish
+   (0.62 to 0.65 against 0.44 to 0.56). Recommended: (b) now, since it needs no model.
+3. **The on-device default.** Recommended: keep MiniLM at 0.78. bge-small at 0.96 cuts
+   false links from 0.41 to 0.25 at recall 0.53, and misses the precision bar by 0.035.
+   It would cost the migration above. Worth another look once more meetings have
+   recognition output, because the choice should rest on recognized text.
+4. **Typed relations.** Recommended: no.
+
+## Reproduce
+
+```sh
+export FM_LEDGER=~/.cache/oats/link-eval/ledger-2.jsonl FM_BUDGET_USD=50
+PY=~/oats-asr-cache/venvs/links/bin/python                # onnxruntime, tokenizers, numpy
+node scripts/link-eval-2.mjs texts --out texts.json       # every text to embed
+$PY -I scripts/lib/embed_texts.py --config bge-small --texts texts.json \
+  --store ~/.cache/oats/link-eval/embed                   # one per model, on the CPU
+node scripts/link-eval-2.mjs screen --configs minilm,bge-small --split tune --drawn
+node scripts/link-eval-2.mjs curve --configs "bge-small::0.93:0.97:0.01" --split tune
+node scripts/link-eval-2.mjs rerank-texts --kind gist --out gist.json
+$PY -I scripts/lib/rerank_pairs.py --model rerank-stsb-distilroberta-base --pairs gist.json \
+  --out ~/.cache/oats/link-eval/rerank/rerank-stsb-distilroberta-base~gist.json
+node scripts/link-eval-2.mjs hybrid --configs bge-small
+node scripts/link-eval-2.mjs final-boards --split test --orders 20 \
+  --methods "stored:0.78+greedy:bge-small:0.96+linkage:bge-small:0.944"
+# The cloud check: the fixed sample, and the app's whole path
+ANTHROPIC_API_KEY=… node scripts/link-eval.mjs remote --model "anthropic:claude-haiku-5-5@low"
+node scripts/link-eval-2.mjs cloud --split test --runs "anthropic_claude-opus-5-5_think_medium,…"
+ANTHROPIC_API_KEY=… node scripts/link-eval-2.mjs app-path --model "anthropic:claude-opus-5-5@think,medium"
+node scripts/link-eval-2.mjs app-path-final --split test --links-module <fix>/src/helpers/conversationLinks.mjs \
+  --runs "anthropic_claude-opus-5-5_think_medium"
+# Returns
+node scripts/topic-loop-eval.mjs --variant d1 --ami <dir> --set all --trace-lanes --json d1.json
+node scripts/return-eval.mjs score --input d1.json --split test
+ANTHROPIC_API_KEY=… node scripts/return-eval.mjs decide --model "anthropic:claude-opus-5-5@think,medium" \
+  --input d1.json --split test
+ANTHROPIC_API_KEY=… node scripts/return-eval.mjs judge --model anthropic:claude-sonnet-5-5 --input d1.json \
+  --split test
+# Recognition: each replay, then the boards
+node scripts/link-eval.mjs snapshots --replay <dir> --cache <cache> --meetings <ids>
+node scripts/link-eval-2.mjs recognition-boards --center 0.78 --orders 8 --runs "small.en__quiet-room"
+```
+
+Round 2 cost $21.92 at list prices, in the ledger above. Weights are in
+`~/oats-asr-cache/models/embed/`, with a README of each file's source and license.
