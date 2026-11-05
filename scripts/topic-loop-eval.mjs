@@ -49,6 +49,9 @@
  *                 (`scripts/topic-names-judge.mjs`).
  *   cost          requests, failures, malformed answers, latency p50/p95, and
  *                 input, cached and output tokens and dollars per hour.
+ *
+ * `--trace-lanes` keeps what `helpers/topicLanes.mjs` draws, live as it grows
+ * and from the record, for `scripts/return-eval.mjs`.
  */
 
 import fs from "node:fs";
@@ -84,6 +87,10 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const helper = (name) => import(pathToFileURL(path.join(ROOT, "src/helpers", name)).href);
 const { TopicNamer } = await helper("topicNamer.mjs");
 const { LiveTopicLoop } = await helper("topicLoop.mjs");
+const { topicLanes } = await helper("topicLanes.mjs");
+const { returnsOfLanes } = await import(
+  pathToFileURL(path.join(ROOT, "scripts/lib/return-score.mjs")).href
+);
 
 const { values: args } = parseArgs({
   options: {
@@ -107,6 +114,7 @@ const { values: args } = parseArgs({
     vectors: { type: "boolean", default: false },
     options: { type: "string", default: "{}" },
     quiet: { type: "boolean", default: false },
+    "trace-lanes": { type: "boolean", default: false },
   },
 });
 
@@ -573,10 +581,31 @@ async function runConversation(conversation) {
   let lastBoundaries = new Map();
   let lastSnapshot = { nodes: [], edges: [] };
 
+  // --trace-lanes: every return the flow card draws, from the moment it draws
+  // it. A return is the same one while its topic holds and its start moves
+  // under 30 s.
+  const drawnReturns = [];
+  const traceLanes = (snapshot, now) => {
+    const lanes = topicLanes({ snapshot, segments, start: 0, end: now, live: true });
+    const current = returnsOfLanes(lanes);
+    for (const entry of drawnReturns) entry.current = false;
+    for (const item of current) {
+      let entry = drawnReturns.find(
+        (other) => other.topic === item.topic && Math.abs(other.at - item.at) < 30_000
+      );
+      if (!entry) {
+        entry = { ...item, shownAt: now };
+        drawnReturns.push(entry);
+      }
+      Object.assign(entry, item, { lastSeenAt: now, current: true });
+    }
+  };
+
   const observe = () => {
     const snapshot = display.snapshot();
     lastSnapshot = snapshot;
     const now = clock.time;
+    if (args["trace-lanes"]) traceLanes(snapshot, now);
     const topicOf = new Map();
     for (const node of snapshot.nodes)
       for (const id of node.utteranceIds ?? []) topicOf.set(String(id), String(node.id));
@@ -677,6 +706,17 @@ async function runConversation(conversation) {
   // What each utterance was in, live at the end and in the record: enough to score again offline.
   result.liveAssignment = assignmentOf(conversation, nodesOf(liveEnd)).map(String);
   result.recordAssignment = assignmentOf(conversation, nodesOf(record)).map(String);
+  if (args["trace-lanes"]) {
+    const lanes = topicLanes({ snapshot: record, segments });
+    const time = (fraction) => Math.round(lanes.start + fraction * lanes.span);
+    result.lanes = {
+      live: drawnReturns,
+      record: {
+        runs: lanes.runs.map((run) => [run.topic, time(run.from), time(run.to)]),
+        returns: returnsOfLanes(lanes),
+      },
+    };
+  }
   if (reference) {
     if (VARIANT !== "vf")
       result.live = segmentationScores(conversation, assignmentOf(conversation, nodesOf(liveEnd)));
