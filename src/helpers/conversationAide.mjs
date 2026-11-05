@@ -96,7 +96,7 @@ const CLAUSE_START = String.raw`(?:^|[.!?¡¿;:…]\s*)`;
 const APO = String.raw`['’]`;
 
 // Interrogative openers, checked at the start of the utterance (mirrors
-// QUESTION_PREFIX). Loose single words are safe here because position carries
+// the English openers). Loose single words are safe here because position carries
 // most of the signal.
 // One or two words of conjunction lead-in ("pero dónde…", "ну и сколько…")
 // must not defeat an opener when the transcriber drops the question mark.
