@@ -45,14 +45,25 @@ scored by `room-replay.js`.
 - **Tune:** anything with a knob (decode settings, VAD thresholds, context,
   enhancement gates) is tuned only on ES2004a, IS1009a and TS3003a, the three
   meetings round 1 tuned on.
-- **Test:** the top 3 models, and any tuned setting that survives, run on the
-  16 Array1-01 meetings that no speech run has seen: the rest of the 24 meetings
-  the other evals use (eval24: IS1009c-d, TS3003c-d, ES2003b, ES2007a, ES2009c,
-  ES2012a, ES2014c, IB4010, IS1002b, IS1004d, IS1007c, TS3005a, TS3007c,
-  TS3010a). Track Q fetched 11 of them and replays them with `small.en`, with
-  these settings, in `~/oats-asr-cache/question-eval/`, so that baseline is
-  read from there. Nothing is tuned on these. The decision reads the intervals
-  from these meetings.
+- **Test:** the top 3 models, and any tuned setting that survives, run on
+  meetings that no speech run has seen. **These are AMI's official test split
+  only: IS1009c-d, TS3003c-d and EN2002a-d.** Nothing is tuned on them. The
+  decision reads the intervals from them, pooled with the 8 screen meetings,
+  which are the rest of the same split. EN2002 is the split's natural meetings,
+  not the design scenario.
+- **Train-split meetings are reported apart.** The cards of Granite Speech 5.0
+  (150 hours of "AMI English" in training, `edinburghcstr/ami`) and Parakeet v3
+  ("AMI" in NeMo ASR Set 3.0) say they trained on AMI. The official test split
+  should be out of that training, but its rooms, its microphones and the design
+  scenario's words are not. The 12 tuning meetings of eval24 are in AMI's train
+  split, so a model trained on AMI may have heard exactly those recordings. They
+  are replayed for the other tracks, and their numbers never go into a decision.
+  (Written after the first screen showed Granite far ahead, and before any test
+  meeting was scored.)
+- **A room AMI never recorded:** DiPCo, the Dinner Party Corpus
+  (CDLA-Permissive-1.0, 10 sessions, about 5 hours): four people at a table at
+  home, one far-field array channel, local models only. Neither card lists it.
+  A model that wins on AMI and not here has learned AMI.
 
 ## The candidates, from primary sources (2026-11-05)
 
