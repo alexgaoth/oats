@@ -80,6 +80,141 @@ test("candidate filter accepts factual forms and excludes commands, greetings, a
   assert.equal(isQuestionCandidate("x".repeat(601) + "?"), false);
 });
 
+test("a question with no question mark is found by its shape", () => {
+  // Recognition misses about half of its question marks (docs/question-eval.md).
+  // Each of these is a real AMI meeting's question, or the same shape.
+  for (const text of [
+    "Is that alright",
+    "do we need a remote",
+    "So do we take these off",
+    "but is it practical to have voice recognition in a remote control",
+    "Are we free to take notes",
+    "Would that be enough to fuel it",
+    "Does anybody know",
+    "Can I just draw the face",
+    "Should it be more like a status of these meetings",
+    "any other thoughts about the physical appearance",
+    "Um any last comments",
+    "anything else",
+    "and how much does that cost",
+    "What do you think",
+    "That sounds good. What about the buttons",
+    "I agree with that, but can we afford it",
+    "yeah but is it cheap enough",
+    "The price is high, is that okay",
+    "it fits the budget, doesn't it",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+});
+
+test("a statement with a question word in it gets no card", () => {
+  // Nine in ten false cards on AMI meetings were this class.
+  for (const text of [
+    "That's what I think",
+    "I know how it works",
+    "when you press the button it turns on",
+    "What I did was look at the market",
+    "How it works is quite simple",
+    "we still have to decide which one",
+    "the button which turns it on",
+    "I don't know where we'll be going with that",
+    "so that's why we went for rubber",
+    "that's who I talked to",
+    "so do I",
+    "neither did we",
+    "and that is it",
+  ]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+});
+
+test("long runs of a filler stay quick at the length cap", () => {
+  // A hum of sixty m's once meant half an hour of a frozen renderer, on one final
+  // segment. Backtracking fails by minutes, not milliseconds, so the fastest of
+  // three runs tells it from a busy machine.
+  const fastest = (work) => {
+    let best = Infinity;
+    for (let run = 0; run < 3; run += 1) {
+      const start = performance.now();
+      work();
+      best = Math.min(best, performance.now() - start);
+    }
+    return best;
+  };
+  for (const filler of ["m", "um", "hmm", "uh", "ah", "oh", "ok", "no", "uh ", "mm-hmm "]) {
+    const count = Math.floor(590 / filler.length);
+    for (const text of [
+      `${filler.repeat(count)} good`,
+      `${filler.repeat(count)}?x`,
+      `good ${filler.repeat(count)}`,
+    ]) {
+      assert.ok(fastest(() => isQuestionCandidate(text)) < 5, `${filler} at ${text.length}`);
+      assert.ok(fastest(() => extractQuestionSentence(text)) < 5, `${filler} quoted`);
+    }
+  }
+});
+
+test("a long hum is noise when it is alone, and not when words follow it", () => {
+  assert.equal(isQuestionCandidate(`${"m".repeat(590)}?`), false);
+  assert.equal(isQuestionCandidate(`${"um".repeat(290)}?`), false);
+  assert.equal(isQuestionCandidate("Mmhmm?"), false);
+  assert.equal(isQuestionCandidate("Mm-hmm?"), false);
+  assert.equal(isQuestionCandidate("Ummm-hmm?"), false);
+  assert.equal(isQuestionCandidate("Hmmm, okay, yeah?"), false);
+  assert.equal(isQuestionCandidate(`${"m".repeat(40)} is it good?`), true);
+});
+
+test("a relative clause and a heading do not ask, and modals ask before a noun", () => {
+  for (const text of [
+    "We still have the user interface, which is all the buttons",
+    "Which is an expectation.",
+    "and then maybe an LCD, which has been put forward",
+    "How to use your remote.",
+    "What to say next.",
+  ]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+  for (const text of [
+    "Would the solar power be enough to fuel it",
+    "Does having both really raise our costs",
+    "Did everyone get this",
+    "Which one is cheaper",
+    "and which kind of battery do we want",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+});
+
+test("two questions in a row are quoted together, a statement between them is not", () => {
+  assert.equal(
+    extractQuestionSentence("We have the numbers. What does it cost? Is it cheaper?"),
+    "What does it cost? Is it cheaper?"
+  );
+  assert.equal(
+    extractQuestionSentence("What does it cost? We have the numbers. Is it cheaper?"),
+    "Is it cheaper?"
+  );
+});
+
+test("a short word that only got a question mark gets no card", () => {
+  for (const text of ["Right?", "Yeah?", "Really?", "Sorry?", "What?", "Mm-hmm?", "Okay, okay?"]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+  assert.equal(isQuestionCandidate("Right, so what now?"), true);
+});
+
+test("the quote is the sentence that asks, with or without its question mark", () => {
+  assert.equal(
+    extractQuestionSentence("We looked at the market. Do we need a remote. It costs a lot."),
+    "Do we need a remote."
+  );
+  assert.equal(
+    extractQuestionSentence("That's what I think. I know how it works."),
+    "That's what I think. I know how it works."
+  );
+});
+
 test("classifier parser enforces the complete strict schema and confidence range", () => {
   assert.deepEqual(parseQuestionAssessment(JSON.stringify(unanswered())), unanswered());
   assert.equal(parseQuestionAssessment('{"isFactualQuestion":true}'), null);
