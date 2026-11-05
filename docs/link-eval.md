@@ -364,7 +364,8 @@ committed before the runs they govern. This summary and "Results" came after.
   lifts the grade of the reason a link shows from 0.39 to 0.85 of 2 to 1.17 to 1.29 (Opus).
 - **On this computer nothing cleared the bar, so main stays.** The nearest is
   bge-small-en-v1.5 at 0.96: false links 0.41 to 0.25, recall 0.68 to 0.53, and
-  precision 0.87 against a bar of 0.90. Balanced accuracy does not move.
+  precision 0.87 against a bar of 0.90. Balanced accuracy does not move, and on
+  recognized text it does much worse than MiniLM.
 - **EmbeddingGemma 2 loses.** It scores below MiniLM at 36 times the CPU. Topic
   vectors alone reach AUC 0.69 to 0.72 whatever the model; nothing small changes that.
 - **Reranking and hybrids add little.** BM25, shared terms, people and recency leave
@@ -584,25 +585,30 @@ scores exactly as "link every pair" does.
 
 | Test pairs | Precision | Recall | False-link rate | Largest subject | Mixed false links |
 | --- | --- | --- | --- | --- | --- |
-| Opus 5.5, today | 0.76 [0.66, 0.86] | 0.98 [0.95, 1.00] | 0.90 [0.75, 1.00] | 132 of 139 | 0/366 |
-| Opus 5.5, fixed | 0.86 [0.76, 0.94] | 0.39 [0.30, 0.49] | 0.19 [0.09, 0.29] | 60 of 139 | 0/366 |
-| gpt-6.1-sol, today | 0.75 [0.64, 0.85] | 1.00 | 1.00 | 135 of 139 | 0/366 |
-| gpt-6.1-sol, fixed | 0.79 [0.69, 0.90] | 0.60 [0.52, 0.68] | 0.46 [0.32, 0.57] | 65 of 139 | 0/366 |
+| Opus 5.5, before #166 | 0.76 [0.66, 0.86] | 0.98 [0.95, 1.00] | 0.90 [0.75, 1.00] | 132 of 139 | 0/366 |
+| Opus 5.5, with #166 | 0.86 [0.76, 0.94] | 0.39 [0.30, 0.49] | 0.19 [0.09, 0.29] | 60 of 139 | 0/366 |
+| gpt-6.1-sol, before #166 | 0.75 [0.64, 0.85] | 1.00 | 1.00 | 135 of 139 | 0/366 |
+| gpt-6.1-sol, with #166 | 0.79 [0.69, 0.90] | 0.60 [0.52, 0.68] | 0.46 [0.32, 0.57] | 65 of 139 | 0/366 |
 
-Paired, fixed minus today:
+Paired, with #166 minus before it:
 
 | | Precision | Recall | False-link rate | BA |
 | --- | --- | --- | --- | --- |
 | Opus 5.5 | +0.10 [0.03, 0.17] | −0.59 [−0.69, −0.48] | −0.71 [−0.83, −0.59] | +0.12 [−0.02, 0.27] |
 | gpt-6.1-sol | +0.05 [0.01, 0.09] | −0.40 [−0.48, −0.32] | −0.54 [−0.67, −0.43] | +0.14 [0.02, 0.29] |
 
-**The fix** is PR #166. A link joins two conversations on the subject the model
+That is one order of the history, because a new order costs a new run of checks.
+Grouping the same answers over 12 other orders gives Opus 0.86, 0.31 and 0.15, and
+gpt-6.1-sol 0.77, 0.62 and 0.55. The figures move as every board's do, and the collapse
+stays gone.
+
+**The fix** is #166, merged as d477fb7. A link joins two conversations on the subject the model
 named, and subjects are one only when their names are alike (0.8, chosen on tuning
 pairs). The check also speaks for every earlier conversation its provider has read,
 not only the 12 it was asked about, so a subject it passed over is not rebuilt on
 this computer. Under the cloud bar, gpt-6.1-sol's gain excludes 0, and Opus's
 balanced accuracy holds 0 while its precision and false-link rate do not. Recall
-falls hard because today's board links nearly everything. AMI is the worst case for
+falls hard because the board before it linked nearly everything. AMI is the worst case for
 this bug, because every scenario meeting is about one product; a varied history
 collapses less, so the gain may be smaller there.
 
@@ -656,10 +662,11 @@ Every other subject is 0.94 to 1.00 pure. On AMI recall above 0.2 means acceptin
 subject. This is why no threshold moved precision far.
 
 **Embedding models.** Tuning meetings, the board's rule (over orders), at the point
-nearest recall 0.50. CPU time is one thread, one text at a time, which holds up on a
-busy machine where wall time does not. A topic costs about 41 turns and 43 phrases.
+nearest recall 0.50. CPU time is one thread, one text at a time, **on a loaded Mac**
+(load above 80): read it as a ratio between models, not as a final figure. A topic
+costs about 41 turns and 43 phrases.
 
-| Model | MB | Dim | CPU ms, turn / name | Time a topic | Memory | License | Pair AUC | Greedy: P, R, FL | No order: P, R, FL |
+| Model | MB | Dim | CPU ms, turn / name (loaded Mac) | Time a topic (loaded Mac) | Memory | License | Pair AUC | Greedy: P, R, FL | No order: P, R, FL |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | all-MiniLM-L6-v2 (main) | 90 | 384 | 4.5 / 2.2 | 0.3 s | 230 MB | Apache-2.0 | 0.71 | 0.87, 0.46, 0.23 | 0.89, 0.49, 0.21 |
 | **bge-small-en-v1.5** | 133 | 384 | 8.4 / 3.8 | 0.5 s | 275 MB | MIT | **0.72** | **0.88, 0.54, 0.24** | **0.89, 0.52, 0.21** |
@@ -670,10 +677,10 @@ busy machine where wall time does not. A topic costs about 41 turns and 43 phras
 | EmbeddingGemma 2, 256 | 175 | 256 | 164 / 77 | 10 s | 527 MB | Apache-2.0 | 0.69 | 0.81, 0.80, 0.65 | 0.83, 0.30, 0.21 |
 | EmbeddingGemma 1, 768 | 176 | 768 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.70 | 0.82, 0.55, 0.40 | 0.87, 0.40, 0.20 |
 | EmbeddingGemma 1, 256 | 176 | 256 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.71 | 0.82, 0.66, 0.49 | 0.90, 0.44, 0.17 |
+| mxbai-embed-large-v1 (over the size) | 337 | 1024 | 51 / 19 | 2.9 s | 644 MB | Apache-2.0 | 0.71 | 0.86, 0.44, 0.25 | 0.89, 0.57, 0.24 |
 
-Time a topic is CPU time for 41 turns and 43 phrases. MB is what the app would ship.
-A base 16 GB M-series Mac should take about twice as long; that is an estimate, not a
-measurement. Not screened: jina-embeddings-v5 (CC BY-NC), LFM2.5-Embedding (license
+Time a topic is CPU time for 41 turns and 43 phrases, on a loaded Mac, so these wait
+for a quiet-machine run. MB is what the app would ship. Not screened: jina-embeddings-v5 (CC BY-NC), LFM2.5-Embedding (license
 other, custom code), harrier-oss and Octen (no ONNX or GGUF from the publisher),
 pplx-embed (399 MB at its smallest).
 
@@ -734,7 +741,16 @@ without the chaining this round found in the cloud check.
 
 ### A local writing model as the linker
 
-Pending: these runs wait for the GPU lock. This section is filled in when they land.
+The same check as the cloud's, with the app's prompt, names and gists only, on the
+fixed sample. Names and gists here are gpt-5.6-luna's, so a local model reads better
+input than it would on its own: this is the most a local linker could do.
+
+| Model | Precision | Recall | False-link rate | Time a check | Tuning pairs |
+| --- | --- | --- | --- | --- | --- |
+| Claude Opus 5.5, for reference | 0.91 | 0.56 | 0.20 | 5.7 s | |
+| Apple's system model (Foundation Models) | 0.90 | 0.21 | 0.09 | 3.1 s | 1 of 9 mixed false links |
+
+Gemma 4 E4B and Qwen3.5 4B: pending. These runs wait for the GPU lock.
 
 ### Inside one conversation
 
@@ -786,13 +802,13 @@ annotators link. Match is 0 to 2, and "shared" is the share graded 2.
 | --- | --- | --- | --- | --- |
 | On this computer, tracker names | 0.72 [0.62, 0.82] | 0.00 | 0.91 [0.84, 0.98] | 0.01 |
 | On this computer, writing-model names | 1.09 [1.01, 1.16] | 0.11 | 1.22 [1.13, 1.30] | 0.22 |
-| Opus 5.5, today | 0.39 [0.29, 0.49] | 0.01 | 0.85 [0.72, 0.99] | 0.16 |
-| Opus 5.5, fixed | 1.17 [1.00, 1.35] | 0.29 | 1.29 [1.13, 1.46] | 0.35 |
-| gpt-6.1-sol, today | 0.35 [0.26, 0.44] | 0.00 | 0.79 [0.67, 0.92] | 0.10 |
-| gpt-6.1-sol, fixed | 0.93 [0.81, 1.05] | 0.13 | 1.05 [0.93, 1.18] | 0.21 |
+| Opus 5.5, before #166 | 0.39 [0.29, 0.49] | 0.01 | 0.85 [0.72, 0.99] | 0.16 |
+| Opus 5.5, with #166 | 1.17 [1.00, 1.35] | 0.29 | 1.29 [1.13, 1.46] | 0.35 |
+| gpt-6.1-sol, before #166 | 0.35 [0.26, 0.44] | 0.00 | 0.79 [0.67, 0.92] | 0.10 |
+| gpt-6.1-sol, with #166 | 0.93 [0.81, 1.05] | 0.13 | 1.05 [0.93, 1.18] | 0.21 |
 
-Today one name stands for 132 conversations, so a cloud user's reason is worse than a
-local user's. The fix puts it on top.
+Before #166 one name stood for 132 conversations, so a cloud user's reason was worse
+than a local user's. Now it is the best of them.
 
 **Typed relations stopped early.** Two judges read the transcript of 44 within-series
 links on tuning meetings and picked continues, depends on, conflicts, same open
@@ -843,6 +859,15 @@ text), so transcripts seem to pull together on their shared errors. Only 2 of th
 pairs are unlinked, so what that does to false links cannot be read. It needs more
 meetings through recognition.
 
+**bge-small does worse than MiniLM here, and that decides it.** At 0.96, against its own
+manual score of precision 0.91 and recall 0.50, recall falls to 0.14 to 0.24 in the quiet
+room and to 0.03 in steady sound, with one side recognized. With both sides recognized,
+as in the app, it links nearly everything: false links 0.81 to 1.00 on the same pairs
+that read 0.44 on manual text, though on only 2 unlinked pairs. MiniLM moves far less
+(0.50 to 0.94, against 0.75). bge-small's cosines sit in a narrow band near 1, and
+recognition's shared errors seem to fill that band. The model that looked best on clean
+transcripts is the more fragile on what the app hears.
+
 **Returns on recognized text** are too few to rate: the tracker draws 1 to 6 returns on
 the 8 meetings, against 12 to 18 gold ones, and none verifies as right under the labels.
 
@@ -883,18 +908,15 @@ MiniLM means:
 
 ## Decisions for Alex
 
-1. **Merge #166.** Recommended. A cloud user's board stops being one subject. It reads
-   stored checks as they are, so no migration. Recall on AMI falls from "everything".
-2. **What to do with "came back".** Nothing reached 0.80, and about half of what is drawn
+1. **What to do with "came back".** Nothing reached 0.80, and about half of what is drawn
    is real. Options: (a) leave it; (b) keep the line's move and drop the count from the
    caption ("3 returns to earlier topics"), which is the sentence that makes the claim;
    (c) with a writing model, keep in the record only returns a model confirms at Finish
    (0.62 to 0.65 against 0.44 to 0.56). Recommended: (b) now, since it needs no model.
-3. **The on-device default.** Recommended: keep MiniLM at 0.78. bge-small at 0.96 cuts
-   false links from 0.41 to 0.25 at recall 0.53, and misses the precision bar by 0.035.
-   It would cost the migration above. Worth another look once more meetings have
-   recognition output, because the choice should rest on recognized text.
-4. **Typed relations.** Recommended: no.
+2. **The on-device default.** Recommended: keep MiniLM at 0.78. bge-small at 0.96 cuts
+   false links from 0.41 to 0.25 on manual text, misses the precision bar by 0.035, and
+   falls apart on recognized text. It would also cost the migration above.
+3. **Typed relations.** Recommended: no.
 
 ## Reproduce
 
@@ -916,7 +938,8 @@ node scripts/link-eval-2.mjs final-boards --split test --orders 20 \
 ANTHROPIC_API_KEY=… node scripts/link-eval.mjs remote --model "anthropic:claude-haiku-5-5@low"
 node scripts/link-eval-2.mjs cloud --split test --runs "anthropic_claude-opus-5-5_think_medium,…"
 ANTHROPIC_API_KEY=… node scripts/link-eval-2.mjs app-path --model "anthropic:claude-opus-5-5@think,medium"
-node scripts/link-eval-2.mjs app-path-final --split test --links-module <fix>/src/helpers/conversationLinks.mjs \
+git show f7bd563:src/helpers/conversationLinks.mjs > before.mjs   # the board before #166
+node scripts/link-eval-2.mjs app-path-final --split test --links-module before.mjs \
   --runs "anthropic_claude-opus-5-5_think_medium"
 # Returns
 node scripts/topic-loop-eval.mjs --variant d1 --ami <dir> --set all --trace-lanes --json d1.json
@@ -930,5 +953,5 @@ node scripts/link-eval.mjs snapshots --replay <dir> --cache <cache> --meetings <
 node scripts/link-eval-2.mjs recognition-boards --center 0.78 --orders 8 --runs "small.en__quiet-room"
 ```
 
-Round 2 cost $21.92 at list prices, in the ledger above. Weights are in
+Round 2 cost $22.00 at list prices, in the ledger above. Weights are in
 `~/oats-asr-cache/models/embed/`, with a README of each file's source and license.
