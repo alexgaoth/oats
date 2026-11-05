@@ -103,6 +103,10 @@ class OnnxModel:
         options = ort.SessionOptions()
         options.intra_op_num_threads = threads
         options.inter_op_num_threads = 1
+        # Waiting threads sleep: on a busy machine spinning burns the cores the
+        # work needs. `--speed` keeps the default, as the app's worker runs.
+        if not config.get("spin"):
+            options.add_session_config_entry("session.intra_op.allow_spinning", "0")
         self.session = ort.InferenceSession(
             os.path.join(folder, config["file"]), options, providers=["CPUExecutionProvider"]
         )
@@ -237,6 +241,7 @@ def smoke(name, threads):
 def speed(name, threads, texts_file):
     """One text at a time, as the app's worker asks. The minimum of three passes."""
     load_started = time.perf_counter()
+    CONFIGS[name]["spin"] = True
     model = load(name, threads)
     model.embed(["warm up"])
     load_s = time.perf_counter() - load_started

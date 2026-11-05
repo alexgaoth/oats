@@ -454,3 +454,19 @@ nomic-embed-text-v2-moe, mxbai-embed-large-v1 (over the size) and
 Qwen3-Embedding-0.6B (over the size). Not screened: jina-embeddings-v5
 (CC BY-NC, no use in an MIT app), LFM2.5-Embedding (license other, custom code),
 harrier-oss and Octen (no ONNX or GGUF from the publisher).
+
+## Changes to the plan, before any test score was read
+
+- **Five methods per family.** "At most five methods go to the test split" now
+  counts each family apart: on-device links, cloud links, and returns. The
+  families answer different questions and have different bars.
+- **A blind judge for returns.** AMI's labels are broad, and a drawn return with
+  a generic label on one side cannot be checked at all. So a second reading of
+  precision is added, beside the label rule, not instead of it. Two judges read
+  the transcript of the earlier runs, what lay between, and the return. They
+  answer whether the room came back to something it had left. Control pairs of
+  stretches with no return drawn are mixed in, unlabelled, to show the judges'
+  base rate. The bar stays on the label rule.
+- **The gold for the mean-of-subject rule.** Round 1's board and every board
+  here draw subjects. Pair scores are reported, but the bar is read on what the
+  board would draw.

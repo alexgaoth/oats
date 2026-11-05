@@ -210,3 +210,63 @@ export function pairedBalance(
   }
   return { delta: point, interval: [percentile(draws, 2.5), percentile(draws, 97.5)] };
 }
+
+/**
+ * Paired differences of method A minus method B on the same pairs: precision,
+ * recall, the false-link rate and balanced accuracy, each with a series
+ * bootstrap whose replicates are shared by both methods.
+ */
+export function pairedRates(
+  pairs,
+  predictedA,
+  predictedB,
+  { seriesOf, groupOf, samples = 1000, seed = 13, pairWeight = () => 1 }
+) {
+  const metrics = (weightOf, predicted) => {
+    const { precision, recall, falseLinks } = rates(confusion(pairs, predicted, weightOf));
+    return { precision, recall, falseLinks, balance: (recall ?? 0) - (falseLinks ?? 0) };
+  };
+  const a = metrics(pairWeight, predictedA);
+  const b = metrics(pairWeight, predictedB);
+  const groups = new Map();
+  for (const pair of pairs) {
+    for (const id of [pair.a, pair.b]) {
+      const group = groupOf(id);
+      if (!groups.has(group)) groups.set(group, new Set());
+      groups.get(group).add(seriesOf(id));
+    }
+  }
+  const random = seeded(seed);
+  const lists = [...groups.values()].map((series) => [...series]);
+  const keys = ["precision", "recall", "falseLinks", "balance"];
+  const draws = Object.fromEntries(keys.map((key) => [key, []]));
+  for (let sample = 0; sample < samples; sample += 1) {
+    const weight = new Map();
+    for (const list of lists) {
+      for (let index = 0; index < list.length; index += 1) {
+        const drawn = list[Math.floor(random() * list.length)];
+        weight.set(drawn, (weight.get(drawn) ?? 0) + 1);
+      }
+    }
+    const weightOf = (pair) =>
+      (weight.get(seriesOf(pair.a)) ?? 0) * (weight.get(seriesOf(pair.b)) ?? 0) * pairWeight(pair);
+    const left = metrics(weightOf, predictedA);
+    const right = metrics(weightOf, predictedB);
+    for (const key of keys) {
+      if (left[key] != null && right[key] != null) draws[key].push(left[key] - right[key]);
+    }
+  }
+  return Object.fromEntries(
+    keys.map((key) => [
+      key,
+      {
+        a: a[key],
+        b: b[key],
+        delta: a[key] != null && b[key] != null ? a[key] - b[key] : null,
+        interval: draws[key].length
+          ? [percentile(draws[key], 2.5), percentile(draws[key], 97.5)]
+          : null,
+      },
+    ])
+  );
+}
