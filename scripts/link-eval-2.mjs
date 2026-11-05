@@ -15,7 +15,13 @@ import { parseArgs } from "node:util";
 
 import { fmBridge } from "./lib/fm-bridge.mjs";
 import { bothInTest, splitOfMeeting, splitOfPair } from "./lib/link-split.mjs";
-import { amiMeetingIds, amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
+import {
+  amiMeetingIds,
+  amiRecognized,
+  amiReference,
+  annotationsDir,
+  topicNames,
+} from "./lib/topic-corpus.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -1204,9 +1210,14 @@ const oneLine = (value) =>
     .replace(/\s+/g, " ")
     .trim();
 
+/** Round 1's second wording: one project links on any part both discuss, at any stage. */
+const PERMISSIVE_RULE =
+  "Link the new conversation to an earlier one when a topic of each is about the same subject: the same thing, question, problem, decision or plan. Two conversations about one project or product are linked when they discuss the same part or aspect of it, even at different stages (for example its design, its price, its features, a deadline); being about the same product with nothing more in common is not enough. A broad area in common is not enough (both about work, about software). Meeting routine never links: greetings, introductions, the agenda, scheduling, the wrap-up.";
+
 /** What a conversation is sent as, for each wording of the request. */
 const SENT = {
   app: "a short gist and the names of its topics",
+  permissive: "a short gist and the names of its topics",
   threads: "the gist, the threads it followed and the names of its topics",
   questions: "the gist, questions asked in it and the names of its topics",
   both: "the gist, the threads it followed, questions asked in it and the names of its topics",
@@ -1277,12 +1288,18 @@ async function linker() {
     lines.push(`Topics: ${topics}`);
     return lines.join("\n");
   };
-  const system = remote.LINK_SYSTEM_PROMPT.replace(
+  let system = remote.LINK_SYSTEM_PROMPT.replace(
     "Each is given only as a short gist and the names of its topics; you never see what was said.",
     `Each is given only as ${SENT[variant]}; you never see what was said.`
   );
-  if (system === remote.LINK_SYSTEM_PROMPT && variant !== "app") {
+  if (system === remote.LINK_SYSTEM_PROMPT && !["app", "permissive"].includes(variant)) {
     throw new Error("The app's prompt has changed");
+  }
+  if (variant === "permissive") {
+    const lines = system.split("\n");
+    lines[lines.findIndex((line) => line.startsWith("Link the new conversation"))] =
+      PERMISSIVE_RULE;
+    system = lines.join("\n");
   }
   const base = linkerRun(BASE_RUN);
   const heard = args.touching ? recognizedMeetings(args.touching) : replaced;
@@ -1984,9 +2001,29 @@ function recognizedMeetings(replay) {
       nodes: readJson(path.join(dir, "snapshots", file)).snapshot.nodes,
       names: readJson(path.join(dir, "names", NAMING_MODEL, file), {}),
       summary: readJson(path.join(dir, "gists", NAMING_MODEL, file))?.summary ?? "",
+      turns: new Map(
+        amiRecognized(
+          DIR,
+          id,
+          NAMES,
+          readJson(path.join(args.ami, "..", "replays", replay, file)).segments
+        ).utterances.map((utterance) => [utterance.id, utterance.text])
+      ),
     });
   }
   return out;
+}
+
+/** Every recognized turn, to embed with another model. */
+function recognitionTexts() {
+  const out = new Set();
+  for (const replay of args.runs.split("+")) {
+    for (const meeting of recognizedMeetings(replay).values()) {
+      for (const text of meeting.turns.values()) out.add(text);
+    }
+  }
+  fs.writeFileSync(args.out, JSON.stringify([...out]));
+  console.log(`${out.size} texts`);
 }
 
 async function recognitionBoards() {
@@ -1997,6 +2034,25 @@ async function recognitionBoards() {
   const corpus = await loadCorpus();
   const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
   const threshold = Number(args.center);
+  // `--configs`: another model's vectors, in place of the MiniLM vectors stored.
+  const other =
+    args.configs && args.configs !== "minilm"
+      ? (await import(pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href)).readStore(
+          path.join(CACHE, "embed"),
+          args.configs
+        )
+      : null;
+  const vectorFor = (node, turns) => {
+    if (!other) return node.vector;
+    const pieces = node.utteranceIds
+      .map((id) => turns.get(String(id)) ?? "")
+      .map((text) => ({
+        vector: other.get(text),
+        weight: corpus.tracker.contentWords(text).length,
+      }))
+      .filter((piece) => piece.vector && piece.weight > 0);
+    return corpus.links.encodeTopicVector(corpus.links.topicContentVector(pieces));
+  };
   const boardWith = (replaced) =>
     corpus.meetings.map((meeting) => {
       const source = replaced?.get(meeting.id) ?? meeting;
@@ -2008,6 +2064,7 @@ async function recognitionBoards() {
           nodes: source.nodes.map((node) => ({
             ...node,
             label: String(source.names?.[node.id]?.name ?? node.label).trim(),
+            vector: vectorFor(node, source.turns ?? meeting.turns),
           })),
         },
       };
@@ -2242,6 +2299,7 @@ const COMMANDS = {
   "app-path-score": appPathScore,
   "app-path-final": appPathFinal,
   "recognition-boards": recognitionBoards,
+  "recognition-texts": recognitionTexts,
   labels,
   "rerank-texts": rerankTexts,
 };
