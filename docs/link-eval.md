@@ -347,15 +347,12 @@ off when the run was stopped, which OpenAI may bill as well.
 # Round 2 (2026-11-05)
 
 Alex's ask: better "linking the relationships", between conversations on the
-board and between topics inside one conversation. Everything under this heading
-was written before the runs it describes. The bars and the split below were
-committed first, in this order, so they can be checked in the history.
+board and between topics inside one conversation. The bars, the split and each
+list of frozen methods below were committed before the runs they govern, so they
+can be checked in the history. The summary and "Results" came after.
 
 <!-- round 2 summary -->
 ## In brief (written after the runs)
-
-The sections from "The bar" to "Models screened", and each "Frozen" list, were
-committed before the runs they govern. This summary and "Results" came after.
 
 - **A bug, fixed in #166.** With a cloud check on, the Global board collapses into
   one subject: 132 of 139 conversations with Claude Opus 5.5, 135 with gpt-6.1-sol.
