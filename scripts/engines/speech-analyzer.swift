@@ -1,7 +1,7 @@
 // Apple's on-device speech recognition as a `room-replay.js --engine`.
 //
 // Reads one JSON line per segment on stdin, {"id":1,"wav":"/path.wav"} with an
-// optional "context":["word", ...], and answers one line on stdout,
+// optional "keywords":["word", ...], and answers one line on stdout,
 // {"id":1,"text":"..."} or {"id":1,"error":"..."}. The first line it prints is
 // {"ready":true}, once the model is on disk and loaded.
 //
@@ -9,6 +9,11 @@
 //     scripts/engines/speech-analyzer.swift -o speech-analyzer
 //   speech-analyzer [--module speech|dictation] [--preset transcription]
 //                   [--locale en-US]
+//   speech-analyzer --whole-dir <streams> --out-dir <dir>
+//
+// With --whole-dir it reads each WAV whole, with the model's own segmentation
+// and context, and writes <dir>/<name>.json, {"segments":[{start,end,text}]}:
+// a pass over a finished conversation. Times are on the file's own clock.
 //
 // `--module speech` is SpeechTranscriber, the macOS 26 model for long speech
 // and conversations. `--module dictation` is DictationTranscriber, the model
@@ -68,6 +73,37 @@ struct Engine {
     }
   }
 
+  static func whole(
+    _ dir: String, _ out: String, _ locale: Locale, _ options: SpeechAnalyzer.Options
+  ) async throws {
+    let names = try FileManager.default.contentsOfDirectory(atPath: dir).sorted()
+    try FileManager.default.createDirectory(atPath: out, withIntermediateDirectories: true)
+    for name in names where name.hasSuffix(".wav") {
+      let started = Date()
+      let file = try AVAudioFile(forReading: URL(fileURLWithPath: "\(dir)/\(name)"))
+      let module = SpeechTranscriber(
+        locale: locale, transcriptionOptions: [], reportingOptions: [],
+        attributeOptions: [.audioTimeRange])
+      let analyzer = try await SpeechAnalyzer(
+        inputAudioFile: file, modules: [module], options: options, finishAfterFile: true)
+      var segments: [[String: Any]] = []
+      for try await result in module.results where result.isFinal {
+        segments.append([
+          "start": result.range.start.seconds,
+          "end": result.range.end.seconds,
+          "text": String(result.text.characters),
+        ])
+      }
+      _ = analyzer
+      let meeting = String(name.dropLast(4))
+      let data = try JSONSerialization.data(withJSONObject: [
+        "meeting": meeting, "seconds": Date().timeIntervalSince(started), "segments": segments,
+      ])
+      try data.write(to: URL(fileURLWithPath: "\(out)/\(meeting).json"))
+      say(["meeting": meeting, "segments": segments.count, "seconds": Date().timeIntervalSince(started)])
+    }
+  }
+
   static func run() async throws {
     let moduleName = flag("module", "speech")
     let preset = flag("preset", "transcription")
@@ -92,6 +128,11 @@ struct Engine {
       locale = found
       try await install(speechModule(locale, preset))
     }
+    let wholeDir = flag("whole-dir", "")
+    if !wholeDir.isEmpty {
+      try await whole(wholeDir, flag("out-dir", "."), locale, options)
+      return
+    }
     say(["ready": true, "locale": locale.identifier])
 
     while let line = readLine() {
@@ -102,7 +143,7 @@ struct Engine {
       do {
         let file = try AVAudioFile(forReading: URL(fileURLWithPath: wav))
         let context = AnalysisContext()
-        if let words = request["context"] as? [String], !words.isEmpty {
+        if let words = request["keywords"] as? [String], !words.isEmpty {
           context.contextualStrings[.general] = words
         }
         var text = ""

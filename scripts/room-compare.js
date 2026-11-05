@@ -17,6 +17,7 @@
  */
 
 const fs = require("fs");
+const path = require("path");
 const { normalise, merge, covered, loadAmi } = require("./room-replay.js");
 
 const argv = process.argv.slice(2);
@@ -24,7 +25,25 @@ const arg = (name, fallback = null) => {
   const at = argv.indexOf(`--${name}`);
   return at !== -1 && argv[at + 1] !== undefined ? argv[at + 1] : fallback;
 };
-const load = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
+/**
+ * A run: a `--json` file, or a `--publish` directory of recordings, or several
+ * of those joined by `+` (the same model on more meetings).
+ */
+function load(spec) {
+  const recordings = [];
+  for (const part of spec.split("+")) {
+    if (fs.statSync(part).isDirectory()) {
+      for (const name of fs.readdirSync(part).sort()) {
+        if (!name.endsWith(".json")) continue;
+        const one = JSON.parse(fs.readFileSync(path.join(part, name), "utf8"));
+        recordings.push({ summary: one.metrics, segments: one.segments });
+      }
+    } else {
+      recordings.push(...JSON.parse(fs.readFileSync(part, "utf8")).recordings);
+    }
+  }
+  return { recordings };
+}
 
 const BASE = arg("base");
 const RUN = arg("run");
@@ -143,6 +162,51 @@ function invented(run, others) {
   return out;
 }
 
+/** When the reference puts a question mark, in one meeting (AMI marks them as words). */
+function referenceQuestions(meeting) {
+  const dir = path.join(AMI, "words");
+  const times = [];
+  for (const file of fs.readdirSync(dir)) {
+    if (!file.startsWith(`${meeting}.`) || !file.endsWith(".words.xml")) continue;
+    const xml = fs.readFileSync(path.join(dir, file), "latin1");
+    for (const [tag] of xml.matchAll(/<w\b[^>]*punc="true"[^>]*>\?<\/w>/g)) {
+      const at = Number(/starttime="([^"]+)"/.exec(tag)?.[1]);
+      if (Number.isFinite(at)) times.push(at);
+    }
+  }
+  return times.sort((a, b) => a - b);
+}
+
+/**
+ * Question marks against the reference's, by segment: a transcript's "?" is
+ * right when its segment holds one of the reference's (half a second of
+ * margin), and a reference "?" is heard when a segment with a "?" holds it.
+ */
+function questionMarks(run) {
+  let written = 0;
+  let right = 0;
+  let reference = 0;
+  let heard = 0;
+  for (const recording of run.recordings) {
+    const times = referenceQuestions(recording.summary.meeting);
+    reference += times.length;
+    const marked = recording.segments.filter((s) => /\?/.test(s.text ?? ""));
+    written += marked.length;
+    for (const s of marked) {
+      if (times.some((t) => t >= s.start - 0.5 && t <= s.end + 0.5)) right += 1;
+    }
+    for (const t of times) {
+      if (marked.some((s) => t >= s.start - 0.5 && t <= s.end + 0.5)) heard += 1;
+    }
+  }
+  return {
+    segmentsWithMark: written,
+    precision: Number(((100 * right) / (written || 1)).toFixed(1)),
+    reference,
+    recall: Number(((100 * heard) / (reference || 1)).toFixed(1)),
+  };
+}
+
 /** How a run writes: questions and sentences per 1,000 words. */
 function style(run) {
   let words = 0;
@@ -168,6 +232,7 @@ result.style = { base: style(a), run: style(b) };
 if (AMI) {
   const others = OTHERS.map(load);
   result.invented = { base: invented(a, others), run: invented(b, others) };
+  result.questionMarks = { base: questionMarks(a), run: questionMarks(b) };
 }
 const row = (name) => {
   const m = result[name];
@@ -181,5 +246,6 @@ if (result.invented) {
     `invented per hour: ${base.perHour} -> ${run.perHour} (${base.invented} -> ${run.invented}; heard elsewhere ${base.heardElsewhere} -> ${run.heardElsewhere})`
   );
   console.log(`  examples: ${JSON.stringify(run.examples)}`);
+  console.log(`question marks ${JSON.stringify(result.questionMarks)}`);
 }
 if (arg("json")) fs.writeFileSync(arg("json"), JSON.stringify(result, null, 1));

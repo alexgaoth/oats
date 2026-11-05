@@ -49,8 +49,10 @@ scored by `room-replay.js`.
   16 Array1-01 meetings that no speech run has seen: the rest of the 24 meetings
   the other evals use (eval24: IS1009c-d, TS3003c-d, ES2003b, ES2007a, ES2009c,
   ES2012a, ES2014c, IB4010, IS1002b, IS1004d, IS1007c, TS3005a, TS3007c,
-  TS3010a). Nothing is tuned on these. The decision reads the intervals from
-  these meetings.
+  TS3010a). Track Q fetched 11 of them and replays them with `small.en`, with
+  these settings, in `~/oats-asr-cache/question-eval/`, so that baseline is
+  read from there. Nothing is tuned on these. The decision reads the intervals
+  from these meetings.
 
 ## The candidates, from primary sources (2026-11-05)
 

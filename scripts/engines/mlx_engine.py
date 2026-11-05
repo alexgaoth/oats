@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--model", required=True)
     parser.add_argument("--language", default="en")
     parser.add_argument("--gen-kwargs", type=json.loads, default={})
+    parser.add_argument("--cpu", action="store_true", help="for a machine whose GPU is busy")
     args = parser.parse_args()
 
     # Libraries print to stdout; only this process's answers may go there.
@@ -34,6 +35,9 @@ def main():
 
     import mlx.core as mx
     from mlx_audio.stt.utils import load_model
+
+    if args.cpu:
+        mx.set_default_device(mx.cpu)
 
     model = load_model(args.model)
     accepts = inspect.signature(model.generate).parameters
@@ -52,8 +56,8 @@ def main():
         request = json.loads(line)
         try:
             kwargs = dict(base)
-            if request.get("context"):
-                kwargs["context"] = request["context"]
+            if request.get("prompt"):
+                kwargs["context"] = request["prompt"]
             if "generation_stream" in accepts or open_kwargs:
                 kwargs["generation_stream"] = stream
             kwargs = {k: v for k, v in kwargs.items() if k in accepts or open_kwargs}
