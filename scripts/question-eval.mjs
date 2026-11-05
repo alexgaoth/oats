@@ -14,6 +14,8 @@
 //
 //   node scripts/question-eval.mjs train --out model.json [--alpha 0.2] [--l1 1]
 //     [--l2 10] [--epochs 6] [--dropout 0]
+//   node scripts/question-eval.mjs refine --spec local:qwen3.5-4b|fm:system|openai:...
+//     --replay name --detectors file --detector name [--gguf file] [--concurrency 8]
 //
 // `baseline` replays every meeting through `isQuestionCandidate` and
 // `extractQuestionSentence` turn by turn in each view, and through the real
@@ -21,7 +23,12 @@
 // false cards and missed questions, for reading by hand. Run it on tuning
 // meetings only: the test meetings stay unread. `train` fits the classifier in
 // `lib/question-classifier.mjs` on the words of every dialogue act in the
-// training meetings: never tuning or test meetings.
+// training meetings: never tuning or test meetings. `refine` asks a model whether
+// each card of a detector is a real question, the way a refine step would after
+// the card is up: it reads the card's line, the line before and the line after. A
+// failed or malformed answer keeps the card (CLAUDE.md, question rule 4). Answers
+// are cached in ~/oats-asr-cache/question-eval/refine, and cloud requests go to the
+// fast-models ledger (FM_LEDGER, FM_BUDGET_USD). Cloud keys are for AMI only.
 //
 // --aide <file> reads another copy of conversationAide.mjs, to compare with main.
 // --detectors <file> adds the detectors its default export maps by name: each
@@ -83,6 +90,11 @@ const { values: args, positionals } = parseArgs({
     l2: { type: "string", default: "10" },
     epochs: { type: "string", default: "6" },
     dropout: { type: "string", default: "0" },
+    spec: { type: "string" },
+    gguf: { type: "string" },
+    prompt: { type: "string", default: "v1" },
+    concurrency: { type: "string", default: "8" },
+    port: { type: "string", default: "8471" },
   },
 });
 const command = positionals[0] ?? "baseline";
@@ -433,8 +445,230 @@ function trainClassifier() {
   fs.writeFileSync(args.out, JSON.stringify({ bias: model.bias, entries: model.entries }));
 }
 
+// --- A model reads the cards.
+
+const REFINE_SYSTEM = {
+  v1: `You read a live transcript of a meeting, written by speech recognition, so words can be wrong and question marks can be missing.
+Decide whether the line marked LINE asks a real question: the speaker wants information, an opinion, a decision or a suggestion from the others.
+These are not questions: statements, even with words like what or how in them; bare checks such as "right?" or "okay?"; asides such as "what's it called"; a fragment with no clear ask.
+Answer with one JSON object and nothing else: {"question": true} or {"question": false}.`,
+};
+
+const APP_SYSTEM = "You are a local conversation question classifier. Follow the JSON contract exactly.";
+
+const REFINE_SCHEMA = {
+  name: "question_verdict",
+  schema: {
+    type: "object",
+    properties: { question: { type: "boolean" } },
+    required: ["question"],
+    additionalProperties: false,
+  },
+};
+
+function refinePrompt(before, line, after) {
+  const parts = [];
+  if (before) parts.push(`BEFORE: ${before}`);
+  parts.push(`LINE: ${line}`);
+  if (after) parts.push(`AFTER: ${after}`);
+  return parts.join("\n");
+}
+
+/** Foundation Models through the bridge: one JSON line out, one JSON line back. */
+async function foundationModels() {
+  const { spawn } = await import("node:child_process");
+  const { createInterface } = await import("node:readline");
+  const binary = path.join(process.env.HOME, "oats-asr-cache/fidelity-2/fm-bridge/bin/fm-bridge");
+  const child = spawn(binary, ["serve"], { stdio: ["pipe", "pipe", "inherit"] });
+  const waiting = new Map();
+  createInterface({ input: child.stdout }).on("line", (line) => {
+    const reply = JSON.parse(line);
+    waiting.get(reply.id)?.(reply);
+    waiting.delete(reply.id);
+  });
+  const schema = {
+    type: "object",
+    properties: { question: { type: "boolean" } },
+    required: ["question"],
+  };
+  let serial = 0;
+  return {
+    ask: (system, user) =>
+      new Promise((resolve) => {
+        serial += 1;
+        const id = String(serial);
+        waiting.set(id, resolve);
+        child.stdin.write(
+          `${JSON.stringify({ id, system, prompt: user, temperature: 0, maxTokens: 30, seed: 1, schema })}\n`
+        );
+      }),
+    stop: () => child.stdin.end(),
+  };
+}
+
+async function refine() {
+  const crypto = await import("node:crypto");
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const views = (args.replay ?? "").split(",").filter(Boolean).map((name) => `rec:${name}`);
+  const detect = DETECTORS[args.detector];
+  const spec = args.spec;
+  const system = args.prompt === "app" ? APP_SYSTEM : REFINE_SYSTEM[args.prompt];
+  const appPrompt = args.prompt === "app";
+  const cacheFile = path.join(
+    process.env.HOME,
+    "oats-asr-cache/question-eval/refine",
+    `${spec.replace(/[^\w.@-]+/g, "_")}.jsonl`
+  );
+  fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+  const cache = new Map();
+  if (fs.existsSync(cacheFile)) {
+    for (const line of fs.readFileSync(cacheFile, "utf8").split("\n").filter(Boolean)) {
+      const row = JSON.parse(line);
+      cache.set(row.key, row);
+    }
+  }
+  const items = [];
+  const rows = [];
+  for (const id of meetingsOf(dir)) {
+    const meeting = load(id);
+    const gold = goldQuestions(meeting, args.set);
+    for (const view of views) {
+      const turns = viewTurns(meeting, view);
+      if (!turns) continue;
+      const index = new Map(turns.map((turn, at) => [turn.id, at]));
+      const cards = cardsOf(detect, turns).map((card) => {
+        const at = index.get(card.id);
+        const line = card.quote;
+        const next = at + 1 < turns.length ? textOf(turns[at + 1].tokens) : "";
+        const user = appPrompt
+          ? aide.buildClassifierPrompt({ id: card.id }, [
+              { id: card.id, text: textOf(turns[at].tokens) },
+              ...(next ? [{ id: "next", text: next }] : []),
+            ])
+          : refinePrompt(at > 0 ? textOf(turns[at - 1].tokens) : "", line, next);
+        const key = crypto
+          .createHash("sha1")
+          .update(`${args.prompt}\n${user}`)
+          .digest("hex");
+        const item = { key, user, card };
+        items.push(item);
+        return item;
+      });
+      rows.push({ id, view, meeting, gold, cards });
+    }
+  }
+  const pending = [...new Map(items.filter((item) => !cache.has(item.key)).map((item) => [item.key, item])).values()];
+  console.log(`${items.length} cards, ${pending.length} to ask ${spec}`);
+  const keep = (key, row) => {
+    cache.set(key, row);
+    fs.appendFileSync(cacheFile, `${JSON.stringify({ key, ...row })}\n`);
+  };
+  // `--prompt app` is the app's own classifier: its prompt, its strict JSON, and
+  // its rule that a confident "not factual" withdraws the card.
+  const parse = (text) => {
+    if (args.prompt === "app") {
+      const verdict = aide.parseQuestionAssessment(String(text ?? "").trim());
+      if (!verdict) return null;
+      return !(!verdict.isFactualQuestion && verdict.confidence >= 0.75);
+    }
+    const match = /"question"\s*:\s*(true|false)/.exec(String(text ?? ""));
+    return match ? match[1] === "true" : null;
+  };
+  if (pending.length && spec.startsWith("fm:")) {
+    const fm = await foundationModels();
+    let done = 0;
+    for (const item of pending) {
+      const reply = await fm.ask(system, item.user);
+      keep(item.key, {
+        verdict: reply.ok ? parse(reply.text) : null,
+        ms: reply.ms ?? null,
+        error: reply.ok ? null : reply.error,
+      });
+      done += 1;
+      if (done % 100 === 0) console.log(`${done}/${pending.length}`);
+    }
+    fm.stop();
+  } else if (pending.length) {
+    const fast = await import("./lib/fast-models.mjs");
+    const local = spec.startsWith("local:");
+    if (local) {
+      const binary = path.join(ROOT, "resources/bin/llama-server-darwin-arm64");
+      await fast.startLocalServer(spec.slice(6).split("@")[0], {
+        binary: fs.existsSync(binary)
+          ? binary
+          : path.join(process.env.HOME, "oats-wt/speech-2/resources/bin/llama-server-darwin-arm64"),
+        model: args.gguf,
+        port: Number(args.port),
+        contextSize: 2048,
+      });
+    }
+    let next = 0;
+    let done = 0;
+    const worker = async () => {
+      while (next < pending.length) {
+        const item = pending[next];
+        next += 1;
+        const answer = await fast.ask(spec, {
+          system,
+          user: item.user,
+          maxTokens: appPrompt ? 220 : 30,
+          schema: appPrompt ? undefined : REFINE_SCHEMA,
+          timeoutMs: 60000,
+          purpose: "question-refine",
+          attempts: 2,
+          parseJson: false,
+        });
+        keep(item.key, {
+          verdict: answer.ok ? parse(answer.text) : null,
+          ms: answer.ms ?? null,
+          error: answer.ok ? null : String(answer.error).slice(0, 120),
+        });
+        done += 1;
+        if (done % 100 === 0) {
+          console.log(`${done}/${pending.length}, $${fast.ledgerTotal().toFixed(3)} in the ledger`);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: local ? 1 : Number(args.concurrency) }, worker));
+    fast.stopLocalServers();
+  }
+  const perView = {};
+  for (const { id, view, meeting, gold, cards } of rows) {
+    const before = scoreCards(cards.map((item) => item.card), gold);
+    const kept = cards.filter((item) => cache.get(item.key)?.verdict !== false);
+    const after = scoreCards(kept.map((item) => item.card), gold);
+    const verdicts = new Map(after.verdicts.map((v, at) => [kept[at].key, v]));
+    const removed = cards.filter((item) => cache.get(item.key)?.verdict === false);
+    const wrongly = removed.filter((item) => before.verdicts[cards.indexOf(item)]).length;
+    (perView[view] ??= { before: [], after: [], removed: 0, wrongly: 0, failed: 0 });
+    const tally = perView[view];
+    tally.before.push({ ...before, seconds: meeting.seconds, id });
+    tally.after.push({ ...after, seconds: meeting.seconds, id });
+    tally.removed += removed.length;
+    tally.wrongly += wrongly;
+    tally.failed += cards.filter((item) => (cache.get(item.key)?.verdict ?? null) === null).length;
+    verdicts.clear();
+  }
+  const out = {};
+  for (const [view, tally] of Object.entries(perView)) {
+    console.log(`--- ${view}, ${spec}`);
+    printRow("before", row(tally.before));
+    printRow("after", row(tally.after));
+    const gain = difference(tally.after, tally.before, "f1");
+    console.log(
+      `F1 gain ${gain.value.toFixed(3)} ${ci(gain.ci)}; withdrew ${tally.removed} cards, ${tally.wrongly} of them right; ${tally.failed} answers failed`
+    );
+    out[view] = { before: row(tally.before), after: row(tally.after), gain, removed: tally.removed, wrongly: tally.wrongly, failed: tally.failed };
+  }
+  const times = [...cache.values()].map((item) => item.ms).filter(Number.isFinite);
+  console.log(`median ${median(times)} ms, p90 ${quantile(times, 0.9)} ms over ${times.length} answers`);
+  if (args.json) fs.writeFileSync(args.json, JSON.stringify(out, null, 1));
+}
+
 if (command === "baseline") await baseline();
 else if (command === "train") trainClassifier();
+else if (command === "refine") await refine();
 else if (command === "errors") await errors();
 else {
   console.error(`unknown command ${command}`);

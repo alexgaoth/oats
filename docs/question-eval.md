@@ -150,3 +150,20 @@ What this says:
 - **The types hide a real class.** "Would you like to go next?" and "Can I do my
   thing?" are `sug` and `off`: they ask, and the gold does not count them. A
   person would not mind those cards. Precision against the gold is a lower bound.
+
+### How far to trust adjacency pairs
+
+Read by hand on tuning meetings: 60 questions the pairs call `open`, 40 they call
+`answered`, and all 9 they call `unknown`, each with the 12 s that followed.
+
+- **A pair means somebody took the question up.** 37 of 40 did. The other three
+  are statements or fragments.
+- **No pair does not mean no answer.** 38 of 60 were taken up within 12 s. The
+  annotators drew few pairs, so about a third of real answers have none. `open` is
+  not a negative. A score that treats it as one punishes a correct "answered".
+- **`UNC` is not "nobody knew".** It is 9 of 346 questions, and about 4 of the 9
+  are an "I don't know". The rest are hedges and talk that moved on.
+
+So the outcome scores below use the pairs one way only: of the questions with a
+gold answer, how many does the app call answered? The rest of the table is
+reported, not scored.

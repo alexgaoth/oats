@@ -16,6 +16,15 @@ import {
   summarize,
   turnTokens,
 } from "../../scripts/lib/question-truth.mjs";
+import {
+  featureNames,
+  features,
+  modelFrom,
+  scoreSentence,
+  sentencesOf,
+  train,
+  wordsOf,
+} from "../../scripts/lib/question-classifier.mjs";
 
 const word = (index, text, start, end, act = null, punct = "", speaker = "A") => ({
   index,
@@ -299,5 +308,68 @@ describe("recognition against the manual words", () => {
     assert.equal(reachedRecognition(question, meeting, new Set([1])), false);
     assert.equal(reachedRecognition(question, meeting, new Set([1, 2])), true);
     assert.equal(reachedRecognition({ words: [0] }, meeting, new Set()), false);
+  });
+});
+
+describe("the classifier", () => {
+  const sentence = (text, y) => ({ features: features(text, { punctuation: false }), y });
+  const examples = [
+    ...["is it red", "do we need a remote", "are you ready", "can we do that", "what do you think"].map(
+      (text) => sentence(text, 1)
+    ),
+    ...["it is red", "we need a remote", "you are ready", "we can do that", "I think so"].map(
+      (text) => sentence(text, 0)
+    ),
+  ];
+
+  test("reading a sentence drops fillers, repeats, case and punctuation", () => {
+    assert.deepEqual(wordsOf("Um, is is it, uh, RED?"), ["is", "it", "red"]);
+  });
+
+  test("the start of a sentence counts apart from its middle", () => {
+    const names = featureNames("so is it red", { punctuation: false });
+    assert.ok(names.includes("^is"));
+    assert.ok(names.includes("^is it"));
+    assert.ok(names.includes("w:so"));
+    assert.ok(!names.includes("^so"));
+  });
+
+  test("marks are features only when asked for", () => {
+    assert.ok(featureNames("is it red?").includes("mark:?"));
+    assert.ok(!featureNames("is it red?", { punctuation: false }).includes("mark:?"));
+  });
+
+  test("training repeats exactly from its seed", () => {
+    const one = train(examples, { epochs: 20, l1: 0, l2: 0, alpha: 0.5, seed: 3 });
+    const two = train(examples, { epochs: 20, l1: 0, l2: 0, alpha: 0.5, seed: 3 });
+    assert.deepEqual(one.entries, two.entries);
+    assert.equal(one.bias, two.bias);
+  });
+
+  test("it learns what it is shown, and a question scores above its statement", () => {
+    const model = train(examples, { epochs: 30, l1: 0, l2: 0, alpha: 0.5 });
+    const options = { punctuation: false };
+    assert.ok(scoreSentence(model, "is it red", options) > scoreSentence(model, "it is red", options));
+    assert.ok(
+      scoreSentence(model, "are you ready", options) > scoreSentence(model, "you are ready", options)
+    );
+  });
+
+  test("L1 sets weights to exactly zero", () => {
+    const loose = train(examples, { epochs: 10, l1: 0, l2: 0, alpha: 0.5 });
+    const tight = train(examples, { epochs: 10, l1: 2, l2: 0, alpha: 0.5 });
+    assert.ok(tight.entries.length < loose.entries.length);
+  });
+
+  test("a stored model scores as the trained one does", () => {
+    const model = train(examples, { epochs: 10, l1: 0, l2: 0, alpha: 0.5 });
+    const stored = modelFrom(JSON.parse(JSON.stringify({ bias: model.bias, entries: model.entries })));
+    const options = { punctuation: false };
+    assert.equal(scoreSentence(stored, "is it red", options), scoreSentence(model, "is it red", options));
+  });
+
+  test("sentences split where recognition marks an end", () => {
+    assert.deepEqual(sentencesOf("Okay. Is it red? Yes"), ["Okay.", "Is it red?", "Yes"]);
+    assert.deepEqual(sentencesOf(""), []);
   });
 });
