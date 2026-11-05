@@ -14,6 +14,9 @@
 //
 //   node scripts/question-eval.mjs train --out model.json [--alpha 0.2] [--l1 1]
 //     [--l2 10] [--epochs 6] [--dropout 0]
+//   node scripts/question-eval.mjs reader --split tune|test [--spec openai:...]
+//     a strong model reads what followed each question, as a second reference for
+//     outcomes (the adjacency pairs say nothing about a question with no pair).
 //   node scripts/question-eval.mjs bars --a a.json --b b.json --key view/set/name
 //     [--key-b view/set/name]: method a against method b, per meeting, as the bars
 //     in docs/question-eval.md read it. Each file comes from `baseline --json`.
@@ -96,6 +99,7 @@ const { values: args, positionals } = parseArgs({
     b: { type: "string" },
     key: { type: "string" },
     "key-b": { type: "string" },
+    reader: { type: "string" },
     replay: { type: "string" },
     replays: {
       type: "string",
@@ -328,6 +332,7 @@ async function baseline() {
   const perMeeting = {};
   let seconds = 0;
   const seen = new Set();
+  const readerSaid = readerAnswers(args.reader);
   for (const id of ids) {
     const meeting = load(id);
     const gold = Object.fromEntries(SETS.map((set) => [set, goldQuestions(meeting, set)]));
@@ -379,6 +384,12 @@ async function baseline() {
           const goldReply = question ? question.reply : "not a question";
           tally.confusion[goldReply] ??= {};
           tally.confusion[goldReply][state] = (tally.confusion[goldReply][state] ?? 0) + 1;
+          const read = question ? (readerSaid.get(question.id) ?? null) : null;
+          if (read) {
+            tally.read ??= {};
+            tally.read[read] ??= {};
+            tally.read[read][state] = (tally.read[read][state] ?? 0) + 1;
+          }
           if (state === "denied" && !question && queries.has(card.quote)) tally.falseSearches += 1;
         });
       }
@@ -417,6 +428,22 @@ async function baseline() {
       `${view}: ${tally.searches} searches opened by themselves (${(tally.searches / hours).toFixed(1)} an hour), ${tally.searchesSaid} on a reply that says it does not know`
     );
     console.log(JSON.stringify(tally.confusion));
+    if (tally.read) {
+      const right = (gold, states) =>
+        states.reduce((sum, state) => sum + (tally.read[gold]?.[state] ?? 0), 0);
+      const all = (gold) =>
+        Object.values(tally.read[gold] ?? {}).reduce((sum, count) => sum + count, 0);
+      const held = ["answered", "unknown", "open"];
+      const hits =
+        right("answered", ["answered", "uncertain"]) +
+        right("unknown", ["denied", "uncertain"]) +
+        right("open", ["silence", "asked"]);
+      const total = held.reduce((sum, gold) => sum + all(gold), 0);
+      console.log(`reader: ${JSON.stringify(tally.read)}`);
+      console.log(
+        `outcome right against the reader: ${pct(hits / (total || 1))} of ${total} (an uncertain card counts as right for answered and for unknown)`
+      );
+    }
     const answered = tally.confusion.answered ?? {};
     const total = Object.values(answered).reduce((sum, count) => sum + count, 0);
     console.log(
@@ -566,6 +593,104 @@ function trainClassifier() {
     `${examples.length} acts, ${examples.filter((example) => example.y).length} questions, ${model.entries.length} weights, ${((Date.now() - started) / 1000).toFixed(1)} s`
   );
   fs.writeFileSync(args.out, JSON.stringify({ bias: model.bias, entries: model.entries }));
+}
+
+// --- A second reference for outcomes.
+
+const READER_SYSTEM = `You read a moment from a meeting transcript. The line marked QUESTION was asked by one speaker. The lines after it are what was said in the next 15 seconds, by speaker letter.
+Decide what happened to the question:
+"answered": somebody other than the asker gave an answer or took it up, even a short yes or no.
+"unknown": somebody said they do not know or could not say.
+"open": nobody took it up in these lines. The asker going on alone, or the talk moving on, is open.
+Answer with one JSON object and nothing else: {"outcome": "answered"} or {"outcome": "unknown"} or {"outcome": "open"}.`;
+
+const READER_SCHEMA = {
+  name: "outcome",
+  schema: {
+    type: "object",
+    properties: { outcome: { type: "string", enum: ["answered", "unknown", "open"] } },
+    required: ["outcome"],
+    additionalProperties: false,
+  },
+};
+
+function readerPath(spec) {
+  return path.join(
+    process.env.HOME,
+    "oats-asr-cache/question-eval/reader",
+    `${spec.replace(/[^\w.@-]+/g, "_")}.jsonl`
+  );
+}
+
+function readerAnswers(file) {
+  const answers = new Map();
+  if (!file || !fs.existsSync(file)) return answers;
+  for (const line of fs.readFileSync(file, "utf8").split("\n").filter(Boolean)) {
+    const row = JSON.parse(line);
+    answers.set(row.id, row.outcome);
+  }
+  return answers;
+}
+
+async function reader() {
+  const { ask, ledgerTotal } = await import("./lib/fast-models.mjs");
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const spec = args.spec ?? "openai:gpt-6.1-terra@none";
+  const file = readerPath(spec);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const known = readerAnswers(file);
+  const items = [];
+  for (const id of meetingsOf(dir)) {
+    const meeting = load(id);
+    for (const question of goldQuestions(meeting, "strict")) {
+      if (known.has(question.id)) continue;
+      const own = new Set(question.words);
+      const after = meeting.words.filter(
+        (word) =>
+          word.start >= question.end - 0.2 && word.start < question.end + 15 && !own.has(word.index)
+      );
+      const runs = [];
+      for (const word of after) {
+        const last = runs.at(-1);
+        if (last?.speaker === word.speaker) last.words.push(word.text + word.punct);
+        else runs.push({ speaker: word.speaker, words: [word.text + word.punct] });
+      }
+      const lines = runs.map(
+        (run) =>
+          `${run.speaker === question.speaker ? "ASKER" : run.speaker}: ${run.words.join(" ")}`
+      );
+      items.push({
+        id: question.id,
+        user: `QUESTION (ASKER): ${question.text}\n${lines.join("\n") || "(nothing was said)"}`,
+      });
+    }
+  }
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Number(args.concurrency) }, async () => {
+      while (next < items.length) {
+        const item = items[next];
+        next += 1;
+        const answer = await ask(spec, {
+          system: READER_SYSTEM,
+          user: item.user,
+          maxTokens: 30,
+          schema: READER_SCHEMA,
+          timeoutMs: 60000,
+          purpose: "question-reader",
+          attempts: 2,
+          parseJson: false,
+        });
+        const match = /"outcome"\s*:\s*"(answered|unknown|open)"/.exec(String(answer.text ?? ""));
+        fs.appendFileSync(
+          file,
+          `${JSON.stringify({ id: item.id, outcome: match?.[1] ?? null })}\n`
+        );
+      }
+    })
+  );
+  console.log(`${items.length} read, $${ledgerTotal().toFixed(3)} in the ledger`);
 }
 
 // --- A model reads the cards.
@@ -813,6 +938,7 @@ async function refine() {
 
 if (command === "baseline") await baseline();
 else if (command === "train") trainClassifier();
+else if (command === "reader") await reader();
 else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
