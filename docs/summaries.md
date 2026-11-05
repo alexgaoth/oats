@@ -41,6 +41,54 @@ of a person was sent anywhere.
   model what it gets: the models invent fewer facts (gpt-5.6-terra: 3.0 → 0.8)
   and write no "You"/"Them" guess, for a few points of coverage.
 
+## Round 2: a good summary with no key, at any length
+
+Question (Alex, 2026-11-05): can a person with no cloud key get a good summary
+on a normal Mac, at any length? Can the cloud do better than round 1?
+
+### The bar, written before the runs (2026-11-05)
+
+This section was committed before any round 2 model ran.
+
+**Quality.** Round 1's bar stays: at most 1.2 invented facts in a summary, at
+least 65% of the annotators' decisions, actions and problems covered, and every
+summary complete. Claude Fable 5.1 decides; gpt-6.1-sol is the second judge.
+
+**It must hold on all four.** Manual text and real recognition (`small.en`,
+quiet room), for conversations under 1 hour and over 1 hour.
+
+**Mac classes.** 16 GB and 32 GB or more. The memory rule stays: the peak is at
+most half of the Mac's memory (8 GB and 16 GB). A Foundation Models route uses
+the system's model and is judged on quality and time only.
+
+**Time.** A 30-minute conversation in under 3 minutes on a base Mac. The base
+Mac is an M4 with a 10-core GPU and 16 GB. No such Mac is here, so the time is
+an estimate from this Mac's own run, split into reading and writing, with the
+ratios of llama.cpp's Apple Silicon table (discussion #4167, Q4_0, 7B):
+
+| Mac | reads, tokens/s | writes, tokens/s | reading time | writing time |
+| --- | --- | --- | --- | --- |
+| M5 Pro, 16-core GPU (this Mac) | 1,340 | 67.6 | × 1 | × 1 |
+| M4, 10-core GPU (the bar) | 221 | 24.1 | × 6.1 | × 2.8 |
+| M1, 8-core GPU (the slowest, shown beside it) | 118 | 14.2 | × 11.4 | × 4.8 |
+
+**The split.** Nothing is tuned on the test meetings.
+
+- **Test: round 1's sets.** eval24 (manual text), far8 (real recognition), and
+  8 long conversations from the same series, each scored against all the
+  annotators' items of its parts: ES2004a+b+c+d (132 min), IS1009a+b+c+d (109),
+  TS3003a+b (61), TS3003a+b+c (99), TS3003a+b+c+d (142), TS3005a+b+c+d (144),
+  IS1004a+b+c+d (119), ES2007a+b+c+d (109).
+- **Dev: series that eval24 does not touch.** 16 meetings: ES2002b, ES2005c,
+  ES2008c, ES2010c, ES2013a, ES2016d, IB4005, IB4011, IS1000d, IS1003b, IS1006a,
+  IS1008c, TS3004c, TS3006a, TS3009d, TS3012b. 4 long conversations:
+  ES2008a+b+c+d (133), IS1000a+b+c+d (141), TS3009a+b (66), TS3012a+b+c (95).
+  Prompts, windows and settings are chosen here, with gpt-6.1-sol as the only
+  judge, so the test meetings stay unseen and Claude Fable 5.1 is spent once.
+- **Each frozen configuration runs once on the test sets**, beside the shipped
+  path and two anchors (Claude Opus 5.5, gpt-6.1-sol), graded by both judges in
+  one batch per judge.
+
 ## Decisions for Alex
 
 1. **OpenAI's default writing model: gpt-6.1-sol**, in place of gpt-5.6-terra
