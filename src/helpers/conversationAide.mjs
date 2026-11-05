@@ -584,12 +584,28 @@ const HEDGE =
 const BACKCHANNEL =
   /^(?:mm+[-\s]?hm*|mhm+|uh[-\s]?huh|uh+|um+|hmm+|right|okay|ok|yeah|yep|yup|sure|got\s+it|i\s+see|makes\s+sense)[\s.!?,]*$/i;
 
-function assessResponseLocally(followingContext) {
-  const replies = (Array.isArray(followingContext) ? followingContext : [])
-    .map((item) => String(item?.text || "").trim())
-    .filter((text) => text && !BACKCHANNEL.test(text) && !BACKCHANNEL_INTL.test(text));
+// A yes/no question is answered by what is a backchannel anywhere else: "Is
+// that okay?" "Yeah." The room said something, and it was the answer.
+const EN_YES = /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
+// A plain "no" to one is an answer too, unless the question was what somebody
+// knows: "Do you know what Kubernetes is?" "No." is the confirmed negative the
+// search exists for. "Do we need a remote?" "No." is a decision.
+const EN_ASKS_KNOWLEDGE =
+  /\b(?:know|heard|aware|remember|recall|familiar|understand|any\s+idea|sure)\b/i;
 
-  if (!replies.length) return { outcome: "silence", confidence: 0.8 };
+function assessResponseLocally(followingContext, question = "") {
+  const said = (Array.isArray(followingContext) ? followingContext : [])
+    .map((item) => String(item?.text || "").trim())
+    .filter(Boolean);
+  const replies = said.filter((text) => !BACKCHANNEL.test(text) && !BACKCHANNEL_INTL.test(text));
+  const askedYesNo = EN_YES_NO.test(question);
+
+  if (!replies.length) {
+    if (askedYesNo && said.some((text) => EN_YES.test(text))) {
+      return { outcome: "answered", confidence: 0.7 };
+    }
+    return { outcome: "silence", confidence: 0.8 };
+  }
 
   const joined = replies.join(" ");
   // Denial wins over hedging: "No, I'm not sure" is a denial with a hedge in it.
@@ -599,15 +615,21 @@ function assessResponseLocally(followingContext) {
   // negator of an ordinary Spanish sentence — that false denial would open a
   // browser over a substantive answer.
   const bareNoOnly = DENIAL.test(joined) && !DENIAL_EXPLICIT_EN.test(joined);
-  // The rescue must identify an *English* reply. A lone /\bi\b/ would match
-  // the Italian plural article ("No, i risultati…"), so "i" only counts
-  // followed by an English auxiliary — and the short-reply branch demands the
-  // reply be negation-only: "No funciona" is an answer, "No." is not.
-  const englishSignal =
-    /\bi'?m\b|\bwe\b|\bi\s+(?:do|did|don't|never|have|haven't|can't|really|am|was|think|know)\b/i;
+  // The short-reply branch demands the reply be negation-only: "No funciona" is
+  // an answer, "No." is not.
+  //
+  // A "no" inside a longer reply says nothing about knowing: "there's no way we
+  // can do that" and "no, I think blue is better" are answers, and a false denial
+  // opens a browser. So a bare "no" counts on its own, or opening a reply that
+  // then says it is not sure.
   const negationOnly = /^\s*(?:(?:no|nope|nah)[\s,.!…]*)+(?:sorry[\s,.!…]*)?$/i;
+  const opensWithNo = /^\s*(?:no|nope|nah)\b/i.test(joined);
+  const unsure = /\b(?:not\s+sure|not\s+certain|unsure)\b/i.test(joined);
   const englishDenied =
-    DENIAL.test(joined) && (!bareNoOnly || negationOnly.test(joined) || englishSignal.test(joined));
+    DENIAL.test(joined) && (!bareNoOnly || negationOnly.test(joined) || (opensWithNo && unsure));
+  if (englishDenied && bareNoOnly && askedYesNo && !EN_ASKS_KNOWLEDGE.test(question)) {
+    return { outcome: "answered", confidence: 0.7 };
+  }
   if (englishDenied || DENIAL_INTL.test(joined)) {
     return { outcome: "denied", confidence: 0.85 };
   }
@@ -816,6 +838,11 @@ Use reason "silence" when there is no later response. Confidence must be between
 ${utterances}`;
 }
 
+/** How often a silence that came due looks again while somebody is speaking. */
+const SPEAKING_RECHECK_MS = 1000;
+/** A segment closes within 20 s. Past this the words are stuck, and the card must resolve. */
+const MAX_SPEAKING_HOLD_MS = 30_000;
+
 // Runs one recording's question detection.
 //
 // Two phases, deliberately decoupled (DESIGN.md §9.2):
@@ -846,6 +873,9 @@ class ConversationAideSession {
     this.onDiagnostic = options.onDiagnostic || (() => {});
     this.confidenceThreshold = options.confidenceThreshold ?? 0.75;
     this.silenceDelayMs = options.silenceDelayMs ?? 8000;
+    // Whether words are arriving that are not final yet. A reply can run longer
+    // than the wait, and a reply still being said is not silence.
+    this.isSpeaking = options.isSpeaking || (() => false);
     this.now = options.now || Date.now;
     // Wrapped, never stored bare: Chromium's timers throw "Illegal invocation"
     // when called with any `this` but the window, and these are called as
@@ -955,11 +985,19 @@ class ConversationAideSession {
   _stage(candidate) {
     this._clearStage();
     this.staged = candidate;
-    this.timer = this.setTimer(() => {
-      const pending = this.staged;
-      this._clearStage();
-      if (pending) this._queueEvaluation(pending, "silence");
-    }, this.silenceDelayMs);
+    this.stagedAt = this.now();
+    this.timer = this.setTimer(() => this._silenceDue(), this.silenceDelayMs);
+  }
+
+  _silenceDue() {
+    const pending = this.staged;
+    if (!pending) return;
+    if (this.isSpeaking() && this.now() < this.stagedAt + MAX_SPEAKING_HOLD_MS) {
+      this.timer = this.setTimer(() => this._silenceDue(), SPEAKING_RECHECK_MS);
+      return;
+    }
+    this._clearStage();
+    this._queueEvaluation(pending, "silence");
   }
 
   _clearStage() {
@@ -1029,7 +1067,7 @@ class ConversationAideSession {
     await this.persistence;
     const card = this.cards.get(candidate.id);
     if (!card) return;
-    const local = assessResponseLocally(followingContext);
+    const local = assessResponseLocally(followingContext, card.question);
     this._updateCard(candidate.id, { state: local.outcome, confidence: local.confidence });
 
     if (card.eventId != null) {
@@ -1138,7 +1176,7 @@ class ConversationAideSession {
     // The local reading of the reply is the primary verdict; the model may only
     // override it when it is confident. This keeps outcomes (and therefore
     // auto-search) working even when the classifier is weak, malformed, or slow.
-    const local = assessResponseLocally(followingContext);
+    const local = assessResponseLocally(followingContext, card.question);
     const modelOutcome = outcomeForAssessment(assessment, this.confidenceThreshold);
     const outcome =
       assessment.confidence >= this.confidenceThreshold ? modelOutcome : local.outcome;

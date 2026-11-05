@@ -179,6 +179,90 @@ test("the quote is the sentence that asks, with or without its question mark", (
   );
 });
 
+test("a yes/no question is answered by a yes", () => {
+  const reply = (text) => [{ id: "r", text }];
+  const outcome = (question, text) => assessResponseLocally(reply(text), question).outcome;
+  assert.equal(outcome("Is that okay?", "Yeah."), "answered");
+  assert.equal(outcome("Do we need a remote", "Yep"), "answered");
+  assert.equal(outcome("Can we afford it?", "Sure."), "answered");
+  // No question to read it against, or one a yes does not answer: as before.
+  assert.equal(assessResponseLocally(reply("Yeah.")).outcome, "silence");
+  assert.equal(outcome("What is the price?", "Yeah."), "silence");
+  // A backchannel that is not a yes.
+  assert.equal(outcome("Is that okay?", "Hmm."), "silence");
+});
+
+test("a plain no to a yes/no question is an answer, unless it asked what somebody knows", () => {
+  const reply = (text) => [{ id: "r", text }];
+  const outcome = (question, text) => assessResponseLocally(reply(text), question).outcome;
+  assert.equal(outcome("Do we need a remote?", "No."), "answered");
+  assert.equal(outcome("Is it expensive?", "Nope."), "answered");
+  // These are the confirmed negative the search exists for.
+  assert.equal(outcome("Do you know what Kubernetes is?", "No."), "denied");
+  assert.equal(outcome("Have you heard of Kubernetes?", "No."), "denied");
+  assert.equal(outcome("What is Kubernetes?", "No."), "denied");
+  assert.equal(outcome("Do we need a remote?", "No idea."), "denied");
+  assert.equal(outcome("Do we need a remote?", "I don't know."), "denied");
+});
+
+test('a "no" inside a longer reply opens no search', () => {
+  const outcome = (text) => assessResponseLocally([{ id: "r", text }]).outcome;
+  assert.notEqual(outcome("There's no way we can do that for twelve euros."), "denied");
+  assert.notEqual(outcome("No, I think blue is better for this."), "denied");
+  assert.notEqual(outcome("We have no budget left for that."), "denied");
+  assert.notEqual(outcome("I'm saying no to the whole plan."), "denied");
+  // Still denials: the reply opens with it and goes on to say it is not sure.
+  assert.equal(outcome("No, I'm not sure."), "denied");
+  assert.equal(outcome("No, not sure at all."), "denied");
+});
+
+test("a reply still being said is not silence", async () => {
+  let speaking = true;
+  let time = 0;
+  const timers = new Map();
+  let serial = 0;
+  const cards = [];
+  const session = new ConversationAideSession({
+    noteId: 1,
+    classify: null,
+    silenceDelayMs: 8000,
+    now: () => time,
+    isSpeaking: () => speaking,
+    setTimer: (callback, ms) => {
+      serial += 1;
+      timers.set(serial, { callback, at: time + ms });
+      return serial;
+    },
+    clearTimer: (id) => timers.delete(id),
+    onCard: (card) => cards.push(card),
+  });
+  const advance = async (ms) => {
+    const end = time + ms;
+    for (;;) {
+      const next = [...timers.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (!next || next[1].at > end) break;
+      timers.delete(next[0]);
+      time = next[1].at;
+      next[1].callback();
+      await session.evaluation;
+    }
+    time = end;
+  };
+  session.onFinalized({ id: "q1", text: "What is the price?" });
+  await advance(12000);
+  assert.equal(latestCard(cards, "q1").state, "asked");
+  speaking = false;
+  session.onFinalized({ id: "r1", text: "Twelve euros and fifty cents for each one of them." });
+  await session.evaluation;
+  assert.equal(latestCard(cards, "q1").state, "answered");
+
+  // Words that never turn final do not hold a card for ever.
+  speaking = true;
+  session.onFinalized({ id: "q2", text: "What is the weight?" });
+  await advance(40000);
+  assert.equal(latestCard(cards, "q2").state, "silence");
+});
+
 test("classifier parser enforces the complete strict schema and confidence range", () => {
   assert.deepEqual(parseQuestionAssessment(JSON.stringify(unanswered())), unanswered());
   assert.equal(parseQuestionAssessment('{"isFactualQuestion":true}'), null);
