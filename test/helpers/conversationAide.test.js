@@ -159,6 +159,8 @@ test("a long hum is noise when it is alone, and not when words follow it", () =>
   assert.equal(isQuestionCandidate(`${"m".repeat(590)}?`), false);
   assert.equal(isQuestionCandidate(`${"um".repeat(290)}?`), false);
   assert.equal(isQuestionCandidate("Mmhmm?"), false);
+  assert.equal(isQuestionCandidate("Mm-hmm?"), false);
+  assert.equal(isQuestionCandidate("Ummm-hmm?"), false);
   assert.equal(isQuestionCandidate("Hmmm, okay, yeah?"), false);
   assert.equal(isQuestionCandidate(`${"m".repeat(40)} is it good?`), true);
 });

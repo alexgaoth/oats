@@ -66,7 +66,7 @@ const COMMAND_PREFIX =
 // in Fibonacci-many ways and backtracking takes exponential time: a hum of sixty
 // m's, which Whisper does write, froze the renderer on one final segment.
 const EN_NOISE_WORD =
-  /(?:uh+|um+|mm+(?:-hmm)?|hmm+|huh|okay|ok|yes|no|yeah|yep|right|really|sorry|what|oh|ah|alright|all right|sure|pardon|eh)[?.!,\s]*/iy;
+  /(?:uh+|(?:um+|hmm+|mm+)(?:-hmm)?|huh|okay|ok|yes|no|yeah|yep|right|really|sorry|what|oh|ah|alright|all right|sure|pardon|eh)[?.!,\s]*/iy;
 
 function isEnglishNoise(text) {
   EN_NOISE_WORD.lastIndex = 0;
