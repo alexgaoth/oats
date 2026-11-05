@@ -1782,7 +1782,9 @@ async function appPathFinal() {
     const today = coMembers(drawnToday);
     const fix = coMembers(drawnFix);
     const line = (label, linked, drawn) => {
-      const yes = (pair) => linked.has(pair.key);
+      // A share over orders of the history, or a board's own links.
+      const shared = typeof [...linked.values()][0] === "number";
+      const yes = (pair) => (shared ? (linked.get(pair.key) ?? 0) : linked.has(pair.key));
       const s = scoreLib.scoreWithIntervals(scenario, yes, options);
       const top = Math.max(0, ...drawn.map((subject) => subject.conversationIds.length));
       console.log(
@@ -1801,6 +1803,13 @@ async function appPathFinal() {
     console.log(
       `  fix minus today: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
     );
+    // The same answers, grouped over other orders of the history. A new order of
+    // checks costs a new run; this reads only how the grouping moves.
+    const orders = historyOrders(board, corpus.truth, Number(args.orders));
+    const shares = linkShares(orders, (item) =>
+      coMembers(fixed.linkThreads(item, { vectorOf, checks }).subjects)
+    );
+    line("fix, over orders", shares, []);
     out.push({ name, today: a, fix: b, paired });
   }
   fs.writeFileSync(path.join(CACHE, "results", `app-path-${split}.json`), JSON.stringify(out));

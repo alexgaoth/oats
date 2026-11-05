@@ -5,6 +5,11 @@ same thing, measured on the AMI meeting corpus, and what changed because of it.
 The script is `scripts/link-eval.mjs`; every number below comes from its
 `report` command. Measured 2026-10-28 on main at b4ea7b7.
 
+**Round 2 (2026-11-05), at the end of this page, changes how to read round 1.** Round
+1 scored the cloud check pair by pair. On the board, the same answers chained into one
+subject, with a false-link rate of 0.90, not 0.25. Round 2 also finds that one order of
+a history is one draw of a board. Read "Round 2" before you rely on the numbers below.
+
 ## In brief
 
 - **The ground truth** is AMI's human topic labels. Two meetings are linked when
