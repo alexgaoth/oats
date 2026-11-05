@@ -122,3 +122,31 @@ excludes 0. It never delays a first card, and when it fails the card keeps its
 local verdict (rule 4 in CLAUDE.md).
 
 A method is frozen on tune and train, then scored once on test.
+
+## Checking the gold
+
+Read by hand before any branch ran: 393 errors from tuning meetings, each sorted
+into one class. The list is `docs/question-eval-audit.tsv`.
+
+| What was read                                | Items | Sorted                                                                                                                                                  |
+| -------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| False cards, app, plain view                 | 149   | 134 plain statements (90%), 5 real questions the gold lacks (3%), 6 fragments, 2 rhetorical, 1 tag, 1 backchannel                                       |
+| Missed questions, app, plain view            | 155   | 82 real misses with question words (53%), 19 real misses in statement form that need intonation (12%), 7 tags, 26 fragments, 20 statements the annotators filed as questions (13%), 1 backchannel |
+| Cards on a manual "?" that the gold rejects  | 89    | 18 real questions filed as another type (20%), 18 tags and checks, 12 echoes and backchannels, 33 fragments, 5 statements, 3 rhetorical                  |
+
+What this says:
+
+- **Precision is low for real.** 9 in 10 false cards hold no question. Nearly all
+  are a statement with "what", "how", "which" or "when" inside it ("that's what
+  I think", "when you press the button"), caught by `QUESTION_ANYWHERE`.
+- **Recall loses a clear class.** Half of the misses are questions that open with
+  an auxiliary or "any" ("Is that alright", "Does anybody know", "any more ideas"),
+  which the prefixes do not list. They need a "?" from recognition.
+- **The gold's noise is modest, and known.** If every real question the gold lacks
+  counted as right, plain precision would rise from 0.26 to about 0.28. If
+  annotators' statements and fragments left the gold, plain recall would rise from
+  0.55 to about 0.64. So noise costs about 0.03 of precision and 0.09 of recall,
+  and it costs every method the same.
+- **The types hide a real class.** "Would you like to go next?" and "Can I do my
+  thing?" are `sug` and `off`: they ask, and the gold does not count them. A
+  person would not mind those cards. Precision against the gold is a lower bound.

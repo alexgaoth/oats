@@ -8,6 +8,8 @@ import {
   overlap,
   prf,
   quoteSpan,
+  reachedRecognition,
+  recognizedTurns,
   roomTurns,
   scoreCards,
   spoken,
@@ -256,5 +258,46 @@ describe("turns and views", () => {
 
   test("overlap is shared words over the shorter side", () => {
     assert.deepEqual(overlap([1, 2], [2, 3, 4, 5]), { shared: 1, value: 0.5 });
+  });
+});
+
+describe("recognition against the manual words", () => {
+  const meeting = {
+    id: "M",
+    words: [
+      word(0, "Um", 10, 10.2),
+      word(1, "is", 10.2, 10.4),
+      word(2, "the", 10.4, 10.5),
+      word(3, "L_C_D_", 10.5, 11),
+      word(4, "too", 11, 11.2),
+      word(5, "big", 11.2, 11.5, null, "?"),
+      word(6, "Yes", 12, 12.2),
+    ],
+  };
+
+  test("a token names its manual word, and a wrong word names none", () => {
+    const [turn] = recognizedTurns(meeting, [
+      { start: 10, end: 11.6, text: "Is the LCD too bad?", ms: 200 },
+    ]);
+    assert.deepEqual(
+      turn.tokens.map((token) => token.word),
+      [1, 2, 3, 4, null]
+    );
+  });
+
+  test("a card appears when the segment closes and Whisper is done", () => {
+    const [turn] = recognizedTurns(meeting, [{ start: 10, end: 11.6, text: "Yes.", ms: 200 }]);
+    assert.equal(turn.at, 11600 + 300 + 200);
+  });
+
+  test("a segment with no text is no turn", () => {
+    assert.deepEqual(recognizedTurns(meeting, [{ start: 0, end: 1, text: " ", ms: 9 }]), []);
+  });
+
+  test("a question is reached when over half of its real words were heard", () => {
+    const question = { words: [0, 1, 2, 3] };
+    assert.equal(reachedRecognition(question, meeting, new Set([1])), false);
+    assert.equal(reachedRecognition(question, meeting, new Set([1, 2])), true);
+    assert.equal(reachedRecognition({ words: [0] }, meeting, new Set()), false);
   });
 });

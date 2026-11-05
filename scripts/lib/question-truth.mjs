@@ -381,6 +381,101 @@ export function quoteSpan(tokens, quote) {
   return null;
 }
 
+/** A token as the alignment compares it: lower case, letters and digits only. */
+export function alignKey(text) {
+  return spoken(text)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+/** The longest common subsequence of two key lists, as `[i, j]` pairs. */
+function commonSubsequence(a, b) {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const table = new Uint16Array(rows * cols);
+  for (let i = a.length - 1; i >= 0; i -= 1) {
+    for (let j = b.length - 1; j >= 0; j -= 1) {
+      table[i * cols + j] =
+        a[i] && a[i] === b[j]
+          ? table[(i + 1) * cols + j + 1] + 1
+          : Math.max(table[(i + 1) * cols + j], table[i * cols + j + 1]);
+    }
+  }
+  const pairs = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] && a[i] === b[j]) {
+      pairs.push([i, j]);
+      i += 1;
+      j += 1;
+    } else if (table[(i + 1) * cols + j] >= table[i * cols + j + 1]) i += 1;
+    else j += 1;
+  }
+  return pairs;
+}
+
+/** How long a recognized turn waits for its segment to close: the pause, less the kept tail. */
+export const CLOSE_MS = 300;
+
+/**
+ * A meeting as the app heard it (view c): `segments` from a replay, each `{
+ * start, end, text, ms }`. A segment's tokens are aligned to the manual words
+ * said in its time span, one second wider on each side, so a token that
+ * recognition got right names its spoken word. Any voice: a room is one
+ * stream. `at` is when the card could appear: the segment closes after the
+ * pause, and Whisper takes `ms`.
+ */
+export function recognizedTurns(meeting, segments, { marginS = 1, closeMs = CLOSE_MS } = {}) {
+  const words = meeting.words;
+  const mids = words.map((word) => (word.start + word.end) / 2);
+  const firstFrom = (time) => {
+    let lo = 0;
+    let hi = mids.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (mids[mid] < time) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  const turns = [];
+  segments.forEach((segment, index) => {
+    const parts = String(segment.text ?? "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return;
+    const from = firstFrom(segment.start - marginS);
+    const to = firstFrom(segment.end + marginS);
+    const near = words.slice(from, to);
+    const pairs = commonSubsequence(
+      parts.map(alignKey),
+      near.map((word) => alignKey(word.text))
+    );
+    const wordOf = new Map(pairs.map(([i, j]) => [i, near[j].index]));
+    turns.push({
+      id: `${meeting.id}-s${index + 1}`,
+      start: segment.start,
+      end: segment.end,
+      at: Math.round(segment.end * 1000) + closeMs + (segment.ms ?? 0),
+      tokens: parts.map((text, i) => ({ text, word: wordOf.get(i) ?? null })),
+    });
+  });
+  return turns;
+}
+
+/**
+ * Whether recognition kept a question at all: at least half of its words that
+ * are not fillers are in `heard`, the set of aligned word indices. A question
+ * below that is a recognition miss, not a detector miss.
+ */
+export function reachedRecognition(question, meeting, heard) {
+  const kept = question.words.filter((index) => !FILLER.test(meeting.words[index].text));
+  const counted = kept.length ? kept : question.words;
+  return counted.filter((index) => heard.has(index)).length / counted.length >= 0.5;
+}
+
 // --- Scores.
 
 /** Overlap coefficient: shared words over the shorter of the two. */
