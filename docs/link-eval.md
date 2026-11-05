@@ -965,9 +965,10 @@ Precision, and false links between unrelated meetings on the mixed histories:
 "As heard" is Apple Speech with every meeting recognized, on test meetings. Sizes 15 are
 one history with 8 unlinked pairs, so they are thin. No recognized history of 100 exists:
 those columns are manual. Manual, 100 needs tuning meetings too, because the test series
-hold 48. ICSI is manual text, and pairs inside one ICSI group have no gold, so they are
-left out of these rates. Precision on mixed histories is low because AMI's across-series
-unlinked pairs are a larger share there.
+hold 48. ICSI is manual text. Pairs inside one ICSI group have no gold, so they are left out of
+these rates. Pairs across ICSI groups count as unlinked, but the groups share an institute
+and a research area, so some of those links may be real: precision on the mixed columns
+is a floor, and it is why they read low.
 
 - **Nothing clears the bar, at any size.** No method reaches precision 0.90, recall 0.50
   and false links 0.25 across sizes. The one row that does, no order at 0.8 as heard at 15,
