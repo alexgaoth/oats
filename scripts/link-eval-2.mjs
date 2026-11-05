@@ -22,7 +22,7 @@
 // The whole path a cloud user gets:
 //   app-path       the app's candidates, and the check on them
 //   app-path-score what the board draws, on tuning pairs
-//   app-path-final today against the fix (`--links-module`), on test pairs
+//   app-path-final the board before #166 (`--links-module`) against the app's
 //
 // What a person reads, and what recognition costs:
 //   labels              each board's reason on a link, graded blind
@@ -1698,7 +1698,6 @@ async function appPathScore() {
         `${name} ${label.padEnd(24)}: asked ${asked}, linked ${linkedCount}; P ${f(r.precision)} R ${f(r.recall)} FL ${f(r.falseLinks)} mixed ${mixed.filter((pair) => linked.has(pair.key)).length}/${mixed.length} ns-within ${within.filter((pair) => linked.has(pair.key)).length}/${within.length}; subjects ${sizes.slice(0, 8).join(" ")} (${subjects.length} in all)`
       );
     };
-    report("today", corpus.links.linkThreads(board, { vectorOf, checks }).subjects);
     // Only what the model said: each link is an edge on a subject it named, and
     // subjects are one when their names are alike. No topic carries a link on.
     const { createEmbedder } = await import(
@@ -1713,23 +1712,24 @@ async function appPathScore() {
     const names = [...new Set(pairsOfLinks.map((item) => item.subject))];
     const embedded = await embedder.embed(names);
     const vectors = new Map(names.map((subject, index) => [subject, embedded[index]]));
-    // The app's fixed code, from its own worktree (`--links-module`): every
-    // conversation summarized by this provider, as the run assumes.
+    // `--links-module`: conversationLinks.mjs as it was before #166.
     if (args["links-module"]) {
-      const fixed = await import(pathToFileURL(path.resolve(args["links-module"])).href);
-      const onRoute = board.map((item) => ({ ...item, summaryRoute: "providers:same" }));
-      const both = (text) => vectors.get(text) ?? vectorOf(text);
-      for (const subjectThreshold of [0.6, 0.65, 0.7, 0.75, 0.8]) {
-        report(
-          `the fix, ${subjectThreshold}`,
-          fixed.linkThreads(onRoute, { vectorOf: both, checks, subjectThreshold }).subjects
-        );
-      }
+      const before = await import(pathToFileURL(path.resolve(args["links-module"])).href);
+      report("before #166", before.linkThreads(board, { vectorOf, checks }).subjects);
+    }
+    // The app's code: every conversation summarized by this provider, as the run assumes.
+    const onRoute = board.map((item) => ({ ...item, summaryRoute: "providers:same" }));
+    const both = (text) => vectors.get(text) ?? vectorOf(text);
+    for (const subjectThreshold of [0.6, 0.65, 0.7, 0.75, 0.8]) {
       report(
-        "the fix, routes not known",
-        fixed.linkThreads(board, { vectorOf: both, checks }).subjects
+        `the app, ${subjectThreshold}`,
+        corpus.links.linkThreads(onRoute, { vectorOf: both, checks, subjectThreshold }).subjects
       );
     }
+    report(
+      "the app, routes not known",
+      corpus.links.linkThreads(board, { vectorOf: both, checks }).subjects
+    );
     for (const threshold of [0.6, 0.7, 0.8, 0.9, 1.01]) {
       const groups = [];
       for (const item of pairsOfLinks) {
@@ -1763,7 +1763,10 @@ async function appPathScore() {
   }
 }
 
-/** The test read of the app's path: today's board against the fix, with paired intervals. */
+/**
+ * The test read of the app's path: the board before #166 (`--links-module`, the
+ * file as it was at f7bd563) against the app's, with paired intervals.
+ */
 async function appPathFinal() {
   const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
   const { readStore } = await import(
@@ -1772,7 +1775,7 @@ async function appPathFinal() {
   const { createEmbedder } = await import(
     pathToFileURL(path.join(ROOT, "scripts/lib/minilm.mjs")).href
   );
-  const fixed = await import(pathToFileURL(path.resolve(args["links-module"])).href);
+  const before = await import(pathToFileURL(path.resolve(args["links-module"])).href);
   const corpus = await loadCorpus();
   const store = readStore(path.join(CACHE, "embed"), "minilm");
   const board = corpus.meetings.map((meeting) => ({
@@ -1805,8 +1808,8 @@ async function appPathFinal() {
     const embedded = await embedder.embed(subjects);
     const vectors = new Map(subjects.map((text, index) => [text, embedded[index]]));
     const vectorOf = (text) => vectors.get(text) ?? store.get(text);
-    const drawnToday = corpus.links.linkThreads(board, { vectorOf: store.get, checks }).subjects;
-    const drawnFix = fixed.linkThreads(board, { vectorOf, checks }).subjects;
+    const drawnToday = before.linkThreads(board, { vectorOf: store.get, checks }).subjects;
+    const drawnFix = corpus.links.linkThreads(board, { vectorOf, checks }).subjects;
     const today = coMembers(drawnToday);
     const fix = coMembers(drawnFix);
     const line = (label, linked, drawn) => {
@@ -1835,7 +1838,7 @@ async function appPathFinal() {
     // checks costs a new run; this reads only how the grouping moves.
     const orders = historyOrders(board, corpus.truth, Number(args.orders));
     const shares = linkShares(orders, (item) =>
-      coMembers(fixed.linkThreads(item, { vectorOf, checks }).subjects)
+      coMembers(corpus.links.linkThreads(item, { vectorOf, checks }).subjects)
     );
     line("fix, over orders", shares, []);
     out.push({ name, today: a, fix: b, paired });
@@ -1890,7 +1893,7 @@ async function labels() {
   const { ask, ledgerTotal, bootstrapMean } = await load("scripts/lib/fast-models.mjs");
   const { readStore } = await load("scripts/lib/embed-store.mjs");
   const { createEmbedder } = await load("scripts/lib/minilm.mjs");
-  const fixed = await import(pathToFileURL(path.resolve(args["links-module"])).href);
+  const before = await import(pathToFileURL(path.resolve(args["links-module"])).href);
   const corpus = await loadCorpus();
   const store = readStore(path.join(CACHE, "embed"), "minilm");
   const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
@@ -1926,10 +1929,10 @@ async function labels() {
     const vectorOf = (text) => vectors.get(text) ?? store.get(text);
     const short = name.split("_").slice(0, 2).join(" ");
     boards[`${short}, today`] = coMembers(
-      corpus.links.linkThreads(boardOn("model"), { vectorOf: store.get, checks }).subjects
+      before.linkThreads(boardOn("model"), { vectorOf: store.get, checks }).subjects
     );
     boards[`${short}, fixed`] = coMembers(
-      fixed.linkThreads(boardOn("model"), { vectorOf, checks }).subjects
+      corpus.links.linkThreads(boardOn("model"), { vectorOf, checks }).subjects
     );
   }
   const names = Object.keys(boards);
@@ -1970,7 +1973,7 @@ async function labels() {
           .map((label) => ({ label, key: random() }))
           .sort((a, b) => a.key - b.key)
           .map((item) => item.label);
-        const file = path.join(dir, `${slug}~${pair.key.replace("|", "_")}.json`);
+        const file = path.join(dir, `${slug}~${pair.key.replaceAll("|", "_")}.json`);
         let stored = readJson(file);
         if (!stored || stored.shown.slice().sort().join("\n") !== shown.slice().sort().join("\n")) {
           const user = [
