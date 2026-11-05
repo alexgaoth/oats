@@ -2,10 +2,38 @@
 // Round 2 of the link benchmark (docs/link-eval.md, "Round 2"). Reads what
 // `scripts/link-eval.mjs` cached (snapshots, names, gists) and adds to it.
 //
-//   node scripts/link-eval-2.mjs texts --out texts.json     every text to embed
+// Models on this computer, on tuning pairs:
+//   texts          every text to embed, for `lib/embed_texts.py`
+//   screen         each model's pair AUC, and the board it draws in one order
+//   curve          the board over orders of the history, and clustered with no order
+//   explore        centring on the history, and name vectors mixed into the topic's
+//   mix-curve      names blended into the clustering
+//   rerank-texts   the texts a cross-encoder reads, for `lib/rerank_pairs.py`
+//   hybrid         every signal in one logistic model, with series folds
+//
+// The test read, once, after the methods are named in the doc:
+//   final-boards   named board methods against main, with paired intervals
+//
+// The check by a writing model, on round 1's fixed sample:
+//   linker         a model with the app's prompt, or more per conversation; also
+//                  a GGUF on this computer, Apple's system model, or `--replay`
+//   cloud          the runs' scores on one side of the split, paired with the first
+//
+// The whole path a cloud user gets:
+//   app-path       the app's candidates, and the check on them
+//   app-path-score what the board draws, on tuning pairs
+//   app-path-final today against the fix (`--links-module`), on test pairs
+//
+// What a person reads, and what recognition costs:
+//   labels              each board's reason on a link, graded blind
+//   relations           typed relations, by two judges
+//   recognition-texts   recognized turns, to embed with another model
+//   recognition-boards  every pair that touches a recognized meeting, against manual
 //
 // Nothing of Oats' users is read or sent. The bar and the split were written
-// before these runs; `--split tune` reads tuning pairs only.
+// before these runs; `--split tune` reads tuning pairs only, with test meetings
+// off the board. Keys come from the environment only, and spend goes to the ledger
+// of `lib/fast-models.mjs` (FM_LEDGER, FM_BUDGET_USD).
 
 import fs from "node:fs";
 import os from "node:os";
