@@ -729,6 +729,21 @@ const REFINE_SCHEMA = {
   },
 };
 
+/** The app's prompt with the question it asks changed, and nothing else. */
+function asQuestionPrompt(prompt) {
+  return prompt
+    .replace(
+      "Assess whether the QUESTION is a factual question and whether the later context answers it.",
+      'Assess whether the line marked QUESTION really asks something, and whether the later context answers it. It comes from speech recognition, so words can be wrong and its question mark can be missing. A statement, a bare check such as "right?" or an aside such as "what\'s it called" asks nothing.'
+    )
+    .replace('"isFactualQuestion":boolean', '"isQuestion":boolean')
+    .replace('"not_factual"', '"not_a_question"')
+    .replace(
+      "Confidence must be between 0 and 1.",
+      'Use "" for searchQuery when there is nothing to search. Confidence must be between 0 and 1.'
+    );
+}
+
 function refinePrompt(before, line, after) {
   const parts = [];
   if (before) parts.push(`BEFORE: ${before}`);
@@ -781,7 +796,7 @@ async function refine() {
         .map((name) => `rec:${name}`);
   const detect = DETECTORS[args.detector];
   const spec = args.spec;
-  const appPrompt = args.prompt === "app" || args.prompt === "app-loose";
+  const appPrompt = args.prompt.startsWith("app");
   const system = appPrompt ? APP_SYSTEM : REFINE_SYSTEM[args.prompt];
   const cacheFile = path.join(
     process.env.HOME,
@@ -809,11 +824,16 @@ async function refine() {
         const at = index.get(card.id);
         const line = card.quote;
         const next = at + 1 < turns.length ? textOf(turns[at + 1].tokens) : "";
-        const user = appPrompt
+        const asked = appPrompt
           ? aide.buildClassifierPrompt({ id: card.id }, [
               { id: card.id, text: textOf(turns[at].tokens) },
               ...(next ? [{ id: "next", text: next }] : []),
             ])
+          : "";
+        const user = appPrompt
+          ? args.prompt === "app-question"
+            ? asQuestionPrompt(asked)
+            : asked
           : refinePrompt(at > 0 ? textOf(turns[at - 1].tokens) : "", line, next);
         const key = crypto.createHash("sha1").update(`${args.prompt}\n${user}`).digest("hex");
         const item = { key, user, card };
@@ -836,8 +856,19 @@ async function refine() {
   // `--prompt app` is the app's own classifier: its prompt, its strict JSON, and
   // its rule that a confident "not factual" withdraws the card. `app-loose` is the
   // same with the JSON read loosely: what the withdraw rule would do if the parser
-  // took a verdict with an empty search query.
+  // took a verdict with an empty search query. `app-question` is the candidate fix:
+  // the same contract, asking whether the line is a question at all.
   const parse = (text) => {
+    if (args.prompt === "app-question") {
+      const match = /\{[\s\S]*\}/.exec(String(text ?? ""));
+      if (!match) return null;
+      try {
+        const verdict = JSON.parse(match[0]);
+        return !(verdict.isQuestion === false && verdict.confidence >= 0.75);
+      } catch {
+        return null;
+      }
+    }
     if (args.prompt === "app-loose") {
       const match = /\{[\s\S]*\}/.exec(String(text ?? ""));
       if (!match) return null;

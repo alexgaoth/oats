@@ -269,6 +269,12 @@ nothing was tuned on Parakeet.
 On the broad set the order is the same: small.en quiet app 0.329, rules 0.465,
 classifier 0.477; small.en steady app 0.169, rules 0.248, classifier 0.269.
 
+Two of S's runs read a whole recording after it stops, so they cannot raise a card
+live, and they stay out of the table: parakeet-ultra-pass2 has rules F1 0.555 quiet
+and 0.392 steady, with 28 and 23 false cards an hour, and apple-whole 0.475 and 0.322.
+Long segments carry more context, so a second look at Finish could catch more, if
+that is ever wanted.
+
 **A miss is mostly recognition's.** In the quiet room small.en loses 83 of 263
 questions outright. Of the 180 it keeps, the app caught 67%. In steady sound it
 loses 186 of 263, and of the 77 it keeps the app caught 51%. Recognition is the
@@ -423,6 +429,15 @@ loosely, the same answers withdraw 182 of the 382 cards, 69 of them right: recal
 to 0.292, F1 -0.099 [-0.141, -0.058]. **Do not fix the parser alone.** "Is it factual?"
 is the wrong question for a card every question should get. If the model is to withdraw
 anything, the prompt must ask "is this a question?", as `v1` does here.
+
+**Follow-up, not done: the verdict asks "is this a question?".** The fix would change
+the prompt and let the parser take an empty search query, together. The candidate is
+`--prompt app-question`: the app's contract with that one question changed. On tuning
+text with gpt-6-luna on the rule cards it gains +0.010 [-0.021, 0.039] on small.en and
++0.026 [0.013, 0.042] on gpt-transcribe, under the 0.05 bar, and a smaller model will
+not do better, so it has no PR. The verdict's call does no harm today and earns
+nothing: its time on a local model is the cost. Leave the parser alone until this is
+taken up.
 
 ### The operating point
 
