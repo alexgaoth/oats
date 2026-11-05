@@ -14,6 +14,8 @@
  * Variants
  *   d0, d1   the on-device trackers alone, no model: d0 the tracker before
  *            #123 (`--tracker`, from bff2230), d1 main's. Free baselines.
+ *   d2       main's tracker with the change detector (`helpers/topicChange.mjs`,
+ *            `--vectors`): its settings in `{"detector": {...}}` in `--options`.
  *   v0, v1   the same trackers plus the app's own topic namer
  *            (`helpers/topicNamer.mjs`, #121) asking `--model`.
  *   v2       the model places new lines every few seconds (TurnsLoop).
@@ -62,7 +64,9 @@ import {
   mean,
   parseSpec,
   percentile,
+  startFmBridge,
   startLocalServer,
+  stopFmBridge,
   stopLocalServers,
 } from "./lib/fast-models.mjs";
 import {
@@ -72,6 +76,8 @@ import {
   annotationsDir,
   assignmentOf,
   humanSegments,
+  icsiMeetingIds,
+  icsiReference,
   segmentExcerpt,
   referenceLabels,
   segmentationScores,
@@ -91,6 +97,8 @@ const { values: args } = parseArgs({
     model: { type: "string" },
     ami: { type: "string" },
     asr: { type: "string" },
+    replay: { type: "string" },
+    icsi: { type: "string" },
     transcript: { type: "string" },
     set: { type: "string", default: "eval24" },
     meetings: { type: "string" },
@@ -101,6 +109,7 @@ const { values: args } = parseArgs({
     json: { type: "string" },
     "local-model": { type: "string" },
     "llama-server": { type: "string" },
+    "fm-bridge": { type: "string" },
     "local-port": { type: "string", default: "18451" },
     "local-context": { type: "string", default: "8192" },
     "show-labels": { type: "boolean", default: false },
@@ -111,8 +120,8 @@ const { values: args } = parseArgs({
 });
 
 const VARIANT = args.variant;
-if (!["d0", "d1", "v0", "v1", "v2", "v3", "v4", "v4app", "vf"].includes(VARIANT)) {
-  console.error("--variant d0|d1|v0|v1|v2|v3|v4|v4app|vf");
+if (!["d0", "d1", "d2", "v0", "v1", "v2", "v3", "v4", "v4app", "vf"].includes(VARIANT)) {
+  console.error("--variant d0|d1|d2|v0|v1|v2|v3|v4|v4app|vf");
   process.exit(2);
 }
 const SPEC = args.model ?? null;
@@ -121,6 +130,16 @@ if (!VARIANT.startsWith("d") && !SPEC) {
   process.exit(2);
 }
 const OPTIONS = JSON.parse(args.options);
+// `changeModel`: a change detector model from a file, for a run on meetings the
+// shipped model was trained on.
+if (OPTIONS.changeModel) {
+  const { CHANGE_MODEL } = await import(pathToFileURL(path.resolve(OPTIONS.changeModel)).href);
+  if (OPTIONS.detector) OPTIONS.detector = { ...OPTIONS.detector, model: CHANGE_MODEL };
+  else OPTIONS.detector = { model: CHANGE_MODEL };
+  if (OPTIONS.proposerDetector) {
+    OPTIONS.proposerDetector = { ...OPTIONS.proposerDetector, model: CHANGE_MODEL };
+  }
+}
 const LABEL = args.label ?? `${VARIANT}${SPEC ? `:${SPEC}` : ""}`;
 
 // The on-device tracker: main's (#123 since 0cf56b9), or another by file. V0 is
@@ -164,12 +183,31 @@ function loadConversations() {
     const value = JSON.parse(fs.readFileSync(args.transcript, "utf8"));
     return [storedTranscript(path.basename(args.transcript, ".json"), value)];
   }
+  if (args.icsi) {
+    // Outside AMI: only models on this computer may read it.
+    if (SPEC && !["local", "fm"].includes(parseSpec(SPEC).provider)) {
+      console.error("ICSI is read by models on this computer only: the keys are for AMI.");
+      process.exit(2);
+    }
+    const ids = args.meetings ? args.meetings.split(",") : icsiMeetingIds(args.icsi);
+    return ids.map((id) => icsiReference(args.icsi, id));
+  }
   if (!args.ami) {
     console.error("--ami <dir> (with --asr for recognition output) or --transcript <file>");
     process.exit(2);
   }
   const dir = annotationsDir(args.ami);
   const names = topicNames(dir);
+  if (args.replay) {
+    // Shared recognition output: one <meeting>.json a meeting, from track S.
+    const wanted = args.meetings ? new Set(args.meetings.split(",")) : null;
+    return fs
+      .readdirSync(args.replay)
+      .filter((file) => file.endsWith(".json"))
+      .map((file) => JSON.parse(fs.readFileSync(path.join(args.replay, file), "utf8")))
+      .filter((recording) => !wanted || wanted.has(recording.meeting))
+      .map((recording) => amiRecognized(dir, recording.meeting, names, recording.segments));
+  }
   if (args.asr) {
     const replay = JSON.parse(fs.readFileSync(args.asr, "utf8"));
     const wanted = args.meetings ? new Set(args.meetings.split(",")) : null;
@@ -348,6 +386,20 @@ function modelNamed(node) {
   return !node.deviceNamed;
 }
 
+/** A proposer for LiveTopicLoop that reads the change detector, with each turn's times. */
+function detectorProposer(clock, utterances, detector) {
+  const tracker = new ConversationTopicTracker({ now: clock.now, detector });
+  const byId = new Map(utterances.map((utterance) => [String(utterance.id), utterance]));
+  return {
+    onUtterance(line) {
+      const utterance = byId.get(String(line.id));
+      tracker.onUtterance({ ...line, start: utterance?.start, end: utterance?.end });
+    },
+    snapshot: (...args) => tracker.snapshot(...args),
+    addVectors: (vectors) => tracker.addVectors(vectors),
+  };
+}
+
 async function runConversation(conversation) {
   const clock = new VirtualClock();
   const calls = [];
@@ -360,9 +412,10 @@ async function runConversation(conversation) {
   let variantStats = null;
 
   // Each variant shows a snapshot; `display()` reads what the flow card shows now.
-  if (VARIANT === "d0" || VARIANT === "d1" || VARIANT === "v0" || VARIANT === "v1") {
+  if (["d0", "d1", "d2", "v0", "v1"].includes(VARIANT)) {
     const tracker = new ConversationTopicTracker({
       now: clock.now,
+      ...(VARIANT === "d2" || OPTIONS.deviceDetector ? { detector: OPTIONS.detector ?? true } : {}),
       ...(OPTIONS.trackerOptions ?? {}),
     });
     const namer =
@@ -376,7 +429,13 @@ async function runConversation(conversation) {
         : null;
     display = {
       async onUtterance(utterance) {
-        tracker.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+        tracker.onUtterance({
+          id: utterance.id,
+          text: utterance.text,
+          at: utterance.at,
+          start: utterance.start,
+          end: utterance.end,
+        });
         if (embedder && typeof tracker.addVectors === "function") {
           // As the feeder does (topicVectors.mjs), with no wait: the turn and the phrases asked.
           const phrases = tracker.phrasesToEmbed(47);
@@ -416,6 +475,8 @@ async function runConversation(conversation) {
     // Finish, with the loop's names carried over and #121's final pass on top.
     const device = new ConversationTopicTracker({
       now: clock.now,
+      // `deviceDetector`: the record's cut comes from the change detector.
+      ...(OPTIONS.deviceDetector ? { detector: OPTIONS.detector ?? true } : {}),
       ...(OPTIONS.trackerOptions ?? {}),
     });
     const loop = new LiveTopicLoop({
@@ -427,6 +488,10 @@ async function runConversation(conversation) {
       now: clock.now,
       setTimer: clock.setTimer,
       clearTimer: clock.clearTimer,
+      // `proposerDetector`: the change detector proposes, at its own settings.
+      ...(OPTIONS.proposerDetector
+        ? { proposer: detectorProposer(clock, utterances, OPTIONS.proposerDetector) }
+        : {}),
       ...(OPTIONS.loop ?? {}),
     });
     const namer = new TopicNamer({
@@ -438,7 +503,14 @@ async function runConversation(conversation) {
     });
     display = {
       async onUtterance(utterance) {
-        device.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+        const turn = {
+          id: utterance.id,
+          text: utterance.text,
+          at: utterance.at,
+          start: utterance.start,
+          end: utterance.end,
+        };
+        device.onUtterance(turn);
         if (embedder && typeof device.addVectors === "function") {
           const phrases = device.phrasesToEmbed(47);
           const vectors = await embedder.embed([
@@ -451,7 +523,14 @@ async function runConversation(conversation) {
           });
         }
         segments.push({ id: utterance.id, text: utterance.text, timestamp: utterance.at });
-        loop.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+        loop.onUtterance(turn);
+        if (embedder && OPTIONS.proposerDetector) {
+          const [vector] = await embedder.embed([utterance.text]);
+          // The app's loop has no vectors for its proposer: this is the replay's.
+          loop.proposer.addVectors({ utterances: [[utterance.id, vector]] });
+          loop._propose();
+          loop._schedule();
+        }
       },
       snapshot() {
         const onDevice = device.snapshot(clock.time);
@@ -990,6 +1069,14 @@ function printSummary(summary) {
 
 const conversations = loadConversations();
 const isLocal = SPEC && parseSpec(SPEC).provider === "local";
+const isSystem = SPEC && parseSpec(SPEC).provider === "fm";
+if (isSystem) {
+  if (!args["fm-bridge"]) {
+    console.error("--fm-bridge <binary> is needed for the system model");
+    process.exit(2);
+  }
+  await startFmBridge(args["fm-bridge"]);
+}
 if (isLocal) {
   if (!args["local-model"] || !args["llama-server"]) {
     console.error("--local-model <gguf> and --llama-server <binary> are needed for a local model");
@@ -1004,7 +1091,7 @@ if (isLocal) {
 }
 // A model on this computer answers one request at a time: one conversation at a
 // time keeps its latencies honest.
-const concurrency = isLocal ? 1 : Number(args.concurrency);
+const concurrency = isLocal || isSystem ? 1 : Number(args.concurrency);
 let results;
 try {
   results = await pool(conversations, concurrency, async (conversation) => {
@@ -1020,6 +1107,7 @@ try {
   });
 } finally {
   if (isLocal) stopLocalServers();
+  if (isSystem) stopFmBridge();
 }
 
 const summary = summarize(results);

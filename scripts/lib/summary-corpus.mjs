@@ -289,3 +289,94 @@ export function judgeTranscript(ami, meeting) {
   const lines = turns.map((turn) => `${turn.speaker}: ${turn.words.join(" ")}`).join("\n");
   return legend ? `(Speakers: ${legend}.)\n${lines}` : lines;
 }
+
+// --- What the annotators wrote about each part of a meeting.
+
+/**
+ * The abstractive summary's sentences with the times they rest on: AMI's
+ * `summlink` files tie each sentence of the summary to the dialogue acts of the
+ * extractive summary. `[{ id, section, text, spans: [{ start, end }] }]`, ids as
+ * `humanSummary` gives them; empty for a meeting with no links.
+ */
+export function linkedSummary(ami, meeting) {
+  const dir = annotationsDir(ami);
+  const linkFile = path.join(dir, "extractive", `${meeting}.summlink.xml`);
+  if (!fs.existsSync(linkFile)) return [];
+  const xml = fs.readFileSync(path.join(dir, "abstractive", `${meeting}.abssumm.xml`), "latin1");
+  const sentences = new Map();
+  for (const [section, prefix] of [
+    ["abstract", "A"],
+    ["decisions", "D"],
+    ["actions", "T"],
+    ["problems", "P"],
+  ]) {
+    let count = 0;
+    for (const block of xml.matchAll(
+      new RegExp(`<${section}\\b[^>]*>([\\s\\S]*?)</${section}>`, "g")
+    )) {
+      for (const match of block[1].matchAll(
+        /<sentence\b[^>]*nite:id="([^"]+)"[^>]*>([\s\S]*?)<\/sentence>/g
+      )) {
+        const text = decode(match[2]);
+        if (!text || /^(NA|N\/A|none)\.?$/i.test(text)) continue;
+        count += 1;
+        sentences.set(match[1], { id: `${prefix}${count}`, section, text, spans: [] });
+      }
+    }
+  }
+  const wordTime = new Map();
+  for (const file of fs.readdirSync(path.join(dir, "words"))) {
+    if (!file.startsWith(`${meeting}.`)) continue;
+    const words = fs.readFileSync(path.join(dir, "words", file), "latin1");
+    for (const match of words.matchAll(
+      /nite:id="([^"]+)"[^>]*?starttime="([\d.]+)"[^>]*?endtime="([\d.]+)"/g
+    )) {
+      wordTime.set(match[1], { start: Number(match[2]), end: Number(match[3]) });
+    }
+  }
+  const actSpan = new Map();
+  for (const file of fs.readdirSync(path.join(dir, "dialogueActs"))) {
+    if (!file.startsWith(`${meeting}.`) || !file.endsWith("dialog-act.xml")) continue;
+    const acts = fs.readFileSync(path.join(dir, "dialogueActs", file), "latin1");
+    for (const match of acts.matchAll(/<dact\b[^>]*nite:id="([^"]+)"[^>]*>([\s\S]*?)<\/dact>/g)) {
+      const child = /words\.xml#id\(([^)]+)\)(?:\.\.id\(([^)]+)\))?/.exec(match[2]);
+      if (!child) continue;
+      const first = wordTime.get(child[1]);
+      const last = wordTime.get(child[2] || child[1]);
+      if (first && last) actSpan.set(match[1], { start: first.start, end: last.end });
+    }
+  }
+  const links = fs.readFileSync(linkFile, "latin1");
+  for (const match of links.matchAll(/<summlink\b[^>]*>([\s\S]*?)<\/summlink>/g)) {
+    const act = /role="extractive"\s+href="[^#"]*#id\(([^)]+)\)"/.exec(match[1]);
+    const sentence = /role="abstractive"\s+href="[^#"]*#id\(([^)]+)\)"/.exec(match[1]);
+    const span = act && actSpan.get(act[1]);
+    const target = sentence && sentences.get(sentence[1]);
+    if (span && target) target.spans.push(span);
+  }
+  return [...sentences.values()].filter((sentence) => sentence.spans.length);
+}
+
+/** The manual transcript of one stretch for the judge, with speakers, as `judgeTranscript`. */
+export function spanTranscript(ami, meeting, start, end) {
+  const dir = annotationsDir(ami);
+  const { words } = loadAmiWords(dir, meeting, topicNames(dir));
+  const roles = speakerRoles(ami, meeting);
+  const turns = [];
+  for (const word of words) {
+    if (word.start < start - 0.25 || word.start > end + 0.25) continue;
+    const last = turns.at(-1);
+    if (last && last.speaker === word.speaker && word.start - last.end < 3) {
+      last.words.push(word.text);
+      last.end = Math.max(last.end, word.end);
+    } else {
+      turns.push({ speaker: word.speaker, end: word.end, words: [word.text] });
+    }
+  }
+  return turns
+    .map((turn) => {
+      const role = roles[turn.speaker];
+      return `${turn.speaker}${role ? ` (${role})` : ""}: ${turn.words.join(" ")}`;
+    })
+    .join("\n");
+}

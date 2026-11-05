@@ -95,7 +95,7 @@ export const PRICES = {
 /** The price row for a model id, ignoring a Bedrock cross-region prefix and the options. */
 export function priceOf(spec) {
   const { provider, model } = parseSpec(spec);
-  if (provider === "local") return { input: 0, cached: 0, output: 0 };
+  if (provider === "local" || provider === "fm") return { input: 0, cached: 0, output: 0 };
   const bare = provider === "bedrock" ? model.replace(/^(us|eu|apac|global)\./, "") : model;
   return PRICES[`${provider}:${bare}`] ?? null;
 }
@@ -159,7 +159,7 @@ export function ledgerTotal() {
 }
 
 function checkBudget(spec) {
-  if (parseSpec(spec).provider === "local") return;
+  if (["local", "fm"].includes(parseSpec(spec).provider)) return;
   // A request with no price would be counted as free and slip past the budget.
   if (!priceOf(spec)) throw new BudgetError(`No price for ${spec}: add it to PRICES first`);
   if (spentAtStart === null) spentAtStart = ledgerTotal();
@@ -420,6 +420,108 @@ async function callLocal({ model, options }, { system, user, maxTokens, schema, 
   };
 }
 
+// Apple's on-device system model (FoundationModels, macOS 26 and later): no
+// download, no key. Through `fm-bridge serve`, one JSON line in and one out, one
+// request at a time. The bridge's schema is a subset of JSON Schema: a nullable
+// string becomes a string, and an empty string reads as null.
+
+let fmBridge = null;
+
+/** Starts the bridge. Run the whole process under the GPU lock. */
+export async function startFmBridge(binary) {
+  const { spawn } = await import("node:child_process");
+  const child = spawn(binary, ["serve"], { stdio: ["pipe", "pipe", "ignore"] });
+  const waiting = new Map();
+  let buffer = "";
+  child.stdout.on("data", (chunk) => {
+    buffer += chunk;
+    for (;;) {
+      const end = buffer.indexOf("\n");
+      if (end < 0) break;
+      const line = buffer.slice(0, end);
+      buffer = buffer.slice(end + 1);
+      if (!line.trim()) continue;
+      let reply = null;
+      try {
+        reply = JSON.parse(line);
+      } catch {}
+      const done = reply && waiting.get(String(reply.id));
+      if (done) {
+        waiting.delete(String(reply.id));
+        done(reply);
+      }
+    }
+  });
+  fmBridge = { child, waiting, queue: Promise.resolve(), next: 1 };
+  return child;
+}
+
+export function stopFmBridge() {
+  try {
+    fmBridge?.child.kill("SIGTERM");
+  } catch {}
+  fmBridge = null;
+}
+
+function fmSchema(schema) {
+  if (schema?.anyOf) return fmSchema(schema.anyOf.find((part) => part.type !== "null"));
+  if (schema?.type === "object") {
+    const properties = {};
+    for (const [key, value] of Object.entries(schema.properties ?? {}))
+      properties[key] = fmSchema(value);
+    return {
+      type: "object",
+      properties,
+      required: schema.required ?? Object.keys(properties),
+      order: Object.keys(properties),
+    };
+  }
+  if (schema?.type === "array") return { ...schema, items: fmSchema(schema.items) };
+  return schema;
+}
+
+async function callFm({ options }, { system, user, maxTokens, schema, timeoutMs }) {
+  if (!fmBridge) throw new Error("No fm-bridge: call startFmBridge first");
+  const id = String(fmBridge.next++);
+  const request = {
+    id,
+    system,
+    prompt: user,
+    temperature: 0,
+    maxTokens,
+    ...(options.includes("greedy") ? { greedy: true } : {}),
+    ...(schema && !options.includes("noschema") ? { schema: fmSchema(schema.schema) } : {}),
+  };
+  const run = fmBridge.queue.then(
+    () =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          fmBridge.waiting.delete(id);
+          const error = new Error(`timed out after ${timeoutMs} ms`);
+          error.status = "timeout";
+          reject(error);
+        }, timeoutMs);
+        fmBridge.waiting.set(id, (reply) => {
+          clearTimeout(timer);
+          resolve(reply);
+        });
+        fmBridge.child.stdin.write(`${JSON.stringify(request)}\n`);
+      })
+  );
+  fmBridge.queue = run.catch(() => undefined);
+  const reply = await run;
+  if (!reply.ok) {
+    const error = new Error(`fm ${reply.error}: ${String(reply.detail ?? "").slice(0, 160)}`);
+    error.status = reply.error;
+    throw error;
+  }
+  return {
+    text: String(reply.text ?? "").trim(),
+    usage: { input: reply.inputTokens ?? 0, cached: 0, output: 0, reasoning: 0 },
+    stop: "stop",
+  };
+}
+
 /**
  * One request. Resolves to `{ ok, text, json, usage, cost, ms, error }`; it
  * never throws for a failed or malformed answer (those are measured), only for
@@ -436,6 +538,7 @@ export async function ask(spec, request) {
     anthropic: callAnthropic,
     bedrock: callBedrock,
     local: callLocal,
+    fm: callFm,
   }[parsed.provider];
   if (!call) throw new Error(`Unknown provider ${parsed.provider}`);
   const full = { maxTokens: 400, timeoutMs: 30_000, attempts: 2, ...request };
@@ -547,7 +650,7 @@ export function extractJson(text) {
  */
 export async function startLocalServer(
   name,
-  { binary, model, port, contextSize = 8192, threads = 4 }
+  { binary, model, port, contextSize = 8192, threads = Number(process.env.FM_LOCAL_THREADS || 4) }
 ) {
   const { spawn } = await import("node:child_process");
   const args = [
@@ -562,8 +665,8 @@ export async function startLocalServer(
     "--ctx-size",
     String(contextSize),
     "--jinja",
-    "--n-gpu-layers",
-    "99",
+    // FM_LOCAL_CPU=1: no GPU at all, for accuracy runs while the GPU is taken. Times do not count.
+    ...(process.env.FM_LOCAL_CPU ? ["--n-gpu-layers", "0", "--device", "none"] : ["--n-gpu-layers", "99"]),
   ];
   const child = spawn(binary, args, {
     stdio: ["ignore", "pipe", "pipe"],

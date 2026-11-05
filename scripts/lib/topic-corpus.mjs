@@ -56,8 +56,8 @@ export function topicNames(dir) {
   return names;
 }
 
-function speakerElements(dir, meeting, speaker) {
-  const xml = fs.readFileSync(path.join(dir, "words", `${meeting}.${speaker}.words.xml`), "latin1");
+function speakerElements(dir, meeting, speaker, folder = "words") {
+  const xml = fs.readFileSync(path.join(dir, folder, `${meeting}.${speaker}.words.xml`), "latin1");
   const elements = [];
   const pattern = /<([a-zA-Z]+)\b([^>]*?)(\/>|>([^<]*)<\/\1>)/g;
   let lastTime = 0;
@@ -74,7 +74,8 @@ function speakerElements(dir, meeting, speaker) {
       start: Number.isFinite(start) ? start : lastTime,
       end: Number.isFinite(end) ? end : Number.isFinite(start) ? start : lastTime,
       text: match[1] === "w" ? decodeXml(match[4] ?? "").trim() : "",
-      punc: attrs.punc === "true",
+      // AMI marks punctuation with `punc`, ICSI with a class other than W.
+      punc: attrs.punc === "true" || (attrs.c != null && !/^(W|LET|NUM|CD)$/.test(attrs.c)),
       trunc: attrs.trunc === "true",
     };
     lastTime = Math.max(lastTime, element.end);
@@ -83,8 +84,8 @@ function speakerElements(dir, meeting, speaker) {
   return elements;
 }
 
-function parseTopics(dir, meeting, names) {
-  const xml = fs.readFileSync(path.join(dir, "topics", `${meeting}.topic.xml`), "latin1");
+function parseTopics(dir, meeting, names, folder = "topics") {
+  const xml = fs.readFileSync(path.join(dir, folder, `${meeting}.topic.xml`), "latin1");
   const roots = [];
   const stack = [];
   for (const match of xml.matchAll(/<(\/?)(topic|nite:pointer|nite:child)\b([^>]*?)\/?>/g)) {
@@ -155,6 +156,11 @@ export function loadAmiWords(dir, meeting, names) {
   };
   for (const root of roots) visit(root, root);
 
+  return { words: wordsInOrder(elementsBySpeaker, topOf, fineOf), topics };
+}
+
+/** Every voice's words in time order, each with its topics; a word no topic holds takes the one before it. */
+function wordsInOrder(elementsBySpeaker, topOf, fineOf) {
   const words = [];
   for (const elements of elementsBySpeaker.values()) {
     let previous = null;
@@ -188,12 +194,96 @@ export function loadAmiWords(dir, meeting, names) {
     if (word.fine) carryFine = word.fine;
     else word.fine = carryFine;
   }
-  return { words, topics };
+  return words;
+}
+
+/**
+ * The ICSI meeting corpus (CC BY 4.0): real research-group meetings, a check
+ * outside AMI. The folder with Words/, Segments/ and Contributions/ of
+ * ICSI_plus_NXT. Topics point at speech segments, and segments at words.
+ */
+export function icsiMeetingIds(root) {
+  return fs
+    .readdirSync(path.join(root, "Contributions", "TopicSegmentation"))
+    .filter((file) => file.endsWith(".topic.xml"))
+    .map((file) => file.replace(/\.topic\.xml$/, ""))
+    .sort();
+}
+
+export function icsiReference(root, meeting) {
+  const speakers = fs
+    .readdirSync(path.join(root, "Words"))
+    .filter((file) => file.startsWith(`${meeting}.`) && file.endsWith(".words.xml"))
+    .map((file) => file.split(".")[1]);
+  const elementsBySpeaker = new Map();
+  const wordPosition = new Map();
+  const segmentsBySpeaker = new Map();
+  const segmentPosition = new Map();
+  for (const speaker of speakers) {
+    const elements = speakerElements(root, meeting, speaker, "Words");
+    elementsBySpeaker.set(speaker, elements);
+    elements.forEach((element, index) => wordPosition.set(element.id, { speaker, index }));
+    const file = path.join(root, "Segments", `${meeting}.${speaker}.segs.xml`);
+    const segments = [];
+    if (fs.existsSync(file)) {
+      for (const match of fs
+        .readFileSync(file, "latin1")
+        .matchAll(/<segment\b([^>]*)>([\s\S]*?)<\/segment>/g)) {
+        const id = attributes(match[1])["nite:id"];
+        const refs = [...match[2].matchAll(/#id\(([^)]+)\)(?:\.\.id\(([^)]+)\))?/g)];
+        segmentPosition.set(id, { speaker, index: segments.length });
+        segments.push(refs.map((ref) => [ref[1], ref[2] || ref[1]]));
+      }
+    }
+    segmentsBySpeaker.set(speaker, segments);
+  }
+  const topOf = new Map();
+  const fineOf = new Map();
+  const topics = new Map();
+  const roots = parseTopics(
+    root,
+    meeting,
+    new Map(),
+    path.join("Contributions", "TopicSegmentation")
+  );
+  const claim = (segment, topic, top) => {
+    for (const [first, last] of segment) {
+      const from = wordPosition.get(first);
+      const to = wordPosition.get(last);
+      if (!from || !to || from.speaker !== to.speaker) continue;
+      const elements = elementsBySpeaker.get(from.speaker);
+      for (let index = from.index; index <= to.index; index += 1) {
+        topOf.set(elements[index].id, top.id);
+        fineOf.set(elements[index].id, topic.id);
+      }
+    }
+  };
+  const visit = (topic, top) => {
+    topics.set(topic.id, topic);
+    for (const href of topic.children) {
+      const match = /#id\(([^)]+)\)(?:\.\.id\(([^)]+)\))?/.exec(href);
+      if (!match) continue;
+      const from = segmentPosition.get(match[1]);
+      const to = segmentPosition.get(match[2] || match[1]);
+      if (!from || !to || from.speaker !== to.speaker) continue;
+      const segments = segmentsBySpeaker.get(from.speaker);
+      for (let index = from.index; index <= to.index; index += 1)
+        claim(segments[index], topic, top);
+    }
+    for (const sub of topic.subtopics) visit(sub, top);
+  };
+  for (const topic of roots) visit(topic, topic);
+  const words = wordsInOrder(elementsBySpeaker, topOf, fineOf);
+  return { ...conversationOf(meeting, words, topics), source: "icsi", split: "outside" };
 }
 
 /** An AMI meeting from its manual transcript, cut at pauses as the segmenter cuts a room. */
 export function amiReference(dir, meeting, names) {
   const { words, topics } = loadAmiWords(dir, meeting, names);
+  return conversationOf(meeting, words, topics);
+}
+
+function conversationOf(meeting, words, topics) {
   const utterances = [];
   let current = null;
   let lastEnd = -Infinity;
