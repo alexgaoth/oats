@@ -821,7 +821,10 @@ input than it would on its own: this is the most a local linker could do.
 | Claude Opus 5.5, for reference | 0.91 | 0.56 | 0.20 | 5.7 s | |
 | Apple's system model (Foundation Models) | 0.90 | 0.21 | 0.09 | 3.1 s | 1 of 9 mixed false links |
 
-Gemma 4 E4B and Qwen3.5 4B: pending. These runs wait for the GPU lock.
+Gemma 4 E4B and Qwen3.5 4B were not run, and neither was Apple's model with a more
+permissive prompt. They waited over two hours behind about 20 jobs on the GPU lock, and
+were taken out of the queue so the speech and summary runs go first. This is a gap: a
+local writing model could still be a better linker with no key than anything here.
 
 ### Inside one conversation
 
