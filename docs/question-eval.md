@@ -13,8 +13,9 @@ this before. The site says "Every question, caught as it's asked".
   questions. A detector that trusts only recognition's "?" scored higher than the
   app (F1 0.459 against 0.325).
 - **Why.** `QUESTION_ANYWHERE`: 9 in 10 false cards were statements with "what",
-  "how" or "which" in them. And the prefixes held only wh-words, so half of the
-  misses were plain yes/no questions that recognition wrote without a "?".
+  "how" or "which" in them. And the prefixes held only wh-words, so a yes/no question
+  got a card only if recognition wrote its "?". On text with no "?", half of the
+  misses were this class.
 - **The ceiling is recognition.** small.en keeps 68% of the questions in a quiet
   room and 29% in steady sound. A question that is not in the text cannot get a
   card. Parakeet Ultra keeps 80% and 45%, and writes the best "?" of the engines
@@ -29,8 +30,9 @@ this before. The site says "Every question, caught as it's asked".
   opened on a reply that did not say "I don't know" fall from 2 to 0 in 4 hours.
 - **What did not earn its place.** A tiny classifier (2,571 weights) adds 0.022
   more F1 than the rules on small.en in a quiet room, with an interval that holds 0,
-  at lower recall, and it fails without punctuation. MiniLM, pitch and context lost. A cloud model refining
-  cards adds 0.041 in a quiet room and 0.008 in steady sound, under the 0.05 bar.
+  at lower recall, and it fails without punctuation. MiniLM, pitch and context lost.
+  A cloud model refining cards adds 0.041 in a quiet room and 0.008 in steady sound,
+  under the 0.05 bar.
 - **The site's claim does not hold.** "Every question, caught as it's asked": the
   best on-device result here catches 48% to 60% in a quiet room, by engine. See "The
   site".
@@ -497,14 +499,16 @@ group, in 3 groups, and all 3 are the same question asked twice ("What do you th
 
 ### What a winner costs
 
-| Method  | Speed here       | Base M-series, 16 GB (estimate) | Memory | Download | Licence       | What leaves the device |
-| ------- | ---------------- | ------------------------------- | ------ | -------- | ------------- | ---------------------- |
-| Rules   | 5 µs a turn      | under 50 µs                     | none   | none     | MIT, the repo | nothing                |
-| Replies | a few µs a reply | the same                        | none   | none     | MIT, the repo | nothing new            |
+| Method  | Speed here    | Base M-series, 16 GB (estimate) | Memory | Download | Licence       | What leaves the device |
+| ------- | ------------- | ------------------------------- | ------ | -------- | ------------- | ---------------------- |
+| Rules   | 5 µs a turn   | under 50 µs                     | none   | none     | MIT, the repo | nothing                |
+| Replies | 15 µs a reply | under 100 µs                    | none   | none     | MIT, the repo | nothing new            |
 
 ### Not done
 
 - Turbo q5_0 is queued behind the GPU lock, so it is not in the tables.
 - The classifier and refiners were tuned on small.en and gpt-transcribe only.
-- Only one recognizer's tuning text exists for steady sound (small.en), and it was
-  not used to choose anything.
+- No method was tuned on steady sound: its tuning replays were still queued at the
+  freeze. Test results in steady sound are all from settings chosen in a quiet room.
+- Parakeet Ultra's rows are provisional: AMI is in its training data.
+- The other nine locales have no benchmark.
