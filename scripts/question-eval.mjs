@@ -781,8 +781,8 @@ async function refine() {
         .map((name) => `rec:${name}`);
   const detect = DETECTORS[args.detector];
   const spec = args.spec;
-  const system = args.prompt === "app" ? APP_SYSTEM : REFINE_SYSTEM[args.prompt];
-  const appPrompt = args.prompt === "app";
+  const appPrompt = args.prompt === "app" || args.prompt === "app-loose";
+  const system = appPrompt ? APP_SYSTEM : REFINE_SYSTEM[args.prompt];
   const cacheFile = path.join(
     process.env.HOME,
     "oats-asr-cache/question-eval/refine",
@@ -834,8 +834,20 @@ async function refine() {
     fs.appendFileSync(cacheFile, `${JSON.stringify({ key, ...row })}\n`);
   };
   // `--prompt app` is the app's own classifier: its prompt, its strict JSON, and
-  // its rule that a confident "not factual" withdraws the card.
+  // its rule that a confident "not factual" withdraws the card. `app-loose` is the
+  // same with the JSON read loosely: what the withdraw rule would do if the parser
+  // took a verdict with an empty search query.
   const parse = (text) => {
+    if (args.prompt === "app-loose") {
+      const match = /\{[\s\S]*\}/.exec(String(text ?? ""));
+      if (!match) return null;
+      try {
+        const verdict = JSON.parse(match[0]);
+        return !(verdict.isFactualQuestion === false && verdict.confidence >= 0.75);
+      } catch {
+        return null;
+      }
+    }
     if (args.prompt === "app") {
       const verdict = aide.parseQuestionAssessment(String(text ?? "").trim());
       if (!verdict) return null;

@@ -410,6 +410,17 @@ as gpt-6.1-terra and claude-sonnet-5-5, and claude-haiku-5-5 is close. gpt-5.4-n
 withdrew too many right cards. For OpenAI and Anthropic keys only: the card's line
 and the lines before and after it leave the device.
 
+**The app's own verdict is mostly thrown away, and that is lucky.** Its prompt asks
+whether a question is factual, and a confident "no" withdraws the card. For "What do
+you think?" a good model says not factual at 0.98 and leaves the search query empty.
+`parseQuestionAssessment` calls an empty query malformed, so the session drops the
+verdict and reads the reply locally. On tuning text with gpt-6-luna, 177 of 382 answers
+failed this way, and only 3 cards were withdrawn. That accident keeps rule 1. Read
+loosely, the same answers withdraw 182 of the 382 cards, 69 of them right: recall 0.497
+to 0.292, F1 -0.099 [-0.141, -0.058]. **Do not fix the parser alone.** "Is it factual?"
+is the wrong question for a card every question should get. If the model is to withdraw
+anything, the prompt must ask "is this a question?", as `v1` does here.
+
 ### The operating point
 
 A question missed costs more than a false card, but a screen of false cards breaks
