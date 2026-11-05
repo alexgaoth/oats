@@ -625,8 +625,13 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     noteId,
     confidenceThreshold: settings.conversationAideConfidence,
     silenceDelayMs: settings.conversationAideSilenceSeconds * 1000,
-    // A partial on screen means somebody is still speaking: not silence.
-    isSpeaking: () => !!useMeetingRecordingStore.getState().micPartial,
+    // A partial on screen means somebody is still speaking: not silence. On a
+    // call the reply is the other side's. A final with no words clears its partial
+    // too (`finalSettled`), so an empty segment does not hold the verdict.
+    isSpeaking: () => {
+      const { micPartial, systemPartial } = useMeetingRecordingStore.getState();
+      return !!(micPartial || systemPartial);
+    },
     autoSearch: settings.conversationAutoSearchEnabled,
     // Null when no classifier is configured, which the session reads as "resolve
     // locally" rather than as a failure. Refinement is the model's whole job; it
