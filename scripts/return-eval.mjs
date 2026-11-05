@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
+import { amiRecognized, amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
 import { splitOfMeeting } from "./lib/link-split.mjs";
 import { meetingReturns } from "./lib/return-truth.mjs";
 import {
@@ -35,6 +35,7 @@ const { values: args, positionals } = parseArgs({
     model: { type: "string" },
     runs: { type: "string" },
     loop: { type: "string" },
+    replay: { type: "string" },
     chars: { type: "string", default: "800" },
     controls: { type: "string", default: "40" },
     "local-model": { type: "string" },
@@ -50,7 +51,14 @@ export function meetingsOf(results, split, level) {
   return results
     .filter((result) => split === "all" || splitOfMeeting(result.id) === split)
     .map((result) => {
-      const conversation = amiReference(DIR, result.id, NAMES);
+      const conversation = args.replay
+        ? amiRecognized(
+            DIR,
+            result.id,
+            NAMES,
+            JSON.parse(fs.readFileSync(path.join(args.replay, `${result.id}.json`), "utf8")).segments
+          )
+        : amiReference(DIR, result.id, NAMES);
       return {
         id: result.id,
         result,

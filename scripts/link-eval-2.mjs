@@ -1935,6 +1935,14 @@ async function recognitionBoards() {
     console.log(
       `  minus manual: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
     );
+    // Both meetings as heard, as the app always has them: few pairs, so counts.
+    const both = scenario.filter((pair) => heard.has(pair.a) && heard.has(pair.b));
+    const rates = (decide) => ratesOf(both, decide, scoreLib);
+    const asHeard = rates(yes);
+    const onManual = rates(manual);
+    console.log(
+      `  both as heard (${both.length} pairs, ${both.filter((pair) => pair.linked).length} linked): P ${f(asHeard.precision)} R ${f(asHeard.recall)} FL ${f(asHeard.falseLinks)}; the same pairs on manual text: P ${f(onManual.precision)} R ${f(onManual.recall)} FL ${f(onManual.falseLinks)}`
+    );
   }
 }
 

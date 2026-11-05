@@ -506,3 +506,18 @@ the manual meetings have them, from the same writing model. Eight meetings make
 Every pair that touches a recognized meeting is compared with the same pair on
 manual text, paired, over the same orders of the history. No method is tuned
 on these.
+
+## Frozen before the test read: on this computer
+
+Chosen on tuning pairs and a tuning-only board, each read as the expected board
+over orders of the history (see below). None of them reached the bar on tuning
+pairs. They go to test as the best the tuning meetings found, with main as the
+reference:
+
+- `stored:0.82`: main's vectors, a higher threshold.
+- `linkage:minilm:0.74`: main's vectors, clustered with no order.
+- `greedy:bge-small:0.96`: bge-small-en-v1.5, main's rule.
+- `linkage:bge-small:0.944`: bge-small-en-v1.5, clustered with no order.
+
+Slot five is held for the best local writing model, if one earns it on tuning
+pairs. Twenty orders of the history for each.
