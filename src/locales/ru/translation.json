@@ -2623,5 +2623,16 @@
     "returned_other": "возврат {{count}}×",
     "search": "Искать",
     "noQuestions": "В этой линии нет вопросов."
+  },
+  "demo": {
+    "replay": {
+      "play": "Воспроизвести",
+      "pause": "Пауза",
+      "position": "Момент разговора",
+      "at": "{{at}} из {{length}}"
+    },
+    "questions": {
+      "replay": "Повторить"
+    }
   }
 }

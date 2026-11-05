@@ -2568,5 +2568,16 @@
     "returned_other": "回到 {{count}} 次",
     "search": "搜索",
     "noQuestions": "这条线索中没有问题。"
+  },
+  "demo": {
+    "replay": {
+      "play": "播放",
+      "pause": "暂停",
+      "position": "对话中的时间点",
+      "at": "{{at}} / {{length}}"
+    },
+    "questions": {
+      "replay": "重播"
+    }
   }
 }

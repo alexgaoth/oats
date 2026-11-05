@@ -1,6 +1,7 @@
 // The site's behaviour: the oat marks, the fluid stage behind the hero and the
-// download section, the download buttons, and the film. Built into
-// site/assets/site.js by `npm run build:site` (site/vite.config.mjs).
+// download section, the download buttons, the film, the product loops, and
+// the live figures (live.js, loaded when one nears the screen). Built into
+// site/assets/site.js by `npm run build:site` (site/build.mjs).
 
 import { mountMark } from "./mark.js";
 import { mountField } from "./field.js";
@@ -75,7 +76,7 @@ const watcher = new IntersectionObserver(
   },
   { threshold: 0.35 }
 );
-for (const video of document.querySelectorAll("video[data-loop]")) {
+function wireLoop(video) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "loop-toggle";
@@ -89,6 +90,44 @@ for (const video of document.querySelectorAll("video[data-loop]")) {
   settle(video);
   watcher.observe(video);
 }
+// A loop in a live figure stays on its poster: the app's component replaces
+// it, so its film is never fetched. If that component cannot come, the loop
+// plays like the others.
+for (const video of document.querySelectorAll("video[data-loop]")) {
+  if (!video.closest("[data-live-slot]")) wireLoop(video);
+}
 still?.addEventListener?.("change", () => {
   for (const video of toggles.keys()) settle(video);
 });
+
+// The live figures: the app's own components, on the example conversation, in
+// the figures that carry `data-live-slot`. live.js (React and the components)
+// loads when the first of them nears the screen, and each figure is drawn as
+// it nears. Until it is ready the figure shows its still or its loop's poster,
+// in a box already the component's size (site.css), so nothing moves when it
+// arrives.
+// Beside this file as assets/live.js. Named through a constant so the build
+// leaves it a URL to load, not a copy of its source.
+const LIVE_SCRIPT = "live.js";
+let live = null;
+const loadLive = () =>
+  (live ??= import(/* @vite-ignore */ new URL(LIVE_SCRIPT, import.meta.url).href));
+function keepStill(figure) {
+  figure.dataset.live = "failed";
+  for (const video of figure.querySelectorAll("video[data-loop]")) wireLoop(video);
+}
+const approaching = new IntersectionObserver(
+  (entries) => {
+    for (const { target, isIntersecting } of entries) {
+      if (!isIntersecting) continue;
+      approaching.unobserve(target);
+      target.dataset.live = "loading";
+      loadLive()
+        .then((module) => module.mount(target))
+        .then((drawn) => drawn || keepStill(target))
+        .catch(() => keepStill(target));
+    }
+  },
+  { rootMargin: "50% 0px" }
+);
+for (const figure of document.querySelectorAll("[data-live-slot]")) approaching.observe(figure);
