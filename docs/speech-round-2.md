@@ -188,3 +188,41 @@ microphone goes straight to the realtime session.
 
 The title and the summary do not wait for the speaker pass, so a second pass
 must either hold them or redo them. Holding them is what the bar below pays for.
+
+## Enhancement: stopped
+
+Every number is content recall on the 3 tune meetings, against the same engine
+with no enhancement. An interval that holds 0 is marked as such.
+
+| before the engine | Apple, quiet room | Apple, steady sound | Parakeet Ultra, steady sound |
+| --- | --- | --- | --- |
+| DeepFilterNet3, full attenuation | -8.4 (-10.8 to -3.0) | -6.6 (-7.1 to -6.1) | -10.9 (-14.7 to -6.7) |
+| DeepFilterNet3, limited to 12 dB | -1.5 (-1.9 to -0.9) | +0.7 (-0.9 to +2.4), holds 0 | -1.2 (-3.2 to +0.4), holds 0 |
+| WPE dereverberation, each segment | +0.4 (+0.2 to +0.6) | +0.7 (-0.7 to +2.1), holds 0 | not run |
+| `afftdn` at the segment's floor + 1 dB | not run | not run | -0.4 (-1.1 to +0.5), holds 0 |
+
+DeepFilterNet3 sounds cleaner and hears less. It removes the far voices'
+consonants, and a recognizer trained on noisy speech does better with the noise
+left in. WPE's gain is under the noise of a run. Stopped: nothing here earns a
+step in the path, and `afftdn` stays where round 1 put it, for `base` and `small`
+only. Code and weights of DeepFilterNet are MIT or Apache-2.0 (one license for
+the repository), and its only runtime here was the publisher's own 0.5.6 binary.
+
+## VAD and segmenting
+
+**Silero v6 as the live segmenter loses speech.** Silero's ONNX model (MIT, from
+`silero-vad` 6.2.3) cut the stream instead of the energy segmenter: open at the
+threshold, close after 300 ms under it, 100 ms of padding, 20 s at most. Through
+Apple's engine on the 3 tune meetings:
+
+| | speech sent, quiet / steady | content, quiet / steady | segments with no speech |
+| --- | --- | --- | --- |
+| the app's energy segmenter | 98% / 86% | 68.2 / 38.2 | 102 / 60 |
+| Silero v6, threshold 0.5 | 76% / 65% | 65.1 / 37.9 | 14 / 6 |
+| Silero v6, threshold 0.35 | 78% / 68% | 65.5 / 39.2 | 20 / 9 |
+
+It sends a quarter less speech and loses 3 points in the quiet room. It keeps out
+far voices, which is what this app exists to hear. The energy segmenter stays.
+TEN VAD was not run: its license adds a no-compete condition to Apache-2.0
+("You may not Deploy the ten-vad in a way that competes with Agora's offerings"),
+which an MIT app cannot pass on.
