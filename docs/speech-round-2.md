@@ -128,3 +128,49 @@ weights as Core ML on the Neural Engine.
 **FFASR's order is a useful prior.** Its far-field ranking puts the Qwen3 family
 and Granite ahead of Parakeet and Whisper. It is synthetic rooms and short
 utterances, so it does not replace the replay.
+
+## The cloud, as the app really uses it
+
+Round 1 gave OpenAI the room segmenter's segments. That is not the app's path. A
+room with an OpenAI key (`getMeetingTranscriptionOptions`, `provider:
+"openai-realtime"`) streams the whole microphone to a realtime session, and the
+server's own VAD cuts the turns (`openaiRealtimeStreaming.js`, `server_vad`,
+threshold 0.6, 600 ms of silence, 500 ms of prefix). `room-replay.js
+--realtime-stream` now replays exactly that. Nothing raises a quiet segment on
+this path, and nothing passes a language.
+
+All numbers in this section are the 3 tune meetings, `gpt-transcribe` unless a
+row says otherwise.
+
+| content recall | quiet room | steady sound | quiet mic | speech inside a turn, quiet / steady |
+| --- | --- | --- | --- | --- |
+| segmenter's segments, one file each (round 1's test) | 72.1 | 44.0 | | 98% / 86% |
+| server VAD 0.6: **the app today** | 70.9 | 46.1 | 61.3 | 89% / 77% |
+| server VAD 0.3 | 70.9 | 49.4 | 68.1 | 91% / 80% |
+| server VAD 0.2 | 70.5 | 49.3 | | |
+| server VAD 0.1 | 60.4 | 50.9 | | |
+| server VAD 0.3, 1,000 ms of silence | 66.8 | 46.0 | | |
+
+Threshold 0.6 was chosen for dictation, a voice next to the microphone. In a
+room it never opens on a far voice. 0.3 costs nothing in the quiet room and
+gains 3.3 points with steady sound (1.5 to 5.4). At 0.1 the quiet room breaks:
+turns run together and the transcript loses 10 points.
+
+**Other OpenAI options, the same 3 meetings, against one file per segment:**
+
+| | quiet room: content, difference | steady sound: content, difference | read |
+| --- | --- | --- | --- |
+| `languages: ["en"]` instead of `language` | 72.2, +0.1 | 44.1, +0.1 | no change |
+| fixed `prompt` describing the room | 70.9, -1.2 (-1.5 to -0.7) | 44.3, +0.3 | no |
+| running text as `prompt` (last 400 characters) | 72.0, -0.2 (-1.1 to +1.2) | 46.3, +2.2 (+1.4 to +2.8) | helps with steady sound; precision +5.2 |
+| `keywords` (12 content words of the last 5 minutes) | 71.9, -0.3 | 44.4, +0.3 | no; precision -3.6 with steady sound |
+| running text and keywords | 71.8, -0.4 | 45.7, +1.6 | worse than running text alone |
+| realtime session, turn detection off | 72.3, +0.2 | 44.9, +0.9 (-0.3 to +2.4) | earlier turns are context by themselves |
+| realtime, `noise_reduction: far_field` | 60.2, -11.9 | 16.5, -27.5 | never: it removes far voices |
+| `gpt-live-transcribe` | 70.4, -1.8 | 38.8, -5.3 | no, and precision -6 and -16 |
+| `gpt-live-transcribe`, `delay: xhigh` | 69.4, -2.7 | 39.1, -5.0 | no |
+| `gpt-realtime-whisper` | 64.9, -7.2 | 33.1, -10.9 | no |
+
+`gpt-transcribe` stays the cloud model. Its realtime session already gives each
+turn the turns before it, so a prompt would add nothing on the app's path. The
+question marks do not move with context (precision about 58, recall 32 to 34).
