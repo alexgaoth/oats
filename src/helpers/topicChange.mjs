@@ -269,7 +269,8 @@ export class TopicChangeDetector {
 
   _read(g, state) {
     const features = gapFeatures(this.turns, g, { lag: this.lag, firstSeen: this.firstSeen });
-    const score = changeScore(features, this.model);
+    // A side with no vector at all would read as nothing in common with the other.
+    const score = features.E30 === 0 ? 0 : changeScore(features, this.model);
     const at = this.turns[g].start;
     if (state.candidate && at > state.candidate.at + this.hold) {
       state.cuts.push(state.candidate.turn);

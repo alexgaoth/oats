@@ -169,6 +169,7 @@ test("the far side's vectors are waited for, for a while", () => {
   late.addTurn({ id: "b", text: "okay y", keys: [], words: 2, start: 20, end: 21 });
   late.advance(55);
   assert.equal(late.next, 2, "read without them once the wait is over");
+  assert.equal(late.proposedId(), null, "and no vectors at all is not a change of subject");
 });
 
 test("the final cuts read the last pauses and change nothing", () => {
