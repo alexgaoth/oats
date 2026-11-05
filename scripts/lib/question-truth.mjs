@@ -354,13 +354,20 @@ function plainWord(text) {
  *   `manual`  the transcribers' words and punctuation (view a)
  *   `plain`   the same words with all punctuation gone, in lower case but for
  *             "I", acronyms and the turn's first letter (view b)
+ *   `unasked` the manual text with every "?" turned into ".": sentence ends stay,
+ *             so a detector must find a question by its words alone
  */
 export function turnTokens(turn, view) {
   const tokens = turn.words.map((word) => ({
-    text: view === "manual" ? spoken(word.text) + word.punct : plainWord(word.text),
+    text:
+      view === "manual"
+        ? spoken(word.text) + word.punct
+        : view === "unasked"
+          ? spoken(word.text) + word.punct.replace(/\?/g, ".")
+          : plainWord(word.text),
     word: word.index,
   }));
-  if (view !== "manual" && tokens.length) {
+  if (view === "plain" && tokens.length) {
     tokens[0].text = tokens[0].text.charAt(0).toUpperCase() + tokens[0].text.slice(1);
   }
   return tokens;
@@ -538,8 +545,11 @@ export function scoreCards(cards, gold) {
     });
   }
   const delays = [];
+  const delayOf = {};
   first.forEach((at, index) => {
-    if (Number.isFinite(at)) delays.push(at - gold[index].end * 1000);
+    if (!Number.isFinite(at)) return;
+    delays.push(at - gold[index].end * 1000);
+    delayOf[gold[index].id] = delays.at(-1);
   });
   return {
     cards: cards.length,
@@ -547,6 +557,7 @@ export function scoreCards(cards, gold) {
     gold: gold.length,
     caught: delays.length,
     delays,
+    delayOf,
     quote,
     verdicts,
     caughtIds: gold.filter((_, index) => Number.isFinite(first[index])).map((item) => item.id),
@@ -622,6 +633,18 @@ export function summarize(rows, options) {
 export function difference(rowsA, rowsB, key = "f1", options) {
   const stat = (a, b) => prf(pool(a))[key] - prf(pool(b))[key];
   return { value: stat(rowsA, rowsB), ci: bootstrap([rowsA, rowsB], stat, options) };
+}
+
+/** The delay of a question both methods caught, method a minus method b: ms per question. */
+export function pairedDelays(rowsA, rowsB) {
+  const out = [];
+  rowsA.forEach((row, index) => {
+    const other = rowsB[index].delayOf;
+    for (const [id, delay] of Object.entries(row.delayOf)) {
+      if (other[id] !== undefined) out.push(delay - other[id]);
+    }
+  });
+  return out;
 }
 
 export function median(values) {

@@ -152,6 +152,55 @@ export function train(examples, { alpha = 0.2, beta = 1, l1 = 1, l2 = 10, epochs
   return modelFrom({ bias: Number(weightAt(SIZE).toFixed(3)), entries });
 }
 
+// Words after which a new clause can start, when punctuation does not say so.
+const OPENERS = new Set(
+  "so and but or yeah yes no okay ok well right because cause then um uh mm hmm now oh actually like alright".split(
+    " "
+  )
+);
+/** How many words of a clause the model reads: a question shows early. */
+const CLAUSE_WORDS = 16;
+
+/**
+ * What may be the question in a turn: each sentence whole, and each clause that
+ * opens inside one. `read` is what the model scores, `quote` what a card shows:
+ * a clause to the end of its sentence.
+ */
+export function candidatesOf(text) {
+  const out = [];
+  for (const sentence of sentencesOf(text)) {
+    const asked = sentence.includes("?");
+    out.push({ read: sentence, quote: sentence, asked });
+    const words = sentence.split(" ");
+    for (let at = 1; at < words.length; at += 1) {
+      const previous = words[at - 1];
+      const bare = previous.toLowerCase().replace(/[^a-z']/g, "");
+      if (!/[,;:]$/.test(previous) && !OPENERS.has(bare)) continue;
+      out.push({
+        read: words.slice(at, at + CLAUSE_WORDS).join(" "),
+        quote: words.slice(at).join(" "),
+        asked,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The turn's best candidate, `{ score, quote }`, or null for an empty turn.
+ * `mark` is what a recognizer's "?" adds: the model reads words only, and how far
+ * to trust that "?" depends on the recognizer, so it is set apart from training.
+ */
+export function bestCandidate(model, text, { mark = 3 } = {}) {
+  let top = null;
+  for (const candidate of candidatesOf(text)) {
+    const score =
+      scoreSentence(model, candidate.read, { punctuation: false }) + (candidate.asked ? mark : 0);
+    if (!top || score > top.score) top = { score, quote: candidate.quote };
+  }
+  return top;
+}
+
 /** Sentence ends, the way recognition marks them. */
 export function sentencesOf(text) {
   return String(text || "")

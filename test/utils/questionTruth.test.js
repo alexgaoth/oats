@@ -6,6 +6,7 @@ import {
   difference,
   goldQuestions,
   overlap,
+  pairedDelays,
   prf,
   quoteSpan,
   reachedRecognition,
@@ -17,6 +18,8 @@ import {
   turnTokens,
 } from "../../scripts/lib/question-truth.mjs";
 import {
+  bestCandidate,
+  candidatesOf,
   featureNames,
   features,
   modelFrom,
@@ -140,6 +143,14 @@ describe("prf and the bootstrap", () => {
     const [low, high] = bootstrap([[1, 2, 3]], (rows) => rows.length, { samples: 20 });
     assert.equal(low, 3);
     assert.equal(high, 3);
+  });
+});
+
+describe("paired delays", () => {
+  test("only questions both methods caught are compared", () => {
+    const a = [{ delayOf: { q1: 1000, q2: 3000 } }];
+    const b = [{ delayOf: { q1: 1000, q3: 500 } }];
+    assert.deepEqual(pairedDelays(a, b), [0]);
   });
 });
 
@@ -366,6 +377,25 @@ describe("the classifier", () => {
     const stored = modelFrom(JSON.parse(JSON.stringify({ bias: model.bias, entries: model.entries })));
     const options = { punctuation: false };
     assert.equal(scoreSentence(stored, "is it red", options), scoreSentence(model, "is it red", options));
+  });
+
+  test("a clause that opens inside a sentence is a candidate of its own", () => {
+    const quotes = candidatesOf("With our budget, is that okay? We agree.").map((item) => item.quote);
+    assert.deepEqual(quotes, ["With our budget, is that okay?", "is that okay?", "We agree."]);
+  });
+
+  test("a word that only joins opens a clause when punctuation does not", () => {
+    const quotes = candidatesOf("we like it so do we need it").map((item) => item.quote);
+    assert.ok(quotes.includes("do we need it"));
+  });
+
+  test("a recognizer's question mark lifts its own sentence only", () => {
+    const empty = modelFrom({ bias: -1, entries: [] });
+    assert.deepEqual(bestCandidate(empty, "We agree. Is it red?", { mark: 3 }), {
+      score: 2,
+      quote: "Is it red?",
+    });
+    assert.equal(bestCandidate(empty, ""), null);
   });
 
   test("sentences split where recognition marks an end", () => {

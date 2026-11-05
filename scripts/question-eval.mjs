@@ -14,6 +14,9 @@
 //
 //   node scripts/question-eval.mjs train --out model.json [--alpha 0.2] [--l1 1]
 //     [--l2 10] [--epochs 6] [--dropout 0]
+//   node scripts/question-eval.mjs bars --a a.json --b b.json --key view/set/name
+//     [--key-b view/set/name]: method a against method b, per meeting, as the bars
+//     in docs/question-eval.md read it. Each file comes from `baseline --json`.
 //   node scripts/question-eval.mjs refine --spec local:qwen3.5-4b|fm:system|openai:...
 //     --replay name --detectors file --detector name [--gguf file] [--concurrency 8]
 //
@@ -33,6 +36,8 @@
 // --aide <file> reads another copy of conversationAide.mjs, to compare with main.
 // --detectors <file> adds the detectors its default export maps by name: each
 // reads a turn's text and returns the card's quote, or null for no card.
+// --model <file> --threshold T --mark M adds `classifier`, a model from `train`:
+// a card when a turn's best candidate scores T or more, with M added for a "?".
 
 import fs from "node:fs";
 import path from "node:path";
@@ -50,6 +55,7 @@ import {
   goldQuestions,
   loadMeeting,
   median,
+  pairedDelays,
   quantile,
   quoteSpan,
   reachedRecognition,
@@ -61,7 +67,12 @@ import {
   summarize,
   turnTokens,
 } from "./lib/question-truth.mjs";
-import { features, train as fitClassifier } from "./lib/question-classifier.mjs";
+import {
+  bestCandidate,
+  features,
+  modelFrom,
+  train as fitClassifier,
+} from "./lib/question-classifier.mjs";
 import { annotationsDir } from "./lib/topic-corpus.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,7 +88,14 @@ const { values: args, positionals } = parseArgs({
     detector: { type: "string", default: "app" },
     aide: { type: "string" },
     detectors: { type: "string" },
+    model: { type: "string" },
+    threshold: { type: "string", default: "-1" },
+    mark: { type: "string", default: "3" },
     only: { type: "string" },
+    a: { type: "string" },
+    b: { type: "string" },
+    key: { type: "string" },
+    "key-b": { type: "string" },
     replay: { type: "string" },
     replays: {
       type: "string",
@@ -115,6 +133,15 @@ const DETECTORS = {
   always: (text) => text,
 };
 
+if (args.model) {
+  const model = modelFrom(JSON.parse(fs.readFileSync(args.model, "utf8")));
+  const threshold = Number(args.threshold);
+  const mark = Number(args.mark);
+  DETECTORS.classifier = (text) => {
+    const top = bestCandidate(model, text, { mark });
+    return top && top.score >= threshold ? top.quote : null;
+  };
+}
 if (args.detectors) {
   const extra = await import(pathToFileURL(path.resolve(args.detectors)).href);
   Object.assign(DETECTORS, await (typeof extra.default === "function" ? extra.default(aide) : extra.default));
@@ -182,6 +209,7 @@ async function replaySession(turns) {
   const timers = new Map();
   const cards = new Map();
   const searches = [];
+  const replies = new Map();
   let eventId = 0;
   const session = new ConversationAideSession({
     noteId: 1,
@@ -193,15 +221,20 @@ async function replaySession(turns) {
       return timerId;
     },
     clearTimer: (id) => timers.delete(id),
-    insertEvent: async () => {
+    insertEvent: async (event) => {
       eventId += 1;
+      if (event.kind === "response" && event.metadata?.outcome === "denied") {
+        replies.set(event.parentEventId, event.text);
+      }
       return eventId;
     },
     updateEvent: async () => null,
+    // Words are arriving: a turn has started and is not final yet.
+    isSpeaking: () => turns.some((turn) => turn.start * 1000 <= now && now < turn.at),
     onCard: (card) => cards.set(card.id, { ...cards.get(card.id), ...card }),
     onCardRemoved: (id) => cards.delete(id),
     openSearch: async ({ query }) => {
-      searches.push({ query, at: now });
+      searches.push({ query, at: now, reply: [...replies.values()].at(-1) ?? "" });
       return true;
     },
   });
@@ -227,6 +260,10 @@ async function replaySession(turns) {
   await session.shutdown();
   return { cards, searches };
 }
+
+/** A reply that says so in words, not one that only has a "no" in it. */
+const SAYS_UNKNOWN =
+  /\b(?:don['’]?t know|do not know|dunno|no idea|no clue|not sure|can['’]?t remember|don['’]?t remember|never heard|nobody knows)\b/i;
 
 function loader(dir) {
   const daTypes = dialogueActTypes(dir);
@@ -272,7 +309,7 @@ async function baseline() {
   const dir = annotationsDir(args.ami);
   const load = loader(dir);
   const replays = args.replay ? args.replay.split(",").map((name) => `rec:${name}`) : [];
-  const views = replays.length ? replays : ["manual", "plain"];
+  const views = replays.length ? replays : ["manual", "plain", "unasked"];
   const ids = meetingsOf(dir);
   const results = {};
   const outcomes = {};
@@ -321,6 +358,9 @@ async function baseline() {
         const byId = new Map(gold[set].map((question) => [question.id, question]));
         const tally = outcomes[set][view];
         tally.searches += searches.length;
+        tally.searchesSaid = (tally.searchesSaid ?? 0) + searches.filter((item) => SAYS_UNKNOWN.test(item.reply)).length;
+        tally.seconds = (tally.seconds ?? 0) + meeting.seconds;
+        (tally.searchList ??= []).push(...searches.map((item) => `${item.query.slice(0, 90)} => ${item.reply.slice(0, 90)}`));
         const queries = new Set(searches.map((search) => search.query));
         detected.forEach((card, index) => {
           const state = states.get(card.id)?.state ?? "gone";
@@ -359,10 +399,75 @@ async function baseline() {
     const drop = difference(perMeeting["plain/strict/app"], perMeeting["manual/strict/app"], "f1");
     console.log(`app F1, plain minus manual, strict: ${drop.value.toFixed(3)} ${ci(drop.ci)}`);
   }
-  console.log(JSON.stringify(outcomes, null, 1));
-  if (args.json) {
-    fs.writeFileSync(args.json, JSON.stringify({ results, outcomes, ids: [...seen] }, null, 1));
+  for (const view of views) {
+    const tally = outcomes.strict[view];
+    const hours = tally.seconds / 3600;
+    console.log(
+      `${view}: ${tally.searches} searches opened by themselves (${(tally.searches / hours).toFixed(1)} an hour), ${tally.searchesSaid} on a reply that says it does not know`
+    );
+    console.log(JSON.stringify(tally.confusion));
+    const answered = tally.confusion.answered ?? {};
+    const total = Object.values(answered).reduce((sum, count) => sum + count, 0);
+    console.log(
+      `of ${total} right cards with a gold answer: ${pct((answered.answered ?? 0) / (total || 1))} answered, ${pct((answered.uncertain ?? 0) / (total || 1))} uncertain, ${pct((answered.silence ?? 0) / (total || 1))} silence, ${pct((answered.denied ?? 0) / (total || 1))} denied`
+    );
   }
+  // Only tuning meetings print what was searched: the test meetings stay unread.
+  if (args.split !== "test" && args.split !== "audio") {
+    for (const view of views) console.log(outcomes.strict[view].searchList.join("\n"));
+  }
+  if (args.json) {
+    const rows = Object.fromEntries(
+      Object.entries(perMeeting)
+        .filter(([key]) => !key.endsWith("/turn"))
+        .map(([key, list]) => [
+          key,
+          list.map(({ id, seconds: length, cards, right, gold, caught, delayOf, delays, quote }) => ({
+            id,
+            seconds: length,
+            cards,
+            right,
+            gold,
+            caught,
+            delayOf,
+            delays,
+            quote,
+          })),
+        ])
+    );
+    fs.writeFileSync(
+      args.json,
+      JSON.stringify({ results, outcomes, ids: [...seen], rows })
+    );
+  }
+}
+
+/** Method a against method b on the same meetings, as the bars read it. */
+function bars() {
+  const read = (file) => JSON.parse(fs.readFileSync(file, "utf8")).rows;
+  const keyA = args.key;
+  const keyB = args["key-b"] ?? keyA;
+  const a = read(args.a)[keyA];
+  const b = read(args.b)[keyB];
+  const line = (name, r) => {
+    const s = summarize(r);
+    const hours = r.reduce((sum, item) => sum + item.seconds, 0) / 3600;
+    console.log(
+      `${name}: P ${pct(s.precision)} R ${pct(s.recall)} F1 ${pct(s.f1)}, ${(s.cards / hours).toFixed(0)} cards an hour, ${((s.cards - s.right) / hours).toFixed(0)} false`
+    );
+  };
+  line(`a ${keyA}`, a);
+  line(`b ${keyB}`, b);
+  for (const key of ["f1", "precision", "recall"]) {
+    const gap = difference(a, b, key);
+    console.log(
+      `${key} a - b: ${gap.value >= 0 ? "+" : ""}${gap.value.toFixed(3)} ${ci(gap.ci)}${gap.ci[0] <= 0 && gap.ci[1] >= 0 ? " (holds 0)" : ""}`
+    );
+  }
+  const paired = pairedDelays(a, b);
+  console.log(
+    `first-card delay on ${paired.length} questions both caught, a - b: median ${median(paired)} ms, 90th percentile ${quantile(paired, 0.9)} ms, largest ${paired.length ? Math.max(...paired) : 0} ms`
+  );
 }
 
 async function errors() {
@@ -510,7 +615,12 @@ async function refine() {
   const crypto = await import("node:crypto");
   const dir = annotationsDir(args.ami);
   const load = loader(dir);
-  const views = (args.replay ?? "").split(",").filter(Boolean).map((name) => `rec:${name}`);
+  const views = args.view
+    ? [args.view]
+    : (args.replay ?? "")
+        .split(",")
+        .filter(Boolean)
+        .map((name) => `rec:${name}`);
   const detect = DETECTORS[args.detector];
   const spec = args.spec;
   const system = args.prompt === "app" ? APP_SYSTEM : REFINE_SYSTEM[args.prompt];
@@ -668,6 +778,7 @@ async function refine() {
 
 if (command === "baseline") await baseline();
 else if (command === "train") trainClassifier();
+else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
 else {
