@@ -25,6 +25,8 @@ export interface BoardConversation {
   openQuestions: number | null;
   /** A cloud model's links to earlier conversations (`remoteLinks.mjs`), or null. */
   linkCheck?: LinkCheck | null;
+  /** Which route wrote its summary (`notes.summary_route`): who has read it. */
+  summaryRoute?: string | null;
 }
 
 /** A cloud model's link check, as stored on a note (`notes.conversation_links`). */

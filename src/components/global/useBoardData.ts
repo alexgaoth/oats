@@ -29,6 +29,7 @@ function toBoardConversation(note: NoteItem, untitled: string): BoardConversatio
     groupId: typeof note.group_id === "number" ? note.group_id : null,
     openQuestions: typeof note.open_questions === "number" ? note.open_questions : null,
     linkCheck: readLinkCheck(note.conversation_links) as LinkCheck | null,
+    summaryRoute: note.summary_route ?? null,
   };
 }
 
@@ -41,6 +42,7 @@ function boardKey(note: NoteItem): string {
     note.open_questions ?? "",
     note.conversation_topics ?? "",
     note.conversation_links ?? "",
+    note.summary_route ?? "",
   ].join("\u0000");
 }
 
