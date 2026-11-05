@@ -97,6 +97,9 @@ class OnnxModel:
         self.config = config
         self.tokenizer = Tokenizer.from_file(os.path.join(folder, "tokenizer.json"))
         self.tokenizer.enable_truncation(max_length=MAX_TOKENS)
+        # A tokenizer.json can carry its own padding (MiniLM's is a fixed 128),
+        # and pad tokens would then count as text. Padding is done below.
+        self.tokenizer.no_padding()
         options = ort.SessionOptions()
         options.intra_op_num_threads = threads
         options.inter_op_num_threads = 1
