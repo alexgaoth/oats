@@ -12,7 +12,8 @@ import { CHECK_OUTCOMES } from "./contextCheck.mjs";
 // only joins ("so do we need it", "yeah but is it cheap").
 const EN_OPENS = String.raw`(?:^|[.?!,;:]\s+|\b(?:so|and|but|or|yeah|yes|no|okay|ok|well|right|because|cause|then|um+|uh+|mm+|hmm+|now|oh|actually|like|alright)[,]?\s+)`;
 const EN_SUBJECT = String.raw`(?:i|you|we|they|he|she|it|this|that|these|those|there|one|anyone|anybody|everyone|everybody|someone|somebody|people|our|your|their|my)`;
-const EN_AUX = String.raw`(?:do|don['’]t|did|didn['’]t|does|doesn['’]t|have|haven['’]t|has|hasn['’]t|had|hadn['’]t|can|can['’]t|could|couldn['’]t|would|wouldn['’]t|will|won['’]t|should|shouldn['’]t|shall)`;
+const EN_AUX_WORDS = String.raw`do|don['’]t|did|didn['’]t|does|doesn['’]t|have|haven['’]t|has|hasn['’]t|had|hadn['’]t|can|can['’]t|could|couldn['’]t|would|wouldn['’]t|will|won['’]t|should|shouldn['’]t|shall`;
+const EN_AUX = `(?:${EN_AUX_WORDS})`;
 const EN_BE = String.raw`(?:is|isn['’]t|are|aren['’]t|was|wasn['’]t|were|weren['’]t)`;
 const EN_DETERMINER = String.raw`(?:the|a|an|any|all|some|each|every)`;
 // "Which" also opens a relative clause (", which is the cheap one"), so it counts
@@ -27,7 +28,7 @@ const EN_YES_NO = new RegExp(
 // Inside a sentence a wh-word asks only when a verb follows at once. "How much",
 // "what about", "which one" and the like count too.
 const EN_WH_CLAUSE = new RegExp(
-  String.raw`${EN_OPENS}${EN_WH}(?:['’](?:s|re)|\s+(?:${EN_AUX.slice(3, -1)}|is|are|was|were|about|else|if|many|much|long|often|far|big|one|kind|type|sort|other|exactly|might))\b`,
+  String.raw`${EN_OPENS}${EN_WH}(?:['’](?:s|re)|\s+(?:${EN_AUX_WORDS}|is|are|was|were|about|else|if|many|much|long|often|far|big|one|kind|type|sort|other|exactly|might))\b`,
   "i"
 );
 // At the very start, any wh-word that a subject does not follow: "Who designed
@@ -59,8 +60,22 @@ function asksInEnglish(text) {
 const COMMAND_PREFIX =
   /^(?:please\s+)?(?:open|close|send|write|type|create|delete|remove|add|set|turn|start|stop|record|search)\b/i;
 // Short words a recognizer marks with "?" and nobody means as a question on a card.
-const EN_NOISE =
-  /^(?:(?:uh+|um+|mm+|mm-hmm|hmm+|huh|okay|ok|yes|no|yeah|yep|right|really|sorry|what|oh|ah|alright|all right|sure|pardon|eh)[?.!,\s]*)+$/i;
+//
+// Read one word at a time, with a sticky pattern that never goes back. As a
+// single repeated pattern the separator is optional, so `mm+` can cut a run of m's
+// in Fibonacci-many ways and backtracking takes exponential time: a hum of sixty
+// m's, which Whisper does write, froze the renderer on one final segment.
+const EN_NOISE_WORD =
+  /(?:uh+|um+|mm+(?:-hmm)?|hmm+|huh|okay|ok|yes|no|yeah|yep|right|really|sorry|what|oh|ah|alright|all right|sure|pardon|eh)[?.!,\s]*/iy;
+
+function isEnglishNoise(text) {
+  EN_NOISE_WORD.lastIndex = 0;
+  while (EN_NOISE_WORD.test(text)) {
+    if (EN_NOISE_WORD.lastIndex === text.length) return true;
+  }
+  return false;
+}
+
 const CASUAL_OR_RHETORICAL =
   /^(?:how are you|what's up|whats up|how's it going|how is it going|who cares|why bother|what can you do)[?.!\s]*$/i;
 
@@ -706,7 +721,7 @@ function isQuestionCandidate(text) {
   const minLength = HAS_CJK.test(value) ? 2 : 4;
   if (value.length < minLength || value.length > 600) return false;
   if (CASUAL_OR_RHETORICAL.test(value) || COMMAND_PREFIX.test(value)) return false;
-  if (EN_NOISE.test(value)) return false;
+  if (isEnglishNoise(value)) return false;
   // A bare acknowledgement is noise in any language — "そうか" ends in か but
   // is somebody agreeing, not asking.
   if (BACKCHANNEL_INTL.test(value)) return false;
