@@ -1591,6 +1591,77 @@ async function appPathScore() {
   }
 }
 
+/** The test read of the app's path: today's board against the fix, with paired intervals. */
+async function appPathFinal() {
+  const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
+  const { readStore } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href
+  );
+  const { createEmbedder } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/minilm.mjs")).href
+  );
+  const fixed = await import(pathToFileURL(path.resolve(args["links-module"])).href);
+  const corpus = await loadCorpus();
+  const store = readStore(path.join(CACHE, "embed"), "minilm");
+  const board = corpus.meetings.map((meeting) => ({
+    id: meeting.id,
+    title: meeting.id,
+    createdAt: meeting.createdAt,
+    summaryRoute: "providers:same",
+    snapshot: {
+      nodes: meeting.nodes.map((node) => ({ ...node, label: nameOf(meeting, node, "model") })),
+    },
+  }));
+  const split = args.split;
+  const scenario = inSplit(corpus.pairs, split, "scenario");
+  const mixed = inSplit(corpus.pairs, split, "mixed");
+  const within = inSplit(corpus.pairs, split, "non-scenario-within");
+  const options = { seriesOf: corpus.truth.seriesOf, groupOf: corpus.truth.groupOf };
+  const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
+  const f = (value) => (value == null ? "  -  " : value.toFixed(3));
+  const iv = (value) => (value ? `[${value[0].toFixed(3)}, ${value[1].toFixed(3)}]` : "");
+  const out = [];
+  for (const name of args.runs.split("+")) {
+    const checks = new Map();
+    for (const meeting of corpus.meetings) {
+      const value = readJson(path.join(CACHE, "app-path", name, `${meeting.id}.json`));
+      if (value?.candidates.length) checks.set(meeting.id, value);
+    }
+    const subjects = [
+      ...new Set([...checks.values()].flatMap((check) => check.links.map((link) => link.subject))),
+    ];
+    const embedded = await embedder.embed(subjects);
+    const vectors = new Map(subjects.map((text, index) => [text, embedded[index]]));
+    const vectorOf = (text) => vectors.get(text) ?? store.get(text);
+    const drawnToday = corpus.links.linkThreads(board, { vectorOf: store.get, checks }).subjects;
+    const drawnFix = fixed.linkThreads(board, { vectorOf, checks }).subjects;
+    const today = coMembers(drawnToday);
+    const fix = coMembers(drawnFix);
+    const line = (label, linked, drawn) => {
+      const yes = (pair) => linked.has(pair.key);
+      const s = scoreLib.scoreWithIntervals(scenario, yes, options);
+      const top = Math.max(0, ...drawn.map((subject) => subject.conversationIds.length));
+      console.log(
+        `${name} ${label.padEnd(6)} P ${f(s.precision)} ${iv(s.intervals.precision)} R ${f(s.recall)} ${iv(s.intervals.recall)} FL ${f(s.falseLinks)} ${iv(s.intervals.falseLinks)} mixed ${mixed.filter(yes).length}/${mixed.length} ns-within ${within.filter(yes).length}/${within.length} largest subject ${top} of ${board.length}, ${drawn.length} subjects`
+      );
+      return s;
+    };
+    const a = line("today", today, drawnToday);
+    const b = line("fix", fix, drawnFix);
+    const paired = scoreLib.pairedRates(
+      scenario,
+      (pair) => fix.has(pair.key),
+      (pair) => today.has(pair.key),
+      options
+    );
+    console.log(
+      `  fix minus today: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
+    );
+    out.push({ name, today: a, fix: b, paired });
+  }
+  fs.writeFileSync(path.join(CACHE, "results", `app-path-${split}.json`), JSON.stringify(out));
+}
+
 // ---------------------------------------------------------------------------
 // Typed relations: can a model say how two linked conversations relate? Two
 // judges read the transcript of the two topics and pick a type, each blind to
@@ -1762,6 +1833,7 @@ const COMMANDS = {
   "final-boards": finalBoards,
   "app-path": appPath,
   "app-path-score": appPathScore,
+  "app-path-final": appPathFinal,
   "rerank-texts": rerankTexts,
 };
 

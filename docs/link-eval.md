@@ -483,3 +483,14 @@ Chosen on tuning pairs. No test pair had been read.
 - **Not sent to test:** more per conversation. On tuning pairs thread headings,
   questions asked and 900 characters of summary each left recall at 0.45 to 0.57
   against 0.56, with no gain in balanced accuracy.
+
+## Frozen before the test read: returns
+
+Nothing here has a tuned threshold beyond what the app ships: the tracker's own
+`returnThreshold` of 0.15 stays, because no other value gained on tuning
+meetings, and grouping stretches by vector stayed at chance.
+
+- The tracker: the record's returns (Connections) and the live ones (flow card).
+- The loop, live, with gpt-5.6-terra (the app's OpenAI check).
+- A model reading the record's parts at Finish: Claude Opus 5.5 at medium, and
+  gpt-5.6-luna as the cheap one. Each reads at most 800 characters a part.
