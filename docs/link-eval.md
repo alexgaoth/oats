@@ -384,8 +384,12 @@ can be checked in the history. The summary and "Results" came after.
   the quiet room and 0.99 in steady sound. The cloud check with #166 still tells pairs
   apart: precision 0.94 and false links 0.23 in the quiet room, 0.86 and 0.52 in steady
   sound. It is the only method here that does.
-- **A small history is harder than the benchmark.** At 23 meetings main's board scores what
-  linking everything scores, even on manual text. The 139-meeting board flatters it.
+- **Scoring a pair against its history does not clear the bar either.** Centring,
+  CSLS, mutual neighbours, rare words and a threshold per history all trade recall for
+  fewer false links, at about the same precision. Mixed histories are not the problem:
+  main draws 0 of 1,139 false links between unrelated meetings. A history about one
+  product is, and the signal is not there. With no key, the recommendation is to show
+  fewer links: mutual nearest neighbours draws the fewest false ones.
 - **A threshold for recognized text did not carry over.** 0.84 read false links of 0.25 on
   tuning meetings and 0.65 on test. Tune again when more meetings have been through
   recognition.
@@ -721,6 +725,7 @@ costs about 41 turns and 43 phrases.
 | EmbeddingGemma 1, 768 | 176 | 768 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.70 | 0.82, 0.55, 0.40 | 0.87, 0.40, 0.20 |
 | EmbeddingGemma 1, 256 | 176 | 256 | 57 / 17 | 3 s | 516 MB | Gemma terms | 0.71 | 0.82, 0.66, 0.49 | 0.90, 0.44, 0.17 |
 | mxbai-embed-large-v1 (over the size) | 337 | 1024 | 51 / 19 | 2.9 s | 644 MB | Apache-2.0 | 0.71 | 0.86, 0.44, 0.25 | 0.89, 0.57, 0.24 |
+| nomic-embed-text-v2-moe (over the size) | 344 | 768 | GGUF, not timed | | | Apache-2.0 | 0.70 | 0.89, 0.37, 0.15 | 0.89, 0.67, 0.27 |
 
 Time a topic is CPU time for 41 turns and 43 phrases, on a loaded Mac, so these wait
 for a quiet-machine run. MB is what the app would ship. Not screened: jina-embeddings-v5 (CC BY-NC), LFM2.5-Embedding (license
@@ -884,11 +889,11 @@ nearest thing here to what the app holds. Linking every pair scores precision 0.
 - **Recognition costs false links, not recall.** Against manual text, the board's
   false-link rate rises 0.16 [−0.07, 0.29] in the quiet room and 0.22 [0.10, 0.30] in
   steady sound. Transcripts pull together on their shared errors.
-- **A small history is harder than the 139-meeting board.** With 23 meetings even manual
-  text reads a false-link rate of 0.78 at main's threshold, against 0.41 on the full
-  board: fewer subjects compete, so topics pile into one. Main's board here scores what
-  linking everything scores. It tells a person little until a history grows, at least
-  on a history about one thing.
+- **These 23 are a hard set, not a small-history effect.** Manual text reads 0.78 at main's
+  threshold here, against 0.41 on the full board, but history size is not why: on sampled
+  manual histories of whole series main reads 0.38, 0.43 and 0.44 at sizes 5, 20 and 40.
+  Only 31 of the 253 pairs here are unlinked, so a few hard pairs carry the rate. Main's
+  board on these 23 scores what linking everything scores.
 - **The cloud check is the only method here that still tells pairs apart.** In the quiet
   room it holds precision 0.94 and false links 0.23, with a largest subject of 10 of 23.
   In steady sound it falls to 0.86 and 0.52, a real cost: false links +0.42 [0.16, 0.67].
@@ -927,6 +932,63 @@ above is the better evidence.
 
 **Returns on recognized text** are too few to rate: the tracker draws 1 to 6 returns on
 the 8 meetings, against 12 to 18 gold ones, and none verifies as right under the labels.
+
+### Scored against the history
+
+An absolute cosine cannot work when a whole history shares one subject, so these score
+a pair against the history it sits in, on the CPU, with no new model
+(`scripts/link-relative.mjs`). Each row is many sampled histories at one size, read once
+on test meetings, against main.
+
+False-link rate, then recall:
+
+| Method | As heard, 5 | As heard, 15 | Steady, 15 | Manual, 5 | Manual, 20 | Manual, 100 | Mixed, 5 | Mixed, 20 | Mixed, 100 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Main: greedy, 0.78 | 0.92, 0.95 | 0.50, 0.78 | 1.00, 1.00 | 0.42, 0.79 | 0.51, 0.78 | 0.42, 0.68 | 0.28, 0.80 | 0.24, 0.81 | 0.22, 0.81 |
+| No order, 0.8 | 0.71, 0.81 | 0.25, 0.57 | 0.75, 0.85 | 0.27, 0.39 | 0.10, 0.21 | 0.04, 0.20 | 0.16, 0.44 | 0.08, 0.27 | 0.07, 0.22 |
+| Threshold from the history | 0.88, 0.65 | 0.25, 0.45 | 0.50, 0.60 | 0.37, 0.64 | 0.13, 0.27 | 0.03, 0.15 | 0.26, 0.67 | 0.10, 0.34 | 0.05, 0.19 |
+| **Mutual nearest, 3** | 0.73, 0.73 | 0.13, 0.22 | 0.13, 0.14 | 0.29, 0.55 | 0.07, 0.18 | 0.01, 0.04 | 0.18, 0.67 | 0.05, 0.19 | 0.01, 0.08 |
+| CSLS | 0.56, 0.59 | 0.00, 0.19 | 0.25, 0.08 | 0.35, 0.64 | 0.08, 0.16 | 0.01, 0.03 | 0.23, 0.64 | 0.05, 0.19 | 0.01, 0.07 |
+| Rare words | 0.46, 0.54 | 0.13, 0.32 | 0.38, 0.32 | 0.39, 0.52 | 0.19, 0.35 | 0.08, 0.18 | 0.28, 0.62 | 0.16, 0.39 | 0.16, 0.36 |
+
+Precision, and false links between unrelated meetings on the mixed histories:
+
+| Method | As heard, 5 | Manual, 20 | Manual, 100 | Mixed, 5 | Mixed, 20 | Mixed, 100 | Unrelated, mixed 20 | Unrelated, mixed 100 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Main: greedy, 0.78 | 0.88 | 0.78 | 0.85 | 0.66 | 0.77 | 0.46 | 0 of 1,139 | 8 of 15,576 |
+| No order, 0.8 | 0.89 | 0.83 | 0.94 | 0.64 | 0.78 | 0.42 | 0 | 0 |
+| Threshold from the history | 0.84 | 0.82 | 0.95 | 0.63 | 0.77 | 0.46 | 0 | 0 |
+| **Mutual nearest, 3** | 0.88 | 0.85 | 0.95 | 0.71 | 0.79 | 0.66 | 0 | 0 |
+| CSLS | 0.89 | 0.83 | 0.91 | 0.65 | 0.79 | 0.67 | 2 | 6 |
+| Rare words | 0.90 | 0.81 | 0.89 | 0.60 | 0.71 | 0.34 | 47 | 153 |
+
+"As heard" is Apple Speech with every meeting recognized, on test meetings. Sizes 15 are
+one history with 8 unlinked pairs, so they are thin. No recognized history of 100 exists:
+those columns are manual. Manual, 100 needs tuning meetings too, because the test series
+hold 48. ICSI is manual text, and pairs inside one ICSI group have no gold, so they are
+left out of these rates. Precision on mixed histories is low because AMI's across-series
+unlinked pairs are a larger share there.
+
+- **Nothing clears the bar, at any size.** No method reaches precision 0.90, recall 0.50
+  and false links 0.25 across sizes. The one row that does, no order at 0.8 as heard at 15,
+  is one history with 8 unlinked pairs, and the same method reads 0.71 at size 5 and 0.75
+  in steady sound.
+- **Every method pays for fewer false links with recall.** On a history of one product at
+  sizes under 20, precision stays near the base rate whatever the score. The signal is
+  not there to rescale.
+- **All-one-product is the hard case, and mixed histories are not.** Main draws 0 of 1,139
+  false links between unrelated meetings at size 20. A cosine works when subjects differ.
+- **Centring is out.** It and removing the top component were stopped on tuning: they drew
+  false links between unrelated meetings where main draws none, because taking out what a
+  history shares inflates what is left. Rare words does the same (47 of 1,139).
+- **Mutual nearest is the safest of them.** It holds false links lowest in steady sound,
+  draws no unrelated link at any size, and keeps precision highest as a history grows. It
+  also scales: a topic links to at most 3 others, so the board's links grow with the
+  history and not with its square. That is why its recall falls with size, and why the
+  gold, which calls most scenario pairs linked, undersells it.
+
+**What the board should do with no key:** show fewer links, and the ones it can stand
+behind. See the decision below.
 
 ### What a model change would cost
 
@@ -971,12 +1033,17 @@ MiniLM means:
    caption ("3 returns to earlier topics"), which is the sentence that makes the claim;
    (c) with a writing model, keep in the record only returns a model confirms at Finish
    (0.62 to 0.65 against 0.44 to 0.56). Recommended: (b) now, since it needs no model.
-2. **The on-device default.** Recommended: keep MiniLM at 0.78 for now, and tune again on
-   recognized text once more tuning meetings come through. bge-small at 0.96 misses the
-   precision bar by 0.035 on manual text and falls apart on recognized text. A threshold
-   of 0.84 does not carry over. Say plainly that a small history on one subject gets
-   little from the on-device board.
-3. **Typed relations.** Recommended: no.
+2. **What the board does with no key.** Nothing cleared the bar, so nothing changes by
+   the bar's rule. But at 0.78 the board on recognized text links nearly everything, on a
+   team's history about one thing. Options: (a) leave it; (b) a topic links only to its
+   nearest 3, and only when they agree, over the same 0.78: false links 0.13 to 0.73 as
+   heard against 0.50 to 1.00, and none between unrelated meetings, at a much lower
+   recall; (c) (b) plus a line that says the board shows only its surest links.
+   Recommended: (b), as a design choice, not as a bar cleared. A wrong link is a visible
+   error, a sparse board is not, and #166 already gives anyone with a key the better path.
+3. **The embedding model.** Recommended: keep MiniLM. bge-small at 0.96 misses the precision
+   bar by 0.035 on manual text and falls apart on recognized text.
+4. **Typed relations.** Recommended: no.
 
 ## Reproduce
 
@@ -1010,6 +1077,9 @@ ANTHROPIC_API_KEY=… node scripts/return-eval.mjs judge --model anthropic:claud
   --split test
 # Recognition: each replay, then the boards
 node scripts/link-eval.mjs snapshots --replay <dir> --cache <cache> --meetings <ids>
+node scripts/link-relative.mjs icsi                        # ICSI through track T's export, on this computer
+node scripts/link-relative.mjs read --pool test-heard --size 5 --histories 40 \
+  --methods "greedy:0.78+mutual:abs:3:0.78"
 node scripts/link-eval-2.mjs recognition-boards --center 0.78 --orders 8 --runs "small.en__quiet-room"
 ANTHROPIC_API_KEY=… node scripts/link-eval-2.mjs recognition-history --center 0.78 --orders 12 \
   --runs "apple-speech__quiet-room" --model "anthropic:claude-opus-5-5@think,medium"
