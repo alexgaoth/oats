@@ -129,6 +129,40 @@ test("a statement with a question word in it gets no card", () => {
   }
 });
 
+test("long runs of a filler stay quick at the length cap", () => {
+  // A hum of sixty m's once meant half an hour of a frozen renderer, on one final
+  // segment. Backtracking fails by minutes, not milliseconds, so the fastest of
+  // three runs tells it from a busy machine.
+  const fastest = (work) => {
+    let best = Infinity;
+    for (let run = 0; run < 3; run += 1) {
+      const start = performance.now();
+      work();
+      best = Math.min(best, performance.now() - start);
+    }
+    return best;
+  };
+  for (const filler of ["m", "um", "hmm", "uh", "ah", "oh", "ok", "no", "uh ", "mm-hmm "]) {
+    const count = Math.floor(590 / filler.length);
+    for (const text of [
+      `${filler.repeat(count)} good`,
+      `${filler.repeat(count)}?x`,
+      `good ${filler.repeat(count)}`,
+    ]) {
+      assert.ok(fastest(() => isQuestionCandidate(text)) < 5, `${filler} at ${text.length}`);
+      assert.ok(fastest(() => extractQuestionSentence(text)) < 5, `${filler} quoted`);
+    }
+  }
+});
+
+test("a long hum is noise when it is alone, and not when words follow it", () => {
+  assert.equal(isQuestionCandidate(`${"m".repeat(590)}?`), false);
+  assert.equal(isQuestionCandidate(`${"um".repeat(290)}?`), false);
+  assert.equal(isQuestionCandidate("Mmhmm?"), false);
+  assert.equal(isQuestionCandidate("Hmmm, okay, yeah?"), false);
+  assert.equal(isQuestionCandidate(`${"m".repeat(40)} is it good?`), true);
+});
+
 test("a relative clause and a heading do not ask, and modals ask before a noun", () => {
   for (const text of [
     "We still have the user interface, which is all the buttons",
