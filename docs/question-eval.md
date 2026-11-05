@@ -524,6 +524,33 @@ final timing runs on a quiet machine. Accuracy does not depend on load.
 | Rules   | 5 µs a turn, loaded Mac   | under 50 µs                     | none   | none     | MIT, the repo | nothing                |
 | Replies | 15 µs a reply, loaded Mac | under 100 µs                    | none   | none     | MIT, the repo | nothing new            |
 
+### To run it again
+
+In this doc, "app" and "main" mean the code before these changes, at f7bd563. The script
+reads the repo's own `conversationAide.mjs`, so that code now has to be passed in:
+
+```sh
+# The code before these changes.
+mkdir -p /tmp/before
+git show f7bd563:src/helpers/conversationAide.mjs > /tmp/before/conversationAide.mjs
+git show f7bd563:src/helpers/contextCheck.mjs > /tmp/before/contextCheck.mjs
+
+# Views (a) and (b), on the test meetings.
+node scripts/question-eval.mjs baseline --split test --aide /tmp/before/conversationAide.mjs
+
+# Real recognition: --split audio is the 8 meetings with recordings.
+node scripts/question-eval.mjs baseline --split audio --replay small.en__quiet-room \
+  --aide /tmp/before/conversationAide.mjs --json before.json
+node scripts/question-eval.mjs baseline --split audio --replay small.en__quiet-room \
+  --json after.json
+
+# The bars: the second method against the first, paired per meeting.
+node scripts/question-eval.mjs bars --a after.json --b before.json \
+  --key rec:small.en__quiet-room/strict/app
+```
+
+`errors` prints false cards and missed questions, and refuses test meetings.
+
 ### Not done
 
 - Turbo q5_0 is queued behind the GPU lock, so it is not in the tables.
