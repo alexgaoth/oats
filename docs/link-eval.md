@@ -338,3 +338,119 @@ off when the run was stopped, which OpenAI may bill as well.
    recorded. The cloud linker sends the topic names and gists of up to 12
    earlier conversations at each Finish, whatever model wrote them, and Settings
    says so. A stricter rule needs the summary's route recorded on each note.
+
+# Round 2 (2026-11-05)
+
+Alex's ask: better "linking the relationships", between conversations on the
+board and between topics inside one conversation. Everything under this heading
+was written before the runs it describes. The bars and the split below were
+committed first, in this order, so they can be checked in the history.
+
+## The bar, written before the runs
+
+**On-device default.** A new default for everyone on this computer needs all
+of these on the test split's scenario pairs:
+
+- precision at or above 0.90,
+- recall at or above 0.50,
+- a false-link rate at or below 0.25,
+- a 95% interval for the paired difference in precision against main that
+  excludes 0.
+
+"Main" is what the board does at f7bd563: stored topic vectors at 0.78, names
+at 0.6 for a topic with no stored vector, drawn as subjects. It also must not
+draw more mixed false links than main does, and must not lose a non-scenario
+link that main finds. Main's two thresholds were chosen in round 1 on every
+meeting, the test meetings too, so main is scored with a small advantage. A
+challenger's thresholds and weights come from tuning pairs only.
+
+Precision is the stated difference because the bar is about precision: a
+stricter linker can only reach it by giving up recall, and then balanced
+accuracy can fall while the board gets more trustworthy. Balanced accuracy and
+the false-link rate are reported beside it, each with its paired interval.
+
+**Inside one conversation.** A new way to draw "came back" needs precision at
+or above 0.80 on the test meetings, reported first. Recall and timing come
+after it. A wrong "came back" is a visible error.
+
+**Cloud.** A new default only if the gain's 95% interval excludes 0: paired
+balanced accuracy against claude-opus-5-5 at medium on the test pairs of the
+sample. More text per conversation counts as a gain only when recall rises and
+the false-link rate's paired interval does not show a rise.
+
+## The split
+
+`scripts/lib/link-split.mjs`. Series stay whole.
+
+- **Test: 12 scenario series and the movie club.** ES2002, ES2004, ES2005,
+  ES2009, ES2014, IS1000, IS1001, IS1009, TS3003, TS3005, TS3011, TS3012, and
+  IB4010 with IB4011. These hold the topic benchmark's test split (ES2004,
+  IS1009, TS3003), so round 2 keeps it. The other nine series were drawn once
+  with a seeded generator (seed 20261105; 4 ES, 2 IS and 3 TS, the corpus'
+  mix). Three series alone cannot carry a series bootstrap.
+- **Tune: the other 23 scenario series and the office meetings.** IB4003 and
+  IB4005.
+- **Tuning pairs** have no meeting in a test series. **Test pairs** have at
+  least one. No label of a test pair is read while tuning. Pairs with both
+  meetings in test series are reported beside them, as the strict reading.
+- At most five methods go to the test split, named before they go, and every
+  one is reported. Nothing is tuned after a test score is read.
+
+Intervals are series bootstraps for pairs, as in round 1. Returns are scored
+per meeting, with a bootstrap over meetings.
+
+## The gold is a proxy
+
+Round 1's gold is AMI's series and topic labels. It can show that a method tells
+pairs with a shared labelled subject from pairs without one, that it does not
+link unrelated meetings, and how those rates compare between methods. It cannot
+show that a link is right for a person. Labels are broad, each stretch has one
+label, and across series the "same subject" belongs to another team's project,
+which a person's own history would not hold. Every precision here is a lower
+bound on what a reader would accept. Round 2 reports the within-series and
+across-series rows apart for that reason.
+
+## The gold for returns
+
+`scripts/lib/return-truth.mjs`. A subject is a label after the link benchmark's
+`subjectOf`, so generic labels make no subject. A subject is held while the room
+is on it. Held stretches closer than 100 words are one stretch, and a stretch
+of fewer than 100 words does not count, the same 100 words as the link gold. A
+subject returns at the start of each held stretch after its first.
+
+- **top**: only the top-level topic of each turn, as the brief names it. It is
+  sparse: 10 returns in the 89 tuning meetings, because AMI's top level is often
+  "discussion" or a presentation, with the subject one level down.
+- **fine**: a turn's innermost topic and every topic above it: 184 returns in
+  54 of the 89 tuning meetings. "Look and usability" is 86 of them.
+
+**A drawn return is right** when one subject holds at least 30% of the words of
+the run it starts, and at least 30% of the words of the topic's earlier runs,
+and under 30% of the words between them. So the room left the subject and came
+back. A generic stretch cannot confirm a return, so a drawn return with no
+subject on one side is **unverifiable**. Precision counts unverifiable returns
+as neither right nor wrong, and is given again with them counted as wrong.
+
+**Chance** is the same rule on every pair of non-adjacent stretches of a
+meeting: what precision a method with no signal would get.
+
+**A gold return is found** when a drawn return on its subject (the same 30% on
+both sides) starts between 60 s before it and its end.
+
+**Timing.** Where the line bends against the gold start, and, live, how long
+after the gold start the flow card first draws the return.
+
+## Models screened
+
+Verified on the Hugging Face API on 2026-11-05: size, license, gating. Default
+candidates are under about 250 MB, ONNX or GGUF, with a license an open-source
+app can ship. The two over that size stay as comparators, to see what a larger
+model would buy.
+
+Embedding: all-MiniLM-L6-v2 (baseline), EmbeddingGemma 1 and 2 at 768 and 256
+dimensions, bge-small-en-v1.5, snowflake-arctic-embed-m-v1.5,
+granite-embedding-small-english-r2, granite-embedding-97m-multilingual-r2,
+nomic-embed-text-v2-moe, mxbai-embed-large-v1 (over the size) and
+Qwen3-Embedding-0.6B (over the size). Not screened: jina-embeddings-v5
+(CC BY-NC, no use in an MIT app), LFM2.5-Embedding (license other, custom code),
+harrier-oss and Octen (no ONNX or GGUF from the publisher).
