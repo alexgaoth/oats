@@ -29,6 +29,7 @@
 //   relations           typed relations, by two judges
 //   recognition-texts   recognized turns, to embed with another model
 //   recognition-boards  every pair that touches a recognized meeting, against manual
+//   recognition-history a history where every meeting was heard, against the same on manual
 //
 // Nothing of Oats' users is read or sent. The bar and the split were written
 // before these runs; `--split tune` reads tuning pairs only, with test meetings
@@ -75,6 +76,7 @@ const { values: args, positionals } = parseArgs({
     touching: { type: "string" },
     orders: { type: "string", default: "12" },
     methods: { type: "string" },
+    subset: { type: "string" },
     "links-module": { type: "string" },
     judges: { type: "string", default: "anthropic:claude-sonnet-5-5+openai:gpt-6.1-sol@low" },
   },
@@ -2054,6 +2056,184 @@ function recognizedMeetings(replay) {
   return out;
 }
 
+/**
+ * A history where every meeting was heard, as the app has it: the meetings a
+ * recognizer covers, and only those, on the board, against the same history on
+ * manual text. The app's rule on topic vectors, and with `--model` the app's
+ * whole cloud path: its candidates, the check, the board.
+ */
+async function recognitionHistory() {
+  const load = (file) => import(pathToFileURL(path.join(ROOT, file)).href);
+  const scoreLib = await load("scripts/lib/link-score.mjs");
+  const { createEmbedder } = await load("scripts/lib/minilm.mjs");
+  const { readStore } = await load("scripts/lib/embed-store.mjs");
+  const remote = await load("src/helpers/remoteLinks.mjs");
+  const fast = await load("scripts/lib/fast-models.mjs");
+  const { summaryExcerpt } = await load("src/helpers/conversationGroupSort.mjs");
+  const corpus = await loadCorpus();
+  const { links, truth } = corpus;
+  const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
+  const other =
+    args.configs && args.configs !== "minilm"
+      ? readStore(path.join(CACHE, "embed"), args.configs)
+      : null;
+  const threshold = Number(args.center);
+  const f = (value) => (value == null ? "  -  " : value.toFixed(3));
+  const iv = (value) => (value ? `[${value[0].toFixed(3)}, ${value[1].toFixed(3)}]` : "");
+  const options = { seriesOf: truth.seriesOf, groupOf: truth.groupOf };
+  for (const replay of args.runs.split("+")) {
+    const replaced = recognizedMeetings(replay);
+    // `--subset tune|test`: only that side of the split, on the board and in the scores.
+    const meetings = corpus.meetings.filter(
+      (meeting) =>
+        replaced.has(meeting.id) && (!args.subset || splitOfMeeting(meeting.id) === args.subset)
+    );
+    const ids = new Set(meetings.map((meeting) => meeting.id));
+    const scenario = corpus.pairs.filter(
+      (pair) => ids.has(pair.a) && ids.has(pair.b) && pair.category.startsWith("scenario")
+    );
+    const vectorFor = (node, turns) => {
+      if (!other) return node.vector;
+      const pieces = node.utteranceIds
+        .map((id) => turns.get(String(id)) ?? "")
+        .map((text) => ({
+          vector: other.get(text),
+          weight: corpus.tracker.contentWords(text).length,
+        }))
+        .filter((piece) => piece.vector && piece.weight > 0);
+      return links.encodeTopicVector(links.topicContentVector(pieces));
+    };
+    const boardFor = (heard) =>
+      meetings.map((meeting) => {
+        const source = heard ? replaced.get(meeting.id) : meeting;
+        return {
+          id: meeting.id,
+          title: meeting.id,
+          createdAt: meeting.createdAt,
+          summaryRoute: "providers:same",
+          summary: source.summary,
+          snapshot: {
+            nodes: source.nodes.map((node) => ({
+              ...node,
+              label: String(source.names?.[node.id]?.name ?? node.label).trim(),
+              vector: vectorFor(node, source.turns ?? meeting.turns),
+            })),
+          },
+        };
+      });
+    const vectorsFor = async (board, extra = []) => {
+      const labels = board.flatMap((item) => item.snapshot.nodes.map((node) => node.label));
+      const texts = [...new Set([...labels, ...extra])];
+      const embedded = await embedder.embed(texts);
+      const vectors = new Map(texts.map((text, index) => [text, embedded[index]]));
+      return (text) => vectors.get(text) ?? null;
+    };
+    const line = (label, yes, reference) => {
+      const s = scoreLib.scoreWithIntervals(scenario, yes, options);
+      console.log(
+        `${label.padEnd(26)} P ${f(s.precision)} ${iv(s.intervals.precision)} R ${f(s.recall)} ${iv(s.intervals.recall)} FL ${f(s.falseLinks)} ${iv(s.intervals.falseLinks)}`
+      );
+      if (reference) {
+        const paired = scoreLib.pairedRates(scenario, yes, reference, options);
+        console.log(
+          `  minus manual: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
+        );
+      }
+      return yes;
+    };
+    const unlinked = scenario.filter((pair) => !pair.linked).length;
+    console.log(
+      `\n${replay}: ${ids.size} meetings, ${scenario.length} scenario pairs, ${unlinked} unlinked; ${args.configs || "minilm"} at ${threshold}`
+    );
+    const draw = async (board) => {
+      const vectorOf = await vectorsFor(board);
+      return linkShares(historyOrders(board, truth, Number(args.orders)), (item) =>
+        coMembers(links.meaningThreads(item, { vectorOf, contentThreshold: threshold }).subjects)
+      );
+    };
+    const sharesManual = await draw(boardFor(false));
+    const sharesHeard = await draw(boardFor(true));
+    const manual = line("board, manual text", (pair) => sharesManual.get(pair.key) ?? 0);
+    line("board, as heard", (pair) => sharesHeard.get(pair.key) ?? 0, manual);
+    if (!args.model) continue;
+
+    // The cloud path over this history, on each text.
+    const slug = args.model.replace(/[^a-zA-Z0-9.-]+/g, "_");
+    const cloudBoard = async (heard) => {
+      const board = boardFor(heard);
+      const nameVectors = await vectorsFor(board);
+      const dir = path.join(CACHE, "app-path", `${slug}~${heard ? replay : `manual-of-${replay}`}`);
+      fs.mkdirSync(dir, { recursive: true });
+      const describe = (item) => ({
+        gist: summaryExcerpt(item.summary, remote.GIST_CHARS),
+        topics: remote.linkTopicNames(item.snapshot, { minTopicMs: links.MIN_LINK_TOPIC_MS }),
+      });
+      let next = 1;
+      const work = async () => {
+        while (next < board.length) {
+          const index = next;
+          next += 1;
+          const current = board[index];
+          const file = path.join(dir, `${current.id}.json`);
+          if (fs.existsSync(file)) continue;
+          const candidates = remote.chooseCandidates(current, board.slice(0, index), {
+            vectorOf: nameVectors,
+          });
+          if (!candidates.length) {
+            fs.writeFileSync(file, JSON.stringify({ candidates: [], links: [], ok: true }));
+            continue;
+          }
+          const prompt = remote.buildLinkPrompt({
+            current: describe(current),
+            earlier: candidates.map((id) => ({
+              id,
+              ...describe(board.find((item) => item.id === id)),
+            })),
+          });
+          const answer = await fast.ask(args.model, {
+            system: prompt.system,
+            user: prompt.text,
+            schema: remote.LINK_SCHEMA,
+            maxTokens: 4000,
+            timeoutMs: 90_000,
+            purpose: "link-eval-2:recognition-history",
+          });
+          const parsed = answer.ok ? remote.parseLinkAnswer(answer.text, prompt.keys) : null;
+          fs.writeFileSync(
+            file,
+            JSON.stringify({ candidates, links: parsed ?? [], ok: Boolean(parsed) })
+          );
+        }
+      };
+      await Promise.all(Array.from({ length: Number(args.concurrency) }, work));
+      const checks = new Map();
+      const subjects = [];
+      for (const item of board) {
+        const value = readJson(path.join(dir, `${item.id}.json`));
+        if (!value?.candidates.length) continue;
+        checks.set(item.id, value);
+        for (const link of value.links) subjects.push(link.subject);
+      }
+      const vectorOf = await vectorsFor(board, subjects);
+      const drawn = links.linkThreads(board, { vectorOf, checks }).subjects;
+      return {
+        linked: coMembers(drawn),
+        largest: Math.max(0, ...drawn.map((subject) => subject.conversationIds.length)),
+      };
+    };
+    const onManual = await cloudBoard(false);
+    const onHeard = await cloudBoard(true);
+    const cloudManual = line(`check, manual (top ${onManual.largest})`, (pair) =>
+      onManual.linked.has(pair.key)
+    );
+    line(
+      `check, as heard (top ${onHeard.largest})`,
+      (pair) => onHeard.linked.has(pair.key),
+      cloudManual
+    );
+  }
+}
+
 /** Every recognized turn, to embed with another model. */
 function recognitionTexts() {
   const out = new Set();
@@ -2339,6 +2519,7 @@ const COMMANDS = {
   "app-path-final": appPathFinal,
   "recognition-boards": recognitionBoards,
   "recognition-texts": recognitionTexts,
+  "recognition-history": recognitionHistory,
   labels,
   "rerank-texts": rerankTexts,
 };

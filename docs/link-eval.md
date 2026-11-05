@@ -563,6 +563,20 @@ reference:
 Slot five is held for the best local writing model, if one earns it on tuning
 pairs. Twenty orders of the history for each.
 
+## Frozen before the test read: a threshold for recognized text
+
+Added late, and read with less trust than the rest. Main's 0.78 was tuned on manual
+transcripts, and the app never has one. When more meetings came through recognition, a
+board with every meeting recognized linked nearly everything at 0.78, so the threshold
+looked wrong for what the app hears. **That first look was on 23 meetings, 15 of them
+in test series, at 0.82, 0.86 and 0.90, so the test split is not clean for this one.**
+
+To keep what can be kept, the threshold comes from the 8 recognized tuning meetings
+alone (Apple Speech, quiet room; 28 pairs, 6 unlinked), by the bar's rule: the most
+recall with a false-link rate at or below 0.25. That is **0.84** (precision 0.89,
+recall 0.57, false links 0.25). Read once on the 15 test meetings (105 pairs), against
+0.78, in both rooms, with every meeting on the board recognized. The same bar applies.
+
 <!-- round 2 results -->
 ## Results
 
