@@ -276,7 +276,7 @@ larger loss in both rooms, and no detector can recover it.
 
 **Delay.** Median 1.2 s from the end of the question to the card, 90th percentile
 5.2 s (small.en, quiet). 0.5 s and 3.2 s in steady sound, where segments are
-shorter. Nothing in these changes adds to it: on the questions both methods catch,
+shorter. These hold Whisper's request time on a loaded Mac, so they are upper figures. Nothing in these changes adds to it: on the questions both methods catch,
 the paired difference is 0 at the median and at the 90th percentile in all eight
 rooms. Now and then a question's first card is later by up to 20 s: on main a
 statement beside it had already raised a card that happened to overlap.
@@ -306,7 +306,8 @@ apple-speech in steady sound recall is 0.004 lower, within its interval. Bar 5, 
 searches that open on a reply that does not say "I don't know": the rules alone keep
 it in seven rooms and add one on parakeet-ultra in a quiet room (3 to 4). With the
 reply branch on top it holds in all eight (the table under "Outcomes"), so the two
-belong together. Bar 6: 5 µs a turn. Bar 7: all tests pass, and no other locale's
+belong together. Bar 6: 5 µs a turn on a loaded Mac, far under 1 ms, to be confirmed on
+a quiet machine. Bar 7: all tests pass, and no other locale's
 pattern changed.
 
 **How much of the "false" is false.** I read 100 of the rules' false cards on
@@ -390,7 +391,7 @@ Tuning meetings, real recognition, F1 unless it says otherwise.
 | 8. Engine punctuation      | Table above. Prompts: no effect shown                                                                                                                            | Pick the engine for speech |
 
 **Why the classifier does not ship.** It is good: hashed word and position n-grams,
-logistic regression, 39 KB, 25 µs a turn, no key, no download. On words alone at the
+logistic regression, 39 KB, 25 µs a turn on a loaded Mac, no key, no download. On words alone at the
 act level it beats the transcribers' own "?" (F1 0.66 against 0.57). But against the
 rules on real recognition it adds 0.008 to 0.054 F1 depending on the engine, with
 recall lower in seven rooms of eight, and bar 4 says a question missed costs more than a
@@ -402,8 +403,8 @@ this can be looked at again if recognition changes.
 The tiny model's weights read as a learned copy of the rules: an auxiliary at the
 start of a sentence, "you think", a trailing "or", and against "what I" and "what we".
 
-**Cloud refining** is cheap (about $0.002 an hour) and takes 880 ms a card, and it
-removes false cards well: of 52 cards it withdrew in the quiet room, 3 were right.
+**Cloud refining** is cheap (about $0.002 an hour) and takes 880 ms a card on a loaded
+Mac, and it removes false cards well: of 52 cards it withdrew in the quiet room, 3 were right.
 It stays under the bar because it can only remove cards: it cannot add a question the
 rules missed. From a wider net (rules plus the classifier at -1) it reaches 0.518
 quiet and 0.283 steady, +0.043 and +0.019 over the rules, with 30 more cards an hour
@@ -473,7 +474,8 @@ ways, and a hum of sixty m's meant half an hour. It now reads one word at a time
 a sticky pattern that never goes back. `test/helpers/conversationAide.test.js` pins
 long runs at the 600-character cap.
 
-Every regex in the file was then attacked, by measurement: strings built from each
+Every regex in the file was then attacked, by measurement, on a loaded Mac (load above
+80), so read these for their shape, not as a speed: strings built from each
 pattern's own words and separators at 600 characters, random mixes, then 500 mutations
 keeping the slowest, and growth from 150 to 2,400 characters.
 
@@ -499,10 +501,13 @@ group, in 3 groups, and all 3 are the same question asked twice ("What do you th
 
 ### What a winner costs
 
-| Method  | Speed here    | Base M-series, 16 GB (estimate) | Memory | Download | Licence       | What leaves the device |
-| ------- | ------------- | ------------------------------- | ------ | -------- | ------------- | ---------------------- |
-| Rules   | 5 µs a turn   | under 50 µs                     | none   | none     | MIT, the repo | nothing                |
-| Replies | 15 µs a reply | under 100 µs                    | none   | none     | MIT, the repo | nothing new            |
+Speeds are from a loaded Mac (load above 80), so none of them is valid for a bar. The
+final timing runs on a quiet machine. Accuracy does not depend on load.
+
+| Method  | Speed here                | Base M-series, 16 GB (estimate) | Memory | Download | Licence       | What leaves the device |
+| ------- | ------------------------- | ------------------------------- | ------ | -------- | ------------- | ---------------------- |
+| Rules   | 5 µs a turn, loaded Mac   | under 50 µs                     | none   | none     | MIT, the repo | nothing                |
+| Replies | 15 µs a reply, loaded Mac | under 100 µs                    | none   | none     | MIT, the repo | nothing new            |
 
 ### Not done
 
