@@ -112,7 +112,10 @@ export const probability = sigmoid;
  * rates, and L1 that sets most weights to exactly 0. `examples` are `{ features,
  * y }`. Deterministic from `seed`: the same examples give the same weights.
  */
-export function train(examples, { alpha = 0.2, beta = 1, l1 = 1, l2 = 10, epochs = 6, seed = 1 } = {}) {
+export function train(
+  examples,
+  { alpha = 0.2, beta = 1, l1 = 1, l2 = 10, epochs = 6, seed = 1 } = {}
+) {
   const z = new Float64Array(SIZE + 1);
   const n = new Float64Array(SIZE + 1);
   const weightAt = (index) => {

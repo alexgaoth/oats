@@ -144,7 +144,10 @@ if (args.model) {
 }
 if (args.detectors) {
   const extra = await import(pathToFileURL(path.resolve(args.detectors)).href);
-  Object.assign(DETECTORS, await (typeof extra.default === "function" ? extra.default(aide) : extra.default));
+  Object.assign(
+    DETECTORS,
+    await (typeof extra.default === "function" ? extra.default(aide) : extra.default)
+  );
 }
 if (args.only) {
   for (const name of Object.keys(DETECTORS)) {
@@ -190,7 +193,10 @@ function cardsOf(detect, turns) {
     cards.push({
       id: turn.id,
       at: turn.at,
-      words: tokens.slice(from, to).filter(known).map((token) => token.word),
+      words: tokens
+        .slice(from, to)
+        .filter(known)
+        .map((token) => token.word),
       turnWords: tokens.filter(known).map((token) => token.word),
       quote,
       turn: textOf(tokens),
@@ -316,7 +322,8 @@ async function baseline() {
   const reach = {};
   for (const set of SETS) {
     outcomes[set] = {};
-    for (const view of views) outcomes[set][view] = { confusion: {}, searches: 0, falseSearches: 0 };
+    for (const view of views)
+      outcomes[set][view] = { confusion: {}, searches: 0, falseSearches: 0 };
   }
   const perMeeting = {};
   let seconds = 0;
@@ -358,9 +365,13 @@ async function baseline() {
         const byId = new Map(gold[set].map((question) => [question.id, question]));
         const tally = outcomes[set][view];
         tally.searches += searches.length;
-        tally.searchesSaid = (tally.searchesSaid ?? 0) + searches.filter((item) => SAYS_UNKNOWN.test(item.reply)).length;
+        tally.searchesSaid =
+          (tally.searchesSaid ?? 0) +
+          searches.filter((item) => SAYS_UNKNOWN.test(item.reply)).length;
         tally.seconds = (tally.seconds ?? 0) + meeting.seconds;
-        (tally.searchList ??= []).push(...searches.map((item) => `${item.query.slice(0, 90)} => ${item.reply.slice(0, 90)}`));
+        (tally.searchList ??= []).push(
+          ...searches.map((item) => `${item.query.slice(0, 90)} => ${item.reply.slice(0, 90)}`)
+        );
         const queries = new Set(searches.map((search) => search.query));
         detected.forEach((card, index) => {
           const state = states.get(card.id)?.state ?? "gone";
@@ -422,23 +433,22 @@ async function baseline() {
         .filter(([key]) => !key.endsWith("/turn"))
         .map(([key, list]) => [
           key,
-          list.map(({ id, seconds: length, cards, right, gold, caught, delayOf, delays, quote }) => ({
-            id,
-            seconds: length,
-            cards,
-            right,
-            gold,
-            caught,
-            delayOf,
-            delays,
-            quote,
-          })),
+          list.map(
+            ({ id, seconds: length, cards, right, gold, caught, delayOf, delays, quote }) => ({
+              id,
+              seconds: length,
+              cards,
+              right,
+              gold,
+              caught,
+              delayOf,
+              delays,
+              quote,
+            })
+          ),
         ])
     );
-    fs.writeFileSync(
-      args.json,
-      JSON.stringify({ results, outcomes, ids: [...seen], rows })
-    );
+    fs.writeFileSync(args.json, JSON.stringify({ results, outcomes, ids: [...seen], rows }));
   }
 }
 
@@ -493,15 +503,20 @@ async function errors() {
       if (score.verdicts[index]) return;
       const act = meeting.acts.get(meeting.words[card.words[0]]?.act);
       const near = scoreBroad.verdicts[index] ? broad.get(scoreBroad.verdicts[index]).type : "";
-      lines.push(
-        ["FP", id, card.id, act?.type ?? "", near, card.quote.slice(0, 220)].join("\t")
-      );
+      lines.push(["FP", id, card.id, act?.type ?? "", near, card.quote.slice(0, 220)].join("\t"));
     });
     const caught = new Set(score.caughtIds);
     for (const question of gold) {
       if (caught.has(question.id)) continue;
       lines.push(
-        ["FN", id, question.id.split(".").pop(), question.type, question.asked ? "?" : "", question.text.slice(0, 220)].join("\t")
+        [
+          "FN",
+          id,
+          question.id.split(".").pop(),
+          question.type,
+          question.asked ? "?" : "",
+          question.text.slice(0, 220),
+        ].join("\t")
       );
     }
   }
@@ -534,7 +549,10 @@ function trainClassifier() {
       if (!act.words.length || (broad.has(act.id) && !strict.has(act.id))) continue;
       const kept = act.words.filter(() => !dropout || draw() >= dropout);
       const text = (kept.length ? kept : act.words).map((word) => spoken(word.text)).join(" ");
-      examples.push({ features: features(text, { punctuation: false }), y: strict.has(act.id) ? 1 : 0 });
+      examples.push({
+        features: features(text, { punctuation: false }),
+        y: strict.has(act.id) ? 1 : 0,
+      });
     }
   }
   const started = Date.now();
@@ -559,7 +577,8 @@ These are not questions: statements, even with words like what or how in them; b
 Answer with one JSON object and nothing else: {"question": true} or {"question": false}.`,
 };
 
-const APP_SYSTEM = "You are a local conversation question classifier. Follow the JSON contract exactly.";
+const APP_SYSTEM =
+  "You are a local conversation question classifier. Follow the JSON contract exactly.";
 
 const REFINE_SCHEMA = {
   name: "question_verdict",
@@ -657,10 +676,7 @@ async function refine() {
               ...(next ? [{ id: "next", text: next }] : []),
             ])
           : refinePrompt(at > 0 ? textOf(turns[at - 1].tokens) : "", line, next);
-        const key = crypto
-          .createHash("sha1")
-          .update(`${args.prompt}\n${user}`)
-          .digest("hex");
+        const key = crypto.createHash("sha1").update(`${args.prompt}\n${user}`).digest("hex");
         const item = { key, user, card };
         items.push(item);
         return item;
@@ -668,7 +684,11 @@ async function refine() {
       rows.push({ id, view, meeting, gold, cards });
     }
   }
-  const pending = [...new Map(items.filter((item) => !cache.has(item.key)).map((item) => [item.key, item])).values()];
+  const pending = [
+    ...new Map(
+      items.filter((item) => !cache.has(item.key)).map((item) => [item.key, item])
+    ).values(),
+  ];
   console.log(`${items.length} cards, ${pending.length} to ask ${spec}`);
   const keep = (key, row) => {
     cache.set(key, row);
@@ -745,13 +765,19 @@ async function refine() {
   }
   const perView = {};
   for (const { id, view, meeting, gold, cards } of rows) {
-    const before = scoreCards(cards.map((item) => item.card), gold);
+    const before = scoreCards(
+      cards.map((item) => item.card),
+      gold
+    );
     const kept = cards.filter((item) => cache.get(item.key)?.verdict !== false);
-    const after = scoreCards(kept.map((item) => item.card), gold);
+    const after = scoreCards(
+      kept.map((item) => item.card),
+      gold
+    );
     const verdicts = new Map(after.verdicts.map((v, at) => [kept[at].key, v]));
     const removed = cards.filter((item) => cache.get(item.key)?.verdict === false);
     const wrongly = removed.filter((item) => before.verdicts[cards.indexOf(item)]).length;
-    (perView[view] ??= { before: [], after: [], removed: 0, wrongly: 0, failed: 0 });
+    perView[view] ??= { before: [], after: [], removed: 0, wrongly: 0, failed: 0 };
     const tally = perView[view];
     tally.before.push({ ...before, seconds: meeting.seconds, id });
     tally.after.push({ ...after, seconds: meeting.seconds, id });
@@ -769,10 +795,19 @@ async function refine() {
     console.log(
       `F1 gain ${gain.value.toFixed(3)} ${ci(gain.ci)}; withdrew ${tally.removed} cards, ${tally.wrongly} of them right; ${tally.failed} answers failed`
     );
-    out[view] = { before: row(tally.before), after: row(tally.after), gain, removed: tally.removed, wrongly: tally.wrongly, failed: tally.failed };
+    out[view] = {
+      before: row(tally.before),
+      after: row(tally.after),
+      gain,
+      removed: tally.removed,
+      wrongly: tally.wrongly,
+      failed: tally.failed,
+    };
   }
   const times = [...cache.values()].map((item) => item.ms).filter(Number.isFinite);
-  console.log(`median ${median(times)} ms, p90 ${quantile(times, 0.9)} ms over ${times.length} answers`);
+  console.log(
+    `median ${median(times)} ms, p90 ${quantile(times, 0.9)} ms over ${times.length} answers`
+  );
   if (args.json) fs.writeFileSync(args.json, JSON.stringify(out, null, 1));
 }
 

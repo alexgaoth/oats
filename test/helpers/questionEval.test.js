@@ -1,33 +1,41 @@
-import { test, describe } from "node:test";
-import assert from "node:assert/strict";
+const test = require("node:test");
+const { describe, before } = test;
+const assert = require("node:assert/strict");
 
-import {
-  bootstrap,
-  difference,
-  goldQuestions,
-  overlap,
-  pairedDelays,
-  prf,
-  quoteSpan,
-  reachedRecognition,
-  recognizedTurns,
-  roomTurns,
-  scoreCards,
-  spoken,
-  summarize,
-  turnTokens,
-} from "../../scripts/lib/question-truth.mjs";
-import {
-  bestCandidate,
-  candidatesOf,
-  featureNames,
-  features,
-  modelFrom,
-  scoreSentence,
-  sentencesOf,
-  train,
-  wordsOf,
-} from "../../scripts/lib/question-classifier.mjs";
+let bestCandidate, bootstrap, candidatesOf, difference, featureNames, features, goldQuestions;
+let modelFrom, overlap, pairedDelays, prf, quoteSpan, reachedRecognition, recognizedTurns;
+let roomTurns, scoreCards, scoreSentence, sentencesOf, spoken, summarize, train, turnTokens;
+let wordsOf;
+
+before(async () => {
+  ({
+    bootstrap,
+    difference,
+    goldQuestions,
+    overlap,
+    pairedDelays,
+    prf,
+    quoteSpan,
+    reachedRecognition,
+    recognizedTurns,
+    roomTurns,
+    scoreCards,
+    spoken,
+    summarize,
+    turnTokens,
+  } = await import("../../scripts/lib/question-truth.mjs"));
+  ({
+    bestCandidate,
+    candidatesOf,
+    featureNames,
+    features,
+    modelFrom,
+    scoreSentence,
+    sentencesOf,
+    train,
+    wordsOf,
+  } = await import("../../scripts/lib/question-classifier.mjs"));
+});
 
 const word = (index, text, start, end, act = null, punct = "", speaker = "A") => ({
   index,
@@ -171,7 +179,12 @@ describe("the gold questions", () => {
   });
 
   test("strict keeps three real words of el.inf, el.sug and el.ass, broad keeps any elicit act", () => {
-    const three = [word(0, "um", 0, 1), word(1, "is", 1, 2), word(2, "it", 2, 3), word(3, "red", 3, 4)];
+    const three = [
+      word(0, "um", 0, 1),
+      word(1, "is", 1, 2),
+      word(2, "it", 2, 3),
+      word(3, "red", 3, 4),
+    ];
     const meeting = meetingOf([
       act("a", "el.inf", three),
       act("b", "el.ass", [word(4, "right", 5, 6)]),
@@ -324,14 +337,21 @@ describe("recognition against the manual words", () => {
 
 describe("the classifier", () => {
   const sentence = (text, y) => ({ features: features(text, { punctuation: false }), y });
-  const examples = [
-    ...["is it red", "do we need a remote", "are you ready", "can we do that", "what do you think"].map(
-      (text) => sentence(text, 1)
-    ),
-    ...["it is red", "we need a remote", "you are ready", "we can do that", "I think so"].map(
-      (text) => sentence(text, 0)
-    ),
-  ];
+  let examples;
+  before(() => {
+    examples = [
+      ...[
+        "is it red",
+        "do we need a remote",
+        "are you ready",
+        "can we do that",
+        "what do you think",
+      ].map((text) => sentence(text, 1)),
+      ...["it is red", "we need a remote", "you are ready", "we can do that", "I think so"].map(
+        (text) => sentence(text, 0)
+      ),
+    ];
+  });
 
   test("reading a sentence drops fillers, repeats, case and punctuation", () => {
     assert.deepEqual(wordsOf("Um, is is it, uh, RED?"), ["is", "it", "red"]);
@@ -360,9 +380,12 @@ describe("the classifier", () => {
   test("it learns what it is shown, and a question scores above its statement", () => {
     const model = train(examples, { epochs: 30, l1: 0, l2: 0, alpha: 0.5 });
     const options = { punctuation: false };
-    assert.ok(scoreSentence(model, "is it red", options) > scoreSentence(model, "it is red", options));
     assert.ok(
-      scoreSentence(model, "are you ready", options) > scoreSentence(model, "you are ready", options)
+      scoreSentence(model, "is it red", options) > scoreSentence(model, "it is red", options)
+    );
+    assert.ok(
+      scoreSentence(model, "are you ready", options) >
+        scoreSentence(model, "you are ready", options)
     );
   });
 
@@ -374,13 +397,20 @@ describe("the classifier", () => {
 
   test("a stored model scores as the trained one does", () => {
     const model = train(examples, { epochs: 10, l1: 0, l2: 0, alpha: 0.5 });
-    const stored = modelFrom(JSON.parse(JSON.stringify({ bias: model.bias, entries: model.entries })));
+    const stored = modelFrom(
+      JSON.parse(JSON.stringify({ bias: model.bias, entries: model.entries }))
+    );
     const options = { punctuation: false };
-    assert.equal(scoreSentence(stored, "is it red", options), scoreSentence(model, "is it red", options));
+    assert.equal(
+      scoreSentence(stored, "is it red", options),
+      scoreSentence(model, "is it red", options)
+    );
   });
 
   test("a clause that opens inside a sentence is a candidate of its own", () => {
-    const quotes = candidatesOf("With our budget, is that okay? We agree.").map((item) => item.quote);
+    const quotes = candidatesOf("With our budget, is that okay? We agree.").map(
+      (item) => item.quote
+    );
     assert.deepEqual(quotes, ["With our budget, is that okay?", "is that okay?", "We agree."]);
   });
 
