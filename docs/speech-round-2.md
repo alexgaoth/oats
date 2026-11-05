@@ -151,10 +151,19 @@ row says otherwise.
 | server VAD 0.1 | 60.4 | 50.9 | | |
 | server VAD 0.3, 1,000 ms of silence | 66.8 | 46.0 | | |
 
-Threshold 0.6 was chosen for dictation, a voice next to the microphone. In a
-room it never opens on a far voice. 0.3 costs nothing in the quiet room and
-gains 3.3 points with steady sound (1.5 to 5.4). At 0.1 the quiet room breaks:
-turns run together and the transcript loses 10 points.
+On these 3 tune meetings 0.3 looked like a clear gain. **It did not hold.** On the
+13 other meetings of AMI's test split, `gpt-transcribe`, 0.3 against 0.6, content
+recall, interval over meetings:
+
+| | 0.6: the app today | 0.3 | difference | speech inside a turn | segments with no speech that came back with text |
+| --- | --- | --- | --- | --- | --- |
+| quiet room | 76.7 | 76.5 | -0.2 (-1.2 to +0.5) | 98.3% to 98.8% | 10 to 10 |
+| steady sound | 52.2 | 53.1 | +0.9 (+0.4 to +1.6) | 91.2% to 94.1% | 8 to 4 |
+| quiet mic | 75.3 | 75.6 | +0.4 (-1.7 to +2.5) | 94.3% to 97.5% | 18 to 11 |
+
+Under the bar in every room, so nothing changes here. The tune gain came from one
+meeting. At 0.1 the quiet room breaks (turns run together, 10 points lost), and
+a longer silence (1,000 ms) loses 4 points.
 
 **Other OpenAI options, the same 3 meetings, against one file per segment:**
 
