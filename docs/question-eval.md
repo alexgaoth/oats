@@ -378,7 +378,7 @@ Tuning meetings, real recognition, F1 unless it says otherwise.
 logistic regression, 39 KB, 25 µs a turn, no key, no download. On words alone at the
 act level it beats the transcribers' own "?" (F1 0.66 against 0.57). But against the
 rules on real recognition it adds 0.008 to 0.054 F1 depending on the engine, with
-recall lower in six rooms of eight, and bar 4 says a question missed costs more than a
+recall lower in seven rooms of eight, and bar 4 says a question missed costs more than a
 false card. Its recall falls to 0.285 without punctuation, where the rules hold 0.460. It
 would also need CLAUDE.md's first question rule to say something other than "pattern
 matching", and new weights for any change. Its code and trainer stay in the eval, so
