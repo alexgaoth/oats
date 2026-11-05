@@ -275,7 +275,8 @@ node scripts/room-compare.js --base a.json --run b.json --ami ami/annotations \
   --others c.json,d.json
 ```
 
-FluidAudio has no prebuilt CLI for this. On this Mac `swift build` crashes (the
-Command Line Tools' `swift-package` has a missing symbol), so its engine was
-built with `swiftc` directly from the v0.18.2 sources, and `scripts/engines/`
-does not hold it.
+FluidAudio (Parakeet on the Neural Engine) has no prebuilt CLI that speaks this
+protocol. `scripts/engines/fluid-engine/engine.swift` does. On this Mac `swift
+build` crashes (the Command Line Tools' `swift-package` has a missing symbol), so
+`scripts/engines/fluid-engine/build.sh` builds it with `swiftc` from the v0.18.2
+sources.
