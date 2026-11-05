@@ -382,9 +382,16 @@ committed before the runs they govern. This summary and "Results" came after.
   The best reader, Opus at Finish, reaches 0.62 to 0.65. Nothing reaches 0.80.
 - **Typed relations stop here.** One type is the answer 86% of the time, and a model
   reading names and gists cannot tell the rest apart.
-- **Recognition.** The cloud check shows no measurable cost, even at 59% WER. The
-  local board loses recall against manual text, and whether that holds when both
-  sides are recognized, as in the app, needs more meetings.
+- **Recognition costs false links, not recall.** With every meeting recognized (Apple
+  Speech, 23 meetings), the board at 0.78 links nearly everything: false links 0.94 in
+  the quiet room and 0.99 in steady sound. The cloud check with #166 still tells pairs
+  apart: precision 0.94 and false links 0.23 in the quiet room, 0.86 and 0.52 in steady
+  sound. It is the only method here that does.
+- **A small history is harder than the benchmark.** At 23 meetings main's board scores what
+  linking everything scores, even on manual text. The 139-meeting board flatters it.
+- **A threshold for recognized text did not carry over.** 0.84 read false links of 0.25 on
+  tuning meetings and 0.65 on test. Tune again when more meetings have been through
+  recognition.
 <!-- /round 2 summary -->
 
 ## The bar, written before the runs
@@ -833,54 +840,68 @@ the rest apart, so a typed label would add a word and no information.
 
 ### On real recognition
 
-Recognition output covers 8 meetings, all in test series. Parakeet Ultra's numbers are
-provisional: AMI is in its training data.
+The app always compares recognized text with recognized text. Parakeet Ultra's numbers
+are provisional: AMI is in its training data.
 
-**The cloud check shows no cost.** Claude Opus 5.5 on the 95 sampled pairs that touch
-a recognized meeting. A second run on manual text sets the noise: false links move by
-0.08 between two runs on the same text.
+**A history where every meeting was heard.** Apple Speech covers 23 annotated meetings,
+so they can make a whole board: 253 scenario pairs, 31 of them unlinked. This is the
+nearest thing here to what the app holds. Linking every pair scores precision 0.88.
 
-| Text | Mean WER | Precision | Recall | False-link rate |
-| --- | --- | --- | --- | --- |
-| Manual | | 0.89 | 0.48 | 0.33 |
-| Parakeet Ultra, quiet room (provisional) | 21.7 | 0.89 | 0.47 | 0.32 |
-| gpt-transcribe, quiet room | 25.2 | 0.86 | 0.45 | 0.41 |
-| Apple Speech, quiet room | 28.5 | 0.87 | 0.43 | 0.34 |
-| small.en, quiet room | 32.0 | 0.95 | 0.55 | 0.16 |
-| Parakeet Ultra, steady sound (provisional) | 45.3 | 0.89 | 0.49 | 0.33 |
-| small.en, steady sound | 59.1 | 0.88 | 0.44 | 0.32 |
-
-Every interval holds 0. The check reads names and gists, which a writing model makes
-from the whole transcript, and that seems to absorb the errors.
-
-**The board on this computer loses recall, not precision.** Main's rule on 1,044
-scenario pairs with one side recognized and the other on manual text:
-
-| Text | Precision | Recall | False-link rate | Recall minus manual | BA minus manual |
+| Method | Text | Mean WER | Precision | Recall | False-link rate |
 | --- | --- | --- | --- | --- | --- |
-| Manual | 0.88 | 0.65 | 0.43 | | |
-| Parakeet Ultra, quiet room (provisional) | 0.88 | 0.43 | 0.30 | −0.22 [−0.35, −0.14] | −0.09 [−0.18, −0.02] |
-| gpt-transcribe, quiet room | 0.87 | 0.49 | 0.36 | −0.16 [−0.22, −0.12] | −0.10 [−0.15, −0.04] |
-| Apple Speech, quiet room | 0.88 | 0.47 | 0.33 | −0.18 [−0.32, −0.07] | −0.08 [−0.17, −0.03] |
-| small.en, quiet room | 0.88 | 0.44 | 0.29 | −0.21 [−0.29, −0.14] | −0.08 [−0.15, −0.02] |
-| Parakeet Ultra, steady sound (provisional) | 0.83 | 0.17 | 0.17 | −0.48 [−0.58, −0.41] | −0.22 [−0.32, −0.12] |
-| small.en, steady sound | 0.88 | 0.05 | 0.03 | −0.60 [−0.77, −0.50] | −0.21 [−0.39, −0.10] |
+| Board, MiniLM at 0.78 (main) | Manual | | 0.89 | 0.87 | 0.78 |
+| | Quiet room | 27.0 | 0.88 | 0.95 | 0.94 |
+| | Steady sound | 51.5 | 0.88 | 0.97 | 0.99 |
+| Cloud check with #166, Opus 5.5 | Manual | | 0.97 | 0.38 | 0.10 |
+| | Quiet room | 27.0 | 0.94 | 0.53 | 0.23 |
+| | Steady sound | 51.5 | 0.86 | 0.43 | 0.52 |
+| Board, bge-small at 0.96 | Manual | | 0.90 | 0.47 | 0.37 |
+| | Quiet room | 27.0 | 0.88 | 0.94 | 0.89 |
+| | Steady sound | 51.5 | 0.88 | 1.00 | 1.00 |
 
-**Read that table with care: it is the wrong way round for the app.** The app compares
-recognized text with recognized text, and here the other side is manual. On the 28
-pairs with both sides recognized, recall rises (0.70 to 0.97 against 0.57 on manual
-text), so transcripts seem to pull together on their shared errors. Only 2 of those 28
-pairs are unlinked, so what that does to false links cannot be read. It needs more
-meetings through recognition.
+- **Recognition costs false links, not recall.** Against manual text, the board's
+  false-link rate rises 0.16 [−0.07, 0.29] in the quiet room and 0.22 [0.10, 0.30] in
+  steady sound. Transcripts pull together on their shared errors.
+- **A small history is harder than the 139-meeting board.** With 23 meetings even manual
+  text reads a false-link rate of 0.78 at main's threshold, against 0.41 on the full
+  board: fewer subjects compete, so topics pile into one. Main's board here scores what
+  linking everything scores. It tells a person little until a history grows, at least
+  on a history about one thing.
+- **The cloud check is the only method here that still tells pairs apart.** In the quiet
+  room it holds precision 0.94 and false links 0.23, with a largest subject of 10 of 23.
+  In steady sound it falls to 0.86 and 0.52, a real cost: false links +0.42 [0.16, 0.67].
+  Two runs on manual text differ by 0.08 in recall, which sets the noise.
+- **bge-small does worse than MiniLM, and that decides it.** Its false-link rate rises
+  0.52 [0.36, 0.76] and 0.63 [0.46, 0.90]. Its cosines sit in a narrow band near 1, and
+  recognition's shared errors fill that band. The model that looked best on clean
+  transcripts is the more fragile on what the app hears.
 
-**bge-small does worse than MiniLM here, and that decides it.** At 0.96, against its own
-manual score of precision 0.91 and recall 0.50, recall falls to 0.14 to 0.24 in the quiet
-room and to 0.03 in steady sound, with one side recognized. With both sides recognized,
-as in the app, it links nearly everything: false links 0.81 to 1.00 on the same pairs
-that read 0.44 on manual text, though on only 2 unlinked pairs. MiniLM moves far less
-(0.50 to 0.94, against 0.75). bge-small's cosines sit in a narrow band near 1, and
-recognition's shared errors seem to fill that band. The model that looked best on clean
-transcripts is the more fragile on what the app hears.
+**A higher threshold is not the fix.** Main's 0.78 was tuned on manual text. On the 8
+tuning meetings, as heard, 0.84 read precision 0.89, recall 0.57 and false links 0.25.
+On the 15 test meetings it reads 0.94, 0.81 and 0.65 in the quiet room, and 0.93, 0.93
+and 0.88 in steady sound (0.93, 0.97 and 0.90, and 0.93, 0.99 and 0.95, at 0.78). So it
+misses the bar. The test side has only 8 unlinked pairs, and was looked at before the
+freeze (see the note there), so this says only that the threshold does not carry over.
+A sound threshold for recognized text needs more tuning meetings through recognition.
+
+**With one side on manual text**, for the record: 1,044 pairs with a recognized meeting
+on one side and a manual one on the other. This is not a case the app ever has, and it
+points the wrong way: recall falls, because recognized and manual text sit apart.
+
+| Text | Mean WER | Precision | Recall | False-link rate | Recall minus manual |
+| --- | --- | --- | --- | --- | --- |
+| Manual | | 0.88 | 0.65 | 0.43 | |
+| Parakeet Ultra, quiet room (provisional) | 21.7 | 0.88 | 0.43 | 0.30 | −0.22 [−0.35, −0.14] |
+| gpt-transcribe, quiet room | 25.2 | 0.87 | 0.49 | 0.36 | −0.16 [−0.22, −0.12] |
+| Apple Speech, quiet room | 28.5 | 0.88 | 0.47 | 0.33 | −0.18 [−0.32, −0.07] |
+| small.en, quiet room | 32.0 | 0.88 | 0.44 | 0.29 | −0.21 [−0.29, −0.14] |
+| Parakeet Ultra, steady sound (provisional) | 45.3 | 0.83 | 0.17 | 0.17 | −0.48 [−0.58, −0.41] |
+| small.en, steady sound | 59.1 | 0.88 | 0.05 | 0.03 | −0.60 [−0.77, −0.50] |
+
+The cloud check on the same kind of pairs (95 sampled pairs, each replay) moved no more
+than two runs on manual text do, for all six replays. That small sample with a manual
+side is why a first reading here said the check had no cost; the whole recognized history
+above is the better evidence.
 
 **Returns on recognized text** are too few to rate: the tracker draws 1 to 6 returns on
 the 8 meetings, against 12 to 18 gold ones, and none verifies as right under the labels.
@@ -917,8 +938,9 @@ MiniLM means:
   chains into one subject.
 - The cloud board was measured in one order of the history. Each order costs a new set
   of checks.
-- Only 8 meetings have recognition output, and only 2 of their 28 pairs are unlinked.
-  Whether a whole history of recognized text links more falsely is open.
+- Recognized histories cover 23 meetings at most, and the test side of them has 8
+  unlinked pairs. The 139-meeting board has no recognized version, and board size moves
+  the numbers more than most methods do.
 
 ## Decisions for Alex
 
@@ -927,9 +949,11 @@ MiniLM means:
    caption ("3 returns to earlier topics"), which is the sentence that makes the claim;
    (c) with a writing model, keep in the record only returns a model confirms at Finish
    (0.62 to 0.65 against 0.44 to 0.56). Recommended: (b) now, since it needs no model.
-2. **The on-device default.** Recommended: keep MiniLM at 0.78. bge-small at 0.96 cuts
-   false links from 0.41 to 0.25 on manual text, misses the precision bar by 0.035, and
-   falls apart on recognized text. It would also cost the migration above.
+2. **The on-device default.** Recommended: keep MiniLM at 0.78 for now, and tune again on
+   recognized text once more tuning meetings come through. bge-small at 0.96 misses the
+   precision bar by 0.035 on manual text and falls apart on recognized text. A threshold
+   of 0.84 does not carry over. Say plainly that a small history on one subject gets
+   little from the on-device board.
 3. **Typed relations.** Recommended: no.
 
 ## Reproduce
@@ -965,7 +989,9 @@ ANTHROPIC_API_KEY=… node scripts/return-eval.mjs judge --model anthropic:claud
 # Recognition: each replay, then the boards
 node scripts/link-eval.mjs snapshots --replay <dir> --cache <cache> --meetings <ids>
 node scripts/link-eval-2.mjs recognition-boards --center 0.78 --orders 8 --runs "small.en__quiet-room"
+ANTHROPIC_API_KEY=… node scripts/link-eval-2.mjs recognition-history --center 0.78 --orders 12 \
+  --runs "apple-speech__quiet-room" --model "anthropic:claude-opus-5-5@think,medium"
 ```
 
-Round 2 cost $22.00 at list prices, in the ledger above. Weights are in
+Round 2 cost $23.54 at list prices, in the ledger above. Weights are in
 `~/oats-asr-cache/models/embed/`, with a README of each file's source and license.
