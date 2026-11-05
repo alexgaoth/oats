@@ -32,6 +32,13 @@ const { values: args, positionals } = parseArgs({
     split: { type: "string", default: "tune" },
     level: { type: "string", default: "fine,top" },
     show: { type: "boolean", default: false },
+    model: { type: "string" },
+    runs: { type: "string" },
+    loop: { type: "string" },
+    chars: { type: "string", default: "800" },
+    controls: { type: "string", default: "40" },
+    "local-model": { type: "string" },
+    "llama-server": { type: "string" },
   },
 });
 
@@ -178,7 +185,333 @@ async function sweep() {
   }
 }
 
-const COMMANDS = { score, sweep };
+// ---------------------------------------------------------------------------
+// A model decides the returns at Finish, from the record's own cuts.
+
+const CACHE = path.join(os.homedir(), ".cache", "oats", "link-eval", "returns");
+const slug = (spec) => String(spec).replace(/[^a-zA-Z0-9.-]+/g, "_");
+
+const DECIDE_SYSTEM = [
+  "You read the parts of one conversation, in the order they happened. Each part is a few lines of it. The lines come from speech recognition: expect errors and half sentences.",
+  "",
+  "Find the parts that come back to the subject of an earlier part: the room was on a specific subject, left it for at least one whole part, and came back to the same subject.",
+  "",
+  "What the whole conversation is about is not a subject: a project or product that every part touches does not come back. Two parts about one project come back only when the same specific part of it is discussed in both (its price, one feature, one decision), and the part between them is about something else.",
+  "",
+  "Be strict. A wrong answer is worse than a missing one. Most conversations have none.",
+  "",
+  'Reply with JSON only, an empty list when there is none: {"returns":[{"part":4,"earlier":2,"subject":"Battery life"}]}',
+].join("\n");
+
+const DECIDE_SCHEMA = {
+  name: "conversation_returns",
+  schema: {
+    type: "object",
+    properties: {
+      returns: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            part: { type: "integer" },
+            earlier: { type: "integer" },
+            subject: { type: "string" },
+          },
+          required: ["part", "earlier", "subject"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["returns"],
+    additionalProperties: false,
+  },
+};
+
+/** Apple's model takes this subset of JSON Schema. */
+const DECIDE_BRIDGE_SCHEMA = {
+  type: "object",
+  order: ["returns"],
+  required: ["returns"],
+  properties: {
+    returns: {
+      type: "array",
+      maxItems: 6,
+      items: {
+        type: "object",
+        order: ["part", "earlier", "subject"],
+        required: ["part", "earlier", "subject"],
+        properties: {
+          part: { type: "integer" },
+          earlier: { type: "integer" },
+          subject: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+/** The client a model spec needs: a cloud model, a GGUF here, or Apple's. */
+async function clientFor(spec) {
+  const fast = await import("./lib/fast-models.mjs");
+  if (spec.startsWith("fm:")) {
+    const { fmBridge } = await import("./lib/fm-bridge.mjs");
+    const bridge = fmBridge();
+    return {
+      ask: (request) => bridge.ask({ ...request, schema: DECIDE_BRIDGE_SCHEMA, maxTokens: 400 }),
+      close: () => bridge.close(),
+    };
+  }
+  if (spec.startsWith("local:")) {
+    await fast.startLocalServer(fast.parseSpec(spec).model, {
+      binary: args["llama-server"],
+      model: args["local-model"],
+      port: 18474,
+      contextSize: 8192,
+    });
+  }
+  return { ask: (request) => fast.ask(spec, request), close: () => fast.stopLocalServers() };
+}
+
+/** Each meeting's parts as a model reads them. */
+async function partsOf(meeting) {
+  const methods = await import("./lib/return-methods.mjs");
+  const { topicExcerpt } = await import("../src/helpers/topicNaming.mjs");
+  const stretches = methods.stretchesOf(meeting.conversation, meeting.result.recordAssignment);
+  return {
+    stretches,
+    text: stretches
+      .map((stretch, index) => {
+        const lines = topicExcerpt(
+          stretch.turns.map((turn) => turn.text),
+          { budget: Number(args.chars) }
+        );
+        return `Part ${index + 1}\n${lines.map((line) => `- ${line}`).join("\n")}`;
+      })
+      .join("\n\n"),
+  };
+}
+
+async function decide() {
+  const spec = args.model;
+  if (!spec) throw new Error("--model");
+  const { results } = JSON.parse(fs.readFileSync(args.input, "utf8"));
+  const meetings = meetingsOf(results, args.split, "fine");
+  const dir = path.join(CACHE, "decide", `${slug(spec)}~${args.chars}`);
+  fs.mkdirSync(dir, { recursive: true });
+  const client = await clientFor(spec);
+  let next = 0;
+  const onDevice = spec.startsWith("local:") || spec.startsWith("fm:");
+  const work = async () => {
+    while (next < meetings.length) {
+      const meeting = meetings[next];
+      next += 1;
+      const file = path.join(dir, `${meeting.id}.json`);
+      if (fs.existsSync(file)) continue;
+      const { stretches, text } = await partsOf(meeting);
+      if (stretches.length < 3) {
+        fs.writeFileSync(file, JSON.stringify({ id: meeting.id, ok: true, returns: [] }));
+        continue;
+      }
+      const answer = await client.ask({
+        system: DECIDE_SYSTEM,
+        user: text,
+        schema: DECIDE_SCHEMA,
+        maxTokens: onDevice ? 600 : 4000,
+        timeoutMs: 180_000,
+        purpose: "return-eval:decide",
+      });
+      let returns = null;
+      try {
+        const start = answer.text.indexOf("{");
+        const value = JSON.parse(answer.text.slice(start, answer.text.lastIndexOf("}") + 1));
+        returns = Array.isArray(value.returns) ? value.returns : null;
+      } catch {
+        returns = null;
+      }
+      fs.writeFileSync(
+        file,
+        JSON.stringify({
+          id: meeting.id,
+          ok: Boolean(returns),
+          returns: returns ?? [],
+          parts: stretches.length,
+          ms: answer.ms,
+          cost: answer.cost,
+          error: answer.ok ? null : answer.error,
+        })
+      );
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: onDevice ? 1 : 6 }, work));
+  } finally {
+    client.close();
+  }
+  console.log(`${spec}: ${meetings.length} meetings decided`);
+}
+
+/** The returns a model decided, as the lanes would draw them. */
+async function decidedReturns(meeting, dir) {
+  const methods = await import("./lib/return-methods.mjs");
+  const answer = JSON.parse(fs.readFileSync(path.join(dir, `${meeting.id}.json`), "utf8"));
+  const stretches = methods.stretchesOf(meeting.conversation, meeting.result.recordAssignment);
+  const groupOf = stretches.map((_, index) => index);
+  for (const item of [...answer.returns].sort((a, b) => a.part - b.part)) {
+    const j = Number(item.part) - 1;
+    const i = Number(item.earlier) - 1;
+    if (!(j > i + 1) || i < 0 || j >= stretches.length) continue;
+    if (j && groupOf[j - 1] === groupOf[i]) continue;
+    groupOf[j] = groupOf[i];
+  }
+  const groups = [...new Set(groupOf)].map((group) =>
+    groupOf.flatMap((value, index) => (value === group ? [index] : []))
+  );
+  return methods.drawnReturns(meeting.conversation, stretches, groups);
+}
+
+async function decided() {
+  const { results } = JSON.parse(fs.readFileSync(args.input, "utf8"));
+  for (const level of args.level.split(",")) {
+    const meetings = meetingsOf(results, args.split, level);
+    console.log(`\n${level}: ${meetings.length} meetings`);
+    for (const run of args.runs.split(",")) {
+      const dir = path.join(CACHE, "decide", run);
+      const drawn = new Map();
+      for (const meeting of meetings) drawn.set(meeting.id, await decidedReturns(meeting, dir));
+      line(run, rowsOf(meetings, (meeting) => drawn.get(meeting.id)));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// A blind judge reads what a drawn return claims, and control pairs with no
+// return drawn. It sees the transcript, never which method drew the pair.
+
+const JUDGE_SYSTEM = [
+  "You read three stretches of one meeting, in the order they happened: EARLIER, BETWEEN and LATER. Each is some of its lines. They come from a transcript of speech: expect filler and half sentences.",
+  "",
+  "A tool claims the meeting came back in LATER to something it had been on in EARLIER and had left. Decide whether that is true.",
+  "",
+  "- came_back: LATER is on the same specific subject as EARLIER, and BETWEEN is on something else.",
+  "- never_left: LATER is on the same specific subject as EARLIER, and so is BETWEEN.",
+  "- different: LATER is not on the same specific subject as EARLIER. The whole meeting being about one project or product does not make two stretches one subject.",
+  "- cannot_tell: the lines do not say.",
+  "",
+  'Reply with JSON only: {"verdict":"came_back","subject":"the shared subject, or empty"}',
+].join("\n");
+
+const JUDGE_SCHEMA = {
+  name: "return_verdict",
+  schema: {
+    type: "object",
+    properties: {
+      verdict: { type: "string", enum: ["came_back", "never_left", "different", "cannot_tell"] },
+      subject: { type: "string" },
+    },
+    required: ["verdict", "subject"],
+    additionalProperties: false,
+  },
+};
+
+const within = (meeting, intervals) =>
+  meeting.conversation.utterances.filter((turn) =>
+    intervals.some(([from, to]) => turn.at >= from && turn.at < to)
+  );
+
+async function judge() {
+  const { ask, ledgerTotal } = await import("./lib/fast-models.mjs");
+  const { topicExcerpt } = await import("../src/helpers/topicNaming.mjs");
+  const { results } = JSON.parse(fs.readFileSync(args.input, "utf8"));
+  const loop = args.loop ? JSON.parse(fs.readFileSync(args.loop, "utf8")).results : [];
+  const meetings = meetingsOf(results, args.split, "fine");
+  const loopMeetings = meetingsOf(loop, args.split, "fine");
+  const items = [];
+  const add = (set, meeting, drawn) => items.push({ set, meeting, drawn });
+  for (const meeting of meetings) {
+    for (const drawn of meeting.result.lanes.record.returns) add("tracker, record", meeting, drawn);
+  }
+  for (const meeting of loopMeetings) {
+    for (const drawn of meeting.result.lanes.live) add("loop, live", meeting, drawn);
+  }
+  for (const run of (args.runs ?? "").split(",").filter(Boolean)) {
+    const dir = path.join(CACHE, "decide", run);
+    for (const meeting of meetings) {
+      for (const drawn of await decidedReturns(meeting, dir)) add(run, meeting, drawn);
+    }
+  }
+  // Controls: pairs of non-adjacent runs, drawn at random with a fixed seed.
+  let state = 20261105;
+  const random = () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+  const controls = meetings.flatMap((meeting) =>
+    chancePairs(meeting.result.lanes.record.runs).map((drawn) => ({ meeting, drawn }))
+  );
+  for (let count = 0; count < Number(args.controls) && controls.length; count += 1) {
+    const { meeting, drawn } = controls.splice(Math.floor(random() * controls.length), 1)[0];
+    add("control", meeting, drawn);
+  }
+  const dir = path.join(CACHE, "judge", slug(args.model));
+  fs.mkdirSync(dir, { recursive: true });
+  let next = 0;
+  const order = items
+    .map((item) => ({ item, key: random() }))
+    .sort((a, b) => a.key - b.key)
+    .map(({ item }) => item);
+  const work = async () => {
+    while (next < order.length) {
+      const item = order[next];
+      next += 1;
+      const { meeting, drawn } = item;
+      const key = `${meeting.id}-${drawn.at}-${drawn.earlier.map((pair) => pair.join("_")).join("-")}`;
+      item.file = path.join(dir, `${key}.json`);
+      if (fs.existsSync(item.file)) continue;
+      const lastEnd = Math.max(...drawn.earlier.map(([, to]) => to));
+      const quote = (intervals, budget) =>
+        topicExcerpt(
+          within(meeting, intervals).map((turn) => turn.text),
+          { budget }
+        )
+          .map((text) => `- ${text}`)
+          .join("\n");
+      const user = [
+        `EARLIER\n${quote(drawn.earlier, 1500)}`,
+        `BETWEEN\n${quote([[lastEnd, drawn.at]], 800) || "- (nothing said)"}`,
+        `LATER\n${quote([[drawn.at, drawn.end]], 1500)}`,
+      ].join("\n\n");
+      const answer = await ask(args.model, {
+        system: JUDGE_SYSTEM,
+        user,
+        schema: JUDGE_SCHEMA,
+        maxTokens: 600,
+        timeoutMs: 120_000,
+        parseJson: true,
+        purpose: "return-eval:judge",
+      });
+      fs.writeFileSync(
+        item.file,
+        JSON.stringify({ verdict: answer.json?.verdict ?? null, subject: answer.json?.subject ?? "" })
+      );
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, work));
+  const sets = [...new Set(items.map((item) => item.set))];
+  console.log(`${args.model}, ${args.split}: ${items.length} items, $${ledgerTotal().toFixed(3)} in the ledger`);
+  for (const set of sets) {
+    const counts = {};
+    for (const item of items.filter((other) => other.set === set)) {
+      const verdict = JSON.parse(fs.readFileSync(item.file, "utf8")).verdict ?? "none";
+      counts[verdict] = (counts[verdict] ?? 0) + 1;
+    }
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+    console.log(
+      `  ${set.padEnd(44)} n ${String(total).padStart(3)}  came back ${((counts.came_back ?? 0) / total).toFixed(2)}  ${JSON.stringify(counts)}`
+    );
+  }
+}
+
+const COMMANDS = { score, sweep, decide, decided, judge };
 if (!COMMANDS[positionals[0]]) {
   console.error(`Usage: node scripts/return-eval.mjs <${Object.keys(COMMANDS).join("|")}>`);
   process.exit(1);

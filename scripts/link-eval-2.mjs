@@ -7,14 +7,13 @@
 // Nothing of Oats' users is read or sent. The bar and the split were written
 // before these runs; `--split tune` reads tuning pairs only.
 
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
+import { fmBridge } from "./lib/fm-bridge.mjs";
 import { splitOfMeeting, splitOfPair } from "./lib/link-split.mjs";
 import { amiMeetingIds, amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
 
@@ -46,7 +45,6 @@ const DIR = annotationsDir(args.ami);
 const CACHE = args.cache;
 const NAMES = topicNames(DIR);
 const NAMING_MODEL = "openai_gpt-5.6-luna_none";
-const FM_BRIDGE = path.join(os.homedir(), "oats-asr-cache", "fidelity-2", "fm-bridge", "bin", "fm-bridge");
 /** A list longer than this is not an answer a linker gives: the sample asks about at most 12. */
 const MAX_LINKS = 12;
 
@@ -162,7 +160,11 @@ function topicVectors(corpus, store, { variant = "device" } = {}) {
 /** The board as the app builds it, with one store's vectors in place of the stored ones. */
 function boardOf(corpus, topics, variant) {
   const { links } = corpus;
-  return corpus.meetings.map((meeting) => ({
+  // While tuning, the board holds tuning meetings only: test meetings take no part.
+  const kept = corpus.meetings.filter(
+    (meeting) => args.split !== "tune" || splitOfMeeting(meeting.id) === "tune"
+  );
+  return kept.map((meeting) => ({
     id: meeting.id,
     title: meeting.id,
     createdAt: meeting.createdAt,
@@ -265,7 +267,7 @@ async function screen() {
   const mixed = inSplit(corpus.pairs, split, "mixed");
   const within = inSplit(corpus.pairs, split, "non-scenario-within");
   console.log(`${split}: ${scenario.length} scenario pairs (${scenario.filter((pair) => pair.linked).length} linked), ${mixed.length} mixed, ${within.length} non-scenario within`);
-  const grid = Array.from({ length: 76 }, (_, index) => Math.round((0.2 + index * 0.01) * 100) / 100);
+  const grid = Array.from({ length: 160 }, (_, index) => Math.round((0.2 + index * 0.005) * 1000) / 1000);
   const out = [];
   for (const spec of args.configs.split(",")) {
     const [config, dims] = spec.split(":");
@@ -290,8 +292,8 @@ async function screen() {
       const board = boardOf(corpus, topics, "device");
       const vectorOf = (text) => store.get(text);
       const drawnScores = new Map();
-      const thresholds = Array.from({ length: 13 }, (_, index) =>
-        Math.round((points.best.threshold - 0.04 + index * 0.02) * 100) / 100
+      const thresholds = Array.from({ length: 12 }, (_, index) =>
+        Math.round((points.best.threshold - 0.02 + index * 0.01) * 1000) / 1000
       );
       for (const threshold of thresholds) {
         const linked = coMembers(
@@ -952,7 +954,9 @@ async function linker() {
       contextSize: 8192,
     });
   }
-  const ask = bridge ? (_, request) => bridge.ask(request) : fast.ask;
+  const ask = bridge
+    ? (_, request) => bridge.ask({ ...request, schema: bridgeSchema(request.schema) })
+    : fast.ask;
   const remote = await load("src/helpers/remoteLinks.mjs");
   const links = await load("src/helpers/conversationLinks.mjs");
   const aide = await load("src/helpers/conversationAide.mjs");
@@ -1071,60 +1075,25 @@ async function linker() {
   );
 }
 
-/** `fm-bridge serve`: one JSON line in, one out, on this computer. The linker's schema, in its subset. */
-function fmBridge() {
-  const child = spawn(FM_BRIDGE, ["serve"], { stdio: ["pipe", "pipe", "inherit"] });
-  const lines = createInterface({ input: child.stdout });
-  const waiting = [];
-  lines.on("line", (line) => waiting.shift()?.(line));
-  const schemaOf = (schema) => {
-    const items = schema.schema.properties.links.items;
-    return {
-      type: "object",
-      order: ["links"],
-      required: ["links"],
-      properties: {
-        links: {
-          type: "array",
-          maxItems: MAX_LINKS,
-          items: {
-            type: "object",
-            order: Object.keys(items.properties),
-            required: items.required,
-            properties: items.properties,
-          },
+/** The linker's schema in the bridge's subset of JSON Schema. */
+function bridgeSchema(schema) {
+  const items = schema.schema.properties.links.items;
+  return {
+    type: "object",
+    order: ["links"],
+    required: ["links"],
+    properties: {
+      links: {
+        type: "array",
+        maxItems: MAX_LINKS,
+        items: {
+          type: "object",
+          order: Object.keys(items.properties),
+          required: items.required,
+          properties: items.properties,
         },
       },
-    };
-  };
-  let serial = 0;
-  return {
-    ask: ({ system, user, schema, maxTokens }) =>
-      new Promise((resolve) => {
-        serial += 1;
-        const started = performance.now();
-        waiting.push((line) => {
-          const reply = JSON.parse(line);
-          const ms = reply.ms ?? performance.now() - started;
-          resolve(
-            reply.ok
-              ? { ok: true, text: reply.text, ms, cost: 0, usage: { input: reply.inputTokens } }
-              : { ok: false, error: `${reply.error}: ${reply.detail ?? ""}`, ms, cost: 0 }
-          );
-        });
-        child.stdin.write(
-          `${JSON.stringify({
-            id: String(serial),
-            system,
-            prompt: user,
-            temperature: 0,
-            maxTokens,
-            greedy: true,
-            schema: schemaOf(schema),
-          })}\n`
-        );
-      }),
-    close: () => child.stdin.end(),
+    },
   };
 }
 
