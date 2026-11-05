@@ -71,9 +71,9 @@ import {
   turnTokens,
 } from "./lib/question-truth.mjs";
 import {
-  bestCandidate,
   features,
   modelFrom,
+  questionIn,
   train as fitClassifier,
 } from "./lib/question-classifier.mjs";
 import { annotationsDir } from "./lib/topic-corpus.mjs";
@@ -141,10 +141,7 @@ if (args.model) {
   const model = modelFrom(JSON.parse(fs.readFileSync(args.model, "utf8")));
   const threshold = Number(args.threshold);
   const mark = Number(args.mark);
-  DETECTORS.classifier = (text) => {
-    const top = bestCandidate(model, text, { mark });
-    return top && top.score >= threshold ? top.quote : null;
-  };
+  DETECTORS.classifier = (text) => questionIn(model, text, { mark, threshold });
 }
 if (args.detectors) {
   const extra = await import(pathToFileURL(path.resolve(args.detectors)).href);
@@ -533,8 +530,16 @@ async function errors() {
       lines.push(["FP", id, card.id, act?.type ?? "", near, card.quote.slice(0, 220)].join("\t"));
     });
     const caught = new Set(score.caughtIds);
+    const heard = new Set(turns.flatMap((turn) => turn.tokens.map((token) => token.word)));
     for (const question of gold) {
       if (caught.has(question.id)) continue;
+      // What recognition wrote where the question was, when it kept it.
+      const said = view.startsWith("rec:")
+        ? turns
+            .filter((turn) => turn.tokens.some((token) => question.words.includes(token.word)))
+            .map((turn) => textOf(turn.tokens))
+            .join(" / ")
+        : "";
       lines.push(
         [
           "FN",
@@ -542,7 +547,13 @@ async function errors() {
           question.id.split(".").pop(),
           question.type,
           question.asked ? "?" : "",
-          question.text.slice(0, 220),
+          question.text.slice(0, 160),
+          view.startsWith("rec:")
+            ? reachedRecognition(question, meeting, heard)
+              ? "kept"
+              : "lost"
+            : "",
+          said.slice(0, 200),
         ].join("\t")
       );
     }

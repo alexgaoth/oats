@@ -189,12 +189,7 @@ export function candidatesOf(text) {
   return out;
 }
 
-/**
- * The turn's best candidate, `{ score, quote }`, or null for an empty turn.
- * `mark` is what a recognizer's "?" adds: the model reads words only, and how far
- * to trust that "?" depends on the recognizer, so it is set apart from training.
- */
-export function bestCandidate(model, text, { mark = 3 } = {}) {
+function scoreCandidates(model, text, mark) {
   let top = null;
   for (const candidate of candidatesOf(text)) {
     const score =
@@ -202,6 +197,37 @@ export function bestCandidate(model, text, { mark = 3 } = {}) {
     if (!top || score > top.score) top = { score, quote: candidate.quote };
   }
   return top;
+}
+
+/**
+ * The turn's best candidate, `{ score, quote }`, or null for an empty turn.
+ * `mark` is what a recognizer's "?" adds: the model reads words only, and how far
+ * to trust that "?" depends on the recognizer, so it is set apart from training.
+ */
+export function bestCandidate(model, text, { mark = 3 } = {}) {
+  return scoreCandidates(model, text, mark);
+}
+
+/**
+ * What a card would quote from a turn, or null for no card: the last sentence
+ * that scores `threshold` or more, with any that do right before it, since "What
+ * does it cost? Is it cheaper?" is one asking.
+ */
+export function questionIn(model, text, { mark = 3, threshold = 0 } = {}) {
+  const sentences = sentencesOf(text).map((sentence) => ({
+    sentence,
+    ...scoreCandidates(model, sentence, mark),
+  }));
+  let last = sentences.length - 1;
+  while (last >= 0 && sentences[last].score < threshold) last -= 1;
+  if (last < 0) return null;
+  let first = last;
+  while (first > 0 && sentences[first - 1].score >= threshold) first -= 1;
+  if (first === last) return sentences[last].quote;
+  return sentences
+    .slice(first, last + 1)
+    .map((item) => item.sentence)
+    .join(" ");
 }
 
 /** Sentence ends, the way recognition marks them. */

@@ -176,3 +176,18 @@ Read by hand on tuning meetings: 60 questions the pairs call `open`, 40 they cal
 So the outcome scores below use the pairs one way only: of the questions with a
 gold answer, how many does the app call answered? The rest of the table is
 reported, not scored.
+
+## What was frozen before the test run
+
+Chosen on tuning and training meetings only, and written here before any of it
+was scored on test.
+
+- **Rules**: branch `alex/question-rules` at 986acd1. `QUESTION_ANYWHERE` is gone.
+  English questions are found where they open a clause, and adjacent asking
+  sentences are quoted together.
+- **Replies**: branch `alex/question-replies` at e33c2bc, on top of the rules.
+- **Classifier**: `node scripts/question-eval.mjs train --out words-tiny.json
+  --alpha 0.1 --l1 6 --l2 1 --epochs 3`: 2,571 weights, 39 KB, trained on the 116
+  training meetings. Threshold 0, mark 3 (`--threshold=0 --mark 3`). Threshold 0 is
+  the highest with recall above the app's on tuning recognition.
+- **Refine prompt**: `v1` in `scripts/question-eval.mjs`.

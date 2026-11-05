@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 let bestCandidate, bootstrap, candidatesOf, difference, featureNames, features, goldQuestions;
 let modelFrom, overlap, pairedDelays, prf, quoteSpan, reachedRecognition, recognizedTurns;
 let roomTurns, scoreCards, scoreSentence, sentencesOf, spoken, summarize, train, turnTokens;
-let wordsOf;
+let wordsOf, questionIn;
 
 before(async () => {
   ({
@@ -30,6 +30,7 @@ before(async () => {
     featureNames,
     features,
     modelFrom,
+    questionIn,
     scoreSentence,
     sentencesOf,
     train,
@@ -426,6 +427,17 @@ describe("the classifier", () => {
       quote: "Is it red?",
     });
     assert.equal(bestCandidate(empty, ""), null);
+  });
+
+  test("a card quotes the last asking sentence and any that ask right before it", () => {
+    const empty = modelFrom({ bias: -1, entries: [] });
+    const quote = (text) => questionIn(empty, text, { mark: 3, threshold: 0 });
+    assert.equal(
+      quote("We agree. What does it cost? Is it cheaper?"),
+      "What does it cost? Is it cheaper?"
+    );
+    assert.equal(quote("What does it cost? We agree. Is it cheaper?"), "Is it cheaper?");
+    assert.equal(quote("We agree. It costs a lot."), null);
   });
 
   test("sentences split where recognition marks an end", () => {
