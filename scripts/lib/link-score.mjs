@@ -11,17 +11,24 @@
 
 import { seeded, percentile } from "./fast-models.mjs";
 
-/** Confusion counts of predictions over pairs, each pair weighted. */
+/**
+ * Confusion counts of predictions over pairs, each pair weighted. A prediction
+ * is a boolean, or a share from 0 to 1: how often the pair is linked when the
+ * board is drawn over many orders of its history.
+ */
 export function confusion(pairs, predicted, weightOf = () => 1) {
   const counts = { tp: 0, fp: 0, fn: 0, tn: 0 };
   for (const pair of pairs) {
     const weight = weightOf(pair);
     if (!weight) continue;
-    const yes = predicted(pair);
-    if (pair.linked && yes) counts.tp += weight;
-    else if (pair.linked) counts.fn += weight;
-    else if (yes) counts.fp += weight;
-    else counts.tn += weight;
+    const share = Number(predicted(pair) ?? 0);
+    if (pair.linked) {
+      counts.tp += weight * share;
+      counts.fn += weight * (1 - share);
+    } else {
+      counts.fp += weight * share;
+      counts.tn += weight * (1 - share);
+    }
   }
   return counts;
 }

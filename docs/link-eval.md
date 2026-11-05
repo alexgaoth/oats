@@ -470,3 +470,16 @@ harrier-oss and Octen (no ONNX or GGUF from the publisher).
 - **The gold for the mean-of-subject rule.** Round 1's board and every board
   here draw subjects. Pair scores are reported, but the bar is read on what the
   board would draw.
+
+## Frozen before the test read: cloud
+
+Chosen on tuning pairs. No test pair had been read.
+
+- **The cloud check, pair by pair** (the fixed sample): Claude Opus 5.5 at medium
+  (the reference), gpt-6.1-sol at low, gpt-6.1-terra at low, Claude Haiku 5.5 at
+  low, Claude Sonnet 5.5 at medium.
+- **The cloud check as the board draws it**: the app's path today, against the
+  fix (subjects from the model's own names, at 0.8), for Opus and gpt-6.1-sol.
+- **Not sent to test:** more per conversation. On tuning pairs thread headings,
+  questions asked and 900 characters of summary each left recall at 0.45 to 0.57
+  against 0.56, with no gain in balanced accuracy.

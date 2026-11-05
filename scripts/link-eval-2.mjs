@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 import { fmBridge } from "./lib/fm-bridge.mjs";
-import { splitOfMeeting, splitOfPair } from "./lib/link-split.mjs";
+import { bothInTest, splitOfMeeting, splitOfPair } from "./lib/link-split.mjs";
 import { amiMeetingIds, amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -37,6 +37,10 @@ const { values: args, positionals } = parseArgs({
     "llama-server": { type: "string" },
     center: { type: "string", default: "0.81" },
     kind: { type: "string", default: "excerpt" },
+    orders: { type: "string", default: "12" },
+    methods: { type: "string" },
+    "links-module": { type: "string" },
+    judges: { type: "string", default: "anthropic:claude-sonnet-5-5+openai:gpt-6.1-sol@low" },
   },
 });
 
@@ -374,6 +378,190 @@ function printCurve(name, curve) {
     console.log(
       `  t ${item.threshold.toFixed(2)} P ${f(item.precision)} R ${f(item.recall)} FL ${f(item.falseLinks)} mixed ${item.mixed} ns-within ${item.nsWithin}`
     );
+  }
+}
+
+/**
+ * The board's history in `count` other orders: the series shuffled, each series'
+ * meetings still in a row and in order. The board is greedy, so what it links
+ * depends on what came first, and one order is one draw. Seeded.
+ */
+function historyOrders(board, truth, count) {
+  const series = [...new Set(board.map((item) => truth.seriesOf(item.id)))];
+  return Array.from({ length: count }, (_, index) => {
+    let state = (20261105 + index * 7919) >>> 0;
+    const random = () => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      return state / 2 ** 32;
+    };
+    const shuffled = series
+      .map((name) => ({ name, key: random() }))
+      .sort((a, b) => a.key - b.key)
+      .map((item) => item.name);
+    const rank = new Map(shuffled.map((name, position) => [name, position]));
+    const sorted = [...board].sort(
+      (a, b) =>
+        rank.get(truth.seriesOf(a.id)) - rank.get(truth.seriesOf(b.id)) ||
+        a.id.localeCompare(b.id)
+    );
+    return sorted.map((item, position) => ({ ...item, createdAt: T0 + position * DAY_MS }));
+  });
+}
+
+/** How often each pair is linked, over the orders of the history: `a|b` to a share. */
+function linkShares(orders, draw) {
+  const counts = new Map();
+  for (const board of orders) {
+    for (const key of draw(board).keys()) counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  for (const [key, count] of counts) counts.set(key, count / orders.length);
+  return counts;
+}
+
+function softRow(pairsBy, shares, threshold, scoreLib) {
+  const yes = (pair) => shares.get(pair.key) ?? 0;
+  const r = ratesOf(pairsBy.scenario, yes, scoreLib);
+  const mixed = pairsBy.mixed.reduce((sum, pair) => sum + yes(pair), 0);
+  const within = pairsBy.within.reduce((sum, pair) => sum + yes(pair), 0);
+  return {
+    threshold,
+    precision: r.precision,
+    recall: r.recall,
+    falseLinks: r.falseLinks,
+    mixed: Math.round(mixed * 10) / 10,
+    nsWithin: Math.round(within * 10) / 10,
+  };
+}
+
+/**
+ * Average-linkage clustering of topic vectors: the subjects do not depend on
+ * the order of the history. One pass gives every threshold: the merges are
+ * kept with their score, and a threshold keeps those at or above it.
+ */
+function dendrogram(vectors) {
+  const n = vectors.length;
+  const similarity = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i += 1) {
+    for (let j = i + 1; j < n; j += 1) {
+      const value = dot(vectors[i], vectors[j]);
+      similarity[i][j] = value;
+      similarity[j][i] = value;
+    }
+  }
+  const size = new Array(n).fill(1);
+  const alive = new Set(Array.from({ length: n }, (_, index) => index));
+  const merges = [];
+  while (alive.size > 1) {
+    let best = -Infinity;
+    let a = -1;
+    let b = -1;
+    const list = [...alive];
+    for (let x = 0; x < list.length; x += 1) {
+      for (let y = x + 1; y < list.length; y += 1) {
+        const value = similarity[list[x]][list[y]];
+        if (value > best) {
+          best = value;
+          a = list[x];
+          b = list[y];
+        }
+      }
+    }
+    if (best < 0.3) break;
+    merges.push({ a, b, score: best });
+    alive.delete(b);
+    for (const other of alive) {
+      if (other === a) continue;
+      const value =
+        (similarity[a][other] * size[a] + similarity[b][other] * size[b]) / (size[a] + size[b]);
+      similarity[a][other] = value;
+      similarity[other][a] = value;
+    }
+    size[a] += size[b];
+  }
+  return merges;
+}
+
+/** The subjects of a dendrogram cut at a threshold, as pairs of conversations linked. */
+function cutDendrogram(merges, count, threshold, owners) {
+  const parent = Array.from({ length: count }, (_, index) => index);
+  const find = (index) => {
+    while (parent[index] !== index) {
+      parent[index] = parent[parent[index]];
+      index = parent[index];
+    }
+    return index;
+  };
+  for (const { a, b, score } of merges) if (score >= threshold) parent[find(b)] = find(a);
+  const groups = new Map();
+  for (let index = 0; index < count; index += 1) {
+    const root = find(index);
+    if (!groups.has(root)) groups.set(root, new Set());
+    groups.get(root).add(owners[index]);
+  }
+  return coMembers([...groups.values()].map((ids) => ({ conversationIds: [...ids], label: "" })));
+}
+
+/**
+ * The board's expected behaviour on one side of the split, over `--orders`
+ * orders of the history, for the app's greedy subjects and for order-free
+ * clustering.
+ */
+async function curve() {
+  const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
+  const { readStore } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href
+  );
+  const corpus = await loadCorpus();
+  const split = args.split;
+  const pairsBy = {
+    scenario: inSplit(corpus.pairs, split, "scenario"),
+    mixed: inSplit(corpus.pairs, split, "mixed"),
+    within: inSplit(corpus.pairs, split, "non-scenario-within"),
+  };
+  const f = (value) => (value == null ? " -  " : value.toFixed(3));
+  const show = (row) =>
+    console.log(
+      `  t ${row.threshold.toFixed(3)} P ${f(row.precision)} R ${f(row.recall)} FL ${f(row.falseLinks)} mixed ${row.mixed} ns-within ${row.nsWithin}`
+    );
+  for (const spec of args.configs.split(",")) {
+    const [config, dims, from, to, step] = spec.split(":");
+    const store = readStore(path.join(CACHE, "embed"), config, {
+      dims: dims ? Number(dims) : undefined,
+    });
+    const topics = topicVectors(corpus, store);
+    const grid = [];
+    for (let value = Number(from); value <= Number(to) + 1e-9; value += Number(step)) {
+      grid.push(Math.round(value * 1000) / 1000);
+    }
+    const board = boardOf(corpus, topics, "device");
+    const orders = historyOrders(board, corpus.truth, Number(args.orders));
+    const vectorOf = (text) => store.get(text);
+    console.log(`${spec}: the app's greedy subjects over ${orders.length} orders`);
+    for (const threshold of grid) {
+      const shares = linkShares(orders, (item) =>
+        coMembers(
+          corpus.links.meaningThreads(item, { vectorOf, contentThreshold: threshold }).subjects
+        )
+      );
+      show(softRow(pairsBy, shares, threshold, scoreLib));
+    }
+    const kept = new Set(board.map((item) => item.id));
+    const flat = [...topics]
+      .filter(([id]) => kept.has(id))
+      .flatMap(([id, list]) =>
+        list.filter((topic) => topic.content).map((topic) => ({ id, vector: topic.content }))
+      );
+    const merges = dendrogram(flat.map((item) => item.vector));
+    console.log(`${spec}: average linkage, no order (${flat.length} topics)`);
+    for (const threshold of grid) {
+      const linked = cutDendrogram(
+        merges,
+        flat.length,
+        threshold,
+        flat.map((item) => item.id)
+      );
+      show(softRow(pairsBy, new Map([...linked.keys()].map((key) => [key, 1])), threshold, scoreLib));
+    }
   }
 }
 
@@ -1113,7 +1301,469 @@ async function cloud() {
   );
 }
 
-const COMMANDS = { texts, screen, explore, cloud, linker, hybrid, "rerank-texts": rerankTexts };
+// ---------------------------------------------------------------------------
+// The test read: one pass over named methods, each over the same orders of the
+// history, against main.
+
+/**
+ * A board method's shares. `spec` is `greedy:<config[:dims]>:<threshold>`,
+ * `linkage:<config[:dims]>:<threshold>`, or `stored:<threshold>`: the vectors
+ * the record holds, as the app reads them.
+ */
+async function boardShares(corpus, spec, orderCount) {
+  const { readStore } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href
+  );
+  const parts = spec.split(":");
+  const kind = parts[0];
+  const threshold = Number(parts.at(-1));
+  if (kind === "stored") {
+    const store = readStore(path.join(CACHE, "embed"), "minilm");
+    const board = corpus.meetings.map((meeting) => ({
+      id: meeting.id,
+      title: meeting.id,
+      createdAt: meeting.createdAt,
+      snapshot: { nodes: meeting.nodes },
+    }));
+    const orders = historyOrders(board, corpus.truth, orderCount);
+    return linkShares(orders, (item) =>
+      coMembers(
+        corpus.links.meaningThreads(item, {
+          vectorOf: (text) => store.get(text),
+          contentThreshold: threshold,
+        }).subjects
+      )
+    );
+  }
+  const config = parts[1];
+  const dims = parts.length === 4 ? Number(parts[2]) : undefined;
+  const store = readStore(path.join(CACHE, "embed"), config, { dims });
+  const topics = topicVectors(corpus, store);
+  if (kind === "greedy") {
+    const board = boardOf(corpus, topics, "device");
+    const orders = historyOrders(board, corpus.truth, orderCount);
+    return linkShares(orders, (item) =>
+      coMembers(
+        corpus.links.meaningThreads(item, {
+          vectorOf: (text) => store.get(text),
+          contentThreshold: threshold,
+        }).subjects
+      )
+    );
+  }
+  const flat = [...topics].flatMap(([id, list]) =>
+    list.filter((topic) => topic.content).map((topic) => ({ id, vector: topic.content }))
+  );
+  const merges = dendrogram(flat.map((item) => item.vector));
+  const linked = cutDendrogram(
+    merges,
+    flat.length,
+    threshold,
+    flat.map((item) => item.id)
+  );
+  return new Map([...linked.keys()].map((key) => [key, 1]));
+}
+
+/** Every named board method on the test pairs, each paired with the first. */
+async function finalBoards() {
+  const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
+  const corpus = await loadCorpus();
+  const { truth } = corpus;
+  const specs = args.methods.split("+");
+  const orderCount = Number(args.orders);
+  const split = args.split;
+  const scenario = inSplit(corpus.pairs, split, "scenario");
+  const mixed = inSplit(corpus.pairs, split, "mixed");
+  const within = inSplit(corpus.pairs, split, "non-scenario-within");
+  const strict = scenario.filter(bothInTest);
+  const options = { seriesOf: truth.seriesOf, groupOf: truth.groupOf };
+  const f = (value) => (value == null ? "  -  " : value.toFixed(3));
+  const iv = (value) => (value ? `[${value[0].toFixed(3)}, ${value[1].toFixed(3)}]` : "");
+  const out = [];
+  const shares = new Map();
+  console.log(`${split}: ${scenario.length} scenario pairs, ${strict.length} with both in test series`);
+  for (const spec of specs) {
+    const linked = await boardShares(corpus, spec, orderCount);
+    shares.set(spec, linked);
+    const yes = (pair) => linked.get(pair.key) ?? 0;
+    const s = scoreLib.scoreWithIntervals(scenario, yes, options);
+    const w = ratesOf(scenario.filter((pair) => pair.category === "scenario-within"), yes, scoreLib);
+    const a = ratesOf(scenario.filter((pair) => pair.category === "scenario-across"), yes, scoreLib);
+    const b = ratesOf(strict, yes, scoreLib);
+    const mixedFalse = mixed.reduce((sum, pair) => sum + yes(pair), 0);
+    const nsWithin = within.reduce((sum, pair) => sum + yes(pair), 0);
+    console.log(
+      `${spec.padEnd(26)} P ${f(s.precision)} ${iv(s.intervals.precision)} R ${f(s.recall)} ${iv(s.intervals.recall)} FL ${f(s.falseLinks)} ${iv(s.intervals.falseLinks)}\n` +
+        `${"".padEnd(26)} within P ${f(w.precision)} R ${f(w.recall)} FL ${f(w.falseLinks)}; across P ${f(a.precision)} R ${f(a.recall)} FL ${f(a.falseLinks)}; both in test P ${f(b.precision)} R ${f(b.recall)} FL ${f(b.falseLinks)}; mixed ${mixedFalse.toFixed(1)}/${mixed.length}; ns-within ${nsWithin.toFixed(1)}/${within.length}`
+    );
+    const row = { spec, scenario: s, within: w, across: a, strict: b, mixedFalse, mixed: mixed.length, nsWithin };
+    if (spec !== specs[0]) {
+      const reference = shares.get(specs[0]);
+      const paired = scoreLib.pairedRates(scenario, yes, (pair) => reference.get(pair.key) ?? 0, options);
+      row.paired = paired;
+      console.log(
+        `${"".padEnd(26)} minus main: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
+      );
+    }
+    out.push(row);
+  }
+  fs.writeFileSync(path.join(CACHE, "results", `final-boards-${split}.json`), JSON.stringify(out));
+}
+
+// ---------------------------------------------------------------------------
+// The whole path a cloud user gets, which round 1 did not measure: the app
+// chooses the candidates (`chooseCandidates`, at most 12, by name vectors), the
+// model answers (`buildLinkPrompt`), and the board draws the answer
+// (`linkThreads` with checks). In the corpus' order, as if every conversation
+// had been summarized by that provider.
+
+async function appPath() {
+  const spec = args.model;
+  const load = (file) => import(pathToFileURL(path.join(ROOT, file)).href);
+  const { ask, ledgerTotal } = await load("scripts/lib/fast-models.mjs");
+  const remote = await load("src/helpers/remoteLinks.mjs");
+  const { readStore } = await load("scripts/lib/embed-store.mjs");
+  const { summaryExcerpt } = await load("src/helpers/conversationGroupSort.mjs");
+  const corpus = await loadCorpus();
+  const { links } = corpus;
+  const store = readStore(path.join(CACHE, "embed"), "minilm");
+  const vectorOf = (text) => store.get(text);
+  const board = corpus.meetings.map((meeting) => ({
+    id: meeting.id,
+    title: meeting.id,
+    createdAt: meeting.createdAt,
+    snapshot: {
+      nodes: meeting.nodes.map((node) => ({ ...node, label: nameOf(meeting, node, "model") })),
+    },
+  }));
+  const described = new Map(
+    corpus.meetings.map((meeting, index) => [
+      meeting.id,
+      {
+        gist: summaryExcerpt(meeting.summary, remote.GIST_CHARS),
+        topics: remote.linkTopicNames(board[index].snapshot, {
+          minTopicMs: links.MIN_LINK_TOPIC_MS,
+        }),
+      },
+    ])
+  );
+  const slug = spec.replace(/[^a-zA-Z0-9.-]+/g, "_");
+  const dir = path.join(CACHE, "app-path", slug);
+  fs.mkdirSync(dir, { recursive: true });
+  let next = 1;
+  const work = async () => {
+    while (next < board.length) {
+      const index = next;
+      next += 1;
+      const current = board[index];
+      const file = path.join(dir, `${current.id}.json`);
+      if (fs.existsSync(file)) continue;
+      const candidates = remote.chooseCandidates(current, board.slice(0, index), { vectorOf });
+      if (!candidates.length) {
+        fs.writeFileSync(file, JSON.stringify({ candidates: [], links: [], ok: true }));
+        continue;
+      }
+      const prompt = remote.buildLinkPrompt({
+        current: described.get(current.id),
+        earlier: candidates.map((id) => ({ id, ...described.get(id) })),
+      });
+      const answer = await ask(spec, {
+        system: prompt.system,
+        user: prompt.text,
+        schema: remote.LINK_SCHEMA,
+        maxTokens: 4000,
+        timeoutMs: 90_000,
+        purpose: "link-eval-2:app-path",
+      });
+      const parsed = answer.ok ? remote.parseLinkAnswer(answer.text, prompt.keys) : null;
+      fs.writeFileSync(
+        file,
+        JSON.stringify({ candidates, links: parsed ?? [], ok: Boolean(parsed), cost: answer.cost })
+      );
+    }
+  };
+  await Promise.all(Array.from({ length: Number(args.concurrency) }, work));
+  console.log(`${slug}: ${board.length} conversations, $${ledgerTotal().toFixed(3)} in the ledger`);
+}
+
+/** What the app path draws, read on one side of the split. No cost: the answers are cached. */
+async function appPathScore() {
+  const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
+  const { readStore } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/embed-store.mjs")).href
+  );
+  const corpus = await loadCorpus();
+  const store = readStore(path.join(CACHE, "embed"), "minilm");
+  const vectorOf = (text) => store.get(text);
+  const board = corpus.meetings.map((meeting) => ({
+    id: meeting.id,
+    title: meeting.id,
+    createdAt: meeting.createdAt,
+    snapshot: {
+      nodes: meeting.nodes.map((node) => ({ ...node, label: nameOf(meeting, node, "model") })),
+    },
+  }));
+  const split = args.split;
+  const scenario = inSplit(corpus.pairs, split, "scenario");
+  const mixed = inSplit(corpus.pairs, split, "mixed");
+  const within = inSplit(corpus.pairs, split, "non-scenario-within");
+  const f = (value) => (value == null ? " -  " : value.toFixed(3));
+  for (const name of args.runs.split("+")) {
+    const checks = new Map();
+    let asked = 0;
+    let linkedCount = 0;
+    for (const meeting of corpus.meetings) {
+      const value = readJson(path.join(CACHE, "app-path", name, `${meeting.id}.json`));
+      if (!value) continue;
+      asked += value.candidates.length;
+      linkedCount += value.links.length;
+      if (value.candidates.length) checks.set(meeting.id, value);
+    }
+    const report = (label, subjects) => {
+      const linked = coMembers(subjects);
+      const r = ratesOf(scenario, (pair) => linked.has(pair.key), scoreLib);
+      const sizes = subjects.map((subject) => subject.conversationIds.length).sort((a, b) => b - a);
+      console.log(
+        `${name} ${label.padEnd(24)}: asked ${asked}, linked ${linkedCount}; P ${f(r.precision)} R ${f(r.recall)} FL ${f(r.falseLinks)} mixed ${mixed.filter((pair) => linked.has(pair.key)).length}/${mixed.length} ns-within ${within.filter((pair) => linked.has(pair.key)).length}/${within.length}; subjects ${sizes.slice(0, 8).join(" ")} (${subjects.length} in all)`
+      );
+    };
+    report("today", corpus.links.linkThreads(board, { vectorOf, checks }).subjects);
+    // Only what the model said: each link is an edge on a subject it named, and
+    // subjects are one when their names are alike. No topic carries a link on.
+    const { createEmbedder } = await import(
+      pathToFileURL(path.join(ROOT, "scripts/lib/minilm.mjs")).href
+    );
+    const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
+    const pairsOfLinks = [];
+    for (const [id, check] of checks) {
+      for (const link of check.links) pairsOfLinks.push({ a: id, b: link.id, subject: link.subject });
+    }
+    const names = [...new Set(pairsOfLinks.map((item) => item.subject))];
+    const embedded = await embedder.embed(names);
+    const vectors = new Map(names.map((subject, index) => [subject, embedded[index]]));
+    // The app's fixed code, from its own worktree (`--links-module`): every
+    // conversation summarized by this provider, as the run assumes.
+    if (args["links-module"]) {
+      const fixed = await import(pathToFileURL(path.resolve(args["links-module"])).href);
+      const onRoute = board.map((item) => ({ ...item, summaryRoute: "providers:same" }));
+      const both = (text) => vectors.get(text) ?? vectorOf(text);
+      for (const subjectThreshold of [0.6, 0.65, 0.7, 0.75, 0.8]) {
+        report(
+          `the fix, ${subjectThreshold}`,
+          fixed.linkThreads(onRoute, { vectorOf: both, checks, subjectThreshold }).subjects
+        );
+      }
+      report(
+        "the fix, routes not known",
+        fixed.linkThreads(board, { vectorOf: both, checks }).subjects
+      );
+    }
+    for (const threshold of [0.6, 0.7, 0.8, 0.9, 1.01]) {
+      const groups = [];
+      for (const item of pairsOfLinks) {
+        const vector = vectors.get(item.subject);
+        let best = null;
+        let bestScore = threshold;
+        for (const group of groups) {
+          const score = dot(group.mean, vector) / (Math.sqrt(dot(group.mean, group.mean)) || 1);
+          if (score >= bestScore) {
+            best = group;
+            bestScore = score;
+          }
+        }
+        if (!best) {
+          best = {
+            mean: new Float64Array(vector.length),
+            ids: new Set(),
+            label: item.subject,
+          };
+          groups.push(best);
+        }
+        for (let k = 0; k < vector.length; k += 1) best.mean[k] += vector[k];
+        best.ids.add(item.a);
+        best.ids.add(item.b);
+      }
+      report(
+        `by subject name, ${threshold}`,
+        groups.map((group) => ({ label: group.label, conversationIds: [...group.ids] }))
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Typed relations: can a model say how two linked conversations relate? Two
+// judges read the transcript of the two topics and pick a type, each blind to
+// the other. If they do not agree, the types do not hold on this corpus, and
+// no model can be scored against them. A model that reads what the cloud check
+// reads (names and gists) is then scored against both.
+
+const RELATION_TYPES = ["continues", "depends_on", "conflicts", "same_open_question", "other"];
+
+const RELATION_RULES = [
+  "- continues: the later one picks up the same subject and moves it on.",
+  "- depends_on: what the later one does or decides on this subject rests on an answer or decision in the earlier one.",
+  "- conflicts: the later one contradicts or reverses what the earlier one held on this subject.",
+  "- same_open_question: the same question is open in both, and neither settles it.",
+  "- other: none of these, or the two only touch the same words.",
+].join("\n");
+
+const RELATION_SCHEMA = {
+  name: "relation",
+  schema: {
+    type: "object",
+    properties: { type: { type: "string", enum: RELATION_TYPES } },
+    required: ["type"],
+    additionalProperties: false,
+  },
+};
+
+const RELATION_JUDGE = [
+  "You read lines from two meetings of one team, the earlier first. They were linked because both are on one subject. The lines come from a transcript of speech: expect filler and half sentences.",
+  "",
+  "Say how the later meeting relates to the earlier one on that subject. Pick one:",
+  RELATION_RULES,
+  "",
+  'Reply with JSON only: {"type":"continues"}',
+].join("\n");
+
+const RELATION_MODEL = [
+  "You get two conversations of one team, the earlier first. Each is given only as a short gist and the names of its topics; you never see what was said. They were linked because both are on one subject.",
+  "",
+  "Say how the later conversation relates to the earlier one on that subject. Pick one:",
+  RELATION_RULES,
+  "",
+  'Reply with JSON only: {"type":"continues"}',
+].join("\n");
+
+/** Cohen's kappa between two lists of labels. */
+function kappa(a, b) {
+  const labels = [...new Set([...a, ...b])];
+  const n = a.length;
+  let same = 0;
+  for (let index = 0; index < n; index += 1) if (a[index] === b[index]) same += 1;
+  const share = (list, label) => list.filter((value) => value === label).length / n;
+  const chance = labels.reduce((sum, label) => sum + share(a, label) * share(b, label), 0);
+  return { agreement: same / n, kappa: chance < 1 ? (same / n - chance) / (1 - chance) : 0, n };
+}
+
+/** Within-series links of Claude Opus 5.5 on tuning meetings, judged and typed. */
+async function relations() {
+  const load = (file) => import(pathToFileURL(path.join(ROOT, file)).href);
+  const { ask, ledgerTotal } = await load("scripts/lib/fast-models.mjs");
+  const remote = await load("src/helpers/remoteLinks.mjs");
+  const links = await load("src/helpers/conversationLinks.mjs");
+  const { topicExcerpt } = await load("src/helpers/topicNaming.mjs");
+  const { summaryExcerpt } = await load("src/helpers/conversationGroupSort.mjs");
+  const { seriesOf } = await load("scripts/lib/link-truth.mjs");
+  const meetings = new Map(loadMeetings().map((meeting) => [meeting.id, meeting]));
+  const base = linkerRun(BASE_RUN);
+  const items = [];
+  for (const call of base.calls.values()) {
+    if (args.split !== "all" && splitOfMeeting(call.id) !== args.split) continue;
+    for (const link of call.links) {
+      if (seriesOf(link.id) !== seriesOf(call.id)) continue;
+      if (args.split !== "all" && splitOfMeeting(link.id) !== args.split) continue;
+      items.push({ later: call.id, earlier: link.id, ...link });
+    }
+  }
+  const named = (meeting, node) => String(meeting.names[node.id]?.name ?? node.label).trim();
+  const topicLines = (id, name) => {
+    const meeting = meetings.get(id);
+    const wanted = String(name).trim().toLowerCase();
+    const nodes = meeting.nodes.filter((node) => links.isLinkableTopic(node));
+    const node =
+      nodes.find((other) => named(meeting, other).toLowerCase() === wanted) ??
+      nodes.find((other) => {
+        const label = named(meeting, other).toLowerCase();
+        return label.includes(wanted) || wanted.includes(label);
+      }) ??
+      nodes[0];
+    return topicExcerpt(
+      node.utteranceIds.map((utterance) => meeting.turns.get(String(utterance)) ?? ""),
+      { budget: 1600 }
+    )
+      .map((line) => `- ${line}`)
+      .join("\n");
+  };
+  const describe = (id) => {
+    const meeting = meetings.get(id);
+    const snapshot = {
+      nodes: meeting.nodes.map((node) => ({ ...node, label: named(meeting, node) })),
+    };
+    const topics = remote.linkTopicNames(snapshot, { minTopicMs: links.MIN_LINK_TOPIC_MS });
+    return `Gist: ${oneLine(summaryExcerpt(meeting.summary, 300))}\nTopics: ${topics.join("; ")}`;
+  };
+  const dir = path.join(CACHE, "relations");
+  fs.mkdirSync(dir, { recursive: true });
+  const typeBy = async (spec, kind) => {
+    const out = new Array(items.length).fill(null);
+    let next = 0;
+    const slug = spec.replace(/[^a-zA-Z0-9.-]+/g, "_");
+    const work = async () => {
+      while (next < items.length) {
+        const index = next;
+        next += 1;
+        const item = items[index];
+        const file = path.join(dir, `${slug}~${kind}~${item.later}~${item.earlier}.json`);
+        const stored = readJson(file);
+        if (stored) {
+          out[index] = stored.type;
+          continue;
+        }
+        const user =
+          kind === "judge"
+            ? `Subject: ${item.subject}\n\nEARLIER MEETING\n${topicLines(item.earlier, item.earlierTopic)}\n\nLATER MEETING\n${topicLines(item.later, item.topic)}`
+            : `Subject: ${item.subject}\n\nEarlier conversation\n${describe(item.earlier)}\n\nLater conversation\n${describe(item.later)}`;
+        const answer = await ask(spec, {
+          system: kind === "judge" ? RELATION_JUDGE : RELATION_MODEL,
+          user,
+          schema: RELATION_SCHEMA,
+          maxTokens: 600,
+          timeoutMs: 120_000,
+          parseJson: true,
+          purpose: `link-eval-2:relations:${kind}`,
+        });
+        out[index] = RELATION_TYPES.includes(answer.json?.type) ? answer.json.type : "other";
+        fs.writeFileSync(file, JSON.stringify({ type: out[index] }));
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, work));
+    return out;
+  };
+  const judges = args.judges.split("+");
+  const first = await typeBy(judges[0], "judge");
+  const second = await typeBy(judges[1], "judge");
+  const models = await Promise.all(args.runs.split("+").map((spec) => typeBy(spec, "model")));
+  const spread = (list) => {
+    const counts = {};
+    for (const value of list) counts[value] = (counts[value] ?? 0) + 1;
+    return JSON.stringify(counts);
+  };
+  const f = ({ agreement, kappa: k, n }) => `agreement ${agreement.toFixed(2)} kappa ${k.toFixed(2)} (n ${n})`;
+  console.log(`${items.length} within-series links on ${args.split}; $${ledgerTotal().toFixed(3)} in the ledger`);
+  console.log(`judge 1 ${spread(first)}\njudge 2 ${spread(second)}`);
+  console.log(`judge 1 against judge 2: ${f(kappa(first, second))}`);
+  args.runs.split("+").forEach((spec, index) => {
+    console.log(`${spec} ${spread(models[index])}`);
+    console.log(`  against judge 1: ${f(kappa(models[index], first))}; judge 2: ${f(kappa(models[index], second))}`);
+  });
+}
+
+const COMMANDS = {
+  texts,
+  screen,
+  explore,
+  curve,
+  cloud,
+  linker,
+  hybrid,
+  relations,
+  "final-boards": finalBoards,
+  "app-path": appPath,
+  "app-path-score": appPathScore,
+  "rerank-texts": rerankTexts,
+};
 
 if (!COMMANDS[command]) {
   console.error(`Usage: node scripts/link-eval-2.mjs <${Object.keys(COMMANDS).join("|")}>`);

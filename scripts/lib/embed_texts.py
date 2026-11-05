@@ -239,7 +239,12 @@ def smoke(name, threads):
 
 
 def speed(name, threads, texts_file):
-    """One text at a time, as the app's worker asks. The minimum of three passes."""
+    """One text at a time, as the app's worker asks. The minimum of three passes.
+
+    `cpu_ms` is this process's CPU time a text: on a busy machine it stands up
+    where wall time does not. For a GGUF model that time is in llama-server, so
+    only `ms` is given.
+    """
     load_started = time.perf_counter()
     CONFIGS[name]["spin"] = True
     model = load(name, threads)
@@ -249,13 +254,18 @@ def speed(name, threads, texts_file):
     report = {"config": name, "threads": threads, "load_s": round(load_s, 2)}
     for kind, texts in samples.items():
         best = None
+        best_cpu = None
         for _ in range(3):
             started = time.perf_counter()
+            cpu = time.process_time()
             for text in texts:
                 model.embed([text])
             elapsed = (time.perf_counter() - started) / len(texts) * 1000
+            spent = (time.process_time() - cpu) / len(texts) * 1000
             best = elapsed if best is None else min(best, elapsed)
+            best_cpu = spent if best_cpu is None else min(best_cpu, spent)
         report[f"{kind}_ms"] = round(best, 2)
+        report[f"{kind}_cpu_ms"] = round(best_cpu, 2)
     report["peak_rss_mb"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1048576)
     if isinstance(model, GgufModel):
         model.close()
