@@ -99,6 +99,10 @@
  *                  --every-offset, default 0), and score only the reference
  *                  words inside them: a sample for paid models, the same
  *                  segments for every model.
+ *   --publish DIR  after each recording, write DIR/<recording>.json: every
+ *                  segment's start, end and text (punctuation kept, empty
+ *                  segments too) and the recording's metrics. The other evals
+ *                  read these as real recognition output.
  *
  * Besides every word, three kinds of words are scored on their own, as the
  * share of them the transcript has (recall): the **content words**, what is
@@ -212,6 +216,7 @@ const REALTIME = arg("realtime");
 const PACE = Number(arg("pace", "1"));
 const CLOUD_CONCURRENCY = Number(arg("concurrency", "6"));
 const JSON_OUT = arg("json");
+const PUBLISH = arg("publish");
 const QUIET = flag("quiet");
 
 const CAPTURE_RATE = 24_000; // the renderer's AudioContext
@@ -1713,6 +1718,25 @@ async function replay(recording, backend, ablation) {
   return { summary, segments: segments.map(({ samples: _samples, ...rest }) => rest) };
 }
 
+/** One recording's recognition output, for the evals that read it (`--publish`). */
+function publish(dir, { summary, segments }) {
+  fs.mkdirSync(dir, { recursive: true });
+  const seconds = (t) => Number(t.toFixed(3));
+  const out = {
+    meeting: summary.meeting,
+    segments: segments.map((s) => ({
+      start: seconds(s.start),
+      end: seconds(s.end),
+      text: s.text ?? "",
+      ...(Number.isFinite(s.ms) ? { ms: s.ms } : {}),
+      ...(s.droppedLabel ? { droppedLabel: s.droppedLabel } : {}),
+      ...(s.failed ? { failed: s.failed } : {}),
+    })),
+    metrics: summary,
+  };
+  fs.writeFileSync(path.join(dir, `${summary.meeting}.json`), JSON.stringify(out, null, 1));
+}
+
 /** Totals over every recording: sums first, shares last. */
 function totals(summaries) {
   const sum = (pick) => summaries.reduce((n, s) => n + (pick(s) || 0), 0);
@@ -1915,7 +1939,11 @@ async function main() {
       });
   const results = [];
   try {
-    for (const recording of recordings) results.push(await replay(recording, backend, ablation));
+    for (const recording of recordings) {
+      const result = await replay(recording, backend, ablation);
+      results.push(result);
+      if (PUBLISH) publish(PUBLISH, result);
+    }
   } finally {
     if (backend) await backend.stop();
     if (ablation) await ablation.stop();
