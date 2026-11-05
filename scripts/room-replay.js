@@ -55,6 +55,10 @@
  *                  and what came back: the noise runs.
  *   --librispeech  conversations built from LibriSpeech voices instead: near,
  *                  clean voices, the case the segmenter was first tuned on.
+ *   --dipco DIR    the Dinner Party Corpus (CDLA-Permissive-1.0): four people at
+ *                  a table at home, one channel of one far-field array
+ *                  (`--dipco-array U01`). Its reference has times by utterance,
+ *                  so each utterance's words are spread over it.
  *   --segmenter    another implementation of the segmenter, e.g. main's, to
  *                  measure "before" with exactly the code that shipped.
  *   --options      segmenter options, as JSON, over its defaults.
@@ -120,6 +124,9 @@
  *                  writes) instead of the app's segmenter.
  *   --score-text   with --segments-from, score the `text` of those segments
  *                  and transcribe nothing: a whole-file pass, as a transcript.
+ *   --heard-stream DIR  an experiment: the segmenter hears the room, the model
+ *                  hears DIR/<recording>.wav, a whole stream run through an
+ *                  enhancer (the same 16 kHz samples). Honours --enhance-gate.
  *   --enhance CMD  an experiment: each segment through an engine-style process
  *                  (a JSON array) before it is sent: {"id":1,"wav":in,"out":out}
  *                  on stdin, {"id":1} once `out` is written (16 kHz mono PCM).
@@ -133,6 +140,10 @@
  *                  `prompt` and `keywords`, an engine's `prompt` and `keywords`.
  *   --cloud-fields  more fields for each cloud request, as JSON, e.g.
  *                  '{"prompt":"A meeting."}'; an array repeats its field.
+ *   --realtime-stream M  the path a room takes with an OpenAI key: the whole
+ *                  recording streamed to a realtime session of model M at
+ *                  --pace, with the app's server VAD (openaiRealtimeStreaming.js)
+ *                  cutting the turns instead of the segmenter.
  *   --realtime-fields  more fields for a realtime session's transcription, as
  *                  JSON, e.g. '{"delay":"xhigh"}'; --realtime-input, for its
  *                  audio input, e.g. '{"noise_reduction":{"type":"far_field"}}'.
@@ -190,6 +201,8 @@ const AMI = arg("ami");
 /** Or conversations built from LibriSpeech voices: a near, clean room. */
 const LIBRISPEECH = arg("librispeech");
 const CONVERSATIONS = Number(arg("conversations", "9"));
+const DIPCO = arg("dipco");
+const DIPCO_ARRAY = arg("dipco-array", "U01");
 const MODEL = arg("model", path.join(process.env.HOME, ".cache/oats/whisper-models/ggml-base.bin"));
 /** The app's id for that file (ggml-small.en.bin: small.en), which the in-room path's denoise asks for. */
 const MODEL_ID =
@@ -257,6 +270,7 @@ const ABLATE_VAD = flag("ablate-vad");
 const ORACLE = flag("oracle");
 const CLOUD = arg("cloud");
 const REALTIME = arg("realtime");
+const REALTIME_STREAM = arg("realtime-stream");
 const ENGINE = arg("engine");
 const ENGINE_LABEL = arg("engine-label", "engine");
 const PAD_SILENCE = Number(arg("pad-silence", "0"));
@@ -267,6 +281,7 @@ const DUMP_STREAM = arg("dump-stream");
 const SEGMENTS_FROM = arg("segments-from");
 const SCORE_TEXT = flag("score-text");
 const ENHANCE = arg("enhance");
+const HEARD_STREAM = arg("heard-stream");
 const ENHANCE_PREROLL = Number(arg("enhance-preroll", "1"));
 const ENHANCE_GATE = arg("enhance-gate") ? Number(arg("enhance-gate")) : null;
 const CLOUD_FIELDS = JSON.parse(arg("cloud-fields", "{}"));
@@ -284,7 +299,7 @@ const CHUNK = 800; // MEETING_AUDIO_BUFFER_SIZE, meetingRecordingStore.ts
 const RATE = 16_000;
 const FRAME = 320; // the segmenter's 20 ms
 
-if (require.main === module && !AUDIO.length && !LIBRISPEECH) {
+if (require.main === module && !AUDIO.length && !LIBRISPEECH && !DIPCO) {
   console.error("usage: node scripts/room-replay.js --audio <file> [--ami <dir>] [--model x.bin]");
   process.exit(2);
 }
@@ -953,6 +968,91 @@ function startFromRun(file) {
   };
 }
 
+/**
+ * A whole recording through a realtime session, as `openaiRealtimeStreaming.js`
+ * opens one: the server's VAD cuts the turns. Returns the turns as segments.
+ */
+async function streamRealtime(model, samples24k) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("--realtime-stream needs OPENAI_API_KEY in the environment");
+  const WebSocket = require("ws");
+  const turns = new Map();
+  const turn = (id) => {
+    if (!turns.has(id)) turns.set(id, { text: "", start: null, end: null, done: false });
+    return turns.get(id);
+  };
+  const ws = new WebSocket("wss://api.openai.com/v1/realtime?intent=transcription", {
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  await new Promise((resolve, reject) => {
+    ws.on("error", reject);
+    ws.on("message", (data) => {
+      const event = JSON.parse(String(data));
+      if (event.type === "session.created") {
+        ws.send(
+          JSON.stringify({
+            type: "session.update",
+            session: {
+              type: "transcription",
+              audio: {
+                input: {
+                  format: { type: "audio/pcm", rate: CAPTURE_RATE },
+                  transcription: { model, ...REALTIME_FIELDS },
+                  turn_detection: {
+                    type: "server_vad",
+                    threshold: 0.6,
+                    silence_duration_ms: 600,
+                    prefix_padding_ms: 500,
+                  },
+                  ...REALTIME_INPUT,
+                },
+              },
+            },
+          })
+        );
+      } else if (event.type === "session.updated") {
+        resolve();
+      } else if (event.type === "input_audio_buffer.speech_started") {
+        turn(String(event.item_id)).start = event.audio_start_ms / 1000;
+      } else if (event.type === "input_audio_buffer.speech_stopped") {
+        turn(String(event.item_id)).end = event.audio_end_ms / 1000;
+      } else if (event.type === "conversation.item.input_audio_transcription.completed") {
+        const t = turn(String(event.item_id));
+        t.text = String(event.transcript ?? "").trim();
+        t.done = true;
+      } else if (event.type === "conversation.item.input_audio_transcription.failed") {
+        turn(String(event.item_id)).done = true;
+      }
+    });
+  });
+  const raw = Buffer.from(samples24k.buffer, samples24k.byteOffset, samples24k.byteLength);
+  const chunk = (CAPTURE_RATE / 10) * 2;
+  const started = Date.now();
+  for (let at = 0; at < raw.length; at += chunk) {
+    const piece = raw.subarray(at, Math.min(at + chunk, raw.length));
+    ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: piece.toString("base64") }));
+    const due = started + ((at + chunk) / 2 / CAPTURE_RATE / PACE) * 1000;
+    if (due > Date.now()) await new Promise((resolve) => setTimeout(resolve, due - Date.now()));
+  }
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline && [...turns.values()].some((t) => !t.done)) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  ws.close();
+  const seconds = samples24k.length / CAPTURE_RATE;
+  return [...turns.values()]
+    .filter((t) => t.start !== null)
+    .sort((a, b) => a.start - b.start)
+    .map((t, index) => ({
+      index,
+      start: t.start,
+      end: t.end ?? seconds,
+      text: t.text,
+      ms: null,
+      failed: null,
+    }));
+}
+
 // ---------------------------------------------------------------------------
 // The reference.
 
@@ -1145,6 +1245,54 @@ function librispeechConversations(dir, count) {
         ffmpegPcm(["-f", "s16le", "-ar", String(RATE), "-ac", "1", "-i", "-"], CAPTURE_RATE, raw),
       reference: () => ({ words, nonSpeech: [] }),
     });
+  }
+  return out;
+}
+
+/**
+ * The sessions of the Dinner Party Corpus, as recordings: one far-field channel
+ * and the transcript, whose utterances carry their times per device.
+ */
+function dipcoRecordings(dir) {
+  const out = [];
+  const seconds = (clock) => {
+    const [h, m, s] = String(clock).split(":").map(Number);
+    return h * 3600 + m * 60 + s;
+  };
+  for (const split of ["dev", "eval"]) {
+    const transcripts = path.join(dir, "transcriptions", split);
+    if (!fs.existsSync(transcripts)) continue;
+    for (const name of fs.readdirSync(transcripts).sort()) {
+      if (!name.endsWith(".json")) continue;
+      const session = name.replace(".json", "");
+      const file = path.join(dir, "audio", split, `${session}_${DIPCO_ARRAY}.CH1.wav`);
+      if (!fs.existsSync(file)) continue;
+      out.push({
+        name: session,
+        audio: path.basename(file),
+        load: () => read24k(file, FROM, SECONDS),
+        reference: () => {
+          const words = [];
+          for (const u of JSON.parse(fs.readFileSync(path.join(transcripts, name), "utf8"))) {
+            const start = seconds(u.start_time[DIPCO_ARRAY]);
+            const end = seconds(u.end_time[DIPCO_ARRAY]);
+            const tokens = String(u.words).split(/\s+/).filter(Boolean);
+            tokens.forEach((text, k) =>
+              words.push({
+                speaker: u.speaker_id,
+                start: start + ((end - start) * k) / tokens.length,
+                end: start + ((end - start) * (k + 1)) / tokens.length,
+                text,
+                truncated: false,
+                entity: null,
+              })
+            );
+          }
+          words.sort((a, b) => a.start - b.start || a.end - b.end);
+          return { words, nonSpeech: [] };
+        },
+      });
+    }
   }
   return out;
 }
@@ -1599,6 +1747,7 @@ async function replay(recording, backend, ablation, vadGate = null, enhancer = n
       reference.nonSpeech = reference.nonSpeech.filter(within);
     }
   }
+  if (REALTIME_STREAM) segments = await streamRealtime(REALTIME_STREAM, samples24k);
   const segmentSeconds = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
   log(
     `${meeting}: ${seconds.toFixed(0)} s, ${segments.length} segments` +
@@ -1637,6 +1786,14 @@ async function replay(recording, backend, ablation, vadGate = null, enhancer = n
     }
   }
 
+  if (HEARD_STREAM) {
+    // The segmenter heard the room; Whisper hears this. The same samples, enhanced.
+    const heard = read24k(path.join(HEARD_STREAM, `${meeting}.wav`), 0, null, RATE);
+    for (const s of segments) {
+      if (ENHANCE_GATE !== null && !(s.steadyFloor >= ENHANCE_GATE)) continue;
+      s.samples = Int16Array.from(heard.subarray(s.startSample, s.endSample));
+    }
+  }
   if (ENHANCE) {
     const raw = ENHANCE_PREROLL ? Math.round(ENHANCE_PREROLL * RATE) : 0;
     for (const s of segments) {
@@ -1726,7 +1883,7 @@ async function replay(recording, backend, ablation, vadGate = null, enhancer = n
         ? { cloud: CLOUD }
         : REALTIME
           ? { realtime: REALTIME, pace: PACE }
-          : ENGINE || FROM_RUN || SCORE_TEXT
+          : ENGINE || FROM_RUN || SCORE_TEXT || REALTIME_STREAM
             ? {
                 engine: ENGINE_LABEL,
                 fromRun: FROM_RUN ? path.basename(FROM_RUN) : undefined,
@@ -2253,7 +2410,7 @@ async function main() {
       ? startCloud(CLOUD)
       : REALTIME
         ? startRealtime(REALTIME)
-        : SCORE_TEXT
+        : SCORE_TEXT || REALTIME_STREAM
           ? { transcribe: async () => ({}), stop: async () => {} }
           : FROM_RUN
             ? startFromRun(FROM_RUN)
@@ -2282,15 +2439,17 @@ async function main() {
   }
   const recordings = LIBRISPEECH
     ? librispeechConversations(LIBRISPEECH, CONVERSATIONS)
-    : AUDIO.map((file) => {
-        const name = path.basename(file).split(".")[0];
-        return {
-          name,
-          audio: path.basename(file),
-          load: () => read24k(file, FROM, SECONDS),
-          reference: () => (AMI ? loadAmi(AMI, name) : null),
-        };
-      });
+    : DIPCO
+      ? dipcoRecordings(DIPCO)
+      : AUDIO.map((file) => {
+          const name = path.basename(file).split(".")[0];
+          return {
+            name,
+            audio: path.basename(file),
+            load: () => read24k(file, FROM, SECONDS),
+            reference: () => (AMI ? loadAmi(AMI, name) : null),
+          };
+        });
   const results = [];
   try {
     for (const recording of recordings) {
