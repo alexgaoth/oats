@@ -34,11 +34,17 @@
 // topic back. The record a finished conversation keeps (`snapshot` with
 // `final`) is cut again from the whole conversation, with hindsight.
 //
+// In a room, in English, the cuts come from the change detector instead
+// (topicChange.mjs, the `detector` option), which reads sentence vectors and
+// draws a change about a minute after it. The stretches between its cuts are
+// grouped, named and published by the code here.
+//
 // Kept as dependency-free ESM so it unit-tests under node:test like the rest of
 // the conversation core.
 
 import { ENGLISH_WORD_RANKS } from "./englishWordRanks.mjs";
 import { encodeTopicVector, topicContentVector } from "./conversationLinks.mjs";
+import { TopicChangeDetector } from "./topicChange.mjs";
 
 // ---------------------------------------------------------------------------
 // Words
@@ -693,6 +699,15 @@ class ConversationTopicTracker {
     this.scale = { ...SCALE, ...(options.scale || {}) };
     this.labelScore = { ...LABEL_SCORE, ...(options.labelScore || {}) };
     this.now = options.now || Date.now;
+    // With `detector`, the cuts come from the change detector (topicChange.mjs),
+    // which reads sentence vectors: `true`, or its settings. Until the first
+    // vector comes, and from the moment they stop coming, the cuts are the
+    // lexical ones below: a Mac without the embedding model, or a recording
+    // whose feeder failed, keeps the tracker it had.
+    this.detector = options.detector
+      ? new TopicChangeDetector(options.detector === true ? {} : options.detector)
+      : null;
+    this._detectorOn = false;
 
     this.utterances = [];
     // Utterances with content words: where each starts among all content
@@ -757,6 +772,15 @@ class ConversationTopicTracker {
       this.startOf.push(this.flat.length);
       for (const key of keys) this.flat.push(key);
     }
+    this.detector?.addTurn({
+      id: record.id,
+      text,
+      keys,
+      words: text.split(/\s+/).length,
+      start: utterance.start,
+      end: utterance.end ?? record.at / 1000,
+    });
+    this._lastSpeech = utterance.end ?? record.at / 1000;
     this._update();
     return this.topics.find((topic) => topic.id === this.currentId) ?? null;
   }
@@ -803,6 +827,13 @@ class ConversationTopicTracker {
   }
 
   _update() {
+    if (this._detectorOn && this.detector.stalled(this._lastSpeech ?? 0)) {
+      this._detectorOn = false;
+    }
+    if (this._detectorOn) {
+      this._updateFromDetector();
+      return;
+    }
     const { window, segment, wide, narrow, total } = this._depths();
     const settled = [];
     this.units.forEach((unit, index) => {
@@ -859,6 +890,14 @@ class ConversationTopicTracker {
     Object.assign(this, this._topicsFor(shown, { commit: true }));
   }
 
+  // The turn indexes that start a stretch, from the turns the detector cut at.
+  _updateFromDetector() {
+    this.detector.advance(this._lastSpeech ?? 0);
+    this._final = null;
+    this._proposedFrom = this.detector.proposedId();
+    Object.assign(this, this._topicsAt(this.detector.cuts, { commit: true }));
+  }
+
   // Vectors for utterances (by id) and phrases (by the key `phrasesToEmbed`
   // gave), from a sentence embedding model. The topics are named again with
   // them; nothing is cut differently. Vectors of any length; they are made
@@ -878,6 +917,7 @@ class ConversationTopicTracker {
       const value = unit(vector);
       if (value) {
         this.vectors.set(String(id), value);
+        if (this.detector?.addVector(id, value)) this._detectorOn = true;
         added += 1;
       }
     }
@@ -889,6 +929,10 @@ class ConversationTopicTracker {
       }
     }
     if (!added || !this._depthCache) return;
+    if (this._detectorOn) {
+      this._updateFromDetector();
+      return;
+    }
     this._final = null;
     Object.assign(this, this._topicsFor(this._shownCuts, { commit: true }));
   }
@@ -946,7 +990,15 @@ class ConversationTopicTracker {
 
   // The topics for one set of cuts (unit indexes).
   _topicsFor(cuts, { commit }) {
-    const starts = [0, ...cuts.map((cut) => this.units[cut].index)].filter(
+    return this._topicsAt(
+      cuts.map((cut) => this.units[cut].index),
+      { commit }
+    );
+  }
+
+  // The topics for stretches that start at these utterances.
+  _topicsAt(cuts, { commit }) {
+    const starts = [0, ...cuts].filter(
       (start, index, list) => index === 0 || start > list[index - 1]
     );
     const stretches = starts.map((start, index) =>
@@ -1301,7 +1353,10 @@ class ConversationTopicTracker {
   // model's names, topicNamer.mjs) reads it only up to there.
   snapshot(at = this.now(), { final = false } = {}) {
     let view = this;
-    if (final && this._depthCache) {
+    if (final && this._detectorOn) {
+      this._final ??= this._topicsAt(this.detector.finalCuts(), { commit: false });
+      view = this._final;
+    } else if (final && this._depthCache) {
       if (!this._final) {
         const { segment, wide, narrow, total } = this._depthCache;
         const cuts = choosePauses({
