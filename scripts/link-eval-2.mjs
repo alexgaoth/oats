@@ -1663,6 +1663,92 @@ async function appPathFinal() {
 }
 
 // ---------------------------------------------------------------------------
+// What recognition costs. The eight meetings a recognizer heard replace their
+// manual selves on the board, and every pair that touches one is scored with
+// the same pair on manual text. Eight meetings alone make 28 pairs, so each is
+// also paired with the other 131, which stay manual: one side as the app would
+// hear it. Written by `link-eval.mjs snapshots|names|gists --replay`.
+
+/** Meetings as a recognizer left them: snapshot, names and summary, from `--cache`. */
+function recognizedMeetings(replay) {
+  const dir = path.join(CACHE, "recognition", replay);
+  const out = new Map();
+  for (const file of fs.readdirSync(path.join(dir, "snapshots"))) {
+    const id = file.replace(/\.json$/, "");
+    out.set(id, {
+      nodes: readJson(path.join(dir, "snapshots", file)).snapshot.nodes,
+      names: readJson(path.join(dir, "names", NAMING_MODEL, file), {}),
+      summary: readJson(path.join(dir, "gists", NAMING_MODEL, file))?.summary ?? "",
+    });
+  }
+  return out;
+}
+
+async function recognitionBoards() {
+  const scoreLib = await import(pathToFileURL(path.join(ROOT, "scripts/lib/link-score.mjs")).href);
+  const { createEmbedder } = await import(
+    pathToFileURL(path.join(ROOT, "scripts/lib/minilm.mjs")).href
+  );
+  const corpus = await loadCorpus();
+  const embedder = await createEmbedder({ cacheDir: path.join(CACHE, "vectors"), threads: 2 });
+  const threshold = Number(args.center);
+  const boardWith = (replaced) =>
+    corpus.meetings.map((meeting) => {
+      const source = replaced?.get(meeting.id) ?? meeting;
+      return {
+        id: meeting.id,
+        title: meeting.id,
+        createdAt: meeting.createdAt,
+        snapshot: {
+          nodes: source.nodes.map((node) => ({
+            ...node,
+            label: String(source.names?.[node.id]?.name ?? node.label).trim(),
+          })),
+        },
+      };
+    });
+  const drawOver = async (board) => {
+    const texts = [...new Set(board.flatMap((item) => item.snapshot.nodes.map((node) => node.label)))];
+    const embedded = await embedder.embed(texts);
+    const vectors = new Map(texts.map((text, index) => [text, embedded[index]]));
+    return linkShares(historyOrders(board, corpus.truth, Number(args.orders)), (item) =>
+      coMembers(
+        corpus.links.meaningThreads(item, {
+          vectorOf: (text) => vectors.get(text) ?? null,
+          contentThreshold: threshold,
+        }).subjects
+      )
+    );
+  };
+  const manualShares = await drawOver(boardWith(null));
+  const heard = new Set(recognizedMeetings(args.runs.split("+")[0]).keys());
+  const touching = corpus.pairs.filter((pair) => heard.has(pair.a) || heard.has(pair.b));
+  const scenario = touching.filter((pair) => pair.category.startsWith("scenario"));
+  const mixed = touching.filter((pair) => pair.category === "mixed");
+  const options = { seriesOf: corpus.truth.seriesOf, groupOf: corpus.truth.groupOf };
+  const f = (value) => (value == null ? "  -  " : value.toFixed(3));
+  const iv = (value) => (value ? `[${value[0].toFixed(3)}, ${value[1].toFixed(3)}]` : "");
+  const line = (label, shares) => {
+    const yes = (pair) => shares.get(pair.key) ?? 0;
+    const s = scoreLib.scoreWithIntervals(scenario, yes, options);
+    console.log(
+      `${label.padEnd(30)} P ${f(s.precision)} ${iv(s.intervals.precision)} R ${f(s.recall)} ${iv(s.intervals.recall)} FL ${f(s.falseLinks)} ${iv(s.intervals.falseLinks)} mixed ${mixed.reduce((sum, pair) => sum + yes(pair), 0).toFixed(1)}/${mixed.length}`
+    );
+    return yes;
+  };
+  console.log(`${scenario.length} scenario pairs touch the ${heard.size} meetings`);
+  const manual = line("manual text", manualShares);
+  for (const replay of args.runs.split("+")) {
+    const shares = await drawOver(boardWith(recognizedMeetings(replay)));
+    const yes = line(replay, shares);
+    const paired = scoreLib.pairedRates(scenario, yes, manual, options);
+    console.log(
+      `  minus manual: P ${f(paired.precision.delta)} ${iv(paired.precision.interval)} R ${f(paired.recall.delta)} ${iv(paired.recall.interval)} FL ${f(paired.falseLinks.delta)} ${iv(paired.falseLinks.interval)} BA ${f(paired.balance.delta)} ${iv(paired.balance.interval)}`
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Typed relations: can a model say how two linked conversations relate? Two
 // judges read the transcript of the two topics and pick a type, each blind to
 // the other. If they do not agree, the types do not hold on this corpus, and
@@ -1834,6 +1920,7 @@ const COMMANDS = {
   "app-path": appPath,
   "app-path-score": appPathScore,
   "app-path-final": appPathFinal,
+  "recognition-boards": recognitionBoards,
   "rerank-texts": rerankTexts,
 };
 

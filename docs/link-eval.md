@@ -494,3 +494,15 @@ meetings, and grouping stretches by vector stayed at chance.
 - The loop, live, with gpt-5.6-terra (the app's OpenAI check).
 - A model reading the record's parts at Finish: Claude Opus 5.5 at medium, and
   gpt-5.6-luna as the cheap one. Each reads at most 800 characters a part.
+
+## What recognition costs: the plan
+
+Recognition output exists for 8 meetings, all in test series: ES2004a to d,
+IS1009a and b, TS3003a and b. Four replays from track S: small.en in the quiet
+room and in steady sound, gpt-transcribe and Apple Speech in the quiet room.
+Each recognized meeting gets its tracker topics, writing-model names and gist as
+the manual meetings have them, from the same writing model. Eight meetings make
+28 pairs, so each is also paired with the other 131 meetings, which stay manual.
+Every pair that touches a recognized meeting is compared with the same pair on
+manual text, paired, over the same orders of the history. No method is tuned
+on these.
