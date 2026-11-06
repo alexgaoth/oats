@@ -601,7 +601,8 @@ const BACKCHANNEL =
 
 // A yes/no question is answered by what is a backchannel anywhere else: "Is
 // that okay?" "Yeah." The room said something, and it was the answer.
-const EN_YES = /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
+const EN_YES =
+  /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
 // A plain "no" to one is an answer too, unless the question was what somebody
 // knows: "Do you know what Kubernetes is?" "No." is the confirmed negative the
 // search exists for. "Do we need a remote?" "No." is a decision.
@@ -1173,15 +1174,14 @@ class ConversationAideSession {
       return;
     }
 
-    // The local detector is permissive by design so nothing is missed, and the
-    // classifier withdraws the false positives ("how's the weather?"). It only
-    // gets to do that when it is *confident*: a card appearing and vanishing is
-    // worse than a card that stays, and an unconfident 1.5B model will call real
-    // questions non-factual often enough to make the rail flicker.
-    if (!assessment.isFactualQuestion && assessment.confidence >= this.confidenceThreshold) {
-      const card = this.cards.get(candidate.id);
-      this.cards.delete(candidate.id);
-      if (card) this.onCardRemoved(card.id);
+    // "Not factual" says nothing against a card. An opinion asked is still a
+    // question, and every question gets a card (CLAUDE.md, first question rule).
+    // Withdrawing on this verdict cost more than it saved: on 4 hours of AMI
+    // meetings the default 1.5B model withdrew 81 cards in a quiet room and 46 of
+    // them were right, taking recall from 0.48 to 0.30 (docs/question-eval.md). So
+    // it resolves locally, as a malformed verdict does, and the card stays.
+    if (!assessment.isFactualQuestion) {
+      await this._resolveLocally(candidate, followingContext, trigger);
       return;
     }
 

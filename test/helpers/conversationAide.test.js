@@ -614,17 +614,35 @@ test("a retracted segment withdraws a card that is already on screen", async () 
   assert.deepEqual(searches, []);
 });
 
-test("the classifier withdraws a card the local detector raised in error", async () => {
-  const { session, removed, searches } = harness({
+test("a verdict of not factual keeps the card and reads the reply locally", async () => {
+  // An opinion asked is still a question. The default model withdrew more right
+  // cards than false ones on AMI meetings (docs/question-eval.md).
+  const { session, cards, removed, searches } = harness({
     classify: async () => unanswered({ isFactualQuestion: false, reason: "not_factual" }),
   });
 
   session.onFinalized({ id: "q1", text: "How much do we care about this?" });
-  session.onFinalized({ id: "r1", text: "Not much." });
+  session.onFinalized({ id: "r1", text: "Not much at all to be honest." });
   await session.evaluation;
 
-  assert.deepEqual(removed, ["q1"]);
+  assert.deepEqual(removed, []);
+  assert.equal(latestCard(cards, "q1").state, "answered");
   assert.deepEqual(searches, []);
+});
+
+test("a confident not factual does not stop a real denial from searching", async () => {
+  const { session, cards, removed, searches } = harness({
+    classify: async () =>
+      unanswered({ isFactualQuestion: false, reason: "not_factual", confidence: 0.95 }),
+  });
+
+  session.onFinalized({ id: "q1", text: "What do you think of Kubernetes?" });
+  session.onFinalized({ id: "r1", text: "I really don't know." });
+  await session.evaluation;
+
+  assert.deepEqual(removed, []);
+  assert.equal(latestCard(cards, "q1").state, "denied");
+  assert.equal(searches.length, 1);
 });
 
 test("silence timer evaluates, while retraction and shutdown cancel a staged candidate", async () => {
