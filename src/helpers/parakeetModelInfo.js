@@ -7,8 +7,16 @@ const REQUIRED_MODEL_FILES = [
   "tokens.txt",
 ];
 
+/** Written after the last file, so a stopped download never counts as a model. */
+const ANE_READY_FILE = "ready";
+
 function getModelRuntime(modelName) {
-  return modelRegistryData.parakeetModels?.[modelName]?.runtime === "online" ? "online" : "offline";
+  const runtime = modelRegistryData.parakeetModels?.[modelName]?.runtime;
+  return runtime === "online" || runtime === "ane" ? runtime : "offline";
 }
 
-module.exports = { REQUIRED_MODEL_FILES, getModelRuntime };
+function requiredModelFiles(modelName) {
+  return getModelRuntime(modelName) === "ane" ? [ANE_READY_FILE] : REQUIRED_MODEL_FILES;
+}
+
+module.exports = { ANE_READY_FILE, REQUIRED_MODEL_FILES, getModelRuntime, requiredModelFiles };
