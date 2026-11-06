@@ -113,6 +113,10 @@
  *                  name in the output is --engine-label.
  *   --pad-silence S  with --engine, an experiment: S seconds of zeros on both
  *                  sides of each segment.
+ *   --audio-before S, --audio-after S  with --engine: seconds of the stream
+ *                  around each segment. The request says keepFrom and keepTo, in
+ *                  seconds of the file: the engine keeps only those words.
+ *                  --audio-slack S moves keepFrom back by S.
  *   --vad-gate F   with --engine, leave out the segments an earlier run (its
  *                  --json file F, the same segments) found no speech in: the
  *                  app's VAD as a gate, for engines that have none.
@@ -274,6 +278,9 @@ const REALTIME_STREAM = arg("realtime-stream");
 const ENGINE = arg("engine");
 const ENGINE_LABEL = arg("engine-label", "engine");
 const PAD_SILENCE = Number(arg("pad-silence", "0"));
+const AUDIO_BEFORE = Number(arg("audio-before", "0"));
+const AUDIO_AFTER = Number(arg("audio-after", "0"));
+const AUDIO_SLACK = Number(arg("audio-slack", "0"));
 const VAD_GATE = arg("vad-gate");
 const FROM_RUN = arg("from-run");
 const CONTEXT = arg("context");
@@ -853,7 +860,18 @@ async function startEngine(command) {
   return {
     async transcribe(samples, _steadyFloor, context = null) {
       if (lastError) return { text: "", ms: 0, failed: lastError };
-      const raised = SEGMENT_GAIN ? raiseQuietSegment(samples) : samples;
+      const before = context?.audioBefore ?? null;
+      const after = context?.audioAfter ?? null;
+      const whole =
+        before || after
+          ? new Int16Array((before?.length ?? 0) + samples.length + (after?.length ?? 0))
+          : samples;
+      if (whole !== samples) {
+        whole.set(before ?? [], 0);
+        whole.set(samples, before?.length ?? 0);
+        whole.set(after ?? [], (before?.length ?? 0) + samples.length);
+      }
+      const raised = SEGMENT_GAIN ? raiseQuietSegment(whole) : whole;
       let heard = raised;
       if (PAD_SILENCE) {
         const pad = Math.round(PAD_SILENCE * RATE);
@@ -868,7 +886,18 @@ async function startEngine(command) {
       const begun = Date.now();
       const answered = new Promise((resolve) => waiting.set(id, resolve));
       child.stdin.write(
-        `${JSON.stringify({ id, wav: wavPath, prompt: context?.prompt, keywords: context?.keywords })}\n`
+        `${JSON.stringify({
+          id,
+          wav: wavPath,
+          prompt: context?.prompt,
+          keywords: context?.keywords,
+          ...(whole === samples
+            ? {}
+            : {
+                keepFrom: Math.max(0, (before?.length ?? 0) / RATE - AUDIO_SLACK),
+                keepTo: ((before?.length ?? 0) + samples.length) / RATE,
+              }),
+        })}\n`
       );
       const answer = await answered;
       const ms = Date.now() - begun;
@@ -1808,6 +1837,23 @@ async function replay(recording, backend, ablation, vadGate = null, enhancer = n
   if (backend) {
     const started = Date.now();
     const contextFor = CONTEXT ? await runningContext(CONTEXT) : null;
+    // What the engine may hear around a segment, of which it keeps only the
+    // segment's own words. The app holds the seconds before; the seconds after
+    // would hold a final back by as much. The first read of a Parakeet model is a
+    // fixed 15 s window, so this costs it no encoder time.
+    const audioAround = (s) =>
+      AUDIO_BEFORE || AUDIO_AFTER
+        ? {
+            audioBefore: stream.subarray(
+              Math.max(0, s.startSample - Math.round(AUDIO_BEFORE * RATE)),
+              s.startSample
+            ),
+            audioAfter: stream.subarray(
+              s.endSample,
+              Math.min(total, s.endSample + Math.round(AUDIO_AFTER * RATE))
+            ),
+          }
+        : {};
     if (CLOUD) {
       let next = 0;
       const worker = async () => {
@@ -1826,7 +1872,10 @@ async function replay(recording, backend, ablation, vadGate = null, enhancer = n
             ? { text: "", vadSegments: 0, failed: null }
             : FROM_RUN
               ? backend.read(meeting, s.index)
-              : await backend.transcribe(s.samples, s.steadyFloor, contextFor?.(s))
+              : await backend.transcribe(s.samples, s.steadyFloor, {
+                  ...contextFor?.(s),
+                  ...audioAround(s),
+                })
         );
         contextFor?.heard(s);
         if (ablation) {

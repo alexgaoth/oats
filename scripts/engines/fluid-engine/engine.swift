@@ -39,6 +39,27 @@ func units(_ name: String) -> MLComputeUnits? {
   }
 }
 
+/// The words whose first token starts inside the segment, when the audio ran past it.
+func kept(_ timings: [TokenTiming], from: Double, to: Double) -> String {
+  var words: [[TokenTiming]] = []
+  for timing in timings {
+    // The library gives a word's first token a leading space or its ▁.
+    if timing.token.hasPrefix("\u{2581}") || timing.token.hasPrefix(" ") || words.isEmpty {
+      words.append([timing])
+    } else {
+      words[words.count - 1].append(timing)
+    }
+  }
+  return
+    words
+    .filter { $0[0].startTime >= from && $0[0].startTime < to }
+    .map {
+      $0.map(\.token).joined().replacingOccurrences(of: "\u{2581}", with: "")
+        .trimmingCharacters(in: .whitespaces)
+    }
+    .joined(separator: " ")
+}
+
 /// Does a segment hold speech? Silero at the threshold in one 256 ms chunk.
 func holdsSpeech(_ vad: VadManager, _ wav: String, _ threshold: Float) async throws -> Bool {
   let results = try await vad.process(URL(fileURLWithPath: wav))
@@ -138,7 +159,11 @@ struct Engine {
           var state = TdtDecoderState.make(decoderLayers: await manager.decoderLayerCount)
           let result = try await manager.transcribe(
             URL(fileURLWithPath: wav), decoderState: &state)
-          say(["id": id, "text": result.text])
+          if let from = request["keepFrom"] as? Double, let to = request["keepTo"] as? Double {
+            say(["id": id, "text": kept(result.tokenTimings ?? [], from: from, to: to)])
+          } else {
+            say(["id": id, "text": result.text])
+          }
         } catch {
           say(["id": id, "error": "\(error)"])
         }
