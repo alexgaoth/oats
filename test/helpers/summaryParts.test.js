@@ -60,8 +60,13 @@ test("words are compared without case, punctuation or filler sounds", () => {
 });
 
 test("a quote is found word for word, or with a small repair", () => {
-  const words = parts.wordsOf("So we said, um, we'll go with the the yellow case and rubber buttons, okay?");
-  assert.deepEqual(parts.findQuote("we'll go with the the yellow case", words), { at: 3, exact: true });
+  const words = parts.wordsOf(
+    "So we said, um, we'll go with the the yellow case and rubber buttons, okay?"
+  );
+  assert.deepEqual(parts.findQuote("we'll go with the the yellow case", words), {
+    at: 3,
+    exact: true,
+  });
   // A repeated word left out still counts, unless no repair is allowed.
   assert.equal(parts.findQuote("we'll go with the yellow case and rubber", words)?.exact, false);
   assert.equal(
@@ -78,7 +83,9 @@ test("a quote that is not in the transcript, or too short, is no evidence", () =
 });
 
 test("numbers are read from digits and from speech", () => {
-  const found = parts.numbersIn("twenty five Euro, 12.5 percent, 1,200 units, two hundred and fifty");
+  const found = parts.numbersIn(
+    "twenty five Euro, 12.5 percent, 1,200 units, two hundred and fifty"
+  );
   for (const value of ["25", "12.5", "1200", "250"]) assert.ok(found.has(value), value);
   assert.ok(parts.numbersIn("twelve point five").has("12.5"));
   assert.ok(parts.numbersIn("two thousand").has("2000"));

@@ -55,7 +55,9 @@ process.resourcesPath = path.resolve(args.resources);
 
 function residentMb(pid) {
   try {
-    const kb = Number(execFileSync("/bin/ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8" }));
+    const kb = Number(
+      execFileSync("/bin/ps", ["-o", "rss=", "-p", String(pid)], { encoding: "utf8" })
+    );
     return Number.isFinite(kb) ? Math.round(kb / 1024) : null;
   } catch {
     return null;

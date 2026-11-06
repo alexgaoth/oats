@@ -88,7 +88,10 @@ An item whose quote is not in the transcript word for word is thrown away. Leave
     `
 Leave a list empty`
   )
-  .replace("only when the quote itself shows the agreement", "only when the transcript shows the agreement");
+  .replace(
+    "only when the quote itself shows the agreement",
+    "only when the transcript shows the agreement"
+  );
 
 export function extractUser(part, index, total) {
   return `Transcript, part ${index + 1} of ${total}:\n\n${part}\n\nAnswer with the JSON object only.`;
@@ -200,7 +203,10 @@ CONTENT RULES:
  * @param {{ partChars?: number, overlapChars?: number }} [options]
  * @returns {string[]}
  */
-export function splitTranscript(text, { partChars = PART_CHARS, overlapChars = OVERLAP_CHARS } = {}) {
+export function splitTranscript(
+  text,
+  { partChars = PART_CHARS, overlapChars = OVERLAP_CHARS } = {}
+) {
   const value = String(text ?? "").trim();
   if (!value) return [];
   if (value.length <= partChars) return [value];
@@ -227,7 +233,10 @@ export function splitTranscript(text, { partChars = PART_CHARS, overlapChars = O
   while (start < segments.length) {
     let end = start;
     let chars = 0;
-    while (end < segments.length && (end === start || chars + segments[end].length + 2 <= partChars)) {
+    while (
+      end < segments.length &&
+      (end === start || chars + segments[end].length + 2 <= partChars)
+    ) {
       chars += segments[end].length + 2;
       end += 1;
     }
@@ -263,7 +272,7 @@ export function wordsOf(text) {
 
 function exactAt(needle, words) {
   const first = needle[0];
-  for (let i = words.indexOf(first); i >= 0 && i <= words.length - needle.length; ) {
+  for (let i = words.indexOf(first); i >= 0 && i <= words.length - needle.length;) {
     let j = 1;
     while (j < needle.length && words[i + j] === needle[j]) j += 1;
     if (j === needle.length) return i;
@@ -385,7 +394,11 @@ export function numbersIn(text) {
     let run = 0;
     while (i < words.length) {
       const word = words[i];
-      if (word === "and" && run > 0 && (NUMBER_WORDS.has(words[i + 1]) || SCALES.has(words[i + 1]))) {
+      if (
+        word === "and" &&
+        run > 0 &&
+        (NUMBER_WORDS.has(words[i + 1]) || SCALES.has(words[i + 1]))
+      ) {
         i += 1;
         continue;
       }
@@ -595,7 +608,8 @@ export function bestPart(claim, parts) {
   let best = 0;
   let bestScore = -1;
   parts.forEach((part, index) => {
-    const score = part.reduce((sum, word) => sum + (wanted.has(word) ? 1 : 0), 0) / (part.length || 1);
+    const score =
+      part.reduce((sum, word) => sum + (wanted.has(word) ? 1 : 0), 0) / (part.length || 1);
     if (score > bestScore) {
       bestScore = score;
       best = index;
@@ -787,15 +801,25 @@ export const LEAD_SYSTEM = `You get the opening lines of the notes of each part 
 
 /** What notes say before their first heading. */
 export function noteLead(note) {
-  return String(note ?? "").split(/^##\s/m)[0].trim();
+  return String(note ?? "")
+    .split(/^##\s/m)[0]
+    .trim();
 }
 
 /** The sections of several notes joined under one heading each, in the app's order. */
 export function mergeSections(notes) {
-  const order = ["Threads", "Key Discussion Points", "Decisions Made", "Action Items", "Follow-ups"];
+  const order = [
+    "Threads",
+    "Key Discussion Points",
+    "Decisions Made",
+    "Action Items",
+    "Follow-ups",
+  ];
   const bodies = new Map();
   for (const note of notes) {
-    for (const block of String(note ?? "").split(/^##\s+/m).slice(1)) {
+    for (const block of String(note ?? "")
+      .split(/^##\s+/m)
+      .slice(1)) {
       const [title, ...rest] = block.split("\n");
       const name = title.trim();
       const body = rest.join("\n").trim();
@@ -867,7 +891,12 @@ export async function summarizeInParts({ transcript, chat, options = {} }) {
       : verifyNotes({ text, transcript, chat, partChars, overlapChars });
   // One request and then the check: the app's own summary with a second pass.
   if (single) {
-    const answer = await chat({ step: "single", ...single, maxTokens: writeTokens, temperature: 0.3 });
+    const answer = await chat({
+      step: "single",
+      ...single,
+      maxTokens: writeTokens,
+      temperature: 0.3,
+    });
     if (answer.stop === "length") {
       throw new Error("The local model stopped at its output limit before it finished");
     }
@@ -1037,7 +1066,10 @@ export async function summarizeInParts({ transcript, chat, options = {} }) {
     const answer = await chat({
       step: "overview",
       system: OVERVIEW_SYSTEM,
-      user: writeUser(items, { quotes: false }).replace("Write the notes.", "Write the top of the notes."),
+      user: writeUser(items, { quotes: false }).replace(
+        "Write the notes.",
+        "Write the top of the notes."
+      ),
       maxTokens: 700,
       temperature: writeTemperature,
     });

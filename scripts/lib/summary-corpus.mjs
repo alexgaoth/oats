@@ -246,7 +246,8 @@ export function loadInputs(ami, { sets = ["ref"], asr = {}, meetings = null } = 
       continue;
     }
     const file = asr[set];
-    if (!file) throw new Error(`--asr ${set}=<room-replay.json or folder> is needed for set ${set}`);
+    if (!file)
+      throw new Error(`--asr ${set}=<room-replay.json or folder> is needed for set ${set}`);
     const recordings = replayRecordings(file);
     const heard = new Map();
     const wanted = meetings ? new Set(meetings.flatMap((meeting) => meeting.split("+"))) : null;

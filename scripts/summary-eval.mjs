@@ -545,9 +545,7 @@ async function pipelineStep(spec, request) {
   if (!args["step-cache"]) return localStep(spec, request);
   const { createHash } = await import("node:crypto");
   const { step: _step, ...same } = request;
-  const name = createHash("sha256")
-    .update(JSON.stringify({ spec, same }))
-    .digest("hex");
+  const name = createHash("sha256").update(JSON.stringify({ spec, same })).digest("hex");
   const file = path.join(args["step-cache"], `${name}.json`);
   if (fs.existsSync(file)) return { ...JSON.parse(fs.readFileSync(file, "utf8")), cached: true };
   const answer = await localStep(spec, request);
@@ -656,7 +654,12 @@ async function cloudStep(spec, { step, system, user, schema }) {
       ...(schema
         ? {
             text: {
-              format: { type: "json_schema", name: "items", schema: cloudSchema(schema), strict: true },
+              format: {
+                type: "json_schema",
+                name: "items",
+                schema: cloudSchema(schema),
+                strict: true,
+              },
             },
           }
         : {}),
@@ -691,7 +694,10 @@ async function cloudStep(spec, { step, system, user, schema }) {
     text = judgeText(res.json);
     usage = judgeUsage(res.json);
   }
-  const cost = record(spec, "summary-step", usage, { ms: Math.round(res.ms), ok: res.status === 200 });
+  const cost = record(spec, "summary-step", usage, {
+    ms: Math.round(res.ms),
+    ok: res.status === 200,
+  });
   return {
     ok: res.status === 200,
     text,
@@ -1928,13 +1934,16 @@ function compare() {
     console.log(
       "| config | ok/all | graded | covered % | D | T | P | abstract % | invented | useful | words | here s | M4 s | M1 s | M4 s per 30 min | peak GB | items | dropped |"
     );
-    console.log("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+    console.log(
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+    );
     for (const key of keys) {
       const list = view.filter((r) => r.key === key);
       if (!list.length) continue;
       const ok = list.filter((r) => r.ok);
       const graded = ok.filter((r) => r.passes > 0);
-      const pct = (metric) => fmt((mean(graded.map((r) => r[metric]).filter((v) => v != null)) ?? NaN) * 100, 0);
+      const pct = (metric) =>
+        fmt((mean(graded.map((r) => r[metric]).filter((v) => v != null)) ?? NaN) * 100, 0);
       console.log(
         `| ${key} | ${ok.length}/${list.length} | ${graded.length} | ${ci(bootstrapMean(graded.map((r) => r.dtp)), 0, 100)} | ${pct("decisions")} | ${pct("actions")} | ${pct("problems")} | ${ci(bootstrapMean(graded.map((r) => r.abstract)), 0, 100)} | ${ci(bootstrapMean(graded.map((r) => r.unsupported)), 2)} | ${fmt(mean(graded.map((r) => r.useful)))} | ${fmt(mean(ok.map((r) => r.words)), 0)} | ${fmt(mean(ok.map((r) => r.ms / 1000)), 0)} | ${fmt(mean(ok.map((r) => r.m4S)), 0)} | ${fmt(mean(ok.map((r) => r.m1S)), 0)} | ${fmt(mean(ok.map((r) => (r.m4S / r.minutes) * 30)), 0)} | ${fmt(Math.max(...ok.map((r) => r.peakMb ?? 0)) / 1024, 1)} | ${fmt(mean(ok.map((r) => r.items)), 0)} | ${fmt(mean(ok.map((r) => r.dropped)), 0)} |`
       );
