@@ -314,6 +314,33 @@ TEN VAD was not run: its license adds a no-compete condition to Apache-2.0
 ("You may not Deploy the ten-vad in a way that competes with Agora's offerings"),
 which an MIT app cannot pass on.
 
+## Not run
+
+- **Whisper decode settings, and prompts for local Whisper.** Withdrawn when the
+  GPU queue ran long: they tune Whisper, and Whisper was no longer ahead.
+- **Models withdrawn for the same reason:** Granite Speech 5.0 2B, distil-large-v3.5,
+  Qwen3-ASR-0.6B, tiro-qwen3-asr-1.7b-v2, Mega-ASR.
+- **A Granite GGUF.** Building `transcribe.cpp` with the patches from a Hugging Face
+  account that is not on the brief's list was refused by the permission check, and
+  needs Alex's approval. The Granite numbers here come from an ONNX export of IBM's
+  own weights, made with PyPI's `torch` and `transformers`.
+
+## What this does not show
+
+- **No real laptop in a real room.** AMI is a 2005 table microphone, set to a
+  laptop's level, and the steady sound is synthetic pink noise. DiPCo is real
+  far-field audio, but it is 5 hours of dinner parties.
+- **16 meetings are 4 sessions.** The meetings of a session share a room and
+  people, so the intervals over meetings are narrower than the true ones. DiPCo is
+  the check on that.
+- **The official test split is not proven clean.** Parakeet v3's card lists AMI in
+  training, and the card does not say which split. DiPCo is outside that doubt.
+- **Invented phrases are small counts.** A run has 2 to 10 of them, and the count
+  depends on which other runs are compared. Read 1 an hour as about 4 phrases.
+- **Keeping up was not run live on a base Mac.** It is an estimate from the
+  publisher's numbers, stated below.
+- **Recognition is not the product.** Whether a summary gains is track Y's test.
+
 ## How to run it
 
 `room-replay.js` runs any recognizer through the app's segmenter and scoring:
