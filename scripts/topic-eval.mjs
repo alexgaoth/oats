@@ -5,6 +5,7 @@
 //   node scripts/topic-eval.mjs --ami <dir> [--split test|tune|all] [--demo]
 //     [--transcript file.json ...] [--tracker file.mjs] [--name label]
 //     [--vectors] [--judge] [--show-labels] [--json out.json]
+//     [--tracker-options '{"detector":true}']
 //
 // Sources
 //   --ami DIR         the AMI meeting corpus' manual annotations
@@ -80,6 +81,7 @@ const { values: args } = parseArgs({
     quiet: { type: "boolean", default: false },
     vectors: { type: "boolean", default: false },
     "model-dir": { type: "string" },
+    "tracker-options": { type: "string", default: "{}" },
   },
 });
 
@@ -285,6 +287,8 @@ function loadAmiMeeting(dir, meeting, names) {
         id: `${meeting}-${index + 1}`,
         text: utterance.words.map((word) => word.text).join(" "),
         at: T0 + Math.round(utterance.start * 1000),
+        start: utterance.start,
+        end: Math.max(...utterance.words.map((word) => word.end)),
         speaker: [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0],
         refTop: utterance.words.map((word) => word.top),
         refFine: utterance.words.map((word) => word.fine),
@@ -368,7 +372,7 @@ async function loadTracker(file) {
 // then the graph and the stack read, after every finalized utterance; the
 // record is the final snapshot.
 async function replay(module, conversation, { embedder = null } = {}) {
-  const tracker = new module.ConversationTopicTracker();
+  const tracker = new module.ConversationTopicTracker(JSON.parse(args["tracker-options"]));
   let spent = 0;
   let worst = 0;
   // What the flow card drew after each utterance: where its topic changes
@@ -376,7 +380,13 @@ async function replay(module, conversation, { embedder = null } = {}) {
   const live = [];
   for (const utterance of conversation.utterances) {
     let before = performance.now();
-    tracker.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+    tracker.onUtterance({
+      id: utterance.id,
+      text: utterance.text,
+      at: utterance.at,
+      start: utterance.start,
+      end: utterance.end,
+    });
     let took = performance.now() - before;
     if (embedder && typeof tracker.addVectors === "function") {
       // As the feeder does, but with no wait: the turn and the phrases asked.
