@@ -840,7 +840,7 @@ async function refine() {
         items.push(item);
         return item;
       });
-      rows.push({ id, view, meeting, gold, cards });
+      rows.push({ id, view, meeting, gold, cards, turns });
     }
   }
   const pending = [
@@ -946,7 +946,7 @@ async function refine() {
     fast.stopLocalServers();
   }
   const perView = {};
-  for (const { id, view, meeting, gold, cards } of rows) {
+  for (const { id, view, meeting, gold, cards, turns } of rows) {
     const before = scoreCards(
       cards.map((item) => item.card),
       gold
@@ -959,8 +959,16 @@ async function refine() {
     const verdicts = new Map(after.verdicts.map((v, at) => [kept[at].key, v]));
     const removed = cards.filter((item) => cache.get(item.key)?.verdict === false);
     const wrongly = removed.filter((item) => before.verdicts[cards.indexOf(item)]).length;
-    perView[view] ??= { before: [], after: [], removed: 0, wrongly: 0, failed: 0 };
+    perView[view] ??= { before: [], after: [], removed: 0, wrongly: 0, failed: 0, read: {} };
     const tally = perView[view];
+    // How each withdrawn card reads locally: what keeping it would do.
+    if (removed.length) {
+      const { cards: states } = await replaySession(turns);
+      for (const item of removed) {
+        const state = states.get(item.card.id)?.state ?? "gone";
+        tally.read[state] = (tally.read[state] ?? 0) + 1;
+      }
+    }
     tally.before.push({ ...before, seconds: meeting.seconds, id });
     tally.after.push({ ...after, seconds: meeting.seconds, id });
     tally.removed += removed.length;
@@ -977,6 +985,7 @@ async function refine() {
     console.log(
       `F1 gain ${gain.value.toFixed(3)} ${ci(gain.ci)}; withdrew ${tally.removed} cards, ${tally.wrongly} of them right; ${tally.failed} answers failed`
     );
+    console.log(`withdrawn cards read locally as ${JSON.stringify(tally.read)}`);
     out[view] = {
       before: row(tally.before),
       after: row(tally.after),
