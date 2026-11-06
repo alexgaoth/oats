@@ -255,9 +255,39 @@ table.
 
 ## Local writing models
 
-Names and gists on eval24. These runs had to share a Mac at a load of 100 or more,
-so Qwen and Gemma ran on the CPU: **accuracy only, no time here counts.** Bar for a
-model in the loop: Pk 0.29, names 4.0, replies that keep up.
+**The loop stays off for models on this computer.** Names and gists on eval24, the
+loop on the 12 standard test meetings. These runs shared a Mac at a load of 100 or
+more, so Qwen and Gemma ran on the CPU, with a reply taken as 3 s on the replay's
+clock: **accuracy only, no time here counts.** Bar for a model in the loop: Pk 0.29,
+names 4.0, replies that keep up.
+
+| 12 test meetings | live Pk | Δ against the detector alone | names shown, relevance / specificity | runs | P / R |
+| --- | --- | --- | --- | --- | --- |
+| one topic | 0.366 | | | 1 | |
+| main | 0.380 | | | 5.9 | 44% / 31% |
+| **detector alone** | **0.266** | | 2.63 / 1.97 | 4.3 | |
+| detector, Gemma 4 E4B names through #121 | **0.266** | | 3.14 / 3.18 | 5.0 | 63% / 36% |
+| Gemma 4 E4B checks, detector proposes | 0.318 | +0.052 [−0.044, +0.148] | 3.76 / 3.56 | 11.5 | 50% / 75% |
+| Apple's system model checks, detector proposes | 0.378 | +0.111 [+0.044, +0.178] | 3.23 / 3.09 | 11.0 | 43% / 61% |
+| gpt-5.6-terra checks, detector proposes | 0.241 | | 3.81 / 3.60 | | |
+
+The models that fit a Mac say yes too often. Gemma takes most proposals and cuts
+into 11 pieces, which reads well against the annotators' finest level (Pk 0.286)
+and badly against their topics. So the detector alone beats a local model in the
+loop on separation. The loop does buy names: Gemma's as shown are near terra's,
+because it names each small piece as it starts. **Neither local row clears the
+bar** (0.29 and 4.0). The way to run a Mac with no key is the detector with #121's
+names, as the app does once #170 lands. It needs no new request pattern, so the
+reply time and the contention with the aide and whisper do not decide anything, and
+they were not measured on this loaded Mac (`loop` runs: 42 to 52 requests an hour).
+Qwen3.5 4B's loop was not run: it is below Gemma on names and gists.
+
+**Apple's system model** (FoundationModels, macOS 26 and later; no download, no key,
+available on this Mac, `fm-bridge`) refused 3 of 169 gists on its guardrails and
+repeats itself: it gave one name to many topics, and #121's check dropped 65 of 176.
+It stays behind Gemma on all three scores below. On a Mac with no model downloaded
+it is still better than no writing model at all for names, and it would need a route
+in the app.
 
 | names, N2: (relevance + specificity) / 2 | pooled [95%] | gpt-6.1-sol | Sonnet 5.5 | names kept |
 | --- | --- | --- | --- | --- |
@@ -265,13 +295,15 @@ model in the loop: Pk 0.29, names 4.0, replies that keep up.
 | gpt-6-astra, low | 4.42 [4.32, 4.50] | 4.76 | 4.09 | 176/176 |
 | gpt-6-luna, none | 4.13 [4.00, 4.21] | 4.48 | 3.79 | 166/176 |
 | **Gemma 4 E4B** | **3.90 [3.79, 4.02]** | 4.28 | 3.52 | 174/176 |
-| Qwen3.5 4B | 3.77 [3.57, 3.84] | 4.19 | 3.35 | 157/176 |
+| Qwen3.5 4B | 3.77 [3.56, 3.84] | 4.19 | 3.35 | 157/176 |
+| Apple's system model | 3.43 [3.27, 3.59] | 3.85 | 3.01 | 111/176 |
 | phrases, no writing model | 2.24 [2.09, 2.31] | 2.49 | 1.98 | 176/176 |
 
 | gists | judge (Fable, gpt) | invented | gold covered | words |
 | --- | --- | --- | --- | --- |
 | Gemma 4 E4B, manual transcript | 3.62 (3.39, 3.85) | **0.17** | 44% | 24 |
 | Qwen3.5 4B, manual transcript | 3.56 (3.37, 3.75) | 0.75 | 55% | 32 |
+| Apple's system model, manual transcript | 3.47 (3.23, 3.72) | 0.34 | 48% | 24 |
 | Gemma 4 E4B, small.en quiet, prompt for recognized text | 3.12 (2.92, 3.31) | 0.45 | 36% | 24 |
 | Gemma 4 E4B, small.en steady, prompt for recognized text | 2.23 (2.08, 2.38) | 0.97 | 15% | 23 |
 
