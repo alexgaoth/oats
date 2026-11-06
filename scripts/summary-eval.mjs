@@ -17,8 +17,8 @@
  *   node scripts/summary-eval.mjs speed --model local:<id> --gguf <file> --llama-server <binary>
  *        --ami <dir> [--meetings a+b,c]                    (a+b: one conversation of both)
  *
- * --pipeline <json>: a summary in parts (summaryParts.mjs) in place of one request, on
- * this Mac only. --meetings takes named sets: eval24, dev16, devlong, testlong.
+ * --pipeline <json or @file>: a summary in parts (lib/summary-parts.mjs) in place of one
+ * request, a measurement. --meetings takes named sets: eval24, dev16, devlong, testlong.
  * fm:system[@permissive] is the system model (Foundation Models) through fm-bridge.
  *
  * Routes, each as the app sends it at Finish (ReasoningService.processText):
@@ -28,12 +28,11 @@
  *                        transcript over 1,024 characters, enable_thinking false). A summary
  *                        cut at the limit fails, as the app fails it (#139).
  *   openai:<model>       the Responses API (inferenceProviders/openai.ts): store false,
- *                        max_output_tokens 4096, no reasoning effort, temperature only for
- *                        models the registry says take it. The app gives up after 30 s.
+ *                        max_output_tokens 16000 (#139), no reasoning effort, temperature only
+ *                        for models the registry says take it. The app gives up after 180 s.
  *   anthropic:<model>    the Messages API as ipcHandlers.js "process-anthropic-reasoning"
- *                        sends it (anthropic-version 2023-06-01, max_tokens 4096), but
- *                        without temperature: the app's 0.3 is refused (HTTP 400) by every
- *                        current Claude model, so as shipped it writes no summary at all.
+ *                        sends it (anthropic-version 2023-06-01, max_tokens 16000, #139), and
+ *                        without temperature (#133).
  *   bedrock:<model>      Converse with the parameters of "process-enterprise-reasoning"
  *                        (max tokens 4096, temperature 0.3). Not a writing route in the
  *                        app today: measured for the decision.
@@ -57,7 +56,8 @@ import {
   judgeTranscript,
   loadInputs,
 } from "./lib/summary-corpus.mjs";
-import { summarizeInParts } from "../src/helpers/summaryParts.mjs";
+import { SUMMARY_MAX_TOKENS } from "../src/helpers/summaryCall.mjs";
+import { summarizeInParts } from "./lib/summary-parts.mjs";
 import { rougeL, tokens, youThemLines } from "./lib/summary-score.mjs";
 import {
   bootstrapMean,
@@ -272,6 +272,7 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
       ? { input: res.json.usage.prompt_tokens ?? 0, output: res.json.usage.completion_tokens ?? 0 }
       : null;
     record(spec, purpose, usage, { ms: Math.round(res.ms), ok: res.status === 200 });
+    const resident = await residentMb(localPids.get(model));
     const stop = res.json?.choices?.[0]?.finish_reason ?? null;
     // The summary needs the whole answer (#139, `requireComplete`): one cut at the
     // output limit or by a full context fails, and nothing is saved.
@@ -286,6 +287,7 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
       status: res.status,
       stop,
       timings: res.json?.timings ?? null,
+      residentMb: resident,
       // The app's request times out at 300 s (llamaServer.js).
       appOutcome: cut ? "cut" : !ok ? "error" : res.ms > 300_000 ? "timeout" : "ok",
       error: ok
@@ -318,7 +320,7 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
         { role: "user", content: user },
       ],
       store: false,
-      max_output_tokens: 4096,
+      max_output_tokens: SUMMARY_MAX_TOKENS,
     };
     if (openaiTakesTemperature(model)) body.temperature = 0.3;
     // @flex: the same request at the Flex tier, half the price and slower. For the
@@ -483,16 +485,20 @@ function samplerOptions(options) {
   return out;
 }
 
-/** A JSON schema as llama-server reads it: `order` is the bridge's, for the system model. */
-function plainSchema(node) {
-  if (Array.isArray(node)) return node.map(plainSchema);
+/** A schema for fm-bridge: JSON objects have no order, so each object says its fields' order. */
+function orderedSchema(node) {
+  if (Array.isArray(node)) return node.map(orderedSchema);
   if (!node || typeof node !== "object") return node;
   const out = {};
   for (const [key, value] of Object.entries(node)) {
-    if (key !== "order") out[key] = plainSchema(value);
+    out[key] = key === "properties" ? mapValues(value, orderedSchema) : orderedSchema(value);
   }
+  if (node.type === "object" && node.properties) out.order = Object.keys(node.properties);
   return out;
 }
+
+const mapValues = (object, fn) =>
+  Object.fromEntries(Object.entries(object).map(([key, value]) => [key, fn(value)]));
 
 // The system model on this Mac, through fm-bridge (Foundation Models).
 let fmChild = null;
@@ -517,7 +523,7 @@ async function fmRequest(options, { system, user, schema, maxTokens, temperature
     temperature,
     maxTokens,
     guardrails: options.includes("permissive") ? "permissive" : "default",
-    ...(schema ? { schema } : {}),
+    ...(schema ? { schema: orderedSchema(schema) } : {}),
   };
   return new Promise((resolve) => {
     fmWaiting.push(resolve);
@@ -588,9 +594,7 @@ async function localStep(spec, { step, system, user, schema, maxTokens, temperat
       stream: false,
       chat_template_kwargs: { enable_thinking: options.includes("think") },
       ...samplerOptions(options),
-      ...(schema
-        ? { response_format: { type: "json_schema", json_schema: { schema: plainSchema(schema) } } }
-        : {}),
+      ...(schema ? { response_format: { type: "json_schema", json_schema: { schema } } } : {}),
     },
     MEASURE_TIMEOUT_MS
   );
@@ -627,7 +631,7 @@ function cloudSchema(node) {
   if (!node || typeof node !== "object") return node;
   const out = {};
   for (const [key, value] of Object.entries(node)) {
-    if (!["order", "maxItems", "minItems"].includes(key)) out[key] = cloudSchema(value);
+    if (!["maxItems", "minItems"].includes(key)) out[key] = cloudSchema(value);
   }
   return out;
 }
@@ -704,7 +708,7 @@ async function cloudStep(spec, { step, system, user, schema }) {
   };
 }
 
-/** A summary by a pipeline (`--pipeline <json>`, summaryParts.mjs): one result as callRoute gives. */
+/** A summary by a pipeline (`--pipeline`, lib/summary-parts.mjs): one result as callRoute gives. */
 async function pipelineSummary(spec, pipeline, input, prompt) {
   const steps = [];
   const started = performance.now();
@@ -727,7 +731,9 @@ async function pipelineSummary(spec, pipeline, input, prompt) {
               user: prompt.userPrefix + finishTranscript(input.segments),
             },
           }
-        : pipeline,
+        : pipeline.mode === "app"
+          ? { ...pipeline, app: { system: prompt.system, userPrefix: prompt.userPrefix } }
+          : pipeline,
     });
     const ok = Boolean(result.text);
     return {
@@ -917,7 +923,13 @@ async function generate() {
     meetings: args.meetings ? expandMeetings(args.meetings.split(",")) : null,
   });
   let load = null;
-  const pipeline = args.pipeline ? JSON.parse(args.pipeline) : null;
+  const pipeline = args.pipeline
+    ? JSON.parse(
+        args.pipeline.startsWith("@")
+          ? fs.readFileSync(args.pipeline.slice(1), "utf8")
+          : args.pipeline
+      )
+    : null;
   if (provider === "local") load = await startLocal(spec);
   const todo = inputs.filter((input) => !fs.existsSync(path.join(dir, `${input.id}.json`)));
   console.error(`${key}: ${todo.length} of ${inputs.length} to write (prompt: ${prompt.ref})`);
@@ -987,7 +999,8 @@ function anthropicSummaryBody(model, options, system, user) {
     model,
     messages: [{ role: "user", content: user }],
     system,
-    max_tokens: Math.max(100, Math.min(user.length * 2, 4096)),
+    // summaryLimits("providers"): the app gives the summary this much since #139.
+    max_tokens: SUMMARY_MAX_TOKENS,
   };
   const effort = options.find((option) => /^(low|medium|high|xhigh|max)$/.test(option));
   if (effort) body.output_config = { effort };
@@ -1647,7 +1660,11 @@ function timeParts(s) {
   const steps = [...(s.summary.steps ?? [])];
   const single = (call) =>
     call?.timings
-      ? { readMs: call.timings.prompt_ms ?? 0, writeMs: call.timings.predicted_ms ?? 0 }
+      ? {
+          readMs: call.timings.prompt_ms ?? 0,
+          writeMs: call.timings.predicted_ms ?? 0,
+          residentMb: call.residentMb ?? null,
+        }
       : null;
   if (!steps.length && single(s.summary)) steps.push(single(s.summary));
   if (single(s.title)) steps.push(single(s.title));

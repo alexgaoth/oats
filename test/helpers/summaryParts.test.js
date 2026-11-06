@@ -1,13 +1,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-// A summary in parts (src/helpers/summaryParts.mjs): how a transcript is cut,
+// A summary in parts (scripts/lib/summary-parts.mjs, the eval's variants): how a transcript is cut,
 // the check on each item, and the run with a fake model.
 
 let parts;
 
 test.before(async () => {
-  parts = await import("../../src/helpers/summaryParts.mjs");
+  parts = await import("../../scripts/lib/summary-parts.mjs");
 });
 
 const sentences = (count, prefix = "word") =>
@@ -82,6 +82,10 @@ test("numbers are read from digits and from speech", () => {
   for (const value of ["25", "12.5", "1200", "250"]) assert.ok(found.has(value), value);
   assert.ok(parts.numbersIn("twelve point five").has("12.5"));
   assert.ok(parts.numbersIn("two thousand").has("2000"));
+  assert.ok(parts.numbersIn("two five").has("25"));
+  assert.ok(parts.numbersIn("twelve fifty Euros").has("12.5"));
+  assert.ok(!parts.numbersIn("twelve fifty Euros").has("1250"));
+  assert.ok(parts.numbersIn("nineteen ninety").has("1990"));
 });
 
 test("an item with an invented quote or a new number is dropped", () => {

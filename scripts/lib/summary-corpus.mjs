@@ -144,6 +144,17 @@ export const DEV16 = [
   "TS3009d",
   "TS3012b",
 ];
+/** A cheaper dev set, for screening models. */
+export const DEV8 = [
+  "ES2002b",
+  "ES2008c",
+  "ES2013a",
+  "IB4005",
+  "IS1000d",
+  "IS1008c",
+  "TS3004c",
+  "TS3012b",
+];
 /** Conversations over an hour for tuning: meetings of one series back to back. */
 export const DEV_LONG = [
   "ES2008a+ES2008b+ES2008c+ES2008d",
@@ -162,12 +173,22 @@ export const TEST_LONG = [
   "IS1004a+IS1004b+IS1004c+IS1004d",
   "ES2007a+ES2007b+ES2007c+ES2007d",
 ];
-const MEETING_SETS = { eval24: EVAL24, dev16: DEV16, devlong: DEV_LONG, testlong: TEST_LONG };
+/** The long test conversations whose every part has far-field audio. */
+export const FAR_LONG = ["ES2004a+ES2004b+ES2004c+ES2004d", "TS3003a+TS3003b"];
 
 /** `--meetings dev16,TS3003a`: named sets expanded, in order, each meeting once. */
 export function expandMeetings(list) {
+  const sets = {
+    eval24: EVAL24,
+    dev16: DEV16,
+    dev8: DEV8,
+    devlong: DEV_LONG,
+    testlong: TEST_LONG,
+    far8: FAR8,
+    farlong: FAR_LONG,
+  };
   const names = [];
-  for (const item of list) names.push(...(MEETING_SETS[item] ?? [item]));
+  for (const item of list) names.push(...(sets[item] ?? [item]));
   return [...new Set(names)];
 }
 
@@ -228,8 +249,10 @@ export function loadInputs(ami, { sets = ["ref"], asr = {}, meetings = null } = 
     if (!file) throw new Error(`--asr ${set}=<room-replay.json or folder> is needed for set ${set}`);
     const recordings = replayRecordings(file);
     const heard = new Map();
+    const wanted = meetings ? new Set(meetings.flatMap((meeting) => meeting.split("+"))) : null;
     for (const recording of recordings) {
       const meeting = recording.summary?.meeting ?? recording.meeting;
+      if (wanted && !wanted.has(meeting)) continue;
       const segments = recording.segments
         .filter((segment) => String(segment.text ?? "").trim())
         .map((segment) => ({ text: segment.text.trim(), start: segment.start, end: segment.end }));

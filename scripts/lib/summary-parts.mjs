@@ -32,20 +32,20 @@ const MAX_ITEMS = { decisions: 8, actions: 6, problems: 6, points: 8 };
 export const EXTRACT_SYSTEM = `You take notes on a conversation. You get one part of its transcript, written by speech recognition. It can contain misheard words, and it usually has no speaker names.
 
 List what a participant would want on record from this part:
-- decisions: what the participants agreed on or settled. Not a proposal that nobody took up.
-- actions: what someone took on, or was asked to do, after this conversation.
-- problems: problems, risks, disagreements and open questions they raised.
+- decisions: what the participants clearly agreed on or settled: somebody proposed it and the others accepted it, or the person leading stated it as settled. A suggestion or a preference is not a decision: put it under points.
+- actions: what a person took on, or was asked to do, after this conversation. A remark about what could be done is not an action.
+- problems: problems, risks, disagreements and questions they raised. State the problem itself. Do not say whether it stayed open or unresolved: this is only one part of the conversation.
 - points: other important facts, options, numbers and reasons.
 
 Each item has two fields:
-- text: one short plain sentence that states the point and its specifics. Say only what the transcript says. Give a person's name only if the transcript says it.
+- text: one short plain sentence that states the point and its specifics. Say only what the transcript says. Give a person's name only if the transcript says it. Report what was said, not what you conclude from it: write "agreed" or "decided" only when the quote itself shows the agreement, and otherwise "suggested", "asked" or "said".
 - quote: the words of the transcript that show it, copied exactly, 5 to 20 words.
 
 An item whose quote is not in the transcript word for word is thrown away. Leave a list empty when this part has nothing for it. Do not repeat an item.`;
 
 /** The JSON the model is held to (a grammar on llama-server). */
-export function extractSchema({ quoteFirst = false } = {}) {
-  const fields = quoteFirst ? ["quote", "text"] : ["text", "quote"];
+export function extractSchema({ quoteFirst = false, quotes = true } = {}) {
+  const fields = !quotes ? ["text"] : quoteFirst ? ["quote", "text"] : ["text", "quote"];
   const list = (maxItems) => ({
     type: "array",
     maxItems,
@@ -53,7 +53,6 @@ export function extractSchema({ quoteFirst = false } = {}) {
       type: "object",
       properties: Object.fromEntries(fields.map((field) => [field, { type: "string" }])),
       required: fields,
-      order: fields,
       additionalProperties: false,
     },
   });
@@ -61,7 +60,6 @@ export function extractSchema({ quoteFirst = false } = {}) {
     type: "object",
     properties: Object.fromEntries(KINDS.map((kind) => [kind, list(MAX_ITEMS[kind])])),
     required: KINDS,
-    order: KINDS,
     additionalProperties: false,
   };
 }
@@ -69,12 +67,28 @@ export function extractSchema({ quoteFirst = false } = {}) {
 /** The same task with the evidence first: the model copies the words, then says what they mean. */
 export const EXTRACT_SYSTEM_QUOTE_FIRST = EXTRACT_SYSTEM.replace(
   `Each item has two fields:
-- text: one short plain sentence that states the point and its specifics. Say only what the transcript says. Give a person's name only if the transcript says it.
+- text: one short plain sentence that states the point and its specifics. Say only what the transcript says. Give a person's name only if the transcript says it. Report what was said, not what you conclude from it: write "agreed" or "decided" only when the quote itself shows the agreement, and otherwise "suggested", "asked" or "said".
 - quote: the words of the transcript that show it, copied exactly, 5 to 20 words.`,
   `Each item has two fields, in this order:
 - quote: the words of the transcript that show it, copied exactly, 5 to 20 words.
 - text: one short plain sentence that states the point and its specifics. Say only what the quote and the lines around it say. Give a person's name only if the transcript says it.`
 );
+
+/** The same task with no quotes: fewer tokens to write, nothing for the code to check. */
+export const EXTRACT_SYSTEM_NO_QUOTES = EXTRACT_SYSTEM.replace(
+  `Each item has two fields:
+`,
+  `Each item has one field:
+`
+)
+  .replace(
+    `- quote: the words of the transcript that show it, copied exactly, 5 to 20 words.
+
+An item whose quote is not in the transcript word for word is thrown away. Leave a list empty`,
+    `
+Leave a list empty`
+  )
+  .replace("only when the quote itself shows the agreement", "only when the transcript shows the agreement");
 
 export function extractUser(part, index, total) {
   return `Transcript, part ${index + 1} of ${total}:\n\n${part}\n\nAnswer with the JSON object only.`;
@@ -99,7 +113,6 @@ export function verifySchema(count) {
       },
     },
     required: ["verdicts"],
-    order: ["verdicts"],
     additionalProperties: false,
   };
 }
@@ -109,24 +122,25 @@ export const WRITE_SYSTEM = `You write the notes of a conversation in markdown. 
 FORMAT RULES (strict):
 - No preamble: no title, no date, no attendee list. Start directly with a 1-2 sentence summary of what the conversation was about.
 - Then use these section headings: ## Threads, ## Key Discussion Points, ## Decisions Made, ## Action Items, ## Follow-ups. Leave out a section that has no content.
-- Under ## Threads, write the 2-5 important lines of thought as short bullets: where each started, how it went, what stays open.
+- Under ## Threads, write the 2-5 important lines of thought as short bullets: where each started and how it went.
 - Under ## Action Items, use checkboxes (\`- [ ]\`).
-- Under ## Follow-ups, put the open questions and problems nobody resolved.
+- Under ## Follow-ups, put the problems and questions they raised.
 - No tables, no horizontal rules, no block quotes.
 
 CONTENT RULES:
 - Use only the items. Add no fact, number, name, date or reason of your own.
 - Keep every decision and every action, and keep the specifics: numbers, names, options.
-- Merge items that say the same thing. Do not call something decided unless it is in the decisions list.
+- Merge items that say the same thing. If a later item settles an earlier question, keep only the outcome.
+- Do not call something decided unless it is in the decisions list. Do not write that something is unresolved, undecided or still open unless an item says so.
 - Write plainly, with no filler.`;
 
 export const OVERVIEW_SYSTEM = `You write the top of the notes of a conversation in markdown. You get a list of items that were checked against its transcript: what was decided, what somebody took on, the problems raised and other points. The list is in the order of the conversation.
 
 Write exactly this and nothing else:
 - First a 1-2 sentence summary of what the conversation was about. No title, no heading.
-- Then the heading ## Threads, with the 2-5 important lines of thought as short bullets: where each started, how it went, what stays open.
+- Then the heading ## Threads, with the 2-5 important lines of thought as short bullets: where each started and how it went.
 
-Use only the items. Add no fact, number, name, date or reason of your own. Do not call something decided unless it is in the decisions list. Write plainly, with no filler.`;
+Use only the items. Add no fact, number, name, date or reason of your own. Do not call something decided unless it is in the decisions list. Do not write that something is unresolved, undecided or still open unless an item says so. Write plainly, with no filler.`;
 
 export function writeUser(items, { quotes = false } = {}) {
   const lines = [];
@@ -147,6 +161,33 @@ export function writeUser(items, { quotes = false } = {}) {
   }
   return `The checked items:\n\n${lines.join("\n")}\nWrite the notes.`;
 }
+
+export const PART_NOTES_SYSTEM = `You take notes on a conversation. You get one part of its transcript, written by speech recognition. It can contain misheard words, and it usually has no speaker names.
+
+Write short markdown bullets under these four headings, and leave out a heading with nothing under it:
+## Decisions: what the participants clearly agreed on or settled. A suggestion or a preference is not a decision.
+## Actions: what a person took on, or was asked to do, after this conversation.
+## Problems: problems, risks, disagreements and questions they raised. Do not say whether they stayed open: this is only one part of the conversation.
+## Points: other important facts, options, numbers and reasons.
+
+Say only what the transcript says, with its specifics: numbers, names, options. Never guess a number, a name or a date. Do not repeat a point. No preamble.`;
+
+export const MERGE_SYSTEM = `You write the notes of a whole conversation in markdown. You get the notes of its parts, in order. Each part's notes saw only that part, so a later part can settle what an earlier part left as a question.
+
+FORMAT RULES (strict):
+- No preamble: no title, no date, no attendee list. Start directly with a 1-2 sentence summary of what the conversation was about.
+- Then use these section headings: ## Threads, ## Key Discussion Points, ## Decisions Made, ## Action Items, ## Follow-ups. Leave out a section that has no content.
+- Under ## Threads, write the 2-5 important lines of thought as short bullets: where each started and how it went.
+- Under ## Action Items, use checkboxes (\`- [ ]\`).
+- Under ## Follow-ups, put the problems and questions they raised.
+- No tables, no horizontal rules, no block quotes.
+
+CONTENT RULES:
+- Use only the notes. Add no fact, number, name, date or reason of your own.
+- Keep every decision and every action, and keep the specifics: numbers, names, options.
+- Merge what is said twice. If a later part settles an earlier question, keep only the outcome.
+- Do not write that something is unresolved, undecided or still open unless the notes say so.
+- Write plainly, with no filler.`;
 
 // --- Parts.
 
@@ -317,8 +358,8 @@ const SCALES = new Map([
 
 /**
  * Every number a text states, in digits or in words, as strings: "25", "12.5",
- * and for spoken numbers the value and the digits as said ("twenty five" is 25;
- * "two five" is 2, 5 and 25; "twelve point five" is 12.5).
+ * and for spoken numbers each value and the whole ("twenty five" is 20, 5 and
+ * 25; "two five" is 2, 5 and 25; "twelve point five" is 12.5).
  *
  * @param {string} text
  * @returns {Set<string>}
@@ -340,7 +381,7 @@ export function numbersIn(text) {
     }
     let total = 0;
     let current = 0;
-    let digits = "";
+    const said = [];
     let run = 0;
     while (i < words.length) {
       const word = words[i];
@@ -351,7 +392,7 @@ export function numbersIn(text) {
       if (NUMBER_WORDS.has(word)) {
         const value = NUMBER_WORDS.get(word);
         current += value;
-        digits += String(value);
+        said.push(value);
         found.add(String(value));
       } else if (SCALES.has(word)) {
         const scale = SCALES.get(word);
@@ -365,7 +406,13 @@ export function numbersIn(text) {
       i += 1;
     }
     found.add(String(total + current));
-    if (run > 1) found.add(digits);
+    // Digits said one by one ("two five"), and a pair of numbers: "twelve fifty"
+    // is 12.50 as a price, and "nineteen ninety" a year, never 1250.
+    if (said.length > 1 && said.every((value) => value < 10)) found.add(said.join(""));
+    if (said.length === 2 && said.every((value) => value >= 10)) {
+      found.add(String(Number(`${said[0]}.${said[1]}`)));
+      if (said[0] === 19 || said[0] === 20) found.add(`${said[0]}${said[1]}`);
+    }
     if (words[i] === "point" && NUMBER_WORDS.has(words[i + 1])) {
       found.add(`${total + current}.${NUMBER_WORDS.get(words[i + 1])}`);
     }
@@ -591,14 +638,185 @@ export async function verifyNotes({ text, transcript, chat, partChars, overlapCh
       dropped.push({ kind: "bullet", text: bullet.text, quote: "", why: "check" });
     });
   }
+  return { text: withoutLines(String(text).split("\n"), removed), dropped };
+}
+
+// --- The same check with only the passages each bullet needs.
+
+export const CLAIM_SYSTEM = `You check one claim from the notes of a conversation against passages of its transcript. The transcript was written by speech recognition, so it can contain misheard words.
+
+Answer true if the passages say the claim or clearly imply it, even in other words.
+Answer false if the passages contradict it, or if the claim adds something they do not hold: a number, a name, a decision nobody made, an action nobody took on.`;
+
+export function claimSchema() {
+  return {
+    type: "object",
+    properties: { supported: { type: "boolean" } },
+    required: ["supported"],
+    additionalProperties: false,
+  };
+}
+
+/**
+ * The passages of a transcript that share the most with a claim: stretches of
+ * `span` words, the rarer the shared word the more it counts.
+ *
+ * @param {string} claim
+ * @param {string[]} words `wordsOf(transcript)`
+ * @param {{ span?: number, count?: number }} [options]
+ * @returns {string[]}
+ */
+export function passagesFor(claim, words, { span = 70, count = 3 } = {}) {
+  const frequency = new Map();
+  for (const word of words) frequency.set(word, (frequency.get(word) ?? 0) + 1);
+  const wanted = new Map();
+  for (const word of contentWords(claim)) {
+    wanted.set(word, 1 / (1 + (frequency.get(word) ?? 0)) ** 0.5);
+  }
+  const step = Math.ceil(span / 2);
+  const scored = [];
+  for (let start = 0; start < words.length; start += step) {
+    const seen = new Set();
+    let score = 0;
+    for (const word of words.slice(start, start + span)) {
+      if (wanted.has(word) && !seen.has(word)) {
+        seen.add(word);
+        score += wanted.get(word);
+      }
+    }
+    scored.push({ start, score });
+  }
+  scored.sort((a, b) => b.score - a.score || a.start - b.start);
+  const picked = [];
+  for (const candidate of scored) {
+    if (picked.length >= count) break;
+    if (picked.some((other) => Math.abs(other.start - candidate.start) < span)) continue;
+    picked.push(candidate);
+  }
+  return picked
+    .sort((a, b) => a.start - b.start)
+    .map(({ start }) => words.slice(start, start + span).join(" "));
+}
+
+/** Written notes with the bullets the passages do not support taken out, one request a bullet. */
+export async function checkClaims({ text, transcript, chat, sections = null }) {
+  const words = wordsOf(transcript);
   const lines = String(text).split("\n");
-  const kept = lines
+  let heading = "";
+  const headingAt = lines.map((line) => {
+    if (/^##\s/.test(line)) heading = line.replace(/^##\s*/, "").trim();
+    return heading;
+  });
+  const removed = new Set();
+  const dropped = [];
+  let index = 0;
+  for (const bullet of noteBullets(text)) {
+    index += 1;
+    if (sections && !sections.some((name) => headingAt[bullet.index].startsWith(name))) continue;
+    const passages = passagesFor(bullet.text, words)
+      .map((passage, n) => `[${n + 1}] ${passage}`)
+      .join("\n");
+    const answer = await chat({
+      step: `claim-${index}`,
+      system: CLAIM_SYSTEM,
+      user: `Passages:\n${passages}\n\nClaim: ${bullet.text}\n\nAnswer with the JSON object only.`,
+      schema: claimSchema(),
+      maxTokens: 12,
+      temperature: 0,
+    });
+    if (firstJsonObject(answer.text)?.supported === false) {
+      removed.add(bullet.index);
+      dropped.push({ kind: "bullet", text: bullet.text, quote: "", why: "claim" });
+    }
+  }
+  return { text: withoutLines(lines, removed), dropped };
+}
+
+/** The lines left, and a heading whose bullets all went goes too. */
+function withoutLines(lines, removed) {
+  return lines
     .filter((_, index) => !removed.has(index))
     .join("\n")
-    // A heading whose bullets were all taken out goes too.
     .replace(/^##[^\n]*\n(\s*\n)*(?=##|\s*$)/gm, "")
     .trim();
-  return { text: kept, dropped };
+}
+
+// --- A decision needs agreement: the words after its quote have to show it.
+
+export const AGREED_SYSTEM = `You check one item from the notes of a conversation against the passage of the transcript it came from. The transcript was written by speech recognition, so it can contain misheard words, and it has no speaker names.
+
+Answer true only if the passage shows that the participants agreed on it or settled it: somebody proposed it and the others accepted it, or the person leading stated it as settled. Answer false if it was only suggested, asked, discussed or left open.`;
+
+/** The transcript's words around a position: where an item's quote stands, and what follows it. */
+export function passageAround(words, at, { before = 60, after = 120 } = {}) {
+  return words.slice(Math.max(0, at - before), at + after).join(" ");
+}
+
+/**
+ * Decisions the passage around their quote does not show as agreed, moved to
+ * the points. Moved, not dropped: what they say was said, and only "decided"
+ * was too much.
+ */
+async function demoteDecisions({ items, words, chat }) {
+  const out = [];
+  let index = 0;
+  for (const item of items) {
+    if (item.kind !== "decisions") {
+      out.push(item);
+      continue;
+    }
+    index += 1;
+    const answer = await chat({
+      step: `agreed-${index}`,
+      system: AGREED_SYSTEM,
+      user: `Passage:\n${passageAround(words, item.position)}\n\nItem: ${item.text}\n\nAnswer with the JSON object only.`,
+      schema: claimSchema(),
+      maxTokens: 12,
+      temperature: 0,
+    });
+    if (firstJsonObject(answer.text)?.supported === false) {
+      out.push({ ...item, kind: "points", demoted: true });
+    } else out.push(item);
+  }
+  return out;
+}
+
+// --- Notes of large parts, joined by the code.
+
+export const LEAD_SYSTEM = `You get the opening lines of the notes of each part of one long conversation, in order. Write a 1-2 sentence summary of what the whole conversation was about. Use only what they say. No heading, no preamble.`;
+
+/** What notes say before their first heading. */
+export function noteLead(note) {
+  return String(note ?? "").split(/^##\s/m)[0].trim();
+}
+
+/** The sections of several notes joined under one heading each, in the app's order. */
+export function mergeSections(notes) {
+  const order = ["Threads", "Key Discussion Points", "Decisions Made", "Action Items", "Follow-ups"];
+  const bodies = new Map();
+  for (const note of notes) {
+    for (const block of String(note ?? "").split(/^##\s+/m).slice(1)) {
+      const [title, ...rest] = block.split("\n");
+      const name = title.trim();
+      const body = rest.join("\n").trim();
+      if (!body) continue;
+      if (!bodies.has(name)) bodies.set(name, []);
+      bodies.get(name).push(body);
+    }
+  }
+  const names = [
+    ...order.filter((name) => bodies.has(name)),
+    ...[...bodies.keys()].filter((name) => !order.includes(name)),
+  ];
+  return names.map((name) => `## ${name}\n${bodies.get(name).join("\n")}`).join("\n\n");
+}
+
+// --- A second look at one's own draft, with the transcript still in front of the model.
+
+export const REVISE_TASK = `Above is the transcript, and below it a draft of the notes. Check the draft against the transcript, claim by claim. Remove a claim the transcript does not support, or correct it: a decision nobody made, an action nobody took on, a wrong number or name, a suggestion written as agreed. Change nothing else, and keep everything that is true. Write the corrected notes in full, in the same format, with no comment about the changes.`;
+
+export function reviseUser(user, draft) {
+  return `${user}\n\n---\nDraft of the notes:\n${draft}\n---\n\n${REVISE_TASK}`;
 }
 
 // --- The whole run.
@@ -635,17 +853,129 @@ export async function summarizeInParts({ transcript, chat, options = {} }) {
     check = false,
     single = null,
     quoteFirst = false,
+    mode = "items",
+    checkSections = null,
+    quotes = true,
+    agreed = false,
+    revise = false,
+    app = null,
+    merge = "model",
   } = options;
+  const runCheck = (text) =>
+    check === "claims"
+      ? checkClaims({ text, transcript, chat, sections: checkSections })
+      : verifyNotes({ text, transcript, chat, partChars, overlapChars });
   // One request and then the check: the app's own summary with a second pass.
   if (single) {
     const answer = await chat({ step: "single", ...single, maxTokens: writeTokens, temperature: 0.3 });
     if (answer.stop === "length") {
       throw new Error("The local model stopped at its output limit before it finished");
     }
-    const checked = await verifyNotes({ text: answer.text, transcript, chat, partChars, overlapChars });
+    if (revise) {
+      const again = await chat({
+        step: "revise",
+        system: single.system,
+        user: reviseUser(single.user, answer.text),
+        maxTokens: writeTokens,
+        temperature: 0.2,
+      });
+      return {
+        text: String(again.text ?? "").trim(),
+        dropped: [],
+        items: [],
+        parts: 1,
+        failedParts: 0,
+      };
+    }
+    const checked = await runCheck(answer.text);
     return { ...checked, items: [], parts: 1, failedParts: 0 };
   }
   const parts = splitTranscript(transcript, { partChars, overlapChars });
+  // Prose notes per part and a merge: the same cut, no quotes and no grammar.
+  if (mode === "notes") {
+    const notes = [];
+    for (let index = 0; index < parts.length; index += 1) {
+      const answer = await chat({
+        step: `notes-${index + 1}`,
+        system: PART_NOTES_SYSTEM,
+        user: `Transcript, part ${index + 1} of ${parts.length}:\n\n${parts[index]}`,
+        maxTokens: extractTokens,
+        temperature,
+      });
+      notes.push(`# Part ${index + 1}\n${String(answer.text ?? "").trim()}`);
+    }
+    const merged = await chat({
+      step: "merge",
+      system: MERGE_SYSTEM,
+      user: `The notes of each part:\n\n${notes.join("\n\n")}\n\nWrite the notes of the whole conversation.`,
+      maxTokens: writeTokens,
+      temperature: writeTemperature,
+    });
+    if (merged.stop === "length") {
+      throw new Error("The local model stopped at its output limit before it finished");
+    }
+    let text = String(merged.text ?? "").trim();
+    const removed = [];
+    if (check) {
+      const checked = await runCheck(text);
+      text = checked.text;
+      removed.push(...checked.dropped);
+    }
+    return { text, items: [], dropped: removed, parts: parts.length, failedParts: 0 };
+  }
+  // The app's own request for each large part, then a merge by the model or by the code.
+  if (mode === "app") {
+    const notes = [];
+    for (let index = 0; index < parts.length; index += 1) {
+      const answer = await chat({
+        step: `part-${index + 1}`,
+        system: app.system,
+        user: `${app.userPrefix}${parts[index]}`,
+        maxTokens: writeTokens,
+        temperature: 0.3,
+      });
+      if (answer.stop === "length") {
+        throw new Error("The local model stopped at its output limit before it finished");
+      }
+      notes.push(String(answer.text ?? "").trim());
+    }
+    if (notes.length === 1) {
+      return { text: notes[0], items: [], dropped: [], parts: 1, failedParts: 0 };
+    }
+    if (merge === "code") {
+      const lead = await chat({
+        step: "lead",
+        system: LEAD_SYSTEM,
+        user: notes.map((note) => noteLead(note)).join("\n\n"),
+        maxTokens: 200,
+        temperature: writeTemperature,
+      });
+      return {
+        text: `${String(lead.text ?? "").trim()}\n\n${mergeSections(notes)}`.trim(),
+        items: [],
+        dropped: [],
+        parts: parts.length,
+        failedParts: 0,
+      };
+    }
+    const merged = await chat({
+      step: "merge",
+      system: MERGE_SYSTEM,
+      user: `The notes of each part:\n\n${notes.map((note, n) => `# Part ${n + 1}\n${note}`).join("\n\n")}\n\nWrite the notes of the whole conversation.`,
+      maxTokens: writeTokens * 2,
+      temperature: writeTemperature,
+    });
+    if (merged.stop === "length") {
+      throw new Error("The local model stopped at its output limit before it finished");
+    }
+    return {
+      text: String(merged.text ?? "").trim(),
+      items: [],
+      dropped: [],
+      parts: parts.length,
+      failedParts: 0,
+    };
+  }
   const gathered = [];
   const dropped = [];
   let failedParts = 0;
@@ -654,13 +984,21 @@ export async function summarizeInParts({ transcript, chat, options = {} }) {
     const part = parts[index];
     const answer = await chat({
       step: `extract-${index + 1}`,
-      system: quoteFirst ? EXTRACT_SYSTEM_QUOTE_FIRST : extractSystem,
+      system: !quotes
+        ? EXTRACT_SYSTEM_NO_QUOTES
+        : quoteFirst
+          ? EXTRACT_SYSTEM_QUOTE_FIRST
+          : extractSystem,
       user: extractUser(part, index, parts.length),
-      schema: grammar ? extractSchema({ quoteFirst }) : undefined,
+      schema: grammar ? extractSchema({ quoteFirst, quotes }) : undefined,
       maxTokens: extractTokens,
       temperature,
     });
-    const checked = checkedItems(answer.text, part, { quote, numbers, tolerance });
+    const checked = checkedItems(answer.text, part, {
+      quote: quotes ? quote : "off",
+      numbers,
+      tolerance,
+    });
     if (!checked.parsed) failedParts += 1;
     let kept = checked.items;
     if (verify && kept.length) {
@@ -686,8 +1024,11 @@ export async function summarizeInParts({ transcript, chat, options = {} }) {
     dropped.push(...checked.dropped);
     offset += wordsOf(part).length;
   }
-  const items = mergeItems(gathered);
+  let items = mergeItems(gathered);
   if (!items.length) return { text: "", items, dropped, parts: parts.length, failedParts };
+  if (agreed) {
+    items = await demoteDecisions({ items, words: wordsOf(parts.join(" ")), chat });
+  }
   let text;
   if (writer === "code") {
     text = renderItems(items);
@@ -715,7 +1056,7 @@ export async function summarizeInParts({ transcript, chat, options = {} }) {
     text = String(answer.text ?? "").trim();
   }
   if (check) {
-    const checked = await verifyNotes({ text, transcript, chat, partChars, overlapChars });
+    const checked = await runCheck(text);
     text = checked.text;
     dropped.push(...checked.dropped);
   }
