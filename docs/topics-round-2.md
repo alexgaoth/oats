@@ -279,7 +279,8 @@ model in the loop: Pk 0.29, names 4.0, replies that keep up.
 - **Gemma's gists are the most careful of any model here** (0.17 invented, against
   Opus's 0.27), and thin: 44% of what the annotators wrote down. They miss the bar
   of 4.0 by being short, not by being wrong. Asking for two full sentences of 25 to
-  35 words did not lift them on learn meetings (3.71, 0.30 invented).
+  35 words did not lift them on learn meetings (one judge: 3.71 against 3.78, and
+  invented facts 0.30 against 0.16).
 - **Qwen3.5 4B** is below Gemma on both, and fails on invented facts.
 
 ## Cloud
