@@ -253,6 +253,35 @@ gpt-6-luna 4.13, on-device phrases 2.24. Round 1's 4.55 and 4.25 came from anoth
 batch of candidates; a judge reads each name beside the others, so compare inside a
 table.
 
+## Local writing models
+
+Names and gists on eval24. These runs had to share a Mac at a load of 100 or more,
+so Qwen and Gemma ran on the CPU: **accuracy only, no time here counts.** Bar for a
+model in the loop: Pk 0.29, names 4.0, replies that keep up.
+
+| names, N2: (relevance + specificity) / 2 | pooled [95%] | gpt-6.1-sol | Sonnet 5.5 | names kept |
+| --- | --- | --- | --- | --- |
+| claude-opus-5-5, medium | 4.64 [4.60, 4.67] | 4.85 | 4.42 | 174/176 |
+| gpt-6-astra, low | 4.42 [4.32, 4.50] | 4.76 | 4.09 | 176/176 |
+| gpt-6-luna, none | 4.13 [4.00, 4.21] | 4.48 | 3.79 | 166/176 |
+| **Gemma 4 E4B** | **3.90 [3.79, 4.02]** | 4.28 | 3.52 | 174/176 |
+| Qwen3.5 4B | 3.77 [3.57, 3.84] | 4.19 | 3.35 | 157/176 |
+| phrases, no writing model | 2.24 [2.09, 2.31] | 2.49 | 1.98 | 176/176 |
+
+| gists, from the manual transcript | judge (Fable, gpt) | invented | gold covered | words |
+| --- | --- | --- | --- | --- |
+| Gemma 4 E4B | 3.62 (3.39, 3.85) | **0.17** | 44% | 24 |
+| Qwen3.5 4B | 3.56 (3.37, 3.75) | 0.75 | 55% | 32 |
+
+- **A local writing model is worth more than anything else for names**: 2.24 to
+  3.90 for Gemma, without the loop, through #121, which the app has today. It
+  falls just short of the bar; 4.0 is inside its interval.
+- **Gemma's gists are the most careful of any model here** (0.17 invented, against
+  Opus's 0.27), and thin: 44% of what the annotators wrote down. They miss the bar
+  of 4.0 by being short, not by being wrong. Asking for two full sentences of 25 to
+  35 words did not lift them on learn meetings (3.71, 0.30 invented).
+- **Qwen3.5 4B** is below Gemma on both, and fails on invented facts.
+
 ## Cloud
 
 **No new model.** `GET /v1/models` today, against `scripts/lib/fast-models.mjs`:
