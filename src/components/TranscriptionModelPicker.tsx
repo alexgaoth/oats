@@ -806,11 +806,14 @@ export default function TranscriptionModelPicker({
   const renderParakeetModels = () => {
     const modelsToRender =
       parakeetModels.length === 0
-        ? Object.entries(PARAKEET_MODEL_INFO).map(([modelId, info]) => ({
-            model: modelId,
-            downloaded: false,
-            size_mb: info.sizeMb,
-          }))
+        ? Object.entries(PARAKEET_MODEL_INFO)
+            // Only the main process knows whether this Mac can run the helper.
+            .filter(([, info]) => info.runtime !== "ane")
+            .map(([modelId, info]) => ({
+              model: modelId,
+              downloaded: false,
+              size_mb: info.sizeMb,
+            }))
         : parakeetModels;
 
     return (

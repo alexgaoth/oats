@@ -12,7 +12,8 @@ const {
 } = require("./ffmpegUtils");
 const { getSafeTempDir } = require("./safeTempDir");
 const ParakeetWsServer = require("./parakeetWsServer");
-const { getModelRuntime, REQUIRED_MODEL_FILES } = require("./parakeetModelInfo");
+const { ParakeetAne, isAneAvailable } = require("./parakeetAne");
+const { getModelRuntime, requiredModelFiles } = require("./parakeetModelInfo");
 
 const SAMPLE_RATE = 16000;
 const BYTES_PER_SAMPLE = 4; // float32
@@ -25,6 +26,13 @@ const SILENCE_RMS_THRESHOLD = 0.001;
 class ParakeetServerManager {
   constructor() {
     this.wsServer = new ParakeetWsServer();
+    /** One helper for the one Neural Engine model, made when it is first asked for. */
+    this.aneHelper = null;
+  }
+
+  ane(modelName) {
+    this.aneHelper ??= new ParakeetAne(path.join(this.getModelsDir(), modelName));
+    return this.aneHelper;
   }
 
   getBinaryPath(runtime) {
@@ -32,6 +40,7 @@ class ParakeetServerManager {
   }
 
   isAvailable(runtime) {
+    if (runtime === "ane") return isAneAvailable();
     return this.wsServer.isAvailable(runtime);
   }
 
@@ -47,7 +56,7 @@ class ParakeetServerManager {
     const modelDir = path.join(this.getModelsDir(), modelName);
     if (!fs.existsSync(modelDir)) return false;
 
-    return REQUIRED_MODEL_FILES.every((file) => fs.existsSync(path.join(modelDir, file)));
+    return requiredModelFiles(modelName).every((file) => fs.existsSync(path.join(modelDir, file)));
   }
 
   async _ensureWav(audioBuffer) {
@@ -99,6 +108,14 @@ class ParakeetServerManager {
     const { wavBuffer, filesToCleanup } = await this._ensureWav(audioBuffer);
     try {
       const runtime = getModelRuntime(modelName);
+      if (runtime === "ane") {
+        const began = Date.now();
+        return {
+          text: await this.ane(modelName).transcribe(wavBuffer),
+          elapsed: Date.now() - began,
+        };
+      }
+
       // Awaiting unconditionally also covers a startup's warm-up completion.
       await this.wsServer.start(modelName, modelDir, runtime);
 
@@ -178,6 +195,7 @@ class ParakeetServerManager {
 
   async startServer(modelName) {
     const runtime = getModelRuntime(modelName);
+    if (runtime === "ane") return this._startAne(modelName);
     if (!this.wsServer.isAvailable(runtime)) {
       return { success: false, reason: "parakeet WS server binary not found" };
     }
@@ -196,8 +214,21 @@ class ParakeetServerManager {
     }
   }
 
+  async _startAne(modelName) {
+    if (!this.isModelDownloaded(modelName)) {
+      return { success: false, reason: `Model "${modelName}" not downloaded` };
+    }
+    try {
+      await this.ane(modelName).start();
+      return { success: true };
+    } catch (error) {
+      debugLogger.error("Failed to start the Parakeet helper", { error: error.message });
+      return { success: false, reason: error.message };
+    }
+  }
+
   async stopServer() {
-    await this.wsServer.stop();
+    await Promise.all([this.wsServer.stop(), this.aneHelper?.stop()]);
   }
 
   getServerStatus() {

@@ -108,10 +108,11 @@ export interface ParakeetModelInfo {
   sizeMb: number;
   language: string;
   supportedLanguages: string[];
-  runtime?: "offline" | "online";
+  runtime?: "offline" | "online" | "ane";
   recommended?: boolean;
-  downloadUrl: string;
-  extractDir: string;
+  /** Absent for a Neural Engine model: its files are in parakeetAneFiles.json. */
+  downloadUrl?: string;
+  extractDir?: string;
 }
 
 export type ParakeetModelsMap = Record<string, ParakeetModelInfo>;

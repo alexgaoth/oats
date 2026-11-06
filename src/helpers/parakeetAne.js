@@ -29,6 +29,11 @@ function isSupportedMac({
   return platform === "darwin" && arch === "arm64" && darwinMajor >= MIN_DARWIN_MAJOR;
 }
 
+/** Whether this Mac can run the helper, and the build carries it. */
+function isAneAvailable() {
+  return isSupportedMac() && resolveBinaryPath(BINARY_NAME) !== null;
+}
+
 /** The 16-bit samples of a WAV, wherever its data chunk starts. */
 function pcmFromWav(wav) {
   let at = 12;
@@ -59,10 +64,6 @@ class ParakeetAne {
 
   binaryPath() {
     return this.command ?? resolveBinaryPath(BINARY_NAME);
-  }
-
-  isAvailable() {
-    return Boolean(this.command) || (isSupportedMac() && this.binaryPath() !== null);
   }
 
   isRunning() {
@@ -180,4 +181,4 @@ class ParakeetAne {
   }
 }
 
-module.exports = { ParakeetAne, isSupportedMac, pcmFromWav };
+module.exports = { ParakeetAne, isAneAvailable, isSupportedMac, pcmFromWav };
