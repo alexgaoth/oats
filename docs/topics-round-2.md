@@ -273,11 +273,11 @@ names 4.0, replies that keep up.
 | --- | --- | --- | --- | --- | --- |
 | one topic | 0.366 | | | 1 | |
 | main | 0.380 | | | 5.9 | 44% / 31% |
-| **detector alone** | **0.266** | | 2.63 / 1.97 | 4.3 | |
+| **detector alone** | **0.266** | | 2.63 / 1.97 | 5.0 | 62% / 36% |
 | detector, Gemma 4 E4B names through #121 | **0.266** | | 3.14 / 3.18 | 5.0 | 63% / 36% |
 | Gemma 4 E4B checks, detector proposes | 0.318 | +0.052 [−0.044, +0.148] | 3.76 / 3.56 | 11.5 | 50% / 75% |
 | Apple's system model checks, detector proposes | 0.378 | +0.111 [+0.044, +0.178] | 3.23 / 3.09 | 11.0 | 43% / 61% |
-| gpt-5.6-terra checks, detector proposes | 0.241 | | 3.81 / 3.60 | | |
+| gpt-5.6-terra checks, detector proposes | 0.241 | | 3.81 / 3.60 | 6.8 | 67% / 55% |
 
 The models that fit a Mac say yes too often. Gemma takes most proposals and cuts
 into 11 pieces, which reads well against the annotators' finest level (Pk 0.286)
