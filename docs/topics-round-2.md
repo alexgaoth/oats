@@ -339,6 +339,7 @@ this page comes from a loaded Mac.
 | Apple Speech, quiet (23) | 0.396 | **0.291** | −0.104 [−0.157, −0.055] | | | |
 | Apple Speech, steady (23) | 0.386 | **0.322** | −0.064 [−0.103, −0.029] | | | |
 | Turbo q5_0, quiet | 0.412 | **0.293** | −0.118 [−0.189, −0.055] | | | |
+| Turbo q5_0, steady | 0.390 | **0.296** | −0.094 [−0.168, −0.021] | | | |
 | Parakeet Ultra, quiet, provisional (12) | 0.434 | 0.308 | −0.126 [−0.204, −0.055] | | | |
 | Parakeet Ultra, steady, provisional (12) | 0.455 | 0.323 | −0.132 [−0.203, −0.064] | | | |
 
