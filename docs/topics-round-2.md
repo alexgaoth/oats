@@ -320,8 +320,9 @@ same as the loop's live view, with no request.
 Track S's replays: the app's segmenter and each recognizer, on the far-field
 microphone, in a quiet room and with steady sound. One topic scores about 0.36 on
 these meetings. Live Pk; lower is better. Parakeet's model card lists AMI in its
-training data, so its row is provisional. Apple Speech covers 23 of the 24 meetings
-of eval24, the others 8. Timing on this page comes from a loaded Mac.
+training data, so its rows are provisional. Apple Speech covers 23 of the 24
+meetings of eval24, Parakeet the 12 standard test meetings, the others 8. Timing on
+this page comes from a loaded Mac.
 
 | recognizer, room | main | **change detector** | Δ against main | terra, today's proposer | terra, detector proposes | opus low |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -331,10 +332,11 @@ of eval24, the others 8. Timing on this page comes from a loaded Mac.
 | gpt-transcribe, steady | 0.446 | **0.308** | −0.138 [−0.237, −0.051] | 0.300 | 0.326 | |
 | Apple Speech, quiet (23) | 0.396 | **0.291** | −0.104 [−0.157, −0.055] | | | |
 | Apple Speech, steady (23) | 0.386 | **0.322** | −0.064 [−0.103, −0.029] | | | |
-| Parakeet Ultra, quiet, provisional | 0.437 | 0.285 | −0.153 [−0.258, −0.055] | | | |
-| Parakeet Ultra, steady, provisional (11) | 0.458 | 0.318 | −0.141 [−0.216, −0.066] | | | |
+| Turbo q5_0, quiet | 0.412 | **0.293** | −0.118 [−0.189, −0.055] | | | |
+| Parakeet Ultra, quiet, provisional (12) | 0.434 | 0.308 | −0.126 [−0.204, −0.055] | | | |
+| Parakeet Ultra, steady, provisional (12) | 0.455 | 0.323 | −0.132 [−0.203, −0.064] | | | |
 
-- **The detector resists recognition errors.** Manual 0.264, recognized 0.285 to
+- **The detector resists recognition errors.** Manual 0.264, recognized 0.283 to
   0.340, and every gain over main excludes 0. Main's tracker falls apart: misheard
   words break word overlap, and it scores worse than one topic in every room.
 - **More meetings, same picture.** With track Q's small.en replays of 11 more
