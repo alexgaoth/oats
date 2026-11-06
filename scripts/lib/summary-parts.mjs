@@ -751,7 +751,7 @@ function withoutLines(lines, removed) {
   return lines
     .filter((_, index) => !removed.has(index))
     .join("\n")
-    .replace(/^##[^\n]*\n(\s*\n)*(?=##|\s*$)/gm, "")
+    .replace(/^##[^\n]*\n(?:[^\S\n]*\n)*(?=##|\s*$)/gm, "")
     .trim();
 }
 
