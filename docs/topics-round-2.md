@@ -268,10 +268,12 @@ model in the loop: Pk 0.29, names 4.0, replies that keep up.
 | Qwen3.5 4B | 3.77 [3.57, 3.84] | 4.19 | 3.35 | 157/176 |
 | phrases, no writing model | 2.24 [2.09, 2.31] | 2.49 | 1.98 | 176/176 |
 
-| gists, from the manual transcript | judge (Fable, gpt) | invented | gold covered | words |
+| gists | judge (Fable, gpt) | invented | gold covered | words |
 | --- | --- | --- | --- | --- |
-| Gemma 4 E4B | 3.62 (3.39, 3.85) | **0.17** | 44% | 24 |
-| Qwen3.5 4B | 3.56 (3.37, 3.75) | 0.75 | 55% | 32 |
+| Gemma 4 E4B, manual transcript | 3.62 (3.39, 3.85) | **0.17** | 44% | 24 |
+| Qwen3.5 4B, manual transcript | 3.56 (3.37, 3.75) | 0.75 | 55% | 32 |
+| Gemma 4 E4B, small.en quiet, prompt for recognized text | 3.12 (2.92, 3.31) | 0.45 | 36% | 24 |
+| Gemma 4 E4B, small.en steady, prompt for recognized text | 2.23 (2.08, 2.38) | 0.97 | 15% | 23 |
 
 - **A local writing model is worth more than anything else for names**: 2.24 to
   3.90 for Gemma, without the loop, through #121, which the app has today. It
@@ -281,6 +283,9 @@ model in the loop: Pk 0.29, names 4.0, replies that keep up.
   of 4.0 by being short, not by being wrong. Asking for two full sentences of 25 to
   35 words did not lift them on learn meetings (one judge: 3.71 against 3.78, and
   invented facts 0.30 against 0.16).
+- **On recognized text the gists are not good enough to show**: 3.12 in a quiet
+  room. A model that writes little from little has nothing left when a third of
+  the words are gone.
 - **Qwen3.5 4B** is below Gemma on both, and fails on invented facts.
 
 ## Cloud
