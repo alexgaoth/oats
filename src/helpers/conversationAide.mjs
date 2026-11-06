@@ -1,11 +1,81 @@
 import { CHECK_OUTCOMES } from "./contextCheck.mjs";
 
-const QUESTION_PREFIX =
-  /^(?:what|why|how|which|who|where|when|do\s+you\s+know|can\s+you\s+(?:explain|tell)|could\s+you\s+(?:explain|tell))\b/i;
-const QUESTION_ANYWHERE =
-  /\b(?:what|why|how|which|who|where|when|do\s+you\s+know|can\s+you\s+explain)\b/i;
+// English, read the way recognition writes it (docs/question-eval.md).
+//
+// A "?" is a guess by the recognizer, and it misses about half of the questions
+// people ask, so a question must be found by its words too. Finding "what" or
+// "how" anywhere does not do it: on AMI meetings nine in ten false cards were a
+// statement with one of those words inside it ("that's what I think", "when you
+// press the button"). What a question has and a statement lacks is its shape: an
+// interrogative word or an auxiliary that *opens a clause*, with a subject after
+// it. A clause opens at the start, after any punctuation, or after a word that
+// only joins ("so do we need it", "yeah but is it cheap").
+const EN_OPENS = String.raw`(?:^|[.?!,;:]\s+|\b(?:so|and|but|or|yeah|yes|no|okay|ok|well|right|because|cause|then|um+|uh+|mm+|hmm+|now|oh|actually|like|alright)[,]?\s+)`;
+const EN_SUBJECT = String.raw`(?:i|you|we|they|he|she|it|this|that|these|those|there|one|anyone|anybody|everyone|everybody|someone|somebody|people|our|your|their|my)`;
+const EN_AUX_WORDS = String.raw`do|don['’]t|did|didn['’]t|does|doesn['’]t|have|haven['’]t|has|hasn['’]t|had|hadn['’]t|can|can['’]t|could|couldn['’]t|would|wouldn['’]t|will|won['’]t|should|shouldn['’]t|shall`;
+const EN_AUX = `(?:${EN_AUX_WORDS})`;
+const EN_BE = String.raw`(?:is|isn['’]t|are|aren['’]t|was|wasn['’]t|were|weren['’]t)`;
+const EN_DETERMINER = String.raw`(?:the|a|an|any|all|some|each|every)`;
+// "Which" also opens a relative clause (", which is the cheap one"), so it counts
+// only where it can only be asking.
+const EN_WH = String.raw`(?:what|why|how|who|where|when|which\s+(?:one|ones|of|way|kind|type|sort|do|does|did|would|should))`;
+// The word after the subject keeps "so do I" and "neither did we" out. "Do the"
+// and "have a" are orders ("have a look"), so those two take a pronoun only.
+const EN_YES_NO = new RegExp(
+  String.raw`${EN_OPENS}(?:${EN_AUX}\s+${EN_SUBJECT}|${EN_BE}\s+(?:${EN_SUBJECT}|${EN_DETERMINER})|(?:does|doesn['’]t|did|didn['’]t|can|can['’]t|could|couldn['’]t|would|wouldn['’]t|will|won['’]t|should|shouldn['’]t|shall)\s+${EN_DETERMINER}|(?:does|doesn['’]t|did|didn['’]t)\s+\w+)\s+[\w'’]`,
+  "i"
+);
+// Inside a sentence a wh-word asks only when a verb follows at once. "How much",
+// "what about", "which one" and the like count too.
+const EN_WH_CLAUSE = new RegExp(
+  String.raw`${EN_OPENS}${EN_WH}(?:['’](?:s|re)|\s+(?:${EN_AUX_WORDS}|is|are|was|were|about|else|if|many|much|long|often|far|big|one|kind|type|sort|other|exactly|might))\b`,
+  "i"
+);
+// At the very start, any wh-word that a subject does not follow: "Who designed
+// the bridge" asks, "When you press the button" does not, and neither does a
+// heading, "How to use your remote".
+const EN_LEAD_IN = String.raw`(?:(?:so|and|but|or|okay|ok|well|right|yeah|oh|now|then|um+|uh+)[\s,.]+)*`;
+const EN_WH_START = new RegExp(
+  String.raw`^${EN_LEAD_IN}${EN_WH}\b(?!\s+(?:${EN_SUBJECT}|${EN_DETERMINER}|to)\b)`,
+  "i"
+);
+const EN_ASKS_FOR_ANY = new RegExp(
+  String.raw`${EN_OPENS}any(?:one|body|thing)?\s+(?:else|other|more|further|last|final|new|comments?|thoughts?|ideas?|questions?|objections?|suggestions?)\b`,
+  "i"
+);
+const EN_TAG =
+  /\b(?:isn['’]t it|aren['’]t we|aren['’]t they|aren['’]t you|don['’]t you(?: think)?|don['’]t we|doesn['’]t it|didn['’]t we|didn['’]t you|won['’]t it|wouldn['’]t it|can['’]t we|shouldn['’]t we|do you think)[.,]?\s*$/i;
+
+/** A sentence that asks something in English, with or without a "?". */
+function asksInEnglish(text) {
+  return (
+    EN_YES_NO.test(text) ||
+    EN_WH_START.test(text) ||
+    EN_WH_CLAUSE.test(text) ||
+    EN_ASKS_FOR_ANY.test(text) ||
+    EN_TAG.test(text)
+  );
+}
+
 const COMMAND_PREFIX =
   /^(?:please\s+)?(?:open|close|send|write|type|create|delete|remove|add|set|turn|start|stop|record|search)\b/i;
+// Short words a recognizer marks with "?" and nobody means as a question on a card.
+//
+// Read one word at a time, with a sticky pattern that never goes back. As a
+// single repeated pattern the separator is optional, so `mm+` can cut a run of m's
+// in Fibonacci-many ways and backtracking takes exponential time: a hum of sixty
+// m's, which Whisper does write, froze the renderer on one final segment.
+const EN_NOISE_WORD =
+  /(?:uh+|(?:um+|hmm+|mm+)(?:-hmm)?|huh|okay|ok|yes|no|yeah|yep|right|really|sorry|what|oh|ah|alright|all right|sure|pardon|eh)[?.!,\s]*/iy;
+
+function isEnglishNoise(text) {
+  EN_NOISE_WORD.lastIndex = 0;
+  while (EN_NOISE_WORD.test(text)) {
+    if (EN_NOISE_WORD.lastIndex === text.length) return true;
+  }
+  return false;
+}
+
 const CASUAL_OR_RHETORICAL =
   /^(?:how are you|what's up|whats up|how's it going|how is it going|who cares|why bother|what can you do)[?.!\s]*$/i;
 
@@ -28,8 +98,9 @@ const CASUAL_OR_RHETORICAL =
 // 3. Transcribers emit straight AND typographic apostrophes, so every
 //    apostrophe in a phrase — and the boundary classes — accepts both.
 //
-// Detection stays generous, exactly like the English patterns: an extra card
-// costs a glance (CLAUDE.md question rule 3). Verdicts stay conservative.
+// Detection here stays generous: an extra card costs a glance (CLAUDE.md question
+// rule 3), and nobody has measured these locales. English was generous too until
+// it was measured (docs/question-eval.md). Verdicts stay conservative.
 
 const SP_START = String.raw`(?:^|[\s("'«¿¡,;:–—‘’“”])`;
 const SP_END = String.raw`(?=$|[\s)"'»,;:!?.…¡¿–—‘’“”])`;
@@ -40,7 +111,7 @@ const CLAUSE_START = String.raw`(?:^|[.!?¡¿;:…]\s*)`;
 const APO = String.raw`['’]`;
 
 // Interrogative openers, checked at the start of the utterance (mirrors
-// QUESTION_PREFIX). Loose single words are safe here because position carries
+// the English openers). Loose single words are safe here because position carries
 // most of the signal.
 // One or two words of conjunction lead-in ("pero dónde…", "ну и сколько…")
 // must not defeat an opener when the transcriber drops the question mark.
@@ -528,12 +599,28 @@ const HEDGE =
 const BACKCHANNEL =
   /^(?:mm+[-\s]?hm*|mhm+|uh[-\s]?huh|uh+|um+|hmm+|right|okay|ok|yeah|yep|yup|sure|got\s+it|i\s+see|makes\s+sense)[\s.!?,]*$/i;
 
-function assessResponseLocally(followingContext) {
-  const replies = (Array.isArray(followingContext) ? followingContext : [])
-    .map((item) => String(item?.text || "").trim())
-    .filter((text) => text && !BACKCHANNEL.test(text) && !BACKCHANNEL_INTL.test(text));
+// A yes/no question is answered by what is a backchannel anywhere else: "Is
+// that okay?" "Yeah." The room said something, and it was the answer.
+const EN_YES = /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
+// A plain "no" to one is an answer too, unless the question was what somebody
+// knows: "Do you know what Kubernetes is?" "No." is the confirmed negative the
+// search exists for. "Do we need a remote?" "No." is a decision.
+const EN_ASKS_KNOWLEDGE =
+  /\b(?:know|heard|aware|remember|recall|familiar|understand|any\s+idea|sure)\b/i;
 
-  if (!replies.length) return { outcome: "silence", confidence: 0.8 };
+function assessResponseLocally(followingContext, question = "") {
+  const said = (Array.isArray(followingContext) ? followingContext : [])
+    .map((item) => String(item?.text || "").trim())
+    .filter(Boolean);
+  const replies = said.filter((text) => !BACKCHANNEL.test(text) && !BACKCHANNEL_INTL.test(text));
+  const askedYesNo = EN_YES_NO.test(question);
+
+  if (!replies.length) {
+    if (askedYesNo && said.some((text) => EN_YES.test(text))) {
+      return { outcome: "answered", confidence: 0.7 };
+    }
+    return { outcome: "silence", confidence: 0.8 };
+  }
 
   const joined = replies.join(" ");
   // Denial wins over hedging: "No, I'm not sure" is a denial with a hedge in it.
@@ -543,15 +630,21 @@ function assessResponseLocally(followingContext) {
   // negator of an ordinary Spanish sentence — that false denial would open a
   // browser over a substantive answer.
   const bareNoOnly = DENIAL.test(joined) && !DENIAL_EXPLICIT_EN.test(joined);
-  // The rescue must identify an *English* reply. A lone /\bi\b/ would match
-  // the Italian plural article ("No, i risultati…"), so "i" only counts
-  // followed by an English auxiliary — and the short-reply branch demands the
-  // reply be negation-only: "No funciona" is an answer, "No." is not.
-  const englishSignal =
-    /\bi'?m\b|\bwe\b|\bi\s+(?:do|did|don't|never|have|haven't|can't|really|am|was|think|know)\b/i;
+  // The short-reply branch demands the reply be negation-only: "No funciona" is
+  // an answer, "No." is not.
+  //
+  // A "no" inside a longer reply says nothing about knowing: "there's no way we
+  // can do that" and "no, I think blue is better" are answers, and a false denial
+  // opens a browser. So a bare "no" counts on its own, or opening a reply that
+  // then says it is not sure.
   const negationOnly = /^\s*(?:(?:no|nope|nah)[\s,.!…]*)+(?:sorry[\s,.!…]*)?$/i;
+  const opensWithNo = /^\s*(?:no|nope|nah)\b/i.test(joined);
+  const unsure = /\b(?:not\s+sure|not\s+certain|unsure)\b/i.test(joined);
   const englishDenied =
-    DENIAL.test(joined) && (!bareNoOnly || negationOnly.test(joined) || englishSignal.test(joined));
+    DENIAL.test(joined) && (!bareNoOnly || negationOnly.test(joined) || (opensWithNo && unsure));
+  if (englishDenied && bareNoOnly && askedYesNo && !EN_ASKS_KNOWLEDGE.test(question)) {
+    return { outcome: "answered", confidence: 0.7 };
+  }
   if (englishDenied || DENIAL_INTL.test(joined)) {
     return { outcome: "denied", confidence: 0.85 };
   }
@@ -598,7 +691,9 @@ const AUTO_SEARCH_OUTCOMES = new Set(["denied"]);
 // People do not speak in tidy single-clause utterances. A finalized segment is
 // often a minute of context with the actual question at the very end — and
 // quoting the whole ramble on a card makes it unreadable and makes the search
-// query useless. Take the last sentence that is actually interrogative.
+// query useless. Take the last sentence that is actually interrogative, with
+// any that ask right before it: "What does it cost? Is it cheaper?" is one
+// asking, and the card must not drop half of it.
 function extractQuestionSentence(text) {
   const value = String(text || "")
     .trim()
@@ -613,25 +708,28 @@ function extractQuestionSentence(text) {
     .filter(Boolean);
   if (sentences.length < 2) return value;
 
+  const asks = (sentence) =>
+    sentence.includes("?") ||
+    sentence.includes("？") ||
+    asksInEnglish(sentence) ||
+    INTL_QUESTION_PREFIX.test(sentence) ||
+    CJK_QUESTION_ENDING.test(sentence);
+
   for (let i = sentences.length - 1; i >= 0; i -= 1) {
     const sentence = sentences[i];
-    if (
-      sentence.includes("?") ||
-      sentence.includes("？") ||
-      QUESTION_PREFIX.test(sentence) ||
-      INTL_QUESTION_PREFIX.test(sentence) ||
-      CJK_QUESTION_ENDING.test(sentence)
-    ) {
+    if (asks(sentence)) {
       // A trailing "right?" or "you know?" is a tag, not the question — fold the
       // preceding sentence back in so the card still says something. Tag-ness
       // is measured in characters for CJK, where space-splitting always says 1.
       const isTag = HAS_CJK.test(sentence)
         ? sentence.replace(/[\s?？。！!.]/g, "").length <= 3
         : sentence.split(" ").length <= 2;
-      if (isTag && i > 0) {
-        return `${sentences[i - 1]} ${sentence}`.trim();
-      }
-      return sentence;
+      let first = isTag && i > 0 ? i - 1 : i;
+      while (first > 0 && asks(sentences[first - 1])) first -= 1;
+      return sentences
+        .slice(first, i + 1)
+        .join(" ")
+        .trim();
     }
   }
   return value;
@@ -645,15 +743,14 @@ function isQuestionCandidate(text) {
   const minLength = HAS_CJK.test(value) ? 2 : 4;
   if (value.length < minLength || value.length > 600) return false;
   if (CASUAL_OR_RHETORICAL.test(value) || COMMAND_PREFIX.test(value)) return false;
-  if (/^(?:uh+|um+|hmm+|okay|ok|yes|no)[?.!\s]*$/i.test(value)) return false;
+  if (isEnglishNoise(value)) return false;
   // A bare acknowledgement is noise in any language — "そうか" ends in か but
   // is somebody agreeing, not asking.
   if (BACKCHANNEL_INTL.test(value)) return false;
   return (
     value.includes("?") ||
     value.includes("？") ||
-    QUESTION_PREFIX.test(value) ||
-    QUESTION_ANYWHERE.test(value) ||
+    asksInEnglish(value) ||
     INTL_QUESTION_PREFIX.test(value) ||
     INTL_QUESTION_ANYWHERE.test(value) ||
     CJK_QUESTION_ENDING.test(value)
@@ -756,6 +853,11 @@ Use reason "silence" when there is no later response. Confidence must be between
 ${utterances}`;
 }
 
+/** How often a silence that came due looks again while somebody is speaking. */
+const SPEAKING_RECHECK_MS = 1000;
+/** A segment closes within 20 s. Past this the words are stuck, and the card must resolve. */
+const MAX_SPEAKING_HOLD_MS = 30_000;
+
 // Runs one recording's question detection.
 //
 // Two phases, deliberately decoupled (DESIGN.md §9.2):
@@ -786,6 +888,9 @@ class ConversationAideSession {
     this.onDiagnostic = options.onDiagnostic || (() => {});
     this.confidenceThreshold = options.confidenceThreshold ?? 0.75;
     this.silenceDelayMs = options.silenceDelayMs ?? 8000;
+    // Whether words are arriving that are not final yet. A reply can run longer
+    // than the wait, and a reply still being said is not silence.
+    this.isSpeaking = options.isSpeaking || (() => false);
     this.now = options.now || Date.now;
     // Wrapped, never stored bare: Chromium's timers throw "Illegal invocation"
     // when called with any `this` but the window, and these are called as
@@ -895,11 +1000,19 @@ class ConversationAideSession {
   _stage(candidate) {
     this._clearStage();
     this.staged = candidate;
-    this.timer = this.setTimer(() => {
-      const pending = this.staged;
-      this._clearStage();
-      if (pending) this._queueEvaluation(pending, "silence");
-    }, this.silenceDelayMs);
+    this.stagedAt = this.now();
+    this.timer = this.setTimer(() => this._silenceDue(), this.silenceDelayMs);
+  }
+
+  _silenceDue() {
+    const pending = this.staged;
+    if (!pending) return;
+    if (this.isSpeaking() && this.now() < this.stagedAt + MAX_SPEAKING_HOLD_MS) {
+      this.timer = this.setTimer(() => this._silenceDue(), SPEAKING_RECHECK_MS);
+      return;
+    }
+    this._clearStage();
+    this._queueEvaluation(pending, "silence");
   }
 
   _clearStage() {
@@ -969,7 +1082,7 @@ class ConversationAideSession {
     await this.persistence;
     const card = this.cards.get(candidate.id);
     if (!card) return;
-    const local = assessResponseLocally(followingContext);
+    const local = assessResponseLocally(followingContext, card.question);
     this._updateCard(candidate.id, { state: local.outcome, confidence: local.confidence });
 
     if (card.eventId != null) {
@@ -1078,7 +1191,7 @@ class ConversationAideSession {
     // The local reading of the reply is the primary verdict; the model may only
     // override it when it is confident. This keeps outcomes (and therefore
     // auto-search) working even when the classifier is weak, malformed, or slow.
-    const local = assessResponseLocally(followingContext);
+    const local = assessResponseLocally(followingContext, card.question);
     const modelOutcome = outcomeForAssessment(assessment, this.confidenceThreshold);
     const outcome =
       assessment.confidence >= this.confidenceThreshold ? modelOutcome : local.outcome;

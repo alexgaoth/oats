@@ -222,6 +222,87 @@ test("a check draws its links without vectors too, and later conversations join 
   assert.deepEqual(byMeaning.subjects, [{ label: "SSO", conversationIds: [1, 2, 3] }]);
 });
 
+test("one topic linked on two subjects leaves them two, and neither takes the other's name", () => {
+  const list = [
+    conversation(1, 100, [topic(1, "SSO rollout")]),
+    conversation(2, 200, [topic(1, "Enterprise pricing")]),
+    conversation(3, 300, [topic(1, "Discount for annual plans")]),
+    conversation(4, 400, [topic(1, "Weekend at the lake")]),
+  ];
+  const checks = new Map([
+    [
+      3,
+      {
+        candidates: [1, 2],
+        links: [
+          { id: 1, subject: "Rollout", topic: "Discount for annual plans", earlierTopic: "SSO rollout" },
+          { id: 2, subject: "Pricing", topic: "Discount for annual plans", earlierTopic: "Enterprise pricing" },
+        ],
+      },
+    ],
+  ]);
+  const { subjects } = links.linkThreads(list, { vectorOf, checks });
+  assert.deepEqual(subjects, [
+    { label: "Pricing", conversationIds: [2, 3] },
+    { label: "Rollout", conversationIds: [1, 3] },
+  ]);
+});
+
+test("subjects a check named are one when their names are alike, and a thread keeps its order", () => {
+  const list = [
+    conversation(1, 100, [topic(1, "SSO rollout")]),
+    conversation(2, 200, [topic(1, "Single sign-on setup")]),
+    conversation(3, 300, [topic(1, "SAML clock skew")]),
+  ];
+  const same = (id, subject, own, earlierTopic) => ({ id, subject, topic: own, earlierTopic });
+  const checks = new Map([
+    [2, { links: [same(1, "SSO rollout", "Single sign-on setup", "SSO rollout")] }],
+    [3, { links: [same(1, "Single sign-on setup", "SAML clock skew", "SSO rollout")] }],
+  ]);
+  const { subjects, edges } = links.linkThreads(list, { vectorOf, checks });
+  assert.deepEqual(subjects[0].conversationIds, [1, 2, 3]);
+  assert.equal(subjects.length, 1);
+  assert.deepEqual(
+    edges.map((edge) => [edge.from, edge.to]),
+    [
+      [1, 2],
+      [2, 3],
+    ]
+  );
+});
+
+test("what the provider has read and did not link stays apart, unasked or not", () => {
+  const route = "providers:anthropic";
+  const on = (item, summaryRoute) => ({ ...item, summaryRoute });
+  const list = [
+    on(conversation(1, 100, [topic(1, "SSO rollout")]), route),
+    on(conversation(2, 200, [topic(1, "Single sign-on setup")]), "local:"),
+    on(conversation(3, 300, [topic(1, "SAML clock skew")]), route),
+  ];
+  // Asked about nothing: 1 was read by this provider and 2 was not.
+  const checks = new Map([[3, { candidates: [], links: [] }]]);
+  const { subjects } = links.linkThreads(list, { vectorOf, checks });
+  assert.deepEqual(
+    subjects.map((subject) => subject.conversationIds),
+    [[1, 2]],
+    "2 meets 1 by meaning; 3 meets neither, for 1 is closed and it is on 1's subject"
+  );
+  const apart = links.linkThreads([list[1], list[2]], { vectorOf, checks });
+  assert.deepEqual(
+    apart.subjects.map((subject) => subject.conversationIds),
+    [[2, 3]],
+    "the provider never read 2, so 3 still meets it on this computer"
+  );
+});
+
+test("the board asks for a vector of every subject a check named", () => {
+  const item = {
+    ...conversation(1, 100, [topic(1, "SSO rollout")]),
+    linkCheck: { links: [{ subject: " Annual plan pricing " }, { subject: "" }] },
+  };
+  assert.deepEqual(links.linkTexts([item]), ["SSO rollout", "Annual plan pricing"]);
+});
+
 test("a link to a conversation that is not on the board, or to itself, is left out", () => {
   const list = [conversation(2, 200, [topic(1, "SSO rollout")])];
   const checks = new Map([

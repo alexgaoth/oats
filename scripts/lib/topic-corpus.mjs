@@ -56,7 +56,7 @@ export function topicNames(dir) {
   return names;
 }
 
-function speakerElements(dir, meeting, speaker, folder = "words") {
+export function speakerElements(dir, meeting, speaker, folder = "words") {
   const xml = fs.readFileSync(path.join(dir, folder, `${meeting}.${speaker}.words.xml`), "latin1");
   const elements = [];
   const pattern = /<([a-zA-Z]+)\b([^>]*?)(\/>|>([^<]*)<\/\1>)/g;

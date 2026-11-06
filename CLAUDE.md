@@ -194,6 +194,10 @@ All four were "fails quietly at the end", which the pencil standard forbids, and
 
 `MeetingRecordingMount`'s tick runs on `performance.now()`; anything it publishes for these checks must be `Date.now()`, or the comparison is ~0 against ~1.7e12 and the warning silently never fires.
 
+### Question spotting is measured, not argued (2026-11-05)
+
+`scripts/question-eval.mjs` runs the real `isQuestionCandidate`, `extractQuestionSentence` and `ConversationAideSession` over AMI meetings, on manual text and on real recognition output (`~/oats-asr-cache/replays`), against human dialogue acts. Numbers, the gold audit and the bars are in `docs/question-eval.md`. Manual AMI text flatters a detector, and its long turns mislead about replies: judge a change on recognition. Never claim a detection or reply change helps without a row from it, and keep the test meetings (ES2004, IS1009, TS3003) unread while tuning.
+
 ### Dictation quality is measured, not argued (2026-08-24)
 
 `scripts/asr-eval.js` runs the real path — the app's own `buildWhisperServerArgs`, the shipped `whisper-server` binary — over LibriSpeech test-clean and reports WER and latency. Numbers and the fork/upstream comparison in `docs/dictation-accuracy.md`. Never claim a transcription change helps without a row from it.
