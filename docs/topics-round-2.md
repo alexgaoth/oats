@@ -19,7 +19,15 @@ cloud winners.
   detector's 0.264: a tie. On recognized text in a quiet room the detector is
   ahead. A key still buys recall (two to three times the changes found) and names.
 - **Names with no writing model stay short of the bar**: 3.48 against 3.6. A phrase
-  somebody said cannot state a subject.
+  somebody said cannot state a subject. With Gemma 4 E4B, through the path the app
+  has today, names go from 2.24 to 3.90 (bar 4.0, inside the interval).
+- **A model on this Mac does not belong in the loop.** Gemma 4 E4B takes most
+  proposals (Pk 0.318 against the detector's 0.266 on the same 12 meetings), and
+  Apple's system model does worse (0.378). The detector alone is the better cutter.
+- **Gists work with a key and not yet without one.** Opus 5.5 4.44 with 0.27
+  invented facts, gpt-6.1-sol 4.31 with 0.19. Gemma 4 E4B 3.62 with 0.17: careful
+  and thin. In a quiet room Opus holds the bar (4.18, 0.41). With steady sound
+  nothing does.
 - **No new cloud model**, and no default changes.
 
 ## The bar, written before the runs (2026-11-05)
@@ -455,8 +463,13 @@ the words are gone.
    steady sound (3.3, about 1 invented fact), so a recording that sounded bad should
    skip them. This track built no UI.
 3. **Gists on this Mac: not by the bar.** Gemma 4 E4B's are careful and thin (3.62,
-   0.17 invented). Alex's call whether careful and thin is worth showing. A quote is
-   not a substitute (1.3 to 1.6).
+   0.17 invented), and on recognized text 3.12. My recommendation: do not show them
+   yet. A quote is not a substitute (1.3 to 1.6).
+4. **The loop on models on this Mac: no.** This was the direction to decide. It
+   fails its bar, and the detector alone cuts better. No PR.
+5. **Apple's system model**: no route for now. Its names (3.43) beat phrases (2.24)
+   with no download, which is worth a look only for a Mac with no writing model, and
+   it refuses some text and repeats names.
 
 ## Reproduce
 
