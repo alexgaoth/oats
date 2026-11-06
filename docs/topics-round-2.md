@@ -30,6 +30,16 @@ cloud winners.
   nothing does.
 - **No new cloud model**, and no default changes.
 
+### Against the bar
+
+| Class | Separation | Names | Other | Verdict |
+| --- | --- | --- | --- | --- |
+| On device, no writing model | **0.264**, gain −0.092 [−0.130, −0.051]; test meetings 0.266, gain −0.114 [−0.166, −0.055]: **met** | 3.48, gain +0.105 [−0.104, +0.320]; test meetings 3.47: **not met** | change drawn after 1.1 min | separation yes, names no |
+| Gemma 4 E4B in the loop | 0.318 on the test meetings: **not met** | 3.90 on N2: **not met** | no time counts: loaded Mac | no |
+| Apple's system model in the loop | 0.378: **not met** | 3.43: **not met** | | no |
+| Cloud | no new default: gain of the new proposer −0.005 [−0.038, +0.028] | no new model | | no change |
+| Gists | | | Opus 4.44, 0.27 invented: **met**. gpt-6.1-sol 4.31, 0.19: **met**. Gemma 3.62, 0.17: **not met** | yes with a key, no on this Mac |
+
 ## The bar, written before the runs (2026-11-05)
 
 Baselines on eval24, the 24 meetings of round 1. Reproduced before any change:
@@ -412,8 +422,8 @@ relevance / specificity):
 | detector's topics, on-device names | 2.64 / 1.97 | 2.80 / 1.80 | 2.46 / 1.63 |
 
 A quiet room costs the names nothing. Steady sound costs a model's names about 0.7,
-because the words are gone (S: 40% of content words recognized), and a phrase said
-in the room is no worse off than a model's sentence.
+because the words are gone (S: 40% of content words recognized), and the on-device
+names lose 0.2 to 0.3.
 
 ## Topic gists
 
@@ -470,6 +480,35 @@ the words are gone.
 5. **Apple's system model**: no route for now. Its names (3.43) beat phrases (2.24)
    with no download, which is worth a look only for a Mac with no writing model, and
    it refuses some text and repeats names.
+
+## Spend, downloads, what was not done
+
+**Spend**: $55.5 of API calls on public AMI data: $53.95 in the ledger (OpenAI $22.23,
+Anthropic $31.72), and about $1.50 of gpt-transcribe over 11 learn meetings, an
+estimate at $0.0045 a minute. ICSI was read only on this Mac.
+
+**Downloads**, public corpora, each CC BY 4.0: `ICSI_plus_NXT.zip` (55 MB,
+groups.inf.ed.ac.uk), and the Array1-01 audio of 11 learn meetings (649 MB, the AMI
+mirror). PyPI: numpy, scipy, scikit-learn, lightgbm, in `venvs/topics`. No model
+weights.
+
+**Not done, or stopped:**
+
+- **Reply time and contention for a local model in the loop.** This Mac stayed at a
+  load of 100 or more. The loop fails its bar on accuracy, so these no longer decide
+  anything. `contention.mjs` was written and not run.
+- **Withdrawn from the GPU queue, none of them run:** names and gists of Gemma 4 12B
+  QAT and Nemotron 3.5 Bolt E4B; the loop with Qwen3.5 4B; small.en over the learn
+  meetings (gpt-transcribe stood in for it); the learn-meeting runs of Gemma, Qwen and
+  the system model, replaced by eval24 runs.
+- **Not embedded**, stopped for the same reason, once MiniLM was decided: arctic-m,
+  mxbai, nomic, Qwen embedding. Granite 4.2, LFM3, Gemma 4 E2B and Qwen3.8 were not
+  tried in any role.
+- **gpt-transcribe, Turbo and small.en beyond 8 to 19 meetings**, as S had published
+  them. The steady-sound row for small.en holds 8.
+- **A real conversation between two people.** No annotated public corpus was used,
+  and note 6 is off limits. The detector is measured on meetings.
+- **Other languages.** The detector is off for them.
 
 ## Reproduce
 
