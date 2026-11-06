@@ -247,13 +247,9 @@ own segmentation), not the room segmenter's short segments.
 
 | model | quiet room, 8 meetings | steady sound, 8 meetings | DiPCo U01, 10 sessions |
 | --- | --- | --- | --- |
-| Parakeet Ultra | 83.0 to 85.7, +2.7 (+2.0 to +3.5) | 55.1 to 66.2, +11.1 (+9.7 to +12.3) | 52.0 to 59.9 |
+| Parakeet Ultra | 83.0 to 85.7, +2.7 (+2.0 to +3.5) | 55.1 to 66.2, +11.1 (+9.7 to +12.3) | 52.0 to 59.9, +7.9 (+7.1 to +8.6) |
 | Parakeet Ultra, the 8 unseen meetings | 77.7 to 81.2, +3.5 (+2.6 to +4.3) | 49.5 to 60.8, +11.3 (+9.8 to +12.7) | |
 | Apple SpeechTranscriber | 77.2 to 78.0, +0.8 (-0.1 to +2.0), holds 0 | 44.1 to 48.6, +4.5 (+3.2 to +5.6) | 48.8 to 51.2, +2.4 (+1.6 to +3.1) |
-
-Parakeet Ultra on DiPCo from the stored WAV, at the same level as the live run,
-is 59.9 (WER 40.6); read from the corpus file it was 59.0, +7.0 (+6.0 to +8.0),
-10 of 10 sessions.
 
 The same model, with the same weights, loses 11 points to a short segment with
 steady sound. Parakeet is a long-context model, and the segmenter's segments
@@ -274,7 +270,7 @@ is 2 s long (`splitAfterMs`). Parakeet Ultra on the 3 tune meetings:
 | 2 s, as it ships | 75.1, 85.2%, 2.3 s | 47.0, 87.1%, 1.6 s |
 | 4 s | 76.4, 83.0%, 3.1 s | 50.1, 85.4%, 2.1 s |
 | 8 s | 77.5, 81.1%, 4.6 s | 51.8, 83.7%, 2.6 s |
-| never | not read | 52.5, 82.2%, 3.1 s |
+| never | 78.2, 77.7%, 6.6 s | 52.5, 82.2%, 3.1 s |
 
 Each step trades purity (what the speaker pass can do) and the delay of a final
 for words. This was not tested on other meetings: it is a design choice for
