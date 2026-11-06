@@ -35,6 +35,14 @@ GIST_SYSTEM_VARIANTS.v3 = [
   "- A number, name or claim that looks misheard or does not fit is left out, not repaired. When little is clear, say only what is clear, in general words.",
 ].join("\n");
 
+// For a small model that stops short: two sentences, each with a job.
+GIST_SYSTEM_VARIANTS.v4 = [
+  "You write the gist of one topic of a recorded conversation: what a person who was there wants to remember of it. You get what was said on that topic, transcribed by speech recognition, so expect errors, filler and half sentences.",
+  "",
+  "Reply with the gist only: two plain sentences, 25 to 35 words in all. The first says what was talked about and the main point made. The second gives what was decided or left open, or the next most important detail.",
+  ...RULES,
+].join("\n");
+
 /** @param {{ turns: string[], budget?: number, variant?: string }} input */
 export function buildGistPrompt({ turns, budget = 3000, variant = "v1" }) {
   const excerpt = topicExcerpt(turns, { budget });
