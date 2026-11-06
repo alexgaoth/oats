@@ -752,10 +752,19 @@ function pushConversationCards() {
 // flow card live and is snapshotted onto the note when recording stops.
 function trackConversationTopic(segment: TranscriptSegment) {
   if (!conversationTopicTracker) return;
+  const at = segment.timestamp ?? Date.now();
   conversationTopicTracker.onUtterance({
     id: segment.id,
     text: segment.text,
-    at: segment.timestamp ?? Date.now(),
+    at,
+    // A room's segment knows its place in the recording, and `timestamp` is when
+    // it started: seconds on one clock, across sittings.
+    ...(Number.isFinite(segment.startMs) && Number.isFinite(segment.endMs)
+      ? {
+          start: at / 1000,
+          end: (at + (segment.endMs as number) - (segment.startMs as number)) / 1000,
+        }
+      : {}),
   });
   topicVectors?.observe(segment);
   // With OpenAI or Anthropic as the writing model, that provider's check model
@@ -1420,9 +1429,16 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // open-thread stack and the topic graph are core surfaces, and they cost one
   // set intersection per utterance. The tracker deliberately outlives the stop so
   // the final snapshot can still be read and saved onto the note.
-  conversationTopicTracker = new ConversationTopicTracker();
+  // In a room, in English, the change detector cuts the topics (topicChange.mjs):
+  // it learned from people talking in rooms, in English. Everything else keeps
+  // the tracker's own cuts.
+  conversationTopicTracker = new ConversationTopicTracker({
+    detector:
+      recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en",
+  });
   // Each turn and each candidate name is embedded on this computer, so the
-  // tracker can name a topic by meaning; a name that arrives is drawn at once.
+  // tracker can cut and name a topic by meaning; a name that arrives is drawn
+  // at once.
   topicVectors?.stop();
   topicVectors = new TopicVectorFeeder({
     tracker: conversationTopicTracker,
