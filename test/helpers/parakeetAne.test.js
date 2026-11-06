@@ -9,8 +9,9 @@ const readline = require("readline");
 const say = (o) => process.stdout.write(JSON.stringify(o) + "\n");
 say({ ready: true });
 readline.createInterface({ input: process.stdin }).on("line", (line) => {
-  const { id, pcm } = JSON.parse(line);
+  const { id, pcm, keepFrom } = JSON.parse(line);
   const audio = Buffer.from(pcm, "base64");
+  if (keepFrom !== undefined) return say({ id, text: audio.length + " bytes from " + keepFrom });
   if (audio.length === 0) return say({ id, error: "no audio" });
   if (audio[0] === 9) process.exit(4);
   say({ id, text: audio.length + " bytes" });
@@ -61,6 +62,13 @@ test("segments are answered by id, on one helper", async () => {
   assert.equal(ane.isRunning(), true);
   await ane.stop();
   assert.equal(ane.isRunning(), false);
+});
+
+test("the audio before a segment goes with it, and says where the segment starts", async () => {
+  const ane = fake();
+  const before = Buffer.alloc(16000 * 2 * 2);
+  assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), before), "64002 bytes from 2");
+  await ane.stop();
 });
 
 test("an error for one segment does not stop the helper", async () => {
