@@ -84,16 +84,16 @@ AMI-Cleaned, which is close-talk headset audio, not a far microphone.
 | Parakeet Ultra (moondream) | Core ML (FluidAudio); Photon | 1.26 GB; about 650 MB int8 Core ML | CC-BY-4.0 | none | none | screened |
 | Parakeet Redux (moondream) | MLX, Core ML | 178 MB | CC-BY-4.0 | none | none | screened |
 | Phonon-2, Bark 3.0 | Core ML (FluidAudio) | about 320 to 410 MB | CC-BY-4.0 | none | 9.32 (Phonon-2) | screened; the publishers' own `.bps` and `.fsq` files are not a safe format, so only Core ML |
-| Qwen3-ASR-1.7B | MLX, transformers | 4.7 GB bf16; 2.5 GB 8-bit; 1.6 GB 4-bit | Apache-2.0 | 13.41 | 8.31 | screened |
-| Qwen3-ASR-0.6B | MLX, transformers | 1.6 GB bf16; 1.0 GB 8-bit; 0.7 GB 4-bit | Apache-2.0 | 16.97 | 9.33 | screened |
-| tiro-qwen3-asr-1.7b-v2 (far-field fine-tune) | transformers | 4.1 GB bf16 | Apache-2.0 | 12.01 (rank 1) | | to screen |
-| Mega-ASR (Qwen3 adapter) | MLX | 2.5 GB 8-bit | Apache-2.0 | 13.38 | | to screen |
-| Granite Speech 5.0 2B | MLX, transformers | 5.0 GB | Apache-2.0 | 14.80 | 6.96 | screened |
+| Qwen3-ASR-1.7B | MLX, transformers | 4.7 GB bf16; 2.5 GB 8-bit; 1.6 GB 4-bit | Apache-2.0 | 13.41 | 8.31 | screened, steady sound only |
+| Qwen3-ASR-0.6B | MLX, transformers | 1.6 GB bf16; 1.0 GB 8-bit; 0.7 GB 4-bit | Apache-2.0 | 16.97 | 9.33 | withdrawn when the GPU queue ran long |
+| tiro-qwen3-asr-1.7b-v2 (far-field fine-tune) | transformers | 4.1 GB bf16 | Apache-2.0 | 12.01 (rank 1) | | withdrawn: the base model did not earn it |
+| Mega-ASR (Qwen3 adapter) | MLX | 2.5 GB 8-bit | Apache-2.0 | 13.38 | | withdrawn: the base model did not earn it |
+| Granite Speech 5.0 2B | MLX, transformers | 5.0 GB | Apache-2.0 | 14.80 | 6.96 | withdrawn: over the size bar, and the GPU queue ran long |
 | Granite Speech 5.0 470M TurboCTC | MLX, transformers | 0.95 GB | Apache-2.0 (the `-nc` twin is CC-BY-NC-SA: not usable) | 15.75 | 7.71 | screened |
 | Cohere Transcribe 03-2026 | Core ML (FluidAudio), MLX | 4.1 GB; gated on Hugging Face | Apache-2.0 | 15.03 | 7.02 | gated: needs an account, so only a third-party copy |
 | NVIDIA Nemotron 3.5 Transcribe (30B + 4B) | mlx-audio with NVIDIA's own NVFP4; NeMo-Speech.cpp GGUF | 21.6 GB NVFP4; 67.5 GB bf16 | OpenMDW-1.1 | 18.23 | 7.78 | runs in principle: over the size bar 14 times |
-| whisper.cpp large-v3 q5_0 | the app's whisper-server | 1.08 GB | MIT | 18.02 (v3, full) | 13.63 | screened |
-| distil-large-v3.5 | the app's whisper-server | 1.52 GB | MIT | none | 12.09 | screened |
+| whisper.cpp large-v3 q5_0 | the app's whisper-server | 1.08 GB | MIT | 18.02 (v3, full) | 13.63 | screened, steady sound only |
+| distil-large-v3.5 | the app's whisper-server | 1.52 GB | MIT | none | 12.09 | withdrawn when the GPU queue ran long |
 | WhisperKit large-v3-turbo 632 MB | Core ML on the Neural Engine | 646 MB | MIT | none | 13.88 (turbo) | screened |
 | Moonshine streaming | transformers, ONNX | 1.1 GB (medium) | MIT | 50.25 (small) | | not screened: 37 points behind on far speech |
 | Voxtral Mini 3B | MLX | 9.4 GB | Apache-2.0 | 21.58 | 13.57 | not screened: over the size bar, behind on far speech |
@@ -128,6 +128,44 @@ weights as Core ML on the Neural Engine.
 **FFASR's order is a useful prior.** Its far-field ranking puts the Qwen3 family
 and Granite ahead of Parakeet and Whisper. It is synthetic rooms and short
 utterances, so it does not replace the replay.
+
+## The screen
+
+Every sixth segment of the 8 meetings, the same segments for every model (602
+with steady sound, 551 in the quiet room). Content recall, words recovered and
+WER. No VAD on any engine here except the two whisper.cpp rows, which run the
+app's own. Times are a loaded Mac (load average 60 to 170, other work on every
+core): read them as an order, not as a measure.
+
+| model | quiet: words, content, WER | steady: words, content, WER | content precision q / s | median ms a segment q / s, loaded Mac |
+| --- | --- | --- | --- | --- |
+| `small.en`, the app | 69.2, 73.0, 32.6 | 44.6, 39.9, 57.9 | 85.2 / 54.6 | 159 / 294 |
+| Parakeet v3, int8 on sherpa-onnx, the app's Parakeet path | 73.4, 73.3, 28.6 | 44.5, 39.4, 57.1 | 85.7 / 65.8 | 702 / 829 (CPU) |
+| WhisperKit turbo 632 MB, Neural Engine | 75.6, 79.8, 26.9 | 52.3, 48.7, 50.6 | 86.4 / 59.9 | 598 / 632 |
+| Apple SpeechTranscriber | 75.8, 76.0, 26.1 | 51.1, 43.2, 51.4 | 82.5 / 57.8 | 105 / 124 |
+| Parakeet v2, Core ML | 76.0, 78.1, 26.4 | 58.1, 54.8, 45.4 | 87.1 / 66.9 | 102 / 91 |
+| Parakeet v3, Core ML | 77.9, 78.0, 24.6 | 59.2, 55.0, 44.0 | 87.9 / 69.4 | 214 / 283 |
+| Parakeet Redux, Core ML | 75.5, 76.3, 26.4 | 52.9, 46.5, 49.7 | 84.2 / 56.2 | 268 / 235 |
+| Phonon-2, Core ML | 75.9, 75.6, 27.5 | 55.5, 51.9, 47.8 | 84.7 / 61.3 | 124 / 102 |
+| Bark 3.0, Core ML | 76.1, 76.2, 26.1 | 55.1, 50.8, 47.3 | 87.7 / 68.4 | 274 / 205 |
+| **Parakeet Ultra, Core ML** | **81.1, 81.2, 21.5** | 60.9, 56.1, 42.2 | 86.3 / 65.6 | 91 / 98 |
+| Granite TurboCTC, int8 ONNX on CPU | 76.4, 77.1, 25.7 | **62.8, 61.7, 40.2** | 88.4 / 70.5 | 604 / 525 (CPU) |
+| Qwen3-ASR-1.7B, 8-bit MLX | not run | 60.4, 57.7, 42.1 | not run / 69.1 | not run / 281 (GPU) |
+| `gpt-transcribe`, cloud | 76.8, 80.1, 24.6 | 52.8, 51.9, 48.6 | 90.9 / 69.9 | 650 / 581 |
+
+Qwen3-ASR-1.7B wrote text for 26 of the segments with no speech (Ultra 3), at 2.3 GB
+it is over the size bar, and it takes the GPU: stopped there. Other runs: Apple's
+DictationTranscriber, all 8 meetings, content 58.2 and 22.0: out. `whisper.cpp` large-v3 q5_0, steady sound, 50.0. Granite's 8-bit MLX and
+ONNX int8 read the same as its full weights (61.7 and 61.9 with steady sound).
+
+**Three things this table says.** Models trained on noisy and far speech beat
+Whisper by a wide margin with steady sound, at a tenth of its cost. The same
+Parakeet v3 weights read 16 points better through FluidAudio's Core ML build
+than through the app's sherpa-onnx int8 path with steady sound, and padding the
+sherpa path with silence makes it worse (50.9 to 38.2 on two meetings), so the
+app's Parakeet path is not a fair picture of Parakeet. And Ultra, moondream's
+post-training of v3, is 3 points over v3 in the quiet room and 1 with steady
+sound, for 150 MB more.
 
 ## The cloud, as the app really uses it
 
