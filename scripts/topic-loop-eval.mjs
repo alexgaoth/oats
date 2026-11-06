@@ -298,6 +298,8 @@ function makeAsk(clock, calls) {
     const real = askModel(SPEC, {
       parseJson: true,
       purpose: `${VARIANT}:${request.kind ?? "name"}`,
+      // `fixedLatencyMs`: an accuracy run on a slow path (a local model on the CPU).
+      ...(OPTIONS.fixedLatencyMs ? { timeoutMs: 180_000 } : {}),
       ...request,
     });
     const gate = real.then(
@@ -319,9 +321,8 @@ function makeAsk(clock, calls) {
             error: result.ok ? null : result.error,
           });
           // The answer lands when it would have: the request took this long.
-          clock.at(startedAt + (result.ok ? result.ms : (result.ms ?? 5_000)), () =>
-            resolve(result)
-          );
+          const took = OPTIONS.fixedLatencyMs ?? result.ms;
+          clock.at(startedAt + (result.ok ? took : (result.ms ?? 5_000)), () => resolve(result));
         })
     );
   };
