@@ -34,6 +34,22 @@ test("a room's transcript reaches the model as Finish formats it: no labels, a b
   assert.equal(text, "Okay, shall we start?\n\nThe budget is twelve fifty.");
 });
 
+test("named meeting sets expand, in order, each meeting once, and dev never touches eval24", () => {
+  assert.deepEqual(corpus.expandMeetings(["TS3003a", "dev16", "ES2002b"]).slice(0, 2), [
+    "TS3003a",
+    "ES2002b",
+  ]);
+  assert.equal(corpus.expandMeetings(["dev16"]).length, 16);
+  assert.equal(corpus.expandMeetings(["testlong"]).length, 8);
+  // Tuning stays off the test meetings: no dev meeting shares a series with eval24.
+  const series = (meeting) => meeting.replace(/[a-d]$/, "");
+  const tested = new Set(corpus.EVAL24.map(series));
+  for (const meeting of corpus.DEV16) assert.ok(!tested.has(series(meeting)), meeting);
+  for (const long of corpus.DEV_LONG) {
+    for (const part of long.split("+")) assert.ok(!tested.has(series(part)), part);
+  }
+});
+
 test("ROUGE-L is the F1 of the longest common subsequence of words", () => {
   assert.equal(score.rougeL("a b c d", "a b c d"), 1);
   assert.equal(score.rougeL("", "a b"), 0);

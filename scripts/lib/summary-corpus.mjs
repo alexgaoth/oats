@@ -122,6 +122,76 @@ export const EVAL24 = [
   "TS3007c",
   "TS3010a",
 ];
+/**
+ * Tuning meetings for round 2 (docs/summaries.md): series eval24 does not touch.
+ * Prompts, windows and settings are chosen here, so eval24 stays unseen.
+ */
+export const DEV16 = [
+  "ES2002b",
+  "ES2005c",
+  "ES2008c",
+  "ES2010c",
+  "ES2013a",
+  "ES2016d",
+  "IB4005",
+  "IB4011",
+  "IS1000d",
+  "IS1003b",
+  "IS1006a",
+  "IS1008c",
+  "TS3004c",
+  "TS3006a",
+  "TS3009d",
+  "TS3012b",
+];
+/** A cheaper dev set, for screening models. */
+export const DEV8 = [
+  "ES2002b",
+  "ES2008c",
+  "ES2013a",
+  "IB4005",
+  "IS1000d",
+  "IS1008c",
+  "TS3004c",
+  "TS3012b",
+];
+/** Conversations over an hour for tuning: meetings of one series back to back. */
+export const DEV_LONG = [
+  "ES2008a+ES2008b+ES2008c+ES2008d",
+  "IS1000a+IS1000b+IS1000c+IS1000d",
+  "TS3009a+TS3009b",
+  "TS3012a+TS3012b+TS3012c",
+];
+/** Conversations over an hour for the final run, from eval24's series. */
+export const TEST_LONG = [
+  "ES2004a+ES2004b+ES2004c+ES2004d",
+  "IS1009a+IS1009b+IS1009c+IS1009d",
+  "TS3003a+TS3003b",
+  "TS3003a+TS3003b+TS3003c",
+  "TS3003a+TS3003b+TS3003c+TS3003d",
+  "TS3005a+TS3005b+TS3005c+TS3005d",
+  "IS1004a+IS1004b+IS1004c+IS1004d",
+  "ES2007a+ES2007b+ES2007c+ES2007d",
+];
+/** The long test conversations whose every part has far-field audio. */
+export const FAR_LONG = ["ES2004a+ES2004b+ES2004c+ES2004d", "TS3003a+TS3003b"];
+
+/** `--meetings dev16,TS3003a`: named sets expanded, in order, each meeting once. */
+export function expandMeetings(list) {
+  const sets = {
+    eval24: EVAL24,
+    dev16: DEV16,
+    dev8: DEV8,
+    devlong: DEV_LONG,
+    testlong: TEST_LONG,
+    far8: FAR8,
+    farlong: FAR_LONG,
+  };
+  const names = [];
+  for (const item of list) names.push(...(sets[item] ?? [item]));
+  return [...new Set(names)];
+}
+
 /** The meetings recorded with the far-field array, replayed through the room path (#122). */
 export const FAR8 = [
   "ES2004a",
@@ -176,25 +246,46 @@ export function loadInputs(ami, { sets = ["ref"], asr = {}, meetings = null } = 
       continue;
     }
     const file = asr[set];
-    if (!file) throw new Error(`--asr ${set}=<room-replay.json> is needed for set ${set}`);
-    const replay = JSON.parse(fs.readFileSync(file, "utf8"));
-    for (const recording of replay.recordings) {
-      const meeting = recording.summary.meeting;
-      if (meetings && !meetings.includes(meeting)) continue;
+    if (!file)
+      throw new Error(`--asr ${set}=<room-replay.json or folder> is needed for set ${set}`);
+    const recordings = replayRecordings(file);
+    const heard = new Map();
+    const wanted = meetings ? new Set(meetings.flatMap((meeting) => meeting.split("+"))) : null;
+    for (const recording of recordings) {
+      const meeting = recording.summary?.meeting ?? recording.meeting;
+      if (wanted && !wanted.has(meeting)) continue;
       const segments = recording.segments
         .filter((segment) => String(segment.text ?? "").trim())
         .map((segment) => ({ text: segment.text.trim(), start: segment.start, end: segment.end }));
       const { words } = loadAmiWords(dir, meeting, names);
+      heard.set(meeting, { segments, minutes: Math.max(...words.map((word) => word.end)) / 60 });
+    }
+    for (const meeting of meetings ?? [...heard.keys()]) {
+      const parts = meeting.split("+");
+      if (!parts.every((part) => heard.has(part))) continue;
       inputs.push({
         id: `${meeting}.${set}`,
         meeting,
         set,
-        segments,
-        minutes: Math.max(...words.map((word) => word.end)) / 60,
+        segments: parts.flatMap((part) => heard.get(part).segments),
+        minutes: parts.reduce((sum, part) => sum + heard.get(part).minutes, 0),
       });
     }
   }
   return inputs;
+}
+
+/** What a room replay wrote: one file with `recordings`, or a folder of one file a meeting. */
+function replayRecordings(file) {
+  const read = (name) => JSON.parse(fs.readFileSync(name, "utf8"));
+  if (!fs.statSync(file).isDirectory()) return read(file).recordings;
+  return fs
+    .readdirSync(file)
+    .filter((name) => name.endsWith(".json"))
+    .flatMap((name) => {
+      const value = read(path.join(file, name));
+      return value.recordings ?? (value.segments ? [value] : []);
+    });
 }
 
 // --- The annotators' summaries and the judge's transcript.
@@ -224,6 +315,23 @@ function decode(text) {
  * entries (nothing of that kind) are dropped.
  */
 export function humanSummary(ami, meeting) {
+  if (meeting.includes("+")) {
+    const out = { abstract: [], decisions: [], actions: [], problems: [] };
+    for (const part of meeting.split("+")) {
+      const one = humanSummary(ami, part);
+      for (const [section, prefix] of [
+        ["abstract", "A"],
+        ["decisions", "D"],
+        ["actions", "T"],
+        ["problems", "P"],
+      ]) {
+        for (const item of one[section]) {
+          out[section].push({ id: `${prefix}${out[section].length + 1}`, text: item.text });
+        }
+      }
+    }
+    return out;
+  }
   const dir = annotationsDir(ami);
   const xml = fs.readFileSync(path.join(dir, "abstractive", `${meeting}.abssumm.xml`), "latin1");
   const out = {};
@@ -268,6 +376,12 @@ export function speakerRoles(ami, meeting) {
  * truth every summary is checked against, whatever transcript it was written from.
  */
 export function judgeTranscript(ami, meeting) {
+  if (meeting.includes("+")) {
+    return meeting
+      .split("+")
+      .map((part, index) => `(Part ${index + 1})\n${judgeTranscript(ami, part)}`)
+      .join("\n\n");
+  }
   const dir = annotationsDir(ami);
   const { words } = loadAmiWords(dir, meeting, topicNames(dir));
   const roles = speakerRoles(ami, meeting);
