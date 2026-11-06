@@ -222,19 +222,63 @@ a longer silence (1,000 ms) loses 4 points.
 turn the turns before it, so a prompt would add nothing on the app's path. The
 question marks do not move with context (precision about 58, recall 32 to 34).
 
-## A second pass at Finish: the audio is there
+## A second pass at Finish
 
-`startInRoomSegmenting` writes the whole conversation to
+**The audio is there.** `startInRoomSegmenting` writes the whole conversation to
 `os.tmpdir()/oats-conversation-<time>.wav` (16 kHz, 16-bit, 115 MB an hour) while
 it records. `finishInRoomSegmenting` closes it at Stop, the speaker pass reads
 it, and `runInRoomSpeakerPass` deletes it when it ends, "whatever happened"
 (`ipcHandlers.js`). So a second pass costs no new storage. It must run before
 that delete, and the promise holds as long as it does: nothing of the room
-outlives the transcript. On a cloud route no WAV is written today, because the
-microphone goes straight to the realtime session.
+outlives the transcript. The file is the raw stream: `feedInRoomAudio` writes
+`downsample24kTo16k` of the microphone, echo cancellation, noise suppression and
+automatic gain are off at capture, and the raise and `afftdn` touch only the copy
+of a segment sent to Whisper. `room-replay.js --dump-stream` writes the same
+bytes, so these whole reads start from what the app would hold. On a cloud route
+no WAV is written today: the microphone goes straight to the realtime session.
 
 The title and the summary do not wait for the speaker pass, so a second pass
-must either hold them or redo them. Holding them is what the bar below pays for.
+must either hold them or redo them.
+
+**A whole read beats the live read on the same model.** Whole minus live, content
+recall, 95% interval over meetings. The model reads the recording with its own
+windows and context (Parakeet's 11 s windows with 2 s of context each side; Apple's
+own segmentation), not the room segmenter's short segments.
+
+| model | quiet room, 8 meetings | steady sound, 8 meetings | DiPCo U01, 10 sessions |
+| --- | --- | --- | --- |
+| Parakeet Ultra | 83.0 to 85.7, +2.7 (+2.0 to +3.5) | 55.1 to 66.2, +11.1 (+9.7 to +12.3) | 52.0 to 59.9 |
+| Parakeet Ultra, the 8 unseen meetings | 77.7 to 81.2, +3.5 (+2.6 to +4.3) | 49.5 to 60.8, +11.3 (+9.8 to +12.7) | |
+| Apple SpeechTranscriber | 77.2 to 78.0, +0.8 (-0.1 to +2.0), holds 0 | 44.1 to 48.6, +4.5 (+3.2 to +5.6) | 48.8 to 51.2, +2.4 (+1.6 to +3.1) |
+
+Parakeet Ultra on DiPCo from the stored WAV, at the same level as the live run,
+is 59.9 (WER 40.6); read from the corpus file it was 59.0, +7.0 (+6.0 to +8.0),
+10 of 10 sessions.
+
+The same model, with the same weights, loses 11 points to a short segment with
+steady sound. Parakeet is a long-context model, and the segmenter's segments
+(2.8 s at the median) give it almost none. Cutting with Silero into pieces of up
+to 28 s comes close: 64.5 with steady sound, 84.8 in the quiet room.
+
+**Whether the summaries gain is track Y's test** (at least 5 points of coverage
+with steady sound). The transcripts are in
+`~/oats-asr-cache/replays/parakeet-ultra-whole__*` and `apple-whole__*`.
+
+## Longer live segments: a lead
+
+The same effect, live. The segmenter splits a turn at a 300 ms soft pause once it
+is 2 s long (`splitAfterMs`). Parakeet Ultra on the 3 tune meetings:
+
+| split a turn after | quiet room: content, purity, median final delay | steady sound: content, purity, median final delay |
+| --- | --- | --- |
+| 2 s, as it ships | 75.1, 85.2%, 2.3 s | 47.0, 87.1%, 1.6 s |
+| 4 s | 76.4, 83.0%, 3.1 s | 50.1, 85.4%, 2.1 s |
+| 8 s | 77.5, 81.1%, 4.6 s | 51.8, 83.7%, 2.6 s |
+| never | not read | 52.5, 82.2%, 3.1 s |
+
+Each step trades purity (what the speaker pass can do) and the delay of a final
+for words. This was not tested on other meetings: it is a design choice for
+Alex, not a result.
 
 ## Enhancement: stopped
 
