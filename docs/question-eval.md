@@ -24,7 +24,7 @@ this before. The site says "Every question, caught as it's asked".
   questions are found where they open a clause. False cards fall from 99 to 34 an
   hour, F1 rises by 0.150 [0.108, 0.181] in a quiet room and by 0.089 [0.054,
   0.118] in steady sound, recall does not fall, and the first card is no later.
-  It clears the default bar in all eight rooms, on four engines.
+  It clears the default bar in all ten rooms, on five engines.
 - **Replies** (#169). The outcome is right 84% of the time, up
   from 75%. Answered questions left as silence fall from 18% to 3%. Searches that
   opened on a reply that did not say "I don't know" fall from 2 to 0 in 4 hours.
@@ -257,6 +257,8 @@ miss, not a detector miss. "False" is false cards an hour.
 | small.en, steady       | 0.29 | 0.145 / 0.221 / 0.175 | 85    | 0.322 / 0.224 / 0.264 | 30    | 0.397 / 0.228 / 0.290 | 22    |
 | parakeet-ultra, quiet  | 0.79 | 0.241 / 0.536 / 0.333 | 112   | 0.441 / 0.597 / 0.507 | 47    | 0.522 / 0.570 / 0.545 | 33    |
 | parakeet-ultra, steady | 0.45 | 0.182 / 0.350 / 0.239 | 102   | 0.352 / 0.373 / 0.362 | 43    | 0.407 / 0.361 / 0.383 | 33    |
+| turbo-q5_0, quiet      | 0.74 | 0.244 / 0.506 / 0.330 | 103   | 0.470 / 0.567 / 0.514 | 40    | 0.536 / 0.532 / 0.534 | 29    |
+| turbo-q5_0, steady     | 0.31 | 0.157 / 0.259 / 0.195 | 94    | 0.335 / 0.278 / 0.304 | 36    | 0.395 / 0.266 / 0.318 | 27    |
 | apple-speech, quiet    | 0.75 | 0.223 / 0.567 / 0.320 | 132   | 0.344 / 0.589 / 0.434 | 72    | 0.422 / 0.578 / 0.488 | 51    |
 | apple-speech, steady   | 0.37 | 0.159 / 0.338 / 0.216 | 123   | 0.262 / 0.335 / 0.294 | 66    | 0.289 / 0.316 / 0.302 | 53    |
 | gpt-transcribe, quiet  | 0.72 | 0.249 / 0.475 / 0.326 | 97    | 0.479 / 0.532 / 0.504 | 36    | 0.544 / 0.517 / 0.530 | 27    |
@@ -283,7 +285,7 @@ larger loss in both rooms, and no detector can recover it.
 **Delay.** Median 1.2 s from the end of the question to the card, 90th percentile
 5.2 s (small.en, quiet). 0.5 s and 3.2 s in steady sound, where segments are
 shorter. These hold Whisper's request time on a loaded Mac, so they are upper figures. Nothing in these changes adds to it: on the questions both methods catch,
-the paired difference is 0 at the median and at the 90th percentile in all eight
+the paired difference is 0 at the median and at the 90th percentile in all ten
 rooms. Now and then a question's first card is later by up to 20 s: on main a
 statement beside it had already raised a card that happened to overlap.
 
@@ -302,16 +304,18 @@ Paired against main, per meeting, strict set. A star means the interval holds 0.
 | small.en, steady       | +0.089 [0.054, 0.118] | +0.177 [0.107, 0.238] | +0.004 [-0.024, 0.022]\* | 0 / 0 ms             |
 | parakeet-ultra, quiet  | +0.175 [0.127, 0.215] | +0.200 [0.147, 0.244] | +0.061 [0.018, 0.093]    | 0 / 0 ms             |
 | parakeet-ultra, steady | +0.123 [0.103, 0.141] | +0.170 [0.142, 0.193] | +0.023 [-0.005, 0.046]\* | 0 / 0 ms             |
+| turbo-q5_0, quiet      | +0.184 [0.148, 0.216] | +0.226 [0.185, 0.262] | +0.061 [0.018, 0.086]    | 0 / 0 ms             |
+| turbo-q5_0, steady     | +0.108 [0.073, 0.158] | +0.178 [0.130, 0.227] | +0.019 [-0.012, 0.063]\* | 0 / 0 ms             |
 | apple-speech, quiet    | +0.114 [0.068, 0.158] | +0.121 [0.076, 0.158] | +0.023 [-0.013, 0.065]\* | 0 / 0 ms             |
 | apple-speech, steady   | +0.078 [0.060, 0.098] | +0.103 [0.077, 0.126] | -0.004 [-0.017, 0.009]\* | 0 / 0 ms             |
 | gpt-transcribe, quiet  | +0.178 [0.138, 0.205] | +0.230 [0.187, 0.261] | +0.057 [0.018, 0.081]    | 0 / 0 ms             |
 | gpt-transcribe, steady | +0.087 [0.061, 0.122] | +0.146 [0.114, 0.173] | +0.011 [-0.018, 0.039]\* | 0 / 0 ms             |
 
-Bars 1 to 3 hold in all eight rooms. Bar 4 holds at the point estimate in seven; on
+Bars 1 to 3 hold in all ten rooms. Bar 4 holds at the point estimate in nine; on
 apple-speech in steady sound recall is 0.004 lower, within its interval. Bar 5, on
 searches that open on a reply that does not say "I don't know": the rules alone keep
-it in seven rooms and add one on parakeet-ultra in a quiet room (3 to 4). With the
-reply branch on top it holds in all eight (the table under "Outcomes"), so the two
+it in nine rooms and add one on parakeet-ultra in a quiet room (3 to 4). With the
+reply branch on top it holds in all ten (the table under "Outcomes"), so the two
 belong together. Bar 6: 5 µs a turn on a loaded Mac, far under 1 ms, to be confirmed on
 a quiet machine. Bar 7: all tests pass, and no other locale's
 pattern changed.
@@ -331,6 +335,7 @@ and is right the least: a third of its "?" are on a question.
 | Engine         | Quiet P / R / F1      | Cards an hour | Steady P / R / F1     | Cards an hour |
 | -------------- | --------------------- | ------------- | --------------------- | ------------- |
 | parakeet-ultra | 0.475 / 0.483 / 0.479 | 66            | 0.395 / 0.312 / 0.349 | 51            |
+| turbo-q5_0     | 0.504 / 0.445 / 0.473 | 57            | 0.368 / 0.209 / 0.267 | 38            |
 | gpt-transcribe | 0.550 / 0.407 / 0.468 | 50            | 0.368 / 0.221 / 0.276 | 41            |
 | small.en       | 0.509 / 0.418 / 0.459 | 53            | 0.341 / 0.179 / 0.234 | 34            |
 | apple-speech   | 0.355 / 0.525 / 0.423 | 98            | 0.262 / 0.316 / 0.287 | 81            |
@@ -354,6 +359,8 @@ one, and silence on an open one.
 | small.en, steady       | 0.759               | 0.807        | 0.139                          | 0.053        | 1 (0)                               | 0 (0)        |
 | parakeet-ultra, quiet  | 0.690               | 0.820        | 0.200                          | 0.043        | 8 (3)                               | 2 (0)        |
 | parakeet-ultra, steady | 0.703               | 0.798        | 0.150                          | 0.063        | 6 (4)                               | 2 (0)        |
+| turbo-q5_0, quiet      | 0.752               | 0.866        | 0.210                          | 0.045        | 11 (4)                              | 4 (0)        |
+| turbo-q5_0, steady     | 0.771               | 0.836        | 0.070                          | 0.040        | 6 (3)                               | 3 (1)        |
 | apple-speech, quiet    | 0.730               | 0.836        | 0.211                          | 0.063        | 15 (7)                              | 5 (0)        |
 | apple-speech, steady   | 0.731               | 0.777        | 0.109                          | 0.059        | 5 (3)                               | 2 (1)        |
 | gpt-transcribe, quiet  | 0.744               | 0.866        | 0.221                          | 0.049        | 9 (3)                               | 3 (0)        |
@@ -385,22 +392,22 @@ main process needs to tell the renderer that a segment is open, whatever the eng
 
 Tuning meetings, real recognition, F1 unless it says otherwise.
 
-| Branch                     | Result                                                                                                                                                           | Verdict                    |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| 1. Rules                   | 0.464 against 0.286 (small.en), recall up. On test: table above.                                                                                                 | **Ships**                  |
-| 2. Tiny classifier         | 0.504. On test +0.022 [-0.004, 0.051] over the rules, recall -0.023 [-0.043, -0.006]. Plain: 0.406                                                               | No: see below              |
-| 3. MiniLM + linear         | 0.41 to 0.45 at the act level, against 0.66 for the words: mean-pooled vectors lose word order                                                                   | Stopped                    |
-| 4. Pitch rise, last 400 ms | AUC 0.49 to 0.52 per segment, against 0.81 for the words. F1 0.519 with or without pitch, leave one meeting out. Per dialogue act: AUC 0.52, 0.651 against 0.645 | Stopped: one try           |
-| 5. Context lines           | Act level: 0.664 with none, 0.667 with the next line. Would add delay                                                                                            | Stopped                    |
-| 6. Local model refining    | QUEUED                                                                                                                                                           | QUEUED                     |
-| 7. Cloud refining          | gpt-6-luna on test: +0.041 [0.025, 0.065] quiet, +0.008 [-0.008, 0.028] steady                                                                                   | Under the bar              |
-| 8. Engine punctuation      | Table above. Prompts: no effect shown                                                                                                                            | Pick the engine for speech |
+| Branch                     | Result                                                                                                                                                                                                                                      | Verdict                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 1. Rules                   | 0.464 against 0.286 (small.en), recall up. On test: table above.                                                                                                                                                                            | **Ships**                  |
+| 2. Tiny classifier         | 0.504. On test +0.022 [-0.004, 0.051] over the rules, recall -0.023 [-0.043, -0.006]. Plain: 0.406                                                                                                                                          | No: see below              |
+| 3. MiniLM + linear         | 0.41 to 0.45 at the act level, against 0.66 for the words: mean-pooled vectors lose word order                                                                                                                                              | Stopped                    |
+| 4. Pitch rise, last 400 ms | AUC 0.49 to 0.52 per segment, against 0.81 for the words. F1 0.519 with or without pitch, leave one meeting out. Per dialogue act: AUC 0.52, 0.651 against 0.645                                                                            | Stopped: one try           |
+| 5. Context lines           | Act level: 0.664 with none, 0.667 with the next line. Would add delay                                                                                                                                                                       | Stopped                    |
+| 6. Local model refining    | On test, rule cards. Foundation Models, prompt `v1`: +0.006 [-0.008, 0.018] quiet, -0.012 [-0.030, 0.008] steady. The 1.5B model, the app's prompt: -0.124 [-0.181, -0.082] and -0.035 [-0.066, -0.005]. Qwen3.5 4B and Gemma 4 E4B not run | No: see below              |
+| 7. Cloud refining          | gpt-6-luna on test: +0.041 [0.025, 0.065] quiet, +0.008 [-0.008, 0.028] steady                                                                                                                                                              | Under the bar              |
+| 8. Engine punctuation      | Table above. Prompts: no effect shown                                                                                                                                                                                                       | Pick the engine for speech |
 
 **Why the classifier does not ship.** It is good: hashed word and position n-grams,
 logistic regression, 39 KB, 25 µs a turn on a loaded Mac, no key, no download. On words alone at the
 act level it beats the transcribers' own "?" (F1 0.66 against 0.57). But against the
 rules on real recognition it adds 0.008 to 0.054 F1 depending on the engine, with
-recall lower in seven rooms of eight, and bar 4 says a question missed costs more than a
+recall lower in seven of the first eight rooms, and bar 4 says a question missed costs more than a
 false card. Its recall falls to 0.285 without punctuation, where the rules hold 0.460. It
 would also need CLAUDE.md's first question rule to say something other than "pattern
 matching", and new weights for any change. Its code and trainer stay in the eval, so
@@ -429,6 +436,28 @@ loosely, the same answers withdraw 182 of the 382 cards, 69 of them right: recal
 to 0.292, F1 -0.099 [-0.141, -0.058]. **Do not fix the parser alone.** "Is it factual?"
 is the wrong question for a card every question should get. If the model is to withdraw
 anything, the prompt must ask "is this a question?", as `v1` does here.
+
+**The 1.5B model does remove real cards.** `qwen2.5-1.5b-instruct-q5_k_m` fills the
+search query in, so every answer parses and nothing stops the withdraw. On the 8 test
+meetings, on rule cards, it withdrew 81 cards in a quiet room, 46 of them right, and 37
+in steady sound, 12 of them right. Recall falls from 0.483 to 0.300 and from 0.224 to
+0.179, and F1 by 0.124 [0.082, 0.181] and 0.035 [0.005, 0.066]. Precision does not
+rise. It reaches only installs with a local classifier on disk: this model is the
+default value of `conversationAideModel`, but nothing downloads it. The one way in is
+the opt-in Download button under Settings › AI models › Advanced, or picking another
+downloaded local model there. Without the file the call fails and the card resolves
+locally, so a plain install never sees it.
+
+#176 is the option for Alex, because the withdraw was deliberate: a confident "not
+factual" keeps the card, reads the reply locally, and opens no search by itself. A
+card this verdict removed never reached the search host, so keeping one sends nothing
+new: the suggestion stays for a person to tap. Of the 118 withdrawn cards none read as
+denied locally, so on these meetings no search would have opened anyway.
+
+Foundation Models with `v1` adds nothing: it withdrew 39 cards in a quiet room, 8 of
+them right, for +0.006. Qwen3.5 4B and Gemma 4 E4B were withdrawn from a GPU queue of
+33 jobs, because the best cloud model adds only +0.008 in steady sound and a smaller
+model cannot clear the bar.
 
 **Follow-up, not done: the verdict asks "is this a question?".** The fix would change
 the prompt and let the parser take an empty search query, together. The candidate is
@@ -553,7 +582,8 @@ node scripts/question-eval.mjs bars --a after.json --b before.json \
 
 ### Not done
 
-- Turbo q5_0 is queued behind the GPU lock, so it is not in the tables.
+- Qwen3.5 4B and Gemma 4 E4B as refiners: not run, see "Branches".
+- The final timing run on a quiet machine.
 - The classifier and refiners were tuned on small.en and gpt-transcribe only.
 - No method was tuned on steady sound: its tuning replays were still queued at the
   freeze. Test results in steady sound are all from settings chosen in a quiet room.
