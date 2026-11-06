@@ -43,7 +43,13 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-import { amiMeetingIds, amiReference, annotationsDir, topicNames } from "./lib/topic-corpus.mjs";
+import {
+  amiMeetingIds,
+  amiRecognized,
+  amiReference,
+  annotationsDir,
+  topicNames,
+} from "./lib/topic-corpus.mjs";
 import { createEmbedder } from "./lib/minilm.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -62,6 +68,7 @@ const { values: args, positionals } = parseArgs({
     "min-words": { type: "string", default: "100" },
     timeout: { type: "string" },
     prompt: { type: "string" },
+    replay: { type: "string" },
   },
 });
 
@@ -69,6 +76,17 @@ const command = positionals[0];
 const DIR = annotationsDir(args.ami);
 const CACHE = args.cache;
 const NAMES = topicNames(DIR);
+
+/**
+ * A meeting's turns: its manual transcript, or with `--replay <dir>` what a
+ * recognizer heard (`<dir>/<meeting>.json`, ~/oats-asr-cache/replays/README.md).
+ * Pass `--cache` with it, so recognized text never mixes with the manual runs.
+ */
+function conversationOf(id) {
+  if (!args.replay) return amiReference(DIR, id, NAMES);
+  const { segments } = JSON.parse(fs.readFileSync(path.join(args.replay, `${id}.json`), "utf8"));
+  return amiRecognized(DIR, id, NAMES, segments);
+}
 
 function cachePath(...parts) {
   const file = path.join(CACHE, ...parts);
@@ -133,7 +151,7 @@ async function snapshots() {
     const file = cachePath("snapshots", `${id}.json`);
     if (fs.existsSync(file)) continue;
     const started = performance.now();
-    const conversation = amiReference(DIR, id, NAMES);
+    const conversation = conversationOf(id);
     const snapshot = await replay(ConversationTopicTracker, conversation, embedder);
     writeJson(file, { id, snapshot });
     console.log(
@@ -149,7 +167,7 @@ function loadMeetings() {
   for (const id of meetingIds()) {
     const stored = readJson(path.join(CACHE, "snapshots", `${id}.json`));
     if (!stored) throw new Error(`No snapshot for ${id}: run the snapshots stage first`);
-    const conversation = amiReference(DIR, id, NAMES);
+    const conversation = conversationOf(id);
     const turns = new Map(
       conversation.utterances.map((utterance) => [utterance.id, utterance.text])
     );
