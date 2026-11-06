@@ -10,18 +10,22 @@ the cloud, or shows that nothing beats round 1.
 **On device: Parakeet Ultra on the Neural Engine, behind Silero, with the 8 s of
 audio before each segment.** It beats both Whisper defaults in both rooms and in a
 room AMI never recorded, on the Neural Engine, at a read of about 100 ms on a loaded
-Mac. @@CTXLINE@@ The bar is cleared on what could be read: **one step of the planned
-test did not run.** Turbo and `small.en` on the 8 unseen meetings were withdrawn when
+Mac. The 8 s before each segment add 2.6 points in the quiet room and 7.4 with steady
+sound on 16 official meetings, 16 of 16, with no delay on a final and no extra compute.
+The bar is cleared on what could be read: **one step of the planned test did not run.** Turbo and `small.en` on the 8 unseen meetings were withdrawn when
 testing stopped, so the gain over Whisper there is not measured. DiPCo and the
 Apple comparison below stand in for it.
 
 **In the cloud: `gpt-transcribe` stays**, with server VAD at 0.6 and no extra field.
-Nothing offered beat it. The on-device model now ties or beats the app's cloud path
-on recall, and the cloud keeps higher precision (below).
+Nothing OpenAI offers beat it. The on-device model now beats the app's cloud path on
+13 official meetings: content +6.4 (3.7 to 9.4), 13/13, and +7.8 (5.3 to 10.0), 11/13.
+The cloud keeps a higher content precision, by 1.8 and 4.2 points. Whether a room with
+a key should still go to the cloud is a design question for Alex.
 
-**A second pass at Finish** matters less now. With the audio before each segment the
-live read comes within 0.6 points of the whole read in the quiet room and 3.3 with
-steady sound. Track Y's summary test decides it, against that live text.
+**A second pass at Finish** matters less now. Against the live read with the audio
+before each segment, the whole read adds +0.6 (0.4 to 0.9) in the quiet room and +3.8
+(3.1 to 4.4) with steady sound on 16 meetings. Track Y's summary numbers were measured
+against plain live text, so they overstate it; Y did not run the new text.
 
 **Nothing else earns a change:** enhancement, a neural VAD as the segmenter,
 `contextualStrings`, the OpenAI prompt options, and alexgaoth/oats#165 for recall.
@@ -30,7 +34,7 @@ steady sound. Track Y's summary test decides it, against that live text.
 | --- | --- | --- |
 | quiet room, 8 meetings | +4.9 (3.4 to 6.7), 7/8 | +10.4 (8.1 to 13.2), 8/8 |
 | steady sound, 8 meetings | +15.7 (13.4 to 17.6), 8/8 | +22.8 (19.8 to 25.2), 8/8 |
-| DiPCo U01, 10 sessions | @@T_D@@ | withdrawn |
+| DiPCo U01, 10 sessions | +8.9 (7.6 to 10.1), 10/10 | withdrawn |
 | the 8 unseen meetings | withdrawn | withdrawn |
 | invented phrases an hour, quiet / steady | 1.24 to 0.99 / 2.23 to 0.25 | 0.74 to 0.99 / 1.24 to 0.49 |
 | keeps up (budget 804 ms a read) | 95 ms on this Mac, loaded; about 190 ms estimated on a base M2 | the same |
@@ -39,7 +43,8 @@ steady sound. Track Y's summary test decides it, against that live text.
 
 Intel Macs keep `base.en`: there is no Neural Engine, and the helper is arm64 only.
 Macs before macOS 14 keep Whisper. The app change is three stacked draft PRs: nothing
-turns on by default, and `speechTier.mjs` stays as it is until Alex decides.
+turns on by default, and `speechTier.mjs` stays as it is until Alex decides. The known
+cost: a room on Parakeet has finals only, so the live line shows no partial words yet.
 
 ## The bar and the split, written before the runs
 
@@ -117,7 +122,7 @@ AMI-Cleaned, which is close-talk headset audio, not a far microphone.
 | Apple DictationTranscriber | the same | the same family of OS assets | Apple SDK | none | none | screened |
 | Parakeet TDT 0.6B v3 | sherpa-onnx int8 on CPU (the app's path), MLX, Core ML | 680 MB int8; 470 MB Core ML; 2.5 GB bf16 | CC-BY-4.0 | 19.04 | 9.42 | screened |
 | Parakeet TDT 0.6B v2 | MLX, Core ML | 2.5 GB bf16; about 480 MB Core ML | CC-BY-4.0 | 17.66 | 9.09 | screened |
-| Parakeet Ultra (moondream) | Core ML (FluidAudio); Photon | 1.26 GB; about 650 MB int8 Core ML | CC-BY-4.0 | none | none | screened |
+| Parakeet Ultra (moondream) | Core ML (FluidAudio); Photon | 1.26 GB; 633 MB int8 Core ML | CC-BY-4.0 | none | none | **the winner** |
 | Parakeet Redux (moondream) | MLX, Core ML | 178 MB | CC-BY-4.0 | none | none | screened |
 | Phonon-2, Bark 3.0 | Core ML (FluidAudio) | about 320 to 410 MB | CC-BY-4.0 | none | 9.32 (Phonon-2) | screened; the publishers' own `.bps` and `.fsq` files are not a safe format, so only Core ML |
 | Qwen3-ASR-1.7B | MLX, transformers | 4.7 GB bf16; 2.5 GB 8-bit; 1.6 GB 4-bit | Apache-2.0 | 13.41 | 8.31 | screened, steady sound only |
@@ -246,13 +251,14 @@ marks, at precision 41.6.
 
 | | quiet room | steady sound |
 | --- | --- | --- |
-| Apple SpeechTranscriber | content 71.6 | content 40.2 |
+| Apple SpeechTranscriber | 69.7 / 71.6 / 32.1 | 43.6 / 40.2 / 57.5 |
 | Parakeet Ultra, the helper's gate | 74.4 / 77.7 / 27.6 | 49.1 / 49.5 / 52.0 |
-| **and the 8 s before each segment** | @@T8Q@@ | @@T8S@@ |
+| **and the 8 s before each segment** | **76.3 / 80.7 / 25.7** | **54.3 / 56.5 / 46.9** |
 
-Ultra against Apple: +6.1 (4.4 to 8.1) and +9.3 (7.9 to 11.2), 8/8 in both rooms. On
-the screen meetings Apple sits 3.1 under turbo in both rooms. If that held here, Ultra
-would be about 3 and 6 points over turbo on the unseen meetings. That is an inference,
+Ultra with the 8 s before against Apple: +9.1 (6.8 to 11.3) and +16.3 (13.9 to 19.5),
+8/8 in both rooms. Against the same model with no context: +3.0 (2.2 to 3.6) and +7.1
+(5.8 to 8.6), 8/8. On the screen meetings Apple sits 3.1 under turbo in both rooms. If
+that held here, Ultra would be about 6 and 13 points over turbo. That is an inference,
 not a measurement.
 
 **DiPCo U01: a room AMI never recorded.** Far array, 10 dinner parties, no noise added.
@@ -264,14 +270,14 @@ not a measurement.
 | Granite TurboCTC, int8 ONNX | 53.1 / 51.8 / 48.0 | |
 | Parakeet v3, Core ML | 53.2 / 49.7 / 48.7 | |
 | Parakeet Ultra, the helper's gate | 55.4 / 51.8 / 46.6 | +3.2 (2.2 to 4.3), 9/10; words +6.4 (5.4 to 7.5); WER -5.5 |
-| **and the 8 s before each segment** | @@DP@@ | @@DPT@@ |
+| **and the 8 s before each segment** | **59.3 / 57.5 / 43.1** | +8.9 (7.6 to 10.1), 10/10; words +10.3 (9.1 to 11.5); WER -9.0 |
 | Ultra, whole read | 61.9 / 59.9 / 40.6 | +11.3 (10.2 to 12.3), 10/10 |
 
-So part of the AMI lead was AMI: the steady-sound lead over Whisper does not
-translate, because this corpus has no steady sound. The lead itself survives. With
-pink noise under DiPCo Apple reads 20.6, Ultra 23.6 and Granite 26.0. Granite's lead
-on AMI with steady sound does not carry over to the plain room, and its card lists
-AMI in training.
+**The lead survives outside AMI, and the audio before a segment works here too:** +5.6
+(4.5 to 6.8), 10/10, on the same model, and the whole read adds only +2.4 (1.7 to 3.3)
+over it. With pink noise under DiPCo, no context, Apple reads 20.6, Ultra 23.6 and
+Granite 26.0. Granite's lead on AMI with steady sound does not carry over to the plain
+room, and its card lists AMI in training.
 
 ## The live read: the audio before a segment
 
@@ -298,7 +304,9 @@ Slack is how far before the segment's start a word's first token may fall and st
 count. With none, the first word of a segment is often lost. The row in bold was picked
 here, before any other meeting was read: the most for no delay, with WER at its lowest.
 
-**On all the meetings, behind the helper's gate:** @@CTXALL@@
+**On all the meetings, behind the helper's gate:** content recall, the 16 official meetings pooled: quiet room 80.1 to 82.7, +2.6 (2.0 to 3.2), 16/16; steady sound 52.0 to 59.5, +7.4 (6.6 to 8.3), 16/16. WER -1.7 and -5.4, content precision +2.4 and +7.0. The 5 screen meetings not used to pick the setting show no tuning effect: against turbo +4.5 (3.4 to 5.8) and +16.0 (13.4 to 18.3), 5/5.
+
+**A word can come back twice.** With the slack, a word at a segment's edge is read by both segments: the last word of a segment and the first of the next were the same at 1.4% of joins with no context, and at 6.9% with it. So a segment does not start with the word the last one ended on. The scores above apply that rule to the text (`scripts/engines/drop_repeats.py`); it costs no content and takes WER down 0.3 to 0.5. The helper does it with the token times, and only for a word inside the slack.
 
 The helper as the app runs it (`macos-parakeet-ane`, through `scripts/engines/pcm_shim.mjs`,
 the 3 tune meetings) reads 77.3 / 78.2 / 25.3 and 56.3 / 54.7 / 45.4, with 5 and 2
@@ -431,8 +439,8 @@ new engine on a Mac that has turbo, and it ran at 0.03 of real time (loaded Mac)
 The same model, with the same weights, loses 11 points to a short segment with
 steady sound. Parakeet is a long-context model, and the segmenter's segments
 (2.8 s at the median) give it almost none. The audio before a segment gives most of
-it back live, so the gain to compare is the whole read against that live read: 85.1
-to 85.7 in the quiet room, and 62.9 to 66.2 with steady sound. Cutting with Silero into pieces of up
+it back live, so the gain to compare is the whole read against that live read: on 16
+meetings +0.6 (0.4 to 0.9) in the quiet room and +3.8 (3.1 to 4.4) with steady sound. Cutting with Silero into pieces of up
 to 28 s comes close: 64.5 with steady sound, 84.8 in the quiet room.
 
 **Whether the summaries gain is track Y's test** (at least 5 points of coverage
