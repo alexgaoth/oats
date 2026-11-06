@@ -4,6 +4,7 @@ const sidecarPidFile = require("./sidecarPidFile");
 
 const EXPECTED_BINARY_FRAGMENTS = {
   parakeet: ["sherpa-onnx-ws-", "sherpa-onnx-online-ws-"],
+  "parakeet-ane": ["macos-parakeet-ane"],
   // Not a downloaded sidecar, but it orphans like one: `pactl subscribe` from
   // the Linux microphone-activity detector survives a SIGKILLed app, and a
   // long-lived orphan of it was found still running against a dead instance.
