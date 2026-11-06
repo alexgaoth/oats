@@ -666,7 +666,9 @@ export async function startLocalServer(
     String(contextSize),
     "--jinja",
     // FM_LOCAL_CPU=1: no GPU at all, for accuracy runs while the GPU is taken. Times do not count.
-    ...(process.env.FM_LOCAL_CPU ? ["--n-gpu-layers", "0", "--device", "none"] : ["--n-gpu-layers", "99"]),
+    ...(process.env.FM_LOCAL_CPU
+      ? ["--n-gpu-layers", "0", "--device", "none"]
+      : ["--n-gpu-layers", "99"]),
   ];
   const child = spawn(binary, args, {
     stdio: ["ignore", "pipe", "pipe"],
