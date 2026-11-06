@@ -164,8 +164,9 @@ What each choice was worth, on groups of people held out of training:
 
 ### Result on eval24
 
-The model was frozen (commit a62c11e) before it first read eval24, and this is its
-one run. Lower is better. Δ is paired against main, with its 95% interval over
+The model was frozen before it first read eval24, and this is its one run. The
+file in #170 is that model, byte for byte, and a rerun on #170's code gives the same
+numbers. Lower is better. Δ is paired against main, with its 95% interval over
 meetings.
 
 | 24 meetings, 12.5 h | live Pk | Δ against main | WindowDiff | record Pk | Δ against main | runs (people: 8.0) | boundaries P / R | real change drawn, after | old lines moved an hour |
