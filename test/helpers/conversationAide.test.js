@@ -630,8 +630,10 @@ test("a verdict of not factual keeps the card and reads the reply locally", asyn
   assert.deepEqual(searches, []);
 });
 
-test("a confident not factual does not stop a real denial from searching", async () => {
-  const { session, cards, removed, searches } = harness({
+test("a confident not factual keeps the card and opens no search", async () => {
+  // A card this verdict removed never reached the search host, so keeping one must
+  // send nothing new: the question stays on this computer until a person taps.
+  const { session, cards, removed, events, searches } = harness({
     classify: async () =>
       unanswered({ isFactualQuestion: false, reason: "not_factual", confidence: 0.95 }),
   });
@@ -641,6 +643,21 @@ test("a confident not factual does not stop a real denial from searching", async
   await session.evaluation;
 
   assert.deepEqual(removed, []);
+  assert.equal(latestCard(cards, "q1").state, "denied");
+  const suggestion = events.find((event) => event.kind === "search_suggestion");
+  assert.ok(suggestion);
+  assert.equal(suggestion.metadata.auto, false);
+  assert.equal(latestCard(cards, "q1").suggestionId, suggestion.id);
+  assert.deepEqual(searches, []);
+});
+
+test("a local verdict with no classifier still opens a confirmed denial's search", async () => {
+  const { session, cards, searches } = harness({ classify: null });
+
+  session.onFinalized({ id: "q1", text: "What do you think of Kubernetes?" });
+  session.onFinalized({ id: "r1", text: "I really don't know." });
+  await session.evaluation;
+
   assert.equal(latestCard(cards, "q1").state, "denied");
   assert.equal(searches.length, 1);
 });

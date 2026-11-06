@@ -601,8 +601,7 @@ const BACKCHANNEL =
 
 // A yes/no question is answered by what is a backchannel anywhere else: "Is
 // that okay?" "Yeah." The room said something, and it was the answer.
-const EN_YES =
-  /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
+const EN_YES = /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
 // A plain "no" to one is an answer too, unless the question was what somebody
 // knows: "Do you know what Kubernetes is?" "No." is the confirmed negative the
 // search exists for. "Do we need a remote?" "No." is a decision.
@@ -1078,7 +1077,12 @@ class ConversationAideSession {
   // a card sat at `asked` for the rest of the conversation and a plainly denied
   // question never opened a search, which read as the feature being broken rather
   // than the model being small.
-  async _resolveLocally(candidate, followingContext, trigger) {
+  async _resolveLocally(
+    candidate,
+    followingContext,
+    trigger,
+    { autoSearch = this.autoSearch } = {}
+  ) {
     if (this.closed) return;
     await this.persistence;
     const card = this.cards.get(candidate.id);
@@ -1120,12 +1124,12 @@ class ConversationAideSession {
         reason: local.outcome,
         state: "shown",
         source: "local",
-        auto: this.autoSearch && AUTO_SEARCH_OUTCOMES.has(local.outcome),
+        auto: autoSearch && AUTO_SEARCH_OUTCOMES.has(local.outcome),
       },
     });
     const suggestionId = suggestionEvent?.id ?? suggestionEvent ?? null;
     this._updateCard(candidate.id, { suggestionId, query });
-    if (!this.autoSearch || !AUTO_SEARCH_OUTCOMES.has(local.outcome)) return;
+    if (!autoSearch || !AUTO_SEARCH_OUTCOMES.has(local.outcome)) return;
     try {
       const opened = await this.openSearch({ eventId: suggestionId, question: query, query });
       if (opened !== false) this._updateCard(candidate.id, { searched: true });
@@ -1177,11 +1181,15 @@ class ConversationAideSession {
     // "Not factual" says nothing against a card. An opinion asked is still a
     // question, and every question gets a card (CLAUDE.md, first question rule).
     // Withdrawing on this verdict cost more than it saved: on 4 hours of AMI
-    // meetings the default 1.5B model withdrew 81 cards in a quiet room and 46 of
-    // them were right, taking recall from 0.48 to 0.30 (docs/question-eval.md). So
-    // it resolves locally, as a malformed verdict does, and the card stays.
-    if (!assessment.isFactualQuestion) {
-      await this._resolveLocally(candidate, followingContext, trigger);
+    // meetings the 1.5B model Settings offers withdrew 81 cards in a quiet room and
+    // 46 of them were right (docs/question-eval.md). So the card stays and the
+    // reply is read locally.
+    //
+    // It opens no search by itself. A card this verdict removed never reached the
+    // search host, so keeping one must not send anything new: the suggestion is
+    // there for a person to tap.
+    if (!assessment.isFactualQuestion && assessment.confidence >= this.confidenceThreshold) {
+      await this._resolveLocally(candidate, followingContext, trigger, { autoSearch: false });
       return;
     }
 
