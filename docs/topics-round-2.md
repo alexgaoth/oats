@@ -405,6 +405,21 @@ was chosen on 11 learn meetings (Opus 4.13 / 0.54 to 4.23 / 0.45). It takes the
 invented facts under the bar in a quiet room. With steady sound no model clears it:
 the words are gone.
 
+## Decisions for Alex
+
+1. **The change detector (#170): yes.** In a room, in English. It is the largest gain
+   for a person with no key, at no cost, and it also takes the record from 0.331 to
+   0.257 for everyone. It draws fewer topics than people do (4.3 against 8.0); if
+   that feels thin in use, the threshold is one number.
+2. **Gists: yes with a key, and they need a surface.** Opus 5.5 (4.44, 0.27 invented)
+   or gpt-6.1-sol (4.31, 0.19), one request per topic at Finish with the prompt for
+   recognized text, in the Intelligence panel. They carry over a quiet room and not
+   steady sound (3.3, about 1 invented fact), so a recording that sounded bad should
+   skip them. This track built no UI.
+3. **Gists on this Mac: not by the bar.** Gemma 4 E4B's are careful and thin (3.62,
+   0.17 invented). Alex's call whether careful and thin is worth showing. A quote is
+   not a substitute (1.3 to 1.6).
+
 ## Reproduce
 
 Public data only. `AMI=~/oats-asr-cache/AMI`, `ICSI=~/oats-asr-cache/ICSI/nxt/ICSIplus`
