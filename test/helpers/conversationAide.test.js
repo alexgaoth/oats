@@ -80,6 +80,225 @@ test("candidate filter accepts factual forms and excludes commands, greetings, a
   assert.equal(isQuestionCandidate("x".repeat(601) + "?"), false);
 });
 
+test("a question with no question mark is found by its shape", () => {
+  // Recognition misses about half of its question marks (docs/question-eval.md).
+  // Each of these is a real AMI meeting's question, or the same shape.
+  for (const text of [
+    "Is that alright",
+    "do we need a remote",
+    "So do we take these off",
+    "but is it practical to have voice recognition in a remote control",
+    "Are we free to take notes",
+    "Would that be enough to fuel it",
+    "Does anybody know",
+    "Can I just draw the face",
+    "Should it be more like a status of these meetings",
+    "any other thoughts about the physical appearance",
+    "Um any last comments",
+    "anything else",
+    "and how much does that cost",
+    "What do you think",
+    "That sounds good. What about the buttons",
+    "I agree with that, but can we afford it",
+    "yeah but is it cheap enough",
+    "The price is high, is that okay",
+    "it fits the budget, doesn't it",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+});
+
+test("a statement with a question word in it gets no card", () => {
+  // Nine in ten false cards on AMI meetings were this class.
+  for (const text of [
+    "That's what I think",
+    "I know how it works",
+    "when you press the button it turns on",
+    "What I did was look at the market",
+    "How it works is quite simple",
+    "we still have to decide which one",
+    "the button which turns it on",
+    "I don't know where we'll be going with that",
+    "so that's why we went for rubber",
+    "that's who I talked to",
+    "so do I",
+    "neither did we",
+    "and that is it",
+  ]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+});
+
+test("long runs of a filler stay quick at the length cap", () => {
+  // A hum of sixty m's once meant half an hour of a frozen renderer, on one final
+  // segment. Backtracking fails by minutes, not milliseconds, so the fastest of
+  // three runs tells it from a busy machine.
+  const fastest = (work) => {
+    let best = Infinity;
+    for (let run = 0; run < 3; run += 1) {
+      const start = performance.now();
+      work();
+      best = Math.min(best, performance.now() - start);
+    }
+    return best;
+  };
+  for (const filler of ["m", "um", "hmm", "uh", "ah", "oh", "ok", "no", "uh ", "mm-hmm "]) {
+    const count = Math.floor(590 / filler.length);
+    for (const text of [
+      `${filler.repeat(count)} good`,
+      `${filler.repeat(count)}?x`,
+      `good ${filler.repeat(count)}`,
+    ]) {
+      assert.ok(fastest(() => isQuestionCandidate(text)) < 5, `${filler} at ${text.length}`);
+      assert.ok(fastest(() => extractQuestionSentence(text)) < 5, `${filler} quoted`);
+    }
+  }
+});
+
+test("a long hum is noise when it is alone, and not when words follow it", () => {
+  assert.equal(isQuestionCandidate(`${"m".repeat(590)}?`), false);
+  assert.equal(isQuestionCandidate(`${"um".repeat(290)}?`), false);
+  assert.equal(isQuestionCandidate("Mmhmm?"), false);
+  assert.equal(isQuestionCandidate("Mm-hmm?"), false);
+  assert.equal(isQuestionCandidate("Ummm-hmm?"), false);
+  assert.equal(isQuestionCandidate("Hmmm, okay, yeah?"), false);
+  assert.equal(isQuestionCandidate(`${"m".repeat(40)} is it good?`), true);
+});
+
+test("a relative clause and a heading do not ask, and modals ask before a noun", () => {
+  for (const text of [
+    "We still have the user interface, which is all the buttons",
+    "Which is an expectation.",
+    "and then maybe an LCD, which has been put forward",
+    "How to use your remote.",
+    "What to say next.",
+  ]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+  for (const text of [
+    "Would the solar power be enough to fuel it",
+    "Does having both really raise our costs",
+    "Did everyone get this",
+    "Which one is cheaper",
+    "and which kind of battery do we want",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+  }
+});
+
+test("two questions in a row are quoted together, a statement between them is not", () => {
+  assert.equal(
+    extractQuestionSentence("We have the numbers. What does it cost? Is it cheaper?"),
+    "What does it cost? Is it cheaper?"
+  );
+  assert.equal(
+    extractQuestionSentence("What does it cost? We have the numbers. Is it cheaper?"),
+    "Is it cheaper?"
+  );
+});
+
+test("a short word that only got a question mark gets no card", () => {
+  for (const text of ["Right?", "Yeah?", "Really?", "Sorry?", "What?", "Mm-hmm?", "Okay, okay?"]) {
+    assert.equal(isQuestionCandidate(text), false, text);
+  }
+  assert.equal(isQuestionCandidate("Right, so what now?"), true);
+});
+
+test("the quote is the sentence that asks, with or without its question mark", () => {
+  assert.equal(
+    extractQuestionSentence("We looked at the market. Do we need a remote. It costs a lot."),
+    "Do we need a remote."
+  );
+  assert.equal(
+    extractQuestionSentence("That's what I think. I know how it works."),
+    "That's what I think. I know how it works."
+  );
+});
+
+test("a yes/no question is answered by a yes", () => {
+  const reply = (text) => [{ id: "r", text }];
+  const outcome = (question, text) => assessResponseLocally(reply(text), question).outcome;
+  assert.equal(outcome("Is that okay?", "Yeah."), "answered");
+  assert.equal(outcome("Do we need a remote", "Yep"), "answered");
+  assert.equal(outcome("Can we afford it?", "Sure."), "answered");
+  // No question to read it against, or one a yes does not answer: as before.
+  assert.equal(assessResponseLocally(reply("Yeah.")).outcome, "silence");
+  assert.equal(outcome("What is the price?", "Yeah."), "silence");
+  // A backchannel that is not a yes.
+  assert.equal(outcome("Is that okay?", "Hmm."), "silence");
+});
+
+test("a plain no to a yes/no question is an answer, unless it asked what somebody knows", () => {
+  const reply = (text) => [{ id: "r", text }];
+  const outcome = (question, text) => assessResponseLocally(reply(text), question).outcome;
+  assert.equal(outcome("Do we need a remote?", "No."), "answered");
+  assert.equal(outcome("Is it expensive?", "Nope."), "answered");
+  // These are the confirmed negative the search exists for.
+  assert.equal(outcome("Do you know what Kubernetes is?", "No."), "denied");
+  assert.equal(outcome("Have you heard of Kubernetes?", "No."), "denied");
+  assert.equal(outcome("What is Kubernetes?", "No."), "denied");
+  assert.equal(outcome("Do we need a remote?", "No idea."), "denied");
+  assert.equal(outcome("Do we need a remote?", "I don't know."), "denied");
+});
+
+test('a "no" inside a longer reply opens no search', () => {
+  const outcome = (text) => assessResponseLocally([{ id: "r", text }]).outcome;
+  assert.notEqual(outcome("There's no way we can do that for twelve euros."), "denied");
+  assert.notEqual(outcome("No, I think blue is better for this."), "denied");
+  assert.notEqual(outcome("We have no budget left for that."), "denied");
+  assert.notEqual(outcome("I'm saying no to the whole plan."), "denied");
+  // Still denials: the reply opens with it and goes on to say it is not sure.
+  assert.equal(outcome("No, I'm not sure."), "denied");
+  assert.equal(outcome("No, not sure at all."), "denied");
+});
+
+test("a reply still being said is not silence", async () => {
+  let speaking = true;
+  let time = 0;
+  const timers = new Map();
+  let serial = 0;
+  const cards = [];
+  const session = new ConversationAideSession({
+    noteId: 1,
+    classify: null,
+    silenceDelayMs: 8000,
+    now: () => time,
+    isSpeaking: () => speaking,
+    setTimer: (callback, ms) => {
+      serial += 1;
+      timers.set(serial, { callback, at: time + ms });
+      return serial;
+    },
+    clearTimer: (id) => timers.delete(id),
+    onCard: (card) => cards.push(card),
+  });
+  const advance = async (ms) => {
+    const end = time + ms;
+    for (;;) {
+      const next = [...timers.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (!next || next[1].at > end) break;
+      timers.delete(next[0]);
+      time = next[1].at;
+      next[1].callback();
+      await session.evaluation;
+    }
+    time = end;
+  };
+  session.onFinalized({ id: "q1", text: "What is the price?" });
+  await advance(12000);
+  assert.equal(latestCard(cards, "q1").state, "asked");
+  speaking = false;
+  session.onFinalized({ id: "r1", text: "Twelve euros and fifty cents for each one of them." });
+  await session.evaluation;
+  assert.equal(latestCard(cards, "q1").state, "answered");
+
+  // Words that never turn final do not hold a card for ever.
+  speaking = true;
+  session.onFinalized({ id: "q2", text: "What is the weight?" });
+  await advance(40000);
+  assert.equal(latestCard(cards, "q2").state, "silence");
+});
+
 test("classifier parser enforces the complete strict schema and confidence range", () => {
   assert.deepEqual(parseQuestionAssessment(JSON.stringify(unanswered())), unanswered());
   assert.equal(parseQuestionAssessment('{"isFactualQuestion":true}'), null);
