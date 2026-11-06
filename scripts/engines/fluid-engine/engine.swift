@@ -39,10 +39,48 @@ func units(_ name: String) -> MLComputeUnits? {
   }
 }
 
+/// Does a segment hold speech? Silero at the threshold in one 256 ms chunk.
+func holdsSpeech(_ vad: VadManager, _ wav: String, _ threshold: Float) async throws -> Bool {
+  let results = try await vad.process(URL(fileURLWithPath: wav))
+  return results.contains { $0.probability >= threshold }
+}
+
 @main
 struct Engine {
   static func main() async {
     do {
+      // `--vad-models <dir>`: Silero on Core ML reads each segment first, and a
+      // segment with no speech comes back empty. With `--vad-only` nothing else
+      // runs: the answer is "speech" or nothing, for `--vad-gate`.
+      let threshold = Float(flag("vad-threshold", "0.5")) ?? 0.5
+      let vadModels = flag("vad-models", "")
+      let vad: VadManager? =
+        vadModels.isEmpty
+        ? nil
+        : try await VadManager(
+          config: VadConfig(defaultThreshold: threshold),
+          modelDirectory: URL(fileURLWithPath: vadModels, isDirectory: true))
+      if CommandLine.arguments.contains("--vad-only"), let vad {
+        say(["ready": true])
+        while let line = readLine() {
+          guard let data = line.data(using: .utf8),
+            let request = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let id = request["id"], let wav = request["wav"] as? String
+          else { continue }
+          do {
+            if CommandLine.arguments.contains("--vad-stats") {
+              let results = try await vad.process(URL(fileURLWithPath: wav))
+              say(["id": id, "text": results.map { String(format: "%.2f", $0.probability) }.joined(separator: " ")])
+              continue
+            }
+            let speech = try await holdsSpeech(vad, wav, threshold)
+            say(["id": id, "text": speech ? "speech" : ""])
+          } catch {
+            say(["id": id, "error": "\(error)"])
+          }
+        }
+        return
+      }
       let chosen = version(flag("version", "v3"))
       let directory = URL(fileURLWithPath: flag("models", ""), isDirectory: true)
       let models = try await AsrModels.downloadAndLoad(
@@ -93,6 +131,10 @@ struct Engine {
           let id = request["id"], let wav = request["wav"] as? String
         else { continue }
         do {
+          if let vad, try await !holdsSpeech(vad, wav, threshold) {
+            say(["id": id, "text": ""])
+            continue
+          }
           var state = TdtDecoderState.make(decoderLayers: await manager.decoderLayerCount)
           let result = try await manager.transcribe(
             URL(fileURLWithPath: wav), decoderState: &state)

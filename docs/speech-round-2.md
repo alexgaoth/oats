@@ -314,6 +314,38 @@ TEN VAD was not run: its license adds a no-compete condition to Apache-2.0
 ("You may not Deploy the ten-vad in a way that competes with Agora's offerings"),
 which an MIT app cannot pass on.
 
+**A gate that needs no whisper-server.** Parakeet has no VAD of its own, and it
+writes short phrases into silence. Silero in front of it, as a yes or no on each
+segment, keeps the words and cuts the phrases. Parakeet Ultra, the 8 meetings:
+
+| gate | quiet room: content, segments with no speech that came back with text | steady sound: content, the same |
+| --- | --- | --- |
+| none | 83.0, 33 | 55.1, 15 |
+| whisper-server's VAD, as `--vad-gate` | 83.0, 23 | 55.1, 15 |
+| Silero v6 ONNX at the app's numbers (`scripts/engines/silero_gate.py`) | 82.9, 23 | 55.0, 10 |
+| **FluidAudio's Silero on Core ML: 2 chunks of 256 ms in a row at 0.85** | 82.9, 27 | 55.0, 10 |
+
+The last rule was picked on the 3 tune meetings from five, and it is what a helper
+can run with no second model server (1 MB, MIT). On the 8 unseen meetings it takes
+33 to 25 and 28 to 18 with content unchanged (77.7, 49.5), and on DiPCo 7 to 4 with
+content 52.0 to 51.8.
+
+## alexgaoth/oats#165, the DC-offset filter, on the Mac path
+
+The PR applied in a throwaway worktree, the filter on, `small.en`, the 8 meetings,
+against the same run without it. AMI's microphones have no DC offset to remove, so
+this shows only what the filter costs a Mac that does not need it.
+
+| | quiet room | steady sound |
+| --- | --- | --- |
+| content recall | 74.7 to 74.9, +0.2 (-0.5 to +0.9) | 40.1 to 40.1, 0.0 (-0.6 to +0.5) |
+| WER | 30.4 to 30.2, -0.2 (-0.8 to +0.4) | 58.5 to 58.5, 0.0 (-0.5 to +0.3) |
+| segments | 3,284 to 3,303 | 3,584 to 3,633 |
+| speech inside a segment | 98.3% to 97.8% | 84.8% to 82.6% |
+
+**Recall and WER do not change. The segmenter does:** the floors sit a little lower,
+1% more segments close, and only 20 to 30% of segments keep the same boundaries.
+
 ## Not run
 
 - **Whisper decode settings, and prompts for local Whisper.** Withdrawn when the
