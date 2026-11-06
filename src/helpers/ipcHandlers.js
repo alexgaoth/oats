@@ -113,6 +113,10 @@ const REALTIME_PROVIDER_CATALOG = [
 // Meeting capture runs at 24 kHz (see meetingRecordingStore AudioContext); cloud
 // streaming providers must be told the true PCM rate or they misread the audio.
 const MEETING_STREAM_SAMPLE_RATE = 24000;
+/** A Neural Engine read hears 8 s before its segment, at 16 kHz. */
+const ROOM_CONTEXT_SAMPLES = 8 * 16000;
+/** What a room keeps in memory: that, the longest segment, and a backlog of reads. */
+const ROOM_RECENT_SECONDS = 60;
 
 function parseAttendees(raw) {
   if (!raw) return [];
@@ -5640,6 +5644,7 @@ class IPCHandlers {
       const { SpeechSegmenter, SAMPLE_RATE } = await import("./speechSegmenter.mjs");
       const { PartialScheduler } = await import("./partialScheduler.mjs");
       const { AudioClock, speechChanges } = await import("./transcriptLag.mjs");
+      const { RoomAudioWindow } = await import("./roomAudioWindow.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
       const stream = fs.createWriteStream(audioPath);
@@ -5654,6 +5659,7 @@ class IPCHandlers {
         queue: [],
         draining: null,
         audio: { path: audioPath, stream, bytes: 0 },
+        recent: new RoomAudioWindow(ROOM_RECENT_SECONDS * SAMPLE_RATE),
         clock: new AudioClock(SAMPLE_RATE),
         speechChanges,
         speechOpen: null,
@@ -5667,6 +5673,7 @@ class IPCHandlers {
       session.audio.stream.write(pcm16k);
       session.audio.bytes += pcm16k.length;
       const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
+      session.recent.push(samples);
       const closed = session.segmenter.push(samples);
       // When this audio reached main: what every moment sent below is counted
       // back from, so a moment can come out late but never early.
@@ -5744,24 +5751,35 @@ class IPCHandlers {
         }
       );
     };
-    // Parakeet on the Neural Engine hears a raised segment too, as it was measured:
-    // with steady sound the raise is worth half a point (docs/speech-round-2.md).
-    const transcribeInRoomParakeet = async (pcm) => {
-      let audio = pcm;
-      if (this.parakeetManager.usesNeuralEngine(meetingLocalModel)) {
-        const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
-        const raised = raiseQuietSegment(
-          new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1)
-        );
-        audio = Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength);
+    // Parakeet on the Neural Engine, as it was measured (docs/speech-round-2.md): it
+    // hears the seconds before a segment, and all of it raised as one. Those seconds
+    // are worth 3 points of content in a quiet room and 8 with steady sound, and
+    // cost no time: the model reads a fixed window anyway.
+    const transcribeInRoomParakeet = async (pcm, session, startSample) => {
+      if (!this.parakeetManager.usesNeuralEngine(meetingLocalModel)) {
+        return this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
+          model: meetingLocalModel,
+        });
       }
-      return this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(audio), {
-        model: meetingLocalModel,
-      });
+      const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
+      const segment = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1);
+      const before = session.recent.before(startSample, ROOM_CONTEXT_SAMPLES);
+      const whole = new Int16Array(before.length + segment.length);
+      whole.set(before);
+      whole.set(segment, before.length);
+      const raised = raiseQuietSegment(whole);
+      const bytes = Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength);
+      return this.parakeetManager.transcribeLocalParakeet(
+        pcm16ToWav(bytes.subarray(before.length * 2)),
+        {
+          model: meetingLocalModel,
+          audioBefore: bytes.subarray(0, before.length * 2),
+        }
+      );
     };
-    const transcribeInRoomAudio = async (pcm, steadyFloor) => {
+    const transcribeInRoomAudio = async (pcm, steadyFloor, session, startSample) => {
       const result = await (meetingLocalProvider === "nvidia"
-        ? transcribeInRoomParakeet(pcm)
+        ? transcribeInRoomParakeet(pcm, session, startSample)
         : transcribeInRoomWhisper(pcm, steadyFloor));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
       return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;
@@ -5800,7 +5818,9 @@ class IPCHandlers {
       let read = false;
       transcribeInRoomAudio(
         Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength),
-        session.segmenter.steadyFloor
+        session.segmenter.steadyFloor,
+        session,
+        openAt ?? 0
       )
         .then((result) => {
           read = Boolean(result?.success);
@@ -5844,7 +5864,12 @@ class IPCHandlers {
       );
       let sent = false;
       try {
-        const result = await transcribeInRoomAudio(pcm, segment.steadyFloor);
+        const result = await transcribeInRoomAudio(
+          pcm,
+          segment.steadyFloor,
+          session,
+          segment.startSample
+        );
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
         meetingLocalTranscript = meetingLocalTranscript

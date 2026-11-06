@@ -14,6 +14,7 @@ const { resolveBinaryPath, gracefulStopProcess } = require("../utils/serverUtils
 
 const BINARY_NAME = "macos-parakeet-ane";
 const SIDECAR_NAME = "parakeet-ane";
+const SAMPLE_RATE = 16000;
 /** macOS 14 is Darwin 23. FluidAudio and this model start there. */
 const MIN_DARWIN_MAJOR = 23;
 /** The first load on a Mac compiles the model for its Neural Engine (48 s on an M5 Pro). */
@@ -155,10 +156,17 @@ class ParakeetAne {
     this.pending.clear();
   }
 
-  /** @param {Buffer} wav 16 kHz mono 16-bit @returns {Promise<string>} */
-  async transcribe(wav) {
+  /**
+   * @param {Buffer} wav 16 kHz mono 16-bit
+   * @param {Buffer} [before] the audio just before it, as context: the helper keeps
+   *   only the words of the WAV
+   * @returns {Promise<string>}
+   */
+  async transcribe(wav, before = null) {
     await this.start();
-    const pcm = pcmFromWav(wav).toString("base64");
+    const segment = pcmFromWav(wav);
+    const pcm = (before ? Buffer.concat([before, segment]) : segment).toString("base64");
+    const keepFrom = before ? before.length / 2 / SAMPLE_RATE : undefined;
     const helper = this.process;
     if (!helper) throw new Error(`${BINARY_NAME} exited`);
     return new Promise((resolve, reject) => {
@@ -168,7 +176,7 @@ class ParakeetAne {
         reject(new Error(`${BINARY_NAME} did not answer`));
       }, READ_TIMEOUT_MS);
       this.pending.set(id, { resolve, reject, timer });
-      helper.stdin.write(`${JSON.stringify({ id, pcm })}\n`);
+      helper.stdin.write(`${JSON.stringify({ id, pcm, keepFrom })}\n`);
     });
   }
 
