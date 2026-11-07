@@ -357,20 +357,98 @@ function downloadFile(url, dest, retryCount = 0) {
   });
 }
 
+
+// Reject archive entries that would escape the destination directory.
+function assertSafeArchivePaths(names, archivePath) {
+  for (const name of names) {
+    const normalized = name.replace(/\\/g, "/");
+    if (
+      normalized.startsWith("/") ||
+      /^[a-zA-Z]:/.test(normalized) ||
+      normalized.split("/").includes("..")
+    ) {
+      throw new Error(`Unsafe path in archive ${archivePath}: ${name}`);
+    }
+  }
+}
+
+function sha256FileSync(filePath) {
+  const crypto = require("crypto");
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+// Skip-gate helper: returns true only when filePath exists and matches the pin
+// (or no pin is configured). A pinned mismatch is deleted on the spot so a
+// later run cannot mistake a tampered binary for a completed download.
+function verifyExistingOrRemove(filePath, expectedHex, label) {
+  if (!fs.existsSync(filePath)) return false;
+  if (!expectedHex) return true;
+  const actual = sha256FileSync(filePath);
+  if (actual === expectedHex.toLowerCase()) return true;
+  console.error(
+    `[${label}] Existing ${path.basename(filePath)} failed SHA256 verification ` +
+      `(expected ${expectedHex.slice(0, 12)}..., got ${actual.slice(0, 12)}...); removing it.`
+  );
+  fs.unlinkSync(filePath);
+  return false;
+}
+
+// Verifies sourcePath against the pin BEFORE it lands at outputPath, then
+// re-verifies the installed copy. Any mismatch removes the output and throws:
+// a bad binary never survives at the install location.
+async function installVerifiedFile(sourcePath, outputPath, expectedHex, label) {
+  if (expectedHex) {
+    await verifySha256(sourcePath, expectedHex, label);
+  }
+  fs.copyFileSync(sourcePath, outputPath);
+  try {
+    if (expectedHex) {
+      await verifySha256(outputPath, expectedHex, label);
+    }
+  } catch (err) {
+    fs.rmSync(outputPath, { force: true });
+    throw err;
+  }
+}
+
+async function verifySha256(filePath, expectedHex, label) {
+  const crypto = require("crypto");
+  const hash = crypto.createHash("sha256");
+  await new Promise((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .on("data", (d) => hash.update(d))
+      .on("end", resolve)
+      .on("error", reject);
+  });
+  const actual = hash.digest("hex");
+  if (actual !== expectedHex.toLowerCase()) {
+    throw new Error(
+      `[${label}] SHA256 mismatch for ${path.basename(filePath)}: expected ${expectedHex}, got ${actual}. Refusing to use an unexpected binary.`
+    );
+  }
+  console.log(`  [${label}] SHA256 verified (${actual.slice(0, 12)}...)`);
+}
+
 async function extractZip(zipPath, destDir) {
   if (process.platform === "win32") {
     // Use unzipper package on Windows for better path handling
     const unzipper = require("unzipper");
+    const dir = await unzipper.Open.file(zipPath);
+    assertSafeArchivePaths(dir.files.map((f) => f.path), zipPath);
     await fs
       .createReadStream(zipPath)
       .pipe(unzipper.Extract({ path: destDir }))
       .promise();
   } else {
+    const listing = execSync(`unzip -Z1 "${zipPath}"`, { encoding: "utf8" });
+    assertSafeArchivePaths(listing.split("\n").filter(Boolean), zipPath);
     execSync(`unzip -o "${zipPath}" -d "${destDir}"`, { stdio: "inherit" });
   }
 }
 
 function extractTarGz(tarPath, destDir) {
+  const listing = execSync(`tar -tzf "${tarPath}"`, { encoding: "utf8" });
+  assertSafeArchivePaths(listing.split("\n").filter(Boolean), tarPath);
   execSync(`tar -xzf "${tarPath}" -C "${destDir}"`, { stdio: "inherit" });
 }
 
@@ -453,6 +531,11 @@ function cleanupFiles(binDir, prefix, keepPrefix) {
 }
 
 module.exports = {
+  assertSafeArchivePaths,
+  verifySha256,
+  sha256FileSync,
+  verifyExistingOrRemove,
+  installVerifiedFile,
   downloadFile,
   extractArchive,
   extractZip,

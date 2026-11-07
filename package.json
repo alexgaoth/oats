@@ -40,6 +40,15 @@
     "build:linux:deb": "npm run build:renderer && electron-builder --linux deb",
     "build:linux:rpm": "npm run build:renderer && electron-builder --linux rpm",
     "build:linux:tar": "npm run build:renderer && electron-builder --linux tar.gz",
+    "compile:winkeys": "node scripts/build-windows-key-listener.js",
+    "compile:winpaste": "node scripts/build-windows-fast-paste.js",
+    "prebuild:win": "npm run download:whisper-cpp -- --platform win32 --arch x64 && npm run download:default-whisper-model && npm run download:llama-server -- --platform win32 --arch x64 && npm run download:sherpa-onnx -- --platform win32 --arch x64 && npm run download:qdrant -- --platform win32 --arch x64 && npm run download:meeting-aec-helper -- --platform win32 --arch x64 && npm run download:whisper-vad-model && npm run download:embedding-model -- --for-build && npm run download:diarization-models && npm run download:nircmd -- --all && npm run download:text-monitor -- --platform win32 && npm run download:windows-fast-paste -- --all && npm run download:windows-key-listener -- --all && npm run download:windows-mic-listener -- --all && npm run download:windows-system-audio-helper -- --all",
+    "build:win": "npm run build:renderer && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
+    "download:nircmd": "node scripts/download-nircmd.js",
+    "download:windows-fast-paste": "node scripts/download-windows-fast-paste.js",
+    "download:windows-key-listener": "node scripts/download-windows-key-listener.js",
+    "download:windows-mic-listener": "node scripts/download-windows-mic-listener.js",
+    "download:windows-system-audio-helper": "node scripts/download-windows-system-audio-helper.js",
     "prepack": "npm run compile:native && npm run download:whisper-cpp && npm run download:default-whisper-model && npm run download:llama-server && npm run download:sherpa-onnx && npm run download:qdrant && npm run download:meeting-aec-helper && npm run download:whisper-vad-model && npm run download:diarization-models",
     "pack": "npm run build:renderer && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
     "predist": "npm run compile:native && npm run download:whisper-cpp && npm run download:default-whisper-model && npm run download:llama-server && npm run download:sherpa-onnx && npm run download:qdrant && npm run download:meeting-aec-helper && npm run download:whisper-vad-model && npm run download:diarization-models",
@@ -81,7 +90,8 @@
     "i18n:check": "node scripts/check-i18n.js && node scripts/check-missing-keys.js",
     "perf:baseline": "node scripts/perf-baseline.js",
     "preview": "cd src && vite preview",
-    "clean": "node cleanup.js"
+    "clean": "node cleanup.js",
+    "download:text-monitor": "node scripts/download-text-monitor.js"
   },
   "keywords": [
     "dictation",
