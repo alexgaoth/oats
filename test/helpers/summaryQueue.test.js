@@ -400,3 +400,123 @@ test("the check counts the context the server on this Mac is started with", () =
   const size = Number(/const SERVER_CONTEXT_SIZE = (\d+);/.exec(source)?.[1]);
   assert.equal(size, queue.LOCAL_CONTEXT_TOKENS);
 });
+
+// A local answer cut at a limit (helpers/localAnswerLimit.js) arrives with its
+// reason: the context filled ("too-long"), or the answer reached its own limit
+// ("output-limit"). Only the context is the conversation's length.
+
+test("a reason from the model on this Mac is read before its words", () => {
+  const cut = (code) =>
+    Object.assign(new Error("Inference failed: The local model stopped at its output limit"), {
+      code,
+    });
+  assert.equal(queue.summaryFailureKind(cut(queue.SUMMARY_TOO_LONG), "local"), "too-long");
+  assert.equal(queue.summaryFailureKind(cut(queue.SUMMARY_OUTPUT_LIMIT), "local"), "output-limit");
+  assert.equal(queue.summaryFailureKind(cut(undefined), "local"), "other");
+  assert.equal(queue.summaryFailureKind(cut(queue.SUMMARY_OUTPUT_LIMIT), "providers"), "other");
+  assert.equal(queue.summaryFailureKind(cut(queue.SUMMARY_OUTPUT_LIMIT), "self-hosted"), "other");
+});
+
+// What a failure that would repeat is remembered by: the conversation, the
+// transcript it was written from, the model and the context.
+
+const FAILED = {
+  id: 5,
+  source: "61452-[{\"id\":\"s1\"",
+  model: "local:gemma-4-e4b-it-q4_k_m",
+  context: 16384,
+  kind: "too-long",
+};
+
+test("a remembered failure stands only while nothing it depends on changed", () => {
+  const list = queue.withSummaryFailure([], FAILED);
+  const now = { id: 5, source: FAILED.source, model: FAILED.model, context: 16384 };
+  assert.equal(queue.standingSummaryFailure(list, now), "too-long");
+  assert.equal(queue.standingSummaryFailure(list, { ...now, id: 6 }), null);
+  assert.equal(queue.standingSummaryFailure(list, { ...now, source: "61900-x" }), null);
+  assert.equal(
+    queue.standingSummaryFailure(list, { ...now, model: "local:gemma-4-12b-it-qat-q4_0" }),
+    null
+  );
+  assert.equal(queue.standingSummaryFailure(list, { ...now, model: "providers:openai" }), null);
+  assert.equal(queue.standingSummaryFailure(list, { ...now, context: 32768 }), null);
+  assert.equal(queue.standingSummaryFailure([], now), null);
+});
+
+test("the remembered failures are read forgivingly, one per conversation, at most 200", () => {
+  assert.deepEqual(queue.readSummaryFailures(null), []);
+  assert.deepEqual(queue.readSummaryFailures("{"), []);
+  assert.deepEqual(queue.readSummaryFailures('{"id":1}'), []);
+  const raw = JSON.stringify([
+    FAILED,
+    { ...FAILED, kind: "output-limit" },
+    { ...FAILED, id: 0 },
+    { ...FAILED, id: 7, kind: "other" },
+    { ...FAILED, id: 8, context: "big" },
+    null,
+  ]);
+  assert.deepEqual(queue.readSummaryFailures(raw), [{ ...FAILED, kind: "output-limit" }]);
+  let list = [];
+  for (let id = 1; id <= queue.SUMMARY_FAILURES_MAX + 5; id += 1) {
+    list = queue.withSummaryFailure(list, { ...FAILED, id });
+  }
+  assert.equal(list.length, queue.SUMMARY_FAILURES_MAX);
+  assert.equal(list[0].id, 6);
+  assert.deepEqual(queue.withoutSummaryFailure(list, 6)[0].id, 7);
+});
+
+test("a summary is newer work when it was written from the transcript stored now", () => {
+  const transcript = '[{"id":"s1","text":"one"},{"id":"s2","text":"two"}]';
+  const stored = {
+    transcript,
+    enhanced_content: "## Threads",
+    enhanced_at_content_hash: queue.summaryContentHash(transcript),
+  };
+  assert.equal(queue.newerSummaryStored(stored, "18-earlier"), true);
+  // The one being saved is of this transcript too: not newer.
+  assert.equal(queue.newerSummaryStored(stored, queue.summaryContentHash(transcript)), false);
+  // The stored summary is of an earlier transcript: nothing newer to keep.
+  assert.equal(
+    queue.newerSummaryStored({ ...stored, enhanced_at_content_hash: "18-earlier" }, "9-x"),
+    false
+  );
+  assert.equal(queue.newerSummaryStored({ ...stored, enhanced_content: "" }, "18-earlier"), false);
+  assert.equal(queue.newerSummaryStored(null, "18-earlier"), false);
+});
+
+test("an earlier summary whose refresh failed is not shown as the summary of everything", () => {
+  // Resumed and finished again: the summary is of the first sitting only.
+  const resumed = { hasSummary: true, stale: true };
+  assert.equal(state({ ...resumed, failed: true }), "failed");
+  assert.equal(state({ ...resumed, failed: true, tooLong: true, writingLocal: true }), "too-long");
+  assert.equal(
+    state({ ...resumed, failed: true, outputLimit: true, writingLocal: true }),
+    "output-limit"
+  );
+  // Nothing failed: the summary is still what the record shows.
+  assert.equal(state({ ...resumed }), "summary");
+  assert.equal(state({ ...resumed, processing: true }), "summary");
+  // A summary of everything stays the summary.
+  assert.equal(state({ hasSummary: true, failed: true }), "summary");
+  // Another writing model since: the earlier summary again, never a new start.
+  assert.equal(
+    state({ ...resumed, failed: true, tooLong: true, writingLocal: false, routeAtHome: false }),
+    "summary"
+  );
+});
+
+test("an answer cut at its own limit says so, and is not offered again unchanged", () => {
+  assert.equal(state({ failed: true, outputLimit: true, writingLocal: true }), "output-limit");
+  assert.equal(
+    state({ failed: true, outputLimit: true, writingLocal: true, recordingElsewhere: true }),
+    "output-limit"
+  );
+  assert.equal(
+    state({ failed: true, outputLimit: true, writingLocal: true, processing: true }),
+    "preparing"
+  );
+  assert.equal(
+    state({ failed: true, outputLimit: true, writingLocal: false, routeAtHome: false }),
+    "starting"
+  );
+});

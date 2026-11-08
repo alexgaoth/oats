@@ -2111,6 +2111,8 @@
       "summaryAfterRecording": "この会話が終わると要約が作成されます。",
       "summaryWhenRecordingEnds": "録音が終わると要約が作成されます。",
       "summaryTooLong": "この会話はこの Mac の文章モデルには長すぎます。API キー（設定 › AI モデル）を使えば要約できます。",
+      "summaryOutputLimit": "この Mac の文章モデルが 1 回の回答で書ける上限に達したため、要約は完成しませんでした。もう一度頼んでも、おそらく同じところで止まります。API キー（設定 › AI モデル）を使えば要約できます。",
+      "summaryEarlier": "会話が続く前に書かれた要約です。その後の部分は含まれていません。",
       "summarizeAgain": "もう一度要約する",
       "summaryFailed": "要約を作成できませんでした：{{reason}}",
       "setUpModel": "モデルを設定"
