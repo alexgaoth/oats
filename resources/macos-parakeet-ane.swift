@@ -3,8 +3,14 @@
 // and talks to it in JSON lines:
 //
 //   helper  {"ready":true}
-//   main    {"id":1,"pcm":"<base64: 16-bit little-endian mono PCM at 16 kHz>"}
+//   main    {"id":1,"pcm":"<base64: 16-bit little-endian mono PCM at 16 kHz>","keepFrom":8.0,"after":"word"}
 //   helper  {"id":1,"text":"What was said."}   or   {"id":1,"error":"..."}
+//
+// A segment is short and the model reads 15 s at once, so main sends the seconds
+// before the segment too, as context. `keepFrom` says where the segment starts, and
+// only the words from there on come back. `after` is the last word main kept from
+// the segment before, in this recording: the helper outlives a recording, so it
+// keeps no words of its own between requests.
 //
 // The audio stays in memory: nothing here writes a segment to disk, and nothing here
 // reaches the network. The main process fetches the models. Why this model, and the
@@ -47,6 +53,43 @@ func holdsSpeech(_ chunks: [VadResult]) -> Bool {
   return false
 }
 
+/// The first token of a word can land this far before the word's segment starts.
+/// Picked on the tune meetings from 0 to 0.64 s (docs/speech-round-2.md).
+let wordStartSlack = 0.32
+
+/// A read's words from the segment's start on. A word counts where its first token
+/// starts, with the slack. In the slack a word can be the one the last segment ended
+/// on: then it is that word again, and it is left out. When the read holds that word
+/// just before it as well, the last segment ended on that earlier one, and this is
+/// the word said again ("... what would he counsel?" "Counsel is what he needed."):
+/// it stays.
+func words(_ timings: [TokenTiming], from start: Double, after lastWord: String) -> [String] {
+  var groups: [[TokenTiming]] = []
+  for timing in timings {
+    if timing.token.hasPrefix("\u{2581}") || timing.token.hasPrefix(" ") || groups.isEmpty {
+      groups.append([timing])
+    } else {
+      groups[groups.count - 1].append(timing)
+    }
+  }
+  let firstKept = groups.firstIndex { $0[0].startTime >= start - wordStartSlack } ?? groups.count
+  var kept = Array(groups[firstKept...])
+  let saidBefore = firstKept > 0 && bare(text(groups[firstKept - 1])) == lastWord
+  if let first = kept.first, first[0].startTime < start, bare(text(first)) == lastWord, !saidBefore {
+    kept.removeFirst()
+  }
+  return kept.map(text)
+}
+
+func text(_ tokens: [TokenTiming]) -> String {
+  tokens.map(\.token).joined().replacingOccurrences(of: "\u{2581}", with: "")
+    .trimmingCharacters(in: .whitespaces)
+}
+
+func bare(_ word: String) -> String {
+  word.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "'" }
+}
+
 func serve(_ directory: URL) async throws {
   // With this set FluidAudio refuses every request: a missing model is an error,
   // never a download.
@@ -70,13 +113,21 @@ func serve(_ directory: URL) async throws {
         say(["id": id, "error": "the pcm is not base64"])
         continue
       }
-      guard holdsSpeech(try await vad.process(audio)) else {
+      let keepFrom = request["keepFrom"] as? Double ?? 0
+      let segment = Array(audio[min(audio.count, Int(keepFrom * 16000))...])
+      guard holdsSpeech(try await vad.process(segment)) else {
         say(["id": id, "text": ""])
         continue
       }
       var state = TdtDecoderState.make(decoderLayers: layers)
       let result = try await manager.transcribe(audio, decoderState: &state)
-      say(["id": id, "text": result.text])
+      guard keepFrom > 0 else {
+        say(["id": id, "text": result.text])
+        continue
+      }
+      let after = bare(request["after"] as? String ?? "")
+      let kept = words(result.tokenTimings ?? [], from: keepFrom, after: after)
+      say(["id": id, "text": kept.joined(separator: " ")])
     } catch {
       say(["id": id, "error": "\(error)"])
     }

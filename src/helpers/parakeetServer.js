@@ -92,7 +92,7 @@ class ParakeetServerManager {
   }
 
   async transcribe(audioBuffer, options = {}) {
-    const { modelName = "parakeet-tdt-0.6b-v3" } = options;
+    const { modelName = "parakeet-tdt-0.6b-v3", audioBefore = null, wordBefore = "" } = options;
 
     const modelDir = path.join(this.getModelsDir(), modelName);
     if (!this.isModelDownloaded(modelName)) {
@@ -111,7 +111,7 @@ class ParakeetServerManager {
       if (runtime === "ane") {
         const began = Date.now();
         return {
-          text: await this.ane(modelName).transcribe(wavBuffer),
+          text: await this.ane(modelName).transcribe(wavBuffer, audioBefore, wordBefore),
           elapsed: Date.now() - began,
         };
       }

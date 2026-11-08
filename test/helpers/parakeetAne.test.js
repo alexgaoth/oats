@@ -9,8 +9,11 @@ const readline = require("readline");
 const say = (o) => process.stdout.write(JSON.stringify(o) + "\n");
 say({ ready: true });
 readline.createInterface({ input: process.stdin }).on("line", (line) => {
-  const { id, pcm } = JSON.parse(line);
+  const { id, pcm, keepFrom, after } = JSON.parse(line);
   const audio = Buffer.from(pcm, "base64");
+  if (keepFrom !== undefined) {
+    return say({ id, text: audio.length + " bytes from " + keepFrom + (after ? " after " + after : "") });
+  }
   if (audio.length === 0) return say({ id, error: "no audio" });
   if (audio[0] === 9) process.exit(4);
   say({ id, text: audio.length + " bytes" });
@@ -63,6 +66,27 @@ test("segments are answered by id, on one helper", async () => {
   assert.equal(ane.isRunning(), false);
 });
 
+test("the audio before a segment goes with it, and says where the segment starts", async () => {
+  const ane = fake();
+  const before = Buffer.alloc(16000 * 2 * 2);
+  assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), before), "64002 bytes from 2");
+  await ane.stop();
+});
+
+test("the word before a segment comes from main, so a new recording starts with none", async () => {
+  // The helper outlives a recording. Main sends the last word of the segment before;
+  // a first segment sends none, and a read with no context sends none either.
+  const ane = fake();
+  const before = Buffer.alloc(16000 * 2);
+  assert.equal(
+    await ane.transcribe(wav(Buffer.from([1, 2])), before, "segment"),
+    "32002 bytes from 1 after segment"
+  );
+  assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), before), "32002 bytes from 1");
+  assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), null, "segment"), "2 bytes");
+  await ane.stop();
+});
+
 test("an error for one segment does not stop the helper", async () => {
   const ane = fake();
   await assert.rejects(ane.transcribe(wav(Buffer.alloc(0))), /no audio/);
@@ -113,4 +137,30 @@ test("a helper that cannot start says why", async () => {
     args: ["-e", 'console.error("no models here"); process.exit(3)', "--"],
   });
   await assert.rejects(ane.start(), /exited \(3\): no models here/);
+});
+
+// The helper's rule for a word at the segment's start (macos-parakeet-ane.swift,
+// `words()`). Swift is not run here; the real helper was measured on LibriSpeech
+// and a `say` turn (the reliability speech report): a word heard again across
+// the cut is left out, and a word said again right after the cut stays.
+test("a word said again after the cut stays; only the same word heard twice goes", () => {
+  const swift = require("node:fs").readFileSync(
+    require("node:path").join(__dirname, "../../resources/macos-parakeet-ane.swift"),
+    "utf8"
+  );
+  const words = swift.slice(swift.indexOf("func words("), swift.indexOf("func text("));
+  assert.match(
+    words,
+    /let firstKept = groups\.firstIndex \{ \$0\[0\]\.startTime >= start - wordStartSlack \}/
+  );
+  assert.match(
+    words,
+    /let saidBefore = firstKept > 0 && bare\(text\(groups\[firstKept - 1\]\)\) == lastWord/,
+    "the read holds the word just before too: the last segment ended on that one"
+  );
+  assert.match(
+    words,
+    /first\[0\]\.startTime < start, bare\(text\(first\)\) == lastWord, !saidBefore \{\s*kept\.removeFirst\(\)/,
+    "only a word inside the slack, equal to the last word, and not said just before, is left out"
+  );
 });
