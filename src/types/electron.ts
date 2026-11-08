@@ -1087,7 +1087,14 @@ declare global {
         modelId: string,
         agentName: string | null,
         config: any
-      ) => Promise<{ success: boolean; text?: string; error?: string }>;
+      ) => Promise<{
+        success: boolean;
+        text?: string;
+        error?: string;
+        /** Why a cut answer was cut (helpers/localAnswerLimit.js). */
+        code?: "summary-too-long" | "summary-output-limit";
+        details?: Record<string, number>;
+      }>;
       checkLocalReasoningAvailable: () => Promise<boolean>;
 
       // Anthropic reasoning
@@ -1616,6 +1623,8 @@ declare global {
         systemAudioMode?: SystemAudioMode;
         systemAudioStrategy?: SystemAudioStrategy;
         oneOnOneAttendee?: { displayName: string; email: string | null } | null;
+        /** A room recorded locally: its session number, which its events carry. */
+        inRoomSession?: number | null;
       }>;
       meetingTranscriptionSend?: (buffer: ArrayBuffer, source: "mic" | "system") => void;
       meetingTranscriptionStop?: () => Promise<{
@@ -1623,6 +1632,8 @@ declare global {
         transcript?: string;
         diarizationSessionId?: string;
         error?: string;
+        /** A room's segments whose words could not be read. */
+        inRoomFailedSegments?: number;
       }>;
       meetingTranscriptionCancel?: () => Promise<{
         success: boolean;
@@ -1636,6 +1647,8 @@ declare global {
           timestamp?: number;
           /** Where the text's audio ended, as the wall-clock moment it was heard. */
           audioEndedAt?: number;
+          /** A room's final: the session it was read for. */
+          session?: number;
         }) => void
       ) => () => void;
       /** Speech started or stopped, or main stopped measuring (`off`). */
@@ -1645,6 +1658,16 @@ declare global {
           at?: number | null;
           dropped?: boolean;
           off?: boolean;
+        }) => void
+      ) => () => void;
+      /** A room's segment opened, closed, was dropped or settled; or its session ended. */
+      onMeetingTranscriptionActivity?: (
+        callback: (data: {
+          session: number;
+          segment?: number;
+          state: "open" | "closed" | "dropped" | "settled" | "ended";
+          outcome?: "final" | "empty" | "failed";
+          reason?: "stop" | "cancelled" | "replaced";
         }) => void
       ) => () => void;
       onMeetingSpeakerIdentified?: (

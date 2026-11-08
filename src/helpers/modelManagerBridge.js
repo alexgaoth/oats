@@ -12,6 +12,7 @@ const {
 const modelRegistryData = require("../models/modelRegistryData.json");
 const LlamaServerManager = require("./llamaServer");
 const debugLogger = require("./debugLogger");
+const { limitFailure } = require("./localAnswerLimit");
 
 const MIN_FILE_SIZE = 1_000_000; // 1MB minimum for valid model files
 
@@ -425,9 +426,14 @@ class ModelManager {
         totalTimeMs: totalTime,
         error: error.message,
       });
-      throw new ModelError(`Inference failed: ${error.message}`, "INFERENCE_FAILED", {
-        error: error.message,
-      });
+      // A cut answer keeps its reason (localAnswerLimit.js), so the record can
+      // tell a conversation too long for this Mac from an answer that ran long.
+      const limit = limitFailure(error);
+      throw new ModelError(
+        `Inference failed: ${error.message}`,
+        limit?.code ?? "INFERENCE_FAILED",
+        { error: error.message, ...limit?.details }
+      );
     }
   }
 

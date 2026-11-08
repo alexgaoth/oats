@@ -38,3 +38,18 @@ test("the main action sinks when pressed, but not under reduced motion", () => {
     /@media \(prefers-reduced-motion: reduce\) \{\s*\.oats-cta,\s*\.oats-cta:active \{/
   );
 });
+
+// `.oats-cta` is unlayered, so its box-shadow beats the button's
+// `focus-visible:ring-[3px]` utility (also a box-shadow): without its own
+// focus rule the main action showed no ring at all under the keyboard.
+test("the main action keeps a visible focus ring over its depth", () => {
+  const rule = CSS.match(/\.oats-cta:focus-visible \{[^}]*\}/);
+  assert.ok(rule, "an unlayered focus rule for the main action");
+  assert.match(rule[0], /0 0 0 3px color-mix\(in oklab, var\(--color-ring\) 50%, transparent\)/);
+  const pressed = CSS.match(/\.oats-cta:active:focus-visible \{[^}]*\}/);
+  assert.ok(pressed && /0 0 0 3px/.test(pressed[0]), "the ring stays while it is pressed");
+  assert.ok(
+    CSS.indexOf(".oats-cta:focus-visible {") > CSS.indexOf(".oats-cta:active {"),
+    "the focus rule comes after the press rule it must not lose to"
+  );
+});
