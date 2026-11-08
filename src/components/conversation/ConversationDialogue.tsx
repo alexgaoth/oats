@@ -104,6 +104,12 @@ export default function ConversationDialogue({ className }: { className?: string
     { source: partialSource, ...(inRoom ? { speaker: "room" } : {}) },
     t
   );
+  // Somebody in the room is saying something not yet read: the segmenter has a
+  // segment open (`helpers/segmentActivity.mjs`). With Parakeet, and with Whisper
+  // between its partials, there are no words to show for it yet, so the log
+  // shows that it is hearing, and never a guess at what. It goes when the
+  // segment closes, and its final then lands as said.
+  const hearing = useMeetingRecordingStore((state) => inRoom && state.segmentOpen) && !partial;
 
   // Type the newest turn on, quickly.
   //
@@ -154,6 +160,16 @@ export default function ConversationDialogue({ className }: { className?: string
     const carried = now - live.at <= CARRY_WINDOW_MS ? live.words : 0;
 
     const current = reveal.current;
+    // Under reduced motion, or with the window out of sight, a final lands
+    // whole: there is nobody to type it on for, or they asked for no motion.
+    const still =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true ||
+      document.visibilityState === "hidden";
+    if (still) {
+      reveal.current = { id: newestId, from: total, at: now, rate: 0, total };
+      setTick((n) => n + 1);
+      return;
+    }
     if (current.id !== newestId) {
       const from = revealStart({ total, carried });
       reveal.current = { id: newestId, from, at: now, rate: revealRate(total - from), total };
@@ -224,7 +240,7 @@ export default function ConversationDialogue({ className }: { className?: string
   // moment reliability was in question, with no further segment coming to
   // re-scroll it. A window resize did the same, 208px to 85px.
   const { faded, measure } = useScrollFade(scroller, turns, stickToEnd);
-  useEffect(stickToEnd, [turns, partial, newestVisible?.text, following, stickToEnd]);
+  useEffect(stickToEnd, [turns, partial, hearing, newestVisible?.text, following, stickToEnd]);
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
@@ -270,7 +286,7 @@ export default function ConversationDialogue({ className }: { className?: string
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           )}
         >
-          {!turns.length && !partial && (
+          {!turns.length && !partial && !hearing && (
             // Inside the region, not instead of it: a labelled log that only
             // exists once somebody has spoken cannot be navigated to beforehand,
             // and then appears with no signal that it has.
@@ -299,7 +315,9 @@ export default function ConversationDialogue({ className }: { className?: string
                   </span>
                 )}
                 <span className="text-foreground/90">
-                  {newest && turn.id === newest.id && newestVisible
+                  {/* Once revealed, the turn's own text: the final as main
+                    delivered it, not its words joined again. */}
+                  {newest && turn.id === newest.id && newestVisible && !newestVisible.done
                     ? newestVisible.text
                     : turn.text}
                 </span>
@@ -323,6 +341,29 @@ export default function ConversationDialogue({ className }: { className?: string
                   </span>
                 )}
                 <span className="text-muted-foreground">{partial}</span>
+              </li>
+            )}
+            {hearing && (
+              // Three still dots in the quiet grey where the words will land. No
+              // animation: it appears and goes with the segment, and that is
+              // the only motion. Hidden from assistive technology like the rest
+              // of this log's changes; the status region is the spoken channel.
+              <li
+                key="hearing"
+                className="flex h-6 max-w-[70ch] items-center text-sm leading-6"
+                data-state="hearing"
+                aria-hidden="true"
+              >
+                {partialLabel && (
+                  <span className="mr-1.5 select-none font-medium text-muted-foreground">
+                    {partialLabel}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <span className="size-1 rounded-full bg-muted-foreground" />
+                  <span className="size-1 rounded-full bg-muted-foreground" />
+                  <span className="size-1 rounded-full bg-muted-foreground" />
+                </span>
               </li>
             )}
           </ol>
