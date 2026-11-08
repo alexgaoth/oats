@@ -1087,7 +1087,14 @@ declare global {
         modelId: string,
         agentName: string | null,
         config: any
-      ) => Promise<{ success: boolean; text?: string; error?: string }>;
+      ) => Promise<{
+        success: boolean;
+        text?: string;
+        error?: string;
+        /** Why a cut answer was cut (helpers/localAnswerLimit.js). */
+        code?: "summary-too-long" | "summary-output-limit";
+        details?: Record<string, number>;
+      }>;
       checkLocalReasoningAvailable: () => Promise<boolean>;
 
       // Anthropic reasoning

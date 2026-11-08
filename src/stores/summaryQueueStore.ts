@@ -1,13 +1,21 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { create } from "zustand";
 import {
+  LOCAL_CONTEXT_TOKENS,
   PENDING_SUMMARIES_KEY,
+  SUMMARY_FAILURES_KEY,
   needsSummary,
   nextPendingSummary,
   queueStopsAfter,
   readPendingSummaries,
+  readSummaryFailures,
+  standingSummaryFailure as standingIn,
+  summaryContentHash,
+  summaryModelKey,
   withPendingSummary,
+  withSummaryFailure,
   withoutPendingSummary,
+  withoutSummaryFailure,
 } from "../helpers/summaryQueue.mjs";
 import { summaryRouteKey } from "../helpers/remoteLinks.mjs";
 import { parseDbTimestamp } from "../helpers/dbTime.mjs";
@@ -53,15 +61,20 @@ interface SummaryQueueState {
   running: number[];
   /** Conversations whose summary was refused this session (no model, no action). */
   refused: number[];
+  /** The remembered failures that would repeat, as stored. */
+  failures: SummaryFailureEntry[];
 }
 
 const useSummaryQueueStore = create<SummaryQueueState>()(() => ({
   finishing: [],
   running: [],
   refused: [],
+  failures: loadFailures(),
 }));
 
-function setMark(field: keyof SummaryQueueState, id: number, on: boolean): void {
+type MarkField = "finishing" | "running" | "refused";
+
+function setMark(field: MarkField, id: number, on: boolean): void {
   const list = useSummaryQueueStore.getState()[field];
   if (list.includes(id) === on) return;
   const next = on ? [...list, id] : list.filter((item) => item !== id);
@@ -105,6 +118,109 @@ function saveQueue(queue: PendingSummary[]): void {
     else localStorage.removeItem(PENDING_SUMMARIES_KEY);
   } catch {
     // Storage refused: the conversation is still summarized when opened.
+  }
+}
+
+interface SummaryFailureEntry {
+  id: number;
+  source: string;
+  model: string;
+  context: number;
+  kind: "too-long" | "output-limit";
+}
+
+/** What a summary is written from and by: the transcript's hash and the writing model. */
+export interface SummaryFingerprint {
+  source: string;
+  model: string;
+}
+
+function loadFailures(): SummaryFailureEntry[] {
+  try {
+    return readSummaryFailures(localStorage.getItem(SUMMARY_FAILURES_KEY));
+  } catch {
+    return [];
+  }
+}
+
+function saveFailures(list: SummaryFailureEntry[]): void {
+  try {
+    if (list.length) localStorage.setItem(SUMMARY_FAILURES_KEY, JSON.stringify(list));
+    else localStorage.removeItem(SUMMARY_FAILURES_KEY);
+  } catch {
+    // Storage refused: the failure is known for this session only.
+  }
+  useSummaryQueueStore.setState({ failures: list });
+}
+
+/**
+ * How this conversation's last summary failed, if asking again now would fail
+ * the same way: "too-long" or "output-limit" with the same transcript, writing
+ * model and context. Otherwise null (helpers/summaryQueue.mjs).
+ */
+export function standingSummaryFailure(now: {
+  id: number;
+  source: string;
+  model: string;
+  context: number;
+}): "too-long" | "output-limit" | null {
+  return standingIn(loadFailures(), now);
+}
+
+/** `standingSummaryFailure` for one conversation, kept current. */
+export function useStandingSummaryFailure(
+  noteId: number | null,
+  transcript: string | null | undefined
+): "too-long" | "output-limit" | null {
+  const failures = useSummaryQueueStore((state) => state.failures);
+  const model = useSettingsStore((state) => {
+    const formatting = selectResolvedNoteFormatting(state);
+    return summaryModelKey(formatting.mode, formatting.model);
+  });
+  return useMemo(
+    () =>
+      noteId === null
+        ? null
+        : standingIn(failures, {
+            id: noteId,
+            source: summaryContentHash(transcript ?? ""),
+            model,
+            context: LOCAL_CONTEXT_TOKENS,
+          }),
+    [noteId, transcript, model, failures]
+  );
+}
+
+/** The fingerprint of a conversation's summary with the writing model now. */
+export function summaryFingerprint(transcript: string | null | undefined): SummaryFingerprint {
+  const formatting = selectResolvedNoteFormatting(getSettings());
+  return {
+    source: summaryContentHash(transcript ?? ""),
+    model: summaryModelKey(formatting.mode, formatting.model),
+  };
+}
+
+function rememberOutcome(
+  noteId: number,
+  outcome: BackgroundActionOutcome,
+  fingerprint: SummaryFingerprint | undefined
+): void {
+  if (outcome === "saved") {
+    const list = loadFailures();
+    const next = withoutSummaryFailure(list, noteId);
+    if (next !== list) saveFailures(next);
+    return;
+  }
+  if ((outcome === "too-long" || outcome === "output-limit") && fingerprint) {
+    saveFailures(
+      withSummaryFailure(loadFailures(), {
+        id: noteId,
+        source: fingerprint.source,
+        model: fingerprint.model,
+        context: LOCAL_CONTEXT_TOKENS,
+        kind: outcome,
+      })
+    );
   }
 }
 
@@ -159,12 +275,15 @@ export function settleSummary(noteId: number): void {
 /**
  * Run one conversation's summary with the queue's bookkeeping: never two at
  * once for one conversation, struck from the list once saved or failed (too
- * long for the model on this Mac included: the queue does not ask again), and
- * a refusal remembered so the record does not ask again and again.
+ * long for the model on this Mac, or cut at its answer limit, included: the
+ * queue does not ask again), and a refusal remembered so the record does not
+ * ask again and again. A failure that would repeat is kept by `fingerprint`
+ * across restarts, until the transcript, the model or the context changes.
  */
 export async function runSummary(
   noteId: number,
-  run: () => Promise<BackgroundActionOutcome>
+  run: () => Promise<BackgroundActionOutcome>,
+  fingerprint?: SummaryFingerprint
 ): Promise<BackgroundActionOutcome> {
   if (useSummaryQueueStore.getState().running.includes(noteId)) return "busy";
   setMark("running", noteId, true);
@@ -174,9 +293,15 @@ export async function runSummary(
   } catch {
     outcome = "refused";
   } finally {
-    if (outcome === "saved" || outcome === "failed" || outcome === "too-long") {
+    if (
+      outcome === "saved" ||
+      outcome === "failed" ||
+      outcome === "too-long" ||
+      outcome === "output-limit"
+    ) {
       settleSummary(noteId);
     }
+    rememberOutcome(noteId, outcome, fingerprint);
     setMark("refused", noteId, outcome === "refused");
     setMark("running", noteId, false);
     kickSummaryQueue();
@@ -244,6 +369,17 @@ async function drain(): Promise<void> {
       settleSummary(id);
       continue;
     }
+    // It failed in a way that would repeat, and nothing it depends on changed.
+    if (
+      standingSummaryFailure({
+        id,
+        ...summaryFingerprint(note.transcript),
+        context: LOCAL_CONTEXT_TOKENS,
+      })
+    ) {
+      settleSummary(id);
+      continue;
+    }
     // Something may have started while the note was read.
     if (busy() || stopped) continue;
     log("start", { noteId: id });
@@ -255,7 +391,8 @@ async function drain(): Promise<void> {
     // One conversation that fails twice is that conversation; its record says
     // so. Several in a row is the model, and the rest wait for the next kick
     // rather than each failing in turn (helpers/summaryQueue.mjs). Too long
-    // for the model is the conversation's length, never the model's fault.
+    // for the model is the conversation's length, never the model's fault,
+    // and an answer cut at its limit is that conversation's answer.
     failedInARow = outcome === "failed" ? failedInARow + 1 : 0;
     if (queueStopsAfter(failedInARow)) return;
   }

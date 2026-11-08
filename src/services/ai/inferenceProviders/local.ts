@@ -24,8 +24,19 @@ export const localProvider: InferenceProvider = {
     const processingTimeMs = Date.now() - startTime;
 
     if (!result.success) {
-      logger.logReasoning("LOCAL_ERROR", { model, processingTimeMs, error: result.error });
-      throw new Error(result.error);
+      logger.logReasoning("LOCAL_ERROR", {
+        model,
+        processingTimeMs,
+        error: result.error,
+        code: result.code,
+        details: result.details,
+      });
+      // The reason main gave a cut answer (helpers/localAnswerLimit.js) stays on
+      // the error, for the summary queue to read (summaryFailureKind).
+      throw Object.assign(
+        new Error(result.error),
+        result.code ? { code: result.code, details: result.details } : {}
+      );
     }
 
     logger.logReasoning("LOCAL_SUCCESS", {
