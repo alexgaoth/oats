@@ -78,6 +78,35 @@ test("a helper that dies fails its reads, and the next read starts a new one", a
   await ane.stop();
 });
 
+test(
+  "a stop while the helper is still loading ends it, and the load fails",
+  { timeout: 15000 },
+  async (t) => {
+    // A first load compiles the model for the Neural Engine and can take a minute.
+    // The app can quit, or the model can be deleted, before the helper is ready.
+    const ane = new ParakeetAne("/models", {
+      command: process.execPath,
+      args: ["-e", "setInterval(() => {}, 1000)", "--"],
+    });
+    const loading = ane.start();
+    loading.catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const pid = ane.spawned?.pid;
+    t.after(() => {
+      try {
+        if (Number.isInteger(pid)) process.kill(pid, "SIGKILL");
+      } catch {
+        // Already gone, as it should be.
+      }
+    });
+    assert.ok(Number.isInteger(pid), "the loading helper is known");
+    await ane.stop();
+    await assert.rejects(loading, /exited/);
+    assert.equal(ane.isRunning(), false);
+    assert.throws(() => process.kill(pid, 0), /ESRCH/);
+  }
+);
+
 test("a helper that cannot start says why", async () => {
   const ane = new ParakeetAne("/models", {
     command: process.execPath,

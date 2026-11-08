@@ -30,6 +30,29 @@ const work = path.join(outputDir, ".fluidaudio");
 const checkout = path.join(work, "FluidAudio");
 const sources = path.join(checkout, "Sources");
 const objects = path.join(work, "build");
+const noticesFile = path.join(outputDir, "macos-parakeet-ane-NOTICES.txt");
+
+// What the helper links, and so what its license notices must travel with it:
+// FluidAudio (Apache-2.0), its VBx clustering port (Apache-2.0) and fastcluster
+// (BSD-2-Clause, whose binary form must carry its notice). FluidAudio's other
+// third-party notices cover data files (the LuxTTS lexicon, Kokoro's word lists)
+// that swiftc never compiles in: only .swift sources go to the compiler.
+const NOTICES = [
+  ["FluidAudio", "LICENSE"],
+  ["fastcluster", path.join("ThirdPartyLicenses", "fastcluster-LICENSE.md")],
+  ["VBx", path.join("ThirdPartyLicenses", "vbx-LICENSE.md")],
+];
+
+function writeNotices() {
+  const parts = NOTICES.map(([name, file]) => {
+    const text = fs.readFileSync(path.join(checkout, file), "utf8").trim();
+    return `${name} (FluidAudio ${FLUIDAUDIO_TAG}, ${file})\n\n${text}\n`;
+  });
+  fs.writeFileSync(
+    noticesFile,
+    `macos-parakeet-ane links the following. Their notices, as each requires.\n\n${parts.join("\n\n")}`
+  );
+}
 
 function log(message) {
   console.log(`[parakeet-ane] ${message}`);
@@ -57,8 +80,10 @@ const hash = crypto
 if (
   fs.existsSync(outputBinary) &&
   fs.existsSync(hashFile) &&
-  fs.readFileSync(hashFile, "utf8").trim() === hash
+  fs.readFileSync(hashFile, "utf8").trim() === hash &&
+  (fs.existsSync(noticesFile) || fs.existsSync(checkout))
 ) {
+  if (!fs.existsSync(noticesFile)) writeNotices();
   process.exit(0);
 }
 
@@ -192,5 +217,6 @@ run("swiftc", [
   outputBinary,
 ]);
 fs.chmodSync(outputBinary, 0o755);
+writeNotices();
 fs.writeFileSync(hashFile, hash);
 log(`Built ${outputBinary}`);

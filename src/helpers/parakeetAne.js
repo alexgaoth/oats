@@ -57,6 +57,8 @@ class ParakeetAne {
     this.command = binary.command ?? null;
     this.args = binary.args ?? [];
     this.process = null;
+    /** The helper still loading, before it is ready: a stop must reach it too. */
+    this.spawned = null;
     this.starting = null;
     this.pending = new Map();
     this.nextId = 1;
@@ -94,6 +96,7 @@ class ParakeetAne {
         detached: true,
       });
       sidecarPidFile.write(SIDECAR_NAME, child.pid);
+      this.spawned = child;
       let ready = false;
       let stderr = "";
       const timer = setTimeout(() => {
@@ -111,6 +114,7 @@ class ParakeetAne {
       child.on("close", (code) => {
         clearTimeout(timer);
         sidecarPidFile.clear(SIDECAR_NAME);
+        if (this.spawned === child) this.spawned = null;
         if (!ready) reject(new Error(`${BINARY_NAME} exited (${code}): ${stderr.trim()}`));
         if (this.process === child) this.process = null;
         this._failAll(new Error(`${BINARY_NAME} exited (${code})`));
@@ -127,6 +131,8 @@ class ParakeetAne {
           return;
         }
         if (message.ready) {
+          // Stopped while it loaded: its close rejects the start.
+          if (this.spawned !== child) return;
           ready = true;
           clearTimeout(timer);
           this.process = child;
@@ -173,9 +179,10 @@ class ParakeetAne {
   }
 
   async stop() {
-    const child = this.process;
+    const child = this.process ?? this.spawned;
     if (!child) return;
     this.process = null;
+    this.spawned = null;
     child.stdin.end();
     await gracefulStopProcess(child);
   }

@@ -12,8 +12,14 @@
  *   node scripts/summary-eval.mjs judge --ami <dir> --out <dir> [--judge <spec>]
  *        [--keys key,key] [--meetings a,b] [--chunk 8] [--effort low] [--batch]
  *   node scripts/summary-eval.mjs report --out <dir> [--baseline <key>] [--json <file>]
+ *   node scripts/summary-eval.mjs compare --out <dir> --ami <dir> --judge <spec> --keys a,b
+ *        [--baseline a] [--meetings dev16]                 (one table per input group)
  *   node scripts/summary-eval.mjs speed --model local:<id> --gguf <file> --llama-server <binary>
  *        --ami <dir> [--meetings a+b,c]                    (a+b: one conversation of both)
+ *
+ * --pipeline <json or @file>: a summary in parts (lib/summary-parts.mjs) in place of one
+ * request, a measurement. --meetings takes named sets: eval24, dev16, devlong, testlong.
+ * fm:system[@permissive] is the system model (Foundation Models) through fm-bridge.
  *
  * Routes, each as the app sends it at Finish (ReasoningService.processText):
  *   local:<registry id>  llama-server with the app's arguments (llamaServer.js: --ctx-size
@@ -22,12 +28,11 @@
  *                        transcript over 1,024 characters, enable_thinking false). A summary
  *                        cut at the limit fails, as the app fails it (#139).
  *   openai:<model>       the Responses API (inferenceProviders/openai.ts): store false,
- *                        max_output_tokens 4096, no reasoning effort, temperature only for
- *                        models the registry says take it. The app gives up after 30 s.
+ *                        max_output_tokens 16000 (#139), no reasoning effort, temperature only
+ *                        for models the registry says take it. The app gives up after 180 s.
  *   anthropic:<model>    the Messages API as ipcHandlers.js "process-anthropic-reasoning"
- *                        sends it (anthropic-version 2023-06-01, max_tokens 4096), but
- *                        without temperature: the app's 0.3 is refused (HTTP 400) by every
- *                        current Claude model, so as shipped it writes no summary at all.
+ *                        sends it (anthropic-version 2023-06-01, max_tokens 16000, #139), and
+ *                        without temperature (#133).
  *   bedrock:<model>      Converse with the parameters of "process-enterprise-reasoning"
  *                        (max tokens 4096, temperature 0.3). Not a writing route in the
  *                        app today: measured for the decision.
@@ -45,11 +50,14 @@ import { parseArgs } from "node:util";
 import {
   FAR8,
   appSummaryPrompt,
+  expandMeetings,
   finishTranscript,
   humanSummary,
   judgeTranscript,
   loadInputs,
 } from "./lib/summary-corpus.mjs";
+import { SUMMARY_MAX_TOKENS } from "../src/helpers/summaryCall.mjs";
+import { summarizeInParts } from "./lib/summary-parts.mjs";
 import { rougeL, tokens, youThemLines } from "./lib/summary-score.mjs";
 import {
   bootstrapMean,
@@ -101,6 +109,10 @@ const { values: args, positionals } = parseArgs({
     regrade: { type: "string" },
     "regrade-sets": { type: "string" },
     dry: { type: "boolean", default: false },
+    pipeline: { type: "string" },
+    "fm-bridge": { type: "string" },
+    "prompt-edit": { type: "string" },
+    "step-cache": { type: "string" },
   },
 });
 const command = positionals[0];
@@ -117,7 +129,7 @@ let spentBefore = null;
 let spentHere = 0;
 
 function guard(spec) {
-  if (parseSpec(spec).provider === "local") return;
+  if (["local", "fm"].includes(parseSpec(spec).provider)) return;
   if (!priceOf(spec)) throw new Error(`No price for ${spec}: add it to PRICES first`);
   if (spentBefore === null) spentBefore = ledgerTotal();
   if (spentBefore + spentHere >= BUDGET) {
@@ -185,6 +197,7 @@ async function postRetrying(url, headers, body, timeoutMs, attempts = 4) {
 
 const MEASURE_TIMEOUT_MS = 300_000;
 const localPorts = new Map();
+const localPids = new Map();
 
 function registryModel(provider, id) {
   if (provider === "local") {
@@ -239,9 +252,10 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
         max_tokens: maxTokens,
         stream: false,
         chat_template_kwargs: {
-          enable_thinking: false,
+          enable_thinking: options.includes("think"),
           ...(effort ? { reasoning_effort: effort } : {}),
         },
+        ...samplerOptions(options),
         // The speed runs read the same conversation twice: the second must not
         // reuse the first one's prompt cache, as a new conversation cannot.
         ...(freshPrompt ? { cache_prompt: false } : {}),
@@ -258,6 +272,7 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
       ? { input: res.json.usage.prompt_tokens ?? 0, output: res.json.usage.completion_tokens ?? 0 }
       : null;
     record(spec, purpose, usage, { ms: Math.round(res.ms), ok: res.status === 200 });
+    const resident = await residentMb(localPids.get(model));
     const stop = res.json?.choices?.[0]?.finish_reason ?? null;
     // The summary needs the whole answer (#139, `requireComplete`): one cut at the
     // output limit or by a full context fails, and nothing is saved.
@@ -272,6 +287,7 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
       status: res.status,
       stop,
       timings: res.json?.timings ?? null,
+      residentMb: resident,
       // The app's request times out at 300 s (llamaServer.js).
       appOutcome: cut ? "cut" : !ok ? "error" : res.ms > 300_000 ? "timeout" : "ok",
       error: ok
@@ -279,6 +295,21 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
         : cut
           ? "stopped at the output limit: the app saves no summary (#139)"
           : (res.json?.error?.message ?? res.text).slice(0, 300),
+    };
+  }
+  if (provider === "fm") {
+    const res = await fmRequest(options, { system, user, maxTokens: 2048, temperature: 0.3 });
+    const ok = res.ok === true && Boolean(String(res.text ?? "").trim());
+    return {
+      ok,
+      text: String(res.text ?? "").trim(),
+      usage: { input: res.inputTokens ?? 0, output: 0 },
+      cost: 0,
+      ms: res.ms ?? null,
+      status: ok ? 200 : (res.error ?? "error"),
+      stop: null,
+      appOutcome: ok ? "not-in-app" : "error",
+      error: ok ? null : `${res.error}: ${String(res.detail ?? "").slice(0, 300)}`,
     };
   }
   if (provider === "openai") {
@@ -289,7 +320,7 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
         { role: "user", content: user },
       ],
       store: false,
-      max_output_tokens: 4096,
+      max_output_tokens: SUMMARY_MAX_TOKENS,
     };
     if (openaiTakesTemperature(model)) body.temperature = 0.3;
     // @flex: the same request at the Flex tier, half the price and slower. For the
@@ -435,6 +466,317 @@ async function callRoute(spec, { system, user, purpose, freshPrompt = false }) {
   throw new Error(`Unknown provider ${provider}`);
 }
 
+/**
+ * Sampler settings a spec asks for: `@t0.1` temperature, `@tp0.9` top-p, `@mp0.1`
+ * min-p, `@tk20` top-k, `@rp1.1` repeat penalty. Measurements: the app sends only
+ * a temperature, and the server's defaults stand for the rest.
+ */
+function samplerOptions(options) {
+  const out = {};
+  const pick = (prefix, field) => {
+    const match = options.find((o) => new RegExp(`^${prefix}[0-9.]+$`).test(o));
+    if (match) out[field] = Number(match.slice(prefix.length));
+  };
+  pick("t", "temperature");
+  pick("tp", "top_p");
+  pick("mp", "min_p");
+  pick("tk", "top_k");
+  pick("rp", "repeat_penalty");
+  return out;
+}
+
+/** A schema for fm-bridge: JSON objects have no order, so each object says its fields' order. */
+function orderedSchema(node) {
+  if (Array.isArray(node)) return node.map(orderedSchema);
+  if (!node || typeof node !== "object") return node;
+  const out = {};
+  for (const [key, value] of Object.entries(node)) {
+    out[key] = key === "properties" ? mapValues(value, orderedSchema) : orderedSchema(value);
+  }
+  if (node.type === "object" && node.properties) out.order = Object.keys(node.properties);
+  return out;
+}
+
+const mapValues = (object, fn) =>
+  Object.fromEntries(Object.entries(object).map(([key, value]) => [key, fn(value)]));
+
+// The system model on this Mac, through fm-bridge (Foundation Models).
+let fmChild = null;
+const fmWaiting = [];
+
+async function fmRequest(options, { system, user, schema, maxTokens, temperature }) {
+  if (!fmChild) {
+    const { spawn } = await import("node:child_process");
+    const readline = await import("node:readline");
+    const binary =
+      args["fm-bridge"] ??
+      path.join(process.env.HOME, "oats-asr-cache/fidelity-2/fm-bridge/bin/fm-bridge");
+    fmChild = spawn(binary, ["serve"], { stdio: ["pipe", "pipe", "inherit"] });
+    readline.createInterface({ input: fmChild.stdout }).on("line", (line) => {
+      fmWaiting.shift()?.(JSON.parse(line));
+    });
+  }
+  const request = {
+    id: "eval",
+    system,
+    prompt: user,
+    temperature,
+    maxTokens,
+    guardrails: options.includes("permissive") ? "permissive" : "default",
+    ...(schema ? { schema: orderedSchema(schema) } : {}),
+  };
+  return new Promise((resolve) => {
+    fmWaiting.push(resolve);
+    fmChild.stdin.write(`${JSON.stringify(request)}\n`);
+  });
+}
+
+function stopFm() {
+  fmChild?.stdin.end();
+  fmChild = null;
+}
+
+/**
+ * One step of a pipeline, from `--step-cache <dir>` when the same request ran
+ * before: variants that share their first steps do not pay for them twice, and
+ * the record keeps the first run's tokens and times.
+ */
+async function pipelineStep(spec, request) {
+  if (!args["step-cache"]) return localStep(spec, request);
+  const { createHash } = await import("node:crypto");
+  const { step: _step, ...same } = request;
+  const name = createHash("sha256").update(JSON.stringify({ spec, same })).digest("hex");
+  const file = path.join(args["step-cache"], `${name}.json`);
+  if (fs.existsSync(file)) return { ...JSON.parse(fs.readFileSync(file, "utf8")), cached: true };
+  const answer = await localStep(spec, request);
+  if (answer.ok) {
+    fs.mkdirSync(args["step-cache"], { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(answer));
+  }
+  return answer;
+}
+
+/** One step of a pipeline on this Mac: llama-server or the system model. Never throws. */
+async function localStep(spec, { step, system, user, schema, maxTokens, temperature }) {
+  const { provider, model, options } = parseSpec(spec);
+  if (provider === "fm") {
+    const res = await fmRequest(options, { system, user, schema, maxTokens, temperature });
+    return {
+      ok: res.ok === true,
+      text: String(res.text ?? ""),
+      stop: null,
+      record: {
+        step,
+        ok: res.ok === true,
+        error: res.error ?? null,
+        detail: res.ok ? null : String(res.detail ?? "").slice(0, 200),
+        read: (res.inputTokens ?? 0) + (res.systemTokens ?? 0),
+        ms: res.ms ?? null,
+      },
+    };
+  }
+  if (provider === "openai" || provider === "anthropic") {
+    return cloudStep(spec, { step, system, user, schema, maxTokens });
+  }
+  const port = localPorts.get(model);
+  const res = await postJson(
+    `http://127.0.0.1:${port}/v1/chat/completions`,
+    {},
+    {
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature,
+      max_tokens: maxTokens,
+      stream: false,
+      chat_template_kwargs: { enable_thinking: options.includes("think") },
+      ...samplerOptions(options),
+      ...(schema ? { response_format: { type: "json_schema", json_schema: { schema } } } : {}),
+    },
+    MEASURE_TIMEOUT_MS
+  );
+  const message = res.json?.choices?.[0]?.message;
+  const raw = String(message?.content || "").trim();
+  const text = raw
+    .replace(/<think>[\s\S]*?<\/think>/g, "")
+    .replace(/<think>[\s\S]*$/, "")
+    .trim();
+  const t = res.json?.timings ?? {};
+  return {
+    ok: res.status === 200,
+    text,
+    stop: res.json?.choices?.[0]?.finish_reason ?? null,
+    record: {
+      step,
+      ok: res.status === 200,
+      error: res.status === 200 ? null : String(res.json?.error?.message ?? res.text).slice(0, 200),
+      stop: res.json?.choices?.[0]?.finish_reason ?? null,
+      read: t.prompt_n ?? 0,
+      cached: t.cache_n ?? 0,
+      written: t.predicted_n ?? 0,
+      readMs: t.prompt_ms ?? null,
+      writeMs: t.predicted_ms ?? null,
+      ms: res.ms,
+      residentMb: await residentMb(localPids.get(model)),
+    },
+  };
+}
+
+/** A strict schema for a cloud model: no `maxItems` or `minItems`, which they may refuse. */
+function cloudSchema(node) {
+  if (Array.isArray(node)) return node.map(cloudSchema);
+  if (!node || typeof node !== "object") return node;
+  const out = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (!["maxItems", "minItems"].includes(key)) out[key] = cloudSchema(value);
+  }
+  return out;
+}
+
+/** One step of a pipeline by a cloud model, public data only: a measurement, not the app. */
+async function cloudStep(spec, { step, system, user, schema }) {
+  const { provider, model, options } = parseSpec(spec);
+  guard(spec);
+  const started = performance.now();
+  let res;
+  let text = "";
+  let usage = null;
+  if (provider === "openai") {
+    const body = {
+      model,
+      input: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      store: false,
+      max_output_tokens: 16000,
+      ...(schema
+        ? {
+            text: {
+              format: {
+                type: "json_schema",
+                name: "items",
+                schema: cloudSchema(schema),
+                strict: true,
+              },
+            },
+          }
+        : {}),
+    };
+    res = await postRetrying(
+      "https://api.openai.com/v1/responses",
+      { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body,
+      MEASURE_TIMEOUT_MS
+    );
+    text = judgeText(res.json);
+    usage = judgeUsage(res.json);
+  } else {
+    const built = anthropicSummaryBody(model, options, system, user);
+    built.body.max_tokens = 16000;
+    if (schema) {
+      built.body.output_config = {
+        ...(built.body.output_config ?? {}),
+        format: { type: "json_schema", schema: cloudSchema(schema) },
+      };
+    }
+    res = await postRetrying(
+      "https://api.anthropic.com/v1/messages",
+      {
+        "X-API-Key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        ...(built.beta ? { "anthropic-beta": built.beta } : {}),
+      },
+      built.body,
+      MEASURE_TIMEOUT_MS
+    );
+    text = judgeText(res.json);
+    usage = judgeUsage(res.json);
+  }
+  const cost = record(spec, "summary-step", usage, {
+    ms: Math.round(res.ms),
+    ok: res.status === 200,
+  });
+  return {
+    ok: res.status === 200,
+    text,
+    stop: res.json?.stop_reason === "max_tokens" ? "length" : null,
+    record: {
+      step,
+      ok: res.status === 200,
+      error: res.status === 200 ? null : String(res.json?.error?.message ?? res.text).slice(0, 200),
+      read: usage?.input ?? 0,
+      written: usage?.output ?? 0,
+      cost,
+      ms: performance.now() - started,
+    },
+  };
+}
+
+/** A summary by a pipeline (`--pipeline`, lib/summary-parts.mjs): one result as callRoute gives. */
+async function pipelineSummary(spec, pipeline, input, prompt) {
+  const steps = [];
+  const started = performance.now();
+  const chat = async (request) => {
+    const answer = await pipelineStep(spec, request);
+    steps.push({ ...answer.record, step: request.step });
+    if (!answer.ok) throw new Error(`${request.step}: ${answer.record.error}`);
+    return answer;
+  };
+  try {
+    const result = await summarizeInParts({
+      transcript: finishTranscript(input.segments),
+      chat,
+      // { "single": true }: the app's own request, then the check on its bullets.
+      options: pipeline.single
+        ? {
+            ...pipeline,
+            single: {
+              system: prompt.system,
+              user: prompt.userPrefix + finishTranscript(input.segments),
+            },
+          }
+        : pipeline.mode === "app"
+          ? { ...pipeline, app: { system: prompt.system, userPrefix: prompt.userPrefix } }
+          : pipeline,
+    });
+    const ok = Boolean(result.text);
+    return {
+      ok,
+      text: result.text,
+      usage: {
+        input: steps.reduce((sum, r) => sum + (r.read ?? 0), 0),
+        output: steps.reduce((sum, r) => sum + (r.written ?? 0), 0),
+      },
+      cost: steps.reduce((sum, r) => sum + (r.cost ?? 0), 0),
+      ms: performance.now() - started,
+      status: ok ? 200 : "empty",
+      stop: "stop",
+      appOutcome: ok ? "not-in-app" : "error",
+      error: ok ? null : "no item survived",
+      steps,
+      items: result.items,
+      dropped: result.dropped,
+      parts: result.parts,
+      failedParts: result.failedParts,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      text: "",
+      usage: null,
+      cost: 0,
+      ms: performance.now() - started,
+      status: "error",
+      stop: null,
+      appOutcome: "error",
+      error: String(error?.message ?? error).slice(0, 300),
+      steps,
+    };
+  }
+}
+
 /** generateNoteTitle's cleaning: trimmed, outer quotes off, kept only under 100 characters. */
 function cleanTitle(raw) {
   const cleaned = String(raw ?? "")
@@ -444,12 +786,14 @@ function cleanTitle(raw) {
 }
 
 async function startLocal(spec) {
-  const { model } = parseSpec(spec);
+  const { model, options } = parseSpec(spec);
   if (localPorts.has(model)) return;
   if (!args.gguf || !args["llama-server"]) throw new Error("--gguf and --llama-server are needed");
   const entry = registryModel("local", model);
   // modelManagerBridge.serverOptions: 16384, or less if the model's context is smaller.
-  const contextSize = Math.min(16384, entry?.contextLength || 16384);
+  // @ctx32768 (a measurement, not the app): another context size.
+  const asked = Number(options.find((o) => /^ctx\d+$/.test(o))?.slice(3));
+  const contextSize = asked || Math.min(16384, entry?.contextLength || 16384);
   const port = Number(args.port);
   const started = performance.now();
   const child = await startLocalServer(model, {
@@ -460,6 +804,7 @@ async function startLocal(spec) {
     threads: 4,
   });
   localPorts.set(model, port);
+  localPids.set(model, child.pid);
   const log = child.startupLog?.() ?? "";
   return {
     loadMs: performance.now() - started,
@@ -555,10 +900,24 @@ function parseAsr() {
 
 // --- generate
 
+/**
+ * The app's prompt with `--prompt-edit <file>` applied: a JSON list of
+ * { "from": "exact text", "to": "new text" }, a prompt change to measure.
+ */
+function promptForRun() {
+  const prompt = appSummaryPrompt(args["prompt-ref"]);
+  if (!args["prompt-edit"]) return prompt;
+  for (const { from, to } of JSON.parse(fs.readFileSync(args["prompt-edit"], "utf8"))) {
+    if (!prompt.system.includes(from)) throw new Error(`Not in the prompt: ${from}`);
+    prompt.system = prompt.system.replace(from, to);
+  }
+  return prompt;
+}
+
 async function generate() {
   const spec = args.model;
   const { provider } = parseSpec(spec);
-  const prompt = appSummaryPrompt(args["prompt-ref"]);
+  const prompt = promptForRun();
   // --key: write into another run's directory, e.g. a model's Flex requests beside
   // the same model's standard ones (one configuration, two price tiers).
   const key = args.key ?? keyOf(spec, args.tag);
@@ -567,13 +926,20 @@ async function generate() {
   const inputs = loadInputs(args.ami, {
     sets: args.sets.split(","),
     asr: parseAsr(),
-    meetings: args.meetings ? args.meetings.split(",") : null,
+    meetings: args.meetings ? expandMeetings(args.meetings.split(",")) : null,
   });
   let load = null;
+  const pipeline = args.pipeline
+    ? JSON.parse(
+        args.pipeline.startsWith("@")
+          ? fs.readFileSync(args.pipeline.slice(1), "utf8")
+          : args.pipeline
+      )
+    : null;
   if (provider === "local") load = await startLocal(spec);
   const todo = inputs.filter((input) => !fs.existsSync(path.join(dir, `${input.id}.json`)));
   console.error(`${key}: ${todo.length} of ${inputs.length} to write (prompt: ${prompt.ref})`);
-  const concurrency = provider === "local" ? 1 : Number(args.concurrency);
+  const concurrency = ["local", "fm"].includes(provider) ? 1 : Number(args.concurrency);
   // --batch (Anthropic): the summaries through the Message Batches API at half the
   // price, the same request bodies; the titles after, one by one. Latency is not
   // measured this way: a few inputs go without --batch for that.
@@ -587,7 +953,9 @@ async function generate() {
       const user = prompt.userPrefix + finishTranscript(input.segments);
       const summary =
         batched?.get(input.id) ??
-        (await callRoute(spec, { system: prompt.system, user, purpose: "summary" }));
+        (pipeline
+          ? await pipelineSummary(spec, pipeline, input, prompt)
+          : await callRoute(spec, { system: prompt.system, user, purpose: "summary" }));
       // The title is written from what the summary call returned (the app's
       // `enhanced`): for OpenAI's empty answer, that is the transcript itself.
       const enhanced = summary.ok ? summary.text : summary.appOutcome === "empty" ? user : "";
@@ -612,6 +980,7 @@ async function generate() {
         summary,
         title: title ? { ...title, clean: cleanTitle(title.text) } : null,
         load: done === 0 ? load : null,
+        pipeline,
       };
       fs.writeFileSync(path.join(dir, `${input.id}.json`), JSON.stringify(result, null, 1));
       done += 1;
@@ -621,6 +990,7 @@ async function generate() {
     });
   } finally {
     stopLocalServers();
+    stopFm();
   }
   console.error(`spent here $${spentHere.toFixed(4)}`);
 }
@@ -635,7 +1005,8 @@ function anthropicSummaryBody(model, options, system, user) {
     model,
     messages: [{ role: "user", content: user }],
     system,
-    max_tokens: Math.max(100, Math.min(user.length * 2, 4096)),
+    // summaryLimits("providers"): the app gives the summary this much since #139.
+    max_tokens: SUMMARY_MAX_TOKENS,
   };
   const effort = options.find((option) => /^(low|medium|high|xhigh|max)$/.test(option));
   if (effort) body.output_config = { effort };
@@ -1006,7 +1377,7 @@ function planJudging(spec, pass) {
     for (const c of chunk.candidates) if (chunk.grades?.[c.id]) graded.add(`${c.key}/${c.input}`);
   }
   const keys = args.keys ? args.keys.split(",") : null;
-  const wanted = args.meetings ? new Set(args.meetings.split(",")) : null;
+  const wanted = args.meetings ? new Set(expandMeetings(args.meetings.split(","))) : null;
   const sets = args["judge-sets"] ? new Set(args["judge-sets"].split(",")) : null;
   // --regrade: these keys are graded again in this pass, beside the new ones,
   // to show whether a later wave grades the same summary the same way.
@@ -1284,6 +1655,38 @@ function loadGrades(spec, effort) {
   return grades;
 }
 
+/** A base Mac's reading and writing time against this Mac's (docs/summaries.md, the bar). */
+const BASE_MACS = { m4: { read: 6.1, write: 2.8 }, m1: { read: 11.4, write: 4.8 } };
+
+/**
+ * Seconds a summary and its title read and wrote on this Mac, from llama-server's
+ * own timings, and what that comes to on a base Mac. The model's load is not in it.
+ */
+function timeParts(s) {
+  const steps = [...(s.summary.steps ?? [])];
+  const single = (call) =>
+    call?.timings
+      ? {
+          readMs: call.timings.prompt_ms ?? 0,
+          writeMs: call.timings.predicted_ms ?? 0,
+          residentMb: call.residentMb ?? null,
+        }
+      : null;
+  if (!steps.length && single(s.summary)) steps.push(single(s.summary));
+  if (single(s.title)) steps.push(single(s.title));
+  if (!steps.some((step) => Number.isFinite(step.readMs))) return {};
+  const readS = steps.reduce((sum, step) => sum + (step.readMs ?? 0), 0) / 1000;
+  const writeS = steps.reduce((sum, step) => sum + (step.writeMs ?? 0), 0) / 1000;
+  const peak = Math.max(0, ...steps.map((step) => step.residentMb ?? 0));
+  return {
+    readS,
+    writeS,
+    m4S: readS * BASE_MACS.m4.read + writeS * BASE_MACS.m4.write,
+    m1S: readS * BASE_MACS.m1.read + writeS * BASE_MACS.m1.write,
+    peakMb: peak || null,
+  };
+}
+
 function gradeMetrics(grade, human) {
   const covered = new Set(grade.covered ?? []);
   const share = (list) =>
@@ -1359,6 +1762,11 @@ function summaryRows(spec, effort) {
       words: tokens(s.summary.text).length,
       youThem: s.summary.ok ? youThemLines(s.summary.text) : null,
       hasTitle: Boolean(s.title?.clean),
+      parts: s.summary.parts ?? null,
+      failedParts: s.summary.failedParts ?? null,
+      items: s.summary.items?.length ?? null,
+      dropped: s.summary.dropped?.length ?? null,
+      ...timeParts(s),
       passes: per.length,
       ...avg,
       rougeL: s.summary.ok ? rougeL(s.summary.text, refText) : null,
@@ -1502,6 +1910,61 @@ function report() {
   if (args.json) fs.writeFileSync(args.json, JSON.stringify(rows, null, 1));
 }
 
+/**
+ * One compact table per input group, for a list of configurations:
+ * `compare --keys a,b,c [--baseline a] [--meetings dev16]`.
+ */
+function compare() {
+  const wanted = args.meetings ? new Set(expandMeetings(args.meetings.split(","))) : null;
+  const rows = summaryRows(args.judge, args.effort).filter((r) => !wanted || wanted.has(r.meeting));
+  const keys = args.keys ? args.keys.split(",") : [...new Set(rows.map((r) => r.key))].sort();
+  const fmt = (v, d = 2) => (v == null || !Number.isFinite(v) ? "–" : v.toFixed(d));
+  const ci = (b, d, scale = 1) =>
+    b.mean == null
+      ? "–"
+      : `${fmt(b.mean * scale, d)} [${fmt(b.low * scale, d)}, ${fmt(b.high * scale, d)}]`;
+  const groups = new Map();
+  for (const r of rows) {
+    const label = `${r.set}, ${r.meeting.includes("+") ? "long" : "short"}`;
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(r);
+  }
+  for (const [label, view] of groups) {
+    console.log(`\n## ${label} (judge ${args.judge})\n`);
+    console.log(
+      "| config | ok/all | graded | covered % | D | T | P | abstract % | invented | useful | words | here s | M4 s | M1 s | M4 s per 30 min | peak GB | items | dropped |"
+    );
+    console.log(
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+    );
+    for (const key of keys) {
+      const list = view.filter((r) => r.key === key);
+      if (!list.length) continue;
+      const ok = list.filter((r) => r.ok);
+      const graded = ok.filter((r) => r.passes > 0);
+      const pct = (metric) =>
+        fmt((mean(graded.map((r) => r[metric]).filter((v) => v != null)) ?? NaN) * 100, 0);
+      console.log(
+        `| ${key} | ${ok.length}/${list.length} | ${graded.length} | ${ci(bootstrapMean(graded.map((r) => r.dtp)), 0, 100)} | ${pct("decisions")} | ${pct("actions")} | ${pct("problems")} | ${ci(bootstrapMean(graded.map((r) => r.abstract)), 0, 100)} | ${ci(bootstrapMean(graded.map((r) => r.unsupported)), 2)} | ${fmt(mean(graded.map((r) => r.useful)))} | ${fmt(mean(ok.map((r) => r.words)), 0)} | ${fmt(mean(ok.map((r) => r.ms / 1000)), 0)} | ${fmt(mean(ok.map((r) => r.m4S)), 0)} | ${fmt(mean(ok.map((r) => r.m1S)), 0)} | ${fmt(mean(ok.map((r) => (r.m4S / r.minutes) * 30)), 0)} | ${fmt(Math.max(...ok.map((r) => r.peakMb ?? 0)) / 1024, 1)} | ${fmt(mean(ok.map((r) => r.items)), 0)} | ${fmt(mean(ok.map((r) => r.dropped)), 0)} |`
+      );
+    }
+    if (args.baseline && view.some((r) => r.key === args.baseline)) {
+      console.log(`\nPaired against ${args.baseline} (95% bootstrap over meetings):\n`);
+      console.log("| config | n | Δ covered, points | Δ invented | Δ useful |");
+      console.log("| --- | --- | --- | --- | --- |");
+      const graded = view.filter((r) => r.ok && r.passes > 0);
+      for (const key of keys) {
+        if (key === args.baseline) continue;
+        const d = pairedInterval(graded, "dtp", args.baseline, key);
+        if (!d.n) continue;
+        console.log(
+          `| ${key} | ${d.n} | ${ci(d, 1, 100)} | ${ci(pairedInterval(graded, "unsupported", args.baseline, key), 2)} | ${ci(pairedInterval(graded, "useful", args.baseline, key), 2)} |`
+        );
+      }
+    }
+  }
+}
+
 function correlation(a, b) {
   const n = Math.min(a.length, b.length);
   if (n < 3) return null;
@@ -1518,9 +1981,9 @@ function correlation(a, b) {
   return saa && sbb ? sab / Math.sqrt(saa * sbb) : null;
 }
 
-const commands = { generate, judge, report, speed };
+const commands = { generate, judge, report, speed, compare };
 if (!commands[command]) {
-  console.error("summary-eval.mjs generate|judge|report|speed (see the header)");
+  console.error("summary-eval.mjs generate|judge|report|compare|speed (see the header)");
   process.exit(2);
 }
 await commands[command]();
