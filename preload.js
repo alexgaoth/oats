@@ -658,6 +658,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     "meeting-transcription-speech",
     (callback) => (_event, data) => callback(data)
   ),
+  // A room's segments opening, closing and settling, for every engine
+  // (helpers/segmentActivity.mjs): the question cards wait on it.
+  onMeetingTranscriptionActivity: registerListener(
+    "meeting-transcription-activity",
+    (callback) => (_event, data) => callback(data)
+  ),
   onMeetingSpeakerIdentified: registerListener(
     "meeting-speaker-identified",
     (callback) => (_event, data) => callback(data)
