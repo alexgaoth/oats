@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const debugLogger = require("./debugLogger");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
 const { classifyAndLog } = require("./networkErrors");
+const { limitFailure } = require("./localAnswerLimit");
 const GnomeShortcutManager = require("./gnomeShortcut");
 const HyprlandShortcutManager = require("./hyprlandShortcut");
 const AssemblyAiStreaming = require("./assemblyAiStreaming");
@@ -3665,7 +3666,7 @@ class IPCHandlers {
         const result = await LocalReasoningService.processText(text, modelId, config);
         return { success: true, text: result };
       } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, ...limitFailure(error) };
       }
     });
 

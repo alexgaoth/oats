@@ -587,8 +587,13 @@ export function createFakeMain({
       });
       if (!answer) return { success: false, error: "The demo has no model for this request." };
       if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
-      // A failure the stand-in was told to give (`summary=fail` in boot.mjs).
-      if (answer.error) return { success: false, error: answer.error };
+      // A failure the stand-in was told to give (`summary=fail` in boot.mjs),
+      // with main's reason for a cut answer when it has one.
+      if (answer.error) {
+        return answer.code
+          ? { success: false, error: answer.error, code: answer.code, details: answer.details }
+          : { success: false, error: answer.error };
+      }
       return { success: true, text: answer.text };
     },
 

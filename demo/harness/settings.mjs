@@ -114,7 +114,10 @@ export function applyDemoSettings(params) {
   }
   // The conversations owed a summary start empty on each page
   // (stores/summaryQueueStore.ts), unless `owed=keep` keeps the last page's.
-  if (params.get("owed") !== "keep") localStorage.removeItem("oatsPendingSummaries");
+  if (params.get("owed") !== "keep") {
+    localStorage.removeItem("oatsPendingSummaries");
+    localStorage.removeItem("oatsSummaryFailures");
+  }
   set("autoGenerateNoteTitle", "true");
   set("contextCheckEnabled", params.get("check") === "1" ? "true" : "false");
   set("contextFolder", params.get("check") === "1" ? CONTEXT_FOLDER : "");
