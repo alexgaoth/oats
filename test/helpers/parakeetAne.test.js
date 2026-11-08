@@ -138,3 +138,29 @@ test("a helper that cannot start says why", async () => {
   });
   await assert.rejects(ane.start(), /exited \(3\): no models here/);
 });
+
+// The helper's rule for a word at the segment's start (macos-parakeet-ane.swift,
+// `words()`). Swift is not run here; the real helper was measured on LibriSpeech
+// and a `say` turn (the reliability speech report): a word heard again across
+// the cut is left out, and a word said again right after the cut stays.
+test("a word said again after the cut stays; only the same word heard twice goes", () => {
+  const swift = require("node:fs").readFileSync(
+    require("node:path").join(__dirname, "../../resources/macos-parakeet-ane.swift"),
+    "utf8"
+  );
+  const words = swift.slice(swift.indexOf("func words("), swift.indexOf("func text("));
+  assert.match(
+    words,
+    /let firstKept = groups\.firstIndex \{ \$0\[0\]\.startTime >= start - wordStartSlack \}/
+  );
+  assert.match(
+    words,
+    /let saidBefore = firstKept > 0 && bare\(text\(groups\[firstKept - 1\]\)\) == lastWord/,
+    "the read holds the word just before too: the last segment ended on that one"
+  );
+  assert.match(
+    words,
+    /first\[0\]\.startTime < start, bare\(text\(first\)\) == lastWord, !saidBefore \{\s*kept\.removeFirst\(\)/,
+    "only a word inside the slack, equal to the last word, and not said just before, is left out"
+  );
+});

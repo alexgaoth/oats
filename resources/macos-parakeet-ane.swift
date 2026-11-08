@@ -59,7 +59,10 @@ let wordStartSlack = 0.32
 
 /// A read's words from the segment's start on. A word counts where its first token
 /// starts, with the slack. In the slack a word can be the one the last segment ended
-/// on: then it is that word again, and it is left out.
+/// on: then it is that word again, and it is left out. When the read holds that word
+/// just before it as well, the last segment ended on that earlier one, and this is
+/// the word said again ("... what would he counsel?" "Counsel is what he needed."):
+/// it stays.
 func words(_ timings: [TokenTiming], from start: Double, after lastWord: String) -> [String] {
   var groups: [[TokenTiming]] = []
   for timing in timings {
@@ -69,8 +72,10 @@ func words(_ timings: [TokenTiming], from start: Double, after lastWord: String)
       groups[groups.count - 1].append(timing)
     }
   }
-  var kept = groups.filter { $0[0].startTime >= start - wordStartSlack }
-  if let first = kept.first, first[0].startTime < start, bare(text(first)) == lastWord {
+  let firstKept = groups.firstIndex { $0[0].startTime >= start - wordStartSlack } ?? groups.count
+  var kept = Array(groups[firstKept...])
+  let saidBefore = firstKept > 0 && bare(text(groups[firstKept - 1])) == lastWord
+  if let first = kept.first, first[0].startTime < start, bare(text(first)) == lastWord, !saidBefore {
     kept.removeFirst()
   }
   return kept.map(text)
