@@ -14,18 +14,30 @@
  * model's names for a topic together, blind and shuffled.
  *
  *   node scripts/topic-names-oracle.mjs --model <provider:model[@opts]> --ami <dir>
- *     [--set test|eval24 | --meetings a,b] [--concurrency 4] --json out.json
+ *     [--set test|eval24|learn12 | --meetings a,b] [--concurrency 4] --json out.json
+ *     [--gguf <file> --llama-server <binary>] [--fm-bridge <binary>]   (models on this Mac)
  *
  * Public AMI data only. Keys come from the environment, and every request is
  * in the spend ledger (`scripts/lib/fast-models.mjs`).
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-import { ask, bootstrapMean, mean, percentile } from "./lib/fast-models.mjs";
+import {
+  ask,
+  bootstrapMean,
+  mean,
+  parseSpec,
+  percentile,
+  startFmBridge,
+  startLocalServer,
+  stopFmBridge,
+  stopLocalServers,
+} from "./lib/fast-models.mjs";
 import {
   amiMeetingIds,
   amiReference,
@@ -48,6 +60,10 @@ const { values: args } = parseArgs({
     meetings: { type: "string" },
     concurrency: { type: "string", default: "4" },
     json: { type: "string" },
+    gguf: { type: "string" },
+    "llama-server": { type: "string" },
+    "fm-bridge": { type: "string" },
+    port: { type: "string", default: "18453" },
   },
 });
 if (!args.model || !args.ami || !args.json) {
@@ -62,14 +78,65 @@ const test = ids.filter((id) => /^(ES2004|IS1009|TS3003)/.test(id));
 const tune = ids.filter((id) => !test.includes(id));
 const step = Math.floor(tune.length / 12);
 const spread = Array.from({ length: 12 }, (_, index) => tune[index * step + Math.floor(step / 2)]);
-const sets = { test, eval24: [...test, ...spread] };
+const learn12 =
+  "ES2002a ES2005b ES2008c ES2011d IS1000a IS1003b IS1006c IS1008d TS3004a TS3008b TS3009c TS3012d".split(
+    " "
+  );
+const sets = { test, eval24: [...test, ...spread], learn12 };
 const meetings = args.meetings ? args.meetings.split(",") : sets[args.set];
 if (!meetings) {
   console.error(`Unknown --set ${args.set}`);
   process.exit(2);
 }
 
+/**
+ * The on-device names of the annotators' topics: `device:minilm` feeds the
+ * tracker the turns and the vectors as the app does, then asks it to name
+ * exactly these stretches.
+ */
+async function deviceNames(id) {
+  const conversation = amiReference(dir, id, names);
+  const { ConversationTopicTracker } = await import(
+    pathToFileURL(path.join(ROOT, "src/helpers/conversationTopics.mjs")).href
+  );
+  const { createEmbedder } = await import("./lib/minilm.mjs");
+  embedder ??= await createEmbedder({
+    cacheDir: path.join(os.homedir(), ".cache/oats/topic-eval/vectors"),
+  });
+  const tracker = new ConversationTopicTracker({ now: () => 0 });
+  for (const utterance of conversation.utterances) {
+    tracker.onUtterance({ id: utterance.id, text: utterance.text, at: utterance.at });
+    const phrases = tracker.phrasesToEmbed(47);
+    const vectors = await embedder.embed([utterance.text, ...phrases.map((phrase) => phrase.text)]);
+    tracker.addVectors({
+      utterances: [[utterance.id, vectors[0]]],
+      phrases: phrases.map((phrase, index) => [phrase.key, vectors[index + 1]]),
+    });
+  }
+  const segments = humanSegments(conversation);
+  const starts = segments.map((segment) => segment.from).filter(Boolean);
+  const view = tracker._topicsAt(starts, { commit: false });
+  const entries = segments.map((segment) => {
+    const first = conversation.utterances[segment.from].id;
+    const topic = view.topics.find((node) => node.utteranceIds.includes(first));
+    return {
+      key: segment.key,
+      words: segment.words,
+      label: segment.label,
+      subtopics: segment.subtopics,
+      excerpt: segmentExcerpt(conversation, segment),
+      live: null,
+      record: topic?.label ? { name: topic.label } : null,
+      raw: "",
+    };
+  });
+  return { id, source: conversation.source, names: entries, calls: [] };
+}
+
+let embedder = null;
+
 async function nameMeeting(id) {
+  if (parseSpec(args.model).provider === "device") return deviceNames(id);
   const conversation = amiReference(dir, id, names);
   const given = [];
   const entries = [];
@@ -103,18 +170,36 @@ async function nameMeeting(id) {
   return { id, source: conversation.source, names: entries, calls };
 }
 
+const { provider, model } = parseSpec(args.model);
+if (provider === "local") {
+  await startLocalServer(model, {
+    binary: args["llama-server"],
+    model: args.gguf,
+    port: Number(args.port),
+    contextSize: 8192,
+  });
+}
+if (provider === "fm") await startFmBridge(args["fm-bridge"]);
+const onThisMac = provider === "local" || provider === "fm";
+
 const results = new Array(meetings.length);
 let next = 0;
 await Promise.all(
-  Array.from({ length: Math.min(Number(args.concurrency), meetings.length) }, async () => {
-    while (next < meetings.length) {
-      const index = next++;
-      results[index] = await nameMeeting(meetings[index]);
-      const named = results[index].names.filter((entry) => entry.record).length;
-      console.error(`${meetings[index]}: ${named}/${results[index].names.length} named`);
+  Array.from(
+    { length: onThisMac ? 1 : Math.min(Number(args.concurrency), meetings.length) },
+    async () => {
+      while (next < meetings.length) {
+        const index = next++;
+        results[index] = await nameMeeting(meetings[index]);
+        const named = results[index].names.filter((entry) => entry.record).length;
+        console.error(`${meetings[index]}: ${named}/${results[index].names.length} named`);
+      }
     }
-  })
+  )
 );
+
+if (provider === "local") stopLocalServers();
+if (provider === "fm") stopFmBridge();
 
 const calls = results.flatMap((result) => result.calls);
 const ok = calls.filter((call) => call.ok);
