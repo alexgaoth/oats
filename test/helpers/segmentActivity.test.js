@@ -3,11 +3,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-let SegmentActivityReporter, SegmentActivityState, ACTIVITY_LIMITS;
+let SegmentActivityReporter, SegmentActivityState, ACTIVITY_LIMITS, withLateRoomFinal;
 let SpeechSegmenter, SAMPLE_RATE, ConversationAideSession;
 
 test.before(async () => {
-  ({ SegmentActivityReporter, SegmentActivityState, ACTIVITY_LIMITS } =
+  ({ SegmentActivityReporter, SegmentActivityState, ACTIVITY_LIMITS, withLateRoomFinal } =
     await import("../../src/helpers/segmentActivity.mjs"));
   ({ SpeechSegmenter, SAMPLE_RATE } = await import("../../src/helpers/speechSegmenter.mjs"));
   ({ ConversationAideSession } = await import("../../src/helpers/conversationAide.mjs"));
@@ -272,7 +272,7 @@ function renderer(clock, { activity = true, session = null } = {}) {
 }
 
 /** Main's in-room session, as ipcHandlers.js runs it. */
-function room(id, { deliver, readSegment }) {
+function room(id, { deliver, readSegment, saveLate = null }) {
   const session = {
     id,
     segmenter: new SpeechSegmenter(),
@@ -280,6 +280,7 @@ function room(id, { deliver, readSegment }) {
     queue: [],
     draining: null,
     abandoned: false,
+    endReason: null,
     failedSegments: 0,
     transcript: [],
     queued: 0,
@@ -299,6 +300,11 @@ function room(id, { deliver, readSegment }) {
       const text = result?.success ? result.text?.trim() : "";
       if (!text) return;
       if (session.abandoned) {
+        if (session.endReason === "replaced" && saveLate) {
+          saveLate(text);
+          outcome = "final";
+          return;
+        }
         outcome = "failed";
         return;
       }
@@ -344,7 +350,8 @@ function room(id, { deliver, readSegment }) {
     abandon(reason) {
       send(session.activity.end(reason));
       session.abandoned = true;
-      session.queue.length = 0;
+      session.endReason = reason;
+      if (!(reason === "replaced" && saveLate)) session.queue.length = 0;
     },
   };
 }
@@ -726,4 +733,154 @@ test("preload carries the channel, and the store listens, holds on it and lets g
     "listeners stay until main's stop has returned"
   );
   assert.match(store, /data\.session !== segmentActivity\.session/, "stale finals are refused");
+});
+
+// ---------------------------------------------------------------------------
+// Where a late final goes (VAL-MOD-004: it never touches the new session, and
+// it is not lost).
+
+test("case 5b, replaced with no Stop: its closed segments are still read, into its own note", async () => {
+  const clock = fakeClock();
+  const ui = renderer(clock, { session: 1 });
+  const slow = engine(clock, TURNS, { delayMs: 3000 });
+  const oldNote = [];
+  const old = room(1, {
+    deliver: ui.deliver,
+    readSegment: slow.readSegment,
+    saveLate: (text) => oldNote.push(text),
+  });
+  await play(
+    clock,
+    old,
+    signal([
+      ["quiet", 1],
+      ["speech", 2],
+      ["quiet", 0.6],
+    ])
+  );
+  assert.equal(ui.state.pendingCount(clock.now()), 1, "a final is on its way");
+  // The window reloaded mid-recording: no Stop, and a new recording starts.
+  old.abandon("replaced");
+  ui.state.reset(2);
+  const fresh = room(2, {
+    deliver: ui.deliver,
+    readSegment: engine(clock, [{ fromMs: 0, toMs: 99_000, text: "New room." }]).readSegment,
+  });
+  await play(
+    clock,
+    fresh,
+    signal([
+      ["quiet", 1],
+      ["speech", 1.5],
+      ["quiet", 1],
+    ])
+  );
+  await clock.advanceTo(clock.now() + 4000);
+  assert.deepEqual(oldNote, [QUESTION], "the old recording's final is in its own note");
+  assert.deepEqual(
+    ui.segments.map((s) => [s.session, s.text]),
+    [[2, "New room."]],
+    "and nowhere in the new one"
+  );
+  assert.deepEqual(old.session.transcript, []);
+  assert.deepEqual(fresh.session.transcript, ["New room."]);
+  await fresh.finish();
+});
+
+test("a late final joins its note's transcript in the order it was said, once", () => {
+  const stored = JSON.stringify([
+    { id: "a", text: "First.", source: "mic", timestamp: 1000, speaker: "room" },
+    { id: "c", text: "Third.", source: "mic", timestamp: 3000, speaker: "room" },
+  ]);
+  const late = {
+    session: 4,
+    segment: 2,
+    text: " Second. ",
+    timestamp: 2000,
+    startMs: 1000,
+    endMs: 1800,
+  };
+  const next = withLateRoomFinal(stored, late);
+  const segments = JSON.parse(next);
+  assert.deepEqual(
+    segments.map((s) => s.text),
+    ["First.", "Second.", "Third."]
+  );
+  assert.deepEqual(segments[1], {
+    id: "late-4-2",
+    text: "Second.",
+    source: "mic",
+    timestamp: 2000,
+    startMs: 1000,
+    endMs: 1800,
+    speaker: "room",
+    speakerName: "Conversation",
+    speakerIsPlaceholder: true,
+    speakerStatus: "confirmed",
+  });
+  assert.deepEqual(segments[0], JSON.parse(stored)[0], "what was there is kept as it was");
+  assert.equal(withLateRoomFinal(next, late), next, "a second save changes nothing");
+  assert.equal(JSON.parse(withLateRoomFinal(null, late)).length, 1, "an empty note gets it");
+  assert.equal(
+    withLateRoomFinal("not json", late),
+    null,
+    "text that is not segments is never overwritten"
+  );
+  assert.equal(withLateRoomFinal('{"a":1}', late), null);
+  assert.equal(withLateRoomFinal(stored, { ...late, text: "  " }), stored, "no words, no change");
+});
+
+test("Stop drains into the old note before a new recording can start: main and renderer", () => {
+  const source = read("src/helpers/ipcHandlers.js");
+  const start = source.slice(source.indexOf('ipcMain.handle("meeting-transcription-start"'));
+  assert.ok(
+    start.indexOf("await meetingStopInFlight") <
+      start.indexOf("meetingTranscriptionStartInProgress = true"),
+    "a start waits for an in-flight stop before it touches any state"
+  );
+  const stop = source.slice(
+    source.indexOf('ipcMain.handle("meeting-transcription-stop"'),
+    source.indexOf("const streamingStartFailure")
+  );
+  assert.ok(
+    stop.indexOf("meetingStopInFlight = inFlight") < stop.indexOf("finishInRoomSegmenting()")
+  );
+  assert.match(
+    stop,
+    /finally \{\s*if \(meetingStopInFlight === inFlight\) meetingStopInFlight = null;\s*stopped\(\);/
+  );
+  const finish = source.slice(
+    source.indexOf("const finishInRoomSegmenting"),
+    source.indexOf("const runInRoomSpeakerPass")
+  );
+  assert.match(
+    finish,
+    /if \(meetingInRoom === session\) meetingInRoom = null;/,
+    "only its own session"
+  );
+  const abandon = source.slice(
+    source.indexOf("const abandonInRoomSession"),
+    source.indexOf("const feedInRoomAudio")
+  );
+  assert.match(abandon, /const keep = reason === "replaced" && abandoned\.noteId != null;/);
+  assert.match(abandon, /if \(!keep\) abandoned\.queue\.length = 0;/);
+  const transcribe = source.slice(
+    source.indexOf("const transcribeInRoomSegment"),
+    source.indexOf("const finishInRoomSegmenting")
+  );
+  assert.ok(
+    transcribe.indexOf("saveLateRoomFinal(session, segment, text)") <
+      transcribe.indexOf("meetingLocalTranscript = meetingLocalTranscript"),
+    "a replaced session's final is saved before, and instead of, the live path"
+  );
+  assert.match(source, /noteId: meetingNoteId,/, "the session knows its note from the start");
+  // The renderer: Record waits for Finish, and Finish keeps its listeners
+  // until main's stop has returned.
+  const store = read("src/stores/meetingRecordingStore.ts");
+  const startRecording = store.slice(store.indexOf("export async function startRecording"));
+  assert.ok(
+    startRecording.indexOf("if (stopping) await stopping;") <
+      startRecording.indexOf("meetingTranscriptionStart?.("),
+    "Record waits for an in-flight Finish"
+  );
 });

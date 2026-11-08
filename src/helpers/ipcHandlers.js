@@ -4347,6 +4347,9 @@ class IPCHandlers {
     });
 
     let meetingTranscriptionStartInProgress = false;
+    // A Stop still landing its last finals. A start waits for it, so a new
+    // recording never takes over a session whose finals are still being read.
+    let meetingStopInFlight = null;
     let meetingTranscriptionPrepareInProgress = false;
     let meetingTranscriptionPreparePromise = null;
 
@@ -5642,7 +5645,7 @@ class IPCHandlers {
       const { SpeechSegmenter, SAMPLE_RATE } = await import("./speechSegmenter.mjs");
       const { PartialScheduler } = await import("./partialScheduler.mjs");
       const { AudioClock, speechChanges } = await import("./transcriptLag.mjs");
-      const { SegmentActivityReporter } = await import("./segmentActivity.mjs");
+      const { SegmentActivityReporter, withLateRoomFinal } = await import("./segmentActivity.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
       const stream = fs.createWriteStream(audioPath);
@@ -5668,6 +5671,11 @@ class IPCHandlers {
         activity: new SegmentActivityReporter(id),
         failedSegments: 0,
         abandoned: false,
+        endReason: null,
+        // The conversation this recording writes into, for a final that lands
+        // after the recording was replaced (saveLateRoomFinal).
+        noteId: meetingNoteId,
+        withLateRoomFinal,
       };
       meetingInRoom.lag = meetingInRoom.partials !== null;
     };
@@ -5682,22 +5690,66 @@ class IPCHandlers {
       for (const event of events) win.webContents.send("meeting-transcription-activity", event);
     };
 
-    /** A session that will not be stopped: a cancel, or a new recording over it. */
+    /**
+     * A session that will not be stopped. `cancelled`: its start failed and was
+     * rolled back, before any audio was sent, so it holds no finals; or a Stop
+     * already took everything from it. `replaced`: a new recording started over
+     * a session nobody stopped (its window reloaded or crashed mid-recording).
+     * Nobody listens for that one's finals any more, so the segments it already
+     * closed are still read and saved into its own conversation.
+     */
     const abandonInRoomSession = (reason) => {
       const abandoned = meetingInRoom;
       if (!abandoned) return;
       sendInRoomActivity(abandoned, abandoned.activity.end(reason));
       abandoned.abandoned = true;
+      abandoned.endReason = reason;
       meetingInRoom = null;
+      const keep = reason === "replaced" && abandoned.noteId != null;
       if (abandoned.queue.length || abandoned.draining) {
         debugLogger.warn("In-room session ended with finals still to read", {
           session: abandoned.id,
           reason,
           queued: abandoned.queue.length + (abandoned.draining ? 1 : 0),
+          savedToNote: keep ? abandoned.noteId : null,
         });
       }
-      abandoned.queue.length = 0;
+      if (!keep) abandoned.queue.length = 0;
       abandoned.audio.stream.end(() => fs.unlink(abandoned.audio.path, () => {}));
+    };
+
+    /** A replaced session's final, into its own conversation (see above). */
+    const saveLateRoomFinal = (session, segment, text) => {
+      try {
+        const note = this.databaseManager.getNote(session.noteId);
+        if (!note) throw new Error("its conversation is gone");
+        const transcript = session.withLateRoomFinal(note.transcript, {
+          session: session.id,
+          segment: segment.activitySegment,
+          text,
+          timestamp: session.startedAt + segment.startMs,
+          startMs: segment.startMs,
+          endMs: segment.endMs,
+        });
+        if (transcript === null) throw new Error("its transcript is not a list of segments");
+        if (transcript === note.transcript) return true;
+        this.databaseManager.updateNote(session.noteId, { transcript });
+        const updated = this.databaseManager.getNote(session.noteId);
+        if (updated) this.broadcastToWindows("note-updated", updated);
+        debugLogger.info("A final of a replaced in-room session was saved to its conversation", {
+          session: session.id,
+          noteId: session.noteId,
+          startMs: segment.startMs,
+        });
+        return true;
+      } catch (error) {
+        debugLogger.warn("A final of a replaced in-room session could not be saved", {
+          session: session.id,
+          noteId: session.noteId,
+          error: error.message,
+        });
+        return false;
+      }
     };
 
     const feedInRoomAudio = (buffer24k) => {
@@ -5882,8 +5934,13 @@ class IPCHandlers {
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
         // Its recording was cancelled or replaced while this was read: the
-        // words belong to neither the new recording nor its transcript.
+        // words belong to neither the new recording nor its transcript. A
+        // replaced one's words go into its own conversation.
         if (session.abandoned) {
+          if (session.endReason === "replaced" && session.noteId != null) {
+            outcome = saveLateRoomFinal(session, segment, text) ? "final" : "failed";
+            return;
+          }
           outcome = "failed";
           debugLogger.warn("A final from an ended in-room session was not delivered", {
             session: session.id,
@@ -5948,7 +6005,7 @@ class IPCHandlers {
       // After the last final: the renderer stops waiting on this session.
       sendInRoomActivity(session, session.activity.end("stop"));
       await new Promise((resolve) => session.audio.stream.end(resolve));
-      meetingInRoom = null;
+      if (meetingInRoom === session) meetingInRoom = null;
       if (session.failedSegments) {
         debugLogger.warn("In-room session stopped with segments that were not read", {
           session: session.id,
@@ -6366,6 +6423,12 @@ class IPCHandlers {
     });
 
     ipcMain.handle("meeting-transcription-start", async (event, options = {}) => {
+      // The renderer waits for its Stop too (startRecording); this holds for
+      // any caller. A Stop resolves after its last final was delivered.
+      if (meetingStopInFlight) {
+        debugLogger.debug("Meeting transcription start: waiting for an in-flight stop");
+        await meetingStopInFlight;
+      }
       // Wait for any in-flight prepare to finish before starting
       if (meetingTranscriptionPreparePromise) {
         debugLogger.debug("Meeting transcription start: waiting for in-flight prepare");
@@ -6675,6 +6738,9 @@ class IPCHandlers {
 
     ipcMain.handle("meeting-transcription-stop", async () => {
       this.meetingDetectionEngine?.setUserRecording(false);
+      let stopped;
+      const inFlight = new Promise((resolve) => (stopped = resolve));
+      meetingStopInFlight = inFlight;
       try {
         if (this.audioTapManager) {
           await this.audioTapManager.stop();
@@ -6769,6 +6835,9 @@ class IPCHandlers {
       } catch (error) {
         debugLogger.error("Meeting transcription stop error", { error: error.message });
         return { success: false, error: error.message };
+      } finally {
+        if (meetingStopInFlight === inFlight) meetingStopInFlight = null;
+        stopped();
       }
     });
 

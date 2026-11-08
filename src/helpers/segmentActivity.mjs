@@ -192,3 +192,54 @@ export class SegmentActivityState {
     return next;
   }
 }
+
+/**
+ * A room recording replaced before anybody stopped it (its window reloaded or
+ * crashed mid-recording, then a new recording started): main still reads the
+ * segments it had closed, and nobody listens for their finals. Each is saved
+ * into that recording's own conversation instead, as the segment the store
+ * would have made of it (meetingRecordingStore.ts, in a room), in the order it
+ * was said.
+ *
+ * Returns the new transcript JSON; the same string when the final is already
+ * there; or null when the stored transcript is not a list of segments, which
+ * is never overwritten.
+ * @param {string | null | undefined} transcriptJson The note's stored transcript.
+ * @param {{ session: number, segment?: number, text: string, timestamp: number,
+ *   startMs?: number, endMs?: number }} final
+ */
+export function withLateRoomFinal(transcriptJson, final) {
+  let segments = [];
+  if (transcriptJson) {
+    try {
+      segments = JSON.parse(transcriptJson);
+    } catch {
+      return null;
+    }
+    if (!Array.isArray(segments)) return null;
+  }
+  const text = String(final?.text ?? "").trim();
+  if (!text) return transcriptJson ?? "[]";
+  const id = `late-${final.session}-${final.segment ?? final.startMs ?? final.timestamp}`;
+  if (
+    segments.some((s) => s?.id === id || (s?.text === text && s?.timestamp === final.timestamp))
+  ) {
+    return transcriptJson;
+  }
+  const segment = {
+    id,
+    text,
+    source: "mic",
+    timestamp: final.timestamp,
+    ...(Number.isFinite(final.startMs) && Number.isFinite(final.endMs)
+      ? { startMs: final.startMs, endMs: final.endMs }
+      : {}),
+    speaker: "room",
+    speakerName: "Conversation",
+    speakerIsPlaceholder: true,
+    speakerStatus: "confirmed",
+  };
+  let at = segments.length;
+  while (at > 0 && (segments[at - 1]?.timestamp ?? 0) > final.timestamp) at -= 1;
+  return JSON.stringify([...segments.slice(0, at), segment, ...segments.slice(at)]);
+}
