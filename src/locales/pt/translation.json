@@ -2110,6 +2110,8 @@
       "summaryAfterRecording": "O resumo será escrito quando esta conversa terminar.",
       "summaryWhenRecordingEnds": "O resumo será escrito quando a gravação terminar.",
       "summaryTooLong": "Esta conversa é longa demais para o modelo de escrita deste Mac. Com uma chave de API (Definições › Modelos de IA), ela pode ser resumida.",
+      "summaryOutputLimit": "O modelo de escrita deste Mac parou no máximo que consegue escrever numa resposta, por isso o resumo não foi concluído. Se pedir de novo, muito provavelmente vai parar da mesma forma. Com uma chave de API (Definições › Modelos de IA), ela pode ser resumida.",
+      "summaryEarlier": "Escrito antes de a conversa continuar. Não inclui a parte posterior.",
       "summarizeAgain": "Resumir novamente",
       "summaryFailed": "Não foi possível criar o resumo: {{reason}}",
       "setUpModel": "Configurar um modelo"

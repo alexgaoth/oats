@@ -32,6 +32,9 @@
 // conversation recorded before any model was ready; `summary=fail` fails every
 // summary, `summary=fail-once` the first try of each, and `summary=too-long`
 // answers as the server on this Mac does to a conversation over its context.
+// `summary=context-full` answers as main does when that context fills while
+// the answer is written (a 99-minute meeting), and `summary=output-limit` as
+// it does when the answer reaches its own limit with room left.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import registry from "../../src/models/modelRegistryData.json";
@@ -164,6 +167,8 @@ if (!openai) installFakeKeyCheck();
 // `summary=too-long` answers as llama-server does to a conversation that does
 // not fit its context, through main's error.
 const failing = params.get("summary");
+// How many summary requests reached main, for `oatsDemo.summaryAsks()`.
+let summaryAsks = 0;
 const CONTEXT_OVERFLOW = `Inference failed: llama-server returned status 400: ${JSON.stringify({
   error: {
     code: 400,
@@ -174,12 +179,36 @@ const CONTEXT_OVERFLOW = `Inference failed: llama-server returned status 400: ${
     n_ctx: 16384,
   },
 })}`;
-if (failing === "fail" || failing === "fail-once" || failing === "too-long") {
+// The counts main read from llama-server (b9763, Gemma 4 E4B, 16,384 tokens of
+// context), measured on AMI TS3003a+b+c and a short exchange.
+const CUT = "Inference failed: The local model stopped at its output limit before it finished";
+const CUT_ANSWERS = {
+  "context-full": {
+    error: CUT,
+    code: "summary-too-long",
+    details: { promptTokens: 16111, completionTokens: 273, contextTokens: 16384, maxTokens: 2048 },
+    delayMs: 600,
+  },
+  "output-limit": {
+    error: CUT,
+    code: "summary-output-limit",
+    details: { promptTokens: 6242, completionTokens: 2048, contextTokens: 16384, maxTokens: 2048 },
+    delayMs: 600,
+  },
+};
+if (
+  failing === "fail" ||
+  failing === "fail-once" ||
+  failing === "too-long" ||
+  Object.hasOwn(CUT_ANSWERS, failing)
+) {
   const answer = main.hooks.reason;
   const tried = new Set();
   main.hooks.reason = (request) => {
     if (/meeting notes assistant/i.test(request.prompt)) {
+      summaryAsks += 1;
       if (failing === "too-long") return { error: CONTEXT_OVERFLOW, delayMs: 600 };
+      if (Object.hasOwn(CUT_ANSWERS, failing)) return { ...CUT_ANSWERS[failing] };
       const first = !tried.has(request.text);
       tried.add(request.text);
       if (failing === "fail" || first) {
@@ -227,6 +256,8 @@ window.oatsDemo = {
     await frame();
     return note.id;
   },
+  /** How many summary requests a `summary=` failure answered on this page. */
+  summaryAsks: () => summaryAsks,
   /** Switch tab in the reading view: "summary", "transcript" or "connections". */
   tab: async (name) => {
     pressTab(name);

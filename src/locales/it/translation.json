@@ -2110,6 +2110,8 @@
       "summaryAfterRecording": "Il riepilogo verrà scritto quando questa conversazione sarà terminata.",
       "summaryWhenRecordingEnds": "Il riepilogo verrà scritto quando la registrazione sarà terminata.",
       "summaryTooLong": "Questa conversazione è troppo lunga per il modello di scrittura di questo Mac. Con una chiave API (Impostazioni › Modelli di IA) si può riassumere.",
+      "summaryOutputLimit": "Il modello di scrittura di questo Mac si è fermato al massimo che può scrivere in una risposta, quindi il riepilogo non è stato completato. Chiedendolo di nuovo, molto probabilmente si fermerebbe allo stesso modo. Con una chiave API (Impostazioni › Modelli di IA) si può riassumere.",
+      "summaryEarlier": "Scritto prima che la conversazione continuasse. Non copre la parte successiva.",
       "summarizeAgain": "Riassumi di nuovo",
       "summaryFailed": "Non è stato possibile creare il riepilogo: {{reason}}",
       "setUpModel": "Configura un modello"

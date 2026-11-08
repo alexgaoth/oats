@@ -11,6 +11,7 @@ import { summaryAnswerProblem, summaryLimits } from "../helpers/summaryCall.mjs"
 import {
   SUMMARY_RETRY_DELAY_MS,
   SUMMARY_TOO_LONG,
+  newerSummaryStored,
   shouldRetrySummary,
   summaryFailureKind,
   tooLongForLocalModel,
@@ -26,9 +27,10 @@ export interface NoteActionState {
   message?: string | null;
   /**
    * "too-long" when it does not fit the writing model on this Mac, so asking
-   * again there fails the same way (helpers/summaryQueue.mjs).
+   * again there fails the same way; "output-limit" when that model's answer
+   * reached its own limit (helpers/summaryQueue.mjs).
    */
-  kind?: "too-long" | "other" | null;
+  kind?: "too-long" | "output-limit" | "other" | null;
 }
 
 export interface ActionErrorEvent {
@@ -44,6 +46,10 @@ interface ActionProcessingStoreState {
 const cancelledFlags = new Map<number, boolean>();
 const processingFlags = new Map<number, boolean>();
 const successTimers = new Map<number, NodeJS.Timeout>();
+// Each run of a note's action counts up. A cancelled run's request goes on
+// (cancelAction), and a newer run resets the cancel flag, so only the latest
+// run may save or report.
+const latestRuns = new Map<number, number>();
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -124,11 +130,13 @@ export interface RunActionOptions {
 /**
  * How an action ended: its result saved, failed (a conversation's summary
  * after its second try), too long for the writing model on this Mac (never
- * tried again there), cancelled, refused (no model, no endpoint, no key for
- * the provider), or not started because one is already running for the note.
+ * tried again there), cut at that model's answer limit (not tried again
+ * unchanged), cancelled (or overtaken by a newer run or a newer saved
+ * summary), refused (no model, no endpoint, no key for the provider), or not
+ * started because one is already running for the note.
  */
 export type BackgroundActionOutcome =
-  "saved" | "failed" | "too-long" | "cancelled" | "refused" | "busy";
+  "saved" | "failed" | "too-long" | "output-limit" | "cancelled" | "refused" | "busy";
 
 export interface RunActionLabels {
   noModel: string;
@@ -140,6 +148,8 @@ export interface RunActionLabels {
   noSummary?: string;
   /** A conversation too long for the writing model on this Mac. */
   tooLong?: string;
+  /** That model's answer reached the most it may write in one answer. */
+  outputLimit?: string;
 }
 
 /**
@@ -174,6 +184,9 @@ export function runBackgroundAction(
 
   cancelledFlags.set(noteId, false);
   processingFlags.set(noteId, true);
+  const run = (latestRuns.get(noteId) ?? 0) + 1;
+  latestRuns.set(noteId, run);
+  const overtaken = () => latestRuns.get(noteId) !== run;
   setNoteState(noteId, {
     status: "processing",
     actionName: action.name,
@@ -218,7 +231,7 @@ export function runBackgroundAction(
         ...(options.isMeetingNote ? summaryLimits(noteFormatting.mode) : {}),
       });
 
-      if (cancelledFlags.get(noteId)) return "cancelled";
+      if (cancelledFlags.get(noteId) || overtaken()) return "cancelled";
       // Never save nothing, or the transcript itself, as the summary.
       if (options.isMeetingNote && summaryAnswerProblem(enhanced, noteContent)) {
         throw new Error(labels.noSummary ?? labels.actionFailed);
@@ -235,7 +248,21 @@ export function runBackgroundAction(
         if (now && (now.title ?? "") !== (options.titleAtStart ?? "")) title = undefined;
       }
 
-      if (cancelledFlags.get(noteId)) return "cancelled";
+      if (cancelledFlags.get(noteId) || overtaken()) return "cancelled";
+      // A summary of the transcript as it is now was saved while this one was
+      // written (the conversation went on, and its Finish summarized it): this
+      // one is older, and is not saved over it.
+      if (options.isMeetingNote) {
+        const stored = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(
+          () => null
+        );
+        if (newerSummaryStored(stored, contentHash)) {
+          processingFlags.set(noteId, false);
+          clearNoteState(noteId);
+          return "cancelled";
+        }
+        if (cancelledFlags.get(noteId) || overtaken()) return "cancelled";
+      }
 
       const updates: Record<string, string> = {
         enhanced_content: enhanced,
@@ -294,7 +321,7 @@ export function runBackgroundAction(
         try {
           return await attempt();
         } catch (err) {
-          if (cancelledFlags.get(noteId)) return "cancelled";
+          if (cancelledFlags.get(noteId) || overtaken()) return "cancelled";
           // No key for the provider: refused, as with no model. Nothing was
           // sent; the conversation stays owed and is written once a key is
           // saved (stores/summaryQueueStore.ts), never tried again before.
@@ -304,8 +331,10 @@ export function runBackgroundAction(
             if (labels.noKey) pushErrorEvent({ noteId, message: labels.noKey });
             return "refused";
           }
-          // Too long for the model on this Mac fails the same way every time:
-          // never asked again, and said plainly instead of the server's words.
+          // Too long for the model on this Mac fails the same way every time,
+          // and an answer cut at its own limit most likely runs long again:
+          // neither is asked again, and each is said plainly instead of the
+          // server's words.
           const kind = options.isMeetingNote
             ? summaryFailureKind(err as { message?: string; code?: string }, noteFormatting.mode)
             : "other";
@@ -316,18 +345,20 @@ export function runBackgroundAction(
           // Only a quick failure: a slow one was a timeout the request code
           // already repeated, or a long local run (helpers/summaryQueue.mjs).
           const tookMs = performance.now() - startedAt;
-          if (options.isMeetingNote && kind !== "too-long" && shouldRetrySummary(tries, tookMs)) {
+          if (options.isMeetingNote && kind === "other" && shouldRetrySummary(tries, tookMs)) {
             await delay(SUMMARY_RETRY_DELAY_MS);
-            if (cancelledFlags.get(noteId)) return "cancelled";
+            if (cancelledFlags.get(noteId) || overtaken()) return "cancelled";
             continue;
           }
           processingFlags.set(noteId, false);
           const message =
             kind === "too-long" && labels.tooLong
               ? labels.tooLong
-              : err instanceof Error
-                ? err.message
-                : labels.actionFailed;
+              : kind === "output-limit" && labels.outputLimit
+                ? labels.outputLimit
+                : err instanceof Error
+                  ? err.message
+                  : labels.actionFailed;
           // A conversation keeps the failure, so its record says so and offers it
           // again (OatsWorkspace.tsx); other notes go back to idle.
           if (options.isMeetingNote) {
@@ -336,7 +367,7 @@ export function runBackgroundAction(
             clearNoteState(noteId);
           }
           pushErrorEvent({ noteId, message });
-          return kind === "too-long" ? "too-long" : "failed";
+          return kind === "other" ? "failed" : kind;
         }
       }
     } finally {

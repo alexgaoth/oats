@@ -179,8 +179,12 @@ yet; `download=<percent>` holds that model mid-download there, until
 model was ready, so opening one starts its summary; `summary=fail` fails every
 summary, `summary=fail-once` the first try of each, and `summary=too-long`
 answers as the server on this Mac does to a conversation over its context;
-`owed=keep` keeps the list of conversations owed a summary from the last page
-(`oatsDemo.owed()` reads it). For example
+`summary=context-full` answers as main does when that context fills while the
+answer is written (a 99-minute meeting), and `summary=output-limit` as it does
+when the answer reaches its own limit with room left;
+`owed=keep` keeps the list of conversations owed a summary, and the summary
+failures that would repeat, from the last page (`oatsDemo.owed()` reads the
+list). For example
 `/demo.html?panel=true&writing=gemma-4-e4b-it-q4_k_m&download=40&bare=launch-readiness-review`.
 
 The harness sets the demo's settings on every load: onboarding done, English,
