@@ -9,9 +9,11 @@ const readline = require("readline");
 const say = (o) => process.stdout.write(JSON.stringify(o) + "\n");
 say({ ready: true });
 readline.createInterface({ input: process.stdin }).on("line", (line) => {
-  const { id, pcm, keepFrom } = JSON.parse(line);
+  const { id, pcm, keepFrom, after } = JSON.parse(line);
   const audio = Buffer.from(pcm, "base64");
-  if (keepFrom !== undefined) return say({ id, text: audio.length + " bytes from " + keepFrom });
+  if (keepFrom !== undefined) {
+    return say({ id, text: audio.length + " bytes from " + keepFrom + (after ? " after " + after : "") });
+  }
   if (audio.length === 0) return say({ id, error: "no audio" });
   if (audio[0] === 9) process.exit(4);
   say({ id, text: audio.length + " bytes" });
@@ -68,6 +70,20 @@ test("the audio before a segment goes with it, and says where the segment starts
   const ane = fake();
   const before = Buffer.alloc(16000 * 2 * 2);
   assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), before), "64002 bytes from 2");
+  await ane.stop();
+});
+
+test("the word before a segment comes from main, so a new recording starts with none", async () => {
+  // The helper outlives a recording. Main sends the last word of the segment before;
+  // a first segment sends none, and a read with no context sends none either.
+  const ane = fake();
+  const before = Buffer.alloc(16000 * 2);
+  assert.equal(
+    await ane.transcribe(wav(Buffer.from([1, 2])), before, "segment"),
+    "32002 bytes from 1 after segment"
+  );
+  assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), before), "32002 bytes from 1");
+  assert.equal(await ane.transcribe(wav(Buffer.from([1, 2])), null, "segment"), "2 bytes");
   await ane.stop();
 });
 

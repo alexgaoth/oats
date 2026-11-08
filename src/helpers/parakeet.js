@@ -250,6 +250,7 @@ class ParakeetManager {
     const result = await this.serverManager.transcribe(audioBuffer, {
       modelName: model,
       audioBefore: options.audioBefore,
+      wordBefore: options.wordBefore,
     });
     const elapsed = Date.now() - startTime;
 

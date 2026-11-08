@@ -5660,6 +5660,8 @@ class IPCHandlers {
         draining: null,
         audio: { path: audioPath, stream, bytes: 0 },
         recent: new RoomAudioWindow(ROOM_RECENT_SECONDS * SAMPLE_RATE),
+        /** The last word of the last final, for Parakeet's read of the next segment. */
+        lastWord: "",
         clock: new AudioClock(SAMPLE_RATE),
         speechChanges,
         speechOpen: null,
@@ -5774,6 +5776,7 @@ class IPCHandlers {
         {
           model: meetingLocalModel,
           audioBefore: bytes.subarray(0, before.length * 2),
+          wordBefore: session.lastWord,
         }
       );
     };
@@ -5872,6 +5875,7 @@ class IPCHandlers {
         );
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
+        session.lastWord = text.split(/\s+/).pop();
         meetingLocalTranscript = meetingLocalTranscript
           ? `${meetingLocalTranscript} ${text}`
           : text;

@@ -166,9 +166,11 @@ class ParakeetAne {
    * @param {Buffer} wav 16 kHz mono 16-bit
    * @param {Buffer} [before] the audio just before it, as context: the helper keeps
    *   only the words of the WAV
+   * @param {string} [wordBefore] the last word kept from the segment before, in the
+   *   same recording: a word heard again at the edge is left out
    * @returns {Promise<string>}
    */
-  async transcribe(wav, before = null) {
+  async transcribe(wav, before = null, wordBefore = "") {
     await this.start();
     const segment = pcmFromWav(wav);
     const pcm = (before ? Buffer.concat([before, segment]) : segment).toString("base64");
@@ -182,7 +184,8 @@ class ParakeetAne {
         reject(new Error(`${BINARY_NAME} did not answer`));
       }, READ_TIMEOUT_MS);
       this.pending.set(id, { resolve, reject, timer });
-      helper.stdin.write(`${JSON.stringify({ id, pcm, keepFrom })}\n`);
+      const after = before && wordBefore ? wordBefore : undefined;
+      helper.stdin.write(`${JSON.stringify({ id, pcm, keepFrom, after })}\n`);
     });
   }
 

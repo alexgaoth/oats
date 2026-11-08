@@ -3,12 +3,14 @@
 // and talks to it in JSON lines:
 //
 //   helper  {"ready":true}
-//   main    {"id":1,"pcm":"<base64: 16-bit little-endian mono PCM at 16 kHz>","keepFrom":8.0}
+//   main    {"id":1,"pcm":"<base64: 16-bit little-endian mono PCM at 16 kHz>","keepFrom":8.0,"after":"word"}
 //   helper  {"id":1,"text":"What was said."}   or   {"id":1,"error":"..."}
 //
 // A segment is short and the model reads 15 s at once, so main sends the seconds
 // before the segment too, as context. `keepFrom` says where the segment starts, and
-// only the words from there on come back.
+// only the words from there on come back. `after` is the last word main kept from
+// the segment before, in this recording: the helper outlives a recording, so it
+// keeps no words of its own between requests.
 //
 // The audio stays in memory: nothing here writes a segment to disk, and nothing here
 // reaches the network. The main process fetches the models. Why this model, and the
@@ -95,7 +97,6 @@ func serve(_ directory: URL) async throws {
   let manager = AsrManager(config: .default)
   try await manager.loadModels(AsrModels.load(from: models, version: .ultra))
   let layers = await manager.decoderLayerCount
-  var lastWord = ""
   say(["ready": true])
   while let line = readLine() {
     guard let data = line.data(using: .utf8),
@@ -119,8 +120,8 @@ func serve(_ directory: URL) async throws {
         say(["id": id, "text": result.text])
         continue
       }
-      let kept = words(result.tokenTimings ?? [], from: keepFrom, after: lastWord)
-      if let last = kept.last { lastWord = bare(last) }
+      let after = bare(request["after"] as? String ?? "")
+      let kept = words(result.tokenTimings ?? [], from: keepFrom, after: after)
       say(["id": id, "text": kept.joined(separator: " ")])
     } catch {
       say(["id": id, "error": "\(error)"])
