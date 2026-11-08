@@ -366,7 +366,9 @@ export function runBackgroundAction(
           } else {
             clearNoteState(noteId);
           }
-          pushErrorEvent({ noteId, message });
+          // A limit is said in the record itself, beside the way forward; a
+          // toast repeating it would cover that way.
+          if (kind === "other") pushErrorEvent({ noteId, message });
           return kind === "other" ? "failed" : kind;
         }
       }

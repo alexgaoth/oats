@@ -467,6 +467,24 @@ test("a dropped connection, or a cut without counts, is tried once more", async 
   assert.equal(stateOf(16).kind, "other");
 });
 
+test("a limit is said in the record only; any other failure also raises the error toast", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  action.consumeErrorEvents();
+  answerWith(CONTEXT_FILLED);
+  assert.equal(await summarize(t, 17), "too-long");
+  answerWith(REFUSED);
+  assert.equal(await summarize(t, 18), "too-long");
+  answerWith(ANSWER_FILLED);
+  assert.equal(await summarize(t, 19), "output-limit");
+  // The record holds the reason beside its AI models button; a toast would cover it.
+  assert.deepEqual(action.consumeErrorEvents(), []);
+  answerWith(CUT_UNCOUNTED, CUT_UNCOUNTED);
+  assert.equal(await summarize(t, 20), "failed");
+  const events = action.consumeErrorEvents();
+  assert.equal(events.length, 1);
+  assert.equal(events[0].noteId, 20);
+});
+
 test("a summary still being written when a newer one starts never saves over it", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const gates = [];
