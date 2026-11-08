@@ -282,6 +282,7 @@ jobs:
           done
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             test -x "$APP_PATH/Contents/Resources/bin/macos-parakeet-ane" || { echo "Missing in bundle: macos-parakeet-ane"; exit 1; }
+            test -f "$APP_PATH/Contents/Resources/bin/macos-parakeet-ane-NOTICES.txt" || { echo "Missing in bundle: macos-parakeet-ane-NOTICES.txt"; exit 1; }
           fi
           test -x "$APP_PATH/Contents/Resources/bin/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter" || { echo "Missing in bundle: MediaRemoteAdapter.framework"; exit 1; }
           test -f "$APP_PATH/Contents/Resources/bin/mediaremote-adapter.pl" || { echo "Missing in bundle: mediaremote-adapter.pl"; exit 1; }
