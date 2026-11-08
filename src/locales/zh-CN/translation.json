@@ -1523,6 +1523,7 @@
     "noneAvailable": "没有可用的模型",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "在 Apple 芯片上最适合面对面对话。运行于神经网络引擎（25 种语言）",
         "parakeet_tdt_0_6b_v3": "快速多语言语音识别，自动语言检测（25 种语言）",
         "parakeet_unified_en_0_6b": "仅英语 ASR，最先进的准确度（平均 WER 5.91%）",
         "nemotron_speech_streaming_en_0_6b": "NVIDIA Nemotron 英语流式语音识别",

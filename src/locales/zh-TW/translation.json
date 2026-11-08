@@ -1523,6 +1523,7 @@
     "noneAvailable": "沒有可用的模型",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "在 Apple 晶片上最適合面對面對話。於神經網路引擎執行（25 種語言）",
         "parakeet_tdt_0_6b_v3": "快速多語言 ASR，自動語言偵測（25 種語言）",
         "parakeet_unified_en_0_6b": "僅英語 ASR，最先進的準確度（平均 WER 5.91%）",
         "nemotron_speech_streaming_en_0_6b": "NVIDIA Nemotron 英語串流語音辨識",

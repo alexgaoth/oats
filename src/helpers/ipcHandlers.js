@@ -5839,11 +5839,24 @@ class IPCHandlers {
         }
       );
     };
+    // Parakeet on the Neural Engine hears a raised segment too, as it was measured:
+    // with steady sound the raise is worth half a point (docs/speech-round-2.md).
+    const transcribeInRoomParakeet = async (pcm) => {
+      let audio = pcm;
+      if (this.parakeetManager.usesNeuralEngine(meetingLocalModel)) {
+        const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
+        const raised = raiseQuietSegment(
+          new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1)
+        );
+        audio = Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength);
+      }
+      return this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(audio), {
+        model: meetingLocalModel,
+      });
+    };
     const transcribeInRoomAudio = async (pcm, steadyFloor) => {
       const result = await (meetingLocalProvider === "nvidia"
-        ? this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
-            model: meetingLocalModel,
-          })
+        ? transcribeInRoomParakeet(pcm)
         : transcribeInRoomWhisper(pcm, steadyFloor));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
       return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;

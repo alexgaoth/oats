@@ -182,6 +182,8 @@ Oats is an Electron app. The interface is React. The main process runs the local
 
 Oats grew out of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop dictation app, and [UPSTREAM.md](UPSTREAM.md) records the provenance. Transcription uses [whisper.cpp](https://github.com/ggml-org/whisper.cpp), local models run on [llama.cpp](https://github.com/ggml-org/llama.cpp), the interface is set in [Inter](https://rsms.me/inter/), and the wordmark in [EB Garamond](https://github.com/octaviopardo/EBGaramond12). Topic names prefer distinctive words by their rank in English, from the Google Books Ngram corpus as counted by [google-books-ngram-frequency](https://github.com/orgtre/google-books-ngram-frequency) (CC BY 3.0). The speed check that picks the speech model for a Mac reads one utterance from [LibriSpeech](https://www.openslr.org/12) (Panayotov et al., CC BY 4.0): test-clean 7127-75946-0024, read by Bill Kneeland for LibriVox.
 
+Parakeet Ultra, a model you can choose on Apple Silicon, is [moondream/parakeet-ultra](https://huggingface.co/moondream/parakeet-ultra) (CC-BY-4.0), a post-training of NVIDIA's Parakeet TDT 0.6B v3 (CC-BY-4.0), in the Core ML build of [FluidInference](https://huggingface.co/FluidInference/parakeet-ultra-coreml). It runs on [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0), behind [Silero VAD](https://github.com/snakers4/silero-vad) (MIT).
+
 ## License
 
 [MIT](LICENSE)

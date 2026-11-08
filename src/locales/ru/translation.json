@@ -1528,6 +1528,7 @@
     "noneAvailable": "Нет доступных моделей",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "Лучший вариант для разговора в комнате на Apple Silicon. Работает на Neural Engine (25 языков)",
         "parakeet_tdt_0_6b_v3": "Быстрое многоязычное распознавание с автоопределением языка (25 языков)",
         "parakeet_unified_en_0_6b": "ASR только для английского с передовой точностью (средний WER 5,91%)",
         "nemotron_speech_streaming_en_0_6b": "Потоковое распознавание английской речи от NVIDIA Nemotron",

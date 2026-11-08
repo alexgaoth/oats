@@ -1528,6 +1528,7 @@
     "noneAvailable": "利用可能なモデルがありません",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "Apple シリコンでの対面の会話に最適。Neural Engine で動作（25 言語）",
         "parakeet_tdt_0_6b_v3": "高速多言語 ASR、自動言語検出対応（25 言語）",
         "parakeet_unified_en_0_6b": "英語専用の最先端精度ASR（平均WER 5.91%）",
         "nemotron_speech_streaming_en_0_6b": "NVIDIA Nemotron の英語ストリーミング ASR",
