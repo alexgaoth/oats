@@ -34,7 +34,8 @@
 // answers as the server on this Mac does to a conversation over its context.
 // `summary=context-full` answers as main does when that context fills while
 // the answer is written (a 99-minute meeting), and `summary=output-limit` as
-// it does when the answer reaches its own limit with room left.
+// it does when the answer reaches its own limit with room left. `grown=<sample
+// id>` gives that conversation a summary of its first part only, owed again.
 
 import mainFixture from "../../src/helpers/sampleConversations/launch-readiness-review.json";
 import registry from "../../src/models/modelRegistryData.json";
@@ -46,6 +47,7 @@ import { installFakeMicrophone } from "./media.mjs";
 import { manyConversations } from "./many.mjs";
 import { createReplay } from "./replay.mjs";
 import { applyDemoSettings } from "./settings.mjs";
+import { summaryContentHash } from "../../src/helpers/summaryQueue.mjs";
 
 const supporting = Object.values(
   import.meta.glob("../fixtures/*.json", { eager: true, import: "default" })
@@ -101,6 +103,25 @@ const bare = params.get("bare");
 if (bare) {
   for (const note of main.db.notes) {
     if (bare === "all" || note.demo_sample === bare) note.enhanced_content = null;
+  }
+}
+// `grown=<sample id>`: that conversation was resumed and finished again, so its
+// summary was written from the first three quarters of the turns it holds now.
+// Finish owes it a new summary, by the local writing model, unless `owed=keep`
+// brings back the last page's list instead.
+const grown = params.get("grown");
+if (grown) {
+  const note = main.db.noteBySample(grown);
+  if (note?.enhanced_content && note.transcript) {
+    const turns = JSON.parse(note.transcript);
+    const first = JSON.stringify(turns.slice(0, Math.ceil(turns.length * 0.75)));
+    note.enhanced_at_content_hash = summaryContentHash(first);
+    if (params.get("owed") !== "keep") {
+      localStorage.setItem(
+        "oatsPendingSummaries",
+        JSON.stringify([{ id: note.id, at: Date.now(), route: "local:" }])
+      );
+    }
   }
 }
 if (many) {
