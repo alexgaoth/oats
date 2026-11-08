@@ -2105,6 +2105,8 @@
       "summaryAfterRecording": "這段對話結束後將產生摘要。",
       "summaryWhenRecordingEnds": "錄音結束後將產生摘要。",
       "summaryTooLong": "這段對話對這台 Mac 上的寫作模型來說太長了。使用 API 金鑰（設定 › AI 模型）即可產生摘要。",
+      "summaryOutputLimit": "這台 Mac 上的寫作模型達到了單次回答可寫的上限，摘要沒有寫完。再次要求很可能會以同樣方式停止。使用 API 金鑰（設定 › AI 模型）即可產生摘要。",
+      "summaryEarlier": "此摘要寫於對話繼續之前，不包含後面的部分。",
       "summarizeAgain": "重新產生摘要",
       "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"

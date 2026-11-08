@@ -230,8 +230,18 @@ export const LOCAL_CONTEXT_TOKENS = 16_384;
  */
 export const GENEROUS_CHARS_PER_TOKEN = 6;
 
-/** The code of the error a summary fails with when the check below stops it. */
+/**
+ * The code of the error a summary fails with when the check below stops it,
+ * or when the context of the model on this Mac filled before its answer was
+ * done (helpers/localAnswerLimit.js).
+ */
 export const SUMMARY_TOO_LONG = "summary-too-long";
+
+/**
+ * The code of a local answer that reached its own token limit with room left
+ * in the context: the answer ran long, not the conversation.
+ */
+export const SUMMARY_OUTPUT_LIMIT = "summary-output-limit";
 
 /**
  * Whether a summary request of this many characters (instructions and
@@ -253,19 +263,152 @@ const CONTEXT_OVERFLOW = /exceeds? the available context size|exceed_context_siz
 /**
  * What a failed summary means for what happens next. "too-long": the
  * conversation does not fit the writing model on this Mac, so asking again
- * fails the same way, and the record says so plainly. "other": anything else.
- * Only the route on this Mac is read: a provider's context is its own, and
- * whatever it says is shown as it said it.
+ * fails the same way, and the record says so plainly. "output-limit": the
+ * model's answer reached its own limit with room left in the context; the
+ * same request most likely runs long again, and it is not the conversation's
+ * length. "other": anything else. Only the route on this Mac is read: a
+ * provider's context is its own, and whatever it says is shown as it said it.
  *
  * @param {{ message?: string, code?: string } | string | null | undefined} error
  * @param {string} mode The writing mode: "local", "providers" or "self-hosted".
- * @returns {"too-long" | "other"}
+ * @returns {"too-long" | "output-limit" | "other"}
  */
 export function summaryFailureKind(error, mode) {
   if (mode !== "local") return "other";
   if (error && typeof error === "object" && error.code === SUMMARY_TOO_LONG) return "too-long";
+  if (error && typeof error === "object" && error.code === SUMMARY_OUTPUT_LIMIT) {
+    return "output-limit";
+  }
   const message = typeof error === "string" ? error : String(error?.message ?? "");
   return CONTEXT_OVERFLOW.test(message) ? "too-long" : "other";
+}
+
+// --- Failures that would repeat.
+//
+// A summary that failed "too-long" or "output-limit" fails the same way when
+// nothing it depends on changed: the conversation, the transcript it was
+// written from, the writing model and the context. It is remembered by those,
+// in localStorage, so neither opening the conversation again nor a restart
+// asks again; a change to any of them lets it be tried.
+
+/** Where the failures are kept, in the window's localStorage. */
+export const SUMMARY_FAILURES_KEY = "oatsSummaryFailures";
+
+/** The most failures kept. Past it the oldest are dropped. */
+export const SUMMARY_FAILURES_MAX = 200;
+
+/**
+ * @typedef {object} SummaryFailure
+ * @property {number} id The conversation's note id.
+ * @property {string} source `summaryContentHash` of the transcript it failed on.
+ * @property {string} model `summaryModelKey` of the writing model then.
+ * @property {number} context The context of the model on this Mac then, in tokens.
+ * @property {"too-long" | "output-limit"} kind
+ */
+
+const REPEATING = new Set(["too-long", "output-limit"]);
+
+/**
+ * The writing model, as a failure records it: its mode and its id.
+ *
+ * @param {string | null | undefined} mode
+ * @param {string | null | undefined} model
+ */
+export function summaryModelKey(mode, model) {
+  return `${String(mode ?? "")}:${String(model ?? "")}`;
+}
+
+function isFailure(item) {
+  return (
+    item &&
+    isId(item.id) &&
+    typeof item.source === "string" &&
+    typeof item.model === "string" &&
+    Number.isInteger(item.context) &&
+    item.context > 0 &&
+    REPEATING.has(item.kind)
+  );
+}
+
+/**
+ * A failure added, or the conversation's earlier one replaced. At most
+ * SUMMARY_FAILURES_MAX, the oldest dropped.
+ *
+ * @param {SummaryFailure[]} list
+ * @param {SummaryFailure} entry
+ * @returns {SummaryFailure[]}
+ */
+export function withSummaryFailure(list, entry) {
+  if (!isFailure(entry)) return list;
+  const next = list.filter((item) => item.id !== entry.id);
+  next.push({
+    id: entry.id,
+    source: entry.source,
+    model: entry.model,
+    context: entry.context,
+    kind: entry.kind,
+  });
+  return next.slice(-SUMMARY_FAILURES_MAX);
+}
+
+/**
+ * @param {SummaryFailure[]} list
+ * @param {number} id
+ * @returns {SummaryFailure[]}
+ */
+export function withoutSummaryFailure(list, id) {
+  return list.some((item) => item.id === id) ? list.filter((item) => item.id !== id) : list;
+}
+
+/**
+ * The stored failures, cleaned. Anything unreadable is dropped.
+ *
+ * @param {string | null | undefined} raw
+ * @returns {SummaryFailure[]}
+ */
+export function readSummaryFailures(raw) {
+  if (typeof raw !== "string" || !raw) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  let list = [];
+  for (const item of parsed) list = withSummaryFailure(list, item);
+  return list;
+}
+
+/**
+ * How the conversation's last summary failed, if it would fail that way again
+ * now: the same transcript, model and context. Otherwise null.
+ *
+ * @param {SummaryFailure[]} list
+ * @param {{ id: number, source: string, model: string, context: number }} now
+ * @returns {"too-long" | "output-limit" | null}
+ */
+export function standingSummaryFailure(list, now) {
+  const item = list.find((entry) => entry.id === now?.id);
+  if (!item) return null;
+  if (item.source !== now.source || item.model !== now.model || item.context !== now.context) {
+    return null;
+  }
+  return item.kind;
+}
+
+/**
+ * Whether the stored note already has a summary of its current transcript that
+ * the one about to be saved (written from `contentHash`) is not: a newer
+ * summary, which an older one still in flight must not replace.
+ *
+ * @param {{ transcript?: string | null, enhanced_content?: string | null, enhanced_at_content_hash?: string | null } | null | undefined} stored
+ * @param {string} contentHash
+ */
+export function newerSummaryStored(stored, contentHash) {
+  if (!stored || !String(stored.enhanced_content ?? "").trim()) return false;
+  const current = summaryContentHash(stored.transcript);
+  return stored.enhanced_at_content_hash === current && contentHash !== current;
 }
 
 /**
@@ -302,7 +445,7 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
 }
 
 /**
- * @typedef {"summary" | "preparing" | "failed" | "too-long" | "recording"
+ * @typedef {"summary" | "preparing" | "failed" | "too-long" | "output-limit" | "recording"
  *   | "after-recording" | "downloading" | "needs-model" | "checking" | "starting"
  *   | "not-summarized"} RecordSummaryState
  */
@@ -310,7 +453,9 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
 /**
  * What a conversation's record says where its summary goes.
  *
- * - "summary": there is one.
+ * - "summary": there is one. A summary of an earlier transcript (the
+ *   conversation went on after it) whose refresh failed is not this: the
+ *   record says the refresh failed first, and why.
  * - "preparing": it is being written, including the pause before a second
  *   try, or Finish is about to write it.
  * - "failed": the second try failed too; the record offers it again.
@@ -318,6 +463,9 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  *   would fail the same way, so the record says why and points to a writing
  *   model with an API key instead. Once another writing model is chosen, what
  *   failed no longer stands in the way, and it is summarized as any other.
+ * - "output-limit": the writing model on this Mac stopped at the most it may
+ *   write in one answer. Not the conversation's length; asked again unchanged
+ *   it most likely runs long again, so it is offered with another model.
  * - "recording": the conversation is being recorded; Finish writes it.
  * - "after-recording": another conversation is being recorded or finished,
  *   and the writing model runs on this Mac or the person's own server, where
@@ -334,9 +482,13 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  *
  * @param {object} facts
  * @param {boolean} facts.hasSummary
+ * @param {boolean} [facts.stale] That summary was written from an earlier
+ *   transcript than the one stored now (`needsSummary`).
  * @param {boolean} facts.processing A summary of it is being written.
- * @param {boolean} facts.failed Its last summary failed, this session.
+ * @param {boolean} facts.failed Its last summary failed, this session, or a
+ *   failure that would repeat stands (`standingSummaryFailure`).
  * @param {boolean} [facts.tooLong] That failure was "too-long" (`summaryFailureKind`).
+ * @param {boolean} [facts.outputLimit] That failure was "output-limit".
  * @param {boolean} [facts.writingLocal] The writing model runs on this Mac now.
  * @param {boolean} facts.recording It is being recorded.
  * @param {boolean} facts.finishing Finish has it and has not asked for the summary yet.
@@ -352,10 +504,13 @@ export function downloadShown(download, { now, quietMs = DOWNLOAD_QUIET_MS }) {
  * @returns {RecordSummaryState}
  */
 export function recordSummaryState(facts) {
-  if (facts.hasSummary) return "summary";
+  if (facts.hasSummary && !(facts.stale && facts.failed)) return "summary";
   if (facts.processing) return "preparing";
-  if (facts.failed && !facts.tooLong) return "failed";
-  if (facts.failed && facts.writingLocal) return "too-long";
+  if (facts.failed && !facts.tooLong && !facts.outputLimit) return "failed";
+  if (facts.failed && facts.writingLocal) return facts.tooLong ? "too-long" : "output-limit";
+  // What failed no longer stands in the way; an earlier summary is still a
+  // summary, and is refreshed when the conversation is finished again.
+  if (facts.hasSummary) return "summary";
   if (facts.recording) return "recording";
   if (!facts.hasTranscript) return "not-summarized";
   if (facts.readiness && facts.readiness !== "ready") {
