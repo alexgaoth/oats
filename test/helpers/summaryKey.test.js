@@ -56,11 +56,12 @@ test("a missing key is a refusal: never retried, never a failure that strikes it
     actions.slice(missing, missing + 400),
     /processingFlags\.set\(noteId, false\);\s*clearNoteState\(noteId\);[\s\S]{0,120}return "refused";/
   );
-  // runSummary strikes only saved, failed and too long: a refusal stays owed.
+  // runSummary strikes only saved and the failures that end it (failed, too
+  // long, cut at the answer limit): a refusal stays owed.
   const store = read("src/stores/summaryQueueStore.ts");
   assert.match(
     store,
-    /if \(outcome === "saved" \|\| outcome === "failed" \|\| outcome === "too-long"\) \{\s*settleSummary\(noteId\);/
+    /if \(\s*outcome === "saved" \|\|\s*outcome === "failed" \|\|\s*outcome === "too-long" \|\|\s*outcome === "output-limit"\s*\) \{\s*settleSummary\(noteId\);/
   );
   // And the drain stops at a refusal rather than dropping the rest.
   assert.match(store, /if \(outcome === "refused" \|\| outcome === "cancelled"\) return;/);
