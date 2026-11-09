@@ -44,6 +44,19 @@
   --color-warning-foreground: #ffffff;
   --color-info: #2563eb;
   --color-info-foreground: #ffffff;
+  /* Status words on their own soft tint (badges). The tint lifts the
+     background, so the status hue itself drops under 4.5:1 there (success
+     2.95:1, recording 3.3:1); the ink is the same hue, deep enough to read. */
+  --color-success-ink: #166534;
+  --color-warning-ink: #9a3412;
+  --color-destructive-ink: #b91c1c;
+  --color-recording-ink: #b91c1c;
+  --color-info-ink: #1d4ed8;
+  /* A red fill under a white label (Stop, Delete). #ef4444 gives 3.76:1;
+     red-600 gives 4.83:1. The status reds stay #ef4444 where they are a dot
+     or text on dark, where they read better than red-600. */
+  --color-destructive-fill: #dc2626;
+  --color-recording-fill: #dc2626;
 
   /* The app frame. */
   --color-sidebar: #fafafa;
@@ -176,6 +189,11 @@
   --color-warning-foreground: #1c1003;
   --color-info: #3b82f6;
   --color-info-foreground: #ffffff;
+  --color-success-ink: #22c55e;
+  --color-warning-ink: #f97316;
+  --color-destructive-ink: #f87171;
+  --color-recording-ink: #f87171;
+  --color-info-ink: #60a5fa;
 
   --color-sidebar: #0f0f11;
   --color-sidebar-foreground: #d4d4d8;
