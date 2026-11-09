@@ -158,7 +158,12 @@ async function setup() {
   const whisperManager = new WhisperManager();
   whisperManager.getModelsDir = () => dir;
 
-  const settings = { local: true, followsDefault: true, whisperModel: "small.en", recording: false };
+  const settings = {
+    local: true,
+    followsDefault: true,
+    whisperModel: "small.en",
+    recording: false,
+  };
   const hook = { fetch: false, leave: false, starts: 0, leaves: 0 };
   const env = { dir, transport, settings, hook, whisperManager, storePath };
   const evaluate = () => {
@@ -309,8 +314,10 @@ test("back on this Mac, the default fetches turbo again, from the start", async 
     assert.equal(env.transport.completed, 1);
     assert.equal(env.tier.snapshot().turbo.declined, false);
     assert.equal(env.tier.record.turboClipMs, 650, "its clip was timed");
-    assert.equal(crypto.createHash("sha256").update(fs.readFileSync(env.turboFile)).digest("hex"),
-      registry.whisperModels[TURBO_MODEL].sha256);
+    assert.equal(
+      crypto.createHash("sha256").update(fs.readFileSync(env.turboFile)).digest("hex"),
+      registry.whisperModels[TURBO_MODEL].sha256
+    );
     assert.deepEqual([env.hook.starts, env.hook.leaves], [2, 1]);
   } finally {
     await env.cleanup();
