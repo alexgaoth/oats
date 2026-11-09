@@ -44,6 +44,7 @@ const path = require("path");
 const { execFile } = require("child_process");
 const debugLogger = require("./debugLogger");
 const WhisperServerManager = require("./whisperServer");
+const nativeE2E = require("./nativeE2E");
 const { createDownloadSignal } = require("./downloadUtils");
 const { DEFAULT_WHISPER_VAD_CONFIG } = require("./whisperVadConfig");
 const { WritingModelFetch } = require("./writingModelFetch");
@@ -188,7 +189,10 @@ class DeviceTier extends EventEmitter {
     publish = () => {},
     detect = detectDevice,
     createServer = () =>
-      new WhisperServerManager({ pidName: "whisper-check", ports: CHECK_SERVER_PORTS }),
+      new WhisperServerManager({
+        pidName: "whisper-check",
+        ports: nativeE2E.portRange("whisperCheck", CHECK_SERVER_PORTS),
+      }),
     clipPath = CLIP_PATH,
     time = timeRead,
     sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
@@ -524,6 +528,7 @@ class DeviceTier extends EventEmitter {
    * @param {{ language?: string, force?: boolean }} [options]
    */
   async startUpgrade({ language = "en", force = false } = {}) {
+    if (nativeE2E.suppresses("speech-model-download")) return this.snapshot();
     if (this.measured) await this.measured;
     const record = this.record;
     if (!record?.device || this.download || this.checking || this.turboInstalled()) {

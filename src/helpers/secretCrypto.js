@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { app, safeStorage } = require("electron");
 const debugLogger = require("./debugLogger");
+const nativeE2E = require("./nativeE2E");
 
 const SERVICE = "Oats";
 const ACCOUNT = "secrets-master-key";
@@ -86,6 +87,15 @@ function _initKeychain() {
 
 function _ensureInit() {
   if (mode) return;
+  // A native end-to-end run never reaches the OS keyring or the master-key
+  // backup: only safeStorage, which --use-mock-keychain points at a mock.
+  const testRun = nativeE2E.activeConfig();
+  if (testRun) {
+    if (!testRun.mockKeychain) throw new Error("native E2E: the mock keychain is required");
+    mode = safeStorage.isEncryptionAvailable() ? "safeStorage" : "unavailable";
+    nativeE2E.note("secrets-safe-storage-only", { mode });
+    return;
+  }
   if (_initKeychain()) {
     mode = "keychain";
     return;

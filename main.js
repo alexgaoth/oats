@@ -32,9 +32,14 @@ const {
 // that left this machine must see every one (networkLedger.js says where).
 require("./src/helpers/networkLedger").install({ app, session, shell });
 
+// Next, before dotenv or any manager: a native end-to-end test run moves every
+// path into its own directory, or exits if its request is incomplete.
+const nativeE2E = require("./src/helpers/nativeE2E");
+nativeE2E.bootstrap({ app, session, shell, globalShortcut });
+
 const path = require("path");
 const tls = require("tls");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+if (!nativeE2E.isActive()) require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 // Extend Node's TLS trust with the OS store so ws and https.get see corporate
 // CAs that Chromium already trusts.
@@ -91,7 +96,7 @@ const APP_CHANNEL = resolveAppChannel();
 process.env.OATS_CHANNEL = APP_CHANNEL;
 
 function configureChannelUserDataPath() {
-  if (APP_CHANNEL === "production") {
+  if (APP_CHANNEL === "production" || nativeE2E.isActive()) {
     return;
   }
 
@@ -354,7 +359,7 @@ function initializeDeferredManagers() {
       "clipboard"
     );
   });
-  clipboardManager.preWarmAccessibility();
+  if (!nativeE2E.suppresses("accessibility-prewarm")) clipboardManager.preWarmAccessibility();
   trayManager = new TrayManager();
   globeKeyManager = new GlobeKeyManager();
 
@@ -385,7 +390,7 @@ function initializeDeferredManagers() {
     });
   }
 
-  meetingDetectionEngine.start();
+  if (!nativeE2E.suppresses("meeting-detection")) meetingDetectionEngine.start();
 }
 
 // Main application startup
@@ -714,6 +719,7 @@ async function startApp() {
   // them, as it always has.
   if (
     !app.isPackaged &&
+    !nativeE2E.suppresses("diarization-model-download") &&
     diarizationManager.getBinaryPath() &&
     (!diarizationManager.isModelDownloaded() || !diarizationManager.isVadModelDownloaded())
   ) {
@@ -748,7 +754,11 @@ async function startApp() {
   // Bundled by prebuild on every platform; only a development checkout that has
   // never run it downloads at launch. A packaged build without it degrades to
   // keyword search rather than reaching for the network.
-  if (!localEmbeddings.isAvailable() && !app.isPackaged) {
+  if (
+    !localEmbeddings.isAvailable() &&
+    !app.isPackaged &&
+    !nativeE2E.suppresses("embedding-model-download")
+  ) {
     localEmbeddings.downloadModel().catch((err) => {
       debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
     });
@@ -764,7 +774,7 @@ async function startApp() {
   trayManager.setCreateControlPanelCallback(() => windowManager.createControlPanelWindow());
   await trayManager.createTray();
 
-  updateManager.checkForUpdatesOnStartup();
+  if (!nativeE2E.suppresses("update-check")) updateManager.checkForUpdatesOnStartup();
 
   if (process.platform === "darwin") {
     const { isGlobeLikeHotkey, isMouseButtonHotkey } = require("./src/helpers/hotkeyManager");
@@ -1062,7 +1072,7 @@ async function startApp() {
     });
 
     syncSuppressedMouseButtons();
-    globeKeyManager.start();
+    if (!nativeE2E.suppresses("globe-key-listener")) globeKeyManager.start();
     hotkeyManager.once("hotkey-loaded", syncSuppressedMouseButtons);
 
     ipcMain.on("hotkey-listening-mode-changed", (_event, enabled) => {
