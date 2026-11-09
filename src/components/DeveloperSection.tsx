@@ -144,6 +144,7 @@ export default function DeveloperSection() {
                 checked={debugEnabled}
                 onChange={handleToggleDebug}
                 disabled={isLoading || isToggling}
+                aria-label={t("developerSection.debugMode.label")}
               />
             </div>
           </div>

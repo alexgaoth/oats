@@ -1,5 +1,6 @@
 import React from "react";
 import { useSettingsLayout } from "./useSettingsLayout";
+import { ToggleLabelContext } from "./toggleLabel";
 import type { InferenceMode } from "../../types/electron";
 
 interface SettingsSectionProps {
@@ -69,6 +70,7 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
   className = "",
 }) => {
   const { isCompact } = useSettingsLayout();
+  const labelId = React.useId();
 
   return (
     <div
@@ -77,12 +79,16 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
       } ${className}`}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p id={labelId} className="text-sm font-medium text-foreground">
+          {label}
+        </p>
         {description && (
           <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{description}</p>
         )}
       </div>
-      <div className={isCompact ? "" : "shrink-0"}>{children}</div>
+      <div className={isCompact ? "" : "shrink-0"}>
+        <ToggleLabelContext.Provider value={labelId}>{children}</ToggleLabelContext.Provider>
+      </div>
     </div>
   );
 };
