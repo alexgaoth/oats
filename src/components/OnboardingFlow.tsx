@@ -357,7 +357,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <h1
               ref={stepHeadingRef}
               tabIndex={-1}
-              className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-foreground outline-none"
+              className="mt-6 text-[22px] font-semibold tracking-[-0.02em] text-foreground outline-none"
             >
               {t("onboarding.permissions.title")}
             </h1>
