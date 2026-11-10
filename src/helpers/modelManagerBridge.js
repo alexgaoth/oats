@@ -13,6 +13,13 @@ const modelRegistryData = require("../models/modelRegistryData.json");
 const LlamaServerManager = require("./llamaServer");
 const debugLogger = require("./debugLogger");
 const { limitFailure } = require("./localAnswerLimit");
+const {
+  DEFAULT_ROLE,
+  WRITING_ROLE,
+  WRITING_PID_NAME,
+  dedicatedWritingServerSupported,
+  serverRoleFor,
+} = require("./writingServer");
 
 const MIN_FILE_SIZE = 1_000_000; // 1MB minimum for valid model files
 
@@ -48,6 +55,13 @@ class ModelManager {
     this.activeRequests = new Map(); // Track HTTP requests for cancellation
     this.serverManager = new LlamaServerManager();
     this.currentServerModelId = null;
+    // The writing model's own server while a recording runs (writingServer.js).
+    // Created on the first hold, so nothing changes for anyone who never asks.
+    this.writingServer = null;
+    this.writingServerModelId = null;
+    /** @type {"off" | "hold" | "idle"} */
+    this.writingMode = "off";
+    this.writingStartFailed = false;
     this._initialized = false;
 
     // IMPORTANT: Do NOT call app.getPath() here!
@@ -375,20 +389,40 @@ class ModelManager {
       );
     }
 
+    const writing =
+      options.serverRole === WRITING_ROLE && this.writingMode !== "off" && this.writingServer;
+    const server = writing ? this.writingServer : this.serverManager;
+    const loadedModelId = writing ? this.writingServerModelId : this.currentServerModelId;
+
     // Start/restart server if needed or if model changed
-    if (!this.serverManager.ready || this.currentServerModelId !== modelId) {
+    if (!server.ready || loadedModelId !== modelId) {
+      if (writing && this.writingStartFailed) {
+        // Once a recording's writing server failed to start, its names wait
+        // for Finish rather than trying again at every topic.
+        throw new ModelError("The writing server could not start", "WRITING_SERVER_FAILED", {
+          modelId,
+        });
+      }
       debugLogger.logReasoning("INFERENCE_STARTING_SERVER", {
-        currentModel: this.currentServerModelId,
+        currentModel: loadedModelId,
         requestedModel: modelId,
-        serverReady: this.serverManager.ready,
+        serverReady: server.ready,
+        ...(writing ? { role: WRITING_ROLE } : {}),
       });
 
-      await this.serverManager.start(modelPath, this.serverOptions(modelInfo));
-      this.currentServerModelId = modelId;
+      try {
+        await server.start(modelPath, this.serverOptions(modelInfo));
+      } catch (error) {
+        if (writing && this.writingMode === "hold") this.writingStartFailed = true;
+        throw error;
+      }
+      if (writing) this.writingServerModelId = modelId;
+      else this.currentServerModelId = modelId;
 
       debugLogger.logReasoning("INFERENCE_SERVER_STARTED", {
-        port: this.serverManager.port,
+        port: server.port,
         model: modelId,
+        ...(writing ? { role: WRITING_ROLE } : {}),
       });
     }
 
@@ -405,7 +439,7 @@ class ModelManager {
     });
 
     try {
-      const result = await this.serverManager.inference(messages, {
+      const result = await server.inference(messages, {
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens ?? 512,
         disableThinking: options.disableThinking,
@@ -437,9 +471,69 @@ class ModelManager {
     }
   }
 
-  async stopServer() {
+  async stopServer(role = DEFAULT_ROLE) {
+    if (role === WRITING_ROLE) {
+      if (this.writingServer) await this.writingServer.stop();
+      this.writingServerModelId = null;
+      return;
+    }
     await this.serverManager.stop();
     this.currentServerModelId = null;
+  }
+
+  /** Whether this computer can run the writing model in a server of its own. */
+  dedicatedWritingServerSupported() {
+    const os = require("os");
+    return dedicatedWritingServerSupported({
+      platform: process.platform,
+      arch: process.arch,
+      memoryBytes: os.totalmem(),
+      binaryAvailable: this.serverManager.isAvailable(),
+    });
+  }
+
+  /** The server a request that asks for `requested` goes to now. */
+  serverRole(requested) {
+    return serverRoleFor({
+      requested,
+      mode: this.writingMode,
+      writingRunning: Boolean(this.writingServer?.ready && this.writingServer.process),
+    });
+  }
+
+  /**
+   * The renderer's word on the writing server (writingServer.js WRITING_MODES).
+   * Resolves with whether the writing model has a server of its own now.
+   *
+   * @param {"hold" | "idle" | "stop"} mode
+   * @returns {Promise<{ dedicated: boolean }>}
+   */
+  async setWritingServer(mode) {
+    if (mode === "hold") {
+      if (!this.dedicatedWritingServerSupported()) {
+        await this.setWritingServer("stop");
+        return { dedicated: false };
+      }
+      if (this.writingMode !== "hold") this.writingStartFailed = false;
+      this.writingMode = "hold";
+      this.writingServer ??= new LlamaServerManager({ pidName: WRITING_PID_NAME });
+      this.writingServer.setKeepAlive(true);
+      debugLogger.info("Writing server held for the recording");
+      return { dedicated: true };
+    }
+    if (mode === "idle") {
+      if (this.writingMode === "off") return { dedicated: false };
+      this.writingMode = "idle";
+      this.writingServer?.setKeepAlive(false);
+      return { dedicated: true };
+    }
+    const wasOn = this.writingMode !== "off";
+    this.writingMode = "off";
+    this.writingStartFailed = false;
+    this.writingServer?.setKeepAlive(false);
+    await this.stopServer(WRITING_ROLE);
+    if (wasOn) debugLogger.info("Writing server stopped");
+    return { dedicated: false };
   }
 
   getServerStatus() {

@@ -3847,6 +3847,17 @@ class IPCHandlers {
       }
     });
 
+    // The writing model's own server while a recording runs (writingServer.js).
+    ipcMain.handle("llama-writing-server", async (event, mode) => {
+      try {
+        if (!["hold", "idle", "stop"].includes(mode)) return { dedicated: false };
+        const modelManager = require("./modelManagerBridge").default;
+        return await modelManager.setWritingServer(mode);
+      } catch (error) {
+        return { dedicated: false, error: error.message };
+      }
+    });
+
     ipcMain.handle("llama-server-status", async () => {
       try {
         const modelManager = require("./modelManagerBridge").default;
