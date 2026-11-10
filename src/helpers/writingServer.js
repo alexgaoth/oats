@@ -77,12 +77,49 @@ function serverRoleFor({ requested = null, mode, writingRunning = false }) {
   return DEFAULT_ROLE;
 }
 
+/** The events of an Electron webContents after which its page holds nothing. */
+const PAGE_GONE_EVENTS = Object.freeze(["did-navigate", "render-process-gone", "destroyed"]);
+
+/**
+ * Which page holds the writing server, so that the hold ends with the page.
+ * A reload, a crash or a closed window ends that page's recording, and the
+ * page can no longer send "idle", so the hold would last until quit.
+ * `release` runs when the page that holds it goes, and not for a page that
+ * let go or that another page's hold replaced.
+ *
+ * @param {() => void} release
+ */
+function createHoldOwner(release) {
+  let holder = null;
+  const watched = new WeakSet();
+  return {
+    /** @param {{ on: (event: string, listener: () => void) => unknown } | null | undefined} page */
+    held(page) {
+      holder = page ?? null;
+      if (!page || watched.has(page)) return;
+      watched.add(page);
+      for (const name of PAGE_GONE_EVENTS) {
+        page.on(name, () => {
+          if (holder !== page) return;
+          holder = null;
+          release();
+        });
+      }
+    },
+    letGo() {
+      holder = null;
+    },
+  };
+}
+
 module.exports = {
   MIN_DEDICATED_WRITING_MEMORY_BYTES,
   DEFAULT_ROLE,
   WRITING_ROLE,
   WRITING_PID_NAME,
   WRITING_MODES,
+  PAGE_GONE_EVENTS,
+  createHoldOwner,
   dedicatedWritingServerSupported,
   serverRoleFor,
 };

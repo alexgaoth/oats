@@ -39,7 +39,11 @@ test("a server of its own only on Apple silicon with the memory that already get
     { platform: "win32", arch: "x64" },
   ]) {
     assert.equal(
-      gate.dedicatedWritingServerSupported({ ...other, memoryBytes: 64 * GB, binaryAvailable: true }),
+      gate.dedicatedWritingServerSupported({
+        ...other,
+        memoryBytes: 64 * GB,
+        binaryAvailable: true,
+      }),
       false
     );
   }
@@ -225,7 +229,10 @@ test("a writing server that failed to start is not tried again in that recording
   const { manager, log } = setupManager();
   await holdWithFake(manager, log);
   manager.writingServer.failStart = true;
-  await assert.rejects(manager.runInference(WRITER, "name", { serverRole: "writing" }), /no memory/);
+  await assert.rejects(
+    manager.runInference(WRITER, "name", { serverRole: "writing" }),
+    /no memory/
+  );
   await assert.rejects(
     manager.runInference(WRITER, "name 2", { serverRole: "writing" }),
     (error) => error.code === "WRITING_SERVER_FAILED"
@@ -251,4 +258,37 @@ test("a question card's classifier never waits behind a topic name", async () =>
   release();
   assert.equal(await naming, "writing answer");
   await manager.setWritingServer("stop");
+});
+
+test("a hold ends with the page that asked for it, and only that page", () => {
+  const { EventEmitter } = require("node:events");
+  let released = 0;
+  const owner = gate.createHoldOwner(() => {
+    released += 1;
+  });
+  const page = new EventEmitter();
+  const other = new EventEmitter();
+
+  owner.held(page);
+  owner.held(page);
+  for (const name of gate.PAGE_GONE_EVENTS) assert.equal(page.listenerCount(name), 1, name);
+  page.emit("did-navigate");
+  assert.equal(released, 1, "a reload of the holding page lets go");
+  page.emit("render-process-gone");
+  assert.equal(released, 1, "once");
+
+  owner.held(page);
+  owner.letGo();
+  page.emit("destroyed");
+  assert.equal(released, 1, "not after the page let go itself");
+
+  owner.held(page);
+  owner.held(other);
+  page.emit("did-navigate");
+  assert.equal(released, 1, "not for a page another page's hold replaced");
+  other.emit("render-process-gone");
+  assert.equal(released, 2);
+
+  owner.held(null);
+  assert.equal(released, 2);
 });
