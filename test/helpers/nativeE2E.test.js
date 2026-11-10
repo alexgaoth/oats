@@ -468,3 +468,75 @@ test("the transcript is compared with the corpus's own words", () => {
   assert.equal(evidence.sharedWithReference, 4);
   assert.equal(evidence.sharedFraction, 0.8);
 });
+
+test("Chromium's sandbox is off only with the explicit opt-in and the switch together", () => {
+  const run = makeRun();
+  const optIn = { ...run.env, OATS_NATIVE_E2E_NO_SANDBOX: "1" };
+  const withSwitch = [...run.argv, "--no-sandbox"];
+
+  assert.equal(validate(run).config.chromiumSandbox, "on");
+  const both = validate(run, { env: optIn, argv: withSwitch });
+  assert.equal(both.ok, true, JSON.stringify(both.errors));
+  assert.equal(both.config.chromiumSandbox, "disabled-for-test");
+
+  const refused = [
+    [
+      "switch without opt-in",
+      { argv: withSwitch },
+      /--no-sandbox needs OATS_NATIVE_E2E_NO_SANDBOX=1/,
+    ],
+    ["opt-in without switch", { env: optIn }, /OATS_NATIVE_E2E_NO_SANDBOX=1 needs --no-sandbox/],
+    [
+      "opt-in not 1",
+      { env: { ...run.env, OATS_NATIVE_E2E_NO_SANDBOX: "true" }, argv: withSwitch },
+      /must be 1/,
+    ],
+    ["packaged", { env: optIn, argv: withSwitch, isPackaged: true }, /packaged/],
+    [
+      "opt-in without the rest of the guard",
+      { env: { ...optIn, NODE_ENV: "development" }, argv: withSwitch },
+      /NODE_ENV/,
+    ],
+  ];
+  for (const [name, overrides, reason] of refused) {
+    const result = validate(run, overrides);
+    assert.equal(result.ok, false, `${name} was accepted`);
+    assert.match(result.errors.join("; "), reason, name);
+  }
+});
+
+test("the sandbox opt-in alone is a test request, and an incomplete one exits", () => {
+  const app = fakeApp();
+  let exited = null;
+  const config = bootstrap({
+    app,
+    env: { OATS_NATIVE_E2E_NO_SANDBOX: "1", HOME: "/Users/someone" },
+    argv: ["electron", ".", "--no-sandbox"],
+    exit: (code) => (exited = code),
+    log: () => {},
+  });
+  assert.equal(config, null);
+  assert.equal(exited, EXIT_REFUSED);
+  assert.deepEqual(app.paths, {});
+});
+
+test("the runner adds --no-sandbox only when the smoke opts in, inside the outer policy", () => {
+  const clip = "/owned/run/assets/clip.wav";
+  const plain = runner.electronArgs(clip);
+  assert.equal(plain.includes("--no-sandbox"), false);
+  assert.equal(runner.electronArgs(clip, { noSandbox: false }).includes("--no-sandbox"), false);
+  const optedIn = runner.electronArgs(clip, { noSandbox: true });
+  assert.equal(optedIn.filter((arg) => arg === "--no-sandbox").length, 1);
+  assert.deepEqual(optedIn.slice(0, 2), ["-p", runner.outboundPolicy(runner.ALLOCATED_PORTS)]);
+  for (const required of REQUIRED_SWITCHES) assert.ok(optedIn.includes(required), required);
+  assert.deepEqual(
+    optedIn.filter((arg) => arg !== "--no-sandbox"),
+    plain,
+    "the opt-in changes nothing else"
+  );
+
+  assert.equal(runner.chromiumSandboxOption({}), false);
+  assert.equal(runner.chromiumSandboxOption({ "chromium-sandbox": "on" }), false);
+  assert.equal(runner.chromiumSandboxOption({ "chromium-sandbox": "off" }), true);
+  assert.throws(() => runner.chromiumSandboxOption({ "chromium-sandbox": "no" }), /on or off/);
+});

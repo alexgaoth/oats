@@ -17,7 +17,9 @@ const REQUEST_ENV = "OATS_NATIVE_E2E";
 const ROOT_ENV = "OATS_NATIVE_E2E_ROOT";
 const RUN_DIR_ENV = "OATS_NATIVE_E2E_RUN_DIR";
 const TOKEN_ENV = "OATS_NATIVE_E2E_TOKEN";
-const REQUEST_NAMES = [REQUEST_ENV, ROOT_ENV, RUN_DIR_ENV, TOKEN_ENV];
+/** Test-only opt-out of Chromium's own sandbox; it never applies outside this route. */
+const NO_SANDBOX_ENV = "OATS_NATIVE_E2E_NO_SANDBOX";
+const REQUEST_NAMES = [REQUEST_ENV, ROOT_ENV, RUN_DIR_ENV, TOKEN_ENV, NO_SANDBOX_ENV];
 
 const ROOT_BASENAME = "native-e2e";
 const MARKER_FILE = "native-e2e-run.json";
@@ -44,6 +46,7 @@ const FAKE_AUDIO_SWITCH = "--use-file-for-fake-audio-capture=";
 const FAKE_AUDIO_SUFFIX = "%noloop";
 const DEBUG_PORT_SWITCH = "--remote-debugging-port=";
 const REFUSED_SWITCHES = ["--remote-debugging-address", "--inspect", "--user-data-dir"];
+const NO_SANDBOX_SWITCH = "--no-sandbox";
 
 /** The only variables the app and its children keep. Values are never logged. */
 const ENV_ALLOWLIST = Object.freeze([
@@ -220,6 +223,22 @@ function validateRequest({
     errors.push(`the debugging port must be ${ALLOCATIONS.cdp[0]}`);
   }
 
+  // Chromium's sandbox stays on unless the run opted out explicitly AND the
+  // launch carries the switch: either one alone is an incomplete request.
+  const noSandboxOptIn = env[NO_SANDBOX_ENV];
+  const noSandboxSwitch = argv.some(
+    (arg) => arg === NO_SANDBOX_SWITCH || arg.startsWith(`${NO_SANDBOX_SWITCH}=`)
+  );
+  if (typeof noSandboxOptIn === "string" && noSandboxOptIn !== "" && noSandboxOptIn !== "1") {
+    errors.push(`${NO_SANDBOX_ENV} must be 1 when it is set`);
+  }
+  if (noSandboxSwitch && noSandboxOptIn !== "1") {
+    errors.push(`${NO_SANDBOX_SWITCH} needs ${NO_SANDBOX_ENV}=1 on the test route`);
+  }
+  if (noSandboxOptIn === "1" && !noSandboxSwitch) {
+    errors.push(`${NO_SANDBOX_ENV}=1 needs ${NO_SANDBOX_SWITCH} at launch`);
+  }
+
   const audioArgs = argv.filter((arg) => arg.startsWith(FAKE_AUDIO_SWITCH));
   let audioFile = null;
   if (audioArgs.length !== 1) {
@@ -250,6 +269,7 @@ function validateRequest({
       runDir,
       audioFile,
       mockKeychain: true,
+      chromiumSandbox: noSandboxOptIn === "1" ? "disabled-for-test" : "on",
       paths: runPaths(runDir),
       ports: ALLOCATIONS,
     }),
@@ -415,6 +435,7 @@ function bootstrap({
     keptEnvironment: Object.keys(env).sort(),
     removedEnvironment: removed.sort(),
     switches: argv.filter((arg) => arg.startsWith("--")),
+    chromiumSandbox: config.chromiumSandbox,
     ports: ALLOCATIONS,
   });
   return config;
@@ -454,6 +475,8 @@ module.exports = {
   FAKE_AUDIO_SWITCH,
   FAKE_AUDIO_SUFFIX,
   MARKER_FILE,
+  NO_SANDBOX_ENV,
+  NO_SANDBOX_SWITCH,
   PORT_CEILING,
   PORT_FLOOR,
   REQUEST_ENV,

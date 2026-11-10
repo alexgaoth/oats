@@ -7,7 +7,7 @@
 //
 //   node scripts/run-native-e2e.js check --root DIR --wav FILE --models DIR [--bin DIR]
 //   node scripts/run-native-e2e.js smoke --root DIR --wav FILE --models DIR [--bin DIR]
-//          [--words DIR] [--start S] [--seconds S]
+//          [--words DIR] [--start S] [--seconds S] [--chromium-sandbox on|off]
 //   node scripts/run-native-e2e.js stop RUN_DIR
 //
 // `check` makes a run directory and proves the prerequisites: the ports are
@@ -17,6 +17,11 @@
 // conversation to be saved, quits, opens the app again on the same directory
 // and reads the conversation back. Every process it starts is recorded in
 // RUN_DIR/pids.json; `stop` ends those exact processes and nothing else.
+//
+// `--chromium-sandbox off` launches Electron with --no-sandbox, still inside
+// the outer outbound policy. Chromium's own sandbox cannot start inside a
+// sandbox-exec policy. That policy limits network egress only, not files or
+// processes, so such a run says nothing about the shipped app's sandbox.
 //
 // The renderer must be built first (`npm run build:renderer`): the app loads
 // src/dist.
@@ -538,13 +543,12 @@ function appEnvironment(run) {
   };
 }
 
-function launchApp(run, ledger, clip, label) {
-  const logFile = path.join(run.paths.logs, `electron-${label}.log`);
-  const out = fs.openSync(logFile, "a", 0o600);
-  const args = [
+/** sandbox-exec's arguments: the outer policy first, then Electron and its switches. */
+function electronArgs(clip, { noSandbox = false, electron = "electron" } = {}) {
+  return [
     "-p",
     outboundPolicy(ALLOCATED_PORTS),
-    electronBinary(),
+    electron,
     REPO,
     "--use-mock-keychain",
     "--use-fake-device-for-media-stream",
@@ -553,10 +557,26 @@ function launchApp(run, ledger, clip, label) {
     // Chromium's audio service sandbox cannot read the fake device's file on macOS.
     "--disable-features=AudioServiceSandbox",
     `--remote-debugging-port=${CDP_PORT}`,
+    ...(noSandbox ? [nativeE2E.NO_SANDBOX_SWITCH] : []),
   ];
+}
+
+/** `--chromium-sandbox off` is the only way to ask for --no-sandbox. */
+function chromiumSandboxOption(options) {
+  const value = options["chromium-sandbox"] ?? "on";
+  if (value !== "on" && value !== "off") fail("--chromium-sandbox must be on or off", 2);
+  return value === "off";
+}
+
+function launchApp(run, ledger, clip, label, { noSandbox = false } = {}) {
+  const logFile = path.join(run.paths.logs, `electron-${label}.log`);
+  const out = fs.openSync(logFile, "a", 0o600);
+  const args = electronArgs(clip, { noSandbox, electron: electronBinary() });
+  const env = appEnvironment(run);
+  if (noSandbox) env[nativeE2E.NO_SANDBOX_ENV] = "1";
   const child = spawn(SANDBOX_EXEC, args, {
     cwd: REPO,
-    env: appEnvironment(run),
+    env,
     detached: true,
     stdio: ["ignore", out, out],
   });
@@ -673,8 +693,8 @@ const READ_NOTES = `(async () => {
   });
 })()`;
 
-async function openApp(run, ledger, clip, label) {
-  const launched = launchApp(run, ledger, clip, label);
+async function openApp(run, ledger, clip, label, launchOptions) {
+  const launched = launchApp(run, ledger, clip, label, launchOptions);
   const isAlive = () => ledger.alive(launched.entry).includes(launched.entry.pid);
   const page = await openTarget("panel=true", 90000, isAlive);
   await waitFor("page load", 60000, () => page.evaluate(`document.readyState === "complete"`));
@@ -745,18 +765,28 @@ async function prepare(options) {
 }
 
 async function smoke(options) {
+  const noSandbox = chromiumSandboxOption(options);
   const { run, ledger, assets } = await prepare(options);
   if (!fs.existsSync(path.join(REPO, "src", "dist", "index.html"))) {
     fail("src/dist is missing: run npm run build:renderer first");
   }
   const clip = assets.clip.file;
   const meeting = path.basename(clip).split("-")[0];
-  const result = { runDir: run.runDir, startedAt: new Date().toISOString(), steps: {} };
+  const result = {
+    runDir: run.runDir,
+    startedAt: new Date().toISOString(),
+    chromiumSandbox: noSandbox
+      ? "off: test-only --no-sandbox inside the outer outbound policy; the shipped sandbox is untested"
+      : "on",
+    steps: {},
+  };
   const save = () => writeJson(path.join(run.runDir, "smoke-result.json"), result);
+  const launchOptions = { noSandbox };
+  if (noSandbox) log("Chromium sandbox off for this test run (--no-sandbox), outer policy kept");
   let current = null;
   try {
     // First launch: record through the visible controls.
-    current = await openApp(run, ledger, clip, "record");
+    current = await openApp(run, ledger, clip, "record", launchOptions);
     await current.page.evaluate(`localStorage.setItem("onboardingCompleted", "true")`);
     await current.page.send("Page.reload");
     await sleep(500);
@@ -773,6 +803,7 @@ async function smoke(options) {
     const startedAt = Date.now();
     await waitFor("recording badge", 20000, () => current.page.evaluate(hasButton(FINISH_LABEL)));
     result.steps.recordingStarted = { afterMs: Date.now() - startedAt };
+    save();
     ledger.snapshot(current.entry);
     await sleep(assets.clip.seconds * 1000 + 6000);
     ledger.snapshot(current.entry);
@@ -828,7 +859,7 @@ async function smoke(options) {
     current = null;
 
     // Second launch on the same directory: the conversation must still be there.
-    current = await openApp(run, ledger, clip, "reopen");
+    current = await openApp(run, ledger, clip, "reopen", launchOptions);
     const reopened = await waitFor("reopened conversation", 60000, async () => {
       const notes = await current.page.evaluate(READ_NOTES);
       return notes.find((n) => n.id === finished.id) || false;
@@ -903,4 +934,12 @@ if (require.main === module) {
   });
 }
 
-module.exports = { outboundPolicy, sliceWav, compareToReference, normalizeWords, ALLOCATED_PORTS };
+module.exports = {
+  outboundPolicy,
+  electronArgs,
+  chromiumSandboxOption,
+  sliceWav,
+  compareToReference,
+  normalizeWords,
+  ALLOCATED_PORTS,
+};
