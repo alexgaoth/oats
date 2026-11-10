@@ -9,10 +9,23 @@
  * this stretch (AMI's `summlink` files tie summary sentences to dialogue acts).
  *
  *   node scripts/topic-gist-eval.mjs generate --model <provider:model[@opts]> --ami <dir> --out <dir>
- *        [--set eval24|learn12] [--meetings a,b] [--replay <dir>] [--tag name] [--prompt v1]
+ *        [--set eval24|learn12] [--meetings a,b] [--replay <dir>] [--tag name] [--prompt v1|v2|v3|v4|app]
  *        [--budget 3000] [--concurrency 4] [--gguf <file> --llama-server <binary>] [--fm-bridge <binary>]
  *   node scripts/topic-gist-eval.mjs judge --judge <spec> --ami <dir> --out <dir> [--keys a,b] [--chunk 10]
+ *        [--gguf <file> --llama-server <binary>]   (a judge on this Mac)
  *   node scripts/topic-gist-eval.mjs report --out <dir> [--baseline key] [--judges a,b] [--json file]
+ *   node scripts/topic-gist-eval.mjs distinct --ami <dir> --out <dir> [--keys a,b]
+ *
+ * `--prompt app` sends the app's own topic request (`buildTopicNamePrompt`: name
+ * and description, the description's length from the stretch's words, "Other
+ * topics" holding the names this run gave the meeting's earlier stretches) and
+ * reads it with `parseTopicLabel`. The description is graded as the gist; the
+ * name is kept beside it. One request at a time, in meeting order.
+ *
+ * `distinct` needs no model: it asks whether each text picks out its own stretch
+ * among its meeting's stretches, by MiniLM vectors (the text against each
+ * stretch's mean turn vector). A run with names is also scored by its names
+ * alone and by name and description together.
  *
  * Public AMI data only for any cloud model. Keys come from the environment, and
  * every request is in the spend ledger (FM_LEDGER), stopped at FM_BUDGET_USD.
@@ -49,6 +62,9 @@ import {
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { buildGistPrompt, parseTopicGist, GIST_SYSTEM_VARIANTS } = await import(
   pathToFileURL(path.join(ROOT, "scripts/lib/topic-gist.mjs")).href
+);
+const { buildTopicNamePrompt, parseTopicLabel, NAME_MAX_TOKENS } = await import(
+  pathToFileURL(path.join(ROOT, "src/helpers/topicNaming.mjs")).href
 );
 
 export const LEARN12 =
@@ -208,8 +224,20 @@ async function generate() {
   const missing = topics.filter((topic) => !done.gists[topic.item]);
   console.error(`${key}: ${missing.length} of ${topics.length} topics to do`);
   let count = 0;
+  const app = args.prompt === "app";
+  // The names this run gave the meeting's earlier stretches, as the app's "Other topics".
+  const othersOf = (topic) =>
+    Object.entries(done.gists)
+      .filter(
+        ([item, row]) =>
+          row.name &&
+          item.startsWith(`${topic.meeting}@`) &&
+          Number(item.split("@")[1]) < Math.round(topic.start)
+      )
+      .sort((a, b) => Number(a[0].split("@")[1]) - Number(b[0].split("@")[1]))
+      .map(([, row]) => row.name);
   try {
-    await pool(missing, local || system ? 1 : Number(args.concurrency), async (topic) => {
+    await pool(missing, local || system || app ? 1 : Number(args.concurrency), async (topic) => {
       if (provider === "extract") {
         const started = performance.now();
         const gist = parseTopicGist(await extractGist(model, topic.turns));
@@ -217,20 +245,26 @@ async function generate() {
         count += 1;
         return;
       }
-      const prompt = buildGistPrompt({
-        turns: topic.turns,
-        budget: Number(args.budget),
-        variant: args.prompt,
-      });
+      const others = app ? othersOf(topic) : [];
+      const prompt = app
+        ? buildTopicNamePrompt({ turns: topic.turns, others, words: topic.words })
+        : buildGistPrompt({
+            turns: topic.turns,
+            budget: Number(args.budget),
+            variant: args.prompt,
+          });
       const result = await ask(spec, {
         system: prompt.system,
         user: prompt.text,
-        maxTokens: 160,
-        purpose: "gist",
+        maxTokens: app ? NAME_MAX_TOKENS : 160,
+        purpose: app ? "describe" : "gist",
         timeoutMs: 90_000,
       });
+      const label =
+        app && result.ok ? parseTopicLabel(result.text, { others, excerpt: prompt.excerpt }) : null;
       done.gists[topic.item] = {
-        gist: result.ok ? parseTopicGist(result.text) : null,
+        gist: result.ok ? (app ? label.description : parseTopicGist(result.text)) : null,
+        ...(app ? { name: label?.name ?? null } : {}),
         raw: result.ok ? result.text.slice(0, 600) : `error: ${result.error}`,
         ms: result.ms,
         cost: result.cost,
@@ -313,6 +347,24 @@ function loadRuns(keys) {
 
 async function judge() {
   const spec = args.judge;
+  const local = parseSpec(spec).provider === "local";
+  if (local) {
+    await startLocalServer(parseSpec(spec).model, {
+      binary: args["llama-server"],
+      model: args.gguf,
+      port: Number(args.port),
+      contextSize: 16384,
+    });
+  }
+  try {
+    await judgeWith(spec);
+  } finally {
+    if (local) stopLocalServers();
+  }
+}
+
+async function judgeWith(spec) {
+  const local = parseSpec(spec).provider === "local";
   const keys = args.keys ? args.keys.split(",") : null;
   const runs = loadRuns(keys);
   const dir = path.join(args.out, "judge", safe(spec));
@@ -382,7 +434,7 @@ async function judge() {
     await judgeBatch(spec, jobs, judgePrompt, save);
     return;
   }
-  await pool(jobs, parseSpec(spec).provider === "anthropic" ? 6 : 8, async (job) => {
+  await pool(jobs, local ? 1 : parseSpec(spec).provider === "anthropic" ? 6 : 8, async (job) => {
     const ids = job.candidates.map((_, index) => `G${index + 1}`);
     const result = await ask(spec, {
       system: JUDGE_SYSTEM,
@@ -593,9 +645,96 @@ function report() {
   if (args.json) fs.writeFileSync(args.json, JSON.stringify(table, null, 1));
 }
 
-const commands = { generate, judge, report };
+// --- distinct
+
+function unitVector(vector) {
+  let norm = 0;
+  for (const value of vector) norm += value * value;
+  norm = Math.sqrt(norm) || 1;
+  return vector.map((value) => value / norm);
+}
+
+async function distinct() {
+  const runs = loadRuns(args.keys ? args.keys.split(",") : null);
+  const { createEmbedder, dot } = await import("./lib/minilm.mjs");
+  embedder ??= await createEmbedder({ cacheDir: path.join(args.out, "vectors") });
+  const variants = runs.flatMap((run) => {
+    const list = [{ label: run.key, text: (row) => row?.gist }];
+    if (Object.values(run.gists).some((row) => row.name)) {
+      list.push({ label: `${run.key} (name)`, text: (row) => row?.name });
+      list.push({
+        label: `${run.key} (name + description)`,
+        text: (row) => (row?.name && row?.gist ? `${row.name}. ${row.gist}` : null),
+      });
+    }
+    return list.map((variant) => ({ ...variant, run }));
+  });
+  const meetings = [
+    ...new Set(runs.flatMap((run) => Object.keys(run.gists).map((item) => item.split("@")[0]))),
+  ].sort();
+  const stretches = new Map();
+  for (const meeting of meetings) {
+    const list = [];
+    for (const topic of topicsOf(meeting)) {
+      const turns = topic.turns.filter((turn) => turn.trim().split(/\s+/).length >= 3);
+      const vectors = await embedder.embed(turns.length ? turns : topic.turns);
+      const sum = new Float32Array(vectors[0].length);
+      for (const vector of vectors) vector.forEach((value, index) => (sum[index] += value));
+      list.push({ item: topic.item, vector: unitVector(sum) });
+    }
+    stretches.set(meeting, list);
+  }
+  // Only the stretches every variant has a text for, so all rows are scored on the same set.
+  const items = [...stretches.values()]
+    .flat()
+    .map((stretch) => stretch.item)
+    .filter((item) => variants.every((variant) => variant.text(variant.run.gists[item])));
+  const chance = mean(items.map((item) => 1 / stretches.get(item.split("@")[0]).length));
+  console.log(
+    `${items.length} stretches in ${new Set(items.map((item) => item.split("@")[0])).size} meetings; picking at random finds its own ${(chance * 100).toFixed(0)}%`
+  );
+  const rows = [];
+  for (const variant of variants) {
+    const texts = items.map((item) => variant.text(variant.run.gists[item]));
+    const vectors = await embedder.embed(texts);
+    const perMeeting = new Map();
+    let top = 0;
+    let reciprocal = 0;
+    items.forEach((item, index) => {
+      const meeting = item.split("@")[0];
+      const scores = stretches.get(meeting).map((stretch) => ({
+        item: stretch.item,
+        score: dot(vectors[index], stretch.vector),
+      }));
+      const own = scores.find((entry) => entry.item === item).score;
+      const rank = 1 + scores.filter((entry) => entry.score > own).length;
+      top += rank === 1 ? 1 : 0;
+      reciprocal += 1 / rank;
+      perMeeting.set(meeting, [...(perMeeting.get(meeting) ?? []), rank === 1 ? 1 : 0]);
+    });
+    const stat = bootstrapMean([...perMeeting.values()].map((values) => mean(values)));
+    rows.push({
+      label: variant.label,
+      top1: top / items.length,
+      mrr: reciprocal / items.length,
+      low: stat.low,
+      high: stat.high,
+      words: mean(texts.map((value) => value.split(/\s+/).length)),
+    });
+  }
+  rows.sort((a, b) => b.top1 - a.top1);
+  for (const row of rows) {
+    console.log(
+      `${row.label.padEnd(56)} own stretch first ${(row.top1 * 100).toFixed(0)}% [${((row.low ?? 0) * 100).toFixed(0)}, ${((row.high ?? 0) * 100).toFixed(0)}] by meeting, MRR ${row.mrr.toFixed(2)}, ${row.words.toFixed(0)} w`
+    );
+  }
+  if (args.json)
+    fs.writeFileSync(args.json, JSON.stringify({ items: items.length, chance, rows }, null, 1));
+}
+
+const commands = { generate, judge, report, distinct };
 if (!commands[command]) {
-  console.error("topic-gist-eval.mjs generate|judge|report (see the header)");
+  console.error("topic-gist-eval.mjs generate|judge|report|distinct (see the header)");
   process.exit(2);
 }
 await commands[command]();

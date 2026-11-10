@@ -1190,6 +1190,7 @@ function ConnectionsView({
   const searchBaseUrl = useSettingsStore((s) => s.conversationAideSearchBaseUrl);
   const view = useSettingsStore((s) => s.connectionsView);
   const setView = useSettingsStore((s) => s.setConnectionsView);
+  const descriptions = useSettingsStore((s) => s.topicDescriptions);
   const snapshot = useMemo(() => readTopicSnapshot(note.conversation_topics), [note]);
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const lanes = useMemo(() => topicLanes({ snapshot, segments }) as Lanes, [snapshot, segments]);
@@ -1317,6 +1318,11 @@ function ConnectionsView({
                   .filter(Boolean)
                   .join(" · ")}
               </p>
+              {descriptions && selectedTopic.description && (
+                <p className="mt-2 max-w-prose text-pretty text-sm leading-snug text-foreground">
+                  {selectedTopic.description}
+                </p>
+              )}
               <ul className="mt-3 divide-y divide-border">
                 {topicQuestions.map((question) => (
                   <li key={question.id} className="flex items-start gap-3 py-2.5">

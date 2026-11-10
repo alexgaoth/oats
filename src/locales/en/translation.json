@@ -2286,6 +2286,12 @@
         "download": "Download",
         "searchWith": "Search with"
       },
+      "topics": {
+        "title": "Topics",
+        "description": "During a conversation, Oats groups what is said into topics and names them.",
+        "describe": "Describe each topic",
+        "describeHint": "Under each topic's name, a few sentences from the writing model on what was said, asked and decided. They grow as the topic does. Off, the conversation flow quotes the topic's latest line instead."
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "Each finished conversation writes itself into your vault as a note.",

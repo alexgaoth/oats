@@ -96,6 +96,12 @@ export interface ConversationTopicNode {
   label: string;
   /** The on-device name, present only when `label` is the writing model's (topicNaming.mjs). */
   deviceLabel?: string;
+  /**
+   * What was said, asked, proposed and decided on the topic, from the writing
+   * model with its name (topicNaming.mjs), or the live topic check's gist. It
+   * grows with the topic. Absent until a model describes it.
+   */
+  description?: string;
   words: string[];
   durationMs: number;
   utteranceIds: string[];

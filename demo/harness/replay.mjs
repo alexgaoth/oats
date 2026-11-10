@@ -208,8 +208,8 @@ export function createReplay({ main, fixture, options = {} }) {
     if (/check what was said in a meeting/i.test(prompt)) {
       return { text: judgeDemoCheck(text), delayMs: 1200 };
     }
-    // A topic's name (`topicNaming.mjs`, topicNames.mjs), while recording and
-    // at Finish.
+    // A topic's name and description (`topicNaming.mjs`, topicNames.mjs),
+    // while recording and at Finish.
     if (/name one topic of a recorded conversation/i.test(prompt)) {
       const name = demoTopicName(text);
       return name ? { text: name, delayMs: 800 } : null;

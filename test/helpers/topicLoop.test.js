@@ -528,6 +528,25 @@ test("the names go to another cut of the conversation by the lines they were giv
   assert.equal(loop.namesFor(split).size, 0);
 });
 
+test("a topic's gist is its description, on the flow card and for the record", async () => {
+  const { clock, proposer, loop, replies, say } = setup();
+  say();
+  say();
+  say();
+  proposer.moveTo(2);
+  say();
+  say();
+  say();
+  replies.push(check({ name: "Budget for the remote", gist: "What the parts cost" }));
+  await clock.tick(1_500);
+  const named = loop.snapshot().nodes.find((node) => node.label === "Budget for the remote");
+  assert.equal(named.description, "What the parts cost");
+  const unnamed = loop.snapshot().nodes.find((node) => node.label !== "Budget for the remote");
+  assert.equal(unnamed?.description, undefined, "no description without a name");
+  const record = { nodes: [{ id: 11, utteranceIds: ["u3", "u4", "u5"] }] };
+  assert.equal(loop.namesFor(record).get(11).description, "What the parts cost");
+});
+
 test("the fast model is the first this key can use, and an unknown answer is asked again", async () => {
   const answers = (map) => async (model) => {
     const answer = map[model];

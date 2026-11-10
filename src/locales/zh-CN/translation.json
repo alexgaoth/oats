@@ -2281,6 +2281,12 @@
         "download": "下载",
         "searchWith": "搜索方式"
       },
+      "topics": {
+        "title": "话题",
+        "description": "对话进行时，Oats 会把所说的内容分成话题并为其命名。",
+        "describe": "描述每个话题",
+        "describeHint": "在每个话题名称下，由写作模型用几句话说明说了什么、问了什么、决定了什么。描述会随话题增长。关闭后，对话走向改为引用该话题的最新一句话。"
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "每段结束的对话都会作为笔记写入你的仓库。",
