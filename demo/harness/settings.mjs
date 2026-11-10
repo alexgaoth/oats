@@ -25,7 +25,9 @@
 // `noticed=1` (the download's notice was shown before),
 // `theme=light|dark`, `view=calm|words`
 // (the recording view), `flow=lanes|graph` (the flow card),
-// `connections=lanes|graph` (the reading view's Connections tab).
+// `connections=lanes|graph` (the reading view's Connections tab),
+// `describe=0` (no topic descriptions: the flow card quotes a pressed topic,
+// the look before descriptions).
 
 import { CONTEXT_FOLDER } from "./context.mjs";
 
@@ -50,6 +52,7 @@ export function applyDemoSettings(params) {
   set("conversationDetail", VIEWS[params.get("view")] ?? "clean");
   set("conversationFlowView", params.get("flow") === "graph" ? "graph" : "lanes");
   set("connectionsView", params.get("connections") === "graph" ? "graph" : "lanes");
+  set("topicDescriptions", params.get("describe") === "0" ? "false" : "true");
   set("conversationAideEnabled", "true");
   set("conversationAideInRoomEnabled", "true");
   set("conversationAideModel", "");

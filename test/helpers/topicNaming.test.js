@@ -55,6 +55,7 @@ test("the prompt carries the other topics' names, the current name and what was 
   assert.equal(first.system, naming.TOPIC_NAME_SYSTEM_PROMPT);
   assert.match(first.text, /^Other topics: none yet$/m);
   assert.doesNotMatch(first.text, /Current name/);
+  assert.match(first.text, /^Length of the description: at most 15 words\.$/m);
   assert.match(first.text, /^- We need to pick the launch date\.$/m);
 
   const again = naming.buildTopicNamePrompt({
@@ -71,6 +72,85 @@ test("the prompt carries the other topics' names, the current name and what was 
     "We need to pick the launch date.",
     "The third works for everyone.",
   ]);
+
+  // Between the steps where a name may change, the name is kept and the
+  // request is for the description; its length follows the topic's words.
+  const describe = naming.buildTopicNamePrompt({
+    turns: ["We need to pick the launch date."],
+    current: "Launch date",
+    keepName: true,
+    words: 600,
+  });
+  assert.match(describe.text, /^Current name: Launch date\. Reply with it unchanged\.$/m);
+  assert.match(describe.text, /^Length of the description: at most 42 words\.$/m);
+});
+
+test("a description grows with the topic, to a cap", () => {
+  const length = naming.descriptionLength;
+  assert.equal(length(0), naming.MIN_DESCRIPTION_WORDS);
+  assert.equal(length(40), 15);
+  assert.equal(length(100), 17);
+  assert.equal(length(250), 25);
+  assert.equal(length(625), 43);
+  assert.equal(length(1000), 62);
+  assert.equal(length(5000), naming.MAX_DESCRIPTION_WORDS);
+  assert.equal(length(Number.NaN), 15);
+});
+
+test("an answer gives a name and a description, labelled or in order", () => {
+  const description =
+    "The scroll wheel costs more than buttons because it needs a special chip. Buttons were chosen.";
+  for (const answer of [
+    `Name: Scroll wheel cost\nAbout: ${description}`,
+    `**Name:** Scroll wheel cost\n**About:** ${description}`,
+    `Name: "Scroll wheel cost"\n\nDescription: ${description}`,
+    `About: ${description}\nName: Scroll wheel cost`,
+    `Scroll wheel cost.\n${description}`,
+    `<think>The wheel.</think>\nName: Scroll wheel cost\nAbout: ${description.split(". ")[0]}.\n${description.split(". ")[1]}`,
+  ]) {
+    assert.deepEqual(
+      naming.parseTopicLabel(answer),
+      { name: "Scroll wheel cost", description },
+      answer
+    );
+  }
+  // A name only, as the earlier prompt asked: no description.
+  assert.deepEqual(naming.parseTopicLabel("Scroll wheel cost"), {
+    name: "Scroll wheel cost",
+    description: null,
+  });
+  // A description with an unusable name keeps the description.
+  assert.deepEqual(naming.parseTopicLabel(`Name: General discussion\nAbout: ${description}`), {
+    name: null,
+    description,
+  });
+});
+
+test("a description that is no description is left out", () => {
+  const read = (about) =>
+    naming.parseTopicLabel(`Name: Scroll wheel cost\nAbout: ${about}`).description;
+  assert.equal(read(""), null);
+  assert.equal(read("Wheel cost."), null, "under three words");
+  assert.equal(read("Sorry, I cannot tell what was said"), null);
+  assert.equal(read("Not enough information to describe this topic"), null);
+  assert.equal(read("What was said on this topic: the wheel"), null);
+  assert.equal(read("Length of the description: at most 15 words."), null);
+  assert.equal(read("scroll wheel cost"), null, "the name again");
+  assert.equal(read("“The wheel costs more than buttons.”"), "The wheel costs more than buttons.");
+});
+
+test("a description longer than the cap is cut at a sentence, else at a word", () => {
+  const sentence = (index) => `Sentence ${index} has exactly eight words in it.`;
+  const long = Array.from({ length: 12 }, (_, index) => sentence(index)).join(" ");
+  const cut = naming.parseTopicDescription(long);
+  const count = cut.split(" ").length;
+  assert.ok(count <= naming.MAX_DESCRIPTION_WORDS, `${count} words`);
+  assert.ok(count > naming.MAX_DESCRIPTION_WORDS - 8, "as many whole sentences as fit");
+  assert.ok(cut.endsWith("in it."));
+  const run = Array.from({ length: 120 }, (_, index) => `w${index}`).join(" ");
+  const clipped = naming.parseTopicDescription(run);
+  assert.equal(clipped.split(" ").length, naming.MAX_DESCRIPTION_WORDS);
+  assert.ok(clipped.endsWith("…"));
 });
 
 test("a name is read out of quotes, bullets, bold, prefixes and a full stop", () => {
@@ -200,29 +280,47 @@ test("a name another topic already has is no name", () => {
   assert.equal(naming.sameName("", ""), false);
 });
 
-test("a topic is named at forty words, renamed as it grows, and once more at the end", () => {
+test("a topic is named at forty words, asked again as it grows, and once more at the end", () => {
   const need = naming.topicNeedsName;
   assert.equal(need({ words: 39 }), null);
   assert.equal(need({ words: 40 }), "first");
   assert.equal(need({ words: 29, final: true }), null);
   assert.equal(need({ words: 30, final: true }), "first");
 
+  // Asked again at 1.6 times its words, so its description keeps up.
+  assert.equal(naming.DESCRIBE_GROWTH, 1.6);
   const record = { name: "Launch date", words: 40 };
-  assert.equal(need({ words: 99, record }), null);
-  assert.equal(need({ words: 100, record }), "rename");
+  assert.equal(need({ words: 63, record }), null);
+  assert.equal(need({ words: 64, record }), "rename");
   // At the end, less growth is enough, but not a few words.
   assert.equal(need({ words: 69, record, final: true }), null);
   assert.equal(need({ words: 70, record, final: true }), "rename");
   assert.equal(need({ words: 300, record: { name: "x", words: 290 }, final: true }), null);
   // A topic the tracker cut smaller is asked again once it lost as much.
   const big = { name: "Launch date", words: 250 };
-  assert.equal(need({ words: 101, record: big }), null);
-  assert.equal(need({ words: 100, record: big }), "rename");
+  assert.equal(need({ words: 157, record: big }), null);
+  assert.equal(need({ words: 156, record: big }), "rename");
   assert.equal(need({ words: 200, record: big, final: true }), null);
   assert.equal(need({ words: 190, record: big, final: true }), "rename");
   // Cut below what can be named from: the name stays, and nothing is asked.
   assert.equal(need({ words: 39, record: big }), null);
   assert.equal(need({ words: 29, record: big, final: true }), null);
+});
+
+test("a name may change only at the steps of 2.5, a name the check gave never", () => {
+  const may = naming.nameMayChange;
+  assert.equal(may({ words: 40 }), true, "no name yet");
+  const record = { name: "Launch date", words: 64, nameWords: 40 };
+  assert.equal(may({ words: 99, record }), false);
+  assert.equal(may({ words: 100, record }), true);
+  assert.equal(may({ words: 16, record }), true, "cut to as much fewer");
+  // A record from before descriptions has no `nameWords`: its `words` count.
+  assert.equal(may({ words: 99, record: { name: "x", words: 40 } }), false);
+  assert.equal(may({ words: 100, record: { name: "x", words: 40 } }), true);
+  // At the end, the end's step.
+  assert.equal(may({ words: 52, record, final: true }), true);
+  assert.equal(may({ words: 51, record, final: true }), false);
+  assert.equal(may({ words: 900, record: { ...record, held: true } }), false);
 });
 
 const node = (overrides = {}) => ({
@@ -287,6 +385,61 @@ test("names go on a snapshot as its labels, with the on-device name kept beside"
   assert.equal(merged.nodes[0].deviceLabel, "launch date");
   assert.equal(merged.nodes[1].label, "sso saml");
   assert.equal(naming.namesOf(snapshot).size, 0);
+});
+
+test("a description goes on the topic with its name, and to the record", () => {
+  const snapshot = { nodes: [node()], edges: [] };
+  const ids = ["a", "b", "c", "d"];
+  const described = naming.applyTopicNames(
+    snapshot,
+    new Map([
+      [
+        1,
+        {
+          name: "Launch date move",
+          description: "The launch moves to the 10th.",
+          utteranceIds: ids,
+        },
+      ],
+    ])
+  );
+  assert.equal(described.nodes[0].description, "The launch moves to the 10th.");
+  // A newer description changes the topic; the same one does not.
+  const again = new Map([
+    [
+      1,
+      { name: "Launch date move", description: "The launch moves to the 10th.", utteranceIds: ids },
+    ],
+  ]);
+  assert.equal(naming.applyTopicNames(described, again), described);
+  const newer = naming.applyTopicNames(
+    described,
+    new Map([
+      [
+        1,
+        {
+          name: "Launch date move",
+          description: "The launch moves to the 10th, after the audit.",
+          utteranceIds: ids,
+        },
+      ],
+    ])
+  );
+  assert.equal(newer.nodes[0].description, "The launch moves to the 10th, after the audit.");
+  // A record with no description keeps the one the topic has.
+  const nameOnly = new Map([[1, { name: "Launch date move", utteranceIds: ids }]]);
+  assert.equal(naming.applyTopicNames(described, nameOnly), described);
+  assert.equal(naming.applyTopicNames(snapshot, nameOnly).nodes[0].description, undefined);
+  // The record as stored takes it by topic id.
+  const stored = naming.applyTopicNames(
+    JSON.parse(JSON.stringify(snapshot)),
+    naming.namesOf(newer)
+  );
+  assert.equal(stored.nodes[0].description, "The launch moves to the 10th, after the audit.");
+  assert.equal(
+    naming.namesOf(newer).get(1).description,
+    "The launch moves to the 10th, after the audit."
+  );
 });
 
 test("a request goes by the writing model's own route, capped only where that is safe", () => {

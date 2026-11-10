@@ -65,6 +65,7 @@ import {
   DictionaryEditor,
   InAppShortcuts,
   QuestionCardSettings,
+  TopicSettings,
   VaultRow,
 } from "./settings/OatsSettingsSections";
 import { useSettingsLayout } from "./ui/useSettingsLayout";
@@ -905,6 +906,7 @@ export default function SettingsPage({
             </div>
 
             <QuestionCardSettings />
+            <TopicSettings />
           </div>
         );
 

@@ -244,7 +244,7 @@ test("the live topic is named only from its turns before a change the tracker pr
   const later = talk.say(1, 30);
   namer.observe(proposing(later), talk.segments);
   await clock.tick(namerModule.MAX_SETTLE_MS);
-  assert.equal(asked.length, 2, "renamed at two and a half times the words it was named from");
+  assert.equal(asked.length, 2, "asked again, and open to a new name at 2.5 times its words");
   const quoted = asked[1].text.split("What was said on this topic:\n")[1].split("\n");
   assert.equal(quoted.length, 3);
   assert.ok(!asked[1].text.includes(talk.segments[3].text), "nothing from the proposed change on");
@@ -383,7 +383,7 @@ test("the end waits for the request that is out, renames what grew, and keeps to
   assert.equal(result.nodes[0].label, "topic 1");
 });
 
-test("a name the live topic check gave is not asked for again at the end", async () => {
+test("a name the live topic check gave is kept at the end, and the topic described once", async () => {
   const { namer, asked, answers } = setup({ live: false });
   const talk = conversation();
   talk.say(1, 40);
@@ -392,16 +392,33 @@ test("a name the live topic check gave is not asked for again at the end", async
   // As topicNamingRunner.ts seeds it from the check (topicLoop.mjs `namesFor`).
   namer.names.set(1, {
     name: "Launch date move",
+    description: "Launch moves a week",
     words: 40,
     namings: 1,
     utteranceIds: ["u0"],
     held: true,
   });
-  answers.push("SSO login with SAML");
+  answers.push(
+    "SSO login with SAML",
+    "Name: Launch week kickoffs\nAbout: The launch moves a week, and three kickoffs move with it."
+  );
   const named = await namer.finish(talk.snapshot(), talk.segments);
-  assert.equal(asked.length, 1, "only the topic the check did not name");
-  assert.equal(named.nodes[0].label, "Launch date move");
+  assert.equal(asked.length, 2, "the topic the check did not name, then the description");
+  assert.match(asked[1].text, /^Current name: Launch date move\. Reply with it unchanged\.$/m);
+  assert.equal(named.nodes[0].label, "Launch date move", "the check's name stays");
+  assert.equal(
+    named.nodes[0].description,
+    "The launch moves a week, and three kickoffs move with it."
+  );
   assert.equal(named.nodes[1].label, "SSO login with SAML");
+  assert.deepEqual(
+    namer.names.get(1).utteranceIds,
+    ["u0"],
+    "the check's lines still decide the fit"
+  );
+  // Described once: a second end asks nothing more of it.
+  await namer.finish(talk.snapshot(), talk.segments);
+  assert.equal(asked.length, 2);
   // The same name from the namer itself is renamed as it grew.
   const own = setup({ live: false });
   own.namer.names.set(1, { name: "Launch date move", words: 40, namings: 1, utteranceIds: ["u0"] });
@@ -460,4 +477,66 @@ test("on this computer a name waits its turn behind the question classifier", as
   assert.deepEqual(order, ["classifier", "name"]);
   assert.equal(labelOf(namer, talk.snapshot(1), 1).label, "Launch date move");
   assert.equal(mostWaiting, 1, "one name in the line at most");
+});
+
+test("the description keeps up with the topic, and the name holds between its steps", async () => {
+  const { clock, namer, asked, answers, changes } = setup();
+  const talk = conversation();
+  talk.say(1, 45);
+  answers.push("Name: Launch date move\nAbout: The launch may move from the 3rd.");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.match(asked[0].text, /^Length of the description: at most 15 words\.$/m);
+  let shown = labelOf(namer, talk.snapshot(1), 1);
+  assert.equal(shown.label, "Launch date move");
+  assert.equal(shown.description, "The launch may move from the 3rd.");
+  assert.equal(changes(), 1);
+
+  // 1.6 times the words: asked again, for the description only.
+  talk.say(1, 30);
+  answers.push(
+    "Name: Kickoff week plans\nAbout: The launch may move from the 3rd; three kickoffs that week."
+  );
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(asked.length, 2);
+  assert.match(asked[1].text, /^Current name: Launch date move\. Reply with it unchanged\.$/m);
+  shown = labelOf(namer, talk.snapshot(1), 1);
+  assert.equal(shown.label, "Launch date move", "the name holds between its steps");
+  assert.equal(shown.description, "The launch may move from the 3rd; three kickoffs that week.");
+  assert.equal(changes(), 2, "a new description is published");
+
+  // An answer with no description keeps the last one, and is still a name.
+  talk.say(1, 50); // 125 words: 2.5 times the 45 the name was read from
+  answers.push("Launch date and kickoffs");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(asked.length, 3);
+  assert.match(asked[2].text, /Reply with a better name only if it does not\./);
+  shown = labelOf(namer, talk.snapshot(1), 1);
+  assert.equal(shown.label, "Launch date and kickoffs", "open to a new name at 2.5 times");
+  assert.equal(shown.description, "The launch may move from the 3rd; three kickoffs that week.");
+  assert.equal(namer.names.get(1).nameWords, 125);
+});
+
+test("a description-only request answered with the name alone changes nothing, and is no failure", async () => {
+  const { clock, namer, asked, answers, changes } = setup();
+  const talk = conversation();
+  talk.say(1, 45);
+  answers.push("Name: Launch date move\nAbout: The launch may move from the 3rd.");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  talk.say(1, 30);
+  answers.push("Launch date move");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(asked.length, 2);
+  assert.equal(changes(), 1);
+  assert.equal(namer.stats.unusable, 0);
+  assert.equal(namer.failures, 0);
+  assert.equal(namer.names.get(1).words, 75, "the next request waits for the next step");
+  assert.equal(
+    labelOf(namer, talk.snapshot(1), 1).description,
+    "The launch may move from the 3rd."
+  );
 });

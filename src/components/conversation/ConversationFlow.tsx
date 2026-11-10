@@ -158,6 +158,7 @@ export default function ConversationFlow({
   view,
   onViewChange,
   compact = false,
+  descriptions = true,
   className,
 }: {
   /** The topics: a stored conversation's, or the recording's. */
@@ -175,6 +176,10 @@ export default function ConversationFlow({
   /** Beside the live dialogue (the Detailed composition): a shorter graph, so
    *  the words being said keep most of the column. */
   compact?: boolean;
+  /** The band under the topics describes the topic now, or the one pressed,
+   *  where a model described it. Off, it quotes the pressed topic's latest
+   *  line, as before descriptions. */
+  descriptions?: boolean;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -230,6 +235,20 @@ export default function ConversationFlow({
     () => snapshot?.nodes?.find((node) => node?.id === selected) ?? null,
     [snapshot, selected]
   );
+  // With descriptions, the band follows the topic now until one is pressed.
+  // It changes when the room moves on or a new description lands, both
+  // between turns, never word by word.
+  const liveNode = useMemo(
+    () => (live ? (snapshot?.nodes?.find((node) => node?.state === "live") ?? null) : null),
+    [snapshot, live]
+  );
+  const shownNode = selectedNode ?? (descriptions ? liveNode : null);
+  const description = descriptions ? shownNode?.description?.trim() || "" : "";
+  // The band's room is kept from the first description on, as from the first
+  // press, so it opens once and then never moves what is below.
+  const [described, setDescribed] = useState(false);
+  if (!described && description) setDescribed(true);
+  const banded = quoting || described;
   const quote = useMemo(
     () => quotedUtterance(selectedNode, segments) as TranscriptSegment | null,
     [selectedNode, segments]
@@ -294,26 +313,41 @@ export default function ConversationFlow({
             )}
           </div>
 
-          {/* A fixed height of two lines, so a long quote and a short one take
-              the same room. */}
-          {quoting && (
+          {/* A fixed height, so a long quote or description and a short one
+              take the same room: two lines for a quote, three where topics
+              are described. The whole description is in its tooltip and in
+              the topic panel of the finished conversation. */}
+          {banded && (
             <div
               className={cn(
                 "shrink-0 border-t border-border px-5",
                 compact ? "pb-2 pt-2" : "pb-3 pt-2.5"
               )}
             >
-              <p className="line-clamp-2 h-10 text-[13px] leading-5 text-muted-foreground">
-                {selectedNode && (
+              <p
+                className={cn(
+                  "text-[13px] leading-5 text-muted-foreground",
+                  descriptions ? "line-clamp-3 h-15" : "line-clamp-2 h-10"
+                )}
+                title={description || undefined}
+              >
+                {shownNode && description ? (
                   <>
-                    <span className="font-medium text-foreground">{selectedNode.label}</span>
-                    {quoteAt && <span className="ml-2 tabular-nums">{quoteAt}</span>}
-                    <span className="ml-2">
-                      {quote
-                        ? t("oats.flow.quote", { text: String(quote.text ?? "").trim() })
-                        : t("oats.flow.noQuote")}
-                    </span>
+                    <span className="font-medium text-foreground">{shownNode.label}</span>
+                    <span className="ml-2">{description}</span>
                   </>
+                ) : (
+                  selectedNode && (
+                    <>
+                      <span className="font-medium text-foreground">{selectedNode.label}</span>
+                      {quoteAt && <span className="ml-2 tabular-nums">{quoteAt}</span>}
+                      <span className="ml-2">
+                        {quote
+                          ? t("oats.flow.quote", { text: String(quote.text ?? "").trim() })
+                          : t("oats.flow.noQuote")}
+                      </span>
+                    </>
+                  )
                 )}
               </p>
             </div>
