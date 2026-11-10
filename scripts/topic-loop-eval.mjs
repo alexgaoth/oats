@@ -6,7 +6,7 @@
  * results.
  *
  *   node scripts/topic-loop-eval.mjs --variant <v> [--model <provider:model[@opts]>]
- *     (--ami <dir> [--set eval24|test|tune|all] [--meetings a,b]
+ *     (--ami <dir> [--set eval24|test|tune|learn83|all] [--meetings a,b]
  *      | --asr <room-replay.json> --ami <dir> | --transcript <note.json>)
  *     [--tracker <conversationTopics.mjs>] [--concurrency 4] [--label name]
  *     [--local-model <gguf> --llama-server <binary>] [--json out.json]
@@ -148,6 +148,15 @@ if (OPTIONS.changeModel) {
     OPTIONS.proposerDetector = { ...OPTIONS.proposerDetector, model: CHANGE_MODEL };
   }
 }
+// `splitModel`: trees of their own for a split of long topics (`detector.split`,
+// `detector.recordSplit`), from a file (docs/topic-split.md).
+if (OPTIONS.splitModel) {
+  const { CHANGE_MODEL } = await import(pathToFileURL(path.resolve(OPTIONS.splitModel)).href);
+  for (const key of ["split", "recordSplit"]) {
+    if (OPTIONS.detector?.[key])
+      OPTIONS.detector[key] = { ...OPTIONS.detector[key], model: CHANGE_MODEL };
+  }
+}
 const LABEL = args.label ?? `${VARIANT}${SPEC ? `:${SPEC}` : ""}`;
 
 // The on-device tracker: main's (#123 since 0cf56b9), or another by file. V0 is
@@ -179,7 +188,12 @@ function evalSet(dir) {
     { length: 12 },
     (_, index) => tune[index * step + Math.floor(step / 2)]
   );
-  return { test, tune, eval24: [...test, ...spread], all: ids };
+  const eval24 = [...test, ...spread];
+  // Every tuning meeting whose series (the group of people) is not in eval24.
+  const series = (id) => id.replace(/[a-d]$/, "");
+  const held = new Set(eval24.map(series));
+  const learn83 = tune.filter((id) => !held.has(series(id)));
+  return { test, tune, eval24, learn83, all: ids };
 }
 
 function loadConversations() {

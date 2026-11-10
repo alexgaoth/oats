@@ -504,6 +504,9 @@ export function segmentationScores(conversation, perUtterance) {
       windowDiff: fine.windowDiff,
       refRuns: fine.refRuns,
       oneTopic: fine.oneTopic,
+      boundaryHits: fine.boundaryHits,
+      boundaryDrawn: fine.boundaryDrawn,
+      boundaryReal: fine.boundaryReal,
     },
   };
 }
