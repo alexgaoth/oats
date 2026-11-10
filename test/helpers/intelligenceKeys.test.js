@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
+// Two keyboard paths on Intelligence.
+//
 // Escape on Intelligence steps back (a record or the map to the list), unless
 // a layer on top already took it. Radix's menus and dialogs close on Escape
 // from a document capture listener and mark the event handled
@@ -33,6 +35,29 @@ test("Intelligence's Escape leaves a key a menu or dialog already handled", () =
   const back = handler.indexOf('new Event("oats-intelligence-back")');
   assert.ok(guard > 0, "the handler checks defaultPrevented");
   assert.ok(back > guard, "the check comes before the step back");
+});
+
+test("a rename ended from the keyboard puts the focus back on the title", () => {
+  const source = read("src/components/OatsWorkspace.tsx");
+  const field = source.slice(source.indexOf('aria-label={t("oats.intelligence.renameHint")}'));
+  const keys = field.slice(0, field.indexOf("className="));
+  assert.match(
+    keys,
+    /event\.key === "Enter" \|\| event\.key === "Escape"\) refocusTitle\.current = true;/
+  );
+  // Enter's keypress would otherwise open the rename again on the refocused title.
+  assert.match(
+    keys,
+    /if \(event\.key === "Enter"\) \{[^}]*event\.preventDefault\(\);[^}]*commitRename\(\);/s
+  );
+  assert.match(
+    source,
+    /if \(renaming \|\| !refocusTitle\.current\) return;\s*refocusTitle\.current = false;\s*titleButton\.current\?\.focus\(\);/
+  );
+  assert.match(
+    source,
+    /<button\s+ref=\{titleButton\}\s+type="button"\s+title=\{t\("oats\.intelligence\.renameHint"\)\}/
+  );
 });
 
 test("the layers it defers to do mark Escape handled", () => {
