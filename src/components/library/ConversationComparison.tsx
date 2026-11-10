@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, X } from "lucide-react";
 import { Button } from "../ui/button";
@@ -19,6 +19,10 @@ type RecordEvidence = { note: NoteItem; events: ConversationEvent[] };
 export function ConversationComparison({ firstId }: { firstId?: number }) {
   const { t } = useTranslation();
   const tools = useLibraryTools();
+  const classic =
+    import.meta.env.VITE_OATS_COMPARISON_LAYOUT === "classic" ||
+    (import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get("comparisonLayout") === "classic");
   const [selected, setSelected] = useState<number[]>(firstId === undefined ? [] : [firstId]);
   const [query, setQuery] = useState("");
   const [picking, setPicking] = useState(true);
@@ -26,6 +30,21 @@ export function ConversationComparison({ firstId }: { firstId?: number }) {
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState(false);
   const [retry, setRetry] = useState(0);
+  const searchField = useRef<HTMLInputElement>(null);
+  const resultHeading = useRef<HTMLHeadingElement>(null);
+  const focusAfterSwitch = useRef<"picker" | "results" | null>(null);
+  useEffect(() => {
+    const target =
+      picking && focusAfterSwitch.current === "picker"
+        ? searchField.current
+        : !picking && !pending && focusAfterSwitch.current === "results"
+          ? resultHeading.current
+          : null;
+    if (!target) return;
+    focusAfterSwitch.current = null;
+    target.focus({ preventScroll: true });
+    target.closest<HTMLElement>('[role="dialog"]')?.scrollTo(0, 0);
+  }, [picking, pending]);
   const ids = selected.join(",");
   useEffect(() => {
     let active = true;
@@ -64,33 +83,45 @@ export function ConversationComparison({ firstId }: { firstId?: number }) {
     evidence.length === 2
       ? sharedTopicLabels(evidence[0].topics, evidence[1].topics)
       : new Set<string>();
+  const showingSelectedRecords =
+    records.length === 2 && records.every(({ note }) => selected.includes(note.id));
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {selected.map((id) => (
+      <div
+        className={`flex flex-wrap items-center gap-2 ${picking || classic ? "" : "justify-end"}`}
+      >
+        {(picking || classic) &&
+          selected.map((id) => (
+            <Button
+              key={id}
+              variant="outline"
+              size="sm"
+              className="max-w-full"
+              onClick={() => {
+                setSelected((held) => held.filter((item) => item !== id));
+                setPicking(true);
+              }}
+              aria-label={t("oats.library.unselect", {
+                title:
+                  records.find((record) => record.note.id === id)?.note.title || t("oats.untitled"),
+              })}
+            >
+              <span className="truncate">
+                {records.find((record) => record.note.id === id)?.note.title ||
+                  t("oats.library.loading")}
+              </span>
+              <X aria-hidden="true" />
+            </Button>
+          ))}
+        {!picking && (
           <Button
-            key={id}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="max-w-full"
             onClick={() => {
-              setSelected((held) => held.filter((item) => item !== id));
+              focusAfterSwitch.current = "picker";
               setPicking(true);
             }}
-            aria-label={t("oats.library.unselect", {
-              title:
-                records.find((record) => record.note.id === id)?.note.title || t("oats.untitled"),
-            })}
           >
-            <span className="truncate">
-              {records.find((record) => record.note.id === id)?.note.title ||
-                t("oats.library.loading")}
-            </span>
-            <X aria-hidden="true" />
-          </Button>
-        ))}
-        {!picking && (
-          <Button variant="ghost" size="sm" onClick={() => setPicking(true)}>
             {t("oats.library.changeSelection")}
           </Button>
         )}
@@ -103,6 +134,7 @@ export function ConversationComparison({ firstId }: { firstId?: number }) {
               {t("oats.library.chooseTwo")}
             </label>
             <Input
+              ref={searchField}
               id="comparison-search"
               type="search"
               value={query}
@@ -128,24 +160,29 @@ export function ConversationComparison({ firstId }: { firstId?: number }) {
           <div className="flex justify-end">
             <Button
               disabled={selected.length !== 2 || pending || failed}
-              onClick={() => setPicking(false)}
+              onClick={() => {
+                focusAfterSwitch.current = "results";
+                setPicking(false);
+              }}
             >
               {t("oats.library.compare")}
             </Button>
           </div>
         </>
-      ) : pending ? (
+      ) : pending && !showingSelectedRecords ? (
         <p role="status" className="text-[13px] text-muted-foreground">
           {t("oats.library.loading")}
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div aria-busy={pending} className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {records.map((record, index) => (
             <ComparisonColumn
               key={record.note.id}
               record={record}
               evidence={evidence[index]}
               shared={shared}
+              classic={classic}
+              headingRef={index === 0 ? resultHeading : undefined}
             />
           ))}
         </div>
@@ -158,18 +195,32 @@ function ComparisonColumn({
   record,
   evidence,
   shared,
+  classic,
+  headingRef,
 }: {
   record: RecordEvidence;
   evidence: ReturnType<typeof comparisonEvidence>;
   shared: Set<string>;
+  classic: boolean;
+  headingRef?: Ref<HTMLHeadingElement>;
 }) {
   const { t, i18n } = useTranslation();
   const tools = useLibraryTools();
   const { note } = record;
   return (
-    <section className="min-w-0 space-y-5">
-      <header className="space-y-2 border-b border-border pb-4">
-        <h2 className="break-words text-base font-semibold">{note.title || t("oats.untitled")}</h2>
+    <section
+      className={`min-w-0 space-y-5 ${classic ? "" : "sm:row-span-4 sm:grid sm:grid-cols-1 sm:grid-rows-subgrid sm:gap-y-5 sm:space-y-0"}`}
+    >
+      <header
+        className={`border-b border-border pb-4 ${classic ? "space-y-2" : "flex flex-col items-start gap-2"}`}
+      >
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          className={`max-w-full break-words text-base font-semibold ${classic ? "" : "flex-1"}`}
+        >
+          {note.title || t("oats.untitled")}
+        </h2>
         <p className="text-xs tabular-nums text-muted-foreground">
           {ledgerDate(note.created_at, { locale: i18n.language })}
         </p>

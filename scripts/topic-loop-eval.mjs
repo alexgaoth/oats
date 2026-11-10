@@ -7,7 +7,8 @@
  *
  *   node scripts/topic-loop-eval.mjs --variant <v> [--model <provider:model[@opts]>]
  *     (--ami <dir> [--set eval24|test|tune|learn83|all] [--meetings a,b]
- *      | --asr <room-replay.json> --ami <dir> | --transcript <note.json>)
+ *      | --asr <room-replay.json> --ami <dir> | --transcript <note.json> [--marks <marks.json>]
+ *      | --referenced <file.json|dir>)
  *     [--tracker <conversationTopics.mjs>] [--concurrency 4] [--label name]
  *     [--local-model <gguf> --llama-server <binary>] [--json out.json]
  *
@@ -36,12 +37,20 @@
  *   --transcript a stored note's segments. Private: only counts and timings are
  *                printed and written, never a word or a topic name, unless
  *                --show-labels. Only models on this computer may read it:
- *                any other provider is refused.
+ *                any other provider is refused. With --marks (`{ "<segment
+ *                id>": "<section>" }`, every segment) it is scored too.
+ *   --referenced recordings with a reference outside AMI and ICSI, one JSON a
+ *                recording or a folder of them (`referencedTranscript` in
+ *                lib/topic-corpus.mjs): talks with their chapters, speeches
+ *                with an outline.
  *
  * Measured, per meeting and in total
  *   segmentation  Pk, WindowDiff, topics and runs against AMI's human
  *                 top-level topics (as `scripts/topic-eval.mjs` in #123), for
  *                 the live view at the end of the meeting and for the record.
+ *                 Drawn changes within a minute of a real one (precision and
+ *                 recall), within 10 s (the right sentence), and how far the
+ *                 ones within a minute land from it (median and p90).
  *   live view     changes of subject drawn within a minute of a real one, and
  *                 how long after it; lines moved to another topic once shown
  *                 (older than 30 s); topic names changed per hour; how long a
@@ -83,6 +92,7 @@ import {
   icsiReference,
   segmentExcerpt,
   referenceLabels,
+  referencedTranscript,
   segmentationScores,
   storedTranscript,
   topicNames,
@@ -107,6 +117,8 @@ const { values: args } = parseArgs({
     replay: { type: "string" },
     icsi: { type: "string" },
     transcript: { type: "string" },
+    marks: { type: "string" },
+    referenced: { type: "string" },
     set: { type: "string", default: "eval24" },
     meetings: { type: "string" },
     tracker: { type: "string" },
@@ -203,7 +215,44 @@ function loadConversations() {
       process.exit(2);
     }
     const value = JSON.parse(fs.readFileSync(args.transcript, "utf8"));
-    return [storedTranscript(path.basename(args.transcript, ".json"), value)];
+    const id = path.basename(args.transcript, ".json");
+    if (args.marks) {
+      const marks = JSON.parse(fs.readFileSync(args.marks, "utf8"));
+      const stored = storedTranscript(id, value);
+      const unmarked = stored.utterances.filter((utterance) => !(utterance.id in marks)).length;
+      if (unmarked) {
+        console.error(
+          `--marks leaves ${unmarked} of ${stored.utterances.length} segments without a section`
+        );
+        process.exit(2);
+      }
+      const segments = stored.utterances.map((utterance) => ({
+        id: utterance.id,
+        text: utterance.text,
+        startMs: utterance.start * 1000,
+        endMs: utterance.end * 1000,
+        ref: marks[utterance.id],
+      }));
+      return [referencedTranscript({ id, source: "stored", segments }, { isPrivate: true })];
+    }
+    return [storedTranscript(id, value)];
+  }
+  if (args.referenced) {
+    const files = fs.statSync(args.referenced).isDirectory()
+      ? fs
+          .readdirSync(args.referenced)
+          .filter((file) => file.endsWith(".json"))
+          .sort()
+          .map((file) => path.join(args.referenced, file))
+      : [args.referenced];
+    const wanted = args.meetings ? new Set(args.meetings.split(",")) : null;
+    return files
+      .map((file) =>
+        referencedTranscript(JSON.parse(fs.readFileSync(file, "utf8")), {
+          id: path.basename(file, ".json"),
+        })
+      )
+      .filter((conversation) => !wanted || wanted.has(conversation.id));
   }
   if (args.icsi) {
     // Outside AMI: only models on this computer may read it.
@@ -956,6 +1005,18 @@ async function pool(items, limit, work) {
   return results;
 }
 
+/** How far drawn changes land from the real ones they match, in seconds. */
+function offsetStats(offsets) {
+  const distances = offsets.map((offset) => Math.abs(offset) / 1000);
+  return {
+    offsetMedianS: percentile(distances, 50),
+    offsetP90S: percentile(distances, 90),
+    lateShare: offsets.length
+      ? offsets.filter((offset) => offset > 0).length / offsets.length
+      : null,
+  };
+}
+
 function summarize(results) {
   const ami = results.filter((result) => result.record?.pk != null);
   const total = (key, part) => results.reduce((sum, result) => sum + (result[part]?.[key] ?? 0), 0);
@@ -985,6 +1046,19 @@ function summarize(results) {
               1,
               ami.reduce((sum, result) => sum + result[part].boundaryReal, 0)
             ),
+          exactPrecision:
+            ami.reduce((sum, result) => sum + result[part].boundaryHitsExact, 0) /
+            Math.max(
+              1,
+              ami.reduce((sum, result) => sum + result[part].boundaryDrawn, 0)
+            ),
+          exactRecall:
+            ami.reduce((sum, result) => sum + result[part].boundaryHitsExact, 0) /
+            Math.max(
+              1,
+              ami.reduce((sum, result) => sum + result[part].boundaryReal, 0)
+            ),
+          ...offsetStats(ami.flatMap((result) => result[part].boundaryOffsets ?? [])),
         }
       : null;
   const lags = ami.flatMap((result) => result.liveDraw?.lags ?? []);
@@ -1106,6 +1180,9 @@ function printSummary(summary) {
     if (!s) continue;
     lines.push(
       `${part.padEnd(6)} Pk ${ci(s.pk)}  WD ${ci(s.windowDiff)}  topics ${fmt(s.topics, 1)} runs ${fmt(s.runs, 1)} (ref ${fmt(s.refRuns, 1)})  boundaries P ${fmt(s.boundaryPrecision * 100, 0)}% R ${fmt(s.boundaryRecall * 100, 0)}%  (one topic Pk ${fmt(s.oneTopicPk)})`
+    );
+    lines.push(
+      `${"".padEnd(6)} within 10 s: P ${fmt(s.exactPrecision * 100, 0)}% R ${fmt(s.exactRecall * 100, 0)}%  matched cuts off by ${fmt(s.offsetMedianS, 1)} s (median), ${fmt(s.offsetP90S, 1)} s (p90), ${fmt(s.lateShare * 100, 0)}% late`
     );
     lines.push(
       `${"".padEnd(6)} fine: Pk ${ci(s.finePk)}  WD ${ci(s.fineWindowDiff)}  (ref runs ${fmt(s.fineRefRuns, 1)}, one topic Pk ${fmt(s.fineOneTopicPk)})`

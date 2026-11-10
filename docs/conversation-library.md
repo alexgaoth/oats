@@ -50,6 +50,19 @@ show retryable errors, preserve unsaved personal notes across unrelated refreshe
 and return focus to their entry point. Opening a source moves focus to its title
 after the reader mounts.
 
+## Comparison layout
+
+Results show each conversation title once. Change selection returns to the picker,
+where the selected records remain removable. Matching evidence sections align
+across the two columns so topics, marks and questions can be read across. Narrow
+windows keep one complete conversation after the other.
+
+Switching between the picker and results restores focus and the dialog's top.
+Background record refreshes do not move the reader's focus or scroll position.
+The previous independent-column layout remains available in the demo with
+`comparisonLayout=classic`, or in a build with `VITE_OATS_COMPARISON_LAYOUT=classic`.
+This adds no visible setting and changes no evidence or saved data.
+
 ## Recording controls
 
 The default remains Clean. Show transcript opens the optional detail area;
