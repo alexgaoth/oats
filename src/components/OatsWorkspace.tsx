@@ -92,6 +92,15 @@ import TopicLanes, { type LaneQuestion, type Lanes } from "./conversation/TopicL
 import { flowCaption, flowViewOptions } from "./conversation/flowText";
 import { questionTopics, topicLanes } from "../helpers/topicLanes.mjs";
 import GlobalConversations from "./global/GlobalConversations";
+import {
+  ConversationLibrary,
+  CompareMenuItem,
+  LibraryMenu,
+  SavePassageButton,
+} from "./library/ConversationLibrary";
+import { useLibraryTools } from "./library/libraryContext";
+import { LibraryFilteredResults, LibraryFilters } from "./library/LibraryBrowser";
+import type { LibraryCriteria } from "../types/conversationLibrary";
 import FieldBackdrop from "./field/FieldBackdrop";
 import { useFieldColumn } from "./field/fieldColumns";
 import LiveConversationFlow from "./conversation/LiveConversationFlow";
@@ -1431,7 +1440,15 @@ function useRoomBelow(
 // Which of the three Intelligence views is showing. Drives the cross-fade key.
 type IntelligenceView = "list" | "reading" | "global";
 
-function IntelligenceViews({
+function IntelligenceViews(props: React.ComponentProps<typeof IntelligenceContent>) {
+  return (
+    <ConversationLibrary>
+      <IntelligenceContent {...props} />
+    </ConversationLibrary>
+  );
+}
+
+function IntelligenceContent({
   view,
   setView,
   reading,
@@ -1443,6 +1460,8 @@ function IntelligenceViews({
   setReading: (reading: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const library = useLibraryTools();
+  const libraryFiltered = library.criteria !== null;
   const notes = useNotes();
   // Where the field mode backdrop keeps clear of (field/fieldColumns.ts).
   const listColumn = useFieldColumn("conversations");
@@ -1466,8 +1485,12 @@ function IntelligenceViews({
   const selected =
     notes.find((note) => note.id === selectedId) ??
     (openedNote && openedNote.id === selectedId ? openedNote : null) ??
-    notes[0] ??
+    (selectedId === null ? notes[0] : null) ??
     null;
+  const sourceHeading = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (reading && openedNote?.id === selected?.id) sourceHeading.current?.focus();
+  }, [openedNote, reading, selected?.id]);
   const { events, reload } = useConversationEvents(selected?.id ?? null);
 
   // The store's listeners keep only the notes it holds current, so a rename, a
@@ -1533,6 +1556,40 @@ function IntelligenceViews({
   // shell already shows Search, and an opening "not searching" would flick the
   // sidebar back to Conversations until the field took focus.
   const [searchFocused, setSearchFocused] = useState(false);
+  useEffect(() => {
+    const openSource = (event: Event) => {
+      const { note, segmentId } = (
+        event as CustomEvent<{ note: NoteItem; segmentId: string | null }>
+      ).detail;
+      setOpenedNote(note);
+      setSelectedId(note.id);
+      setTab(segmentId ? "transcript" : "summary");
+      setLandedOnSegment(segmentId);
+      setReading(true);
+    };
+    const applyView = (event: Event) => {
+      const criteria = (event as CustomEvent<LibraryCriteria>).detail;
+      setQuery(criteria.query ?? "");
+      setReading(false);
+      setView("list");
+    };
+    window.addEventListener("oats-library-source", openSource);
+    window.addEventListener("oats-library-view", applyView);
+    return () => {
+      window.removeEventListener("oats-library-source", openSource);
+      window.removeEventListener("oats-library-view", applyView);
+    };
+  }, [setReading, setView]);
+  useEffect(() => {
+    const off = window.electronAPI?.onNoteDeleted?.(({ id }) => {
+      if (id === selectedId) {
+        setOpenedNote(null);
+        setSelectedId(null);
+        setReading(false);
+      }
+    });
+    return () => off?.();
+  }, [selectedId, setReading]);
   const searching = isSearching({ view, reading, focused: searchFocused, query });
   const reportedSearching = useRef(false);
   useEffect(() => {
@@ -1543,11 +1600,13 @@ function IntelligenceViews({
   useEffect(() => {
     const clear = () => {
       setQuery("");
+      setReading(false);
+      setView("list");
       searchInputRef.current?.blur();
     };
     window.addEventListener("oats-clear-search", clear);
     return () => window.removeEventListener("oats-clear-search", clear);
-  }, []);
+  }, [setReading, setView]);
 
   // Find in this conversation. `null` is closed; a string is the find line,
   // open, with what is typed in it. "Search what you are looking at": in the
@@ -1621,7 +1680,7 @@ function IntelligenceViews({
   const olderScan = useRef<{ needle: string; ms: number; complete: boolean } | null>(null);
   useEffect(() => {
     const needle = query.trim();
-    if (!needle) {
+    if (!needle || libraryFiltered) {
       setOlderNotes([]);
       setOlderPending(false);
       return undefined;
@@ -1652,7 +1711,7 @@ function IntelligenceViews({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, heldIds]);
+  }, [query, heldIds, libraryFiltered]);
 
   // Local filter over title, summary, and transcript: the conversations the list
   // holds, then the older matches for this query. The older ones are tested
@@ -1711,7 +1770,7 @@ function IntelligenceViews({
   const [landedOnSegment, setLandedOnSegment] = useState<string | null>(null);
   useEffect(() => {
     const needle = query.trim();
-    if (needle.length < 3) {
+    if (needle.length < 3 || libraryFiltered) {
       setSemanticNotes([]);
       return undefined;
     }
@@ -1731,7 +1790,7 @@ function IntelligenceViews({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, libraryFiltered]);
 
   const recalled = useMemo(
     () =>
@@ -2037,6 +2096,8 @@ function IntelligenceViews({
                 <h1 className="min-w-0 flex-1 text-[28px] font-semibold leading-tight tracking-[-0.02em]">
                   <button
                     type="button"
+                    ref={sourceHeading}
+                    data-library-source-heading
                     title={t("oats.intelligence.renameHint")}
                     onClick={() => {
                       setDraftTitle(selected.title || "");
@@ -2338,6 +2399,12 @@ function IntelligenceViews({
                 </div>
               )}
               <TranscriptView
+                renderPassageAction={(segmentId, textRoot) => (
+                  <SavePassageButton
+                    source={{ noteId: selected.id, segmentId }}
+                    textRoot={textRoot}
+                  />
+                )}
                 segments={selectedSegments}
                 fallback={
                   selectedSegments.length
@@ -2440,6 +2507,7 @@ function IntelligenceViews({
             ]}
           />
         )}
+        <LibraryMenu query={query} />
       </div>
 
       {view === "global" ? (
@@ -2449,127 +2517,127 @@ function IntelligenceViews({
           className="oats-enter relative mt-4 flex min-h-0 flex-1 flex-col"
         >
           <GlobalConversations
-            onOpen={(noteId, segmentId) => {
-              setSelectedId(noteId);
-              // An open question opens its conversation at the turn it was asked.
-              setTab(segmentId ? "transcript" : "summary");
-              setLandedOnSegment(segmentId ?? null);
-              setReading(true);
-            }}
+            onOpen={(noteId, segmentId) => void library.openSource(noteId, segmentId)}
           />
         </div>
       ) : (
         <div key="list" ref={listColumn} className="oats-enter mx-auto w-full max-w-3xl px-8 pb-16">
-          {/* Its line is kept while there is a query, so the list below does not
+          <LibraryFilters query={query} />
+          {library.criteria !== null ? (
+            <LibraryFilteredResults query={query} />
+          ) : (
+            <>
+              {/* Its line is kept while there is a query, so the list below does not
               move when a receipt arrives or changes. */}
-          {searched && (
-            <p className="mt-2 h-4 px-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
-              {receipt &&
-                t("oats.intelligence.search.receipt", {
-                  matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
-                  conversations: t("oats.intelligence.search.conversations", {
-                    count: receipt.conversations,
-                  }),
-                  duration: formatSearchDuration(receipt.ms, i18n.language),
-                })}
-            </p>
-          )}
-
-          {/* The result, announced. A screen-reader user who types should not have
+              {searched && (
+                <p className="mt-2 h-4 px-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
+                  {receipt &&
+                    t("oats.intelligence.search.receipt", {
+                      matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
+                      conversations: t("oats.intelligence.search.conversations", {
+                        count: receipt.conversations,
+                      }),
+                      duration: formatSearchDuration(receipt.ms, i18n.language),
+                    })}
+                </p>
+              )}
+              {/* The result, announced. A screen-reader user who types should not have
               to tab into the list to learn whether anything matched. */}
-          <p aria-live="polite" role="status" className="sr-only">
-            {/* Literal matches first, then the related ones; "only related" only
+              <p aria-live="polite" role="status" className="sr-only">
+                {/* Literal matches first, then the related ones; "only related" only
                 when there are related results to speak of, so assistive output
                 never claims a match the screen does not show. */}
-            {!query.trim()
-              ? ""
-              : literalNotes.length
-                ? // The count is the *literal* matches, not the row count.
-                  `${t("oats.intelligence.searchResults", { count: literalNotes.length })}.${
-                    recalled.length > literalNotes.length
-                      ? ` ${t("oats.intelligence.plusRelated", {
-                          count: recalled.length - literalNotes.length,
-                        })}.`
-                      : ""
-                  }`
-                : // Older conversations are still being read: saying nothing
-                  // matches now would be a claim the next moment may take back.
-                  awaitingOlder
+                {!query.trim()
                   ? ""
-                  : recalled.length
-                    ? t("oats.intelligence.onlyRelated")
-                    : t("oats.intelligence.noMatches")}
-          </p>
+                  : literalNotes.length
+                    ? // The count is the *literal* matches, not the row count.
+                      `${t("oats.intelligence.searchResults", { count: literalNotes.length })}.${
+                        recalled.length > literalNotes.length
+                          ? ` ${t("oats.intelligence.plusRelated", {
+                              count: recalled.length - literalNotes.length,
+                            })}.`
+                          : ""
+                      }`
+                    : // Older conversations are still being read: saying nothing
+                      // matches now would be a claim the next moment may take back.
+                      awaitingOlder
+                      ? ""
+                      : recalled.length
+                        ? t("oats.intelligence.onlyRelated")
+                        : t("oats.intelligence.noMatches")}
+              </p>
 
-          {/* With no literal hit, every row below is the index's guess, and the
+              {/* With no literal hit, every row below is the index's guess, and the
               page says so before the reader takes them as findings. */}
-          {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
-            <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
-              <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              {t("oats.intelligence.onlyRelated")}
-            </p>
-          )}
+              {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
+                <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
+                  <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  {t("oats.intelligence.onlyRelated")}
+                </p>
+              )}
 
-          {!visibleNotes.length ? (
-            // Older conversations are still being read: say nothing yet, rather
-            // than "Nothing matches that" a moment before a match arrives.
-            awaitingOlder ? null : query.trim() ? (
-              <EmptyState
-                icon={SearchX}
-                title={t("oats.intelligence.noMatches")}
-                description={t("oats.intelligence.noMatchesHint")}
-              />
-            ) : (
-              <EmptyState
-                icon={MessagesSquare}
-                title={t("oats.intelligence.empty")}
-                description={t("oats.intelligence.emptyDescription")}
-                action={
-                  <div className="flex flex-col items-center gap-6">
-                    <StartRecordingButton />
-                    <ExampleOffer layout="stacked" />
-                  </div>
-                }
-              />
-            )
-          ) : query.trim() ? (
-            // Ranked, not dated: literal matches first, then the related ones, and
-            // a date heading between them would break that order.
-            <Card className="mt-3 gap-0 overflow-hidden">
-              <ul className="divide-y divide-border">
-                {recalled.map(({ note, related }) => (
-                  <ConversationRow
-                    key={note.id}
-                    note={note}
-                    query={query}
-                    related={related}
-                    onOpen={() => openResult(note)}
+              {!visibleNotes.length ? (
+                // Older conversations are still being read: say nothing yet, rather
+                // than "Nothing matches that" a moment before a match arrives.
+                awaitingOlder ? null : query.trim() ? (
+                  <EmptyState
+                    icon={SearchX}
+                    title={t("oats.intelligence.noMatches")}
+                    description={t("oats.intelligence.noMatchesHint")}
                   />
-                ))}
-              </ul>
-            </Card>
-          ) : (
-            dayGroups.map((group) => (
-              <section key={group.key} aria-label={group.label} className="mt-6">
-                <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">
-                  {group.label}
-                </h2>
-                <Card className="gap-0 overflow-hidden">
+                ) : (
+                  <EmptyState
+                    icon={MessagesSquare}
+                    title={t("oats.intelligence.empty")}
+                    description={t("oats.intelligence.emptyDescription")}
+                    action={
+                      <div className="flex flex-col items-center gap-6">
+                        <StartRecordingButton />
+                        <ExampleOffer layout="stacked" />
+                      </div>
+                    }
+                  />
+                )
+              ) : query.trim() ? (
+                // Ranked, not dated: literal matches first, then the related ones, and
+                // a date heading between them would break that order.
+                <Card className="mt-3 gap-0 overflow-hidden">
                   <ul className="divide-y divide-border">
-                    {group.notes.map((note) => (
+                    {recalled.map(({ note, related }) => (
                       <ConversationRow
                         key={note.id}
                         note={note}
-                        query=""
-                        related={false}
-                        timeOnly
+                        query={query}
+                        related={related}
                         onOpen={() => openResult(note)}
                       />
                     ))}
                   </ul>
                 </Card>
-              </section>
-            ))
+              ) : (
+                dayGroups.map((group) => (
+                  <section key={group.key} aria-label={group.label} className="mt-6">
+                    <h2 className="mb-2 px-1 text-xs font-medium text-muted-foreground">
+                      {group.label}
+                    </h2>
+                    <Card className="gap-0 overflow-hidden">
+                      <ul className="divide-y divide-border">
+                        {group.notes.map((note) => (
+                          <ConversationRow
+                            key={note.id}
+                            note={note}
+                            query=""
+                            related={false}
+                            timeOnly
+                            onOpen={() => openResult(note)}
+                          />
+                        ))}
+                      </ul>
+                    </Card>
+                  </section>
+                ))
+              )}
+            </>
           )}
         </div>
       )}
@@ -2947,6 +3015,7 @@ function ConversationActions({
               if (shownId.current === note.id) setNaming(true);
             }}
           />
+          <CompareMenuItem noteId={note.id} returnTo={() => moreButton.current} />
           {vaultPath && (
             <DropdownMenuItem onSelect={() => void file()}>
               <Vault aria-hidden="true" />

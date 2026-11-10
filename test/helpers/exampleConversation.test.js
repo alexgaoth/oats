@@ -126,7 +126,7 @@ test("Home offers it under the record card, where the recent list goes", () => {
 });
 
 test("the empty Conversations page offers it under Start recording", () => {
-  const empty = between(WORKSPACE, 'title={t("oats.intelligence.empty")}', "/>\n            )");
+  const empty = between(WORKSPACE, 'title={t("oats.intelligence.empty")}', "</div>");
   const start = empty.indexOf("<StartRecordingButton />");
   const offer = empty.indexOf('<ExampleOffer layout="stacked" />');
   assert.ok(start > -1 && offer > start, "Start recording first, then the example");
