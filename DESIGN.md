@@ -187,7 +187,7 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 - **Clean (default):** a status card — listening red dot, the elapsed time as the
   heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
   (`M`) and **Stop** — then the contour in its own card section, then the
-  **Calm / Words** view switch. Below it, the **conversation flow** card. Nothing
+  **Show transcript** button. Below it, the **conversation flow** card. Nothing
   on screen changes while somebody speaks except the clock, the two counters under
   it, the contour and the flow card — and the flow card shows topics, not words,
   so it changes every few minutes, when the subject does.
@@ -199,7 +199,8 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   when something lands, never mid-word. A number that changes rolls up once
   (`oats-roll`, `--motion-base`), never on its first value and not under reduced
   motion. The questions count is left out while question cards are off: a zero
-  there would be a guess.
+  there would be a guess. Pressing the questions count opens the Questions tab,
+  without changing detection, search, or what gets saved.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
   talked about so far, as **lanes** (the default) or a **graph**. A view switch
   chooses Lanes / Graph, and the choice persists. The lanes
@@ -234,9 +235,16 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   back to the on-device topics, named as above. The record keeps the on-device
   cut at Finish, with the check's names carried over by the lines they were
   given from, and the writing model names the rest.
-- **Detailed:** adds the question cards and the live transcript below the flow
-  card, each in standard card/list styling. The flow card then yields height to
-  them (at most 40% of the column) and scrolls inside.
+- **Detailed:** adds Transcript / Questions tabs below the flow card, showing
+  one kind of text at a time. **Hide details** returns to Clean. The flow card
+  yields height to the detail (at most 40% of the column) and scrolls inside.
+  These controls name the action rather than asking someone to interpret
+  "Calm" and "Words". The questions count is already present, so it opens its
+  own detail without another toolbar button. Speech never reveals a detail
+  automatically. The question rail stays mounted and announces in every view.
+  The previous composition remains available for design comparison with the
+  development query `recordingControls=classic` or a build made with
+  `VITE_OATS_RECORDING_CONTROLS=classic`, not as another Settings choice.
 - Health warnings (silent microphone, not saving, not transcribing) are alerts
   directly under the status card, so a busy conversation can never push them away.
 - **Lag** (`conversation/TranscriptLagBadge.tsx`): nothing while the text keeps

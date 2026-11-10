@@ -10,6 +10,7 @@ import { useGlobalHighlight } from "./highlightStore";
 import type { HighlightSource } from "./highlightStore";
 import type { BoardNode, TabGraph } from "./useBoardData";
 import { cn } from "../lib/utils";
+import { useLibraryTools } from "../library/libraryContext";
 
 // The widgets a board can hold. Each draws one tab's conversations and reads
 // and writes the board's one highlight, so pointing at a conversation in any
@@ -100,6 +101,7 @@ export function ForceGraphWidget({
  */
 export function SubjectChip({ subject }: { subject: TabGraph["subjects"][number] }) {
   const { t } = useTranslation();
+  const library = useLibraryTools();
   const lit = useGlobalHighlight(
     (state) =>
       state.hoveredSubject === subject.label ||
@@ -119,8 +121,14 @@ export function SubjectChip({ subject }: { subject: TabGraph["subjects"][number]
       onPointerLeave={leave}
       onFocus={point}
       onBlur={leave}
+      onClick={(event) =>
+        library.show(
+          { kind: "subject", label: subject.label, conversationIds: subject.conversationIds },
+          event.currentTarget
+        )
+      }
       className={cn(
-        "inline-flex h-6 cursor-default items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium text-foreground outline-none transition-colors",
+        "inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted/60",
         "focus-visible:ring-[3px] focus-visible:ring-ring/50",
         lit ? "border-foreground" : "border-border"
       )}

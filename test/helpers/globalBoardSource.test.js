@@ -144,8 +144,20 @@ test("an open question opens its conversation at the turn it was asked in", () =
     workspace.indexOf("<GlobalConversations"),
     workspace.indexOf("<GlobalConversations") + 500
   );
-  assert.match(opened, /setTab\(segmentId \? "transcript" : "summary"\)/);
-  assert.match(opened, /setLandedOnSegment\(segmentId \?\? null\)/);
+  assert.match(
+    opened,
+    /onOpen=\{\(noteId, segmentId\) => void library\.openSource\(noteId, segmentId\)\}/
+  );
+  const library = read("src/components/library/ConversationLibrary.tsx");
+  assert.match(library, /const note = await window\.electronAPI\.getNote\(id\);/);
+  assert.match(library, /detail: \{ note, segmentId \}/);
+  const handler = workspace.slice(
+    workspace.indexOf("const openSource = (event: Event)"),
+    workspace.indexOf("const applyView = (event: Event)")
+  );
+  assert.match(handler, /setSelectedId\(note\.id\)/);
+  assert.match(handler, /setTab\(segmentId \? "transcript" : "summary"\)/);
+  assert.match(handler, /setLandedOnSegment\(segmentId\)/);
 });
 
 test("the subjects and the open questions light with the rest of the board", () => {

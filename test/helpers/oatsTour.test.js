@@ -323,7 +323,7 @@ test("the pieces are given none of the actions that leave the window, so none is
   for (const [name, source] of Object.entries(DEMO)) {
     assert.doesNotMatch(
       code(source),
-      /onSearch|onDismiss|onOpenSource|onOpenTurn|onRenameSpeaker/,
+      /onSearch|onDismiss|onOpenSource|onOpenTurn|onRenameSpeaker|renderPassageAction/,
       `${name} passes no action that leaves the window`
     );
   }
@@ -341,6 +341,7 @@ test("the pieces are given none of the actions that leave the window, so none is
   );
   assert.match(REVIEW, /\{item\.reply && onOpenTurn \? \(/);
   assert.match(TRANSCRIPT, /const nameable = Boolean\(onRename && segment\.speaker/);
+  assert.match(TRANSCRIPT, /renderPassageAction\?\.\(\s*String\(segment\.id\),/);
   assert.match(FLOW_CARD, /onValueChange=\{onViewChange\}/);
   // The tour's cards carry no suggestion to search or dismiss with.
   assert.match(DEMO.DemoQuestions, /tourCards\(conversation, \{ now, step \}\)/);
@@ -349,7 +350,11 @@ test("the pieces are given none of the actions that leave the window, so none is
 test("the app keeps its actions: the recording's rail and flow card are bound by wrappers", () => {
   assert.match(
     WORKSPACE,
-    /<LiveSignalRail onFocus=\{setFocusedGroup\} announceOnly=\{!detailed\} \/>/
+    /<LiveSignalRail onFocus=\{setFocusedGroup\} announceOnly=\{!showQuestions\} \/>/
+  );
+  assert.match(
+    WORKSPACE,
+    /const showQuestions = detailed && \(classicRecordingControls \|\| detailTab === "questions"\);/
   );
   assert.match(WORKSPACE, /<LiveConversationFlow\s/);
   assert.match(LIVE_RAIL, /useMeetingRecordingStore\(\(state\) => state\.questionCards\)/);
