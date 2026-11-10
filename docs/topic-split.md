@@ -4,9 +4,10 @@ Question (Alex, 2026-11-08): topic names are a few words and do not tell topics
 apart. "Maybe split topics when the scope is narrow." When a conversation stays
 on one narrow subject, the change detector (#170) draws few cuts, a topic grows
 long, and its name says little. This page measures how long the topics get, tries
-three ways to cut them finer and one control, and gives the options. It changes
-nothing by default. The names themselves (#193, a growing description for each
-topic) are a separate track.
+three ways to cut them finer and one control, and gives the options. Alex chose
+the live split with cautious settings: the app now asks for `split: { after: 480,
+threshold: 0.3 }` (Decision, below). The names themselves (#193, a growing
+description for each topic) are a separate track.
 
 ## The answer
 
@@ -34,13 +35,63 @@ topic) are a separate track.
   longest lane cut in two or three, and (live split only) 3 more name changes an hour and 8 more old
   lines moved an hour. The record split changes nothing while recording.
 
-**Recommendation, for Alex to decide:** if long topics hurt in use, take the record
+**Recommendation before the decision:** if long topics hurt in use, take the record
 split (B below, `recordSplit: { after: 480, threshold: 0.25 }`): it costs nothing
 while recording, its top-level cost was +0.023 on the learn meetings and +0.003 on
 eval24, and it took the most talk out of long topics. Do not expect better
 boundaries from it, only shorter topics. If the live lanes must change too, the
 live split (A) is the cheaper live rule. A lower global threshold (C) is worse
 than both for the same number of topics.
+
+## Decision
+
+Alex (2026-11-09): "split long topics live, but do so conservatively." So the app
+takes A, at the cautious end of its settings. A second grid on learn83
+(cross-fitted, as in Method) tried a longer wait and a higher bar. Live view; long
+is 10 minutes or more.
+
+| A, live | Δ top | Δ fine | topics | minutes p90 | talk in long topics | names changed an hour | old lines moved an hour |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| d2 | | | 4.2 | 17.1 | 63% | 22.3 | 32.1 |
+| 8 min, 0.20 (round 1's A) | +0.018 [+0.005, +0.030] | −0.003 | 5.0 | 11.4 | 39% | 24.8 | 40.0 |
+| 8 min, 0.25 | +0.019 [+0.009, +0.029] | −0.001 | 4.8 | 12.3 | 44% | 24.2 | 37.9 |
+| **8 min, 0.30** | +0.006 [−0.002, +0.014] | +0.001 | 4.6 | 13.8 | 52% | 23.6 | 35.5 |
+| 10 min, 0.20 | +0.015 [+0.005, +0.026] | −0.001 | 4.8 | 12.3 | 56% | 24.1 | 38.0 |
+| 10 min, 0.25 | +0.013 [+0.005, +0.021] | −0.002 | 4.6 | 13.6 | 57% | 23.5 | 36.3 |
+| 10 min, 0.30 | +0.004 [−0.003, +0.012] | −0.000 | 4.4 | 14.5 | 59% | 23.2 | 34.8 |
+| 12 min, 0.20 | +0.011 [+0.003, +0.019] | +0.001 | 4.6 | 13.8 | 57% | 23.7 | 35.6 |
+| 12 min, 0.25 | +0.011 [+0.003, +0.019] | −0.000 | 4.5 | 14.6 | 58% | 23.3 | 34.7 |
+| 12 min, 0.30 | +0.003 [−0.003, +0.010] | +0.000 | 4.4 | 15.5 | 59% | 23.0 | 33.7 |
+
+In the record, 8 min, 0.30: top +0.006 [−0.003, +0.014], fine +0.001, 4.6 topics,
+60% of the talk in long topics (d2 68%).
+
+- At 0.30, just under the model's 0.3531, the top-level cost's interval holds 0 at
+  every wait. Every setting below 0.30 costs +0.011 or more, with an interval above 0.
+- Of the settings at 0.30, 8 minutes takes the most talk out of long topics (63% to
+  52% live) for about the same cost. A longer wait cuts a 20-minute topic later, so
+  both pieces can stay over 10 minutes.
+- **Chosen: `split: { after: 480, threshold: 0.3 }`** (`LONG_TOPIC_SPLIT` in
+  `src/helpers/topicChange.mjs`). The app passes it to the detector in a room, in
+  English, the only place the detector runs.
+
+eval24, one run of the chosen setting, after the choice (the second read of eval24
+in this study; round 1's A and B were the first):
+
+| eval24 | view | Pk top | Δ top | Pk fine | Δ fine | topics | minutes p90 | talk in long topics | names changed an hour | old lines moved an hour |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| d2 | live | 0.264 | | 0.338 | | 4.3 | 18.7 | 64% | 22.4 | 29.2 |
+| A, 8 min, 0.30 | live | 0.259 | −0.005 [−0.026, +0.015] | 0.335 | −0.002 [−0.011, +0.005] | 4.6 | 15.8 | 57% | 23.6 | 34.1 |
+| d2 | record | 0.257 | | 0.333 | | 4.5 | 20.9 | 68% | | |
+| A, 8 min, 0.30 | record | 0.250 | −0.007 [−0.027, +0.013] | 0.329 | −0.003 [−0.012, +0.004] | 5.0 | 14.9 | 60% | | |
+
+On the 12 standard test meetings alone: top −0.016 [−0.051, +0.013] live and −0.018
+[−0.053, +0.012] in the record; talk in long topics 55% to 48% live.
+
+What a person sees: one more topic in about every second meeting of 30 minutes (4.2
+to 4.6 on learn83), the longest lane cut once, a name change about one more time an
+hour, and 3 to 5 more old lines moved an hour. Round 1's A (0.20) cut more (5.0
+topics, 39% of the talk left in long topics) for a top-level cost of +0.018.
 
 ## Key numbers
 
@@ -189,8 +240,7 @@ What the tuning says:
   meeting.** No rule escapes it on learn83. The annotators' own fine level, read as
   topics, scores 0.244 on the top level, the same as d2: a perfect subtopic cutter
   would cost nothing there. The detector is far from that.
-- **The fine level does not move.** Its best is B, 8 min, −0.005; every interval holds
-  0. The rules find more fine changes (recall 20% to 27%), and draw more that are not
+- **The fine level does not move.** Its best is B, 8 min, −0.005; every interval holds 0. The rules find more fine changes (recall 20% to 27%), and draw more that are not
   (precision 81% to 76%), in about equal measure.
 - **Waiting longer before splitting is cheaper.** At 3 minutes A costs +0.04 to +0.09;
   at 8 minutes +0.017 to +0.020. The first minutes of a topic are where the detector's
@@ -267,12 +317,13 @@ of 0 to 0.015.
 1. **Leave it.** Long topics stay. The names (#193) do the work of telling them apart.
    Nothing to ship.
 2. **B, the record split at Finish.** `detector: { recordSplit: { after: 480,
-   threshold: 0.25, spacing: 90 } }`. Costs nothing while recording, shortens the
+threshold: 0.25, spacing: 90 } }`. Costs nothing while recording, shortens the
    record's long topics most (68% to 47% of the talk, eval24 44%), top level +0.023
    on learn83 and +0.003 on eval24. **My recommendation if long topics hurt in use.**
 3. **A, the live split.** `detector: { split: { after: 480, threshold: 0.2 } }`. Also
    shortens the live lanes. Top level +0.017 on learn83 and +0.004 on eval24, about 3
-   more name changes and 8 more moved lines an hour.
+   more name changes and 8 more moved lines an hour. **Chosen, with cautious settings
+   (8 min, 0.30; see Decision).**
 4. **A and B together** were not measured. B after A would split what A left long.
 5. **Not recommended**: a lower threshold everywhere (C: worse on both levels for the
    same number of topics), subtopic trees (D: a second model for little effect), and
@@ -286,8 +337,10 @@ where the detector draws fewer cuts and long topics are longer.
 
 - `src/helpers/topicChange.mjs`: `split` and `recordSplit` options of
   `TopicChangeDetector`, off by default; each pause's score kept (`scores`,
-  `splitScores`). No setting of the app changes. Tests in
+  `splitScores`). `LONG_TOPIC_SPLIT`, the setting the app asks for. Tests in
   `test/helpers/topicChange.test.js`.
+- `src/stores/meetingRecordingStore.ts`: in a room, in English, the tracker's
+  detector gets `split: LONG_TOPIC_SPLIT`. Elsewhere nothing changes.
 - `scripts/topic-loop-eval.mjs`: `--set learn83`; the `splitModel` option (a file of
   trees for D).
 - `scripts/lib/topic-corpus.mjs`: the fine level's boundary counts in
@@ -344,4 +397,13 @@ node scripts/topic-loop-eval.mjs --variant d2 --vectors --ami $AMI --set eval24 
 node scripts/topic-split-eval.mjs --ami $AMI --runs $W/e-d2.json,$W/e-A.json,$W/e-B.json --base $W/e-d2.json --long-minutes 10
 node scripts/topic-split-eval.mjs --ami $AMI --runs $W/e-d2.json,$W/e-A.json,$W/e-B.json --base $W/e-d2.json --long-minutes 10 \
   --only ES2004,IS1009,TS3003
+
+# The cautious live split (Decision): a grid of A on learn83, then eval24 once
+for a in 480 600 720; do for t in 0.2 0.25 0.3; do
+  run A-$a-$t "{\"detector\":{\"split\":{\"after\":$a,\"threshold\":$t}}}"; done; done
+node scripts/topic-split-eval.mjs --ami $AMI --base $W/cf-d2.json --long-minutes 10 \
+  --runs $W/cf-d2.json,$(ls $W/A-*.json | paste -sd, -)
+node scripts/topic-loop-eval.mjs --variant d2 --vectors --ami $AMI --set eval24 --json $W/e-A3.json \
+  --options '{"detector":{"split":{"after":480,"threshold":0.3}}}'
+node scripts/topic-split-eval.mjs --ami $AMI --runs $W/e-d2.json,$W/e-A3.json --base $W/e-d2.json --long-minutes 10
 ```

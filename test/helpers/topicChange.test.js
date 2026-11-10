@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 let CHANGE_RULE;
+let LONG_TOPIC_SPLIT;
 let SCALES;
 let TopicChangeDetector;
 let changeScore;
@@ -11,8 +12,16 @@ let openingCues;
 let ConversationTopicTracker;
 
 test.before(async () => {
-  ({ CHANGE_RULE, SCALES, TopicChangeDetector, changeScore, gapFeatures, makeTurn, openingCues } =
-    await import("../../src/helpers/topicChange.mjs"));
+  ({
+    CHANGE_RULE,
+    LONG_TOPIC_SPLIT,
+    SCALES,
+    TopicChangeDetector,
+    changeScore,
+    gapFeatures,
+    makeTurn,
+    openingCues,
+  } = await import("../../src/helpers/topicChange.mjs"));
   ({ ConversationTopicTracker } = await import("../../src/helpers/conversationTopics.mjs"));
 });
 
@@ -250,6 +259,7 @@ test("a long topic is split at weaker pauses only when asked", () => {
 
 test("the rule's settings are the measured ones", () => {
   assert.deepEqual({ ...CHANGE_RULE }, { lag: 45, hold: 15, spacing: 90 });
+  assert.deepEqual({ ...LONG_TOPIC_SPLIT }, { after: 480, threshold: 0.3 });
 });
 
 test("when the vectors stop, the tracker goes back to its own cuts", () => {

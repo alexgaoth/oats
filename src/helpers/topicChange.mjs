@@ -35,6 +35,13 @@ export const SCALES = Object.freeze([30, 60, 120, 240]);
 /** Turn settings of the detector (see the header). */
 export const CHANGE_RULE = Object.freeze({ lag: 45, hold: 15, spacing: 90 });
 
+/**
+ * The split the app asks for (docs/topic-split.md): from 8 minutes into a
+ * topic, a pause is cut at 0.30 instead of the model's 0.3531. The cautious end
+ * of the measured settings: on the learn meetings its top-level cost holds 0.
+ */
+export const LONG_TOPIC_SPLIT = Object.freeze({ after: 480, threshold: 0.3 });
+
 /** When a turn has no time of its own: about this many words a second. */
 const WORDS_PER_SECOND = 2.5;
 
@@ -207,7 +214,8 @@ export class TopicChangeDetector {
    *   A lower `threshold` proposes more, for a model that checks each one
    *   (topicLoop.mjs).
    *
-   *   Both splits are off unless given (docs/topic-split.md). `split`: once a
+   *   Both splits are off unless given; the app gives `split:
+   *   LONG_TOPIC_SPLIT` (docs/topic-split.md). `split`: once a
    *   topic has run `after` seconds, a pause in it is cut at `threshold`
    *   instead. `recordSplit`: at the end only, a stretch longer than `after`
    *   seconds is cut at its strongest pause over `threshold` that leaves
