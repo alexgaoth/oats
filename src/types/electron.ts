@@ -5,6 +5,15 @@ import type {
   ConversationEvent,
   SuggestionState,
 } from "./conversationEvents";
+import type {
+  LibraryCriteria,
+  LibraryOptions,
+  LibraryConversation,
+  WorkingSet,
+  WorkingSetDetail,
+  WorkingPassageSource,
+  SavedLibraryView,
+} from "./conversationLibrary";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia";
 
@@ -760,6 +769,29 @@ declare global {
         limit?: number,
         folderId?: number | null
       ) => Promise<NoteItem[]>;
+      listLibraryConversations: (
+        options?: LibraryOptions
+      ) => Promise<{ items: LibraryConversation[]; cursor: number | null }>;
+      getWorkingSets: () => Promise<WorkingSet[]>;
+      createWorkingSet: (name: string) => Promise<WorkingSet>;
+      renameWorkingSet: (id: number, name: string) => Promise<void>;
+      deleteWorkingSet: (id: number) => Promise<void>;
+      getWorkingSet: (id: number) => Promise<WorkingSetDetail | null>;
+      addWorkingSetPassage: (setId: number, source: WorkingPassageSource) => Promise<void>;
+      updateWorkingSetPassage: (
+        setId: number,
+        passageId: number,
+        update: { note?: string; position?: number }
+      ) => Promise<void>;
+      removeWorkingSetPassage: (setId: number, passageId: number) => Promise<void>;
+      listSavedViews: () => Promise<SavedLibraryView[]>;
+      saveLibraryView: (view: {
+        id?: number;
+        name: string;
+        criteria: LibraryCriteria;
+      }) => Promise<void>;
+      deleteLibraryView: (id: number) => Promise<void>;
+      onConversationLibraryChanged: (callback: () => void) => () => void;
       updateNote: (
         id: number,
         updates: {
