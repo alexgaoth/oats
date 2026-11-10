@@ -211,6 +211,43 @@ test("the tracker cuts by the detector once vectors come, and by words until the
   assert.equal(lexical.snapshot(1).nodes.length, 1);
 });
 
+// "okay" scores 0.999, another opener ("so", "well") 0.27, any other turn 0.02.
+const OPENER_MODEL = {
+  features: ["okay", "cue"],
+  threshold: 0.5,
+  base: 0,
+  trees: [
+    { f: [0], t: [0.5], l: [-1], r: [-2], v: [-4, 4] },
+    { f: [1], t: [0.5], l: [-1], r: [-2], v: [0, 3] },
+  ],
+};
+
+// Ten minutes on one subject, with a weak opener at 1.5 and at 5 minutes.
+const NARROW = Array.from({ length: 21 }, (_, index) => ({
+  text: index === 3 ? "so this part" : index === 10 ? "so that part" : "plain turn",
+  start: index * 30,
+}));
+
+test("a long topic is split at weaker pauses only when asked", () => {
+  const settings = { model: OPENER_MODEL, lag: 10, hold: 5, spacing: 60 };
+  const plain = new TopicChangeDetector(settings);
+  feed(plain, NARROW);
+  assert.deepEqual(plain.cuts, []);
+  assert.deepEqual(plain.finalCuts(), []);
+
+  const live = new TopicChangeDetector({ ...settings, split: { after: 200, threshold: 0.2 } });
+  feed(live, NARROW);
+  assert.deepEqual(live.cuts, [10], "the opener at 1.5 minutes came too early in the topic");
+
+  const record = new TopicChangeDetector({
+    ...settings,
+    recordSplit: { after: 400, threshold: 0.2, spacing: 60 },
+  });
+  feed(record, NARROW);
+  assert.deepEqual(record.cuts, [], "the live view is not split");
+  assert.deepEqual(record.finalCuts(), [3, 10]);
+});
+
 test("the rule's settings are the measured ones", () => {
   assert.deepEqual({ ...CHANGE_RULE }, { lag: 45, hold: 15, spacing: 90 });
 });

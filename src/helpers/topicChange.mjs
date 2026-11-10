@@ -200,9 +200,20 @@ export function changeScore(features, model = CHANGE_MODEL) {
 export class TopicChangeDetector {
   /**
    * @param {{ lag?: number, hold?: number, spacing?: number, threshold?: number,
-   *   model?: typeof CHANGE_MODEL }} [options]
+   *   model?: typeof CHANGE_MODEL,
+   *   split?: { after: number, threshold: number, model?: typeof CHANGE_MODEL } | null,
+   *   recordSplit?: { after: number, threshold: number, spacing?: number,
+   *     model?: typeof CHANGE_MODEL } | null }} [options]
    *   A lower `threshold` proposes more, for a model that checks each one
    *   (topicLoop.mjs).
+   *
+   *   Both splits are off unless given (docs/topic-split.md). `split`: once a
+   *   topic has run `after` seconds, a pause in it is cut at `threshold`
+   *   instead. `recordSplit`: at the end only, a stretch longer than `after`
+   *   seconds is cut at its strongest pause over `threshold` that leaves
+   *   `spacing` seconds on each side, again until none is left. With a `model`
+   *   of its own (trees learned from finer subjects), a split reads that
+   *   model's score instead.
    */
   constructor({
     lag = CHANGE_RULE.lag,
@@ -210,9 +221,14 @@ export class TopicChangeDetector {
     spacing = CHANGE_RULE.spacing,
     model = CHANGE_MODEL,
     threshold = model.threshold,
+    split = null,
+    recordSplit = null,
   } = {}) {
-    Object.assign(this, { lag, hold, spacing, threshold, model });
+    Object.assign(this, { lag, hold, spacing, threshold, model, split, recordSplit });
     this.turns = [];
+    /** Each pause's score, by the index of the turn after it, and the split model's. */
+    this.scores = [];
+    this.splitScores = [];
     this.byId = new Map();
     this.firstSeen = new Map();
     /** The next pause to read: the one before this turn. */
@@ -271,15 +287,24 @@ export class TopicChangeDetector {
     const features = gapFeatures(this.turns, g, { lag: this.lag, firstSeen: this.firstSeen });
     // A side with no vector at all would read as nothing in common with the other.
     const score = features.E30 === 0 ? 0 : changeScore(features, this.model);
+    this.scores[g] = score;
+    const splitModel = this.split?.model ?? this.recordSplit?.model;
+    if (splitModel)
+      this.splitScores[g] = features.E30 === 0 ? 0 : changeScore(features, splitModel);
     const at = this.turns[g].start;
     if (state.candidate && at > state.candidate.at + this.hold) {
       state.cuts.push(state.candidate.turn);
       state.candidate = null;
     }
     const last = state.cuts.at(-1);
-    const clear = last === undefined || at - this.turns[last].start >= this.spacing;
-    if (score >= this.threshold && clear && (!state.candidate || score > state.candidate.score)) {
-      state.candidate = { turn: g, at, score };
+    const since = at - this.turns[last ?? 0].start;
+    const clear = last === undefined || since >= this.spacing;
+    const long = this.split && since >= this.split.after;
+    const value = long && this.split.model ? this.splitScores[g] : score;
+    const strength =
+      score >= this.threshold ? score : long && value >= this.split.threshold ? value : -1;
+    if (strength >= 0 && clear && (!state.candidate || strength > state.candidate.score)) {
+      state.candidate = { turn: g, at, score: strength };
     }
   }
 
@@ -300,6 +325,39 @@ export class TopicChangeDetector {
   finalCuts() {
     const state = { cuts: [...this.cuts], candidate: this.candidate && { ...this.candidate } };
     for (let g = this.next; g < this.turns.length; g += 1) this._read(g, state);
-    return state.candidate ? [...state.cuts, state.candidate.turn] : state.cuts;
+    const cuts = state.candidate ? [...state.cuts, state.candidate.turn] : state.cuts;
+    return this.recordSplit ? this._splitLong(cuts) : cuts;
+  }
+
+  /** The cuts with each long stretch cut again at its strongest pauses (`recordSplit`). */
+  _splitLong(cuts) {
+    if (!this.turns.length) return cuts;
+    const { after, threshold, spacing = this.spacing, model } = this.recordSplit;
+    const scores = model ? this.splitScores : this.scores;
+    const out = [];
+    const startOf = (index) =>
+      index < this.turns.length ? this.turns[index].start : this.turns.at(-1).end;
+    const visit = (from, to) => {
+      if (startOf(to) - startOf(from) >= after) {
+        let best = -1;
+        for (let g = from + 1; g < to; g += 1) {
+          const score = scores[g] ?? 0;
+          if (score < threshold || (best >= 0 && score <= scores[best])) continue;
+          const at = this.turns[g].start;
+          if (at - startOf(from) >= spacing && startOf(to) - at >= spacing) best = g;
+        }
+        if (best >= 0) {
+          visit(from, best);
+          out.push(best);
+          visit(best, to);
+        }
+      }
+    };
+    const bounds = [0, ...cuts, this.turns.length];
+    for (let index = 0; index + 1 < bounds.length; index += 1) {
+      if (index) out.push(bounds[index]);
+      visit(bounds[index], bounds[index + 1]);
+    }
+    return out;
   }
 }
