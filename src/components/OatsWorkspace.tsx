@@ -1464,6 +1464,15 @@ function IntelligenceViews({
   // in place beats making the user hunt for where a title can be changed.
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
+  // Enter and Escape end a rename from the keyboard. The field unmounts with
+  // the focus in it, so the focus goes back to the title it replaced, not <body>.
+  const titleButton = useRef<HTMLButtonElement>(null);
+  const refocusTitle = useRef(false);
+  useEffect(() => {
+    if (renaming || !refocusTitle.current) return;
+    refocusTitle.current = false;
+    titleButton.current?.focus();
+  }, [renaming]);
   // A conversation opened from a result the list does not hold — one older than
   // the newest hundred, found by the main process's scan or by the vector index.
   // `selected` fell back to `notes[0]` for an id it could not find, so opening
@@ -2029,7 +2038,13 @@ function IntelligenceViews({
                 onChange={(event) => setDraftTitle(event.target.value)}
                 onBlur={() => void commitRename()}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") void commitRename();
+                  if (event.key === "Enter" || event.key === "Escape") refocusTitle.current = true;
+                  if (event.key === "Enter") {
+                    // Unhandled, this Enter's keypress lands on the title the
+                    // focus has just returned to, and opens the rename again.
+                    event.preventDefault();
+                    void commitRename();
+                  }
                   if (event.key === "Escape") setRenaming(false);
                 }}
                 className="-mx-2 block w-[calc(100%+1rem)] rounded-md border border-input bg-transparent px-2 py-0.5 text-[28px] font-semibold leading-tight tracking-[-0.02em] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -2042,6 +2057,7 @@ function IntelligenceViews({
               <div className="flex items-start gap-3">
                 <h1 className="min-w-0 flex-1 text-[28px] font-semibold leading-tight tracking-[-0.02em]">
                   <button
+                    ref={titleButton}
                     type="button"
                     title={t("oats.intelligence.renameHint")}
                     onClick={() => {
@@ -3641,6 +3657,9 @@ export default function OatsWorkspace() {
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // An open menu or dialog closes on this same Escape and marks it handled
+      // first (Radix listens on the document, in capture).
+      if (event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "/") {
