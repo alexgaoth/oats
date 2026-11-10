@@ -15,7 +15,7 @@ export function AgentTitleBar({ onNewChat, onClose }: AgentTitleBarProps) {
   return (
     <div
       className={cn(
-        "flex items-center justify-between h-8 px-3",
+        "flex items-center justify-between h-9 px-3",
         "bg-surface-1",
         "border-b border-border/20",
         "shadow-[0_1px_2px_0_oklch(0_0_0/0.04)]",
@@ -23,9 +23,7 @@ export function AgentTitleBar({ onNewChat, onClose }: AgentTitleBarProps) {
       )}
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
-      <span className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase">
-        {agentName}
-      </span>
+      <span className="text-xs text-muted-foreground font-medium">{agentName}</span>
 
       <div
         className="flex items-center gap-0.5"
@@ -34,10 +32,10 @@ export function AgentTitleBar({ onNewChat, onClose }: AgentTitleBarProps) {
         <button
           onClick={onNewChat}
           className={cn(
-            "p-1 rounded-sm",
+            "inline-flex size-6 items-center justify-center rounded-sm",
             "text-muted-foreground hover:text-foreground hover:bg-foreground/10",
             "transition-colors duration-150",
-            "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30"
+            "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           )}
           aria-label={t("agentMode.titleBar.newChat")}
         >
@@ -46,10 +44,10 @@ export function AgentTitleBar({ onNewChat, onClose }: AgentTitleBarProps) {
         <button
           onClick={onClose}
           className={cn(
-            "p-1 rounded-sm",
+            "inline-flex size-6 items-center justify-center rounded-sm",
             "text-muted-foreground hover:text-foreground hover:bg-foreground/10",
             "transition-colors duration-150",
-            "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30"
+            "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           )}
           aria-label={t("agentMode.titleBar.close")}
         >
