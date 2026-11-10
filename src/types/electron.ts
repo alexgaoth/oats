@@ -1152,6 +1152,10 @@ declare global {
       ) => Promise<{ success: boolean; port?: number; error?: string }>;
       llamaServerStop: () => Promise<{ success: boolean; error?: string }>;
       llamaServerStatus: () => Promise<LlamaServerStatus>;
+      /** The writing model's own server while a recording runs (helpers/writingServer.js). */
+      llamaWritingServer?: (
+        mode: "hold" | "idle" | "stop"
+      ) => Promise<{ dedicated: boolean; error?: string }>;
       llamaGpuReset: () => Promise<{ success: boolean; error?: string }>;
       detectVulkanGpu?: () => Promise<VulkanGpuResult>;
       getLlamaVulkanStatus?: () => Promise<LlamaVulkanStatus>;

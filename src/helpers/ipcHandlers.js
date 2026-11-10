@@ -22,6 +22,9 @@ const { getNetworkLedger } = require("./networkLedger");
 const { createOnDeviceStatus } = require("./onDeviceStatus");
 const { initDeviceTier } = require("./deviceTier");
 
+/** The page that holds the writing server (writingServer.js createHoldOwner), made on first use. */
+let writingHoldOwner = null;
+
 // Tinfoil's only realtime STT model — fallback when the renderer omits one.
 const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
 // Question-card outcomes (DESIGN.md §4). Anything else the renderer sends is
@@ -3848,6 +3851,22 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         return { success: false, error: error.message };
+      }
+    });
+
+    // The writing model's own server while a recording runs (writingServer.js).
+    ipcMain.handle("llama-writing-server", async (event, mode) => {
+      try {
+        if (!["hold", "idle", "stop"].includes(mode)) return { dedicated: false };
+        const modelManager = require("./modelManagerBridge").default;
+        writingHoldOwner ??= require("./writingServer").createHoldOwner(() => {
+          modelManager.setWritingServer("idle").catch(() => {});
+        });
+        if (mode === "hold") writingHoldOwner.held(event.sender);
+        else writingHoldOwner.letGo();
+        return await modelManager.setWritingServer(mode);
+      } catch (error) {
+        return { dedicated: false, error: error.message };
       }
     });
 

@@ -493,17 +493,25 @@ export function topicNameConfig(route, system) {
  * would load the classifier back: seconds of loading each way, on the path
  * that settles a question card. Then the names wait for the end, when the
  * classifier is done. A provider, a server of the person's own, or a local
- * writing model that is the classifier too, names as the topics grow.
+ * writing model that is the classifier too, names as the topics grow. So does
+ * a local writing model with a server of its own beside the classifier's
+ * (`dedicatedWritingServer`, helpers/writingServer.js): nothing is unloaded.
  *
  * @param {{ mode: string, model: string, classifier?: string | null,
- *   classifierOnDisk?: boolean | null }} input
+ *   classifierOnDisk?: boolean | null, dedicatedWritingServer?: boolean }} input
  *   `classifierOnDisk` is null when it could not be told, which counts as on
  *   disk: a load avoided is worth more than a name a few minutes early.
  */
-export function namesWhileRecording({ mode, model, classifier = null, classifierOnDisk = null }) {
+export function namesWhileRecording({
+  mode,
+  model,
+  classifier = null,
+  classifierOnDisk = null,
+  dedicatedWritingServer = false,
+}) {
   if (mode !== "local") return true;
   if (!classifier || classifier === model) return true;
-  return classifierOnDisk === false;
+  return classifierOnDisk === false || dedicatedWritingServer === true;
 }
 
 /**
