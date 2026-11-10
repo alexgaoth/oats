@@ -1340,6 +1340,30 @@ class IPCHandlers {
       return this.databaseManager.getNotes(noteType, limit, folderId);
     });
 
+    // Mutations resolve only after their transaction commits. A rejected write
+    // never announces a change; no-op/repeated actions may safely invalidate.
+    const libraryMethods = [
+      ["db-list-library-conversations", "listLibraryConversations", false],
+      ["db-get-working-sets", "getWorkingSets", false],
+      ["db-create-working-set", "createWorkingSet", true],
+      ["db-rename-working-set", "renameWorkingSet", true],
+      ["db-delete-working-set", "deleteWorkingSet", true],
+      ["db-get-working-set", "getWorkingSet", false],
+      ["db-add-working-set-passage", "addWorkingSetPassage", true],
+      ["db-update-working-set-passage", "updateWorkingSetPassage", true],
+      ["db-remove-working-set-passage", "removeWorkingSetPassage", true],
+      ["db-list-saved-library-views", "listSavedViews", false],
+      ["db-save-library-view", "saveLibraryView", true],
+      ["db-delete-library-view", "deleteLibraryView", true],
+    ];
+    for (const [channel, method, changes] of libraryMethods) {
+      ipcMain.handle(channel, async (_event, ...args) => {
+        const result = await this.databaseManager[method](...args);
+        if (changes) this.broadcastToWindows("conversation-library-changed");
+        return result;
+      });
+    }
+
     ipcMain.handle("db-update-note", async (event, id, updates) => {
       const result = this.databaseManager.updateNote(id, updates);
       if (result?.success && result?.note) {
@@ -8522,10 +8546,17 @@ class IPCHandlers {
   }
 
   broadcastToWindows(channel, payload) {
+    const libraryChanged = [
+      "note-added",
+      "note-updated",
+      "note-deleted",
+      "conversation-groups-changed",
+    ].includes(channel);
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((win) => {
       if (!win.isDestroyed()) {
         win.webContents.send(channel, payload);
+        if (libraryChanged) win.webContents.send("conversation-library-changed");
       }
     });
   }
