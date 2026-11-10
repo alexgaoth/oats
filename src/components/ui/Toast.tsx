@@ -232,7 +232,7 @@ const Toast: React.FC<
           type="button"
           onClick={handleCopyError}
           aria-label={t("common.copy")}
-          className="-mr-1 -mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="relative -mr-1 -mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground outline-none after:absolute after:-inset-px after:content-[''] transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {copied ? (
             <Check aria-hidden="true" className="size-3.5" />

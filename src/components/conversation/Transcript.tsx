@@ -227,7 +227,8 @@ function SpeakerName({
           onClick={() => setNaming(true)}
           aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
           title={t("oats.intelligence.nameSpeaker", { speaker: label })}
-          className="rounded-sm outline-none decoration-muted-foreground/50 underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          // The name is one 20px line; the invisible 2px around it makes a 24px target.
+          className="relative min-w-6 rounded-sm text-left outline-none decoration-muted-foreground/50 underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 after:absolute after:-inset-0.5 after:content-['']"
         >
           {label}
         </button>

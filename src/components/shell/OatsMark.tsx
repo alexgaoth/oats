@@ -165,7 +165,8 @@ export function OatsMark({
       aria-label={label}
       onClick={spin}
       className={cn(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        // A 20px grain in a 24px target: the extra 2px each way is invisible.
+        "relative inline-flex size-5 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 after:absolute after:-inset-0.5 after:content-['']",
         className
       )}
     >

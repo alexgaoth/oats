@@ -1,6 +1,7 @@
 const modelManager = require("../helpers/modelManagerBridge").default;
 const debugLogger = require("../helpers/debugLogger");
 const { createOneAtATime } = require("../helpers/oneAtATime");
+const { WRITING_ROLE } = require("../helpers/writingServer");
 
 class LocalReasoningService {
   constructor() {
@@ -8,6 +9,10 @@ class LocalReasoningService {
     // The server answers one request at a time. A second request waits its
     // turn rather than being refused (oneAtATime.js says why).
     this.turns = createOneAtATime();
+    // The writing model's own server, while a recording holds one
+    // (writingServer.js), has its own line, so a question card's classifier
+    // never waits behind a topic name.
+    this.writingTurns = createOneAtATime();
   }
 
   async isAvailable() {
@@ -21,13 +26,16 @@ class LocalReasoningService {
   }
 
   async processText(text, modelId, config = {}) {
+    const serverRole = modelManager.serverRole(config?.serverRole);
+    const turns = serverRole === WRITING_ROLE ? this.writingTurns : this.turns;
     debugLogger.logReasoning("LOCAL_BRIDGE_START", {
       modelId,
       textLength: text.length,
       hasConfig: Object.keys(config).length > 0,
-      waiting: this.turns.waiting,
+      waiting: turns.waiting,
+      ...(serverRole === WRITING_ROLE ? { serverRole } : {}),
     });
-    return this.turns.run(() => this._process(text, modelId, config));
+    return turns.run(() => this._process(text, modelId, { ...config, serverRole }));
   }
 
   async _process(text, modelId, config) {
@@ -44,6 +52,7 @@ class LocalReasoningService {
         systemPrompt: config.systemPrompt || "",
         disableThinking: config.disableThinking !== false,
         requireComplete: config.requireComplete === true,
+        serverRole: config.serverRole,
       };
 
       debugLogger.logReasoning("LOCAL_BRIDGE_INFERENCE", {
