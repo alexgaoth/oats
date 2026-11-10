@@ -65,6 +65,14 @@ test("a voice's Name, one 20px line, is at least 24x24", () => {
   assert.ok(w >= 24 && h >= 24, `${w}x${h}`);
 });
 
+test("a dialog's Close is 24x24 with its icon where it was", () => {
+  const line = classOf(read("src/components/ui/dialog.tsx"), "<DialogPrimitive.Close className=");
+  assert.match(line, /\bsize-6\b/);
+  // A 16px icon centred in 24px sits 4px in: right-3/top-3 (12px) keeps it 16px from the corner.
+  assert.match(line, /\bright-3 top-3\b/);
+  assert.match(line, /items-center justify-center/);
+});
+
 test("a force graph's smallest disc is a 24px target, nearest disc first", () => {
   const graph = read("src/components/notes/ForceGraph.tsx");
   const physics = read("src/components/notes/graphPhysics.ts");
