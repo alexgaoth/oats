@@ -238,6 +238,68 @@ test("no two topics of a conversation share a label", () => {
   assert.equal(new Set(labels).size, labels.length);
 });
 
+// ------------------------------------------------------------------ record cuts
+
+// At Finish the writing model reads the whole conversation and says where each
+// topic starts (topicRecordCut.mjs). The record takes those cuts; the live
+// view keeps its own.
+test("the record's topics start where the model's cuts say", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...DEMO]);
+  const firsts = (snapshot) => snapshot.nodes.map((node) => node.utteranceIds[0]);
+  const live = firsts(tracker.snapshot(end));
+  assert.equal(tracker.setRecordCuts(["u14", "u28"]), true);
+  const { nodes, edges } = tracker.snapshot(end, { final: true });
+  assert.deepEqual(firsts({ nodes }), ["u0", "u14", "u28"]);
+  assert.deepEqual(
+    nodes.map((node) => node.label),
+    ["enterprise pricing", "research engineer", "investor demo"]
+  );
+  assert.deepEqual(
+    edges.map((edge) => edge.kind),
+    ["new", "new"]
+  );
+  assert.equal(nodes.flatMap((node) => node.utteranceIds).length, 42);
+
+  tracker.setRecordCuts(["u10"]);
+  assert.deepEqual(firsts(tracker.snapshot(end, { final: true })), ["u0", "u10"]);
+  assert.deepEqual(firsts(tracker.snapshot(end)), live, "the live view is not changed");
+});
+
+test("a return in the model's cuts is one topic with a return edge", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING, ...PRICING.slice(0, 9)]);
+  tracker.setRecordCuts(["u28", "u14"]);
+  const { nodes, edges } = tracker.snapshot(end, { final: true });
+  assert.equal(nodes.length, 2);
+  assert.ok(edges.some((edge) => edge.kind === "return" && edge.to === nodes[0].id));
+  assert.equal(nodes[0].returns, 1);
+});
+
+test("model cuts at unknown turns or the first turn are skipped", () => {
+  const { tracker, end } = record([...PRICING, ...HIRING]);
+  assert.equal(tracker.setRecordCuts(["nope", "u0", "u0"]), true);
+  const { nodes } = tracker.snapshot(end, { final: true });
+  assert.equal(nodes.length, 1);
+  assert.equal(nodes[0].utteranceIds.length, 28);
+  assert.equal(new ConversationTopicTracker().setRecordCuts(["u1"]), false);
+});
+
+test("a turn after the model's cuts drops them", () => {
+  const lines = [...PRICING, ...HIRING];
+  const { tracker } = record(lines);
+  tracker.setRecordCuts(["u5"]);
+  const more = {
+    id: `u${lines.length}`,
+    text: "One more thing on hiring.",
+    at: lines.length * 6000,
+  };
+  tracker.onUtterance(more);
+  const fresh = new ConversationTopicTracker();
+  feed(fresh, [...utterancesOf(lines), more]);
+  const ids = (one) =>
+    one.snapshot(more.at, { final: true }).nodes.map((node) => node.utteranceIds);
+  assert.deepEqual(ids(tracker), ids(fresh));
+});
+
 // ------------------------------------------------------------------ live
 
 // The flow card redraws from every snapshot. A topic it has drawn is never

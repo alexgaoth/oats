@@ -72,6 +72,7 @@ import {
   startRecording,
   stopRecording,
   getConversationTopicSnapshot,
+  cutRecordTopics,
   markMoment,
   applyConversationSpeakers,
   sittingLoudness,
@@ -179,7 +180,7 @@ import {
   useActionProcessingStore,
   type BackgroundActionOutcome,
 } from "../stores/actionProcessingStore";
-import { nameFinalTopics } from "../stores/topicNamingRunner";
+import { nameFinalTopics, topicNamingGeneration } from "../stores/topicNamingRunner";
 import { useSummaryReadinessState } from "../hooks/useSummaryReadiness";
 import { isRegenerableNoteTitle } from "../helpers/regenerableNoteTitle";
 import {
@@ -664,6 +665,7 @@ function ConversationSurface() {
     // Snapshot the topics before anything else awaits: the tracker is live
     // renderer state, and the graph in Intelligence reads only what is persisted.
     const topics = getConversationTopicSnapshot();
+    const naming = topicNamingGeneration();
     const moments = state.moments;
     // How loud each second was, so the finished contour keeps the shape the
     // live line had. Taken now, with the topics, before anything awaits.
@@ -689,10 +691,15 @@ function ConversationSurface() {
       } finally {
         finishSaved();
       }
+      // The writing model reads the whole conversation and says where each
+      // topic starts, which the tracker can only guess from pauses and words
+      // (helpers/topicRecordCut.mjs). The record takes those cuts; without a
+      // usable answer it keeps the tracker's, saved above.
+      const cut = await cutRecordTopics(recordingNoteId, state.segments, naming);
       // The writing model's last names for the topics, for the record. With a
       // model on this computer they go before the summary, which would
       // otherwise hold them behind it (topicNamingRunner.ts).
-      await nameFinalTopics(recordingNoteId, topics, state.segments);
+      await nameFinalTopics(recordingNoteId, cut ?? topics, state.segments, naming);
       // With no writing model ready (none chosen yet, or the one on this Mac
       // still downloading), the queue writes it as soon as one is.
       if (await writingModelReady()) {
