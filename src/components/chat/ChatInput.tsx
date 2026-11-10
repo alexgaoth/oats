@@ -122,18 +122,19 @@ export function ChatInput({
               placeholder={t("agentMode.input.typeMessage")}
               className={cn(
                 "input-inline flex-1 outline-none bg-transparent",
-                "text-[13px] text-foreground placeholder:text-muted-foreground/40",
-                "min-w-0 p-0",
+                "text-[13px] text-foreground placeholder:text-muted-foreground",
+                "h-6 min-w-0 p-0",
                 isBusy && "text-muted-foreground/30 cursor-not-allowed"
               )}
             />
             {isBusy && onCancel ? (
               <button
                 onClick={onCancel}
+                aria-label={t("common.cancel")}
                 className={cn(
-                  "p-1 rounded-sm shrink-0",
-                  "text-muted-foreground/60 hover:text-foreground hover:bg-foreground/8",
-                  "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30",
+                  "inline-flex size-6 items-center justify-center rounded-sm shrink-0",
+                  "text-muted-foreground hover:text-foreground hover:bg-foreground/8",
+                  "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                   "transition-colors duration-100"
                 )}
               >
@@ -143,9 +144,10 @@ export function ChatInput({
               <button
                 onClick={handleSubmit}
                 disabled={!inputText.trim()}
+                aria-label={t("agentMode.input.send")}
                 className={cn(
-                  "p-1 rounded-sm shrink-0",
-                  "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30",
+                  "inline-flex size-6 items-center justify-center rounded-sm shrink-0",
+                  "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                   "transition-colors duration-100",
                   inputText.trim()
                     ? "text-brand-ink hover:text-brand-ink/80"
