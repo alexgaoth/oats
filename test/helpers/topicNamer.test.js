@@ -486,7 +486,7 @@ test("the description keeps up with the topic, and the name holds between its st
   answers.push("Name: Launch date move\nAbout: The launch may move from the 3rd.");
   namer.observe(talk.snapshot(1), talk.segments);
   await clock.tick(namerModule.SETTLE_MS);
-  assert.match(asked[0].text, /^Length of the description: at most 15 words\.$/m);
+  assert.match(asked[0].text, /^Length of the description: about 15 words, in 1 sentence\.$/m);
   let shown = labelOf(namer, talk.snapshot(1), 1);
   assert.equal(shown.label, "Launch date move");
   assert.equal(shown.description, "The launch may move from the 3rd.");

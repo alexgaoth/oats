@@ -104,6 +104,7 @@ export const TOPIC_NAME_SYSTEM_PROMPT = [
   "Reply with exactly two lines and nothing else:",
   "Name: the name",
   "About: the description",
+  "One name and one description cover the whole of what was said, even when it touches several things.",
   "",
   "The name:",
   "- says specifically what this part of the conversation is about: the thing, question, problem or decision discussed",
@@ -114,8 +115,8 @@ export const TOPIC_NAME_SYSTEM_PROMPT = [
   "The description:",
   "- says what was said, asked, proposed or decided on this topic, and what was left open, so that a person who was not there can tell it apart from the other topics",
   "- gives the specific things said: the options, numbers, dates, names and reasons",
-  "- is plain sentences in the language that was spoken, no longer than the length the request gives",
-  "- uses only what the lines say. Never add a name, a number, a decision or a reason they do not state. If something was only suggested, say it was suggested",
+  "- is plain sentences in the language that was spoken, of about the length the request gives: the first sentence says what this topic is about and its main point, and the next ones what was decided, proposed or left open, and the other details that matter",
+  "- uses only what the lines say. Never add a name, a number, a decision or a reason they do not state. If something was only suggested or asked, say so: do not state it as a plan, a requirement or a decision",
   "- does not name speakers or roles: who said a line is not known",
   "- leaves out a number, name or claim that looks misheard or does not fit, instead of repairing it",
 ].join("\n");
@@ -129,7 +130,22 @@ export const TOPIC_NAME_SYSTEM_PROMPT = [
  */
 export function descriptionLength(words) {
   const count = Number.isFinite(words) ? Math.max(0, words) : 0;
-  return Math.round(Math.min(MAX_DESCRIPTION_WORDS, Math.max(MIN_DESCRIPTION_WORDS, 12 + count / 20)));
+  return Math.round(
+    Math.min(MAX_DESCRIPTION_WORDS, Math.max(MIN_DESCRIPTION_WORDS, 12 + count / 20))
+  );
+}
+
+/**
+ * How many sentences a description of `length` words is asked for: one up to
+ * about 26 words, four at the cap. A small model reads "at most N words" as
+ * "be brief" and writes one sentence whatever N is (Gemma 4 E4B on AMI's learn
+ * meetings: 18 words where up to 80 were allowed), so the request gives a
+ * target and a shape.
+ *
+ * @param {number} length
+ */
+export function descriptionSentences(length) {
+  return Math.min(4, Math.max(1, Math.round(length / 18)));
 }
 
 const oneLine = (value) =>
@@ -222,8 +238,15 @@ export function buildTopicNamePrompt({
   }
   const count = Number.isFinite(words)
     ? words
-    : (Array.isArray(turns) ? turns : []).reduce((total, turn) => total + countWords(String(turn ?? "")), 0);
-  lines.push(`Length of the description: at most ${descriptionLength(count)} words.`);
+    : (Array.isArray(turns) ? turns : []).reduce(
+        (total, turn) => total + countWords(String(turn ?? "")),
+        0
+      );
+  const length = descriptionLength(count);
+  const sentences = descriptionSentences(length);
+  lines.push(
+    `Length of the description: about ${length} words, in ${sentences} ${sentences === 1 ? "sentence" : "sentences"}.`
+  );
   lines.push("", "What was said on this topic:", ...excerpt.map((line) => `- ${line}`));
   return { system: TOPIC_NAME_SYSTEM_PROMPT, text: lines.join("\n"), excerpt };
 }
@@ -298,7 +321,8 @@ const REFUSAL =
 // The prompt's own lines. A provider that gets an empty answer can hand back
 // the text it was sent (the dictation cleanup's fallback), whose first line
 // would otherwise read as a four-word name.
-const ECHO = /^(?:other topics|current name|length of the description|what was said on this topic)\b/i;
+const ECHO =
+  /^(?:other topics|current name|length of the description|what was said on this topic)\b/i;
 
 /** Lower case with letters, digits and single spaces only: for comparing names. */
 function nameKey(name) {
@@ -466,7 +490,12 @@ function capDescription(text, max) {
     kept += sentence;
   }
   if (kept.trim()) return kept.trim();
-  if (/\s/.test(text)) return `${text.split(" ").slice(0, max).join(" ").replace(/[\s,;:]+$/u, "")}…`;
+  if (/\s/.test(text))
+    return `${text
+      .split(" ")
+      .slice(0, max)
+      .join(" ")
+      .replace(/[\s,;:]+$/u, "")}…`;
   return `${text.slice(0, Math.max(1, Math.floor((text.length * max) / count)))}…`;
 }
 
@@ -497,6 +526,11 @@ export function parseTopicDescription(answer, { name = null } = {}) {
   return capDescription(text, MAX_DESCRIPTION_WORDS);
 }
 
+/** A short line with no sentence end: a name, where a description was expected. */
+function looksLikeName(line) {
+  return countWords(line) <= 6 && !/[.!?…。！？]["'”’»」』)]*$/u.test(line.trim());
+}
+
 /**
  * The name and the description in a model's answer to `buildTopicNamePrompt`.
  *
@@ -522,6 +556,9 @@ export function parseTopicLabel(answer, context = {}) {
     const value = label ? line.slice(label[0].length) : line;
     if (label && ABOUT_LABEL.test(label[1])) about.push(value);
     else if (nameLine === null && (label || !about.length)) nameLine = value;
+    // A small model can split a topic into several name and description
+    // pairs; only the first pair is this topic's.
+    else if (nameLine !== null && about.length && (label || looksLikeName(value))) break;
     else about.push(value);
   }
   const name = nameLine === null ? null : parseTopicName(nameLine, context);

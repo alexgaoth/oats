@@ -55,7 +55,7 @@ test("the prompt carries the other topics' names, the current name and what was 
   assert.equal(first.system, naming.TOPIC_NAME_SYSTEM_PROMPT);
   assert.match(first.text, /^Other topics: none yet$/m);
   assert.doesNotMatch(first.text, /Current name/);
-  assert.match(first.text, /^Length of the description: at most 15 words\.$/m);
+  assert.match(first.text, /^Length of the description: about 15 words, in 1 sentence\.$/m);
   assert.match(first.text, /^- We need to pick the launch date\.$/m);
 
   const again = naming.buildTopicNamePrompt({
@@ -82,7 +82,7 @@ test("the prompt carries the other topics' names, the current name and what was 
     words: 600,
   });
   assert.match(describe.text, /^Current name: Launch date\. Reply with it unchanged\.$/m);
-  assert.match(describe.text, /^Length of the description: at most 42 words\.$/m);
+  assert.match(describe.text, /^Length of the description: about 42 words, in 2 sentences\.$/m);
 });
 
 test("a description grows with the topic, to a cap", () => {
@@ -95,6 +95,16 @@ test("a description grows with the topic, to a cap", () => {
   assert.equal(length(1000), 62);
   assert.equal(length(5000), naming.MAX_DESCRIPTION_WORDS);
   assert.equal(length(Number.NaN), 15);
+});
+
+test("a longer description is asked for in more sentences", () => {
+  const sentences = naming.descriptionSentences;
+  assert.equal(sentences(naming.MIN_DESCRIPTION_WORDS), 1);
+  assert.equal(sentences(26), 1);
+  assert.equal(sentences(27), 2);
+  assert.equal(sentences(42), 2);
+  assert.equal(sentences(62), 3);
+  assert.equal(sentences(naming.MAX_DESCRIPTION_WORDS), 4);
 });
 
 test("an answer gives a name and a description, labelled or in order", () => {
@@ -126,6 +136,21 @@ test("an answer gives a name and a description, labelled or in order", () => {
   });
 });
 
+test("an answer that splits the topic in several pairs gives the first pair only", () => {
+  const first = "The kinetic battery was discussed. The chip type was left for later.";
+  for (const answer of [
+    `Energy source ideas\n${first}\n\nChip selection options\nThe options were simple or advanced.`,
+    `Energy source ideas\n${first}\nChip selection options\nThe options were simple or advanced.`,
+    `Name: Energy source ideas\nAbout: ${first}\nName: Chip selection options\nAbout: The options were simple or advanced.`,
+  ]) {
+    assert.deepEqual(
+      naming.parseTopicLabel(answer),
+      { name: "Energy source ideas", description: first },
+      answer
+    );
+  }
+});
+
 test("a description that is no description is left out", () => {
   const read = (about) =>
     naming.parseTopicLabel(`Name: Scroll wheel cost\nAbout: ${about}`).description;
@@ -134,7 +159,7 @@ test("a description that is no description is left out", () => {
   assert.equal(read("Sorry, I cannot tell what was said"), null);
   assert.equal(read("Not enough information to describe this topic"), null);
   assert.equal(read("What was said on this topic: the wheel"), null);
-  assert.equal(read("Length of the description: at most 15 words."), null);
+  assert.equal(read("Length of the description: about 15 words, in 1 sentence."), null);
   assert.equal(read("scroll wheel cost"), null, "the name again");
   assert.equal(read("“The wheel costs more than buttons.”"), "The wheel costs more than buttons.");
 });

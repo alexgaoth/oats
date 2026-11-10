@@ -92,7 +92,7 @@ export function demoTopicName(prompt) {
   const text = String(prompt ?? "");
   const said = text.split("What was said on this topic:")[1] ?? "";
   const current = /^Current name: (.*?)\.\s/m.exec(text)?.[1] ?? null;
-  const length = Number(/^Length of the description: at most (\d+) words\./m.exec(text)?.[1] ?? 80);
+  const length = Number(/^Length of the description: about (\d+) words/m.exec(text)?.[1] ?? 80);
   let best = null;
   let most = 0;
   for (const entry of NAMES) {
