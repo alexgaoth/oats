@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 let comparisonEvidence, sharedTopicLabels;
 test.before(async () => {
   ({ comparisonEvidence, sharedTopicLabels } =
@@ -42,4 +44,22 @@ test("shared topic labels do not infer semantic equivalence", () => {
     [{ label: "resume" }, { label: "Budget" }]
   );
   assert.deepEqual([...result], ["resume"]);
+});
+
+test("comparison aligns evidence rows, avoids repeated result titles and retains its preview", () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, "../../src/components/library/ConversationComparison.tsx"),
+    "utf8"
+  );
+  assert.match(source, /\(picking \|\| classic\) &&\s*selected\.map/);
+  assert.match(source, /sm:row-span-4 sm:grid sm:grid-cols-1 sm:grid-rows-subgrid/);
+  assert.match(source, /VITE_OATS_COMPARISON_LAYOUT === "classic"/);
+  assert.match(
+    source,
+    /import\.meta\.env\.DEV &&\s*new URLSearchParams\(window\.location\.search\)\.get\("comparisonLayout"\)/
+  );
+  assert.match(source, /target\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(source, /focusAfterSwitch\.current = null/);
+  assert.match(source, /pending && !showingSelectedRecords/);
+  assert.match(source, /aria-busy=\{pending\}/);
 });
