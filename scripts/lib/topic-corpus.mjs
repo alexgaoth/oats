@@ -391,6 +391,43 @@ export function storedTranscript(id, value) {
   };
 }
 
+/**
+ * A recording with a reference outside AMI and ICSI: `{ id, source?, segments:
+ * [{ id?, text, startMs, endMs, ref }], sections?: { [ref]: title } }`. Each
+ * segment's `ref` names the section it belongs to (a video's chapters, a
+ * speech's outline, marks on a stored note). `private` keeps its words out of
+ * what the evals print and write, as for a stored note.
+ */
+export function referencedTranscript(value, { id, isPrivate = false } = {}) {
+  const topics = new Map(
+    Object.entries(value.sections ?? {}).map(([key, title]) => [
+      String(key),
+      { description: String(title) },
+    ])
+  );
+  const segments = (value.segments ?? []).filter((segment) => String(segment?.text ?? "").trim());
+  return {
+    id: String(value.id ?? id),
+    source: value.source ?? "referenced",
+    private: isPrivate,
+    topics,
+    utterances: segments.map((segment, index) => {
+      const ref = String(segment.ref);
+      if (!topics.has(ref)) topics.set(ref, { description: ref });
+      const count = Math.max(1, String(segment.text).trim().split(/\s+/).length);
+      return {
+        id: String(segment.id ?? `u${index + 1}`),
+        text: String(segment.text),
+        start: segment.startMs / 1000,
+        end: segment.endMs / 1000,
+        at: segment.endMs + FINAL_DELAY_MS,
+        refTop: new Array(count).fill(ref),
+        refFine: new Array(count).fill(ref),
+      };
+    }),
+  };
+}
+
 export function amiMeetingIds(dir) {
   const withWords = new Set(
     fs.readdirSync(path.join(dir, "words")).map((file) => file.split(".")[0])
@@ -484,6 +521,30 @@ export function assignmentOf(conversation, nodes) {
 }
 
 const BOUNDARY_TOLERANCE_MS = 60_000;
+/** A cut at the right place: within about one sentence of the real change. */
+export const EXACT_TOLERANCE_MS = 10_000;
+
+/**
+ * Pairs each drawn change with the nearest real one not taken yet, within
+ * `tolerance` ms. The signed offset of each pair, drawn minus real: late is positive.
+ */
+export function matchChanges(drawn, real, tolerance) {
+  const used = new Set();
+  const offsets = [];
+  for (const at of drawn) {
+    let best = -1;
+    real.forEach((other, index) => {
+      const distance = Math.abs(other - at);
+      if (used.has(index) || distance > tolerance) return;
+      if (best < 0 || distance < Math.abs(real[best] - at)) best = index;
+    });
+    if (best >= 0) {
+      used.add(best);
+      offsets.push(at - real[best]);
+    }
+  }
+  return offsets;
+}
 
 /**
  * Segmentation scores of one assignment (a topic per utterance) against the
@@ -505,6 +566,7 @@ export function segmentationScores(conversation, perUtterance) {
       refRuns: fine.refRuns,
       oneTopic: fine.oneTopic,
       boundaryHits: fine.boundaryHits,
+      boundaryHitsExact: fine.boundaryHitsExact,
       boundaryDrawn: fine.boundaryDrawn,
       boundaryReal: fine.boundaryReal,
     },
@@ -526,20 +588,7 @@ function segmentationAgainst(conversation, perUtterance, refUtterance) {
     labels.flatMap((label, index) => (index && label !== labels[index - 1] ? [times[index]] : []));
   const drawn = changes(perUtterance);
   const real = changes(refUtterance);
-  const used = new Set();
-  let hits = 0;
-  for (const at of drawn) {
-    let best = -1;
-    real.forEach((other, index) => {
-      const distance = Math.abs(other - at);
-      if (used.has(index) || distance > BOUNDARY_TOLERANCE_MS) return;
-      if (best < 0 || distance < Math.abs(real[best] - at)) best = index;
-    });
-    if (best >= 0) {
-      used.add(best);
-      hits += 1;
-    }
-  }
+  const offsets = matchChanges(drawn, real, BOUNDARY_TOLERANCE_MS);
   const one = pkWindowDiff(reference, new Array(reference.length).fill(0));
   return {
     pk: scores.pk,
@@ -551,7 +600,9 @@ function segmentationAgainst(conversation, perUtterance, refUtterance) {
     refRuns: segmentCount(refUtterance),
     refTopics: new Set(refUtterance.map((id) => topicDescription(conversation.topics?.get(id))))
       .size,
-    boundaryHits: hits,
+    boundaryHits: offsets.length,
+    boundaryHitsExact: matchChanges(drawn, real, EXACT_TOLERANCE_MS).length,
+    boundaryOffsets: offsets,
     boundaryDrawn: drawn.length,
     boundaryReal: real.length,
     oneTopic: { pk: one.pk, windowDiff: one.windowDiff },
