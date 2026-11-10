@@ -11,7 +11,8 @@
  * `--vectors` holds `<id>.minilm.f32` files made ahead of time, one vector for
  * each turn; without it the turns are embedded here by all-MiniLM-L6-v2.
  * Writes `<id>.json`: `{ id, features, rows, starts, words, cuts }`, one row for
- * each pause, `cuts` the turns where the annotators' top-level topic changes.
+ * each pause, `cuts` the turns where the annotators' top-level topic changes
+ * (`--fine`: their finest level, for a detector of subtopics, docs/topic-split.md).
  */
 
 import fs from "node:fs";
@@ -42,6 +43,7 @@ const { values: args } = parseArgs({
     vectors: { type: "string" },
     out: { type: "string" },
     lag: { type: "string", default: "60" },
+    fine: { type: "boolean", default: false },
   },
 });
 const LAG = Number(args.lag);
@@ -106,7 +108,7 @@ for (const conversation of conversations()) {
     names ??= Object.keys(features);
     rows.push(names.map((name) => Number(features[name].toFixed(6))));
   }
-  const reference = referenceLabels(conversation);
+  const reference = referenceLabels(conversation, { fine: args.fine });
   const cuts = reference.flatMap((label, index) =>
     index && label !== reference[index - 1] ? [index] : []
   );

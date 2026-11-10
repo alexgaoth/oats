@@ -40,6 +40,7 @@ import {
 } from "./topicNamingRunner";
 import { AGENT_RUNS_PER_RECORDING } from "../helpers/contextCheck.mjs";
 import { ConversationTopicTracker } from "../helpers/conversationTopics";
+import { LONG_TOPIC_SPLIT } from "../helpers/topicChange.mjs";
 import { TopicVectorFeeder } from "../helpers/topicVectors.mjs";
 import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
@@ -1475,10 +1476,12 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // the final snapshot can still be read and saved onto the note.
   // In a room, in English, the change detector cuts the topics (topicChange.mjs):
   // it learned from people talking in rooms, in English. Everything else keeps
-  // the tracker's own cuts.
+  // the tracker's own cuts. From 8 minutes into a topic it also cuts at a weaker
+  // change of subject, so one narrow subject does not fill the whole lane.
+  const roomInEnglish =
+    recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en";
   conversationTopicTracker = new ConversationTopicTracker({
-    detector:
-      recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en",
+    detector: roomInEnglish ? { split: LONG_TOPIC_SPLIT } : false,
   });
   // Each turn and each candidate name is embedded on this computer, so the
   // tracker can cut and name a topic by meaning; a name that arrives is drawn

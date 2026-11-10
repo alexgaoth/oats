@@ -30,7 +30,8 @@
 //   the sidebar's request count includes it (networkLedger.js). Then its
 //   checksum is checked and the clip is read with turbo, and that time
 //   replaces the prediction. A cancelled or deleted turbo is remembered:
-//   Oats does not fetch it again by itself.
+//   Oats does not fetch it again by itself. A download stopped because speech
+//   left this Mac (`cancelUpgrade({ decline: false })`) is not a no.
 //
 // `deviceTier()` returns the same snapshot the renderer gets, for any other
 // local model that wants to size itself to this Mac. The writing model does:
@@ -216,7 +217,7 @@ class DeviceTier extends EventEmitter {
     this.record = this._load();
     this.measuring = false;
     this.measured = null;
-    this.download = null; // { abort, receivedBytes, totalBytes }
+    this.download = null; // { abort, receivedBytes, totalBytes, cancelled, abandoned }
     this.checking = false;
     this.failed = null;
     this.checkServer = null; // the check's own whisper-server while it runs
@@ -551,7 +552,13 @@ class DeviceTier extends EventEmitter {
     if (choice.model !== TURBO_MODEL) return this.snapshot();
 
     const signal = createDownloadSignal();
-    this.download = { abort: signal.abort, receivedBytes: 0, totalBytes: 0, cancelled: false };
+    this.download = {
+      abort: signal.abort,
+      receivedBytes: 0,
+      totalBytes: 0,
+      cancelled: false,
+      abandoned: false,
+    };
     this.failed = null;
     this.publish();
     debugLogger.info("Fetching Whisper turbo for this Mac", {
@@ -598,8 +605,14 @@ class DeviceTier extends EventEmitter {
       }
     } catch (error) {
       if (error?.isAbort || download.cancelled) {
-        // Cancelled: the person said no. Remembered, and the partial file goes.
-        if (this.record) {
+        // The person's Cancel is a no, and is remembered. A download stopped
+        // because speech left this Mac is not. The partial file goes either way.
+        if (download.abandoned) {
+          debugLogger.info("Whisper turbo stopped: speech left this Mac", {
+            receivedBytes: download.receivedBytes,
+            totalBytes: download.totalBytes,
+          });
+        } else if (this.record) {
           this.record.turboDeclined = true;
           this._save();
         }
@@ -616,12 +629,25 @@ class DeviceTier extends EventEmitter {
     }
   }
 
-  /** The person cancelled the download: stop it, and do not start it again by itself. */
-  cancelUpgrade() {
-    if (this.download) {
-      this.download.cancelled = true;
-      this.download.abort();
-    } else if (this.record) {
+  /**
+   * Stop turbo's download. `decline` (the default) is the person's Cancel: Oats
+   * does not start it again by itself. Without it nothing is remembered:
+   * speech left this Mac, and the default may fetch turbo again when it comes
+   * back.
+   *
+   * @param {{ decline?: boolean }} [options]
+   */
+  cancelUpgrade({ decline = true } = {}) {
+    const download = this.download;
+    if (download) {
+      // The person's Cancel wins over a stop of Oats' own that is still settling.
+      if (decline) download.abandoned = false;
+      else if (!download.cancelled) download.abandoned = true;
+      if (!download.cancelled) {
+        download.cancelled = true;
+        download.abort();
+      }
+    } else if (decline && this.record) {
       this.record.turboDeclined = true;
       this._save();
       this.publish();

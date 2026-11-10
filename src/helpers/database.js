@@ -802,6 +802,8 @@ class DatabaseManager {
         "CREATE INDEX IF NOT EXISTS idx_snippets_pending_sync ON snippets(sync_status) WHERE sync_status = 'pending'"
       );
 
+      this._migrateConversationLibrary();
+
       // Last, because it reads `transcript` and `conversation_marks`, which are
       // added above. A failure is logged, never thrown: search is worth less
       // than a database that opens, and the transaction leaves whatever index
@@ -820,6 +822,95 @@ class DatabaseManager {
       debugLogger.error("Database initialization failed", { error: error.message }, "database");
       throw error;
     }
+  }
+
+  _migrateConversationLibrary() {
+    this.db.transaction(() => {
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_notes_library_created
+          ON notes(created_at DESC, id DESC)
+          WHERE note_type = 'meeting' AND deleted_at IS NULL;
+        CREATE TABLE IF NOT EXISTS working_sets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          name_key TEXT NOT NULL UNIQUE
+        );
+        CREATE TABLE IF NOT EXISTS working_set_passages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          set_id INTEGER NOT NULL REFERENCES working_sets(id) ON DELETE CASCADE,
+          note_id INTEGER NOT NULL,
+          segment_id TEXT NOT NULL,
+          start_offset INTEGER NOT NULL CHECK(start_offset >= 0),
+          end_offset INTEGER NOT NULL CHECK(end_offset > start_offset),
+          source_hash TEXT NOT NULL,
+          position INTEGER NOT NULL CHECK(position >= 0),
+          note TEXT NOT NULL DEFAULT '' CHECK(length(note) <= 500),
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(set_id, note_id, segment_id, start_offset, end_offset)
+        );
+        CREATE INDEX IF NOT EXISTS idx_working_set_passages_order
+          ON working_set_passages(set_id, position, id);
+        CREATE TABLE IF NOT EXISTS saved_library_views (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          name_key TEXT NOT NULL UNIQUE,
+          criteria_json TEXT NOT NULL
+        );
+      `);
+    })();
+  }
+
+  async _conversationLibrary() {
+    const { ConversationLibrary } = await import("./conversationLibrary.mjs");
+    return new ConversationLibrary(this.db);
+  }
+
+  async listLibraryConversations(options) {
+    return (await this._conversationLibrary()).listLibraryConversations(options);
+  }
+
+  async getWorkingSets() {
+    return (await this._conversationLibrary()).getWorkingSets();
+  }
+
+  async createWorkingSet(name) {
+    return (await this._conversationLibrary()).createWorkingSet(name);
+  }
+
+  async renameWorkingSet(id, name) {
+    return (await this._conversationLibrary()).renameWorkingSet(id, name);
+  }
+
+  async deleteWorkingSet(id) {
+    return (await this._conversationLibrary()).deleteWorkingSet(id);
+  }
+
+  async getWorkingSet(id) {
+    return (await this._conversationLibrary()).getWorkingSet(id);
+  }
+
+  async addWorkingSetPassage(setId, source) {
+    return (await this._conversationLibrary()).addWorkingSetPassage(setId, source);
+  }
+
+  async updateWorkingSetPassage(setId, passageId, update) {
+    return (await this._conversationLibrary()).updateWorkingSetPassage(setId, passageId, update);
+  }
+
+  async removeWorkingSetPassage(setId, passageId) {
+    return (await this._conversationLibrary()).removeWorkingSetPassage(setId, passageId);
+  }
+
+  async listSavedViews() {
+    return (await this._conversationLibrary()).listSavedViews();
+  }
+
+  async saveLibraryView(view) {
+    return (await this._conversationLibrary()).saveLibraryView(view);
+  }
+
+  async deleteLibraryView(id) {
+    return (await this._conversationLibrary()).deleteLibraryView(id);
   }
 
   /** Whether `notes_fts` and its triggers are exactly `NOTES_FTS_SCHEMA`. */

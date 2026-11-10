@@ -163,7 +163,8 @@ conversations at all, as a new install; the fake main inserts the example when
 it is asked), `profile=many` (two hundred synthetic conversations over a year,
 in three conversation groups, instead of the samples: `harness/many.mjs`),
 `theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
-`connections=lanes|graph`, `badges=1` (show the "Example" badge on the demo's
+`connections=lanes|graph`, `describe=0` (no topic descriptions: the
+flow card quotes a pressed topic, as before descriptions), `badges=1` (show the "Example" badge on the demo's
 conversations), `autosearch=1` (turn auto-search on; the fake main process
 writes each search down instead of opening a browser, and
 `oatsDemo.searches()` lists them, so a film can show the browser opening),
@@ -228,12 +229,13 @@ where the main process and the microphone stand:
   the AnalyserNode reports the replayed room's level. The listening ring, the
   live contour and the loudness kept at Finish are the app's own measurement.
 - Mark is pressed with the M key.
-- The local model names the topics as they grow, and once more at Finish
-  (`src/helpers/topicNaming.mjs`): a stub (`harness/topicNames.mjs`) reads the
-  words sent for a topic and answers with the review's names for its eight
-  topics ("Pellwood launch date decision", "SAML clock skew fix", and so on:
-  what gpt-5.6-luna named them). A topic with no subject it knows keeps its
-  on-device name.
+- The local model names and describes the topics as they grow, and once more
+  at Finish (`src/helpers/topicNaming.mjs`): a stub (`harness/topicNames.mjs`)
+  reads the words sent for a topic and answers with the review's names for its
+  eight topics ("Pellwood launch date decision", "SAML clock skew fix", and so
+  on: what gpt-5.6-luna named them), and with as much of a description written
+  from the sample's lines as the request's length allows. A topic with no
+  subject it knows keeps its on-device name.
 - After Stop, main's half follows: the turn being said is transcribed, the
   speaker pass reports the voices (`conversation-speakers`), and the local model
   answers the summary action with the sample's title and summary. Then the

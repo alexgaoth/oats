@@ -46,6 +46,9 @@ test("a final is shown as delivered once revealed, and whole under reduced motio
   assert.match(DIALOGUE, /from: total, at: now, rate: 0, total/);
 });
 
-test("Clean gains nothing: the dialogue, and so the cue, is in Words only", () => {
-  assert.match(WORKSPACE, /\{detailed && \(\s*<ConversationDialogue/);
+test("Clean gains nothing: the dialogue and cue need the optional transcript detail", () => {
+  assert.match(
+    WORKSPACE,
+    /\{detailed && \(classicRecordingControls \|\| detailTab === "transcript"\) && \(\s*<TabsContent[\s\S]*?<ConversationDialogue/
+  );
 });

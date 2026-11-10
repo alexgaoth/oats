@@ -155,6 +155,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getNote: (id) => ipcRenderer.invoke("db-get-note", id),
   getNotes: (noteType, limit, folderId) =>
     ipcRenderer.invoke("db-get-notes", noteType, limit, folderId),
+  listLibraryConversations: (options) =>
+    ipcRenderer.invoke("db-list-library-conversations", options),
+  getWorkingSets: () => ipcRenderer.invoke("db-get-working-sets"),
+  createWorkingSet: (name) => ipcRenderer.invoke("db-create-working-set", name),
+  renameWorkingSet: (id, name) => ipcRenderer.invoke("db-rename-working-set", id, name),
+  deleteWorkingSet: (id) => ipcRenderer.invoke("db-delete-working-set", id),
+  getWorkingSet: (id) => ipcRenderer.invoke("db-get-working-set", id),
+  addWorkingSetPassage: (setId, source) =>
+    ipcRenderer.invoke("db-add-working-set-passage", setId, source),
+  updateWorkingSetPassage: (setId, passageId, update) =>
+    ipcRenderer.invoke("db-update-working-set-passage", setId, passageId, update),
+  removeWorkingSetPassage: (setId, passageId) =>
+    ipcRenderer.invoke("db-remove-working-set-passage", setId, passageId),
+  listSavedViews: () => ipcRenderer.invoke("db-list-saved-library-views"),
+  saveLibraryView: (view) => ipcRenderer.invoke("db-save-library-view", view),
+  deleteLibraryView: (id) => ipcRenderer.invoke("db-delete-library-view", id),
+  onConversationLibraryChanged: registerListener(
+    "conversation-library-changed",
+    (callback) => () => callback()
+  ),
   updateNote: (id, updates) => ipcRenderer.invoke("db-update-note", id, updates),
   deleteNote: (id) => ipcRenderer.invoke("db-delete-note", id),
   // The bundled example conversation, for somebody who has recorded nothing yet.
@@ -327,7 +347,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getDeviceTier: () => ipcRenderer.invoke("get-device-tier"),
   onDeviceTier: registerListener("device-tier", (callback) => (_event, tier) => callback(tier)),
   startSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-start", options),
-  cancelSpeechUpgrade: () => ipcRenderer.invoke("speech-upgrade-cancel"),
+  cancelSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-cancel", options),
   startWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-start", options),
   cancelWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-cancel", options),
   writingModelChosen: () => ipcRenderer.invoke("writing-model-chosen"),
@@ -594,6 +614,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   llamaServerStart: (modelId) => ipcRenderer.invoke("llama-server-start", modelId),
   llamaServerStop: () => ipcRenderer.invoke("llama-server-stop"),
   llamaServerStatus: () => ipcRenderer.invoke("llama-server-status"),
+  llamaWritingServer: (mode) => ipcRenderer.invoke("llama-writing-server", mode),
   llamaGpuReset: () => ipcRenderer.invoke("llama-gpu-reset"),
 
   // Vulkan GPU acceleration

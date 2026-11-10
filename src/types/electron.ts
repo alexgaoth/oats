@@ -5,6 +5,15 @@ import type {
   ConversationEvent,
   SuggestionState,
 } from "./conversationEvents";
+import type {
+  LibraryCriteria,
+  LibraryOptions,
+  LibraryConversation,
+  WorkingSet,
+  WorkingSetDetail,
+  WorkingPassageSource,
+  SavedLibraryView,
+} from "./conversationLibrary";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia";
 
@@ -539,7 +548,10 @@ declare global {
         language: string;
         force?: boolean;
       }) => Promise<DeviceTierSnapshot>;
-      cancelSpeechUpgrade?: () => Promise<DeviceTierSnapshot>;
+      cancelSpeechUpgrade?: (options?: {
+        /** False when speech left this Mac rather than the person pressing Cancel. */
+        decline?: boolean;
+      }) => Promise<DeviceTierSnapshot>;
       // The writing model on this Mac (writingModelFetch.js): fetched when
       // nothing is ready and the setting follows the default, or when setup
       // chose "On this Mac". `force` is the person asking in Settings.
@@ -757,6 +769,29 @@ declare global {
         limit?: number,
         folderId?: number | null
       ) => Promise<NoteItem[]>;
+      listLibraryConversations: (
+        options?: LibraryOptions
+      ) => Promise<{ items: LibraryConversation[]; cursor: number | null }>;
+      getWorkingSets: () => Promise<WorkingSet[]>;
+      createWorkingSet: (name: string) => Promise<WorkingSet>;
+      renameWorkingSet: (id: number, name: string) => Promise<void>;
+      deleteWorkingSet: (id: number) => Promise<void>;
+      getWorkingSet: (id: number) => Promise<WorkingSetDetail | null>;
+      addWorkingSetPassage: (setId: number, source: WorkingPassageSource) => Promise<void>;
+      updateWorkingSetPassage: (
+        setId: number,
+        passageId: number,
+        update: { note?: string; position?: number }
+      ) => Promise<void>;
+      removeWorkingSetPassage: (setId: number, passageId: number) => Promise<void>;
+      listSavedViews: () => Promise<SavedLibraryView[]>;
+      saveLibraryView: (view: {
+        id?: number;
+        name: string;
+        criteria: LibraryCriteria;
+      }) => Promise<void>;
+      deleteLibraryView: (id: number) => Promise<void>;
+      onConversationLibraryChanged: (callback: () => void) => () => void;
       updateNote: (
         id: number,
         updates: {
@@ -1149,6 +1184,10 @@ declare global {
       ) => Promise<{ success: boolean; port?: number; error?: string }>;
       llamaServerStop: () => Promise<{ success: boolean; error?: string }>;
       llamaServerStatus: () => Promise<LlamaServerStatus>;
+      /** The writing model's own server while a recording runs (helpers/writingServer.js). */
+      llamaWritingServer?: (
+        mode: "hold" | "idle" | "stop"
+      ) => Promise<{ dedicated: boolean; error?: string }>;
       llamaGpuReset: () => Promise<{ success: boolean; error?: string }>;
       detectVulkanGpu?: () => Promise<VulkanGpuResult>;
       getLlamaVulkanStatus?: () => Promise<LlamaVulkanStatus>;

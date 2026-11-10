@@ -25,6 +25,12 @@ const HEALTH_CHECK_FAILURE_THRESHOLD = 3;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_CONTEXT_SIZE = 4096;
 
+// Ports chosen by any manager in this process and not yet given back. Two
+// managers (the default server and the writing server) scan the same range;
+// without this, both could find one port free and the second spawn would fail
+// to bind it.
+const reservedPorts = new Set();
+
 // llama-server's refusal of a request over its context:
 // {"error":{"type":"exceed_context_size_error","n_prompt_tokens":30076,"n_ctx":16384}}.
 function contextRefusal(body) {
@@ -38,7 +44,12 @@ function contextRefusal(body) {
 }
 
 class LlamaServerManager {
-  constructor() {
+  /**
+   * @param {{ pidName?: string }} [options] `pidName` names the PID file, so a
+   *   second server's orphan is found by its own file (sidecarReaper.js).
+   */
+  constructor({ pidName = "llama" } = {}) {
+    this.pidName = pidName;
     this.process = null;
     this.port = null;
     this.ready = false;
@@ -50,6 +61,8 @@ class LlamaServerManager {
     this.cachedServerBinaryPaths = null;
     this.activeBackend = null;
     this.idleTimer = null;
+    this.keepAlive = false;
+    this.reservedPort = null;
   }
 
   getServerBinaryPaths() {
@@ -115,11 +128,25 @@ class LlamaServerManager {
   }
 
   async findAvailablePort() {
+    this.releasePort();
     const [first, last] = nativeE2E.portRange("llama", [PORT_RANGE_START, PORT_RANGE_END]);
     for (let port = first; port <= last; port++) {
-      if (await isPortAvailable(port)) return port;
+      if (reservedPorts.has(port)) continue;
+      // Reserved before the check awaits, so a second manager scanning at the
+      // same moment moves on to the next port.
+      reservedPorts.add(port);
+      if (await isPortAvailable(port)) {
+        this.reservedPort = port;
+        return port;
+      }
+      reservedPorts.delete(port);
     }
     throw new Error(`No available ports in range ${first}-${last}`);
+  }
+
+  releasePort() {
+    if (this.reservedPort !== null) reservedPorts.delete(this.reservedPort);
+    this.reservedPort = null;
   }
 
   async start(modelPath, options = {}) {
@@ -271,7 +298,7 @@ class LlamaServerManager {
         env,
         detached: process.platform !== "win32",
       });
-      sidecarPidFile.write("llama", this.process.pid);
+      sidecarPidFile.write(this.pidName, this.process.pid);
 
       let stderrBuffer = "";
       let exitCode = null;
@@ -306,7 +333,7 @@ class LlamaServerManager {
         this.ready = false;
         this.process = null;
         this.stopHealthCheck();
-        sidecarPidFile.clear("llama");
+        sidecarPidFile.clear(this.pidName);
       });
 
       const getProcessInfo = () => ({ stderr: stderrBuffer, exitCode, exitSignal });
@@ -454,6 +481,7 @@ class LlamaServerManager {
 
   resetIdleTimer() {
     this.clearIdleTimer();
+    if (this.keepAlive) return;
     this.idleTimer = setTimeout(() => {
       debugLogger.info("llama-server idle timeout reached, stopping to free VRAM", {
         timeoutMs: IDLE_TIMEOUT_MS,
@@ -468,6 +496,16 @@ class LlamaServerManager {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
+  }
+
+  /**
+   * While kept alive, the server is not stopped when idle. Turned off, the
+   * idle timer starts again from now.
+   */
+  setKeepAlive(on) {
+    this.keepAlive = Boolean(on);
+    if (this.keepAlive) this.clearIdleTimer();
+    else if (this.process) this.resetIdleTimer();
   }
 
   async inference(messages, options = {}) {
@@ -582,6 +620,7 @@ class LlamaServerManager {
 
     if (!this.process) {
       this.ready = false;
+      this.releasePort();
       return;
     }
 
@@ -615,6 +654,7 @@ class LlamaServerManager {
     this.process = null;
     this.ready = false;
     this.port = null;
+    this.releasePort();
     this.modelPath = null;
     this.contextSize = null;
     this.activeBackend = null;

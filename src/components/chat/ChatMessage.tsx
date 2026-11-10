@@ -291,11 +291,12 @@ export function ChatMessage({
           <div className="flex justify-start mt-1.5 -mb-0.5">
             <button
               onClick={handleCopy}
+              aria-label={t("common.copy")}
               className={cn(
-                "p-1 rounded-sm",
-                "text-muted-foreground/40 hover:text-foreground hover:bg-foreground/8",
-                "opacity-0 group-hover/msg:opacity-100 transition-all duration-150",
-                "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30"
+                "inline-flex size-6 items-center justify-center rounded-sm",
+                "text-muted-foreground hover:text-foreground hover:bg-foreground/8",
+                "opacity-0 group-hover/msg:opacity-100 focus-visible:opacity-100 transition-all duration-150",
+                "focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               )}
             >
               {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}

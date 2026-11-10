@@ -5,7 +5,8 @@ import { useSettingsStore } from "../../stores/settingsStore";
 /**
  * The recording screen's flow card: `ConversationFlow` given the recording's
  * topics, its words, the moment Record was pressed and the subjects of past
- * conversations, with the Lanes / Graph choice kept as a setting. The card
+ * conversations, with the Lanes / Graph choice and topic descriptions kept as
+ * settings. The card
  * itself reads no store, so the demo pieces draw it without one.
  */
 export default function LiveConversationFlow({
@@ -21,6 +22,7 @@ export default function LiveConversationFlow({
   const suggestions = useMeetingRecordingStore((s) => s.suggestions);
   const view = useSettingsStore((s) => s.conversationFlowView);
   const setView = useSettingsStore((s) => s.setConversationFlowView);
+  const descriptions = useSettingsStore((s) => s.topicDescriptions);
   return (
     <ConversationFlow
       live
@@ -31,6 +33,7 @@ export default function LiveConversationFlow({
       view={view}
       onViewChange={setView}
       compact={compact}
+      descriptions={descriptions}
       className={className}
     />
   );

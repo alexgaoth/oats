@@ -75,6 +75,23 @@ const sessionModels = new Map<string, TopicModel | null>();
 let waitingLines: TranscriptSegment[] | null = null;
 /** The recording whose check was stopped: one still being set up for it does not start. */
 let stoppedGeneration = 0;
+/**
+ * Whether this recording's names go to a server of the writing model's own,
+ * beside the question classifier's (helpers/writingServer.js). Main starts it
+ * on the first name, keeps it through the recording and the names at Finish,
+ * and stops it before the summary.
+ */
+let writingServer = false;
+
+/** Tells main what the writing server is for now. False when it has none. */
+async function setWritingServer(mode: "hold" | "idle" | "stop"): Promise<boolean> {
+  try {
+    const answer = await window.electronAPI?.llamaWritingServer?.(mode);
+    return answer?.dedicated === true;
+  } catch {
+    return false;
+  }
+}
 
 function log(event: string, detail?: Record<string, unknown>): void {
   // Counts and times only: never a name or a word of the conversation.
@@ -99,11 +116,12 @@ async function askNamer(prompt: { system: string; text: string }): Promise<strin
       nameRequestConfig(choice, route, prompt.system)
     );
   }
+  const config = topicNameConfig(route, prompt.system);
   return reasoningService.processText(
     prompt.text,
     route.modelId,
     null,
-    topicNameConfig(route, prompt.system)
+    writingServer && route.mode === "local" ? { ...config, serverRole: "writing" } : config
   );
 }
 
@@ -200,12 +218,13 @@ async function namesLive(route: WritingRoute): Promise<boolean> {
     classifier && classifier !== route.modelId
       ? await localSummaryModelDownloaded("local", classifier)
       : null;
-  return namesWhileRecording({
-    mode: route.mode,
-    model: route.modelId,
-    classifier,
-    classifierOnDisk,
-  });
+  const input = { mode: route.mode, model: route.modelId, classifier, classifierOnDisk };
+  if (namesWhileRecording(input)) return true;
+  // The classifier would take turns with the writing model in one server: on
+  // a Mac that has the memory, the writing model gets a server of its own.
+  writingServer = await setWritingServer("hold");
+  log("writing-server", { dedicated: writingServer });
+  return namesWhileRecording({ ...input, dedicatedWritingServer: writingServer });
 }
 
 /**
@@ -219,6 +238,7 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   loop = null;
   loopProvider = null;
   waitingLines = null;
+  writingServer = false;
   const mine = ++generation;
   const route = currentWritingRoute();
   // No writing model: the topics keep their on-device names, and nothing is sent.
@@ -311,6 +331,9 @@ export function stopLiveTopics(): void {
   loop?.stop();
   stoppedGeneration = generation;
   waitingLines = null;
+  // The names at Finish still use the writing server; if Finish never asks
+  // (nothing was heard), it stops after the usual idle time.
+  if (writingServer) void setWritingServer("idle");
 }
 
 /**
@@ -381,6 +404,24 @@ async function writeNames(noteId: number, named: ConversationTopicSnapshot): Pro
  * once, and the summary does not wait.
  */
 export async function nameFinalTopics(
+  noteId: number | null,
+  snapshot: ConversationTopicSnapshot | null,
+  segments: TranscriptSegment[]
+): Promise<void> {
+  const mine = generation;
+  try {
+    await nameFinal(noteId, snapshot, segments);
+  } finally {
+    // Stopped before the summary loads the writing model in the default
+    // server, so the model is never in memory twice.
+    if (writingServer && mine === generation) {
+      writingServer = false;
+      await setWritingServer("stop");
+    }
+  }
+}
+
+async function nameFinal(
   noteId: number | null,
   snapshot: ConversationTopicSnapshot | null,
   segments: TranscriptSegment[]

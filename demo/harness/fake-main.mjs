@@ -11,6 +11,7 @@
 import { placeSampleConversation } from "../../src/helpers/sampleConversations.mjs";
 import { demoAgentAnswer, folderStatus, searchDemoContext } from "./context.mjs";
 import { demoTopicVector } from "./topicVectors.mjs";
+import { createDemoLibrary } from "./library.mjs";
 
 // The columns `DatabaseManager.updateNote` accepts.
 const UPDATABLE = new Set([
@@ -407,6 +408,11 @@ export function createFakeMain({
   };
 
   const explicit = {
+    ...createDemoLibrary({
+      notes,
+      emit,
+      storage: typeof window === "undefined" ? null : window.localStorage,
+    }),
     // --- The platform, and the boot-time questions.
     getPlatform: () => "darwin",
     // What main holds is what the page asked for (`lang=`, settings.mjs):

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Bookmark, Users } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -34,6 +35,7 @@ import type { ConversationEvent, QuestionOutcome } from "../../types/conversatio
  * no naming, so a voice's name there is words, not a button.
  */
 export function TranscriptView({
+  renderPassageAction,
   segments,
   fallback = "",
   query = "",
@@ -44,6 +46,8 @@ export function TranscriptView({
   speaker = null,
   onRenameSpeaker,
 }: {
+  /** The reader supplies its save action. The tour supplies none. */
+  renderPassageAction?: (segmentId: string, textRoot: () => HTMLElement | null) => ReactNode;
   /** The timed turns, as stored. */
   segments: TranscriptSegment[];
   /** The plain text shown when there are no timed turns (an imported or
@@ -132,7 +136,7 @@ export function TranscriptView({
               key={segment.id}
               ref={matched ? target : undefined}
               className={cn(
-                "grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-4 rounded-md",
+                "group/turn grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-4 rounded-md",
                 !first && (newSpeaker ? "mt-5" : "mt-1.5"),
                 // The turn a search landed on. Not a highlight — a semantic match
                 // has no span to highlight — but "this is the one".
@@ -157,13 +161,27 @@ export function TranscriptView({
               </span>
               <div className="min-w-0">
                 {newSpeaker && <SpeakerName segment={segment} onRename={onRenameSpeaker} />}
-                <p
-                  title={at ?? undefined}
-                  className="max-w-[70ch] text-[15px] leading-7 text-foreground/90"
-                >
+                <div className="flex items-start gap-1">
                   {isMarked && <span className="sr-only">{t("oats.review.markedTurn")} </span>}
-                  <Highlighted text={String(segment.text ?? "")} query={query} />
-                </p>
+                  <p
+                    data-passage-text={String(segment.id)}
+                    title={at ?? undefined}
+                    className="min-w-0 max-w-[70ch] flex-1 text-[15px] leading-7 text-foreground/90"
+                  >
+                    <Highlighted text={String(segment.text ?? "")} query={query} />
+                  </p>
+                  {segment.id != null &&
+                    renderPassageAction?.(
+                      String(segment.id),
+                      () =>
+                        Array.from(
+                          transcriptRef.current?.querySelectorAll<HTMLElement>(
+                            "[data-passage-text]"
+                          ) ?? []
+                        ).find((element) => element.dataset.passageText === String(segment.id)) ??
+                        null
+                    )}
+                </div>
               </div>
             </li>
           );
@@ -227,7 +245,8 @@ function SpeakerName({
           onClick={() => setNaming(true)}
           aria-label={t("oats.intelligence.nameSpeaker", { speaker: label })}
           title={t("oats.intelligence.nameSpeaker", { speaker: label })}
-          className="rounded-sm outline-none decoration-muted-foreground/50 underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          // The name is one 20px line; the invisible 2px around it makes a 24px target.
+          className="relative min-w-6 rounded-sm text-left outline-none decoration-muted-foreground/50 underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 after:absolute after:-inset-0.5 after:content-['']"
         >
           {label}
         </button>

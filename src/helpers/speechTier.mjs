@@ -251,6 +251,25 @@ export function shouldFetchTurbo({
   );
 }
 
+/**
+ * Whether to stop turbo's download because speech no longer runs on this Mac
+ * with Whisper: "With an API key" with an OpenAI key, or another engine.
+ * Nothing would use it. It is not a no (deviceTier.js, `decline: false`), so
+ * the default fetches it again when speech comes back. A recording does not
+ * stop it, and neither does turbo stored as the person's own choice.
+ *
+ * @param {object} input
+ * @param {boolean} input.local Speech runs on this Mac with Whisper.
+ * @param {boolean} input.followsDefault
+ * @param {string | null} [input.whisperModel] The speech model the settings hold.
+ * @param {{ downloading?: unknown }} input.turbo
+ * @returns {boolean}
+ */
+export function shouldLeaveTurbo({ local, followsDefault, whisperModel = null, turbo = {} }) {
+  if (!turbo.downloading || local === true) return false;
+  return followsDefault === true || whisperModel !== TURBO_MODEL;
+}
+
 /** Set once the notice of turbo's automatic download has been shown (localStorage). */
 export const UPGRADE_NOTICE_KEY = "speechUpgradeNoticed";
 

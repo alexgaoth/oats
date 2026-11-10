@@ -70,6 +70,40 @@ const SHOTS = [
     query: "demo=live&from=560&end=hold&view=calm",
     script: "await demo.untilSeconds(563)",
   },
+  // Topic descriptions (src/helpers/topicNaming.mjs), at the smallest window:
+  // the topic now, described under the lanes; a pressed topic; the earlier
+  // look, which quotes a pressed topic (`describe=0`); and a finished
+  // conversation's topic, described in its panel after Finish named it.
+  {
+    name: "live-described",
+    size: "880x680",
+    query: "demo=live&from=560&end=hold&view=calm",
+    script: "await demo.untilSeconds(580)",
+  },
+  {
+    name: "live-described-pressed",
+    size: "880x680",
+    query: "demo=live&from=560&end=hold&view=calm",
+    script: "await demo.untilSeconds(580); await demo.pressTopic('SOC 2 audit timeline')",
+  },
+  {
+    name: "live-quoted",
+    size: "880x680",
+    query: "demo=live&from=560&end=hold&view=calm&describe=0",
+    script: "await demo.untilSeconds(580); await demo.pressTopic('SOC 2 audit timeline')",
+  },
+  {
+    name: "reading-topic-described",
+    size: "880x680",
+    query: "demo=live&from=1700&edits=0",
+    script: [
+      "await demo.untilStopped();",
+      "await oatsDemo.open(oatsDemo.status().noteId, { tab: 'connections' });",
+      "await demo.wait(1500);",
+      "await demo.pressTopic('SOC 2 audit timeline');",
+      "await demo.scrollTo('Summary', 'tab');",
+    ].join(" "),
+  },
   {
     name: "live-calm-graph",
     query: "demo=live&from=1062&end=hold&view=calm&flow=graph",
@@ -424,6 +458,21 @@ window.demo = {
     button?.click();
     button?.blur();
     await demo.wait(300);
+  },
+  // Press a topic's row in the lanes (or its node in the graph) by its name.
+  async pressTopic(label) {
+    await demo.until(() =>
+      [...document.querySelectorAll("button")].some((b) => b.textContent.includes(label))
+    );
+    const button = [...document.querySelectorAll("button")].find((b) => b.textContent.includes(label));
+    button.click();
+    button.blur();
+    await demo.wait(400);
+  },
+  // The recording stopped, and its record was named at Finish.
+  async untilStopped() {
+    await demo.until(() => !["recording", "stopping"].includes(oatsDemo.status().phase), 90000);
+    await demo.wait(12000);
   },
   // Paste a key into the first key field on the page and save it.
   async typeKey(text) {

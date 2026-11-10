@@ -434,6 +434,7 @@ export class LiveTopicLoop {
         id: Number(topic.id),
         label: topic.name ?? deviceLabel,
         ...(topic.name ? { deviceLabel } : {}),
+        ...(topic.name && topic.gist ? { description: topic.gist } : {}),
         words: this._topWords(topic),
         durationMs,
         utteranceIds: [...topic.utteranceIds],
@@ -470,9 +471,10 @@ export class LiveTopicLoop {
    * record): each goes to the topic of `snapshot` that holds most of the lines
    * it was given from, while that topic still holds at least half of them
    * (`nameStillFits`), and no two topics get one name. `held` tells #121's
-   * namer not to ask for these topics again.
+   * namer not to name these topics again. The gist goes with a name as its
+   * description, until the namer describes the whole topic at the end.
    *
-   * @returns {Map<any, { name: string, words: number, namings: number, utteranceIds: string[], held?: boolean }>}
+   * @returns {Map<any, { name: string, description?: string, words: number, namings: number, utteranceIds: string[], held?: boolean }>}
    */
   namesFor(snapshot) {
     const candidates = [];
@@ -500,6 +502,7 @@ export class LiveTopicLoop {
       if ([...names.values()].some((record) => sameName(record.name, topic.name))) continue;
       names.set(node.id, {
         name: topic.name,
+        ...(topic.gist ? { description: topic.gist } : {}),
         words: topic.namedWords,
         namings: topic.namings,
         utteranceIds: [...topic.namedIds],

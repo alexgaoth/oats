@@ -23,6 +23,9 @@ const { createOnDeviceStatus } = require("./onDeviceStatus");
 const { initDeviceTier } = require("./deviceTier");
 const nativeE2E = require("./nativeE2E");
 
+/** The page that holds the writing server (writingServer.js createHoldOwner), made on first use. */
+let writingHoldOwner = null;
+
 // Tinfoil's only realtime STT model — fallback when the renderer omits one.
 const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
 // Question-card outcomes (DESIGN.md §4). Anything else the renderer sends is
@@ -1341,6 +1344,30 @@ class IPCHandlers {
       return this.databaseManager.getNotes(noteType, limit, folderId);
     });
 
+    // Mutations resolve only after their transaction commits. A rejected write
+    // never announces a change; no-op/repeated actions may safely invalidate.
+    const libraryMethods = [
+      ["db-list-library-conversations", "listLibraryConversations", false],
+      ["db-get-working-sets", "getWorkingSets", false],
+      ["db-create-working-set", "createWorkingSet", true],
+      ["db-rename-working-set", "renameWorkingSet", true],
+      ["db-delete-working-set", "deleteWorkingSet", true],
+      ["db-get-working-set", "getWorkingSet", false],
+      ["db-add-working-set-passage", "addWorkingSetPassage", true],
+      ["db-update-working-set-passage", "updateWorkingSetPassage", true],
+      ["db-remove-working-set-passage", "removeWorkingSetPassage", true],
+      ["db-list-saved-library-views", "listSavedViews", false],
+      ["db-save-library-view", "saveLibraryView", true],
+      ["db-delete-library-view", "deleteLibraryView", true],
+    ];
+    for (const [channel, method, changes] of libraryMethods) {
+      ipcMain.handle(channel, async (_event, ...args) => {
+        const result = await this.databaseManager[method](...args);
+        if (changes) this.broadcastToWindows("conversation-library-changed");
+        return result;
+      });
+    }
+
     ipcMain.handle("db-update-note", async (event, id, updates) => {
       const result = this.databaseManager.updateNote(id, updates);
       if (result?.success && result?.note) {
@@ -2126,7 +2153,11 @@ class IPCHandlers {
       })
     );
 
-    ipcMain.handle("speech-upgrade-cancel", () => this.deviceTier.cancelUpgrade());
+    // `decline: false` when speech left this Mac: the download stops, and
+    // nothing is remembered as a no.
+    ipcMain.handle("speech-upgrade-cancel", (_event, options = {}) =>
+      this.deviceTier.cancelUpgrade({ decline: options?.decline !== false })
+    );
 
     // The writing model on this Mac (writingTier.mjs, writingModelFetch.js).
     // The renderer asks after setup, or when setup chose "On this Mac", while
@@ -3848,6 +3879,22 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         return { success: false, error: error.message };
+      }
+    });
+
+    // The writing model's own server while a recording runs (writingServer.js).
+    ipcMain.handle("llama-writing-server", async (event, mode) => {
+      try {
+        if (!["hold", "idle", "stop"].includes(mode)) return { dedicated: false };
+        const modelManager = require("./modelManagerBridge").default;
+        writingHoldOwner ??= require("./writingServer").createHoldOwner(() => {
+          modelManager.setWritingServer("idle").catch(() => {});
+        });
+        if (mode === "hold") writingHoldOwner.held(event.sender);
+        else writingHoldOwner.letGo();
+        return await modelManager.setWritingServer(mode);
+      } catch (error) {
+        return { dedicated: false, error: error.message };
       }
     });
 
@@ -8505,10 +8552,17 @@ class IPCHandlers {
   }
 
   broadcastToWindows(channel, payload) {
+    const libraryChanged = [
+      "note-added",
+      "note-updated",
+      "note-deleted",
+      "conversation-groups-changed",
+    ].includes(channel);
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((win) => {
       if (!win.isDestroyed()) {
         win.webContents.send(channel, payload);
+        if (libraryChanged) win.webContents.send("conversation-library-changed");
       }
     });
   }

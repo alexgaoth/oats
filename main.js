@@ -346,6 +346,7 @@ function registerSidecars() {
   }
   const modelManager = require("./src/helpers/modelManagerBridge").default;
   sidecarRegistry.register("llama", () => modelManager.stopServer());
+  sidecarRegistry.register("llama-writing", () => modelManager.setWritingServer("stop"));
   const onnxWorkerClient = require("./src/helpers/onnxWorkerClient");
   sidecarRegistry.register("onnx", () => onnxWorkerClient.stop());
 }
