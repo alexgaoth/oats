@@ -570,6 +570,15 @@ function ConversationSurface() {
   const detail = useSettingsStore((s) => s.conversationDetail);
   const setDetail = useSettingsStore((s) => s.setConversationDetail);
   const detailed = detail === "detailed";
+  const [detailTab, setDetailTab] = useState<"transcript" | "questions">("transcript");
+  const detailsId = useId();
+  // Keep the previous composition available for design comparisons, not as
+  // another permanent choice in the product.
+  const classicRecordingControls =
+    import.meta.env.VITE_OATS_RECORDING_CONTROLS === "classic" ||
+    (import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get("recordingControls") === "classic");
+  const showQuestions = detailed && (classicRecordingControls || detailTab === "questions");
 
   // Which question annotation is being read, so its mark on the trace can rise.
   // Re-evaluated on the same tick the elapsed clock already ticks on, so a
@@ -910,7 +919,17 @@ function ConversationSurface() {
                 {/* Under the clock, on the second line, indented to the clock's
                     edge: the dot's 10 px and the 12 px gap. Read straight after
                     the clock. */}
-                <RecordingCounters className="order-2 pl-5.5" />
+                <RecordingCounters
+                  className="order-2 pl-5.5"
+                  onQuestions={
+                    classicRecordingControls
+                      ? undefined
+                      : () => {
+                          setDetailTab("questions");
+                          setDetail("detailed");
+                        }
+                  }
+                />
                 <Badge variant="recording">{t("oats.conversation.recordingBadge")}</Badge>
                 {/* How far behind the text is, once it trails by more than 2 s.
                     Not beside the "not transcribing" warning, which says it. */}
@@ -990,24 +1009,40 @@ function ConversationSurface() {
               {/* What the recording view shows changes the whole surface, so it is
                   one of the few choices drawn with character (DESIGN.md §2). */}
               <div className="flex items-center justify-end border-t border-border px-3 py-1.5">
-                <ViewSwitch<ConversationDetail>
-                  className="h-8"
-                  aria-label={t("oats.conversation.view.label")}
-                  value={detail}
-                  onValueChange={setDetail}
-                  options={[
-                    {
-                      value: "clean",
-                      label: t("oats.conversation.view.calm"),
-                      icon: WavesHorizontal,
-                    },
-                    {
-                      value: "detailed",
-                      label: t("oats.conversation.view.words"),
-                      icon: Captions,
-                    },
-                  ]}
-                />
+                {classicRecordingControls ? (
+                  <ViewSwitch<ConversationDetail>
+                    className="h-8"
+                    aria-label={t("oats.conversation.view.label")}
+                    value={detail}
+                    onValueChange={setDetail}
+                    options={[
+                      {
+                        value: "clean",
+                        label: t("oats.conversation.view.calm"),
+                        icon: WavesHorizontal,
+                      },
+                      {
+                        value: "detailed",
+                        label: t("oats.conversation.view.words"),
+                        icon: Captions,
+                      },
+                    ]}
+                  />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8"
+                    aria-expanded={detailed}
+                    onClick={() => {
+                      setDetailTab("transcript");
+                      setDetail(detailed ? "clean" : "detailed");
+                    }}
+                  >
+                    {detailed ? <X aria-hidden="true" /> : <Captions aria-hidden="true" />}
+                    {t(detailed ? "oats.library.hideDetails" : "oats.library.showTranscript")}
+                  </Button>
+                )}
               </div>
             </Card>
 
@@ -1027,36 +1062,84 @@ function ConversationSurface() {
 
             {/* The question rail stays mounted in both compositions — remounting
                 it on every switch re-announced every question already heard. */}
-            <div
+            <Tabs
+              value={detailTab}
+              onValueChange={(value) => setDetailTab(value as "transcript" | "questions")}
               className={cn(
-                "flex min-h-0 flex-col",
+                "flex min-h-0 flex-col gap-0",
                 detailed && "flex-1 [@media(max-height:640px)]:min-h-[13rem]"
               )}
             >
+              {detailed && !classicRecordingControls && (
+                <TabsList className="mb-3 shrink-0 self-start">
+                  <TabsTrigger
+                    id={`${detailsId}-transcript-tab`}
+                    aria-controls={`${detailsId}-transcript`}
+                    value="transcript"
+                  >
+                    {t("oats.library.transcriptTab")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    id={`${detailsId}-questions-tab`}
+                    aria-controls={`${detailsId}-questions`}
+                    value="questions"
+                  >
+                    {t("oats.library.questionsTab")}
+                  </TabsTrigger>
+                </TabsList>
+              )}
               <div
+                id={`${detailsId}-questions`}
+                role={showQuestions && !classicRecordingControls ? "tabpanel" : undefined}
+                aria-labelledby={
+                  showQuestions && !classicRecordingControls
+                    ? `${detailsId}-questions-tab`
+                    : undefined
+                }
+                tabIndex={showQuestions && !classicRecordingControls ? 0 : undefined}
                 className={cn(
                   "group relative flex min-h-0 shrink-0 flex-col",
-                  detailed ? "max-h-[52%]" : "max-h-0"
+                  showQuestions
+                    ? classicRecordingControls
+                      ? "max-h-[52%]"
+                      : "flex-1 overflow-y-auto"
+                    : "max-h-0"
                 )}
               >
                 <div
                   ref={bandRef}
                   onScroll={measureBand}
-                  className={cn("min-h-0", detailed ? "overflow-y-auto" : "overflow-hidden")}
+                  className={cn("min-h-0", showQuestions ? "overflow-y-auto" : "overflow-hidden")}
                 >
-                  <LiveSignalRail onFocus={setFocusedGroup} announceOnly={!detailed} />
+                  <LiveSignalRail onFocus={setFocusedGroup} announceOnly={!showQuestions} />
                 </div>
-                <ScrollFade edges={detailed ? bandFaded : { top: false, bottom: false }} />
+                <ScrollFade edges={showQuestions ? bandFaded : { top: false, bottom: false }} />
               </div>
-              {detailed && (
-                <ConversationDialogue
-                  className={cn(
-                    "min-h-[4.5rem] flex-1 basis-0",
-                    cardCount > 0 ? "mt-4 border-t border-border pt-4" : "mt-1"
-                  )}
-                />
+              {detailed && (classicRecordingControls || detailTab === "transcript") && (
+                <TabsContent
+                  id={`${detailsId}-transcript`}
+                  role={classicRecordingControls ? "region" : "tabpanel"}
+                  aria-label={
+                    classicRecordingControls ? t("oats.library.transcriptTab") : undefined
+                  }
+                  aria-labelledby={
+                    classicRecordingControls ? undefined : `${detailsId}-transcript-tab`
+                  }
+                  value="transcript"
+                  forceMount
+                  className="flex min-h-0 flex-1"
+                >
+                  <ConversationDialogue
+                    className={cn(
+                      "min-h-[4.5rem] flex-1 basis-0",
+                      classicRecordingControls && cardCount > 0
+                        ? "mt-4 border-t border-border pt-4"
+                        : "mt-1"
+                    )}
+                  />
+                </TabsContent>
               )}
-            </div>
+            </Tabs>
           </div>
         ) : (
           <div ref={homeColumn} className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 py-8">

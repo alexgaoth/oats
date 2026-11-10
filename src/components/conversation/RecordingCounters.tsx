@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
+import { Button } from "../ui/button";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import {
@@ -53,7 +54,13 @@ function Counter({ label, count, formatted }: { label: string; count: number; fo
  * of the few things allowed to move. The questions count is left out when
  * question cards are off, because a zero there would be a guess, not a count.
  */
-export default function RecordingCounters({ className }: { className?: string }) {
+export default function RecordingCounters({
+  className,
+  onQuestions,
+}: {
+  className?: string;
+  onQuestions?: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const segments = useMeetingRecordingStore((state) => state.segments);
   const cards = useMeetingRecordingStore((state) => state.questionCards);
@@ -79,13 +86,27 @@ export default function RecordingCounters({ className }: { className?: string })
         count={words}
         formatted={number.format(words)}
       />
-      {questionsOn && (
-        <Counter
-          label={t("oats.conversation.counters.questions", { count: questions })}
-          count={questions}
-          formatted={number.format(questions)}
-        />
-      )}
+      {questionsOn &&
+        (onQuestions ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-mx-1 h-6 px-1 text-[13px] font-normal text-muted-foreground"
+            onClick={onQuestions}
+          >
+            <Counter
+              label={t("oats.conversation.counters.questions", { count: questions })}
+              count={questions}
+              formatted={number.format(questions)}
+            />
+          </Button>
+        ) : (
+          <Counter
+            label={t("oats.conversation.counters.questions", { count: questions })}
+            count={questions}
+            formatted={number.format(questions)}
+          />
+        ))}
     </p>
   );
 }
