@@ -634,14 +634,24 @@ async function waitFor(label, timeoutMs, probe, intervalMs = 500) {
   return fail(`${label}: not reached within ${timeoutMs} ms (last: ${JSON.stringify(last)})`, 6);
 }
 
+// A button is found by its accessible name: its aria-label, else its text. The
+// recording's Stop carries its shortcut in a Kbd, so its text is not "Stop".
+const findButton = (label) => `Array.from(document.querySelectorAll("button")).find(
+    (b) => (b.getAttribute("aria-label") || b.textContent.trim()) === ${JSON.stringify(label)} &&
+      b.offsetParent !== null && !b.disabled
+  )`;
+
 const visibleButton = (label) => `(() => {
-  const button = Array.from(document.querySelectorAll("button")).find(
-    (b) => b.textContent.trim() === ${JSON.stringify(label)} && b.offsetParent !== null && !b.disabled
-  );
+  const button = ${findButton(label)};
   if (!button) return false;
   button.click();
   return true;
 })()`;
+
+const hasButton = (label) => `Boolean(${findButton(label)})`;
+
+const START_LABEL = "Record conversation";
+const FINISH_LABEL = "Finish conversation";
 
 const READ_NOTES = `(async () => {
   const notes = await window.electronAPI.getNotes();
@@ -754,20 +764,14 @@ async function smoke(options) {
       current.page.evaluate(`document.readyState === "complete"`)
     );
     await waitFor("Start recording button", 60000, () =>
-      current.page.evaluate(
-        `Array.from(document.querySelectorAll("button")).some((b) => b.textContent.trim() === "Start recording" && b.offsetParent !== null)`
-      )
+      current.page.evaluate(hasButton(START_LABEL))
     );
     const before = await current.page.evaluate(READ_NOTES);
     await waitFor("press Start recording", 10000, () =>
-      current.page.evaluate(visibleButton("Start recording"))
+      current.page.evaluate(visibleButton(START_LABEL))
     );
     const startedAt = Date.now();
-    await waitFor("recording badge", 20000, () =>
-      current.page.evaluate(
-        `Array.from(document.querySelectorAll("button")).some((b) => b.textContent.trim() === "Stop" && b.offsetParent !== null)`
-      )
-    );
+    await waitFor("recording badge", 20000, () => current.page.evaluate(hasButton(FINISH_LABEL)));
     result.steps.recordingStarted = { afterMs: Date.now() - startedAt };
     ledger.snapshot(current.entry);
     await sleep(assets.clip.seconds * 1000 + 6000);
@@ -775,7 +779,7 @@ async function smoke(options) {
     result.steps.counters = await current.page.evaluate(
       `document.body.innerText.match(/\\d+ words?/)?.[0] ?? null`
     );
-    await waitFor("press Stop", 10000, () => current.page.evaluate(visibleButton("Stop")));
+    await waitFor("press Stop", 10000, () => current.page.evaluate(visibleButton(FINISH_LABEL)));
     const stoppedAt = Date.now();
     const known = new Set(before.map((n) => n.id));
     const saved = await waitFor(
@@ -784,9 +788,7 @@ async function smoke(options) {
       async () => {
         const notes = await current.page.evaluate(READ_NOTES);
         const fresh = notes.find((n) => !known.has(n.id) && n.text.length > 0);
-        const recording = await current.page.evaluate(
-          `Array.from(document.querySelectorAll("button")).some((b) => b.textContent.trim() === "Stop" && b.offsetParent !== null)`
-        );
+        const recording = await current.page.evaluate(hasButton(FINISH_LABEL));
         return fresh && !recording ? fresh : false;
       },
       1000

@@ -389,6 +389,24 @@ test("under the test route, a port outside the allocation is never probed", asyn
   assert.equal(await isPortAvailable(18629), false);
 });
 
+test("under the test route, the default and writing llama servers share only the allocation", async () => {
+  const run = makeRun();
+  const LlamaServerManager = require("../../src/helpers/llamaServer");
+  nativeE2E._setActiveForTests(validate(run).config);
+  const a = new LlamaServerManager();
+  const b = new LlamaServerManager({ pidName: "llama-writing" });
+  try {
+    const [pa, pb] = await Promise.all([a.findAvailablePort(), b.findAvailablePort()]);
+    assert.notEqual(pa, pb);
+    for (const port of [pa, pb]) assert.ok(port >= 18624 && port <= 18627, `port ${port}`);
+    a.releasePort();
+    assert.equal(a.reservedPort, null);
+    assert.equal(b.reservedPort, pb);
+  } finally {
+    a.releasePort();
+    b.releasePort();
+  }
+});
 test("the runner's outbound policy allows only local IPC and the allocated ports", () => {
   const policy = runner.outboundPolicy(runner.ALLOCATED_PORTS);
   const lines = policy.split("\n");
