@@ -203,6 +203,32 @@ test("turbo is fetched after setup, for a default, on this Mac, and never twice"
   assert.equal(without({ recording: false }), true);
 });
 
+test("turbo's download stops when speech leaves this Mac, and only then", () => {
+  const downloading = { downloading: { receivedBytes: 1, totalBytes: 10 } };
+  const left = {
+    local: false,
+    followsDefault: true,
+    whisperModel: "small.en",
+    turbo: downloading,
+  };
+  assert.equal(tier.shouldLeaveTurbo(left), true, "With an API key, with an OpenAI key");
+  const leave = (patch) => tier.shouldLeaveTurbo({ ...left, ...patch });
+  assert.equal(leave({ local: true }), false, "speech still runs here");
+  assert.equal(leave({ turbo: {} }), false, "nothing to stop");
+  assert.equal(leave({ turbo: { checking: true } }), false, "the bytes are in: nothing to stop");
+  assert.equal(
+    leave({ followsDefault: false, whisperModel: "turbo-q5" }),
+    false,
+    "turbo is the person's own choice"
+  );
+  assert.equal(
+    leave({ followsDefault: false, whisperModel: "small" }),
+    true,
+    "a choice of another model does not need turbo"
+  );
+  // A recording neither starts nor stops it.
+  assert.equal(leave({ local: true, recording: true }), false);
+});
 test("the one-time notice: only for a download Oats started by itself, once", () => {
   const show = (patch) =>
     tier.shouldShowUpgradeNotice({

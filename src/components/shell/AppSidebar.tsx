@@ -13,6 +13,7 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { visibleSettingsPages, type SettingsPageId } from "../settings/settingsPages";
 import { ariaKeyShortcuts, formatHotkey } from "../../utils/hotkeyLabel";
 import { getCachedPlatform } from "../../utils/platform";
+import { openWhileRecording } from "../../helpers/shellNav.mjs";
 
 export type ShellSurface = "conversation" | "intelligence" | "settings";
 
@@ -252,7 +253,6 @@ export function AppSidebar({
           label={t("oats.shell.search")}
           active={current === "search"}
           onClick={onSearch}
-          disabled={recording}
           trailing={<Kbd>/</Kbd>}
         />
       </nav>
@@ -297,7 +297,7 @@ export function AppSidebar({
             <NavItem
               icon={Settings}
               label={t("oats.nav.settings")}
-              disabled={recording}
+              disabled={recording && !openWhileRecording("settings")}
               aria-keyshortcuts={keys.settingsAria}
               onClick={() => onNavigate("settings")}
             />

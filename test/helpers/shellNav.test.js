@@ -1,12 +1,18 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+const fs = require("node:fs");
+const path = require("node:path");
+
 let shellNav;
 let isSearching;
+let openWhileRecording;
 
 test.before(async () => {
-  ({ shellNav, isSearching } = await import("../../src/helpers/shellNav.mjs"));
+  ({ shellNav, isSearching, openWhileRecording } = await import("../../src/helpers/shellNav.mjs"));
 });
+
+const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf8");
 
 // The bug this exists for: pressing Search lit Conversations and titled the
 // page Conversations.
@@ -49,4 +55,29 @@ test("reading a result, or the board, is not searching", () => {
     isSearching({ view: "global", reading: false, focused: true, query: "import bug" }),
     false
   );
+});
+
+// DESIGN.md §1: navigation stays available while recording, and Settings is the
+// one destination closed. The 2026-11-08 screen audit found Search closed too,
+// in the sidebar and for the recall hotkey.
+test("while recording, every destination opens but Settings", () => {
+  assert.equal(openWhileRecording("conversation"), true);
+  assert.equal(openWhileRecording("intelligence"), true);
+  assert.equal(openWhileRecording("search"), true);
+  assert.equal(openWhileRecording("settings"), false);
+});
+
+test("the sidebar's Search and the recall hotkey are not refused while recording", () => {
+  const sidebar = read("src/components/shell/AppSidebar.tsx");
+  const search = sidebar.match(/<NavItem\s+icon=\{Search\}[\s\S]*?\/>/);
+  assert.ok(search, "the sidebar has a Search item");
+  assert.doesNotMatch(search[0], /disabled=/);
+  const settings = sidebar.match(/<NavItem\s+icon=\{Settings\}[\s\S]*?\/>/);
+  assert.match(settings[0], /disabled=\{recording && !openWhileRecording\("settings"\)\}/);
+
+  const workspace = read("src/components/OatsWorkspace.tsx");
+  const goToSearch = workspace.match(/const goToSearch = \(\) => \{[\s\S]*?\n {4}\};/);
+  assert.ok(goToSearch, "the recall hotkey has its handler");
+  assert.doesNotMatch(goToSearch[0], /isRecording/);
+  assert.match(workspace, /isRecording &&\s+!openWhileRecording\(next\)/);
 });

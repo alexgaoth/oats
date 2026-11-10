@@ -223,8 +223,10 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
       if (state === "fast" || (force && (state === "declined" || state === "failed"))) run();
       return current;
     },
-    cancelSpeechUpgrade: async () => {
-      if (state === "downloading") set("declined");
+    // The person's Cancel is a no; speech leaving this Mac (`decline: false`)
+    // is not: turbo is not fetched yet, and the default may fetch it again.
+    cancelSpeechUpgrade: async ({ decline = true } = {}) => {
+      if (state === "downloading") set(decline === false ? "fast" : "declined");
       return current;
     },
     /** Switch state on a running page (the harness's `oatsDemo.tier`). */

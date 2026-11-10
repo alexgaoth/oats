@@ -6,13 +6,15 @@ import {
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../stores/settingsStore";
-import { shouldFetchTurbo } from "../helpers/speechTier.mjs";
+import { shouldFetchTurbo, shouldLeaveTurbo } from "../helpers/speechTier.mjs";
 import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
+import { leaveTurbo } from "./useSpeechTier";
 
 /**
  * Ask main for turbo when the rule picks it for this Mac and nothing stands in
- * the way (`shouldFetchTurbo`). Mounted once, in the workspace, which shows
- * only after setup. Main checks the rule again before it fetches anything.
+ * the way (`shouldFetchTurbo`), and stop its download when speech leaves this
+ * Mac (`shouldLeaveTurbo`). Mounted once, in the workspace, which shows only
+ * after setup. Main checks the rule again before it fetches anything.
  */
 export function useSpeechUpgrade() {
   const tier = useDeviceTierStore((state) => state.tier);
@@ -25,16 +27,30 @@ export function useSpeechUpgrade() {
   const recording = useMeetingRecordingStore((state) => state.isRecording);
 
   const choice = useMemo(() => speechChoiceFor(tier, language), [tier, language]);
+  const followsDefault = whisperModelFollowsDefault();
+  const local = meetingLocal && engine === "whisper";
   const fetch = shouldFetchTurbo({
     choice,
     setupDone: localStorage.getItem("onboardingCompleted") === "true",
     // `whisperModel` is in the effect's list for this: a choice made in
     // Settings ends it.
-    followsDefault: whisperModelFollowsDefault(),
-    local: meetingLocal && engine === "whisper",
+    followsDefault,
+    local,
     recording,
     turbo: tier?.turbo ?? {},
   });
+  // Read on each snapshot, so a download that main starts after the switch
+  // (a start asked for just before it) stops as soon as it shows.
+  const leave = shouldLeaveTurbo({
+    local,
+    followsDefault,
+    whisperModel,
+    turbo: tier?.turbo ?? {},
+  });
+
+  useEffect(() => {
+    if (leave) leaveTurbo();
+  }, [leave]);
 
   useEffect(() => {
     if (!fetch) return;
