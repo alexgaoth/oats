@@ -1,0 +1,119 @@
+{
+  "_comment": "Parakeet Ultra's Core ML build and Silero, pinned to Hugging Face commits. The main process fetches these; the helper never reaches the network.",
+  "bundles": [
+    {
+      "repo": "FluidInference/parakeet-ultra-coreml",
+      "revision": "95eaa59a39d4394f047a4dc5cce480388a60d1b6",
+      "into": "parakeet-ultra",
+      "files": [
+        {
+          "path": "Decoder.mlmodelc/analytics/coremldata.bin",
+          "size": 243
+        },
+        {
+          "path": "Decoder.mlmodelc/coremldata.bin",
+          "size": 560
+        },
+        {
+          "path": "Decoder.mlmodelc/model.mil",
+          "size": 13110
+        },
+        {
+          "path": "Decoder.mlmodelc/weights/weight.bin",
+          "size": 23604992
+        },
+        {
+          "path": "Encoder.mlmodelc/analytics/coremldata.bin",
+          "size": 243
+        },
+        {
+          "path": "Encoder.mlmodelc/coremldata.bin",
+          "size": 514
+        },
+        {
+          "path": "Encoder.mlmodelc/model.mil",
+          "size": 1002653
+        },
+        {
+          "path": "Encoder.mlmodelc/weights/weight.bin",
+          "size": 594211328
+        },
+        {
+          "path": "JointDecisionv3.mlmodelc/analytics/coremldata.bin",
+          "size": 243
+        },
+        {
+          "path": "JointDecisionv3.mlmodelc/coremldata.bin",
+          "size": 592
+        },
+        {
+          "path": "JointDecisionv3.mlmodelc/model.mil",
+          "size": 11777
+        },
+        {
+          "path": "JointDecisionv3.mlmodelc/weights/weight.bin",
+          "size": 12642764
+        },
+        {
+          "path": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+          "size": 243
+        },
+        {
+          "path": "Preprocessor.mlmodelc/coremldata.bin",
+          "size": 486
+        },
+        {
+          "path": "Preprocessor.mlmodelc/metadata.json",
+          "size": 2841
+        },
+        {
+          "path": "Preprocessor.mlmodelc/model.mil",
+          "size": 28181
+        },
+        {
+          "path": "Preprocessor.mlmodelc/weights/weight.bin",
+          "size": 491072
+        },
+        {
+          "path": "config.json",
+          "size": 414
+        },
+        {
+          "path": "parakeet_v3_vocab.json",
+          "size": 151122
+        },
+        {
+          "path": "parakeet_vocab.json",
+          "size": 151122
+        }
+      ]
+    },
+    {
+      "repo": "FluidInference/silero-vad-coreml",
+      "revision": "b419383c55c110e2c9271fa6ee0ea83d03c70d96",
+      "into": "",
+      "files": [
+        {
+          "path": "silero-vad-unified-256ms-v6.2.1.mlmodelc/analytics/coremldata.bin",
+          "size": 243
+        },
+        {
+          "path": "silero-vad-unified-256ms-v6.2.1.mlmodelc/coremldata.bin",
+          "size": 625
+        },
+        {
+          "path": "silero-vad-unified-256ms-v6.2.1.mlmodelc/metadata.json",
+          "size": 3335
+        },
+        {
+          "path": "silero-vad-unified-256ms-v6.2.1.mlmodelc/model.mil",
+          "size": 176918
+        },
+        {
+          "path": "silero-vad-unified-256ms-v6.2.1.mlmodelc/weights/weight.bin",
+          "size": 882304
+        }
+      ]
+    }
+  ]
+}

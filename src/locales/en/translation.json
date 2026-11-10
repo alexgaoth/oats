@@ -1531,6 +1531,7 @@
     "noneAvailable": "No models available",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "Best in a room on Apple Silicon. Runs on the Neural Engine (25 languages)",
         "parakeet_tdt_0_6b_v3": "Fast multilingual ASR with auto language detection (25 languages)",
         "parakeet_unified_en_0_6b": "English-only ASR with state-of-the-art accuracy (5.91% avg WER)",
         "nemotron_speech_streaming_en_0_6b": "English streaming ASR from NVIDIA Nemotron",
@@ -2110,6 +2111,8 @@
       "summaryAfterRecording": "The summary is written when this conversation is finished.",
       "summaryWhenRecordingEnds": "The summary is written when the recording ends.",
       "summaryTooLong": "This conversation is too long for the writing model on this Mac. With an API key (Settings › AI models) it can be summarized.",
+      "summaryOutputLimit": "The writing model on this Mac stopped at the most it can write in one answer, so the summary was not finished. Asked again, it would most likely stop the same way. With an API key (Settings › AI models) it can be summarized.",
+      "summaryEarlier": "Written before the conversation went on. It does not cover the later part.",
       "summarizeAgain": "Summarize again",
       "summaryFailed": "The summary could not be written: {{reason}}",
       "setUpModel": "Set up a model"

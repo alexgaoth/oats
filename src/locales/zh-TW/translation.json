@@ -1523,6 +1523,7 @@
     "noneAvailable": "沒有可用的模型",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "在 Apple 晶片上最適合面對面對話。於神經網路引擎執行（25 種語言）",
         "parakeet_tdt_0_6b_v3": "快速多語言 ASR，自動語言偵測（25 種語言）",
         "parakeet_unified_en_0_6b": "僅英語 ASR，最先進的準確度（平均 WER 5.91%）",
         "nemotron_speech_streaming_en_0_6b": "NVIDIA Nemotron 英語串流語音辨識",
@@ -2105,6 +2106,8 @@
       "summaryAfterRecording": "這段對話結束後將產生摘要。",
       "summaryWhenRecordingEnds": "錄音結束後將產生摘要。",
       "summaryTooLong": "這段對話對這台 Mac 上的寫作模型來說太長了。使用 API 金鑰（設定 › AI 模型）即可產生摘要。",
+      "summaryOutputLimit": "這台 Mac 上的寫作模型達到了單次回答可寫的上限，摘要沒有寫完。再次要求很可能會以同樣方式停止。使用 API 金鑰（設定 › AI 模型）即可產生摘要。",
+      "summaryEarlier": "此摘要寫於對話繼續之前，不包含後面的部分。",
       "summarizeAgain": "重新產生摘要",
       "summaryFailed": "無法產生摘要：{{reason}}",
       "setUpModel": "設定模型"

@@ -112,6 +112,8 @@
         "macos-mic-listener",
         "macos-text-monitor",
         "macos-media-remote",
+        "macos-parakeet-ane",
+        "macos-parakeet-ane-NOTICES.txt",
         "MediaRemoteAdapter.framework/**",
         "linux-fast-paste",
         "linux-system-audio-helper",

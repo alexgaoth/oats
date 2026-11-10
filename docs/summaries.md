@@ -41,6 +41,380 @@ of a person was sent anywhere.
   model what it gets: the models invent fewer facts (gpt-5.6-terra: 3.0 → 0.8)
   and write no "You"/"Them" guess, for a few points of coverage.
 
+## Round 2: a good summary with no key, at any length
+
+Question (Alex, 2026-11-05): can a person with no cloud key get a good summary
+on a normal Mac, at any length? Can the cloud do better than round 1?
+
+### The bar, written before the runs (2026-11-05)
+
+This section was committed before any round 2 model ran.
+
+**Quality.** Round 1's bar stays: at most 1.2 invented facts in a summary, at
+least 65% of the annotators' decisions, actions and problems covered, and every
+summary complete. Claude Fable 5.1 decides; gpt-6.1-sol is the second judge.
+
+**It must hold on all four.** Manual text and real recognition (`small.en`,
+quiet room), for conversations under 1 hour and over 1 hour.
+
+**Mac classes.** 16 GB and 32 GB or more. The memory rule stays: the peak is at
+most half of the Mac's memory (8 GB and 16 GB). A Foundation Models route uses
+the system's model and is judged on quality and time only.
+
+**Time.** A 30-minute conversation in under 3 minutes on a base Mac. The base
+Mac is an M4 with a 10-core GPU and 16 GB. No such Mac is here, so the time is
+an estimate from this Mac's own run, split into reading and writing, with the
+ratios of llama.cpp's Apple Silicon table (discussion #4167, Q4_0, 7B):
+
+| Mac | reads, tokens/s | writes, tokens/s | reading time | writing time |
+| --- | --- | --- | --- | --- |
+| M5 Pro, 16-core GPU (this Mac) | 1,340 | 67.6 | × 1 | × 1 |
+| M4, 10-core GPU (the bar) | 221 | 24.1 | × 6.1 | × 2.8 |
+| M1, 8-core GPU (the slowest, shown beside it) | 118 | 14.2 | × 11.4 | × 4.8 |
+
+**The split.** Nothing is tuned on the test meetings.
+
+- **Test: round 1's sets.** eval24 (manual text), far8 (real recognition), and
+  8 long conversations from the same series, each scored against all the
+  annotators' items of its parts: ES2004a+b+c+d (132 min), IS1009a+b+c+d (109),
+  TS3003a+b (61), TS3003a+b+c (99), TS3003a+b+c+d (142), TS3005a+b+c+d (144),
+  IS1004a+b+c+d (119), ES2007a+b+c+d (109).
+- **Dev: series that eval24 does not touch.** 16 meetings: ES2002b, ES2005c,
+  ES2008c, ES2010c, ES2013a, ES2016d, IB4005, IB4011, IS1000d, IS1003b, IS1006a,
+  IS1008c, TS3004c, TS3006a, TS3009d, TS3012b. 4 long conversations:
+  ES2008a+b+c+d (133), IS1000a+b+c+d (141), TS3009a+b (66), TS3012a+b+c (95).
+  Prompts, windows and settings are chosen here, with gpt-6.1-sol as the only
+  judge, so the test meetings stay unseen and Claude Fable 5.1 is spent once.
+- **Each frozen configuration runs once on the test sets**, beside the shipped
+  path and two anchors (Claude Opus 5.5, gpt-6.1-sol), graded by both judges in
+  one batch per judge.
+
+### The answer (round 2)
+
+Every number below is from the test sets, written once with frozen settings,
+unless it says dev. "Covered / invented" means the share of the annotators'
+decisions, actions and problems a summary states, and the invented facts in a
+summary. The first pair is Claude Fable 5.1, the second gpt-6.1-sol.
+
+- **No local route clears the bar.** The best is the request as shipped on Gemma 4
+  E4B, on 16 GB: 53 / 1.0, 58 / 1.0 on manual text (12 points short of coverage, inside
+  the limit on invented facts) and 45 / 1.8, 47 / 1.9 on `small.en` in a quiet room (20
+  points short and 0.6 facts over). Qwen3.5 4B: 55 / 5.2 and 48 / 5.1. For 32 GB Macs the
+  best seen is Gemma 4 12B, 72 / 2.3 on 8 dev meetings, not run on the test set. Time
+  is not the problem: about 60 s for 30 minutes on the M4 estimate. Over an hour every
+  local route still fails or misses by more.
+- **Extract with quotes, then write: refuted.** The idea was that a quote check
+  would remove invented facts mechanically. It does not. Models quote real words
+  and then over-read them: "The team agreed..." on a suggestion. The check drops
+  1 to 6% of items, and 78 of the 78 flagged claims in Claude Haiku's rendered
+  items had a real quote. On Gemma 4 E4B (dev16, gpt-6.1-sol as judge) it lowers
+  coverage from 61% to 42% and invented facts stay near 2, for 3 times the time.
+- **A summary in parts solves length, not quality, on a local model.** Gemma 4
+  E4B gets 54 / 3.4 in parts against 61 / 1.5 in one request on short meetings,
+  and 42 / 6.8 on conversations over an hour. A cloud model gains a lot from
+  parts on long text (gpt-6-luna 47 → 75), so the method works; the small model
+  is the limit.
+- **Apple Foundation Models work, and they are not good enough.** No refusal in
+  about 90 requests, 8,192 tokens of context on macOS 27, and it runs here. In one
+  request it fits only 6 of the 16 dev meetings (55 / 6.0). In parts it gets 22 / 3.8.
+- **A verify pass does not lift the line between coverage and invented facts.** It
+  removes about half of the invented facts and 17 to 28 points of coverage. Asking
+  the model to revise its own draft changes nothing measurable.
+- **Recognition is still the largest lever.** On steady sound, the same route gains
+  8 to 21 points from turbo over `small.en`, and a further 13 to 20 from reading
+  the whole recording with Parakeet (provisional, probably overstated) or 3 to 11
+  with Apple. Most of the old "+28 to 35" was the model, not the re-read.
+- **The prompt line "keep every decision, action and open problem"**, in place of
+  "Bias toward brevity": no real change on short manual text, +6 to +10 points on
+  conversations over an hour for both cloud models with no more invented facts, and
+  0.6 to 1.4 more invented facts on real recognition. It does not help local models: Gemma 4 E4B stays at 53 and invents 0.2 to 0.4 more, Qwen3.5 4B gains 4 to 6 points and invents 1.1 more. Not adopted.
+- **A real memory bug in the local path, new in this round:** see "The shipped
+  path". Fixed in #175.
+
+### Decisions for Alex (round 2)
+
+1. **Keep the local defaults.** Gemma 4 E4B on 16 GB or more, Qwen3.5 4B under
+   that. Nothing tested beats them on the bar. Gemma 4 12B covers more and invents
+   more, at half the speed; it is the choice to measure next for 32 GB Macs.
+2. **Say plainly what a local summary is.** Today's best on real recognition is 45% covered with 1.8 invented facts in a quiet room. Recommended: keep the
+   record's wording honest for "On this Mac", and point long conversations at a key.
+3. **Conversations over an hour on this Mac: your call.** They still fail. Dev
+   results for Gemma 4 E4B, 4 conversations of 66 to 141 minutes: one request with a
+   49,152-token context 37 / 1.5 at 6.6 GB; the app's request on parts of 35,000
+   characters plus a merge 40 / 2.5. Both beat an error message and neither clears
+   the bar. Not confirmed on the test set. Recommended: raise the context, because it
+   is one constant and it invents the least, once a test run confirms it.
+4. **A second pass after the conversation.** The in-room path keeps the WAV until the
+   speaker pass ends, so a re-read needs no change to what the app keeps. Against
+   turbo live on steady sound, Parakeet whole gains +13 to +20 points (provisional,
+   probably overstated) and Apple whole +3 to +11 (interval across 0).
+5. **The "Bias toward brevity" line: leave it for now.** See "Cloud". The gain is on
+   manual text and long conversations; on real recognition it adds invented facts.
+6. **gpt-6.1-sol stays OpenAI's default, Claude Opus 5.5 Anthropic's.** gpt-6.1-terra
+   is cheaper and covers 3 to 5 points less. Claude Sonnet 5.5 with thinking on does
+   not beat Opus 5.5: 86 / 1.0 against 87 / 0.5 with the same prompt.
+
+### The shipped path, checked
+
+No packaged app was launched. `scripts/local-summary-check.cjs` drives the app's own
+main-process code (`LocalReasoningService`, `modelManagerBridge`, `llamaServer`) with
+the app's llama-server (b9763), the registry's files, the prompt from the source, and
+a stand-in for Electron. Both download URLs answer, at the size on disk.
+
+| conversation | Gemma 4 E4B | Qwen3.5 4B |
+| --- | --- | --- |
+| IS1009c, 30 min | ok, 33.1 s with load, title 0.7 s, 5.9 GB | ok, 56.4 s with load, title 1.3 s, 4.4 GB |
+| IB4010, 49 min | ok, 26.2 s, 6.4 GB | ok, 45.3 s, 5.5 GB |
+| TS3003a+b, 61 min | ok, 25.4 s, 6.7 GB | ok, 46.1 s, 5.6 GB |
+| TS3003a+b+c, 99 min | fails: "stopped at its output limit" | fails the same way |
+| ES2004a+b+c+d, 132 min | refused: 30,076 tokens against 16,384 | refused: 29,259 tokens |
+
+Timing is a loaded Mac (load above 60; Qwen3.5 4B ran outside the GPU lock, once, with
+main's leave), so it is not valid for the bar. The results match round 1, with two
+additions:
+
+- **The memory bug.** llama-server keeps past prompts in memory, up to 8 GiB above
+  the model (`--cache-ram`). Resident memory on Gemma 4 E4B rose about 130 MB a
+  request, from 5.7 GB to 9.7 GB over 16 meetings and to 11.2 GB on long ones, and
+  15.2 GB on Gemma 4 12B. With `LLAMA_ARG_CACHE_RAM=0` it stayed at 5.96 GB and read
+  at the same speed. Fixed in #175. The peaks in the round 1 tables came from a few
+  requests, so they are the right numbers once #175 is in.
+- **At 99 minutes the failure is the wrong kind.** The prompt fits and the answer is
+  cut, so the record says the generic failure and offers a retry that cannot work;
+  only a refused request is "too long". Small, and not fixed.
+
+### Models on this Mac
+
+Test sets, the request as shipped. Covered / invented, first judge then second.
+
+| route | manual, 24 meetings | `small.en` quiet, 8 | `small.en` steady, 8 | M4 estimate, 30 min |
+| --- | --- | --- | --- | --- |
+| Gemma 4 E4B, 16 GB or more | 53 [43, 62] / 1.0 [0.6, 1.5], 58 / 1.0 | 45 [35, 53] / 1.8 [0.9, 2.6], 47 / 1.9 | 24 / 4.3, 32 / 4.1 | 57 s |
+| Gemma 4 E4B, the prompt line | 53 / 1.2, 53 / 1.4 | 45 / 2.1, 43 / 2.3 | not run | 60 s |
+| Qwen3.5 4B, under 16 GB | 55 [43, 66] / 5.2 [4.2, 6.3], 57 / 6.7 | 48 [29, 68] / 5.1 [3.6, 6.3], 56 / 6.3 | not run | 82 s |
+| Qwen3.5 4B, the prompt line | 61 / 6.3, 61 / 7.8 | not run | not run | 84 s |
+
+The bar, per Mac class:
+
+| | 16 GB: Gemma 4 E4B | 32 GB or more |
+| --- | --- | --- |
+| Manual, under 1 hour | 53 / 1.0: 12 points short | Gemma 4 12B 72 / 2.3 on dev8: 1.1 facts over, not on the test set |
+| `small.en` quiet, under 1 hour | 45 / 1.8: 20 points short, 0.6 facts over | not run |
+| Manual, over 1 hour | no summary today; dev: 37 / 1.5 with a larger context | not run |
+| `small.en` quiet, over 1 hour | no summary today; not run with any fix | not run |
+| 30 minutes on a base Mac, under 3 minutes | about 60 s, M1 about 105 s (loaded Mac) | Gemma 4 12B about 190 s on the M4 estimate |
+
+Memory with #175: Gemma 4 E4B about 6.0 GB, Qwen3.5 4B 5.6 GB at most, Gemma 4 12B
+not measured without the prompt cache (a 7.0 GB file, so it likely passes the 8 GB limit
+of a 16 GB Mac). Nothing leaves the Mac on any local route. Licenses: Apache-2.0.
+
+Dev screen on 8 meetings, the shipped request, gpt-6.1-sol as the only judge, covered
+/ invented, loaded Mac.
+
+| model | file | license | shipped request | with the prompt line | result |
+| --- | --- | --- | --- | --- | --- |
+| Gemma 4 E4B | 5.4 GB | Apache-2.0 | 63 / 1.5 | 56 / 2.6 | stays the default |
+| Gemma 4 12B, Google's QAT Q4_0 | 7.0 GB | Apache-2.0 | 72 / 2.3 | 66 / 3.4 | more coverage, more invented, half the speed (418 and 21 tokens/s). Not run on the test set |
+| Nemotron 3.5 Bolt E4B | 6.2 GB | OpenMDW-1.1 | 59 / 1.9 | 63 / 1.6 | same as Gemma 4 E4B, its base |
+| Granite 4.2 8B | 5.3 GB | Apache-2.0 | 45 / 16.0 (7 of 8) | not run | ruled out |
+
+Not measured: Gemma 4 E2B and Qwen3.8 9B Distill (fetched, then withdrawn from a full
+GPU queue). LFM3 1.7B: the app's b9763 refuses its architecture; Homebrew's build 11960
+loads it. Clef-Flash: its card says no free-form text. "Qwen3.5 14B" does not exist
+from Qwen. Mistral Small 4 is 119B. The disk stopped larger models for 32 GB Macs
+(Qwen3.8 27B, 19 GB; Mistral Small 3.2, 14.3 GB).
+
+#### Foundation Models
+
+`~/oats-asr-cache/fidelity-2/fm-bridge` (Swift CLI, README beside it). Available here;
+context 8,192 tokens on macOS 27.0.1, 4,096 back-deployed on 26.0 to 26.3. No refusal in
+about 90 requests of meeting text. One request fails above about 36 minutes
+("Content contains 9611 tokens, which exceeds the maximum allowed context size of
+8192"): 10 of 16 dev meetings. Quality, gpt-6.1-sol as judge: 55 / 6.0 on the 6
+meetings that fit, 22 / 3.8 in parts on 13. It took 18 s a step at the median and up to
+7 minutes for a meeting on the loaded Mac. Closed: it is far under the bar.
+
+### Extract with quotes, parts, verify (dev16, gpt-6.1-sol as judge)
+
+Covered / invented. gpt-6-luna and Claude Haiku 5.5 stood in while the GPU queue was
+full, as a careful and an inventive model.
+
+| variant | Gemma 4 E4B | gpt-6-luna | Claude Haiku 5.5 |
+| --- | --- | --- | --- |
+| The shipped request | 61 / 1.5 | 62 / 0.5 | 75 / 5.0 |
+| With the prompt line | 55 / 2.1 | 72 / 0.8 | 81 / 6.1 |
+| The prompt line, then revise your own draft | 57 / 1.9 | 71 / 0.6 | 81 / 5.8 |
+| Items with quotes, then written | 42 / 1.9 | 76 / 1.3 | 78 / 4.9 |
+| Items with quotes, rendered by code | 49 / 2.4 | 77 / 0.9 | 86 / 4.5 |
+| Items with no quotes, rendered by code | | 83 / 2.0 | 86 / 4.4 |
+| Prose notes per part, then a merge | 54 / 3.4 | 82 / 1.7 | 85 / 7.0 |
+| The merge, then each bullet checked | | 54 to 72 / 0.5 to 0.9 | 66 / 3.9 |
+
+- The quote check drops 1 to 6% of items. On gpt-6-luna quotes halve invented facts
+  against items with none, for 6 points of coverage. On Claude Haiku they do nothing.
+- A check of each bullet removes about half of the invented facts and 17 to 28 points
+  of coverage, so it moves along the same line and does not lift it. Checking only decisions and
+  actions, or moving unagreed decisions to the points, gives less of both.
+- Writing "suggested" in place of "agreed" in items takes 0.3 invented facts off
+  gpt-6-luna. Evidence first (quote before text) lowers coverage. Neither helps Gemma.
+- Time, Gemma 4 E4B on the M4 estimate, per 30 minutes, loaded Mac: one request 82 s,
+  notes in parts 153 s, items with quotes 227 s.
+
+Settings on Gemma 4 E4B (dev8, shipped 63 / 1.5): temperature 0 58 / 1.3, 0.7 61 / 1.9,
+repeat penalty 1.1 55 / 1.9, top-p 0.8 59 / 2.5, thinking on 60 / 1.0. All intervals
+overlap. Nothing beats the app's request. Thinking is the one to look at again.
+
+Long conversations, Gemma 4 E4B (dev, 4 conversations): notes in parts 42 / 7.0, the
+app's request on parts with a model merge 40 / 2.5, with a code merge 53 / 4.8, one
+request in a 49,152-token context 37 / 1.5 (resident 6.6 GB). gpt-6-luna in one request
+47 / 1.4, in parts 75 / 2.5. These are dev numbers; the test run was withdrawn.
+
+### Recognition: what each step buys
+
+The 8 far-field meetings, `gpt-6.1-sol` and Claude Opus 5.5, with the prompt line
+above. Covered / invented, first judge then second. Parakeet rows are provisional:
+its card lists AMI in the training data, and on DiPCo, a room outside AMI, Parakeet
+Ultra leads Apple by only +3.2 points [1.9, 4.4] and a turbo stand-in by +2.3
+[1.3, 3.4] (track S). So these rows probably overstate its lead.
+
+| what the summary read | content recall / WER | gpt-6.1-sol | Claude Opus 5.5 |
+| --- | --- | --- | --- |
+| Quiet room | | | |
+| `small.en` live | 74.7 / 30.4 | 72 / 1.1, 72 / 1.4 | 84 / 1.8, 84 / 3.8 |
+| turbo q5_0 live | | 72 / 0.6, 78 / 1.5 | 84 / 1.5, 83 / 3.0 |
+| Apple speech live | | 69 / 0.5, 75 / 0.8 | 86 / 2.0, 85 / 3.5 |
+| gpt-transcribe live | 81.3 / 23.4 | 77 / 0.1, 76 / 0.5 | 91 / 1.1, 89 / 2.8 |
+| Parakeet Ultra live (provisional) | 83.0 / 20.4 | 69 / 0.5, 81 / 1.4 | 94 / 1.3, 87 / 1.8 |
+| Apple, whole stream | 78.0 / 23.9 | 76 / 0.5, 80 / 0.9 | 93 / 1.1, 92 / 2.6 |
+| Parakeet, second pass (provisional) | 84.8 / 19.0 | 79 / 0.1, 84 / 0.4 | 88 / 1.1, 88 / 2.3 |
+| Parakeet, whole recording (provisional) | 85.7 / 17.9 | 72 / 0.4, 83 / 0.5 | 88 / 0.8, 84 / 2.0 |
+| Steady sound | | | |
+| `small.en` live | 40.1 / 58.5 | 33 / 2.4, 45 / 3.0 | 43 / 3.9, 47 / 4.1 |
+| turbo q5_0 live | 47.2 / 52.9 | 48 / 2.4, 53 / 3.0 | 64 / 4.8, 68 / 5.8 |
+| Apple speech live | | 57 / 1.3, 67 / 1.8 | 62 / 4.4, 66 / 5.3 |
+| gpt-transcribe live | 49.8 / 50.9 | 46 / 1.4, 59 / 1.9 | 56 / 3.3, 64 / 3.5 |
+| Parakeet Ultra live (provisional) | 55.1 / 44.3 | 50 / 0.9, 56 / 1.8 | 59 / 3.1, 68 / 3.8 |
+| Apple, whole stream | 48.6 / 48.1 | 58 / 1.0, 64 / 1.4 | 67 / 3.1, 71 / 4.3 |
+| Parakeet, second pass (provisional) | 64.5 / 37.1 | 66 / 0.5, 67 / 1.1 | 82 / 2.1, 78 / 4.0 |
+| Parakeet, whole recording (provisional) | 66.2 / 34.6 | 68 / 1.0, 73 / 1.6 | 84 / 2.9, 82 / 4.4 |
+
+Paired deltas on steady sound, points of coverage, 8 meetings, 95% bootstrap
+interval over meetings, first judge, then the second judge's mean:
+
+| delta | gpt-6.1-sol | Claude Opus 5.5 | invented facts |
+| --- | --- | --- | --- |
+| turbo live − `small.en` live | +15 [2, 29], +8 | +20 [5, 37], +21 | 0 to +1.6 |
+| Apple whole − Apple live | +1 [−11, 13], −3 | +5 [−3, 12], +5 | −0.3 to −1.3 |
+| Parakeet whole − Parakeet live (provisional) | +18 [7, 33], +16 | +25 [9, 41], +14 | −0.3 to +0.6 |
+| Apple whole − turbo live | +9 [−7, 28], +11 | +3 [−14, 22], +3 | −1.4 to −1.6 |
+| Parakeet whole − turbo live (provisional) | +19 [5, 35], +20 | +20 [7, 33], +13 | −1.4 to −1.9 |
+| Apple whole − gpt-transcribe live | +12 [−3, 26], +4 | +11 [2, 20], +8 | −0.5 to +0.8 |
+| Parakeet whole − gpt-transcribe live (provisional) | +22 [8, 35], +14 | +28 [12, 45], +18 | −0.4 to +0.9 |
+
+- Most of the gain over `small.en` live is the model, not the re-read: turbo or
+  Apple live already gains 15 to 24 points on steady sound.
+- The re-read pays for Parakeet on steady sound (provisional) and little for Apple.
+- In the quiet room every second pass is within noise of its live model and of
+  turbo live. It lowers invented facts a little on some routes.
+The same on Gemma 4 E4B, the request as shipped, covered / invented, first judge then
+second. Better words help this model much less, because it states so little to begin
+with:
+
+| what it read | quiet room | steady sound |
+| --- | --- | --- |
+| `small.en` live | 45 / 1.8, 47 / 1.9 | 24 / 4.3, 32 / 4.1 |
+| gpt-transcribe live | 48 / 1.3, 49 / 1.9 | 23 / 3.9, 34 / 4.4 |
+| Apple, whole stream | 47 / 1.5, 43 / 1.4 | 29 / 3.4, 33 / 4.0 |
+| Parakeet, whole recording (provisional) | 47 / 0.6, 46 / 1.0 | 36 / 2.9, 35 / 2.6 |
+
+Track S's newest live text, `parakeet-ultra-context`, hears 8 s before each segment
+(content 85.1 and 62.9). A second pass over it adds only 0.6 and 3.3 points of content, so
+"Parakeet whole − Parakeet live" above overstates the re-read. It arrived after testing
+stopped and is not measured here, nor is `turbo-whole`.
+
+- One frozen prompt for garbled lines was tried. On `small.en` it moves coverage by
+  −4 to +9 points and adds 0.1 to 1.0 invented facts in the quiet room, and nothing
+  measurable on steady sound. A prompt does not recover words that recognition lost.
+
+### Cloud
+
+`/v1/models` on 2026-11-05 has no new writing model since 2026-10-28, only image
+models. gpt-6.1-terra (2026-10-13) had not been measured. All of this is the test set,
+with Claude at the app's 16,000 output tokens.
+
+| route | manual, 24 meetings | manual, 8 over an hour | `small.en` quiet, 8 | `small.en` steady, 8 |
+| --- | --- | --- | --- | --- |
+| Claude Opus 5.5, shipped prompt | 83 / 0.4, 86 / 1.1 | 73 / 1.0, 73 / 2.4 | 83 / 1.1, 90 / 2.4 | 45 / 3.1, 54 / 3.8 |
+| Claude Opus 5.5, the prompt line | 87 / 0.5, 85 / 1.4 | 82 / 1.0, 82 / 2.4 | 84 / 1.8, 84 / 3.8 | 43 / 3.9, 47 / 4.1 |
+| Claude Opus 5.5, the line and a rule for garbled lines | | | 89 / 1.3, 86 / 2.0 | 45 / 4.4, 56 / 5.0 |
+| gpt-6.1-sol, shipped prompt | 73 / 0.2, 77 / 0.3 | 59 / 0.9, 63 / 0.6 | 67 / 0.3, 73 / 0.3 | 38 / 1.4, 41 / 1.4 |
+| gpt-6.1-sol, the prompt line | 77 / 0.0, 77 / 0.5 | 67 / 0.9, 69 / 0.9 | 72 / 1.1, 72 / 1.4 | 33 / 2.4, 45 / 3.0 |
+| gpt-6.1-sol, the line and a rule for garbled lines | | | 76 / 0.6, 78 / 1.3 | 39 / 1.5, 42 / 2.1 |
+| gpt-6.1-terra, the prompt line | 70 / 0.0, 72 / 0.5 | | | |
+| Claude Sonnet 5.5, thinking on, the prompt line | 86 / 1.0, 83 / 2.6 | | | |
+
+The prompt line against the shipped prompt, paired, first judge then second:
+
+- Manual, short: Opus +4.1 [1.1, 7.9], −1.0 [−2.9, 0.7]; sol +4.6 [0.4, 9.9], −0.3
+  [−3.2, 2.4]. Invented facts do not change. The judges disagree, so call it no change.
+- Manual, over an hour: Opus +10.0 [4.4, 16.7], +9.1 [4.5, 14.0]; sol +7.8 [3.2, 13.2],
+  +5.8 [1.8, 10.1]. Invented facts do not change. This one is real.
+- `small.en`, quiet: coverage inside the noise, invented +0.6 [0.0, 1.3] and +1.4 [0.6,
+  2.1] for Opus, +0.9 [0.3, 1.5] and +1.1 [0.1, 2.1] for sol. This is the cost, and the
+  app reads recognition, not manual text.
+- Local: Gemma 4 E4B manual 0.0 [−5.4, 5.1] points and +0.17 [−0.33, 0.63] facts, quiet +0.7
+  [−8.4, 10.9] and +0.38 [−0.25, 1.13]. Qwen3.5 4B manual +6.2 [−2.1, 14.5] and +1.13
+  [−0.04, 2.33]. First judge, intervals across 0: no gain on the default, and more
+  invented facts on the small model, as feared. Steady sound was not run on local models.
+
+Round 1's cloud numbers repeat: Opus 5.5 83 / 0.4 here against 85 / 0.75, gpt-6.1-sol 73
+/ 0.2 against 73 / 0.67. So no prompt beat round 1 on real input.
+
+### What round 2 did not do
+
+- **No timing is valid for the bar.** The Mac stayed loaded (load 8 to 180), and the
+  quiet run was withdrawn when testing stopped. Every time here is "loaded Mac", and the
+  M4 and M1 estimates come from those runs. A quiet run can only lower them.
+- Not run on the test set: Gemma 4 12B, anything over an hour on a local model, Foundation
+  Models. Local long numbers are dev only.
+- Only 2 long conversations have far-field audio, so "real recognition over an hour"
+  rests on those 2, and on cloud routes only.
+- 32 GB Macs: no model larger than Gemma 4 12B was fetched, because of the disk.
+- The second-pass rows are 8 AMI meetings. Turbo whole read was not published.
+
+### Spend and downloads (round 2)
+
+$78.75 in API calls (`FM_LEDGER`, `ledger-round2.jsonl`). Downloads, all checked against
+Hugging Face's sha256: Gemma 4 12B QAT Q4_0 (google, 6.98 GB), Nemotron 3.5 Bolt E4B
+Q4_K_M (nvidia, 6.18 GB), Granite 4.2 8B Q4_K_M (ibm-granite, 5.35 GB), LFM3 1.7B Q4_K_M
+(bartowski, 1.12 GB), Gemma 4 E2B Q4_K_M (bartowski, 3.46 GB), Qwen3.8 9B Distill Q4_K_M
+(empero-ai, 5.78 GB). Six AMI Array1-01 meetings (about 450 MB) were fetched for dev
+replays and not used: the replays were withdrawn.
+
+### Reproduce (round 2)
+
+```sh
+export FM_LEDGER=~/.cache/oats/summaries/ledger-round2.jsonl FM_BUDGET_USD=80
+A=(--ami ~/oats-asr-cache/AMI --out eval)
+# the replays: a folder of one file a meeting is enough
+R=~/oats-asr-cache/replays
+ASR=(--asr quiet=$R/small.en__quiet-room --asr pws=$R/parakeet-ultra-whole__steady-sound)
+# a prompt change, on named sets (eval24, dev16, dev8, devlong, testlong, far8, farlong)
+node scripts/summary-eval.mjs generate --model openai:gpt-6.1-sol --sets ref --meetings eval24,testlong \
+  --tag complete --prompt-edit prompt-edit.json "${A[@]}"
+# a variant in parts (scripts/lib/summary-parts.mjs): JSON or @file
+lockf -k ~/oats-asr-cache/gpu.lock node scripts/summary-eval.mjs generate --model local:gemma-4-e4b-it-q4_k_m \
+  --gguf <file> --llama-server <app's binary> --sets ref --meetings dev16 --tag notes \
+  --pipeline '{"mode":"notes"}' --step-cache eval/steps "${A[@]}"
+# Foundation Models, through fm-bridge
+lockf -k ~/oats-asr-cache/gpu.lock node scripts/summary-eval.mjs generate --model fm:system --sets ref --meetings dev16 "${A[@]}"
+# settings: @t0.1 @tp0.9 @mp0.1 @tk20 @rp1.1 @ctx32768 @think @out4096
+node scripts/summary-eval.mjs compare --judge anthropic:claude-fable-5-1 --keys a,b --baseline a --meetings eval24 "${A[@]}"
+# the shipped path through the app's own main-process code
+lockf -k ~/oats-asr-cache/gpu.lock node scripts/local-summary-check.cjs --ami ~/oats-asr-cache/AMI --models <dir> \
+  --resources <dir with bin/> --model gemma-4-e4b-it-q4_k_m --meetings IS1009c,TS3003a+TS3003b
+```
+
 ## Decisions for Alex
 
 1. **OpenAI's default writing model: gpt-6.1-sol**, in place of gpt-5.6-terra

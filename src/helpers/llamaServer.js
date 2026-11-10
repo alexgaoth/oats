@@ -8,6 +8,7 @@ const { isPortAvailable } = require("../utils/serverUtils");
 const { getSafeTempDir } = require("./safeTempDir");
 const { app } = require("electron");
 const sidecarPidFile = require("./sidecarPidFile");
+const { CONTEXT_FULL, limitDetails, truncationReason } = require("./localAnswerLimit");
 
 // Range starts at 8221, clear of the 8200-8219 band, to avoid port-bind collisions.
 const PORT_RANGE_START = 8221;
@@ -23,12 +24,25 @@ const HEALTH_CHECK_FAILURE_THRESHOLD = 3;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_CONTEXT_SIZE = 4096;
 
+// llama-server's refusal of a request over its context:
+// {"error":{"type":"exceed_context_size_error","n_prompt_tokens":30076,"n_ctx":16384}}.
+function contextRefusal(body) {
+  try {
+    const error = JSON.parse(body)?.error;
+    if (error?.type !== "exceed_context_size_error") return null;
+    return { promptTokens: error.n_prompt_tokens, contextTokens: error.n_ctx };
+  } catch {
+    return null;
+  }
+}
+
 class LlamaServerManager {
   constructor() {
     this.process = null;
     this.port = null;
     this.ready = false;
     this.modelPath = null;
+    this.contextSize = null;
     this.startupPromise = null;
     this.healthCheckInterval = null;
     this.healthCheckFailures = 0;
@@ -130,6 +144,7 @@ class LlamaServerManager {
 
     this.port = await this.findAvailablePort();
     this.modelPath = modelPath;
+    this.contextSize = options.contextSize || DEFAULT_CONTEXT_SIZE;
 
     const baseArgs = [
       "--model",
@@ -143,7 +158,7 @@ class LlamaServerManager {
       // Unset, this defaults to the model's full trained context (128K+),
       // whose KV cache can exceed total RAM with --fit disabled. See #1203.
       "--ctx-size",
-      String(options.contextSize || DEFAULT_CONTEXT_SIZE),
+      String(this.contextSize),
       "--jinja",
     ];
 
@@ -231,6 +246,14 @@ class LlamaServerManager {
     // count stays complete (docs/network-allowlist.md). Builds that predate the
     // option ignore the variable.
     env.LLAMA_ARG_OFFLINE = "1";
+
+    // By default llama-server keeps the state of past prompts in memory, up to
+    // 8 GiB on top of the model (--cache-ram). Measured on Gemma 4 E4B: 5.7 GB
+    // grew by about 130 MB a request, to 11.2 GB, and stayed at 6.0 GB with this
+    // at 0, reading at the same speed (docs/summaries.md). On a 16 GB Mac beside
+    // the speech model that is memory it does not have. Builds that predate the
+    // option ignore the variable.
+    env.LLAMA_ARG_CACHE_RAM = process.env.LLAMA_ARG_CACHE_RAM || "0";
 
     return env;
   }
@@ -494,7 +517,13 @@ class LlamaServerManager {
             });
 
             if (res.statusCode !== 200) {
-              reject(new Error(`llama-server returned status ${res.statusCode}: ${data}`));
+              const error = new Error(`llama-server returned status ${res.statusCode}: ${data}`);
+              const refusal = contextRefusal(data);
+              if (refusal) {
+                error.code = CONTEXT_FULL;
+                error.details = limitDetails({ ...refusal, maxTokens: requestBody.max_tokens });
+              }
+              reject(error);
               return;
             }
 
@@ -508,7 +537,21 @@ class LlamaServerManager {
             // Stopped by max_tokens or a full context: for a caller that needs the
             // whole answer (the summary at Finish), a cut answer is a failure.
             if (options.requireComplete && response.choices?.[0]?.finish_reason === "length") {
-              reject(new Error("The local model stopped at its output limit before it finished"));
+              const error = new Error(
+                "The local model stopped at its output limit before it finished"
+              );
+              const counts = {
+                promptTokens: response.usage?.prompt_tokens,
+                completionTokens: response.usage?.completion_tokens,
+                contextTokens: this.contextSize,
+                maxTokens: requestBody.max_tokens,
+              };
+              const reason = truncationReason(counts);
+              if (reason) {
+                error.code = reason;
+                error.details = limitDetails(counts);
+              }
+              reject(error);
               return;
             }
             const message = response.choices?.[0]?.message;
@@ -571,6 +614,7 @@ class LlamaServerManager {
     this.ready = false;
     this.port = null;
     this.modelPath = null;
+    this.contextSize = null;
     this.activeBackend = null;
   }
 

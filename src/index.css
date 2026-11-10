@@ -380,6 +380,22 @@
     0 1px 1px rgb(154 91 0 / 0.3);
 }
 
+/* The depth above is a box-shadow and unlayered, so it beats the button's own
+   `focus-visible:ring-[3px]` (also a box-shadow): the ring has to be part of it. */
+.oats-cta:focus-visible {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--color-ring) 50%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 1px 2px rgb(154 91 0 / 0.35);
+}
+
+.oats-cta:active:focus-visible {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--color-ring) 50%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 1px 1px rgb(154 91 0 / 0.3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .oats-cta,
   .oats-cta:active {

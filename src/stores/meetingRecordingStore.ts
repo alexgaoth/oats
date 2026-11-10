@@ -45,6 +45,7 @@ import { buildSuggestions } from "../helpers/conversationSuggestions";
 import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
 import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
 import { TranscriptLag } from "../helpers/transcriptLag.mjs";
+import { SegmentActivityState } from "../helpers/segmentActivity.mjs";
 import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
   ContextCheck,
@@ -133,6 +134,14 @@ interface MeetingRecordingState {
   lastSoundAt: number | null;
   /** When a turn was last finalized — not the same as when sound arrived. */
   lastSegmentAt: number | null;
+  /**
+   * In a room recorded locally: a segment is open, so somebody is saying
+   * something not yet read (`helpers/segmentActivity.mjs`). From the
+   * segmenter, for every engine; never from a partial's words.
+   */
+  segmentOpen: boolean;
+  /** Segments closed whose finals have not landed yet. */
+  segmentsPending: number;
   checkpointFailedSince: number | null;
   /** How many finalized turns are known to be on disk. */
   checkpointedSegments: number;
@@ -571,6 +580,8 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   micSilentSince: null,
   lastSoundAt: null,
   lastSegmentAt: null,
+  segmentOpen: false,
+  segmentsPending: 0,
   checkpointFailedSince: null,
   checkpointedSegments: 0,
   lastCheckpointAt: null,
@@ -625,6 +636,16 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     noteId,
     confidenceThreshold: settings.conversationAideConfidence,
     silenceDelayMs: settings.conversationAideSilenceSeconds * 1000,
+    // A partial on screen means somebody is still speaking: not silence. On a
+    // call the reply is the other side's. A final with no words clears its partial
+    // too (`finalSettled`), so an empty segment does not hold the verdict.
+    // In a room the segmenter says so first, with or without partials: a segment
+    // open, or one closed whose final is still being read. Parakeet sends no
+    // partials, and a Whisper partial can be seconds apart.
+    isSpeaking: () => {
+      const { micPartial, systemPartial } = useMeetingRecordingStore.getState();
+      return !!(micPartial || systemPartial) || segmentActivity.isBusy(Date.now());
+    },
     autoSearch: settings.conversationAutoSearchEnabled,
     // Null when no classifier is configured, which the session reads as "resolve
     // locally" rather than as a failure. Refinement is the model's whole job; it
@@ -745,10 +766,19 @@ function pushConversationCards() {
 // flow card live and is snapshotted onto the note when recording stops.
 function trackConversationTopic(segment: TranscriptSegment) {
   if (!conversationTopicTracker) return;
+  const at = segment.timestamp ?? Date.now();
   conversationTopicTracker.onUtterance({
     id: segment.id,
     text: segment.text,
-    at: segment.timestamp ?? Date.now(),
+    at,
+    // A room's segment knows its place in the recording, and `timestamp` is when
+    // it started: seconds on one clock, across sittings.
+    ...(Number.isFinite(segment.startMs) && Number.isFinite(segment.endMs)
+      ? {
+          start: at / 1000,
+          end: (at + (segment.endMs as number) - (segment.startMs as number)) / 1000,
+        }
+      : {}),
   });
   topicVectors?.observe(segment);
   // With OpenAI or Anthropic as the writing model, that provider's check model
@@ -979,6 +1009,34 @@ export const getMicAnalyser = (): AnalyserNode | null => micAnalyser;
  */
 const transcriptLag = new TranscriptLag();
 
+/**
+ * A room's segments as main reports them (`helpers/segmentActivity.mjs`): one
+ * recording's session, what is open and which finals are still to come. Read
+ * by the aide's wait on a reply, and published as `segmentOpen` and
+ * `segmentsPending`, which age out by themselves if main goes quiet.
+ */
+const segmentActivity = new SegmentActivityState();
+let segmentActivityTimer: ReturnType<typeof setTimeout> | null = null;
+
+function publishSegmentActivity() {
+  if (segmentActivityTimer) clearTimeout(segmentActivityTimer);
+  segmentActivityTimer = null;
+  const now = Date.now();
+  const segmentOpen = segmentActivity.isOpen(now);
+  const segmentsPending = segmentActivity.pendingCount(now);
+  const state = useMeetingRecordingStore.getState();
+  if (state.segmentOpen !== segmentOpen || state.segmentsPending !== segmentsPending) {
+    useMeetingRecordingStore.setState({ segmentOpen, segmentsPending });
+  }
+  const next = segmentActivity.nextExpiry(now);
+  if (next !== null) segmentActivityTimer = setTimeout(publishSegmentActivity, next - now);
+}
+
+function resetSegmentActivity(session: number | null = null) {
+  segmentActivity.reset(session);
+  publishSegmentActivity();
+}
+
 export function readTranscriptLag(now: number): {
   visible: boolean;
   behindMs: number;
@@ -1189,6 +1247,7 @@ async function cleanup(): Promise<void> {
   await releaseCapture();
   ipcCleanups.forEach((fn) => fn());
   ipcCleanups = [];
+  resetSegmentActivity();
   isPrepared = false;
   isRecordingFlag = false;
   isStartingFlag = false;
@@ -1378,6 +1437,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
 
   segmentsRefValue = seed;
   transcriptLag.reset();
+  resetSegmentActivity();
   sittingLevels = [];
   sittingLoudnessSeed = args.seedLoudness ?? null;
   speakerIdentifications = [];
@@ -1413,9 +1473,16 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // open-thread stack and the topic graph are core surfaces, and they cost one
   // set intersection per utterance. The tracker deliberately outlives the stop so
   // the final snapshot can still be read and saved onto the note.
-  conversationTopicTracker = new ConversationTopicTracker();
+  // In a room, in English, the change detector cuts the topics (topicChange.mjs):
+  // it learned from people talking in rooms, in English. Everything else keeps
+  // the tracker's own cuts.
+  conversationTopicTracker = new ConversationTopicTracker({
+    detector:
+      recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en",
+  });
   // Each turn and each candidate name is embedded on this computer, so the
-  // tracker can name a topic by meaning; a name that arrives is drawn at once.
+  // tracker can cut and name a topic by meaning; a name that arrives is drawn
+  // at once.
   topicVectors?.stop();
   topicVectors = new TopicVectorFeeder({
     tracker: conversationTopicTracker,
@@ -1520,6 +1587,9 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       return;
     }
 
+    // Before any listener: events of another session change nothing here.
+    if (startResult.inRoomSession != null) resetSegmentActivity(startResult.inRoomSession);
+
     const systemAudioMode = startResult.systemAudioMode || initialSystemAudioAccess.mode;
     const systemAudioStrategy = startResult.systemAudioStrategy || initialSystemAudioStrategy;
     systemCaptureResult = await ensureRendererSystemAudioCapture({
@@ -1569,7 +1639,21 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         startMs?: number;
         endMs?: number;
         audioEndedAt?: number;
+        session?: number;
       }) => {
+        // A final read for a room recording that has since ended: not this one's.
+        if (
+          data.session != null &&
+          segmentActivity.session !== null &&
+          data.session !== segmentActivity.session
+        ) {
+          logger.warn(
+            "Final from another in-room session ignored",
+            { session: data.session, current: segmentActivity.session },
+            "meeting"
+          );
+          return;
+        }
         // Text for the audio up to here is on screen now (a final with no
         // words included: its audio is settled all the same).
         if (data.type !== "retract") transcriptLag.text({ audioEndedAt: data.audioEndedAt });
@@ -1697,6 +1781,11 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         });
     });
     if (speechCleanup) ipcCleanups.push(speechCleanup);
+
+    const activityCleanup = window.electronAPI?.onMeetingTranscriptionActivity?.((data) => {
+      if (segmentActivity.apply(data, Date.now())) publishSegmentActivity();
+    });
+    if (activityCleanup) ipcCleanups.push(activityCleanup);
 
     const speakerCleanup = window.electronAPI?.onMeetingSpeakerIdentified?.((data) => {
       reserveSpeakerIndex(data.speakerId);
@@ -1956,6 +2045,13 @@ async function finishRecording(): Promise<StopRecordingResult> {
     if (result?.diarizationSessionId) {
       diarizationSessionId = result.diarizationSessionId;
       useMeetingRecordingStore.setState({ diarizationSessionId });
+    }
+    if (result?.inRoomFailedSegments) {
+      logger.warn(
+        "Recording stopped with segments that were not read",
+        { failedSegments: result.inRoomFailedSegments },
+        "meeting"
+      );
     }
     if (result?.success && result.transcript) {
       useMeetingRecordingStore.setState({ transcript: result.transcript });

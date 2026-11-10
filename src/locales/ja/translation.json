@@ -1528,6 +1528,7 @@
     "noneAvailable": "利用可能なモデルがありません",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "Apple シリコンでの対面の会話に最適。Neural Engine で動作（25 言語）",
         "parakeet_tdt_0_6b_v3": "高速多言語 ASR、自動言語検出対応（25 言語）",
         "parakeet_unified_en_0_6b": "英語専用の最先端精度ASR（平均WER 5.91%）",
         "nemotron_speech_streaming_en_0_6b": "NVIDIA Nemotron の英語ストリーミング ASR",
@@ -2110,6 +2111,8 @@
       "summaryAfterRecording": "この会話が終わると要約が作成されます。",
       "summaryWhenRecordingEnds": "録音が終わると要約が作成されます。",
       "summaryTooLong": "この会話はこの Mac の文章モデルには長すぎます。API キー（設定 › AI モデル）を使えば要約できます。",
+      "summaryOutputLimit": "この Mac の文章モデルが 1 回の回答で書ける上限に達したため、要約は完成しませんでした。もう一度頼んでも、おそらく同じところで止まります。API キー（設定 › AI モデル）を使えば要約できます。",
+      "summaryEarlier": "会話が続く前に書かれた要約です。その後の部分は含まれていません。",
       "summarizeAgain": "もう一度要約する",
       "summaryFailed": "要約を作成できませんでした：{{reason}}",
       "setUpModel": "モデルを設定"

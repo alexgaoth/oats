@@ -177,6 +177,8 @@ import {
   holdForFinish,
   oweSummary,
   runSummary,
+  summaryFingerprint,
+  useStandingSummaryFailure,
   useSummaryQueue,
   useSummaryQueueMarks,
   useWritingRouteKey,
@@ -184,6 +186,7 @@ import {
 import { writingModelReady } from "../stores/conversationGroupSortStore";
 import { localModelName, useModelDownloadPercent } from "../stores/modelDownloadStore";
 import {
+  needsSummary,
   recordSummaryState,
   routeStaysHome,
   summaryContentHash,
@@ -325,36 +328,41 @@ async function summarizeConversation(
   t: TFunction,
   { allowTitleGeneration }: { allowTitleGeneration: boolean }
 ): Promise<BackgroundActionOutcome> {
-  return runSummary(noteId, async () => {
-    const action = (await initializeActions()).find((item) => item.is_builtin);
-    if (!action) return "refused";
-    // The title now: renamed while the summary is written, it keeps the new name.
-    const note = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(() => null);
-    const settings = useSettingsStore.getState();
-    const config = selectResolvedNoteFormatting(settings);
-    const formatted = transcriptText(transcript, t);
-    return runBackgroundAction(
-      noteId,
-      `## Conversation Transcript\n${formatted}`,
-      summaryContentHash(transcript),
-      action,
-      {
-        isCloudMode: selectIsCloudNoteFormattingMode(settings),
-        modelId: config.model,
-        isMeetingNote: true,
-        allowTitleGeneration,
-        titleAtStart: note ? (note.title ?? "") : undefined,
-      },
-      {
-        noModel: t("oats.errors.noModel"),
-        noEndpoint: t("oats.errors.noEndpoint"),
-        noKey: t("oats.preflight.no-writing-key"),
-        actionFailed: t("oats.errors.actionFailed"),
-        noSummary: t("oats.errors.noSummary"),
-        tooLong: t("oats.intelligence.summaryTooLong"),
-      }
-    );
-  });
+  return runSummary(
+    noteId,
+    async () => {
+      const action = (await initializeActions()).find((item) => item.is_builtin);
+      if (!action) return "refused";
+      // The title now: renamed while the summary is written, it keeps the new name.
+      const note = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(() => null);
+      const settings = useSettingsStore.getState();
+      const config = selectResolvedNoteFormatting(settings);
+      const formatted = transcriptText(transcript, t);
+      return runBackgroundAction(
+        noteId,
+        `## Conversation Transcript\n${formatted}`,
+        summaryContentHash(transcript),
+        action,
+        {
+          isCloudMode: selectIsCloudNoteFormattingMode(settings),
+          modelId: config.model,
+          isMeetingNote: true,
+          allowTitleGeneration,
+          titleAtStart: note ? (note.title ?? "") : undefined,
+        },
+        {
+          noModel: t("oats.errors.noModel"),
+          noEndpoint: t("oats.errors.noEndpoint"),
+          noKey: t("oats.preflight.no-writing-key"),
+          actionFailed: t("oats.errors.actionFailed"),
+          noSummary: t("oats.errors.noSummary"),
+          tooLong: t("oats.intelligence.summaryTooLong"),
+          outputLimit: t("oats.intelligence.summaryOutputLimit"),
+        }
+      );
+    },
+    summaryFingerprint(transcript)
+  );
 }
 
 /**
@@ -1816,6 +1824,11 @@ function IntelligenceViews({
     const noteState = selected ? state.noteStates[selected.id] : undefined;
     return noteState?.status === "failed" && noteState.kind === "too-long";
   });
+  // The model's answer reached its own limit: not the conversation's length.
+  const summaryOutputLimit = useActionProcessingStore((state) => {
+    const noteState = selected ? state.noteStates[selected.id] : undefined;
+    return noteState?.status === "failed" && noteState.kind === "output-limit";
+  });
   const summaryMarks = useSummaryQueueMarks(selected?.id ?? null);
   const recordingSelected = useMeetingRecordingStore(
     (state) =>
@@ -1833,11 +1846,19 @@ function IntelligenceViews({
   const writingMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
   const writingModel = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
   const writingDownload = useModelDownloadPercent(writingMode === "local" ? writingModel : null);
+  // A failure that would repeat, kept across restarts: the same transcript,
+  // model and context fail the same way, so opening it again does not ask.
+  const standingFailure = useStandingSummaryFailure(
+    selected?.id ?? null,
+    selected?.transcript ?? null
+  );
   const summaryState = recordSummaryState({
     hasSummary: Boolean(selected?.enhanced_content),
+    stale: selected ? needsSummary(selected) : false,
     processing: summarizing || summaryMarks.running,
-    failed: summaryFailure !== null,
-    tooLong: summaryTooLong,
+    failed: summaryFailure !== null || standingFailure !== null,
+    tooLong: summaryTooLong || standingFailure === "too-long",
+    outputLimit: summaryOutputLimit || standingFailure === "output-limit",
     writingLocal: writingMode === "local",
     recording: recordingSelected,
     finishing: summaryMarks.finishing,
@@ -2154,66 +2175,83 @@ function IntelligenceViews({
                   </div>
                 </div>
               ) : (
-                <div
-                  role="status"
-                  // A download's percent changes every few seconds: read where it
-                  // stands, not announced at each step.
-                  aria-live={summaryState === "downloading" ? "off" : undefined}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-5 text-muted-foreground"
-                >
-                  <Sparkles aria-hidden="true" className="size-4 shrink-0" />
-                  <p className="min-w-0 flex-1">
-                    {summaryState === "failed"
-                      ? t("oats.intelligence.summaryFailed", { reason: summaryFailure })
-                      : summaryState === "too-long"
-                        ? t("oats.intelligence.summaryTooLong")
-                        : summaryState === "downloading"
-                          ? t("oats.intelligence.summaryAfterDownload", {
-                              model: localModelName(writingModel),
-                              percent: writingDownload,
-                            })
-                          : summaryState === "needs-model"
-                            ? t("oats.intelligence.needsSummaryModel")
-                            : summaryState === "recording"
-                              ? t("oats.intelligence.summaryAfterRecording")
-                              : summaryState === "after-recording"
-                                ? t("oats.intelligence.summaryWhenRecordingEnds")
-                                : t("oats.intelligence.notSummarized")}
-                  </p>
-                  {summaryState === "needs-model" && (
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        window.dispatchEvent(
-                          new CustomEvent("oats-open-settings", { detail: "models" })
-                        )
-                      }
-                    >
-                      {t("oats.intelligence.setUpModel")}
-                    </Button>
-                  )}
-                  {summaryState === "failed" && (
-                    <Button size="sm" onClick={() => void summarizeLater(selected, t)}>
-                      <Sparkles aria-hidden="true" />
-                      {t("oats.intelligence.summarizeAgain")}
-                    </Button>
-                  )}
-                  {/* Asking the model on this Mac again would fail the same way:
+                <>
+                  <div
+                    role="status"
+                    // A download's percent changes every few seconds: read where it
+                    // stands, not announced at each step.
+                    aria-live={summaryState === "downloading" ? "off" : undefined}
+                    className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] leading-5 text-muted-foreground"
+                  >
+                    <Sparkles aria-hidden="true" className="size-4 shrink-0" />
+                    <p className="min-w-0 flex-1">
+                      {summaryState === "failed"
+                        ? t("oats.intelligence.summaryFailed", { reason: summaryFailure })
+                        : summaryState === "too-long"
+                          ? t("oats.intelligence.summaryTooLong")
+                          : summaryState === "output-limit"
+                            ? t("oats.intelligence.summaryOutputLimit")
+                            : summaryState === "downloading"
+                              ? t("oats.intelligence.summaryAfterDownload", {
+                                  model: localModelName(writingModel),
+                                  percent: writingDownload,
+                                })
+                              : summaryState === "needs-model"
+                                ? t("oats.intelligence.needsSummaryModel")
+                                : summaryState === "recording"
+                                  ? t("oats.intelligence.summaryAfterRecording")
+                                  : summaryState === "after-recording"
+                                    ? t("oats.intelligence.summaryWhenRecordingEnds")
+                                    : t("oats.intelligence.notSummarized")}
+                    </p>
+                    {summaryState === "needs-model" && (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("oats-open-settings", { detail: "models" })
+                          )
+                        }
+                      >
+                        {t("oats.intelligence.setUpModel")}
+                      </Button>
+                    )}
+                    {summaryState === "failed" && (
+                      <Button size="sm" onClick={() => void summarizeLater(selected, t)}>
+                        <Sparkles aria-hidden="true" />
+                        {t("oats.intelligence.summarizeAgain")}
+                      </Button>
+                    )}
+                    {/* Asking the model on this Mac again would fail the same way:
                       the way forward is a writing model with an API key. */}
-                  {summaryState === "too-long" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        window.dispatchEvent(
-                          new CustomEvent("oats-open-settings", { detail: "models" })
-                        )
-                      }
-                    >
-                      {t("oats.settings.pages.models.title")}
-                    </Button>
-                  )}
-                </div>
+                    {(summaryState === "too-long" || summaryState === "output-limit") && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("oats-open-settings", { detail: "models" })
+                          )
+                        }
+                      >
+                        {t("oats.settings.pages.models.title")}
+                      </Button>
+                    )}
+                  </div>
+                  {/* The conversation went on and its new summary failed: the
+                    earlier one still says what the first part was about. */}
+                  {selected.enhanced_content ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[13px] text-muted-foreground">
+                        {t("oats.intelligence.summaryEarlier")}
+                      </p>
+                      <MarkdownRenderer
+                        content={selected.enhanced_content}
+                        className="max-w-[70ch] text-[15px] leading-7 text-foreground"
+                      />
+                    </div>
+                  ) : null}
+                </>
               )}
             </TabsContent>
 

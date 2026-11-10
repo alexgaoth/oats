@@ -194,6 +194,10 @@ All four were "fails quietly at the end", which the pencil standard forbids, and
 
 `MeetingRecordingMount`'s tick runs on `performance.now()`; anything it publishes for these checks must be `Date.now()`, or the comparison is ~0 against ~1.7e12 and the warning silently never fires.
 
+### Question spotting is measured, not argued (2026-11-05)
+
+`scripts/question-eval.mjs` runs the real `isQuestionCandidate`, `extractQuestionSentence` and `ConversationAideSession` over AMI meetings, on manual text and on real recognition output (`~/oats-asr-cache/replays`), against human dialogue acts. Numbers, the gold audit and the bars are in `docs/question-eval.md`. Manual AMI text flatters a detector, and its long turns mislead about replies: judge a change on recognition. Never claim a detection or reply change helps without a row from it, and keep the test meetings (ES2004, IS1009, TS3003) unread while tuning.
+
 ### Dictation quality is measured, not argued (2026-08-24)
 
 `scripts/asr-eval.js` runs the real path — the app's own `buildWhisperServerArgs`, the shipped `whisper-server` binary — over LibriSpeech test-clean and reports WER and latency. Numbers and the fork/upstream comparison in `docs/dictation-accuracy.md`. Never claim a transcription change helps without a row from it.
@@ -207,6 +211,15 @@ All four were "fails quietly at the end", which the pencil standard forbids, and
 - **The writing model follows a default too** (2026-10-29, `helpers/writingTier.mjs` is the rule, `helpers/writingModelFetch.js` downloads). On this Mac: Gemma 4 E4B with 16 GB of memory or more (`os.totalmem`, read at once into the device tier snapshot as `memoryBytes`), Qwen3.5 4B under that, and a Qwen3.5 4B already on disk stands in until Gemma is there; with an API key: gpt-6.1-sol with an OpenAI key, Claude Opus 5.5 when Anthropic's is the only key. A stored `cleanupModel` is a choice and is never moved; with nothing stored the store follows the default in memory only (`followDefaultWritingModel`), and the switch never stores a default (`setProcessing`). When no writing model is ready, "On this Mac" downloads the default by itself, as Turbo does (notice `WritingModelNotice.tsx`, flag `writingModelNoticed`; a cancel or delete is remembered in `userData/writing-model.json`). It waits in main for a recording to end. Deleting any writing model stops that until the person chooses a model or presses Download (`autoDeclined`), so removing Qwen3.5 4B never starts Gemma's 5.4 GB. Moving to "With an API key" or to another model stops a running download without remembering a no; only the person's Cancel is a no. Use in Advanced always stores a choice, even of the Recommended model. With an API key and no OpenAI key, speech stays on this Mac, because a conversation streams only to OpenAI (`applyProvidersSpeech`). Opening a model list must never change a setting: `LocalModelPicker` once stored `""` over a model not yet on disk.
 - **`preferredLanguage` defaults to English (`en`) since 2026-10-26** (Alex's decision). It was `auto` on purpose before, but in a room detection was the bigger risk: replaying eight AMI meetings (#122), the multilingual models heard far voices as Korean, Hindi or Welsh, and `base` + `auto` recovered 62.2% of the words against 66.8% for `base.en` + `en`. The setup screen shows the language (one row in `OnboardingFlow.tsx`), Settings › Recording changes it, and `auto` stays a choice. A stored `auto` moves to `en` once (`helpers/speechLanguage.mjs`, flag `speechLanguageDefaultMigrated`). Main's copy, `LOCAL_WHISPER_LANGUAGE` in `.env`, reads unset as English (`EnvironmentManager.getSpeechLanguage`), so detection is synced as the value `auto`, never as an unset key.
 - The pre-Oats `../oats` tree and OpenWhispr itself (1.10.2, 2026-10-02, clone at `../openwhispr-upstream`) sound clearer only because they default `useLocalWhisper` to **false** and transcribe in the cloud. Locally the two are within a point of each other. We forked 1.7.6.
+
+### Topic cuts are learned, not tuned by hand (2026-11-05)
+
+In a room, in English, the live topics are cut by `helpers/topicChange.mjs`: 150 small trees over numbers the app already has, read 45 s after each pause. Measured in `docs/topics-round-2.md`: live Pk 0.264 against the old tracker's 0.356 on meetings it never saw, and 0.28 on `small.en` output. The lexical cuts in `conversationTopics.mjs` stay as the fallback for other languages, calls, no embedding model and a feeder that stops.
+
+- **`topicChangeModel.mjs` is generated** (`scripts/topic-change-train.py`). The trainer reads `gapFeatures` through `scripts/topic-change-features.mjs`, so the app and the training share one implementation. Change a feature, and train again.
+- **The model is tied to all-MiniLM-L6-v2.** Another embedder's cosines sit elsewhere, so a new embedder means training again and checking on recognized text.
+- **AMI alone misleads.** AMI is role play with an agenda. The old tracker looked fine there and scored 0.51 on ICSI's real meetings, where one topic scores 0.28. The training set holds both.
+- **Twelve meetings misled again.** Letting the detector propose for the live check took Pk from 0.20 to 0.14 on 12 tuning meetings and gained nothing on eval24.
 
 ### Transcription scopes — the trap that broke recording
 

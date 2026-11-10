@@ -14,7 +14,8 @@ const ParakeetServerManager = require("./parakeetServer");
 const { getModelsDirForService } = require("./modelDirUtils");
 
 const modelRegistryData = require("../models/modelRegistryData.json");
-const { getModelRuntime, REQUIRED_MODEL_FILES } = require("./parakeetModelInfo");
+const parakeetAneFiles = require("../models/parakeetAneFiles.json");
+const { ANE_READY_FILE, getModelRuntime, REQUIRED_MODEL_FILES } = require("./parakeetModelInfo");
 
 function getParakeetModelConfig(modelName) {
   const modelInfo = modelRegistryData.parakeetModels[modelName];
@@ -182,6 +183,10 @@ class ParakeetManager {
     return getModelRuntime(modelName) === "online";
   }
 
+  usesNeuralEngine(modelName) {
+    return getModelRuntime(modelName) === "ane";
+  }
+
   async createOnlineStream(modelName, options = {}) {
     this.validateModelName(modelName);
     const started = await this.serverManager.startServer(modelName);
@@ -193,7 +198,8 @@ class ParakeetManager {
 
   async transcribeLocalParakeet(audioBlob, options = {}) {
     const model = options.model || "parakeet-tdt-0.6b-v3";
-    const serverAvailable = this.serverManager.isAvailable(getModelRuntime(model));
+    const runtime = getModelRuntime(model);
+    const serverAvailable = this.serverManager.isAvailable(runtime);
 
     debugLogger.logSTTPipeline("transcribeLocalParakeet - start", {
       options,
@@ -204,7 +210,9 @@ class ParakeetManager {
 
     if (!serverAvailable) {
       throw new Error(
-        "sherpa-onnx binary not found. Please ensure the app is installed correctly."
+        runtime === "ane"
+          ? "macos-parakeet-ane not found. Please ensure the app is installed correctly."
+          : "sherpa-onnx binary not found. Please ensure the app is installed correctly."
       );
     }
 
@@ -239,7 +247,11 @@ class ParakeetManager {
     });
 
     const startTime = Date.now();
-    const result = await this.serverManager.transcribe(audioBuffer, { modelName: model });
+    const result = await this.serverManager.transcribe(audioBuffer, {
+      modelName: model,
+      audioBefore: options.audioBefore,
+      wordBefore: options.wordBefore,
+    });
     const elapsed = Date.now() - startTime;
 
     debugLogger.logSTTPipeline("transcribeLocalParakeet - completed", {
@@ -284,6 +296,10 @@ class ParakeetManager {
 
     if (this.serverManager.isModelDownloaded(modelName)) {
       return { model: modelName, downloaded: true, path: modelPath, success: true };
+    }
+
+    if (getModelRuntime(modelName) === "ane") {
+      return this._downloadAneModel(modelName, progressCallback);
     }
 
     const spaceCheck = await checkDiskSpace(modelsDir, modelConfig.size * 2.5);
@@ -477,6 +493,68 @@ class ParakeetManager {
     return runSystemTar(archivePath, extractDir);
   }
 
+  /**
+   * A Core ML model is a folder of files, not one archive. They come one at a time
+   * from pinned commits, through the same counted download as every other model.
+   * A stopped download resumes, and the model counts only once every file is here.
+   */
+  async _downloadAneModel(modelName, progressCallback) {
+    const modelPath = this.getModelPath(modelName);
+    const files = parakeetAneFiles.bundles.flatMap((bundle) =>
+      bundle.files.map((file) => ({ ...file, ...bundle, files: undefined }))
+    );
+    const total = files.reduce((sum, file) => sum + file.size, 0);
+
+    await fsPromises.mkdir(modelPath, { recursive: true });
+    const spaceCheck = await checkDiskSpace(modelPath, total * 1.2);
+    if (!spaceCheck.ok) {
+      throw new Error(
+        `Not enough disk space to download the model. Need ~${Math.round((total * 1.2) / 1_000_000)}MB, ` +
+          `only ${Math.round(spaceCheck.availableBytes / 1_000_000)}MB available.`
+      );
+    }
+
+    const { signal, abort } = createDownloadSignal();
+    this.currentDownloadProcess = { abort };
+    const report = (done) =>
+      progressCallback?.({
+        type: "progress",
+        model: modelName,
+        downloaded_bytes: done,
+        total_bytes: total,
+        percentage: Math.round((done / total) * 100),
+      });
+
+    try {
+      let finished = 0;
+      for (const file of files) {
+        const target = path.join(modelPath, file.into, file.path);
+        await fsPromises.mkdir(path.dirname(target), { recursive: true });
+        if (!fs.existsSync(target)) {
+          await downloadFile(
+            `https://huggingface.co/${file.repo}/resolve/${file.revision}/${file.path}`,
+            target,
+            {
+              signal,
+              expectedSize: file.size,
+              onProgress: (downloadedBytes) => report(finished + downloadedBytes),
+            }
+          );
+        }
+        finished += file.size;
+        report(finished);
+      }
+      await fsPromises.writeFile(path.join(modelPath, ANE_READY_FILE), "");
+      progressCallback?.({ type: "complete", model: modelName, percentage: 100 });
+      return { model: modelName, downloaded: true, path: modelPath, success: true };
+    } catch (error) {
+      if (error.isAbort) throw new Error("Download interrupted by user");
+      throw error;
+    } finally {
+      this.currentDownloadProcess = null;
+    }
+  }
+
   async cancelDownload() {
     if (this.currentDownloadProcess) {
       this.currentDownloadProcess.abort();
@@ -490,6 +568,17 @@ class ParakeetManager {
     const modelPath = this.getModelPath(modelName);
 
     if (this.serverManager.isModelDownloaded(modelName)) {
+      if (getModelRuntime(modelName) === "ane") {
+        const sizeMb = modelRegistryData.parakeetModels[modelName].sizeMb;
+        return {
+          model: modelName,
+          downloaded: true,
+          path: modelPath,
+          size_bytes: sizeMb * 1024 * 1024,
+          size_mb: sizeMb,
+          success: true,
+        };
+      }
       try {
         const encoderPath = path.join(modelPath, "encoder.int8.onnx");
         const stats = fs.statSync(encoderPath);
@@ -514,6 +603,8 @@ class ParakeetManager {
     const modelInfo = [];
 
     for (const model of models) {
+      // Only an Apple Silicon Mac with the helper can run a Neural Engine model.
+      if (getModelRuntime(model) === "ane" && !this.serverManager.isAvailable("ane")) continue;
       const status = await this.checkModelStatus(model);
       modelInfo.push(status);
     }
@@ -529,6 +620,7 @@ class ParakeetManager {
     const modelPath = this.getModelPath(modelName);
 
     if (fs.existsSync(modelPath)) {
+      if (getModelRuntime(modelName) === "ane") await this.serverManager.aneHelper?.stop();
       try {
         const encoderPath = path.join(modelPath, "encoder.int8.onnx");
         let freedBytes = 0;

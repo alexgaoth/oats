@@ -1528,6 +1528,7 @@
     "noneAvailable": "No hay modelos disponibles",
     "descriptions": {
       "parakeet": {
+        "parakeet_ultra_ane": "La mejor opción en una sala con Apple Silicon. Se ejecuta en el Neural Engine (25 idiomas)",
         "parakeet_tdt_0_6b_v3": "ASR multilingüe rápido con detección automática de idioma (25 idiomas)",
         "parakeet_unified_en_0_6b": "ASR solo en inglés con precisión de vanguardia (5,91% WER promedio)",
         "nemotron_speech_streaming_en_0_6b": "ASR en inglés por streaming de NVIDIA Nemotron",
@@ -2110,6 +2111,8 @@
       "summaryAfterRecording": "El resumen se escribirá cuando termine esta conversación.",
       "summaryWhenRecordingEnds": "El resumen se escribirá cuando termine la grabación.",
       "summaryTooLong": "Esta conversación es demasiado larga para el modelo de escritura de este Mac. Con una clave API (Ajustes › Modelos de IA) se puede resumir.",
+      "summaryOutputLimit": "El modelo de escritura de este Mac se detuvo en el máximo que puede escribir en una respuesta, así que el resumen no se terminó. Si se vuelve a pedir, lo más probable es que se detenga igual. Con una clave API (Ajustes › Modelos de IA) se puede resumir.",
+      "summaryEarlier": "Escrito antes de que la conversación continuara. No incluye la parte posterior.",
       "summarizeAgain": "Resumir de nuevo",
       "summaryFailed": "No se pudo crear el resumen: {{reason}}",
       "setUpModel": "Configurar un modelo"
