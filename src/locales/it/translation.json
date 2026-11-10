@@ -2355,6 +2355,12 @@
         "download": "Scarica",
         "searchWith": "Cerca con"
       },
+      "topics": {
+        "title": "Argomenti",
+        "description": "Durante una conversazione, Oats raggruppa ciò che si dice in argomenti e dà loro un nome.",
+        "describe": "Descrivi ogni argomento",
+        "describeHint": "Sotto il nome di ogni argomento, qualche frase del modello di scrittura su ciò che è stato detto, chiesto e deciso. Cresce con l'argomento. Se disattivato, il flusso della conversazione cita invece l'ultima frase dell'argomento."
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "Ogni conversazione conclusa si scrive nel tuo vault come nota.",

@@ -2355,6 +2355,12 @@
         "download": "Baixar",
         "searchWith": "Pesquisar com"
       },
+      "topics": {
+        "title": "Tópicos",
+        "description": "Durante uma conversa, o Oats agrupa o que é dito em tópicos e dá nome a eles.",
+        "describe": "Descrever cada tópico",
+        "describeHint": "Sob o nome de cada tópico, algumas frases do modelo de escrita sobre o que foi dito, perguntado e decidido. Elas crescem com o tópico. Desativado, o fluxo da conversa cita a última fala do tópico."
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "Cada conversa concluída é salva no seu cofre como uma nota.",

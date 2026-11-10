@@ -574,6 +574,9 @@ export interface SettingsState
   /** Lanes or the graph in the reading view's Connections tab, chosen apart
    *  from the flow card's. */
   connectionsView: ConversationFlowView;
+  /** A topic's description under its name, on the flow card and in the topic
+   *  panel. Off, the flow card quotes the topic's latest line, as before. */
+  topicDescriptions: boolean;
   /** The ledger, or the oat field. See `uiMode.mjs`. */
   uiMode: UiMode;
   conversationAideEnabled: boolean;
@@ -664,6 +667,7 @@ export interface SettingsState
   setConversationDetail: (value: ConversationDetail) => void;
   setConversationFlowView: (value: ConversationFlowView) => void;
   setConnectionsView: (value: ConversationFlowView) => void;
+  setTopicDescriptions: (value: boolean) => void;
   setUiMode: (value: UiMode) => void;
   setConversationAideEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
@@ -1321,6 +1325,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   connectionsView: resolveFlowView(
     isBrowser ? localStorage.getItem("connectionsView") : null
   ) as ConversationFlowView,
+  topicDescriptions: readBoolean("topicDescriptions", true),
   uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
@@ -1427,6 +1432,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setConnectionsView: createStringSetter("connectionsView") as (
     value: ConversationFlowView
   ) => void,
+  setTopicDescriptions: createBooleanSetter("topicDescriptions"),
   setConversationAideEnabled: createBooleanSetter("conversationAideEnabled"),
   setConversationAideOnlineEnabled: createBooleanSetter("conversationAideOnlineEnabled"),
   setConversationAideInRoomEnabled: createBooleanSetter("conversationAideInRoomEnabled"),

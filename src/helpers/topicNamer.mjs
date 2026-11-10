@@ -1,5 +1,6 @@
-// When the writing model is asked to name a conversation's topics: during a
-// recording, as topics grow, and once more when it ends, for the record.
+// When the writing model is asked to name and describe a conversation's
+// topics: during a recording, as topics grow, and once more when it ends, for
+// the record.
 //
 // The prompt, the reading of the answer and the rule for when a topic needs a
 // name are in `topicNaming.mjs`; this decides when requests go out. The model
@@ -27,21 +28,29 @@
 //   before a change the tracker proposes in it (`namedTurnIds`).
 // - **A name never goes back.** A topic shows its on-device name until the
 //   model's arrives, and that name until a newer one arrives. Nothing on screen
-//   changes while a request is out, and a failure changes nothing at all.
+//   changes while a request is out, and a failure changes nothing at all. The
+//   same holds for a description: an answer without one keeps the last.
+// - **The description keeps up, the name holds.** A topic is asked about
+//   again each time it grows by `DESCRIBE_GROWTH`, so its description covers
+//   what was said since. Its name may change only at the steps of
+//   `RENAME_GROWTH` (`nameMayChange`); between them the request keeps it.
 // - **Failures back off.** A topic whose request failed is asked again only
 //   once it has grown by half. Three failures in a row end naming for the
 //   recording: a model that is not answering will not start in the middle of
 //   a meeting, and asking on would only fill its queue.
-// - **The end names what is left**, within a time budget: smaller topics, and
-//   topics that grew since their last name (`finish`).
+// - **The end names what is left**, within a time budget: smaller topics,
+//   topics that grew since their last name, and topics the live topic check
+//   named, for a description of the whole topic (`finish`).
 
 import { countWords } from "./recordingCounters.mjs";
 import {
+  FINAL_NAME_WORDS,
   applyTopicNames,
   buildTopicNamePrompt,
   isNameableTopic,
+  nameMayChange,
   nameStillFits,
-  parseTopicName,
+  parseTopicLabel,
   sameName,
   topicNeedsName,
 } from "./topicNaming.mjs";
@@ -139,10 +148,13 @@ export class TopicNamer {
     this.log = log;
 
     /**
-     * The names given, by topic id. `held` marks a name the live topic check
-     * gave (`stores/topicNamingRunner.ts`), which this never asks for again.
+     * The names given, by topic id. `words` is the topic's size at its last
+     * request, `nameWords` at the last one that could change its name.
+     * `held` marks a name the live topic check gave
+     * (`stores/topicNamingRunner.ts`), which this never renames; at the end
+     * it asks once for its description (`described`).
      *
-     * @type {Map<number, { name: string, words: number, namings: number, utteranceIds: string[], held?: boolean }>}
+     * @type {Map<number, { name: string, description?: string | null, words: number, nameWords?: number, namings: number, utteranceIds: string[], held?: boolean, described?: boolean }>}
      */
     this.names = new Map();
     /** @type {Map<number, { words: number, final: boolean }>} */
@@ -350,12 +362,19 @@ export class TopicNamer {
       if (!isNameableTopic(node)) continue;
       const words = this._words(node, byId);
       const record = this._record(node);
+      const failed = this.failed.get(node.id);
       // A name the live topic check gave (topicLoop.mjs `namesFor`) is not
-      // asked for again: one request names a topic, not two.
-      if (record?.held) continue;
+      // asked for again: one request names a topic, not two. Its gist is a
+      // line; at the end it is asked once for a description of the whole
+      // topic, with its name kept.
+      if (record?.held) {
+        if (!final || record.described || words < FINAL_NAME_WORDS) continue;
+        if (failed?.final) continue;
+        jobs.push({ node, words, record, need: "describe" });
+        continue;
+      }
       const need = topicNeedsName({ words, record, final });
       if (!need) continue;
-      const failed = this.failed.get(node.id);
       if (failed && (final ? failed.final : words < failed.words * RETRY_GROWTH)) continue;
       jobs.push({ node, words, record, need });
     }
@@ -379,7 +398,14 @@ export class TopicNamer {
       .map((id) => byId.get(String(id))?.text)
       .filter((text) => typeof text === "string" && text.trim());
     const others = this._others(node.id);
-    const prompt = buildTopicNamePrompt({ turns, others, current: record?.name ?? null });
+    const mayRename = nameMayChange({ words, record, final });
+    const prompt = buildTopicNamePrompt({
+      turns,
+      others,
+      current: record?.name ?? null,
+      keepName: !mayRename,
+      words,
+    });
     const started = this.now();
     this.stats.requests += 1;
     let answer;
@@ -404,8 +430,14 @@ export class TopicNamer {
     }
     const ms = this.now() - started;
     this.stats.ms.push(ms);
-    const name = parseTopicName(answer, { others, excerpt: prompt.excerpt });
-    if (!name) {
+    const parsed = parseTopicLabel(answer, { others, excerpt: prompt.excerpt });
+    // A name that may not change is kept whatever the answer says; then the
+    // request is for the description. An answer with the name and no
+    // description is an answer (a model that writes no descriptions must not
+    // end naming for the recording), and changes nothing.
+    const offered = mayRename ? parsed.name : null;
+    const name = offered ?? record?.name ?? null;
+    if (!name || (!offered && !parsed.description && !parsed.name)) {
       this._failed(node.id, words, final);
       this.stats.unusable += 1;
       this.log("unusable", { topic: node.id, final, ms });
@@ -414,17 +446,33 @@ export class TopicNamer {
     this.failures = 0;
     this.failed.delete(node.id);
     const kept = Boolean(record?.name && sameName(record.name, name));
+    const description = parsed.description ?? record?.description ?? null;
     this.names.set(node.id, {
       name: kept ? record.name : name,
+      description,
       words,
+      nameWords: mayRename ? words : (record?.nameWords ?? record?.words ?? words),
       namings: (record?.namings ?? 0) + 1,
       // The turns it was read from: `nameStillFits` asks whether the topic
-      // still holds them.
-      utteranceIds: ids.map(String),
+      // still holds them. A name the check gave keeps its own.
+      utteranceIds: record?.held ? record.utteranceIds : ids.map(String),
+      ...(record?.held ? { held: true, described: true } : {}),
     });
     this.stats.named += 1;
-    this.log("named", { topic: node.id, final, ms, words, kept, renamed: Boolean(record) });
-    return { changed: !kept, ok: true };
+    const described = Boolean(parsed.description);
+    this.log("named", {
+      topic: node.id,
+      final,
+      ms,
+      words,
+      kept,
+      renamed: Boolean(record),
+      described,
+    });
+    return {
+      changed: !kept || (described && parsed.description !== (record?.description ?? null)),
+      ok: true,
+    };
   }
 
   _failed(id, words, final) {

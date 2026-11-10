@@ -2355,6 +2355,12 @@
         "download": "Laden",
         "searchWith": "Suchen mit"
       },
+      "topics": {
+        "title": "Themen",
+        "description": "Während eines Gesprächs ordnet Oats das Gesagte in Themen und benennt sie.",
+        "describe": "Jedes Thema beschreiben",
+        "describeHint": "Unter dem Namen jedes Themas ein paar Sätze vom Schreibmodell dazu, was gesagt, gefragt und entschieden wurde. Sie wachsen mit dem Thema. Aus: Der Gesprächsverlauf zitiert stattdessen den letzten Satz des Themas."
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "Jedes beendete Gespräch schreibt sich als Notiz in deinen Tresor.",

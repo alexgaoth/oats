@@ -2355,6 +2355,12 @@
         "download": "Télécharger",
         "searchWith": "Rechercher avec"
       },
+      "topics": {
+        "title": "Sujets",
+        "description": "Pendant une conversation, Oats regroupe ce qui est dit en sujets et leur donne un nom.",
+        "describe": "Décrire chaque sujet",
+        "describeHint": "Sous le nom de chaque sujet, quelques phrases du modèle d'écriture sur ce qui a été dit, demandé et décidé. Elles s'étoffent avec le sujet. Désactivé, le déroulé de la conversation cite plutôt la dernière phrase du sujet."
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "Chaque conversation terminée s’écrit dans votre coffre sous forme de note.",

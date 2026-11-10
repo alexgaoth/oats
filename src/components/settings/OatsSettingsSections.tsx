@@ -158,6 +158,31 @@ export function QuestionCardSettings() {
 }
 
 /**
+ * How topics read during and after a conversation: a description under each
+ * name from the writing model (topicNaming.mjs), or the earlier look, which
+ * quotes the topic's latest line.
+ */
+export function TopicSettings() {
+  const { t } = useTranslation();
+  const describe = useSettingsStore((state) => state.topicDescriptions);
+  const setDescribe = useSettingsStore((state) => state.setTopicDescriptions);
+  return (
+    <SettingsSection
+      title={t("oats.settings.topics.title")}
+      description={t("oats.settings.topics.description")}
+    >
+      <SettingRow
+        label={t("oats.settings.topics.describe")}
+        description={t("oats.settings.topics.describeHint")}
+        htmlFor="topic-descriptions"
+      >
+        <Toggle id="topic-descriptions" checked={describe} onChange={setDescribe} />
+      </SettingRow>
+    </SettingsSection>
+  );
+}
+
+/**
  * The optional model that refines question cards, under Settings › AI models ›
  * Advanced with the other models. Detection works without it (local pattern
  * matching), so it is a download offered, never a requirement.

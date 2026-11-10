@@ -2355,6 +2355,12 @@
         "download": "Descargar",
         "searchWith": "Buscar con"
       },
+      "topics": {
+        "title": "Temas",
+        "description": "Durante una conversación, Oats agrupa lo que se dice en temas y les pone nombre.",
+        "describe": "Describir cada tema",
+        "describeHint": "Bajo el nombre de cada tema, unas frases del modelo de escritura sobre lo que se dijo, preguntó y decidió. Crecen con el tema. Desactivado, el flujo de la conversación cita la última frase del tema."
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "Cada conversación terminada se guarda en tu bóveda como una nota.",
