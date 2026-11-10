@@ -2122,7 +2122,11 @@ class IPCHandlers {
       })
     );
 
-    ipcMain.handle("speech-upgrade-cancel", () => this.deviceTier.cancelUpgrade());
+    // `decline: false` when speech left this Mac: the download stops, and
+    // nothing is remembered as a no.
+    ipcMain.handle("speech-upgrade-cancel", (_event, options = {}) =>
+      this.deviceTier.cancelUpgrade({ decline: options?.decline !== false })
+    );
 
     // The writing model on this Mac (writingTier.mjs, writingModelFetch.js).
     // The renderer asks after setup, or when setup chose "On this Mac", while

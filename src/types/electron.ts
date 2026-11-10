@@ -539,7 +539,10 @@ declare global {
         language: string;
         force?: boolean;
       }) => Promise<DeviceTierSnapshot>;
-      cancelSpeechUpgrade?: () => Promise<DeviceTierSnapshot>;
+      cancelSpeechUpgrade?: (options?: {
+        /** False when speech left this Mac rather than the person pressing Cancel. */
+        decline?: boolean;
+      }) => Promise<DeviceTierSnapshot>;
       // The writing model on this Mac (writingModelFetch.js): fetched when
       // nothing is ready and the setting follows the default, or when setup
       // chose "On this Mac". `force` is the person asking in Settings.

@@ -327,7 +327,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getDeviceTier: () => ipcRenderer.invoke("get-device-tier"),
   onDeviceTier: registerListener("device-tier", (callback) => (_event, tier) => callback(tier)),
   startSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-start", options),
-  cancelSpeechUpgrade: () => ipcRenderer.invoke("speech-upgrade-cancel"),
+  cancelSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-cancel", options),
   startWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-start", options),
   cancelWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-cancel", options),
   writingModelChosen: () => ipcRenderer.invoke("writing-model-chosen"),

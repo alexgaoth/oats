@@ -31,7 +31,15 @@ export function requestTurbo(language: string): void {
 
 /** Stop turbo's download; Oats will not start it again by itself. */
 export function cancelTurbo(): void {
-  void window.electronAPI?.cancelSpeechUpgrade?.().catch(() => {});
+  void window.electronAPI?.cancelSpeechUpgrade?.({ decline: true }).catch(() => {});
+}
+
+/**
+ * Speech left this Mac: stop turbo's download without a no, so the default
+ * may fetch it again when speech comes back.
+ */
+export function leaveTurbo(): void {
+  void window.electronAPI?.cancelSpeechUpgrade?.({ decline: false }).catch(() => {});
 }
 
 /**
