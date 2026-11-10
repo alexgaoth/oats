@@ -3635,6 +3635,9 @@ export default function OatsWorkspace() {
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // An open menu or dialog closes on this same Escape and marks it handled
+      // first (Radix listens on the document, in capture).
+      if (event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "/") {
