@@ -123,7 +123,7 @@ import {
   withOlderMatches,
 } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
-import { isSearching, shellNav } from "../helpers/shellNav.mjs";
+import { isSearching, openWhileRecording, shellNav } from "../helpers/shellNav.mjs";
 import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import {
@@ -1190,6 +1190,7 @@ function ConnectionsView({
   const searchBaseUrl = useSettingsStore((s) => s.conversationAideSearchBaseUrl);
   const view = useSettingsStore((s) => s.connectionsView);
   const setView = useSettingsStore((s) => s.setConnectionsView);
+  const descriptions = useSettingsStore((s) => s.topicDescriptions);
   const snapshot = useMemo(() => readTopicSnapshot(note.conversation_topics), [note]);
   const segments = useMemo(() => parseSegments(note.transcript), [note.transcript]);
   const lanes = useMemo(() => topicLanes({ snapshot, segments }) as Lanes, [snapshot, segments]);
@@ -1317,6 +1318,11 @@ function ConnectionsView({
                   .filter(Boolean)
                   .join(" · ")}
               </p>
+              {descriptions && selectedTopic.description && (
+                <p className="mt-2 max-w-prose text-pretty text-sm leading-snug text-foreground">
+                  {selectedTopic.description}
+                </p>
+              )}
               <ul className="mt-3 divide-y divide-border">
                 {topicQuestions.map((question) => (
                   <li key={question.id} className="flex items-start gap-3 py-2.5">
@@ -3560,14 +3566,14 @@ export default function OatsWorkspace() {
   }, []);
 
   // The recall hotkey: from any application into cross-conversation search.
-  // Refused while recording for the same reason as Cmd+, — and the focus step
+  // It works while recording, as the sidebar's Search does (DESIGN.md §1): the
+  // recording surface stays mounted, so the conversation goes on. The focus step
   // is delegated via a DOM event so it works whether Intelligence is already
   // mounted or is mounting right now. Push covers a running panel; the consume
   // call covers a cold start, where the press created this window and the
   // pushed event predates any listener.
   useEffect(() => {
     const goToSearch = () => {
-      if (useMeetingRecordingStore.getState().isRecording) return;
       setSurface("intelligence");
       setSearching(true);
       requestAnimationFrame(() => {
@@ -3768,8 +3774,11 @@ export default function OatsWorkspace() {
               onSettingsPage={setSettingsPage}
               onExitSettings={() => setSurface(lastSurface.current)}
               onNavigate={(next) => {
-                // Settings stays closed while a conversation is live, as Cmd+, does.
-                if (next === "settings" && useMeetingRecordingStore.getState().isRecording) return;
+                // Settings stays closed while a conversation is live, as Cmd+, does;
+                // everything else stays open (DESIGN.md §1).
+                if (useMeetingRecordingStore.getState().isRecording && !openWhileRecording(next)) {
+                  return;
+                }
                 // Conversations is the whole list: it ends a search.
                 if (next === "intelligence") {
                   window.dispatchEvent(new Event("oats-clear-search"));

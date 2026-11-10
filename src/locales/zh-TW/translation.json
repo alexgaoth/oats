@@ -2281,6 +2281,12 @@
         "download": "下載",
         "searchWith": "搜尋方式"
       },
+      "topics": {
+        "title": "話題",
+        "description": "對話進行時，Oats 會把所說的內容分成話題並為其命名。",
+        "describe": "描述每個話題",
+        "describeHint": "在每個話題名稱下，由寫作模型用幾句話說明說了什麼、問了什麼、決定了什麼。描述會隨話題增長。關閉後，對話走向改為引用該話題的最新一句話。"
+      },
       "connections": {
         "vaultTitle": "Obsidian",
         "vaultDescription": "每段結束的對話都會以筆記寫入你的儲存庫。",

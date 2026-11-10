@@ -25,6 +25,18 @@ export function shellNav(surface, searching) {
 }
 
 /**
+ * Whether a destination opens while a conversation is recorded (DESIGN.md §1).
+ * Navigation stays available, Search included: the recording surface is never
+ * unmounted, so the conversation goes on and Stop stays in the sidebar.
+ * Settings is the one destination closed during a recording, as Cmd+, is.
+ *
+ * @param {"conversation" | "intelligence" | "search" | "settings"} destination
+ */
+export function openWhileRecording(destination) {
+  return destination !== "settings";
+}
+
+/**
  * Whether the Conversations page is searching: in the list (not reading a
  * conversation, not on the board), with the field focused or a query in it.
  */

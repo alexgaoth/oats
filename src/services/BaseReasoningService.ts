@@ -31,6 +31,12 @@ export interface ReasoningConfig {
    * the answer is empty. The summary at Finish sets it (actionProcessingStore.ts).
    */
   requireComplete?: boolean;
+  /**
+   * On this computer: "writing" asks for the writing model's own server while
+   * a recording holds one (helpers/writingServer.js). Anything else, or no
+   * held server, is the default server.
+   */
+  serverRole?: "writing";
 }
 
 export abstract class BaseReasoningService {

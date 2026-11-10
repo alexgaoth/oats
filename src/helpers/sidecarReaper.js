@@ -19,6 +19,8 @@ const EXPECTED_BINARY_FRAGMENTS = {
   // The short-lived server that times the speed check's clip (deviceTier.js).
   "whisper-check": ["whisper-server"],
   llama: ["llama-server"],
+  // The writing model's own server while a recording runs (writingServer.js).
+  "llama-writing": ["llama-server"],
   qdrant: ["qdrant"],
   diarization: ["sherpa-onnx-diarize"],
 };
