@@ -43,7 +43,9 @@ export const Toggle = ({
       // exactly 16px, so the gap round the knob is 2px on every side in both
       // states. The track was once widened from shadcn's 32px without changing
       // the travel, which left the knob 1px from one end and 5px from the other.
-      className={`peer inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 shadow-xs transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${track} ${
+      // The track is 20px tall; an invisible 2px above and below makes it a
+      // 24px target without moving the row.
+      className={`peer relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 shadow-xs after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-[''] transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${track} ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
     >

@@ -78,6 +78,9 @@ const DENSITY: Record<ThreadState, number> = {
 const DRAG_SLOP = 4;
 // Discs are small; the pointer may land this far outside one and still have it.
 const HIT_SLOP = 4;
+// And never less than a 24px target, whatever the disc's size (MIN_RADIUS is 5).
+// Where two reaches overlap, the nearer disc wins.
+const MIN_HIT_RADIUS = 12;
 // Edges stop this far short of the discs they join.
 const EDGE_GAP = 3;
 // Under a disc, the gap between its rim and its label's plate.
@@ -813,7 +816,8 @@ export default function ForceGraph<TNode extends GraphNode>({
     let bestDistance = Infinity;
     for (const node of nodesRef.current) {
       const distance = Math.hypot(node.x - x, node.y - y);
-      if (distance <= node.radius + HIT_SLOP && distance < bestDistance) {
+      const reach = Math.max(node.radius + HIT_SLOP, MIN_HIT_RADIUS);
+      if (distance <= reach && distance < bestDistance) {
         best = node;
         bestDistance = distance;
       }
