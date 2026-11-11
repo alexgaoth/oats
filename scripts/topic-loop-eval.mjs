@@ -26,6 +26,8 @@
  *            the tracker's cut at Finish, with the loop's names carried over
  *            and #121's final pass for the rest. `--options` takes
  *            `{"loop": {...}}`, the module's options (`checkAfterWords`).
+ *   v3app    v3 as the app ships it for the writing model on this computer
+ *            (`helpers/topicWindowLoop.mjs`), the rest as v4app.
  *   vf       no live view: the model cuts and names the record at Finish.
  *   V2 to V4 get the app's final naming pass at Finish, as V0 and V1 do.
  *
@@ -103,6 +105,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const helper = (name) => import(pathToFileURL(path.join(ROOT, "src/helpers", name)).href);
 const { TopicNamer } = await helper("topicNamer.mjs");
 const { LiveTopicLoop } = await helper("topicLoop.mjs");
+const { WindowTopicLoop } = await helper("topicWindowLoop.mjs");
 const { topicLanes } = await helper("topicLanes.mjs");
 const { returnsOfLanes } = await import(
   pathToFileURL(path.join(ROOT, "scripts/lib/return-score.mjs")).href
@@ -140,8 +143,8 @@ const { values: args } = parseArgs({
 });
 
 const VARIANT = args.variant;
-if (!["d0", "d1", "d2", "v0", "v1", "v2", "v3", "v4", "v4app", "vf"].includes(VARIANT)) {
-  console.error("--variant d0|d1|d2|v0|v1|v2|v3|v4|v4app|vf");
+if (!["d0", "d1", "d2", "v0", "v1", "v2", "v3", "v3app", "v4", "v4app", "vf"].includes(VARIANT)) {
+  console.error("--variant d0|d1|d2|v0|v1|v2|v3|v3app|v4|v4app|vf");
   process.exit(2);
 }
 const SPEC = args.model ?? null;
@@ -453,7 +456,7 @@ function labelsOf(nodes) {
  */
 function modelNamed(node) {
   if (VARIANT.startsWith("d")) return false;
-  if (VARIANT === "v0" || VARIANT === "v1" || VARIANT === "v4app")
+  if (VARIANT === "v0" || VARIANT === "v1" || VARIANT === "v4app" || VARIANT === "v3app")
     return typeof node.deviceLabel === "string";
   return !node.deviceNamed;
 }
@@ -541,7 +544,7 @@ async function runConversation(conversation) {
         : null;
       return named;
     };
-  } else if (VARIANT === "v4app") {
+  } else if (VARIANT === "v4app" || VARIANT === "v3app") {
     // V4 as the app ships it (helpers/topicLoop.mjs, stores/topicNamingRunner.ts):
     // the flow card shows the loop; the record is the on-device tracker's cut at
     // Finish, with the loop's names carried over and #121's final pass on top.
@@ -551,7 +554,8 @@ async function runConversation(conversation) {
       ...(OPTIONS.deviceDetector ? { detector: OPTIONS.detector ?? true } : {}),
       ...(OPTIONS.trackerOptions ?? {}),
     });
-    const loop = new LiveTopicLoop({
+    const Loop = VARIANT === "v3app" ? WindowTopicLoop : LiveTopicLoop;
+    const loop = new Loop({
       ask: async (request) => {
         const result = await ask({ ...request, maxTokens: request.maxTokens });
         if (!result.ok) throw new Error(result.error);

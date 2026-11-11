@@ -27,6 +27,7 @@ summary and the title, sorts the group and tidies dictation.
 | OpenAI | **gpt-6-astra**, reasoning low (else gpt-6.1-sol, gpt-6.1-terra) | **gpt-5.6-terra**, reasoning none (else gpt-6.1-terra, gpt-6.1-sol, gpt-6-luna, gpt-5.6-luna) |
 | Anthropic | **claude-opus-5-5**, effort medium (else claude-sonnet-5-5) | **claude-opus-5-5**, effort low (else claude-haiku-5-5), with the refusal fallback |
 | Bedrock | (no writing route in the app) | none: nothing beat main |
+| a model on this computer | the writing model, as before | **the writing model, V3 window** (`src/helpers/topicWindowLoop.mjs`), when it may name while recording |
 | every other route | the writing model, as before | none, as before |
 
 - **V4 now runs on the Anthropic route too**, with the same limits: at most
@@ -224,6 +225,32 @@ mid-way) are left out of the tables; each model was run again.
   prompts still ask for 2 to 5 words, and the 48-character limit stays. In the
   runs below the check's own names were refused 0 to 2 times in about 190;
   with the five-word limit, 2 and 42 times.
+
+### The writing model on this computer: V3 window
+
+With Gemma 4 E4B (Macs with 16 GB or more), the on-device tracker alone draws
+few changes while recording. So with a model on this computer as the writing
+model, `src/helpers/topicWindowLoop.mjs` runs instead of the check, when the
+recording may name while it runs (`namesWhileRecording`): every 2 minutes,
+after at least 25 new words, the model gets the last 6 minutes (at most 100
+lines and 1,500 words) as numbered lines, each with the topic it is shown
+under, and gives the topic of every line. It can move a cut, start a topic or
+go back to an earlier one; a run under 40 words joins the topic around it,
+except the last. A 60 s timeout, one request at a time, on the writing server
+when the recording holds one. Everything else (the view, the names carried to
+the record, three failures end it) is V4's. Nothing leaves the computer.
+
+Live view at the end, a cut within 10 s of a real change, Gemma 4 E4B
+(`--variant v3`; 12 talks and 12 two-person videos as the app heard them, 12
+AMI meetings):
+
+| | talks: cuts real / changes found | two-person | meetings |
+| --- | --- | --- | --- |
+| on-device tracker alone | 100% / 3% | 30% / 4% | 30% / 18% |
+| **V3 window** | 41% / 44% | 31% / 37% | 21% / 39% |
+
+A change shows a median 1.4 to 1.9 minutes after it happened; about 45
+requests an hour, 3.5 s each at the median (13 s at p95).
 
 ### Verification: the app's code on eval24
 
@@ -814,6 +841,9 @@ node scripts/topic-loop-eval.mjs --variant v4app --vectors --model openai:gpt-6-
 node scripts/topic-loop-eval.mjs --variant v2 --model openai:gpt-6-luna@none --ami $AMI --asr room-replay.json --json v2-far.json
 
 # A model on this computer (llama-server, as the app runs it)
+node scripts/topic-loop-eval.mjs --variant v3app --model local:gemma-4-e4b \
+  --local-model google_gemma-4-E4B-it-Q4_K_M.gguf --llama-server resources/bin/llama-server-darwin-arm64 \
+  --ami $AMI --set eval24 --json v3app-local.json
 node scripts/topic-loop-eval.mjs --variant v3 --model local:qwen3.5-2b@grammar \
   --local-model Qwen_Qwen3.5-2B-Q4_K_M.gguf --llama-server resources/bin/llama-server-darwin-arm64 \
   --ami $AMI --set test --json v3-local.json
