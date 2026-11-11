@@ -174,6 +174,18 @@ Anthropic as the writing model, the live topic check below names the topics
 while recording instead, and these requests go out only at the end, for the
 record's topics it did not name.
 
+When a conversation ends, the writing model also cuts the record's topics: it
+reads the whole transcript and says where each topic starts
+(`src/helpers/topicRecordCut.mjs`). It goes by the same route as the names, so
+it adds no destination: with OpenAI or Anthropic as the writing model, that
+provider's model for the live topic check below, when the key can use it; with
+any other route, the writing model itself. One request per 6,000 words of the
+transcript: the lines of that part, numbered, each at most 400 characters, and
+the names and one-line descriptions of the topics found in the parts before it.
+Never audio. With a model on this computer, nothing leaves. With no writing
+model, or one that is not ready, nothing is sent and the record keeps the topics
+cut on this computer (`src/stores/topicNamingRunner.ts`).
+
 The live topic check runs only with OpenAI or Anthropic as the writing model
 and that provider's key, and goes to the same host by the same key, so it adds
 no destination either (`src/helpers/topicLoop.mjs`). During the conversation,
