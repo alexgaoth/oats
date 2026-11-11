@@ -188,7 +188,10 @@ cut on this computer (`src/stores/topicNamingRunner.ts`).
 
 The live topic check runs only with OpenAI or Anthropic as the writing model
 and that provider's key, and goes to the same host by the same key, so it adds
-no destination either (`src/helpers/topicLoop.mjs`). During the conversation,
+no destination either (`src/helpers/topicLoop.mjs`). With a model on this
+computer as the writing model, the window loop takes its place
+(`src/helpers/topicWindowLoop.mjs`): the last 6 minutes go to that model every
+2 minutes, and nothing leaves. During the conversation,
 the on-device tracker proposes changes of subject, and that provider's most
 accurate model for the check confirms each proposed change and names the new
 topic (`src/helpers/topicModels.mjs`): with OpenAI, gpt-5.6-terra with

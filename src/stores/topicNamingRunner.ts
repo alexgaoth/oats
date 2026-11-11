@@ -17,6 +17,7 @@ import {
   topicNameConfig,
 } from "../helpers/topicNaming.mjs";
 import { LiveTopicLoop, chooseFastModel, readJson } from "../helpers/topicLoop.mjs";
+import { WindowTopicLoop } from "../helpers/topicWindowLoop.mjs";
 import { cutRecord } from "../helpers/topicRecordCut.mjs";
 import {
   checkRequestConfig,
@@ -62,9 +63,17 @@ let generation = 0;
 // ends early (three failures in a row, or the writing model is no longer that
 // provider's), the flow card goes back to the tracker's topics and #121 names
 // them as on any other route.
-let loop: LiveTopicLoop | null = null;
+//
+// With the writing model on this computer, the window loop
+// (helpers/topicWindowLoop.mjs) takes the check's place while the recording
+// can name live (`namesLive`): every 2 minutes the model re-cuts the last 6
+// minutes and names the topics, on the writing server when the recording
+// holds one. The rest is as above.
+let loop: LiveTopicLoop | WindowTopicLoop | null = null;
 /** The provider of the check that runs now, so a change of writing model ends it. */
 let loopProvider: "openai" | "anthropic" | null = null;
+/** The local writing model of the window loop that runs now, so a change of model ends it. */
+let loopLocalModel: string | null = null;
 /**
  * The topic model each provider's key can use, per job ("openai:check",
  * "anthropic:names", ...): absent until asked, null when it can use none.
@@ -173,6 +182,28 @@ function loopReady(): boolean {
   return loopProvider !== null && topicProvider(currentWritingRoute()) === loopProvider;
 }
 
+/** Whether the window loop may still ask: the same model on this computer, and ready. */
+async function windowLoopReady(): Promise<boolean> {
+  const route = currentWritingRoute();
+  if (!loopLocalModel || route?.mode !== "local" || route.modelId !== loopLocalModel) return false;
+  return writingModelReady();
+}
+
+/** One request of the window loop, to the writing model on this computer. */
+async function askLocalModel(request: {
+  system: string;
+  user: string;
+  maxTokens: number;
+}): Promise<string> {
+  const route = currentWritingRoute();
+  if (!route || route.mode !== "local") throw new Error("No local writing model");
+  return reasoningService.processText(request.user, route.modelId, null, {
+    ...topicNameConfig(route, request.system),
+    maxTokens: request.maxTokens,
+    ...(writingServer ? { serverRole: "writing" as const } : {}),
+  });
+}
+
 /**
  * The names for a snapshot of the tracker's topics: the live check's, on the
  * topics that hold the lines they were given from, and the namer's where it
@@ -238,6 +269,7 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   loop?.stop();
   loop = null;
   loopProvider = null;
+  loopLocalModel = null;
   waitingLines = null;
   writingServer = false;
   const mine = ++generation;
@@ -245,15 +277,15 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   // No writing model: the topics keep their on-device names, and nothing is sent.
   if (!route) return;
   // OpenAI or Anthropic with a key: the live topic check names the topics
-  // while recording, so the namer only names the record at Finish. Every other
-  // route: #121.
+  // while recording, so the namer only names the record at Finish. The writing
+  // model on this computer, when it may name while recording: the window loop,
+  // the same way. Every other route: #121.
   const provider = topicProvider(route);
-  if (provider) waitingLines = [];
+  if (provider || route.mode === "local") waitingLines = [];
   const fast = provider ? await topicModelFor(provider, "check") : null;
   if (mine !== generation) return;
-  const waited = waitingLines ?? [];
-  waitingLines = null;
   if (fast && stoppedGeneration === mine) {
+    waitingLines = null;
     // The recording ended while the fast model was being asked for: no check
     // starts after it, and nothing more is sent while it is not recording.
     namer = new TopicNamer({
@@ -266,6 +298,8 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     return;
   }
   if (fast && provider) {
+    const waited = waitingLines ?? [];
+    waitingLines = null;
     loopProvider = provider;
     loop = new LiveTopicLoop({
       ask: (request: {
@@ -295,6 +329,31 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   }
   const live = await namesLive(route);
   if (mine !== generation) return;
+  const waited = waitingLines ?? [];
+  waitingLines = null;
+  if (live && route.mode === "local" && stoppedGeneration !== mine) {
+    loopLocalModel = route.modelId;
+    loop = new WindowTopicLoop({
+      ask: askLocalModel,
+      ready: windowLoopReady,
+      onChange: () => {
+        if (loop?.disabled) namerTakesOver(mine);
+        onChange();
+      },
+      log: loopLog,
+    });
+    namer = new TopicNamer({
+      ask: askNamer,
+      ready: writingModelReady,
+      onChange,
+      live: false,
+      log,
+    });
+    for (const segment of waited) observeUtterance(segment);
+    log("started", { mode: route.mode, live: false, loop: "window" });
+    if (waited.length) onChange();
+    return;
+  }
   namer = new TopicNamer({
     ask: askNamer,
     ready: writingModelReady,
