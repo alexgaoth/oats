@@ -382,3 +382,41 @@ test("main notes the first recording audio it receives only under the test route
     nativeE2E._setActiveForTests(null);
   }
 });
+
+test("the runner refuses to start without the FFmpeg a room's segments need", () => {
+  const dir = tempDir("oats-native-e2e-ffmpeg-");
+  const missing = path.join(dir, "node_modules", "ffmpeg-static", "ffmpeg");
+  const noSystem = [path.join(dir, "opt-homebrew-ffmpeg"), path.join(dir, "usr-local-ffmpeg")];
+  assert.throws(
+    () => runner.findFFmpeg({ bundled: missing, candidates: noSystem }),
+    (error) => error.exitCode === 10 && /no FFmpeg/.test(error.message)
+  );
+  assert.throws(
+    () => runner.findFFmpeg({ bundled: null, candidates: noSystem }),
+    (error) => error.exitCode === 10
+  );
+
+  // A file that is there but cannot be run is what the app also skips.
+  const notExecutable = path.join(dir, "ffmpeg-not-executable");
+  fs.writeFileSync(notExecutable, "", { mode: 0o644 });
+  assert.throws(
+    () => runner.findFFmpeg({ bundled: notExecutable, candidates: noSystem }),
+    (error) => error.exitCode === 10
+  );
+});
+
+test("the runner accepts the bundled FFmpeg first, then a system install", () => {
+  const dir = tempDir("oats-native-e2e-ffmpeg-");
+  const bundled = path.join(dir, "ffmpeg");
+  fs.writeFileSync(bundled, "", { mode: 0o755 });
+  const system = path.join(dir, "system-ffmpeg");
+  fs.writeFileSync(system, "", { mode: 0o755 });
+  assert.deepEqual(runner.findFFmpeg({ bundled, candidates: [system] }), {
+    path: bundled,
+    source: "ffmpeg-static",
+  });
+  assert.deepEqual(
+    runner.findFFmpeg({ bundled: path.join(dir, "missing"), candidates: [system] }),
+    { path: system, source: "system" }
+  );
+});

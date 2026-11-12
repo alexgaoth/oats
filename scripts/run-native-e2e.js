@@ -34,6 +34,10 @@
 // AudioContext, the worklet, the first PCM, the renderer's send, main's
 // receipt. A stage that does not arrive ends the run early (exit 8); a Start
 // button still covered by a dialog ends it before recording (exit 9).
+//
+// A room's segments reach whisper-server only through FFmpeg, so a worktree
+// whose ffmpeg-static install never fetched its binary records audio and
+// transcribes nothing. Both commands refuse to start without one (exit 10).
 
 const { spawn, execFileSync, spawnSync } = require("child_process");
 const crypto = require("crypto");
@@ -60,6 +64,8 @@ const CAPTURE_SETUP_MS = 20000;
 const SILENT_CHUNKS = 150;
 const EXIT_CAPTURE_STALLED = 8;
 const EXIT_START_COVERED = 9;
+const EXIT_NO_FFMPEG = 10;
+const SYSTEM_FFMPEG = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"];
 
 function fail(message, code = 1) {
   const error = new Error(message);
@@ -224,6 +230,38 @@ function ensureBinaries(binArg) {
     copied.push(name);
   }
   return { target, copied };
+}
+
+function bundledFFmpeg() {
+  try {
+    return require("ffmpeg-static");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The FFmpeg the app will find, in the app's own order (ffmpegUtils.getFFmpegPath):
+ * the ffmpeg-static binary, then the system installs. The test route scrubs
+ * PATH, so a PATH-only FFmpeg is not counted.
+ */
+function findFFmpeg({ bundled = bundledFFmpeg(), candidates = SYSTEM_FFMPEG } = {}) {
+  const usable = (file) => {
+    try {
+      fs.accessSync(file, fs.constants.X_OK);
+      return fs.statSync(file).isFile();
+    } catch {
+      return false;
+    }
+  };
+  if (bundled && usable(bundled)) return { path: bundled, source: "ffmpeg-static" };
+  const system = candidates.find((file) => fs.existsSync(file));
+  if (system) return { path: system, source: "system" };
+  return fail(
+    `no FFmpeg: ${bundled ?? "ffmpeg-static"} is missing and none of ${candidates.join(", ")} exists; ` +
+      "a room's speech would never reach whisper-server, nothing was started",
+    EXIT_NO_FFMPEG
+  );
 }
 
 function prepareAssets(run, options) {
@@ -1212,6 +1250,7 @@ const START_HIT = `(() => {
 async function prepare(options) {
   if (process.platform !== "darwin") fail("the native run is macOS only");
   if (!fs.existsSync(SANDBOX_EXEC)) fail(`${SANDBOX_EXEC} is missing`, 3);
+  const ffmpeg = findFFmpeg();
   await checkPorts();
   const run = makeRunDir(options.root);
   log(`run directory ${run.runDir}`);
@@ -1227,7 +1266,8 @@ async function prepare(options) {
   if (!containment.compatible) {
     fail("the inherited outbound policy did not behave as required; no native work was started", 3);
   }
-  const check = { run, ledger, assets, containment };
+  log(`ffmpeg ${ffmpeg.path} (${ffmpeg.source})`);
+  const check = { run, ledger, assets, containment, ffmpeg };
   return check;
 }
 
@@ -1465,6 +1505,7 @@ module.exports = {
   dispatchCdpMessage,
   eventRecorder,
   fakeDeviceLines,
+  findFFmpeg,
   summarizeCdpEvent,
   outboundPolicy,
   electronArgs,
