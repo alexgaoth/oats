@@ -35,6 +35,14 @@ export const RECORD_LINE_CHARS = 400;
 /** A topic of fewer words joins the one around it. */
 export const RECORD_MIN_RUN_WORDS = 60;
 
+/**
+ * Minutes a topic usually holds, for the count hint (`minutesPerTopic`) the
+ * app gives a writing model on this computer. Without it Gemma 4 E4B drew 1.2
+ * times the real number of topics on 18 min videos and 2.4 to 2.7 times on
+ * 30 min ones (docs/fast-models.md).
+ */
+export const RECORD_MINUTES_PER_TOPIC = 5;
+
 const NAME_RULES =
   "A name has 2 to 5 words, says specifically what the part is about (the thing, question, problem or decision), is in sentence case in the language spoken, has no quotation marks, and is not generic (not Discussion, Meeting, Update, Introduction, Small talk).";
 

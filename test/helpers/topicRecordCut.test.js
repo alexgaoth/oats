@@ -80,6 +80,18 @@ test("topics start at the turns where the model says the subject changes", async
   assert.match(model.requests[0].user, /^LINES \(3 min of conversation\):$/m);
 });
 
+test("minutesPerTopic tells the model about how many topics fit the length", async () => {
+  const lines = [...said("pricing", 15), ...said("hiring", 15)];
+  const utterances = lines.map((text, index) => ({ id: `u${index}`, text, at: index * 60_000 }));
+  const hinted = subjectModel();
+  const result = await cutRecord({ ask: hinted.ask, utterances, minutesPerTopic: 5 });
+  assert.deepEqual(result.starts, ["u15"]);
+  assert.match(hinted.requests[0].user, /^About 6 topics is usual for this length;/m);
+  const plain = subjectModel();
+  await cutRecord({ ask: plain.ask, utterances });
+  assert.doesNotMatch(plain.requests[0].user, /topics is usual/);
+});
+
 test("a return to an earlier subject keeps that topic's key", async () => {
   const model = subjectModel();
   const result = await cutRecord({
