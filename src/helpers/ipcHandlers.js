@@ -6829,6 +6829,7 @@ class IPCHandlers {
     };
 
     ipcMain.on("meeting-transcription-send", (_event, audioBuffer, source) => {
+      nativeE2E.observeMeetingAudio(audioBuffer, source);
       sendMeetingAudio(audioBuffer, source);
     });
 

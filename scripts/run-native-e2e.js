@@ -25,6 +25,15 @@
 //
 // The renderer must be built first (`npm run build:renderer`): the app loads
 // src/dist.
+//
+// Before Start, `smoke` finishes onboarding the way setup does (including the
+// bundle-migration sentinel), keeps every console call, page exception and
+// browser log entry in RUN_DIR/logs/cdp-events-<launch>.jsonl, and installs a
+// page probe that only observes the capture path. After Start it waits a
+// bounded time for each capture stage in turn: getUserMedia, a running
+// AudioContext, the worklet, the first PCM, the renderer's send, main's
+// receipt. A stage that does not arrive ends the run early (exit 8); a Start
+// button still covered by a dialog ends it before recording (exit 9).
 
 const { spawn, execFileSync, spawnSync } = require("child_process");
 const crypto = require("crypto");
@@ -45,6 +54,12 @@ const WHISPER_MODELS = ["ggml-small.en.bin", "ggml-small.bin"];
 const EXCLUDED_BIN = /^(\.?macos-|\.?MediaRemoteAdapter|\.swift-module-cache)/;
 const REQUIRED_BIN = ["whisper-server-darwin-arm64", "whisper-vad"];
 const QUIT_TIMEOUT_MS = 45000;
+/** From the press of Start to main receiving audio; setup takes about a second. */
+const CAPTURE_SETUP_MS = 20000;
+/** This many PCM chunks (800 samples at 24 kHz, about 5 s) all at zero is a silent source. */
+const SILENT_CHUNKS = 150;
+const EXIT_CAPTURE_STALLED = 8;
+const EXIT_START_COVERED = 9;
 
 function fail(message, code = 1) {
   const error = new Error(message);
@@ -589,21 +604,21 @@ function launchApp(run, ledger, clip, label, { noSandbox = false } = {}) {
 
 // ---------------------------------------------------------------- CDP
 
-async function openTarget(urlFragment, timeoutMs, isAlive) {
+async function openTarget(urlFragment, timeoutMs, isAlive, socketOptions) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (!isAlive()) fail("the app exited before its window opened", 5);
     try {
       const list = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json();
       const target = list.find((t) => t.type === "page" && t.url.includes(urlFragment));
-      if (target) return openSocket(target.webSocketDebuggerUrl);
+      if (target) return openSocket(target.webSocketDebuggerUrl, socketOptions);
     } catch {}
     await sleep(250);
   }
   return fail(`no window matching "${urlFragment}" within ${timeoutMs} ms`, 5);
 }
 
-async function openSocket(wsUrl) {
+async function openSocket(wsUrl, { onEvent } = {}) {
   const ws = new WebSocket(wsUrl);
   await new Promise((resolve, reject) => {
     ws.onopen = resolve;
@@ -615,13 +630,7 @@ async function openSocket(wsUrl) {
     for (const entry of pending.values()) entry.reject(new Error("debugger socket closed"));
     pending.clear();
   };
-  ws.onmessage = (message) => {
-    const msg = JSON.parse(message.data);
-    const entry = pending.get(msg.id);
-    if (!entry) return;
-    pending.delete(msg.id);
-    msg.error ? entry.reject(new Error(JSON.stringify(msg.error))) : entry.resolve(msg.result);
-  };
+  ws.onmessage = (message) => dispatchCdpMessage(JSON.parse(message.data), pending, onEvent);
   const send = (method, params = {}) =>
     new Promise((resolve, reject) => {
       const next = ++id;
@@ -640,6 +649,8 @@ async function openSocket(wsUrl) {
     return result.result.value;
   };
   await send("Runtime.enable");
+  await send("Log.enable");
+  await send("Page.enable");
   return { ws, send, evaluate };
 }
 
@@ -693,10 +704,10 @@ const READ_NOTES = `(async () => {
   });
 })()`;
 
-async function openApp(run, ledger, clip, label, launchOptions) {
+async function openApp(run, ledger, clip, label, launchOptions, socketOptions) {
   const launched = launchApp(run, ledger, clip, label, launchOptions);
   const isAlive = () => ledger.alive(launched.entry).includes(launched.entry.pid);
-  const page = await openTarget("panel=true", 90000, isAlive);
+  const page = await openTarget("panel=true", 90000, isAlive, socketOptions);
   await waitFor("page load", 60000, () => page.evaluate(`document.readyState === "complete"`));
   ledger.snapshot(launched.entry);
   return { ...launched, page, isAlive };
@@ -739,6 +750,462 @@ function compareToReference(recognized, reference) {
     sharedFraction: distinct.length ? Number((shared.length / distinct.length).toFixed(3)) : 0,
   };
 }
+
+// ---------------------------------------------------------------- capture diagnostics
+
+/**
+ * Route one debugger message: a reply settles its command, and every other
+ * message with a method (console calls, exceptions, log entries) goes to
+ * onEvent. Events carry no id, so a receiver that only matched ids lost them.
+ */
+function dispatchCdpMessage(msg, pending, onEvent) {
+  if (msg.id !== undefined && pending.has(msg.id)) {
+    const entry = pending.get(msg.id);
+    pending.delete(msg.id);
+    msg.error ? entry.reject(new Error(JSON.stringify(msg.error))) : entry.resolve(msg.result);
+    return "reply";
+  }
+  if (typeof msg.method === "string") {
+    onEvent?.(msg);
+    return "event";
+  }
+  return "ignored";
+}
+
+function cdpArgText(arg) {
+  if (!arg) return "";
+  if (arg.value !== undefined) {
+    return typeof arg.value === "string" ? arg.value : JSON.stringify(arg.value);
+  }
+  if (arg.preview?.properties?.length) {
+    const fields = arg.preview.properties.map((p) => `${p.name}: ${p.value}`).join(", ");
+    return `{${fields}${arg.preview.overflow ? ", …" : ""}}`;
+  }
+  return arg.description ?? arg.unserializableValue ?? arg.type ?? "";
+}
+
+/** One line for a console call, page exception or browser log entry; null for any other event. */
+function summarizeCdpEvent(msg) {
+  const p = msg?.params || {};
+  if (msg?.method === "Runtime.consoleAPICalled") {
+    const text = (p.args || []).map(cdpArgText).join(" ");
+    return { kind: "console", level: p.type ?? null, text: text.slice(0, 2000), at: p.timestamp };
+  }
+  if (msg?.method === "Runtime.exceptionThrown") {
+    const d = p.exceptionDetails || {};
+    const text = d.exception?.description ?? d.text ?? "";
+    return {
+      kind: "exception",
+      text: String(text).slice(0, 2000),
+      url: d.url ?? null,
+      line: d.lineNumber ?? null,
+      at: p.timestamp,
+    };
+  }
+  if (msg?.method === "Log.entryAdded") {
+    const e = p.entry || {};
+    return {
+      kind: "log",
+      level: e.level ?? null,
+      source: e.source ?? null,
+      text: String(e.text ?? "").slice(0, 2000),
+      url: e.url ?? null,
+      at: e.timestamp,
+    };
+  }
+  return null;
+}
+
+/** Keep every retained event in memory and append it to FILE as it arrives. */
+function eventRecorder(file) {
+  const kept = [];
+  const onEvent = (msg) => {
+    const line = summarizeCdpEvent(msg);
+    if (!line) return;
+    kept.push(line);
+    try {
+      fs.appendFileSync(file, `${JSON.stringify(line)}\n`, { mode: 0o600 });
+    } catch {}
+  };
+  return { file, kept, onEvent };
+}
+
+/**
+ * Installed with Page.addScriptToEvaluateOnNewDocument, so it runs before the
+ * app's scripts. It wraps the capture calls only to record when each one was
+ * made and how it settled; every value and error passes through unchanged.
+ */
+function captureProbe() {
+  const w = globalThis;
+  if (w.__oatsE2EProbe) return;
+  const t0 = w.performance.now();
+  const now = () => Math.round(w.performance.now() - t0);
+  const probe = {
+    installedAt: Date.now(),
+    gum: [],
+    devices: [],
+    contexts: [],
+    resumes: [],
+    sinks: [],
+    modules: [],
+    nodes: [],
+    send: { wrapped: null, count: 0, bytes: 0, firstAt: null, lastSource: null },
+  };
+  Object.defineProperty(w, "__oatsE2EProbe", { value: probe });
+  const describe = (error) => ({
+    name: error?.name ?? null,
+    message: String(error?.message ?? error).slice(0, 300),
+  });
+  const call = (fn) => {
+    try {
+      return Promise.resolve(fn());
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+  const observe = (list, entry, promise) => {
+    list.push(entry);
+    return promise.then(
+      (value) => {
+        entry.resolvedAt = now();
+        return value;
+      },
+      (error) => {
+        entry.rejectedAt = now();
+        entry.error = describe(error);
+        throw error;
+      }
+    );
+  };
+  const isArrayBuffer = (value) => Object.prototype.toString.call(value) === "[object ArrayBuffer]";
+
+  const wrapSend = () => {
+    if (probe.send.wrapped === "yes") return;
+    const api = w.electronAPI;
+    if (!api) {
+      probe.send.wrapped = "no-api";
+      return;
+    }
+    const original = api.meetingTranscriptionSend;
+    if (typeof original !== "function") {
+      probe.send.wrapped = "missing";
+      return;
+    }
+    const counted = function (buffer, source) {
+      probe.send.count += 1;
+      probe.send.bytes += buffer?.byteLength ?? 0;
+      if (probe.send.firstAt === null) probe.send.firstAt = now();
+      probe.send.lastSource = source;
+      return original.call(this, buffer, source);
+    };
+    try {
+      api.meetingTranscriptionSend = counted;
+    } catch (error) {
+      probe.send.wrapped = `refused: ${describe(error).message}`;
+      return;
+    }
+    probe.send.wrapped = api.meetingTranscriptionSend === counted ? "yes" : "read-only";
+  };
+
+  const media = w.navigator?.mediaDevices;
+  if (media && typeof media.getUserMedia === "function") {
+    const getUserMedia = media.getUserMedia.bind(media);
+    media.getUserMedia = (constraints) => {
+      wrapSend();
+      const audio = constraints?.audio;
+      const entry = {
+        at: now(),
+        exactDevice: Boolean(audio && typeof audio === "object" && audio.deviceId),
+        video: Boolean(constraints?.video),
+      };
+      return observe(
+        probe.gum,
+        entry,
+        call(() => getUserMedia(constraints))
+      ).then((stream) => {
+        entry.tracks = stream.getAudioTracks().map((track) => {
+          const settings = track.getSettings?.() ?? {};
+          const seen = {
+            label: track.label,
+            readyState: track.readyState,
+            muted: track.muted,
+            enabled: track.enabled,
+            sampleRate: settings.sampleRate ?? null,
+            channelCount: settings.channelCount ?? null,
+          };
+          track.addEventListener?.("ended", () => (seen.endedAt = now()));
+          track.addEventListener?.("mute", () => (seen.mutedAt = now()));
+          track.addEventListener?.("unmute", () => (seen.unmutedAt = now()));
+          return seen;
+        });
+        return stream;
+      });
+    };
+  }
+  if (media && typeof media.enumerateDevices === "function") {
+    const enumerateDevices = media.enumerateDevices.bind(media);
+    media.enumerateDevices = () => {
+      const entry = { at: now() };
+      return observe(
+        probe.devices,
+        entry,
+        call(() => enumerateDevices())
+      ).then((devices) => {
+        entry.audioInputs = devices
+          .filter((d) => d.kind === "audioinput")
+          .map((d) => ({ label: d.label, hasId: Boolean(d.deviceId) }));
+        return devices;
+      });
+    };
+  }
+
+  const OriginalContext = w.AudioContext;
+  if (typeof OriginalContext === "function") {
+    for (const [name, list] of [
+      ["resume", probe.resumes],
+      ["setSinkId", probe.sinks],
+    ]) {
+      const original = OriginalContext.prototype[name];
+      if (typeof original !== "function") continue;
+      OriginalContext.prototype[name] = function (...args) {
+        const entry = { at: now(), stateBefore: this.state };
+        return observe(
+          list,
+          entry,
+          call(() => original.apply(this, args))
+        ).then((value) => {
+          entry.stateAfter = this.state;
+          return value;
+        });
+      };
+    }
+    w.AudioContext = class AudioContext extends OriginalContext {
+      constructor(...args) {
+        super(...args);
+        const entry = { at: now(), sampleRate: this.sampleRate, state: this.state, changes: [] };
+        probe.contexts.push(entry);
+        this.addEventListener("statechange", () => {
+          entry.state = this.state;
+          entry.changes.push({ at: now(), state: this.state });
+        });
+      }
+    };
+  }
+
+  const workletProto = w.Worklet?.prototype ?? w.AudioWorklet?.prototype;
+  if (workletProto && typeof workletProto.addModule === "function") {
+    const addModule = workletProto.addModule;
+    workletProto.addModule = function (url, ...rest) {
+      const entry = { at: now(), scheme: String(url).split(":")[0] };
+      return observe(
+        probe.modules,
+        entry,
+        call(() => addModule.call(this, url, ...rest))
+      );
+    };
+  }
+
+  const OriginalNode = w.AudioWorkletNode;
+  if (typeof OriginalNode === "function") {
+    w.AudioWorkletNode = class AudioWorkletNode extends OriginalNode {
+      constructor(context, name, options) {
+        super(context, name, options);
+        const entry = {
+          at: now(),
+          name,
+          messages: 0,
+          bytes: 0,
+          peak: 0,
+          firstAt: null,
+          lastAt: null,
+        };
+        probe.nodes.push(entry);
+        this.port.addEventListener("message", (event) => {
+          if (!isArrayBuffer(event.data)) return;
+          const samples = new Int16Array(event.data);
+          let peak = 0;
+          for (let i = 0; i < samples.length; i++) {
+            const v = samples[i] < 0 ? -samples[i] : samples[i];
+            if (v > peak) peak = v;
+          }
+          entry.messages += 1;
+          entry.bytes += event.data.byteLength;
+          entry.lastAt = now();
+          if (entry.firstAt === null) {
+            entry.firstAt = entry.lastAt;
+            entry.firstPeak = peak;
+          }
+          if (peak > entry.peak) entry.peak = peak;
+        });
+      }
+    };
+  }
+  wrapSend();
+}
+
+const CAPTURE_PROBE = `(${captureProbe.toString()})();`;
+const READ_PROBE = `JSON.parse(JSON.stringify(globalThis.__oatsE2EProbe ?? null))`;
+const CAPTURE_STAGES = [
+  "getUserMedia",
+  "audioContext",
+  "worklet",
+  "firstPcm",
+  "rendererSend",
+  "mainReceive",
+];
+
+/**
+ * Where capture has got to, from the page probe and main's trace notes. The
+ * first stage that is neither done nor skipped is pending; a stage that failed
+ * outright is pending too, with its error.
+ */
+function captureStages(probe, mainNotes = []) {
+  const p = probe || {};
+  const gum = p.gum || [];
+  const live = gum.find((e) => (e.tracks || []).some((t) => t.readyState === "live"));
+  const rejected = gum.filter((e) => e.error);
+  const contexts = p.contexts || [];
+  const modules = p.modules || [];
+  const nodes = (p.nodes || []).filter((n) => n.name === "meeting-pcm-processor");
+  const node = nodes.find((n) => n.messages > 0);
+  const send = p.send || {};
+  const received = mainNotes.find(
+    (n) => n.event === "meeting-audio-received" && n.source === "mic"
+  );
+  const stages = {
+    getUserMedia: live
+      ? { done: true, at: live.resolvedAt, track: live.tracks[0] }
+      : { done: false, calls: gum.length, errors: rejected.map((e) => e.error) },
+    audioContext: contexts.some((c) => c.state === "running")
+      ? { done: true }
+      : {
+          done: false,
+          contexts: contexts.map((c) => c.state),
+          resumes: (p.resumes || []).length,
+          resumesSettled: (p.resumes || []).filter((r) => "resolvedAt" in r || r.error).length,
+          sinks: (p.sinks || []).length,
+          sinksSettled: (p.sinks || []).filter((r) => "resolvedAt" in r || r.error).length,
+        },
+    worklet: modules.some((m) => "resolvedAt" in m)
+      ? { done: true }
+      : {
+          done: false,
+          calls: modules.length,
+          errors: modules.filter((m) => m.error).map((m) => m.error),
+        },
+    firstPcm: node
+      ? { done: true, at: node.firstAt, messages: node.messages, peak: node.peak }
+      : { done: false, nodes: nodes.length },
+    rendererSend:
+      send.wrapped !== "yes"
+        ? { skipped: true, reason: send.wrapped ?? "not observed" }
+        : send.count > 0
+          ? { done: true, at: send.firstAt, count: send.count }
+          : { done: false },
+    mainReceive: received
+      ? { done: true, at: received.at, peak: received.peak ?? null }
+      : { done: false },
+  };
+  const pending =
+    CAPTURE_STAGES.find((name) => !stages[name].done && !stages[name].skipped) ?? null;
+  const silent = Boolean(node && node.messages >= SILENT_CHUNKS && node.peak === 0);
+  return { stages, pending, silent, complete: pending === null };
+}
+
+/** main's trace notes about recording audio, written by nativeE2E.observeMeetingAudio. */
+function mainAudioNotes(run) {
+  try {
+    return fs
+      .readFileSync(path.join(run.paths.logs, "native-e2e-trace.jsonl"), "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter((note) => note && String(note.event).startsWith("meeting-audio"));
+  } catch {
+    return [];
+  }
+}
+
+/** Chromium's own lines about the fake microphone and its file, from the app's stderr log. */
+function fakeDeviceLines(text) {
+  return String(text || "")
+    .split("\n")
+    .filter((line) =>
+      /fake[ _-]?(audio|device|capture|input)|use-file-for-fake|failed to read|wav_audio|file_source|audio_input/i.test(
+        line
+      )
+    )
+    .slice(0, 40);
+}
+
+/** Wait, within the bound, for every capture stage; on a stall say which stage and what was seen. */
+async function watchCapture(page, run, startedAt) {
+  let last = null;
+  while (Date.now() - startedAt < CAPTURE_SETUP_MS) {
+    const probe = await page.evaluate(READ_PROBE).catch((error) => ({ error: error.message }));
+    last = { probe, ...captureStages(probe, mainAudioNotes(run)) };
+    if (last.complete) break;
+    await sleep(500);
+  }
+  // A source that delivers chunks of zeros is a stall too: there is nothing to hear.
+  while (last?.complete && Date.now() - startedAt < CAPTURE_SETUP_MS + 10000) {
+    const firstPcm = last.stages.firstPcm;
+    if (firstPcm.peak > 0 || last.silent) break;
+    await sleep(500);
+    const probe = await page.evaluate(READ_PROBE).catch((error) => ({ error: error.message }));
+    last = { probe, ...captureStages(probe, mainAudioNotes(run)) };
+  }
+  const ok = Boolean(last?.complete && !last.silent);
+  return {
+    ok,
+    afterMs: Date.now() - startedAt,
+    pending: last?.pending ?? "getUserMedia",
+    silent: Boolean(last?.silent),
+    stages: last?.stages ?? null,
+    probe: last?.probe ?? null,
+    main: mainAudioNotes(run),
+  };
+}
+
+/** Finish onboarding as OnboardingFlow's saveSettings does, sentinel included. */
+const FIXTURE_ONBOARDING = `(async () => {
+  localStorage.setItem("onboardingCompleted", "true");
+  await window.electronAPI.markBundleMigrated();
+  const state = await window.electronAPI.getPostMigrationState();
+  return { onboardingCompleted: localStorage.getItem("onboardingCompleted"), postMigration: state };
+})()`;
+
+const VISIBLE_DIALOGS = `Array.from(document.querySelectorAll('[role="dialog"],[role="alertdialog"]'))
+  .filter((d) => d.getBoundingClientRect().width > 0)
+  .map((d) => (d.querySelector("h1,h2,h3")?.textContent || d.getAttribute("aria-label") || "").trim())`;
+
+/** If the reminder dialog shows anyway, Remind Me Later is its harmless answer; never Grant Access. */
+const DISMISS_REMINDER = `(() => {
+  const dialogs = ${VISIBLE_DIALOGS};
+  const later = ${findButton("Remind Me Later")};
+  if (later) later.click();
+  return { dialogs, remindMeLater: Boolean(later) };
+})()`;
+
+const START_HIT = `(() => {
+  const button = ${findButton(START_LABEL)};
+  if (!button) return { found: false };
+  const r = button.getBoundingClientRect();
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  const name = hit
+    ? hit.tagName.toLowerCase() +
+      (typeof hit.className === "string" && hit.className
+        ? "." + hit.className.trim().split(/\\s+/).slice(0, 3).join(".")
+        : "")
+    : null;
+  return { found: true, covered: !(hit && (hit === button || button.contains(hit))), hit: name, dialogs: ${VISIBLE_DIALOGS} };
+})()`;
 
 // ---------------------------------------------------------------- commands
 
@@ -784,10 +1251,16 @@ async function smoke(options) {
   const launchOptions = { noSandbox };
   if (noSandbox) log("Chromium sandbox off for this test run (--no-sandbox), outer policy kept");
   let current = null;
+  const recordEvents = eventRecorder(path.join(run.paths.logs, "cdp-events-record.jsonl"));
   try {
-    // First launch: record through the visible controls.
-    current = await openApp(run, ledger, clip, "record", launchOptions);
-    await current.page.evaluate(`localStorage.setItem("onboardingCompleted", "true")`);
+    // First launch: record through the visible controls. Events are kept from
+    // the first debugger connection, so the reload and Start are both covered.
+    current = await openApp(run, ledger, clip, "record", launchOptions, {
+      onEvent: recordEvents.onEvent,
+    });
+    await current.page.send("Page.addScriptToEvaluateOnNewDocument", { source: CAPTURE_PROBE });
+    result.steps.fixture = await current.page.evaluate(FIXTURE_ONBOARDING);
+    save();
     await current.page.send("Page.reload");
     await sleep(500);
     await waitFor("page reload", 60000, () =>
@@ -796,16 +1269,52 @@ async function smoke(options) {
     await waitFor("Start recording button", 60000, () =>
       current.page.evaluate(hasButton(START_LABEL))
     );
+    // The reminder is opened after an IPC round trip on mount; give it time to show.
+    await sleep(1500);
+    const reminder = await current.page.evaluate(DISMISS_REMINDER);
+    if (reminder.remindMeLater) await sleep(500);
+    const startHit = await current.page.evaluate(START_HIT);
+    result.steps.overlay = { ...reminder, start: startHit };
+    result.steps.beforeStart = {
+      probeInstalled: await current.page.evaluate(`Boolean(globalThis.__oatsE2EProbe)`),
+      eventsRetained: recordEvents.kept.length,
+      exceptions: recordEvents.kept.filter((e) => e.kind === "exception").length,
+    };
+    save();
+    if (!startHit.found || startHit.covered) {
+      fail(
+        `the Start button is covered (${startHit.hit}); nothing was recorded`,
+        EXIT_START_COVERED
+      );
+    }
     const before = await current.page.evaluate(READ_NOTES);
     await waitFor("press Start recording", 10000, () =>
       current.page.evaluate(visibleButton(START_LABEL))
     );
     const startedAt = Date.now();
     await waitFor("recording badge", 20000, () => current.page.evaluate(hasButton(FINISH_LABEL)));
+    // The badge is shown before capture is set up, so it proves only the press.
     result.steps.recordingStarted = { afterMs: Date.now() - startedAt };
     save();
     ledger.snapshot(current.entry);
-    await sleep(assets.clip.seconds * 1000 + 6000);
+    result.steps.capture = await watchCapture(current.page, run, startedAt);
+    save();
+    ledger.snapshot(current.entry);
+    if (!result.steps.capture.ok) {
+      const stage = result.steps.capture.silent
+        ? "firstPcm (silent)"
+        : result.steps.capture.pending;
+      log(`capture setup stalled at ${stage}; stopping early`);
+      result.steps.earlyStop = {
+        stage,
+        finishPressed: await current.page.evaluate(visibleButton(FINISH_LABEL)).catch(() => false),
+      };
+      await sleep(3000);
+      result.steps.earlyStop.probeAfter = await current.page.evaluate(READ_PROBE).catch(() => null);
+      save();
+      fail(`capture setup stalled at ${stage}`, EXIT_CAPTURE_STALLED);
+    }
+    await sleep(Math.max(0, assets.clip.seconds * 1000 + 6000 - (Date.now() - startedAt)));
     ledger.snapshot(current.entry);
     result.steps.counters = await current.page.evaluate(
       `document.body.innerText.match(/\\d+ words?/)?.[0] ?? null`
@@ -881,6 +1390,20 @@ async function smoke(options) {
     }
     result.finishedAt = new Date().toISOString();
     result.trace = path.join(run.paths.logs, "native-e2e-trace.jsonl");
+    let appLog = "";
+    try {
+      appLog = fs.readFileSync(path.join(run.paths.logs, "electron-record.log"), "utf8");
+    } catch {}
+    result.diagnostics = {
+      events: recordEvents.file,
+      eventsRetained: recordEvents.kept.length,
+      exceptions: recordEvents.kept.filter((e) => e.kind === "exception").slice(0, 20),
+      errors: recordEvents.kept
+        .filter((e) => e.level === "error" || e.level === "warning")
+        .slice(0, 40),
+      fakeDeviceLog: fakeDeviceLines(appLog),
+      mainAudio: mainAudioNotes(run),
+    };
     save();
   }
 
@@ -935,6 +1458,14 @@ if (require.main === module) {
 }
 
 module.exports = {
+  CAPTURE_PROBE,
+  DISMISS_REMINDER,
+  FIXTURE_ONBOARDING,
+  captureStages,
+  dispatchCdpMessage,
+  eventRecorder,
+  fakeDeviceLines,
+  summarizeCdpEvent,
   outboundPolicy,
   electronArgs,
   chromiumSandboxOption,

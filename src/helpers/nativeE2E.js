@@ -457,6 +457,55 @@ function portRange(service, fallback) {
   return [range[0], range[1]];
 }
 
+const AUDIO_PROGRESS_MS = 5000;
+const meetingAudio = new Map();
+
+function pcm16Peak(buffer) {
+  let bytes;
+  if (Buffer.isBuffer(buffer)) bytes = buffer;
+  else if (ArrayBuffer.isView(buffer))
+    bytes = Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  else if (buffer instanceof ArrayBuffer) bytes = Buffer.from(buffer);
+  else return null;
+  let peak = 0;
+  for (let i = 0; i + 1 < bytes.length; i += 2) {
+    const sample = Math.abs(bytes.readInt16LE(i));
+    if (sample > peak) peak = sample;
+  }
+  return peak;
+}
+
+/**
+ * Under the test route, note when recording audio first reaches main, and
+ * every few seconds how much has followed and how loud it was. A silent or
+ * missing source is then told apart from a recogniser that heard nothing.
+ */
+function observeMeetingAudio(buffer, source) {
+  if (!active) return;
+  const key = source === "system" ? "system" : "mic";
+  const bytes = buffer?.byteLength ?? 0;
+  const peak = pcm16Peak(buffer);
+  const now = Date.now();
+  const seen = meetingAudio.get(key);
+  if (!seen) {
+    meetingAudio.set(key, { chunks: 1, bytes, peak: peak ?? 0, notedAt: now });
+    note("meeting-audio-received", { source: key, bytes, peak });
+    return;
+  }
+  seen.chunks += 1;
+  seen.bytes += bytes;
+  if (peak !== null && peak > seen.peak) seen.peak = peak;
+  if (now - seen.notedAt >= AUDIO_PROGRESS_MS) {
+    seen.notedAt = now;
+    note("meeting-audio-progress", {
+      source: key,
+      chunks: seen.chunks,
+      bytes: seen.bytes,
+      peak: seen.peak,
+    });
+  }
+}
+
 /** True, and noted, when the test route skips a startup step unrelated to recording. */
 function suppresses(step) {
   if (!active) return false;
@@ -466,6 +515,7 @@ function suppresses(step) {
 
 function _setActiveForTests(config) {
   active = config;
+  meetingAudio.clear();
 }
 
 module.exports = {
@@ -494,6 +544,7 @@ module.exports = {
   isPortAllowed,
   isRequested,
   note,
+  observeMeetingAudio,
   portRange,
   runPaths,
   suppresses,
