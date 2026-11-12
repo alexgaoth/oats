@@ -747,6 +747,9 @@ class ConversationTopicTracker {
     this._stretches = new Map();
     this._rankings = new Map();
     this._final = null;
+    // Where the record's topics start (utterance indexes), when a model that
+    // read the whole conversation chose them (`setRecordCuts`).
+    this._recordCuts = null;
   }
 
   // Feeds one finalized utterance and returns the topic it is in now. Every
@@ -766,6 +769,7 @@ class ConversationTopicTracker {
     };
     this.utterances.push(record);
     this._byId.set(record.id, record);
+    this._recordCuts = null;
     for (const key of new Set(phrases.map((phrase) => phrase.key))) addCount(this.everywhere, key);
     if (keys.length) {
       this.units.push({ id: record.id, index: this.utterances.length - 1 });
@@ -1334,6 +1338,22 @@ class ConversationTopicTracker {
       .sort((a, b) => b.lastAt - a.lastAt);
   }
 
+  // The record's cuts, chosen by a model that read the whole conversation
+  // (topicRecordCut.mjs): the utterance ids topics start at. The final
+  // snapshot is built from them as from the detector's, so returns, names
+  // and ids work as they do for any record. Ids the tracker does not know are
+  // skipped. A new utterance drops them: they were cut from a conversation
+  // that has since gone on. Says whether the record now has these cuts.
+  setRecordCuts(startIds) {
+    if (!this.utterances.length) return false;
+    const index = new Map(this.utterances.map((utterance, at) => [utterance.id, at]));
+    this._recordCuts = [...new Set((startIds ?? []).map((id) => index.get(String(id))))]
+      .filter((at) => Number.isInteger(at) && at > 0)
+      .sort((a, b) => a - b);
+    this._final = null;
+    return true;
+  }
+
   // The graph's contents. Node weight is time spent, which is what the radius
   // encodes; edges keep their direction and weight.
   //
@@ -1353,7 +1373,10 @@ class ConversationTopicTracker {
   // model's names, topicNamer.mjs) reads it only up to there.
   snapshot(at = this.now(), { final = false } = {}) {
     let view = this;
-    if (final && this._detectorOn) {
+    if (final && this._recordCuts) {
+      this._final ??= this._topicsAt(this._recordCuts, { commit: false });
+      view = this._final;
+    } else if (final && this._detectorOn) {
       this._final ??= this._topicsAt(this.detector.finalCuts(), { commit: false });
       view = this._final;
     } else if (final && this._depthCache) {

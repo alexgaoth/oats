@@ -16,7 +16,8 @@ The licence allows measuring with it, not training a model the app ships.
   list  the videos chosen, for the audio: id, mp3 path in the dataset, length,
         chapter starts and titles.
   asr   the segments `scripts/room-replay.js --publish` wrote for each mp3, each
-        given the chapter its start falls in: what the app hears, with true times.
+        given the chapter its middle falls in (a segment lasts about 5 s and can
+        hold a chapter start): what the app hears, with true times.
 
 Chosen (--kind): 5 to 60 minutes (--max-minutes), at least two chapter changes, chapters of 2
 minutes or more on average (the detector keeps 90 s between cuts). `talk`: one
@@ -93,7 +94,8 @@ def asr_recording(entry, published, kind):
     starts = entry["chapter_timestamps"]
     segments = []
     for index, segment in enumerate(s for s in replay["segments"] if s["text"].strip()):
-        chapter = sum(1 for at in starts if segment["start"] >= at)
+        middle = (segment["start"] + segment["end"]) / 2
+        chapter = sum(1 for at in starts if middle >= at)
         segments.append({
             "id": f"u{index + 1}", "text": segment["text"].strip(),
             "startMs": round(segment["start"] * 1000), "endMs": round(segment["end"] * 1000),

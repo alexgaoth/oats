@@ -40,10 +40,11 @@
 //   renamed only when it grew two and a half times since its name. Until then
 //   a topic shows its on-device name.
 //
-// The record is not this view: at Finish the conversation keeps the on-device
-// tracker's cut, and the names given here carry over to the record's topics
-// that still hold the lines they were given from (`namesFor`); #121's final
-// pass names only the record's topics that carry none.
+// The record is not this view: at Finish the model cuts the whole conversation
+// again (topicRecordCut.mjs), and without an answer the record keeps the
+// on-device tracker's cut. The names given here carry over to the record's
+// topics that still hold the lines they were given from (`namesFor`); #121's
+// final pass names only the record's topics that carry none.
 //
 // Pure and DOM-free: the model is behind `ask`, the clock behind `now`,
 // `setTimer` and `clearTimer`, so it runs under node:test and in the replay

@@ -34,6 +34,7 @@ import {
   namedTopicSnapshot,
   observeTopics,
   observeUtterance,
+  recordTopicStarts,
   resolveLiveTopic,
   startTopicNaming,
   stopLiveTopics,
@@ -984,6 +985,57 @@ export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null
       final: true,
     }) as ConversationTopicSnapshot
   );
+}
+
+/**
+ * The record's topics cut again where the writing model says each starts, as
+ * it reads the whole conversation (topicNamingRunner.ts `recordTopicStarts`),
+ * stored onto the note with this recording's names on them. Resolves to what
+ * was stored, or null: no writing model ready, no usable answer, a new
+ * recording started meanwhile, or the note is gone. The record then keeps the
+ * topics it was saved with. `naming` is the recording's
+ * (`topicNamingGeneration`), read at Finish. Never throws: the names and the
+ * summary come after it at Finish.
+ */
+export async function cutRecordTopics(
+  noteId: number,
+  segments: TranscriptSegment[],
+  naming?: number
+): Promise<ConversationTopicSnapshot | null> {
+  const tracker = conversationTopicTracker;
+  if (!tracker) return null;
+  try {
+    // The turns the tracker holds, at its times: a cut it does not know would be lost.
+    const at = new Map<string, number>(
+      tracker.utterances.map((utterance: { id: string; at: number }) => [
+        utterance.id,
+        utterance.at,
+      ])
+    );
+    const utterances = segments.flatMap((segment) => {
+      const id = String(segment.id);
+      const when = at.get(id);
+      return when === undefined ? [] : [{ id, text: segment.text, at: when }];
+    });
+    const starts = await recordTopicStarts(utterances, naming);
+    if (!starts || tracker !== conversationTopicTracker) return null;
+    if (useMeetingRecordingStore.getState().isRecording) return null;
+    if (!tracker.setRecordCuts(starts)) return null;
+    const snapshot = getConversationTopicSnapshot();
+    if (!snapshot) return null;
+    const api = window.electronAPI;
+    const note = await api?.getNote?.(noteId);
+    if (!note || note.deleted_at) return null;
+    const result = await api.updateNote(noteId, { conversation_topics: JSON.stringify(snapshot) });
+    return result?.success ? snapshot : null;
+  } catch (error) {
+    logger.debug(
+      "Topic record cut failed",
+      { error: error instanceof Error ? error.message : String(error) },
+      "topics"
+    );
+    return null;
+  }
 }
 
 async function stopConversationAide() {

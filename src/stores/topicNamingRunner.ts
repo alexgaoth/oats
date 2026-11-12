@@ -16,7 +16,9 @@ import {
   namesWhileRecording,
   topicNameConfig,
 } from "../helpers/topicNaming.mjs";
-import { LiveTopicLoop, chooseFastModel } from "../helpers/topicLoop.mjs";
+import { LiveTopicLoop, chooseFastModel, readJson } from "../helpers/topicLoop.mjs";
+import { WindowTopicLoop } from "../helpers/topicWindowLoop.mjs";
+import { cutRecord } from "../helpers/topicRecordCut.mjs";
 import {
   checkRequestConfig,
   nameRequestConfig,
@@ -55,15 +57,23 @@ let generation = 0;
 // the writing model, that provider's most accurate model for it
 // (topicModels.mjs) confirms the changes of subject the on-device tracker
 // proposes, and names the topics, while the conversation goes on. The flow
-// card shows its topics; the record keeps the tracker's cut at Finish, with
-// these names carried over and #121's final names for the topics they do not
-// cover. A topic the check named is not sent to #121 again. When the check
+// card shows its topics; the record takes the cut the model gives at Finish
+// (`recordTopicStarts`), else the tracker's, with these names carried over
+// and #121's final names for the topics they do not cover. A topic the check named is not sent to #121 again. When the check
 // ends early (three failures in a row, or the writing model is no longer that
 // provider's), the flow card goes back to the tracker's topics and #121 names
 // them as on any other route.
-let loop: LiveTopicLoop | null = null;
+//
+// With the writing model on this computer, the window loop
+// (helpers/topicWindowLoop.mjs) takes the check's place while the recording
+// can name live (`namesLive`): every 2 minutes the model re-cuts the last 6
+// minutes and names the topics, on the writing server when the recording
+// holds one. The rest is as above.
+let loop: LiveTopicLoop | WindowTopicLoop | null = null;
 /** The provider of the check that runs now, so a change of writing model ends it. */
 let loopProvider: "openai" | "anthropic" | null = null;
+/** The local writing model of the window loop that runs now, so a change of model ends it. */
+let loopLocalModel: string | null = null;
 /**
  * The topic model each provider's key can use, per job ("openai:check",
  * "anthropic:names", ...): absent until asked, null when it can use none.
@@ -172,6 +182,28 @@ function loopReady(): boolean {
   return loopProvider !== null && topicProvider(currentWritingRoute()) === loopProvider;
 }
 
+/** Whether the window loop may still ask: the same model on this computer, and ready. */
+async function windowLoopReady(): Promise<boolean> {
+  const route = currentWritingRoute();
+  if (!loopLocalModel || route?.mode !== "local" || route.modelId !== loopLocalModel) return false;
+  return writingModelReady();
+}
+
+/** One request of the window loop, to the writing model on this computer. */
+async function askLocalModel(request: {
+  system: string;
+  user: string;
+  maxTokens: number;
+}): Promise<string> {
+  const route = currentWritingRoute();
+  if (!route || route.mode !== "local") throw new Error("No local writing model");
+  return reasoningService.processText(request.user, route.modelId, null, {
+    ...topicNameConfig(route, request.system),
+    maxTokens: request.maxTokens,
+    ...(writingServer ? { serverRole: "writing" as const } : {}),
+  });
+}
+
 /**
  * The names for a snapshot of the tracker's topics: the live check's, on the
  * topics that hold the lines they were given from, and the namer's where it
@@ -237,6 +269,7 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   loop?.stop();
   loop = null;
   loopProvider = null;
+  loopLocalModel = null;
   waitingLines = null;
   writingServer = false;
   const mine = ++generation;
@@ -244,15 +277,15 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   // No writing model: the topics keep their on-device names, and nothing is sent.
   if (!route) return;
   // OpenAI or Anthropic with a key: the live topic check names the topics
-  // while recording, so the namer only names the record at Finish. Every other
-  // route: #121.
+  // while recording, so the namer only names the record at Finish. The writing
+  // model on this computer, when it may name while recording: the window loop,
+  // the same way. Every other route: #121.
   const provider = topicProvider(route);
-  if (provider) waitingLines = [];
+  if (provider || route.mode === "local") waitingLines = [];
   const fast = provider ? await topicModelFor(provider, "check") : null;
   if (mine !== generation) return;
-  const waited = waitingLines ?? [];
-  waitingLines = null;
   if (fast && stoppedGeneration === mine) {
+    waitingLines = null;
     // The recording ended while the fast model was being asked for: no check
     // starts after it, and nothing more is sent while it is not recording.
     namer = new TopicNamer({
@@ -265,6 +298,8 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     return;
   }
   if (fast && provider) {
+    const waited = waitingLines ?? [];
+    waitingLines = null;
     loopProvider = provider;
     loop = new LiveTopicLoop({
       ask: (request: {
@@ -294,6 +329,31 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   }
   const live = await namesLive(route);
   if (mine !== generation) return;
+  const waited = waitingLines ?? [];
+  waitingLines = null;
+  if (live && route.mode === "local" && stoppedGeneration !== mine) {
+    loopLocalModel = route.modelId;
+    loop = new WindowTopicLoop({
+      ask: askLocalModel,
+      ready: windowLoopReady,
+      onChange: () => {
+        if (loop?.disabled) namerTakesOver(mine);
+        onChange();
+      },
+      log: loopLog,
+    });
+    namer = new TopicNamer({
+      ask: askNamer,
+      ready: writingModelReady,
+      onChange,
+      live: false,
+      log,
+    });
+    for (const segment of waited) observeUtterance(segment);
+    log("started", { mode: route.mode, live: false, loop: "window" });
+    if (waited.length) onChange();
+    return;
+  }
   namer = new TopicNamer({
     ask: askNamer,
     ready: writingModelReady,
@@ -391,6 +451,81 @@ async function writeNames(noteId: number, named: ConversationTopicSnapshot): Pro
   log("saved", { noteId, saved: Boolean(result?.success) });
 }
 
+/** A request of the record's cut (topicRecordCut.mjs `ask`). */
+type RecordCutRequest = {
+  kind: string;
+  system: string;
+  user: string;
+  schema: { name: string; schema: object };
+  maxTokens: number;
+  timeoutMs: number;
+};
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timed out")), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Where the record's topics start, by turn id, as the writing model reads the
+ * whole conversation when it ends (helpers/topicRecordCut.mjs). Null when no
+ * writing model is ready or none gave a usable answer: the record then keeps
+ * the tracker's cuts.
+ *
+ * The same privacy rule and route as the names. With OpenAI or Anthropic as
+ * the writing model, the request goes to that provider's check model
+ * (topicModels.mjs), the most accurate one measured at telling a change of
+ * subject, with the asked JSON. Every other route asks the writing model
+ * itself, on the writing server while the recording holds one, and reads the
+ * JSON from its answer.
+ */
+export async function recordTopicStarts(
+  utterances: Array<{ id: string; text: string; at: number }>,
+  mine: number = generation
+): Promise<string[] | null> {
+  const route = currentWritingRoute();
+  if (!route || !utterances.length || mine !== generation) return null;
+  if (!(await writingModelReady())) return null;
+  const provider = topicProvider(route);
+  const choice = provider ? await topicModelFor(provider, "check") : null;
+  const ask = async (request: RecordCutRequest) => {
+    // A new recording started: the writing model is its own now.
+    if (mine !== generation) return { ok: false };
+    const work =
+      provider && choice
+        ? askFastModel(provider, choice, request)
+        : reasoningService.processText(request.user, route.modelId, null, {
+            ...topicNameConfig(route, request.system),
+            maxTokens: request.maxTokens,
+            timeoutMs: request.timeoutMs,
+            ...(writingServer && route.mode === "local" ? { serverRole: "writing" as const } : {}),
+          });
+    const json = readJson(await withTimeout(work, request.timeoutMs));
+    return json ? { ok: true, json } : { ok: false };
+  };
+  const started = Date.now();
+  const result = await cutRecord({ ask, utterances }).catch(() => null);
+  // Counts and times only.
+  log("record-cut", {
+    ms: Date.now() - started,
+    requests: result?.calls.length ?? 0,
+    topics: result ? result.starts.length + 1 : 0,
+  });
+  return result ? result.starts : null;
+}
+
+/**
+ * Which recording the topics are named for now. Finish reads it before it
+ * awaits anything: a recording that starts meanwhile has a namer of its own,
+ * which Finish must not stop.
+ */
+export function topicNamingGeneration(): number {
+  return generation;
+}
+
 /**
  * The recording ended and its topics were saved: the model names what is left
  * for the record (topics still unnamed, and topics that grew since their name),
@@ -406,9 +541,10 @@ async function writeNames(noteId: number, named: ConversationTopicSnapshot): Pro
 export async function nameFinalTopics(
   noteId: number | null,
   snapshot: ConversationTopicSnapshot | null,
-  segments: TranscriptSegment[]
+  segments: TranscriptSegment[],
+  mine: number = generation
 ): Promise<void> {
-  const mine = generation;
+  if (mine !== generation) return;
   try {
     await nameFinal(noteId, snapshot, segments);
   } finally {

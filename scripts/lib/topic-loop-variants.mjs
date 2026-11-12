@@ -17,6 +17,7 @@
 // graph and the scores read it unchanged.
 
 import { parseTopicName, sameName } from "../../src/helpers/topicNaming.mjs";
+import { cutRecord as appCutRecord } from "../../src/helpers/topicRecordCut.mjs";
 
 const oneLine = (value) =>
   String(value ?? "")
@@ -1257,183 +1258,53 @@ export class HybridLoop {
 }
 
 // ---------------------------------------------------------------------------
-// VF: the whole record, cut and named at Finish.
-
-export const RECORD_SYSTEM = [
-  "You divide the transcript of a recorded conversation into its topics. The lines come from speech recognition: expect errors, filler and half sentences. Who said a line is not known.",
-  "",
-  "Give the topics as segments, in order: each segment has the number of its first line, runs until the next segment, and has a topic key (T1, T2, ...). When the conversation goes back to an earlier topic, use that topic's key again. Give each key a name and a gist (one line, at most 12 words).",
-  "",
-  "A topic usually holds 2 to 10 minutes of talk: one subject, problem, decision or agenda item. A short aside, a joke or one remark stays in the topic around it. The request says how long the conversation lasted.",
-  NAME_RULES,
-  "",
-  'Reply with JSON only: {"segments": [{"from": 1, "topic": "T1"}, {"from": 57, "topic": "T2"}], "topics": [{"key": "T1", "name": "...", "gist": "..."}]}',
-].join("\n");
-
-export const RECORD_SCHEMA = {
-  name: "topic_record",
-  schema: {
-    type: "object",
-    properties: {
-      segments: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: { from: { type: "integer" }, topic: { type: "string" } },
-          required: ["from", "topic"],
-          additionalProperties: false,
-        },
-      },
-      topics: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            key: { type: "string" },
-            name: { type: "string" },
-            gist: { type: "string" },
-          },
-          required: ["key", "name", "gist"],
-          additionalProperties: false,
-        },
-      },
-    },
-    required: ["segments", "topics"],
-    additionalProperties: false,
-  },
-};
+// VF: the whole record, cut at Finish by the app's own helper.
 
 /**
- * Lines for the record: utterances joined until a line holds `minWords` words
- * (and at most `maxWords`), so a long meeting is a few hundred numbered lines.
+ * The app's record cut (`src/helpers/topicRecordCut.mjs`, with its options) as
+ * a snapshot, each topic with the name the model gave it. With no usable
+ * answer, every line stays in one topic.
  */
-export function recordLines(utterances, { minWords = 14, maxWords = 45 } = {}) {
-  const lines = [];
-  let current = null;
-  for (const utterance of utterances) {
-    const words = countWords(utterance.text);
-    if (!current || current.words >= minWords || current.words + words > maxWords) {
-      current = { ids: [], text: "", words: 0 };
-      lines.push(current);
-    }
-    current.ids.push(String(utterance.id));
-    current.text = current.text
-      ? `${current.text} ${oneLine(utterance.text)}`
-      : oneLine(utterance.text);
-    current.words += words;
-  }
-  return lines;
-}
-
-/**
- * Cuts and names a whole record with one request (`ask`), or with several when
- * it is longer than `chunkWords` (each chunk sees the topics found before it).
- * Resolves to a snapshot, or null when the model gave nothing usable.
- */
-export async function cutRecord({
-  ask,
-  utterances,
-  chunkWords = 9000,
-  lineChars = 400,
-  minRunWords = 60,
-}) {
-  const lines = recordLines(utterances);
-  const chunks = [];
-  let chunk = [];
-  let words = 0;
-  for (const line of lines) {
-    if (chunk.length && words + line.words > chunkWords) {
-      chunks.push(chunk);
-      chunk = [];
-      words = 0;
-    }
-    chunk.push(line);
-    words += line.words;
-  }
-  if (chunk.length) chunks.push(chunk);
+export async function cutRecord({ ask, utterances, ...options }) {
+  const asked = [];
+  const counted = async (request) => {
+    const entry = { kind: request.kind, result: null };
+    asked.push(entry);
+    entry.result = await ask(request);
+    return entry.result;
+  };
+  const cut = await appCutRecord({ ask: counted, utterances, ...options });
+  const stat = stats();
+  asked.forEach(({ kind, result }, index) => {
+    // Without a cut, no answer was usable.
+    const usable = cut ? cut.calls[index]?.usable !== false : false;
+    recordCall(stat, kind, result, !usable);
+  });
   const book = new TopicBook();
   for (const utterance of utterances) book.addLine(utterance);
-  const keyToId = new Map();
-  const stat = stats();
-  for (const part of chunks) {
-    const known = [...book.topics.values()].map((topic) => {
-      const key = [...keyToId.entries()].find(([, id]) => id === topic.id)?.[0];
-      return `${key} | ${topic.name} | ${topic.gist}`;
-    });
-    const first = book.byId.get(part[0].ids[0])?.at ?? 0;
-    const last = book.byId.get(part.at(-1).ids.at(-1))?.at ?? first;
-    const user = [
-      ...(known.length
-        ? ["TOPICS FOUND BEFORE THESE LINES (reuse their keys for a return):", ...known, ""]
-        : []),
-      `LINES (${minutesText((last - first) / 60_000)} of conversation):`,
-      ...part.map((line, index) => `${index + 1}. ${clip(line.text, lineChars)}`),
-    ].join("\n");
-    const result = await ask({
-      kind: "record",
-      system: RECORD_SYSTEM,
-      user,
-      schema: RECORD_SCHEMA,
-      maxTokens: 4000,
-      timeoutMs: 120_000,
-    });
-    const segments = Array.isArray(result?.json?.segments) ? result.json.segments : null;
-    recordCall(stat, "record", result, result?.ok && !segments?.length);
-    if (!segments?.length) {
-      // This stretch stays in the topic before it.
-      const last = [...book.topics.values()].at(-1);
-      const id = last?.id ?? book.create("Conversation", "", 0);
-      book.place(
-        part.flatMap((line) => line.ids),
-        id
-      );
-      continue;
-    }
-    const names = new Map();
-    for (const item of Array.isArray(result.json.topics) ? result.json.topics : []) {
-      if (item?.key) names.set(oneLine(item.key), item);
-    }
-    const starts = segments
-      .map((segment) => ({ from: Number(segment.from), topic: oneLine(segment.topic) }))
-      .filter(
-        (segment) =>
-          Number.isInteger(segment.from) && segment.from >= 1 && segment.from <= part.length
-      )
-      .sort((a, b) => a.from - b.from);
-    if (!starts.length) continue;
-    starts[0].from = 1;
-    for (let index = 0; index < starts.length; index += 1) {
-      const from = starts[index].from - 1;
-      const to = (starts[index + 1]?.from ?? part.length + 1) - 1;
-      const slice = part.slice(from, to);
-      if (!slice.length) continue;
-      const key = starts[index].topic;
-      let id = keyToId.get(key);
-      if (!id) {
-        const item = names.get(key);
-        const ids = slice.flatMap((line) => line.ids);
-        const raw = item?.name ?? key;
-        const name = book.checkedName(raw, { excerpt: slice.map((line) => line.text) });
-        if (!name) stat.unusableNames += 1;
-        id = book.create(name ?? clip(raw, 48), item?.gist ?? "", book.byId.get(ids[0])?.at ?? 0);
-        keyToId.set(key, id);
-      }
-      book.place(
-        slice.flatMap((line) => line.ids),
-        id
-      );
-    }
+  const labelOf = new Map();
+  if (cut) {
+    const spoken = utterances.filter((utterance) => oneLine(utterance?.text));
+    spoken.forEach((utterance, index) => labelOf.set(String(utterance.id), cut.labels[index]));
   }
-  if (minRunWords > 0) {
-    const labels = book.lines.map((line) => book.topicOf.get(line.id) ?? null);
-    const smoothed = smoothRuns(
-      labels,
-      book.lines.map((line) => line.words),
-      minRunWords
+  // A turn with no words joins the topic of the turn before it.
+  const runs = new Map();
+  let label = cut?.labels[0] ?? null;
+  for (const line of book.lines) {
+    label = labelOf.get(line.id) ?? label;
+    if (!runs.has(label)) runs.set(label, []);
+    runs.get(label).push(line);
+  }
+  for (const [key, lines] of runs) {
+    const topic = key === null ? null : cut.topics.get(key);
+    const raw = topic?.name || key || "Conversation";
+    const name = book.checkedName(raw, { excerpt: lines.slice(0, 20).map((line) => line.text) });
+    if (!name) stat.unusableNames += 1;
+    const id = book.create(name ?? clip(raw, 48), topic?.gist ?? "", lines[0].at ?? 0);
+    book.place(
+      lines.map((line) => line.id),
+      id
     );
-    smoothed.forEach((topic, index) => {
-      if (topic && topic !== labels[index]) book.place([book.lines[index].id], topic);
-    });
   }
   return { snapshot: book.snapshot(0, { final: true }), stats: stat };
 }
