@@ -971,7 +971,7 @@ function ConversationSurface() {
                     <Square className="size-3.5 fill-current" />
                     {t("oats.conversation.stop")}
                     {shortcut && (
-                      <Kbd className="ml-0.5 border-destructive-foreground/30 bg-destructive-foreground/15 text-destructive-foreground">
+                      <Kbd className="ml-0.5 border-destructive-foreground/40 bg-transparent text-destructive-foreground">
                         {shortcut}
                       </Kbd>
                     )}

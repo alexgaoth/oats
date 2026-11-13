@@ -85,6 +85,8 @@ semantic names (`src/index.css`, `@theme` and `.dark`).
 | `ring` | `#f5a30f` | `#f5a30f` | focus rings and focused field edges |
 | `recording` | `#ef4444` | `#ef4444` | recording, and only recording |
 | `success` / `warning` / `destructive` / `info` | green / orange `#c2410c` (light) `#f97316` (dark) / red / blue | | status |
+| `recording-fill` / `destructive-fill` | `#dc2626` | `#dc2626` | a red fill under a white label: Stop, Delete (4.8:1) |
+| `*-ink` (success, warning, destructive, recording, info) | green-800 / orange-800 / red-700 / red-700 / blue-700 | the status hue, red-400, blue-400 | a status word on its own tint (badges), 4.5:1 or more |
 
 Rules:
 
@@ -120,7 +122,7 @@ Rules:
   Electron), each size at its own size, and the DMG window's background with them.
 - **Red means recording or danger.** It is never decoration. Idle, the record
   action is the brand; live, it turns red and says Stop.
-- Status is a soft badge (`bg-success/10 text-success`), never a colored border bar.
+- Status is a soft badge (`bg-success/10 text-success-ink`), never a colored border bar.
 - Both themes are complete; follow the system appearance by default.
 
 ## 3. Type

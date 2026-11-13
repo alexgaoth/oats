@@ -120,7 +120,7 @@ function ViewSwitch<T extends string>({
             className={cn(
               "inline-flex h-full cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 text-sm font-medium",
               "outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50",
-              selected ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              selected ? "text-primary-foreground" : "text-foreground/65 hover:text-foreground"
             )}
           >
             <Icon
