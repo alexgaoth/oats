@@ -18,7 +18,7 @@ import {
 } from "../helpers/topicNaming.mjs";
 import { LiveTopicLoop, chooseFastModel, readJson } from "../helpers/topicLoop.mjs";
 import { WindowTopicLoop } from "../helpers/topicWindowLoop.mjs";
-import { cutRecord } from "../helpers/topicRecordCut.mjs";
+import { cutRecord, RECORD_MINUTES_PER_TOPIC } from "../helpers/topicRecordCut.mjs";
 import {
   checkRequestConfig,
   nameRequestConfig,
@@ -507,7 +507,9 @@ export async function recordTopicStarts(
     return json ? { ok: true, json } : { ok: false };
   };
   const started = Date.now();
-  const result = await cutRecord({ ask, utterances }).catch(() => null);
+  // The count hint is measured with the writing models on this computer only.
+  const hint = route.mode === "local" ? { minutesPerTopic: RECORD_MINUTES_PER_TOPIC } : {};
+  const result = await cutRecord({ ask, utterances, ...hint }).catch(() => null);
   // Counts and times only.
   log("record-cut", {
     ms: Date.now() - started,
