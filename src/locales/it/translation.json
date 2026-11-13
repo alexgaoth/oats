@@ -2134,7 +2134,10 @@
         "matches_other": "{{count}} corrispondenze",
         "conversations_one": "{{count}} conversazione",
         "conversations_other": "{{count}} conversazioni",
-        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}",
+        "searchingOlder": "Ricerca nelle conversazioni più vecchie…",
+        "olderFailed": "Non è stato possibile cercare nelle conversazioni più vecchie, quindi non sono in questi risultati.",
+        "retry": "Riprova"
       },
       "match": {
         "transcript": "Detto",

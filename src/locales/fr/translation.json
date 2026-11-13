@@ -2134,7 +2134,10 @@
         "matches_other": "{{count}} occurrences",
         "conversations_one": "{{count}} conversation",
         "conversations_other": "{{count}} conversations",
-        "receipt": "{{matches}} dans {{conversations}} · {{duration}}"
+        "receipt": "{{matches}} dans {{conversations}} · {{duration}}",
+        "searchingOlder": "Recherche dans les conversations plus anciennes…",
+        "olderFailed": "Impossible de chercher dans les conversations plus anciennes : elles ne figurent pas dans ces résultats.",
+        "retry": "Réessayer"
       },
       "match": {
         "transcript": "Dit",
