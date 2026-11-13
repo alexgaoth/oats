@@ -110,7 +110,9 @@ export function HotkeyListInput({
       {items.map((hotkey, index) => (
         <HotkeyInput
           variant="settings"
-          key={`${hotkey}-${index}`}
+          // By place, not by value: a new value (or its rollback) must not
+          // remount the field that has the focus.
+          key={index}
           value={hotkey}
           onChange={(next) => replaceAt(index, next)}
           onClear={canRemove ? () => void removeAt(index) : undefined}

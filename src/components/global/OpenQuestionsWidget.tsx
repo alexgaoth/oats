@@ -104,6 +104,8 @@ const QuestionRow = memo(function QuestionRow({
     <li>
       <button
         type="button"
+        data-node-id={id}
+        data-segment-id={row.segmentId ?? undefined}
         onPointerEnter={point}
         onPointerLeave={leave}
         onFocus={point}

@@ -972,6 +972,7 @@ export default function ForceGraph<TNode extends GraphNode>({
                 else buttonRefs.current.delete(node.id);
               }}
               type="button"
+              data-node-id={node.id}
               tabIndex={roving ? (node.id === tabStop ? 0 : -1) : undefined}
               onClick={() => {
                 if (onActivate) onActivate(node as unknown as TNode);
