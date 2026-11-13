@@ -2134,7 +2134,10 @@
         "matches_other": "{{count}} matches",
         "conversations_one": "{{count}} conversation",
         "conversations_other": "{{count}} conversations",
-        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}",
+        "searchingOlder": "Searching older conversations…",
+        "olderFailed": "Older conversations could not be searched, so they are not in these results.",
+        "retry": "Try again"
       },
       "match": {
         "transcript": "Said",

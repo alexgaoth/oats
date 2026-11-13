@@ -2134,7 +2134,10 @@
         "matches_other": "{{count}} coincidencias",
         "conversations_one": "{{count}} conversación",
         "conversations_other": "{{count}} conversaciones",
-        "receipt": "{{matches}} en {{conversations}} · {{duration}}"
+        "receipt": "{{matches}} en {{conversations}} · {{duration}}",
+        "searchingOlder": "Buscando en conversaciones más antiguas…",
+        "olderFailed": "No se pudo buscar en las conversaciones más antiguas, así que no aparecen en estos resultados.",
+        "retry": "Reintentar"
       },
       "match": {
         "transcript": "Dicho",

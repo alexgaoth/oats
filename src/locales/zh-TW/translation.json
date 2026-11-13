@@ -2129,7 +2129,10 @@
         "matches_other": "{{count}} 處相符",
         "conversations_one": "{{count}} 個對話",
         "conversations_other": "{{count}} 個對話",
-        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}"
+        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}",
+        "searchingOlder": "正在搜尋更早的對話…",
+        "olderFailed": "無法搜尋更早的對話，因此這些結果中不包含它們。",
+        "retry": "重試"
       },
       "match": {
         "transcript": "說過",

@@ -48,6 +48,25 @@ export function tallyMatches(texts, needle) {
 }
 
 /**
+ * Where the scan of the older conversations stands for `query`: "idle" with
+ * no query, "pending" until an answer for this very query has arrived,
+ * "failed" when that answer was an error, and "done" otherwise. Keyed on the
+ * query, so an answer for an earlier query never settles a later one, and
+ * "nothing matches" can wait for "done".
+ *
+ * @param {string} query
+ * @param {boolean} pending a scan is in flight
+ * @param {{ needle: string, complete: boolean } | null} result the last answer
+ * @returns {"idle" | "pending" | "failed" | "done"}
+ */
+export function olderScanState(query, pending, result) {
+  const needle = String(query ?? "").trim();
+  if (!needle) return "idle";
+  if (pending || !result || result.needle !== needle) return "pending";
+  return result.complete ? "done" : "failed";
+}
+
+/**
  * How long a search took, short and in the reader's own number format: a
  * tenth of a millisecond under 10 ms, whole milliseconds under a second, then
  * seconds. Under a twentieth of a millisecond it reads "<0.1 ms": rounded, it

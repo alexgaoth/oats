@@ -134,7 +134,7 @@ import {
 } from "../helpers/conversationRecall.mjs";
 import { findMatches, foldText } from "../helpers/searchFold.mjs";
 import { isSearching, openWhileRecording, shellNav } from "../helpers/shellNav.mjs";
-import { formatSearchDuration, tallyMatches } from "../helpers/searchReceipt.mjs";
+import { formatSearchDuration, olderScanState, tallyMatches } from "../helpers/searchReceipt.mjs";
 import { speakerText } from "../utils/speakerLabel";
 import {
   openQuestionCount,
@@ -1782,6 +1782,11 @@ function IntelligenceContent({
   // process's half of the search, for the receipt under the box. `complete`
   // is false when the scan failed, so a count would leave the older ones out.
   const olderScan = useRef<{ needle: string; ms: number; complete: boolean } | null>(null);
+  // The same answer as state, so the page can say which query it settled.
+  const [olderResult, setOlderResult] = useState<{ needle: string; complete: boolean } | null>(
+    null
+  );
+  const [olderRetry, setOlderRetry] = useState(0);
   useEffect(() => {
     const needle = query.trim();
     if (!needle || libraryFiltered) {
@@ -1801,12 +1806,14 @@ function IntelligenceContent({
           if (cancelled) return;
           const complete = Array.isArray(found);
           olderScan.current = { needle, ms: performance.now() - startedAt, complete };
+          setOlderResult({ needle, complete });
           setOlderNotes(complete ? found : []);
           setOlderPending(false);
         })
         .catch(() => {
           if (cancelled) return;
           olderScan.current = { needle, ms: performance.now() - startedAt, complete: false };
+          setOlderResult({ needle, complete: false });
           setOlderNotes([]);
           setOlderPending(false);
         });
@@ -1815,7 +1822,7 @@ function IntelligenceContent({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, heldIds, libraryFiltered]);
+  }, [query, heldIds, libraryFiltered, olderRetry]);
 
   // Local filter over title, summary, and transcript: the conversations the list
   // holds, then the older matches for this query. The older ones are tested
@@ -1831,7 +1838,22 @@ function IntelligenceContent({
     return { notes: matched, ms: performance.now() - startedAt };
   }, [notes, searchable, query]);
   const literalNotes = literal.notes;
-  const awaitingOlder = olderPending && query.trim().length > 0;
+  const olderState = olderScanState(query, olderPending, olderResult);
+  const awaitingOlder = olderState === "pending";
+  // The older conversations were not searched: the list holds only the newest,
+  // and "nothing matches" would be a claim about conversations nobody read.
+  const olderFailed = olderState === "failed";
+  // Said only when the scan is slow enough to notice, so a quick one does not
+  // flash a line on every keystroke.
+  const [olderSlow, setOlderSlow] = useState(false);
+  useEffect(() => {
+    if (!awaitingOlder) {
+      setOlderSlow(false);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setOlderSlow(true), 400);
+    return () => window.clearTimeout(timer);
+  }, [awaitingOlder, query]);
 
   // The receipt under the search box: "12 matches in 4 conversations · 9 ms".
   // It counts the literal matches the list shows and times the search that
@@ -2641,15 +2663,40 @@ function IntelligenceContent({
               move when a receipt arrives or changes. */}
               {searched && (
                 <p className="mt-2 h-4 px-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
-                  {receipt &&
-                    t("oats.intelligence.search.receipt", {
-                      matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
-                      conversations: t("oats.intelligence.search.conversations", {
-                        count: receipt.conversations,
-                      }),
-                      duration: formatSearchDuration(receipt.ms, i18n.language),
-                    })}
+                  {awaitingOlder && olderSlow
+                    ? t("oats.intelligence.search.searchingOlder")
+                    : receipt &&
+                      t("oats.intelligence.search.receipt", {
+                        matches: t("oats.intelligence.search.matches", { count: receipt.matches }),
+                        conversations: t("oats.intelligence.search.conversations", {
+                          count: receipt.conversations,
+                        }),
+                        duration: formatSearchDuration(receipt.ms, i18n.language),
+                      })}
                 </p>
+              )}
+              {searched && olderFailed && (
+                <div
+                  role="alert"
+                  className="mt-3 flex items-center gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-3.5 py-2.5 text-[13px] leading-5 text-foreground"
+                >
+                  <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-warning" />
+                  <span className="min-w-0 flex-1">
+                    {t("oats.intelligence.search.olderFailed")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setOlderRetry((n) => n + 1);
+                      // This alert goes while the scan runs again, and the search
+                      // box is where its answer is read.
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    {t("oats.intelligence.search.retry")}
+                  </Button>
+                </div>
               )}
               {/* The result, announced. A screen-reader user who types should not have
               to tab into the list to learn whether anything matched. */}
@@ -2668,9 +2715,10 @@ function IntelligenceContent({
                             })}.`
                           : ""
                       }`
-                    : // Older conversations are still being read: saying nothing
-                      // matches now would be a claim the next moment may take back.
-                      awaitingOlder
+                    : // Older conversations are still being read, or could not be:
+                      // saying nothing matches would be a claim about them. A failure
+                      // is announced by its own alert.
+                      awaitingOlder || olderFailed
                       ? ""
                       : recalled.length
                         ? t("oats.intelligence.onlyRelated")
@@ -2679,17 +2727,21 @@ function IntelligenceContent({
 
               {/* With no literal hit, every row below is the index's guess, and the
               page says so before the reader takes them as findings. */}
-              {query.trim() && !literalNotes.length && !awaitingOlder && recalled.length > 0 && (
-                <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
-                  <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                  {t("oats.intelligence.onlyRelated")}
-                </p>
-              )}
+              {query.trim() &&
+                !literalNotes.length &&
+                !awaitingOlder &&
+                !olderFailed &&
+                recalled.length > 0 && (
+                  <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-muted-foreground">
+                    <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    {t("oats.intelligence.onlyRelated")}
+                  </p>
+                )}
 
               {!visibleNotes.length ? (
                 // Older conversations are still being read: say nothing yet, rather
                 // than "Nothing matches that" a moment before a match arrives.
-                awaitingOlder ? null : query.trim() ? (
+                awaitingOlder || olderFailed ? null : query.trim() ? (
                   <EmptyState
                     icon={SearchX}
                     title={t("oats.intelligence.noMatches")}
