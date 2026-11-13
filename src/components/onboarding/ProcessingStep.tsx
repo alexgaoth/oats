@@ -42,7 +42,7 @@ export const ProcessingStep = forwardRef<
         <h1
           ref={headingRef}
           tabIndex={-1}
-          className="mt-6 text-2xl font-semibold tracking-[-0.02em] text-foreground outline-none"
+          className="mt-6 text-[22px] font-semibold tracking-[-0.02em] text-foreground outline-none"
         >
           {t("onboarding.processing.title")}
         </h1>

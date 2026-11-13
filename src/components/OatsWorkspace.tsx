@@ -919,7 +919,7 @@ function ConversationSurface() {
                 </span>
                 {/* The clock is the heading: the one thing on this screen that is
                     unambiguously true, and what a person glances at. */}
-                <h1 className="text-2xl font-semibold tabular-nums tracking-[-0.02em]">
+                <h1 className="text-[22px] font-semibold tabular-nums tracking-[-0.02em]">
                   <span className="sr-only">{t("oats.conversation.listening")} </span>
                   {clock(elapsed)}
                 </h1>
@@ -1168,6 +1168,7 @@ function ConversationSurface() {
                   </p>
                   <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
                     <Button
+                      className="oats-cta"
                       onClick={begin}
                       disabled={starting || preflight.blocking}
                       aria-label={t("oats.conversation.record")}
