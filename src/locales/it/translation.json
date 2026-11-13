@@ -625,7 +625,10 @@
     "duplicate": "Già aggiunto"
   },
   "languageSelector": {
+    "autoDetect": "Rilevamento automatico",
+    "clearSearch": "Cancella ricerca",
     "noLanguagesFound": "Nessuna lingua trovata",
+    "searchLabel": "Cerca lingue",
     "searchPlaceholder": "Cerca..."
   },
   "microphoneSettings": {
@@ -1870,7 +1873,8 @@
       "copyToClipboard": "Copia negli appunti",
       "copied": "Copiato",
       "emptyState": "Chiedimi qualsiasi cosa",
-      "errorPrefix": "Errore"
+      "errorPrefix": "Errore",
+      "apiKeyMissing": "Non c'è ancora una chiave API per {{provider}}. Aggiungine una in Impostazioni › Modelli di IA."
     },
     "titleBar": {
       "label": "Agente",

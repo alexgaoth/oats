@@ -625,7 +625,10 @@
     "duplicate": "Bereits hinzugefügt"
   },
   "languageSelector": {
+    "autoDetect": "Automatisch erkennen",
+    "clearSearch": "Suche löschen",
     "noLanguagesFound": "Keine Sprachen gefunden",
+    "searchLabel": "Sprachen durchsuchen",
     "searchPlaceholder": "Suchen..."
   },
   "microphoneSettings": {
@@ -1870,7 +1873,8 @@
       "copyToClipboard": "In Zwischenablage kopieren",
       "copied": "Kopiert",
       "emptyState": "Frag mich alles",
-      "errorPrefix": "Fehler"
+      "errorPrefix": "Fehler",
+      "apiKeyMissing": "Noch kein API-Schlüssel für {{provider}}. Fügen Sie einen unter Einstellungen › KI-Modelle hinzu."
     },
     "titleBar": {
       "label": "Agent",

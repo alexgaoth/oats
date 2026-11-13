@@ -1,15 +1,18 @@
-import React, { useState, useRef, useEffect, useCallback, useId } from "react";
+import React, { useState, useRef, useEffect, useCallback, useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { ChevronDown, Search, X, Check } from "lucide-react";
 import registry from "../../config/languageRegistry.json";
 import { LIST_SEARCH_THRESHOLD } from "../../config/constants";
 import { cn } from "../lib/utils";
+import { languageMatches, localizedLanguageOptions } from "../../helpers/languageNames.mjs";
 
 export interface LanguageOption {
   value: string;
   label: string;
   flag: string;
+  /** Searched as well as the label: the registry's English name. */
+  englishLabel?: string;
 }
 
 const REGISTRY_OPTIONS: LanguageOption[] = registry.languages.map(({ code, label, flag }) => ({
@@ -61,10 +64,17 @@ export default function LanguageSelector({
   align = "start",
   "aria-labelledby": labelledBy,
 }: LanguageSelectorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const control = variant === "control";
   const triggerId = useId();
-  const items = options ?? REGISTRY_OPTIONS;
+  const locale = i18n.resolvedLanguage || i18n.language;
+  const autoLabel = t("languageSelector.autoDetect");
+  // A caller's own options keep their labels; the registry's are named in the
+  // interface's language.
+  const items = useMemo<LanguageOption[]>(
+    () => options ?? localizedLanguageOptions(REGISTRY_OPTIONS, locale, autoLabel),
+    [options, locale, autoLabel]
+  );
   const showSearch = items.length > LIST_SEARCH_THRESHOLD;
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,11 +95,7 @@ export default function LanguageSelector({
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   const filteredLanguages = showSearch
-    ? items.filter(
-        (lang) =>
-          lang.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          lang.value.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? items.filter((lang) => languageMatches(lang, searchQuery))
     : items;
 
   const handleSearchQueryChange = useCallback((value: string) => {
@@ -308,12 +314,14 @@ export default function LanguageSelector({
                     value={searchQuery}
                     onChange={(e) => handleSearchQueryChange(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    aria-label={t("languageSelector.searchLabel")}
                     placeholder={t("languageSelector.searchPlaceholder")}
                     className="h-full w-full min-w-0 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
                   />
                   {searchQuery && (
                     <button
                       type="button"
+                      aria-label={t("languageSelector.clearSearch")}
                       onClick={clearSearch}
                       className="shrink-0 rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground"
                     >
@@ -324,23 +332,28 @@ export default function LanguageSelector({
               ) : (
                 <div className="px-2 pt-2 pb-1.5 border-b border-border/50">
                   <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                    <Search
+                      aria-hidden="true"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none"
+                    />
                     <input
                       ref={searchInputRef}
                       type="text"
                       value={searchQuery}
                       onChange={(e) => handleSearchQueryChange(e.target.value)}
                       onKeyDown={handleKeyDown}
+                      aria-label={t("languageSelector.searchLabel")}
                       placeholder={t("languageSelector.searchPlaceholder")}
                       className="w-full h-7 pl-7 pr-6 text-xs bg-transparent text-foreground border-0 focus:outline-none placeholder:text-muted-foreground/50"
                     />
                     {searchQuery && (
                       <button
                         type="button"
+                        aria-label={t("languageSelector.clearSearch")}
                         onClick={clearSearch}
                         className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors rounded p-0.5 hover:bg-muted/50"
                       >
-                        <X className="w-3 h-3" />
+                        <X aria-hidden="true" className="w-3 h-3" />
                       </button>
                     )}
                   </div>
