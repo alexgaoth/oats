@@ -625,7 +625,10 @@
     "duplicate": "已新增"
   },
   "languageSelector": {
+    "autoDetect": "自動偵測",
+    "clearSearch": "清除搜尋",
     "noLanguagesFound": "找不到語言",
+    "searchLabel": "搜尋語言",
     "searchPlaceholder": "搜尋..."
   },
   "microphoneSettings": {
@@ -1865,7 +1868,8 @@
       "copyToClipboard": "複製到剪貼簿",
       "copied": "已複製",
       "emptyState": "隨便問我",
-      "errorPrefix": "錯誤"
+      "errorPrefix": "錯誤",
+      "apiKeyMissing": "還沒有 {{provider}} 的 API 金鑰。請在 設定 › AI 模型 中新增一個。"
     },
     "titleBar": {
       "label": "助手",

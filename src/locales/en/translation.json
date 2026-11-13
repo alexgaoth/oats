@@ -628,7 +628,10 @@
     "duplicate": "Already added"
   },
   "languageSelector": {
+    "autoDetect": "Auto-detect",
+    "clearSearch": "Clear search",
     "noLanguagesFound": "No languages found",
+    "searchLabel": "Search languages",
     "searchPlaceholder": "Search..."
   },
   "microphoneSettings": {
@@ -1873,7 +1876,8 @@
       "copyToClipboard": "Copy to clipboard",
       "copied": "Copied",
       "emptyState": "Ask me anything",
-      "errorPrefix": "Error"
+      "errorPrefix": "Error",
+      "apiKeyMissing": "No {{provider}} API key yet. Add one in Settings › AI models."
     },
     "titleBar": {
       "label": "Agent",
