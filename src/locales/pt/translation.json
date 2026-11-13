@@ -2043,7 +2043,7 @@
         "behind": "{{seconds}} s de atraso",
         "described": "A transcrição está {{seconds}} s atrás do que está a ser dito."
       },
-      "statusRecording": "Gravando. Áudio e transcrições ficam neste computador.",
+      "statusRecording": "Gravando.",
       "statusStopped": "Gravação concluída. O Oats está escrevendo o resumo.",
       "nothingHeard": "Não se ouviu nada, por isso não foi guardada nenhuma conversa. Verifique o microfone nas Definições.",
       "continuing": "Continuando {{title}}",
