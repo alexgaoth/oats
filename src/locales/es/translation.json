@@ -2043,7 +2043,7 @@
         "behind": "{{seconds}} s de retraso",
         "described": "La transcripción va {{seconds}} s por detrás de lo que se dice."
       },
-      "statusRecording": "Grabando. El audio y las transcripciones no salen de este equipo.",
+      "statusRecording": "Grabando.",
       "statusStopped": "Grabación finalizada. Oats está escribiendo el resumen.",
       "nothingHeard": "No se oyó nada, así que no se guardó ninguna conversación. Revisa el micrófono en Ajustes.",
       "continuing": "Continuando {{title}}",
