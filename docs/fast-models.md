@@ -252,6 +252,50 @@ AMI meetings):
 A change shows a median 1.4 to 1.9 minutes after it happened; about 45
 requests an hour, 3.5 s each at the median (13 s at p95).
 
+### The record cut with a model on this computer: a count hint
+
+At Finish the writing model cuts the whole record
+(`src/helpers/topicRecordCut.mjs`). Gemma 4 E4B drew too many topics: 1.2 to
+1.7 times the real changes on 9 to 27 min videos, 1.8 to 2.0 times on 30 to
+59 min ones, 2.3 times on AMI meetings. So with a model on this computer each
+request says about how many topics are usual for its length, one per 5 minutes
+(`RECORD_MINUTES_PER_TOPIC`), and that the conversation decides, not the
+number. The OpenAI and Anthropic check models get no hint: they were not
+measured with it.
+
+Record, a cut within 10 s of a real change, cuts real / changes found (F1),
+tuning sets only: 12 talks and 12 two-person YTSeg validation videos of 9 to 27
+min and 12 + 12 of 30 to 59 min, as the app heard them, and 12 AMI meetings
+(manual text):
+
+| | talks | two-person | long talks | long two-person | meetings |
+| --- | --- | --- | --- | --- | --- |
+| E4B, no hint | 39% / 67% (49) | 36% / 44% (40) | 25% / 50% (34) | 28% / 51% (36) | 21% / 48% (29) |
+| E4B, a topic per 4 min | 47% / 61% (53) | 42% / 49% (45) | 27% / 51% (35) | 30% / 51% (38) | 17% / 47% (25) |
+| **E4B, per 5 min** | 49% / 55% (52) | 46% / 47% (46) | 27% / 48% (34) | 35% / 50% (41) | 25% / 44% (32) |
+| E4B, per 6 min | 40% / 48% (44) | 44% / 43% (43) | 32% / 50% (39) | 35% / 49% (41) | 24% / 47% (31) |
+| Qwen3.5 4B, no hint | 42% / 32% (36) | 40% / 25% (31) | 26% / 35% (30) | 28% / 16% (21) | 25% / 24% (25) |
+| **Qwen3.5 4B, per 5 min** | 55% / 26% (35) | 45% / 22% (30) | 35% / 32% (34) | 35% / 26% (30) | 31% / 32% (31) |
+
+Short and long together, 5 min is the best or equal on every kind: E4B F1
+talks 39 to 40, two-person 37 to 43, meetings 29 to 32; Qwen 32 to 34, 25 to
+30, 25 to 31. 4 min makes meetings worse; 6 min equals 5 overall, better on
+long talks and worse on short ones. E4B still draws 1.8 times the real changes
+on long talks.
+
+Held-out, once, after the choice: 12 + 12 YTSeg test videos of 8 to 50 min as
+the app heard them, and AMI eval24 (24 meetings, manual text):
+
+| | talks | two-person | meetings |
+| --- | --- | --- | --- |
+| E4B, no hint | 21% / 57% (30) | 19% / 47% (27) | 27% / 45% (33) |
+| **E4B, per 5 min** | 28% / 48% (36) | 24% / 38% (29) | 33% / 51% (40) |
+| Qwen3.5 4B, no hint | 23% / 32% (27) | 14% / 11% (12) | 35% / 22% (27) |
+| **Qwen3.5 4B, per 5 min** | 25% / 25% (25) | 20% / 14% (16) | 33% / 24% (28) |
+
+With the hint E4B draws 1.5 to 1.7 times the real changes there, against 1.7
+to 2.7 times with none.
+
 ### Verification: the app's code on eval24
 
 `scripts/topic-loop-eval.mjs --variant v4app` replays the 24 meetings through
