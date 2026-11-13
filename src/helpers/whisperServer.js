@@ -8,6 +8,7 @@ const { app } = require("electron");
 const debugLogger = require("./debugLogger");
 const { killProcess } = require("../utils/process");
 const { isPortAvailable } = require("../utils/serverUtils");
+const nativeE2E = require("./nativeE2E");
 const { getSafeTempDir } = require("./safeTempDir");
 const { convertToWav } = require("./ffmpegUtils");
 const sidecarPidFile = require("./sidecarPidFile");
@@ -241,7 +242,10 @@ class WhisperServerManager extends EventEmitter {
    *   loaded, and with SO_REUSEPORT, so two servers that start at once in one
    *   range can take the same port and answer each other's requests.
    */
-  constructor({ pidName = "whisper", ports = [PORT_RANGE_START, PORT_RANGE_END] } = {}) {
+  constructor({
+    pidName = "whisper",
+    ports = nativeE2E.portRange("whisper", [PORT_RANGE_START, PORT_RANGE_END]),
+  } = {}) {
     super();
     this.pidName = pidName;
     this.ports = ports;

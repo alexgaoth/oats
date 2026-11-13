@@ -6,10 +6,12 @@ const os = require("os");
 const debugLogger = require("./debugLogger");
 const {
   findAvailablePort,
+  isPortAvailable,
   resolveBinaryPath,
   gracefulStopProcess,
 } = require("../utils/serverUtils");
 const sidecarPidFile = require("./sidecarPidFile");
+const nativeE2E = require("./nativeE2E");
 
 /**
  * The sidecar's config. Bound to loopback only, and with Qdrant's anonymous
@@ -95,7 +97,13 @@ class QdrantManager {
     const binaryPath = this.getBinaryPath();
     if (!binaryPath) throw new Error("qdrant binary not found");
 
-    this.port = await findAvailablePort(PORT_RANGE_START, PORT_RANGE_END);
+    this.port = await findAvailablePort(
+      ...nativeE2E.portRange("qdrant", [PORT_RANGE_START, PORT_RANGE_END])
+    );
+    // gRPC takes the next port. The test allocation reserves it, so check it too.
+    if (nativeE2E.isActive() && !(await isPortAvailable(this.port + 1))) {
+      throw new Error(`qdrant gRPC port ${this.port + 1} is not available`);
+    }
 
     fs.mkdirSync(STORAGE_DIR, { recursive: true });
 
