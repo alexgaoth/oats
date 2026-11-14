@@ -252,16 +252,17 @@ AMI meetings):
 A change shows a median 1.4 to 1.9 minutes after it happened; about 45
 requests an hour, 3.5 s each at the median (13 s at p95).
 
-### The record cut with a model on this computer: a count hint
+### The record cut: a count hint
 
 At Finish the writing model cuts the whole record
 (`src/helpers/topicRecordCut.mjs`). Gemma 4 E4B drew too many topics: 1.2 to
 1.7 times the real changes on 9 to 27 min videos, 1.8 to 2.0 times on 30 to
-59 min ones, 2.3 times on AMI meetings. So with a model on this computer each
-request says about how many topics are usual for its length, one per 5 minutes
-(`RECORD_MINUTES_PER_TOPIC`), and that the conversation decides, not the
-number. The OpenAI and Anthropic check models get no hint: they were not
-measured with it.
+59 min ones, 2.3 times on AMI meetings. So each request says about how many
+topics are usual for its length, one per 5 minutes (`RECORD_MINUTES_PER_TOPIC`),
+and that the conversation decides, not the number. The OpenAI and Anthropic
+check models get the hint too, not yet measured with it: the cloud models run
+for VF also drew too many topics (eval24 results below: gpt-6-luna 10.0 and
+gpt-5.6-luna 11.3 runs a meeting against the annotators' 8.0).
 
 Record, a cut within 10 s of a real change, cuts real / changes found (F1),
 tuning sets only: 12 talks and 12 two-person YTSeg validation videos of 9 to 27

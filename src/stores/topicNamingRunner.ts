@@ -507,9 +507,11 @@ export async function recordTopicStarts(
     return json ? { ok: true, json } : { ok: false };
   };
   const started = Date.now();
-  // The count hint is measured with the writing models on this computer only.
-  const hint = route.mode === "local" ? { minutesPerTopic: RECORD_MINUTES_PER_TOPIC } : {};
-  const result = await cutRecord({ ask, utterances, ...hint }).catch(() => null);
+  const result = await cutRecord({
+    ask,
+    utterances,
+    minutesPerTopic: RECORD_MINUTES_PER_TOPIC,
+  }).catch(() => null);
   // Counts and times only.
   log("record-cut", {
     ms: Date.now() - started,

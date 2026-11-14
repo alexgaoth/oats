@@ -37,9 +37,9 @@ export const RECORD_MIN_RUN_WORDS = 60;
 
 /**
  * Minutes a topic usually holds, for the count hint (`minutesPerTopic`) the
- * app gives a writing model on this computer. Without it Gemma 4 E4B drew 1.2
- * times the real number of topics on 18 min videos and 2.4 to 2.7 times on
- * 30 min ones (docs/fast-models.md).
+ * app gives on every route. Without it Gemma 4 E4B drew 1.2 times the real
+ * number of topics on 18 min videos and 2.4 to 2.7 times on 30 min ones, and
+ * the cloud models also drew too many on meetings (docs/fast-models.md).
  */
 export const RECORD_MINUTES_PER_TOPIC = 5;
 
