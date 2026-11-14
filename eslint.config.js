@@ -12,6 +12,7 @@ module.exports = [
       ".eb-cache/**", // electron-builder tool cache (fpm/ruby, etc.)
       "src/**", // src has its own config
       "site/assets/site.js", // built from site/src by npm run build:site
+      "site/assets/live.js", // the live figures, built the same way
     ],
   },
   // Main process files (CommonJS)

@@ -68,7 +68,7 @@ The product rules from v1 still hold and still win over taste:
 ## 2. Color
 
 Neutral zinc surfaces, saturated status colours, and one brand colour; shadcn
-semantic names (`src/index.css`, `@theme` and `.dark`).
+semantic names (`src/styles/oats-tokens.css`, `@theme` and `.dark`, imported by `src/index.css`).
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -179,6 +179,15 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   or an arrow key, never by itself, and under reduced motion nothing in it
   moves. It opens after setup is saved, so Skip, Start or a quit all land in
   the app, and it never shows again.
+- **The site's live figures** (`site/src/live.js`, 2026-10-31). The public
+  page draws the same demo pieces in five figures: the live view played back
+  (`DemoReplay`: the line grows, topics take their lanes, each question's mark
+  appears and settles; the whole conversation in 40 seconds, with Play /
+  Pause and a scrubber, and under reduced motion it starts on the finished
+  map), the flow card, the question cards with Replay, and what was left open
+  with talk time. Light like the page, each in a shadow root, loaded as it
+  nears the screen into a box already its height, and nothing in them is
+  saved or sent (`site/README.md`).
 - Radius: `rounded-md` (8px) for controls, `rounded-xl` (12px) for cards and
   panels. Focus: `ring-[3px] ring-ring/50` on every interactive element.
 
@@ -400,7 +409,8 @@ Copy rules (from the design-taste review, 2026-10-09):
 
 | Concern | File |
 |---|---|
-| Tokens, base layer | `src/index.css` |
+| Tokens | `src/styles/oats-tokens.css` (the app and the site's live figures) |
+| Base layer | `src/index.css` |
 | Primitives | `src/components/ui/*` |
 | Frame | `src/components/shell/AppSidebar.tsx`, `OatsWorkspace.tsx` (shell) |
 | Brand mark | `src/components/shell/OatsMark.tsx` |

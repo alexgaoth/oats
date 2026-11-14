@@ -1,0 +1,67 @@
+/* The live figures' styles (live.js): the app's own, for the shadow root each
+   figure is drawn in. Tailwind with the app's tokens and motion (src/styles/).
+   Its utilities are the ones the files live.js imports use: build.mjs hands
+   Tailwind that list (site/sources.mjs, importGraph), so nothing else in the
+   app adds to it. Inside a shadow root nothing here reaches the page, and the
+   page's styles do not reach in. One light theme, like the page. */
+
+@import "tailwindcss" source(none);
+@import "../../src/styles/oats-tokens.css";
+@import "../../src/styles/oats-motion.css";
+
+/* As the app's base layer has them (src/index.css): a border is the border
+   colour, headings and running text wrap without a lone last word, and what
+   answers a press changes colour on the motion timing. */
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  button,
+  input,
+  [role="button"] {
+    transition:
+      background-color var(--motion-instant) var(--ease-oats),
+      border-color var(--motion-instant) var(--ease-oats),
+      color var(--motion-instant) var(--ease-oats);
+  }
+}
+
+/* The figure's own box: the app's type and colours, from here down, on the
+   app's background, with the window's padding round it. */
+:host {
+  display: block;
+  font-size: 16px;
+  font-family: var(--font-family-sans);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.live-root {
+  padding: 24px;
+  background: var(--color-background);
+}
+
+/* The page's narrow gutter (site.css, 640px and below). */
+@media (max-width: 640px) {
+  .live-root {
+    padding: 16px;
+  }
+}
+
+/* As in the app: under reduced motion nothing animates. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

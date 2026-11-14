@@ -104,7 +104,7 @@ zinc, Inter, and the sidebar frame. Each of these is checkable, and any one of
 them fails review.
 
 1. **A colour or motion literal** where a token exists. Single source of truth is
-   the `@theme` block in `src/index.css`.
+   the `@theme` block in `src/styles/oats-tokens.css`.
 2. **A hand-made control where a `src/components/ui/` primitive exists** — a text
    link posing as a button, an underline posing as an input, a row of words
    posing as tabs. Use Button, Input, Select, Toggle, SegmentedControl, Tabs,
