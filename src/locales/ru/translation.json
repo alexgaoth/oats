@@ -2156,7 +2156,10 @@
         "conversations_few": "{{count}} разговорах",
         "conversations_many": "{{count}} разговорах",
         "conversations_other": "{{count}} разговорах",
-        "receipt": "{{matches}} в {{conversations}} · {{duration}}"
+        "receipt": "{{matches}} в {{conversations}} · {{duration}}",
+        "searchingOlder": "Поиск в более старых разговорах…",
+        "olderFailed": "Не удалось выполнить поиск по более старым разговорам, поэтому их нет в этих результатах.",
+        "retry": "Повторить"
       },
       "match": {
         "transcript": "Сказано",

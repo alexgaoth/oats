@@ -8,11 +8,12 @@ const assert = require("node:assert/strict");
 let countOccurrences;
 let tallyMatches;
 let formatSearchDuration;
+let olderScanState;
 let foldText;
 let findMatches;
 let recallText;
 test.before(async () => {
-  ({ countOccurrences, tallyMatches, formatSearchDuration } =
+  ({ countOccurrences, tallyMatches, formatSearchDuration, olderScanState } =
     await import("../../src/helpers/searchReceipt.mjs"));
   ({ foldText, findMatches } = await import("../../src/helpers/searchFold.mjs"));
   ({ recallText } = await import("../../src/helpers/conversationRecall.mjs"));
@@ -98,4 +99,19 @@ test("a duration reads in the reader's number format, finer when it is short", (
   assert.equal(formatSearchDuration(0.05, "en"), "0.1 ms");
   assert.equal(formatSearchDuration(Number.NaN, "en"), null);
   assert.equal(formatSearchDuration(-1, "en"), null);
+});
+
+test("the older scan settles only on an answer for the very query on screen", () => {
+  assert.equal(olderScanState("", false, null), "idle");
+  assert.equal(olderScanState("   ", true, null), "idle");
+  // Typed, and nothing has answered yet: neither a match nor "nothing matches".
+  assert.equal(olderScanState("launch", false, null), "pending");
+  assert.equal(olderScanState("launch", true, { needle: "launch", complete: true }), "pending");
+  // An answer for an earlier query does not settle this one.
+  assert.equal(olderScanState("launch", false, { needle: "laun", complete: true }), "pending");
+  assert.equal(olderScanState("launch", false, { needle: "laun", complete: false }), "pending");
+  assert.equal(olderScanState(" launch ", false, { needle: "launch", complete: true }), "done");
+  assert.equal(olderScanState("launch", false, { needle: "launch", complete: false }), "failed");
+  // A retry of the same query is pending again until it answers.
+  assert.equal(olderScanState("launch", true, { needle: "launch", complete: false }), "pending");
 });

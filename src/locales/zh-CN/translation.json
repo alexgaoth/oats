@@ -2129,7 +2129,10 @@
         "matches_other": "{{count}} 处匹配",
         "conversations_one": "{{count}} 个对话",
         "conversations_other": "{{count}} 个对话",
-        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}"
+        "receipt": "{{conversations}}中有 {{matches}} · {{duration}}",
+        "searchingOlder": "正在搜索更早的对话…",
+        "olderFailed": "无法搜索更早的对话，因此这些结果中不包含它们。",
+        "retry": "重试"
       },
       "match": {
         "transcript": "说过",

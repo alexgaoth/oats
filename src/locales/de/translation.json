@@ -2134,7 +2134,10 @@
         "matches_other": "{{count}} Treffer",
         "conversations_one": "{{count}} Gespräch",
         "conversations_other": "{{count}} Gesprächen",
-        "receipt": "{{matches}} in {{conversations}} · {{duration}}"
+        "receipt": "{{matches}} in {{conversations}} · {{duration}}",
+        "searchingOlder": "Ältere Gespräche werden durchsucht…",
+        "olderFailed": "Ältere Gespräche konnten nicht durchsucht werden und fehlen in diesen Ergebnissen.",
+        "retry": "Erneut versuchen"
       },
       "match": {
         "transcript": "Gesagt",

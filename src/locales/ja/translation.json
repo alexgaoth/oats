@@ -2134,7 +2134,10 @@
         "matches_other": "{{count}} 件の一致",
         "conversations_one": "{{count}} 件の会話",
         "conversations_other": "{{count}} 件の会話",
-        "receipt": "{{conversations}}で {{matches}} · {{duration}}"
+        "receipt": "{{conversations}}で {{matches}} · {{duration}}",
+        "searchingOlder": "以前の会話を検索しています…",
+        "olderFailed": "以前の会話を検索できなかったため、この結果には含まれていません。",
+        "retry": "再試行"
       },
       "match": {
         "transcript": "発言",
