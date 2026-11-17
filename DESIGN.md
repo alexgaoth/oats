@@ -185,7 +185,7 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 ## 5. Recording surface
 
 - **Clean (default):** a status card — listening red dot, the elapsed time as the
-  heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
+  heading (`text-[22px] font-semibold tabular-nums`), a **Recording** badge, **Mark**
   (`M`) and **Stop** — then the contour in its own card section, then the
   **Show transcript** button. Below it, the **conversation flow** card. Nothing
   on screen changes while somebody speaks except the clock, the two counters under
