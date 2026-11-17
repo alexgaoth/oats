@@ -29,6 +29,15 @@ export interface UsePermissionsProps {
   showAlertDialog: (dialog: { title: string; description?: string }) => void;
 }
 
+export interface UsePermissionsOptions {
+  /**
+   * The caller shows a microphone failure itself, next to the control that
+   * asked, from `micPermissionError`. Then no dialog or alert says it again:
+   * one failure, said once. Failures to open System Settings keep their dialog.
+   */
+  micErrorInline?: boolean;
+}
+
 const stopTracks = (stream?: MediaStream) => {
   try {
     stream?.getTracks?.().forEach((track) => track.stop());
@@ -105,7 +114,8 @@ const describeMicError = (error: unknown, t: TFunction): string => {
 };
 
 export const usePermissions = (
-  showAlertDialog?: UsePermissionsProps["showAlertDialog"]
+  showAlertDialog?: UsePermissionsProps["showAlertDialog"],
+  { micErrorInline = false }: UsePermissionsOptions = {}
 ): UsePermissionsReturn => {
   const { t } = useTranslation();
   const [micPermissionGranted, setMicPermissionGranted] = useLocalStorage(
@@ -177,6 +187,7 @@ export const usePermissions = (
     if (!navigator?.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
       const message = t("hooks.permissions.micUnavailable");
       setMicPermissionError(message);
+      if (micErrorInline) return;
       if (showAlertDialog) {
         showAlertDialog({
           title: t("hooks.permissions.titles.microphoneUnavailable"),
@@ -208,6 +219,7 @@ export const usePermissions = (
       logger.error("Microphone permission denied:", err);
       const message = describeMicError(err, t);
       setMicPermissionError(message);
+      if (micErrorInline) return;
       if (showAlertDialog) {
         showAlertDialog({
           title: t("hooks.permissions.titles.microphonePermissionRequired"),
@@ -217,7 +229,7 @@ export const usePermissions = (
         alert(message);
       }
     }
-  }, [showAlertDialog, t, setMicPermissionGranted]);
+  }, [showAlertDialog, micErrorInline, t, setMicPermissionGranted]);
 
   const checkPasteToolsAvailability = useCallback(async (): Promise<PasteToolsResult | null> => {
     setIsCheckingPasteTools(true);

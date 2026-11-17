@@ -115,7 +115,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     [dictationKey]
   );
 
-  const permissionsHook = usePermissions(showAlertDialog);
+  // The step shows a microphone failure under the request itself.
+  const permissionsHook = usePermissions(showAlertDialog, { micErrorInline: true });
   useClipboard(showAlertDialog); // Initialize clipboard hook for permission checks
 
   useEffect(() => {
@@ -453,7 +454,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
             {/* Only once the system prompt cannot help any more. */}
             {permissionsHook.micPermissionError && (
-              <div className="mt-4 flex w-full items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-left">
+              <div
+                role="alert"
+                className="mt-4 flex w-full items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-left"
+              >
                 <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
                 <p className="min-w-0 flex-1 text-[13px] leading-5 text-foreground">
                   {permissionsHook.micPermissionError}
