@@ -216,7 +216,7 @@ export function AppSidebar({
               // Idle, the main action: honey with a little depth (`.oats-cta`).
               // Live, it is red and says Stop.
               recording
-                ? "bg-recording text-recording-foreground hover:bg-recording/90"
+                ? "bg-recording-fill text-recording-foreground hover:bg-recording-fill/90"
                 : "oats-cta bg-primary text-primary-foreground"
             )}
           >
@@ -228,9 +228,7 @@ export function AppSidebar({
             <span className="flex-1 text-left">
               {recording ? t("oats.shell.stop") : t("oats.shell.record")}
             </span>
-            {recording && clock && (
-              <span className="text-[13px] tabular-nums opacity-90">{clock}</span>
-            )}
+            {recording && clock && <span className="text-[13px] tabular-nums">{clock}</span>}
           </button>
         </ShortcutTooltip>
       </div>

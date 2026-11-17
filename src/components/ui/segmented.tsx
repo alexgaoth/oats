@@ -68,7 +68,7 @@ function SegmentedControl<T extends string>({
               "transition-[color,background-color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
               selected
                 ? "bg-background text-foreground shadow-sm dark:bg-input/40"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-foreground/65 hover:text-foreground"
             )}
           >
             {option.label}

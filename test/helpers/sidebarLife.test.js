@@ -26,7 +26,7 @@ test("the page you are on is a honey pill, and only that item", () => {
 
 test("the record button has depth only as the idle main action", () => {
   assert.match(SIDEBAR, /: "oats-cta bg-primary text-primary-foreground"/);
-  const live = SIDEBAR.match(/\? "bg-recording text-recording-foreground[^"]*"/);
+  const live = SIDEBAR.match(/\? "bg-recording-fill text-recording-foreground[^"]*"/);
   assert.ok(live && !live[0].includes("oats-cta"), "live, it is plain red");
 });
 
