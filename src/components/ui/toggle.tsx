@@ -1,4 +1,5 @@
 import React from "react";
+import { ToggleLabelContext } from "./toggleLabel";
 
 interface ToggleProps {
   checked: boolean;
@@ -18,6 +19,8 @@ export const Toggle = ({
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
 }: ToggleProps) => {
+  const rowLabelId = React.useContext(ToggleLabelContext);
+  const labelledBy = ariaLabelledBy ?? (ariaLabel ? undefined : rowLabelId);
   // shadcn/ui switch: ink when on, the input tone when off, so both states
   // read as a switch in both modes.
   const track = checked ? "bg-primary" : "bg-input dark:bg-input/80";
@@ -36,7 +39,7 @@ export const Toggle = ({
       id={id}
       aria-checked={checked}
       aria-label={ariaLabel}
-      aria-labelledby={ariaLabelledBy}
+      aria-labelledby={labelledBy}
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       // Geometry: a 36x20 track with 2px padding and a 16px knob that travels
