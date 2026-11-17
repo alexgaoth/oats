@@ -625,7 +625,10 @@
     "duplicate": "Уже добавлена"
   },
   "languageSelector": {
+    "autoDetect": "Определять автоматически",
+    "clearSearch": "Очистить поиск",
     "noLanguagesFound": "Языки не найдены",
+    "searchLabel": "Поиск языка",
     "searchPlaceholder": "Поиск..."
   },
   "microphoneSettings": {
@@ -1870,7 +1873,8 @@
       "copyToClipboard": "Копировать в буфер обмена",
       "copied": "Скопировано",
       "emptyState": "Спросите что угодно",
-      "errorPrefix": "Ошибка"
+      "errorPrefix": "Ошибка",
+      "apiKeyMissing": "API-ключа {{provider}} пока нет. Добавьте его в разделе Настройки › Модели ИИ."
     },
     "titleBar": {
       "label": "Агент",

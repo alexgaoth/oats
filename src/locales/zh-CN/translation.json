@@ -625,7 +625,10 @@
     "duplicate": "已添加"
   },
   "languageSelector": {
+    "autoDetect": "自动检测",
+    "clearSearch": "清除搜索",
     "noLanguagesFound": "未找到匹配的语言",
+    "searchLabel": "搜索语言",
     "searchPlaceholder": "搜索..."
   },
   "microphoneSettings": {
@@ -1865,7 +1868,8 @@
       "copyToClipboard": "复制到剪贴板",
       "copied": "已复制",
       "emptyState": "随便问我",
-      "errorPrefix": "错误"
+      "errorPrefix": "错误",
+      "apiKeyMissing": "还没有 {{provider}} 的 API 密钥。请在 设置 › AI 模型 中添加一个。"
     },
     "titleBar": {
       "label": "助手",

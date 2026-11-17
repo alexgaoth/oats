@@ -7,6 +7,7 @@ import { getAgentSystemPrompt } from "../../config/prompts";
 import { createToolRegistry } from "../../services/tools";
 import type { ToolRegistry } from "../../services/tools/ToolRegistry";
 import type { Message, AgentState, ToolCallInfo } from "./types";
+import { chatErrorText } from "../../helpers/chatErrorText.mjs";
 
 const RAG_NOTE_LIMIT = 5;
 const RAG_NOTE_SNIPPET_LENGTH = 500;
@@ -232,7 +233,7 @@ export function useChatStreaming({
             m.id === assistantId
               ? {
                   ...m,
-                  content: `${t("agentMode.chat.errorPrefix")}: ${(error as Error).message}`,
+                  content: chatErrorText(error, t),
                   isStreaming: false,
                 }
               : m

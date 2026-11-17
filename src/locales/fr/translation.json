@@ -625,7 +625,10 @@
     "duplicate": "Déjà ajouté"
   },
   "languageSelector": {
+    "autoDetect": "Détection automatique",
+    "clearSearch": "Effacer la recherche",
     "noLanguagesFound": "Aucune langue trouvée",
+    "searchLabel": "Rechercher une langue",
     "searchPlaceholder": "Rechercher..."
   },
   "microphoneSettings": {
@@ -1870,7 +1873,8 @@
       "copyToClipboard": "Copier dans le presse-papiers",
       "copied": "Copié",
       "emptyState": "Demandez-moi n'importe quoi",
-      "errorPrefix": "Erreur"
+      "errorPrefix": "Erreur",
+      "apiKeyMissing": "Aucune clé d’API {{provider}} pour l’instant. Ajoutez-en une dans Réglages › Modèles d’IA."
     },
     "titleBar": {
       "label": "Agent",

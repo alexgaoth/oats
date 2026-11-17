@@ -625,7 +625,10 @@
     "duplicate": "すでに追加されています"
   },
   "languageSelector": {
+    "autoDetect": "自動検出",
+    "clearSearch": "検索をクリア",
     "noLanguagesFound": "言語が見つかりません",
+    "searchLabel": "言語を検索",
     "searchPlaceholder": "検索..."
   },
   "microphoneSettings": {
@@ -1870,7 +1873,8 @@
       "copyToClipboard": "クリップボードにコピー",
       "copied": "コピーしました",
       "emptyState": "なんでも聞いてください",
-      "errorPrefix": "エラー"
+      "errorPrefix": "エラー",
+      "apiKeyMissing": "{{provider}} の API キーがまだありません。設定 › AI モデル で追加してください。"
     },
     "titleBar": {
       "label": "エージェント",
