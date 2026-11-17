@@ -5,6 +5,7 @@ const { app } = require("electron");
 const debugLogger = require("./debugLogger");
 const { normalizeUiLanguage } = require("./i18nMain");
 const secretCrypto = require("./secretCrypto");
+const nativeE2E = require("./nativeE2E");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
 
 const SECRET_KEYS = [
@@ -84,7 +85,9 @@ class EnvironmentManager {
     // user's own (above): a .env shipped inside the app was whatever the person
     // who built it had on disk — API keys included — and every key found in it
     // was migrated into each user's Keychain on first launch.
-    const fallbackPaths = app.isPackaged ? [] : [path.join(__dirname, "..", "..", ".env")];
+    // A native end-to-end run reads only its own userData .env (nativeE2E.js).
+    const fallbackPaths =
+      app.isPackaged || nativeE2E.isActive() ? [] : [path.join(__dirname, "..", "..", ".env")];
 
     for (const envPath of fallbackPaths) {
       try {

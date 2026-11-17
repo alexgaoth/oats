@@ -30,6 +30,7 @@
 const fs = require("fs");
 const path = require("path");
 const debugLogger = require("./debugLogger");
+const nativeE2E = require("./nativeE2E");
 const registry = require("../models/modelRegistryData.json");
 
 const STORE_VERSION = 1;
@@ -174,6 +175,7 @@ class WritingModelFetch {
    * @returns {boolean} Whether a download started, or waits for a recording to end.
    */
   start({ modelId, force = false } = {}) {
+    if (nativeE2E.suppresses("writing-model-download")) return false;
     if (this._refusal(modelId, force)) return false;
     if (force) {
       this._undoNo(modelId);

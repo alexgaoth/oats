@@ -11,6 +11,7 @@ const {
 } = require("../utils/serverUtils");
 const { getSafeTempDir } = require("./safeTempDir");
 const sidecarPidFile = require("./sidecarPidFile");
+const nativeE2E = require("./nativeE2E");
 const { parseOfflineMessage, createOnlineAccumulator } = require("./parakeetWsResult");
 const { pcm16ToFloat32 } = require("../utils/audioUtils");
 
@@ -87,6 +88,9 @@ class ParakeetWsServer {
     const wsBinary = this.getWsBinaryPath(runtime);
     if (!wsBinary) throw new Error(`sherpa-onnx ${runtime} WS server binary not found`);
     if (!fs.existsSync(modelDir)) throw new Error(`Model directory not found: ${modelDir}`);
+    if (nativeE2E.isActive()) {
+      throw new Error("native E2E: Parakeet runs only on the Neural Engine helper, over stdio");
+    }
 
     this.port = await findAvailablePort(PORT_RANGE_START, PORT_RANGE_END);
     this.modelName = modelName;

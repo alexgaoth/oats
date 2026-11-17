@@ -2,6 +2,7 @@ const fs = require("fs");
 const net = require("net");
 const path = require("path");
 const { killProcessGroup } = require("./process");
+const nativeE2E = require("../helpers/nativeE2E");
 
 const GRACEFUL_STOP_TIMEOUT_MS = 5000;
 
@@ -16,6 +17,11 @@ function tryBind(port, host) {
 }
 
 async function isPortAvailable(port) {
+  // A native end-to-end run binds only its allocated loopback ports, so it
+  // probes loopback and nothing outside the allocation.
+  if (nativeE2E.isActive()) {
+    return nativeE2E.isPortAllowed(port) && (await tryBind(port, "127.0.0.1"));
+  }
   return (
     (await tryBind(port, "0.0.0.0")) &&
     (await tryBind(port, "::")) &&

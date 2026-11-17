@@ -5,6 +5,7 @@ const http = require("http");
 const debugLogger = require("./debugLogger");
 const { killProcess } = require("../utils/process");
 const { isPortAvailable } = require("../utils/serverUtils");
+const nativeE2E = require("./nativeE2E");
 const { getSafeTempDir } = require("./safeTempDir");
 const { app } = require("electron");
 const sidecarPidFile = require("./sidecarPidFile");
@@ -128,7 +129,8 @@ class LlamaServerManager {
 
   async findAvailablePort() {
     this.releasePort();
-    for (let port = PORT_RANGE_START; port <= PORT_RANGE_END; port++) {
+    const [first, last] = nativeE2E.portRange("llama", [PORT_RANGE_START, PORT_RANGE_END]);
+    for (let port = first; port <= last; port++) {
       if (reservedPorts.has(port)) continue;
       // Reserved before the check awaits, so a second manager scanning at the
       // same moment moves on to the next port.
@@ -139,7 +141,7 @@ class LlamaServerManager {
       }
       reservedPorts.delete(port);
     }
-    throw new Error(`No available ports in range ${PORT_RANGE_START}-${PORT_RANGE_END}`);
+    throw new Error(`No available ports in range ${first}-${last}`);
   }
 
   releasePort() {

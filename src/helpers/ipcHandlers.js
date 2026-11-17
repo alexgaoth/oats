@@ -21,6 +21,7 @@ const AudioStorageManager = require("./audioStorage");
 const { getNetworkLedger } = require("./networkLedger");
 const { createOnDeviceStatus } = require("./onDeviceStatus");
 const { initDeviceTier } = require("./deviceTier");
+const nativeE2E = require("./nativeE2E");
 
 /** The page that holds the writing server (writingServer.js createHoldOwner), made on first use. */
 let writingHoldOwner = null;
@@ -988,6 +989,9 @@ class IPCHandlers {
     ipcMain.handle("conversation-search-open", async (_event, request) => {
       if (!request || typeof request.query !== "string" || !request.query.trim()) {
         return { success: false, error: "Invalid search request" };
+      }
+      if (nativeE2E.suppresses("search-open")) {
+        return { success: false, error: "Search is off in a native end-to-end run" };
       }
       try {
         const { buildSearchUrl, validateSearchUrl } = await import("./conversationAide.mjs");
@@ -4093,8 +4097,10 @@ class IPCHandlers {
       return mediaPlayer.resumeMedia();
     });
 
+    // A native end-to-end run hears a public WAV through Chromium's fake
+    // device, so it reports that device's permission and never asks the OS.
     ipcMain.handle("request-microphone-access", async () => {
-      if (process.platform !== "darwin") {
+      if (process.platform !== "darwin" || nativeE2E.isActive()) {
         return { granted: true, status: "granted" };
       }
       const granted = await systemPreferences.askForMediaAccess("microphone");
@@ -4102,7 +4108,7 @@ class IPCHandlers {
     });
 
     ipcMain.handle("check-microphone-access", () => {
-      if (process.platform !== "darwin") {
+      if (process.platform !== "darwin" || nativeE2E.isActive()) {
         return { granted: true, status: "granted" };
       }
       const status = systemPreferences.getMediaAccessStatus("microphone");
@@ -6823,6 +6829,7 @@ class IPCHandlers {
     };
 
     ipcMain.on("meeting-transcription-send", (_event, audioBuffer, source) => {
+      nativeE2E.observeMeetingAudio(audioBuffer, source);
       sendMeetingAudio(audioBuffer, source);
     });
 
