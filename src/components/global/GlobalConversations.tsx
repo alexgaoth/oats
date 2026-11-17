@@ -62,6 +62,52 @@ const ICON: Record<WidgetType, LucideIcon> = {
 /** What a tab shows before anybody arranges it. */
 const DEFAULT_TYPES: WidgetType[] = ["force", "arcs"];
 
+// The control a conversation was opened from. Opening it replaces the board,
+// so Back or Escape mounts a new one, and the focus would land on the page.
+// Module state, not a ref, because the board that reads it is not the one
+// that wrote it.
+let openedFrom: { widget: string | null; id: number; segmentId: string | null } | null = null;
+
+function cssValue(value: string) {
+  return typeof CSS !== "undefined" && CSS.escape ? CSS.escape(value) : value;
+}
+
+/**
+ * Put the focus back on the control the conversation was opened from, once
+ * the charts have laid it out again; else on its card, which survives a
+ * conversation leaving the chart; else on the tab. Only while nothing else
+ * has the focus, so a press during the wait wins.
+ */
+function returnFocusTo(from: NonNullable<typeof openedFrom>, onDone: () => void) {
+  let tries = 0;
+  let timer = 0;
+  const attempt = () => {
+    const active = document.activeElement;
+    if (active && active !== document.body) return onDone();
+    const card = from.widget
+      ? document.querySelector<HTMLElement>(`[data-widget="${cssValue(from.widget)}"]`)
+      : null;
+    const segment = from.segmentId ? `[data-segment-id="${cssValue(from.segmentId)}"]` : "";
+    const control =
+      card?.querySelector<HTMLElement>(`[data-node-id="${from.id}"]${segment}`) ??
+      card?.querySelector<HTMLElement>(`[data-node-id="${from.id}"]`);
+    if (control) {
+      control.focus();
+      return onDone();
+    }
+    // A graph places its nodes over a few frames. Timers, not animation
+    // frames: frames stop in a window nobody is looking at.
+    if (++tries < 20) {
+      timer = window.setTimeout(attempt, 50);
+      return undefined;
+    }
+    (card ?? document.querySelector<HTMLElement>('[role="tab"][data-state="active"]'))?.focus();
+    return onDone();
+  };
+  timer = window.setTimeout(attempt, 0);
+  return () => window.clearTimeout(timer);
+}
+
 export default function GlobalConversations({
   onOpen,
 }: {
@@ -116,10 +162,25 @@ export default function GlobalConversations({
     (id: number, segmentId: string | null = null) => {
       // Kept honey on the board, so coming back from it shows where you were.
       useGlobalHighlight.getState().select(id);
+      const active = document.activeElement;
+      const card =
+        active instanceof HTMLElement ? active.closest<HTMLElement>("[data-widget]") : null;
+      openedFrom = { widget: card?.dataset.widget ?? null, id, segmentId };
       onOpen(id, segmentId);
     },
     [onOpen]
   );
+
+  // Back from the conversation: the focus goes where it was. Cleared only once
+  // it is used, so a mount that is undone at once (React's strict mode) and
+  // done again still finds it.
+  useEffect(() => {
+    const from = openedFrom;
+    if (!from) return undefined;
+    return returnFocusTo(from, () => {
+      if (openedFrom === from) openedFrom = null;
+    });
+  }, []);
 
   const name = useCallback((widget: BoardWidget) => t(NAME_KEY[widget.type]), [t]);
   const commit = useCallback(

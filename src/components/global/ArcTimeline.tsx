@@ -452,6 +452,7 @@ export default function ArcTimeline({
                     else buttons.current.delete(id);
                   }}
                   type="button"
+                  data-node-id={id}
                   tabIndex={id === tabStop ? 0 : -1}
                   onFocus={() => {
                     setCurrent(id);

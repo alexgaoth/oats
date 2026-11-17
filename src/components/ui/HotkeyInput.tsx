@@ -287,17 +287,41 @@ export function HotkeyInput({
 
       setValidationWarning(null);
       onChange(hotkey);
+      // Done listening, and the focus stays: blurring here dropped it on the
+      // page, so the next Tab started again from the top. The field listens
+      // again only when asked (focus, a click, Enter or Space).
       setIsCapturing(false);
       setActiveModifiers(new Set());
+      heldModifiersRef.current = { ctrl: false, meta: false, alt: false, shift: false };
+      modifierCodesRef.current = {};
+      keyDownTimeRef.current = 0;
       clearFnHeld();
-      containerRef.current?.blur();
+      window.electronAPI?.setHotkeyListeningMode?.(false);
     },
     [validate, onChange, clearFnHeld]
   );
 
+  const startCapture = useCallback(() => {
+    if (disabled) return;
+    setIsCapturing(true);
+    setValidationWarning(null);
+    clearFnHeld();
+    window.electronAPI?.setHotkeyListeningMode?.(true);
+  }, [disabled, clearFnHeld]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (disabled) return;
+      // Tab and Shift+Tab move the focus, listening or not: a field that
+      // listens on focus would otherwise keep every keyboard user in it.
+      if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) return;
+      if (!isCapturing) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          startCapture();
+        }
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
 
@@ -352,12 +376,12 @@ export function HotkeyInput({
       }
       // If no base key, modifiers are held - don't finalize yet
     },
-    [disabled, isMac, isWindows, finalizeCapture]
+    [disabled, isCapturing, startCapture, isMac, isWindows, finalizeCapture]
   );
 
   const handleKeyUp = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (disabled) return;
+      if (disabled || !isCapturing) return;
       e.preventDefault();
 
       const wasHoldingModifiers =
@@ -395,12 +419,17 @@ export function HotkeyInput({
         keyDownTimeRef.current = 0;
       }
     },
-    [disabled, buildModifierOnlyHotkey, finalizeCapture]
+    [disabled, isCapturing, buildModifierOnlyHotkey, finalizeCapture]
   );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (disabled || !isCapturing) return;
+      if (disabled) return;
+      if (!isCapturing) {
+        // A press on the field that kept the focus after a capture.
+        if (e.button === 0 && document.activeElement === containerRef.current) startCapture();
+        return;
+      }
 
       const mouseHotkey = e.button === 3 ? "MouseButton4" : e.button === 4 ? "MouseButton5" : null;
       if (!mouseHotkey) return;
@@ -409,17 +438,10 @@ export function HotkeyInput({
       e.stopPropagation();
       finalizeCapture(mouseHotkey);
     },
-    [disabled, isCapturing, finalizeCapture]
+    [disabled, isCapturing, startCapture, finalizeCapture]
   );
 
-  const handleFocus = useCallback(() => {
-    if (!disabled) {
-      setIsCapturing(true);
-      setValidationWarning(null);
-      clearFnHeld();
-      window.electronAPI?.setHotkeyListeningMode?.(true);
-    }
-  }, [disabled, clearFnHeld]);
+  const handleFocus = startCapture;
 
   const handleBlur = useCallback(() => {
     setIsCapturing(false);
