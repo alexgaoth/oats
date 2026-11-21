@@ -16,8 +16,8 @@ import { useClipboard } from "../hooks/useClipboard";
 import { useSettings } from "../hooks/useSettings";
 import { selectProcessingMode, useSettingsStore } from "../stores/settingsStore";
 import { ProcessingStep } from "./onboarding/ProcessingStep";
-import { commitProcessing, useLocalDownloads } from "./onboarding/processingSetup";
-import type { ProcessingMode } from "./settings/processing";
+import { prepareLocalSetup, useLocalDownloads } from "./onboarding/processingSetup";
+import { setProcessing, type ProcessingMode } from "./settings/processing";
 import type { ProviderKeyHandle } from "./settings/ProviderKeyField";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
@@ -321,7 +321,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [currentStep]);
 
   // Continue, or Get started on the last step. Leaving the processing step
-  // commits its choice, and on this Mac starts its downloads at once. With an
+  // commits its choice. The workspace starts any local downloads later. With an
   // API key, a key pasted and not saved yet is checked and saved by this one
   // press; a key the provider refuses keeps the step, its reason under the
   // field. With no text in the field, a saved key goes on, and no key at all
@@ -341,7 +341,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           if (!providerKeySaved) return;
         }
       }
-      commitProcessing(processingChoice, localDownloads, preferredLanguage);
+      setProcessing(processingChoice);
+      if (processingChoice === "local") {
+        await prepareLocalSetup().catch((error) =>
+          logger.warn("Could not reset the local setup declines", { error }, "onboarding")
+        );
+      }
     }
     if (isLastStep) await finishOnboarding();
     else setCurrentStep(currentStep + 1);

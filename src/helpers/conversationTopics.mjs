@@ -45,6 +45,7 @@
 import { ENGLISH_WORD_RANKS } from "./englishWordRanks.mjs";
 import { encodeTopicVector, topicContentVector } from "./conversationLinks.mjs";
 import { TopicChangeDetector } from "./topicChange.mjs";
+import { TopicProposals } from "./topicProposals.mjs";
 
 // ---------------------------------------------------------------------------
 // Words
@@ -707,6 +708,10 @@ class ConversationTopicTracker {
     this.detector = options.detector
       ? new TopicChangeDetector(options.detector === true ? {} : options.detector)
       : null;
+    this._proposals =
+      this.detector && Number.isFinite(options.proposalStartedAt)
+        ? new TopicProposals(this.detector, { startedAt: options.proposalStartedAt / 1000 })
+        : null;
     this._detectorOn = false;
 
     this.utterances = [];
@@ -786,7 +791,18 @@ class ConversationTopicTracker {
     });
     this._lastSpeech = utterance.end ?? record.at / 1000;
     this._update();
+    this.tickProposals();
     return this.topics.find((topic) => topic.id === this.currentId) ?? null;
+  }
+
+  // While no final arrives, the recording clock can expire a mark but must
+  // not assume the recognizer has delivered all the words heard so far.
+  tickProposals(at = this.now()) {
+    if (!this._detectorOn || !this._proposals) return false;
+    const before = this._proposals.snapshot();
+    this._proposals.advance(at / 1000, this._lastSpeech);
+    const after = this._proposals.snapshot();
+    return before.length !== after.length || before.some((mark, index) => mark !== after[index]);
   }
 
   // Marks resolved the topic that contains a given utterance. Called when a
@@ -897,6 +913,7 @@ class ConversationTopicTracker {
   // The turn indexes that start a stretch, from the turns the detector cut at.
   _updateFromDetector() {
     this.detector.advance(this._lastSpeech ?? 0);
+    this._proposals?.observeCuts(this.now() / 1000);
     this._final = null;
     this._proposedFrom = this.detector.proposedId();
     Object.assign(this, this._topicsAt(this.detector.cuts, { commit: true }));
@@ -1416,7 +1433,20 @@ class ConversationTopicTracker {
         : {}),
       ...(final ? this._storedVector(topic) : {}),
     }));
-    return { nodes, edges: view.transitions.map((edge) => ({ ...edge })) };
+    const proposals = !final && this._detectorOn ? this._proposals?.snapshot() : undefined;
+    return {
+      nodes,
+      edges: view.transitions.map((edge) => ({ ...edge })),
+      ...(proposals?.length
+        ? {
+            proposals: proposals.map((mark) => ({
+              ...mark,
+              at: Math.round(mark.at * 1000),
+              since: Math.round(mark.since * 1000),
+            })),
+          }
+        : {}),
+    };
   }
 
   // The vector of what was said on a topic, for the record (`final`): the

@@ -68,7 +68,7 @@ test("the one visible processing choice configures the meeting scope too", () =>
   const rule = STORE.slice(STORE.indexOf("export function applyProvidersSpeech("));
   assert.match(
     rule.slice(0, 800),
-    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: !cloud,/,
+    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: routes\.speech === "local",/,
     "every scope moves together, the meeting scope included"
   );
   assert.match(rule.slice(0, 800), /setMeetingTranscriptionMode\("providers"\)/);

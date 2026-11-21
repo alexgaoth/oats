@@ -362,10 +362,16 @@ test("the writing model's automatic start is announced, once, with its Cancel", 
 
 test("a writing download waits in main for a recording to end", () => {
   const fetcher = read("src/helpers/writingModelFetch.js");
-  assert.match(fetcher, /if \(this\.isBusy\(\)\) \{[\s\S]{0,200}void this\._startWhenFree\(entry\);/);
+  assert.match(
+    fetcher,
+    /if \(this\.isBusy\(\)\) \{[\s\S]{0,200}void this\._startWhenFree\(entry\);/
+  );
   assert.match(fetcher, /while \(this\.waiting === entry && this\.isBusy\(\)\)/);
   // The device tier's recording signal, the one its clip check waits on.
-  assert.match(read("src/helpers/deviceTier.js"), /new WritingModelFetch\(\{[\s\S]{0,400}isBusy: \(\) => \{/);
+  assert.match(
+    read("src/helpers/deviceTier.js"),
+    /new WritingModelFetch\(\{[\s\S]{0,400}isBusy: \(\) => \{/
+  );
   assert.match(
     read("src/helpers/ipcHandlers.js"),
     /isBusy: \(\) => this\.isMeetingActive\?\.\(\) === true/
@@ -398,9 +404,15 @@ test("a key is checked with its own provider's host only, never a custom endpoin
     /proxyFetch\(\s*`https:\/\/api\.anthropic\.com\/v1\/models\/\$\{encodeURIComponent\(String\(modelId\)\)\}`/
   );
   assert.match(main, /ipcMain\.handle\("anthropic-key-check"[\s\S]{0,200}anthropicModelResponse\(/);
-  assert.match(main, /ipcMain\.handle\("anthropic-model-available"[\s\S]{0,200}anthropicModelResponse\(/);
+  assert.match(
+    main,
+    /ipcMain\.handle\("anthropic-model-available"[\s\S]{0,200}anthropicModelResponse\(/
+  );
   const doc = read("docs/network-allowlist.md");
-  assert.match(doc, /\| `api\.openai\.com` or `api\.anthropic\.com` +\| Adding an OpenAI or Anthropic key/);
+  assert.match(
+    doc,
+    /\| `api\.openai\.com` or `api\.anthropic\.com` +\| Adding an OpenAI or Anthropic key/
+  );
   assert.match(doc, /Checking a key: adding an OpenAI or Anthropic key/);
 });
 
@@ -421,21 +433,26 @@ test("the writing model comes through the counted download path, from Hugging Fa
   }
 });
 
-test("setup starts the downloads only when the person continues with On this Mac", () => {
-  // The step names what "On this Mac" fetches; nothing starts while it is shown.
-  const setup = read("src/components/onboarding/processingSetup.ts");
-  assert.match(
-    setup,
-    /setProcessing\(mode\);\s*if \(mode === "local"\) downloads\.start\(language\);/
-  );
-  const step = read("src/components/onboarding/ProcessingStep.tsx");
-  assert.doesNotMatch(step, /requestTurbo|requestWritingModel|commitProcessing|\.start\(/);
-  // The flow commits the choice in one place: leaving the processing step.
-  const flow = read("src/components/OnboardingFlow.tsx");
-  assert.equal([...flow.matchAll(/commitProcessing\(/g)].length, 1);
-  // After the pasted key, if any, is checked and saved (setupProcessing.test.js).
-  assert.match(
-    flow,
-    /if \(currentStepId === "processing"\) \{[\s\S]{0,900}?\n {6}commitProcessing\(processingChoice, localDownloads, preferredLanguage\);/
-  );
+test("only a committed local processing choice authorizes downloads after setup", () => {
+  const processing = read("src/components/settings/processing.ts");
+  assert.match(processing, /setLocalSetupAuthorization\(mode === "local"\);/);
+  for (const name of [
+    "OnboardingFlow.tsx",
+    "onboarding/ProcessingStep.tsx",
+    "onboarding/processingSetup.ts",
+  ]) {
+    assert.doesNotMatch(
+      read(`src/components/${name}`),
+      /requestTurbo|requestWritingModel|startSpeechUpgrade|startWritingModelDownload/
+    );
+  }
+  for (const name of ["useSpeechUpgrade.ts", "useWritingModel.ts"]) {
+    const hook = read(`src/hooks/${name}`);
+    assert.match(
+      hook,
+      /const authorized = useSettingsStore\(\(state\) => state\.localSetupAuthorized\)/
+    );
+    assert.match(hook, /const fetch =\s*authorized &&/);
+    assert.match(hook, /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/);
+  }
 });
