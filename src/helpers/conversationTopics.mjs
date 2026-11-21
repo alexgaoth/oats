@@ -712,7 +712,7 @@ class ConversationTopicTracker {
       this.detector && Number.isFinite(options.proposalStartedAt)
         ? new TopicProposals(this.detector, {
             startedAt: options.proposalStartedAt / 1000,
-            greyFloor: GREY_FLOOR,
+            greyFloor: options.proposalGreyEnabled ? GREY_FLOOR : null,
             judge: options.proposalJudge && {
               ...options.proposalJudge,
               active: () => this._detectorOn && options.proposalJudge.active(),

@@ -76,7 +76,7 @@ function feed(tracker, utterances) {
 test("detector snapshots publish live proposals, including expiration in silence", () => {
   const epoch = 1_700_000_007_000;
   let now = epoch;
-  const options = { now: () => now, proposalStartedAt: epoch };
+  const options = { now: () => now, proposalStartedAt: epoch, proposalGreyEnabled: true };
   const tracker = new ConversationTopicTracker({
     ...options,
     detector: { threshold: 2 },
@@ -125,16 +125,20 @@ test("a vector arrival publishes an early solid cut without waiting for the next
     proposalStartedAt: 0,
     detector: { threshold: 2 },
   });
-  tracker._proposals.score = () => 0.45;
+  tracker._proposals.score = (g) => (g === 1 ? 0.42 : 0.45);
   const turn = (id, start, end) =>
     tracker.onUtterance({ id, text: PRICING[0], start, end, at: start * 1000 });
   turn("start", 0, 9);
   tracker.addVectors({ utterances: [["start", [1, 0]]] });
   now = 32_000;
-  turn("early", 15, 31);
+  turn("maybe", 15, 31);
+  tracker.addVectors({ utterances: [["maybe", [1, 0]]] });
+  assert.equal(tracker.snapshot().proposals, undefined);
+  now = 57_000;
+  turn("early", 40, 56);
   assert.deepEqual(tracker.detector.cuts, []);
   tracker.addVectors({ utterances: [["early", [1, 0]]] });
-  assert.deepEqual(tracker.detector.cuts, [1]);
+  assert.deepEqual(tracker.detector.cuts, [2]);
   assert.equal(tracker.snapshot().nodes.at(-1).utteranceIds.includes("early"), true);
   assert.equal(tracker.snapshot().proposals, undefined);
 });

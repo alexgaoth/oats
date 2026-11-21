@@ -1583,11 +1583,13 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // change of subject, so one narrow subject does not fill the whole lane.
   const roomInEnglish =
     recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en";
+  const proposalGreyEnabled = roomInEnglish && getSettings().topicProposalGreyEnabled;
   let scheduleProposalExpiry: ((deadline: number | null) => void) | undefined;
   const tracker: ConversationTopicTracker = new ConversationTopicTracker({
     detector: roomInEnglish ? { split: LONG_TOPIC_SPLIT } : false,
     proposalStartedAt: recordingStartedAt,
-    proposalJudge: roomInEnglish
+    proposalGreyEnabled,
+    proposalJudge: proposalGreyEnabled
       ? {
           ask: askTopicProposal,
           text: (id: string) =>
@@ -1604,7 +1606,9 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     onProposalDeadline: (deadline: number | null) => scheduleProposalExpiry?.(deadline),
   });
   conversationTopicTracker = tracker;
-  if (roomInEnglish) scheduleProposalExpiry = startTopicProposalClock(tracker, recordingStartedAt);
+  if (proposalGreyEnabled) {
+    scheduleProposalExpiry = startTopicProposalClock(tracker, recordingStartedAt);
+  }
   // Each turn and each candidate name is embedded on this computer, so the
   // tracker can cut and name a topic by meaning; a name that arrives is drawn
   // at once.

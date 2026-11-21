@@ -48,7 +48,7 @@ export class TopicProposals {
    *   Partial<Pick<import("./topicChange.mjs").TopicChangeDetector, "commitEarlyCut">>} detector
    * @param {{ rule?: Partial<Omit<typeof PROPOSAL_RULE, "schedule">> & { schedule?: ReadonlyArray<number | string> },
    *   startedAt?: number,
-   *   greyFloor?: number,
+   *   greyFloor?: number | null,
    *   onCut?: (g: number, now: number, source: "early" | "reread" | "judge") => void,
    *   onGrey?: (mark: Proposal, g: number) => void,
    *   judge?: TopicProposalJudge,
@@ -284,6 +284,7 @@ export class TopicProposals {
       }
       if (
         newTick &&
+        this.greyFloor !== null &&
         !read.shown &&
         read.value >= this.greyFloor &&
         read.value < EARLY_CUT_SCORE &&
