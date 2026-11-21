@@ -23,5 +23,8 @@ export function migrateRoomSpeechDefault(storage) {
 
 /** Use the room's recommendation only if no applicable model was chosen. */
 export function followsRoomSpeechDefault(preference, engine, followsWhisper) {
-  return preference !== "shared" && engine === "whisper" && followsWhisper;
+  return (
+    engine === "whisper" &&
+    (preference === "recommended" || (preference !== "shared" && followsWhisper))
+  );
 }

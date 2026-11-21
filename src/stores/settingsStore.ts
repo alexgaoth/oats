@@ -577,7 +577,7 @@ export interface SettingsState
   remoteTranscriptionModel: string;
   cleanupMode: InferenceMode;
   localSetupAuthorized: boolean;
-  roomSpeechPreference: "default" | "shared";
+  roomSpeechPreference: "default" | "shared" | "recommended";
   cleanupRemoteUrl: string;
 
   meetingTranscriptionMode: InferenceMode;
@@ -1307,7 +1307,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
   localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
-  roomSpeechPreference: readString(ROOM_SPEECH_PREFERENCE, "") === "shared" ? "shared" : "default",
+  roomSpeechPreference: (() => {
+    const preference = readString(ROOM_SPEECH_PREFERENCE, "");
+    return preference === "shared" || preference === "recommended" ? preference : "default";
+  })(),
 
   meetingTranscriptionMode: (() => {
     const v = readString("meetingTranscriptionMode", "local");
@@ -2221,6 +2224,7 @@ export function chooseLocalSpeechModel(engine: LocalTranscriptionProvider, model
   store.setMeetingLocalTranscriptionProvider(engine);
   if (engine === "nvidia") store.setParakeetModel(model);
   else store.setWhisperModel(model);
+  setRoomSpeechPreference("shared");
 }
 
 /**

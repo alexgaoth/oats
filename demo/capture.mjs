@@ -305,6 +305,16 @@ const SHOTS = [
   // state, and Advanced (src/components/settings/ModelsPage.tsx). The writing
   // model on this Mac follows its memory (src/helpers/writingTier.mjs).
   ...[
+    ["default", "parakeet=ready"],
+    ["upgrade", "parakeet=missing&chosen=turbo-q5"],
+  ].map(([name, query]) => ({
+    name: `parakeet-${name}`,
+    size: "880x680",
+    query,
+    script:
+      "await oatsDemo.settings('models'); await demo.until(() => document.body.innerText.includes('Parakeet Ultra'))",
+  })),
+  ...[
     ["speech", "tier=fast&processing=providers&keys=anthropic"],
     ["writing", "writingState=small"],
   ].map(([name, query]) => ({
