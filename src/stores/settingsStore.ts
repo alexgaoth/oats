@@ -596,6 +596,8 @@ export interface SettingsState
   /** The ledger, or the oat field. See `uiMode.mjs`. */
   uiMode: UiMode;
   conversationAideEnabled: boolean;
+  topicProposalJudgeEnabled: boolean;
+  topicProposalGreyEnabled: boolean;
   conversationAideOnlineEnabled: boolean;
   conversationAideInRoomEnabled: boolean;
   conversationAideModel: string;
@@ -686,6 +688,8 @@ export interface SettingsState
   setTopicDescriptions: (value: boolean) => void;
   setUiMode: (value: UiMode) => void;
   setConversationAideEnabled: (value: boolean) => void;
+  setTopicProposalJudgeEnabled: (value: boolean) => void;
+  setTopicProposalGreyEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
   setConversationAideInRoomEnabled: (value: boolean) => void;
   setConversationAideModel: (value: string) => void;
@@ -1347,6 +1351,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   topicDescriptions: readBoolean("topicDescriptions", true),
   uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
+  topicProposalJudgeEnabled: readBoolean("topicProposalJudgeEnabled", false),
+  topicProposalGreyEnabled: readBoolean("topicProposalGreyEnabled", false),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
   conversationAideInRoomEnabled: readBoolean("conversationAideInRoomEnabled", true),
   conversationAideModel: readString("conversationAideModel", "qwen2.5-1.5b-instruct-q5_k_m"),
@@ -1453,6 +1459,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   ) => void,
   setTopicDescriptions: createBooleanSetter("topicDescriptions"),
   setConversationAideEnabled: createBooleanSetter("conversationAideEnabled"),
+  setTopicProposalJudgeEnabled: createBooleanSetter("topicProposalJudgeEnabled"),
+  setTopicProposalGreyEnabled: createBooleanSetter("topicProposalGreyEnabled"),
   setConversationAideOnlineEnabled: createBooleanSetter("conversationAideOnlineEnabled"),
   setConversationAideInRoomEnabled: createBooleanSetter("conversationAideInRoomEnabled"),
   setConversationAideModel: createStringSetter("conversationAideModel"),

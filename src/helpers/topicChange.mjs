@@ -316,6 +316,19 @@ export class TopicChangeDetector {
     }
   }
 
+  /** An early cut is append-only and supersedes the older held candidate. */
+  commitEarlyCut(g, exclusion = 20) {
+    const turn = this.turns[g];
+    if (!turn || !Number.isInteger(g) || g < 1) return false;
+    const last = this.turns[this.cuts.at(-1)];
+    if (last && (turn.start - last.start < this.spacing || turn.start - last.start <= exclusion)) {
+      return false;
+    }
+    this.cuts.push(g);
+    this.candidate = null;
+    return true;
+  }
+
   /** Reads every pause whose far side has landed by `now` (seconds). */
   advance(now) {
     while (this.next < this.turns.length && this._ready(this.next, now)) {

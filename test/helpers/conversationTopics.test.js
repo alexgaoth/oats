@@ -76,13 +76,13 @@ function feed(tracker, utterances) {
 test("detector snapshots publish live proposals, including expiration in silence", () => {
   const epoch = 1_700_000_007_000;
   let now = epoch;
-  const options = { now: () => now, proposalStartedAt: epoch };
+  const options = { now: () => now, proposalStartedAt: epoch, proposalGreyEnabled: true };
   const tracker = new ConversationTopicTracker({
     ...options,
     detector: { threshold: 2 },
   });
   const lexical = new ConversationTopicTracker(options);
-  tracker._proposals.score = () => 0.5;
+  tracker._proposals.score = () => 0.42;
   const turn = (id, start, end) => {
     now = epoch + end * 1000;
     const utterance = {
@@ -110,11 +110,36 @@ test("detector snapshots publish live proposals, including expiration in silence
   assert.equal(lexical.snapshot().proposals, undefined);
   assert.equal(tracker.snapshot(now, { final: true }).proposals, undefined);
   assert.equal(tracker.tickProposals(epoch + 75_000), false);
-  assert.equal(tracker.tickProposals(epoch + 90_000), true);
+  assert.equal(tracker.tickProposals(epoch + 80_000), true);
   assert.deepEqual(tracker.snapshot().proposals, [
-    { ...grey, state: "faded", since: epoch + 90_000 },
+    { ...grey, state: "faded", since: epoch + 80_000 },
   ]);
   assert.equal(tracker.tickProposals(epoch + 105_000), true);
+  assert.equal(tracker.snapshot().proposals, undefined);
+});
+
+test("a vector arrival publishes an early solid cut without waiting for the next tick", () => {
+  let now = 0;
+  const tracker = new ConversationTopicTracker({
+    now: () => now,
+    proposalStartedAt: 0,
+    detector: { threshold: 2 },
+  });
+  tracker._proposals.score = (g) => (g === 1 ? 0.42 : 0.45);
+  const turn = (id, start, end) =>
+    tracker.onUtterance({ id, text: PRICING[0], start, end, at: start * 1000 });
+  turn("start", 0, 9);
+  tracker.addVectors({ utterances: [["start", [1, 0]]] });
+  now = 32_000;
+  turn("maybe", 15, 31);
+  tracker.addVectors({ utterances: [["maybe", [1, 0]]] });
+  assert.equal(tracker.snapshot().proposals, undefined);
+  now = 57_000;
+  turn("early", 40, 56);
+  assert.deepEqual(tracker.detector.cuts, []);
+  tracker.addVectors({ utterances: [["early", [1, 0]]] });
+  assert.deepEqual(tracker.detector.cuts, [2]);
+  assert.equal(tracker.snapshot().nodes.at(-1).utteranceIds.includes("early"), true);
   assert.equal(tracker.snapshot().proposals, undefined);
 });
 
