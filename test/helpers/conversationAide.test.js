@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 let ConversationAideSession;
 let buildSearchUrl;
 let isQuestionCandidate;
+let isTrackableQuestion;
 let assessResponseLocally;
 let extractQuestionSentence;
 let outcomeForAssessment;
@@ -16,6 +17,7 @@ test.before(async () => {
     ConversationAideSession,
     buildSearchUrl,
     isQuestionCandidate,
+    isTrackableQuestion,
     assessResponseLocally,
     extractQuestionSentence,
     outcomeForAssessment,
@@ -78,6 +80,34 @@ test("candidate filter accepts factual forms and excludes commands, greetings, a
   assert.equal(isQuestionCandidate("I finished the deployment."), false);
   assert.equal(isQuestionCandidate("Who cares?"), false);
   assert.equal(isQuestionCandidate("x".repeat(601) + "?"), false);
+});
+
+test("Clean track filter drops weak quotes without changing the candidate detector", () => {
+  for (const text of [
+    "Are we going to talk about...",
+    "Main design points, is it?",
+    "Who cares, right?",
+    "That was my fault. Sorry?",
+    "What happens when you press the button is already documented.",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+    assert.equal(isTrackableQuestion(extractQuestionSentence(text)), false, text);
+  }
+});
+
+test("Clean track filter keeps clear asks even without perfect punctuation", () => {
+  for (const text of [
+    "Can we agree on the price",
+    "How much",
+    "So, four?",
+    "Do we want the red case or should we go with...",
+    "What does it cost? Sorry?",
+  ]) {
+    assert.equal(isTrackableQuestion(text), true, text);
+  }
+  assert.equal(isTrackableQuestion("Main design points, is it?", "en-GB"), false);
+  assert.equal(isTrackableQuestion("どう？", "ja"), true);
+  assert.equal(isTrackableQuestion("¿Cuándo?", "auto"), true);
 });
 
 test("a question with no question mark is found by its shape", () => {
