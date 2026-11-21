@@ -10,6 +10,7 @@ let topicLanes,
   runAt,
   questionTopics,
   lanePath,
+  laneGhostPath,
   laneProposalTicks,
   MIN_RUN_MS,
   LANE_ROW_PX,
@@ -21,6 +22,7 @@ test.before(async () => {
     runAt,
     questionTopics,
     lanePath,
+    laneGhostPath,
     laneProposalTicks,
     MIN_RUN_MS,
     LANE_ROW_PX,
@@ -57,6 +59,21 @@ test("grey and fading ticks use the current runs; settled marks leave the normal
   );
   assert.equal(lanes.runs[1].from, 0.5);
   assert.equal(lanes.rows.length, 2);
+});
+
+test("the ghost uses the normal bend geometry without adding a real lane", () => {
+  const last = { topic: 3, from: 0.2, to: 1 };
+  const tick = { x: 0.75, row: 1 };
+  const ghost = laneGhostPath(last, tick, 2, 200);
+  const normal = lanePath({
+    runs: [{ ...last, to: tick.x }, { topic: 4, from: tick.x, to: last.to }],
+    rows: new Map([[3, 1], [4, 2]]),
+    width: 200,
+  });
+  assert.equal(ghost.path.slice(ghost.path.indexOf(" L ")), normal.slice(normal.indexOf(" L ")));
+  assert.equal(ghost.clip, 150 - LANE_BEND_PX);
+  assert.equal(laneGhostPath(last, { ...tick, x: 0.1 }, 2, 200), null);
+  assert.equal(last.to, 1);
 });
 
 // A topic with its utterances, as the tracker stores it.

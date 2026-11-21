@@ -349,3 +349,28 @@ export function lanePath({
   d += ` L ${round(x(last.to))} ${round(y(last))}`;
   return d;
 }
+
+/** Preview one new row without changing any recorded run or topic. */
+export function laneGhostPath(last, tick, rowCount, width) {
+  if (!last || tick.x <= last.from || tick.x >= last.to) return null;
+  const topic = 1;
+  const preview = 2;
+  const bend = Math.min(
+    ((tick.x - last.from) * width) / 2,
+    ((last.to - tick.x) * width) / 2,
+    LANE_BEND_PX
+  );
+  const start = tick.x - (2 * bend) / width;
+  const path = lanePath({
+    runs: [
+      { topic, from: start, to: tick.x },
+      { topic: preview, from: tick.x, to: last.to },
+    ],
+    rows: new Map([
+      [topic, tick.row],
+      [preview, rowCount],
+    ]),
+    width,
+  });
+  return path && { path, clip: tick.x * width - bend };
+}

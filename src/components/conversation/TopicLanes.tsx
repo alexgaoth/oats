@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { formatSpan } from "../../helpers/ledgerDate.mjs";
-import { LANE_ROW_PX, lanePath, runAt } from "../../helpers/topicLanes.mjs";
+import { LANE_ROW_PX, laneGhostPath, lanePath, runAt } from "../../helpers/topicLanes.mjs";
 import { StateMark } from "./StateMark";
 import { stateLabel } from "./flowText";
 import { markFill } from "./questionMarks";
@@ -48,6 +48,7 @@ export interface LaneQuestion {
 }
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+const GHOST_MS = 600;
 
 /** The element that scrolls `element`, if any: the card body past eight rows. */
 function scrollerOf(element: HTMLElement | null): HTMLElement | null {
@@ -65,17 +66,19 @@ export default function TopicLanes({
   live = false,
   questions,
   proposalTicks,
+  ghostPreview = false,
   inset = "px-5",
   className,
 }: {
   lanes: Lanes;
   selected: number | null;
   onSelect: (id: number) => void;
-  /** A recording: the line ends at now, in honey, and earlier topics are quiet. */
+  /** A recording: the line ends at now, in honey. */
   live?: boolean;
   /** Questions to mark on the line, each on the topic the room was on. */
   questions?: LaneQuestion[];
   proposalTicks?: (ProposalTick & { row: number })[];
+  ghostPreview?: boolean;
   /** A row's side padding: the card's in a card, less on a page. */
   inset?: string;
   className?: string;
@@ -106,7 +109,7 @@ export default function TopicLanes({
   }, []);
 
   const rowOf = useMemo(() => new Map(rows.map((row, index) => [row.id, index])), [rows]);
-  const height = rows.length * LANE_ROW_PX;
+  const clipId = useId();
   const d = useMemo(() => lanePath({ runs, rows: rowOf, width }), [runs, rowOf, width]);
   const centre = (index: number) => index * LANE_ROW_PX + LANE_ROW_PX / 2;
 
@@ -114,6 +117,37 @@ export default function TopicLanes({
   const last = runs[runs.length - 1];
   const now =
     live && last && rowOf.has(last.topic) ? { x: last.to, row: rowOf.get(last.topic) } : null;
+  const eligibleTicks =
+    ghostPreview && now && last
+      ? proposalTicks?.filter(
+          (tick) => tick.row === now.row && tick.x > last.from && tick.x < last.to
+        )
+      : undefined;
+  const candidate = eligibleTicks?.find((tick) => tick.state === "grey") ?? eligibleTicks?.at(-1);
+  const [expiredGhost, setExpiredGhost] = useState<string>();
+  const fadeKey = candidate?.state === "faded" ? `${candidate.id}:${candidate.since}` : undefined;
+  const fadeSince = fadeKey ? candidate?.since : undefined;
+  const animationDelay = useMemo(
+    () => (fadeSince === undefined ? undefined : `${-Math.max(0, Date.now() - fadeSince)}ms`),
+    [fadeSince]
+  );
+  useLayoutEffect(() => {
+    if (!fadeKey || fadeSince === undefined) return;
+    const remaining = fadeSince + GHOST_MS - Date.now();
+    if (remaining <= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setExpiredGhost(fadeKey);
+      return;
+    }
+    const timer = setTimeout(() => setExpiredGhost(fadeKey), remaining);
+    return () => clearTimeout(timer);
+  }, [fadeKey, fadeSince]);
+  const ghost =
+    width > 0 && candidate && (!fadeKey || expiredGhost !== fadeKey)
+      ? laneGhostPath(last, candidate, rows.length, width)
+      : null;
+  const gridRows = rows.length + Number(Boolean(ghost));
+  const height = gridRows * LANE_ROW_PX;
+  const fading = Boolean(ghost && fadeKey);
 
   // Each question on the topic the room was on when it was asked, in the marks
   // every surface uses (`questionMarks.ts`). Rings first, so a settled mark is
@@ -167,7 +201,7 @@ export default function TopicLanes({
         "grid grid-cols-[fit-content(min(15rem,34%))_minmax(0,1fr)_max-content] gap-x-3",
         className
       )}
-      style={{ gridTemplateRows: `repeat(${rows.length}, ${LANE_ROW_PX}px)` }}
+      style={{ gridTemplateRows: `repeat(${gridRows}, ${LANE_ROW_PX}px)` }}
     >
       {rows.map((row, index) => {
         const isSelected = row.id === selected;
@@ -232,10 +266,28 @@ export default function TopicLanes({
           </li>
         );
       })}
+      {ghost && (
+        <li
+          key={fadeKey ?? candidate?.id}
+          aria-hidden="true"
+          data-topic-ghost={fading ? "faded" : "grey"}
+          className={cn(
+            "pointer-events-none col-span-full grid grid-cols-subgrid items-center text-muted-foreground",
+            fading &&
+              "animate-out fade-out fill-mode-forwards duration-[600ms] motion-reduce:hidden"
+          )}
+          style={{
+            gridRow: gridRows,
+            animationDelay,
+          }}
+        >
+          <span className={cn(inset, "text-[13px]")}>…</span>
+        </li>
+      )}
       <li
         aria-hidden="true"
         className="pointer-events-none relative col-start-2"
-        style={{ gridRow: `1 / span ${rows.length}` }}
+        style={{ gridRow: `1 / span ${gridRows}` }}
       >
         <div ref={plot} className="oats-lanes-draw absolute inset-0">
           {width > 0 && d && (
@@ -246,6 +298,11 @@ export default function TopicLanes({
               preserveAspectRatio="none"
               className="absolute inset-0 overflow-visible"
             >
+              {ghost && !fading && (
+                <clipPath id={clipId}>
+                  <rect width={ghost.clip} height={height} />
+                </clipPath>
+              )}
               <path
                 d={d}
                 fill="none"
@@ -254,16 +311,41 @@ export default function TopicLanes({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
+                clipPath={ghost && !fading ? `url(#${clipId})` : undefined}
               />
+              {ghost && (
+                <g
+                  key={fadeKey ?? candidate?.id}
+                  className={
+                    fading
+                      ? "animate-out fade-out fill-mode-forwards duration-[600ms] motion-reduce:hidden"
+                      : undefined
+                  }
+                  style={{ animationDelay }}
+                >
+                  <path
+                    d={ghost.path}
+                    fill="none"
+                    stroke="var(--color-muted-foreground)"
+                    strokeWidth={CHART.line}
+                    strokeDasharray="3 4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={0.4}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+              )}
             </svg>
           )}
-          {proposalTicks?.map((tick) => (
-            <TopicProposalTick
-              key={`${tick.id}-${tick.state}`}
-              tick={tick}
-              style={{ top: centre(tick.row) + 2 }}
-            />
-          ))}
+          {!ghostPreview &&
+            proposalTicks?.map((tick) => (
+              <TopicProposalTick
+                key={`${tick.id}-${tick.state}`}
+                tick={tick}
+                style={{ top: centre(tick.row) + 2 }}
+              />
+            ))}
           {/* The chart's one dot (DESIGN.md §6): `CHART.dot` across in a
               `CHART.ring` ring of the card colour. A question's mark sits on
               a disc of the card colour that wide, so the line stops at its
@@ -278,7 +360,7 @@ export default function TopicLanes({
               <StateMark state={mark.state} className="block" />
             </span>
           ))}
-          {now && (
+          {now && (!ghost || fading) && (
             <span
               className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
               style={{
