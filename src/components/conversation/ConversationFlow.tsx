@@ -7,8 +7,9 @@ import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { buildThreadMap, placeLabels, quotedUtterance } from "../../helpers/liveThreadMap.mjs";
 import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
-import { LANE_ROW_PX, topicLanes } from "../../helpers/topicLanes.mjs";
+import { LANE_ROW_PX, laneProposalTicks, topicLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
+import type { ProposalTick } from "./TopicProposalTick";
 import { flowCaption, flowViewOptions, stateLabel } from "./flowText";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 import type { ConversationFlowView } from "../../stores/settingsStore";
@@ -211,6 +212,13 @@ export default function ConversationFlow({
     [snapshot, startedAt, live]
   );
   const empty = lanes.empty;
+  const proposalTicks = useMemo(
+    () =>
+      (live && view === "lanes"
+        ? laneProposalTicks(lanes, snapshot?.proposals)
+        : []) as (ProposalTick & { row: number })[],
+    [live, view, lanes, snapshot?.proposals]
+  );
   const caption = flowCaption(
     t,
     view === "graph"
@@ -307,7 +315,13 @@ export default function ConversationFlow({
             }
           >
             {view === "lanes" ? (
-              <TopicLanes lanes={lanes} selected={selected} onSelect={toggle} live={live} />
+              <TopicLanes
+                lanes={lanes}
+                selected={selected}
+                onSelect={toggle}
+                live={live}
+                proposalTicks={proposalTicks}
+              />
             ) : (
               <FlowGraph map={map} compact={compact} selected={selected} onSelect={toggle} />
             )}

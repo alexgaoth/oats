@@ -19,6 +19,7 @@ import {
   type ChartPalette,
 } from "../charts/chartStyle";
 import { markKind } from "./questionMarks";
+import { TopicProposalTick, type ProposalTick } from "./TopicProposalTick";
 
 // The conversation contour (DESIGN.md §6) — Oats' signature mark.
 //
@@ -97,6 +98,7 @@ export interface ContourData {
   points: ContourPoint[];
   marks: ContourMark[];
   shifts: ContourShift[];
+  proposalTicks?: ProposalTick[];
   /** Counted in the label; not drawn (the lanes show returns). */
   returns: ContourReturn[];
   /** Instants somebody pressed "Mark". Optional: older callers build none. */
@@ -197,6 +199,7 @@ export default function ConversationContour({
   pickLabel?: (time: number) => string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rollRef = useRef<HTMLDivElement | null>(null);
   const [palette, setPalette] = useState<ChartPalette | null>(null);
   // Where the pointer is over a pickable trace, as a fraction of its width.
   // A DOM hairline rather than a redraw: hovering must not repaint the canvas.
@@ -224,18 +227,20 @@ export default function ConversationContour({
     // arriving) picks up where the slide is, so nothing jumps. Under reduced
     // motion it stays still and moves in steps.
     const glide = (bucketPx: number) => {
-      canvas.style.transition = "none";
+      const roll = rollRef.current;
+      if (!roll) return;
+      roll.style.transition = "none";
       const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       if (!contour.live || reduce || !contour.span) {
-        canvas.style.transform = "";
+        roll.style.transform = "";
         return;
       }
       const secondStart = (contour.start ?? 0) + contour.span - LIVE_BUCKET_MS;
       const gone = Math.min(1, Math.max(0, (Date.now() - secondStart) / LIVE_BUCKET_MS));
-      canvas.style.transform = `translateX(${(-gone * bucketPx).toFixed(2)}px)`;
-      void canvas.offsetWidth;
-      canvas.style.transition = `transform ${Math.round((1 - gone) * LIVE_BUCKET_MS)}ms linear`;
-      canvas.style.transform = `translateX(${(-bucketPx).toFixed(2)}px)`;
+      roll.style.transform = `translateX(${(-gone * bucketPx).toFixed(2)}px)`;
+      void roll.offsetWidth;
+      roll.style.transition = `transform ${Math.round((1 - gone) * LIVE_BUCKET_MS)}ms linear`;
+      roll.style.transform = `translateX(${(-bucketPx).toFixed(2)}px)`;
     };
 
     const draw = ({ ctx, width: canvasWidth, height: cssHeight }: ChartFrame) => {
@@ -421,15 +426,7 @@ export default function ConversationContour({
         pickable ? "cursor-pointer" : undefined,
         !pickable && !contour.live && className
       )}
-      style={
-        contour.live
-          ? {
-              height,
-              width: `calc(100% * ${(contour.points.length + 1) / Math.max(1, contour.points.length)})`,
-              willChange: "transform",
-            }
-          : { height }
-      }
+      style={{ height }}
       onPointerMove={
         pickable
           ? (event) => {
@@ -453,7 +450,35 @@ export default function ConversationContour({
 
   // Live, a clipping frame round the wider canvas, so the bucket sliding in
   // from the right and the one leaving on the left are never seen past it.
-  if (contour.live) return <div className={cn("overflow-hidden", className)}>{canvas}</div>;
+  if (contour.live) {
+    const buckets = Math.max(1, contour.points.length);
+    return (
+      <div className={cn("overflow-hidden", className)}>
+        <div
+          ref={rollRef}
+          className="relative will-change-transform"
+          style={{ width: `${((buckets + 1) / buckets) * 100}%` }}
+        >
+          {canvas}
+          {showMarks && Boolean(contour.proposalTicks?.length) && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0"
+              style={{ width: `calc(${(buckets / (buckets + 1)) * 100}% - 1px)` }}
+            >
+              {contour.proposalTicks?.map((tick) => (
+                <TopicProposalTick
+                  key={`${tick.id}-${tick.state}`}
+                  tick={tick}
+                  className="bottom-4"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
   if (!pickable) return canvas;
 
   return (

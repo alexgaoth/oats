@@ -258,6 +258,17 @@ export function runAt(lanes, time) {
   return nearest;
 }
 
+/** A pending change sits on the existing run. It never creates a row or a bend. */
+export function laneProposalTicks(lanes, proposals) {
+  if (!proposals?.length || !lanes.span) return [];
+  return proposals.flatMap(({ id, at, state, since }) => {
+    if (state === "solid" || at < lanes.start || at > lanes.end) return [];
+    const run = runAt(lanes, at);
+    const row = lanes.rows.findIndex((item) => item.id === run?.topic);
+    return row < 0 ? [] : [{ id, state, since, row, x: clamp01((at - lanes.start) / lanes.span) }];
+  });
+}
+
 /**
  * Which topic each question belongs to: the one the room was on when it was
  * asked, which is the row its mark sits on. A question the tracker placed
