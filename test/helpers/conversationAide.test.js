@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 let ConversationAideSession;
 let buildSearchUrl;
 let isQuestionCandidate;
+let isTrackableQuestion;
 let assessResponseLocally;
 let extractQuestionSentence;
 let outcomeForAssessment;
@@ -16,6 +17,7 @@ test.before(async () => {
     ConversationAideSession,
     buildSearchUrl,
     isQuestionCandidate,
+    isTrackableQuestion,
     assessResponseLocally,
     extractQuestionSentence,
     outcomeForAssessment,
@@ -78,6 +80,70 @@ test("candidate filter accepts factual forms and excludes commands, greetings, a
   assert.equal(isQuestionCandidate("I finished the deployment."), false);
   assert.equal(isQuestionCandidate("Who cares?"), false);
   assert.equal(isQuestionCandidate("x".repeat(601) + "?"), false);
+});
+
+test("Clean track filter drops weak quotes without changing the candidate detector", () => {
+  for (const text of [
+    "Are we going to talk about...",
+    "Main design points, is it?",
+    "Who cares, right?",
+    "That was my fault. Sorry?",
+    "What happens when you press the button is already documented.",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+    assert.equal(isTrackableQuestion(extractQuestionSentence(text)), false, text);
+  }
+});
+
+test("Clean track filter keeps clear asks even without perfect punctuation", () => {
+  for (const text of [
+    "Can we agree on the price",
+    "How much",
+    "So, four?",
+    "Do we want the red case or should we go with...",
+    "What does it cost? Sorry?",
+  ]) {
+    assert.equal(isTrackableQuestion(text), true, text);
+  }
+  assert.equal(isTrackableQuestion("Main design points, is it?", "en-GB"), false);
+  assert.equal(isTrackableQuestion("どう？", "ja"), true);
+  assert.equal(isTrackableQuestion("¿Cuándo?", "auto"), true);
+});
+
+test("live cards publish track immediately and keep it through verdicts and search", async () => {
+  const { session, cards, events, searches } = harness({ classify: null, language: "en" });
+  try {
+    const tag = "Main design points, is it?";
+    session.onFinalized({ id: "tag", text: tag });
+    assert.equal(latestCard(cards, "tag").track, false);
+    assert.equal(latestCard(cards, "tag").state, "asked");
+    session.onFinalized({ id: "reply", text: "I don't know." });
+    await session.evaluation;
+    assert.equal(latestCard(cards, "tag").state, "denied");
+    assert.equal(latestCard(cards, "tag").track, false);
+    assert.ok(events.some((event) => event.kind === "question" && event.text === tag));
+    assert.equal(searches.length, 1);
+    assert.equal(searches[0].question, tag);
+
+    const real = "How much does it cost?";
+    for (const id of ["first", "repeat"]) {
+      session.onFinalized({ id, text: real });
+      assert.equal(latestCard(cards, id).track, true);
+    }
+    assert.equal(latestCard(cards, "repeat").occurrence, 2);
+  } finally {
+    await session.shutdown();
+  }
+});
+
+test("live cards use the unfiltered path for unknown speech languages", async () => {
+  const { session, cards } = harness({ classify: null });
+  try {
+    session.onFinalized({ id: "q", text: "Main design points, is it?" });
+    assert.equal(latestCard(cards, "q").track, true);
+  } finally {
+    await session.shutdown();
+  }
 });
 
 test("a question with no question mark is found by its shape", () => {
@@ -466,6 +532,32 @@ test("only the question is quoted, not the ramble it arrived in", () => {
   assert.equal(extractQuestionSentence(""), "");
 });
 
+test("classifier wording changes the search query but never the quote", async () => {
+  const quote = "Do you know what Kubernetes is?";
+  for (const confidence of [0.6, 0.95]) {
+    const { session, cards, events, updates, searches } = harness({
+      classify: async () =>
+        unanswered({
+          confidence,
+          normalizedQuestion: "What is a Kubernetes cluster?",
+          searchQuery: "Kubernetes cluster definition",
+        }),
+    });
+    session.onFinalized({ id: "q1", text: `I missed that part. ${quote}` });
+    session.onFinalized({ id: "r1", text: "I don't know." });
+    await session.evaluation;
+    await session.shutdown();
+
+    assert.ok(cards.length > 1);
+    assert.ok(cards.every((card) => card.question === quote));
+    assert.equal(events[0].text, quote);
+    assert.equal(updates[0].patch.normalizedQuestion, undefined);
+    assert.equal(latestCard(cards, "q1").query, "Kubernetes cluster definition");
+    assert.equal(searches[0].query, "Kubernetes cluster definition");
+    assert.equal(searches[0].question, quote);
+  }
+});
+
 test("the card shows the extracted question, not the whole utterance", () => {
   const { session, cards, events } = harness();
   session.onFinalized({
@@ -784,26 +876,80 @@ test("a failed search leaves the card unmarked rather than claiming it searched"
   assert.deepEqual(diagnostics, [{ code: "auto_search_failed", error: "browser unavailable" }]);
 });
 
-test("shutdown suppresses an inference result that was already in flight", async () => {
-  let resolveClassifier;
-  const classifierResult = new Promise((resolve) => {
-    resolveClassifier = resolve;
+test(
+  "shutdown writes local verdicts without waiting for an active or queued classifier",
+  { timeout: 250 },
+  async () => {
+    let resolveClassifier;
+    let started;
+    const classifierStarted = new Promise((resolve) => (started = resolve));
+    const classifierResult = new Promise((resolve) => {
+      resolveClassifier = resolve;
+    });
+    let calls = 0;
+    const { session, cards, events, updates, searches } = harness({
+      classify: () => {
+        calls += 1;
+        started();
+        return classifierResult;
+      },
+    });
+    session.onFinalized({ id: "q1", text: "What is Kubernetes?" });
+    session.onFinalized({ id: "r1", text: "It runs and manages containers." });
+    await classifierStarted;
+
+    session.onFinalized({ id: "q2", text: "What is a pod?" });
+    session.onFinalized({ id: "r2", text: "I don't know." });
+    session.onFinalized({ id: "q3", text: "What is a service?" });
+    await session.shutdown();
+
+    assert.equal(calls, 1);
+    assert.equal(latestCard(cards, "q1").state, "answered");
+    assert.equal(latestCard(cards, "q2").state, "denied");
+    assert.equal(latestCard(cards, "q3").state, "asked");
+    assert.deepEqual(
+      updates.map(({ patch }) => [patch.state, patch.source]),
+      [
+        ["answered", "local"],
+        ["denied", "local"],
+      ]
+    );
+    assert.deepEqual(
+      events.filter(({ kind }) => kind === "response").map(({ segmentIds }) => segmentIds),
+      [["r1"], ["r2"]]
+    );
+    assert.deepEqual(
+      searches.map(({ query }) => query),
+      ["What is a pod?"]
+    );
+
+    const count = cards.length;
+    resolveClassifier(unanswered());
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(cards.length, count);
+  }
+);
+
+test("shutdown drains a verdict behind a stalled browser request", { timeout: 250 }, async () => {
+  let started;
+  const searchStarted = new Promise((resolve) => (started = resolve));
+  const { session, updates } = harness({
+    classify: null,
+    openSearch: () => {
+      started();
+      return new Promise(() => {});
+    },
   });
-  const { session, events, searches } = harness({ classify: () => classifierResult });
   session.onFinalized({ id: "q1", text: "What is Kubernetes?" });
-  session.onFinalized({ id: "r1", text: "No." });
-
-  await Promise.resolve();
-  const shutdown = session.shutdown();
-  resolveClassifier(unanswered());
-  await shutdown;
-
-  // The detection event survives; nothing derived from the late verdict does.
+  session.onFinalized({ id: "r1", text: "I don't know." });
+  await searchStarted;
+  session.onFinalized({ id: "q2", text: "What is a pod?" });
+  session.onFinalized({ id: "r2", text: "It groups one or more containers." });
+  await session.shutdown();
   assert.deepEqual(
-    events.map((event) => event.kind),
-    ["question"]
+    updates.map(({ patch }) => patch.state),
+    ["denied", "answered"]
   );
-  assert.deepEqual(searches, []);
 });
 
 // With no classifier at all.

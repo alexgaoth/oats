@@ -2,13 +2,36 @@ import { useEffect, useMemo } from "react";
 import { useDeviceTierStore } from "../stores/deviceTierStore";
 import { useMeetingRecordingStore } from "../stores/meetingRecordingStore";
 import {
-  speechChoiceFor,
+  localSetupFor,
+  roomSpeechPlan,
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../stores/settingsStore";
 import { shouldFetchTurbo, shouldLeaveTurbo } from "../helpers/speechTier.mjs";
 import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
 import { leaveTurbo } from "./useSpeechTier";
+import {
+  cancelRoomModelDownload,
+  refreshRoomModel,
+  startRoomModelDownload,
+  useRoomModelStore,
+} from "../stores/roomModelStore";
+
+function workspaceIdle() {
+  const { isRecording, isTranscribing } = useMeetingRecordingStore.getState();
+  return !isRecording && !isTranscribing;
+}
+
+function roomDownloadAuthorized() {
+  return (
+    localStorage.getItem("onboardingCompleted") === "true" &&
+    useSettingsStore.getState().localSetupAuthorized
+  );
+}
+
+export function requestRoomModel() {
+  void startRoomModelDownload(workspaceIdle, true);
+}
 
 /**
  * Ask main for turbo when the rule picks it for this Mac and nothing stands in
@@ -22,27 +45,56 @@ export function useSpeechUpgrade() {
   const whisperModel = useSettingsStore((state) => state.whisperModel);
   const meetingLocal = useSettingsStore((state) => state.meetingUseLocalWhisper);
   const engine = useSettingsStore((state) => state.localTranscriptionProvider);
+  const authorized = useSettingsStore((state) => state.localSetupAuthorized);
   // Not while a conversation is recorded: the download's notice would compete
   // with the room. It starts when the recording ends.
-  const recording = useMeetingRecordingStore((state) => state.isRecording);
+  const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const room = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
+  const { available, installed, declined, failed, progress } = useRoomModelStore();
 
-  const choice = useMemo(() => speechChoiceFor(tier, language), [tier, language]);
+  useEffect(() => {
+    if (room && available === null) void refreshRoomModel();
+  }, [room, available]);
+
+  useEffect(() => {
+    if (!room || recording) {
+      cancelRoomModelDownload(false);
+      return;
+    }
+    if (!authorized) {
+      cancelRoomModelDownload(false, true);
+      return;
+    }
+    if (available && !installed && !declined && !failed && progress === null) {
+      void startRoomModelDownload(
+        () =>
+          workspaceIdle() &&
+          roomDownloadAuthorized() &&
+          Boolean(roomSpeechPlan(useSettingsStore.getState(), useDeviceTierStore.getState().tier))
+      );
+    }
+  }, [room, authorized, recording, available, installed, declined, failed, progress]);
+
+  const plan = useMemo(() => localSetupFor(tier, language, "local"), [tier, language]);
   const followsDefault = whisperModelFollowsDefault();
   const local = meetingLocal && engine === "whisper";
-  const fetch = shouldFetchTurbo({
-    choice,
-    setupDone: localStorage.getItem("onboardingCompleted") === "true",
-    // `whisperModel` is in the effect's list for this: a choice made in
-    // Settings ends it.
-    followsDefault,
-    local,
-    recording,
-    turbo: tier?.turbo ?? {},
-  });
+  const fetch =
+    authorized &&
+    !room &&
+    shouldFetchTurbo({
+      choice: plan.whisper.choice,
+      setupDone: localStorage.getItem("onboardingCompleted") === "true",
+      // `whisperModel` is in the effect's list for this: a choice made in
+      // Settings ends it.
+      followsDefault,
+      local,
+      recording,
+      turbo: tier?.turbo ?? {},
+    });
   // Read on each snapshot, so a download that main starts after the switch
   // (a start asked for just before it) stops as soon as it shows.
   const leave = shouldLeaveTurbo({
-    local,
+    local: local && !room,
     followsDefault,
     whisperModel,
     turbo: tier?.turbo ?? {},

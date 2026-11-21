@@ -1935,7 +1935,7 @@
     "join": "Unirse y transcribir"
   },
   "oats": {
-    "parakeetFallback": "Oats usó Whisper porque Parakeet no pudo transcribir.",
+    "parakeetFallback": "Parakeet falló. Usando Whisper.",
     "library": {
       "tools": "Herramientas de conversación",
       "filter": "Filtrar conversaciones",
@@ -2545,6 +2545,11 @@
       "percent": "{{percent}}%",
       "needsKey": "Falta una clave",
       "noAddress": "Sin dirección",
+      "upgrade": {
+        "speech": "{{model}} reconoció 7,5 puntos porcentuales más de palabras que Whisper Small en pruebas con ruido de fondo.",
+        "writing": "{{model}} inventó de media cuatro datos menos por resumen en pruebas con reuniones.",
+        "size": "Descarga: {{size}}."
+      },
       "noModel": "Sin modelo",
       "addKey": "Añadir clave de OpenAI",
       "advanced": "Avanzado",

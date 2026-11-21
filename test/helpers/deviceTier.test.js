@@ -31,6 +31,7 @@ const M5_PRO = {
   chip: "Apple M5 Pro",
   gpuCores: 16,
   memoryBytes: 48 * GIB,
+  macosVersion: "26.1",
 };
 
 const IOREG = `+-o AGXAcceleratorG17X  <class AGXAcceleratorG17X, id 0x1000003d1, registered>
@@ -154,6 +155,7 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
   const calls = [];
   const run = async (file, args) => {
     calls.push([path.basename(file), ...args].join(" "));
+    if (args.includes("kern.osproductversion")) return "26.1\n";
     if (file.endsWith("sysctl")) return "Apple M5 Pro\n";
     if (file.endsWith("ioreg")) return IOREG;
     return SYSTEM_PROFILER;
@@ -163,7 +165,11 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
     await detectDevice({ platform: "darwin", arch: "arm64", run, totalmem }),
     M5_PRO
   );
-  assert.deepEqual(calls, ["sysctl -n machdep.cpu.brand_string", "ioreg -rc AGXAccelerator -d 1"]);
+  assert.deepEqual(calls, [
+    "sysctl -n machdep.cpu.brand_string",
+    "sysctl -n kern.osproductversion",
+    "ioreg -rc AGXAccelerator -d 1",
+  ]);
 
   // IOKit with nothing to say: the slower system_profiler.
   calls.length = 0;
@@ -184,6 +190,7 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
     chip: null,
     gpuCores: null,
     memoryBytes: 48 * GIB,
+    macosVersion: null,
   });
   assert.deepEqual(calls, [], "no tool runs off a Mac");
 });
@@ -564,6 +571,85 @@ test("a quit while the check runs stops its server", async () => {
   }
 });
 
+test("choosing local at setup clears only the planned downloads' earlier declines", async () => {
+  const env = setup();
+  try {
+    const gemma = "gemma-4-e4b-it-q4_k_m";
+    const qwen = "qwen3.5-4b-q4_k_m";
+    const { tier } = tierFor(env, { detect: async () => ({ ...M5_PRO, macosVersion: "13.6" }) });
+    await tier.ensureMeasured();
+    tier.cancelUpgrade();
+    tier.writing.deleted([gemma, qwen]);
+    const declines = () => {
+      const { turbo, writing } = tier.snapshot();
+      return [turbo.declined, writing.declined, writing.autoDeclined];
+    };
+
+    await tier.prepareLocalSetup();
+    assert.deepEqual(declines(), [true, [gemma, qwen], true]);
+    await tier.prepareLocalSetup({ language: "auto", speech: true });
+    assert.deepEqual(declines(), [true, [gemma, qwen], true], "Turbo does not fit with detection");
+    await tier.prepareLocalSetup({ language: "en", speech: true, writing: true });
+    assert.deepEqual(declines(), [false, [qwen], false]);
+    assert.equal(env.downloads.length, 0, "setup prepares, but does not download");
+    assert.equal(tier.snapshot().writing.downloading, null);
+    const { tier: reopened } = tierFor(env);
+    assert.equal(reopened.snapshot().turbo.declined, false);
+    assert.deepEqual(reopened.snapshot().writing.declined, [qwen]);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("setup can finish before the speed check clears an earlier Turbo decline", async (t) => {
+  const env = setup();
+  t.after(env.cleanup);
+  const detect = async () => ({ ...M5_PRO, macosVersion: "13.6" });
+  const { tier } = tierFor(env, { detect });
+  await tier.ensureMeasured();
+  tier.cancelUpgrade();
+
+  const { promise: checkStarted, resolve: startCheck } = Promise.withResolvers();
+  const { promise: waitForClip, resolve: finishClip } = Promise.withResolvers();
+  const { tier: updated } = tierFor(env, {
+    appVersion: "0.4.0",
+    detect,
+    time: async () => {
+      startCheck();
+      await waitForClip;
+      return 170;
+    },
+  });
+  const measurement = updated.ensureMeasured();
+  await checkStarted;
+  try {
+    await updated.prepareLocalSetup({ language: "en", speech: true });
+    assert.equal(updated.snapshot().turbo.declined, true);
+  } finally {
+    finishClip();
+  }
+  await measurement;
+  // The pending reset runs in the continuation of ensureMeasured().
+  await new Promise(setImmediate);
+  assert.equal(updated.snapshot().turbo.declined, false);
+  assert.equal(env.downloads.length, 0);
+});
+
+test("Turbo does not start downloading while a recording is active", async () => {
+  const env = setup();
+  try {
+    let recording = false;
+    const { tier } = tierFor(env, { isBusy: () => recording });
+    await tier.ensureMeasured();
+    recording = true;
+    const snapshot = await tier.startUpgrade({ language: "en" });
+    assert.equal(snapshot.turbo.downloading, null);
+    assert.equal(env.downloads.length, 0);
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("after the download, the switch waits for a recording to end, however long", async () => {
   const env = setup();
   try {
@@ -580,7 +666,11 @@ test("after the download, the switch waits for a recording to end, however long"
       time: scripted([280, 170, 900, 650]),
     });
     await tier.ensureMeasured();
-    recording = true;
+    const finishDownload = env.whisperManager.onDownload;
+    env.whisperManager.onDownload = (...args) => {
+      recording = true;
+      return finishDownload(...args);
+    };
     await tier.startUpgrade({ language: "en" });
     await settle(tier);
     assert.equal(polls, 144, "it waited for the whole recording");

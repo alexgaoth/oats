@@ -6,6 +6,13 @@
 //     [--meetings a,b] [--replay name,name] [--json out.json]
 //   node scripts/question-eval.mjs errors --ami <dir> --split tune [--view plain]
 //     [--set strict] [--detector app] [--out file.tsv]
+//   node scripts/question-eval.mjs audit --replays <tuning cache> --out sample.json
+//   node scripts/question-eval.mjs audit --replays <tuning cache> --labels labels.tsv
+//   node scripts/question-eval.mjs track-audit --split tune|test --replays <cache> --out blind.json
+//   node scripts/question-eval.mjs track-audit --split tune|test --replays <cache> --labels labels.tsv
+//   node scripts/question-eval.mjs boundaries --ami <dir> --split tune|test
+//   node scripts/question-eval.mjs speaker-oracle --split tune --replay small.en__quiet-room
+//     --reader <cached judgments> [--reply-rule different|different-nonquestion]
 //
 // A view is `manual` (the transcribers' words and punctuation), `plain` (none of
 // their punctuation) or `rec:<name>`, recognition output from
@@ -42,6 +49,7 @@
 // --model <file> --threshold T --mark M adds `classifier`, a model from `train`:
 // a card when a turn's best candidate scores T or more, with M added for a "?".
 
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -49,15 +57,19 @@ import { parseArgs } from "node:util";
 
 import {
   AUDIO_MEETINGS,
+  CLOSE_MS,
+  HIT_OVERLAP,
   TEST_MEETINGS,
   TUNE_MEETINGS,
   adjacencyTypes,
+  bootstrap,
   dialogueActMeetings,
   dialogueActTypes,
   difference,
   goldQuestions,
   loadMeeting,
   median,
+  overlap,
   pairedDelays,
   quantile,
   quoteSpan,
@@ -77,6 +89,12 @@ import {
   train as fitClassifier,
 } from "./lib/question-classifier.mjs";
 import { annotationsDir } from "./lib/topic-corpus.mjs";
+import { makeSentenceRecords, splitSentences } from "../src/helpers/sentenceSplit.mjs";
+import {
+  overlappingWords,
+  replaySpeakerReplies,
+  speakerVotes,
+} from "./lib/question-speaker-oracle.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -101,6 +119,7 @@ const { values: args, positionals } = parseArgs({
     "key-b": { type: "string" },
     reader: { type: "string" },
     "no-hold": { type: "boolean", default: false },
+    "reply-rule": { type: "string" },
     replay: { type: "string" },
     replays: {
       type: "string",
@@ -108,6 +127,7 @@ const { values: args, positionals } = parseArgs({
     },
     json: { type: "string" },
     out: { type: "string" },
+    labels: { type: "string" },
     alpha: { type: "string", default: "0.2" },
     l1: { type: "string", default: "1" },
     l2: { type: "string", default: "10" },
@@ -126,7 +146,13 @@ const aideFile = args.aide
   ? path.resolve(args.aide)
   : path.join(ROOT, "src/helpers/conversationAide.mjs");
 const aide = await import(pathToFileURL(aideFile).href);
-const { ConversationAideSession, extractQuestionSentence, isQuestionCandidate } = aide;
+const {
+  ConversationAideSession,
+  assessResponseLocally,
+  extractQuestionSentence,
+  isQuestionCandidate,
+  isTrackableQuestion,
+} = aide;
 
 const SETS = ["strict", "broad"];
 
@@ -237,11 +263,12 @@ async function replaySession(turns) {
       return eventId;
     },
     updateEvent: async () => null,
-    // Words are arriving: a turn has started and is not final yet. `--no-hold` is
-    // a recognizer with no partials (Parakeet in a room): the app cannot tell.
-    isSpeaking: () =>
-      !args["no-hold"] && turns.some((turn) => turn.start * 1000 <= now && now < turn.at),
-    onCard: (card) => cards.set(card.id, { ...cards.get(card.id), ...card }),
+    isSpeaking: () => speechInFlight(turns, now),
+    onCard: (card) => {
+      const prior = cards.get(card.id);
+      const verdictAt = prior?.verdictAt ?? (card.state !== "asked" ? now : null);
+      cards.set(card.id, { ...prior, ...card, verdictAt });
+    },
     onCardRemoved: (id) => cards.delete(id),
     openSearch: async ({ query }) => {
       searches.push({ query, at: now, reply: [...replies.values()].at(-1) ?? "" });
@@ -263,12 +290,28 @@ async function replaySession(turns) {
   for (const turn of turns) {
     await fireUntil(turn.at);
     now = turn.at;
-    session.onFinalized({ id: turn.id, text: textOf(turn.tokens) });
+    const segment = {
+      id: turn.id,
+      text: textOf(turn.tokens),
+      startMs: turn.start * 1000,
+      endMs: turn.end * 1000,
+      source: "mic",
+    };
+    if (session.onFinalizedSentences) {
+      session.onFinalizedSentences(segment, makeSentenceRecords(segment));
+    } else {
+      session.onFinalized(segment);
+    }
     await session.evaluation;
   }
   await fireUntil(Infinity);
   await session.shutdown();
   return { cards, searches };
+}
+
+// Activity starts before the words arrive. This also models finals-only engines.
+function speechInFlight(turns, now) {
+  return !args["no-hold"] && turns.some((turn) => turn.start * 1000 <= now && now < turn.at);
 }
 
 /** A reply that says so in words, not one that only has a "no" in it. */
@@ -283,6 +326,132 @@ function loader(dir) {
 
 const pct = (value) => (value === null ? "-" : value.toFixed(3));
 const ci = (pair) => `[${pair[0].toFixed(3)}, ${pair[1].toFixed(3)}]`;
+
+const ORACLE_RULES = ["different", "different-nonquestion"];
+const READER_STATES = {
+  answered: ["answered", "uncertain"],
+  unknown: ["denied", "uncertain"],
+  open: ["silence", "asked"],
+};
+
+async function speakerOracle() {
+  const rule = args["reply-rule"];
+  if (
+    args.meetings ||
+    !["tune", "test"].includes(args.split) ||
+    (args.split === "test" && !rule) ||
+    (rule && !ORACLE_RULES.includes(rule))
+  ) {
+    throw new Error("Use the fixed tune or test split. Test requires one frozen speaker rule.");
+  }
+  const reader = readerAnswers(args.reader);
+  if (!reader.size) throw new Error("Supply cached reader judgments with --reader");
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const rules = ["today", ...(rule ? [rule] : ORACLE_RULES)];
+  const replayViews = (args.replay?.split(",") ?? []).map((name) => `rec:${name}`);
+  const views = args.split === "test" ? replayViews : ["manual", "plain", ...replayViews];
+  const selectedViews = args.view ? views.filter((view) => view === args.view) : views;
+  if (!selectedViews.length)
+    throw new Error("No matching view. Name recognition views with --replay.");
+  const data = Object.fromEntries(selectedViews.map((view) => [view, []]));
+  for (const id of meetingsOf(dir)) {
+    const meeting = load(id);
+    const gold = goldQuestions(meeting);
+    const replyOf = new Map();
+    for (const { source, target } of meeting.pairs) {
+      const targetAct = meeting.acts.get(target);
+      if (!Number.isFinite(targetAct?.end)) continue;
+      const earlier = replyOf.get(source);
+      if (!earlier || targetAct.start < earlier.start) replyOf.set(source, targetAct);
+    }
+    for (const view of selectedViews) {
+      const recognized = view.startsWith("rec:");
+      const turns = viewTurns(meeting, view);
+      if (!turns) continue;
+      const cards = cardsOf(BASE_DETECTOR, turns);
+      const quoteOf = new Map(cards.map(({ id, quote }) => [id, quote]));
+      const marks = scoreCards(cards, gold).verdicts;
+      const labeled = turns.map((turn) => ({
+        id: turn.id,
+        at: turn.at,
+        text: textOf(turn.tokens),
+        quote: quoteOf.get(turn.id),
+        ...speakerVotes(recognized ? overlappingWords(meeting.words, turn) : turn.words),
+      }));
+      const { cards: base } = await replaySession(turns);
+      const variants = { today: base };
+      for (const name of rules.slice(1)) {
+        variants[name] = replaySpeakerReplies(labeled, {
+          skipQuestions: name === "different-nonquestion",
+          isSpeaking: (at) => speechInFlight(turns, at),
+          assess: assessResponseLocally,
+        });
+      }
+      const rows = Object.fromEntries(
+        rules.map((name) => {
+          let right = 0;
+          let scored = 0;
+          let withReply = 0;
+          const delays = {};
+          cards.forEach((card, index) => {
+            const match = marks[index];
+            if (!match) return;
+            const ref = reader.get(match);
+            const result = variants[name].get(card.id);
+            if (READER_STATES[ref]) {
+              scored += 1;
+              right += Number(READER_STATES[ref].includes(result?.state));
+            }
+            const reply = replyOf.get(match);
+            if (!reply) return;
+            withReply += 1;
+            if (result?.verdictAt != null) delays[card.id] = result.verdictAt - reply.end * 1000;
+          });
+          return [name, { right, scored, withReply, delays }];
+        })
+      );
+      data[view].push({
+        rows,
+        finals: labeled.length,
+        mixed: labeled.filter((turn) => turn.mixed).length,
+        unknown: labeled.filter((turn) => !turn.speaker).length,
+      });
+    }
+  }
+  const sum = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
+  const ratio = (rows) => sum(rows, "right") / (sum(rows, "scored") || 1);
+  const sec = (ms) => (ms === null ? "-" : (ms / 1000).toFixed(2));
+  for (const [view, meetings] of Object.entries(data)) {
+    if (!meetings.length) throw new Error(`No cached meetings for ${view}`);
+    const base = meetings.map(({ rows }) => rows.today);
+    console.log(
+      `${args.split} ${view}, ${meetings.length} meetings: ` +
+        `${sum(meetings, "mixed")}/${sum(meetings, "finals")} mixed, ${sum(meetings, "unknown")} unknown`
+    );
+    for (const name of rules) {
+      const rows = meetings.map((meeting) => meeting.rows[name]);
+      const delays = rows.flatMap((row) => Object.values(row.delays));
+      console.log(
+        `  ${name}: outcome ${pct(ratio(rows))} ${ci(bootstrap([rows], ratio))} (${sum(rows, "right")}/${sum(rows, "scored")}); ` +
+          `delay p50/p90 ${sec(median(delays))}/${sec(quantile(delays, 0.9))} s, ` +
+          `${delays.length}/${sum(rows, "withReply")} states timed, ${delays.filter((ms) => ms < 0).length} early`
+      );
+      if (name === "today") continue;
+      const gain = (a, b) => ratio(b) - ratio(a);
+      const paired = rows.map((row, i) =>
+        Object.entries(row.delays)
+          .filter(([id]) => Object.hasOwn(base[i].delays, id))
+          .map(([id, delay]) => delay - base[i].delays[id])
+      );
+      const pairMedian = (sample) => median(sample.flat());
+      console.log(
+        `    vs today: outcome ${pct(gain(base, rows))} ${ci(bootstrap([base, rows], gain))}; ` +
+          `paired p50 delay ${sec(pairMedian(paired))} [${bootstrap([paired], pairMedian).map(sec).join(", ")}] s`
+      );
+    }
+  }
+}
 
 function row(rows) {
   const s = summarize(rows);
@@ -565,6 +734,238 @@ async function errors() {
   if (args.out) fs.writeFileSync(args.out, text);
   else process.stdout.write(text);
   console.error(`${lines.length} lines`);
+}
+
+const AUDIT_CATEGORIES = new Set([
+  "real",
+  "tag",
+  "rhetorical",
+  "fragment",
+  "backchannel",
+  "statement",
+]);
+
+// Use the same earliest match as scoreCards, not the best gold match per card.
+function firstCardTiming(cards, turns, gold, score) {
+  const byId = new Map(turns.map((turn) => [turn.id, turn]));
+  return gold.flatMap((question) => {
+    const delay = score.delayOf[question.id];
+    if (delay === undefined) return [];
+    const endMs = question.end * 1000;
+    const card = cards.find(
+      (item) => item.at - endMs === delay && overlap(item.words, question.words).value >= HIT_OVERLAP
+    );
+    const turn = byId.get(card.id);
+    const segmentEnd = Math.round(turn.end * 1000);
+    return {
+      delay,
+      remainingAudio: segmentEnd - endMs,
+      request: card.at - segmentEnd - CLOSE_MS,
+      finalLength: (turn.end - turn.start) * 1000,
+    };
+  });
+}
+
+function reportFirstCardTiming(rows) {
+  const p90 = quantile(rows.map((row) => row.delay), 0.9);
+  const tail = rows.filter((row) => row.delay >= p90);
+  const med = (key) => median(tail.map((row) => row[key]));
+  // The segmenter selects the cut in the last third of its 20 s buffer.
+  // Use a generous lower edge. Without the close reason this is an upper bound.
+  const couldBeCap = (row) => row.finalLength >= 13_300;
+  console.log({
+    firstCardTimingMs: {
+      caught: rows.length,
+      p90,
+      tailCount: tail.length,
+      tailMedianRemainingAudio: med("remainingAudio"),
+      tailMedianRequest: med("request"),
+      tailMedianFinalLength: med("finalLength"),
+      tailFinalsLongEnoughForCap: tail.filter(couldBeCap).length,
+      p90WithoutRequest: quantile(rows.map((row) => row.delay - row.request), 0.9),
+      assumedClose: CLOSE_MS,
+    },
+  });
+}
+
+function audit(trackAudit = false) {
+  if (args.meetings || (args.split !== "tune" && !(trackAudit && args.split === "test"))) {
+    throw new Error("Use the fixed tuning split, or the fixed test split with track-audit");
+  }
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const cards = [];
+  const meetings = args.split === "test" ? AUDIO_MEETINGS : TUNE_MEETINGS;
+  const rows = new Map();
+  const timing = [];
+  for (const id of meetings) {
+    const meeting = load(id);
+    const turns = viewTurns(meeting, "rec:small.en__quiet-room");
+    if (!turns) throw new Error(`Missing small.en quiet replay for ${id}`);
+    const detected = cardsOf(BASE_DETECTOR, turns);
+    // Never evaluate the rule or disclose AMI matches in the blind export.
+    const gold = args.labels ? goldQuestions(meeting, "strict") : [];
+    const base = args.labels ? scoreCards(detected, gold) : null;
+    const kept = trackAudit && args.labels
+      ? detected.filter((card) => isTrackableQuestion(card.quote))
+      : null;
+    const retained = kept ? new Set(kept.map((card) => card.id)) : null;
+    if (trackAudit && base) timing.push(...firstCardTiming(detected, turns, gold, base));
+    rows.set(id, {
+      cards: 0,
+      read: 0,
+      gold: 0,
+      shown: 0,
+      shownRead: 0,
+      questions: gold.length,
+      caught: base?.caught ?? 0,
+      kept: kept ? scoreCards(kept, gold).caught : 0,
+    });
+    const indices = new Map(turns.map((turn, index) => [turn.id, index]));
+    detected.forEach((card, i) => {
+      const index = indices.get(card.id);
+      cards.push({
+        id: card.id,
+        meeting: id,
+        quote: card.quote,
+        before: turns[index - 1] ? textOf(turns[index - 1].tokens) : "",
+        final: card.turn,
+        after: turns[index + 1] ? textOf(turns[index + 1].tokens) : "",
+        ...(base ? { gold: Boolean(base.verdicts[i]) } : {}),
+        ...(retained ? { retained: retained.has(card.id) } : {}),
+      });
+    });
+  }
+  const digest = (id) => createHash("sha256").update(`oats-sr2-v1:${id}`).digest("hex");
+  const order = new Map(cards.map((card) => [card.id, digest(card.id)]));
+  const sample = cards.sort((a, b) => order.get(a.id).localeCompare(order.get(b.id))).slice(0, 200);
+  if (sample.length !== 200) throw new Error("Audit needs 200 cards");
+  if (!args.labels) {
+    const json = JSON.stringify(sample, null, 2) + "\n";
+    if (args.out) fs.writeFileSync(args.out, json);
+    else process.stdout.write(json);
+    return;
+  }
+  const labels = new Map();
+  for (const line of fs.readFileSync(args.labels, "utf8").trim().split(/\r?\n/)) {
+    const [id, track, category, extra] = line.split("\t");
+    if (
+      labels.has(id) ||
+      !["yes", "no"].includes(track) ||
+      !AUDIT_CATEGORIES.has(category) ||
+      extra !== undefined
+    ) {
+      throw new Error(`Invalid or duplicate audit label: ${line}`);
+    }
+    labels.set(id, { track, category });
+  }
+  if (labels.size !== sample.length || sample.some((card) => !labels.has(card.id))) {
+    throw new Error("Supply one label per sampled card");
+  }
+  const categories = {};
+  const dropped = {};
+  for (const card of sample) {
+    const { track, category } = labels.get(card.id);
+    const row = rows.get(card.meeting);
+    row.cards += 1;
+    row.read += Number(track === "yes");
+    row.gold += Number(card.gold);
+    row.shown += Number(card.retained === true);
+    row.shownRead += Number(card.retained === true && track === "yes");
+    categories[category] = (categories[category] ?? 0) + 1;
+    if (card.retained === false) {
+      const key = `${track}:${category}`;
+      dropped[key] = (dropped[key] ?? 0) + 1;
+    }
+  }
+  const sum = (list, key) => list.reduce((total, item) => total + item[key], 0);
+  const ratio = (list, numerator, denominator) =>
+    sum(list, numerator) / sum(list, denominator);
+  const stats = {
+    reading: (list) => ratio(list, "read", "cards"),
+    labels: (list) => ratio(list, "gold", "cards"),
+    difference: (list) => ratio(list, "read", "cards") - ratio(list, "gold", "cards"),
+  };
+  if (trackAudit) {
+    Object.assign(stats, {
+      cleanReading: (list) => ratio(list, "shownRead", "shown"),
+      readingGain: (list) => ratio(list, "shownRead", "shown") - ratio(list, "read", "cards"),
+      amiRecall: (list) => ratio(list, "caught", "questions"),
+      cleanAmiRecall: (list) => ratio(list, "kept", "questions"),
+      relativeRecallLoss: (list) => 1 - ratio(list, "kept", "caught"),
+    });
+    console.log({ split: args.split, meetings: meetings.length, categories, dropped });
+  }
+  const data = [...rows.values()];
+  for (const [name, stat] of Object.entries(stats)) {
+    console.log(`${name}: ${pct(stat(data))} ${ci(bootstrap([data], stat))}`);
+  }
+  if (trackAudit) {
+    console.log(Object.fromEntries(Object.keys(data[0]).map((key) => [key, sum(data, key)])));
+    reportFirstCardTiming(timing);
+  }
+  console.log(JSON.stringify(categories));
+}
+
+/** Compare exact word ends, including unpunctuated gold acts and forced final cuts. */
+function boundaries() {
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const total = { gold: 0, predicted: 0, right: 0, possible: 0, finalWrong: 0 };
+  let worstFinalMs = 0;
+  let splitMs = 0;
+  let sentences = 0;
+  for (const id of meetingsOf(dir)) {
+    const meeting = load(id);
+    const gold = new Set(
+      [...meeting.acts.values()]
+        .filter((act) => act.words.length)
+        .map((act) => act.words.at(-1).index)
+    );
+    total.gold += gold.size;
+    for (const turn of roomTurns(meeting)) {
+      const tokens = turnTokens(turn, "manual");
+      const text = textOf(tokens);
+      let offset = 0;
+      const words = new Map();
+      tokens.forEach((token, index) => {
+        offset += token.text.length;
+        words.set(offset, token.word);
+        const final = index === tokens.length - 1;
+        if (gold.has(token.word) && (final || /[.!?…。．！？｡]/u.test(token.text))) {
+          total.possible += 1;
+        }
+        if (final && !gold.has(token.word)) total.finalWrong += 1;
+        offset += 1;
+      });
+      const start = performance.now();
+      const split = splitSentences(text);
+      const elapsed = performance.now() - start;
+      splitMs += elapsed;
+      worstFinalMs = Math.max(worstFinalMs, elapsed);
+      sentences += split.length;
+      total.predicted += split.length;
+      total.right += split.filter((part) => gold.has(words.get(part.end))).length;
+    }
+  }
+  console.log(
+    JSON.stringify(
+      {
+        ...total,
+        precision: total.right / total.predicted,
+        recall: total.right / total.gold,
+        f1: (2 * total.right) / (total.predicted + total.gold),
+        // An oracle could skip every incorrect punctuation break, but could not
+        // insert an unpunctuated break inside a final or remove a forced final cut.
+        f1Ceiling: (2 * total.possible) / (total.gold + total.possible + total.finalWrong),
+        sentences,
+        meanSentenceMs: splitMs / sentences,
+        worstFinalMs,
+      },
+      null,
+      2
+    )
+  );
 }
 
 /**
@@ -1008,6 +1409,10 @@ else if (command === "reader") await reader();
 else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
+else if (command === "audit") audit();
+else if (command === "track-audit") audit(true);
+else if (command === "boundaries") boundaries();
+else if (command === "speaker-oracle") await speakerOracle();
 else {
   console.error(`unknown command ${command}`);
   process.exit(2);

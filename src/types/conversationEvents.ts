@@ -36,6 +36,11 @@ export interface ConversationCard {
   check?: ContextCheck;
 }
 
+export interface LiveConversationCard extends ConversationCard {
+  /** Eligibility for Clean only. This does not suppress detection or search. */
+  track: boolean;
+}
+
 // Where a context check's evidence came from: a file in the context folder
 // (contextService.js), a past conversation, or a page the agent read.
 export type ContextSource =
@@ -141,9 +146,18 @@ export interface ConversationSuggestion {
   seenIn?: number;
 }
 
+export interface ConversationTopicProposal {
+  id: string;
+  startId: string;
+  at: number;
+  state: "grey" | "solid" | "faded";
+  since: number;
+}
+
 export interface ConversationTopicSnapshot {
   nodes: ConversationTopicNode[];
   edges: ConversationTopicEdge[];
+  proposals?: ConversationTopicProposal[];
 }
 
 export interface ConversationEvent {

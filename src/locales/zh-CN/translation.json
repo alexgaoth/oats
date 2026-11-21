@@ -1930,7 +1930,7 @@
     "join": "加入并转录"
   },
   "oats": {
-    "parakeetFallback": "Parakeet 未能转写，Oats 改用 Whisper。",
+    "parakeetFallback": "Parakeet 失败，正在使用 Whisper。",
     "library": {
       "tools": "对话工具",
       "filter": "筛选对话",
@@ -2540,6 +2540,11 @@
       "percent": "{{percent}}%",
       "needsKey": "需要密钥",
       "noAddress": "没有地址",
+      "upgrade": {
+        "speech": "在有背景噪声的室内测试中，{{model}} 识别出单词的比例比 Whisper Small 高 7.5 个百分点。",
+        "writing": "在会议测试中，{{model}} 每份摘要平均少编造四条事实。",
+        "size": "下载大小：{{size}}。"
+      },
       "noModel": "没有模型",
       "addKey": "添加 OpenAI 密钥",
       "advanced": "高级",
