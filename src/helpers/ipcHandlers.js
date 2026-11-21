@@ -5973,6 +5973,7 @@ class IPCHandlers {
         {
           model: requested,
           language: session.language,
+          allowEmpty: true,
           ...this._resolveWhisperVadOptions("meeting"),
           audioFilter: roomDenoiseFilter(raised, steadyFloor, model),
         }
