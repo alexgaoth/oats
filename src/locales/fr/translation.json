@@ -2651,5 +2651,16 @@
     "returned_other": "repris {{count}}×",
     "search": "Rechercher",
     "noQuestions": "Aucune question dans ce fil."
+  },
+  "demo": {
+    "replay": {
+      "play": "Lire",
+      "pause": "Pause",
+      "position": "Moment de la conversation",
+      "at": "{{at}} sur {{length}}"
+    },
+    "questions": {
+      "replay": "Rejouer"
+    }
   }
 }

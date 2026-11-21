@@ -2651,5 +2651,16 @@
     "returned_other": "{{count}} 回戻った",
     "search": "検索",
     "noQuestions": "この話の筋に質問はありません。"
+  },
+  "demo": {
+    "replay": {
+      "play": "再生",
+      "pause": "一時停止",
+      "position": "会話の時点",
+      "at": "{{at}} / {{length}}"
+    },
+    "questions": {
+      "replay": "もう一度"
+    }
   }
 }

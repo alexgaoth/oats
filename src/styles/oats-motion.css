@@ -1,0 +1,120 @@
+/* The motion the app's shared components carry: a surface's entrance, the
+   lanes drawing in, and a view switch's indicator and drawing. Their own file
+   so the site's live figures (site/src/live/live.css) move the same way. Each
+   is still under reduced motion. */
+
+/* View enter animation (DESIGN.md §8): fade + 8px rise on the `base` curve.
+   Only transform and opacity animate; no horizontal movement, no bounce, no
+   overshoot.
+
+   NOT a true cross-fade. §8 also asks that "the outgoing view dims to 0 as the
+   incoming rises", which needs the departing DOM held for the transition. Two
+   attempts at that were verifiably wrong — re-rendering the previous element
+   mounts a fresh copy (replaying the enter animation under a fading wrapper),
+   and cloning in a layout effect captures the *incoming* view because React has
+   already committed by then. Both looked worse than this does. Left as an
+   enter-only fade rather than shipping a broken overlap; see UI_OVERHAUL.md. */
+@keyframes oats-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.oats-enter {
+  /* No `will-change`: it is a static class, so the hint would be held for as
+     long as the surface is displayed rather than for the 220ms it animates —
+     a permanent compositing layer on a full-window element. transform and
+     opacity composite anyway. */
+  animation: oats-enter var(--motion-base) var(--ease-oats) both;
+}
+
+/* Reduced motion lands on the destination immediately: a still frame, not a
+   shorter animation (§8, §12), and the outgoing copy is not drawn at all. */
+@media (prefers-reduced-motion: reduce) {
+  .oats-enter {
+    animation: none;
+  }
+}
+
+/* The lanes' line drawing itself once, left to right, when the lanes appear
+   (TopicLanes.tsx). Time runs left to right and the line only ever moves
+   forward in it, so uncovering the box from the left draws the line in the
+   order the room took it. The clip extends past the box so the dot at now is
+   not cut, and it is not kept afterwards (`backwards`, not `both`). Not under
+   reduced motion: the line is simply there. */
+@keyframes oats-lanes-draw {
+  from {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+  to {
+    clip-path: inset(-8px -8px -8px -8px);
+  }
+}
+
+.oats-lanes-draw {
+  animation: oats-lanes-draw var(--motion-slow) var(--ease-oats) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-lanes-draw {
+    animation: none;
+  }
+}
+
+/* A ViewSwitch's choice (ui/view-switch.tsx): a honey indicator that slides to
+   the chosen view. Only the choices that change what you see get one (DESIGN.md
+   §2); it moves when you choose, never at rest. */
+.oats-view-indicator {
+  background-image: linear-gradient(180deg, #f8b52e 0%, var(--color-primary) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    0 1px 2px rgb(154 91 0 / 0.3);
+  transition:
+    transform var(--motion-base) var(--ease-oats),
+    width var(--motion-base) var(--ease-oats);
+}
+
+/* The chosen view's drawing arrives once, its parts one after another. */
+.oats-view-glyph > * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: oats-glyph-in var(--motion-base) var(--ease-oats) both;
+}
+
+.oats-view-glyph > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.oats-view-glyph > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.oats-view-glyph > :nth-child(n + 4) {
+  animation-delay: 120ms;
+}
+
+@keyframes oats-glyph-in {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-view-indicator {
+    transition: none;
+  }
+
+  .oats-view-glyph > * {
+    animation: none;
+  }
+}

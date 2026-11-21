@@ -2651,5 +2651,16 @@
     "returned_other": "retomado {{count}}×",
     "search": "Buscar",
     "noQuestions": "No hay preguntas en este hilo."
+  },
+  "demo": {
+    "replay": {
+      "play": "Reproducir",
+      "pause": "Pausa",
+      "position": "Momento de la conversación",
+      "at": "{{at}} de {{length}}"
+    },
+    "questions": {
+      "replay": "Repetir"
+    }
   }
 }

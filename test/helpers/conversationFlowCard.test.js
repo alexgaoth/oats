@@ -12,7 +12,11 @@ const read = (file) => fs.readFileSync(path.join(__dirname, "../..", file), "utf
 const FLOW = read("src/components/conversation/ConversationFlow.tsx");
 const LANES = read("src/components/conversation/TopicLanes.tsx");
 const TEXT = read("src/components/conversation/flowText.ts");
-const CSS = read("src/index.css");
+// The app's styles: index.css and the files it imports (src/styles/), where the
+// tokens and the shared motion live since the site's live figures use them too.
+const CSS = ["src/index.css", "src/styles/oats-tokens.css", "src/styles/oats-motion.css"]
+  .map((file) => read(file))
+  .join("\n");
 const STORE = read("src/stores/settingsStore.ts");
 const CHART_STYLE = read("src/components/charts/chartStyle.ts");
 

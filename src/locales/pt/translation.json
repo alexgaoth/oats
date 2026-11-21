@@ -2651,5 +2651,16 @@
     "returned_other": "retomado {{count}}×",
     "search": "Pesquisar",
     "noQuestions": "Sem perguntas neste fio."
+  },
+  "demo": {
+    "replay": {
+      "play": "Reproduzir",
+      "pause": "Pausar",
+      "position": "Momento da conversa",
+      "at": "{{at}} de {{length}}"
+    },
+    "questions": {
+      "replay": "Repetir"
+    }
   }
 }

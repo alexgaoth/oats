@@ -155,6 +155,7 @@ export default function ConversationFlow({
   startedAt: startedAtProp,
   suggestions = NO_SUGGESTIONS,
   live = false,
+  now,
   view,
   onViewChange,
   compact = false,
@@ -170,6 +171,9 @@ export default function ConversationFlow({
   /** A recording: the axis runs from the press to now and the line ends at
    *  now, in honey. */
   live?: boolean;
+  /** A recording's now, in epoch ms: the clock's when omitted. A replay of a
+   *  stored conversation (`demo/DemoReplay.tsx`) passes the moment it shows. */
+  now?: number;
   /** Lanes or Graph, and where a choice of it goes. */
   view: ConversationFlowView;
   onViewChange: (view: ConversationFlowView) => void;
@@ -196,19 +200,19 @@ export default function ConversationFlow({
         snapshot,
         segments,
         start: live && typeof startedAt === "number" ? startedAt : Number.NaN,
-        end: live ? Date.now() : Number.NaN,
+        end: live ? (now ?? Date.now()) : Number.NaN,
         live,
       }) as Lanes,
-    [snapshot, segments, startedAt, live]
+    [snapshot, segments, startedAt, live, now]
   );
   const map = useMemo(
     () =>
       buildThreadMap({
         snapshot,
         startedAt: startedAt ?? 0,
-        now: live ? Date.now() : lastActivity(snapshot),
+        now: live ? (now ?? Date.now()) : lastActivity(snapshot),
       }) as ThreadMap,
-    [snapshot, startedAt, live]
+    [snapshot, startedAt, live, now]
   );
   const empty = lanes.empty;
   const caption = flowCaption(
@@ -278,7 +282,9 @@ export default function ConversationFlow({
       aria-labelledby={titleId}
       className={cn("gap-0 overflow-hidden", className)}
     >
-      <CardHeader className="shrink-0 flex-row items-start justify-between gap-4 pb-4">
+      {/* In a card too narrow for both (a phone, on the site), the switch
+          goes under the title instead of squeezing it. */}
+      <CardHeader className="shrink-0 flex-row flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-4">
         <div className="flex min-h-8 min-w-0 flex-col justify-center gap-1.5">
           <CardTitle id={titleId}>{t("oats.flow.title")}</CardTitle>
           {caption && <p className="text-[13px] text-muted-foreground">{caption}</p>}
