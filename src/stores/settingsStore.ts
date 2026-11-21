@@ -2211,11 +2211,16 @@ export function chooseLocalSpeechModel(engine: LocalTranscriptionProvider, model
  * cloud.
  */
 export function forgetSpeechChoice(): void {
-  if (isBrowser) localStorage.removeItem("whisperModel");
   const store = useSettingsStore.getState();
   store.setLocalTranscriptionProvider("whisper");
   store.setMeetingLocalTranscriptionProvider("whisper");
   chooseCloudSpeechModel("openai", "gpt-transcribe");
+  followRecommendedWhisper();
+}
+
+/** Return to the measured Whisper default without changing cloud settings. */
+export function followRecommendedWhisper(): void {
+  if (isBrowser) localStorage.removeItem("whisperModel");
   followDefaultWhisperModel();
 }
 

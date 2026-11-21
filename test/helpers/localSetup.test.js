@@ -1,9 +1,9 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-let planLocalSetup;
+let planLocalSetup, localUpgradeHint;
 test.before(async () => {
-  ({ planLocalSetup } = await import("../../src/helpers/localSetup.mjs"));
+  ({ planLocalSetup, localUpgradeHint } = await import("../../src/helpers/localSetup.mjs"));
 });
 
 const GIB = 1024 ** 3;
@@ -116,4 +116,17 @@ test("an installed Parakeet model is ready only with the setting on", () => {
   const flagged = planLocalSetup({ ...options, parakeetRoomDefault: true });
   assert.equal(flagged.readySpeech.model, ULTRA);
   assert.deepEqual(flagged.downloads, { speech: null, writing: null });
+});
+
+test("the hint only recommends a measured upgrade this Mac can use", () => {
+  const active = { activeWhisper: "small", activeWriter: QWEN };
+  const plan = (gb, options) =>
+    planLocalSetup({ device: mac(gb, options), installed: { writing: [QWEN] } });
+  assert.equal(localUpgradeHint({ plan: plan(8), ...active }), null);
+  assert.equal(localUpgradeHint({ plan: plan(16), ...active }), "speech");
+  assert.equal(localUpgradeHint({ plan: plan(16, { smallClipMs: 250 }), ...active }), "writing");
+  assert.equal(localUpgradeHint({ plan: plan(16), ...active, recording: true }), null);
+  assert.equal(localUpgradeHint({ plan: plan(16), activeWhisper: TURBO, activeWriter: GEMMA }), null);
+  assert.equal(localUpgradeHint({ plan: plan(16), activeWhisper: "small", language: "de" }), null);
+  assert.equal(localUpgradeHint({ plan: plan(16) }), null, "cloud does not need a local upgrade");
 });

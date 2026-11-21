@@ -1,7 +1,12 @@
 import { chooseSpeechModel, defaultSpeechModel, TURBO_MODEL } from "./speechTier.mjs";
 import { bundledWhisperModels } from "./bundledWhisperModels.mjs";
 import { isEnglish, resolveWhisperModel } from "./whisperEnglishModel.mjs";
-import { chooseLocalWritingModel, defaultLocalWritingModel } from "./writingTier.mjs";
+import {
+  chooseLocalWritingModel,
+  defaultLocalWritingModel,
+  LARGE_WRITING_MODEL,
+  SMALL_WRITING_MODEL,
+} from "./writingTier.mjs";
 
 export const PARAKEET_ROOM_MODEL = "parakeet-ultra-ane";
 
@@ -103,4 +108,40 @@ export function planLocalSetup({
     writing: { recommended: recommendedWriting, choice: readyWriting, installed: hasReadyWriting },
     downloads,
   };
+}
+
+/**
+ * The one measured upgrade worth showing in Settings. Rank only models we
+ * compared. Prefer speech because recognition is the input to every summary.
+ *
+ * @param {object} input
+ * @param {ReturnType<typeof planLocalSetup>} input.plan
+ * @param {string | null} [input.activeWhisper] Current local Whisper setting.
+ * @param {string | null} [input.activeWriter] Current, installed local writer.
+ * @param {string} [input.language]
+ * @param {boolean} [input.recording]
+ * @returns {"speech" | "writing" | null}
+ */
+export function localUpgradeHint({
+  plan,
+  activeWhisper = null,
+  activeWriter = null,
+  language = "en",
+  recording = false,
+}) {
+  if (recording) return null;
+  if (
+    plan.whisper.choice.model === TURBO_MODEL &&
+    isEnglish(language) &&
+    (activeWhisper === "small" || activeWhisper === "small.en")
+  ) {
+    return "speech";
+  }
+  if (
+    plan.writing.recommended.model === LARGE_WRITING_MODEL &&
+    activeWriter === SMALL_WRITING_MODEL
+  ) {
+    return "writing";
+  }
+  return null;
 }
