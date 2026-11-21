@@ -60,7 +60,7 @@ The shipped trees saw learn83. Two fair versions, each scored only by trees that
 
 So the app needs no new trees. The shipped trees read a far side cut to 30 s.
 
-## Frozen before eval24 (2026-11-20 22:55 PST)
+## Frozen before eval24 (2026-11-20 22:39 PST; the eval24 run ended at 22:40)
 
 The rules:
 

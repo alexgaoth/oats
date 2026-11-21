@@ -676,8 +676,8 @@ function ConversationSurface() {
     const releaseFinish = holdForFinish(recordingNoteId);
     void (async () => {
       try {
-        // For the lists' open-question count. Every question has landed by
-        // now: Stop waits for the aide to write its last verdict.
+        // Stop waits for local verdict writes for questions that got a reply.
+        // A question with no reply is still open.
         const openQuestions = await countOpenQuestions(recordingNoteId);
         await window.electronAPI?.updateNote(recordingNoteId, {
           ...(openQuestions === null ? {} : { open_questions: openQuestions }),

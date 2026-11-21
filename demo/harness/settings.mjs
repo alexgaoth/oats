@@ -91,6 +91,15 @@ export function applyDemoSettings(params) {
   if (params.get("noticedWriting") === "1") set("writingModelNoticed", "1");
   else localStorage.removeItem("writingModelNoticed");
   const providers = params.get("loop") === "1" || params.get("processing") === "providers";
+  if (params.get("legacySetup") === "1") {
+    localStorage.removeItem("localSetupAuthorized");
+    localStorage.removeItem("localSetupAuthorizationMigrated");
+  } else {
+    set(
+      "localSetupAuthorized",
+      String(!providers && params.get("firstrun") !== "1" && params.get("authorize") !== "0")
+    );
+  }
   const mode = providers ? "providers" : "local";
   for (const key of [
     "cleanupMode",

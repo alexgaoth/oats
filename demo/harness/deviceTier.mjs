@@ -171,6 +171,15 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
   return {
     getArch: () => (state === "intel" ? "x64" : "arm64"),
     getDeviceTier: async () => current,
+    prepareLocalSetup: async ({ language, speech, writing }) => {
+      if (speech && language === "en" && memoryBytes >= 16 * GIB && state === "declined") {
+        set("fast");
+      }
+      if (writing && writingState === "declined") {
+        autoDeclined = false;
+        setWriting("none");
+      }
+    },
     startWritingModelDownload: async ({ modelId, force = false } = {}) => {
       if (force) autoDeclined = false;
       const startable =
