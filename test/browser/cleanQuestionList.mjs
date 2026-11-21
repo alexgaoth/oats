@@ -15,7 +15,8 @@ export async function checkCleanQuestionList() {
   const storeUrl = performance
     .getEntriesByType("resource")
     .find(({ name }) => name.includes("/stores/meetingRecordingStore.ts"))?.name;
-  const { useMeetingRecordingStore: store } = await import(storeUrl);
+  check(Boolean(storeUrl), "The recording store must have loaded");
+  const { useMeetingRecordingStore: store } = await import(/* @vite-ignore */ storeUrl);
   // Start through the real UI and store, but with no other turns arriving.
   window.electronAPI.meetingTranscriptionStart = async () => ({ success: true });
   await window.electronAPI.requestToggleConversation();
