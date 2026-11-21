@@ -8,6 +8,7 @@
 //     [--set strict] [--detector app] [--out file.tsv]
 //   node scripts/question-eval.mjs audit --replays <tuning cache> --out sample.json
 //   node scripts/question-eval.mjs audit --replays <tuning cache> --labels labels.tsv
+//   node scripts/question-eval.mjs boundaries --ami <dir> --split tune|test
 //
 // A view is `manual` (the transcribers' words and punctuation), `plain` (none of
 // their punctuation) or `rec:<name>`, recognition output from
@@ -81,6 +82,7 @@ import {
   train as fitClassifier,
 } from "./lib/question-classifier.mjs";
 import { annotationsDir } from "./lib/topic-corpus.mjs";
+import { makeSentenceRecords, splitSentences } from "../src/helpers/sentenceSplit.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -268,7 +270,18 @@ async function replaySession(turns) {
   for (const turn of turns) {
     await fireUntil(turn.at);
     now = turn.at;
-    session.onFinalized({ id: turn.id, text: textOf(turn.tokens) });
+    const segment = {
+      id: turn.id,
+      text: textOf(turn.tokens),
+      startMs: turn.start * 1000,
+      endMs: turn.end * 1000,
+      source: "mic",
+    };
+    if (session.onFinalizedSentences) {
+      session.onFinalizedSentences(segment, makeSentenceRecords(segment));
+    } else {
+      session.onFinalized(segment);
+    }
     await session.evaluation;
   }
   await fireUntil(Infinity);
@@ -572,7 +585,14 @@ async function errors() {
   console.error(`${lines.length} lines`);
 }
 
-const AUDIT_CATEGORIES = new Set(["real", "tag", "rhetorical", "fragment", "backchannel", "statement"]);
+const AUDIT_CATEGORIES = new Set([
+  "real",
+  "tag",
+  "rhetorical",
+  "fragment",
+  "backchannel",
+  "statement",
+]);
 
 function audit() {
   if (args.split !== "tune" || args.meetings) {
@@ -617,7 +637,12 @@ function audit() {
   const labels = new Map();
   for (const line of fs.readFileSync(args.labels, "utf8").trim().split(/\r?\n/)) {
     const [id, track, category, extra] = line.split("\t");
-    if (labels.has(id) || !["yes", "no"].includes(track) || !AUDIT_CATEGORIES.has(category) || extra !== undefined) {
+    if (
+      labels.has(id) ||
+      !["yes", "no"].includes(track) ||
+      !AUDIT_CATEGORIES.has(category) ||
+      extra !== undefined
+    ) {
       throw new Error(`Invalid or duplicate audit label: ${line}`);
     }
     labels.set(id, { track, category });
@@ -647,6 +672,67 @@ function audit() {
     console.log(`${name}: ${pct(stat(rows))} ${ci(bootstrap([rows], stat))}`);
   }
   console.log(JSON.stringify(categories));
+}
+
+/** Compare exact word ends, including unpunctuated gold acts and forced final cuts. */
+function boundaries() {
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const total = { gold: 0, predicted: 0, right: 0, possible: 0, finalWrong: 0 };
+  let worstFinalMs = 0;
+  let splitMs = 0;
+  let sentences = 0;
+  for (const id of meetingsOf(dir)) {
+    const meeting = load(id);
+    const gold = new Set(
+      [...meeting.acts.values()]
+        .filter((act) => act.words.length)
+        .map((act) => act.words.at(-1).index)
+    );
+    total.gold += gold.size;
+    for (const turn of roomTurns(meeting)) {
+      const tokens = turnTokens(turn, "manual");
+      const text = textOf(tokens);
+      let offset = 0;
+      const words = new Map();
+      tokens.forEach((token, index) => {
+        offset += token.text.length;
+        words.set(offset, token.word);
+        const final = index === tokens.length - 1;
+        if (gold.has(token.word) && (final || /[.!?…。．！？｡]/u.test(token.text))) {
+          total.possible += 1;
+        }
+        if (final && !gold.has(token.word)) total.finalWrong += 1;
+        offset += 1;
+      });
+      const start = performance.now();
+      const split = splitSentences(text);
+      const elapsed = performance.now() - start;
+      splitMs += elapsed;
+      worstFinalMs = Math.max(worstFinalMs, elapsed);
+      sentences += split.length;
+      total.predicted += split.length;
+      total.right += split.filter((part) => gold.has(words.get(part.end))).length;
+    }
+  }
+  console.log(
+    JSON.stringify(
+      {
+        ...total,
+        precision: total.right / total.predicted,
+        recall: total.right / total.gold,
+        f1: (2 * total.right) / (total.predicted + total.gold),
+        // An oracle could skip every incorrect punctuation break, but could not
+        // insert an unpunctuated break inside a final or remove a forced final cut.
+        f1Ceiling: (2 * total.possible) / (total.gold + total.possible + total.finalWrong),
+        sentences,
+        meanSentenceMs: splitMs / sentences,
+        worstFinalMs,
+      },
+      null,
+      2
+    )
+  );
 }
 
 /**
@@ -1091,6 +1177,7 @@ else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
 else if (command === "audit") audit();
+else if (command === "boundaries") boundaries();
 else {
   console.error(`unknown command ${command}`);
   process.exit(2);

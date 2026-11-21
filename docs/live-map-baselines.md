@@ -68,3 +68,35 @@ done
 The default virtual speech hold stays on. The speech activity contract supports
 it independently of partial text. Print only aggregate results from the test
 split. The `--reader` flag reads a file and makes no requests.
+
+## SR-1: sentence ends versus dialogue-act ends
+
+Score exact word ends on manual text in the simulated room finals.
+Include every dialogue act with words. Count the end of each final even
+if it has no punctuation: a sentence does not carry over to the next final.
+
+| AMI split | Precision | Recall | F1 | Punctuation-only ceiling |
+| --- | ---: | ---: | ---: | ---: |
+| Tune | 0.845 | 0.691 | 0.760 | 0.781 |
+| Test | 0.848 | 0.703 | 0.769 | 0.789 |
+
+The ceiling credits every gold end on a token with an end mark or at the
+end of a final. It removes every other break except the final ends. On test,
+2,553 of 8,594 gold ends cannot be reached by that rule, and 680 finals end
+at a different word. The 0.90 gate cannot pass under both constraints.
+
+Typical split time was about 0.001 ms per sentence in these runs. In one
+sequential run the longest whole-final split, including the cold start, took
+0.52 ms. In a concurrent run one whole-final split took 2.36 ms wall time.
+
+```sh
+node scripts/question-eval.mjs boundaries --split tune
+node scripts/question-eval.mjs boundaries --split test
+node --test test/helpers/sentenceSplit.test.js test/helpers/conversationAide.test.js
+```
+
+The record-only change preserves the question baseline. Compare JSON output
+from each LM-0 command with the default aide and with `--aide` set to the aide
+from `7337403`, with its relative `contextCheck.mjs` import resolved. All nine
+command pairs produced identical JSON, including per-meeting scores and
+outcome counts.

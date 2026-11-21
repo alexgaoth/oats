@@ -601,7 +601,8 @@ const BACKCHANNEL =
 
 // A yes/no question is answered by what is a backchannel anywhere else: "Is
 // that okay?" "Yeah." The room said something, and it was the answer.
-const EN_YES = /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
+const EN_YES =
+  /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
 // A plain "no" to one is an answer too, unless the question was what somebody
 // knows: "Do you know what Kubernetes is?" "No." is the confirmed negative the
 // search exists for. "Do we need a remote?" "No." is a decision.
@@ -904,6 +905,7 @@ class ConversationAideSession {
     this.timer = null;
     this.utterances = [];
     this.cards = new Map();
+    this.sentenceByCard = new Map();
     this.groupCounts = new Map();
     this.closed = false;
     this.evaluation = Promise.resolve();
@@ -911,6 +913,10 @@ class ConversationAideSession {
   }
 
   onFinalized(segment) {
+    this.onFinalizedSentences(segment, []);
+  }
+
+  onFinalizedSentences(segment, sentences) {
     if (this.closed || !segment || !segment.id || !String(segment.text || "").trim()) return;
     const utterance = { id: String(segment.id), text: String(segment.text).trim() };
     this.utterances.push(utterance);
@@ -922,7 +928,7 @@ class ConversationAideSession {
       this._queueEvaluation(previous, "next_utterance");
     }
     if (isQuestionCandidate(utterance.text)) {
-      this._emitCard(utterance);
+      this._emitCard(utterance, sentences);
       this._stage(utterance);
     }
   }
@@ -933,6 +939,7 @@ class ConversationAideSession {
   onRetracted(segmentId) {
     const id = String(segmentId || "");
     this.utterances = this.utterances.filter((item) => item.id !== id);
+    this.sentenceByCard.delete(id);
     const card = this.cards.get(id);
     if (card) {
       this.cards.delete(id);
@@ -953,9 +960,20 @@ class ConversationAideSession {
 
   // Phase 1. Synchronous by contract: the card is handed to the UI before this
   // returns, and the database write is chased asynchronously afterwards.
-  _emitCard(utterance) {
+  _emitCard(utterance, sentences = []) {
     // The card shows the question, not the paragraph it arrived in.
     const question = extractQuestionSentence(utterance.text);
+    // Preserve the quote and ID of the segment-level card. When it spans
+    // sentences, attach it to the last asking sentence in the quote.
+    if (sentences.length) {
+      const normalized = (text) => text.trim().replace(/\s+/g, " ");
+      const record =
+        sentences.findLast((part) => question.includes(normalized(part.text))) ??
+        sentences.findLast((part) => isQuestionCandidate(part.text)) ??
+        sentences.at(-1);
+      record.question = { quote: question };
+      this.sentenceByCard.set(utterance.id, record);
+    }
     const groupKey = questionGroupKey(question);
     const occurrence = (this.groupCounts.get(groupKey) ?? 0) + 1;
     this.groupCounts.set(groupKey, occurrence);
@@ -981,7 +999,14 @@ class ConversationAideSession {
           parentEventId: null,
           segmentIds: [utterance.id],
           text: question,
-          metadata: { state: "asked", groupKey, occurrence },
+          metadata: {
+            state: "asked",
+            groupKey,
+            occurrence,
+            ...(this.sentenceByCard.has(utterance.id)
+              ? { sentenceId: this.sentenceByCard.get(utterance.id).id }
+              : {}),
+          },
         });
         const stored = this.cards.get(utterance.id);
         if (stored) stored.eventId = event?.id ?? event ?? null;
@@ -992,6 +1017,8 @@ class ConversationAideSession {
   _updateCard(segmentId, patch) {
     const card = this.cards.get(segmentId);
     if (!card) return null;
+    const record = this.sentenceByCard.get(segmentId);
+    if (record && patch.state && patch.state !== "asked") record.answered = patch.state;
     Object.assign(card, patch);
     this.onCard({ ...card });
     return card;
@@ -1181,6 +1208,9 @@ class ConversationAideSession {
     if (!assessment.isFactualQuestion && assessment.confidence >= this.confidenceThreshold) {
       const card = this.cards.get(candidate.id);
       this.cards.delete(candidate.id);
+      const record = this.sentenceByCard.get(candidate.id);
+      if (record) record.question = null;
+      this.sentenceByCard.delete(candidate.id);
       if (card) this.onCardRemoved(card.id);
       return;
     }
