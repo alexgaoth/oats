@@ -68,7 +68,7 @@ test("the one visible processing choice configures the meeting scope too", () =>
   const rule = STORE.slice(STORE.indexOf("export function applyProvidersSpeech("));
   assert.match(
     rule.slice(0, 800),
-    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: !cloud,/,
+    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: routes\.speech === "local",/,
     "every scope moves together, the meeting scope included"
   );
   assert.match(rule.slice(0, 800), /setMeetingTranscriptionMode\("providers"\)/);
@@ -97,6 +97,19 @@ test("conversations use the dictation speech model", () => {
   assert.match(body, /localTranscriptionProvider: state\.localTranscriptionProvider,/);
   assert.match(body, /cloudTranscriptionModel: state\.cloudTranscriptionModel,/);
   assert.doesNotMatch(body, /state\.meeting(Whisper|Parakeet)Model/);
+});
+
+test("preflight takes the local or cloud choice and engine from the same resolver as Record", () => {
+  const read = (file) => fs.readFileSync(path.join(__dirname, "../../src", file), "utf8");
+  const preflight = read("hooks/useConversationPreflight.ts");
+  const recording = read("stores/meetingRecordingStore.ts");
+  assert.match(recording, /const resolved = selectResolvedMeetingTranscription\(state\)/);
+  assert.match(recording, /if \(resolved\.useLocalWhisper\)/);
+  assert.match(recording, /localProvider: resolved\.localTranscriptionProvider/);
+  for (const field of ["useLocalWhisper", "localTranscriptionProvider"]) {
+    assert.ok(preflight.includes(`selectResolvedMeetingTranscription(state).${field}`), field);
+  }
+  assert.doesNotMatch(preflight, /state\.meetingLocalTranscriptionProvider/);
 });
 
 test("summaries use the cleanup scope's whole configuration", () => {

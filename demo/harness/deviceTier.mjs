@@ -105,7 +105,13 @@ function snapshot(
  * @param {{ state?: string | null, writing?: string | null, memory?: string | null,
  *   emit: (name: string, payload: unknown) => void }} options
  */
-export function createFakeDeviceTier({ state: initial, writing: initialWriting, memory, emit }) {
+export function createFakeDeviceTier({
+  state: initial,
+  writing: initialWriting,
+  memory,
+  macosVersion,
+  emit,
+}) {
   let state = initial || "ready";
   const memoryBytes = (Number(memory) > 0 ? Number(memory) : 48) * GIB;
   const writingModel = memoryBytes >= 16 * GIB ? GEMMA : QWEN;
@@ -113,12 +119,16 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
   // A writing model was deleted: nothing is fetched by itself until a choice.
   let autoDeclined = false;
   let writing = writingReport(writingState, writingModel);
-  let current = snapshot(state, undefined, writing, memoryBytes);
+  const withVersion = (report) => {
+    if (report.device && macosVersion) report.device.macosVersion = macosVersion;
+    return report;
+  };
+  let current = withVersion(snapshot(state, undefined, writing, memoryBytes));
   let timer = null;
   let writingTimer = null;
 
   const publish = (next) => {
-    current = next;
+    current = withVersion(next);
     emit("onDeviceTier", current);
   };
   const set = (next) => {
@@ -171,6 +181,15 @@ export function createFakeDeviceTier({ state: initial, writing: initialWriting, 
   return {
     getArch: () => (state === "intel" ? "x64" : "arm64"),
     getDeviceTier: async () => current,
+    prepareLocalSetup: async ({ language, speech, writing }) => {
+      if (speech && language === "en" && memoryBytes >= 16 * GIB && state === "declined") {
+        set("fast");
+      }
+      if (writing && writingState === "declined") {
+        autoDeclined = false;
+        setWriting("none");
+      }
+    },
     startWritingModelDownload: async ({ modelId, force = false } = {}) => {
       if (force) autoDeclined = false;
       const startable =

@@ -1935,6 +1935,7 @@
     "join": "Rejoindre et transcrire"
   },
   "oats": {
+    "parakeetFallback": "Échec de Parakeet. Oats utilise Whisper.",
     "library": {
       "tools": "Outils de conversation",
       "filter": "Filtrer les conversations",
@@ -2544,6 +2545,11 @@
       "percent": "{{percent}}%",
       "needsKey": "Clé requise",
       "noAddress": "Aucune adresse",
+      "upgrade": {
+        "speech": "{{model}} a reconnu 7,5 points de pourcentage de mots en plus que Whisper Small lors des tests avec bruit de fond.",
+        "writing": "{{model}} a inventé en moyenne quatre faits de moins par résumé lors des tests sur des réunions.",
+        "size": "Téléchargement : {{size}}."
+      },
       "noModel": "Aucun modèle",
       "addKey": "Ajouter une clé OpenAI",
       "advanced": "Avancé",

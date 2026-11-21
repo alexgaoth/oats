@@ -24,14 +24,15 @@ const ONLINE_MAX_SEGMENT_SECONDS = 600;
 const SILENCE_RMS_THRESHOLD = 0.001;
 
 class ParakeetServerManager {
-  constructor() {
-    this.wsServer = new ParakeetWsServer();
+  constructor({ preview = false } = {}) {
+    this.wsServer = new ParakeetWsServer(preview ? "parakeet-preview" : undefined);
+    this.aneBinary = preview ? { sidecarName: "parakeet-ane-preview" } : {};
     /** One helper for the one Neural Engine model, made when it is first asked for. */
     this.aneHelper = null;
   }
 
   ane(modelName) {
-    this.aneHelper ??= new ParakeetAne(path.join(this.getModelsDir(), modelName));
+    this.aneHelper ??= new ParakeetAne(path.join(this.getModelsDir(), modelName), this.aneBinary);
     return this.aneHelper;
   }
 

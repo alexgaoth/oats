@@ -3,6 +3,7 @@ import {
   chooseWritingModel,
   forgetWritingChoice,
   selectProcessingMode,
+  setLocalSetupAuthorization,
   useSettingsStore,
 } from "../../stores/settingsStore";
 import {
@@ -128,4 +129,5 @@ export function setProcessing(mode: ProcessingMode) {
   store.setNoteFormattingMode(mode);
   if (remembered) chooseWritingModel(remembered.cleanupProvider, remembered.cleanupModel);
   else forgetWritingChoice();
+  setLocalSetupAuthorization(mode === "local");
 }

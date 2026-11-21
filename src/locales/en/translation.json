@@ -1935,6 +1935,7 @@
     "join": "Join & transcribe"
   },
   "oats": {
+    "parakeetFallback": "Parakeet failed. Using Whisper.",
     "library": {
       "tools": "Conversation tools",
       "filter": "Filter conversations",
@@ -2544,6 +2545,11 @@
       "percent": "{{percent}}%",
       "needsKey": "Needs a key",
       "noAddress": "No address",
+      "upgrade": {
+        "speech": "{{model}} recognized 7.5 percentage points more words than Whisper Small in room tests with background noise.",
+        "writing": "{{model}} averaged four fewer invented facts per summary in meeting tests.",
+        "size": "Download: {{size}}."
+      },
       "noModel": "No model",
       "addKey": "Add an OpenAI key",
       "advanced": "Advanced",

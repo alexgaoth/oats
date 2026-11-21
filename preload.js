@@ -346,6 +346,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // then pushed.
   getDeviceTier: () => ipcRenderer.invoke("get-device-tier"),
   onDeviceTier: registerListener("device-tier", (callback) => (_event, tier) => callback(tier)),
+  prepareLocalSetup: (options) => ipcRenderer.invoke("local-setup-prepare", options),
   startSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-start", options),
   cancelSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-cancel", options),
   startWritingModelDownload: (options) => ipcRenderer.invoke("writing-model-start", options),
@@ -696,6 +697,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onMeetingTranscriptionError: registerListener(
     "meeting-transcription-error",
     (callback) => (_event, data) => callback(data)
+  ),
+  onMeetingTranscriptionFallback: registerListener(
+    "meeting-transcription-fallback",
+    (callback) => () => callback()
   ),
 
   // Dictation realtime streaming
