@@ -2340,30 +2340,6 @@ export function selectProcessingMode(state: Pick<SettingsState, "featurePreferen
   return state.featurePreferences.defaultRoute;
 }
 
-/**
- * Speech with API keys. A conversation streams to OpenAI's realtime API and
- * no other (`selectResolvedMeetingTranscription`), so speech goes to OpenAI
- * when an OpenAI key is stored and stays on this Mac without one. Every
- * scope's switch is written together, as the trap in CLAUDE.md requires
- * (`setCloudTranscriptionForAllScopes`); then the modes are set back to
- * "providers", which the helper would derive from the switch, so the
- * processing choice still reads "With an API key".
- */
-export function applyProvidersSpeech(): void {
-  const store = useSettingsStore.getState();
-  const { routes } = planLocalSetup({
-    processing: "providers",
-    openaiKey: Boolean(store.openaiApiKey.trim()),
-  });
-  store.setCloudTranscriptionForAllScopes({
-    useLocalWhisper: routes.speech === "local",
-    cloudTranscriptionMode: "byok",
-  });
-  store.setTranscriptionMode("providers");
-  store.setMeetingTranscriptionMode("providers");
-  store.setUploadTranscriptionMode("providers");
-}
-
 /** Only the committed processing choice authorizes automatic local downloads. */
 export function setLocalSetupAuthorization(authorized: boolean): void {
   if (isBrowser) localStorage.setItem(LOCAL_SETUP_AUTHORIZED, String(authorized));
@@ -2384,13 +2360,6 @@ if (isBrowser) {
       followDefaultWritingModel();
       const preferences = pinWritingProvider(state.featurePreferences, featureKeyPresence(state));
       if (preferences !== state.featurePreferences) saveFeaturePreferences(preferences);
-    }
-    // An OpenAI key added or removed with API keys chosen moves speech with it.
-    if (
-      Boolean(state.openaiApiKey.trim()) !== Boolean(previous.openaiApiKey.trim()) &&
-      selectProcessingMode(state) === "providers"
-    ) {
-      applyProvidersSpeech();
     }
   });
   followDefaultWhisperModel();
@@ -2624,8 +2593,16 @@ export function selectDictationSettings(state: SettingsState) {
   };
 }
 
-export function getDictationSettings() {
-  return selectDictationSettings(useSettingsStore.getState());
+export function getDictationSettings(localOnly = false) {
+  const state = useSettingsStore.getState();
+  if (!localOnly) return selectDictationSettings(state);
+  return selectDictationSettings({
+    ...state,
+    featurePreferences: {
+      ...state.featurePreferences,
+      exceptions: { ...state.featurePreferences.exceptions, dictation: "local" },
+    },
+  });
 }
 
 export interface ResolvedLLMConfig {

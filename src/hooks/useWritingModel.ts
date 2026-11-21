@@ -167,7 +167,8 @@ export function useWritingModel(): WritingModel {
 export function useWritingModelDownload(): void {
   const tier = useDeviceTierStore((state) => state.tier);
   const model = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
-  const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const meeting = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const recording = meeting || tier?.dictationRecording === true;
   const authorized = useSettingsStore(
     (state) => selectFeatureRoute(state, "writing").downloadAuthorized
   );

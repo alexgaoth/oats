@@ -132,6 +132,9 @@ export const useAudioRecording = (toast, options = {}) => {
             window.electronAPI?.resumeMediaPlayback?.();
           }
         }
+        if (wasRecordingRef.current !== isRecording) {
+          window.electronAPI?.setDictationCaptureState?.(isRecording);
+        }
         wasRecordingRef.current = isRecording;
         setIsRecording(isRecording);
         setIsProcessing(isProcessing);
@@ -325,6 +328,7 @@ export const useAudioRecording = (toast, options = {}) => {
       disposeStart?.();
       disposeStop?.();
       disposeNoAudio?.();
+      window.electronAPI?.setDictationCaptureState?.(false);
       if (audioManagerRef.current) {
         audioManagerRef.current.cleanup();
       }

@@ -72,6 +72,7 @@ export async function startRoomModelDownload(canStart: () => boolean, force = fa
   useRoomModelStore.setState({ progress: 0 });
   try {
     const result = await api?.downloadParakeetModel?.(PARAKEET_ROOM_MODEL);
+    if (result?.code === "RECORDING_ACTIVE") return;
     if (!result?.success || !result.downloaded)
       throw new Error("Parakeet download did not complete");
     useRoomModelStore.setState({ installed: true });

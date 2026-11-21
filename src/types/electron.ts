@@ -33,6 +33,7 @@ export interface OnDeviceStatus {
 
 /** What this Mac can run, as main measured it (deviceTier.js). */
 export interface DeviceTierSnapshot {
+  dictationRecording?: boolean;
   device: {
     platform: string;
     arch: string;
@@ -544,6 +545,7 @@ declare global {
       // pulled once, then pushed. `startSpeechUpgrade` fetches turbo when the
       // rule in main agrees; `force` is the person asking again in Settings.
       getDeviceTier?: () => Promise<DeviceTierSnapshot | null>;
+      setDictationCaptureState?: (active: boolean) => void;
       onDeviceTier?: (callback: (tier: DeviceTierSnapshot) => void) => () => void;
       prepareLocalSetup?: (options: {
         language: string;

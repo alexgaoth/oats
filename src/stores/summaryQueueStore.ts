@@ -25,7 +25,6 @@ import { useActionProcessingStore, type BackgroundActionOutcome } from "./action
 import { currentWritingRoute } from "./conversationGroupSortStore";
 import { watchModelDownloads } from "./modelDownloadStore";
 import { summaryReadinessNow, useSummaryReadinessState } from "../hooks/useSummaryReadiness";
-import { writingKeyPresent } from "../utils/writingKeys";
 import type { NoteItem } from "../types/electron";
 import logger from "../utils/logger";
 
@@ -43,10 +42,7 @@ import logger from "../utils/logger";
 // Privacy: no new destination and no new data. A summary goes to the writing
 // model the person chose, by the route Finish uses (`summarizeConversation` in
 // OatsWorkspace.tsx), and the queue sends a conversation to a cloud provider
-// only if that provider was already the writing model when it finished
-// (`queueMaySend`). One chosen since gets it when somebody opens it. A
-// conversation finished with "With an API key" and no key yet goes to the
-// provider whose key the person adds: nothing could be sent before.
+// only if that provider was already active when it finished (`queueMaySend`).
 
 interface PendingSummary {
   id: number;
@@ -88,20 +84,6 @@ export function writingRouteKey(): string {
     mode: formatting.mode,
     provider: formatting.mode === "providers" ? formatting.provider : undefined,
   });
-}
-
-/**
- * The route an owed conversation records: the writing route now, or
- * "providers:" with no provider while the provider has no key. Nothing could
- * be sent then, so the provider whose key the person adds may write it
- * (`queueMaySend`, helpers/summaryQueue.mjs).
- */
-function owedRouteKey(): string {
-  const state = getSettings();
-  const formatting = selectResolvedNoteFormatting(state);
-  const keyless =
-    formatting.mode === "providers" && writingKeyPresent(state, formatting.provider) === false;
-  return keyless ? summaryRouteKey({ mode: "providers", provider: "" }) : writingRouteKey();
 }
 
 function loadQueue(): PendingSummary[] {
@@ -236,7 +218,9 @@ function log(event: string, detail?: Record<string, unknown>): void {
  * leave it to the queue.
  */
 export function holdForFinish(noteId: number): () => void {
-  saveQueue(withPendingSummary(loadQueue(), { id: noteId, at: Date.now(), route: owedRouteKey() }));
+  saveQueue(
+    withPendingSummary(loadQueue(), { id: noteId, at: Date.now(), route: writingRouteKey() })
+  );
   setMark("finishing", noteId, true);
   let released = false;
   return () => {
@@ -260,7 +244,7 @@ export function oweSummary(note: Pick<NoteItem, "id" | "created_at">): void {
     withPendingSummary(queue, {
       id: note.id,
       at: Number.isFinite(at) ? at : Date.now(),
-      route: owedRouteKey(),
+      route: writingRouteKey(),
     })
   );
 }
@@ -317,7 +301,7 @@ const BUSY_POLL_MS = 1000;
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-let summarizer: ((note: NoteItem) => Promise<BackgroundActionOutcome>) | null = null;
+let summarizer: ((note: NoteItem, route: string) => Promise<BackgroundActionOutcome>) | null = null;
 let draining = false;
 let stopped = false;
 
@@ -352,8 +336,9 @@ async function drain(): Promise<void> {
     }
     if (!(await readyNow())) return;
     const { refused } = useSummaryQueueStore.getState();
+    const route = writingRouteKey();
     const id = nextPendingSummary(loadQueue(), {
-      route: writingRouteKey(),
+      route,
       skip: (candidate: number) => refused.includes(candidate),
     });
     if (id === null) return;
@@ -381,9 +366,9 @@ async function drain(): Promise<void> {
       continue;
     }
     // Something may have started while the note was read.
-    if (busy() || stopped) continue;
+    if (busy() || stopped || route !== writingRouteKey()) continue;
     log("start", { noteId: id });
-    const outcome = await summarizer(note);
+    const outcome = await summarizer(note, route);
     log("end", { noteId: id, outcome });
     // The model went away, or the summary was stopped: the next kick
     // (readiness, a change of model) starts again.
@@ -415,11 +400,13 @@ export function kickSummaryQueue(): void {
  * runs whenever the writing model is ready, from the first launch after a quit
  * and again whenever the model or its route changes.
  */
-export function useSummaryQueue(summarize: (note: NoteItem) => Promise<BackgroundActionOutcome>) {
+export function useSummaryQueue(
+  summarize: (note: NoteItem, route: string) => Promise<BackgroundActionOutcome>
+) {
   const latest = useRef(summarize);
   latest.current = summarize;
   useEffect(() => {
-    summarizer = (note) => latest.current(note);
+    summarizer = (note, route) => latest.current(note, route);
     stopped = false;
     watchModelDownloads();
     // Quitting stops the queue before its next conversation; the one cut off

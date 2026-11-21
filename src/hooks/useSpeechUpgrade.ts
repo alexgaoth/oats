@@ -20,7 +20,7 @@ import {
 
 function workspaceIdle() {
   const { isRecording, isTranscribing } = useMeetingRecordingStore.getState();
-  return !isRecording && !isTranscribing;
+  return !isRecording && !isTranscribing && !useDeviceTierStore.getState().tier?.dictationRecording;
 }
 
 function roomDownloadAuthorized() {
@@ -53,7 +53,8 @@ export function useSpeechUpgrade() {
   );
   // Not while a conversation is recorded: the download's notice would compete
   // with the room. It starts when the recording ends.
-  const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const meeting = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const recording = meeting || tier?.dictationRecording === true;
   const room = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
   const { available, installed, declined, failed, progress } = useRoomModelStore();
 
@@ -62,7 +63,7 @@ export function useSpeechUpgrade() {
   }, [room, available]);
 
   useEffect(() => {
-    if (!room || recording) {
+    if (!room || meeting) {
       cancelRoomModelDownload(false);
       return;
     }
@@ -70,7 +71,7 @@ export function useSpeechUpgrade() {
       cancelRoomModelDownload(false, true);
       return;
     }
-    if (available && !installed && !declined && !failed && progress === null) {
+    if (!recording && available && !installed && !declined && !failed && progress === null) {
       void startRoomModelDownload(
         () =>
           workspaceIdle() &&
@@ -78,7 +79,7 @@ export function useSpeechUpgrade() {
           Boolean(roomSpeechPlan(useSettingsStore.getState(), useDeviceTierStore.getState().tier))
       );
     }
-  }, [room, roomAuthorized, recording, available, installed, declined, failed, progress]);
+  }, [room, roomAuthorized, meeting, recording, available, installed, declined, failed, progress]);
 
   const plan = useMemo(() => localSetupFor(tier, language, "local"), [tier, language]);
   const followsDefault = whisperModelFollowsDefault();
