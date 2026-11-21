@@ -6,6 +6,8 @@
 //     [--meetings a,b] [--replay name,name] [--json out.json]
 //   node scripts/question-eval.mjs errors --ami <dir> --split tune [--view plain]
 //     [--set strict] [--detector app] [--out file.tsv]
+//   node scripts/question-eval.mjs audit --replays <tuning cache> --out sample.json
+//   node scripts/question-eval.mjs audit --replays <tuning cache> --labels labels.tsv
 //
 // A view is `manual` (the transcribers' words and punctuation), `plain` (none of
 // their punctuation) or `rec:<name>`, recognition output from
@@ -42,6 +44,7 @@
 // --model <file> --threshold T --mark M adds `classifier`, a model from `train`:
 // a card when a turn's best candidate scores T or more, with M added for a "?".
 
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -52,6 +55,7 @@ import {
   TEST_MEETINGS,
   TUNE_MEETINGS,
   adjacencyTypes,
+  bootstrap,
   dialogueActMeetings,
   dialogueActTypes,
   difference,
@@ -108,6 +112,7 @@ const { values: args, positionals } = parseArgs({
     },
     json: { type: "string" },
     out: { type: "string" },
+    labels: { type: "string" },
     alpha: { type: "string", default: "0.2" },
     l1: { type: "string", default: "1" },
     l2: { type: "string", default: "10" },
@@ -567,6 +572,83 @@ async function errors() {
   console.error(`${lines.length} lines`);
 }
 
+const AUDIT_CATEGORIES = new Set(["real", "tag", "rhetorical", "fragment", "backchannel", "statement"]);
+
+function audit() {
+  if (args.split !== "tune" || args.meetings) {
+    throw new Error("audit uses the fixed tuning meetings only");
+  }
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const cards = [];
+  for (const id of TUNE_MEETINGS) {
+    const meeting = load(id);
+    const turns = viewTurns(meeting, "rec:small.en__quiet-room");
+    if (!turns) throw new Error(`Missing small.en quiet tuning replay for ${id}`);
+    const detected = cardsOf(BASE_DETECTOR, turns);
+    // Keep the gold labels out of the reading pass.
+    const verdicts = args.labels
+      ? scoreCards(detected, goldQuestions(meeting, "strict")).verdicts
+      : [];
+    const indices = new Map(turns.map((turn, index) => [turn.id, index]));
+    detected.forEach((card, i) => {
+      const index = indices.get(card.id);
+      cards.push({
+        id: card.id,
+        meeting: id,
+        quote: card.quote,
+        before: turns[index - 1] ? textOf(turns[index - 1].tokens) : "",
+        final: card.turn,
+        after: turns[index + 1] ? textOf(turns[index + 1].tokens) : "",
+        ...(args.labels ? { gold: Boolean(verdicts[i]) } : {}),
+      });
+    });
+  }
+  const digest = (id) => createHash("sha256").update(`oats-sr2-v1:${id}`).digest("hex");
+  const order = new Map(cards.map((card) => [card.id, digest(card.id)]));
+  const sample = cards.sort((a, b) => order.get(a.id).localeCompare(order.get(b.id))).slice(0, 200);
+  if (sample.length !== 200) throw new Error("Audit needs 200 cards");
+  if (!args.labels) {
+    const json = JSON.stringify(sample, null, 2) + "\n";
+    if (args.out) fs.writeFileSync(args.out, json);
+    else process.stdout.write(json);
+    return;
+  }
+  const labels = new Map();
+  for (const line of fs.readFileSync(args.labels, "utf8").trim().split(/\r?\n/)) {
+    const [id, track, category, extra] = line.split("\t");
+    if (labels.has(id) || !["yes", "no"].includes(track) || !AUDIT_CATEGORIES.has(category) || extra !== undefined) {
+      throw new Error(`Invalid or duplicate audit label: ${line}`);
+    }
+    labels.set(id, { track, category });
+  }
+  if (labels.size !== sample.length || sample.some((card) => !labels.has(card.id))) {
+    throw new Error("Supply one label per sampled card");
+  }
+  const rows = TUNE_MEETINGS.map(() => ({ cards: 0, read: 0, gold: 0 }));
+  const categories = {};
+  for (const card of sample) {
+    const { track, category } = labels.get(card.id);
+    const row = rows[TUNE_MEETINGS.indexOf(card.meeting)];
+    row.cards += 1;
+    row.read += Number(track === "yes");
+    row.gold += Number(card.gold);
+    categories[category] = (categories[category] ?? 0) + 1;
+  }
+  const precision = (list, key) =>
+    list.reduce((sum, item) => sum + item[key], 0) /
+    list.reduce((sum, item) => sum + item.cards, 0);
+  const stats = {
+    reading: (list) => precision(list, "read"),
+    labels: (list) => precision(list, "gold"),
+    difference: (list) => precision(list, "read") - precision(list, "gold"),
+  };
+  for (const [name, stat] of Object.entries(stats)) {
+    console.log(`${name}: ${pct(stat(rows))} ${ci(bootstrap([rows], stat))}`);
+  }
+  console.log(JSON.stringify(categories));
+}
+
 /**
  * The words of every dialogue act in the training meetings: strict questions
  * against everything that elicits nothing. The acts in between (a short "right?",
@@ -1008,6 +1090,7 @@ else if (command === "reader") await reader();
 else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
+else if (command === "audit") audit();
 else {
   console.error(`unknown command ${command}`);
   process.exit(2);
