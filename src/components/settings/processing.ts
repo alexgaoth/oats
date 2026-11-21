@@ -3,6 +3,7 @@ import {
   chooseWritingModel,
   forgetWritingChoice,
   selectProcessingMode,
+  setFeatureRoute,
   setLocalSetupAuthorization,
   useSettingsStore,
 } from "../../stores/settingsStore";
@@ -99,6 +100,7 @@ function storedWritingChoice(): RememberedModels | null {
 
 /** Point every feature at this Mac or at the providers, in one choice. */
 export function setProcessing(mode: ProcessingMode) {
+  setFeatureRoute(mode);
   const store = useSettingsStore.getState();
   // The choice in use is kept under the side the writing is on, "mixed" or not.
   const { memory, restore: remembered } = switchWritingSide({
