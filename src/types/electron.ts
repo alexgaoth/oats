@@ -545,6 +545,11 @@ declare global {
       // rule in main agrees; `force` is the person asking again in Settings.
       getDeviceTier?: () => Promise<DeviceTierSnapshot | null>;
       onDeviceTier?: (callback: (tier: DeviceTierSnapshot) => void) => () => void;
+      prepareLocalSetup?: (options: {
+        language: string;
+        speech: boolean;
+        writing: boolean;
+      }) => Promise<void>;
       startSpeechUpgrade?: (options: {
         language: string;
         force?: boolean;

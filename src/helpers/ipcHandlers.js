@@ -2140,6 +2140,15 @@ class IPCHandlers {
     // Pulled once by each window, then pushed as `device-tier`.
     ipcMain.handle("get-device-tier", () => this.deviceTier.snapshot());
 
+    // A setup choice resets old declines. The workspace still starts downloads.
+    ipcMain.handle("local-setup-prepare", (_event, options = {}) =>
+      this.deviceTier.prepareLocalSetup({
+        language: typeof options?.language === "string" ? options.language : "en",
+        speech: options?.speech === true,
+        writing: options?.writing === true,
+      })
+    );
+
     // The renderer asks after setup, while the speech setting follows the
     // default; main checks the rule again before it fetches anything.
     ipcMain.handle("speech-upgrade-start", (_event, options = {}) =>

@@ -260,10 +260,17 @@ class WritingModelFetch {
 
   /** The person asked for a model: their no to it, and to fetching by itself, is undone. */
   _undoNo(modelId) {
-    if (!this.declined.includes(modelId) && !this.autoDeclined) return;
+    if (!this.declined.includes(modelId) && !this.autoDeclined) return false;
     this.declined = this.declined.filter((id) => id !== modelId);
     this.autoDeclined = false;
     this._save();
+    return true;
+  }
+
+  /** An explicit setup choice replaces an earlier no for this model only. */
+  clearSetupDecline(modelId) {
+    if (!LOCAL_MODELS.has(modelId) || !this._undoNo(modelId)) return;
+    this.publish();
   }
 
   /**

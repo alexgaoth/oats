@@ -38,6 +38,10 @@ import {
 import { followsDefaultModel, settingWhisperModel, TURBO_MODEL } from "../helpers/speechTier.mjs";
 import { planLocalSetup } from "../helpers/localSetup.mjs";
 import {
+  LOCAL_SETUP_AUTHORIZED,
+  migrateLocalSetupAuthorization,
+} from "../helpers/localSetupConsent.mjs";
+import {
   defaultWritingModel,
   followsDefaultWritingModel,
   migrateStoredWritingModel,
@@ -1083,6 +1087,8 @@ function createSecretSetter(
 
 export const MAX_TRANSLATION_TARGETS = 5;
 
+if (isBrowser) migrateLocalSetupAuthorization(localStorage);
+
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uiLanguage: normalizeUiLanguage(isBrowser ? localStorage.getItem("uiLanguage") : null),
   // Local by default. Oats bundles a Whisper model and promises it works the
@@ -1289,7 +1295,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return "local" as InferenceMode;
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
-  localSetupAuthorized: readString("localSetupAuthorized", "") === "true",
+  localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
 
   meetingTranscriptionMode: (() => {
     const v = readString("meetingTranscriptionMode", "local");
@@ -2275,7 +2281,7 @@ export function applyProvidersSpeech(): void {
 
 /** Only the committed processing choice authorizes automatic local downloads. */
 export function setLocalSetupAuthorization(authorized: boolean): void {
-  if (isBrowser) localStorage.setItem("localSetupAuthorized", String(authorized));
+  if (isBrowser) localStorage.setItem(LOCAL_SETUP_AUTHORIZED, String(authorized));
   useSettingsStore.setState({ localSetupAuthorized: authorized });
 }
 
