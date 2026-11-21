@@ -924,13 +924,37 @@ class ConversationAideSession {
 
     const previous = this.staged;
     if (previous && previous.id !== utterance.id) {
-      this._clearStage();
-      this._queueEvaluation(previous, "next_utterance");
+      if (sentences.length) this._readReply(previous, sentences);
+      else {
+        this._clearStage();
+        this._queueEvaluation(previous, "next_utterance");
+      }
     }
     if (isQuestionCandidate(utterance.text)) {
       this._emitCard(utterance, sentences);
       this._stage(utterance);
+      const question = this.sentenceByCard.get(utterance.id);
+      if (question) this._readReply(utterance, sentences.slice(sentences.indexOf(question) + 1));
     }
+  }
+
+  _readReply(candidate, sentences) {
+    if (!sentences.length) return;
+    this._clearStage();
+    const context = [];
+    for (const sentence of sentences) {
+      // A new question closes the reply window, not the earlier question.
+      if (isQuestionCandidate(sentence.text)) break;
+      context.push({ id: sentence.segmentId, text: sentence.text });
+      // A bare "no" can introduce a correction rather than deny knowledge.
+      // Read its continuation if it is already in this final.
+      const canContinue =
+        BACKCHANNEL.test(sentence.text) ||
+        BACKCHANNEL_INTL.test(sentence.text) ||
+        /^(?:no|nope|nah)[.!…]*$/i.test(sentence.text);
+      if (!canContinue) break;
+    }
+    if (context.length) this._queueEvaluation(candidate, "reply_sentence", context);
   }
 
   // A card can already be on screen when its segment is retracted, because cards
@@ -1048,14 +1072,14 @@ class ConversationAideSession {
     this.staged = null;
   }
 
-  _queueEvaluation(candidate, trigger) {
+  _queueEvaluation(candidate, trigger, reply) {
     // The response window is the utterances that follow the question, never the
     // ones before it: preceding chatter is not an answer, and persisting it as a
     // "response" event (or feeding it to the classifier as "later context")
     // corrupts answer detection and the stored conversation graph. On silence
     // the candidate is the last utterance, so this correctly yields no context.
     const index = this.utterances.findIndex((item) => item.id === candidate.id);
-    const context = index >= 0 ? this.utterances.slice(index + 1).slice(-3) : [];
+    const context = reply ?? (index >= 0 ? this.utterances.slice(index + 1).slice(-3) : []);
     this.evaluation = this.evaluation
       .then(() => this._evaluate(candidate, context, trigger))
       .catch((error) => this.onDiagnostic("evaluation_failed", error));
@@ -1125,7 +1149,7 @@ class ConversationAideSession {
       noteId: this.noteId,
       kind: "response",
       parentEventId: card.eventId,
-      segmentIds: followingContext.map((item) => item.id),
+      segmentIds: [...new Set(followingContext.map((item) => item.id))],
       text: followingContext.map((item) => item.text).join(" ") || "",
       metadata: { reason: local.outcome, trigger, outcome: local.outcome, source: "local" },
     });
@@ -1245,7 +1269,7 @@ class ConversationAideSession {
       noteId: this.noteId,
       kind: "response",
       parentEventId: questionEventId,
-      segmentIds: followingContext.map((item) => item.id),
+      segmentIds: [...new Set(followingContext.map((item) => item.id))],
       text: followingContext.map((item) => item.text).join(" ") || "",
       metadata: { reason: assessment.reason, trigger, outcome },
     });
@@ -1258,7 +1282,7 @@ class ConversationAideSession {
       noteId: this.noteId,
       kind: "search_suggestion",
       parentEventId: questionEventId,
-      segmentIds: [candidate.id, ...followingContext.map((item) => item.id)],
+      segmentIds: [...new Set([candidate.id, ...followingContext.map((item) => item.id)])],
       text: assessment.searchQuery,
       metadata: {
         query: assessment.searchQuery,

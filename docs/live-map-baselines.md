@@ -100,3 +100,60 @@ from each LM-0 command with the default aide and with `--aide` set to the aide
 from `7337403`, with its relative `contextCheck.mjs` import resolved. All nine
 command pairs produced identical JSON, including per-meeting scores and
 outcome counts.
+
+## SR-3: stop reading the reply at its sentence boundary
+
+The candidate reads the first substantive sentence after the question.
+It also reads a continuation after a backchannel or a bare negation in
+the same final. A new question is not a reply. The 8 s timer and 30 s hold
+stay in place.
+
+| Split and input | Outcome right, base → candidate | Change, 95% interval | Reply-to-state p50 / p90, base → candidate | Changed cards, base → candidate | Searches (explicit unknown), base → candidate |
+| --- | --- | --- | --- | --- | --- |
+| Tune small.en quiet | 0.819 → 0.711 | −0.108 [−0.153, −0.057] | 3.25 / 9.74 → 1.44 / 5.26 s | 94/94 → 90/94 | 4 (4) → 7 (4) |
+| Test small.en quiet | 0.843 → 0.818 | −0.025 [−0.081, +0.046] | 3.91 / 10.30 → 1.37 / 5.79 s | 77/77 → 70/77 | 1 (1) → 2 (0) |
+| Test small.en steady | 0.807 → 0.825 | +0.018 [0.000, +0.061] | 1.06 / 8.82 → 0.23 / 8.09 s | 39/39 → 39/39 | 0 (0) → 1 (0) |
+| Test Parakeet with context, quiet | 0.881 → 0.691 | −0.191 [−0.271, −0.118] | 3.47 / 9.86 → 2.00 / 7.04 s | 193/193 → 157/193 | 7 (7) → 8 (3) |
+| Test Parakeet with context, steady | 0.858 → 0.623 | −0.236 [−0.317, −0.158] | 2.32 / 8.68 → 0.93 / 6.47 s | 139/139 → 107/139 | 3 (3) → 8 (4) |
+
+Time starts at the end of the first AMI reply act linked to a matched
+question. It stops at the first change from `asked` on the replay clock.
+The delay quantiles exclude cards with no linked reply or no state change.
+The command prints how often a state changes before its reference reply
+ends. A negative delay is not evidence of a speed gain. The paired median
+change was 0.00 s in every row, with intervals that include zero.
+
+Detection results did not change. Keep this candidate out of the default
+route. It fails the outcome and automatic-search gates. The search check
+uses the existing explicit-unknown pattern, not a new human audit.
+
+```sh
+export PATH=/opt/homebrew/opt/node@24/bin:$PATH
+cache="$HOME/oats-asr-cache"
+scratch=$(mktemp -d)
+git show 7337403:src/helpers/conversationAide.mjs |
+  node --input-type=module -e '
+    import fs from "node:fs";
+    import { pathToFileURL } from "node:url";
+    import path from "node:path";
+    process.stdout.write(fs.readFileSync(0, "utf8").replace(
+      "./contextCheck.mjs", pathToFileURL(path.resolve("src/helpers/contextCheck.mjs")).href
+    ));
+  ' > "$scratch/base.mjs"
+compare() {
+  view=$3
+  set -- --only app --split "$1" --replays "$2" --replay "$view" \
+    --reader "$cache/question-eval/reader/openai_gpt-6.1-terra@none.jsonl"
+  node scripts/question-eval.mjs baseline "$@" --aide "$scratch/base.mjs" \
+    --json "$scratch/base.json" > /dev/null
+  node scripts/question-eval.mjs baseline "$@" --json "$scratch/candidate.json" > /dev/null
+  node scripts/question-eval.mjs outcome-bars --a "$scratch/base.json" \
+    --b "$scratch/candidate.json" --key "rec:$view"
+}
+compare tune "$cache/question-eval/replays" small.en__quiet-room
+for engine in small.en parakeet-ultra-context; do
+  for room in quiet-room steady-sound; do
+    compare test "$cache/replays" "${engine}__${room}"
+  done
+done
+```
