@@ -1935,6 +1935,7 @@
     "join": "Beitreten & transkribieren"
   },
   "oats": {
+    "parakeetFallback": "Parakeet fehlgeschlagen. Whisper läuft.",
     "library": {
       "tools": "Gesprächswerkzeuge",
       "filter": "Gespräche filtern",

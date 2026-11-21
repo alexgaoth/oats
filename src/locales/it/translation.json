@@ -1935,6 +1935,7 @@
     "join": "Partecipa e trascrivi"
   },
   "oats": {
+    "parakeetFallback": "Parakeet non ha funzionato. Uso Whisper.",
     "library": {
       "tools": "Strumenti per le conversazioni",
       "filter": "Filtra conversazioni",
