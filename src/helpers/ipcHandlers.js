@@ -5698,6 +5698,7 @@ class IPCHandlers {
       const { PartialScheduler } = await import("./partialScheduler.mjs");
       const { AudioClock, speechChanges } = await import("./transcriptLag.mjs");
       const { RoomAudioWindow } = await import("./roomAudioWindow.mjs");
+      const { RoomTranscriptionFallback } = await import("./roomTranscriptionFallback.mjs");
       const { SegmentActivityReporter, withLateRoomFinal } = await import("./segmentActivity.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
@@ -5708,8 +5709,11 @@ class IPCHandlers {
       // still reads reaches this one.
       if (meetingInRoom) abandonInRoomSession("replaced");
       const id = ++meetingInRoomSessions;
-      meetingInRoom = {
+      const session = {
         id,
+        model: meetingLocalModel,
+        language: meetingLocalLanguage,
+        parakeet: null,
         segmenter: new SpeechSegmenter(),
         // Whisper only: the default, and the path measured with a second
         // request on its server. Parakeet keeps finals only until it is.
@@ -5733,6 +5737,31 @@ class IPCHandlers {
         noteId: meetingNoteId,
         withLateRoomFinal,
       };
+      if (meetingLocalProvider === "nvidia") {
+        session.parakeet = new RoomTranscriptionFallback({
+          prepare: async () => {
+            const result = await this.parakeetManager.startServer(
+              session.model || "parakeet-tdt-0.6b-v3"
+            );
+            if (!result?.success) throw new Error(result?.reason || "Parakeet start failed");
+          },
+          read: (pcm, _floor, startSample) => transcribeInRoomParakeet(pcm, session, startSample),
+          // Request small, not the configured Parakeet model ID. Whisper resolves
+          // it to small.en for English on Apple Silicon, or the bundled fallback.
+          backup: (pcm, floor) => transcribeInRoomWhisper(pcm, floor, session, "small"),
+          onFallback: (error) => {
+            debugLogger.warn("In-room Parakeet used Whisper as backup", {
+              session: id,
+              error: error.message,
+            });
+            const win = meetingLocalWin;
+            if (meetingInRoom === session && win && !win.isDestroyed()) {
+              win.webContents.send("meeting-transcription-fallback");
+            }
+          },
+        });
+      }
+      meetingInRoom = session;
       meetingInRoom.lag = meetingInRoom.partials !== null;
     };
 
@@ -5810,6 +5839,9 @@ class IPCHandlers {
 
     const feedInRoomAudio = (buffer24k) => {
       const session = meetingInRoom;
+      // Start on the first chunk, after the renderer is listening. A cold
+      // Neural Engine compile must not block the microphone from recording.
+      if (session.parakeet && !session.parakeet.starting) void session.parakeet.start();
       const pcm16k = downsample24kTo16k(buffer24k);
       session.audio.stream.write(pcm16k);
       session.audio.bytes += pcm16k.length;
@@ -5877,19 +5909,21 @@ class IPCHandlers {
     // or over) its FFmpeg conversion also takes that sound out, with afftdn at
     // the segment's own floor, for `base` and `small` (roomSegmentAudio.mjs):
     // the model the request will run, after a missing download falls back.
-    const transcribeInRoomWhisper = async (pcm, steadyFloor) => {
+    const transcribeInRoomWhisper = async (
+      pcm,
+      steadyFloor,
+      session,
+      requested = session.model
+    ) => {
       const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
       const { roomDenoiseFilter } = await import("./roomSegmentAudio.mjs");
       const raised = raiseQuietSegment(new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1));
-      const model = await this.whisperManager.resolveRequestModel(
-        meetingLocalModel,
-        meetingLocalLanguage
-      );
+      const model = await this.whisperManager.resolveRequestModel(requested, session.language);
       return this.whisperManager.transcribeLocalWhisper(
         pcm16ToWav(Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength)),
         {
-          model: meetingLocalModel,
-          language: meetingLocalLanguage,
+          model: requested,
+          language: session.language,
           ...this._resolveWhisperVadOptions("meeting"),
           audioFilter: roomDenoiseFilter(raised, steadyFloor, model),
         }
@@ -5900,9 +5934,10 @@ class IPCHandlers {
     // are worth 3 points of content in a quiet room and 8 with steady sound, and
     // cost no time: the model reads a fixed window anyway.
     const transcribeInRoomParakeet = async (pcm, session, startSample) => {
-      if (!this.parakeetManager.usesNeuralEngine(meetingLocalModel)) {
+      if (!this.parakeetManager.usesNeuralEngine(session.model)) {
         return this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
-          model: meetingLocalModel,
+          model: session.model,
+          allowEmpty: true,
         });
       }
       const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
@@ -5916,16 +5951,17 @@ class IPCHandlers {
       return this.parakeetManager.transcribeLocalParakeet(
         pcm16ToWav(bytes.subarray(before.length * 2)),
         {
-          model: meetingLocalModel,
+          model: session.model,
+          allowEmpty: true,
           audioBefore: bytes.subarray(0, before.length * 2),
           wordBefore: session.lastWord,
         }
       );
     };
     const transcribeInRoomAudio = async (pcm, steadyFloor, session, startSample) => {
-      const result = await (meetingLocalProvider === "nvidia"
-        ? transcribeInRoomParakeet(pcm, session, startSample)
-        : transcribeInRoomWhisper(pcm, steadyFloor));
+      const result = await (session.parakeet
+        ? session.parakeet.final(pcm, steadyFloor, startSample)
+        : transcribeInRoomWhisper(pcm, steadyFloor, session));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
       return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;
     };

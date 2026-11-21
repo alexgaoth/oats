@@ -1935,6 +1935,7 @@
     "join": "参加して文字起こし"
   },
   "oats": {
+    "parakeetFallback": "Parakeet で文字起こしできなかったため、Oats は Whisper を使用しました。",
     "library": {
       "tools": "会話ツール",
       "filter": "会話を絞り込む",
