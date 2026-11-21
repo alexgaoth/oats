@@ -192,6 +192,43 @@ What this says:
   thing?" are `sug` and `off`: they ask, and the gold does not count them. A
   person would not mind those cards. Precision against the gold is a lower bound.
 
+### v0.4 tuning audit: which cards would a listener track?
+
+We sampled 200 cards from the shipped 0.3.0 rules on quiet `small.en`
+recognition. The sample includes both matches and misses against the strict
+AMI labels. It covers the 11 tuning meetings only. To sample without
+replacement, sort by SHA-256 of `oats-sr2-v1:<card id>` and take the first 200.
+
+The lane agent read the quote, its final and the adjacent finals. It did
+not see the AMI verdict until after labeling. This is a single agent's
+close reading, not independent human validation. Alex's review sample
+contains the first 30 cards in the same random order.
+
+Mark **yes** if the card captures a request for information, clarification
+or a decision that a listener would track. A short or imperfectly transcribed
+question can count if the context makes the request clear. Mark a tag **yes**
+only when it asks for meaningful confirmation. Mark rhetorical questions,
+unrecoverable fragments, backchannels and statements **no**.
+
+| Measure on the same sample | Precision | 95% meeting-bootstrap interval |
+| --- | ---: | ---: |
+| Close reading | 0.650 | [0.601, 0.689] |
+| Strict AMI labels | 0.445 | [0.373, 0.530] |
+| Close reading minus AMI | +0.205 | [+0.110, +0.276] |
+
+The categories were 126 real, 15 tag (4 tracked), 10 rhetorical, 28 fragment,
+3 backchannel and 18 statement. The intervals use 2,000 draws of 11 meetings
+with replacement. Pool the sampled cards in each draw. Use the same draw
+for both precision estimates. This audit does not measure recall or establish
+precision on the test split.
+
+```sh
+export PATH=/opt/homebrew/opt/node@24/bin:$PATH
+cache="$HOME/oats-asr-cache/question-eval/replays"
+node scripts/question-eval.mjs audit --replays "$cache" --out /tmp/oats-audit.json
+node scripts/question-eval.mjs audit --replays "$cache" --labels docs/question-audit-tune.tsv
+```
+
 ### How far to trust adjacency pairs
 
 Read by hand on tuning meetings: 60 questions the pairs call `open`, 40 they call
@@ -387,6 +424,93 @@ measures that case: on parakeet-ultra outcomes are right 0.727 (quiet) and 0.745
 (steady) rather than 0.820 and 0.798, and 19% and 13% of answered questions stay
 silence. The search fixes hold either way. If Parakeet becomes the room default, the
 main process needs to tell the renderer that a segment is open, whatever the engine.
+
+### Null result: sentence-bounded replies without speaker labels
+
+The [sentence reply trial](https://github.com/alexgaoth/oats/pull/225) read the
+first substantive sentence after a question without knowing who spoke.
+On test, small.en outcome accuracy fell from 0.843 to 0.818 in quiet
+(change −0.025, 95% interval [−0.081, +0.046]). It rose from 0.807 to 0.825
+in steady sound. Parakeet with context fell from 0.881 to 0.691 in quiet
+and from 0.858 to 0.623 in steady sound. The paired median delay did not
+improve. Both engines also produced more automatic searches without an
+explicit-unknown match. The candidate stays out of the default route.
+
+### Speaker oracle for reply selection
+
+**The oracle did not improve outcome accuracy.** The best speaker rule on
+tuning had lower accuracy on all four test views. Its median state change
+was later. This does not support adding live diarization for this rule.
+It does not test a rule that identifies speakers inside each final.
+
+Hold the existing question cards and local verdict rules fixed. In manual
+and plain views, use the exact AMI words that form each final. In recognition,
+use the AMI words with positive time overlap with the final. In both cases
+each word casts one vote. Assign the speaker with the most votes. Ties and
+empty spans have no speaker label. Mixed finals still get only one label.
+The oracle gives these rules a reference label without diarization errors
+or inference delay. It does not give them a perfect reply or a clean speaker
+boundary: 34% to 40% of recognized test finals contain words from more than
+one speaker, and 2% to 2.5% have no label.
+
+1. **(a)** Replay today's aide: use the next final, even if it is a question.
+2. **(b)** Use the next final with a known speaker different from the asker.
+   Skip the asker's own finals and finals with no speaker label.
+3. **(c)** Use rule (b), but also skip finals that the existing detector marks
+   as a question.
+
+For (b) and (c), each question keeps its own timer. An eligible final can
+resolve more than one pending card. All rules wait 8 s for quiet, with
+rechecks every second while speech is in flight, up to 30 s after the
+question final. The oracle does not use future speaker labels to settle a
+card early.
+
+Outcome accuracy uses the same cached reader and the same matched cards as
+[LM-0](live-map-baselines.md#checks-1-and-2-questions-and-outcomes). Delay
+starts at the end of the first linked AMI reply act. It stops at the first
+state change, including a silence verdict. Cards with no linked reply do not
+enter the delay measure. The command also reports states that change before
+the reference reply ends. Those are not evidence of a speed gain.
+
+#### Tune: compare all three rules
+
+| Input, 11 meetings | Outcome right (a / b / c) | Reply-to-state p50 / p90, seconds (a / b / c) |
+| --- | --- | --- |
+| Manual | 0.767 / 0.662 / 0.557 | 9.25 / 21.63 · 11.50 / 30.84 · 12.76 / 31.10 |
+| Plain | 0.783 / 0.658 / 0.600 | 11.91 / 25.17 · 14.07 / 32.38 · 15.33 / 32.38 |
+| small.en, quiet | 0.819 / 0.795 / 0.735 | 3.25 / 9.74 · 5.33 / 17.75 · 6.94 / 20.98 |
+
+Rule (a) won every tuning view. Rule (b) was the better speaker rule on
+every view. We froze it before test and compared only (a) and (b) there.
+On quiet tuning recognition the outcome change for (b) was −0.024
+[−0.063, +0.015], versus −0.084 [−0.147, −0.023] for (c).
+
+#### Test: today's rule against the frozen speaker rule
+
+| Input | Meetings | Outcome right, today → speaker | Change, 95% interval | Reply-to-state p50 / p90, seconds (today → speaker) | Paired p50 change, 95% interval (seconds) |
+| --- | ---: | --- | --- | --- | --- |
+| small.en, quiet | 8 | 0.843 → 0.810 | −0.033 [−0.079, +0.014] | 3.91 / 10.30 → 7.86 / 22.23 | +2.90 [0.00, +4.47] |
+| small.en, steady | 8 | 0.807 → 0.737 | −0.070 [−0.244, +0.128] | 1.06 / 8.82 → 5.25 / 15.29 | +3.09 [0.00, +6.55] |
+| Parakeet with context, quiet | 12 | 0.881 → 0.795 | −0.086 [−0.142, −0.041] | 3.47 / 9.86 → 6.73 / 24.41 | +2.91 [0.00, +3.91] |
+| Parakeet with context, steady | 12 | 0.858 → 0.679 | −0.179 [−0.217, −0.128] | 2.32 / 8.68 → 4.56 / 12.59 | +2.24 [+0.01, +2.92] |
+
+The 95% intervals use 2,000 paired draws of whole meetings. Small.en
+outcome intervals include zero. Both Parakeet intervals exclude zero in
+the worse direction. Parakeet Ultra trained on AMI, and the engine
+cohorts differ. Use these rows to compare reply rules, not engines.
+
+```sh
+export PATH=/opt/homebrew/opt/node@24/bin:$PATH
+cache="$HOME/oats-asr-cache"
+reader="$cache/question-eval/reader/openai_gpt-6.1-terra@none.jsonl"
+node scripts/question-eval.mjs speaker-oracle --split tune \
+  --replays "$cache/question-eval/replays" --replay small.en__quiet-room --reader "$reader"
+node scripts/question-eval.mjs speaker-oracle --split test --reply-rule different \
+  --replays "$cache/replays" \
+  --replay small.en__quiet-room,small.en__steady-sound,parakeet-ultra-context__quiet-room,parakeet-ultra-context__steady-sound \
+  --reader "$reader"
+node --test test/helpers/questionSpeakerOracle.test.js
+```
 
 ### Branches
 

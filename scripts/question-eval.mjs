@@ -6,6 +6,10 @@
 //     [--meetings a,b] [--replay name,name] [--json out.json]
 //   node scripts/question-eval.mjs errors --ami <dir> --split tune [--view plain]
 //     [--set strict] [--detector app] [--out file.tsv]
+//   node scripts/question-eval.mjs audit --replays <tuning cache> --out sample.json
+//   node scripts/question-eval.mjs audit --replays <tuning cache> --labels labels.tsv
+//   node scripts/question-eval.mjs speaker-oracle --split tune --replay small.en__quiet-room
+//     --reader <cached judgments> [--reply-rule different|different-nonquestion]
 //
 // A view is `manual` (the transcribers' words and punctuation), `plain` (none of
 // their punctuation) or `rec:<name>`, recognition output from
@@ -42,6 +46,7 @@
 // --model <file> --threshold T --mark M adds `classifier`, a model from `train`:
 // a card when a turn's best candidate scores T or more, with M added for a "?".
 
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -52,6 +57,7 @@ import {
   TEST_MEETINGS,
   TUNE_MEETINGS,
   adjacencyTypes,
+  bootstrap,
   dialogueActMeetings,
   dialogueActTypes,
   difference,
@@ -77,6 +83,11 @@ import {
   train as fitClassifier,
 } from "./lib/question-classifier.mjs";
 import { annotationsDir } from "./lib/topic-corpus.mjs";
+import {
+  overlappingWords,
+  replaySpeakerReplies,
+  speakerVotes,
+} from "./lib/question-speaker-oracle.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -101,6 +112,7 @@ const { values: args, positionals } = parseArgs({
     "key-b": { type: "string" },
     reader: { type: "string" },
     "no-hold": { type: "boolean", default: false },
+    "reply-rule": { type: "string" },
     replay: { type: "string" },
     replays: {
       type: "string",
@@ -108,6 +120,7 @@ const { values: args, positionals } = parseArgs({
     },
     json: { type: "string" },
     out: { type: "string" },
+    labels: { type: "string" },
     alpha: { type: "string", default: "0.2" },
     l1: { type: "string", default: "1" },
     l2: { type: "string", default: "10" },
@@ -126,7 +139,12 @@ const aideFile = args.aide
   ? path.resolve(args.aide)
   : path.join(ROOT, "src/helpers/conversationAide.mjs");
 const aide = await import(pathToFileURL(aideFile).href);
-const { ConversationAideSession, extractQuestionSentence, isQuestionCandidate } = aide;
+const {
+  ConversationAideSession,
+  assessResponseLocally,
+  extractQuestionSentence,
+  isQuestionCandidate,
+} = aide;
 
 const SETS = ["strict", "broad"];
 
@@ -237,11 +255,12 @@ async function replaySession(turns) {
       return eventId;
     },
     updateEvent: async () => null,
-    // Words are arriving: a turn has started and is not final yet. `--no-hold` is
-    // a recognizer with no partials (Parakeet in a room): the app cannot tell.
-    isSpeaking: () =>
-      !args["no-hold"] && turns.some((turn) => turn.start * 1000 <= now && now < turn.at),
-    onCard: (card) => cards.set(card.id, { ...cards.get(card.id), ...card }),
+    isSpeaking: () => speechInFlight(turns, now),
+    onCard: (card) => {
+      const prior = cards.get(card.id);
+      const verdictAt = prior?.verdictAt ?? (card.state !== "asked" ? now : null);
+      cards.set(card.id, { ...prior, ...card, verdictAt });
+    },
     onCardRemoved: (id) => cards.delete(id),
     openSearch: async ({ query }) => {
       searches.push({ query, at: now, reply: [...replies.values()].at(-1) ?? "" });
@@ -271,6 +290,11 @@ async function replaySession(turns) {
   return { cards, searches };
 }
 
+// Activity starts before the words arrive. This also models finals-only engines.
+function speechInFlight(turns, now) {
+  return !args["no-hold"] && turns.some((turn) => turn.start * 1000 <= now && now < turn.at);
+}
+
 /** A reply that says so in words, not one that only has a "no" in it. */
 const SAYS_UNKNOWN =
   /\b(?:don['’]?t know|do not know|dunno|no idea|no clue|not sure|can['’]?t remember|don['’]?t remember|never heard|nobody knows)\b/i;
@@ -283,6 +307,132 @@ function loader(dir) {
 
 const pct = (value) => (value === null ? "-" : value.toFixed(3));
 const ci = (pair) => `[${pair[0].toFixed(3)}, ${pair[1].toFixed(3)}]`;
+
+const ORACLE_RULES = ["different", "different-nonquestion"];
+const READER_STATES = {
+  answered: ["answered", "uncertain"],
+  unknown: ["denied", "uncertain"],
+  open: ["silence", "asked"],
+};
+
+async function speakerOracle() {
+  const rule = args["reply-rule"];
+  if (
+    args.meetings ||
+    !["tune", "test"].includes(args.split) ||
+    (args.split === "test" && !rule) ||
+    (rule && !ORACLE_RULES.includes(rule))
+  ) {
+    throw new Error("Use the fixed tune or test split. Test requires one frozen speaker rule.");
+  }
+  const reader = readerAnswers(args.reader);
+  if (!reader.size) throw new Error("Supply cached reader judgments with --reader");
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const rules = ["today", ...(rule ? [rule] : ORACLE_RULES)];
+  const replayViews = (args.replay?.split(",") ?? []).map((name) => `rec:${name}`);
+  const views = args.split === "test" ? replayViews : ["manual", "plain", ...replayViews];
+  const selectedViews = args.view ? views.filter((view) => view === args.view) : views;
+  if (!selectedViews.length)
+    throw new Error("No matching view. Name recognition views with --replay.");
+  const data = Object.fromEntries(selectedViews.map((view) => [view, []]));
+  for (const id of meetingsOf(dir)) {
+    const meeting = load(id);
+    const gold = goldQuestions(meeting);
+    const replyOf = new Map();
+    for (const { source, target } of meeting.pairs) {
+      const targetAct = meeting.acts.get(target);
+      if (!Number.isFinite(targetAct?.end)) continue;
+      const earlier = replyOf.get(source);
+      if (!earlier || targetAct.start < earlier.start) replyOf.set(source, targetAct);
+    }
+    for (const view of selectedViews) {
+      const recognized = view.startsWith("rec:");
+      const turns = viewTurns(meeting, view);
+      if (!turns) continue;
+      const cards = cardsOf(BASE_DETECTOR, turns);
+      const quoteOf = new Map(cards.map(({ id, quote }) => [id, quote]));
+      const marks = scoreCards(cards, gold).verdicts;
+      const labeled = turns.map((turn) => ({
+        id: turn.id,
+        at: turn.at,
+        text: textOf(turn.tokens),
+        quote: quoteOf.get(turn.id),
+        ...speakerVotes(recognized ? overlappingWords(meeting.words, turn) : turn.words),
+      }));
+      const { cards: base } = await replaySession(turns);
+      const variants = { today: base };
+      for (const name of rules.slice(1)) {
+        variants[name] = replaySpeakerReplies(labeled, {
+          skipQuestions: name === "different-nonquestion",
+          isSpeaking: (at) => speechInFlight(turns, at),
+          assess: assessResponseLocally,
+        });
+      }
+      const rows = Object.fromEntries(
+        rules.map((name) => {
+          let right = 0;
+          let scored = 0;
+          let withReply = 0;
+          const delays = {};
+          cards.forEach((card, index) => {
+            const match = marks[index];
+            if (!match) return;
+            const ref = reader.get(match);
+            const result = variants[name].get(card.id);
+            if (READER_STATES[ref]) {
+              scored += 1;
+              right += Number(READER_STATES[ref].includes(result?.state));
+            }
+            const reply = replyOf.get(match);
+            if (!reply) return;
+            withReply += 1;
+            if (result?.verdictAt != null) delays[card.id] = result.verdictAt - reply.end * 1000;
+          });
+          return [name, { right, scored, withReply, delays }];
+        })
+      );
+      data[view].push({
+        rows,
+        finals: labeled.length,
+        mixed: labeled.filter((turn) => turn.mixed).length,
+        unknown: labeled.filter((turn) => !turn.speaker).length,
+      });
+    }
+  }
+  const sum = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
+  const ratio = (rows) => sum(rows, "right") / (sum(rows, "scored") || 1);
+  const sec = (ms) => (ms === null ? "-" : (ms / 1000).toFixed(2));
+  for (const [view, meetings] of Object.entries(data)) {
+    if (!meetings.length) throw new Error(`No cached meetings for ${view}`);
+    const base = meetings.map(({ rows }) => rows.today);
+    console.log(
+      `${args.split} ${view}, ${meetings.length} meetings: ` +
+        `${sum(meetings, "mixed")}/${sum(meetings, "finals")} mixed, ${sum(meetings, "unknown")} unknown`
+    );
+    for (const name of rules) {
+      const rows = meetings.map((meeting) => meeting.rows[name]);
+      const delays = rows.flatMap((row) => Object.values(row.delays));
+      console.log(
+        `  ${name}: outcome ${pct(ratio(rows))} ${ci(bootstrap([rows], ratio))} (${sum(rows, "right")}/${sum(rows, "scored")}); ` +
+          `delay p50/p90 ${sec(median(delays))}/${sec(quantile(delays, 0.9))} s, ` +
+          `${delays.length}/${sum(rows, "withReply")} states timed, ${delays.filter((ms) => ms < 0).length} early`
+      );
+      if (name === "today") continue;
+      const gain = (a, b) => ratio(b) - ratio(a);
+      const paired = rows.map((row, i) =>
+        Object.entries(row.delays)
+          .filter(([id]) => Object.hasOwn(base[i].delays, id))
+          .map(([id, delay]) => delay - base[i].delays[id])
+      );
+      const pairMedian = (sample) => median(sample.flat());
+      console.log(
+        `    vs today: outcome ${pct(gain(base, rows))} ${ci(bootstrap([base, rows], gain))}; ` +
+          `paired p50 delay ${sec(pairMedian(paired))} [${bootstrap([paired], pairMedian).map(sec).join(", ")}] s`
+      );
+    }
+  }
+}
 
 function row(rows) {
   const s = summarize(rows);
@@ -565,6 +715,95 @@ async function errors() {
   if (args.out) fs.writeFileSync(args.out, text);
   else process.stdout.write(text);
   console.error(`${lines.length} lines`);
+}
+
+const AUDIT_CATEGORIES = new Set([
+  "real",
+  "tag",
+  "rhetorical",
+  "fragment",
+  "backchannel",
+  "statement",
+]);
+
+function audit() {
+  if (args.split !== "tune" || args.meetings) {
+    throw new Error("audit uses the fixed tuning meetings only");
+  }
+  const dir = annotationsDir(args.ami);
+  const load = loader(dir);
+  const cards = [];
+  for (const id of TUNE_MEETINGS) {
+    const meeting = load(id);
+    const turns = viewTurns(meeting, "rec:small.en__quiet-room");
+    if (!turns) throw new Error(`Missing small.en quiet tuning replay for ${id}`);
+    const detected = cardsOf(BASE_DETECTOR, turns);
+    // Keep the gold labels out of the reading pass.
+    const verdicts = args.labels
+      ? scoreCards(detected, goldQuestions(meeting, "strict")).verdicts
+      : [];
+    const indices = new Map(turns.map((turn, index) => [turn.id, index]));
+    detected.forEach((card, i) => {
+      const index = indices.get(card.id);
+      cards.push({
+        id: card.id,
+        meeting: id,
+        quote: card.quote,
+        before: turns[index - 1] ? textOf(turns[index - 1].tokens) : "",
+        final: card.turn,
+        after: turns[index + 1] ? textOf(turns[index + 1].tokens) : "",
+        ...(args.labels ? { gold: Boolean(verdicts[i]) } : {}),
+      });
+    });
+  }
+  const digest = (id) => createHash("sha256").update(`oats-sr2-v1:${id}`).digest("hex");
+  const order = new Map(cards.map((card) => [card.id, digest(card.id)]));
+  const sample = cards.sort((a, b) => order.get(a.id).localeCompare(order.get(b.id))).slice(0, 200);
+  if (sample.length !== 200) throw new Error("Audit needs 200 cards");
+  if (!args.labels) {
+    const json = JSON.stringify(sample, null, 2) + "\n";
+    if (args.out) fs.writeFileSync(args.out, json);
+    else process.stdout.write(json);
+    return;
+  }
+  const labels = new Map();
+  for (const line of fs.readFileSync(args.labels, "utf8").trim().split(/\r?\n/)) {
+    const [id, track, category, extra] = line.split("\t");
+    if (
+      labels.has(id) ||
+      !["yes", "no"].includes(track) ||
+      !AUDIT_CATEGORIES.has(category) ||
+      extra !== undefined
+    ) {
+      throw new Error(`Invalid or duplicate audit label: ${line}`);
+    }
+    labels.set(id, { track, category });
+  }
+  if (labels.size !== sample.length || sample.some((card) => !labels.has(card.id))) {
+    throw new Error("Supply one label per sampled card");
+  }
+  const rows = TUNE_MEETINGS.map(() => ({ cards: 0, read: 0, gold: 0 }));
+  const categories = {};
+  for (const card of sample) {
+    const { track, category } = labels.get(card.id);
+    const row = rows[TUNE_MEETINGS.indexOf(card.meeting)];
+    row.cards += 1;
+    row.read += Number(track === "yes");
+    row.gold += Number(card.gold);
+    categories[category] = (categories[category] ?? 0) + 1;
+  }
+  const precision = (list, key) =>
+    list.reduce((sum, item) => sum + item[key], 0) /
+    list.reduce((sum, item) => sum + item.cards, 0);
+  const stats = {
+    reading: (list) => precision(list, "read"),
+    labels: (list) => precision(list, "gold"),
+    difference: (list) => precision(list, "read") - precision(list, "gold"),
+  };
+  for (const [name, stat] of Object.entries(stats)) {
+    console.log(`${name}: ${pct(stat(rows))} ${ci(bootstrap([rows], stat))}`);
+  }
+  console.log(JSON.stringify(categories));
 }
 
 /**
@@ -1008,6 +1247,8 @@ else if (command === "reader") await reader();
 else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
+else if (command === "audit") audit();
+else if (command === "speaker-oracle") await speakerOracle();
 else {
   console.error(`unknown command ${command}`);
   process.exit(2);
