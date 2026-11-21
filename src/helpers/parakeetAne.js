@@ -51,12 +51,13 @@ function pcmFromWav(wav) {
 class ParakeetAne {
   /**
    * @param {string} modelsDir holds `parakeet-ultra/` and Silero's `.mlmodelc`
-   * @param {{ command?: string, args?: string[] }} [binary] a test's fake helper
+   * @param {{ command?: string, args?: string[], sidecarName?: string }} [binary]
    */
   constructor(modelsDir, binary = {}) {
     this.modelsDir = modelsDir;
     this.command = binary.command ?? null;
     this.args = binary.args ?? [];
+    this.sidecarName = binary.sidecarName ?? SIDECAR_NAME;
     this.process = null;
     /** The helper still loading, before it is ready: a stop must reach it too. */
     this.spawned = null;
@@ -96,7 +97,7 @@ class ParakeetAne {
         cwd: getSafeTempDir(),
         detached: true,
       });
-      sidecarPidFile.write(SIDECAR_NAME, child.pid);
+      sidecarPidFile.write(this.sidecarName, child.pid);
       this.spawned = child;
       let ready = false;
       let stderr = "";
@@ -114,7 +115,7 @@ class ParakeetAne {
       });
       child.on("close", (code) => {
         clearTimeout(timer);
-        sidecarPidFile.clear(SIDECAR_NAME);
+        sidecarPidFile.clear(this.sidecarName);
         if (this.spawned === child) this.spawned = null;
         if (!ready) reject(new Error(`${BINARY_NAME} exited (${code}): ${stderr.trim()}`));
         if (this.process === child) this.process = null;
