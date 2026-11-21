@@ -38,6 +38,16 @@ import {
 import { followsDefaultModel, settingWhisperModel, TURBO_MODEL } from "../helpers/speechTier.mjs";
 import { PARAKEET_ROOM_MODEL, planLocalSetup } from "../helpers/localSetup.mjs";
 import {
+  FEATURE_ROUTES_KEY,
+  changeFeatureRoute,
+  migrateFeaturePreferences,
+  pinWritingProvider,
+  readFeaturePreferences,
+  type Feature,
+  type FeaturePreferences,
+  type Route,
+} from "../helpers/featureRoutes.mjs";
+import {
   ROOM_SPEECH_PREFERENCE,
   followsRoomSpeechDefault,
   migrateRoomSpeechDefault,
@@ -577,6 +587,7 @@ export interface SettingsState
   remoteTranscriptionModel: string;
   cleanupMode: InferenceMode;
   localSetupAuthorized: boolean;
+  featurePreferences: FeaturePreferences;
   roomSpeechPreference: "default" | "shared" | "recommended";
   cleanupRemoteUrl: string;
 
@@ -1101,6 +1112,7 @@ export const MAX_TRANSLATION_TARGETS = 5;
 
 if (isBrowser) {
   migrateLocalSetupAuthorization(localStorage);
+  migrateFeaturePreferences(localStorage);
   migrateRoomSpeechDefault(localStorage);
 }
 
@@ -1311,6 +1323,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
   localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
+  featurePreferences: readFeaturePreferences(isBrowser ? localStorage : null),
   roomSpeechPreference: (() => {
     const preference = readString(ROOM_SPEECH_PREFERENCE, "");
     return preference === "shared" || preference === "recommended" ? preference : "default";
@@ -2376,6 +2389,24 @@ if (isBrowser) {
 // The removed hosted cloud ("legacy" mode) has been removed — cloud
 // access is BYOK-only now (`mode === "providers"`). These selectors are kept
 // (many call sites still reference them) but can never be true anymore.
+
+/**
+ * Store the app default or one exception without overwriting the other
+ * preferences. These are non-secret settings. Runtime callers use the
+ * feature resolver, not the compatibility fields from older versions.
+ */
+export function setFeatureRoute(route: Route | null, feature?: Feature): void {
+  const state = useSettingsStore.getState();
+  const preferences = pinWritingProvider(
+    changeFeatureRoute(state.featurePreferences, route, feature),
+    {
+      openai: Boolean(state.openaiApiKey.trim()),
+      anthropic: Boolean(state.anthropicApiKey.trim()),
+    }
+  );
+  if (isBrowser) localStorage.setItem(FEATURE_ROUTES_KEY, JSON.stringify(preferences));
+  useSettingsStore.setState({ featurePreferences: preferences });
+}
 
 export const selectIsCloudCleanupMode = (_state: SettingsState) => false;
 
