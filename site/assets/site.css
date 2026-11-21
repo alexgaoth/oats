@@ -544,6 +544,97 @@ q {
   margin: clamp(48px, 7vw, 80px) auto 0;
 }
 
+/* The live figures (site.js loads live.js as one nears the screen): the app's
+   own components, drawn in a shadow root inside the figure. The host is laid
+   out at the figure's width but unseen until it is ready, so the components
+   measure themselves before anyone sees them; then the still or the loop's
+   poster goes. With scripts on, the figure is already the component's height
+   (--live-h) from the first paint, the still shown whole at its top, so
+   nothing moves when the component arrives. With scripts off the figure is
+   the still, as it was. */
+.live-host {
+  position: absolute;
+  inset: 0 0 auto;
+  visibility: hidden;
+}
+
+[data-live="ready"] > .live-host {
+  position: relative;
+  visibility: visible;
+}
+
+[data-live="ready"] > img,
+[data-live="ready"] > video,
+[data-live="ready"] > .loop-toggle {
+  display: none;
+}
+
+/* With scripts on, each live figure is its component's height from the first
+   paint: the most the component takes at rest within each range of widths,
+   measured with the figures drawn (site/measure-live.mjs prints this table).
+   The replays are measured at their end, with every topic in its lane. */
+@media (scripting: enabled) {
+  /* live-heights:start */
+  :root { --live-map: 581px; --live-topics: 395px; --live-questions: 334px; --live-after: 1250px; }
+  @media (min-width: 330px) { :root { --live-questions: 314px; --live-after: 1163px; } }
+  @media (min-width: 340px) { :root { --live-after: 1119px; } }
+  @media (min-width: 350px) { :root { --live-after: 1095px; } }
+  @media (min-width: 360px) { :root { --live-after: 1076px; } }
+  @media (min-width: 370px) { :root { --live-after: 1028px; } }
+  @media (min-width: 380px) { :root { --live-after: 1008px; } }
+  @media (min-width: 390px) { :root { --live-after: 965px; } }
+  @media (min-width: 400px) { :root { --live-after: 941px; } }
+  @media (min-width: 430px) { :root { --live-after: 921px; } }
+  @media (min-width: 450px) { :root { --live-questions: 294px; --live-after: 897px; } }
+  @media (min-width: 470px) { :root { --live-questions: 274px; --live-after: 873px; } }
+  @media (min-width: 500px) { :root { --live-map: 537px; --live-topics: 351px; --live-after: 849px; } }
+  @media (min-width: 520px) { :root { --live-after: 825px; } }
+  @media (min-width: 530px) { :root { --live-after: 715px; } }
+  @media (min-width: 540px) { :root { --live-after: 691px; } }
+  @media (min-width: 550px) { :root { --live-after: 667px; } }
+  @media (min-width: 560px) { :root { --live-after: 652px; } }
+  @media (min-width: 620px) { :root { --live-after: 628px; } }
+  @media (min-width: 640px) { :root { --live-map: 553px; --live-topics: 367px; --live-questions: 290px; --live-after: 668px; } }
+  @media (min-width: 660px) { :root { --live-after: 644px; } }
+  @media (min-width: 900px) { :root { --live-after: 889px; } }
+  @media (min-width: 920px) { :root { --live-after: 865px; } }
+  @media (min-width: 960px) { :root { --live-after: 841px; } }
+  @media (min-width: 980px) { :root { --live-after: 731px; } }
+  @media (min-width: 1000px) { :root { --live-after: 707px; } }
+  @media (min-width: 1020px) { :root { --live-after: 683px; } }
+  @media (min-width: 1040px) { :root { --live-after: 668px; } }
+  @media (min-width: 1160px) { :root { --live-after: 644px; } }
+  /* live-heights:end */
+
+  [data-live-slot="hero"],
+  [data-live-slot="map"] {
+    --live-h: var(--live-map);
+  }
+
+  [data-live-slot="topics"] {
+    --live-h: var(--live-topics);
+  }
+
+  [data-live-slot="questions"] {
+    --live-h: var(--live-questions);
+  }
+
+  [data-live-slot="after"] {
+    --live-h: var(--live-after);
+  }
+
+  [data-live-slot] {
+    min-height: var(--live-h);
+  }
+
+  [data-live-slot] > img,
+  [data-live-slot] > video {
+    height: var(--live-h);
+    object-fit: contain;
+    object-position: top center;
+  }
+}
+
 /* Features */
 
 .feature {

@@ -393,6 +393,7 @@ export default function ConversationSignalRail({
   onSearch,
   onDismiss,
   onOpenSource,
+  className,
 }: {
   cards: ConversationCard[];
   /**
@@ -418,6 +419,8 @@ export default function ConversationSignalRail({
   onDismiss?: (cards: ConversationCard[]) => void;
   /** Opens a verdict's file or link. Absent, the source is only named. */
   onOpenSource?: (source: ContextSource) => void;
+  /** Placement: under the contour it annotates, the rail keeps its distance. */
+  className?: string;
 }) {
   const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -540,7 +543,7 @@ export default function ConversationSignalRail({
     // The surface gives this region the space left between the pinned head and
     // foot, so it scrolls inside itself rather than pushing the dead-microphone
     // warning off screen.
-    <div className="mt-6 flex w-full flex-col gap-3">
+    <div className={cn("mt-6 flex w-full flex-col gap-3", className)}>
       {/* The only thing announced, and it is mounted **before** it has anything
           to say.
           

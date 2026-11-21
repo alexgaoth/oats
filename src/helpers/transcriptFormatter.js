@@ -65,7 +65,8 @@ function mergeSegments(segments) {
   return merged;
 }
 
-// As the gutter writes it (`clock` in OatsWorkspace.tsx): 0:04, 1:05, 1:02:03.
+// As the gutter writes it (`offsetClock` in conversation/Transcript.tsx): 0:04,
+// 1:05, 1:02:03.
 function formatTimestamp(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(total / 3600);
