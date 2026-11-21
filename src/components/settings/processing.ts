@@ -99,8 +99,9 @@ function storedWritingChoice(): RememberedModels | null {
   }
 }
 
-export function setFeatureProcessing(feature: Feature, mode: ProcessingMode | null) {
-  setFeatureRoute(mode, feature);
+export function setFeatureProcessing(feature: Feature, mode: ProcessingMode) {
+  const defaultRoute = selectProcessingMode(useSettingsStore.getState());
+  setFeatureRoute(mode === defaultRoute ? null : mode, feature);
   if (feature === "writing") updateWritingSide();
 }
 

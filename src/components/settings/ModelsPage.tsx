@@ -1,12 +1,14 @@
 import * as React from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Download, KeyRound, RotateCcw, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { SettingsSection } from "./SettingsKit";
 import { ProcessingChoice, WhatIsSent } from "./ProcessingChoice";
+import { featureRouteName } from "./featureRouteCopy";
 import { ProviderKeyField } from "./ProviderKeyField";
 import { SpeechModelChoice } from "./SpeechModelChoice";
 import { WritingModelChoice } from "./WritingModelChoice";
@@ -167,13 +169,13 @@ function FeatureRow({
 }) {
   const { t } = useTranslation();
   const titleId = useId();
+  const routeButton = useRef<HTMLButtonElement>(null);
   const mac = getCachedPlatform() === "darwin";
-  const { effective, requested, exception, needsKey, provider } = useSettingsStore(
+  const { effective, requested, needsKey, provider } = useSettingsStore(
     useShallow((state) => selectFeatureRoute(state, feature))
   );
   const writingProvider = useSettingsStore((state) => state.featurePreferences.writingProvider);
-  const [keyOpen, setKeyOpen] = useState(false);
-  const name = t(`oats.featureRoutes.${feature}`);
+  const name = featureRouteName(t, feature);
   const other = requested === "local" ? "providers" : "local";
   const switchLabel = t(
     other === "providers"
@@ -182,11 +184,22 @@ function FeatureRow({
         ? "oats.featureRoutes.useMac"
         : "oats.featureRoutes.useComputer"
   );
-  const place =
-    effective === "providers"
+  const keyProvider = feature === "writing" && !writingProvider ? "any" : provider;
+  const addKeyLabel = t("apiKeyInput.add");
+  const keepLocalLabel = t(
+    mac ? "oats.featureRoutes.keepOnMac" : "oats.featureRoutes.keepOnComputer"
+  );
+  const place = needsKey
+    ? t(mac ? "oats.featureRoutes.untilKeyOnMac" : "oats.featureRoutes.untilKeyOnComputer", {
+        model,
+        provider:
+          keyProvider === "any"
+            ? t("oats.featureRoutes.writingKeyProviders")
+            : getProviderDisplayName(provider ?? ""),
+      })
+    : effective === "providers"
       ? t("oats.featureRoutes.withKey", { model })
       : t(mac ? "oats.featureRoutes.onMac" : "oats.featureRoutes.onComputer", { model });
-  const providerName = provider ? getProviderDisplayName(provider) : "";
   const Icon = action?.icon;
   return (
     <section aria-labelledby={titleId} className="px-5 py-3">
@@ -195,55 +208,48 @@ function FeatureRow({
           <h4 id={titleId} className="text-sm font-medium text-foreground">
             {name}
           </h4>
-          <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{place}</p>
+          <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground" aria-live="polite">
+            {place}
+          </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={`${name}: ${switchLabel}`}
-            onClick={() => {
-              setFeatureProcessing(feature, other);
-              setKeyOpen(false);
-            }}
-          >
-            {switchLabel}
-          </Button>
-          {exception && (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`${name}: ${t("oats.featureRoutes.useDefault")}`}
-              onClick={() => {
-                setFeatureProcessing(feature, null);
-                setKeyOpen(false);
-              }}
-            >
-              {t("oats.featureRoutes.useDefault")}
-            </Button>
+          {needsKey && keyProvider && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" aria-label={`${name}: ${addKeyLabel}`}>
+                  <KeyRound aria-hidden="true" />
+                  {addKeyLabel}
+                </Button>
+              </DialogTrigger>
+              <DialogContent
+                aria-describedby={undefined}
+                className="oats-surface motion-reduce:animate-none"
+                onCloseAutoFocus={(event) => {
+                  // After a successful save the Add button no longer exists.
+                  if (routeButton.current?.getAttribute("data-route-action") === "switch") {
+                    event.preventDefault();
+                    routeButton.current.focus();
+                  }
+                }}
+              >
+                <DialogTitle>{addKeyLabel}</DialogTitle>
+                <ProviderKeyField provider={keyProvider} />
+              </DialogContent>
+            </Dialog>
           )}
+          <Button
+            ref={routeButton}
+            variant={needsKey ? "ghost" : "outline"}
+            size="sm"
+            data-route-action={needsKey ? "keep-local" : "switch"}
+            aria-label={`${name}: ${needsKey ? keepLocalLabel : switchLabel}`}
+            onClick={() => setFeatureProcessing(feature, needsKey ? "local" : other)}
+          >
+            {needsKey ? keepLocalLabel : switchLabel}
+          </Button>
         </div>
       </div>
-      {needsKey && provider ? (
-        <div className="mt-1">
-          <p className="text-[13px] leading-5 text-muted-foreground" role="status">
-            {feature === "writing" && !writingProvider
-              ? t("oats.featureRoutes.addWritingKey")
-              : t("oats.featureRoutes.addProviderKey", { provider: providerName })}
-          </p>
-          {keyOpen ? (
-            <ProviderKeyField
-              provider={feature === "writing" && !writingProvider ? "any" : provider}
-              autoFocus
-            />
-          ) : (
-            <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)}>
-              <KeyRound aria-hidden="true" />
-              {t("apiKeyInput.add")}
-            </Button>
-          )}
-        </div>
-      ) : (
+      {!needsKey && (
         <>
           {note && <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{note}</p>}
           {progress && (
