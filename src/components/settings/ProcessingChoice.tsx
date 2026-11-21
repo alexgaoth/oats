@@ -8,6 +8,7 @@ import { useShallow } from "zustand/react/shallow";
 import { FEATURES } from "../../helpers/featureRoutes.mjs";
 import { selectFeatureRoute, useSettingsStore } from "../../stores/settingsStore";
 import { getProviderDisplayName } from "../../models/ModelRegistry";
+import { featureRouteDisclosure, featureRouteName } from "./featureRouteCopy";
 
 /**
  * The one processing choice, drawn the same in Settings › AI models and in
@@ -170,11 +171,9 @@ export function WhatIsSent({ featureRoutes = false }: { featureRoutes?: boolean 
                 cloud[index] ? (
                   <li key={feature}>
                     <strong className="font-medium text-foreground">
-                      {t(`oats.featureRoutes.${feature}`)}.{" "}
+                      {featureRouteName(t, feature)}.{" "}
                     </strong>
-                    {t(`oats.featureRoutes.${feature}Sent`, {
-                      provider: getProviderDisplayName(cloud[index] ?? ""),
-                    })}
+                    {featureRouteDisclosure(t, feature, getProviderDisplayName(cloud[index] ?? ""))}
                   </li>
                 ) : null
               )}

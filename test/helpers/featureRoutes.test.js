@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 let FEATURES, FEATURE_ROUTES_KEY, resolveFeatureRoute, changeFeatureRoute, pinWritingProvider;
-let migrateFeaturePreferences, readFeaturePreferences;
+let migrateFeaturePreferences, readFeaturePreferences, availableWritingProvider;
 
 test.before(async () => {
   ({
@@ -13,7 +13,26 @@ test.before(async () => {
     pinWritingProvider,
     migrateFeaturePreferences,
     readFeaturePreferences,
+    availableWritingProvider,
   } = await import("../../src/helpers/featureRoutes.mjs"));
+});
+
+test("a new cloud writing choice uses a working key and respects a usable pin", () => {
+  assert.equal(availableWritingProvider(null, {}), null);
+  assert.equal(availableWritingProvider(null, { openai: "ok" }), "openai");
+  assert.equal(availableWritingProvider(null, { anthropic: "ok" }), "anthropic");
+  assert.equal(availableWritingProvider(null, { openai: "ok", anthropic: "ok" }), "openai");
+  assert.equal(
+    availableWritingProvider("anthropic", { openai: "ok", anthropic: "ok" }),
+    "anthropic"
+  );
+  for (const refused of ["rejected", "no-access", "unknown"]) {
+    assert.equal(
+      availableWritingProvider("openai", { openai: refused, anthropic: "ok" }),
+      "anthropic"
+    );
+    assert.equal(availableWritingProvider("openai", { openai: refused }), null);
+  }
 });
 
 function profile(settings = {}) {
@@ -62,20 +81,44 @@ test("each feature resolves only its own exception or the default and its own pr
   }
 });
 
-test("changing the app default keeps explicit exceptions, even when they match the new default", () => {
+test("changing the default keeps only exceptions that differ from the new default", () => {
   const initial = changeFeatureRoute(readFeaturePreferences(null), "local");
   const custom = changeFeatureRoute(initial, "providers", "dictation");
+  assert.deepEqual(changeFeatureRoute(custom, "local").exceptions, { dictation: "providers" });
   const cloud = changeFeatureRoute(custom, "providers");
-  assert.deepEqual(cloud.exceptions, { dictation: "providers" });
+  assert.deepEqual(cloud.exceptions, {});
   assert.equal(resolveFeatureRoute(cloud, "conversations").downloadAuthorized, false);
-  assert.equal(resolveFeatureRoute(cloud, "dictation").exception, "providers");
+  assert.equal(resolveFeatureRoute(cloud, "dictation").exception, null);
   const back = changeFeatureRoute(cloud, "local");
-  assert.equal(resolveFeatureRoute(back, "dictation").downloadAuthorized, false);
-  assert.equal(resolveFeatureRoute(back, "writing").downloadAuthorized, true);
-  const reset = changeFeatureRoute(back, null, "dictation");
-  assert.deepEqual(reset.exceptions, {});
-  assert.equal(resolveFeatureRoute(reset, "dictation").downloadAuthorized, true);
-  assert.deepEqual(initial.exceptions, {});
+  assert.equal(resolveFeatureRoute(back, "dictation").requested, "local");
+  assert.deepEqual(custom.exceptions, { dictation: "providers" });
+});
+
+test("choosing the app default on a feature row removes its exception", () => {
+  for (const [defaultRoute, other] of [
+    ["local", "providers"],
+    ["providers", "local"],
+  ]) {
+    const initial = changeFeatureRoute(readFeaturePreferences(null), defaultRoute);
+    const changed = changeFeatureRoute(initial, other, "dictation");
+    const restored = changeFeatureRoute(changed, defaultRoute, "dictation");
+    assert.deepEqual(restored.exceptions, {});
+    assert.equal(resolveFeatureRoute(restored, "dictation").requested, defaultRoute);
+  }
+});
+
+test("keeping a feature local clears a missing-key exception and remains local when a key arrives", () => {
+  const local = changeFeatureRoute(readFeaturePreferences(null), "local");
+  const pending = changeFeatureRoute(local, "providers", "dictation");
+  assert.equal(resolveFeatureRoute(pending, "dictation").needsKey, true);
+  const kept = changeFeatureRoute(pending, null, "dictation");
+  assert.deepEqual(kept.exceptions, {});
+  assert.equal(resolveFeatureRoute(kept, "dictation", { openai: "ok" }).effective, "local");
+
+  const cloud = changeFeatureRoute(local, "providers");
+  const overridden = changeFeatureRoute(cloud, "local", "dictation");
+  assert.deepEqual(overridden.exceptions, { dictation: "local" });
+  assert.equal(resolveFeatureRoute(overridden, "dictation", { openai: "ok" }).effective, "local");
 });
 
 test("a local exception authorizes only that feature, and a failed cloud key never authorizes downloads", () => {
@@ -88,7 +131,7 @@ test("a local exception authorizes only that feature, and a failed cloud key nev
   }
   const local = changeFeatureRoute(initial, "local", "conversations");
   const switched = changeFeatureRoute(local, "local");
-  assert.equal(resolveFeatureRoute(switched, "conversations").exception, "local");
+  assert.equal(resolveFeatureRoute(switched, "conversations").exception, null);
   assert.equal(resolveFeatureRoute(switched, "conversations").downloadAuthorized, true);
 });
 
@@ -157,4 +200,17 @@ test("migration preserves a mixed profile's cloud choices and an explicit lack o
 test("invalid persisted route data does not enable cloud routing or downloads", () => {
   const stored = profile({ [FEATURE_ROUTES_KEY]: "{", cleanupMode: "providers" });
   assert.deepEqual(readFeaturePreferences(stored), readFeaturePreferences(null));
+});
+
+test("reading old preferences drops redundant exceptions without granting download consent", () => {
+  const stored = profile({
+    [FEATURE_ROUTES_KEY]: JSON.stringify({
+      defaultRoute: "local",
+      exceptions: { dictation: "local", conversations: "providers" },
+      consent: {},
+    }),
+  });
+  const preferences = readFeaturePreferences(stored);
+  assert.deepEqual(preferences.exceptions, { conversations: "providers" });
+  assert.equal(resolveFeatureRoute(preferences, "dictation").downloadAuthorized, false);
 });
