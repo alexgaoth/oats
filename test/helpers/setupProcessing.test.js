@@ -45,7 +45,7 @@ test("setup has no Save: Get started checks and saves the pasted key, and stays 
   const forward = FLOW.slice(FLOW.indexOf("const goForward = async () => {"));
   assert.match(
     forward,
-    /if \(processingChoice === "providers" && keyDraft\.trim\(\)\) \{\s*if \(field\) \{\s*setCheckingKey\(true\);\s*const saved = await field\.commit\(\);\s*setCheckingKey\(false\);\s*if \(!saved\) return;\s*\} else \{[\s\S]{0,160}setKeyDraft\(""\);\s*if \(!providerKeySaved\) return;\s*\}\s*\}\s*commitProcessing\(/
+    /if \(processingChoice === "providers" && keyDraft\.trim\(\)\) \{\s*if \(field\) \{\s*setCheckingKey\(true\);\s*const saved = await field\.commit\(\);\s*setCheckingKey\(false\);\s*if \(!saved\) return;\s*\} else \{[\s\S]{0,160}setKeyDraft\(""\);\s*if \(!providerKeySaved\) return;\s*\}\s*\}\s*setProcessing\(processingChoice\)/
   );
   // A pasted key is enough to press Get started; a saved one too.
   assert.match(
