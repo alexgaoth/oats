@@ -192,6 +192,43 @@ What this says:
   thing?" are `sug` and `off`: they ask, and the gold does not count them. A
   person would not mind those cards. Precision against the gold is a lower bound.
 
+### v0.4 tuning audit: which cards would a listener track?
+
+We sampled 200 cards from the shipped 0.3.0 rules on quiet `small.en`
+recognition. The sample includes both matches and misses against the strict
+AMI labels. It covers the 11 tuning meetings only. To sample without
+replacement, sort by SHA-256 of `oats-sr2-v1:<card id>` and take the first 200.
+
+The lane agent read the quote, its final and the adjacent finals. It did
+not see the AMI verdict until after labeling. This is a single agent's
+close reading, not independent human validation. Alex's review sample
+contains the first 30 cards in the same random order.
+
+Mark **yes** if the card captures a request for information, clarification
+or a decision that a listener would track. A short or imperfectly transcribed
+question can count if the context makes the request clear. Mark a tag **yes**
+only when it asks for meaningful confirmation. Mark rhetorical questions,
+unrecoverable fragments, backchannels and statements **no**.
+
+| Measure on the same sample | Precision | 95% meeting-bootstrap interval |
+| --- | ---: | ---: |
+| Close reading | 0.650 | [0.601, 0.689] |
+| Strict AMI labels | 0.445 | [0.373, 0.530] |
+| Close reading minus AMI | +0.205 | [+0.110, +0.276] |
+
+The categories were 126 real, 15 tag (4 tracked), 10 rhetorical, 28 fragment,
+3 backchannel and 18 statement. The intervals use 2,000 draws of 11 meetings
+with replacement. Pool the sampled cards in each draw. Use the same draw
+for both precision estimates. This audit does not measure recall or establish
+precision on the test split.
+
+```sh
+export PATH=/opt/homebrew/opt/node@24/bin:$PATH
+cache="$HOME/oats-asr-cache/question-eval/replays"
+node scripts/question-eval.mjs audit --replays "$cache" --out /tmp/oats-audit.json
+node scripts/question-eval.mjs audit --replays "$cache" --labels docs/question-audit-tune.tsv
+```
+
 ### How far to trust adjacency pairs
 
 Read by hand on tuning meetings: 60 questions the pairs call `open`, 40 they call
