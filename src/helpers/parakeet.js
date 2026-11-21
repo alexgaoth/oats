@@ -259,6 +259,11 @@ class ParakeetManager {
       textLength: result.text?.length || 0,
     });
 
+    // A completed read with no words (e.g. the ANE speech gate) is not an
+    // engine failure. Keep the older no-audio response for dictation.
+    if (options.allowEmpty && typeof result?.text === "string" && !result.text.trim()) {
+      return { success: true, text: "" };
+    }
     return this.parseParakeetResult(result);
   }
 

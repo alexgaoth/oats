@@ -1935,6 +1935,7 @@
     "join": "Rejoindre et transcrire"
   },
   "oats": {
+    "parakeetFallback": "Échec de Parakeet. Oats utilise Whisper.",
     "library": {
       "tools": "Outils de conversation",
       "filter": "Filtrer les conversations",

@@ -1935,6 +1935,7 @@
     "join": "Присоединиться и вести заметки"
   },
   "oats": {
+    "parakeetFallback": "Сбой Parakeet. Oats использует Whisper.",
     "library": {
       "tools": "Инструменты для разговоров",
       "filter": "Фильтр разговоров",
