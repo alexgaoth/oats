@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "../lib/utils";
+import { SPIN_MS, tossFrame } from "../../helpers/oatsMarkMotion.mjs";
 import {
   RECORDING_TOSS_PEAK,
-  SPIN_MS,
   playRecordingToss,
   recordingTossPose,
-  tossFrame,
-} from "../../helpers/oatsMarkMotion.mjs";
+} from "../../helpers/recordingToss.mjs";
 import { getCachedPlatform } from "../../utils/platform";
 import { AT_REST, paintGrain, type GrainPose } from "./grainCanvas";
 

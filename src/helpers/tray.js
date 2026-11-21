@@ -8,7 +8,7 @@ const {
   RECORDING_TOSS_FRAMES,
   RECORDING_TOSS_PEAK,
   playRecordingToss,
-} = require("./oatsMarkMotion.mjs");
+} = require("./recordingToss.mjs");
 
 class TrayManager {
   constructor() {

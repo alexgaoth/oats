@@ -7,7 +7,7 @@ const { inflateSync } = require("node:zlib");
 
 const root = path.join(__dirname, "../..");
 const assets = path.join(root, "src/assets/tray-recording");
-let TrayManager, motion, reduced, displayOptionsChanged;
+let TrayManager, motion, maxHop, reduced, displayOptionsChanged;
 const app = new EventEmitter();
 
 class FakeTray extends EventEmitter {
@@ -65,7 +65,8 @@ test.before(async () => {
       },
     },
   };
-  motion = await import("../../src/helpers/oatsMarkMotion.mjs");
+  ({ HOP: maxHop } = await import("../../src/helpers/oatsMarkMotion.mjs"));
+  motion = await import("../../src/helpers/recordingToss.mjs");
   TrayManager = require("../../src/helpers/tray.js");
 });
 
@@ -116,7 +117,7 @@ test("macOS plays a toss, rests, loops, and restores the exact idle image on Sto
 test("reduced motion uses the mid-hop template and schedules no timers", async (t) => {
   const { manager, tray, setTimer } = await makeTray(t, { reduce: true, recording: true });
   assert.deepEqual(tray.images, [idle, manager.recordingIcons[motion.RECORDING_TOSS_PEAK]]);
-  assert.ok(motion.recordingTossPose(motion.RECORDING_TOSS_PEAK).hop > motion.HOP * 0.99);
+  assert.ok(motion.recordingTossPose(motion.RECORDING_TOSS_PEAK).hop > maxHop * 0.99);
   assert.equal(setTimer.mock.callCount(), 0);
   manager.setConversationState({ recording: false });
   assert.equal(tray.images.at(-1), idle);

@@ -3,12 +3,12 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { tumbleHeight } from "../src/helpers/oatsMarkMotion.mjs";
 import {
   RECORDING_TOSS_FRAMES,
   RECORDING_TOSS_PEAK,
   recordingTossPose,
-  tumbleHeight,
-} from "../src/helpers/oatsMarkMotion.mjs";
+} from "../src/helpers/recordingToss.mjs";
 
 const chrome =
   process.env.CHROME ??
