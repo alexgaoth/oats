@@ -1,26 +1,28 @@
 # Oats network allowlist
 
+**Proposal for review:** The feature routes below describe the proposed Oats
+0.4 behavior. They do not change the allowlist for a released version.
+
 Oats can run a complete conversation offline: a fresh install records, transcribes
 with its bundled Whisper models (`small.en` and `base` on Apple Silicon, `base.en`
 and `base` elsewhere), catches questions, creates a note, and shows the
 conversation structure with no connection at all.
 
-**Audio, transcripts, and summaries never leave the device.** No OpenWhispr
-service, account service, analytics endpoint, calendar service, or automatic
-update feed is contacted. v1 updates are signed manual downloads.
+With all three features on this computer, Oats does not send their audio,
+transcripts, or summaries to an AI provider. No OpenWhispr service, account
+service, analytics endpoint, calendar service, or automatic update feed is
+contacted. v1 updates are signed manual downloads.
 
 One outbound action is **on by default**: the question search below. It is the
 only default-on connection in the product, and it is switchable off in Settings.
 
-**Nothing is downloaded at launch, with two exceptions after setup.** Every
+**The packaged app does not start optional model downloads before setup is complete.** Every
 model a conversation needs ships in the app: Whisper `base` and `base.en`
 (`small.en` and `base` on Apple Silicon), the Silero VAD, pyannote
 segmentation, TitaNet for speakers, and MiniLM for search. A development
-checkout fetches the ones it is missing; a packaged build does not. The two
-exceptions: on a Mac whose GPU measures fast enough, Oats downloads Whisper
-Turbo once, after setup; and with processing on this computer, it downloads
-the writing model once when no writing model is ready (below, "Automatic,
-once"). The local vector store
+checkout fetches the ones it is missing; a packaged build does not. Optional
+downloads after setup depend on each feature's route, as described below.
+The local vector store
 (Qdrant) listens on 127.0.0.1 only and runs with its anonymous usage
 statistics turned off, by config and by flag (`src/helpers/qdrantManager.js`).
 Nothing of the builder's machine is packed into the app — in particular no
@@ -48,6 +50,33 @@ Scope limits that make this safe to state plainly:
 - Turning off auto-search in Settings restores click-only behavior; question
   cards still appear and are still recorded.
 
+## Proposed feature routes
+
+Setup asks for one default: **On this Mac** or **With an API key**. AI models
+in Settings lets each feature use the other route. Changing the default
+does not remove an exception. The Settings disclosure lists only features
+that currently use a cloud provider.
+
+| Feature | Provider for the key route | What Oats sends |
+| --- | --- | --- |
+| Conversations | OpenAI | Room audio for live transcription. This route does not send transcripts for writing. |
+| Dictation | OpenAI | Dictated audio for transcription. If cleanup is on, the recognized text and cleanup instructions go to OpenAI too. A custom dictionary can supply transcription and cleanup hints. |
+| Writing | The selected writing provider | Transcript text for summaries, titles, topic names and descriptions. Other writing requests can include topic labels, summaries, or context passages, as detailed below. Writing does not send audio. |
+
+The key route needs a usable key for that provider. A missing or refused key
+keeps the feature local. Oats asks for the same provider's key and does not
+choose a different cloud provider. An explicitly selected local route can
+authorize its downloads. A local fallback because a key is missing cannot.
+File uploads and separately enabled integrations have their own settings.
+
+## Automatic, once: Parakeet for Conversations
+
+On eligible Apple Silicon Macs, a local Conversations route can fetch
+Parakeet Ultra from `huggingface.co` and its CDN. Oats requests model files,
+not conversation data. The download waits until setup and does not start
+during a recording. Bundled Whisper, or an eligible installed Turbo, works
+while Parakeet is unavailable.
+
 ## Automatic, once: Whisper Turbo on a fast Mac
 
 | Host                                   | What is fetched                                                                                                                                                  |
@@ -57,13 +86,11 @@ Scope limits that make this safe to state plainly:
 At first launch and after each update, Oats times one 5-second clip on this
 Mac's GPU, on its own speech server, with no connection
 (`src/helpers/deviceTier.js`). When the result says the Mac can run
-`large-v3-turbo` live (`src/helpers/speechTier.mjs`), Oats downloads it once
-setup is done, and only while the speech model follows the default: a model
-the person chose stops it. It never starts while a conversation is
-recorded: it waits for the recording to end. Setup's step "Where Oats
-thinks" names it with its size once the check is done (a second or two
-after launch), and when the person continues with "On this Mac" it starts
-at once. When Oats starts it by itself, a notice in the corner says so once,
+`large-v3-turbo` live (`src/helpers/speechTier.mjs`), Oats can download it
+after setup if local Dictation uses Whisper, or if local Conversations needs
+Whisper without an eligible Parakeet route. The speech model must follow
+the default. The download does not start during a recording.
+When Oats starts it by itself, a notice in the corner says so once,
 with its size, its host and a Cancel button: after setup on a new install
 that went on before the check was done, and at the first launch of this
 version on an existing one, which never sees the setup screen. The sidebar
@@ -80,13 +107,11 @@ Linux, and Macs that measure too slow never fetch it.
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `huggingface.co` and its LFS/CDN hosts | One GGUF file: `google_gemma-4-E4B-it-Q4_K_M.gguf` (5.4 GB, `bartowski/google_gemma-4-E4B-it-GGUF`) with 16 GB of memory or more, else `Qwen_Qwen3.5-4B-Q4_K_M.gguf` (2.7 GB, `bartowski/Qwen_Qwen3.5-4B-GGUF`). Nothing is sent but the request for the file. |
 
-With processing on this computer ("On this Mac", the default), the title and
+With Writing on this computer, the title and
 summary of each conversation are written by a local model. When none is ready
 and the writing setting follows the default, Oats downloads the one this
-computer's memory holds (`src/helpers/writingTier.mjs`): at once when the
-person continues past setup's step "Where Oats thinks" with "On this Mac",
-which names it with its size, or else once setup is done, and never while a
-conversation is recorded: it waits for the recording to end. A model the
+computer's memory holds (`src/helpers/writingTier.mjs`). It waits until
+setup is complete and no recording is active. A model the
 person chose stops it, and so does a
 writing model already on disk. When Oats starts it by itself, a notice in the
 corner says so once, with its size, its host and a Cancel button; the sidebar
@@ -96,8 +121,8 @@ request count includes it, and its disk-space check runs first. A cancelled or
 deleted model is not fetched again unless the person asks for it in Settings
 (`src/helpers/writingModelFetch.js`). After the person deletes any writing
 model, Oats fetches none by itself until they choose a model or press
-Download. Choosing another model, or "With an API key", stops the download.
-With an API key, nothing is fetched.
+Download. Choosing another model, or switching Writing to a key, stops its
+automatic download. A key route in another feature does not change this rule.
 
 ## Explicit user actions
 
@@ -106,7 +131,7 @@ With an API key, nothing is fetched.
 | Your configured search host                                                                               | Re-running a search manually from a question card or a topic-graph node.                     |
 | `huggingface.co` and its LFS/CDN hosts                                                                    | Downloading an optional speech, embedding, or reasoning model, or creating a release bundle. |
 | `github.com` and `objects.githubusercontent.com`                                                          | Downloading an optional runtime helper or a signed release manually.                         |
-| A provider selected by the user (OpenAI, Anthropic, Gemini, Groq, Mistral, Tinfoil, or a custom endpoint) | Only after the user adds a key and selects that provider.                                    |
+| The provider for an active key route (OpenAI, Anthropic, Gemini, Groq, OpenRouter, Tinfoil, or a custom endpoint) | Only for features configured to use that route and its key. |
 | `api.openai.com` or `api.anthropic.com`                                                                   | Adding an OpenAI or Anthropic key, in setup or Settings: one request checks it first.        |
 
 The exact provider hostname is controlled by that provider or by the user's
@@ -128,16 +153,13 @@ provider refuses is not saved, and the provider's reason is shown; an OpenAI
 project key that may not read the model list is saved without the check
 (`src/helpers/keyStatus.mjs`).
 
-A conversation's summary goes to the writing model, by its route, at Finish.
-When no writing model is ready then (none chosen yet, the one on this
-computer still downloading, or "With an API key" and no key yet), the
-conversation waits, and is summarized by the same route once one is
-(`src/stores/summaryQueueStore.ts`): by a model on this computer or the
-person's own server, always; by a cloud provider only if it was already the
-writing model when the conversation finished. A provider chosen since gets an
-earlier conversation only when somebody opens it. A conversation that finished
-with no key goes to the provider whose key the person adds: nothing could be
-sent before. A summary that fails is asked for once more, after 10 seconds.
+A conversation's summary uses the effective Writing route at Finish.
+If the writing model is not ready, the conversation waits in the summary
+queue (`src/stores/summaryQueueStore.ts`). The queue sends to a cloud
+provider only if that provider was active for Writing at Finish. Adding a
+key does not automatically send conversations that finished on the local
+fallback. Opening a conversation can start a summary with the current
+route. Oats does not retry a failed cloud summary in the background.
 
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no
@@ -323,11 +345,17 @@ starts again at zero when Oats launches.
 
 Before a release, capture a fresh-offline session and an online session with no
 provider keys configured and auto-search disabled. Neither should create a
-connection, except on a Mac that qualifies for Whisper Turbo: there the online
-session downloads it once after setup, from `huggingface.co` only (cancel it,
-or choose a speech model first, to check the rest). Then repeat with one
+connection, except for authorized local model downloads after setup. Check
+that Parakeet, Turbo, and the writing model fetch only from their listed
+hosts. Then repeat with one
 deliberate action at a time (model download, manual search, optional BYOK
 request) and record only the expected destination above.
+
+Set the app default to local and only Dictation to use a key. Verify that
+only Dictation sends audio or cleanup text to OpenAI. Repeat with a key
+default and Conversations on this Mac: room audio must stay local even
+when Writing sends transcript text. Remove the key and check that the
+affected features stay local without starting their model downloads.
 
 Then run the auto-search case explicitly: with it enabled, record a conversation
 containing one answered and one unanswered question, and confirm the capture shows
