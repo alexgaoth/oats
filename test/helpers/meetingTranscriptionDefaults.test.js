@@ -99,6 +99,19 @@ test("conversations use the dictation speech model", () => {
   assert.doesNotMatch(body, /state\.meeting(Whisper|Parakeet)Model/);
 });
 
+test("preflight takes the local or cloud choice and engine from the same resolver as Record", () => {
+  const read = (file) => fs.readFileSync(path.join(__dirname, "../../src", file), "utf8");
+  const preflight = read("hooks/useConversationPreflight.ts");
+  const recording = read("stores/meetingRecordingStore.ts");
+  assert.match(recording, /const resolved = selectResolvedMeetingTranscription\(state\)/);
+  assert.match(recording, /if \(resolved\.useLocalWhisper\)/);
+  assert.match(recording, /localProvider: resolved\.localTranscriptionProvider/);
+  for (const field of ["useLocalWhisper", "localTranscriptionProvider"]) {
+    assert.ok(preflight.includes(`selectResolvedMeetingTranscription(state).${field}`), field);
+  }
+  assert.doesNotMatch(preflight, /state\.meetingLocalTranscriptionProvider/);
+});
+
 test("summaries use the cleanup scope's whole configuration", () => {
   const start = STORE.indexOf("export const selectResolvedLLMConfig");
   const body = STORE.slice(start, start + 1200);
