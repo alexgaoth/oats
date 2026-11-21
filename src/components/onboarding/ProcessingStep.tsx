@@ -60,9 +60,11 @@ export const ProcessingStep = forwardRef<
             <p className="px-1 text-[13px] leading-5 text-muted-foreground">
               {downloads.items.length
                 ? t("onboarding.processing.downloads", { models: list })
-                : mac
-                  ? t("onboarding.processing.nothingToDownload")
-                  : t("onboarding.processing.nothingToDownloadComputer")}
+                : downloads.checking
+                  ? t("oats.models.checking")
+                  : mac
+                    ? t("onboarding.processing.nothingToDownload")
+                    : t("onboarding.processing.nothingToDownloadComputer")}
             </p>
           ),
           providers: (

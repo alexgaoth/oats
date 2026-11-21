@@ -1930,7 +1930,7 @@
     "join": "加入並轉錄"
   },
   "oats": {
-    "parakeetFallback": "Parakeet 無法轉錄，Oats 改用 Whisper。",
+    "parakeetFallback": "Parakeet 失敗，正在使用 Whisper。",
     "library": {
       "tools": "對話工具",
       "filter": "篩選對話",
@@ -2540,6 +2540,11 @@
       "percent": "{{percent}}%",
       "needsKey": "需要金鑰",
       "noAddress": "沒有位址",
+      "upgrade": {
+        "speech": "在有背景噪音的室內測試中，{{model}} 辨識出單字的比例比 Whisper Small 高 7.5 個百分點。",
+        "writing": "在會議測試中，{{model}} 每份摘要平均少捏造四項事實。",
+        "size": "下載大小：{{size}}。"
+      },
       "noModel": "沒有模型",
       "addKey": "新增 OpenAI 金鑰",
       "advanced": "進階",

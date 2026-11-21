@@ -1935,7 +1935,7 @@
     "join": "参加して文字起こし"
   },
   "oats": {
-    "parakeetFallback": "Parakeet で文字起こしできなかったため、Oats は Whisper を使用しました。",
+    "parakeetFallback": "Parakeet が失敗しました。Whisper を使用中。",
     "library": {
       "tools": "会話ツール",
       "filter": "会話を絞り込む",
@@ -2545,6 +2545,11 @@
       "percent": "{{percent}}%",
       "needsKey": "キーが必要",
       "noAddress": "アドレスなし",
+      "upgrade": {
+        "speech": "背景音のある部屋でのテストでは、{{model}} が認識できた単語の割合は Whisper Small より 7.5 ポイント高くなりました。",
+        "writing": "会議のテストでは、{{model}} は要約に含まれる事実にない記述が平均で 4 件少なくなりました。",
+        "size": "ダウンロード容量：{{size}}。"
+      },
       "noModel": "モデルなし",
       "addKey": "OpenAI キーを追加",
       "advanced": "詳細設定",
