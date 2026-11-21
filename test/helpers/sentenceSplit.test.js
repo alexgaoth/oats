@@ -114,3 +114,74 @@ test("sentence records receive legacy checks without changing cards or transcrip
   assert.equal(events[0].metadata.sentenceId, "q.2");
   assert.deepEqual(events[1].segmentIds, ["r"]);
 });
+
+test("a reply in the same final excludes later sentences and keeps transcript links", async () => {
+  const cards = [];
+  const events = [];
+  const session = new ConversationAideSession({
+    noteId: 1,
+    onCard: (card) => cards.push(card),
+    insertEvent: async (event) => events.push(event),
+  });
+  const segment = {
+    id: "q",
+    text: "Which metal did you pick? We picked stainless steel. I don't know the cost.",
+    source: "mic",
+  };
+  const records = makeSentenceRecords(segment);
+  session.onFinalizedSentences(segment, records);
+  assert.equal(cards.at(-1).state, "asked");
+  await session.evaluation;
+  await session.shutdown();
+  assert.equal(records[0].answered, "answered");
+  assert.equal(cards.at(-1).state, "answered");
+  assert.equal(events[1].text, "We picked stainless steel.");
+  assert.deepEqual(events[1].segmentIds, ["q"]);
+  assert.equal(events.length, 2);
+});
+
+test("another question leaves the first open and can receive its own sentence reply", async () => {
+  const cards = new Map();
+  let timer;
+  const session = new ConversationAideSession({
+    noteId: 1,
+    onCard: (card) => cards.set(card.id, card),
+    setTimer: (callback, ms) => {
+      assert.equal(ms, 8000);
+      timer = callback;
+      return 1;
+    },
+    clearTimer: () => (timer = null),
+  });
+  const ingest = (id, text) => {
+    const segment = { id, text, source: "mic" };
+    session.onFinalizedSentences(segment, makeSentenceRecords(segment));
+  };
+  ingest("first", "How much will it cost?");
+  assert.equal(typeof timer, "function");
+  ingest("second", "How much have we budgeted?");
+  ingest("reply", "Yeah. We budgeted one hundred dollars. I don't know the exact unit price.");
+  assert.equal(timer, null);
+  await session.evaluation;
+  assert.equal(cards.get("first").state, "asked");
+  assert.equal(cards.get("second").state, "answered");
+  await session.shutdown();
+});
+
+test("a correction after a bare no does not trigger an unknown search", async () => {
+  const cards = [];
+  const searches = [];
+  const session = new ConversationAideSession({
+    noteId: 1,
+    onCard: (card) => cards.push(card),
+    openSearch: async (search) => searches.push(search),
+  });
+  const question = { id: "q", text: "Do you know when it ships?", source: "mic" };
+  const reply = { id: "r", text: "No. The release is this Friday.", source: "mic" };
+  session.onFinalizedSentences(question, makeSentenceRecords(question));
+  session.onFinalizedSentences(reply, makeSentenceRecords(reply));
+  await session.evaluation;
+  await session.shutdown();
+  assert.equal(cards.at(-1).state, "answered");
+  assert.deepEqual(searches, []);
+});

@@ -9,6 +9,7 @@
 //   node scripts/question-eval.mjs audit --replays <tuning cache> --out sample.json
 //   node scripts/question-eval.mjs audit --replays <tuning cache> --labels labels.tsv
 //   node scripts/question-eval.mjs boundaries --ami <dir> --split tune|test
+//   node scripts/question-eval.mjs outcome-bars --a baseline.json --b sentences.json --key rec:<name>
 //
 // A view is `manual` (the transcribers' words and punctuation), `plain` (none of
 // their punctuation) or `rec:<name>`, recognition output from
@@ -248,7 +249,11 @@ async function replaySession(turns) {
     // a recognizer with no partials (Parakeet in a room): the app cannot tell.
     isSpeaking: () =>
       !args["no-hold"] && turns.some((turn) => turn.start * 1000 <= now && now < turn.at),
-    onCard: (card) => cards.set(card.id, { ...cards.get(card.id), ...card }),
+    onCard: (card) => {
+      const previous = cards.get(card.id);
+      const verdictAt = previous?.verdictAt ?? (card.state !== "asked" ? now : null);
+      cards.set(card.id, { ...previous, ...card, verdictAt });
+    },
     onCardRemoved: (id) => cards.delete(id),
     openSearch: async ({ query }) => {
       searches.push({ query, at: now, reply: [...replies.values()].at(-1) ?? "" });
@@ -302,6 +307,12 @@ function loader(dir) {
 const pct = (value) => (value === null ? "-" : value.toFixed(3));
 const ci = (pair) => `[${pair[0].toFixed(3)}, ${pair[1].toFixed(3)}]`;
 
+const RIGHT_READER_STATE = {
+  answered: ["answered", "uncertain"],
+  unknown: ["denied", "uncertain"],
+  open: ["silence", "asked"],
+};
+
 function row(rows) {
   const s = summarize(rows);
   const delays = rows.flatMap((item) => item.delays);
@@ -348,6 +359,7 @@ async function baseline() {
       outcomes[set][view] = { confusion: {}, searches: 0, falseSearches: 0 };
   }
   const perMeeting = {};
+  const replyRows = {};
   let seconds = 0;
   const seen = new Set();
   const readerSaid = readerAnswers(args.reader);
@@ -383,6 +395,13 @@ async function baseline() {
       }
       const { cards: states, searches } = await replaySession(turns);
       const detected = cardsOf(DETECTORS.app ?? BASE_DETECTOR, turns);
+      const firstReply = new Map();
+      for (const pair of meeting.pairs) {
+        const act = meeting.acts.get(pair.target);
+        if (!Number.isFinite(act?.end)) continue;
+        const prior = firstReply.get(pair.source);
+        if (!prior || act.start < prior.start) firstReply.set(pair.source, act);
+      }
       for (const set of SETS) {
         const score = scoreCards(detected, gold[set]);
         const byId = new Map(gold[set].map((question) => [question.id, question]));
@@ -392,12 +411,17 @@ async function baseline() {
           (tally.searchesSaid ?? 0) +
           searches.filter((item) => SAYS_UNKNOWN.test(item.reply)).length;
         tally.seconds = (tally.seconds ?? 0) + meeting.seconds;
-        (tally.searchList ??= []).push(
-          ...searches.map((item) => `${item.query.slice(0, 90)} => ${item.reply.slice(0, 90)}`)
-        );
+        if (args.split !== "test" && args.split !== "audio") {
+          (tally.searchList ??= []).push(
+            ...searches.map((item) => `${item.query.slice(0, 90)} => ${item.reply.slice(0, 90)}`)
+          );
+        }
+        const replies = { id, right: 0, scored: 0, withReply: 0, delay: {} };
+        if (set === "strict") (replyRows[view] ??= []).push(replies);
         const queries = new Set(searches.map((search) => search.query));
         detected.forEach((card, index) => {
-          const state = states.get(card.id)?.state ?? "gone";
+          const result = states.get(card.id);
+          const state = result?.state ?? "gone";
           const question = byId.get(score.verdicts[index]);
           const goldReply = question ? question.reply : "not a question";
           tally.confusion[goldReply] ??= {};
@@ -407,6 +431,15 @@ async function baseline() {
             tally.read ??= {};
             tally.read[read] ??= {};
             tally.read[read][state] = (tally.read[read][state] ?? 0) + 1;
+            replies.scored += 1;
+            replies.right += Number(RIGHT_READER_STATE[read]?.includes(state) ?? false);
+          }
+          const reply = firstReply.get(question?.id);
+          if (reply) {
+            replies.withReply += 1;
+            if (result?.verdictAt != null) {
+              replies.delay[card.id] = result.verdictAt - reply.end * 1000;
+            }
           }
           if (state === "denied" && !question && queries.has(card.quote)) tally.falseSearches += 1;
         });
@@ -493,8 +526,47 @@ async function baseline() {
           ),
         ])
     );
-    fs.writeFileSync(args.json, JSON.stringify({ results, outcomes, ids: [...seen], rows }));
+    fs.writeFileSync(
+      args.json,
+      JSON.stringify({ results, outcomes, ids: [...seen], rows, replyRows })
+    );
   }
+}
+
+function outcomeBars() {
+  const read = (file) => JSON.parse(fs.readFileSync(file, "utf8")).replyRows[args.key];
+  const a = read(args.a);
+  const b = read(args.b);
+  if (!a?.length || !b || a.length !== b.length || a.some((row, i) => row.id !== b[i].id)) {
+    throw new Error("Compare the same view and meetings");
+  }
+  const count = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
+  const accuracy = (rows) => count(rows, "right") / count(rows, "scored");
+  const seconds = (ms) => (ms / 1000).toFixed(2);
+  for (const [name, rows] of [
+    ["a", a],
+    ["b", b],
+  ]) {
+    const delays = rows.flatMap((row) => Object.values(row.delay));
+    console.log(`${name}: outcome right ${pct(accuracy(rows))} of ${count(rows, "scored")}`);
+    console.log(
+      `${name}: reply-to-state median ${seconds(median(delays))} s, p90 ${seconds(quantile(delays, 0.9))} s, ` +
+        `${delays.length}/${count(rows, "withReply")} changed; ${delays.filter((ms) => ms < 0).length} before the reference reply ended`
+    );
+  }
+  const change = (oldRows, newRows) => accuracy(newRows) - accuracy(oldRows);
+  const paired = b.map((row, i) =>
+    Object.entries(row.delay)
+      .filter(([id]) => a[i].delay[id] !== undefined)
+      .map(([id, ms]) => ms - a[i].delay[id])
+  );
+  const medianChange = (rows) => median(rows.flat());
+  console.log(`outcome change b - a: ${pct(change(a, b))} ${ci(bootstrap([a, b], change))}`);
+  console.log(
+    `paired delay b - a: median ${seconds(medianChange(paired))} s ` +
+      `[${bootstrap([paired], medianChange).map(seconds).join(", ")}] ` +
+      `on ${paired.flat().length} cards`
+  );
 }
 
 /** Method a against method b on the same meetings, as the bars read it. */
@@ -1178,6 +1250,7 @@ else if (command === "refine") await refine();
 else if (command === "errors") await errors();
 else if (command === "audit") audit();
 else if (command === "boundaries") boundaries();
+else if (command === "outcome-bars") outcomeBars();
 else {
   console.error(`unknown command ${command}`);
   process.exit(2);
