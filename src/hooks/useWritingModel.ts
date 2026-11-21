@@ -4,6 +4,7 @@ import { endModelDownload, noteModelDownload } from "../stores/modelDownloadStor
 import { useMeetingRecordingStore } from "../stores/meetingRecordingStore";
 import {
   currentDefaultWritingModel,
+  localSetupFor,
   useSettingsStore,
   writingModelFollowsDefault,
 } from "../stores/settingsStore";
@@ -166,26 +167,21 @@ export function useWritingModelDownload(): void {
   const mode = useSettingsStore((state) => state.cleanupMode);
   const model = useSettingsStore((state) => state.cleanupModel);
   const recording = useMeetingRecordingStore((state) => state.isRecording);
-  const choice = useMemo(
-    () =>
-      mode === "local"
-        ? currentDefaultWritingModel(
-            { cleanupMode: mode, openaiApiKey: "", anthropicApiKey: "" },
-            tier
-          )
-        : null,
-    [mode, tier]
-  );
-  const fetch = shouldFetchWritingModel({
-    choice,
-    setupDone: localStorage.getItem("onboardingCompleted") === "true",
-    // `model` is in the effect's list for this: a choice made in Settings ends it.
-    followsDefault: writingModelFollowsDefault(),
-    local: mode === "local",
-    recording,
-    writing: tier?.writing ?? NO_WRITING,
-  });
-  const modelId = choice?.model ?? "";
+  const authorized = useSettingsStore((state) => state.localSetupAuthorized);
+  const plan = useMemo(() => localSetupFor(tier, "en", "local"), [tier]);
+  const fetch =
+    authorized &&
+    Boolean(plan.downloads.writing) &&
+    shouldFetchWritingModel({
+      choice: plan.writing.recommended,
+      setupDone: localStorage.getItem("onboardingCompleted") === "true",
+      // `model` is in the effect's list for this: a choice made in Settings ends it.
+      followsDefault: writingModelFollowsDefault(),
+      local: mode === "local",
+      recording,
+      writing: tier?.writing ?? NO_WRITING,
+    });
+  const modelId = plan.downloads.writing;
 
   // The summaries and the record hear model downloads through the download
   // store (stores/modelDownloadStore.ts). Oats' own download of the writing

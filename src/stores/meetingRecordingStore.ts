@@ -2,8 +2,10 @@ import { create } from "zustand";
 import {
   DEFAULT_WHISPER_MODEL,
   getSettings,
+  roomSpeechPlan,
   selectResolvedMeetingTranscription,
 } from "./settingsStore";
+import { useDeviceTierStore } from "./deviceTierStore";
 import { useStreamingProvidersStore } from "./streamingProvidersStore";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { reconcileSavedMicSelection } from "../helpers/micSelectionRecovery";
@@ -30,6 +32,7 @@ import {
 import { ConversationAideSession } from "../helpers/conversationAide";
 import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
 import {
+  askTopicProposal,
   liveTopicSnapshot,
   namedTopicSnapshot,
   observeTopics,
@@ -48,6 +51,7 @@ import { addMoment, parseMoments } from "../helpers/conversationMoments.mjs";
 import { assignSpeakers, speakerNumber } from "../helpers/speakerTurns.mjs";
 import { TranscriptLag } from "../helpers/transcriptLag.mjs";
 import { SegmentActivityState } from "../helpers/segmentActivity.mjs";
+import { makeSentenceRecords } from "../helpers/sentenceSplit.mjs";
 import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
   ContextCheck,
@@ -55,9 +59,25 @@ import type {
   ConversationSuggestion,
   ConversationTopicSnapshot,
   OpenThread,
+  QuestionOutcome,
 } from "../types/conversationEvents";
 
 export type ConversationRecordingMode = "online" | "in_room";
+
+export interface SentenceRecord {
+  id: string;
+  segmentId: string;
+  start: number;
+  end: number;
+  text: string;
+  startMs: number;
+  endMs: number;
+  source: "mic" | "system";
+  question: { quote: string } | null;
+  answered: Exclude<QuestionOutcome, "asked"> | null;
+  topic: unknown;
+  link: unknown;
+}
 
 export interface TranscriptSegment {
   id: string;
@@ -71,6 +91,8 @@ export interface TranscriptSegment {
    */
   startMs?: number;
   endMs?: number;
+  /** Live records for this final, not part of the stored transcript format. */
+  sentences?: readonly SentenceRecord[];
   speaker?: string;
   speakerName?: string;
   speakerIsPlaceholder?: boolean;
@@ -253,6 +275,26 @@ const getMeetingTranscriptionOptions = () => {
     provider.models[0]?.id;
   return { provider: `${provider.id}-realtime` as const, model, mode };
 };
+
+async function getRoomTranscriptionOptions() {
+  const shared = getMeetingTranscriptionOptions();
+  const state = getSettings();
+  const tier = useDeviceTierStore.getState().tier;
+  const planned = roomSpeechPlan(state, tier);
+  if (!planned) return shared;
+  // Read the file again for each new room. An incomplete download or a model
+  // removed after Settings last opened must not delay the first recording.
+  const status = await window.electronAPI
+    ?.checkParakeetModelStatus?.(planned.speech.model)
+    .catch(() => null);
+  const { readySpeech } = (status?.downloaded && roomSpeechPlan(state, tier, true)) || planned;
+  return {
+    provider: "local" as const,
+    localProvider: readySpeech.engine === "parakeet" ? ("nvidia" as const) : ("whisper" as const),
+    localModel: readySpeech.model,
+    language: getBaseLanguageCode(state.preferredLanguage),
+  };
+}
 
 const stopMediaStream = (stream: MediaStream | null) => {
   try {
@@ -763,10 +805,11 @@ function pushConversationCards() {
   });
 }
 
-// Topic tracking runs on every finalized utterance for the whole recording, so it
-// stays lexical and local — no model call, no network. It feeds the conversation
-// flow card live and is snapshotted onto the note when recording stops.
+// The local tracker runs on every finalized utterance. It feeds the live
+// conversation flow and saves a snapshot when recording stops.
 function trackConversationTopic(segment: TranscriptSegment) {
+  // `segment.sentences` is the sentence input for the topic checks. The
+  // existing tracker, vectors and namers still use the original text and ID.
   if (!conversationTopicTracker) return;
   const at = segment.timestamp ?? Date.now();
   conversationTopicTracker.onUtterance({
@@ -817,6 +860,35 @@ function publishTopicNames() {
       conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
     ),
   });
+}
+
+// The tracker outlives Stop to save the final topics. Its live clock does not.
+function startTopicProposalClock(tracker: ConversationTopicTracker, startedAt: number) {
+  const tickMs = 15_000;
+  let timer: ReturnType<typeof setTimeout>;
+  let expiry: ReturnType<typeof setTimeout> | undefined;
+  const update = () => {
+    if (tracker.tickProposals(Date.now())) publishTopicNames();
+  };
+  const tick = () => {
+    const now = Date.now();
+    timer = setTimeout(tick, tickMs - ((now - startedAt) % tickMs));
+    update();
+  };
+  timer = setTimeout(tick, tickMs - ((Date.now() - startedAt) % tickMs));
+  const unsubscribe = useMeetingRecordingStore.subscribe((state) => {
+    if (state.isRecording && state.recordingStartedAt === startedAt) return;
+    clearTimeout(timer);
+    clearTimeout(expiry);
+    unsubscribe();
+  });
+  return (deadline: number | null) => {
+    clearTimeout(expiry);
+    expiry =
+      deadline !== null && useMeetingRecordingStore.getState().isRecording
+        ? setTimeout(update, Math.max(0, Math.ceil(deadline) - Date.now()))
+        : undefined;
+  };
 }
 
 // Topic snapshots of past conversations, loaded once when a recording starts.
@@ -1499,9 +1571,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   speakerLocks = locks;
   systemPartialSpeakerIdValue = null;
 
+  const recordingStartedAt = Date.now();
   useMeetingRecordingStore.setState({
     isRecording: true,
-    recordingStartedAt: Date.now(),
+    recordingStartedAt,
     isTranscribing: true,
     recordingNoteId: args.noteId,
     recordingNoteTitle: args.noteTitle,
@@ -1532,9 +1605,32 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // change of subject, so one narrow subject does not fill the whole lane.
   const roomInEnglish =
     recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en";
-  conversationTopicTracker = new ConversationTopicTracker({
+  const proposalGreyEnabled = roomInEnglish && getSettings().topicProposalGreyEnabled;
+  let scheduleProposalExpiry: ((deadline: number | null) => void) | undefined;
+  const tracker: ConversationTopicTracker = new ConversationTopicTracker({
     detector: roomInEnglish ? { split: LONG_TOPIC_SPLIT } : false,
+    proposalStartedAt: recordingStartedAt,
+    proposalGreyEnabled,
+    proposalJudge: proposalGreyEnabled
+      ? {
+          ask: askTopicProposal,
+          text: (id: string) =>
+            useMeetingRecordingStore.getState().segments.find((segment) => segment.id === id)
+              ?.text ?? "",
+          active: () =>
+            conversationTopicTracker === tracker &&
+            useMeetingRecordingStore.getState().isRecording &&
+            getSettings().topicProposalJudgeEnabled,
+          now: () => Date.now() / 1000,
+        }
+      : undefined,
+    onProposalCut: publishTopicNames,
+    onProposalDeadline: (deadline: number | null) => scheduleProposalExpiry?.(deadline),
   });
+  conversationTopicTracker = tracker;
+  if (proposalGreyEnabled) {
+    scheduleProposalExpiry = startTopicProposalClock(tracker, recordingStartedAt);
+  }
   // Each turn and each candidate name is embedded on this computer, so the
   // tracker can cut and name a topic by meaning; a name that arrives is drawn
   // at once.
@@ -1568,11 +1664,16 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       prepareMeetingSystemAudioCapture(initialSystemAudioAccess, recordingMode);
 
     const [startResult, micResult, initialSystemCaptureResult] = await Promise.all([
-      window.electronAPI?.meetingTranscriptionStart?.({
-        ...getMeetingTranscriptionOptions(),
-        noteId: args.noteId ?? null,
-        recordingMode,
-      }),
+      (recordingMode === "in_room"
+        ? getRoomTranscriptionOptions()
+        : Promise.resolve(getMeetingTranscriptionOptions())
+      ).then((options) =>
+        window.electronAPI?.meetingTranscriptionStart?.({
+          ...options,
+          noteId: args.noteId ?? null,
+          recordingMode,
+        })
+      ),
       getMeetingMicConstraints().then(async (constraints) => {
         try {
           return await navigator.mediaDevices.getUserMedia(constraints);
@@ -1789,7 +1890,11 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
             })
           : provisional;
 
-        const prev = useMeetingRecordingStore.getState().segments;
+        const { segments: prev, recordingStartedAt } = useMeetingRecordingStore.getState();
+        seg.sentences = makeSentenceRecords(
+          seg,
+          Math.max(0, Date.now() - (recordingStartedAt ?? Date.now()))
+        );
         const ts = seg.timestamp ?? Infinity;
         let i = prev.length;
         while (i > 0 && (prev[i - 1].timestamp ?? 0) > ts) i--;
@@ -1803,7 +1908,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
           transcript: buildTranscriptText(next),
           ...partialPatch,
         });
-        conversationAideSession?.onFinalized(seg);
+        conversationAideSession?.onFinalizedSentences(seg, seg.sentences);
         trackConversationTopic(seg);
         // When a turn last landed, which is what tells a stalled backend apart
         // from a quiet room: the microphone level cannot distinguish them.

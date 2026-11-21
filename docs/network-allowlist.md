@@ -213,6 +213,13 @@ the check asks for the refusal fallback above. With any other provider, a
 custom endpoint, a server of the person's own or a model on this computer, the
 check is off and nothing changes.
 
+The optional topic proposal judge and grey marks are both off by default
+(`topicProposalJudgeEnabled` and `topicProposalGreyEnabled`). When both are
+enabled for an English in-room recording on that key route, the judge sends one
+excerpt per open grey mark to the same check model. The excerpt contains
+finalized transcript turns that start within 90 seconds before and 15 seconds
+after the pause. It contains no audio. This does not replace either live loop.
+
 Linking conversations on the Global conversations board happens on this
 computer: each topic name is embedded by the bundled all-MiniLM-L6-v2, and
 nothing leaves (`src/helpers/conversationLinks.mjs`). With OpenAI or Anthropic
