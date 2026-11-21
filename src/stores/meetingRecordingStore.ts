@@ -2,8 +2,10 @@ import { create } from "zustand";
 import {
   DEFAULT_WHISPER_MODEL,
   getSettings,
+  roomSpeechPlan,
   selectResolvedMeetingTranscription,
 } from "./settingsStore";
+import { useDeviceTierStore } from "./deviceTierStore";
 import { useStreamingProvidersStore } from "./streamingProvidersStore";
 import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { reconcileSavedMicSelection } from "../helpers/micSelectionRecovery";
@@ -273,6 +275,26 @@ const getMeetingTranscriptionOptions = () => {
     provider.models[0]?.id;
   return { provider: `${provider.id}-realtime` as const, model, mode };
 };
+
+async function getRoomTranscriptionOptions() {
+  const shared = getMeetingTranscriptionOptions();
+  const state = getSettings();
+  const tier = useDeviceTierStore.getState().tier;
+  const planned = roomSpeechPlan(state, tier);
+  if (!planned) return shared;
+  // Read the file again for each new room. An incomplete download or a model
+  // removed after Settings last opened must not delay the first recording.
+  const status = await window.electronAPI
+    ?.checkParakeetModelStatus?.(planned.speech.model)
+    .catch(() => null);
+  const { readySpeech } = (status?.downloaded && roomSpeechPlan(state, tier, true)) || planned;
+  return {
+    provider: "local" as const,
+    localProvider: readySpeech.engine === "parakeet" ? ("nvidia" as const) : ("whisper" as const),
+    localModel: readySpeech.model,
+    language: getBaseLanguageCode(state.preferredLanguage),
+  };
+}
 
 const stopMediaStream = (stream: MediaStream | null) => {
   try {
@@ -1642,11 +1664,16 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       prepareMeetingSystemAudioCapture(initialSystemAudioAccess, recordingMode);
 
     const [startResult, micResult, initialSystemCaptureResult] = await Promise.all([
-      window.electronAPI?.meetingTranscriptionStart?.({
-        ...getMeetingTranscriptionOptions(),
-        noteId: args.noteId ?? null,
-        recordingMode,
-      }),
+      (recordingMode === "in_room"
+        ? getRoomTranscriptionOptions()
+        : Promise.resolve(getMeetingTranscriptionOptions())
+      ).then((options) =>
+        window.electronAPI?.meetingTranscriptionStart?.({
+          ...options,
+          noteId: args.noteId ?? null,
+          recordingMode,
+        })
+      ),
       getMeetingMicConstraints().then(async (constraints) => {
         try {
           return await navigator.mediaDevices.getUserMedia(constraints);

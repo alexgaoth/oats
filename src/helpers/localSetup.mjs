@@ -9,6 +9,7 @@ import {
 } from "./writingTier.mjs";
 
 export const PARAKEET_ROOM_MODEL = "parakeet-ultra-ane";
+const PARAKEET_ROOM_DEFAULT = true;
 
 /**
  * Plan local setup independently of the active cloud models. Bundled Whisper
@@ -32,7 +33,7 @@ export function planLocalSetup({
   processing = null,
   openaiKey = false,
   language = "en",
-  parakeetRoomDefault = false,
+  parakeetRoomDefault = PARAKEET_ROOM_DEFAULT,
 } = {}) {
   const { platform, arch, memoryBytes, macosVersion } = device;
   const bundle = bundledWhisperModels(platform, arch);
@@ -57,12 +58,14 @@ export function planLocalSetup({
   const whisperReady = resolveWhisper(whisperSetting);
   const whisperRecommended =
     whisperChoice.model === TURBO_MODEL ? TURBO_MODEL : resolveWhisper(whisperChoice.model);
+  const cloudSpeech = processing === "providers" && openaiKey;
 
   // docs/speech-round-2.md: Ultra with 8 s of context gained 15.7 points of
   // content recall over Turbo in steady sound on eight English AMI meetings.
   // Do not generalize this default to unmeasured languages or older Macs.
   const parakeet =
     parakeetRoomDefault === true &&
+    (processing === "local" || (processing === "providers" && !cloudSpeech)) &&
     platform === "darwin" &&
     arch === "arm64" &&
     Number(macosVersion?.split(".")[0]) >= 14 &&
@@ -71,7 +74,9 @@ export function planLocalSetup({
   const speech = parakeet
     ? { engine: "parakeet", model: PARAKEET_ROOM_MODEL }
     : { engine: "whisper", model: whisperRecommended };
-  const readySpeech = parakeetReady ? speech : { engine: "whisper", model: whisperReady };
+  const readySpeech = parakeetReady
+    ? speech
+    : { engine: "whisper", model: parakeet ? resolveWhisper(bundle.model) : whisperReady };
 
   // docs/summaries.md: Gemma averaged 1.71 invented facts vs Qwen's 5.71
   // (24 AMI meetings). Gemma peaks at 6.8 GB, Qwen at 5.6 GB. Keep Qwen
@@ -99,7 +104,7 @@ export function planLocalSetup({
   // both key routes, but never auto-download weights in key mode.
   return {
     routes: {
-      speech: processing === "providers" && openaiKey ? "providers" : "local",
+      speech: cloudSpeech ? "providers" : "local",
       writing: processing === "providers" ? "providers" : "local",
     },
     speech,

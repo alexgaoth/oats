@@ -37,13 +37,11 @@ for (const os of ["13.6", "14.0", "26.1"]) {
       const device = mac(gb, { macosVersion: os });
       const fast = planLocalSetup({ device, processing: "local" });
       const slow = planLocalSetup({ device: { ...device, smallClipMs: 250 }, processing: "local" });
-      assert.equal(fast.speech.engine, "whisper", "Parakeet defaults to off");
-      assert.equal(fast.speech.model, gb === 8 ? "small.en" : TURBO);
-      assert.equal(slow.speech.model, "small.en");
+      assert.equal(fast.speech.engine, os === "13.6" ? "whisper" : "parakeet");
+      assert.equal(fast.speech.model, os === "13.6" ? (gb === 8 ? "small.en" : TURBO) : ULTRA);
+      assert.equal(slow.speech.model, os === "13.6" ? "small.en" : ULTRA);
       assert.equal(fast.downloads.writing, gb === 8 ? QWEN : GEMMA);
-      const flagged = planLocalSetup({ device, processing: "local", parakeetRoomDefault: true });
-      assert.equal(flagged.speech.model, os === "13.6" ? fast.speech.model : ULTRA);
-      assert.equal(flagged.readySpeech.model, "small.en", "bundled Whisper is the fallback");
+      assert.equal(fast.readySpeech.model, "small.en", "bundled Whisper is the fallback");
     });
   }
 }
@@ -51,7 +49,7 @@ for (const os of ["13.6", "14.0", "26.1"]) {
 test("an installed recommendation needs no download", () => {
   const plan = planLocalSetup({
     device: mac(24),
-    installed: { whisper: [TURBO], writing: [GEMMA] },
+    installed: { whisper: [TURBO], writing: [GEMMA], parakeet: [ULTRA] },
     processing: "local",
   });
   assert.deepEqual(plan.downloads, { speech: null, writing: null });
@@ -62,7 +60,7 @@ test("an installed recommendation needs no download", () => {
 test("a usable installed writer is kept without an automatic upgrade", () => {
   const plan = planLocalSetup({
     device: mac(24, { smallClipMs: 250 }),
-    installed: { writing: [QWEN] },
+    installed: { writing: [QWEN], parakeet: [ULTRA] },
     processing: "local",
   });
   assert.deepEqual(plan.downloads, { speech: null, writing: null });
@@ -81,6 +79,7 @@ test("a key configures local speech without authorizing downloads", () => {
     assert.equal(plan.routes.speech, openaiKey ? "providers" : "local");
     assert.equal(plan.routes.writing, "providers");
     assert.equal(plan.whisper.setting, TURBO);
+    assert.equal(plan.speech.engine, openaiKey ? "whisper" : "parakeet");
     assert.deepEqual(plan.downloads, { speech: null, writing: null });
   }
   assert.deepEqual(planLocalSetup({ device: mac(32) }).downloads, { speech: null, writing: null });
@@ -106,16 +105,30 @@ test("language detection retains its speed cost and never uses an English-only f
   assert.equal(plan.downloads.speech, null);
 });
 
-test("an installed Parakeet model is ready only with the setting on", () => {
+test("an installed Parakeet model is ready unless the default is disabled", () => {
   const options = {
     device: mac(8),
     installed: { parakeet: [ULTRA], writing: [QWEN] },
     processing: "local",
   };
-  assert.equal(planLocalSetup(options).readySpeech.model, "small.en");
-  const flagged = planLocalSetup({ ...options, parakeetRoomDefault: true });
-  assert.equal(flagged.readySpeech.model, ULTRA);
-  assert.deepEqual(flagged.downloads, { speech: null, writing: null });
+  assert.equal(
+    planLocalSetup({ ...options, parakeetRoomDefault: false }).readySpeech.model,
+    "small.en"
+  );
+  const plan = planLocalSetup(options);
+  assert.equal(plan.readySpeech.model, ULTRA);
+  assert.deepEqual(plan.downloads, { speech: null, writing: null });
+});
+
+test("a first in-room recording uses bundled Whisper if Parakeet is missing, even with Turbo installed", () => {
+  const plan = planLocalSetup({
+    device: mac(48),
+    installed: { whisper: [TURBO] },
+    processing: "local",
+  });
+  assert.deepEqual(plan.readySpeech, { engine: "whisper", model: "small.en" });
+  assert.deepEqual(plan.downloads.speech, { engine: "parakeet", model: ULTRA });
+  assert.equal(plan.whisper.setting, TURBO, "dictation keeps its independent model");
 });
 
 test("the hint only recommends a measured upgrade this Mac can use", () => {
@@ -126,7 +139,10 @@ test("the hint only recommends a measured upgrade this Mac can use", () => {
   assert.equal(localUpgradeHint({ plan: plan(16), ...active }), "speech");
   assert.equal(localUpgradeHint({ plan: plan(16, { smallClipMs: 250 }), ...active }), "writing");
   assert.equal(localUpgradeHint({ plan: plan(16), ...active, recording: true }), null);
-  assert.equal(localUpgradeHint({ plan: plan(16), activeWhisper: TURBO, activeWriter: GEMMA }), null);
+  assert.equal(
+    localUpgradeHint({ plan: plan(16), activeWhisper: TURBO, activeWriter: GEMMA }),
+    null
+  );
   assert.equal(localUpgradeHint({ plan: plan(16), activeWhisper: "small", language: "de" }), null);
   assert.equal(localUpgradeHint({ plan: plan(16) }), null, "cloud does not need a local upgrade");
 });

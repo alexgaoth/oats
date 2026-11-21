@@ -576,7 +576,7 @@ test("choosing local at setup clears only the planned downloads' earlier decline
   try {
     const gemma = "gemma-4-e4b-it-q4_k_m";
     const qwen = "qwen3.5-4b-q4_k_m";
-    const { tier } = tierFor(env);
+    const { tier } = tierFor(env, { detect: async () => ({ ...M5_PRO, macosVersion: "13.6" }) });
     await tier.ensureMeasured();
     tier.cancelUpgrade();
     tier.writing.deleted([gemma, qwen]);
@@ -604,7 +604,8 @@ test("choosing local at setup clears only the planned downloads' earlier decline
 test("setup can finish before the speed check clears an earlier Turbo decline", async (t) => {
   const env = setup();
   t.after(env.cleanup);
-  const { tier } = tierFor(env);
+  const detect = async () => ({ ...M5_PRO, macosVersion: "13.6" });
+  const { tier } = tierFor(env, { detect });
   await tier.ensureMeasured();
   tier.cancelUpgrade();
 
@@ -612,6 +613,7 @@ test("setup can finish before the speed check clears an earlier Turbo decline", 
   const { promise: waitForClip, resolve: finishClip } = Promise.withResolvers();
   const { tier: updated } = tierFor(env, {
     appVersion: "0.4.0",
+    detect,
     time: async () => {
       startCheck();
       await waitForClip;
