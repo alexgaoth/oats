@@ -42,14 +42,8 @@ import {
   topicNames,
 } from "./lib/topic-corpus.mjs";
 import { contentWords } from "../src/helpers/conversationTopics.mjs";
-import {
-  CHANGE_RULE,
-  LONG_TOPIC_SPLIT,
-  TopicChangeDetector,
-  changeScore,
-  gapFeatures,
-  makeTurn,
-} from "../src/helpers/topicChange.mjs";
+import { LONG_TOPIC_SPLIT, TopicChangeDetector, makeTurn } from "../src/helpers/topicChange.mjs";
+import { PROPOSAL_RULE, TopicProposals, proposalScore } from "../src/helpers/topicProposals.mjs";
 
 const { values: args } = parseArgs({
   options: {
@@ -90,8 +84,6 @@ const THRESHOLDS = numbers(args.thresholds);
 const CAPS = numbers(args.caps);
 const CONFIRM_S = Number(args.confirm);
 const TOLERANCE_S = Number(args.tolerance);
-// A pause the detector has decided: read at `lag` s, held `hold` s, plus a turn.
-const DECIDED_S = CHANGE_RULE.lag + CHANGE_RULE.hold + 5;
 // Each scheduled r alone, and two steps that grow with what is heard.
 const SCHEDULES = [
   ...LAGS.map((r) => [r]),
@@ -106,7 +98,6 @@ const SCHEDULES = [
     s.every((r) => LAGS.includes(typeof r === "string" ? Number(r.slice(1)) : r))
   ),
 ];
-const strongCue = (turn) => Boolean(turn.cues?.phnext || turn.cues?.phlets);
 
 // --- Meetings: the same sets as scripts/topic-loop-eval.mjs.
 
@@ -190,7 +181,6 @@ async function loadMeeting(id) {
   const early = new Map();
   for (const r of LAGS) {
     const score = new Float64Array(turns.length).fill(Number.NaN);
-    const ready = new Float64Array(turns.length).fill(Number.POSITIVE_INFINITY);
     const learned = EARLY.has(r)
       ? JSON.parse(fs.readFileSync(path.join(EARLY.get(r), `${id}.json`), "utf8")).scores
       : null;
@@ -198,16 +188,9 @@ async function loadMeeting(id) {
       throw new Error(`${id}: ${learned.length} early scores for ${turns.length - 1} pauses`);
     }
     for (let g = 1; g < turns.length; g += 1) {
-      const features = gapFeatures(turns, g, { lag: r, firstSeen });
-      score[g] = features.E30 === 0 ? 0 : learned ? learned[g - 1] : changeScore(features);
-      const at = turns[g].start;
-      let landed = turns[g].end;
-      for (let j = g + 1; j < turns.length && turns[j].start < at + r; j += 1) {
-        landed = Math.max(landed, turns[j].end);
-      }
-      ready[g] = Math.max(landed, at + r);
+      score[g] = proposalScore({ turns, firstSeen }, g, r, learned?.[g - 1]);
     }
-    early.set(r, { score, ready });
+    early.set(r, score);
   }
 
   // Real changes: where AMI's top-level topic changes.
@@ -217,68 +200,37 @@ async function loadMeeting(id) {
     if (labels[index] !== labels[index - 1]) real.push(utterances[index].start);
   }
   const end = turns.length ? turns.at(-1).end : 0;
-  return { id, turns, drawn, early, real, end };
+  return { id, turns, firstSeen, drawn, early, real, end };
 }
 
 // --- Grey marks under one rule.
 
 function simulate(meeting, rule) {
-  const { turns, drawn, early } = meeting;
-  const marks = [];
-  const open = [];
-  const solid = [];
-  const taken = new Uint8Array(turns.length);
+  const { turns, firstSeen, drawn, early } = meeting;
+  const replay = { turns: [], firstSeen, cuts: [] };
+  const marks = new Map();
+  const proposals = new TopicProposals(replay, {
+    rule: { ...rule, confirm: CONFIRM_S },
+    score: (g, r) => early.get(r)[g],
+    onChange(mark) {
+      if (mark.state === "grey") marks.set(mark.id, { ...mark, raisedAt: mark.since });
+      else Object.assign(marks.get(mark.id), { state: mark.state, resolvedAt: mark.since });
+    },
+  });
   let nextDrawn = 0;
-  let first = 1;
-  const last = meeting.end + DECIDED_S + rule.slice;
+  const last = meeting.end + PROPOSAL_RULE.expiresAfter + rule.slice;
   for (let now = rule.slice; now <= last; now += rule.slice) {
-    while (nextDrawn < drawn.length && drawn[nextDrawn].drawnAt <= now)
-      solid.push(drawn[nextDrawn++]);
-    for (let index = open.length - 1; index >= 0; index -= 1) {
-      const mark = open[index];
-      const hit = solid.find((cut) => Math.abs(cut.at - mark.at) <= CONFIRM_S);
-      if (hit) {
-        mark.state = "solid";
-        mark.resolvedAt = hit.drawnAt;
-      } else if (now >= mark.at + DECIDED_S) {
-        mark.state = "faded";
-        mark.resolvedAt = now;
-      } else continue;
-      open.splice(index, 1);
+    while (replay.turns.length < turns.length && turns[replay.turns.length].end <= now) {
+      replay.turns.push(turns[replay.turns.length]);
     }
-    if (open.length >= rule.cap) continue;
-    while (first < turns.length && turns[first].start <= now - DECIDED_S) first += 1;
-    const lastSolid = solid.at(-1);
-    let best = null;
-    for (let g = first; g < turns.length && turns[g].start <= now; g += 1) {
-      if (taken[g]) continue;
-      const at = turns[g].start;
-      if (lastSolid && at - lastSolid.at < CHANGE_RULE.spacing) continue;
-      if (solid.some((cut) => Math.abs(cut.at - at) <= CONFIRM_S)) continue;
-      if (open.some((mark) => Math.abs(mark.at - at) < rule.slice)) continue;
-      let score = null;
-      for (const entry of rule.schedule) {
-        const gated = typeof entry === "string";
-        const r = gated ? Number(entry.slice(1)) : entry;
-        if (gated && !strongCue(turns[g])) continue;
-        const value = early.get(r);
-        if (value.ready[g] <= now) score = value.score[g];
-      }
-      if (score === null || score < rule.threshold) continue;
-      if (!best || score > best.score) best = { g, at, score };
+    while (nextDrawn < drawn.length && drawn[nextDrawn].drawnAt <= now) {
+      const cut = drawn[nextDrawn++];
+      replay.cuts.push(cut.g);
+      proposals.observeCuts(cut.drawnAt);
     }
-    if (best) {
-      const mark = { ...best, raisedAt: now, state: "open" };
-      taken[best.g] = 1;
-      marks.push(mark);
-      open.push(mark);
-    }
+    proposals.advance(now, Math.min(now, turns[replay.turns.length]?.start ?? now));
   }
-  for (const mark of open) {
-    mark.state = "faded";
-    mark.resolvedAt = last;
-  }
-  return marks;
+  return [...marks.values()];
 }
 
 // --- Scores.

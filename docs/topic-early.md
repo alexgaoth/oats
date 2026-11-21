@@ -84,6 +84,18 @@ Today, the solid line only: 7.2 cuts an hour, 63% within 60 s of a real change, 
 
 The intervals are 95%, by bootstrap over meetings.
 
+### Shared app and replay rule
+
+The replay now uses `src/helpers/topicProposals.mjs`. The grid result files
+matched the original replay byte for byte on learn83 and eval24 for the
+15 s slice, 0.45 threshold and one open mark. The frozen-rule results and
+their intervals also matched for both rules.
+
+| Set     | Primary rule fades/h | Grey right | Solid cuts with an earlier grey | Mean lead over found changes |
+| ------- | -------------------: | ---------: | ------------------------------: | ----------------------------: |
+| learn83 | 2.1                  | 87%        | 48%                             | 14.5 s                        |
+| eval24  | 2.1                  | 75%        | 46%                             | 14.6 s                        |
+
 Against the bar:
 
 1. **Faded marks:** 2.1 an hour against a bar of 2. The interval holds 2: met at the edge.
