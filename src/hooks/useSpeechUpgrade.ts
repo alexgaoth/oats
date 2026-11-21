@@ -4,6 +4,7 @@ import { useMeetingRecordingStore } from "../stores/meetingRecordingStore";
 import {
   localSetupFor,
   roomSpeechPlan,
+  selectFeatureRoute,
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../stores/settingsStore";
@@ -19,13 +20,13 @@ import {
 
 function workspaceIdle() {
   const { isRecording, isTranscribing } = useMeetingRecordingStore.getState();
-  return !isRecording && !isTranscribing;
+  return !isRecording && !isTranscribing && !useDeviceTierStore.getState().tier?.dictationRecording;
 }
 
 function roomDownloadAuthorized() {
   return (
     localStorage.getItem("onboardingCompleted") === "true" &&
-    useSettingsStore.getState().localSetupAuthorized
+    selectFeatureRoute(useSettingsStore.getState(), "conversations").downloadAuthorized
   );
 }
 
@@ -43,12 +44,17 @@ export function useSpeechUpgrade() {
   const tier = useDeviceTierStore((state) => state.tier);
   const language = useSettingsStore((state) => state.preferredLanguage);
   const whisperModel = useSettingsStore((state) => state.whisperModel);
-  const meetingLocal = useSettingsStore((state) => state.meetingUseLocalWhisper);
   const engine = useSettingsStore((state) => state.localTranscriptionProvider);
-  const authorized = useSettingsStore((state) => state.localSetupAuthorized);
+  const roomAuthorized = useSettingsStore(
+    (state) => selectFeatureRoute(state, "conversations").downloadAuthorized
+  );
+  const dictationAuthorized = useSettingsStore(
+    (state) => selectFeatureRoute(state, "dictation").downloadAuthorized
+  );
   // Not while a conversation is recorded: the download's notice would compete
   // with the room. It starts when the recording ends.
-  const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const meeting = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const recording = meeting || tier?.dictationRecording === true;
   const room = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
   const { available, installed, declined, failed, progress } = useRoomModelStore();
 
@@ -57,15 +63,15 @@ export function useSpeechUpgrade() {
   }, [room, available]);
 
   useEffect(() => {
-    if (!room || recording) {
+    if (!room || meeting) {
       cancelRoomModelDownload(false);
       return;
     }
-    if (!authorized) {
+    if (!roomAuthorized) {
       cancelRoomModelDownload(false, true);
       return;
     }
-    if (available && !installed && !declined && !failed && progress === null) {
+    if (!recording && available && !installed && !declined && !failed && progress === null) {
       void startRoomModelDownload(
         () =>
           workspaceIdle() &&
@@ -73,28 +79,25 @@ export function useSpeechUpgrade() {
           Boolean(roomSpeechPlan(useSettingsStore.getState(), useDeviceTierStore.getState().tier))
       );
     }
-  }, [room, authorized, recording, available, installed, declined, failed, progress]);
+  }, [room, roomAuthorized, meeting, recording, available, installed, declined, failed, progress]);
 
   const plan = useMemo(() => localSetupFor(tier, language, "local"), [tier, language]);
   const followsDefault = whisperModelFollowsDefault();
-  const local = meetingLocal && engine === "whisper";
-  const fetch =
-    authorized &&
-    !room &&
-    shouldFetchTurbo({
-      choice: plan.whisper.choice,
-      setupDone: localStorage.getItem("onboardingCompleted") === "true",
-      // `whisperModel` is in the effect's list for this: a choice made in
-      // Settings ends it.
-      followsDefault,
-      local,
-      recording,
-      turbo: tier?.turbo ?? {},
-    });
+  const local = (dictationAuthorized || (roomAuthorized && !room)) && engine === "whisper";
+  const fetch = shouldFetchTurbo({
+    choice: plan.whisper.choice,
+    setupDone: localStorage.getItem("onboardingCompleted") === "true",
+    // `whisperModel` is in the effect's list for this: a choice made in
+    // Settings ends it.
+    followsDefault,
+    local,
+    recording,
+    turbo: tier?.turbo ?? {},
+  });
   // Read on each snapshot, so a download that main starts after the switch
   // (a start asked for just before it) stops as soon as it shows.
   const leave = shouldLeaveTurbo({
-    local: local && !room,
+    local,
     followsDefault,
     whisperModel,
     turbo: tier?.turbo ?? {},

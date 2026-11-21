@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   selectResolvedMeetingTranscription,
   selectResolvedNoteFormatting,
+  selectFeatureRoute,
   useSettingsStore,
 } from "../stores/settingsStore";
 import { localSummaryModelDownloaded, useSummaryReadiness } from "./useSummaryReadiness";
 import { useModelDownloadPercent } from "../stores/modelDownloadStore";
-import { writingKeyPresent } from "../utils/writingKeys";
 import { summaryReadiness } from "../utils/summaryReadiness";
 import {
   blocksRecording,
@@ -26,7 +26,9 @@ export interface Preflight {
   check: () => Promise<PreflightProblem | null>;
 }
 
-async function microphoneFacts(): Promise<Pick<PreflightFacts, "audioInputs" | "micPermission">> {
+export async function microphoneFacts(): Promise<
+  Pick<PreflightFacts, "audioInputs" | "micPermission">
+> {
   try {
     const devices = (await navigator.mediaDevices?.enumerateDevices?.()) ?? [];
     const inputs = devices.filter((device) => device.kind === "audioinput");
@@ -47,16 +49,13 @@ async function microphoneFacts(): Promise<Pick<PreflightFacts, "audioInputs" | "
   }
 }
 
-async function transcriptionFacts(
+export async function transcriptionFacts(
   useLocalWhisper: boolean,
   localProvider: string
 ): Promise<Pick<PreflightFacts, "speechEngineReady" | "anyModelDownloaded" | "hasApiKey">> {
   const unknown = { speechEngineReady: null, anyModelDownloaded: null, hasApiKey: null };
   try {
-    if (!useLocalWhisper) {
-      const key = await window.electronAPI?.getOpenAIKey?.();
-      return { ...unknown, hasApiKey: Boolean(key && key.trim()) };
-    }
+    if (!useLocalWhisper) return unknown;
     if (localProvider !== "whisper") return unknown;
     const installed = await window.electronAPI?.checkWhisperInstallation?.();
     const listed = await window.electronAPI?.listWhisperModels?.();
@@ -110,8 +109,12 @@ export function useConversationPreflight(): Preflight {
   const summaryDownloading =
     useModelDownloadPercent(summaryMode === "local" ? summaryModel : null) !== null;
   // With API keys and no key, the key is what is missing (the line says so).
-  const summaryProvider = useSettingsStore((state) => selectResolvedNoteFormatting(state).provider);
-  const summaryKey = useSettingsStore((state) => writingKeyPresent(state, summaryProvider));
+  const roomNeedsKey = useSettingsStore(
+    (state) => selectFeatureRoute(state, "conversations").needsKey
+  );
+  const summaryNeedsKey = useSettingsStore(
+    (state) => selectFeatureRoute(state, "writing").needsKey
+  );
   const summaryReadyNow = useSummaryReadiness();
   // Only the newest check says what is shown. Checks overlap (on mount, on a
   // change of setting, when a download starts), and one that skipped a slow
@@ -125,6 +128,7 @@ export function useConversationPreflight(): Preflight {
       useLocalWhisper,
       localProvider,
       ...(await transcriptionFacts(useLocalWhisper, localProvider)),
+      needsKey: roomNeedsKey,
       questionCardsOn: aideEnabled && aideInRoom,
       summaryReady: summaryDownloading
         ? null
@@ -134,10 +138,10 @@ export function useConversationPreflight(): Preflight {
               model: summaryModel,
               remoteUrl: summaryUrl,
               localModelDownloaded: await localSummaryModelDownloaded(summaryMode, summaryModel),
-              providerKey: summaryMode === "providers" ? summaryKey : null,
+              providerKey: summaryMode === "providers" ? true : null,
             })
           ),
-      summaryWaiting: summaryMode === "providers" && summaryKey === false ? "no-key" : null,
+      summaryWaiting: summaryNeedsKey ? "no-key" : null,
     });
     if (mine === asked.current) setProblem(found);
     return found;
@@ -150,7 +154,8 @@ export function useConversationPreflight(): Preflight {
     summaryModel,
     summaryUrl,
     summaryDownloading,
-    summaryKey,
+    roomNeedsKey,
+    summaryNeedsKey,
   ]);
 
   // Asked again when the model lands too (`summaryReadyNow` changes then).

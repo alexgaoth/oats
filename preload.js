@@ -345,6 +345,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // What this Mac can run, and turbo's download (deviceTier.js). Pulled once,
   // then pushed.
   getDeviceTier: () => ipcRenderer.invoke("get-device-tier"),
+  setDictationCaptureState: (active) => ipcRenderer.send("dictation-capture-state", active),
   onDeviceTier: registerListener("device-tier", (callback) => (_event, tier) => callback(tier)),
   prepareLocalSetup: (options) => ipcRenderer.invoke("local-setup-prepare", options),
   startSpeechUpgrade: (options) => ipcRenderer.invoke("speech-upgrade-start", options),

@@ -101,6 +101,9 @@ test("a cloud provider gets only what finished while it was the writing model", 
   assert.equal(queue.queueMaySend(LOCAL, OPENAI), false);
   assert.equal(queue.queueMaySend("providers:anthropic", OPENAI), false);
   assert.equal(queue.queueMaySend("", "providers:custom"), false);
+  assert.equal(queue.queueMaySend("providers:", OPENAI), false);
+  assert.equal(queue.queueMaySend("providers:", "providers:anthropic"), false);
+  assert.equal(queue.queueMaySend("providers:", LOCAL), true);
   assert.equal(queue.queueMaySend("", ""), false);
   const list = [
     { id: 4, at: 400, route: LOCAL },
@@ -422,7 +425,7 @@ test("a reason from the model on this Mac is read before its words", () => {
 
 const FAILED = {
   id: 5,
-  source: "61452-[{\"id\":\"s1\"",
+  source: '61452-[{"id":"s1"',
   model: "local:gemma-4-e4b-it-q4_k_m",
   context: 16384,
   kind: "too-long",

@@ -1,8 +1,8 @@
 import {
-  applyProvidersSpeech,
   chooseWritingModel,
   forgetWritingChoice,
   selectProcessingMode,
+  selectFeatureRoute,
   setFeatureRoute,
   setLocalSetupAuthorization,
   useSettingsStore,
@@ -14,6 +14,7 @@ import {
   WRITING_PROVIDER_KEY,
 } from "../../helpers/writingTier.mjs";
 import { leaveWritingDownload } from "../../hooks/useWritingModel";
+import type { Feature } from "../../helpers/featureRoutes.mjs";
 
 /**
  * The one Processing switch: every feature on this Mac, or every feature on
@@ -98,11 +99,15 @@ function storedWritingChoice(): RememberedModels | null {
   }
 }
 
-/** Point every feature at this Mac or at the providers, in one choice. */
-export function setProcessing(mode: ProcessingMode) {
-  setFeatureRoute(mode);
+export function setFeatureProcessing(feature: Feature, mode: ProcessingMode | null) {
+  setFeatureRoute(mode, feature);
+  if (feature === "writing") updateWritingSide();
+}
+
+function updateWritingSide() {
   const store = useSettingsStore.getState();
-  // The choice in use is kept under the side the writing is on, "mixed" or not.
+  const mode = selectFeatureRoute(store, "writing").requested;
+  if (mode === store.cleanupMode) return;
   const { memory, restore: remembered } = switchWritingSide({
     memory: readMemory(),
     writingMode: store.cleanupMode,
@@ -110,26 +115,16 @@ export function setProcessing(mode: ProcessingMode) {
     target: mode,
   });
   writeMemory(memory);
-
-  // Speech. On this Mac, every scope local. With API keys, OpenAI when its key
-  // is stored and this Mac without it (applyProvidersSpeech).
-  if (mode === "local") {
-    store.setCloudTranscriptionForAllScopes({
-      useLocalWhisper: true,
-      cloudTranscriptionMode: "byok",
-    });
-    store.setTranscriptionMode(mode);
-    store.setMeetingTranscriptionMode(mode);
-  } else {
-    applyProvidersSpeech();
-    // Not a no: the default may fetch it again on the way back to this Mac.
-    leaveWritingDownload();
-  }
-
-  // Writing: summaries take the cleanup scope's whole configuration.
   store.setCleanupMode(mode);
   store.setNoteFormattingMode(mode);
   if (remembered) chooseWritingModel(remembered.cleanupProvider, remembered.cleanupModel);
   else forgetWritingChoice();
+  if (mode === "providers") leaveWritingDownload();
+}
+
+/** Choose the default. Uploads keep their existing independent scope. */
+export function setProcessing(mode: ProcessingMode) {
+  setFeatureRoute(mode);
+  updateWritingSide();
   setLocalSetupAuthorization(mode === "local");
 }

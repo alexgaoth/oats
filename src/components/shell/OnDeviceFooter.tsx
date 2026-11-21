@@ -5,7 +5,12 @@ import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
 import { cancelTurbo, useSpeechTier } from "../../hooks/useSpeechTier";
 import { cancelWritingModel, useWritingModel } from "../../hooks/useWritingModel";
-import { selectResolvedNoteFormatting, useSettingsStore } from "../../stores/settingsStore";
+import {
+  selectDictationSettings,
+  selectResolvedMeetingTranscription,
+  selectResolvedNoteFormatting,
+  useSettingsStore,
+} from "../../stores/settingsStore";
 import { useStreamingProvidersStore } from "../../stores/streamingProvidersStore";
 import { getProviderDisplayName, getTranscriptionProvider } from "../../models/ModelRegistry";
 import { describeOnDevice, destinationOf } from "../../helpers/onDeviceSummary.mjs";
@@ -45,17 +50,20 @@ export function OnDeviceFooter({ className }: { className?: string }) {
   const status = useOnDeviceStatus();
 
   // A conversation's speech: what meetingRecordingStore reads to record one.
-  const conversationLocal = useSettingsStore((state) => state.meetingUseLocalWhisper);
+  const conversationLocal = useSettingsStore(
+    (state) => selectResolvedMeetingTranscription(state).useLocalWhisper
+  );
   const engine = useSettingsStore((state) => state.localTranscriptionProvider);
   // Before the realtime catalog loads, a conversation streams to OpenAI.
   const realtimeName = useStreamingProvidersStore((state) => state.providers?.[0]?.name);
   // Dictation's speech, which counts only while dictation is on.
   const dictationEnabled = useSettingsStore((state) => state.dictationEnabled);
-  const dictationLocal = useSettingsStore((state) => state.useLocalWhisper);
-  const dictationMode = useSettingsStore((state) => state.transcriptionMode);
-  const dictationProvider = useSettingsStore((state) => state.cloudTranscriptionProvider);
-  const dictationBaseUrl = useSettingsStore((state) => state.cloudTranscriptionBaseUrl);
-  const dictationRemoteUrl = useSettingsStore((state) => state.remoteTranscriptionUrl);
+  const dictationLocal = useSettingsStore(
+    (state) => selectDictationSettings(state).useLocalWhisper
+  );
+  const dictationProvider = useSettingsStore(
+    (state) => selectDictationSettings(state).cloudTranscriptionProvider
+  );
   // The writing model. Field by field: the selector builds a new object per call.
   const writingMode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
   const writingProvider = useSettingsStore((state) => selectResolvedNoteFormatting(state).provider);
@@ -78,11 +86,9 @@ export function OnDeviceFooter({ className }: { className?: string }) {
           : dictationLocal
             ? { local: true }
             : destinationOf({
-                mode: dictationMode === "self-hosted" ? "self-hosted" : "providers",
+                mode: "providers",
                 provider: dictationProvider,
                 providerName: getTranscriptionProvider(dictationProvider)?.name,
-                baseUrl: dictationBaseUrl,
-                remoteUrl: dictationRemoteUrl,
               }),
         writing: destinationOf({
           mode: writingMode,
@@ -101,10 +107,7 @@ export function OnDeviceFooter({ className }: { className?: string }) {
       realtimeName,
       dictationEnabled,
       dictationLocal,
-      dictationMode,
       dictationProvider,
-      dictationBaseUrl,
-      dictationRemoteUrl,
       writingMode,
       writingProvider,
       writingBaseUrl,

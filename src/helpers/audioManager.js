@@ -19,8 +19,7 @@ import { isStaleDeviceError } from "./staleMicDevice";
 import { shouldSaveDiscardedRecording } from "./discardedRecording";
 import {
   DEFAULT_WHISPER_MODEL,
-  getSettings,
-  getEffectiveCleanupModel,
+  getDictationSettings as getSettings,
   isCloudCleanupMode,
   isCloudDictationAgentMode,
   isCloudTranslationMode,
@@ -81,6 +80,11 @@ function resolveReasoningRoute(
   voiceAgentRequested,
   translationRequested
 ) {
+  const cleanupConfig = {
+    provider: settings.cleanupProvider,
+    baseUrl: settings.cleanupProvider === "openai" ? API_ENDPOINTS.OPENAI_BASE : undefined,
+    disableThinking: settings.cleanupDisableThinking,
+  };
   const cleanupReachable =
     !!settings.useCleanupModel && (!!settings.cleanupModel?.trim() || isCloudCleanupMode());
   const agentModel = settings.dictationAgentModel?.trim() || "";
@@ -133,7 +137,7 @@ function resolveReasoningRoute(
       kind: "translation",
       model: settings.translationModel?.trim() || "",
       cleanupReachable,
-      cleanupConfig: { disableThinking: settings.cleanupDisableThinking },
+      cleanupConfig,
       config: {
         provider,
         language: settings.translationTargetLanguage,
@@ -164,7 +168,7 @@ function resolveReasoningRoute(
       config: {
         provider,
         lanUrl: isSelfHostedAgent ? settings.dictationAgentRemoteUrl : undefined,
-        baseUrl: isCustomAgent ? settings.dictationAgentCloudBaseUrl || undefined : undefined,
+        baseUrl: provider === "openai" ? API_ENDPOINTS.OPENAI_BASE : undefined,
         customApiKey:
           isCustomAgent || isSelfHostedAgent
             ? settings.dictationAgentCustomApiKey || undefined
@@ -182,7 +186,7 @@ function resolveReasoningRoute(
   if (kind === "cleanup") {
     return {
       kind: "cleanup",
-      config: { disableThinking: settings.cleanupDisableThinking },
+      config: cleanupConfig,
     };
   }
   return { kind: "skip" };
@@ -649,6 +653,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         return false;
       }
 
+      const { useLocalWhisper: localOnly } = getSettings();
       const constraints = await this.getAudioConstraints(forceDefaultMic);
       const micStream = await this.acquireHealthyMicStream(
         await navigator.mediaDevices.getUserMedia(constraints),
@@ -776,6 +781,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
         await this.processAudio(audioBlob, {
           durationSeconds,
+          localOnly,
           ...(previewStop?.streamed ? { streamedText: previewStop.text } : {}),
         });
 
@@ -792,7 +798,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         localTranscriptionProvider,
         whisperModel,
         parakeetModel,
-      } = getSettings();
+      } = getSettings(localOnly);
       const isNvidia = localTranscriptionProvider === "nvidia";
       // Online models stream+commit during capture, so PCM runs even with preview off.
       const streamingCommit = useLocalWhisper && isNvidia && isOnlineParakeetModel(parakeetModel);
@@ -938,7 +944,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
   async processAudio(audioBlob, metadata = {}) {
     const pipelineStart = performance.now();
-    const settings = getSettings();
+    // Local capture cannot become a cloud upload after a settings change.
+    const settings = getSettings(metadata.localOnly === true);
     const speechGateDecision = getLocalSpeechGateDecision(this._localSpeechGateState);
     this._localSpeechGateState = null;
 
@@ -1108,7 +1115,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         }
         const rawText = result.text;
         const reasoningStart = performance.now();
-        const text = await this.processTranscription(result.text, "local");
+        const text = await this.processTranscription(result.text, "local", true);
         timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
 
         if (text !== null && text !== undefined) {
@@ -1126,20 +1133,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw error;
       }
 
-      const { allowOpenAIFallback, useLocalWhisper: isLocalMode } = getSettings();
-
-      if (allowOpenAIFallback && isLocalMode) {
-        try {
-          const fallbackResult = await this.processWithOpenAIAPI(audioBlob, metadata);
-          return { ...fallbackResult, source: "openai-fallback" };
-        } catch (fallbackError) {
-          throw new Error(
-            `Local Whisper failed: ${error.message}. OpenAI fallback also failed: ${fallbackError.message}`
-          );
-        }
-      } else {
-        throw new Error(`Local Whisper failed: ${error.message}`);
-      }
+      throw new Error(`Local Whisper failed: ${error.message}`);
     }
   }
 
@@ -1188,7 +1182,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       if (result.success && result.text) {
         const rawText = result.text;
         const reasoningStart = performance.now();
-        const text = await this.processTranscription(result.text, "local-parakeet");
+        const text = await this.processTranscription(result.text, "local-parakeet", true);
         timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
 
         if (text !== null && text !== undefined) {
@@ -1213,20 +1207,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw error;
       }
 
-      const { allowOpenAIFallback, useLocalWhisper: isLocalMode } = getSettings();
-
-      if (allowOpenAIFallback && isLocalMode) {
-        try {
-          const fallbackResult = await this.processWithOpenAIAPI(audioBlob, metadata);
-          return { ...fallbackResult, source: "openai-fallback" };
-        } catch (fallbackError) {
-          throw new Error(
-            `Parakeet failed: ${error.message}. OpenAI fallback also failed: ${fallbackError.message}`
-          );
-        }
-      } else {
-        throw new Error(`Parakeet failed: ${error.message}`);
-      }
+      throw new Error(`Parakeet failed: ${error.message}`);
     }
   }
 
@@ -1237,6 +1218,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
 
     const provider = s.cloudTranscriptionProvider || "openai";
+    if (provider === "openai") {
+      if (!s.useLocalWhisper && isValidApiKey(s.openaiApiKey, "openai")) return s.openaiApiKey;
+      throw Object.assign(new Error("Add an OpenAI API key in AI models."), {
+        code: "API_KEY_MISSING",
+      });
+    }
 
     // Check cache (invalidate if provider changed)
     if (this.cachedApiKey !== null && this.cachedApiKeyProvider === provider) {
@@ -1385,12 +1372,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
-  async isReasoningAvailable() {
+  async isReasoningAvailable(s = getSettings()) {
     if (typeof window === "undefined") {
       return false;
     }
 
-    const s = getSettings();
     const useReasoning =
       !!s.useCleanupModel || dictationAgentReachable(s) || translationChainReachable(s);
     const now = Date.now();
@@ -1506,7 +1492,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
-  async processTranscription(text, source) {
+  async processTranscription(text, source, localOnly = false) {
     const normalizedText = typeof text === "string" ? text.trim() : "";
 
     if (!normalizedText) {
@@ -1532,9 +1518,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       timestamp: new Date().toISOString(),
     });
 
-    const cleanupModel = getEffectiveCleanupModel();
     const isCloud = isCloudCleanupMode();
-    const settings = getSettings();
+    const settings = getSettings(localOnly);
+    const cleanupModel = settings.cleanupModel;
     const cleanupProvider = settings.cleanupProvider || "auto";
     const cleanupReachable = !!settings.useCleanupModel && (!!cleanupModel || isCloud);
     const agentReachable = dictationAgentReachable(settings);
@@ -1553,7 +1539,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return normalizedText;
     }
 
-    const useReasoning = await this.isReasoningAvailable();
+    const useReasoning = await this.isReasoningAvailable(settings);
 
     logger.logReasoning("REASONING_CHECK", {
       useReasoning,
@@ -1817,6 +1803,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   async processWithOpenAIAPI(audioBlob, metadata = {}) {
     const timings = {};
     const apiSettings = getSettings();
+    if (metadata.localOnly || apiSettings.useLocalWhisper) {
+      throw new Error("Cloud dictation is not enabled for this recording");
+    }
     const language = getBaseLanguageCode(this.getEffectiveSttLanguage(apiSettings));
     const allowLocalFallback = apiSettings.allowLocalFallback;
     const fallbackModel = apiSettings.fallbackWhisperModel || DEFAULT_WHISPER_MODEL;
@@ -2223,7 +2212,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           const result = await window.electronAPI.transcribeLocalWhisper(arrayBuffer, options);
 
           if (result.success && result.text) {
-            const text = await this.processTranscription(result.text, "local-fallback");
+            const text = await this.processTranscription(result.text, "local-fallback", true);
             if (text) {
               return { success: true, text, source: "local-fallback" };
             }
@@ -2761,6 +2750,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       }
 
       this.stopRequestedDuringStreamingStart = false;
+      this.streamingFailureReported = false;
 
       const t0 = performance.now();
       const constraints = await this.getAudioConstraints(forceDefaultMic);
@@ -2855,11 +2845,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
       const errorCleanup = provider.onError((error) => {
         logger.error("Streaming provider error", { error }, "streaming");
-        this.onError?.({
+        this.reportStreamingFailure({
           title: "Streaming Error",
           description: error,
         });
-        if (this.isStreaming) {
+        if (this.isStreaming && this.isRecording) {
           logger.warn("Connection lost during streaming, auto-stopping", {}, "streaming");
           this.stopStreamingRecording().catch((e) => {
             logger.error(
@@ -2888,6 +2878,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const result = await (async () => {
         const streamingSettings = getSettings();
         const { cloudTranscriptionModel, useLocalWhisper } = streamingSettings;
+        if (useLocalWhisper) return { needsFallback: true };
         const sttLanguage = this.getEffectiveSttLanguage(streamingSettings);
         const res = await provider.start({
           sampleRate: 16000,
@@ -2898,18 +2889,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         });
 
         if (!res.success) {
-          if (res.code === "NO_API") {
-            return { needsFallback: true };
-          }
-          if (res.code === "NETWORK_ERROR" && useLocalWhisper) {
-            this.onError?.({
-              code: "NETWORK_ERROR",
-              title: "streaming.errors.cloudUnreachable.title",
-              description: "Cloud unreachable — using local engine for this recording.",
-              messageKey: "streaming.errors.cloudUnreachable.fallback",
-            });
-            return { needsFallback: true };
-          }
           const err = new Error(res.error || "Failed to start streaming session");
           err.code = res.code;
           err.messageKey = res.messageKey;
@@ -2998,7 +2977,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           "Your microphones stayed muted and produced no audio. Please check your sound input settings and try again.";
       }
 
-      this.onError?.({
+      this.reportStreamingFailure({
         code: error.code,
         messageKey: error.messageKey,
         title: errorTitle,
@@ -3011,6 +2990,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       this.onStateChange?.({ isRecording: false, isProcessing: false, isStreaming: false });
       return false;
     }
+  }
+
+  reportStreamingFailure(error) {
+    if (this.streamingFailureReported) return;
+    this.streamingFailureReported = true;
+    this.onError?.(error);
   }
 
   async stopStreamingRecording() {
@@ -3164,7 +3149,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             "streaming"
           );
         } else if (route.kind === "cleanup") {
-          const effectiveModel = getEffectiveCleanupModel();
+          const effectiveModel = stSettings.cleanupModel;
           if (effectiveModel) {
             const reasoned = await this.processWithReasoningModel(
               finalText,
@@ -3187,7 +3172,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             route,
             cleanup: {
               mode: "model",
-              model: getEffectiveCleanupModel(),
+              model: stSettings.cleanupModel,
               log: { level: "error", channel: "streaming" },
             },
           });
@@ -3222,6 +3207,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         }
       } catch (fallbackErr) {
         logger.error("Batch fallback failed", { error: fallbackErr.message }, "streaming");
+        this.reportStreamingFailure({
+          title: "Transcription Error",
+          description: fallbackErr.message,
+          code: fallbackErr.code,
+          messageKey: fallbackErr.messageKey,
+        });
       }
     }
 
@@ -3250,7 +3241,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         },
         "streaming"
       );
-    } else {
+    } else if (!this.streamingFailureReported) {
       // Silence: still fire callback to dismiss the preview and show the no-audio toast.
       this.onTranscriptionComplete?.({ success: true, text: "" });
     }

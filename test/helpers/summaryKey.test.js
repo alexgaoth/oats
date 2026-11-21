@@ -3,11 +3,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-// "Titles and summaries wait for an API key": with "With an API key" and no key
-// for the writing provider, Finish and the summary queue wait for the key
-// instead of failing, and a conversation finished then goes to the provider
-// whose key the person adds (stores/summaryQueueStore.ts,
-// helpers/summaryQueue.mjs, hooks/useSummaryReadiness.ts).
+// Writing readiness and the summary queue enforce the effective route. A
+// conversation that finished locally does not get sent when a key is added.
 
 const ROOT = path.join(__dirname, "..", "..");
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), "utf8");
@@ -67,28 +64,24 @@ test("a missing key is a refusal: never retried, never a failure that strikes it
   assert.match(store, /if \(outcome === "refused" \|\| outcome === "cancelled"\) return;/);
 });
 
-test("finished with no key, a conversation goes to the provider whose key is added", () => {
-  const { KEYLESS_ROUTE, queueMaySend, nextPendingSummary } = queue;
-  assert.equal(KEYLESS_ROUTE, "providers:");
-  assert.equal(queueMaySend(KEYLESS_ROUTE, "providers:openai"), true);
-  assert.equal(queueMaySend(KEYLESS_ROUTE, "providers:anthropic"), true);
-  // Still no key: nothing to send to.
-  assert.equal(queueMaySend(KEYLESS_ROUTE, KEYLESS_ROUTE), false);
-  assert.equal(queueMaySend(KEYLESS_ROUTE, ""), false);
-  // This Mac or the person's own server, as for any owed conversation.
-  assert.equal(queueMaySend(KEYLESS_ROUTE, "local:"), true);
-  // A provider that had its key keeps the rule: one chosen since gets nothing unasked.
-  assert.equal(queueMaySend("providers:openai", "providers:anthropic"), false);
+test("adding a key does not send a summary owed on the local fallback or legacy keyless route", () => {
+  const { queueMaySend, nextPendingSummary } = queue;
+  for (const owed of ["local:", "providers:"]) {
+    assert.equal(queueMaySend(owed, "providers:openai"), false);
+    assert.equal(queueMaySend(owed, "providers:anthropic"), false);
+    assert.equal(queueMaySend(owed, "providers:"), false);
+    assert.equal(queueMaySend(owed, "local:"), true);
+  }
   const list = [
-    { id: 2, at: 200, route: "providers:openai" },
-    { id: 1, at: 100, route: KEYLESS_ROUTE },
+    { id: 3, at: 300, route: "local:" },
+    { id: 2, at: 200, route: "providers:" },
+    { id: 1, at: 100, route: "providers:openai" },
   ];
-  assert.equal(nextPendingSummary(list, { route: "providers:anthropic" }), 1);
-  // The route recorded at Finish, and when a record asks for one, says so.
+  assert.equal(nextPendingSummary(list, { route: "providers:anthropic" }), null);
+  assert.equal(nextPendingSummary(list, { route: "providers:openai" }), 1);
+  assert.equal(nextPendingSummary(list, { route: "local:" }), 3);
+  // Finish and record opening both record the effective route.
   const store = read("src/stores/summaryQueueStore.ts");
-  assert.match(
-    store,
-    /const keyless =\s*formatting\.mode === "providers" && writingKeyPresent\(state, formatting\.provider\) === false;/
-  );
-  assert.equal([...store.matchAll(/route: owedRouteKey\(\)/g)].length, 2);
+  assert.equal([...store.matchAll(/route: writingRouteKey\(\)/g)].length, 2);
+  assert.match(store, /if \(busy\(\) \|\| stopped \|\| route !== writingRouteKey\(\)\) continue;/);
 });

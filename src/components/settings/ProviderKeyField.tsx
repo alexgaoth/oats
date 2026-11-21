@@ -5,7 +5,11 @@ import { Check, KeyRound, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { useSettingsStore, type SettingsState } from "../../stores/settingsStore";
+import {
+  setFeatureKeyStatus,
+  useSettingsStore,
+  type SettingsState,
+} from "../../stores/settingsStore";
 import { checkKey, detectKeyProvider, type KeyProvider } from "../../utils/keyCheck";
 import { writingModelName } from "../../hooks/useWritingModel";
 import { CLOUD_WRITING_MODELS } from "../../helpers/writingTier.mjs";
@@ -119,12 +123,17 @@ export function ProviderKeyField({
       // A key the provider refuses is not saved, and the provider's reason is
       // said when it gave one. A restricted key that may not read the model
       // list is saved (helpers/keyStatus.mjs).
-      if (status === "rejected") {
+      if (status === "rejected" || status === "no-access" || status === "unknown") {
         setMessage({
           tone: "danger",
-          text: reason
-            ? t("oats.keys.rejectedReason", { provider: PROVIDER_NAMES[target], reason })
-            : t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
+          text:
+            status === "no-access"
+              ? t("oats.keys.noAccess", { model: writingModelName(CLOUD_WRITING_MODELS[detected]) })
+              : status === "unknown"
+                ? t("oats.keys.unchecked")
+                : reason
+                  ? t("oats.keys.rejectedReason", { provider: PROVIDER_NAMES[target], reason })
+                  : t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
         });
         return false;
       }
@@ -132,12 +141,9 @@ export function ProviderKeyField({
       setMessage(
         status === "ok"
           ? { tone: "success", text: t("oats.keys.works", { model }) }
-          : status === "no-access"
-            ? { tone: "warning", text: t("oats.keys.noAccess", { model }) }
-            : status === "limited"
-              ? { tone: "muted", text: t("oats.keys.limited", { model }) }
-              : { tone: "muted", text: t("oats.keys.unchecked") }
+          : { tone: "muted", text: t("oats.keys.limited", { model }) }
       );
+      setFeatureKeyStatus(detected, status);
     } else {
       setMessage({ tone: "success", text: t("oats.keys.saved") });
     }

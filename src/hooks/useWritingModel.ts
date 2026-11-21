@@ -5,6 +5,8 @@ import { useMeetingRecordingStore } from "../stores/meetingRecordingStore";
 import {
   currentDefaultWritingModel,
   localSetupFor,
+  selectFeatureRoute,
+  selectResolvedNoteFormatting,
   useSettingsStore,
   writingModelFollowsDefault,
 } from "../stores/settingsStore";
@@ -106,10 +108,10 @@ export interface WritingModel {
  * for a key. One place, so the rows, the notice and the preflight agree.
  */
 export function useWritingModel(): WritingModel {
-  const mode = useSettingsStore((state) => state.cleanupMode);
-  const provider = useSettingsStore((state) => state.cleanupProvider);
-  const model = useSettingsStore((state) => state.cleanupModel);
-  const remoteUrl = useSettingsStore((state) => state.cleanupRemoteUrl);
+  const mode = useSettingsStore((state) => selectResolvedNoteFormatting(state).mode);
+  const provider = useSettingsStore((state) => selectResolvedNoteFormatting(state).provider);
+  const model = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
+  const remoteUrl = useSettingsStore((state) => selectResolvedNoteFormatting(state).remoteUrl);
   const keyPresent = useSettingsStore((state) => writingKeyPresent(state, provider));
   const openaiKey = useSettingsStore((state) => state.openaiApiKey);
   const anthropicKey = useSettingsStore((state) => state.anthropicApiKey);
@@ -164,10 +166,12 @@ export function useWritingModel(): WritingModel {
  */
 export function useWritingModelDownload(): void {
   const tier = useDeviceTierStore((state) => state.tier);
-  const mode = useSettingsStore((state) => state.cleanupMode);
-  const model = useSettingsStore((state) => state.cleanupModel);
-  const recording = useMeetingRecordingStore((state) => state.isRecording);
-  const authorized = useSettingsStore((state) => state.localSetupAuthorized);
+  const model = useSettingsStore((state) => selectResolvedNoteFormatting(state).model);
+  const meeting = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  const recording = meeting || tier?.dictationRecording === true;
+  const authorized = useSettingsStore(
+    (state) => selectFeatureRoute(state, "writing").downloadAuthorized
+  );
   const plan = useMemo(() => localSetupFor(tier, "en", "local"), [tier]);
   const fetch =
     authorized &&
@@ -177,7 +181,7 @@ export function useWritingModelDownload(): void {
       setupDone: localStorage.getItem("onboardingCompleted") === "true",
       // `model` is in the effect's list for this: a choice made in Settings ends it.
       followsDefault: writingModelFollowsDefault(),
-      local: mode === "local",
+      local: authorized,
       recording,
       writing: tier?.writing ?? NO_WRITING,
     });
@@ -189,6 +193,9 @@ export function useWritingModelDownload(): void {
   // step, and then its end, or its stop.
   const report = tier?.writing ?? NO_WRITING;
   const step = report.downloading;
+  useEffect(() => {
+    if (!authorized && (step || report.waiting)) leaveWritingDownload();
+  }, [authorized, step, report.waiting]);
   const installedKey = report.installed.join(" ");
   const told = useRef<string | null>(null);
   useEffect(() => {

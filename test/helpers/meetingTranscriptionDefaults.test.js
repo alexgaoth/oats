@@ -42,48 +42,27 @@ test("the meeting scope is what the primary action actually reads", () => {
   // If this moves, the test below is checking the wrong field.
   assert.match(
     STORE,
-    /selectResolvedMeetingTranscription[\s\S]{0,2000}useLocalWhisper: state\.meetingUseLocalWhisper/,
-    "meeting transcription should resolve from meetingUseLocalWhisper"
+    /selectResolvedMeetingTranscription[\s\S]{0,2000}selectFeatureRoute\(state, "conversations"\)[\s\S]{0,2000}useLocalWhisper: route\.effective === "local"/,
+    "meeting transcription should resolve from the Conversations route"
   );
 });
 
-test("the one visible processing choice configures the meeting scope too", () => {
+test("the processing default writes the resolver's input, not the upload scope", () => {
   const start = PROCESSING.indexOf("export function setProcessing(");
   assert.ok(start > -1, "setProcessing not found");
   const body = PROCESSING.slice(start, start + 2000);
 
-  // On this Mac: every scope's switch together, the meeting scope included.
-  assert.match(
-    body,
-    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: true,/,
-    "choosing on-device processing must set meetingUseLocalWhisper, or recording still goes to the cloud"
-  );
-  assert.match(
-    body,
-    /setMeetingTranscriptionMode\(mode\)/,
-    "the meeting transcription mode must follow the visible choice"
-  );
-  // With API keys: the store's rule, which follows the OpenAI key.
-  assert.match(body, /applyProvidersSpeech\(\);/);
-  const rule = STORE.slice(STORE.indexOf("export function applyProvidersSpeech("));
-  assert.match(
-    rule.slice(0, 800),
-    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: routes\.speech === "local",/,
-    "every scope moves together, the meeting scope included"
-  );
-  assert.match(rule.slice(0, 800), /setMeetingTranscriptionMode\("providers"\)/);
+  assert.match(body, /setFeatureRoute\(mode\);/);
+  assert.doesNotMatch(body, /setCloudTranscriptionForAllScopes|setUploadTranscriptionMode/);
 });
 
-test("the Settings toggle reflects the meeting scope, not just dictation", () => {
-  // Otherwise the button can read "On this computer" while recording is cloud —
-  // which is exactly how the bug stayed invisible.
+test("the Settings default stays separate from resolved feature routes", () => {
   assert.match(PROCESSING, /return selectProcessingMode\(state\);/);
   const start = STORE.indexOf("export function selectProcessingMode(");
   assert.ok(start > -1, "selectProcessingMode not found");
   const body = STORE.slice(start, start + 600);
-  for (const scope of ["transcriptionMode", "cleanupMode", "meetingTranscriptionMode"]) {
-    assert.ok(body.includes(`state.${scope}`), `the selected state must include ${scope}`);
-  }
+  assert.match(body, /return state\.featurePreferences\.defaultRoute;/);
+  assert.match(PROCESSING, /setFeatureRoute\(mode\);/);
 });
 
 // One speech model and one writing model. Two models on one local server meant
@@ -112,13 +91,14 @@ test("preflight takes the local or cloud choice and engine from the same resolve
   assert.doesNotMatch(preflight, /state\.meetingLocalTranscriptionProvider/);
 });
 
-test("summaries use the cleanup scope's whole configuration", () => {
+test("summaries and dictation cleanup use separate feature routes", () => {
   const start = STORE.indexOf("export const selectResolvedLLMConfig");
   const body = STORE.slice(start, start + 1200);
   assert.match(
     body,
-    /if \(scope === "noteFormatting"\) \{\s*return \{ \.\.\.selectResolvedLLMConfig\(state, "dictationCleanup"\), scope \};/
+    /if \(scope === "noteFormatting"\) \{\s*return resolvedFeatureWriting\(state, "writing", scope\);/
   );
+  assert.match(body, /return resolvedFeatureWriting\(state, "dictation", scope\);/);
 });
 
 test("switching processing does not leave the other mode's model behind", () => {
@@ -126,7 +106,7 @@ test("switching processing does not leave the other mode's model behind", () => 
   // going to the provider while the switch read "On this Mac". Now the switch
   // sets the writing scope's mode and either restores that side's own choice
   // or forgets the stored model, so the default for the new side applies.
-  const start = PROCESSING.indexOf("export function setProcessing(");
+  const start = PROCESSING.indexOf("function updateWritingSide(");
   const body = PROCESSING.slice(start, start + 2000);
   assert.match(body, /store\.setCleanupMode\(mode\);/);
   assert.match(body, /store\.setNoteFormattingMode\(mode\);/);
@@ -138,7 +118,7 @@ test("switching processing does not leave the other mode's model behind", () => 
   );
   assert.match(body, /writeMemory\(memory\);/);
   // Moving to the providers stops a local writing download nothing would use.
-  assert.match(body, /applyProvidersSpeech\(\);[^}]*leaveWritingDownload\(\);/);
+  assert.match(body, /if \(mode === "providers"\) leaveWritingDownload\(\);/);
   assert.match(
     body,
     /if \(remembered\) chooseWritingModel\(remembered\.cleanupProvider, remembered\.cleanupModel\);/

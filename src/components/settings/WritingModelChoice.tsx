@@ -21,7 +21,7 @@ import {
   chooseWritingModel,
   currentDefaultWritingModel,
   forgetWritingChoice,
-  selectProcessingMode,
+  selectFeatureRoute,
   setResolvedLLMConfig,
   useSettingsStore,
   writingModelFollowsDefault,
@@ -72,11 +72,10 @@ const CUSTOM = "custom";
  */
 export function WritingModelChoice() {
   const { t, i18n } = useTranslation();
-  const processing = useSettingsStore((state) => selectProcessingMode(state));
+  const side = useSettingsStore((state) => selectFeatureRoute(state, "writing").requested);
   const mode = useSettingsStore((state) => state.cleanupMode);
   const provider = useSettingsStore((state) => state.cleanupProvider);
   const model = useSettingsStore((state) => state.cleanupModel);
-  const speechMode = useSettingsStore((state) => state.meetingTranscriptionMode);
   const openaiKey = useSettingsStore((state) => state.openaiApiKey);
   const anthropicKey = useSettingsStore((state) => state.anthropicApiKey);
   const cloudBaseUrl = useSettingsStore((state) => state.cleanupCloudBaseUrl);
@@ -86,13 +85,6 @@ export function WritingModelChoice() {
   const tier = useDeviceTierStore((state) => state.tier);
   const writing = useWritingReport();
 
-  // The side the processing choice is on. With a server of the person's own
-  // the writing scope is "self-hosted", and speech says where the rest runs.
-  const side: "local" | "providers" =
-    processing === "providers" ||
-    (processing === "mixed" && (mode === "self-hosted" ? speechMode : mode) === "providers")
-      ? "providers"
-      : "local";
   const providers = [
     ...(side === "local"
       ? LOCAL_FAMILIES

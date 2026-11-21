@@ -84,11 +84,6 @@ export function ModelsPage() {
           aria-labelledby={titleId}
           details={{ providers: <WhatIsSent /> }}
         />
-        {mode === "mixed" && (
-          <p className="mt-2 px-1 text-xs leading-5 text-muted-foreground">
-            {t("oats.settings.processingMixed")}
-          </p>
-        )}
       </section>
 
       <SettingsSection

@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 import AudioManager from "../helpers/audioManager";
 import logger from "../utils/logger";
 import { playStartCue, playStopCue } from "../utils/dictationCues";
-import { getSettings } from "../stores/settingsStore";
+import { getDictationSettings, getSettings, selectFeatureRoute } from "../stores/settingsStore";
 import { expandSnippets } from "../utils/snippets";
 import { getRecordingErrorTitle, getRecordingErrorDescription } from "../utils/recordingErrors";
 import { isAccessibilitySkipped } from "../utils/permissions";
+import { microphoneFacts, transcriptionFacts } from "./useConversationPreflight";
+import { resolveSpeechPreflight } from "../utils/preflight";
 
 export const useAudioRecording = (toast, options = {}) => {
   const { t } = useTranslation();
@@ -30,6 +32,23 @@ export const useAudioRecording = (toast, options = {}) => {
 
         const currentState = audioManagerRef.current.getState();
         if (currentState.isRecording || currentState.isProcessing) return false;
+
+        const route = selectFeatureRoute(getSettings(), "dictation");
+        const { useLocalWhisper, localTranscriptionProvider } = getDictationSettings();
+        const problem = resolveSpeechPreflight({
+          ...(await microphoneFacts()),
+          ...(await transcriptionFacts(useLocalWhisper, localTranscriptionProvider)),
+          useLocalWhisper,
+          localProvider: localTranscriptionProvider,
+          needsKey: route.needsKey,
+        });
+        if (problem) {
+          toast({
+            title: t(`oats.preflight.${problem}`),
+            variant: problem === "no-api-key" ? "default" : "destructive",
+          });
+          if (problem !== "no-api-key") return false;
+        }
 
         audioManagerRef.current.setVoiceAgentRequested(voiceAgentRequested);
         audioManagerRef.current.setTranslationRequested(translationRequested);
@@ -61,7 +80,7 @@ export const useAudioRecording = (toast, options = {}) => {
         startLockRef.current = false;
       }
     },
-    []
+    [t, toast]
   );
 
   const performStopRecording = useCallback(async () => {
@@ -112,6 +131,9 @@ export const useAudioRecording = (toast, options = {}) => {
           if (wasRecordingRef.current && getSettings().pauseMediaOnDictation) {
             window.electronAPI?.resumeMediaPlayback?.();
           }
+        }
+        if (wasRecordingRef.current !== isRecording) {
+          window.electronAPI?.setDictationCaptureState?.(isRecording);
         }
         wasRecordingRef.current = isRecording;
         setIsRecording(isRecording);
@@ -194,7 +216,7 @@ export const useAudioRecording = (toast, options = {}) => {
             clientTranscriptionId: result.clientTranscriptionId,
           });
 
-          if (result.source === "openai" && getSettings().useLocalWhisper) {
+          if (result.source === "openai" && getDictationSettings().useLocalWhisper) {
             toast({
               title: t("hooks.audioRecording.fallback.title"),
               description: t("hooks.audioRecording.fallback.description"),
@@ -306,6 +328,7 @@ export const useAudioRecording = (toast, options = {}) => {
       disposeStart?.();
       disposeStop?.();
       disposeNoAudio?.();
+      window.electronAPI?.setDictationCaptureState?.(false);
       if (audioManagerRef.current) {
         audioManagerRef.current.cleanup();
       }

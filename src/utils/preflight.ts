@@ -27,6 +27,8 @@ export interface PreflightFacts {
   speechEngineReady: boolean | null;
   anyModelDownloaded: boolean | null;
   hasApiKey: boolean | null;
+  /** Cloud was requested, but recording will use the local route. */
+  needsKey?: boolean;
   /** Whether question cards will fire for this conversation. The aide fails
    *  silently when its gate is closed — this is the one place that says so
    *  while there is still time to change it. */
@@ -49,7 +51,9 @@ export interface PreflightFacts {
  * false alarm here costs a real conversation, which is much more expensive than
  * the failure it would have warned about.
  */
-export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null {
+export function resolveSpeechPreflight(
+  facts: Omit<PreflightFacts, "questionCardsOn" | "summaryReady" | "summaryWaiting">
+): PreflightProblem | null {
   if (facts.audioInputs === 0) return "no-microphone";
   if (facts.micPermission === "denied") return "microphone-permission";
 
@@ -64,6 +68,13 @@ export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null
     // while another is present still records, because the resolver falls back.
     if (facts.anyModelDownloaded === false) return "no-model";
   }
+  if (facts.needsKey) return "no-api-key";
+  return null;
+}
+
+export function resolvePreflight(facts: PreflightFacts): PreflightProblem | null {
+  const speechProblem = resolveSpeechPreflight(facts);
+  if (speechProblem) return speechProblem;
   // Recording still works fully without a summary model, and the title and
   // summary are written once one is ready (stores/summaryQueueStore.ts). Until
   // then a conversation has neither, which used to be discovered at the end,
