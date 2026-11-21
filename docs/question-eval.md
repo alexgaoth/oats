@@ -229,6 +229,68 @@ node scripts/question-eval.mjs audit --replays "$cache" --out /tmp/oats-audit.js
 node scripts/question-eval.mjs audit --replays "$cache" --labels docs/question-audit-tune.tsv
 ```
 
+### v0.4 Clean question filter
+
+Clean needs fewer distracting cards. The filter checks the exact quote after
+the existing detector creates a candidate. It drops short fragments, weak tags,
+backchannels and a few explicit rhetorical shapes. An unpunctuated quote needs
+a question shape. A question mark can support a short check such as “Four?”.
+One qualifying sentence keeps a multi-sentence quote. The rules apply to English
+only. For other languages or automatic language detection, the aide keeps the
+card eligible. The filter does not change detection, replies, search, or what
+Words can show.
+
+We tuned on the same 200 cards from the 11 tuning meetings above. We froze the
+rule at **2026-11-20 23:29:30 PST** before opening any held-out cards. We used
+the same SHA-256 ordering to select 200 cards from the eight held-out quiet
+`small.en` replays. The lane agent labeled each quote with its final and adjacent
+finals, without seeing the rule decisions or AMI labels. This is one agent's
+reading, not independent human validation. The label file contains the fixed
+test judgments. We did not adjust the rule after the held-out comparison.
+
+| Split | Current precision by reading | Clean precision by reading | Paired gain |
+| --- | ---: | ---: | ---: |
+| Tune | 130/200 = 0.650 [0.601, 0.689] | 122/165 = 0.739 [0.673, 0.799] | +0.089 [+0.052, +0.134] |
+| Test | 148/200 = 0.740 [0.656, 0.832] | 142/177 = 0.802 [0.733, 0.886] | +0.062 [+0.036, +0.108] |
+
+Recall uses **all** strict AMI questions on each split, not the 200 read cards.
+Match the retained cards again, so a second card can still catch a question.
+Relative loss is the share of questions caught by the current detector that
+the filter loses. All intervals are 95% paired meeting-bootstrap intervals,
+with 2,000 draws.
+
+| Split | Current strict AMI recall | Clean strict AMI recall | Relative recall loss |
+| --- | ---: | ---: | ---: |
+| Tune | 172/346 = 0.497 [0.445, 0.556] | 162/346 = 0.468 [0.424, 0.518] | 5.8% [3.4%, 8.7%] |
+| Test | 127/263 = 0.483 [0.451, 0.522] | 126/263 = 0.479 [0.446, 0.517] | 0.8% [0.0%, 3.1%] |
+
+Both splits pass the point targets of at least 0.70 precision by reading and
+at most 10% relative AMI recall loss. The tuning precision interval crosses
+0.70. The held-out recall-loss interval includes zero. The filter dropped 17
+of the 52 test cards the reader rejected. It also dropped six cards the reader
+would track, five of them meaningful tags. These results do not qualify
+Parakeet, steady sound, or other languages.
+
+```sh
+export PATH=/opt/homebrew/opt/node@24/bin:$PATH
+cache="$HOME/oats-asr-cache/question-eval/replays"
+node scripts/question-eval.mjs track-audit --split tune \
+  --replays "$cache" --labels docs/question-audit-tune.tsv
+node scripts/question-eval.mjs track-audit --split test --out /tmp/oats-track-blind.json
+node scripts/question-eval.mjs track-audit --split test --labels docs/question-audit-test.tsv
+```
+
+**First-card delay.** On those same held-out replays, the current code's first
+card p90 was 4.86 s over 127 matched AMI questions. The older result below was
+5.2 s. Removing cached request time alone leaves a p90 of 4.60 s. For the 13
+questions at or above the current p90, the median final lasted 9.71 s. The
+median wait from the end of the question to the end of its final was 5.60 s.
+Median request time was 0.26 s. The replay adds a fixed 0.30 s close wait. None
+of those 13 finals was long enough to end directly at a 20 s cap cut: the
+segmenter cuts in the last third, so such a final would be at least 13.3 s.
+The cache lacks close reasons and live queue times. This explains the replay
+tail, not every source of delay in the app.
+
 ### How far to trust adjacency pairs
 
 Read by hand on tuning meetings: 60 questions the pairs call `open`, 40 they call
