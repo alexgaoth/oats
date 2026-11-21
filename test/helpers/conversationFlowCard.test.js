@@ -76,12 +76,15 @@ test("each row is a button: the label, the minutes, and its state for a screen r
   assert.match(LANES, /<button[\s\S]*?type="button"[\s\S]*?aria-pressed=\{isSelected\}/);
   assert.match(LANES, /onClick=\{\(\) => onSelect\(row\.id\)\}/);
   assert.match(LANES, /isSelected && "bg-muted hover:bg-muted"/);
-  assert.match(LANES, /"truncate text-\[13px\]"/);
+  // Grey means "maybe" only (Alex, 2026-11-20): every settled label is at full
+  // contrast, and the topic now differs by weight alone.
+  assert.match(LANES, /"truncate text-\[13px\] text-foreground"/);
+  assert.doesNotMatch(LANES, /text-muted-foreground group-hover:text-foreground/);
   assert.match(LANES, /text-right text-\[13px\] tabular-nums text-muted-foreground/);
   assert.match(LANES, /<span className="sr-only">\{name\}<\/span>/);
   // The topic now: medium weight, and no Now badge (the line's honey end says
   // it); its state is still in the row's name for a screen reader.
-  assert.match(LANES, /isNow && "font-medium text-foreground"/);
+  assert.match(LANES, /isNow \? "font-medium" : "font-normal"/);
   assert.doesNotMatch(LANES, /<Badge/);
   assert.match(LANES, /stateLabel\(t, isNow \? "live"/);
   // The stack's dividers.
@@ -175,8 +178,15 @@ test("the graph measures its box before the first paint, then on resize", () => 
 });
 
 test("labels sit on plates in the card colour, placed clear of each other's words", () => {
-  assert.match(FLOW, /"bg-card font-medium text-foreground hover:bg-muted"/);
-  assert.match(FLOW, /"bg-card text-muted-foreground hover:bg-muted hover:text-foreground"/);
+  assert.match(
+    FLOW,
+    /"text-foreground",\s*isSelected \? "bg-muted" : "bg-card hover:bg-muted",\s*isLive \? "font-medium" : "font-normal"/
+  );
+  assert.doesNotMatch(
+    FLOW,
+    /"bg-card text-muted-foreground hover:bg-muted hover:text-foreground"/,
+    "a settled label is never muted: grey means maybe"
+  );
   assert.match(FLOW, /plateX: BUTTON_PAD_X_PX,\s*plateY: PLATE_Y_PX,/);
   assert.doesNotMatch(FLOW, /hover:bg-muted\/60/, "a plate is opaque, even under the pointer");
 });
