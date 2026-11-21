@@ -45,7 +45,7 @@ test("the text a topic is read by is its name, or its name and the telling words
   assert.equal(links.topicLinkText(null), "");
 });
 
-test("topics alike in meaning are one subject, threaded through time", () => {
+test("topics alike in meaning are one subject, and each edge is a pair that links", () => {
   const { subjects, edges } = links.meaningThreads(
     [
       conversation(3, 300, [topic(1, "SAML clock skew")]),
@@ -56,7 +56,7 @@ test("topics alike in meaning are one subject, threaded through time", () => {
       ]),
       conversation(4, 400, [topic(1, "Weekend at the lake")]),
     ],
-    { vectorOf }
+    { vectorOf, threshold: 0.7 }
   );
   const byLabel = Object.fromEntries(
     subjects.map((subject) => [subject.label, subject.conversationIds])
@@ -76,9 +76,10 @@ test("topics alike in meaning are one subject, threaded through time", () => {
     edges.map((edge) => [edge.from, edge.to]).sort(),
     [
       [1, 2],
+      [1, 3],
       [2, 3],
     ],
-    "each conversation on a subject joins the one on it before, and two subjects share an edge"
+    "all three SSO topics link, and two subjects share the edge from 1 to 2"
   );
   const first = edges.find((edge) => edge.from === 1 && edge.to === 2);
   assert.equal(first.weight, 2, "the edge between 1 and 2 carries both subjects");
@@ -235,8 +236,18 @@ test("one topic linked on two subjects leaves them two, and neither takes the ot
       {
         candidates: [1, 2],
         links: [
-          { id: 1, subject: "Rollout", topic: "Discount for annual plans", earlierTopic: "SSO rollout" },
-          { id: 2, subject: "Pricing", topic: "Discount for annual plans", earlierTopic: "Enterprise pricing" },
+          {
+            id: 1,
+            subject: "Rollout",
+            topic: "Discount for annual plans",
+            earlierTopic: "SSO rollout",
+          },
+          {
+            id: 2,
+            subject: "Pricing",
+            topic: "Discount for annual plans",
+            earlierTopic: "Enterprise pricing",
+          },
         ],
       },
     ],
@@ -317,6 +328,135 @@ test("a link to a conversation that is not on the board, or to itself, is left o
     ],
   ]);
   assert.deepEqual(links.linkThreads(list, { vectorOf, checks }), { subjects: [], edges: [] });
+});
+
+// What was said on a topic, as a direction in degrees. Every angle under 38
+// clears the bar of 0.78, so these read like a history about one thing.
+const saidAt = (id, degrees) => {
+  const radians = (degrees * Math.PI) / 180;
+  return conversation(id, id * 100, [
+    {
+      ...topic(1, `Topic ${id}`),
+      vector: links.encodeTopicVector(unit(Math.cos(radians), Math.sin(radians))),
+    },
+  ]);
+};
+const said = (...degrees) => degrees.map((value, index) => saidAt(index + 1, value));
+const pairsOf = ({ edges }) => edges.map((edge) => [edge.from, edge.to]).sort();
+const heldBy = ({ subjects }) => subjects.map((subject) => subject.conversationIds).sort();
+
+test("two topics link only when each is among the other's three nearest", () => {
+  assert.equal(links.LINK_NEIGHBOURS, 3);
+  // All five clear the bar together. 1 has 4 among its three nearest, and 4 has
+  // not 1; 1 and 5 have not each other.
+  const board = links.meaningThreads(said(0, 4, 10, 18, 28), { vectorOf });
+  assert.deepEqual(pairsOf(board), [
+    [1, 2],
+    [1, 3],
+    [2, 3],
+    [2, 4],
+    [3, 4],
+    [4, 5],
+  ]);
+  const nearestOne = links.meaningThreads(said(0, 4, 10, 18, 28), { vectorOf, neighbours: 1 });
+  assert.deepEqual(pairsOf(nearestOne), [[1, 2]], "3's nearest is 2, and 2's is 1");
+});
+
+test("the nearest still have to reach the bar", () => {
+  assert.deepEqual(links.meaningThreads(said(0, 60), { vectorOf }).subjects, []);
+  assert.equal(
+    links.meaningThreads(said(0, 60), { vectorOf, contentThreshold: 0.4 }).subjects.length,
+    1
+  );
+});
+
+test("links do not chain: a subject holds a topic and those that link to it", () => {
+  const board = links.meaningThreads(said(0, 30, 60), { vectorOf });
+  assert.deepEqual(heldBy(board), [
+    [1, 2],
+    [2, 3],
+  ]);
+  assert.deepEqual(pairsOf(board), [
+    [1, 2],
+    [2, 3],
+  ]);
+});
+
+test("a subject's edges start at its first topic, and those it drew do not link each other", () => {
+  const board = links.meaningThreads(said(0, 30, -30), { vectorOf });
+  assert.deepEqual(heldBy(board), [[1, 2, 3]]);
+  assert.deepEqual(pairsOf(board), [
+    [1, 2],
+    [1, 3],
+  ]);
+});
+
+test("topics all alike are one subject, and each of their edges carries it", () => {
+  const board = links.meaningThreads(said(0, 5, 10), { vectorOf });
+  assert.deepEqual(heldBy(board), [[1, 2, 3]]);
+  assert.equal(board.edges.length, 3);
+  const [{ label }] = board.subjects;
+  assert.ok(board.edges.every((edge) => edge.topics.length === 1 && edge.topics[0] === label));
+});
+
+test("on a history about one thing, a board grows with the history and not with its square", () => {
+  const history = said(...Array.from({ length: 12 }, (_, index) => index * 3));
+  const board = links.meaningThreads(history, { vectorOf });
+  assert.ok(board.edges.length <= (12 * links.LINK_NEIGHBOURS) / 2);
+  assert.ok(board.subjects.every((subject) => subject.conversationIds.length <= 4));
+});
+
+test("a name said many times is one subject, threaded to its newest conversation", () => {
+  const history = Array.from({ length: 8 }, (_, index) =>
+    conversation(index + 1, (index + 1) * 100, [topic(1, "SSO rollout")])
+  );
+  const board = links.meaningThreads(history, { vectorOf });
+  assert.deepEqual(board.subjects, [
+    { label: "SSO rollout", conversationIds: [1, 2, 3, 4, 5, 6, 7, 8] },
+  ]);
+  assert.ok(
+    pairsOf(board).every(([from, to]) => to - from <= 2),
+    "the same name ties, and the nearest in time win"
+  );
+  assert.ok(pairsOf(board).some(([from, to]) => from === 7 && to === 8));
+});
+
+test("a subject on this computer does not join what the provider read and did not link", () => {
+  const route = "providers:anthropic";
+  const on = (item, summaryRoute) => ({ ...item, summaryRoute });
+  const list = [
+    on(conversation(1, 100, [topic(1, "SSO rollout")]), "local:"),
+    on(conversation(2, 200, [topic(1, "Single sign-on setup")]), route),
+    on(conversation(3, 300, [topic(1, "SAML clock skew")]), route),
+  ];
+  const checks = new Map([[3, { candidates: [], links: [] }]]);
+  assert.deepEqual(
+    heldBy(links.linkThreads(list, { vectorOf, checks })),
+    [[1, 2]],
+    "3 would meet 1 on this computer, but 1's subject holds 2, which the provider kept apart"
+  );
+});
+
+test("a check's subject takes what came after it, and leaves an earlier link alone", () => {
+  const list = [
+    conversation(1, 100, [topic(1, "SSO rollout")]),
+    conversation(2, 200, [topic(1, "Single sign-on setup")]),
+    conversation(3, 300, [topic(1, "SAML clock skew")]),
+  ];
+  // The check linked 1 and left 2 out. That says nothing of 1 and 2.
+  const checks = new Map([
+    [
+      3,
+      {
+        candidates: [1, 2],
+        links: [{ id: 1, subject: "SSO", topic: "SAML clock skew", earlierTopic: "SSO rollout" }],
+      },
+    ],
+  ]);
+  assert.deepEqual(heldBy(links.linkThreads(list, { vectorOf, checks })), [
+    [1, 2],
+    [1, 3],
+  ]);
 });
 
 test("a stored topic vector is one byte a dimension, and reads back the same way", () => {
