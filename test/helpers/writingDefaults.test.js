@@ -54,9 +54,12 @@ test("the default's description is translated in every locale", () => {
 test("a model somebody chose is kept: the default is followed only while nothing is stored", () => {
   const start = PROCESSING.indexOf("function updateWritingSide(");
   const body = PROCESSING.slice(start, PROCESSING.indexOf("export function setProcessing("));
-  // The switch restores the side's last choice, or follows the default; it
-  // never stores a default by itself.
-  assert.match(body, /if \(remembered\) chooseWritingModel\(/);
+  // Restore the side's last choice unless it belongs to a different provider
+  // than the one the row selected. Do not store a default.
+  assert.match(
+    body,
+    /if \(remembered && \(!provider \|\| remembered\.cleanupProvider === provider\)\) \{\s*chooseWritingModel\(/
+  );
   assert.match(body, /else forgetWritingChoice\(\);/);
   assert.doesNotMatch(body, /setCleanupModel\(/);
   // The store moves a setting that follows the default in memory only.
