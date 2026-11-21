@@ -1935,6 +1935,27 @@
     "join": "Beitreten & transkribieren"
   },
   "oats": {
+    "featureRoutes": {
+      "conversations": "Unterhaltungen",
+      "dictation": "Diktat",
+      "writing": "Schreiben",
+      "useKey": "API-Schlüssel verwenden",
+      "useMac": "Diesen Mac verwenden",
+      "useComputer": "Diesen Computer verwenden",
+      "useDefault": "Standard verwenden",
+      "onMac": "{{model}}, auf diesem Mac",
+      "onComputer": "{{model}}, auf diesem Computer",
+      "withKey": "{{model}}, mit Ihrem Schlüssel",
+      "addProviderKey": "Fügen Sie einen Schlüssel für {{provider}} hinzu, um diese Funktion in der Cloud zu nutzen.",
+      "addWritingKey": "Fügen Sie einen OpenAI- oder Anthropic-Schlüssel hinzu, um Schreiben in der Cloud zu nutzen.",
+      "conversationsSent": "Audio geht zur Transkription an {{provider}}.",
+      "dictationSent": "Audio geht zur Transkription an {{provider}}. Wenn die Textkorrektur aktiv ist, geht auch der diktierte Text dorthin.",
+      "writingSent": "Transkripttext geht für Zusammenfassungen, Themennamen und Beschreibungen an {{provider}}. Manche Funktionen senden auch ausgewählte Zusammenfassungen oder Textstellen. Schreiben sendet kein Audio.",
+      "noneSent": "Keine dieser Funktionen sendet Daten an einen Anbieter.",
+      "defaultDescription": "Der Standard für Unterhaltungen, Diktat und Schreiben.",
+      "keyNoAccess": "Oats hat den Schlüssel nicht gespeichert. Er kann {{model}} nicht verwenden.",
+      "keyNotChecked": "Oats konnte den Schlüssel nicht prüfen. Versuchen Sie es erneut."
+    },
     "parakeetFallback": "Parakeet fehlgeschlagen. Whisper läuft.",
     "library": {
       "tools": "Gesprächswerkzeuge",

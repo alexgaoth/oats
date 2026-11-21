@@ -128,9 +128,11 @@ export function ProviderKeyField({
           tone: "danger",
           text:
             status === "no-access"
-              ? t("oats.keys.noAccess", { model: writingModelName(CLOUD_WRITING_MODELS[detected]) })
+              ? t("oats.featureRoutes.keyNoAccess", {
+                  model: writingModelName(CLOUD_WRITING_MODELS[detected]),
+                })
               : status === "unknown"
-                ? t("oats.keys.unchecked")
+                ? t("oats.featureRoutes.keyNotChecked")
                 : reason
                   ? t("oats.keys.rejectedReason", { provider: PROVIDER_NAMES[target], reason })
                   : t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
