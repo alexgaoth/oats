@@ -31,6 +31,7 @@ const M5_PRO = {
   chip: "Apple M5 Pro",
   gpuCores: 16,
   memoryBytes: 48 * GIB,
+  macosVersion: "26.1",
 };
 
 const IOREG = `+-o AGXAcceleratorG17X  <class AGXAcceleratorG17X, id 0x1000003d1, registered>
@@ -154,6 +155,7 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
   const calls = [];
   const run = async (file, args) => {
     calls.push([path.basename(file), ...args].join(" "));
+    if (args.includes("kern.osproductversion")) return "26.1\n";
     if (file.endsWith("sysctl")) return "Apple M5 Pro\n";
     if (file.endsWith("ioreg")) return IOREG;
     return SYSTEM_PROFILER;
@@ -163,7 +165,11 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
     await detectDevice({ platform: "darwin", arch: "arm64", run, totalmem }),
     M5_PRO
   );
-  assert.deepEqual(calls, ["sysctl -n machdep.cpu.brand_string", "ioreg -rc AGXAccelerator -d 1"]);
+  assert.deepEqual(calls, [
+    "sysctl -n machdep.cpu.brand_string",
+    "sysctl -n kern.osproductversion",
+    "ioreg -rc AGXAccelerator -d 1",
+  ]);
 
   // IOKit with nothing to say: the slower system_profiler.
   calls.length = 0;
@@ -184,6 +190,7 @@ test("detection reads the chip, the GPU and the memory, and nothing off a Mac", 
     chip: null,
     gpuCores: null,
     memoryBytes: 48 * GIB,
+    macosVersion: null,
   });
   assert.deepEqual(calls, [], "no tool runs off a Mac");
 });
@@ -564,6 +571,21 @@ test("a quit while the check runs stops its server", async () => {
   }
 });
 
+test("Turbo does not start downloading while a recording is active", async () => {
+  const env = setup();
+  try {
+    let recording = false;
+    const { tier } = tierFor(env, { isBusy: () => recording });
+    await tier.ensureMeasured();
+    recording = true;
+    const snapshot = await tier.startUpgrade({ language: "en" });
+    assert.equal(snapshot.turbo.downloading, null);
+    assert.equal(env.downloads.length, 0);
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("after the download, the switch waits for a recording to end, however long", async () => {
   const env = setup();
   try {
@@ -580,7 +602,11 @@ test("after the download, the switch waits for a recording to end, however long"
       time: scripted([280, 170, 900, 650]),
     });
     await tier.ensureMeasured();
-    recording = true;
+    const finishDownload = env.whisperManager.onDownload;
+    env.whisperManager.onDownload = (...args) => {
+      recording = true;
+      return finishDownload(...args);
+    };
     await tier.startUpgrade({ language: "en" });
     await settle(tier);
     assert.equal(polls, 144, "it waited for the whole recording");

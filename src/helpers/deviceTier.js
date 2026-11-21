@@ -108,7 +108,7 @@ function parseSystemProfilerCores(text) {
 }
 
 /**
- * The chip, the GPU's core count and the memory. Only reads.
+ * The chip, the GPU's core count, the memory and the macOS version. Only reads.
  *
  * @param {{ platform?: string, arch?: string, run?: typeof runTool, totalmem?: () => number }} [options]
  */
@@ -118,17 +118,28 @@ async function detectDevice({
   run = runTool,
   totalmem = os.totalmem,
 } = {}) {
-  const device = { platform, arch, chip: null, gpuCores: null, memoryBytes: null };
+  const device = {
+    platform,
+    arch,
+    chip: null,
+    gpuCores: null,
+    memoryBytes: null,
+    macosVersion: null,
+  };
   try {
     device.memoryBytes = Number(totalmem()) || null;
   } catch {
     device.memoryBytes = null;
   }
   if (platform !== "darwin") return device;
-  device.chip = (await run("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"])).trim() || null;
-  device.gpuCores = parseGpuCoreCount(
-    await run("/usr/sbin/ioreg", ["-rc", "AGXAccelerator", "-d", "1"])
-  );
+  const [chip, version, gpu] = await Promise.all([
+    run("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"]),
+    run("/usr/sbin/sysctl", ["-n", "kern.osproductversion"]),
+    run("/usr/sbin/ioreg", ["-rc", "AGXAccelerator", "-d", "1"]),
+  ]);
+  device.chip = chip.trim() || null;
+  device.macosVersion = version.trim() || null;
+  device.gpuCores = parseGpuCoreCount(gpu);
   if (device.gpuCores === null && arch === "arm64") {
     device.gpuCores = parseSystemProfilerCores(
       await run("/usr/sbin/system_profiler", ["SPDisplaysDataType", "-json"], { timeoutMs: 15000 })
@@ -149,6 +160,7 @@ function isCurrent(record, { appVersion, device }) {
   return (
     record?.version === STORE_VERSION &&
     record.appVersion === appVersion &&
+    record.device?.macosVersion === device?.macosVersion &&
     sameDevice(record.device, device)
   );
 }
@@ -544,7 +556,7 @@ class DeviceTier extends EventEmitter {
       turboClipMs: record.turboClipMs,
       language,
     });
-    if (choice.model !== TURBO_MODEL) return this.snapshot();
+    if (choice.model !== TURBO_MODEL || this.isBusy()) return this.snapshot();
 
     const signal = createDownloadSignal();
     this.download = {

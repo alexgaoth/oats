@@ -40,6 +40,7 @@ export interface DeviceTierSnapshot {
     chip: string | null;
     gpuCores: number | null;
     memoryBytes: number | null;
+    macosVersion?: string | null;
   } | null;
   /** The speed check's clip with `small.en`, in ms (Apple Silicon only). */
   smallClipMs: number | null;
