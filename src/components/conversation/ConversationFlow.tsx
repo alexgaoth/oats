@@ -321,6 +321,10 @@ export default function ConversationFlow({
                 onSelect={toggle}
                 live={live}
                 proposalTicks={proposalTicks}
+                ghostPreview={
+                  import.meta.env.DEV &&
+                  new URLSearchParams(window.location.search).get("topicPreview") === "ghost"
+                }
               />
             ) : (
               <FlowGraph map={map} compact={compact} selected={selected} onSelect={toggle} />
