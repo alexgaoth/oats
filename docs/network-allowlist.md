@@ -53,20 +53,22 @@ Scope limits that make this safe to state plainly:
 ## Proposed feature routes
 
 Setup asks for one default: **On this Mac** or **With an API key**. AI models
-in Settings lets each feature use the other route. Changing the default
-does not remove an exception. The Settings disclosure lists only features
-that currently use a cloud provider.
+in Settings lets each feature use the other route when a suitable key is
+available. Changing the default keeps exceptions that differ from the new
+default. The Settings disclosure lists only features that currently use a
+cloud provider.
 
-| Feature | Provider for the key route | What Oats sends |
+| Feature | Key it uses | What Oats sends |
 | --- | --- | --- |
-| Conversations | OpenAI | Room audio for live transcription. This route does not send transcripts for writing. |
-| Dictation | OpenAI | Dictated audio for transcription. If cleanup is on, the recognized text and cleanup instructions go to OpenAI too. A custom dictionary can supply transcription and cleanup hints. |
-| Writing | The selected writing provider | Transcript text for summaries, titles, topic names and descriptions. Other writing requests can include topic labels, summaries, or context passages, as detailed below. Writing does not send audio. |
+| Conversations | Your OpenAI key | Room audio for live transcription. This route does not send transcripts for writing. |
+| Dictation | Your OpenAI key | Dictated audio for transcription. If cleanup is on, the recognized text and cleanup instructions go to OpenAI too. A custom dictionary can supply transcription and cleanup hints. |
+| Writing | Your OpenAI or Anthropic key | Transcript text for summaries, titles, topic names and descriptions. Other writing requests can include topic labels, summaries, or context passages, as detailed below. Writing does not send audio. |
 
 The key route needs a usable key for that provider. A missing or refused key
-keeps the feature local. Oats asks for the same provider's key and does not
-choose a different cloud provider. An explicitly selected local route can
-authorize its downloads. A local fallback because a key is missing cannot.
+keeps the feature local. If a saved exception loses its key, Oats asks for
+the same provider's key and does not switch providers automatically. An
+explicitly selected local route can authorize its downloads. A local fallback
+because a key is missing cannot.
 File uploads and separately enabled integrations have their own settings.
 
 ## Automatic, once: Parakeet for Conversations
