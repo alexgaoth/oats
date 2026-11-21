@@ -15,43 +15,28 @@
 //   again in reverse. The caller therefore passes a set of every id ever
 //   announced, not the id of the newest card.
 //
-//   **Saying nothing.** A live region only announces when its text *changes*.
-//   Two questions arriving in the same five-second segment used to announce
-//   once, silently dropping the other; and a re-asking of the same question
-//   produces identical text, so rule 3's "repeats are never suppressed" became
-//   "repeats are never spoken". Both cases are reported here instead, which
-//   makes the text differ as a side effect of being accurate.
+//   **Saying nothing.** Two questions can arrive in one render, and a repeat
+//   can have identical text. Give each asking its own keyed addition to the
+//   live region instead of replacing the region's text with the latest quote.
 
 /**
  * @param {Array<{ id?: string, question?: string, occurrence?: number }>} cards
  *   The cards currently on the surface, oldest first.
  * @param {Set<string>} spoken Every card id the region has already announced.
- * @returns {{ ids: string[], question: string, occurrence: number, count: number } | null}
- *   `null` when there is nothing new. `count` is how many cards arrived
- *   together; `question` and `occurrence` describe the newest of them.
- *   The caller is responsible for adding `ids` to `spoken`.
+ * @returns {{ id: string, question: string, occurrence: number }[]}
+ *   The caller marks every returned id spoken, including cards with no text.
  */
-export function nextAnnouncement(cards, spoken) {
+export function newQuestionAnnouncements(cards, spoken) {
   const fresh = [];
   for (const card of cards ?? []) {
     if (!card?.id || spoken.has(card.id)) continue;
-    // A card with no question text has nothing to announce, but it must still
-    // be marked spoken or it is reconsidered on every render.
-    fresh.push(card);
+    fresh.push({
+      id: card.id,
+      question: card.question ?? "",
+      occurrence: Number.isFinite(card.occurrence) ? card.occurrence : 1,
+    });
   }
-  if (!fresh.length) return null;
-
-  const ids = fresh.map((card) => card.id);
-  const speakable = fresh.filter((card) => card.question);
-  if (!speakable.length) return { ids, question: "", occurrence: 1, count: 0 };
-
-  const newest = speakable[speakable.length - 1];
-  return {
-    ids,
-    question: newest.question,
-    occurrence: Number.isFinite(newest.occurrence) ? newest.occurrence : 1,
-    count: speakable.length,
-  };
+  return fresh;
 }
 
 const CHECK_VERDICTS = new Set(["right", "wrong", "answer"]);
