@@ -540,6 +540,53 @@ test("a model on this computer names while recording unless a classifier would t
   );
 });
 
+test("live topic routes keep the key loop and use the detector for local cuts", () => {
+  const { liveTopicMode, namesWhileRecording } = naming;
+  const local = { mode: "local", model: "gemma-4-e4b", classifier: "qwen" };
+  const cases = [
+    [{}, "none"],
+    [{ mode: "providers", hasCheckModel: true }, "key-loop"],
+    [{ mode: "providers", hasCheckModel: true, stopped: true }, "finish"],
+    [{ mode: "providers", liveNames: true }, "namer"],
+    [{ mode: "self-hosted", liveNames: true }, "namer"],
+    [
+      { mode: "local", liveNames: namesWhileRecording({ ...local, classifier: "" }) },
+      "detector-namer",
+    ],
+    [
+      { mode: "local", liveNames: namesWhileRecording({ ...local, classifier: local.model }) },
+      "detector-namer",
+    ],
+    [
+      { mode: "local", liveNames: namesWhileRecording({ ...local, classifierOnDisk: false }) },
+      "detector-namer",
+    ],
+    [
+      { mode: "local", liveNames: namesWhileRecording({ ...local, classifierOnDisk: true }) },
+      "finish",
+    ],
+    [
+      { mode: "local", liveNames: namesWhileRecording({ ...local, classifierOnDisk: null }) },
+      "finish",
+    ],
+    [
+      {
+        mode: "local",
+        liveNames: namesWhileRecording({
+          ...local,
+          classifierOnDisk: true,
+          dedicatedWritingServer: true,
+        }),
+      },
+      "detector-namer",
+    ],
+    [{ mode: "local", liveNames: true, stopped: true }, "finish"],
+  ];
+  for (const [input, expected] of cases) {
+    assert.equal(liveTopicMode(input), expected, JSON.stringify(input));
+  }
+});
+
 // docs/network-allowlist.md promises that topic names add no destination and
 // no path the sidebar's count could miss: a request goes only by the writing
 // model's own route (the reasoning service, whose provider calls are renderer
