@@ -784,26 +784,80 @@ test("a failed search leaves the card unmarked rather than claiming it searched"
   assert.deepEqual(diagnostics, [{ code: "auto_search_failed", error: "browser unavailable" }]);
 });
 
-test("shutdown suppresses an inference result that was already in flight", async () => {
-  let resolveClassifier;
-  const classifierResult = new Promise((resolve) => {
-    resolveClassifier = resolve;
+test(
+  "shutdown writes local verdicts without waiting for an active or queued classifier",
+  { timeout: 250 },
+  async () => {
+    let resolveClassifier;
+    let started;
+    const classifierStarted = new Promise((resolve) => (started = resolve));
+    const classifierResult = new Promise((resolve) => {
+      resolveClassifier = resolve;
+    });
+    let calls = 0;
+    const { session, cards, events, updates, searches } = harness({
+      classify: () => {
+        calls += 1;
+        started();
+        return classifierResult;
+      },
+    });
+    session.onFinalized({ id: "q1", text: "What is Kubernetes?" });
+    session.onFinalized({ id: "r1", text: "It runs and manages containers." });
+    await classifierStarted;
+
+    session.onFinalized({ id: "q2", text: "What is a pod?" });
+    session.onFinalized({ id: "r2", text: "I don't know." });
+    session.onFinalized({ id: "q3", text: "What is a service?" });
+    await session.shutdown();
+
+    assert.equal(calls, 1);
+    assert.equal(latestCard(cards, "q1").state, "answered");
+    assert.equal(latestCard(cards, "q2").state, "denied");
+    assert.equal(latestCard(cards, "q3").state, "asked");
+    assert.deepEqual(
+      updates.map(({ patch }) => [patch.state, patch.source]),
+      [
+        ["answered", "local"],
+        ["denied", "local"],
+      ]
+    );
+    assert.deepEqual(
+      events.filter(({ kind }) => kind === "response").map(({ segmentIds }) => segmentIds),
+      [["r1"], ["r2"]]
+    );
+    assert.deepEqual(
+      searches.map(({ query }) => query),
+      ["What is a pod?"]
+    );
+
+    const count = cards.length;
+    resolveClassifier(unanswered());
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(cards.length, count);
+  }
+);
+
+test("shutdown drains a verdict behind a stalled browser request", { timeout: 250 }, async () => {
+  let started;
+  const searchStarted = new Promise((resolve) => (started = resolve));
+  const { session, updates } = harness({
+    classify: null,
+    openSearch: () => {
+      started();
+      return new Promise(() => {});
+    },
   });
-  const { session, events, searches } = harness({ classify: () => classifierResult });
   session.onFinalized({ id: "q1", text: "What is Kubernetes?" });
-  session.onFinalized({ id: "r1", text: "No." });
-
-  await Promise.resolve();
-  const shutdown = session.shutdown();
-  resolveClassifier(unanswered());
-  await shutdown;
-
-  // The detection event survives; nothing derived from the late verdict does.
+  session.onFinalized({ id: "r1", text: "I don't know." });
+  await searchStarted;
+  session.onFinalized({ id: "q2", text: "What is a pod?" });
+  session.onFinalized({ id: "r2", text: "It groups one or more containers." });
+  await session.shutdown();
   assert.deepEqual(
-    events.map((event) => event.kind),
-    ["question"]
+    updates.map(({ patch }) => patch.state),
+    ["denied", "answered"]
   );
-  assert.deepEqual(searches, []);
 });
 
 // With no classifier at all.
