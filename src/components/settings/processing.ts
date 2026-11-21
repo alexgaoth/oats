@@ -1,5 +1,4 @@
 import {
-  applyProvidersSpeech,
   chooseWritingModel,
   forgetWritingChoice,
   selectProcessingMode,
@@ -126,17 +125,6 @@ function updateWritingSide() {
 /** Choose the default. Uploads keep their existing independent scope. */
 export function setProcessing(mode: ProcessingMode) {
   setFeatureRoute(mode);
-  const store = useSettingsStore.getState();
-  if (mode === "local") {
-    store.setCloudTranscriptionForAllScopes({
-      useLocalWhisper: true,
-      cloudTranscriptionMode: "byok",
-    });
-    store.setTranscriptionMode(mode);
-    store.setMeetingTranscriptionMode(mode);
-  } else {
-    applyProvidersSpeech();
-  }
   updateWritingSide();
   setLocalSetupAuthorization(mode === "local");
 }

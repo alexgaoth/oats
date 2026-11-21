@@ -340,14 +340,15 @@ class IPCHandlers {
       speechServer: this.whisperManager?.serverManager,
       publish: (status) => this.broadcastToWindows("on-device-status", status),
     });
-    // What this Mac can run, and turbo's download (deviceTier.js). Measured
-    // after the pre-warm (main.js); it waits while a conversation is recorded.
+    this.dictationCaptures = new Set();
+    // Automatic downloads wait for capture on any window.
     this.deviceTier = initDeviceTier({
       whisperManager: this.whisperManager,
       storePath: path.join(app.getPath("userData"), "device-tier.json"),
       appVersion: app.getVersion(),
-      isBusy: () => this.isMeetingActive?.() === true,
-      publish: (snapshot) => this.broadcastToWindows("device-tier", snapshot),
+      isBusy: () => this.isMeetingActive?.() === true || this.dictationCaptures.size > 0,
+      publish: (snapshot) =>
+        this.broadcastToWindows("device-tier", this.captureAwareTier(snapshot)),
       // The writing model's automatic download goes the way every local
       // writing model does (writingModelFetch.js).
       modelManager: require("./modelManagerBridge").default,
@@ -362,6 +363,10 @@ class IPCHandlers {
         this.broadcastToWindows("gpu-fallback-notification", {});
       });
     }
+  }
+
+  captureAwareTier(snapshot) {
+    return { ...snapshot, dictationRecording: this.dictationCaptures.size > 0 };
   }
 
   /** The context check's index (contextService.js), created on first use. */
@@ -2137,7 +2142,28 @@ class IPCHandlers {
 
     // This Mac's tier and turbo's download (deviceTier.js, speechTier.mjs).
     // Pulled once by each window, then pushed as `device-tier`.
-    ipcMain.handle("get-device-tier", () => this.deviceTier.snapshot());
+    ipcMain.handle("get-device-tier", () => this.captureAwareTier(this.deviceTier.snapshot()));
+    const observedCaptures = new WeakSet();
+    ipcMain.on("dictation-capture-state", ({ sender }, active) => {
+      const clear = () => {
+        if (this.dictationCaptures.delete(sender)) this.deviceTier.publish();
+      };
+      if (active !== true) {
+        clear();
+        return;
+      }
+      if (!observedCaptures.has(sender)) {
+        observedCaptures.add(sender);
+        sender.once("destroyed", clear);
+        sender.on("render-process-gone", clear);
+        sender.on("did-start-navigation", (_event, _url, sameDocument, mainFrame) => {
+          if (mainFrame && !sameDocument) clear();
+        });
+      }
+      if (this.dictationCaptures.has(sender)) return;
+      this.dictationCaptures.add(sender);
+      this.deviceTier.publish();
+    });
 
     // A setup choice resets old declines. The workspace still starts downloads.
     ipcMain.handle("local-setup-prepare", (_event, options = {}) =>
@@ -2467,6 +2493,12 @@ class IPCHandlers {
     });
 
     ipcMain.handle("download-parakeet-model", async (event, modelName) => {
+      if (
+        modelName === "parakeet-ultra-ane" &&
+        (this.isMeetingActive?.() || this.dictationCaptures.size > 0)
+      ) {
+        return { success: false, code: "RECORDING_ACTIVE" };
+      }
       try {
         const result = await this.parakeetManager.downloadParakeetModel(
           modelName,

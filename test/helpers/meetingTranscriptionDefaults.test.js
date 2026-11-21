@@ -47,31 +47,13 @@ test("the meeting scope is what the primary action actually reads", () => {
   );
 });
 
-test("the one visible processing choice configures the meeting scope too", () => {
+test("the processing default writes the resolver's input, not the upload scope", () => {
   const start = PROCESSING.indexOf("export function setProcessing(");
   assert.ok(start > -1, "setProcessing not found");
   const body = PROCESSING.slice(start, start + 2000);
 
-  // On this Mac: every scope's switch together, the meeting scope included.
-  assert.match(
-    body,
-    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: true,/,
-    "choosing on-device processing must set meetingUseLocalWhisper, or recording still goes to the cloud"
-  );
-  assert.match(
-    body,
-    /setMeetingTranscriptionMode\(mode\)/,
-    "the meeting transcription mode must follow the visible choice"
-  );
-  // With API keys: the store's rule, which follows the OpenAI key.
-  assert.match(body, /applyProvidersSpeech\(\);/);
-  const rule = STORE.slice(STORE.indexOf("export function applyProvidersSpeech("));
-  assert.match(
-    rule.slice(0, 800),
-    /setCloudTranscriptionForAllScopes\(\{\s*useLocalWhisper: routes\.speech === "local",/,
-    "every scope moves together, the meeting scope included"
-  );
-  assert.match(rule.slice(0, 800), /setMeetingTranscriptionMode\("providers"\)/);
+  assert.match(body, /setFeatureRoute\(mode\);/);
+  assert.doesNotMatch(body, /setCloudTranscriptionForAllScopes|setUploadTranscriptionMode/);
 });
 
 test("the Settings default stays separate from resolved feature routes", () => {

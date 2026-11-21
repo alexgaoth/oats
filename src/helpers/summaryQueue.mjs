@@ -126,22 +126,14 @@ export function routeStaysHome(route) {
 }
 
 /**
- * The route a conversation records when it finished with "With an API key"
- * and no key for the writing provider: no provider could be sent anything.
- */
-export const KEYLESS_ROUTE = "providers:";
-
-/**
  * Whether the queue may send an owed conversation to the writing model chosen
  * now, without anybody asking.
  *
  * A model on this Mac or the person's own server, always. A cloud provider only
  * if it was already the writing model when the conversation finished: a
  * provider chosen since does not get earlier conversations unasked, the rule
- * the group sort and the link check keep (docs/network-allowlist.md). Such a
- * conversation is summarized when somebody opens it. One that finished with no
- * key (`KEYLESS_ROUTE`) goes to the provider whose key the person adds: the
- * person had chosen a provider's model, and none could be asked before.
+ * the group sort and the link check keep (docs/network-allowlist.md). Older
+ * entries with no named provider do not grant permission to send.
  *
  * @param {string} owedRoute The route when the conversation finished.
  * @param {string} currentRoute The route now.
@@ -149,9 +141,7 @@ export const KEYLESS_ROUTE = "providers:";
 export function queueMaySend(owedRoute, currentRoute) {
   const now = String(currentRoute ?? "");
   if (routeStaysHome(now)) return true;
-  const owed = String(owedRoute ?? "");
-  if (owed === KEYLESS_ROUTE) return now.startsWith(KEYLESS_ROUTE) && now !== KEYLESS_ROUTE;
-  return now !== "" && owed === now;
+  return now !== "" && now !== "providers:" && owedRoute === now;
 }
 
 /**

@@ -192,6 +192,7 @@ import {
   useSummaryQueue,
   useSummaryQueueMarks,
   useWritingRouteKey,
+  writingRouteKey,
 } from "../stores/summaryQueueStore";
 import { writingModelReady } from "../stores/conversationGroupSortStore";
 import { localModelName, useModelDownloadPercent } from "../stores/modelDownloadStore";
@@ -336,7 +337,7 @@ async function summarizeConversation(
   noteId: number,
   transcript: string,
   t: TFunction,
-  { allowTitleGeneration }: { allowTitleGeneration: boolean }
+  { allowTitleGeneration, route }: { allowTitleGeneration: boolean; route: string }
 ): Promise<BackgroundActionOutcome> {
   return runSummary(
     noteId,
@@ -345,6 +346,7 @@ async function summarizeConversation(
       if (!action) return "refused";
       // The title now: renamed while the summary is written, it keeps the new name.
       const note = await Promise.resolve(window.electronAPI?.getNote?.(noteId)).catch(() => null);
+      if (route !== writingRouteKey()) return "cancelled";
       const settings = useSettingsStore.getState();
       const config = selectResolvedNoteFormatting(settings);
       const formatted = transcriptText(transcript, t);
@@ -380,9 +382,14 @@ async function summarizeConversation(
  * it, the queue, "Summarize again". A title somebody wrote is theirs; only a
  * placeholder is replaced.
  */
-function summarizeLater(note: NoteItem, t: TFunction): Promise<BackgroundActionOutcome> {
+function summarizeLater(
+  note: NoteItem,
+  t: TFunction,
+  route = writingRouteKey()
+): Promise<BackgroundActionOutcome> {
   return summarizeConversation(note.id, note.transcript ?? "", t, {
     allowTitleGeneration: isRegenerableNoteTitle(note.title, [t("oats.untitled")]),
+    route,
   });
 }
 
@@ -673,6 +680,7 @@ function ConversationSurface() {
     // From here the conversation is owed a summary, written down before
     // anything can stop it: a writing model that is not ready yet, or a quit,
     // leaves it to the summary queue instead of losing it.
+    const finishWritingRoute = writingRouteKey();
     const releaseFinish = holdForFinish(recordingNoteId);
     void (async () => {
       try {
@@ -705,6 +713,7 @@ function ConversationSurface() {
       if (await writingModelReady()) {
         await summarizeConversation(recordingNoteId, finalTranscript, t, {
           allowTitleGeneration: true,
+          route: finishWritingRoute,
         });
       }
     })().finally(releaseFinish);
@@ -3623,7 +3632,7 @@ export default function OatsWorkspace() {
   // A conversation that finished before its writing model was ready, or whose
   // summary a quit cut off, is summarized once the model is ready
   // (stores/summaryQueueStore.ts).
-  useSummaryQueue((note) => summarizeLater(note, t));
+  useSummaryQueue((note, route) => summarizeLater(note, t, route));
   const fieldMode = useSettingsStore((s) => s.uiMode) === "field";
   const [surface, setSurface] = useState<Surface>("conversation");
   // Whether the Conversations page is searching, as it reports it. Search in
