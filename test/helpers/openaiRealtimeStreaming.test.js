@@ -21,6 +21,84 @@ function makeFakeSocket(readyState) {
   return socket;
 }
 
+test("an unexpected meeting socket close retries and sends queued audio once, in order", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const OpenAIRealtimeStreaming = (await load()).default;
+  const streaming = new OpenAIRealtimeStreaming();
+  t.after(() => streaming.cleanup());
+  streaming.shouldRecover = () => true;
+  const old = makeFakeSocket(WS.CONNECTING);
+  const failed = makeFakeSocket(WS.CONNECTING);
+  const replacement = makeFakeSocket(WS.CONNECTING);
+  const sockets = [old, failed, replacement];
+  const ready = (socket) => {
+    socket.readyState = WS.OPEN;
+    socket.emit("message", JSON.stringify({ type: "session.created" }));
+  };
+  const turn = () => new Promise((resolve) => setImmediate(resolve));
+  const start = streaming.connect({
+    apiKey: "fake",
+    preconfigured: true,
+    createSocket: async () => sockets.shift(),
+  });
+  await turn();
+  ready(old);
+  await start;
+  old.terminate(); // close only, no error
+  streaming.sendAudio(Buffer.from("first"));
+  await turn();
+  failed.terminate();
+  await turn();
+  streaming.sendAudio(Buffer.from("second"));
+  t.mock.timers.tick(500);
+  await turn();
+  replacement.readyState = WS.OPEN;
+  streaming.sendAudio(Buffer.from("third")); // transport open, session not ready
+  assert.equal(replacement.sent.length, 0);
+  ready(replacement);
+  await turn();
+  streaming.sendAudio(Buffer.from("live"));
+  assert.deepEqual(
+    replacement.sent.map((data) => Buffer.from(JSON.parse(data).audio, "base64").toString()),
+    ["first", "second", "third", "live"]
+  );
+  assert.equal(streaming.recovery, null);
+});
+
+test("meeting socket recovery stops after five failures and reports once", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const OpenAIRealtimeStreaming = (await load()).default;
+  const streaming = new OpenAIRealtimeStreaming();
+  streaming.shouldRecover = () => true;
+  const old = makeFakeSocket(WS.CONNECTING);
+  const turn = () => new Promise((resolve) => setImmediate(resolve));
+  const errors = [];
+  streaming.onError = (error) => errors.push(error.message);
+  let attempts = 0;
+  const start = streaming.connect({
+    apiKey: "fake",
+    preconfigured: true,
+    createSocket: async () => {
+      if (attempts++ === 0) return old;
+      throw new Error("offline");
+    },
+  });
+  await turn();
+  old.readyState = WS.OPEN;
+  old.emit("message", JSON.stringify({ type: "session.created" }));
+  await start;
+  old.terminate();
+  await turn();
+  for (let attempt = 1; attempt < 5; attempt++) {
+    t.mock.timers.tick(500 * attempt);
+    await turn();
+  }
+  assert.equal(attempts, 6, "one initial connection and five recovery attempts");
+  assert.deepEqual(errors, ["offline"]);
+  assert.equal(streaming.recovery, null);
+  assert.equal(streaming.sendAudio(Buffer.from("late")), false);
+});
+
 async function connectPreconfigured(streaming, socket) {
   const connected = streaming.connect({
     apiKey: "key",

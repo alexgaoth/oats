@@ -118,7 +118,6 @@ const REALTIME_PROVIDER_CATALOG = [
 // streaming providers must be told the true PCM rate or they misread the audio.
 const MEETING_STREAM_SAMPLE_RATE = 24000;
 /** A Neural Engine read hears 8 s before its segment, at 16 kHz. */
-const ROOM_CONTEXT_SAMPLES = 8 * 16000;
 /** What a room keeps in memory: that, the longest segment, and a backlog of reads. */
 const ROOM_RECENT_SECONDS = 60;
 
@@ -2139,6 +2138,15 @@ class IPCHandlers {
     // This Mac's tier and turbo's download (deviceTier.js, speechTier.mjs).
     // Pulled once by each window, then pushed as `device-tier`.
     ipcMain.handle("get-device-tier", () => this.deviceTier.snapshot());
+
+    // A setup choice resets old declines. The workspace still starts downloads.
+    ipcMain.handle("local-setup-prepare", (_event, options = {}) =>
+      this.deviceTier.prepareLocalSetup({
+        language: typeof options?.language === "string" ? options.language : "en",
+        speech: options?.speech === true,
+        writing: options?.writing === true,
+      })
+    );
 
     // The renderer asks after setup, while the speech setting follows the
     // default; main checks the rule again before it fetches anything.
@@ -4810,6 +4818,15 @@ class IPCHandlers {
         send("meeting-transcription-error", error.message);
       };
       streaming.onSessionExpired = () => reconnectMeetingStreams();
+      if (streaming instanceof OpenAIRealtimeStreaming) {
+        streaming.shouldRecover = () =>
+          !!meetingConnectionOptions &&
+          meetingStartedAt !== null &&
+          !meetingStopInFlight &&
+          !meetingReconnecting &&
+          (source === "mic" ? this._meetingMicStreaming : this._meetingSystemStreaming) ===
+            streaming;
+      }
     };
 
     const reconnectMeetingStreams = async () => {
@@ -5698,6 +5715,8 @@ class IPCHandlers {
       const { PartialScheduler } = await import("./partialScheduler.mjs");
       const { AudioClock, speechChanges } = await import("./transcriptLag.mjs");
       const { RoomAudioWindow } = await import("./roomAudioWindow.mjs");
+      const { roomParakeetAudio } = await import("./roomParakeetAudio.mjs");
+      const { RoomTranscriptionFallback } = await import("./roomTranscriptionFallback.mjs");
       const { SegmentActivityReporter, withLateRoomFinal } = await import("./segmentActivity.mjs");
       const os = require("os");
       const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
@@ -5708,12 +5727,16 @@ class IPCHandlers {
       // still reads reaches this one.
       if (meetingInRoom) abandonInRoomSession("replaced");
       const id = ++meetingInRoomSessions;
-      meetingInRoom = {
+      const session = {
         id,
+        model: meetingLocalModel,
+        language: meetingLocalLanguage,
+        parakeet: null,
+        roomParakeetAudio,
+        preview: null,
+        previewReady: false,
         segmenter: new SpeechSegmenter(),
-        // Whisper only: the default, and the path measured with a second
-        // request on its server. Parakeet keeps finals only until it is.
-        partials: meetingLocalProvider === "nvidia" ? null : new PartialScheduler(),
+        partials: new PartialScheduler(),
         startedAt: Date.now(),
         queue: [],
         draining: null,
@@ -5733,7 +5756,32 @@ class IPCHandlers {
         noteId: meetingNoteId,
         withLateRoomFinal,
       };
-      meetingInRoom.lag = meetingInRoom.partials !== null;
+      if (meetingLocalProvider === "nvidia") {
+        session.parakeet = new RoomTranscriptionFallback({
+          prepare: async () => {
+            const result = await this.parakeetManager.startServer(
+              session.model || "parakeet-tdt-0.6b-v3"
+            );
+            if (!result?.success) throw new Error(result?.reason || "Parakeet start failed");
+          },
+          read: (pcm, _floor, startSample) => transcribeInRoomParakeet(pcm, session, startSample),
+          // Request small, not the configured Parakeet model ID. Whisper resolves
+          // it to small.en for English on Apple Silicon, or the bundled fallback.
+          backup: (pcm, floor) => transcribeInRoomWhisper(pcm, floor, session, "small"),
+          onFallback: (error) => {
+            debugLogger.warn("In-room Parakeet used Whisper as backup", {
+              session: id,
+              error: error.message,
+            });
+            const win = meetingLocalWin;
+            if (meetingInRoom === session && win && !win.isDestroyed()) {
+              win.webContents.send("meeting-transcription-fallback");
+            }
+          },
+        });
+      }
+      meetingInRoom = session;
+      session.lag = !session.parakeet;
     };
 
     /**
@@ -5759,6 +5807,7 @@ class IPCHandlers {
       if (!abandoned) return;
       sendInRoomActivity(abandoned, abandoned.activity.end(reason));
       abandoned.abandoned = true;
+      stopParakeetPreview(abandoned);
       abandoned.endReason = reason;
       meetingInRoom = null;
       const keep = reason === "replaced" && abandoned.noteId != null;
@@ -5810,6 +5859,15 @@ class IPCHandlers {
 
     const feedInRoomAudio = (buffer24k) => {
       const session = meetingInRoom;
+      // Start on the first chunk, after the renderer is listening. A cold
+      // Neural Engine compile must not block the microphone from recording.
+      if (session.parakeet && !session.parakeet.starting) {
+        void session.parakeet.start().then(() => {
+          if (meetingInRoom === session && !session.ending && !session.parakeet.usingBackup) {
+            startParakeetPreview(session);
+          }
+        });
+      }
       const pcm16k = downsample24kTo16k(buffer24k);
       session.audio.stream.write(pcm16k);
       session.audio.bytes += pcm16k.length;
@@ -5863,6 +5921,38 @@ class IPCHandlers {
       sendInRoomSpeech(session, { off: true });
     };
 
+    const stopParakeetPreview = (session) => {
+      const preview = session.preview;
+      session.preview = null;
+      session.previewReady = false;
+      preview?.stop().catch((error) => {
+        debugLogger.warn("Parakeet preview worker did not stop", { error: error.message });
+      });
+    };
+
+    const startParakeetPreview = (session) => {
+      const preview = this.parakeetManager.createRoomPreview(session.model);
+      session.preview = preview;
+      preview.started
+        .then((ready) => {
+          if (session.preview !== preview) return;
+          if (!ready) {
+            stopParakeetPreview(session);
+            return;
+          }
+          session.previewReady = true;
+          session.lag = true;
+          // Speech might already be open. Start the lag clock at its actual
+          // opening, not at the moment the preview worker became ready.
+          session.speechOpen = null;
+          reportInRoomSpeech(session, []);
+        })
+        .catch((error) => {
+          if (session.preview === preview) stopParakeetPreview(session);
+          debugLogger.debug("Parakeet preview worker did not start", { error: error.message });
+        });
+    };
+
     // Finals and partials both go through this, so a partial is read with
     // exactly the model and options its final will be. Async, so whatever
     // goes wrong arrives as a rejection, never as a throw into the audio path.
@@ -5877,19 +5967,22 @@ class IPCHandlers {
     // or over) its FFmpeg conversion also takes that sound out, with afftdn at
     // the segment's own floor, for `base` and `small` (roomSegmentAudio.mjs):
     // the model the request will run, after a missing download falls back.
-    const transcribeInRoomWhisper = async (pcm, steadyFloor) => {
+    const transcribeInRoomWhisper = async (
+      pcm,
+      steadyFloor,
+      session,
+      requested = session.model
+    ) => {
       const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
       const { roomDenoiseFilter } = await import("./roomSegmentAudio.mjs");
       const raised = raiseQuietSegment(new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1));
-      const model = await this.whisperManager.resolveRequestModel(
-        meetingLocalModel,
-        meetingLocalLanguage
-      );
+      const model = await this.whisperManager.resolveRequestModel(requested, session.language);
       return this.whisperManager.transcribeLocalWhisper(
         pcm16ToWav(Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength)),
         {
-          model: meetingLocalModel,
-          language: meetingLocalLanguage,
+          model: requested,
+          language: session.language,
+          allowEmpty: true,
           ...this._resolveWhisperVadOptions("meeting"),
           audioFilter: roomDenoiseFilter(raised, steadyFloor, model),
         }
@@ -5899,33 +5992,34 @@ class IPCHandlers {
     // hears the seconds before a segment, and all of it raised as one. Those seconds
     // are worth 3 points of content in a quiet room and 8 with steady sound, and
     // cost no time: the model reads a fixed window anyway.
-    const transcribeInRoomParakeet = async (pcm, session, startSample) => {
-      if (!this.parakeetManager.usesNeuralEngine(meetingLocalModel)) {
-        return this.parakeetManager.transcribeLocalParakeet(pcm16ToWav(pcm), {
-          model: meetingLocalModel,
-        });
-      }
-      const { raiseQuietSegment } = await import("./roomSegmentLevel.mjs");
-      const segment = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.length >> 1);
-      const before = session.recent.before(startSample, ROOM_CONTEXT_SAMPLES);
-      const whole = new Int16Array(before.length + segment.length);
-      whole.set(before);
-      whole.set(segment, before.length);
-      const raised = raiseQuietSegment(whole);
-      const bytes = Buffer.from(raised.buffer, raised.byteOffset, raised.byteLength);
-      return this.parakeetManager.transcribeLocalParakeet(
-        pcm16ToWav(bytes.subarray(before.length * 2)),
-        {
-          model: meetingLocalModel,
-          audioBefore: bytes.subarray(0, before.length * 2),
-          wordBefore: session.lastWord,
-        }
+    const transcribeInRoomParakeet = async (pcm, session, startSample, preview = null) => {
+      const { wav, ...context } = session.roomParakeetAudio(
+        pcm,
+        this.parakeetManager.usesNeuralEngine(session.model),
+        session.recent,
+        startSample,
+        session.lastWord
       );
+      return preview
+        ? preview.read(wav, context)
+        : this.parakeetManager.transcribeLocalParakeet(wav, {
+            ...context,
+            model: session.model,
+            allowEmpty: true,
+          });
     };
-    const transcribeInRoomAudio = async (pcm, steadyFloor, session, startSample) => {
-      const result = await (meetingLocalProvider === "nvidia"
-        ? transcribeInRoomParakeet(pcm, session, startSample)
-        : transcribeInRoomWhisper(pcm, steadyFloor));
+    const transcribeInRoomAudio = async (
+      pcm,
+      steadyFloor,
+      session,
+      startSample,
+      preview = null
+    ) => {
+      const result = await (preview
+        ? transcribeInRoomParakeet(pcm, session, startSample, preview)
+        : session.parakeet
+          ? session.parakeet.final(pcm, steadyFloor, startSample)
+          : transcribeInRoomWhisper(pcm, steadyFloor, session));
       const { isOnlySoundLabels } = await import("./soundLabels.mjs");
       return result?.success && isOnlySoundLabels(result.text) ? { ...result, text: "" } : result;
     };
@@ -5949,11 +6043,13 @@ class IPCHandlers {
     const startInRoomPartial = (session) => {
       const scheduler = session.partials;
       if (!scheduler) return;
+      const preview = session.preview;
+      if (session.parakeet && !session.previewReady) return;
       const decision = scheduler.tick({
         now: performance.now(),
         open: session.segmenter.open,
         finalsPending: session.queue.length + (session.draining ? 1 : 0),
-        serverBusy: !this.whisperManager.serverManager.isIdle(),
+        serverBusy: !preview && !this.whisperManager.serverManager.isIdle(),
       });
       if (!decision.start) return;
       const samples = session.segmenter.openSamples();
@@ -5965,7 +6061,8 @@ class IPCHandlers {
         Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength),
         session.segmenter.steadyFloor,
         session,
-        openAt ?? 0
+        openAt ?? 0,
+        preview
       )
         .then((result) => {
           read = Boolean(result?.success);
@@ -5974,13 +6071,18 @@ class IPCHandlers {
         .catch((error) => {
           // A partial is only a preview; its final reports any real failure.
           debugLogger.debug("In-room partial transcription failed", { error: error.message });
+          if (preview && session.preview === preview) {
+            stopParakeetPreview(session);
+            stopInRoomLag(session);
+          }
           return "";
         })
         .then((text) => {
-          const words = scheduler.settle(decision.id, text, session.segmenter.open);
+          const open = preview && session.preview !== preview ? null : session.segmenter.open;
+          const words = scheduler.settle(decision.id, text, open);
           if (words !== null) {
             sendInRoomPartial(session, words, audioEndedAt);
-          } else if (read && session.lag && session.segmenter.open?.startSample === openAt) {
+          } else if (read && session.lag && open?.startSample === openAt) {
             // Read, and nothing new in it (a breath, the same words): the line
             // on screen is current up to here, so the lag must not wait on it.
             sendInRoomPartial(session, scheduler.shown, audioEndedAt);
@@ -6019,6 +6121,10 @@ class IPCHandlers {
         if (!result?.success) {
           outcome = "failed";
           session.failedSegments += 1;
+        }
+        if (session.parakeet?.usingBackup && session.preview) {
+          stopParakeetPreview(session);
+          stopInRoomLag(session);
         }
         const text = result?.success ? result.text?.trim() : "";
         if (!text) return;
@@ -6086,6 +6192,8 @@ class IPCHandlers {
     const finishInRoomSegmenting = async () => {
       const session = meetingInRoom;
       if (!session) return null;
+      session.ending = true;
+      stopParakeetPreview(session);
       const flushed = session.segmenter.flush();
       const activity = session.activity.take(flushed, null);
       for (const segment of flushed) enqueueInRoomSegment(session, segment);

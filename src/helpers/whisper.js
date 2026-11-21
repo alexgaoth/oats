@@ -472,6 +472,7 @@ class WhisperManager {
       vadEnabled,
       vadConfig,
       audioFilter,
+      allowEmpty: options.allowEmpty === true,
     });
   }
 
@@ -544,7 +545,7 @@ class WhisperManager {
       resultKeys: Object.keys(result),
     });
 
-    return this.parseWhisperResult(result);
+    return this.parseWhisperResult(result, { allowEmpty: options.allowEmpty });
   }
 
   async transcribeViaLan(audioBlob, url, options = {}) {
@@ -598,7 +599,7 @@ class WhisperManager {
     return text.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
   }
 
-  parseWhisperResult(output) {
+  parseWhisperResult(output, { allowEmpty = false } = {}) {
     // Handle both string (from CLI) and object (from server) inputs
     let result;
     if (typeof output === "string") {
@@ -633,6 +634,7 @@ class WhisperManager {
     if (result.text !== undefined) {
       const text = typeof result.text === "string" ? this.normalizeWhitespace(result.text) : "";
       if (!text || this.isBlankAudioMarker(text)) {
+        if (allowEmpty && typeof result.text === "string") return { success: true, text: "" };
         return { success: false, message: "No audio detected" };
       }
       return { success: true, text };

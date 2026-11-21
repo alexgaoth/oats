@@ -1930,6 +1930,7 @@
     "join": "加入並轉錄"
   },
   "oats": {
+    "parakeetFallback": "Parakeet 失敗，正在使用 Whisper。",
     "library": {
       "tools": "對話工具",
       "filter": "篩選對話",
@@ -2376,7 +2377,7 @@
       },
       "models": {
         "title": "你的模型",
-        "description": "兩個模型完成所有工作，每個都同時用於對話與聽寫。",
+        "description": "語音和寫作模型",
         "speech": "語音",
         "speechDescription": "轉寫對話與聽寫",
         "writing": "寫作",
@@ -2539,6 +2540,15 @@
       "percent": "{{percent}}%",
       "needsKey": "需要金鑰",
       "noAddress": "沒有位址",
+      "roomDefault": "{{model}} 是這台 Mac 上面對面交談的預設模型",
+      "roomActive": "面對面交談目前使用 {{model}}",
+      "useWhisper": "使用 Whisper",
+      "upgrade": {
+        "parakeet": "在公開會議錄音中，與 Whisper Turbo 相比，{{model}} 的內容召回率在安靜環境中高出 4.9 個百分點，在持續噪音下高出 15.7 個百分點。",
+        "speech": "在有背景噪音的室內測試中，{{model}} 辨識出單字的比例比 Whisper Small 高 7.5 個百分點。",
+        "writing": "在會議測試中，{{model}} 每份摘要平均少捏造四項事實。",
+        "size": "下載大小：{{size}}。"
+      },
       "noModel": "沒有模型",
       "addKey": "新增 OpenAI 金鑰",
       "advanced": "進階",

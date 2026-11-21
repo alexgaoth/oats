@@ -35,12 +35,17 @@ import {
   defaultWhisperModel,
   migrateStoredWhisperModel,
 } from "../helpers/bundledWhisperModels.mjs";
+import { followsDefaultModel, settingWhisperModel, TURBO_MODEL } from "../helpers/speechTier.mjs";
+import { PARAKEET_ROOM_MODEL, planLocalSetup } from "../helpers/localSetup.mjs";
 import {
-  chooseSpeechModel,
-  defaultSpeechModel,
-  followsDefaultModel,
-  settingWhisperModel,
-} from "../helpers/speechTier.mjs";
+  ROOM_SPEECH_PREFERENCE,
+  followsRoomSpeechDefault,
+  migrateRoomSpeechDefault,
+} from "../helpers/roomSpeechPreference.mjs";
+import {
+  LOCAL_SETUP_AUTHORIZED,
+  migrateLocalSetupAuthorization,
+} from "../helpers/localSetupConsent.mjs";
 import {
   defaultWritingModel,
   followsDefaultWritingModel,
@@ -345,13 +350,33 @@ export function whisperModelFollowsDefault(): boolean {
 
 /** The default speech model this Mac qualifies for in a language (speechTier.mjs). */
 export function speechChoiceFor(tier: DeviceTierSnapshot | null, language: string) {
-  return chooseSpeechModel({
-    platform: tier?.device?.platform ?? getCachedPlatform(),
-    arch: tier?.device?.arch ?? getArch(),
-    memoryBytes: tier?.device?.memoryBytes ?? null,
-    smallClipMs: tier?.smallClipMs ?? null,
-    turboClipMs: tier?.turboClipMs ?? null,
-    language,
+  return localSetupFor(tier, language).whisper.choice;
+}
+
+/** The latest local plan, whether or not the person uses a key. */
+export function localSetupFor(
+  tier: DeviceTierSnapshot | null,
+  language: string,
+  processing: "local" | "providers" | null = null,
+  { openaiKey = false, parakeetInstalled = false } = {}
+) {
+  return planLocalSetup({
+    device: {
+      platform: tier?.device?.platform ?? getCachedPlatform(),
+      arch: tier?.device?.arch ?? getArch(),
+      memoryBytes: tier?.memoryBytes ?? tier?.device?.memoryBytes ?? null,
+      macosVersion: tier?.device?.macosVersion,
+      smallClipMs: tier?.smallClipMs,
+      turboClipMs: tier?.turboClipMs,
+    },
+    installed: {
+      whisper: tier?.turbo?.installed && !tier.turbo.checking ? [TURBO_MODEL] : [],
+      writing: tier?.writing?.installed ?? [],
+      parakeet: parakeetInstalled ? [PARAKEET_ROOM_MODEL] : [],
+    },
+    language: resolveSpeechLanguage(language),
+    processing,
+    openaiKey,
   });
 }
 
@@ -363,11 +388,7 @@ export function currentDefaultWhisperModel(
   language: string,
   tier: DeviceTierSnapshot | null = useDeviceTierStore.getState().tier
 ): string {
-  return defaultSpeechModel({
-    choice: speechChoiceFor(tier, language),
-    bundleModel: DEFAULT_WHISPER_MODEL,
-    turboInstalled: tier?.turbo?.installed === true,
-  });
+  return localSetupFor(tier, language).whisper.setting;
 }
 
 // One time on Apple Silicon: a stored "base" goes, so the setting follows the
@@ -397,10 +418,11 @@ export function currentDefaultWritingModel(
   state: Pick<SettingsState, "cleanupMode" | "openaiApiKey" | "anthropicApiKey">,
   tier: DeviceTierSnapshot | null = useDeviceTierStore.getState().tier
 ) {
+  if (state.cleanupMode === "local") {
+    return { provider: "local", ...localSetupFor(tier, DEFAULT_SPEECH_LANGUAGE).writing.choice };
+  }
   return defaultWritingModel({
     mode: state.cleanupMode,
-    memoryBytes: tier?.memoryBytes ?? tier?.device?.memoryBytes ?? null,
-    installed: tier?.writing?.installed ?? [],
     openaiKey: Boolean(state.openaiApiKey?.trim()),
     anthropicKey: Boolean(state.anthropicApiKey?.trim()),
   });
@@ -554,6 +576,8 @@ export interface SettingsState
   remoteTranscriptionUrl: string;
   remoteTranscriptionModel: string;
   cleanupMode: InferenceMode;
+  localSetupAuthorized: boolean;
+  roomSpeechPreference: "default" | "shared" | "recommended";
   cleanupRemoteUrl: string;
 
   meetingTranscriptionMode: InferenceMode;
@@ -580,6 +604,8 @@ export interface SettingsState
   /** The ledger, or the oat field. See `uiMode.mjs`. */
   uiMode: UiMode;
   conversationAideEnabled: boolean;
+  topicProposalJudgeEnabled: boolean;
+  topicProposalGreyEnabled: boolean;
   conversationAideOnlineEnabled: boolean;
   conversationAideInRoomEnabled: boolean;
   conversationAideModel: string;
@@ -670,6 +696,8 @@ export interface SettingsState
   setTopicDescriptions: (value: boolean) => void;
   setUiMode: (value: UiMode) => void;
   setConversationAideEnabled: (value: boolean) => void;
+  setTopicProposalJudgeEnabled: (value: boolean) => void;
+  setTopicProposalGreyEnabled: (value: boolean) => void;
   setConversationAideOnlineEnabled: (value: boolean) => void;
   setConversationAideInRoomEnabled: (value: boolean) => void;
   setConversationAideModel: (value: string) => void;
@@ -1071,6 +1099,11 @@ function createSecretSetter(
 
 export const MAX_TRANSLATION_TARGETS = 5;
 
+if (isBrowser) {
+  migrateLocalSetupAuthorization(localStorage);
+  migrateRoomSpeechDefault(localStorage);
+}
+
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uiLanguage: normalizeUiLanguage(isBrowser ? localStorage.getItem("uiLanguage") : null),
   // Local by default. Oats bundles a Whisper model and promises it works the
@@ -1277,6 +1310,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return "local" as InferenceMode;
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
+  localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
+  roomSpeechPreference: (() => {
+    const preference = readString(ROOM_SPEECH_PREFERENCE, "");
+    return preference === "shared" || preference === "recommended" ? preference : "default";
+  })(),
 
   meetingTranscriptionMode: (() => {
     const v = readString("meetingTranscriptionMode", "local");
@@ -1328,6 +1366,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   topicDescriptions: readBoolean("topicDescriptions", true),
   uiMode: resolveUiMode(isBrowser ? localStorage.getItem("uiMode") : null) as UiMode,
   conversationAideEnabled: readBoolean("conversationAideEnabled", true),
+  topicProposalJudgeEnabled: readBoolean("topicProposalJudgeEnabled", false),
+  topicProposalGreyEnabled: readBoolean("topicProposalGreyEnabled", false),
   conversationAideOnlineEnabled: readBoolean("conversationAideOnlineEnabled", true),
   conversationAideInRoomEnabled: readBoolean("conversationAideInRoomEnabled", true),
   conversationAideModel: readString("conversationAideModel", "qwen2.5-1.5b-instruct-q5_k_m"),
@@ -1434,6 +1474,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   ) => void,
   setTopicDescriptions: createBooleanSetter("topicDescriptions"),
   setConversationAideEnabled: createBooleanSetter("conversationAideEnabled"),
+  setTopicProposalJudgeEnabled: createBooleanSetter("topicProposalJudgeEnabled"),
+  setTopicProposalGreyEnabled: createBooleanSetter("topicProposalGreyEnabled"),
   setConversationAideOnlineEnabled: createBooleanSetter("conversationAideOnlineEnabled"),
   setConversationAideInRoomEnabled: createBooleanSetter("conversationAideInRoomEnabled"),
   setConversationAideModel: createStringSetter("conversationAideModel"),
@@ -2190,6 +2232,7 @@ export function chooseLocalSpeechModel(engine: LocalTranscriptionProvider, model
   store.setMeetingLocalTranscriptionProvider(engine);
   if (engine === "nvidia") store.setParakeetModel(model);
   else store.setWhisperModel(model);
+  setRoomSpeechPreference("shared");
 }
 
 /**
@@ -2198,11 +2241,48 @@ export function chooseLocalSpeechModel(engine: LocalTranscriptionProvider, model
  * cloud.
  */
 export function forgetSpeechChoice(): void {
-  if (isBrowser) localStorage.removeItem("whisperModel");
   const store = useSettingsStore.getState();
   store.setLocalTranscriptionProvider("whisper");
   store.setMeetingLocalTranscriptionProvider("whisper");
   chooseCloudSpeechModel("openai", "gpt-transcribe");
+  followRecommendedWhisper();
+  setRoomSpeechPreference("default");
+}
+
+/** Keep the shared speech setting for rooms, or use the room recommendation. */
+export function setRoomSpeechPreference(preference: SettingsState["roomSpeechPreference"]): void {
+  if (isBrowser) localStorage.setItem(ROOM_SPEECH_PREFERENCE, preference);
+  useSettingsStore.setState({ roomSpeechPreference: preference });
+}
+
+/** The recommendation is separate from the model used for dictation and calls. */
+export function roomSpeechPlan(
+  state: SettingsState,
+  tier: DeviceTierSnapshot | null,
+  parakeetInstalled = false
+) {
+  if (
+    !state.meetingUseLocalWhisper ||
+    !followsRoomSpeechDefault(
+      state.roomSpeechPreference,
+      state.localTranscriptionProvider,
+      whisperModelFollowsDefault()
+    )
+  ) {
+    return null;
+  }
+  const processing = state.meetingTranscriptionMode;
+  if (processing !== "local" && processing !== "providers") return null;
+  const plan = localSetupFor(tier, state.preferredLanguage, processing, {
+    openaiKey: Boolean(state.openaiApiKey.trim()),
+    parakeetInstalled,
+  });
+  return plan.speech.engine === "parakeet" ? plan : null;
+}
+
+/** Return to the measured Whisper default without changing cloud settings. */
+export function followRecommendedWhisper(): void {
+  if (isBrowser) localStorage.removeItem("whisperModel");
   followDefaultWhisperModel();
 }
 
@@ -2247,14 +2327,23 @@ export function selectProcessingMode(
  */
 export function applyProvidersSpeech(): void {
   const store = useSettingsStore.getState();
-  const cloud = Boolean(store.openaiApiKey.trim());
+  const { routes } = planLocalSetup({
+    processing: "providers",
+    openaiKey: Boolean(store.openaiApiKey.trim()),
+  });
   store.setCloudTranscriptionForAllScopes({
-    useLocalWhisper: !cloud,
+    useLocalWhisper: routes.speech === "local",
     cloudTranscriptionMode: "byok",
   });
   store.setTranscriptionMode("providers");
   store.setMeetingTranscriptionMode("providers");
   store.setUploadTranscriptionMode("providers");
+}
+
+/** Only the committed processing choice authorizes automatic local downloads. */
+export function setLocalSetupAuthorization(authorized: boolean): void {
+  if (isBrowser) localStorage.setItem(LOCAL_SETUP_AUTHORIZED, String(authorized));
+  useSettingsStore.setState({ localSetupAuthorized: authorized });
 }
 
 if (isBrowser) {

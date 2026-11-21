@@ -7,6 +7,14 @@ the cloud, or shows that nothing beats round 1.
 
 ## The bottom line
 
+**Oats v0.4 default:** English in-room conversations use Parakeet Ultra with
+8 seconds of earlier audio on Apple Silicon with macOS 14 or later, when
+speech stays on the Mac and follows the default. Bundled Whisper Small
+handles the room until Parakeet is installed, or if Parakeet fails. Dictation
+and uploads keep their own settings. As noted in
+[the live map baselines](live-map-baselines.md), the Parakeet model may have
+seen AMI during training, so the gain on AMI may be optimistic.
+
 **On device: Parakeet Ultra on the Neural Engine, behind Silero, with the 8 s of
 audio before each segment.** It beats both Whisper defaults in both rooms and in a
 room AMI never recorded, on the Neural Engine, at a read of about 100 ms on a loaded

@@ -1935,6 +1935,7 @@
     "join": "Join & transcribe"
   },
   "oats": {
+    "parakeetFallback": "Parakeet failed. Using Whisper.",
     "library": {
       "tools": "Conversation tools",
       "filter": "Filter conversations",
@@ -2381,7 +2382,7 @@
       },
       "models": {
         "title": "Your models",
-        "description": "Two models do all the work. Each one serves conversations and dictation.",
+        "description": "Models for speech and writing",
         "speech": "Speech",
         "speechDescription": "Transcribes conversations and dictation",
         "writing": "Writing",
@@ -2544,6 +2545,15 @@
       "percent": "{{percent}}%",
       "needsKey": "Needs a key",
       "noAddress": "No address",
+      "roomDefault": "{{model}} is the default for rooms on this Mac",
+      "roomActive": "{{model}} is in use for rooms",
+      "useWhisper": "Use Whisper",
+      "upgrade": {
+        "parakeet": "On public meeting recordings, {{model}} recalled 4.9 percentage points more content in quiet and 15.7 more with steady noise than Whisper Turbo.",
+        "speech": "{{model}} recognized 7.5 percentage points more words than Whisper Small in room tests with background noise.",
+        "writing": "{{model}} averaged four fewer invented facts per summary in meeting tests.",
+        "size": "Download: {{size}}."
+      },
       "noModel": "No model",
       "addKey": "Add an OpenAI key",
       "advanced": "Advanced",

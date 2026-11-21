@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { selectResolvedNoteFormatting, useSettingsStore } from "../stores/settingsStore";
+import {
+  selectResolvedMeetingTranscription,
+  selectResolvedNoteFormatting,
+  useSettingsStore,
+} from "../stores/settingsStore";
 import { localSummaryModelDownloaded, useSummaryReadiness } from "./useSummaryReadiness";
 import { useModelDownloadPercent } from "../stores/modelDownloadStore";
 import { writingKeyPresent } from "../utils/writingKeys";
@@ -81,17 +85,15 @@ function readinessFact(readiness: ReturnType<typeof summaryReadiness>): boolean 
  */
 export function useConversationPreflight(): Preflight {
   const [problem, setProblem] = useState<PreflightProblem | null>(null);
-  // Subscribed rather than read once, so changing the processing choice in
-  // Settings clears the warning without a restart — and field by field rather
-  // than through `selectResolvedMeetingTranscription`, which builds a fresh
-  // object on every call and would re-render this on every unrelated change.
-  //
-  // These are the *meeting* scope, which is the one recording a conversation
-  // actually reads (CLAUDE.md, "the trap that broke recording"). Checking the
-  // dictation scope here would produce a preflight that passes while the primary
-  // action fails, which is the original bug wearing a hat.
-  const useLocalWhisper = useSettingsStore((state) => state.meetingUseLocalWhisper);
-  const localProvider = useSettingsStore((state) => state.meetingLocalTranscriptionProvider);
+  // Use the recording's resolver. The meeting scope decides local vs cloud,
+  // but the local engine and model are shared with dictation. Select fields
+  // rather than the whole object so unrelated settings do not trigger checks.
+  const useLocalWhisper = useSettingsStore(
+    (state) => selectResolvedMeetingTranscription(state).useLocalWhisper
+  );
+  const localProvider = useSettingsStore(
+    (state) => selectResolvedMeetingTranscription(state).localTranscriptionProvider
+  );
   // Both gates the aide checks for an in-room conversation
   // (meetingRecordingStore.startConversationAide) — subscribed so flipping
   // either in Settings clears or raises the line without a restart.

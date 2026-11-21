@@ -13,7 +13,25 @@ import { WritingModelChoice } from "./WritingModelChoice";
 import { GpuDeviceSelector } from "./GpuDeviceSelector";
 import { QuestionModelSettings } from "./OatsSettingsSections";
 import { setProcessing } from "./processing";
-import { selectProcessingMode, useSettingsStore } from "../../stores/settingsStore";
+import {
+  followRecommendedWhisper,
+  forgetWritingChoice,
+  localSetupFor,
+  roomSpeechPlan,
+  selectProcessingMode,
+  setRoomSpeechPreference,
+  useSettingsStore,
+} from "../../stores/settingsStore";
+import { useDeviceTierStore } from "../../stores/deviceTierStore";
+import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
+import { requestRoomModel } from "../../hooks/useSpeechUpgrade";
+import {
+  cancelRoomModelDownload,
+  refreshRoomModel,
+  ROOM_MODEL_BYTES,
+  ROOM_MODEL_NAME,
+  useRoomModelStore,
+} from "../../stores/roomModelStore";
 import {
   cancelTurbo,
   formatMegabytes,
@@ -25,13 +43,17 @@ import {
   formatGigabytes,
   requestWritingModel,
   useWritingModel,
+  writingModelName,
 } from "../../hooks/useWritingModel";
 import {
   getStreamingTranscriptionProviders,
+  getLocalModel,
   PARAKEET_MODEL_INFO,
   WHISPER_MODEL_INFO,
 } from "../../models/ModelRegistry";
 import { TURBO_MODEL } from "../../helpers/speechTier.mjs";
+import { localUpgradeHint } from "../../helpers/localSetup.mjs";
+import { LARGE_WRITING_MODEL } from "../../helpers/writingTier.mjs";
 import { getCachedPlatform } from "../../utils/platform";
 
 /**
@@ -43,6 +65,7 @@ import { getCachedPlatform } from "../../utils/platform";
 export function ModelsPage() {
   const { t } = useTranslation();
   const mode = useSettingsStore((state) => selectProcessingMode(state));
+  const upgrade = useUpgradeHint();
   const titleId = useId();
   return (
     <div className="space-y-8">
@@ -72,13 +95,46 @@ export function ModelsPage() {
         title={t("oats.settings.models.title")}
         description={t("oats.settings.models.description")}
       >
-        <SpeechModelRow />
-        <WritingModelRow />
+        <SpeechModelRow upgrade={upgrade === "speech"} />
+        <WritingModelRow upgrade={upgrade === "writing"} />
       </SettingsSection>
 
       <AdvancedModels />
     </div>
   );
+}
+
+function useUpgradeHint() {
+  const tier = useDeviceTierStore((state) => state.tier);
+  const language = useSettingsStore((state) => state.preferredLanguage);
+  const whisper = useSettingsStore((state) =>
+    state.meetingUseLocalWhisper && state.localTranscriptionProvider === "whisper"
+      ? state.whisperModel
+      : null
+  );
+  const { available, installed, progress } = useRoomModelStore();
+  const roomEligible = useSettingsStore((state) =>
+    Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier))
+  );
+  const room = available && roomEligible;
+  const followingRoom = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
+  const writer = useSettingsStore((state) =>
+    state.cleanupMode === "local" ? state.cleanupModel : null
+  );
+  const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
+  if (tier?.device?.platform !== "darwin") return null;
+  return localUpgradeHint({
+    plan: localSetupFor(tier, language, room ? "local" : null),
+    language,
+    recording,
+    activeWhisper:
+      (room && (progress !== null || (installed && followingRoom))) ||
+      tier.turbo.downloading ||
+      tier.turbo.checking
+        ? null
+        : whisper,
+    activeWriter: writer && tier.writing?.installed.includes(writer) ? writer : null,
+  });
 }
 
 type RowState =
@@ -199,7 +255,7 @@ function whisperName(id: string): string {
  * conversation streams to. Without an OpenAI key it stays on this Mac, and
  * the row says so and offers the key in place.
  */
-function SpeechModelRow() {
+function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
   const { t, i18n } = useTranslation();
   const processing = useSettingsStore((state) => selectProcessingMode(state));
   const local = useSettingsStore((state) => state.meetingUseLocalWhisper);
@@ -213,6 +269,15 @@ function SpeechModelRow() {
   const mac = getCachedPlatform() === "darwin";
   const [keyOpen, setKeyOpen] = useState(false);
   const label = t("oats.settings.models.speech");
+  const room = useRoomModelStore();
+  const followsRoom = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier.tier)));
+  const finishing = useMeetingRecordingStore((state) => state.isTranscribing || state.isRecording);
+  const roomEligible = useSettingsStore((state) =>
+    Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier.tier))
+  );
+  React.useEffect(() => {
+    if (roomEligible) void refreshRoomModel();
+  }, [roomEligible]);
 
   if (!local) {
     const models =
@@ -243,6 +308,67 @@ function SpeechModelRow() {
       ? (PARAKEET_MODEL_INFO[parakeetModel]?.name ?? parakeetModel)
       : whisperName(whisperModel);
   const withoutOpenAI = processing === "providers";
+  if (roomEligible && room.available && (followsRoom || upgrade)) {
+    const usingRoomModel = followsRoom && room.installed;
+    const active = followsRoom ? whisperName("small") : name;
+    const roomSize = formatMegabytes(ROOM_MODEL_BYTES, i18n.language);
+    const gain = t("oats.models.upgrade.parakeet", { model: ROOM_MODEL_NAME });
+    const ready = { kind: "ready" } as const;
+    const state: RowState =
+      usingRoomModel || finishing
+        ? ready
+        : room.progress !== null
+          ? {
+              kind: "downloading",
+              percent: room.progress,
+              detail: t("oats.models.upgrade.size", { size: roomSize }),
+              cancelLabel: t("oats.models.cancelModel", { model: ROOM_MODEL_NAME }),
+              onCancel: () => cancelRoomModelDownload(),
+            }
+          : {
+              kind: "action",
+              label: t(
+                room.installed
+                  ? "oats.models.use"
+                  : room.failed
+                    ? "oats.speechTier.retry"
+                    : "common.download"
+              ),
+              icon: room.failed ? "retry" : "download",
+              onClick: () => {
+                setRoomSpeechPreference("recommended");
+                if (!room.installed) requestRoomModel();
+              },
+            };
+    return (
+      <ModelStatusRow
+        label={label}
+        line={t(usingRoomModel ? "oats.models.roomDefault" : "oats.models.roomActive", {
+          model: usingRoomModel ? ROOM_MODEL_NAME : active,
+        })}
+        note={
+          !usingRoomModel && upgrade && room.progress === null && !finishing
+            ? `${gain}${room.installed ? "" : ` ${t("oats.models.upgrade.size", { size: roomSize })}`}`
+            : undefined
+        }
+        state={state}
+      >
+        {usingRoomModel && (
+          <Button variant="outline" size="sm" onClick={() => setRoomSpeechPreference("shared")}>
+            {t("oats.models.useWhisper")}
+          </Button>
+        )}
+        {withoutOpenAI &&
+          (keyOpen ? (
+            <ProviderKeyField provider="openai" autoFocus />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)}>
+              {t("oats.models.addKey")}
+            </Button>
+          ))}
+      </ModelStatusRow>
+    );
+  }
   const chosen = engine === "nvidia" || !tier.followsDefault;
   const size = formatMegabytes(tier.sizeBytes, i18n.language);
 
@@ -308,6 +434,19 @@ function SpeechModelRow() {
       onClick: () => setKeyOpen(true),
     };
   }
+  if (upgrade) {
+    const installed = tier.tier?.turbo.installed === true;
+    note = upgradeDetail(t, "speech", whisperName(TURBO_MODEL), installed ? null : size);
+    state = {
+      kind: "action",
+      label: t(installed ? "oats.models.use" : "common.download"),
+      icon: "download",
+      onClick: () => {
+        followRecommendedWhisper();
+        if (!installed) requestTurbo(language);
+      },
+    };
+  }
 
   return (
     <ModelStatusRow label={label} line={line} note={note} state={state}>
@@ -322,9 +461,10 @@ function SpeechModelRow() {
  * most accurate model for summaries, and the key field in place when there is
  * no key; or a model somebody chose.
  */
-function WritingModelRow() {
+function WritingModelRow({ upgrade }: { upgrade: boolean }) {
   const { t, i18n } = useTranslation();
   const writing = useWritingModel();
+  const report = useDeviceTierStore((state) => state.tier?.writing);
   const mac = getCachedPlatform() === "darwin";
   // The key field stays once a key is saved in it, so what the provider said
   // of that key is there to read after the row turns ready.
@@ -401,6 +541,41 @@ function WritingModelRow() {
       state = { kind: "warning", label: t("oats.models.noModel") };
       break;
   }
+  if (upgrade) {
+    const model = LARGE_WRITING_MODEL;
+    const name = writingModelName(model);
+    const modelSize = formatGigabytes(getLocalModel(model)?.sizeBytes, i18n.language);
+    const installed = report?.installed.includes(model) === true;
+    const download = report?.downloading?.modelId === model ? report.downloading : null;
+    if (download) {
+      const percent =
+        download.totalBytes > 0
+          ? Math.min(100, Math.floor((download.receivedBytes / download.totalBytes) * 100))
+          : 0;
+      state = {
+        kind: "downloading",
+        percent,
+        detail: t("oats.writingModel.progress", { percent, size: modelSize }),
+        cancelLabel: t("oats.writingModel.cancelDownload", { model: name }),
+        onCancel: cancelWritingModel,
+      };
+    } else {
+      const failed = report?.failed?.modelId === model;
+      note = upgradeDetail(t, "writing", name, installed ? null : modelSize);
+      if (failed) note += ` ${t("oats.writingModel.failed")}`;
+      state = {
+        kind: "action",
+        label: t(
+          installed ? "oats.models.use" : failed ? "oats.speechTier.retry" : "common.download"
+        ),
+        icon: failed ? "retry" : "download",
+        onClick: () => {
+          forgetWritingChoice();
+          if (!installed) requestWritingModel(model);
+        },
+      };
+    }
+  }
 
   return (
     <ModelStatusRow label={label} line={line} note={note} state={state}>
@@ -412,6 +587,20 @@ function WritingModelRow() {
       )}
     </ModelStatusRow>
   );
+}
+
+/** AMI replay (docs/dictation-accuracy.md) and AMI summary eval (docs/summaries.md). */
+function upgradeDetail(
+  t: ReturnType<typeof useTranslation>["t"],
+  kind: "speech" | "writing",
+  model: string,
+  size: string | null
+) {
+  const gain =
+    kind === "speech"
+      ? t("oats.models.upgrade.speech", { model })
+      : t("oats.models.upgrade.writing", { model });
+  return size ? `${gain} ${t("oats.models.upgrade.size", { size })}` : gain;
 }
 
 /**

@@ -1935,6 +1935,7 @@
     "join": "Entrar e transcrever"
   },
   "oats": {
+    "parakeetFallback": "O Parakeet falhou. A usar o Whisper.",
     "library": {
       "tools": "Ferramentas de conversa",
       "filter": "Filtrar conversas",
@@ -2381,7 +2382,7 @@
       },
       "models": {
         "title": "Seus modelos",
-        "description": "Dois modelos fazem todo o trabalho. Cada um serve para conversas e ditado.",
+        "description": "Modelos de fala e escrita",
         "speech": "Fala",
         "speechDescription": "Transcreve conversas e ditados",
         "writing": "Escrita",
@@ -2544,6 +2545,15 @@
       "percent": "{{percent}}%",
       "needsKey": "Falta uma chave",
       "noAddress": "Sem endereço",
+      "roomDefault": "{{model}} é o modelo padrão para reuniões presenciais neste Mac",
+      "roomActive": "{{model}} é usado em reuniões presenciais",
+      "useWhisper": "Usar Whisper",
+      "upgrade": {
+        "parakeet": "Em gravações públicas de reuniões, {{model}} recuperou mais conteúdo que o Whisper Turbo: 4,9 pontos percentuais a mais em silêncio e 15,7 a mais com ruído constante.",
+        "speech": "{{model}} reconheceu 7,5 pontos percentuais a mais de palavras que Whisper Small em testes com ruído de fundo.",
+        "writing": "{{model}} inventou em média quatro fatos a menos por resumo nos testes com reuniões.",
+        "size": "Download: {{size}}."
+      },
       "noModel": "Sem modelo",
       "addKey": "Adicionar chave da OpenAI",
       "advanced": "Avançado",

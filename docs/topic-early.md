@@ -60,7 +60,7 @@ The shipped trees saw learn83. Two fair versions, each scored only by trees that
 
 So the app needs no new trees. The shipped trees read a far side cut to 30 s.
 
-## Frozen before eval24 (2026-11-20 22:55 PST)
+## Frozen before eval24 (2026-11-20 22:39 PST; the eval24 run ended at 22:40)
 
 The rules:
 
@@ -131,6 +131,91 @@ The paired intervals resample meetings and all include zero. On eval24,
 the cap removes one fade and leaves the lead unchanged. The capped
 precision is just below 75%, and the fade rate is just above two per hour.
 
+## Part 2: early cuts and the grey band
+
+The English in-room detector reads the shipped trees on 15 seconds of following
+speech. A score of 0.45 or higher commits a solid cut when the final turns and
+their vectors arrive. The cut counts toward the 90 s spacing and 20 s exclusion.
+The ordinary 45 s read and 15 s hold still catch slower changes.
+
+Every 15 s, the strongest eligible score in [0.40, 0.45) can open one grey mark.
+A detector cut within 20 s settles the mark. A 30 s reread at 0.45 or higher also
+settles it and commits a cut. A mark that opens with the reread already available
+gets that reread on the next event. Unsettled marks fade at 65 s from the pause.
+After three fades in a rolling hour, no new grey mark opens until the oldest
+fade leaves that hour. High scores still commit cuts.
+
+The optional judge is off by default (`topicProposalJudgeEnabled`). On a
+supported key route, it uses the existing provider's check model. It asks once
+per open mark, with finalized turns starting in the 90 s before and 15 s after
+the pause. A yes with confidence of 0.80 or higher can commit the cut only while
+the same mark is open. Neither live model loop changes. When a loop owns the
+live view, its topic cuts still take precedence over this detector's view.
+
+### learn83: floor selection
+
+The tuning sweep without a judge gave 5.766, 5.411 and 3.450 fades per hour at
+floors of 0.30, 0.35 and 0.40. We chose 0.40 for the fewest fades and froze it
+at **2026-11-20 23:09:41 PST**, before the eval24 run. Pooled rates divide the
+total by meeting hours. They can exceed three even when no single recording
+exceeds three fades in a rolling hour.
+
+After the holdout run, we scheduled fades at the precise deadline, rejected
+detector settlements at or after the deadline, and sorted cached verdicts by
+delivery time. With no other tuning, we checked those corrections on learn83:
+
+| Grey floor | Cuts/h | Precision | Found | Median delay | Grey/h | Fades/h | Settled | Grey right |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 7.02 | 74.75% | 49.19% | 67.45 s | — | — | — | — |
+| 0.30 | 8.65 | 71.58% | 57.78% | 25.42 s | 6.569 | 5.766 | 12.2% | 61.2% |
+| 0.35 | 8.65 | 71.31% | 57.60% | 25.49 s | 6.167 | 5.411 | 12.3% | 65.1% |
+| 0.40 | 8.67 | 71.39% | 57.78% | 25.55 s | 4.490 | 3.639 | 18.9% | 60.0% |
+| 0.40 + cached Luna | 9.12 | 70.73% | 59.75% | 24.45 s | 4.726 | 2.954 | 37.5% | 60.0% |
+
+The corrected default rule leads the baseline by 28.47 s [25.26, 31.65]
+where both find the change. Cached Luna leads by 32.10 s [28.03, 35.56].
+
+### eval24: the single frozen read
+
+These are the original results, before the deadline and verdict-order
+corrections. We did not read eval24 again. This measures the integrated
+local detector with immediate vectors, not either writing-model loop or
+recognition latency. Matches use AMI topic changes within 60 seconds.
+
+| Variant | Cuts/h | Precision | Found | Median delay | Grey/h | Fades/h | Settled | Grey right |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 45 s read and hold | 7.19 | 62.64% | 44.05% | 65.23 s | — | — | — | — |
+| Two bands, no judge | 8.53 | 63.89% | 53.57% | 34.44 s | 4.109 | 2.687 | 34.6% | 48.1% |
+| Two bands, cached Luna | 9.25 | 59.83% | 54.76% | 29.72 s | 4.425 | 2.055 | 53.6% | 48.2% |
+
+Paired 95% intervals resample whole meetings:
+
+| Change against baseline | No judge | Cached Luna |
+| --- | ---: | ---: |
+| Precision, percentage points | +1.25 [−1.91, +4.51] | −2.81 [−6.40, +1.04] |
+| Found, percentage points | +9.52 [+4.76, +15.19] | +10.71 [+6.06, +16.25] |
+| Mean lead where both find the change | 20.38 s [12.01, 28.69] | 24.81 s [17.67, 31.21] |
+
+The no-judge median fell by 30.79 s [16.53, 42.70]. The frozen no-judge rule met
+all three bars: precision within three points of baseline, no more than three
+pooled fades per hour, and a lead interval that excludes zero. Its cuts came
+from 57 early reads, 47 ordinary reads and four rereads.
+
+The Luna replay matched all 56 opened marks to cached verdicts. Luna settled 20
+marks by verdict. The cached replay does not measure the check model that a
+particular key selects at runtime. This lane made no cloud calls.
+
+### Prior approver study
+
+In the separate orchestrator study, the 15 s early cut alone gained 1.2 points
+of precision [−2.5, +5.0] and 11.3 points found [+5.5, +17.5]. It led by 25.7 s
+[17.3, 35.1] on shared hits, with a 26 s median against 65 s. At a 0.35 floor,
+Luna (`gpt-6-luna`, no reasoning) gained 13.1 points found and had a 19 s median.
+It took about 0.6 s and cost about $0.00007 per request.
+
+Gemma 4 E4B approved 90% of candidates on learn83. It improved by about two
+points over approving everything. The judge does not use Gemma.
+
 ## Commands
 
 ```sh
@@ -147,4 +232,6 @@ node scripts/topic-change-features.mjs --icsi ~/oats-asr-cache/ICSI/nxt/ICSIplus
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --model-dir resources/bin/all-MiniLM-L6-v2 --slices 15 --thresholds 0.45 --caps 1 --rules "15:30:0.45:1;15:15/30:0.5:1"
 # Post-read check of the cap (also run with --set learn83):
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --model-dir resources/bin/all-MiniLM-L6-v2 --slices 15 --thresholds 0.45 --caps 1 --top 0 --rules "15:30:0.45:1" --compare-fade-cap
+# Part 2 deadline check on learn83, with no model calls:
+node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set learn83 --lags 15,30 --bands --grey-floors 0.30,0.35,0.40 --approvals "$O/verdicts-learn83-r15.jsonl"
 ```

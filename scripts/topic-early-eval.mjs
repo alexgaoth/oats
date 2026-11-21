@@ -8,6 +8,8 @@
  *     [--meetings a,b] [--model-dir <all-MiniLM-L6-v2 dir>] [--cache <dir>]
  *     [--lags 5,10,15,20,30] [--slices 5,10,15,20,30]
  *     [--thresholds 0.3,0.35,...] [--caps 1,2] [--json out.json] [--top 3]
+ *     [--bands --grey-floors 0.30,0.35,0.40] [--approvals verdicts.jsonl]
+ *     [--dump-candidates candidates.jsonl --dump-read 15 --dump-threshold 0.30]
  *
  * For each meeting, on manual words cut as the app cuts speech (0.4 s pauses,
  * 20 s at most, scripts/lib/topic-corpus.mjs):
@@ -23,6 +25,9 @@
  *      cut (the detector cannot cut there). A grey mark turns solid when the
  *      detector draws a cut within `--confirm` s of it, and fades 65 s after its
  *      pause when it does not. Marks never move and never return.
+ *
+ * --bands replays the two-band rule with a real detector. --approvals also
+ * replays cached verdicts at their recorded request latency. It makes no calls.
  *
  * Scored against AMI's top-level topic changes, within 60 s (docs/topic-split.md).
  * Public data only (AMI, CC BY 4.0). Nothing leaves the computer.
@@ -43,7 +48,14 @@ import {
 } from "./lib/topic-corpus.mjs";
 import { contentWords } from "../src/helpers/conversationTopics.mjs";
 import { LONG_TOPIC_SPLIT, TopicChangeDetector, makeTurn } from "../src/helpers/topicChange.mjs";
-import { PROPOSAL_RULE, TopicProposals, proposalScore } from "../src/helpers/topicProposals.mjs";
+import {
+  EARLY_READ_S,
+  GREY_FLOOR,
+  PROPOSAL_RULE,
+  TopicProposals,
+  approvalWindow,
+  proposalScore,
+} from "../src/helpers/topicProposals.mjs";
 
 const { values: args } = parseArgs({
   options: {
@@ -71,6 +83,13 @@ const { values: args } = parseArgs({
     // "slice:schedule:threshold:cap;..." with the schedule as "30" or "15/30".
     rules: { type: "string" },
     "compare-fade-cap": { type: "boolean", default: false },
+    bands: { type: "boolean", default: false },
+    "grey-floors": { type: "string", default: String(GREY_FLOOR) },
+    "dump-candidates": { type: "string" },
+    "dump-read": { type: "string", default: String(EARLY_READ_S) },
+    "dump-threshold": { type: "string", default: "0.3" },
+    approvals: { type: "string" },
+    "approve-at": { type: "string", default: "0.8" },
   },
 });
 if (!args.ami) {
@@ -79,12 +98,25 @@ if (!args.ami) {
 }
 
 const numbers = (text) => text.split(",").map(Number).filter(Number.isFinite);
-const LAGS = numbers(args.lags).sort((a, b) => a - b);
+const LAGS = [
+  ...new Set([
+    ...numbers(args.lags),
+    ...(args.bands || args.approvals ? [EARLY_READ_S, 30] : []),
+    ...(args["dump-candidates"] ? [Number(args["dump-read"])] : []),
+  ]),
+].sort((a, b) => a - b);
 const SLICES = numbers(args.slices);
 const THRESHOLDS = numbers(args.thresholds);
 const CAPS = numbers(args.caps);
 const CONFIRM_S = Number(args.confirm);
 const TOLERANCE_S = Number(args.tolerance);
+const APPROVALS = new Map();
+if (args.approvals) {
+  for (const line of fs.readFileSync(args.approvals, "utf8").split("\n").filter(Boolean)) {
+    const v = JSON.parse(line);
+    APPROVALS.set(`${v.meeting}#${v.g}`, v);
+  }
+}
 // Each scheduled r alone, and two steps that grow with what is heard.
 const SCHEDULES = [
   ...LAGS.map((r) => [r]),
@@ -201,7 +233,7 @@ async function loadMeeting(id) {
     if (labels[index] !== labels[index - 1]) real.push(utterances[index].start);
   }
   const end = turns.length ? turns.at(-1).end : 0;
-  return { id, turns, firstSeen, drawn, early, real, end };
+  return { id, turns, firstSeen, drawn, early, real, end, texts: utterances.map((u) => u.text) };
 }
 
 // --- Grey marks under one rule.
@@ -257,12 +289,194 @@ function firstMarks(meeting, marks) {
   return out;
 }
 
+function bandReplay(meeting, greyFloor, useApprovals) {
+  const { turns, texts, early, id, end } = meeting;
+  const detector = new TopicChangeDetector({ split: LONG_TOPIC_SPLIT });
+  const drawn = [];
+  const marks = new Map();
+  const pending = [];
+  let asked = 0;
+  let answered = 0;
+  const proposals = new TopicProposals(detector, {
+    greyFloor,
+    score: (g, lag) => early.get(lag)[g],
+    onChange(mark) {
+      if (mark.state === "grey") marks.set(mark.id, { ...mark });
+      else marks.get(mark.id).state = mark.state;
+    },
+    onCut(g, now, source) {
+      drawn.push({ g, at: turns[g].start, drawnAt: now, source });
+    },
+    onGrey(mark, g) {
+      if (!useApprovals) return;
+      asked++;
+      const verdict = APPROVALS.get(`${id}#${g}`);
+      if (!verdict?.ok) return;
+      answered++;
+      pending.push({ id: mark.id, verdict, at: mark.since + Math.max(0, verdict.ms ?? 0) / 1000 });
+      pending.sort((left, right) => left.at - right.at);
+    },
+  });
+  const slice = PROPOSAL_RULE.slice;
+  let i = 0;
+  let tick = slice;
+  let landed = 0;
+  const last = end + PROPOSAL_RULE.expiresAfter + slice;
+  for (;;) {
+    const nextTurn = turns[i]?.end ?? Infinity;
+    const nextVerdict = pending[0]?.at ?? Infinity;
+    const now = Math.min(nextTurn, tick, nextVerdict, proposals.deadline());
+    if (now > last) break;
+    while (turns[i]?.end <= now) {
+      const turn = turns[i];
+      detector.addTurn({ ...turn, text: texts[i++] });
+      detector.addVector(turn.id, turn.vector);
+      landed = turn.end;
+      detector.advance(landed);
+      while (drawn.length < detector.cuts.length) {
+        const g = detector.cuts[drawn.length];
+        drawn.push({ g, at: turns[g].start, drawnAt: now, source: "detector" });
+      }
+    }
+    proposals.advance(now, landed);
+    if (tick === now) tick += slice;
+    while (pending[0]?.at <= now) {
+      const { id: markId, verdict } = pending.shift();
+      proposals.approve(markId, verdict, now, Number(args["approve-at"]));
+    }
+  }
+  return { drawn, marks: [...marks.values()], asked, answered };
+}
+
+function lineComparison(meeting, result) {
+  const first = (line, change) => {
+    const times = line
+      .filter((cut) => near([change], cut.at, TOLERANCE_S))
+      .map((cut) => cut.drawnAt);
+    return times.length ? Math.min(...times) - change : null;
+  };
+  const baseFirsts = meeting.real.map((change) => first(meeting.drawn, change));
+  const nextFirsts = meeting.real.map((change) => first(result.drawn, change));
+  const gain = baseFirsts.flatMap((delay, i) =>
+    delay !== null && nextFirsts[i] !== null ? [delay - nextFirsts[i]] : []
+  );
+  const line = (cuts, delays) => ({
+    cuts: cuts.length,
+    right: cuts.filter((cut) => near(meeting.real, cut.at, TOLERANCE_S)).length,
+    delays: delays.filter((delay) => delay !== null),
+  });
+  return {
+    h: meeting.end / 3600,
+    changes: meeting.real.length,
+    gain,
+    base: line(meeting.drawn, baseFirsts),
+    next: line(result.drawn, nextFirsts),
+    grey: result.marks.length,
+    faded: result.marks.filter((mark) => mark.state === "faded").length,
+    settled: result.marks.filter((mark) => mark.state === "solid").length,
+    greyRight: result.marks.filter((mark) => near(meeting.real, mark.at, TOLERANCE_S)).length,
+    asked: result.asked,
+    answered: result.answered,
+    sources: result.drawn.map((cut) => cut.source),
+  };
+}
+
+const ratio = (pairs) => {
+  const numerator = pairs.reduce((sum, pair) => sum + pair[0], 0);
+  const denominator = pairs.reduce((sum, pair) => sum + pair[1], 0);
+  return denominator ? numerator / denominator : 0;
+};
+
+function bootstrap(perMeeting, statistic, draws = 2000) {
+  let seed = 7;
+  const random = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const values = [];
+  for (let draw = 0; draw < draws; draw += 1) {
+    const sample = perMeeting.map(() => perMeeting[Math.floor(random() * perMeeting.length)]);
+    values.push(statistic(sample));
+  }
+  values.sort((a, b) => a - b);
+  return [values[Math.floor(draws * 0.025)], values[Math.floor(draws * 0.975)]];
+}
+
+function reportBands(data, label) {
+  const sum = (rows, value) => rows.reduce((total, row) => total + value(row), 0);
+  const compare = (name, stat, scale = 100) => {
+    const diff = (rows) => scale * (stat(rows, "next") - stat(rows, "base"));
+    const [lo, hi] = bootstrap(data, diff);
+    console.log(
+      `  ${name}: ${(scale * stat(data, "base")).toFixed(2)} -> ${(scale * stat(data, "next")).toFixed(2)}; delta ${diff(data).toFixed(2)} [${lo.toFixed(2)}, ${hi.toFixed(2)}]`
+    );
+  };
+  console.log(`\nTwo bands (${label}):`);
+  const h = sum(data, (d) => d.h);
+  const grey = sum(data, (d) => d.grey);
+  compare("cuts/h", (rows, side) => sum(rows, (r) => r[side].cuts) / sum(rows, (r) => r.h), 1);
+  compare("line precision (%)", (rows, side) =>
+    ratio(rows.map((r) => [r[side].right, r[side].cuts]))
+  );
+  compare("changes found (%)", (rows, side) =>
+    ratio(rows.map((r) => [r[side].delays.length, r.changes]))
+  );
+  compare("first line median (s)", (rows, side) => median(rows.flatMap((r) => r[side].delays)), 1);
+  const gain = (rows) => ratio(rows.map((r) => [r.gain.reduce((a, b) => a + b, 0), r.gain.length]));
+  const bounds = bootstrap(data, gain).map((x) => x.toFixed(2));
+  console.log(`  lead where both find it (s): ${gain(data).toFixed(2)} [${bounds.join(", ")}]`);
+  console.log(
+    `  grey/h ${(grey / h).toFixed(3)}, fades/h ${(sum(data, (d) => d.faded) / h).toFixed(3)}, ${((100 * sum(data, (d) => d.settled)) / (grey || 1)).toFixed(1)}% settled, ${((100 * sum(data, (d) => d.greyRight)) / (grey || 1)).toFixed(1)}% right`
+  );
+  const sources = Object.create(null);
+  for (const row of data)
+    for (const source of row.sources) sources[source] = (sources[source] ?? 0) + 1;
+  console.log(`  cuts by source: ${JSON.stringify(sources)}`);
+  if (sum(data, (d) => d.asked)) {
+    console.log(
+      `  cached verdicts found: ${sum(data, (d) => d.answered)} of ${sum(data, (d) => d.asked)} grey marks`
+    );
+  }
+}
+
 const meetings = [];
 for (const id of ids) {
   meetings.push(await loadMeeting(id));
   process.stderr.write(".");
 }
 process.stderr.write("\n");
+
+if (args["dump-candidates"]) {
+  const lag = Number(args["dump-read"]);
+  const floor = Number(args["dump-threshold"]);
+  const lines = [];
+  for (const { id, turns, texts, early } of meetings) {
+    for (let g = 1; g < turns.length; g++) {
+      const score = early.get(lag)[g];
+      if (score < floor) continue;
+      const at = turns[g].start;
+      const window = approvalWindow(turns, g, (_, i) => texts[i], lag);
+      const last = g + window.after.length - 1;
+      const ready = Math.max(at + lag, ...turns.slice(g, last + 1).map((turn) => turn.end));
+      lines.push(JSON.stringify({ meeting: id, g, at, ready, score, ...window }));
+    }
+  }
+  fs.writeFileSync(args["dump-candidates"], lines.join("\n") + "\n");
+  console.error(`${lines.length} candidates at r ${lag}, score ${floor} or more`);
+}
+
+if (args.bands || args.approvals) {
+  for (const floor of numbers(args["grey-floors"])) {
+    reportBands(
+      meetings.map((m) => lineComparison(m, bandReplay(m, floor, false))),
+      `floor ${floor}, no judge`
+    );
+    if (args.approvals) {
+      reportBands(
+        meetings.map((m) => lineComparison(m, bandReplay(m, floor, true))),
+        `floor ${floor}, cached judge ${args.approvals}`
+      );
+    }
+  }
+  process.exit(0);
+}
 
 const hours = meetings.reduce((sum, meeting) => sum + meeting.end, 0) / 3600;
 const realCount = meetings.reduce((sum, meeting) => sum + meeting.real.length, 0);
@@ -370,22 +584,6 @@ for (const budget of [1, 2, 4]) {
   }
 }
 if (args.rules) {
-  const ratio = (pairs) => {
-    const numerator = pairs.reduce((sum, pair) => sum + pair[0], 0);
-    const denominator = pairs.reduce((sum, pair) => sum + pair[1], 0);
-    return denominator ? numerator / denominator : 0;
-  };
-  const bootstrap = (perMeeting, statistic, draws = 2000) => {
-    let seed = 7;
-    const random = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
-    const values = [];
-    for (let draw = 0; draw < draws; draw += 1) {
-      const sample = perMeeting.map(() => perMeeting[Math.floor(random() * perMeeting.length)]);
-      values.push(statistic(sample));
-    }
-    values.sort((a, b) => a - b);
-    return [values[Math.floor(draws * 0.025)], values[Math.floor(draws * 0.975)]];
-  };
   const measure = (rule) => {
     const fades = [];
     const right = [];

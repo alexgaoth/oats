@@ -29,6 +29,13 @@ import {
 } from "../../models/ModelRegistry";
 import { isEnglish } from "../../helpers/whisperEnglishModel.mjs";
 import { TURBO_MODEL } from "../../helpers/speechTier.mjs";
+import { PARAKEET_ROOM_MODEL } from "../../helpers/localSetup.mjs";
+import {
+  cancelRoomModelDownload,
+  declineRoomModel,
+  refreshRoomModel,
+  useRoomModelStore,
+} from "../../stores/roomModelStore";
 import { getCachedPlatform } from "../../utils/platform";
 
 type Listed = { model: string; downloaded: boolean; size_mb?: number };
@@ -69,6 +76,8 @@ export function SpeechModelChoice() {
   const language = useSettingsStore((state) => state.preferredLanguage);
   const openaiKey = useSettingsStore((state) => state.openaiApiKey);
   const speechTier = useSpeechTier();
+  const roomProgress = useRoomModelStore((state) => state.progress);
+  const roomInstalled = useRoomModelStore((state) => state.installed);
   // With API keys the chooser shows OpenAI, even while speech waits on this
   // Mac for its key; on this Mac (or mixed, where speech is local) the engines.
   const side =
@@ -108,7 +117,7 @@ export function SpeechModelChoice() {
     if (side !== "local") return;
     void loadWhisper();
     void loadParakeet();
-  }, [side, loadWhisper, loadParakeet, speechTier.tier?.turbo?.installed]);
+  }, [side, loadWhisper, loadParakeet, speechTier.tier?.turbo?.installed, roomInstalled]);
 
   const whisper = useModelDownload({ modelType: "whisper", onDownloadComplete: loadWhisper });
   const parakeet = useModelDownload({ modelType: "parakeet", onDownloadComplete: loadParakeet });
@@ -131,19 +140,23 @@ export function SpeechModelChoice() {
       return Object.entries(PARAKEET_MODEL_INFO).map(([id, info]) => {
         const downloaded = Boolean(listed.get(id)?.downloaded);
         const inUse = conversationLocal && engine === "nvidia" && parakeetModel === id;
+        const defaultDownload = id === PARAKEET_ROOM_MODEL ? roomProgress : null;
         return {
           id,
           name: info.name,
           size: formatSize(listed.get(id)?.size_mb ?? info.sizeMb, i18n.language),
           note: info.language === "en" ? t("oats.models.englishOnly") : undefined,
-          state: parakeet.isDownloadingModel(id)
-            ? "downloading"
-            : inUse && downloaded
-              ? "in-use"
-              : downloaded
-                ? "ready"
-                : "download",
-          percent: parakeet.isDownloadingModel(id) ? parakeet.downloadProgress.percentage : 0,
+          state:
+            defaultDownload !== null || parakeet.isDownloadingModel(id)
+              ? "downloading"
+              : inUse && downloaded
+                ? "in-use"
+                : downloaded
+                  ? "ready"
+                  : "download",
+          percent:
+            defaultDownload ??
+            (parakeet.isDownloadingModel(id) ? parakeet.downloadProgress.percentage : 0),
           removable: downloaded,
         };
       });
@@ -194,6 +207,7 @@ export function SpeechModelChoice() {
     engine,
     parakeetModel,
     parakeet,
+    roomProgress,
     i18n.language,
     t,
     whisperList,
@@ -212,7 +226,11 @@ export function SpeechModelChoice() {
 
   const download = (id: string) => {
     if (view === "nvidia") {
-      void parakeet.downloadModel(id, (done) => chooseLocalSpeechModel("nvidia", done));
+      if (roomProgress !== null) return;
+      void parakeet.downloadModel(id, (done) => {
+        chooseLocalSpeechModel("nvidia", done);
+        void refreshRoomModel();
+      });
       return;
     }
     // Turbo on a Mac that qualifies comes through the tier's own download, so
@@ -226,6 +244,7 @@ export function SpeechModelChoice() {
 
   const cancel = (id: string) => {
     if (id === TURBO_MODEL && turbo?.downloading) cancelTurbo();
+    else if (id === PARAKEET_ROOM_MODEL && roomProgress !== null) cancelRoomModelDownload();
     else if (view === "nvidia") void parakeet.cancelDownload();
     else void whisper.cancelDownload();
   };
@@ -241,8 +260,13 @@ export function SpeechModelChoice() {
       description: t("transcription.deleteModel.description"),
       variant: "destructive",
       onConfirm: () => {
-        if (view === "nvidia") void parakeet.deleteModel(target, loadParakeet);
-        else void whisper.deleteModel(target, loadWhisper);
+        if (view === "nvidia") {
+          void parakeet.deleteModel(target, () => {
+            if (target === PARAKEET_ROOM_MODEL) declineRoomModel();
+            void refreshRoomModel();
+            void loadParakeet();
+          });
+        } else void whisper.deleteModel(target, loadWhisper);
       },
     });
   };
