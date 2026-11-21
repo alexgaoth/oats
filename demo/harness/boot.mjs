@@ -140,9 +140,9 @@ if (many) {
 // writing model ready) is nothing on disk, its download declined.
 const deviceTier = createFakeDeviceTier({
   state: params.get("tier"),
-  writing:
-    params.get("writingState") ?? (params.get("writing") === "none" ? "declined" : null),
+  writing: params.get("writingState") ?? (params.get("writing") === "none" ? "declined" : null),
   memory: params.get("memory"),
+  macosVersion: params.has("parakeet") ? "26.1" : null,
   emit: main.emit,
 });
 Object.assign(main.api, {
@@ -154,6 +154,37 @@ Object.assign(main.api, {
   startWritingModelDownload: deviceTier.startWritingModelDownload,
   cancelWritingModelDownload: deviceTier.cancelWritingModelDownload,
   writingModelChosen: deviceTier.writingModelChosen,
+});
+// Only a fixture that asks for the Neural Engine model offers it. All model
+// operations below are local state in the browser.
+const roomModel = "parakeet-ultra-ane";
+const roomAvailable = params.has("parakeet") && deviceTier.getArch() === "arm64";
+let roomInstalled = params.get("parakeet") === "ready";
+let roomTransfer = null;
+let roomDownloads = 0;
+let roomStart = null;
+Object.assign(main.api, {
+  listParakeetModels: async () => ({
+    success: true,
+    models: roomAvailable ? [{ model: roomModel, downloaded: roomInstalled }] : [],
+  }),
+  checkParakeetModelStatus: async () => ({ success: true, downloaded: roomInstalled }),
+  downloadParakeetModel: async (id) => {
+    if (!roomAvailable || id !== roomModel || roomTransfer) return { success: false };
+    roomDownloads++;
+    const completed = await new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(true), 8000);
+      roomTransfer = () => {
+        clearTimeout(timer);
+        resolve(false);
+      };
+      main.emit("onParakeetDownloadProgress", {}, { model: roomModel, percentage: 34 });
+    });
+    roomTransfer = null;
+    roomInstalled = completed;
+    return { success: completed, downloaded: completed };
+  },
+  cancelParakeetDownload: async () => roomTransfer?.(),
 });
 main.hooks.whisperModels = deviceTier.whisperModels;
 main.hooks.writingInstalled = deviceTier.writingInstalled;
@@ -177,6 +208,11 @@ const replay = createReplay({
   fixture: mainFixture,
   options: { hold: params.get("end") === "hold", edits: params.get("edits") !== "0" },
 });
+const replayStart = main.hooks.start;
+main.hooks.start = (options) => {
+  roomStart = { provider: options.localProvider, model: options.localModel };
+  return replayStart?.(options);
+};
 const openai =
   params.get("loop") === "1"
     ? installFakeOpenAI({ reason: (request) => main.hooks.reason?.(request) ?? null })
@@ -268,6 +304,7 @@ const frame = () => new Promise((resolve) => setTimeout(resolve, 120));
 
 window.oatsDemo = {
   ...replay,
+  roomSpeech: () => ({ installed: roomInstalled, downloads: roomDownloads, start: roomStart }),
   /** Open a sample conversation in the reading view, on a tab. */
   async open(sampleId = "launch-readiness-review", { tab = "summary" } = {}) {
     const note = main.db.noteBySample(sampleId) ?? main.db.findNote(Number(sampleId));

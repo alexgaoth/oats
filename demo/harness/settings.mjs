@@ -100,6 +100,10 @@ export function applyDemoSettings(params) {
       String(!providers && params.get("firstrun") !== "1" && params.get("authorize") !== "0")
     );
   }
+  localStorage.removeItem("roomSpeechPreference");
+  localStorage.removeItem("roomSpeechDefaultMigrated");
+  localStorage.removeItem("roomParakeetDeclined");
+  if (params.get("parakeet") === "declined") set("roomParakeetDeclined", "true");
   const mode = providers ? "providers" : "local";
   for (const key of [
     "cleanupMode",
