@@ -1216,7 +1216,6 @@ class ConversationAideSession {
       assessment.confidence >= this.confidenceThreshold ? modelOutcome : local.outcome;
     this._updateCard(candidate.id, {
       state: outcome,
-      question: assessment.normalizedQuestion || card.question,
       confidence: assessment.confidence,
     });
 
@@ -1227,7 +1226,6 @@ class ConversationAideSession {
         groupKey: card.groupKey,
         occurrence: card.occurrence,
         confidence: assessment.confidence,
-        normalizedQuestion: assessment.normalizedQuestion,
       });
     }
     await this.insertEvent({
@@ -1265,7 +1263,7 @@ class ConversationAideSession {
 
     await this._openSearch(candidate.id, {
       eventId: suggestionId,
-      question: assessment.normalizedQuestion,
+      question: card.question,
       query: assessment.searchQuery,
     });
   }
