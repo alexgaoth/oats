@@ -270,7 +270,10 @@ function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
   const [keyOpen, setKeyOpen] = useState(false);
   const label = t("oats.settings.models.speech");
   const room = useRoomModelStore();
-  const followsRoom = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier.tier)));
+  const interimWhisper = useSettingsStore(
+    (state) => roomSpeechPlan(state, tier.tier)?.readySpeech.model ?? null
+  );
+  const followsRoom = interimWhisper !== null;
   const finishing = useMeetingRecordingStore((state) => state.isTranscribing || state.isRecording);
   const roomEligible = useSettingsStore((state) =>
     Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier.tier))
@@ -310,7 +313,7 @@ function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
   const withoutOpenAI = processing === "providers";
   if (roomEligible && room.available && (followsRoom || upgrade)) {
     const usingRoomModel = followsRoom && room.installed;
-    const active = followsRoom ? whisperName("small") : name;
+    const active = interimWhisper ? whisperName(interimWhisper) : name;
     const roomSize = formatMegabytes(ROOM_MODEL_BYTES, i18n.language);
     const gain = t("oats.models.upgrade.parakeet", { model: ROOM_MODEL_NAME });
     const ready = { kind: "ready" } as const;

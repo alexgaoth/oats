@@ -120,15 +120,36 @@ test("an installed Parakeet model is ready unless the default is disabled", () =
   assert.deepEqual(plan.downloads, { speech: null, writing: null });
 });
 
-test("a first in-room recording uses bundled Whisper if Parakeet is missing, even with Turbo installed", () => {
+test("a first in-room recording keeps eligible Turbo while Parakeet is missing", () => {
   const plan = planLocalSetup({
-    device: mac(48),
+    device: mac(48, { turboClipMs: 160 }),
     installed: { whisper: [TURBO] },
     processing: "local",
   });
-  assert.deepEqual(plan.readySpeech, { engine: "whisper", model: "small.en" });
+  assert.deepEqual(plan.readySpeech, { engine: "whisper", model: TURBO });
   assert.deepEqual(plan.downloads.speech, { engine: "parakeet", model: ULTRA });
-  assert.equal(plan.whisper.setting, TURBO, "dictation keeps its independent model");
+});
+
+test("a first in-room recording uses the bundle if Turbo is absent or too slow", () => {
+  const bundle = { engine: "whisper", model: "small.en" };
+  const missing = planLocalSetup({ device: mac(48), processing: "local" });
+  assert.deepEqual(missing.readySpeech, bundle);
+  const slow = planLocalSetup({
+    device: mac(48, { turboClipMs: 1_100 }),
+    installed: { whisper: [TURBO] },
+    processing: "local",
+  });
+  assert.deepEqual(slow.readySpeech, bundle);
+});
+
+test("the room uses installed Parakeet instead of eligible Turbo", () => {
+  const plan = planLocalSetup({
+    device: mac(48, { turboClipMs: 160 }),
+    installed: { whisper: [TURBO], parakeet: [ULTRA] },
+    processing: "local",
+  });
+  assert.deepEqual(plan.readySpeech, { engine: "parakeet", model: ULTRA });
+  assert.equal(plan.downloads.speech, null);
 });
 
 test("the hint only recommends a measured upgrade this Mac can use", () => {
