@@ -27,7 +27,8 @@ const ONLINE_FINISH_IDLE_TIMEOUT_MS = 10000;
 const ONLINE_END_TAIL_PADDING_S = 0.6;
 
 class ParakeetWsServer {
-  constructor() {
+  constructor(sidecarName = "parakeet") {
+    this.sidecarName = sidecarName;
     this.process = null;
     this.port = null;
     this.ready = false;
@@ -125,7 +126,7 @@ class ParakeetWsServer {
       detached: process.platform !== "win32",
     });
     this.process = child;
-    sidecarPidFile.write("parakeet", child.pid);
+    sidecarPidFile.write(this.sidecarName, child.pid);
 
     let stderrBuffer = "";
     let exitCode = null;
@@ -160,7 +161,7 @@ class ParakeetWsServer {
         this.ready = false;
         this.process = null;
         this.stopHealthCheck();
-        sidecarPidFile.clear("parakeet");
+        sidecarPidFile.clear(this.sidecarName);
       }
       readyResolve(false);
     });

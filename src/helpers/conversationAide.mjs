@@ -758,6 +758,41 @@ function isQuestionCandidate(text) {
   );
 }
 
+// This second check is only for Clean. Keep detection, quotes and verdicts
+// independent of it. Apply English rules only when the language is English.
+const TRACK_TAG =
+  /\b(?:right|okay|ok|huh|yeah|you know|you see|isn['’]t it|is it|aren['’]t (?:we|you|they)|don['’]t (?:you|we))$/i;
+const TRACK_LEAD =
+  /^(?:(?:so|and|but|or|well|okay|ok|oh|yeah|yes|no|now|then|um+|uh+|mm+|hmm+|i mean)[\s,]+)*/i;
+const TRACK_RHETORICAL =
+  /^(?:who (?:even )?cares|why (?:even )?bother|what (?:the (?:hell|heck|fuck)|do i care)|guess what)\b/i;
+const TRACK_SHORT_ASK = /^(?:how (?:much|many|long|far|often)|which (?:one|ones)|what else)$/i;
+const TRACK_DANGLING = /\b(?:and|but|to|with|without|about|of|for|in|into|like|any|the|a|an)$/i;
+const TRACK_NUMBER = /^(?:\p{N}|(?:zero|one|two|three|four|five|six|seven|eight|nine|ten)\b)/iu;
+
+function isTrackableQuestion(quote, language = "en") {
+  if (!/^en(?:-|$)/i.test(language)) return true;
+  return quote.split(/(?<=[.!?])\s+|(?<=[。！？])\s*/).some((part) => {
+    const marked = /[?？]["'”’)]*\s*$/.test(part);
+    const interrupted = /(?:\.{2,}|…|[-–—])\s*$/.test(part);
+    const clean = part.replace(/^[\s“"'(-]+|[\s?.!。！？"”')]+$/g, "");
+    const text = clean.replace(TRACK_LEAD, "");
+    if (!text || isEnglishNoise(text) || BACKCHANNEL.test(text)) return false;
+    if (TRACK_RHETORICAL.test(text) || CASUAL_OR_RHETORICAL.test(text)) return false;
+    const shape = EN_YES_NO.test(text) || EN_WH_CLAUSE.test(text) || EN_ASKS_FOR_ANY.test(text);
+    if (TRACK_TAG.test(text) && !shape) return false;
+    if (!marked) {
+      return (
+        TRACK_SHORT_ASK.test(text) ||
+        (shape && (!(interrupted || TRACK_DANGLING.test(text)) || text.split(/\s+/).length >= 7))
+      );
+    }
+    // A question mark can make an elliptical ask clear. Keep short checks with
+    // a number or a question word, but not isolated content words.
+    return shape || TRACK_NUMBER.test(text) || /\s/.test(text) || /^and (?:you|here)$/i.test(clean);
+  });
+}
+
 function parseQuestionAssessment(raw) {
   if (typeof raw !== "string" || !raw.trim()) return null;
   let parsed;
@@ -876,6 +911,7 @@ const OPTIONAL_WORK_STOPPED = Symbol("optional work stopped");
 class ConversationAideSession {
   constructor(options) {
     this.noteId = options.noteId;
+    this.language = options.language ?? "auto";
     this.classify = options.classify;
     this.insertEvent = options.insertEvent || (async () => null);
     this.updateEvent = options.updateEvent || (async () => null);
@@ -995,6 +1031,7 @@ class ConversationAideSession {
       id: utterance.id,
       noteId: this.noteId,
       question,
+      track: isTrackableQuestion(question, this.language),
       state: "asked",
       groupKey,
       occurrence,
@@ -1323,6 +1360,7 @@ export {
   buildClassifierPrompt,
   buildSearchUrl,
   isQuestionCandidate,
+  isTrackableQuestion,
   normalizeQuestion,
   outcomeForAssessment,
   parseQuestionAssessment,

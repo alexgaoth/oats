@@ -32,6 +32,7 @@ import {
 import { ConversationAideSession } from "../helpers/conversationAide";
 import { runContextCheck, type ContextCheckInput } from "./contextCheckRunner";
 import {
+  askTopicProposal,
   liveTopicSnapshot,
   namedTopicSnapshot,
   observeTopics,
@@ -54,9 +55,9 @@ import { makeSentenceRecords } from "../helpers/sentenceSplit.mjs";
 import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
   ContextCheck,
-  ConversationCard,
   ConversationSuggestion,
   ConversationTopicSnapshot,
+  LiveConversationCard,
   OpenThread,
   QuestionOutcome,
 } from "../types/conversationEvents";
@@ -177,7 +178,7 @@ interface MeetingRecordingState {
    * separate always-on-top window, which is why this list used to be somewhere
    * else entirely.
    */
-  questionCards: ConversationCard[];
+  questionCards: LiveConversationCard[];
   /**
    * When this sitting began — the moment record was pressed, not the timestamp
    * of the first utterance.
@@ -593,7 +594,7 @@ let conversationTopicTracker: InstanceType<typeof ConversationTopicTracker> | nu
 // Sentence vectors for the tracker's names, from the local embedding model
 // (topicVectors.mjs). Off when there is no model; the names stay lexical.
 let topicVectors: TopicVectorFeeder | null = null;
-const conversationCards = new Map<string, ConversationCard>();
+const conversationCards = new Map<string, LiveConversationCard>();
 
 export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   isRecording: false,
@@ -677,6 +678,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
   const agentBudget = settings.contextAgentEnabled ? { left: AGENT_RUNS_PER_RECORDING } : null;
   conversationAideSession = new ConversationAideSession({
     noteId,
+    language: getBaseLanguageCode(settings.preferredLanguage),
     confidenceThreshold: settings.conversationAideConfidence,
     silenceDelayMs: settings.conversationAideSilenceSeconds * 1000,
     // A partial on screen means somebody is still speaking: not silence. On a
@@ -722,7 +724,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     insertEvent: (event: any) => window.electronAPI.insertConversationEvent?.(event),
     updateEvent: (id: number, patch: Record<string, unknown>) =>
       window.electronAPI.updateConversationEventMetadata?.(id, patch),
-    onCard: (card: ConversationCard) => {
+    onCard: (card: LiveConversationCard) => {
       conversationCards.set(card.id, card);
       pushConversationCards();
       // An answered question closes the thread it was asked in. Keyed by the
@@ -804,9 +806,8 @@ function pushConversationCards() {
   });
 }
 
-// Topic tracking runs on every finalized utterance for the whole recording, so it
-// stays lexical and local — no model call, no network. It feeds the conversation
-// flow card live and is snapshotted onto the note when recording stops.
+// The local tracker runs on every finalized utterance. It feeds the live
+// conversation flow and saves a snapshot when recording stops.
 function trackConversationTopic(segment: TranscriptSegment) {
   // `segment.sentences` is the sentence input for the topic checks. The
   // existing tracker, vectors and namers still use the original text and ID.
@@ -860,6 +861,35 @@ function publishTopicNames() {
       conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
     ),
   });
+}
+
+// The tracker outlives Stop to save the final topics. Its live clock does not.
+function startTopicProposalClock(tracker: ConversationTopicTracker, startedAt: number) {
+  const tickMs = 15_000;
+  let timer: ReturnType<typeof setTimeout>;
+  let expiry: ReturnType<typeof setTimeout> | undefined;
+  const update = () => {
+    if (tracker.tickProposals(Date.now())) publishTopicNames();
+  };
+  const tick = () => {
+    const now = Date.now();
+    timer = setTimeout(tick, tickMs - ((now - startedAt) % tickMs));
+    update();
+  };
+  timer = setTimeout(tick, tickMs - ((Date.now() - startedAt) % tickMs));
+  const unsubscribe = useMeetingRecordingStore.subscribe((state) => {
+    if (state.isRecording && state.recordingStartedAt === startedAt) return;
+    clearTimeout(timer);
+    clearTimeout(expiry);
+    unsubscribe();
+  });
+  return (deadline: number | null) => {
+    clearTimeout(expiry);
+    expiry =
+      deadline !== null && useMeetingRecordingStore.getState().isRecording
+        ? setTimeout(update, Math.max(0, Math.ceil(deadline) - Date.now()))
+        : undefined;
+  };
 }
 
 // Topic snapshots of past conversations, loaded once when a recording starts.
@@ -1542,9 +1572,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   speakerLocks = locks;
   systemPartialSpeakerIdValue = null;
 
+  const recordingStartedAt = Date.now();
   useMeetingRecordingStore.setState({
     isRecording: true,
-    recordingStartedAt: Date.now(),
+    recordingStartedAt,
     isTranscribing: true,
     recordingNoteId: args.noteId,
     recordingNoteTitle: args.noteTitle,
@@ -1575,9 +1606,32 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   // change of subject, so one narrow subject does not fill the whole lane.
   const roomInEnglish =
     recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en";
-  conversationTopicTracker = new ConversationTopicTracker({
+  const proposalGreyEnabled = roomInEnglish && getSettings().topicProposalGreyEnabled;
+  let scheduleProposalExpiry: ((deadline: number | null) => void) | undefined;
+  const tracker: ConversationTopicTracker = new ConversationTopicTracker({
     detector: roomInEnglish ? { split: LONG_TOPIC_SPLIT } : false,
+    proposalStartedAt: recordingStartedAt,
+    proposalGreyEnabled,
+    proposalJudge: proposalGreyEnabled
+      ? {
+          ask: askTopicProposal,
+          text: (id: string) =>
+            useMeetingRecordingStore.getState().segments.find((segment) => segment.id === id)
+              ?.text ?? "",
+          active: () =>
+            conversationTopicTracker === tracker &&
+            useMeetingRecordingStore.getState().isRecording &&
+            getSettings().topicProposalJudgeEnabled,
+          now: () => Date.now() / 1000,
+        }
+      : undefined,
+    onProposalCut: publishTopicNames,
+    onProposalDeadline: (deadline: number | null) => scheduleProposalExpiry?.(deadline),
   });
+  conversationTopicTracker = tracker;
+  if (proposalGreyEnabled) {
+    scheduleProposalExpiry = startTopicProposalClock(tracker, recordingStartedAt);
+  }
   // Each turn and each candidate name is embedded on this computer, so the
   // tracker can cut and name a topic by meaning; a name that arrives is drawn
   // at once.

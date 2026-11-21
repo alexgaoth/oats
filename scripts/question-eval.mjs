@@ -8,6 +8,8 @@
 //     [--set strict] [--detector app] [--out file.tsv]
 //   node scripts/question-eval.mjs audit --replays <tuning cache> --out sample.json
 //   node scripts/question-eval.mjs audit --replays <tuning cache> --labels labels.tsv
+//   node scripts/question-eval.mjs track-audit --split tune|test --replays <cache> --out blind.json
+//   node scripts/question-eval.mjs track-audit --split tune|test --replays <cache> --labels labels.tsv
 //   node scripts/question-eval.mjs boundaries --ami <dir> --split tune|test
 //   node scripts/question-eval.mjs speaker-oracle --split tune --replay small.en__quiet-room
 //     --reader <cached judgments> [--reply-rule different|different-nonquestion]
@@ -55,6 +57,8 @@ import { parseArgs } from "node:util";
 
 import {
   AUDIO_MEETINGS,
+  CLOSE_MS,
+  HIT_OVERLAP,
   TEST_MEETINGS,
   TUNE_MEETINGS,
   adjacencyTypes,
@@ -65,6 +69,7 @@ import {
   goldQuestions,
   loadMeeting,
   median,
+  overlap,
   pairedDelays,
   quantile,
   quoteSpan,
@@ -146,6 +151,7 @@ const {
   assessResponseLocally,
   extractQuestionSentence,
   isQuestionCandidate,
+  isTrackableQuestion,
 } = aide;
 
 const SETS = ["strict", "broad"];
@@ -739,22 +745,82 @@ const AUDIT_CATEGORIES = new Set([
   "statement",
 ]);
 
-function audit() {
-  if (args.split !== "tune" || args.meetings) {
-    throw new Error("audit uses the fixed tuning meetings only");
+// Use the same earliest match as scoreCards, not the best gold match per card.
+function firstCardTiming(cards, turns, gold, score) {
+  const byId = new Map(turns.map((turn) => [turn.id, turn]));
+  return gold.flatMap((question) => {
+    const delay = score.delayOf[question.id];
+    if (delay === undefined) return [];
+    const endMs = question.end * 1000;
+    const card = cards.find(
+      (item) => item.at - endMs === delay && overlap(item.words, question.words).value >= HIT_OVERLAP
+    );
+    const turn = byId.get(card.id);
+    const segmentEnd = Math.round(turn.end * 1000);
+    return {
+      delay,
+      remainingAudio: segmentEnd - endMs,
+      request: card.at - segmentEnd - CLOSE_MS,
+      finalLength: (turn.end - turn.start) * 1000,
+    };
+  });
+}
+
+function reportFirstCardTiming(rows) {
+  const p90 = quantile(rows.map((row) => row.delay), 0.9);
+  const tail = rows.filter((row) => row.delay >= p90);
+  const med = (key) => median(tail.map((row) => row[key]));
+  // The segmenter selects the cut in the last third of its 20 s buffer.
+  // Use a generous lower edge. Without the close reason this is an upper bound.
+  const couldBeCap = (row) => row.finalLength >= 13_300;
+  console.log({
+    firstCardTimingMs: {
+      caught: rows.length,
+      p90,
+      tailCount: tail.length,
+      tailMedianRemainingAudio: med("remainingAudio"),
+      tailMedianRequest: med("request"),
+      tailMedianFinalLength: med("finalLength"),
+      tailFinalsLongEnoughForCap: tail.filter(couldBeCap).length,
+      p90WithoutRequest: quantile(rows.map((row) => row.delay - row.request), 0.9),
+      assumedClose: CLOSE_MS,
+    },
+  });
+}
+
+function audit(trackAudit = false) {
+  if (args.meetings || (args.split !== "tune" && !(trackAudit && args.split === "test"))) {
+    throw new Error("Use the fixed tuning split, or the fixed test split with track-audit");
   }
   const dir = annotationsDir(args.ami);
   const load = loader(dir);
   const cards = [];
-  for (const id of TUNE_MEETINGS) {
+  const meetings = args.split === "test" ? AUDIO_MEETINGS : TUNE_MEETINGS;
+  const rows = new Map();
+  const timing = [];
+  for (const id of meetings) {
     const meeting = load(id);
     const turns = viewTurns(meeting, "rec:small.en__quiet-room");
-    if (!turns) throw new Error(`Missing small.en quiet tuning replay for ${id}`);
+    if (!turns) throw new Error(`Missing small.en quiet replay for ${id}`);
     const detected = cardsOf(BASE_DETECTOR, turns);
-    // Keep the gold labels out of the reading pass.
-    const verdicts = args.labels
-      ? scoreCards(detected, goldQuestions(meeting, "strict")).verdicts
-      : [];
+    // Never evaluate the rule or disclose AMI matches in the blind export.
+    const gold = args.labels ? goldQuestions(meeting, "strict") : [];
+    const base = args.labels ? scoreCards(detected, gold) : null;
+    const kept = trackAudit && args.labels
+      ? detected.filter((card) => isTrackableQuestion(card.quote))
+      : null;
+    const retained = kept ? new Set(kept.map((card) => card.id)) : null;
+    if (trackAudit && base) timing.push(...firstCardTiming(detected, turns, gold, base));
+    rows.set(id, {
+      cards: 0,
+      read: 0,
+      gold: 0,
+      shown: 0,
+      shownRead: 0,
+      questions: gold.length,
+      caught: base?.caught ?? 0,
+      kept: kept ? scoreCards(kept, gold).caught : 0,
+    });
     const indices = new Map(turns.map((turn, index) => [turn.id, index]));
     detected.forEach((card, i) => {
       const index = indices.get(card.id);
@@ -765,7 +831,8 @@ function audit() {
         before: turns[index - 1] ? textOf(turns[index - 1].tokens) : "",
         final: card.turn,
         after: turns[index + 1] ? textOf(turns[index + 1].tokens) : "",
-        ...(args.labels ? { gold: Boolean(verdicts[i]) } : {}),
+        ...(base ? { gold: Boolean(base.verdicts[i]) } : {}),
+        ...(retained ? { retained: retained.has(card.id) } : {}),
       });
     });
   }
@@ -795,26 +862,47 @@ function audit() {
   if (labels.size !== sample.length || sample.some((card) => !labels.has(card.id))) {
     throw new Error("Supply one label per sampled card");
   }
-  const rows = TUNE_MEETINGS.map(() => ({ cards: 0, read: 0, gold: 0 }));
   const categories = {};
+  const dropped = {};
   for (const card of sample) {
     const { track, category } = labels.get(card.id);
-    const row = rows[TUNE_MEETINGS.indexOf(card.meeting)];
+    const row = rows.get(card.meeting);
     row.cards += 1;
     row.read += Number(track === "yes");
     row.gold += Number(card.gold);
+    row.shown += Number(card.retained === true);
+    row.shownRead += Number(card.retained === true && track === "yes");
     categories[category] = (categories[category] ?? 0) + 1;
+    if (card.retained === false) {
+      const key = `${track}:${category}`;
+      dropped[key] = (dropped[key] ?? 0) + 1;
+    }
   }
-  const precision = (list, key) =>
-    list.reduce((sum, item) => sum + item[key], 0) /
-    list.reduce((sum, item) => sum + item.cards, 0);
+  const sum = (list, key) => list.reduce((total, item) => total + item[key], 0);
+  const ratio = (list, numerator, denominator) =>
+    sum(list, numerator) / sum(list, denominator);
   const stats = {
-    reading: (list) => precision(list, "read"),
-    labels: (list) => precision(list, "gold"),
-    difference: (list) => precision(list, "read") - precision(list, "gold"),
+    reading: (list) => ratio(list, "read", "cards"),
+    labels: (list) => ratio(list, "gold", "cards"),
+    difference: (list) => ratio(list, "read", "cards") - ratio(list, "gold", "cards"),
   };
+  if (trackAudit) {
+    Object.assign(stats, {
+      cleanReading: (list) => ratio(list, "shownRead", "shown"),
+      readingGain: (list) => ratio(list, "shownRead", "shown") - ratio(list, "read", "cards"),
+      amiRecall: (list) => ratio(list, "caught", "questions"),
+      cleanAmiRecall: (list) => ratio(list, "kept", "questions"),
+      relativeRecallLoss: (list) => 1 - ratio(list, "kept", "caught"),
+    });
+    console.log({ split: args.split, meetings: meetings.length, categories, dropped });
+  }
+  const data = [...rows.values()];
   for (const [name, stat] of Object.entries(stats)) {
-    console.log(`${name}: ${pct(stat(rows))} ${ci(bootstrap([rows], stat))}`);
+    console.log(`${name}: ${pct(stat(data))} ${ci(bootstrap([data], stat))}`);
+  }
+  if (trackAudit) {
+    console.log(Object.fromEntries(Object.keys(data[0]).map((key) => [key, sum(data, key)])));
+    reportFirstCardTiming(timing);
   }
   console.log(JSON.stringify(categories));
 }
@@ -1322,6 +1410,7 @@ else if (command === "bars") bars();
 else if (command === "refine") await refine();
 else if (command === "errors") await errors();
 else if (command === "audit") audit();
+else if (command === "track-audit") audit(true);
 else if (command === "boundaries") boundaries();
 else if (command === "speaker-oracle") await speakerOracle();
 else {

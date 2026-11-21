@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 let ConversationAideSession;
 let buildSearchUrl;
 let isQuestionCandidate;
+let isTrackableQuestion;
 let assessResponseLocally;
 let extractQuestionSentence;
 let outcomeForAssessment;
@@ -16,6 +17,7 @@ test.before(async () => {
     ConversationAideSession,
     buildSearchUrl,
     isQuestionCandidate,
+    isTrackableQuestion,
     assessResponseLocally,
     extractQuestionSentence,
     outcomeForAssessment,
@@ -78,6 +80,70 @@ test("candidate filter accepts factual forms and excludes commands, greetings, a
   assert.equal(isQuestionCandidate("I finished the deployment."), false);
   assert.equal(isQuestionCandidate("Who cares?"), false);
   assert.equal(isQuestionCandidate("x".repeat(601) + "?"), false);
+});
+
+test("Clean track filter drops weak quotes without changing the candidate detector", () => {
+  for (const text of [
+    "Are we going to talk about...",
+    "Main design points, is it?",
+    "Who cares, right?",
+    "That was my fault. Sorry?",
+    "What happens when you press the button is already documented.",
+  ]) {
+    assert.equal(isQuestionCandidate(text), true, text);
+    assert.equal(isTrackableQuestion(extractQuestionSentence(text)), false, text);
+  }
+});
+
+test("Clean track filter keeps clear asks even without perfect punctuation", () => {
+  for (const text of [
+    "Can we agree on the price",
+    "How much",
+    "So, four?",
+    "Do we want the red case or should we go with...",
+    "What does it cost? Sorry?",
+  ]) {
+    assert.equal(isTrackableQuestion(text), true, text);
+  }
+  assert.equal(isTrackableQuestion("Main design points, is it?", "en-GB"), false);
+  assert.equal(isTrackableQuestion("どう？", "ja"), true);
+  assert.equal(isTrackableQuestion("¿Cuándo?", "auto"), true);
+});
+
+test("live cards publish track immediately and keep it through verdicts and search", async () => {
+  const { session, cards, events, searches } = harness({ classify: null, language: "en" });
+  try {
+    const tag = "Main design points, is it?";
+    session.onFinalized({ id: "tag", text: tag });
+    assert.equal(latestCard(cards, "tag").track, false);
+    assert.equal(latestCard(cards, "tag").state, "asked");
+    session.onFinalized({ id: "reply", text: "I don't know." });
+    await session.evaluation;
+    assert.equal(latestCard(cards, "tag").state, "denied");
+    assert.equal(latestCard(cards, "tag").track, false);
+    assert.ok(events.some((event) => event.kind === "question" && event.text === tag));
+    assert.equal(searches.length, 1);
+    assert.equal(searches[0].question, tag);
+
+    const real = "How much does it cost?";
+    for (const id of ["first", "repeat"]) {
+      session.onFinalized({ id, text: real });
+      assert.equal(latestCard(cards, id).track, true);
+    }
+    assert.equal(latestCard(cards, "repeat").occurrence, 2);
+  } finally {
+    await session.shutdown();
+  }
+});
+
+test("live cards use the unfiltered path for unknown speech languages", async () => {
+  const { session, cards } = harness({ classify: null });
+  try {
+    session.onFinalized({ id: "q", text: "Main design points, is it?" });
+    assert.equal(latestCard(cards, "q").track, true);
+  } finally {
+    await session.shutdown();
+  }
 });
 
 test("a question with no question mark is found by its shape", () => {
