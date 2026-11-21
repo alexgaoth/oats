@@ -305,6 +305,15 @@ const SHOTS = [
   // state, and Advanced (src/components/settings/ModelsPage.tsx). The writing
   // model on this Mac follows its memory (src/helpers/writingTier.mjs).
   ...[
+    ["speech", "tier=fast&processing=providers&keys=anthropic"],
+    ["writing", "writingState=small"],
+  ].map(([name, query]) => ({
+    name: `models-upgrade-${name}`,
+    size: "880x680",
+    query,
+    script: "await oatsDemo.settings('models')",
+  })),
+  ...[
     ["local-ready", ""],
     ["local-downloading", "tier=downloading&writingState=downloading"],
     ["local-declined", "writingState=declined&tier=declined"],

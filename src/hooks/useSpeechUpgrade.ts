@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useDeviceTierStore } from "../stores/deviceTierStore";
 import { useMeetingRecordingStore } from "../stores/meetingRecordingStore";
 import {
-  speechChoiceFor,
+  localSetupFor,
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../stores/settingsStore";
@@ -22,23 +22,27 @@ export function useSpeechUpgrade() {
   const whisperModel = useSettingsStore((state) => state.whisperModel);
   const meetingLocal = useSettingsStore((state) => state.meetingUseLocalWhisper);
   const engine = useSettingsStore((state) => state.localTranscriptionProvider);
+  const authorized = useSettingsStore((state) => state.localSetupAuthorized);
   // Not while a conversation is recorded: the download's notice would compete
   // with the room. It starts when the recording ends.
   const recording = useMeetingRecordingStore((state) => state.isRecording);
 
-  const choice = useMemo(() => speechChoiceFor(tier, language), [tier, language]);
+  const plan = useMemo(() => localSetupFor(tier, language, "local"), [tier, language]);
   const followsDefault = whisperModelFollowsDefault();
   const local = meetingLocal && engine === "whisper";
-  const fetch = shouldFetchTurbo({
-    choice,
-    setupDone: localStorage.getItem("onboardingCompleted") === "true",
-    // `whisperModel` is in the effect's list for this: a choice made in
-    // Settings ends it.
-    followsDefault,
-    local,
-    recording,
-    turbo: tier?.turbo ?? {},
-  });
+  const fetch =
+    authorized &&
+    plan.downloads.speech?.engine === "whisper" &&
+    shouldFetchTurbo({
+      choice: plan.whisper.choice,
+      setupDone: localStorage.getItem("onboardingCompleted") === "true",
+      // `whisperModel` is in the effect's list for this: a choice made in
+      // Settings ends it.
+      followsDefault,
+      local,
+      recording,
+      turbo: tier?.turbo ?? {},
+    });
   // Read on each snapshot, so a download that main starts after the switch
   // (a start asked for just before it) stops as soon as it shows.
   const leave = shouldLeaveTurbo({

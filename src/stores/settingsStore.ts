@@ -35,12 +35,12 @@ import {
   defaultWhisperModel,
   migrateStoredWhisperModel,
 } from "../helpers/bundledWhisperModels.mjs";
+import { followsDefaultModel, settingWhisperModel, TURBO_MODEL } from "../helpers/speechTier.mjs";
+import { planLocalSetup } from "../helpers/localSetup.mjs";
 import {
-  chooseSpeechModel,
-  defaultSpeechModel,
-  followsDefaultModel,
-  settingWhisperModel,
-} from "../helpers/speechTier.mjs";
+  LOCAL_SETUP_AUTHORIZED,
+  migrateLocalSetupAuthorization,
+} from "../helpers/localSetupConsent.mjs";
 import {
   defaultWritingModel,
   followsDefaultWritingModel,
@@ -345,13 +345,31 @@ export function whisperModelFollowsDefault(): boolean {
 
 /** The default speech model this Mac qualifies for in a language (speechTier.mjs). */
 export function speechChoiceFor(tier: DeviceTierSnapshot | null, language: string) {
-  return chooseSpeechModel({
-    platform: tier?.device?.platform ?? getCachedPlatform(),
-    arch: tier?.device?.arch ?? getArch(),
-    memoryBytes: tier?.device?.memoryBytes ?? null,
-    smallClipMs: tier?.smallClipMs ?? null,
-    turboClipMs: tier?.turboClipMs ?? null,
-    language,
+  return localSetupFor(tier, language).whisper.choice;
+}
+
+/** The latest local plan, whether or not the person uses a key. */
+export function localSetupFor(
+  tier: DeviceTierSnapshot | null,
+  language: string,
+  processing: "local" | "providers" | null = null
+) {
+  return planLocalSetup({
+    device: {
+      platform: tier?.device?.platform ?? getCachedPlatform(),
+      arch: tier?.device?.arch ?? getArch(),
+      memoryBytes: tier?.memoryBytes ?? tier?.device?.memoryBytes ?? null,
+      macosVersion: tier?.device?.macosVersion,
+      smallClipMs: tier?.smallClipMs,
+      turboClipMs: tier?.turboClipMs,
+    },
+    installed: {
+      whisper: tier?.turbo?.installed && !tier.turbo.checking ? [TURBO_MODEL] : [],
+      writing: tier?.writing?.installed ?? [],
+    },
+    // The room-only route must have a Whisper backup before opting in.
+    language: resolveSpeechLanguage(language),
+    processing,
   });
 }
 
@@ -363,11 +381,7 @@ export function currentDefaultWhisperModel(
   language: string,
   tier: DeviceTierSnapshot | null = useDeviceTierStore.getState().tier
 ): string {
-  return defaultSpeechModel({
-    choice: speechChoiceFor(tier, language),
-    bundleModel: DEFAULT_WHISPER_MODEL,
-    turboInstalled: tier?.turbo?.installed === true,
-  });
+  return localSetupFor(tier, language).whisper.setting;
 }
 
 // One time on Apple Silicon: a stored "base" goes, so the setting follows the
@@ -397,10 +411,11 @@ export function currentDefaultWritingModel(
   state: Pick<SettingsState, "cleanupMode" | "openaiApiKey" | "anthropicApiKey">,
   tier: DeviceTierSnapshot | null = useDeviceTierStore.getState().tier
 ) {
+  if (state.cleanupMode === "local") {
+    return { provider: "local", ...localSetupFor(tier, DEFAULT_SPEECH_LANGUAGE).writing.choice };
+  }
   return defaultWritingModel({
     mode: state.cleanupMode,
-    memoryBytes: tier?.memoryBytes ?? tier?.device?.memoryBytes ?? null,
-    installed: tier?.writing?.installed ?? [],
     openaiKey: Boolean(state.openaiApiKey?.trim()),
     anthropicKey: Boolean(state.anthropicApiKey?.trim()),
   });
@@ -554,6 +569,7 @@ export interface SettingsState
   remoteTranscriptionUrl: string;
   remoteTranscriptionModel: string;
   cleanupMode: InferenceMode;
+  localSetupAuthorized: boolean;
   cleanupRemoteUrl: string;
 
   meetingTranscriptionMode: InferenceMode;
@@ -1073,6 +1089,8 @@ function createSecretSetter(
 
 export const MAX_TRANSLATION_TARGETS = 5;
 
+if (isBrowser) migrateLocalSetupAuthorization(localStorage);
+
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uiLanguage: normalizeUiLanguage(isBrowser ? localStorage.getItem("uiLanguage") : null),
   // Local by default. Oats bundles a Whisper model and promises it works the
@@ -1279,6 +1297,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return "local" as InferenceMode;
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
+  localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
 
   meetingTranscriptionMode: (() => {
     const v = readString("meetingTranscriptionMode", "local");
@@ -2202,11 +2221,16 @@ export function chooseLocalSpeechModel(engine: LocalTranscriptionProvider, model
  * cloud.
  */
 export function forgetSpeechChoice(): void {
-  if (isBrowser) localStorage.removeItem("whisperModel");
   const store = useSettingsStore.getState();
   store.setLocalTranscriptionProvider("whisper");
   store.setMeetingLocalTranscriptionProvider("whisper");
   chooseCloudSpeechModel("openai", "gpt-transcribe");
+  followRecommendedWhisper();
+}
+
+/** Return to the measured Whisper default without changing cloud settings. */
+export function followRecommendedWhisper(): void {
+  if (isBrowser) localStorage.removeItem("whisperModel");
   followDefaultWhisperModel();
 }
 
@@ -2251,14 +2275,23 @@ export function selectProcessingMode(
  */
 export function applyProvidersSpeech(): void {
   const store = useSettingsStore.getState();
-  const cloud = Boolean(store.openaiApiKey.trim());
+  const { routes } = planLocalSetup({
+    processing: "providers",
+    openaiKey: Boolean(store.openaiApiKey.trim()),
+  });
   store.setCloudTranscriptionForAllScopes({
-    useLocalWhisper: !cloud,
+    useLocalWhisper: routes.speech === "local",
     cloudTranscriptionMode: "byok",
   });
   store.setTranscriptionMode("providers");
   store.setMeetingTranscriptionMode("providers");
   store.setUploadTranscriptionMode("providers");
+}
+
+/** Only the committed processing choice authorizes automatic local downloads. */
+export function setLocalSetupAuthorization(authorized: boolean): void {
+  if (isBrowser) localStorage.setItem(LOCAL_SETUP_AUTHORIZED, String(authorized));
+  useSettingsStore.setState({ localSetupAuthorized: authorized });
 }
 
 if (isBrowser) {
