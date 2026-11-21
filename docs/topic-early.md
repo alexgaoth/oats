@@ -110,6 +110,27 @@ What a person sees with the primary rule:
 
 The gain is real, but small: about 15 s on average. The shipped trees cannot see a change sooner. Below 30 s of the following talk they are not sure enough. To go faster, a stronger judge must approve the grey marks early. That is the next study: a model reads about 15 s after a candidate pause and says whether the subject changed.
 
+### Rolling fade cap, added after the eval24 read
+
+The app does not open a mark when three marks faded in the last 60 minutes
+of the current conversation. Solid marks do not count. This is a limit on
+bursts, not a new fit to eval24. The opening rule stays frozen.
+
+| Set | Measure | Frozen | With cap | Paired change [95% interval] |
+| --- | --- | ---: | ---: | ---: |
+| learn83 | Fades per hour | 2.056 | 1.961 | −0.095 [−0.216, 0] |
+| learn83 | Grey marks right | 87.2% | 86.8% | −0.4 points [−0.9, 0] |
+| learn83 | Solid cuts with an earlier grey | 48.0% | 47.3% | −0.7 points [−2.0, 0] |
+| learn83 | Mean lead over found changes | 14.458 s | 14.263 s | −0.195 s [−0.541, 0] |
+| eval24 | Fades per hour | 2.134 | 2.055 | −0.079 [−0.269, 0] |
+| eval24 | Grey marks right | 75.0% | 74.4% | −0.6 points [−2.3, 0] |
+| eval24 | Solid cuts with an earlier grey | 45.9% | 45.9% | 0 points [0, 0] |
+| eval24 | Mean lead over found changes | 14.589 s | 14.589 s | 0 s [0, 0] |
+
+The paired intervals resample meetings and all include zero. On eval24,
+the cap removes one fade and leaves the lead unchanged. The capped
+precision is just below 75%, and the fade rate is just above two per hour.
+
 ## Commands
 
 ```sh
@@ -124,4 +145,6 @@ node scripts/topic-change-features.mjs --icsi ~/oats-asr-cache/ICSI/nxt/ICSIplus
 ~/oats-asr-cache/venvs/topics/bin/python -B scripts/topic-early-train.py --data ami=$O/f45/ami --data icsi=$O/f45/icsi --out $O/oof45 --apply 30=$O/f30/ami
 # eval24, once, the frozen rules:
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --model-dir resources/bin/all-MiniLM-L6-v2 --slices 15 --thresholds 0.45 --caps 1 --rules "15:30:0.45:1;15:15/30:0.5:1"
+# Post-read check of the cap (also run with --set learn83):
+node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --model-dir resources/bin/all-MiniLM-L6-v2 --slices 15 --thresholds 0.45 --caps 1 --top 0 --rules "15:30:0.45:1" --compare-fade-cap
 ```
