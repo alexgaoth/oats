@@ -36,7 +36,12 @@ import {
   migrateStoredWhisperModel,
 } from "../helpers/bundledWhisperModels.mjs";
 import { followsDefaultModel, settingWhisperModel, TURBO_MODEL } from "../helpers/speechTier.mjs";
-import { planLocalSetup } from "../helpers/localSetup.mjs";
+import { PARAKEET_ROOM_MODEL, planLocalSetup } from "../helpers/localSetup.mjs";
+import {
+  ROOM_SPEECH_PREFERENCE,
+  followsRoomSpeechDefault,
+  migrateRoomSpeechDefault,
+} from "../helpers/roomSpeechPreference.mjs";
 import {
   LOCAL_SETUP_AUTHORIZED,
   migrateLocalSetupAuthorization,
@@ -352,7 +357,8 @@ export function speechChoiceFor(tier: DeviceTierSnapshot | null, language: strin
 export function localSetupFor(
   tier: DeviceTierSnapshot | null,
   language: string,
-  processing: "local" | "providers" | null = null
+  processing: "local" | "providers" | null = null,
+  { openaiKey = false, parakeetInstalled = false } = {}
 ) {
   return planLocalSetup({
     device: {
@@ -366,10 +372,11 @@ export function localSetupFor(
     installed: {
       whisper: tier?.turbo?.installed && !tier.turbo.checking ? [TURBO_MODEL] : [],
       writing: tier?.writing?.installed ?? [],
+      parakeet: parakeetInstalled ? [PARAKEET_ROOM_MODEL] : [],
     },
-    // The room-only route must have a Whisper backup before opting in.
     language: resolveSpeechLanguage(language),
     processing,
+    openaiKey,
   });
 }
 
@@ -570,6 +577,7 @@ export interface SettingsState
   remoteTranscriptionModel: string;
   cleanupMode: InferenceMode;
   localSetupAuthorized: boolean;
+  roomSpeechPreference: "default" | "shared";
   cleanupRemoteUrl: string;
 
   meetingTranscriptionMode: InferenceMode;
@@ -1087,7 +1095,10 @@ function createSecretSetter(
 
 export const MAX_TRANSLATION_TARGETS = 5;
 
-if (isBrowser) migrateLocalSetupAuthorization(localStorage);
+if (isBrowser) {
+  migrateLocalSetupAuthorization(localStorage);
+  migrateRoomSpeechDefault(localStorage);
+}
 
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uiLanguage: normalizeUiLanguage(isBrowser ? localStorage.getItem("uiLanguage") : null),
@@ -1296,6 +1307,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   })(),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
   localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
+  roomSpeechPreference: readString(ROOM_SPEECH_PREFERENCE, "") === "shared" ? "shared" : "default",
 
   meetingTranscriptionMode: (() => {
     const v = readString("meetingTranscriptionMode", "local");
@@ -2222,6 +2234,38 @@ export function forgetSpeechChoice(): void {
   store.setMeetingLocalTranscriptionProvider("whisper");
   chooseCloudSpeechModel("openai", "gpt-transcribe");
   followRecommendedWhisper();
+  setRoomSpeechPreference("default");
+}
+
+/** Keep the shared speech setting for rooms, or use the room recommendation. */
+export function setRoomSpeechPreference(preference: SettingsState["roomSpeechPreference"]): void {
+  if (isBrowser) localStorage.setItem(ROOM_SPEECH_PREFERENCE, preference);
+  useSettingsStore.setState({ roomSpeechPreference: preference });
+}
+
+/** The recommendation is separate from the model used for dictation and calls. */
+export function roomSpeechPlan(
+  state: SettingsState,
+  tier: DeviceTierSnapshot | null,
+  parakeetInstalled = false
+) {
+  if (
+    !state.meetingUseLocalWhisper ||
+    !followsRoomSpeechDefault(
+      state.roomSpeechPreference,
+      state.localTranscriptionProvider,
+      whisperModelFollowsDefault()
+    )
+  ) {
+    return null;
+  }
+  const processing = state.meetingTranscriptionMode;
+  if (processing !== "local" && processing !== "providers") return null;
+  const plan = localSetupFor(tier, state.preferredLanguage, processing, {
+    openaiKey: Boolean(state.openaiApiKey.trim()),
+    parakeetInstalled,
+  });
+  return plan.speech.engine === "parakeet" ? plan : null;
 }
 
 /** Return to the measured Whisper default without changing cloud settings. */
