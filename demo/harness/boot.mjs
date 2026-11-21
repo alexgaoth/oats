@@ -148,6 +148,7 @@ const deviceTier = createFakeDeviceTier({
 Object.assign(main.api, {
   getArch: deviceTier.getArch,
   getDeviceTier: deviceTier.getDeviceTier,
+  prepareLocalSetup: deviceTier.prepareLocalSetup,
   startSpeechUpgrade: deviceTier.startSpeechUpgrade,
   cancelSpeechUpgrade: deviceTier.cancelSpeechUpgrade,
   startWritingModelDownload: deviceTier.startWritingModelDownload,

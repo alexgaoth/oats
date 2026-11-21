@@ -571,6 +571,68 @@ test("a quit while the check runs stops its server", async () => {
   }
 });
 
+test("choosing local at setup clears only the planned downloads' earlier declines", async () => {
+  const env = setup();
+  try {
+    const gemma = "gemma-4-e4b-it-q4_k_m";
+    const qwen = "qwen3.5-4b-q4_k_m";
+    const { tier } = tierFor(env);
+    await tier.ensureMeasured();
+    tier.cancelUpgrade();
+    tier.writing.deleted([gemma, qwen]);
+    const declines = () => {
+      const { turbo, writing } = tier.snapshot();
+      return [turbo.declined, writing.declined, writing.autoDeclined];
+    };
+
+    await tier.prepareLocalSetup();
+    assert.deepEqual(declines(), [true, [gemma, qwen], true]);
+    await tier.prepareLocalSetup({ language: "auto", speech: true });
+    assert.deepEqual(declines(), [true, [gemma, qwen], true], "Turbo does not fit with detection");
+    await tier.prepareLocalSetup({ language: "en", speech: true, writing: true });
+    assert.deepEqual(declines(), [false, [qwen], false]);
+    assert.equal(env.downloads.length, 0, "setup prepares, but does not download");
+    assert.equal(tier.snapshot().writing.downloading, null);
+    const { tier: reopened } = tierFor(env);
+    assert.equal(reopened.snapshot().turbo.declined, false);
+    assert.deepEqual(reopened.snapshot().writing.declined, [qwen]);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("setup can finish before the speed check clears an earlier Turbo decline", async (t) => {
+  const env = setup();
+  t.after(env.cleanup);
+  const { tier } = tierFor(env);
+  await tier.ensureMeasured();
+  tier.cancelUpgrade();
+
+  const { promise: checkStarted, resolve: startCheck } = Promise.withResolvers();
+  const { promise: waitForClip, resolve: finishClip } = Promise.withResolvers();
+  const { tier: updated } = tierFor(env, {
+    appVersion: "0.4.0",
+    time: async () => {
+      startCheck();
+      await waitForClip;
+      return 170;
+    },
+  });
+  const measurement = updated.ensureMeasured();
+  await checkStarted;
+  try {
+    await updated.prepareLocalSetup({ language: "en", speech: true });
+    assert.equal(updated.snapshot().turbo.declined, true);
+  } finally {
+    finishClip();
+  }
+  await measurement;
+  // The pending reset runs in the continuation of ensureMeasured().
+  await new Promise(setImmediate);
+  assert.equal(updated.snapshot().turbo.declined, false);
+  assert.equal(env.downloads.length, 0);
+});
+
 test("Turbo does not start downloading while a recording is active", async () => {
   const env = setup();
   try {

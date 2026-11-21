@@ -16,7 +16,7 @@ import { useClipboard } from "../hooks/useClipboard";
 import { useSettings } from "../hooks/useSettings";
 import { selectProcessingMode, useSettingsStore } from "../stores/settingsStore";
 import { ProcessingStep } from "./onboarding/ProcessingStep";
-import { useLocalDownloads } from "./onboarding/processingSetup";
+import { prepareLocalSetup, useLocalDownloads } from "./onboarding/processingSetup";
 import { setProcessing, type ProcessingMode } from "./settings/processing";
 import type { ProviderKeyHandle } from "./settings/ProviderKeyField";
 import { setAgentName as saveAgentName } from "../utils/agentName";
@@ -342,6 +342,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
       }
       setProcessing(processingChoice);
+      if (processingChoice === "local") {
+        await prepareLocalSetup().catch((error) =>
+          logger.warn("Could not reset the local setup declines", { error }, "onboarding")
+        );
+      }
     }
     if (isLastStep) await finishOnboarding();
     else setCurrentStep(currentStep + 1);

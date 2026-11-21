@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { formatMegabytes } from "../../hooks/useSpeechTier";
 import { formatGigabytes, writingModelName } from "../../hooks/useWritingModel";
 import { TURBO_MODEL } from "../../helpers/speechTier.mjs";
+import { startupSpeechLanguage } from "../../helpers/speechLanguage.mjs";
 import { getLocalModel } from "../../models/ModelRegistry";
 import { useDeviceTierStore } from "../../stores/deviceTierStore";
 import {
@@ -34,20 +35,13 @@ export function useLocalDownloads(): LocalDownloads {
     engine !== "nvidia" &&
     whisperModelFollowsDefault() &&
     plan.downloads.speech?.model === TURBO_MODEL &&
-    tier?.turbo &&
-    !tier.turbo.declined &&
-    !tier.turbo.failed;
-  const writingModel =
-    writingModelFollowsDefault() && !tier?.writing?.autoDeclined ? plan.downloads.writing : null;
-  const writingDownloads =
-    writingModel &&
-    !tier?.writing?.declined.includes(writingModel) &&
-    tier?.writing?.failed?.modelId !== writingModel;
+    !tier?.turbo.failed;
+  const writingModel = writingModelFollowsDefault() ? plan.downloads.writing : null;
   const items = [
     ...(turbo && tier?.turbo.sizeBytes
       ? [`Whisper Turbo (${formatMegabytes(tier.turbo.sizeBytes, i18n.language)})`]
       : []),
-    ...(writingModel && writingDownloads
+    ...(writingModel && tier?.writing?.failed?.modelId !== writingModel
       ? [
           `${writingModelName(writingModel)} (${formatGigabytes(
             getLocalModel(writingModel)?.sizeBytes,
@@ -57,4 +51,14 @@ export function useLocalDownloads(): LocalDownloads {
       : []),
   ];
   return { items, checking: !tier || tier.measuring };
+}
+
+/** The setup press replaces earlier declines, without starting downloads. */
+export async function prepareLocalSetup() {
+  const state = useSettingsStore.getState();
+  await window.electronAPI?.prepareLocalSetup?.({
+    language: startupSpeechLanguage(state.preferredLanguage),
+    speech: state.localTranscriptionProvider === "whisper" && whisperModelFollowsDefault(),
+    writing: writingModelFollowsDefault(),
+  });
 }

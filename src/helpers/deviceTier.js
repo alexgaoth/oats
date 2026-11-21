@@ -52,6 +52,8 @@ const registry = require("../models/modelRegistryData.json");
 
 let speechTierModule = null;
 const loadSpeechTier = () => (speechTierModule ??= import("./speechTier.mjs"));
+let localSetupModule = null;
+const loadLocalSetup = () => (localSetupModule ??= import("./localSetup.mjs"));
 
 /** The speed check's clip: 16 kHz mono PCM, LibriSpeech test-clean 7127-75946-0024. */
 const CLIP_PATH = path.join(__dirname, "speechCheck.wav");
@@ -526,6 +528,51 @@ class DeviceTier extends EventEmitter {
       debugLogger.warn("Device tier failed", { error: error.message });
       this.measured = null;
       return this.record;
+    }
+  }
+
+  /**
+   * Setup explicitly chose local. Clear old declines for the missing
+   * recommendations, without fetching anything. If the speech check is
+   * running, decide when it finishes, without making setup wait for it.
+   */
+  async prepareLocalSetup({ language = "en", speech = false, writing = false } = {}) {
+    const { planLocalSetup } = await loadLocalSetup();
+    const plan = () => {
+      const { device, memoryBytes, smallClipMs, turboClipMs, turbo, writing } = this.snapshot();
+      return planLocalSetup({
+        device: {
+          platform: process.platform,
+          arch: process.arch,
+          ...device,
+          memoryBytes,
+          smallClipMs,
+          turboClipMs,
+        },
+        installed: { whisper: turbo.installed ? [TURBO_MODEL] : [], writing: writing.installed },
+        language,
+        processing: "local",
+      });
+    };
+    const current = plan();
+    if (writing && current.downloads.writing) {
+      this.writing.clearSetupDecline(current.downloads.writing);
+    }
+    if (!speech || !this.record?.turboDeclined) return;
+    const clearSpeechDecline = () => {
+      if (!this.record?.turboDeclined || plan().downloads.speech?.model !== TURBO_MODEL) return;
+      this.record.turboDeclined = false;
+      this._save();
+      this.publish();
+    };
+    if (this.measuring || current.whisper.choice.reason === "not-measured") {
+      void this.ensureMeasured()
+        .then(clearSpeechDecline)
+        .catch((error) =>
+          debugLogger.warn("Could not reset the Turbo decline", { error: error.message })
+        );
+    } else {
+      clearSpeechDecline();
     }
   }
 
