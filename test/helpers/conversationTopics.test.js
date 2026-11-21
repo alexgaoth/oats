@@ -73,6 +73,51 @@ function feed(tracker, utterances) {
   return utterances;
 }
 
+test("detector snapshots publish live proposals, including expiration in silence", () => {
+  const epoch = 1_700_000_007_000;
+  let now = epoch;
+  const options = { now: () => now, proposalStartedAt: epoch };
+  const tracker = new ConversationTopicTracker({
+    ...options,
+    detector: { threshold: 2 },
+  });
+  const lexical = new ConversationTopicTracker(options);
+  tracker._proposals.score = () => 0.5;
+  const turn = (id, start, end) => {
+    now = epoch + end * 1000;
+    const utterance = {
+      id,
+      text: PRICING[0],
+      at: epoch + start * 1000,
+      start: epoch / 1000 + start,
+      end: epoch / 1000 + end,
+    };
+    lexical.onUtterance(utterance);
+    tracker.onUtterance(utterance);
+    tracker.addVectors({ utterances: [[id, [1, 0]]] });
+  };
+  turn("start", 0, 9);
+  turn("candidate", 15, 23);
+  turn("following", 40, 45);
+  const grey = {
+    id: "proposal-candidate",
+    startId: "candidate",
+    at: epoch + 15_000,
+    state: "grey",
+    since: epoch + 45_000,
+  };
+  assert.deepEqual(tracker.snapshot().proposals, [grey]);
+  assert.equal(lexical.snapshot().proposals, undefined);
+  assert.equal(tracker.snapshot(now, { final: true }).proposals, undefined);
+  assert.equal(tracker.tickProposals(epoch + 75_000), false);
+  assert.equal(tracker.tickProposals(epoch + 90_000), true);
+  assert.deepEqual(tracker.snapshot().proposals, [
+    { ...grey, state: "faded", since: epoch + 90_000 },
+  ]);
+  assert.equal(tracker.tickProposals(epoch + 105_000), true);
+  assert.equal(tracker.snapshot().proposals, undefined);
+});
+
 function record(lines, options) {
   const tracker = new ConversationTopicTracker(options);
   const utterances = feed(tracker, utterancesOf(lines));

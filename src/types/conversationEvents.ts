@@ -141,9 +141,18 @@ export interface ConversationSuggestion {
   seenIn?: number;
 }
 
+export interface ConversationTopicProposal {
+  id: string;
+  startId: string;
+  at: number;
+  state: "grey" | "solid" | "faded";
+  since: number;
+}
+
 export interface ConversationTopicSnapshot {
   nodes: ConversationTopicNode[];
   edges: ConversationTopicEdge[];
+  proposals?: ConversationTopicProposal[];
 }
 
 export interface ConversationEvent {
