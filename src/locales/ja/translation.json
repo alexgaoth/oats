@@ -1935,6 +1935,7 @@
     "join": "参加して文字起こし"
   },
   "oats": {
+    "parakeetFallback": "Parakeet が失敗しました。Whisper を使用中。",
     "library": {
       "tools": "会話ツール",
       "filter": "会話を絞り込む",

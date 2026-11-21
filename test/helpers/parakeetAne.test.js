@@ -139,6 +139,66 @@ test("a helper that cannot start says why", async () => {
   await assert.rejects(ane.start(), /exited \(3\): no models here/);
 });
 
+test("a missing, broken, or crashing Parakeet helper does not lose or repeat finals", async (t) => {
+  const { RoomTranscriptionFallback } =
+    await import("../../src/helpers/roomTranscriptionFallback.mjs");
+  const { join } = require("node:path");
+  for (const scenario of ["missing", "startup crash", "read crash"]) {
+    await t.test(scenario, async (t) => {
+      const ane =
+        scenario === "missing"
+          ? new ParakeetAne("/models", { command: join(__dirname, "missing-helper") })
+          : scenario === "startup crash"
+            ? new ParakeetAne("/models", {
+                command: process.execPath,
+                args: ["-e", "process.exit(3)", "--"],
+              })
+            : fake();
+      t.after(() => ane.stop());
+      const notice = [];
+      const attempted = [];
+      const results = [];
+      const route = new RoomTranscriptionFallback({
+        prepare: () => ane.start(),
+        read: async (pcm) => {
+          attempted.push(pcm[1]);
+          return { success: true, text: await ane.transcribe(wav(pcm)) };
+        },
+        backup: (pcm) => ({ success: true, text: `Whisper ${pcm[1]}` }),
+        onFallback: (error) => notice.push(error.message),
+      });
+      void route.start();
+      for (let id = 1; id <= 3; id++) {
+        results.push((await route.final(Buffer.from([9, id]))).text);
+      }
+      assert.deepEqual(results, ["Whisper 1", "Whisper 2", "Whisper 3"]);
+      assert.deepEqual(attempted, scenario === "read crash" ? [1, 2] : []);
+      assert.equal(notice.length, 1);
+    });
+  }
+});
+
+test("a completed empty read resets the consecutive Parakeet failure count", async () => {
+  const { RoomTranscriptionFallback } =
+    await import("../../src/helpers/roomTranscriptionFallback.mjs");
+  let notices = 0;
+  const route = new RoomTranscriptionFallback({
+    prepare: () => {},
+    read: async (text) => {
+      if (text === null) throw new Error("read failed");
+      return { success: true, text };
+    },
+    backup: () => ({ success: true, text: "Whisper" }),
+    onFallback: () => notices++,
+  });
+  const texts = [null, "", null, "Parakeet"];
+  for (const [index, text] of texts.entries()) {
+    assert.equal((await route.final(text)).text, text ?? "Whisper", `final ${index}`);
+  }
+  assert.equal(notices, 1);
+  assert.equal(route.usingBackup, false);
+});
+
 // The helper's rule for a word at the segment's start (macos-parakeet-ane.swift,
 // `words()`). Swift is not run here; the real helper was measured on LibriSpeech
 // and a `say` turn (the reliability speech report): a word heard again across

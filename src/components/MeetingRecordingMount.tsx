@@ -39,6 +39,14 @@ export default function MeetingRecordingMount(): null {
     });
   }, [error, toast, t]);
 
+  useEffect(
+    () =>
+      window.electronAPI?.onMeetingTranscriptionFallback?.(() => {
+        toast({ title: t("oats.parakeetFallback") });
+      }),
+    [t, toast]
+  );
+
   useEffect(() => {
     if (!isRecording) return;
 

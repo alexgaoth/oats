@@ -1935,6 +1935,7 @@
     "join": "Entrar e transcrever"
   },
   "oats": {
+    "parakeetFallback": "O Parakeet falhou. A usar o Whisper.",
     "library": {
       "tools": "Ferramentas de conversa",
       "filter": "Filtrar conversas",
