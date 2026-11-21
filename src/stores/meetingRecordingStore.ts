@@ -840,6 +840,23 @@ function publishTopicNames() {
   });
 }
 
+// The tracker outlives Stop to save the final topics. Its live clock does not.
+function startTopicProposalClock(tracker: ConversationTopicTracker, startedAt: number) {
+  const tickMs = 15_000;
+  let timer: ReturnType<typeof setTimeout>;
+  const tick = () => {
+    const now = Date.now();
+    timer = setTimeout(tick, tickMs - ((now - startedAt) % tickMs));
+    if (tracker.tickProposals(now)) publishTopicNames();
+  };
+  timer = setTimeout(tick, tickMs - ((Date.now() - startedAt) % tickMs));
+  const unsubscribe = useMeetingRecordingStore.subscribe((state) => {
+    if (state.isRecording && state.recordingStartedAt === startedAt) return;
+    clearTimeout(timer);
+    unsubscribe();
+  });
+}
+
 // Topic snapshots of past conversations, loaded once when a recording starts.
 // Suggestions of the `adjacent` kind are the only thing that reads them, and they
 // are read from what is already stored on each note — no extra pass over audio,
@@ -1520,9 +1537,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   speakerLocks = locks;
   systemPartialSpeakerIdValue = null;
 
+  const recordingStartedAt = Date.now();
   useMeetingRecordingStore.setState({
     isRecording: true,
-    recordingStartedAt: Date.now(),
+    recordingStartedAt,
     isTranscribing: true,
     recordingNoteId: args.noteId,
     recordingNoteTitle: args.noteTitle,
@@ -1555,7 +1573,9 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     recordingMode === "in_room" && getBaseLanguageCode(getSettings().preferredLanguage) === "en";
   conversationTopicTracker = new ConversationTopicTracker({
     detector: roomInEnglish ? { split: LONG_TOPIC_SPLIT } : false,
+    proposalStartedAt: recordingStartedAt,
   });
+  if (roomInEnglish) startTopicProposalClock(conversationTopicTracker, recordingStartedAt);
   // Each turn and each candidate name is embedded on this computer, so the
   // tracker can cut and name a topic by meaning; a name that arrives is drawn
   // at once.

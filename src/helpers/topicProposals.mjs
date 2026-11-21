@@ -27,14 +27,16 @@ export class TopicProposals {
    * and retain a history without keeping it in the live session.
    * @param {Pick<import("./topicChange.mjs").TopicChangeDetector, "turns" | "firstSeen" | "cuts">} detector
    * @param {{ rule?: Partial<Omit<typeof PROPOSAL_RULE, "schedule">> & { schedule?: ReadonlyArray<number | string> },
+   *   startedAt?: number,
    *   score?: (g: number, lag: number) => number,
    *   onChange?: (mark: Proposal) => void }} [options]
    */
   constructor(
     detector,
-    { rule = {}, score = (g, lag) => proposalScore(detector, g, lag), onChange } = {}
+    { rule = {}, startedAt = 0, score = (g, lag) => proposalScore(detector, g, lag), onChange } = {}
   ) {
     this.detector = detector;
+    this.startedAt = startedAt;
     this.rule = { ...PROPOSAL_RULE, ...rule };
     this.score = score;
     this.onChange = onChange;
@@ -76,7 +78,7 @@ export class TopicProposals {
   advance(now, landedThrough = now) {
     this.observeCuts(now);
     const { slice, cap, expiresAfter, confirm, schedule, threshold } = this.rule;
-    const tick = Math.floor(now / slice);
+    const tick = Math.floor((now - this.startedAt) / slice);
     if (tick <= this.lastTick) return;
     this.lastTick = tick;
     this.marks = this.marks.filter((mark) => mark.state === "grey" || now - mark.since < slice);
