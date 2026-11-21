@@ -6,15 +6,58 @@ const assert = require("node:assert/strict");
 
 const example = require("../../src/helpers/sampleConversations/launch-readiness-review.json");
 
-let topicLanes, runAt, questionTopics, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX;
+let topicLanes,
+  runAt,
+  questionTopics,
+  lanePath,
+  laneProposalTicks,
+  MIN_RUN_MS,
+  LANE_ROW_PX,
+  LANE_BEND_PX;
 
 test.before(async () => {
-  ({ topicLanes, runAt, questionTopics, lanePath, MIN_RUN_MS, LANE_ROW_PX, LANE_BEND_PX } =
-    await import("../../src/helpers/topicLanes.mjs"));
+  ({
+    topicLanes,
+    runAt,
+    questionTopics,
+    lanePath,
+    laneProposalTicks,
+    MIN_RUN_MS,
+    LANE_ROW_PX,
+    LANE_BEND_PX,
+  } = await import("../../src/helpers/topicLanes.mjs"));
 });
 
 const START = 1_800_000_000_000;
 const S = 1000;
+
+test("grey and fading ticks use the current runs; settled marks leave the normal bend", () => {
+  const { segments, snapshot } = conversation(
+    [
+      [1, 0],
+      [1, 20],
+      [2, 40],
+      [2, 60],
+    ],
+    [node(1, "First"), node(2, "Second")]
+  );
+  const lanes = topicLanes({ snapshot, segments, start: START, end: START + 80 * S, live: true });
+  const proposal = (id, seconds, state) => ({ id, at: START + seconds * S, state, since: START });
+  assert.deepEqual(
+    laneProposalTicks(lanes, [
+      proposal("grey", 60, "grey"),
+      proposal("fade", 20, "faded"),
+      proposal("solid", 40, "solid"),
+      proposal("old", -10, "grey"),
+    ]),
+    [
+      { id: "grey", state: "grey", since: START, row: 1, x: 0.75 },
+      { id: "fade", state: "faded", since: START, row: 0, x: 0.25 },
+    ]
+  );
+  assert.equal(lanes.runs[1].from, 0.5);
+  assert.equal(lanes.rows.length, 2);
+});
 
 // A topic with its utterances, as the tracker stores it.
 const node = (id, label, over = {}) => ({

@@ -109,6 +109,7 @@ export function useLiveContour(startedAt: number | null): ContourData {
       levels: levels.current,
       questions: cards,
       topics,
+      proposals: snapshot?.proposals,
       moments,
       now: time,
       startedAt: startedAt ?? time,

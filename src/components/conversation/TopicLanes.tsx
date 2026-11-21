@@ -7,6 +7,7 @@ import { LANE_ROW_PX, lanePath, runAt } from "../../helpers/topicLanes.mjs";
 import { StateMark } from "./StateMark";
 import { stateLabel } from "./flowText";
 import { markFill } from "./questionMarks";
+import { TopicProposalTick, type ProposalTick } from "./TopicProposalTick";
 import type { QuestionOutcome } from "../../types/conversationEvents";
 
 // The lanes: how a conversation moved between its topics. One row per topic,
@@ -63,6 +64,7 @@ export default function TopicLanes({
   onSelect,
   live = false,
   questions,
+  proposalTicks,
   inset = "px-5",
   className,
 }: {
@@ -73,6 +75,7 @@ export default function TopicLanes({
   live?: boolean;
   /** Questions to mark on the line, each on the topic the room was on. */
   questions?: LaneQuestion[];
+  proposalTicks?: (ProposalTick & { row: number })[];
   /** A row's side padding: the card's in a card, less on a page. */
   inset?: string;
   className?: string;
@@ -210,12 +213,8 @@ export default function TopicLanes({
                     label.title = label.scrollWidth > label.clientWidth ? row.label : "";
                   }}
                   className={cn(
-                    "truncate text-[13px]",
-                    isNow && "font-medium text-foreground",
-                    !isNow &&
-                      (live && !isSelected
-                        ? "text-muted-foreground group-hover:text-foreground"
-                        : "text-foreground")
+                    "truncate text-[13px] text-foreground",
+                    isNow ? "font-medium" : "font-normal"
                   )}
                 >
                   {row.label}
@@ -258,6 +257,13 @@ export default function TopicLanes({
               />
             </svg>
           )}
+          {proposalTicks?.map((tick) => (
+            <TopicProposalTick
+              key={`${tick.id}-${tick.state}`}
+              tick={tick}
+              style={{ top: centre(tick.row) + 2 }}
+            />
+          ))}
           {/* The chart's one dot (DESIGN.md §6): `CHART.dot` across in a
               `CHART.ring` ring of the card colour. A question's mark sits on
               a disc of the card colour that wide, so the line stops at its

@@ -612,6 +612,7 @@ function smooth121(values, skip = () => false) {
  *   groupKey?: string, occurrence?: number }>} [input.questions] Question cards.
  * @param {Array<{ id?: string, label?: string, state?: string, startedAt?: number,
  *   lastTouchedAt?: number }>} [input.topics] Topic nodes from the tracker.
+ * @param {import("./topicProposals.mjs").Proposal[]} [input.proposals] Live proposals, in epoch ms.
  * @param {Array<{ id?: string, at?: number, note?: string }>} [input.moments]
  *   Instants somebody pressed "Mark".
  * @param {number} input.now The current time.
@@ -628,6 +629,7 @@ export function buildLiveContour({
   levels = [],
   questions = [],
   topics = [],
+  proposals = [],
   moments = [],
   now,
   startedAt,
@@ -741,6 +743,9 @@ export function buildLiveContour({
       label: topic.label ?? "",
       state: topic.state ?? "open",
     }));
+  const proposalTicks = proposals
+    .filter(({ at, state }) => state !== "solid" && at > session && inWindow(at))
+    .map(({ id, at, state, since }) => ({ id, x: xAt(at), state, since }));
 
   // An arc can start before the window: its left end is then off the canvas,
   // which is where that part of the conversation now is.
@@ -798,6 +803,7 @@ export function buildLiveContour({
     points,
     marks,
     shifts,
+    proposalTicks,
     returns,
     moments: marked,
     span,

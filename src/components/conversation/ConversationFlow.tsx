@@ -7,8 +7,9 @@ import { CHART } from "../charts/chartStyle";
 import { cn } from "../lib/utils";
 import { buildThreadMap, placeLabels, quotedUtterance } from "../../helpers/liveThreadMap.mjs";
 import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
-import { LANE_ROW_PX, topicLanes } from "../../helpers/topicLanes.mjs";
+import { LANE_ROW_PX, laneProposalTicks, topicLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
+import type { ProposalTick } from "./TopicProposalTick";
 import { flowCaption, flowViewOptions, stateLabel } from "./flowText";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 import type { ConversationFlowView } from "../../stores/settingsStore";
@@ -211,6 +212,13 @@ export default function ConversationFlow({
     [snapshot, startedAt, live]
   );
   const empty = lanes.empty;
+  const proposalTicks = useMemo(
+    () =>
+      (live && view === "lanes"
+        ? laneProposalTicks(lanes, snapshot?.proposals)
+        : []) as (ProposalTick & { row: number })[],
+    [live, view, lanes, snapshot?.proposals]
+  );
   const caption = flowCaption(
     t,
     view === "graph"
@@ -307,7 +315,13 @@ export default function ConversationFlow({
             }
           >
             {view === "lanes" ? (
-              <TopicLanes lanes={lanes} selected={selected} onSelect={toggle} live={live} />
+              <TopicLanes
+                lanes={lanes}
+                selected={selected}
+                onSelect={toggle}
+                live={live}
+                proposalTicks={proposalTicks}
+              />
             ) : (
               <FlowGraph map={map} compact={compact} selected={selected} onSelect={toggle} />
             )}
@@ -520,12 +534,9 @@ function FlowGraph({
                       : (ALIGN[align] ?? ALIGN.center),
                     "outline-none transition-colors duration-150 motion-reduce:transition-none",
                     "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                    isSelected
-                      ? "bg-muted text-foreground"
-                      : isLive
-                        ? "bg-card font-medium text-foreground hover:bg-muted"
-                        : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-                    isSelected && isLive && "font-medium"
+                    "text-foreground",
+                    isSelected ? "bg-muted" : "bg-card hover:bg-muted",
+                    isLive ? "font-medium" : "font-normal"
                   )}
                 >
                   {/* The chart's one dot: `CHART.dot` across, in a ring

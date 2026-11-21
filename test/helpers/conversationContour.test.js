@@ -1,6 +1,34 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+test("live contour projects grey and fading ticks but uses the normal tick for a cut", () => {
+  const now = 1_800_000_300_000;
+  const startedAt = now - 260_000;
+  const proposal = (id, ago, state) => ({ id, startId: id, at: now - ago, state, since: now });
+  const contour = buildLiveContour({
+    now,
+    startedAt,
+    utterances: [],
+    topics: [{ id: "cut", startedAt: now - 95_000 }],
+    proposals: [
+      proposal("grey", 40_000, "grey"),
+      proposal("fade", 75_000, "faded"),
+      proposal("solid", 95_000, "solid"),
+      proposal("scrolled-out", 250_000, "grey"),
+    ],
+  });
+  assert.deepEqual(
+    contour.proposalTicks.map(({ id, state }) => [id, state]),
+    [
+      ["grey", "grey"],
+      ["fade", "faded"],
+    ]
+  );
+  assert.equal(contour.shifts[0].id, "cut");
+  assert.ok(contour.shifts[0].x < contour.proposalTicks[1].x);
+  assert.ok(contour.proposalTicks[1].x < contour.proposalTicks[0].x);
+  assert.equal(contour.summary.shifts, 1);
+});
 // The house convention for testing an `.mjs` helper from a CommonJS test file
 // (see conversationGraph.test.js): the module stays pure ESM so it needs no
 // build step, and the test reaches it through a dynamic import.
@@ -580,7 +608,9 @@ function finishedTalk() {
 }
 
 /** One level a second: each turn rises and falls, the pauses are room tone. */
-function finishedLevels(loudness = (turn, second) => 0.04 + 0.16 * Math.sin((second / 20) * Math.PI)) {
+function finishedLevels(
+  loudness = (turn, second) => 0.04 + 0.16 * Math.sin((second / 20) * Math.PI)
+) {
   const levels = [];
   for (let second = 0; second < 600; second += 1) {
     const turn = Math.floor(second / 30);
@@ -605,8 +635,8 @@ test("with the loudness kept, a finished conversation is not a flat block", () =
   const louder = buildContour({
     utterances,
     // Every other turn spoken louder: the words are the same.
-    levels: finishedLevels((turn, second) =>
-      (turn % 2 ? 0.08 : 0.03) + 0.12 * Math.sin((second / 20) * Math.PI)
+    levels: finishedLevels(
+      (turn, second) => (turn % 2 ? 0.08 : 0.03) + 0.12 * Math.sin((second / 20) * Math.PI)
     ),
   });
   const ys = (contour) => contour.points.map((point) => point.y);
@@ -625,7 +655,10 @@ test("with the loudness kept, a finished conversation is not a flat block", () =
 /** Each bucket with the time its middle stands for, in seconds into the window. */
 function bucketsOf(contour) {
   const bucketMs = contour.span / CONTOUR_RESOLUTION;
-  return contour.points.map((point, index) => ({ point, second: ((index + 0.5) * bucketMs) / SECOND }));
+  return contour.points.map((point, index) => ({
+    point,
+    second: ((index + 0.5) * bucketMs) / SECOND,
+  }));
 }
 
 test("a turn stands above the pause after it", () => {
