@@ -216,6 +216,79 @@ It took about 0.6 s and cost about $0.00007 per request.
 Gemma 4 E4B approved 90% of candidates on learn83. It improved by about two
 points over approving everything. The judge does not use Gemma.
 
+## Part 3: who draws the live line (learn83, 2026-11-21)
+
+Today a writing model on this Mac that may run during a recording turns on the window loop (`src/helpers/topicWindowLoop.mjs`). The loop cuts the last 6 minutes again every 2 minutes, and its view replaces the detector's live view. So its users never see the early cut. The proposal: every route cuts with the detector and the early cut, and the model only names each topic when its cut lands (`src/helpers/topicNamer.mjs`).
+
+- **Harness:** `scripts/topic-loop-eval.mjs`, with the live line metrics below. It replays the manual AMI words of the 83 learn83 meetings: 41.5 h from first to last speech, 559 real changes, 13.5 an hour.
+- **Model:** Gemma 4 E4B (Q4_K_M) through `llama-server` on this Mac, in all three arms. No cloud calls. eval24 was not read.
+- **Arms:** `v3` is the experiment's loop with the shipped window settings (2 min stride, 6 min window, 100 lines, 1,500 words). `v3app` is the shipped class (`WindowTopicLoop`). `v1` is the detector with the early cut, and the namer names each topic.
+- **Line metrics:** each boundary counts once, at its first display, also when a later window removes it. A line is right when a real change is within 60 s of it. A real change is found when any line is within 60 s of it. This match is not one to one.
+
+| Route | Lines an hour | Right within 60 s | Found within 60 s | Median first line | Median model name, from speech |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Window loop (`--variant v3`) | 29.15 | 49.1% (594/1,211) | 75.1% (420/559) | 90.9 s | 105.3 s |
+| Shipped window loop (`--variant v3app`) | 26.88 | 49.6% (554/1,117) | 68.7% (384/559) | 84.1 s | 94.0 s |
+| Detector + early cut + namer (`--variant v1 --early-cut --vectors`) | 8.81 | 71.6% (262/366) | 57.8% (323/559) | 25.9 s | 40.3 s |
+
+**Chance.** Random lines, with the same number in each meeting, give these expected values (a 120 s window for each line):
+
+| Route | Right by chance | Found by chance | Right, above chance | Found, above chance |
+| --- | ---: | ---: | ---: | ---: |
+| Window loop | 36.3% | 61.9% | +12.8 points | +13.2 points |
+| Shipped window loop | 35.2% | 57.1% | +14.3 points | +11.5 points |
+| Detector + early cut | 37.9% | 27.2% | +33.7 points | +30.6 points |
+
+**Paired differences.** The detector route minus each loop, in points. The intervals are 95% paired meeting bootstraps (10,000 draws, `scripts/topic-routing-compare.py`).
+
+| Detector route minus | Right | Found | Right, above chance | Found, above chance |
+| --- | ---: | ---: | ---: | ---: |
+| Window loop | +22.5 [+17.2, +27.8] | -17.4 [-22.6, -12.2] | +20.9 [+15.8, +25.9] | +17.3 [+12.7, +22.1] |
+| Shipped window loop | +22.0 [+16.5, +27.4] | -10.9 [-16.5, -5.4] | +19.3 [+14.2, +24.4] | +19.0 [+15.1, +23.1] |
+
+**Segmentation at the live end.** Lower is better. The intervals are 95% meeting bootstraps.
+
+| Route | Pk | WindowDiff |
+| --- | ---: | ---: |
+| Window loop | 0.327 [0.302, 0.353] | 0.417 [0.387, 0.450] |
+| Shipped window loop | 0.331 [0.304, 0.358] | 0.405 [0.375, 0.437] |
+| Detector + early cut | 0.234 [0.213, 0.256] | 0.269 [0.248, 0.292] |
+| One topic for the whole meeting | 0.325 | |
+
+**Stability, an hour.**
+
+| Route | Old lines moved to another topic | Lines taken back | Label changes |
+| --- | ---: | ---: | ---: |
+| Window loop | 145.5 | 3.9 | 0.1 |
+| Shipped window loop | 146.0 | 3.5 | 4.6 (2.0 first model names, 2.0 phrase-label changes, 0.6 back to a phrase label, 0.1 renames) |
+| Detector + early cut | 16.5 | 0 | 19.9 (10.3 first model names, 3.0 renames, 6.6 phrase-label changes) |
+
+On the detector route a new topic shows with its phrase label first. The model name replaces it a median 7.2 s later. On the window loops a topic shows with its model name, a median 84 to 91 s after the change. The window loop's requests took a median 2.9 s, and 8.8% of its answers were malformed. The shipped loop's requests took 2.8 s, and 6.7% were malformed. It named 647 of its 664 topics. The namer's requests took 0.8 s, and 1.4% were malformed.
+
+Result:
+
+- The gate in the brief failed: the detector route must not be worse on right and on found. It found 57.8% against 75.1% (`v3`) and 68.7% (`v3app`).
+- Most of the window loops' lead on found comes from their line counts. Random lines at 29 an hour find 61.9%, and at 27 an hour 57.1%. Above chance, the detector route finds +30.6 points, the window loops +11.5 to +13.2.
+- Both sides of the trade are real. Against the shipped loop, the detector route finds 10.9 points fewer changes [5.4, 16.5]. Above chance it finds 19.0 points more [15.1, 23.1], and its lines are right 22.0 points more often [16.5, 27.4].
+- The detector route is better on every other measure here: right, first line, first name, Pk, WindowDiff and old lines moved.
+- The shipped loop matches the experiment's loop on right, Pk and old lines moved. It draws 8% fewer lines and finds 6.4 points fewer changes.
+- Alex decides the routing. Live routing is unchanged.
+
+### A stricter grey (learn83 only, a proposal)
+
+The eval24 read of the 0.40 to 0.45 band gave 48% of marks right and 2.7 faded an hour. The bar for a new rule on learn83: at least 70% right and at most 2 faded an hour. Cached MiniLM vectors, the current detector, no judge, one open mark and a 65 s deadline.
+
+| Rule | Marks | Right | Marks an hour | Faded an hour | Settled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| No grey | 0 | | 0 | 0 | |
+| R15, 0.400 to under 0.45 | 190 | 60.0% | 4.49 | 3.64 | 18.9% |
+| R15, 0.430 to under 0.45 | 73 | 61.6% | 1.73 | 1.42 | 17.8% |
+| R15, 0.440 to under 0.45 | 29 | 79.3% | 0.69 | 0.57 | 17.2% |
+| R15, 0.445 to under 0.45 | 14 | 85.7% | 0.33 | 0.31 | 7.1% |
+| R30 at 0.45, no early cut | 27 | 81.5% | 0.64 | 0.59 | 7.4% |
+
+The 0.44 band meets both bars. It has 29 marks, so its interval is wide. These are tuning numbers, not a held-out result. Grey stays off by default.
+
 ## Commands
 
 ```sh
@@ -234,4 +307,13 @@ node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --mode
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --model-dir resources/bin/all-MiniLM-L6-v2 --slices 15 --thresholds 0.45 --caps 1 --top 0 --rules "15:30:0.45:1" --compare-fade-cap
 # Part 2 deadline check on learn83, with no model calls:
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set learn83 --lags 15,30 --bands --grey-floors 0.30,0.35,0.40 --approvals "$O/verdicts-learn83-r15.jsonl"
+# Part 3 routing, heavy (local Gemma, the slot, 22:00 to 08:00):
+G=~/oats-asr-cache/models/llm/gemma-4-e4b/google_gemma-4-E4B-it-Q4_K_M.gguf
+L="--model local:gemma-4-e4b --local-model $G --llama-server /opt/homebrew/bin/llama-server --local-port 18473 --local-context 16384"
+node scripts/topic-loop-eval.mjs --variant v3 --ami ~/oats-asr-cache/AMI --set learn83 $L --options '{"strideMs":120000,"windowMs":360000,"maxLines":100,"maxWords":1500}' --json ~/oats-asr-cache/topic-routing/learn83-v3-window.json
+node scripts/topic-loop-eval.mjs --variant v3app --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v3app-window.json
+node scripts/topic-loop-eval.mjs --variant v1 --early-cut --vectors --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v1-early-cut.json
+# Part 3 chance values and paired differences (light, under 1 s):
+R=~/oats-asr-cache/topic-routing
+python3 -I scripts/topic-routing-compare.py $R/learn83-v1-early-cut.json $R/learn83-v3-window.json $R/learn83-v3app-window.json
 ```
