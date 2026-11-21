@@ -45,7 +45,7 @@
 import { ENGLISH_WORD_RANKS } from "./englishWordRanks.mjs";
 import { encodeTopicVector, topicContentVector } from "./conversationLinks.mjs";
 import { TopicChangeDetector } from "./topicChange.mjs";
-import { TopicProposals } from "./topicProposals.mjs";
+import { GREY_FLOOR, TopicProposals } from "./topicProposals.mjs";
 
 // ---------------------------------------------------------------------------
 // Words
@@ -710,7 +710,23 @@ class ConversationTopicTracker {
       : null;
     this._proposals =
       this.detector && Number.isFinite(options.proposalStartedAt)
-        ? new TopicProposals(this.detector, { startedAt: options.proposalStartedAt / 1000 })
+        ? new TopicProposals(this.detector, {
+            startedAt: options.proposalStartedAt / 1000,
+            greyFloor: GREY_FLOOR,
+            judge: options.proposalJudge && {
+              ...options.proposalJudge,
+              active: () => this._detectorOn && options.proposalJudge.active(),
+            },
+            onChange: (mark) =>
+              options.onProposalDeadline?.(
+                mark.state === "grey" ? this._proposals.deadline() * 1000 : null
+              ),
+            onCut: (_g, _at, source) => {
+              if (source !== "judge") return;
+              this._publishDetectorCuts();
+              options.onProposalCut?.();
+            },
+          })
         : null;
     this._detectorOn = false;
 
@@ -791,7 +807,6 @@ class ConversationTopicTracker {
     });
     this._lastSpeech = utterance.end ?? record.at / 1000;
     this._update();
-    this.tickProposals();
     return this.topics.find((topic) => topic.id === this.currentId) ?? null;
   }
 
@@ -800,9 +815,12 @@ class ConversationTopicTracker {
   tickProposals(at = this.now()) {
     if (!this._detectorOn || !this._proposals) return false;
     const before = this._proposals.snapshot();
+    const cutCount = this.detector.cuts.length;
     this._proposals.advance(at / 1000, this._lastSpeech);
+    const cut = cutCount !== this.detector.cuts.length;
+    if (cut) this._publishDetectorCuts();
     const after = this._proposals.snapshot();
-    return before.length !== after.length || before.some((mark, index) => mark !== after[index]);
+    return cut || before.length !== after.length || before.some((mark, index) => mark !== after[index]);
   }
 
   // Marks resolved the topic that contains a given utterance. Called when a
@@ -913,7 +931,11 @@ class ConversationTopicTracker {
   // The turn indexes that start a stretch, from the turns the detector cut at.
   _updateFromDetector() {
     this.detector.advance(this._lastSpeech ?? 0);
-    this._proposals?.observeCuts(this.now() / 1000);
+    this._proposals?.advance(this.now() / 1000, this._lastSpeech);
+    this._publishDetectorCuts();
+  }
+
+  _publishDetectorCuts() {
     this._final = null;
     this._proposedFrom = this.detector.proposedId();
     Object.assign(this, this._topicsAt(this.detector.cuts, { commit: true }));
