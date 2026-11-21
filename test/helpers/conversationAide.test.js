@@ -466,6 +466,32 @@ test("only the question is quoted, not the ramble it arrived in", () => {
   assert.equal(extractQuestionSentence(""), "");
 });
 
+test("classifier wording changes the search query but never the quote", async () => {
+  const quote = "Do you know what Kubernetes is?";
+  for (const confidence of [0.6, 0.95]) {
+    const { session, cards, events, updates, searches } = harness({
+      classify: async () =>
+        unanswered({
+          confidence,
+          normalizedQuestion: "What is a Kubernetes cluster?",
+          searchQuery: "Kubernetes cluster definition",
+        }),
+    });
+    session.onFinalized({ id: "q1", text: `I missed that part. ${quote}` });
+    session.onFinalized({ id: "r1", text: "I don't know." });
+    await session.evaluation;
+    await session.shutdown();
+
+    assert.ok(cards.length > 1);
+    assert.ok(cards.every((card) => card.question === quote));
+    assert.equal(events[0].text, quote);
+    assert.equal(updates[0].patch.normalizedQuestion, undefined);
+    assert.equal(latestCard(cards, "q1").query, "Kubernetes cluster definition");
+    assert.equal(searches[0].query, "Kubernetes cluster definition");
+    assert.equal(searches[0].question, quote);
+  }
+});
+
 test("the card shows the extracted question, not the whole utterance", () => {
   const { session, cards, events } = harness();
   session.onFinalized({
