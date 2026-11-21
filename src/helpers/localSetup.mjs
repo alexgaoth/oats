@@ -74,9 +74,7 @@ export function planLocalSetup({
   const speech = parakeet
     ? { engine: "parakeet", model: PARAKEET_ROOM_MODEL }
     : { engine: "whisper", model: whisperRecommended };
-  const readySpeech = parakeetReady
-    ? speech
-    : { engine: "whisper", model: parakeet ? resolveWhisper(bundle.model) : whisperReady };
+  const readySpeech = parakeetReady ? speech : { engine: "whisper", model: whisperReady };
 
   // docs/summaries.md: Gemma averaged 1.71 invented facts vs Qwen's 5.71
   // (24 AMI meetings). Gemma peaks at 6.8 GB, Qwen at 5.6 GB. Keep Qwen
