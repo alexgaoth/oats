@@ -911,6 +911,7 @@ const OPTIONAL_WORK_STOPPED = Symbol("optional work stopped");
 class ConversationAideSession {
   constructor(options) {
     this.noteId = options.noteId;
+    this.language = options.language ?? "auto";
     this.classify = options.classify;
     this.insertEvent = options.insertEvent || (async () => null);
     this.updateEvent = options.updateEvent || (async () => null);
@@ -1030,6 +1031,7 @@ class ConversationAideSession {
       id: utterance.id,
       noteId: this.noteId,
       question,
+      track: isTrackableQuestion(question, this.language),
       state: "asked",
       groupKey,
       occurrence,

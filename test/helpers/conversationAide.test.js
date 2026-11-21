@@ -110,6 +110,42 @@ test("Clean track filter keeps clear asks even without perfect punctuation", () 
   assert.equal(isTrackableQuestion("¿Cuándo?", "auto"), true);
 });
 
+test("live cards publish track immediately and keep it through verdicts and search", async () => {
+  const { session, cards, events, searches } = harness({ classify: null, language: "en" });
+  try {
+    const tag = "Main design points, is it?";
+    session.onFinalized({ id: "tag", text: tag });
+    assert.equal(latestCard(cards, "tag").track, false);
+    assert.equal(latestCard(cards, "tag").state, "asked");
+    session.onFinalized({ id: "reply", text: "I don't know." });
+    await session.evaluation;
+    assert.equal(latestCard(cards, "tag").state, "denied");
+    assert.equal(latestCard(cards, "tag").track, false);
+    assert.ok(events.some((event) => event.kind === "question" && event.text === tag));
+    assert.equal(searches.length, 1);
+    assert.equal(searches[0].question, tag);
+
+    const real = "How much does it cost?";
+    for (const id of ["first", "repeat"]) {
+      session.onFinalized({ id, text: real });
+      assert.equal(latestCard(cards, id).track, true);
+    }
+    assert.equal(latestCard(cards, "repeat").occurrence, 2);
+  } finally {
+    await session.shutdown();
+  }
+});
+
+test("live cards use the unfiltered path for unknown speech languages", async () => {
+  const { session, cards } = harness({ classify: null });
+  try {
+    session.onFinalized({ id: "q", text: "Main design points, is it?" });
+    assert.equal(latestCard(cards, "q").track, true);
+  } finally {
+    await session.shutdown();
+  }
+});
+
 test("a question with no question mark is found by its shape", () => {
   // Recognition misses about half of its question marks (docs/question-eval.md).
   // Each of these is a real AMI meeting's question, or the same shape.
