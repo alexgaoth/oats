@@ -534,12 +534,9 @@ function FlowGraph({
                       : (ALIGN[align] ?? ALIGN.center),
                     "outline-none transition-colors duration-150 motion-reduce:transition-none",
                     "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                    isSelected
-                      ? "bg-muted text-foreground"
-                      : isLive
-                        ? "bg-card font-medium text-foreground hover:bg-muted"
-                        : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-                    isSelected && isLive && "font-medium"
+                    "text-foreground",
+                    isSelected ? "bg-muted" : "bg-card hover:bg-muted",
+                    isLive ? "font-medium" : "font-normal"
                   )}
                 >
                   {/* The chart's one dot: `CHART.dot` across, in a ring

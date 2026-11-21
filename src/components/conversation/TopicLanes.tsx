@@ -213,12 +213,8 @@ export default function TopicLanes({
                     label.title = label.scrollWidth > label.clientWidth ? row.label : "";
                   }}
                   className={cn(
-                    "truncate text-[13px]",
-                    isNow && "font-medium text-foreground",
-                    !isNow &&
-                      (live && !isSelected
-                        ? "text-muted-foreground group-hover:text-foreground"
-                        : "text-foreground")
+                    "truncate text-[13px] text-foreground",
+                    isNow ? "font-medium" : "font-normal"
                   )}
                 >
                   {row.label}
