@@ -601,7 +601,8 @@ const BACKCHANNEL =
 
 // A yes/no question is answered by what is a backchannel anywhere else: "Is
 // that okay?" "Yeah." The room said something, and it was the answer.
-const EN_YES = /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
+const EN_YES =
+  /^(?:yes|yeah|yep|yup|sure|right|okay|ok|exactly|definitely|absolutely|mm-?hm+|uh[-\s]?huh)\b/i;
 // A plain "no" to one is an answer too, unless the question was what somebody
 // knows: "Do you know what Kubernetes is?" "No." is the confirmed negative the
 // search exists for. "Do we need a remote?" "No." is a decision.
@@ -857,6 +858,7 @@ ${utterances}`;
 const SPEAKING_RECHECK_MS = 1000;
 /** A segment closes within 20 s. Past this the words are stuck, and the card must resolve. */
 const MAX_SPEAKING_HOLD_MS = 30_000;
+const OPTIONAL_WORK_STOPPED = Symbol("optional work stopped");
 
 // Runs one recording's question detection.
 //
@@ -904,13 +906,19 @@ class ConversationAideSession {
     this.timer = null;
     this.utterances = [];
     this.cards = new Map();
+    this.sentenceByCard = new Map();
     this.groupCounts = new Map();
     this.closed = false;
+    this.releaseOptionalWork = null;
     this.evaluation = Promise.resolve();
     this.persistence = Promise.resolve();
   }
 
   onFinalized(segment) {
+    this.onFinalizedSentences(segment, []);
+  }
+
+  onFinalizedSentences(segment, sentences) {
     if (this.closed || !segment || !segment.id || !String(segment.text || "").trim()) return;
     const utterance = { id: String(segment.id), text: String(segment.text).trim() };
     this.utterances.push(utterance);
@@ -922,7 +930,7 @@ class ConversationAideSession {
       this._queueEvaluation(previous, "next_utterance");
     }
     if (isQuestionCandidate(utterance.text)) {
-      this._emitCard(utterance);
+      this._emitCard(utterance, sentences);
       this._stage(utterance);
     }
   }
@@ -933,6 +941,7 @@ class ConversationAideSession {
   onRetracted(segmentId) {
     const id = String(segmentId || "");
     this.utterances = this.utterances.filter((item) => item.id !== id);
+    this.sentenceByCard.delete(id);
     const card = this.cards.get(id);
     if (card) {
       this.cards.delete(id);
@@ -947,15 +956,38 @@ class ConversationAideSession {
   async shutdown() {
     this.closed = true;
     this._clearStage();
+    this.releaseOptionalWork?.(OPTIONAL_WORK_STOPPED);
     await this.evaluation;
     await this.persistence;
   }
 
+  // Finish releases the one optional request on the evaluation chain. It
+  // still waits for the local conversation event writes on that chain.
+  async _waitWhileRecording(start) {
+    const stopped = new Promise((resolve) => (this.releaseOptionalWork = resolve));
+    try {
+      return await Promise.race([stopped, start()]);
+    } finally {
+      this.releaseOptionalWork = null;
+    }
+  }
+
   // Phase 1. Synchronous by contract: the card is handed to the UI before this
   // returns, and the database write is chased asynchronously afterwards.
-  _emitCard(utterance) {
+  _emitCard(utterance, sentences = []) {
     // The card shows the question, not the paragraph it arrived in.
     const question = extractQuestionSentence(utterance.text);
+    // Preserve the quote and ID of the segment-level card. When it spans
+    // sentences, attach it to the last asking sentence in the quote.
+    if (sentences.length) {
+      const normalized = (text) => text.trim().replace(/\s+/g, " ");
+      const record =
+        sentences.findLast((part) => question.includes(normalized(part.text))) ??
+        sentences.findLast((part) => isQuestionCandidate(part.text)) ??
+        sentences.at(-1);
+      record.question = { quote: question };
+      this.sentenceByCard.set(utterance.id, record);
+    }
     const groupKey = questionGroupKey(question);
     const occurrence = (this.groupCounts.get(groupKey) ?? 0) + 1;
     this.groupCounts.set(groupKey, occurrence);
@@ -981,7 +1013,14 @@ class ConversationAideSession {
           parentEventId: null,
           segmentIds: [utterance.id],
           text: question,
-          metadata: { state: "asked", groupKey, occurrence },
+          metadata: {
+            state: "asked",
+            groupKey,
+            occurrence,
+            ...(this.sentenceByCard.has(utterance.id)
+              ? { sentenceId: this.sentenceByCard.get(utterance.id).id }
+              : {}),
+          },
         });
         const stored = this.cards.get(utterance.id);
         if (stored) stored.eventId = event?.id ?? event ?? null;
@@ -992,6 +1031,8 @@ class ConversationAideSession {
   _updateCard(segmentId, patch) {
     const card = this.cards.get(segmentId);
     if (!card) return null;
+    const record = this.sentenceByCard.get(segmentId);
+    if (record && patch.state && patch.state !== "asked") record.answered = patch.state;
     Object.assign(card, patch);
     this.onCard({ ...card });
     return card;
@@ -1078,8 +1119,8 @@ class ConversationAideSession {
   // question never opened a search, which read as the feature being broken rather
   // than the model being small.
   async _resolveLocally(candidate, followingContext, trigger) {
-    if (this.closed) return;
     await this.persistence;
+    if (this.closed && !followingContext.length) return;
     const card = this.cards.get(candidate.id);
     if (!card) return;
     const local = assessResponseLocally(followingContext, card.question);
@@ -1102,7 +1143,7 @@ class ConversationAideSession {
       text: followingContext.map((item) => item.text).join(" ") || "",
       metadata: { reason: local.outcome, trigger, outcome: local.outcome, source: "local" },
     });
-    this._startCheck(candidate, followingContext, local.outcome);
+    if (!this.closed) this._startCheck(candidate, followingContext, local.outcome);
     if (local.outcome === "answered") return;
 
     // The question text is the best search query available without the model.
@@ -1125,18 +1166,13 @@ class ConversationAideSession {
     const suggestionId = suggestionEvent?.id ?? suggestionEvent ?? null;
     this._updateCard(candidate.id, { suggestionId, query });
     if (!this.autoSearch || !AUTO_SEARCH_OUTCOMES.has(local.outcome)) return;
-    try {
-      const opened = await this.openSearch({ eventId: suggestionId, question: query, query });
-      if (opened !== false) this._updateCard(candidate.id, { searched: true });
-    } catch (error) {
-      this.onDiagnostic("auto_search_failed", error);
-    }
+    await this._openSearch(candidate.id, { eventId: suggestionId, question: query, query });
   }
 
   // Phase 2. Never creates a card — it only resolves one that is already on
   // screen. A verdict that arrives after the card was retracted is dropped.
   async _evaluate(candidate, followingContext, trigger) {
-    if (this.closed || !this.cards.has(candidate.id)) return;
+    if (!this.cards.has(candidate.id)) return;
 
     // No classifier configured at all: resolve locally and say nothing about it.
     //
@@ -1147,26 +1183,31 @@ class ConversationAideSession {
     // would report `classifier_failed` once per question for a model the user
     // never asked for, which is a diagnostic that means the opposite of what it
     // says.
-    if (!this.classify) {
+    if (this.closed || !this.classify) {
       await this._resolveLocally(candidate, followingContext, trigger);
       return;
     }
 
-    let assessment;
+    let raw;
     try {
-      const raw = await this.classify({
-        candidate,
-        context: [candidate, ...followingContext],
-        prompt: buildClassifierPrompt(candidate, [candidate, ...followingContext]),
-      });
-      assessment = typeof raw === "string" ? parseQuestionAssessment(raw) : raw;
+      raw = await this._waitWhileRecording(() =>
+        this.classify({
+          candidate,
+          context: [candidate, ...followingContext],
+          prompt: buildClassifierPrompt(candidate, [candidate, ...followingContext]),
+        })
+      );
     } catch (error) {
       this.onDiagnostic("classifier_failed", error);
       await this._resolveLocally(candidate, followingContext, trigger);
       return;
     }
-    if (this.closed || !this.cards.has(candidate.id)) return;
-    assessment = typeof assessment === "string" ? parseQuestionAssessment(assessment) : assessment;
+    if (raw === OPTIONAL_WORK_STOPPED || this.closed) {
+      await this._resolveLocally(candidate, followingContext, trigger);
+      return;
+    }
+    if (!this.cards.has(candidate.id)) return;
+    const assessment = typeof raw === "string" ? parseQuestionAssessment(raw) : raw;
     if (!assessment || !parseQuestionAssessment(JSON.stringify(assessment))) {
       this.onDiagnostic("malformed_classifier_output");
       await this._resolveLocally(candidate, followingContext, trigger);
@@ -1181,11 +1222,18 @@ class ConversationAideSession {
     if (!assessment.isFactualQuestion && assessment.confidence >= this.confidenceThreshold) {
       const card = this.cards.get(candidate.id);
       this.cards.delete(candidate.id);
+      const record = this.sentenceByCard.get(candidate.id);
+      if (record) record.question = null;
+      this.sentenceByCard.delete(candidate.id);
       if (card) this.onCardRemoved(card.id);
       return;
     }
 
     await this.persistence;
+    if (this.closed) {
+      await this._resolveLocally(candidate, followingContext, trigger);
+      return;
+    }
     const card = this.cards.get(candidate.id);
     if (!card) return;
     // The local reading of the reply is the primary verdict; the model may only
@@ -1197,7 +1245,6 @@ class ConversationAideSession {
       assessment.confidence >= this.confidenceThreshold ? modelOutcome : local.outcome;
     this._updateCard(candidate.id, {
       state: outcome,
-      question: assessment.normalizedQuestion || card.question,
       confidence: assessment.confidence,
     });
 
@@ -1208,7 +1255,6 @@ class ConversationAideSession {
         groupKey: card.groupKey,
         occurrence: card.occurrence,
         confidence: assessment.confidence,
-        normalizedQuestion: assessment.normalizedQuestion,
       });
     }
     await this.insertEvent({
@@ -1244,17 +1290,28 @@ class ConversationAideSession {
     // denial spends it automatically.
     if (!this.autoSearch || !AUTO_SEARCH_OUTCOMES.has(outcome)) return;
 
-    try {
-      const opened = await this.openSearch({
-        eventId: suggestionId,
-        question: assessment.normalizedQuestion,
-        query: assessment.searchQuery,
-      });
-      if (opened === false) return;
-      this._updateCard(candidate.id, { searched: true });
-    } catch (error) {
-      this.onDiagnostic("auto_search_failed", error);
+    await this._openSearch(candidate.id, {
+      eventId: suggestionId,
+      question: card.question,
+      query: assessment.searchQuery,
+    });
+  }
+
+  async _openSearch(cardId, request) {
+    const open = async () => {
+      try {
+        return await this.openSearch(request);
+      } catch (error) {
+        this.onDiagnostic("auto_search_failed", error);
+        return false;
+      }
+    };
+    if (this.closed) {
+      void open();
+      return;
     }
+    const opened = await this._waitWhileRecording(open);
+    if (!this.closed && opened !== false) this._updateCard(cardId, { searched: true });
   }
 }
 
