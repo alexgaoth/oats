@@ -70,6 +70,7 @@ const { values: args } = parseArgs({
     // Frozen rules only, with 95% meeting-bootstrap intervals:
     // "slice:schedule:threshold:cap;..." with the schedule as "30" or "15/30".
     rules: { type: "string" },
+    "compare-fade-cap": { type: "boolean", default: false },
   },
 });
 if (!args.ami) {
@@ -210,7 +211,7 @@ function simulate(meeting, rule) {
   const replay = { turns: [], firstSeen, cuts: [] };
   const marks = new Map();
   const proposals = new TopicProposals(replay, {
-    rule: { ...rule, confirm: CONFIRM_S },
+    rule: { maxFadesPerHour: Infinity, ...rule, confirm: CONFIRM_S },
     score: (g, r) => early.get(r)[g],
     onChange(mark) {
       if (mark.state === "grey") marks.set(mark.id, { ...mark, raisedAt: mark.since });
@@ -369,36 +370,27 @@ for (const budget of [1, 2, 4]) {
   }
 }
 if (args.rules) {
-  const bootstrap = (perMeeting, draws = 2000) => {
+  const ratio = (pairs) => {
+    const numerator = pairs.reduce((sum, pair) => sum + pair[0], 0);
+    const denominator = pairs.reduce((sum, pair) => sum + pair[1], 0);
+    return denominator ? numerator / denominator : 0;
+  };
+  const bootstrap = (perMeeting, statistic, draws = 2000) => {
     let seed = 7;
     const random = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
     const values = [];
     for (let draw = 0; draw < draws; draw += 1) {
-      let top = 0;
-      let bottom = 0;
-      for (let index = 0; index < perMeeting.length; index += 1) {
-        const pick = perMeeting[Math.floor(random() * perMeeting.length)];
-        top += pick[0];
-        bottom += pick[1];
-      }
-      values.push(bottom ? top / bottom : 0);
+      const sample = perMeeting.map(() => perMeeting[Math.floor(random() * perMeeting.length)]);
+      values.push(statistic(sample));
     }
     values.sort((a, b) => a - b);
     return [values[Math.floor(draws * 0.025)], values[Math.floor(draws * 0.975)]];
   };
-  for (const text of args.rules.split(";")) {
-    const [slice, schedule, threshold, cap] = text.split(":");
-    const rule = {
-      slice: Number(slice),
-      schedule: schedule.split("/").map((r) => (r.startsWith("c") ? r : Number(r))),
-      threshold: Number(threshold),
-      cap: Number(cap),
-    };
+  const measure = (rule) => {
     const fades = [];
     const right = [];
     const gain = [];
     const early = [];
-    let gains = [];
     for (const meeting of meetings) {
       const marks = simulate(meeting, rule);
       const hoursHere = meeting.end / 3600;
@@ -416,24 +408,43 @@ if (args.rules) {
         saved += mark.solidAt - first;
         count += 1;
         if (mark.greyAt !== null && mark.greyAt < mark.solidAt) before += 1;
-        gains.push(mark.solidAt - first);
       }
       gain.push([saved, count]);
       early.push([before, count]);
     }
-    const sum = (pairs, at) => pairs.reduce((total, pair) => total + pair[at], 0);
-    const ratio = (pairs) => sum(pairs, 0) / Math.max(1e-9, sum(pairs, 1));
-    const show = (pairs, scale = 1, digits = 2) => {
-      const [low, high] = bootstrap(pairs);
-      return `${(ratio(pairs) * scale).toFixed(digits)} [${(low * scale).toFixed(digits)}, ${(high * scale).toFixed(digits)}]`;
+    return { fades, right, early, gain };
+  };
+  const show = (pairs, statistic = ratio) => {
+    const [low, high] = bootstrap(pairs, statistic);
+    return `${statistic(pairs).toFixed(3)} [${low.toFixed(3)}, ${high.toFixed(3)}]`;
+  };
+  for (const text of args.rules.split(";")) {
+    const [slice, schedule, threshold, cap] = text.split(":");
+    const rule = {
+      slice: Number(slice),
+      schedule: schedule.split("/").map((r) => (r.startsWith("c") ? r : Number(r))),
+      threshold: Number(threshold),
+      cap: Number(cap),
     };
+    const metrics = [
+      ["fades", "faded marks an hour"],
+      ["right", `grey marks within ${TOLERANCE_S} s of a real change`],
+      ["early", "solid cuts with an earlier grey mark"],
+      ["gain", "seconds earlier than the line, mean over found changes"],
+    ];
+    const baseline = measure(rule);
     console.log(`\nFrozen rule ${text}:`);
-    console.log(`  faded marks an hour: ${show(fades, 1, 1)}`);
-    console.log(`  grey marks within ${TOLERANCE_S} s of a real change: ${show(right)}`);
-    console.log(`  solid cuts with an earlier grey mark: ${show(early)}`);
-    console.log(
-      `  seconds earlier than the line, mean over found changes: ${show(gain, 1, 1)}; median ${median(gains)?.toFixed(0)} s`
-    );
+    for (const [key, label] of metrics) console.log(`  ${label}: ${show(baseline[key])}`);
+    if (args["compare-fade-cap"]) {
+      const capped = measure({ ...rule, maxFadesPerHour: PROPOSAL_RULE.maxFadesPerHour });
+      console.log(`\nWith ${PROPOSAL_RULE.maxFadesPerHour} fades/h cap (paired deltas):`);
+      const difference = (sample) =>
+        ratio(sample.map((pair) => pair[1])) - ratio(sample.map((pair) => pair[0]));
+      for (const [key, label] of metrics) {
+        const paired = baseline[key].map((value, index) => [value, capped[key][index]]);
+        console.log(`  ${label}: ${show(capped[key])}; delta ${show(paired, difference)}`);
+      }
+    }
   }
 }
 if (args.json) {

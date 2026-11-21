@@ -68,3 +68,23 @@ test("allows spacing at 90 seconds but not one second earlier", () => {
   proposals.advance(135);
   assert.equal(proposals.snapshot()[0].at, 100);
 });
+
+test("blocks openings after three fades until the oldest leaves the rolling hour", () => {
+  const { proposals } = replay([10, 100, 190, 280, 3630]);
+  for (const [open, fade] of [
+    [45, 75],
+    [135, 165],
+    [225, 255],
+  ]) {
+    proposals.advance(open);
+    assert.equal(proposals.snapshot().at(-1).state, "grey");
+    proposals.advance(fade);
+    assert.equal(proposals.snapshot().at(-1).state, "faded");
+  }
+  proposals.advance(315);
+  assert.deepEqual(proposals.snapshot(), []);
+  proposals.advance(3660);
+  assert.deepEqual(proposals.snapshot(), []);
+  proposals.advance(3675);
+  assert.equal(proposals.snapshot()[0].at, 3630);
+});

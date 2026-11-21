@@ -9,7 +9,10 @@ export const PROPOSAL_RULE = Object.freeze({
   cap: 1,
   confirm: 20,
   expiresAfter: 65,
+  maxFadesPerHour: 3,
 });
+
+const HOUR_S = 3600;
 
 export function proposalScore(detector, g, lag, learnedScore = undefined) {
   const features = gapFeatures(detector.turns, g, { lag, firstSeen: detector.firstSeen });
@@ -38,6 +41,7 @@ export class TopicProposals {
     /** @type {Proposal[]} */
     this.marks = [];
     this.taken = new Set();
+    this.fades = [];
     this.first = 1;
     this.nextCut = 0;
     this.lastTick = 0;
@@ -78,8 +82,13 @@ export class TopicProposals {
     this.marks = this.marks.filter((mark) => mark.state === "grey" || now - mark.since < slice);
     for (let i = 0; i < this.marks.length; i += 1) {
       const mark = this.marks[i];
-      if (mark.state === "grey" && now >= mark.at + expiresAfter) this._resolve(i, "faded", now);
+      if (mark.state === "grey" && now >= mark.at + expiresAfter) {
+        this._resolve(i, "faded", now);
+        this.fades.push(now);
+      }
     }
+    while (this.fades.length && this.fades[0] <= now - HOUR_S) this.fades.shift();
+    if (this.fades.length >= this.rule.maxFadesPerHour) return;
     const open = this.marks.filter((mark) => mark.state === "grey");
     if (open.length >= cap) return;
 
