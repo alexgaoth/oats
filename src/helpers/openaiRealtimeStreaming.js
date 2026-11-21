@@ -5,6 +5,11 @@ const WEBSOCKET_TIMEOUT_MS = 15000;
 const DISCONNECT_TIMEOUT_MS = 3000;
 const SAMPLE_RATE = 24000;
 const COLD_START_BUFFER_MAX = 3 * SAMPLE_RATE * 2; // 3 seconds of 16-bit PCM
+const RECOVERY_ATTEMPTS = 5;
+const RECOVERY_BACKOFF_MS = 500;
+// Covers five 15 s handshakes plus the retry delays, without retaining an
+// unbounded amount of audio if the network stays down.
+const RECOVERY_BUFFER_MAX = 90 * SAMPLE_RATE * 2;
 const KEEPALIVE_INTERVAL_MS = 15000;
 // OpenAI Realtime sessions die at 60 minutes; reconnect proactively before that.
 const SESSION_PREEMPT_MS = 55 * 60 * 1000;
@@ -39,6 +44,8 @@ class OpenAIRealtimeStreaming {
     this.onError = null;
     this.onSessionEnd = null;
     this.onSessionExpired = null;
+    this.shouldRecover = null;
+    this.recovery = null;
     this._sessionExpired = false;
     this._sessionTimer = null;
     this.pendingResolve = null;
@@ -87,7 +94,7 @@ class OpenAIRealtimeStreaming {
     this.preconfigured = !!preconfigured;
     this.inputRate = inputRate || SAMPLE_RATE;
     this.captureRate = captureRate || this.inputRate;
-    this.completedSegments = [];
+    if (!this.recovery) this.completedSegments = [];
     this.currentPartial = "";
     this.audioBytesSent = 0;
     this.speechStartedAt = null;
@@ -97,6 +104,7 @@ class OpenAIRealtimeStreaming {
     debugLogger.debug("OpenAI Realtime connecting", { model: this.model });
 
     // Attested providers (Tinfoil) supply their socket via an async factory.
+    const recovery = this.recovery;
     let ws;
     try {
       ws = createSocket
@@ -107,15 +115,17 @@ class OpenAIRealtimeStreaming {
       this.cleanup();
       throw err;
     }
+    if (recovery && this.recovery !== recovery) {
+      ws.close();
+      throw new Error("WebSocket disconnected");
+    }
 
     return new Promise((resolve, reject) => {
       this.pendingResolve = resolve;
       this.pendingReject = reject;
 
       this.connectionTimeout = setTimeout(() => {
-        this.isConnecting = false;
-        this.cleanup();
-        reject(new Error("OpenAI Realtime connection timeout"));
+        this._socketEnded(options, new Error("OpenAI Realtime connection timeout"), true);
       }, WEBSOCKET_TIMEOUT_MS);
 
       this.ws = ws;
@@ -125,22 +135,17 @@ class OpenAIRealtimeStreaming {
       });
 
       this.ws.on("message", (data) => {
-        this.handleMessage(data);
+        if (this.ws === ws) this.handleMessage(data);
       });
 
       this.ws.on("error", (error) => {
+        if (this.ws !== ws) return;
         debugLogger.error("OpenAI Realtime WebSocket error", { error: error.message });
-        this.isConnecting = false;
-        this.cleanup();
-        if (this.pendingReject) {
-          this.pendingReject(error);
-          this.pendingReject = null;
-          this.pendingResolve = null;
-        }
-        this.onError?.(error);
+        this._socketEnded(options, error);
       });
 
       this.ws.on("close", (code, reason) => {
+        if (this.ws !== ws) return;
         const wasActive = this.isConnected;
         this.isConnecting = false;
         debugLogger.debug("OpenAI Realtime WebSocket closed", {
@@ -148,17 +153,63 @@ class OpenAIRealtimeStreaming {
           reason: reason?.toString(),
           wasActive,
         });
-        if (this.pendingReject) {
-          this.pendingReject(new Error(`WebSocket closed before ready (code: ${code})`));
-          this.pendingReject = null;
-          this.pendingResolve = null;
-        }
-        this.cleanup();
-        if (wasActive && !this.isDisconnecting && !this._sessionExpired) {
-          this.onSessionEnd?.({ text: this.getFullTranscript() });
-        }
+        this._socketEnded(options, new Error(`WebSocket closed (code: ${code})`), true);
       });
     });
+  }
+
+  _socketEnded(options, error, closed = false) {
+    const wasActive = this.isConnected;
+    const unexpected = !this.isDisconnecting && !this._sessionExpired;
+    const recover = wasActive && unexpected && this.shouldRecover?.();
+    this.pendingReject?.(error);
+    this.pendingReject = null;
+    this.pendingResolve = null;
+    this.cleanup();
+    if (recover && !this.recovery) {
+      // Arm the queue synchronously. Audio can arrive before the retry dials.
+      this.bufferingAudio = true;
+      const recovery = {};
+      this.recovery = recovery;
+      void this._recover(options, recovery);
+    } else if (!this.recovery) {
+      if (closed && wasActive && unexpected) {
+        this.onSessionEnd?.({ text: this.getFullTranscript() });
+      } else if (!closed) {
+        this.onError?.(error);
+      }
+    }
+  }
+
+  async _recover(options, recovery) {
+    const current = () => this.recovery === recovery && this.shouldRecover?.();
+    let lastError;
+    for (let attempt = 0; attempt < RECOVERY_ATTEMPTS; attempt++) {
+      if (attempt) {
+        await new Promise((resolve) => setTimeout(resolve, RECOVERY_BACKOFF_MS * attempt));
+      }
+      if (!current()) break;
+      this.bufferingAudio = true;
+      try {
+        await this.connect(options);
+        if (!current()) break;
+        if (!this.isConnected) throw new Error("WebSocket closed during recovery");
+        this._flushBufferedAudio();
+        this.recovery = null;
+        return;
+      } catch (error) {
+        lastError = error;
+        this.cleanup();
+        if (current()) this.bufferingAudio = true;
+      }
+    }
+    if (this.recovery !== recovery) return;
+    const report = current();
+    this.recovery = null;
+    this.bufferingAudio = false;
+    this.coldStartBuffer = [];
+    this.coldStartBufferSize = 0;
+    if (report && lastError) this.onError?.(lastError);
   }
 
   handleMessage(data) {
@@ -368,8 +419,11 @@ class OpenAIRealtimeStreaming {
   sendAudio(pcmBuffer) {
     const isOpen = this.ws?.readyState === WebSocket.OPEN;
 
-    if (!isOpen) {
-      if (this.bufferingAudio && this.coldStartBufferSize < COLD_START_BUFFER_MAX) {
+    if (!isOpen || (this.recovery && !this.isConnected)) {
+      if (
+        (this.bufferingAudio || this.recovery) &&
+        this.coldStartBufferSize < (this.recovery ? RECOVERY_BUFFER_MAX : COLD_START_BUFFER_MAX)
+      ) {
         const copy = Buffer.from(pcmBuffer);
         this.coldStartBuffer.push(copy);
         this.coldStartBufferSize += copy.length;
@@ -377,28 +431,36 @@ class OpenAIRealtimeStreaming {
       return false;
     }
 
-    if (this.coldStartBuffer.length > 0) {
-      debugLogger.debug("OpenAI Realtime flushing cold-start buffer", {
-        chunks: this.coldStartBuffer.length,
-        bytes: this.coldStartBufferSize,
-      });
-      for (const buf of this.coldStartBuffer) {
-        const audio = this._resampleToInputRate(buf);
-        this.ws.send(
-          JSON.stringify({ type: "input_audio_buffer.append", audio: audio.toString("base64") })
-        );
-        this.audioBytesSent += audio.length;
-      }
-      this.coldStartBuffer = [];
-      this.coldStartBufferSize = 0;
-    }
-
+    this._flushBufferedAudio();
     const audio = this._resampleToInputRate(Buffer.from(pcmBuffer));
     this.ws.send(
       JSON.stringify({ type: "input_audio_buffer.append", audio: audio.toString("base64") })
     );
     this.audioBytesSent += audio.length;
     return true;
+  }
+
+  _flushBufferedAudio() {
+    if (this.coldStartBuffer.length > 0) {
+      debugLogger.debug("OpenAI Realtime flushing cold-start buffer", {
+        chunks: this.coldStartBuffer.length,
+        bytes: this.coldStartBufferSize,
+      });
+      let sent = 0;
+      try {
+        for (const buf of this.coldStartBuffer) {
+          const audio = this._resampleToInputRate(buf);
+          this.ws.send(
+            JSON.stringify({ type: "input_audio_buffer.append", audio: audio.toString("base64") })
+          );
+          this.audioBytesSent += audio.length;
+          this.coldStartBufferSize -= buf.length;
+          sent++;
+        }
+      } finally {
+        this.coldStartBuffer.splice(0, sent);
+      }
+    }
   }
 
   async disconnect() {
@@ -409,6 +471,15 @@ class OpenAIRealtimeStreaming {
       readyState: this.ws?.readyState,
     });
 
+    if (this.recovery) {
+      this.recovery = null;
+      this.coldStartBuffer = [];
+      this.coldStartBufferSize = 0;
+      this.pendingReject?.(new Error("WebSocket disconnected"));
+      this.pendingReject = null;
+      this.pendingResolve = null;
+      this.cleanup();
+    }
     if (!this.ws) return { text: this.getFullTranscript() };
 
     this.isDisconnecting = true;
@@ -462,7 +533,7 @@ class OpenAIRealtimeStreaming {
         });
       }
 
-      this.ws.close();
+      this.ws?.close();
     }
 
     const result = { text: this.getFullTranscript() };
@@ -479,10 +550,11 @@ class OpenAIRealtimeStreaming {
     this.stopKeepAlive();
 
     if (this.ws) {
-      try {
-        this.ws.close();
-      } catch {}
+      const socket = this.ws;
       this.ws = null;
+      try {
+        socket.close();
+      } catch {}
     }
 
     this.isConnected = false;
