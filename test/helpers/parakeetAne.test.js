@@ -199,6 +199,39 @@ test("a completed empty read resets the consecutive Parakeet failure count", asy
   assert.equal(route.usingBackup, false);
 });
 
+test("a Parakeet final bypasses an in-flight preview and the old preview is discarded", async () => {
+  const { PartialScheduler } = await import("../../src/helpers/partialScheduler.mjs");
+  const finalEngine = fake();
+  const previewEngine = new ParakeetAne("/models", {
+    command: process.execPath,
+    args: ["-e", FAKE.replace('say({ id, text: audio.length + " bytes" });', ""), "--"],
+  });
+  try {
+    await Promise.all([previewEngine.start(), finalEngine.start()]);
+    const scheduler = new PartialScheduler();
+    const open = { startSample: 0, speechMs: 1000 };
+    const { start, id } = scheduler.tick({ now: 1000, open });
+    assert.equal(start, true);
+    // The preview worker never answers. The final does not wait for it.
+    const held = previewEngine.transcribe(wav(Buffer.from([1, 2])));
+    const aborted = assert.rejects(held, /exited/);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(previewEngine.pending.size, 1);
+    const audio = wav(Buffer.from([1, 2, 3, 4]));
+    assert.equal(await finalEngine.transcribe(audio), "4 bytes");
+    assert.equal(
+      scheduler.tick({ now: 2200, open: { ...open, startSample: 200 }, finalsPending: 1 }).reason,
+      "final-pending"
+    );
+    assert.equal(scheduler.settle(id, "stale preview", { startSample: 200 }), null);
+    await previewEngine.stop();
+    await aborted;
+    assert.equal(await finalEngine.transcribe(audio), "4 bytes");
+  } finally {
+    await Promise.all([previewEngine.stop(), finalEngine.stop()]);
+  }
+});
+
 // The helper's rule for a word at the segment's start (macos-parakeet-ane.swift,
 // `words()`). Swift is not run here; the real helper was measured on LibriSpeech
 // and a `say` turn (the reliability speech report): a word heard again across

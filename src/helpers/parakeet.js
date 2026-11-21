@@ -38,6 +38,8 @@ class ParakeetManager {
     this.currentDownloadProcess = null;
     this.isInitialized = false;
     this.serverManager = new ParakeetServerManager();
+    this.roomPreview = null;
+    this.roomPreviewClosing = null;
   }
 
   getModelsDir() {
@@ -172,7 +174,49 @@ class ParakeetManager {
   }
 
   async stopServer() {
-    await this.serverManager.stopServer();
+    await Promise.all([
+      this.serverManager.stopServer(),
+      this.roomPreview?.stop(),
+      this.roomPreviewClosing,
+    ]);
+  }
+
+  /**
+   * Give optional previews their own worker. The final worker can start a
+   * read even if a preview already crossed the process boundary.
+   */
+  createRoomPreview(model) {
+    model ||= "parakeet-tdt-0.6b-v3";
+    const server = new ParakeetServerManager({ preview: true });
+    const previous = this.roomPreview?.stop() ?? this.roomPreviewClosing;
+    let closed = false;
+    const started = Promise.resolve(previous).then(async () => {
+      if (closed) return false;
+      const result = await server.startServer(model);
+      return result.success && !closed;
+    });
+    let stopping;
+    const preview = {
+      started,
+      read: async (wav, options) =>
+        this.transcribeLocalParakeet(wav, { ...options, model, allowEmpty: true }, server),
+      stop: () => {
+        if (stopping) return stopping;
+        closed = true;
+        if (this.roomPreview === preview) this.roomPreview = null;
+        // If startup has already begun, let it settle before disposing its
+        // worker. No recording or final waits for this cleanup.
+        stopping = started.catch(() => {}).then(() => server.stopServer());
+        this.roomPreviewClosing = stopping;
+        const clear = () => {
+          if (this.roomPreviewClosing === stopping) this.roomPreviewClosing = null;
+        };
+        stopping.then(clear, clear);
+        return stopping;
+      },
+    };
+    this.roomPreview = preview;
+    return preview;
   }
 
   getServerStatus() {
@@ -196,10 +240,10 @@ class ParakeetManager {
     return this.serverManager.createOnlineStream(options);
   }
 
-  async transcribeLocalParakeet(audioBlob, options = {}) {
+  async transcribeLocalParakeet(audioBlob, options = {}, server = this.serverManager) {
     const model = options.model || "parakeet-tdt-0.6b-v3";
     const runtime = getModelRuntime(model);
-    const serverAvailable = this.serverManager.isAvailable(runtime);
+    const serverAvailable = server.isAvailable(runtime);
 
     debugLogger.logSTTPipeline("transcribeLocalParakeet - start", {
       options,
@@ -216,7 +260,7 @@ class ParakeetManager {
       );
     }
 
-    if (!this.serverManager.isModelDownloaded(model)) {
+    if (!server.isModelDownloaded(model)) {
       throw new Error(
         `Parakeet model "${model}" not downloaded. Please download it from Settings.`
       );
@@ -247,7 +291,7 @@ class ParakeetManager {
     });
 
     const startTime = Date.now();
-    const result = await this.serverManager.transcribe(audioBuffer, {
+    const result = await server.transcribe(audioBuffer, {
       modelName: model,
       audioBefore: options.audioBefore,
       wordBefore: options.wordBefore,
