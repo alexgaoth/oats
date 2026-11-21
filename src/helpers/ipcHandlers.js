@@ -4818,6 +4818,15 @@ class IPCHandlers {
         send("meeting-transcription-error", error.message);
       };
       streaming.onSessionExpired = () => reconnectMeetingStreams();
+      if (streaming instanceof OpenAIRealtimeStreaming) {
+        streaming.shouldRecover = () =>
+          !!meetingConnectionOptions &&
+          meetingStartedAt !== null &&
+          !meetingStopInFlight &&
+          !meetingReconnecting &&
+          (source === "mic" ? this._meetingMicStreaming : this._meetingSystemStreaming) ===
+            streaming;
+      }
     };
 
     const reconnectMeetingStreams = async () => {
