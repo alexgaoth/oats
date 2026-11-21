@@ -135,6 +135,9 @@ export function localUpgradeHint({
   recording = false,
 }) {
   if (recording) return null;
+  if (plan.speech.engine === "parakeet" && activeWhisper && isEnglish(language)) {
+    return "speech";
+  }
   if (
     plan.whisper.choice.model === TURBO_MODEL &&
     isEnglish(language) &&

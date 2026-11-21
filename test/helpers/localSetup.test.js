@@ -146,3 +146,12 @@ test("the hint only recommends a measured upgrade this Mac can use", () => {
   assert.equal(localUpgradeHint({ plan: plan(16), activeWhisper: "small", language: "de" }), null);
   assert.equal(localUpgradeHint({ plan: plan(16) }), null, "cloud does not need a local upgrade");
 });
+
+test("the English room hint recommends Parakeet over Turbo on a supported Mac", () => {
+  const plan = planLocalSetup({ device: mac(8), processing: "local" });
+  assert.equal(localUpgradeHint({ plan, activeWhisper: TURBO }), "speech");
+  assert.equal(localUpgradeHint({ plan, activeWhisper: TURBO, recording: true }), null);
+  assert.equal(localUpgradeHint({ plan, activeWhisper: null }), null);
+  const unsupported = planLocalSetup({ device: mac(8), processing: "local", language: "fr" });
+  assert.equal(localUpgradeHint({ plan: unsupported, activeWhisper: TURBO, language: "fr" }), null);
+});

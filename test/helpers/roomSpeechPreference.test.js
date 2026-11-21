@@ -43,4 +43,5 @@ test("the one-time migration preserves explicit Whisper and Parakeet choices", (
   assert.equal(followsRoomSpeechDefault("default", "nvidia", true), false);
   assert.equal(followsRoomSpeechDefault("default", "whisper", false), false);
   assert.equal(followsRoomSpeechDefault("shared", "whisper", true), false);
+  assert.equal(followsRoomSpeechDefault("recommended", "whisper", false), true);
 });

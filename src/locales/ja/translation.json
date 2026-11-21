@@ -2382,7 +2382,7 @@
       },
       "models": {
         "title": "使用中のモデル",
-        "description": "2つのモデルがすべてを担います。どちらも会話とディクテーションの両方に使われます。",
+        "description": "音声認識と文章作成のモデル",
         "speech": "音声",
         "speechDescription": "会話とディクテーションを文字起こし",
         "writing": "文章",
@@ -2545,7 +2545,11 @@
       "percent": "{{percent}}%",
       "needsKey": "キーが必要",
       "noAddress": "アドレスなし",
+      "roomDefault": "このMacの対面会話では{{model}}が既定のモデルです",
+      "roomActive": "対面会話に{{model}}を使用中",
+      "useWhisper": "Whisperを使う",
       "upgrade": {
+        "parakeet": "公開された会議録音では、{{model}}の内容再現率はWhisper Turboより静かな環境で4.9ポイント、一定の雑音がある環境で15.7ポイント高くなりました。",
         "speech": "背景音のある部屋でのテストでは、{{model}} が認識できた単語の割合は Whisper Small より 7.5 ポイント高くなりました。",
         "writing": "会議のテストでは、{{model}} は要約に含まれる事実にない記述が平均で 4 件少なくなりました。",
         "size": "ダウンロード容量：{{size}}。"

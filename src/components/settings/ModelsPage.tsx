@@ -17,11 +17,21 @@ import {
   followRecommendedWhisper,
   forgetWritingChoice,
   localSetupFor,
+  roomSpeechPlan,
   selectProcessingMode,
+  setRoomSpeechPreference,
   useSettingsStore,
 } from "../../stores/settingsStore";
 import { useDeviceTierStore } from "../../stores/deviceTierStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
+import { requestRoomModel } from "../../hooks/useSpeechUpgrade";
+import {
+  cancelRoomModelDownload,
+  refreshRoomModel,
+  ROOM_MODEL_BYTES,
+  ROOM_MODEL_NAME,
+  useRoomModelStore,
+} from "../../stores/roomModelStore";
 import {
   cancelTurbo,
   formatMegabytes,
@@ -102,16 +112,27 @@ function useUpgradeHint() {
       ? state.whisperModel
       : null
   );
+  const { available, installed, progress } = useRoomModelStore();
+  const roomEligible = useSettingsStore((state) =>
+    Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier))
+  );
+  const room = available && roomEligible;
+  const followingRoom = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
   const writer = useSettingsStore((state) =>
     state.cleanupMode === "local" ? state.cleanupModel : null
   );
   const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
   if (tier?.device?.platform !== "darwin") return null;
   return localUpgradeHint({
-    plan: localSetupFor(tier, language),
+    plan: localSetupFor(tier, language, room ? "local" : null),
     language,
     recording,
-    activeWhisper: tier.turbo.downloading || tier.turbo.checking ? null : whisper,
+    activeWhisper:
+      (room && (progress !== null || (installed && followingRoom))) ||
+      tier.turbo.downloading ||
+      tier.turbo.checking
+        ? null
+        : whisper,
     activeWriter: writer && tier.writing?.installed.includes(writer) ? writer : null,
   });
 }
@@ -248,6 +269,15 @@ function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
   const mac = getCachedPlatform() === "darwin";
   const [keyOpen, setKeyOpen] = useState(false);
   const label = t("oats.settings.models.speech");
+  const room = useRoomModelStore();
+  const followsRoom = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier.tier)));
+  const finishing = useMeetingRecordingStore((state) => state.isTranscribing || state.isRecording);
+  const roomEligible = useSettingsStore((state) =>
+    Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier.tier))
+  );
+  React.useEffect(() => {
+    if (roomEligible) void refreshRoomModel();
+  }, [roomEligible]);
 
   if (!local) {
     const models =
@@ -278,6 +308,67 @@ function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
       ? (PARAKEET_MODEL_INFO[parakeetModel]?.name ?? parakeetModel)
       : whisperName(whisperModel);
   const withoutOpenAI = processing === "providers";
+  if (roomEligible && room.available && (followsRoom || upgrade)) {
+    const usingRoomModel = followsRoom && room.installed;
+    const active = followsRoom ? whisperName("small") : name;
+    const roomSize = formatMegabytes(ROOM_MODEL_BYTES, i18n.language);
+    const gain = t("oats.models.upgrade.parakeet", { model: ROOM_MODEL_NAME });
+    const ready = { kind: "ready" } as const;
+    const state: RowState =
+      usingRoomModel || finishing
+        ? ready
+        : room.progress !== null
+          ? {
+              kind: "downloading",
+              percent: room.progress,
+              detail: t("oats.models.upgrade.size", { size: roomSize }),
+              cancelLabel: t("oats.models.cancelModel", { model: ROOM_MODEL_NAME }),
+              onCancel: () => cancelRoomModelDownload(),
+            }
+          : {
+              kind: "action",
+              label: t(
+                room.installed
+                  ? "oats.models.use"
+                  : room.failed
+                    ? "oats.speechTier.retry"
+                    : "common.download"
+              ),
+              icon: room.failed ? "retry" : "download",
+              onClick: () => {
+                setRoomSpeechPreference("recommended");
+                if (!room.installed) requestRoomModel();
+              },
+            };
+    return (
+      <ModelStatusRow
+        label={label}
+        line={t(usingRoomModel ? "oats.models.roomDefault" : "oats.models.roomActive", {
+          model: usingRoomModel ? ROOM_MODEL_NAME : active,
+        })}
+        note={
+          !usingRoomModel && upgrade && room.progress === null && !finishing
+            ? `${gain}${room.installed ? "" : ` ${t("oats.models.upgrade.size", { size: roomSize })}`}`
+            : undefined
+        }
+        state={state}
+      >
+        {usingRoomModel && (
+          <Button variant="outline" size="sm" onClick={() => setRoomSpeechPreference("shared")}>
+            {t("oats.models.useWhisper")}
+          </Button>
+        )}
+        {withoutOpenAI &&
+          (keyOpen ? (
+            <ProviderKeyField provider="openai" autoFocus />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)}>
+              {t("oats.models.addKey")}
+            </Button>
+          ))}
+      </ModelStatusRow>
+    );
+  }
   const chosen = engine === "nvidia" || !tier.followsDefault;
   const size = formatMegabytes(tier.sizeBytes, i18n.language);
 

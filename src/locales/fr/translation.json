@@ -2382,7 +2382,7 @@
       },
       "models": {
         "title": "Vos modèles",
-        "description": "Deux modèles font tout le travail. Chacun sert aux conversations et à la dictée.",
+        "description": "Modèles de transcription et de rédaction",
         "speech": "Parole",
         "speechDescription": "Transcrit les conversations et la dictée",
         "writing": "Écriture",
@@ -2545,7 +2545,11 @@
       "percent": "{{percent}}%",
       "needsKey": "Clé requise",
       "noAddress": "Aucune adresse",
+      "roomDefault": "{{model}} est le modèle par défaut pour les réunions en personne sur ce Mac",
+      "roomActive": "{{model}} est utilisé pour les réunions en personne",
+      "useWhisper": "Utiliser Whisper",
       "upgrade": {
+        "parakeet": "Sur des enregistrements publics de réunions, {{model}} a retrouvé 4,9 points de pourcentage de contenu de plus en silence et 15,7 de plus avec un bruit constant que Whisper Turbo.",
         "speech": "{{model}} a reconnu 7,5 points de pourcentage de mots en plus que Whisper Small lors des tests avec bruit de fond.",
         "writing": "{{model}} a inventé en moyenne quatre faits de moins par résumé lors des tests sur des réunions.",
         "size": "Téléchargement : {{size}}."
