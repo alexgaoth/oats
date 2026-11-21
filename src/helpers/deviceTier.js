@@ -52,6 +52,8 @@ const registry = require("../models/modelRegistryData.json");
 
 let speechTierModule = null;
 const loadSpeechTier = () => (speechTierModule ??= import("./speechTier.mjs"));
+let localSetupModule = null;
+const loadLocalSetup = () => (localSetupModule ??= import("./localSetup.mjs"));
 
 /** The speed check's clip: 16 kHz mono PCM, LibriSpeech test-clean 7127-75946-0024. */
 const CLIP_PATH = path.join(__dirname, "speechCheck.wav");
@@ -108,7 +110,7 @@ function parseSystemProfilerCores(text) {
 }
 
 /**
- * The chip, the GPU's core count and the memory. Only reads.
+ * The chip, the GPU's core count, the memory and the macOS version. Only reads.
  *
  * @param {{ platform?: string, arch?: string, run?: typeof runTool, totalmem?: () => number }} [options]
  */
@@ -118,17 +120,28 @@ async function detectDevice({
   run = runTool,
   totalmem = os.totalmem,
 } = {}) {
-  const device = { platform, arch, chip: null, gpuCores: null, memoryBytes: null };
+  const device = {
+    platform,
+    arch,
+    chip: null,
+    gpuCores: null,
+    memoryBytes: null,
+    macosVersion: null,
+  };
   try {
     device.memoryBytes = Number(totalmem()) || null;
   } catch {
     device.memoryBytes = null;
   }
   if (platform !== "darwin") return device;
-  device.chip = (await run("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"])).trim() || null;
-  device.gpuCores = parseGpuCoreCount(
-    await run("/usr/sbin/ioreg", ["-rc", "AGXAccelerator", "-d", "1"])
-  );
+  const [chip, version, gpu] = await Promise.all([
+    run("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"]),
+    run("/usr/sbin/sysctl", ["-n", "kern.osproductversion"]),
+    run("/usr/sbin/ioreg", ["-rc", "AGXAccelerator", "-d", "1"]),
+  ]);
+  device.chip = chip.trim() || null;
+  device.macosVersion = version.trim() || null;
+  device.gpuCores = parseGpuCoreCount(gpu);
   if (device.gpuCores === null && arch === "arm64") {
     device.gpuCores = parseSystemProfilerCores(
       await run("/usr/sbin/system_profiler", ["SPDisplaysDataType", "-json"], { timeoutMs: 15000 })
@@ -149,6 +162,7 @@ function isCurrent(record, { appVersion, device }) {
   return (
     record?.version === STORE_VERSION &&
     record.appVersion === appVersion &&
+    record.device?.macosVersion === device?.macosVersion &&
     sameDevice(record.device, device)
   );
 }
@@ -518,6 +532,51 @@ class DeviceTier extends EventEmitter {
   }
 
   /**
+   * Setup explicitly chose local. Clear old declines for the missing
+   * recommendations, without fetching anything. If the speech check is
+   * running, decide when it finishes, without making setup wait for it.
+   */
+  async prepareLocalSetup({ language = "en", speech = false, writing = false } = {}) {
+    const { planLocalSetup } = await loadLocalSetup();
+    const plan = () => {
+      const { device, memoryBytes, smallClipMs, turboClipMs, turbo, writing } = this.snapshot();
+      return planLocalSetup({
+        device: {
+          platform: process.platform,
+          arch: process.arch,
+          ...device,
+          memoryBytes,
+          smallClipMs,
+          turboClipMs,
+        },
+        installed: { whisper: turbo.installed ? [TURBO_MODEL] : [], writing: writing.installed },
+        language,
+        processing: "local",
+      });
+    };
+    const current = plan();
+    if (writing && current.downloads.writing) {
+      this.writing.clearSetupDecline(current.downloads.writing);
+    }
+    if (!speech || !this.record?.turboDeclined) return;
+    const clearSpeechDecline = () => {
+      if (!this.record?.turboDeclined || plan().downloads.speech?.model !== TURBO_MODEL) return;
+      this.record.turboDeclined = false;
+      this._save();
+      this.publish();
+    };
+    if (this.measuring || current.whisper.choice.reason === "not-measured") {
+      void this.ensureMeasured()
+        .then(clearSpeechDecline)
+        .catch((error) =>
+          debugLogger.warn("Could not reset the Turbo decline", { error: error.message })
+        );
+    } else {
+      clearSpeechDecline();
+    }
+  }
+
+  /**
    * Fetch turbo, when this Mac qualifies for it in this language and it is
    * not on disk, not downloading and not declined. `force` is the person
    * asking for it in Settings, after a cancel or a failure.
@@ -544,7 +603,7 @@ class DeviceTier extends EventEmitter {
       turboClipMs: record.turboClipMs,
       language,
     });
-    if (choice.model !== TURBO_MODEL) return this.snapshot();
+    if (choice.model !== TURBO_MODEL || this.isBusy()) return this.snapshot();
 
     const signal = createDownloadSignal();
     this.download = {
