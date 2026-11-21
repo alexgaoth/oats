@@ -2615,6 +2615,7 @@
     }
   },
   "questionCard": {
+    "empty": "還沒有問題。",
     "now": "剛剛",
     "state": {
       "asked": "未解決",

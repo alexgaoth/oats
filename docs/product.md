@@ -40,7 +40,7 @@ Auto-search is the one thing that leaves the device during a conversation, it is
 
 ## During and after the conversation
 
-While a conversation is recorded, the screen draws its **contour**: one thin trace, left to right in time, thicker where more was said, notched where the subject turned, and marked above wherever a question was asked — grainier the less settled it came out. Every part of it is measured from the conversation itself, so no two conversations draw the same line. By default the screen shows only that, the listening seed and the clock; **Words** (the Calm / Words switch under the line) adds the question cards, the live transcript and the threads still open, and switches back the same way.
+While recording, **Clean** shows the recording controls and a list of eligible questions with their reply states. It keeps every question without an answer, followed by the three most recent answered questions. **Show transcript** opens **Words**, with the contour, topic flow, live transcript and full question rail. **Hide details** returns to Clean.
 
 Oats has a second interface, chosen in Settings: the **field**, where the conversation is recorded in a field of oats that grows while you talk and withdraws when you stop. The default is the **ledger** — paper, graphite and one gold mark.
 
