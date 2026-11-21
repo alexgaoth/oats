@@ -1935,7 +1935,7 @@
     "join": "Beitreten & transkribieren"
   },
   "oats": {
-    "parakeetFallback": "Oats hat Whisper verwendet, weil Parakeet nicht transkribieren konnte.",
+    "parakeetFallback": "Parakeet fehlgeschlagen. Whisper läuft.",
     "library": {
       "tools": "Gesprächswerkzeuge",
       "filter": "Gespräche filtern",

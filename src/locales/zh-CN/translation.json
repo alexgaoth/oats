@@ -1930,7 +1930,7 @@
     "join": "加入并转录"
   },
   "oats": {
-    "parakeetFallback": "Parakeet 未能转写，Oats 改用 Whisper。",
+    "parakeetFallback": "Parakeet 失败，正在使用 Whisper。",
     "library": {
       "tools": "对话工具",
       "filter": "筛选对话",

@@ -1935,7 +1935,7 @@
     "join": "Join & transcribe"
   },
   "oats": {
-    "parakeetFallback": "Oats used Whisper because Parakeet could not transcribe.",
+    "parakeetFallback": "Parakeet failed. Using Whisper.",
     "library": {
       "tools": "Conversation tools",
       "filter": "Filter conversations",

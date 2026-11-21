@@ -1935,7 +1935,7 @@
     "join": "Присоединиться и вести заметки"
   },
   "oats": {
-    "parakeetFallback": "Oats использовал Whisper, потому что Parakeet не смог распознать речь.",
+    "parakeetFallback": "Сбой Parakeet. Oats использует Whisper.",
     "library": {
       "tools": "Инструменты для разговоров",
       "filter": "Фильтр разговоров",
