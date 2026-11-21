@@ -360,11 +360,12 @@ export default function TopicLanes({
               <StateMark state={mark.state} className="block" />
             </span>
           ))}
-          {now && (!ghost || fading) && (
+          {now && (
             <span
               className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
               style={{
-                left: `${now.x * 100}%`,
+                // Honey ends the confirmed line, not the provisional step.
+                left: ghost && !fading ? ghost.clip : `${now.x * 100}%`,
                 top: centre(now.row),
                 width: CHART.dot * 2,
                 height: CHART.dot * 2,
