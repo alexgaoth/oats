@@ -425,6 +425,18 @@ measures that case: on parakeet-ultra outcomes are right 0.727 (quiet) and 0.745
 silence. The search fixes hold either way. If Parakeet becomes the room default, the
 main process needs to tell the renderer that a segment is open, whatever the engine.
 
+### Null result: sentence-bounded replies without speaker labels
+
+The [sentence reply trial](https://github.com/alexgaoth/oats/pull/225) read the
+first substantive sentence after a question without knowing who spoke.
+On test, small.en outcome accuracy fell from 0.843 to 0.818 in quiet
+(change −0.025, 95% interval [−0.081, +0.046]). It rose from 0.807 to 0.825
+in steady sound. Parakeet with context fell from 0.881 to 0.691 in quiet
+and from 0.858 to 0.623 in steady sound. The paired median delay did not
+improve. Both engines also produced more automatic searches without an
+explicit-unknown match. The candidate stays out of the default route.
+See [the full comparison and commands](live-map-baselines.md#sr-3-stop-reading-the-reply-at-its-sentence-boundary).
+
 ### Branches
 
 Tuning meetings, real recognition, F1 unless it says otherwise.
