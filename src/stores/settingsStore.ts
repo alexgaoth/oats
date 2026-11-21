@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { API_ENDPOINTS } from "../config/constants";
 import i18n, { normalizeUiLanguage } from "../i18n";
 import { ensureAgentNameInDictionary } from "../utils/agentName";
-import { useStreamingProvidersStore } from "./streamingProvidersStore";
 import logger from "../utils/logger";
 import whisperVadConstants from "../constants/whisperVad.json";
 import type { LocalTranscriptionProvider, InferenceMode, SelfHostedType } from "../types/electron";
@@ -40,12 +39,16 @@ import { PARAKEET_ROOM_MODEL, planLocalSetup } from "../helpers/localSetup.mjs";
 import {
   FEATURE_ROUTES_KEY,
   changeFeatureRoute,
+  isWritingProvider,
   migrateFeaturePreferences,
   pinWritingProvider,
   readFeaturePreferences,
+  resolveFeatureRoute,
   type Feature,
   type FeaturePreferences,
+  type Provider,
   type Route,
+  type RouteKeyStatus,
 } from "../helpers/featureRoutes.mjs";
 import {
   ROOM_SPEECH_PREFERENCE,
@@ -58,6 +61,7 @@ import {
 } from "../helpers/localSetupConsent.mjs";
 import {
   defaultWritingModel,
+  CLOUD_WRITING_MODELS,
   followsDefaultWritingModel,
   migrateStoredWritingModel,
   WRITING_MODEL_KEY,
@@ -71,6 +75,7 @@ import {
   resolveSpeechLanguage,
 } from "../helpers/speechLanguage.mjs";
 import { getArch, getCachedPlatform } from "../utils/platform";
+import { writingKeyPresent } from "../utils/writingKeys";
 
 /** Which interface Oats wears. See `uiMode.mjs`. */
 export type UiMode = "work" | "field";
@@ -588,6 +593,7 @@ export interface SettingsState
   cleanupMode: InferenceMode;
   localSetupAuthorized: boolean;
   featurePreferences: FeaturePreferences;
+  featureKeyStatus: Partial<Record<Provider, RouteKeyStatus>>;
   roomSpeechPreference: "default" | "shared" | "recommended";
   cleanupRemoteUrl: string;
 
@@ -1034,6 +1040,7 @@ const SECRET_IPC_SAVERS = {
 type SecretProvider = keyof typeof SECRET_IPC_SAVERS;
 
 const secretSaveTimers: Partial<Record<SecretProvider, ReturnType<typeof setTimeout>>> = {};
+const FEATURE_KEY_CHANGE = "oats.featureKeyChanged.";
 function debouncedSaveSecret(provider: SecretProvider, key: string) {
   if (!isBrowser) return;
   const timer = secretSaveTimers[provider];
@@ -1042,13 +1049,21 @@ function debouncedSaveSecret(provider: SecretProvider, key: string) {
     const api = window.electronAPI;
     const save = api?.[SECRET_IPC_SAVERS[provider]] as
       ((k: string) => Promise<unknown>) | undefined;
-    save?.(key)?.catch((err) => {
-      logger.warn(
-        "Failed to persist secret",
-        { provider, error: (err as Error).message },
-        "settings"
-      );
-    });
+    save?.(key)
+      ?.then(() => {
+        if (provider === "openai" || provider === "anthropic") {
+          // Signal other windows after the secure store has the new key. This
+          // event carries no key, only the provider and a change identifier.
+          localStorage.setItem(`${FEATURE_KEY_CHANGE}${provider}`, String(Date.now()));
+        }
+      })
+      .catch((err) => {
+        logger.warn(
+          "Failed to persist secret",
+          { provider, error: (err as Error).message },
+          "settings"
+        );
+      });
   }, 250);
 }
 
@@ -1324,6 +1339,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
   localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
   featurePreferences: readFeaturePreferences(isBrowser ? localStorage : null),
+  featureKeyStatus: {},
   roomSpeechPreference: (() => {
     const preference = readString(ROOM_SPEECH_PREFERENCE, "");
     return preference === "shared" || preference === "recommended" ? preference : "default";
@@ -2275,7 +2291,7 @@ export function roomSpeechPlan(
   parakeetInstalled = false
 ) {
   if (
-    !state.meetingUseLocalWhisper ||
+    selectFeatureRoute(state, "conversations").effective !== "local" ||
     !followsRoomSpeechDefault(
       state.roomSpeechPreference,
       state.localTranscriptionProvider,
@@ -2284,10 +2300,7 @@ export function roomSpeechPlan(
   ) {
     return null;
   }
-  const processing = state.meetingTranscriptionMode;
-  if (processing !== "local" && processing !== "providers") return null;
-  const plan = localSetupFor(tier, state.preferredLanguage, processing, {
-    openaiKey: Boolean(state.openaiApiKey.trim()),
+  const plan = localSetupFor(tier, state.preferredLanguage, "local", {
     parakeetInstalled,
   });
   return plan.speech.engine === "parakeet" ? plan : null;
@@ -2302,6 +2315,9 @@ export function followRecommendedWhisper(): void {
 /** A writing model somebody chose: stored, so no default moves it. */
 export function chooseWritingModel(provider: string, model: string): void {
   const store = useSettingsStore.getState();
+  if (isWritingProvider(provider)) {
+    saveFeaturePreferences({ ...store.featurePreferences, writingProvider: provider });
+  }
   store.setCleanupProvider(provider);
   store.setCleanupModel(model);
 }
@@ -2320,13 +2336,8 @@ export function forgetWritingChoice(): void {
  * "providers" when they agree, "mixed" when they differ. Summaries follow the
  * cleanup scope (`selectResolvedLLMConfig`), so their own mode is left out.
  */
-export function selectProcessingMode(
-  state: Pick<SettingsState, "transcriptionMode" | "cleanupMode" | "meetingTranscriptionMode">
-): "local" | "providers" | "mixed" {
-  const modes = [state.transcriptionMode, state.cleanupMode, state.meetingTranscriptionMode];
-  if (modes.every((mode) => mode === "local")) return "local";
-  if (modes.every((mode) => mode === "providers")) return "providers";
-  return "mixed";
+export function selectProcessingMode(state: Pick<SettingsState, "featurePreferences">): Route {
+  return state.featurePreferences.defaultRoute;
 }
 
 /**
@@ -2371,6 +2382,8 @@ if (isBrowser) {
       state.anthropicApiKey !== previous.anthropicApiKey
     ) {
       followDefaultWritingModel();
+      const preferences = pinWritingProvider(state.featurePreferences, featureKeyPresence(state));
+      if (preferences !== state.featurePreferences) saveFeaturePreferences(preferences);
     }
     // An OpenAI key added or removed with API keys chosen moves speech with it.
     if (
@@ -2399,13 +2412,37 @@ export function setFeatureRoute(route: Route | null, feature?: Feature): void {
   const state = useSettingsStore.getState();
   const preferences = pinWritingProvider(
     changeFeatureRoute(state.featurePreferences, route, feature),
-    {
-      openai: Boolean(state.openaiApiKey.trim()),
-      anthropic: Boolean(state.anthropicApiKey.trim()),
-    }
+    featureKeyPresence(state)
   );
+  saveFeaturePreferences(preferences);
+}
+
+function saveFeaturePreferences(preferences: FeaturePreferences): void {
   if (isBrowser) localStorage.setItem(FEATURE_ROUTES_KEY, JSON.stringify(preferences));
   useSettingsStore.setState({ featurePreferences: preferences });
+}
+
+function featureKeyPresence(state: SettingsState) {
+  return {
+    openai: Boolean(state.openaiApiKey.trim()),
+    anthropic: Boolean(state.anthropicApiKey.trim()),
+  };
+}
+
+export function selectFeatureRoute(state: SettingsState, feature: Feature) {
+  const provider =
+    feature === "writing" ? (state.featurePreferences.writingProvider ?? "openai") : "openai";
+  const present =
+    provider === "custom"
+      ? Boolean(state.cleanupCustomApiKey.trim() && state.cleanupCloudBaseUrl.trim())
+      : writingKeyPresent(state, provider);
+  const status = present ? (state.featureKeyStatus[provider] ?? "legacy") : undefined;
+  return resolveFeatureRoute(state.featurePreferences, feature, { [provider]: status });
+}
+
+export function setFeatureKeyStatus(provider: Provider, status: RouteKeyStatus): void {
+  const { featureKeyStatus } = useSettingsStore.getState();
+  useSettingsStore.setState({ featureKeyStatus: { ...featureKeyStatus, [provider]: status } });
 }
 
 export const selectIsCloudCleanupMode = (_state: SettingsState) => false;
@@ -2437,10 +2474,7 @@ export interface ResolvedMeetingTranscription {
 export const selectResolvedMeetingTranscription = (
   state: SettingsState
 ): ResolvedMeetingTranscription => {
-  const catalog = useStreamingProvidersStore.getState().providers;
-  // TODO(1.8.0): Catalog has one cloud entry today (OpenAI Realtime).
-  // When a second is added, resolve as `meetingCloudTranscriptionProvider || cloudTranscriptionProvider || catalog[0]?.id`, then validate against catalog.
-  const cloudTranscriptionProvider = catalog?.[0]?.id ?? "";
+  const route = selectFeatureRoute(state, "conversations");
 
   // One speech model for conversations and dictation. The two paths share one
   // whisper-server (and one Parakeet server), which holds one model: with two
@@ -2453,16 +2487,15 @@ export const selectResolvedMeetingTranscription = (
   // `meetingRecordingStore` keeps OpenAI's realtime default when the chosen
   // model cannot, and Settings offers only models that can.
   return {
-    useLocalWhisper: state.meetingUseLocalWhisper,
+    useLocalWhisper: route.effective === "local",
     whisperModel: state.whisperModel,
     localTranscriptionProvider: state.localTranscriptionProvider,
     parakeetModel: state.parakeetModel,
-    cloudTranscriptionProvider,
+    cloudTranscriptionProvider: "openai",
     cloudTranscriptionModel: state.cloudTranscriptionModel,
-    cloudTranscriptionBaseUrl:
-      state.meetingCloudTranscriptionBaseUrl || state.cloudTranscriptionBaseUrl || "",
-    cloudTranscriptionMode: state.meetingCloudTranscriptionMode || state.cloudTranscriptionMode,
-    transcriptionMode: state.meetingTranscriptionMode,
+    cloudTranscriptionBaseUrl: "",
+    cloudTranscriptionMode: "byok",
+    transcriptionMode: route.effective,
     remoteTranscriptionType: state.meetingRemoteTranscriptionType,
     remoteTranscriptionUrl: state.meetingRemoteTranscriptionUrl || state.remoteTranscriptionUrl,
   };
@@ -2523,6 +2556,78 @@ export const selectResolvedNoteFormatting = (state: SettingsState): ResolvedNote
   };
 };
 
+// Dictation cleanup and summaries share the installed local model. Their
+// destinations do not follow one another.
+function resolvedFeatureWriting(
+  state: SettingsState,
+  feature: "dictation" | "writing",
+  scope: "dictationCleanup" | "dictationAgent" | "noteFormatting"
+): ResolvedLLMConfig {
+  const route = selectFeatureRoute(state, feature);
+  const provider = route.effective === "local" ? "local" : (route.provider ?? "openai");
+  const usesChoice =
+    state.cleanupProvider === provider &&
+    !writingModelFollowsDefault() &&
+    state.cleanupModel.trim();
+  const model = usesChoice
+    ? state.cleanupModel
+    : provider === "local"
+      ? localSetupFor(useDeviceTierStore.getState().tier, DEFAULT_SPEECH_LANGUAGE).writing.choice
+          .model
+      : provider === "openai" || provider === "anthropic"
+        ? CLOUD_WRITING_MODELS[provider]
+        : "";
+  return {
+    scope,
+    mode: route.effective,
+    provider,
+    model,
+    cloudMode: route.effective === "providers" ? "byok" : undefined,
+    cloudBaseUrl:
+      provider === "openai"
+        ? API_ENDPOINTS.OPENAI_BASE
+        : provider === "custom"
+          ? state.cleanupCloudBaseUrl
+          : undefined,
+    customApiKey: provider === "custom" ? state.cleanupCustomApiKey : undefined,
+    disableThinking:
+      scope === "dictationAgent"
+        ? state.dictationAgentDisableThinking
+        : state.cleanupDisableThinking,
+  };
+}
+
+export function selectDictationSettings(state: SettingsState) {
+  const route = selectFeatureRoute(state, "dictation");
+  const cleanup = resolvedFeatureWriting(state, "dictation", "dictationCleanup");
+  const agent = resolvedFeatureWriting(state, "dictation", "dictationAgent");
+  const local = route.effective === "local";
+  const openaiSpeechChoice =
+    state.cloudTranscriptionProvider === "openai" ? state.cloudTranscriptionModel : "";
+  return {
+    ...state,
+    useLocalWhisper: local,
+    transcriptionMode: route.effective,
+    cloudTranscriptionProvider: "openai",
+    cloudTranscriptionModel: openaiSpeechChoice || "gpt-transcribe",
+    cloudTranscriptionBaseUrl: "",
+    cloudTranscriptionMode: "byok",
+    allowOpenAIFallback: false,
+    cleanupMode: cleanup.mode,
+    cleanupProvider: cleanup.provider,
+    cleanupModel: cleanup.model,
+    cleanupCloudBaseUrl: "",
+    cleanupRemoteUrl: "",
+    dictationAgentMode: agent.mode,
+    dictationAgentProvider: agent.provider,
+    dictationAgentModel: state.dictationAgentModel ? agent.model : "",
+  };
+}
+
+export function getDictationSettings() {
+  return selectDictationSettings(useSettingsStore.getState());
+}
+
 export interface ResolvedLLMConfig {
   scope: InferenceScope;
   mode: InferenceMode;
@@ -2539,12 +2644,11 @@ export const selectResolvedLLMConfig = (
   state: SettingsState,
   scope: InferenceScope
 ): ResolvedLLMConfig => {
-  // One writing model for summaries and dictation cleanup. Both ran on the one
-  // llama-server, which holds one model, and nothing needed them to differ, so
-  // summaries now take the whole cleanup configuration: mode, provider, model,
-  // URLs, key (kept in the secure store) and thinking switch.
   if (scope === "noteFormatting") {
-    return { ...selectResolvedLLMConfig(state, "dictationCleanup"), scope };
+    return resolvedFeatureWriting(state, "writing", scope);
+  }
+  if (scope === "dictationCleanup" || scope === "dictationAgent") {
+    return resolvedFeatureWriting(state, "dictation", scope);
   }
   const def: InferenceScopeDefinition = INFERENCE_SCOPES[scope];
   const fallback = def.fallbackScope
@@ -2612,11 +2716,7 @@ export function getSettings() {
 }
 
 export function getEffectiveCleanupModel() {
-  const state = useSettingsStore.getState();
-  if (selectIsCloudCleanupMode(state)) {
-    return "";
-  }
-  return state.cleanupModel;
+  return getDictationSettings().cleanupModel;
 }
 
 export function isCloudCleanupMode() {
@@ -3003,6 +3103,29 @@ export async function initializeSettings(): Promise<void> {
     if (!event.key || event.storageArea !== localStorage || event.newValue === null) return;
 
     const { key, newValue } = event;
+
+    if (key === FEATURE_ROUTES_KEY) {
+      useSettingsStore.setState({ featurePreferences: readFeaturePreferences(localStorage) });
+      return;
+    }
+    if (key.startsWith(FEATURE_KEY_CHANGE)) {
+      const provider = key.slice(FEATURE_KEY_CHANGE.length);
+      if (provider !== "openai" && provider !== "anthropic") return;
+      const readKey =
+        provider === "openai"
+          ? window.electronAPI?.getOpenAIKey
+          : window.electronAPI?.getAnthropicKey;
+      useSettingsStore.setState({ [`${provider}ApiKey`]: "" });
+      void readKey?.()
+        .then((value) => {
+          if (localStorage.getItem(key) === newValue) {
+            useSettingsStore.setState({ [`${provider}ApiKey`]: value || "" });
+            invalidateApiKeyCaches(provider);
+          }
+        })
+        .catch(() => {});
+      return;
+    }
 
     if (key.startsWith("customPrompt.")) {
       const kind = key.slice("customPrompt.".length) as PromptKind;

@@ -1,5 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from "react";
-import { useSettingsStore, initializeSettings } from "../stores/settingsStore";
+import {
+  useSettingsStore,
+  initializeSettings,
+  selectDictationSettings,
+} from "../stores/settingsStore";
 import logger from "../utils/logger";
 import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
 import { useLocalStorage } from "./useLocalStorage";
@@ -180,7 +184,7 @@ function useSettingsInternal() {
     cleanupModel,
     dictationAgentProvider,
     dictationAgentModel,
-  } = store;
+  } = selectDictationSettings(store);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.electronAPI?.syncStartupPreferences) return;

@@ -27,7 +27,9 @@ test("the key field checks and saves through one commit, which another button ca
     FIELD.indexOf("const commit = async"),
     FIELD.indexOf("useImperativeHandle(")
   );
-  const refused = commit.indexOf('if (status === "rejected")');
+  const refused = commit.indexOf(
+    'if (status === "rejected" || status === "no-access" || status === "unknown")'
+  );
   const stored = commit.indexOf("SETTERS[target]");
   assert.ok(refused > -1 && stored > refused, "refused before it is stored");
   assert.match(commit.slice(refused, stored), /return false;/);

@@ -19,7 +19,7 @@ import { isStaleDeviceError } from "./staleMicDevice";
 import { shouldSaveDiscardedRecording } from "./discardedRecording";
 import {
   DEFAULT_WHISPER_MODEL,
-  getSettings,
+  getDictationSettings as getSettings,
   getEffectiveCleanupModel,
   isCloudCleanupMode,
   isCloudDictationAgentMode,
@@ -81,6 +81,11 @@ function resolveReasoningRoute(
   voiceAgentRequested,
   translationRequested
 ) {
+  const cleanupConfig = {
+    provider: settings.cleanupProvider,
+    baseUrl: settings.cleanupProvider === "openai" ? API_ENDPOINTS.OPENAI_BASE : undefined,
+    disableThinking: settings.cleanupDisableThinking,
+  };
   const cleanupReachable =
     !!settings.useCleanupModel && (!!settings.cleanupModel?.trim() || isCloudCleanupMode());
   const agentModel = settings.dictationAgentModel?.trim() || "";
@@ -133,7 +138,7 @@ function resolveReasoningRoute(
       kind: "translation",
       model: settings.translationModel?.trim() || "",
       cleanupReachable,
-      cleanupConfig: { disableThinking: settings.cleanupDisableThinking },
+      cleanupConfig,
       config: {
         provider,
         language: settings.translationTargetLanguage,
@@ -164,7 +169,7 @@ function resolveReasoningRoute(
       config: {
         provider,
         lanUrl: isSelfHostedAgent ? settings.dictationAgentRemoteUrl : undefined,
-        baseUrl: isCustomAgent ? settings.dictationAgentCloudBaseUrl || undefined : undefined,
+        baseUrl: provider === "openai" ? API_ENDPOINTS.OPENAI_BASE : undefined,
         customApiKey:
           isCustomAgent || isSelfHostedAgent
             ? settings.dictationAgentCustomApiKey || undefined
@@ -182,7 +187,7 @@ function resolveReasoningRoute(
   if (kind === "cleanup") {
     return {
       kind: "cleanup",
-      config: { disableThinking: settings.cleanupDisableThinking },
+      config: cleanupConfig,
     };
   }
   return { kind: "skip" };
@@ -1817,6 +1822,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   async processWithOpenAIAPI(audioBlob, metadata = {}) {
     const timings = {};
     const apiSettings = getSettings();
+    if (apiSettings.useLocalWhisper) {
+      throw new Error("Cloud dictation is not enabled for this recording");
+    }
     const language = getBaseLanguageCode(this.getEffectiveSttLanguage(apiSettings));
     const allowLocalFallback = apiSettings.allowLocalFallback;
     const fallbackModel = apiSettings.fallbackWhisperModel || DEFAULT_WHISPER_MODEL;
@@ -3222,6 +3230,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         }
       } catch (fallbackErr) {
         logger.error("Batch fallback failed", { error: fallbackErr.message }, "streaming");
+        this.onError?.({
+          title: "Transcription Error",
+          description: fallbackErr.message,
+          code: fallbackErr.code,
+          messageKey: fallbackErr.messageKey,
+        });
       }
     }
 

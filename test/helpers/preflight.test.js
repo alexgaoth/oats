@@ -61,6 +61,20 @@ test("the cloud path is warned about its key and nothing else", async () => {
   assert.equal(resolvePreflight({ ...cloud, hasApiKey: true, anyModelDownloaded: false }), null);
 });
 
+test("dictation and conversations check the engine they will use when a cloud key is missing", async () => {
+  const { resolveSpeechPreflight, resolvePreflight } = await load();
+  assert.equal(resolveSpeechPreflight({ ...READY, needsKey: true }), "no-api-key");
+  assert.equal(resolvePreflight({ ...READY, needsKey: true }), "no-api-key");
+  assert.equal(
+    resolveSpeechPreflight({ ...READY, needsKey: true, anyModelDownloaded: false }),
+    "no-model"
+  );
+  assert.equal(
+    resolveSpeechPreflight({ ...READY, useLocalWhisper: false, anyModelDownloaded: false }),
+    null
+  );
+});
+
 test("Parakeet is never told its Whisper model is missing", async () => {
   const { resolvePreflight } = await load();
   assert.equal(

@@ -345,7 +345,12 @@ export function runBackgroundAction(
           // Only a quick failure: a slow one was a timeout the request code
           // already repeated, or a long local run (helpers/summaryQueue.mjs).
           const tookMs = performance.now() - startedAt;
-          if (options.isMeetingNote && kind === "other" && shouldRetrySummary(tries, tookMs)) {
+          if (
+            options.isMeetingNote &&
+            noteFormatting.mode !== "providers" &&
+            kind === "other" &&
+            shouldRetrySummary(tries, tookMs)
+          ) {
             await delay(SUMMARY_RETRY_DELAY_MS);
             if (cancelledFlags.get(noteId) || overtaken()) return "cancelled";
             continue;

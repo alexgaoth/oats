@@ -257,10 +257,8 @@ const getMeetingTranscriptionOptions = () => {
   }
 
   const catalog = useStreamingProvidersStore.getState().providers;
-  const provider =
-    catalog?.find((p) => p.id === resolved.cloudTranscriptionProvider) ?? catalog?.[0];
-  const byokKeyAvailable = provider?.id === "openai" ? !!state.openaiApiKey : true;
-  const mode = resolved.cloudTranscriptionMode === "byok" && byokKeyAvailable ? "byok" : "legacy"; // TODO(stage4): dead hosted-cloud reference
+  const provider = catalog?.find((p) => p.id === resolved.cloudTranscriptionProvider);
+  const mode = "byok" as const;
   if (!provider) {
     logger.debug(
       "Streaming providers catalog not loaded, falling back to OpenAI default",
@@ -2000,7 +1998,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     });
     if (mergeCleanup) ipcCleanups.push(mergeCleanup);
 
+    let reportedSpeechFailure = false;
     const errorCleanup = window.electronAPI?.onMeetingTranscriptionError?.((err) => {
+      if (reportedSpeechFailure) return;
+      reportedSpeechFailure = true;
       useMeetingRecordingStore.setState({ error: err });
       logger.error("Meeting transcription stream error", { error: err }, "meeting");
     });

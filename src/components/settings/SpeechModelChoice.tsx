@@ -18,7 +18,7 @@ import {
   chooseCloudSpeechModel,
   chooseLocalSpeechModel,
   forgetSpeechChoice,
-  selectProcessingMode,
+  selectFeatureRoute,
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../../stores/settingsStore";
@@ -67,8 +67,10 @@ const CLOUD_SPEECH = () =>
  */
 export function SpeechModelChoice() {
   const { t, i18n } = useTranslation();
-  const processing = useSettingsStore((state) => selectProcessingMode(state));
-  const conversationLocal = useSettingsStore((state) => state.meetingUseLocalWhisper);
+  const side = useSettingsStore((state) => selectFeatureRoute(state, "conversations").requested);
+  const conversationLocal = useSettingsStore(
+    (state) => selectFeatureRoute(state, "conversations").effective === "local"
+  );
   const engine = useSettingsStore((state) => state.localTranscriptionProvider);
   const whisperModel = useSettingsStore((state) => state.whisperModel);
   const parakeetModel = useSettingsStore((state) => state.parakeetModel);
@@ -80,10 +82,6 @@ export function SpeechModelChoice() {
   const roomInstalled = useRoomModelStore((state) => state.installed);
   // With API keys the chooser shows OpenAI, even while speech waits on this
   // Mac for its key; on this Mac (or mixed, where speech is local) the engines.
-  const side =
-    processing === "providers" || (processing === "mixed" && !conversationLocal)
-      ? "providers"
-      : "local";
   const providers =
     side === "providers"
       ? [{ id: "openai", name: "OpenAI" }]

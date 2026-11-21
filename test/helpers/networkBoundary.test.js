@@ -433,7 +433,7 @@ test("the writing model comes through the counted download path, from Hugging Fa
   }
 });
 
-test("only a committed local processing choice authorizes downloads after setup", () => {
+test("downloads require consent for the feature that uses the model, after setup", () => {
   const processing = read("src/components/settings/processing.ts");
   assert.match(processing, /setLocalSetupAuthorization\(mode === "local"\);/);
   for (const name of [
@@ -446,13 +446,14 @@ test("only a committed local processing choice authorizes downloads after setup"
       /requestTurbo|requestWritingModel|startSpeechUpgrade|startWritingModelDownload/
     );
   }
-  for (const name of ["useSpeechUpgrade.ts", "useWritingModel.ts"]) {
+  for (const [name, features] of [
+    ["useSpeechUpgrade.ts", ["conversations", "dictation"]],
+    ["useWritingModel.ts", ["writing"]],
+  ]) {
     const hook = read(`src/hooks/${name}`);
-    assert.match(
-      hook,
-      /const authorized = useSettingsStore\(\(state\) => state\.localSetupAuthorized\)/
-    );
-    assert.match(hook, /const fetch =\s*authorized &&/);
+    for (const feature of features) {
+      assert.ok(hook.includes(`selectFeatureRoute(state, "${feature}").downloadAuthorized`));
+    }
     assert.match(hook, /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/);
   }
 });

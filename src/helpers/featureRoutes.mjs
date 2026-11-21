@@ -1,11 +1,20 @@
 import { LOCAL_SETUP_AUTHORIZED, migrateLocalSetupAuthorization } from "./localSetupConsent.mjs";
 
 export const FEATURES = /** @type {const} */ (["conversations", "dictation", "writing"]);
+export const WRITING_PROVIDERS = /** @type {const} */ ([
+  "openai",
+  "anthropic",
+  "gemini",
+  "groq",
+  "openrouter",
+  "tinfoil",
+  "custom",
+]);
 export const FEATURE_ROUTES_KEY = "oats.featureRoutes";
 
 /** @typedef {typeof FEATURES[number]} Feature */
 /** @typedef {"local" | "providers"} Route */
-/** @typedef {"openai" | "anthropic"} Provider */
+/** @typedef {typeof WRITING_PROVIDERS[number]} Provider */
 /** @typedef {"ok" | "limited" | "legacy" | "rejected" | "no-access" | "unknown"} RouteKeyStatus */
 /** @typedef {Partial<Record<Feature, Route>>} Exceptions */
 /** @typedef {Partial<Record<Feature, boolean>>} Consent */
@@ -17,8 +26,8 @@ function isRoute(value) {
 }
 
 /** @param {unknown} value @returns {value is Provider} */
-function isProvider(value) {
-  return value === "openai" || value === "anthropic";
+export function isWritingProvider(value) {
+  return WRITING_PROVIDERS.some((provider) => provider === value);
 }
 
 /**
@@ -117,7 +126,7 @@ export function readFeaturePreferences(storage) {
         defaultRoute: saved.defaultRoute,
         exceptions,
         consent,
-        writingProvider: isProvider(saved.writingProvider) ? saved.writingProvider : null,
+        writingProvider: isWritingProvider(saved.writingProvider) ? saved.writingProvider : null,
       };
     }
   } catch {
@@ -151,7 +160,7 @@ export function readFeaturePreferences(storage) {
     defaultRoute,
     exceptions,
     consent,
-    writingProvider: isProvider(provider) ? provider : null,
+    writingProvider: isWritingProvider(provider) ? provider : null,
   };
 }
 
