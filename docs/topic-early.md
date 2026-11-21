@@ -216,6 +216,66 @@ It took about 0.6 s and cost about $0.00007 per request.
 Gemma 4 E4B approved 90% of candidates on learn83. It improved by about two
 points over approving everything. The judge does not use Gemma.
 
+## Part 3: who draws the live line (learn83, 2026-11-21)
+
+Today a writing model on this Mac that may run during a recording turns on the window loop (`src/helpers/topicWindowLoop.mjs`). The loop cuts the last 6 minutes again every 2 minutes, and its view replaces the detector's live view. So its users never see the early cut. The proposal: every route cuts with the detector and the early cut, and the model only names each topic when its cut lands (`src/helpers/topicNamer.mjs`).
+
+- **Harness:** `scripts/topic-loop-eval.mjs`, with the live line metrics below. It replays the manual AMI words of the 83 learn83 meetings: 41.5 h from first to last speech, 559 real changes, 13.5 an hour.
+- **Model:** Gemma 4 E4B (Q4_K_M) through `llama-server` on this Mac, in both arms. No cloud calls. eval24 was not read.
+- **Line metrics:** each boundary counts once, at its first display, also when a later window removes it. A line is right when a real change is within 60 s of it. A real change is found when any line is within 60 s of it. This match is not one to one.
+
+| Route | Lines an hour | Right within 60 s | Found within 60 s | Median first line | Median model name, from speech |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Window loop (`--variant v3`) | 29.15 | 49.1% (594/1,211) | 75.1% (420/559) | 90.9 s | 105.3 s |
+| Detector + early cut + namer (`--variant v1 --early-cut --vectors`) | 8.81 | 71.6% (262/366) | 57.8% (323/559) | 25.9 s | 40.3 s |
+
+**Chance.** Random lines, with the same number in each meeting, give these expected values (a 120 s window for each line):
+
+| Route | Right by chance | Found by chance | Right, above chance | Found, above chance |
+| --- | ---: | ---: | ---: | ---: |
+| Window loop | 36.3% | 61.9% | +12.8 points | +13.2 points |
+| Detector + early cut | 37.9% | 27.2% | +33.7 points | +30.6 points |
+
+**Segmentation at the live end.** Lower is better. The intervals are 95% meeting bootstraps.
+
+| Route | Pk | WindowDiff |
+| --- | ---: | ---: |
+| Window loop | 0.327 [0.302, 0.353] | 0.417 [0.387, 0.450] |
+| Detector + early cut | 0.234 [0.213, 0.256] | 0.269 [0.248, 0.292] |
+| One topic for the whole meeting | 0.325 | |
+
+**Stability, an hour.**
+
+| Route | Old lines moved to another topic | Lines taken back | Label changes |
+| --- | ---: | ---: | ---: |
+| Window loop | 145.5 | 3.9 | 0.1 |
+| Detector + early cut | 16.5 | 0 | 19.9 (10.3 first model names, 3.0 renames, 6.6 phrase-label changes) |
+
+On the detector route a new topic shows with its phrase label first. The model name replaces it a median 7.2 s later. On the window loop a topic shows with its model name, 90.9 s after the change. The window loop's requests took a median 2.9 s, and 8.8% of its answers were malformed. The namer's requests took 0.8 s, and 1.4% were malformed.
+
+Result:
+
+- The gate in the brief failed: the detector route must not be worse on right and on found. It found 57.8% against 75.1%.
+- Most of the window loop's lead on found comes from its line count. Random lines at 29 an hour find 61.9%.
+- The detector route is better on every other measure here: right, first line, first name, Pk, WindowDiff and old lines moved.
+- The `v3` arm is the experiment's loop with the shipped window settings (2 min stride, 6 min window, 100 lines, 1,500 words). It is not the shipped class (`--variant v3app`).
+- Alex decides the routing. Live routing is unchanged.
+
+### A stricter grey (learn83 only, a proposal)
+
+The eval24 read of the 0.40 to 0.45 band gave 48% of marks right and 2.7 faded an hour. The bar for a new rule on learn83: at least 70% right and at most 2 faded an hour. Cached MiniLM vectors, the current detector, no judge, one open mark and a 65 s deadline.
+
+| Rule | Marks | Right | Marks an hour | Faded an hour | Settled |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| No grey | 0 | | 0 | 0 | |
+| R15, 0.400 to under 0.45 | 190 | 60.0% | 4.49 | 3.64 | 18.9% |
+| R15, 0.430 to under 0.45 | 73 | 61.6% | 1.73 | 1.42 | 17.8% |
+| R15, 0.440 to under 0.45 | 29 | 79.3% | 0.69 | 0.57 | 17.2% |
+| R15, 0.445 to under 0.45 | 14 | 85.7% | 0.33 | 0.31 | 7.1% |
+| R30 at 0.45, no early cut | 27 | 81.5% | 0.64 | 0.59 | 7.4% |
+
+The 0.44 band meets both bars. It has 29 marks, so its interval is wide. These are tuning numbers, not a held-out result. Grey stays off by default.
+
 ## Commands
 
 ```sh
@@ -234,4 +294,9 @@ node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --mode
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set eval24 --model-dir resources/bin/all-MiniLM-L6-v2 --slices 15 --thresholds 0.45 --caps 1 --top 0 --rules "15:30:0.45:1" --compare-fade-cap
 # Part 2 deadline check on learn83, with no model calls:
 node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set learn83 --lags 15,30 --bands --grey-floors 0.30,0.35,0.40 --approvals "$O/verdicts-learn83-r15.jsonl"
+# Part 3 routing, heavy (local Gemma, the slot, 22:00 to 08:00):
+G=~/oats-asr-cache/models/llm/gemma-4-e4b/google_gemma-4-E4B-it-Q4_K_M.gguf
+L="--model local:gemma-4-e4b --local-model $G --llama-server /opt/homebrew/bin/llama-server --local-port 18473 --local-context 16384"
+node scripts/topic-loop-eval.mjs --variant v3 --ami ~/oats-asr-cache/AMI --set learn83 $L --options '{"strideMs":120000,"windowMs":360000,"maxLines":100,"maxWords":1500}' --json ~/oats-asr-cache/topic-routing/learn83-v3-window.json
+node scripts/topic-loop-eval.mjs --variant v1 --early-cut --vectors --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v1-early-cut.json
 ```

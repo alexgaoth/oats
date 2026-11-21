@@ -11,6 +11,7 @@
  *      | --referenced <file.json|dir>)
  *     [--tracker <conversationTopics.mjs>] [--concurrency 4] [--label name]
  *     [--local-model <gguf> --llama-server <binary>] [--json out.json]
+ *     [--early-cut] (v1 or d2 with --vectors)
  *
  * Variants
  *   d0, d1   the on-device trackers alone, no model: d0 the tracker before
@@ -106,6 +107,7 @@ const helper = (name) => import(pathToFileURL(path.join(ROOT, "src/helpers", nam
 const { TopicNamer } = await helper("topicNamer.mjs");
 const { LiveTopicLoop } = await helper("topicLoop.mjs");
 const { WindowTopicLoop } = await helper("topicWindowLoop.mjs");
+const { LONG_TOPIC_SPLIT } = await helper("topicChange.mjs");
 const { topicLanes } = await helper("topicLanes.mjs");
 const { returnsOfLanes } = await import(
   pathToFileURL(path.join(ROOT, "scripts/lib/return-score.mjs")).href
@@ -139,10 +141,14 @@ const { values: args } = parseArgs({
     options: { type: "string", default: "{}" },
     quiet: { type: "boolean", default: false },
     "trace-lanes": { type: "boolean", default: false },
+    "early-cut": { type: "boolean", default: false },
   },
 });
 
 const VARIANT = args.variant;
+if (args["early-cut"] && (!args.vectors || !["v1", "d2"].includes(VARIANT))) {
+  throw new Error("--early-cut requires --variant v1 or d2, with --vectors");
+}
 if (!["d0", "d1", "d2", "v0", "v1", "v2", "v3", "v3app", "v4", "v4app", "vf"].includes(VARIANT)) {
   console.error("--variant d0|d1|d2|v0|v1|v2|v3|v3app|v4|v4app|vf");
   process.exit(2);
@@ -492,6 +498,7 @@ async function runConversation(conversation) {
       now: clock.now,
       ...(VARIANT === "d2" || OPTIONS.deviceDetector ? { detector: OPTIONS.detector ?? true } : {}),
       ...(OPTIONS.trackerOptions ?? {}),
+      ...(args["early-cut"] ? { detector: { split: LONG_TOPIC_SPLIT }, proposalStartedAt: 0 } : {}),
     });
     const namer =
       VARIANT === "v0" || VARIANT === "v1"
@@ -724,6 +731,9 @@ async function runConversation(conversation) {
     });
   }
   const found = new Array(realChanges.length).fill(null);
+  const firstCuts = new Map();
+  const firstNames = new Map();
+  const firstTopics = new Map();
   let takenBack = 0;
   let lastBoundaries = new Map();
   let lastSnapshot = { nodes: [], edges: [] };
@@ -771,6 +781,17 @@ async function runConversation(conversation) {
     }
     const labels = labelsOf(snapshot.nodes);
     const named = new Map(snapshot.nodes.map((node) => [String(node.id), modelNamed(node)]));
+    for (const node of snapshot.nodes) {
+      const id = String(node.id);
+      if (!firstTopics.has(id)) firstTopics.set(id, now);
+      if (named.get(id) && !firstNames.has(id)) {
+        const speech = startOf.get(String(node.utteranceIds?.[0])) ?? node.firstAt;
+        firstNames.set(id, {
+          afterSpeech: (now - speech) / 1000,
+          afterShown: (now - firstTopics.get(id)) / 1000,
+        });
+      }
+    }
     for (const [id, label] of labels) {
       const before = lastLabel.get(id);
       if (before !== undefined && before !== label) {
@@ -800,6 +821,8 @@ async function runConversation(conversation) {
     for (const [id, at] of lastBoundaries) {
       if (!boundaries.has(id) && now - at > 180_000) takenBack += 1;
     }
+    for (const [id, at] of boundaries)
+      if (!firstCuts.has(id)) firstCuts.set(id, { at, drawn: now });
     lastBoundaries = boundaries;
     if (realChanges.length) {
       const drawn = [...boundaries.values()];
@@ -835,6 +858,20 @@ async function runConversation(conversation) {
   await runTimers(endAt + 90_000);
   answerQueries(Infinity, lastSnapshot);
   const liveEnd = lastSnapshot;
+  const liveLine = reference && {
+    cuts: firstCuts.size,
+    right: [...firstCuts.values()].filter(({ at }) =>
+      realChanges.some((change) => Math.abs(at - change) <= 60_000)
+    ).length,
+    found: realChanges.flatMap((change) => {
+      const matches = [...firstCuts.values()].filter(({ at }) => Math.abs(at - change) <= 60_000);
+      return matches.length ? [Math.min(...matches.map(({ drawn }) => drawn)) - change] : [];
+    }),
+    names: liveEnd.nodes
+      .filter((node) => firstNames.has(String(node.id)))
+      .map((node) => firstNames.get(String(node.id))),
+    topics: liveEnd.nodes.length,
+  };
   const liveCalls = calls.length;
   const record = await finishLive();
   const wallMs = performance.now() - started;
@@ -848,6 +885,7 @@ async function runConversation(conversation) {
     minutes,
     utterances: utterances.length,
     wallMs,
+    liveLine,
   };
   const nodesOf = (snapshot) => (snapshot?.nodes ?? []).filter((node) => node.utteranceIds?.length);
   // What each utterance was in, live at the end and in the record: enough to score again offline.
@@ -1067,6 +1105,9 @@ function summarize(results) {
       : null;
   const lags = ami.flatMap((result) => result.liveDraw?.lags ?? []);
   const latencies = results.flatMap((result) => result.cost.latencies);
+  const liveLineRows = ami.filter((result) => result.liveLine);
+  const lineLags = liveLineRows.flatMap((result) => result.liveLine.found);
+  const modelNames = liveLineRows.flatMap((result) => result.liveLine.names);
   return {
     label: LABEL,
     variant: VARIANT,
@@ -1075,6 +1116,26 @@ function summarize(results) {
     hours,
     live: scores("live"),
     record: scores("record"),
+    liveLine: liveLineRows.length && {
+      cutsPerHour:
+        total("cuts", "liveLine") /
+        (liveLineRows.reduce((sum, result) => sum + result.minutes, 0) / 60),
+      precision60: total("cuts", "liveLine")
+        ? total("right", "liveLine") / total("cuts", "liveLine")
+        : null,
+      found60: total("real", "liveDraw") ? lineLags.length / total("real", "liveDraw") : null,
+      firstLineMedianS: lineLags.length ? percentile(lineLags, 50) / 1000 : null,
+      firstNameFromSpeechMedianS: percentile(
+        modelNames.map((name) => name.afterSpeech),
+        50
+      ),
+      firstNameFromShownMedianS: percentile(
+        modelNames.map((name) => name.afterShown),
+        50
+      ),
+      topicsNamed: modelNames.length,
+      topics: total("topics", "liveLine"),
+    },
     liveDraw: {
       found:
         lags.length /
@@ -1193,6 +1254,12 @@ function printSummary(summary) {
     );
   }
   const b = summary.behaviour;
+  const line = summary.liveLine;
+  if (line) {
+    lines.push(
+      `line   ${fmt(line.cutsPerHour, 2)} cuts/h, ${fmt(line.precision60 == null ? null : line.precision60 * 100, 2)}% precision within 60 s, ${fmt(line.found60 == null ? null : line.found60 * 100, 2)}% found, median first line ${fmt(line.firstLineMedianS, 2)} s; model names ${line.topicsNamed}/${line.topics}, median ${fmt(line.firstNameFromSpeechMedianS, 2)} s from speech or ${fmt(line.firstNameFromShownMedianS, 2)} s from first shown`
+    );
+  }
   lines.push(
     `live   changes drawn ${fmt(summary.liveDraw.found * 100, 0)}% after a median ${fmt(summary.liveDraw.lagMedianMinutes, 1)} min; label changes ${fmt(b.labelChangesPerHour, 1)}/h (model renames ${fmt(b.renamesPerHour, 1)}, first model names ${fmt(b.firstNamesPerHour, 1)}, on-device ${fmt(b.deviceChangesPerHour, 1)}); old lines moved ${fmt(b.linesMovedOldPerHour, 1)}/h; changes taken back ${fmt(b.takenBackPerHour, 1)}/h; topics removed ${fmt(b.topicsRemovedPerHour, 1)}/h; a line's topic settles after ${fmt(b.settledDelayP50 / 1000, 1)} s (p50), ${fmt(b.settledDelayP90 / 1000, 1)} s (p90)`
   );
