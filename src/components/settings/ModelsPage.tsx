@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../ui/dialog"
 import { SettingsSection } from "./SettingsKit";
 import { ProcessingChoice, WhatIsSent } from "./ProcessingChoice";
 import { featureRouteName } from "./featureRouteCopy";
-import { ProviderKeyField } from "./ProviderKeyField";
+import { KeyCapabilities, ProviderKeyField } from "./ProviderKeyField";
 import { SpeechModelChoice } from "./SpeechModelChoice";
 import { WritingModelChoice } from "./WritingModelChoice";
 import { GpuDeviceSelector } from "./GpuDeviceSelector";
@@ -23,6 +23,8 @@ import {
   roomSpeechPlan,
   selectProcessingMode,
   selectFeatureRoute,
+  selectUsableFeatureKey,
+  selectWritingKeyProvider,
   selectDictationSettings,
   selectResolvedMeetingTranscription,
   selectResolvedNoteFormatting,
@@ -91,6 +93,24 @@ export function ModelsPage() {
           showDescriptions={false}
           aria-labelledby={titleId}
         />
+        <div className="mt-3 flex items-center gap-3 px-1">
+          <KeyCapabilities className="min-w-0" />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="ml-auto shrink-0">
+                <KeyRound aria-hidden="true" />
+                {t("apiKeyInput.add")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent
+              aria-describedby={undefined}
+              className="oats-surface motion-reduce:animate-none"
+            >
+              <DialogTitle>{t("apiKeyInput.add")}</DialogTitle>
+              <ProviderKeyField />
+            </DialogContent>
+          </Dialog>
+        </div>
       </section>
 
       <div>
@@ -170,11 +190,19 @@ function FeatureRow({
   const { t } = useTranslation();
   const titleId = useId();
   const routeButton = useRef<HTMLButtonElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
   const mac = getCachedPlatform() === "darwin";
-  const { effective, requested, needsKey, provider } = useSettingsStore(
+  const { effective, requested, exception, needsKey, provider } = useSettingsStore(
     useShallow((state) => selectFeatureRoute(state, feature))
   );
   const writingProvider = useSettingsStore((state) => state.featurePreferences.writingProvider);
+  const canUseCloud = useSettingsStore((state) =>
+    feature === "writing"
+      ? Boolean(selectWritingKeyProvider(state))
+      : selectUsableFeatureKey(state, "openai")
+  );
+  const missingKey = exception === "providers" && needsKey;
+  const showSwitch = effective === "providers" || (requested === "local" && canUseCloud);
   const name = featureRouteName(t, feature);
   const other = requested === "local" ? "providers" : "local";
   const switchLabel = t(
@@ -189,7 +217,7 @@ function FeatureRow({
   const keepLocalLabel = t(
     mac ? "oats.featureRoutes.keepOnMac" : "oats.featureRoutes.keepOnComputer"
   );
-  const place = needsKey
+  const place = missingKey
     ? t(mac ? "oats.featureRoutes.untilKeyOnMac" : "oats.featureRoutes.untilKeyOnComputer", {
         model,
         provider:
@@ -205,7 +233,12 @@ function FeatureRow({
     <section aria-labelledby={titleId} className="px-5 py-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h4 id={titleId} className="text-sm font-medium text-foreground">
+          <h4
+            id={titleId}
+            ref={title}
+            tabIndex={-1}
+            className="text-sm font-medium text-foreground"
+          >
             {name}
           </h4>
           <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground" aria-live="polite">
@@ -213,7 +246,7 @@ function FeatureRow({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
-          {needsKey && keyProvider && (
+          {missingKey && keyProvider && (
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" aria-label={`${name}: ${addKeyLabel}`}>
@@ -237,19 +270,24 @@ function FeatureRow({
               </DialogContent>
             </Dialog>
           )}
-          <Button
-            ref={routeButton}
-            variant={needsKey ? "ghost" : "outline"}
-            size="sm"
-            data-route-action={needsKey ? "keep-local" : "switch"}
-            aria-label={`${name}: ${needsKey ? keepLocalLabel : switchLabel}`}
-            onClick={() => setFeatureProcessing(feature, needsKey ? "local" : other)}
-          >
-            {needsKey ? keepLocalLabel : switchLabel}
-          </Button>
+          {(missingKey || showSwitch) && (
+            <Button
+              ref={routeButton}
+              variant={missingKey ? "ghost" : "outline"}
+              size="sm"
+              data-route-action={missingKey ? "keep-local" : "switch"}
+              aria-label={`${name}: ${missingKey ? keepLocalLabel : switchLabel}`}
+              onClick={() => {
+                if (missingKey && !canUseCloud) title.current?.focus();
+                setFeatureProcessing(feature, missingKey ? "local" : other);
+              }}
+            >
+              {missingKey ? keepLocalLabel : switchLabel}
+            </Button>
+          )}
         </div>
       </div>
-      {!needsKey && (
+      {!missingKey && (
         <>
           {note && <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{note}</p>}
           {progress && (

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 let FEATURES, FEATURE_ROUTES_KEY, resolveFeatureRoute, changeFeatureRoute, pinWritingProvider;
-let migrateFeaturePreferences, readFeaturePreferences;
+let migrateFeaturePreferences, readFeaturePreferences, availableWritingProvider;
 
 test.before(async () => {
   ({
@@ -13,7 +13,26 @@ test.before(async () => {
     pinWritingProvider,
     migrateFeaturePreferences,
     readFeaturePreferences,
+    availableWritingProvider,
   } = await import("../../src/helpers/featureRoutes.mjs"));
+});
+
+test("a new cloud writing choice uses a working key and respects a usable pin", () => {
+  assert.equal(availableWritingProvider(null, {}), null);
+  assert.equal(availableWritingProvider(null, { openai: "ok" }), "openai");
+  assert.equal(availableWritingProvider(null, { anthropic: "ok" }), "anthropic");
+  assert.equal(availableWritingProvider(null, { openai: "ok", anthropic: "ok" }), "openai");
+  assert.equal(
+    availableWritingProvider("anthropic", { openai: "ok", anthropic: "ok" }),
+    "anthropic"
+  );
+  for (const refused of ["rejected", "no-access", "unknown"]) {
+    assert.equal(
+      availableWritingProvider("openai", { openai: refused, anthropic: "ok" }),
+      "anthropic"
+    );
+    assert.equal(availableWritingProvider("openai", { openai: refused }), null);
+  }
 });
 
 function profile(settings = {}) {

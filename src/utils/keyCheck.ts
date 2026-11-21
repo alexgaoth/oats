@@ -14,7 +14,7 @@ export type KeyProvider = "openai" | "anthropic";
  */
 export function detectKeyProvider(key: string): KeyProvider | null {
   const value = key.trim();
-  if (/^sk-ant-[\w-]{8,}$/.test(value)) return "anthropic";
+  if (value.startsWith("sk-ant-")) return /^sk-ant-[\w-]{8,}$/.test(value) ? "anthropic" : null;
   if (/^sk-[\w-]{8,}$/.test(value)) return "openai";
   return null;
 }

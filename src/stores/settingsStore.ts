@@ -42,6 +42,8 @@ import {
   isWritingProvider,
   migrateFeaturePreferences,
   pinWritingProvider,
+  availableWritingProvider,
+  isUsableFeatureKey,
   readFeaturePreferences,
   resolveFeatureRoute,
   type Feature,
@@ -2377,10 +2379,15 @@ if (isBrowser) {
  * preferences. These are non-secret settings. Runtime callers use the
  * feature resolver, not the compatibility fields from older versions.
  */
-export function setFeatureRoute(route: Route | null, feature?: Feature): void {
+export function setFeatureRoute(
+  route: Route | null,
+  feature?: Feature,
+  writingProvider?: Provider
+): void {
   const state = useSettingsStore.getState();
+  const next = changeFeatureRoute(state.featurePreferences, route, feature);
   const preferences = pinWritingProvider(
-    changeFeatureRoute(state.featurePreferences, route, feature),
+    writingProvider ? { ...next, writingProvider } : next,
     featureKeyPresence(state)
   );
   saveFeaturePreferences(preferences);
@@ -2393,20 +2400,38 @@ function saveFeaturePreferences(preferences: FeaturePreferences): void {
 
 function featureKeyPresence(state: SettingsState) {
   return {
-    openai: Boolean(state.openaiApiKey.trim()),
-    anthropic: Boolean(state.anthropicApiKey.trim()),
+    openai: isUsableFeatureKey(selectFeatureKeyStatus(state, "openai")),
+    anthropic: isUsableFeatureKey(selectFeatureKeyStatus(state, "anthropic")),
   };
+}
+
+function selectFeatureKeyStatus(state: SettingsState, provider: Provider) {
+  const present =
+    provider === "custom"
+      ? Boolean(state.cleanupCustomApiKey.trim() && state.cleanupCloudBaseUrl.trim())
+      : writingKeyPresent(state, provider);
+  return present ? (state.featureKeyStatus[provider] ?? "legacy") : undefined;
+}
+
+export function selectUsableFeatureKey(state: SettingsState, provider: Provider) {
+  return isUsableFeatureKey(selectFeatureKeyStatus(state, provider));
+}
+
+export function selectWritingKeyProvider(state: SettingsState) {
+  const pinned = state.featurePreferences.writingProvider;
+  return availableWritingProvider(pinned, {
+    ...(pinned && { [pinned]: selectFeatureKeyStatus(state, pinned) }),
+    openai: selectFeatureKeyStatus(state, "openai"),
+    anthropic: selectFeatureKeyStatus(state, "anthropic"),
+  });
 }
 
 export function selectFeatureRoute(state: SettingsState, feature: Feature) {
   const provider =
     feature === "writing" ? (state.featurePreferences.writingProvider ?? "openai") : "openai";
-  const present =
-    provider === "custom"
-      ? Boolean(state.cleanupCustomApiKey.trim() && state.cleanupCloudBaseUrl.trim())
-      : writingKeyPresent(state, provider);
-  const status = present ? (state.featureKeyStatus[provider] ?? "legacy") : undefined;
-  return resolveFeatureRoute(state.featurePreferences, feature, { [provider]: status });
+  return resolveFeatureRoute(state.featurePreferences, feature, {
+    [provider]: selectFeatureKeyStatus(state, provider),
+  });
 }
 
 export function setFeatureKeyStatus(provider: Provider, status: RouteKeyStatus): void {

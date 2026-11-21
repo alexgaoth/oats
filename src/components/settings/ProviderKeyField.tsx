@@ -6,10 +6,14 @@ import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
+  selectUsableFeatureKey,
+  selectWritingKeyProvider,
   setFeatureKeyStatus,
   useSettingsStore,
   type SettingsState,
 } from "../../stores/settingsStore";
+import { getCachedPlatform } from "../../utils/platform";
+import { getProviderDisplayName } from "../../models/ModelRegistry";
 import { checkKey, detectKeyProvider, type KeyProvider } from "../../utils/keyCheck";
 import { writingModelName } from "../../hooks/useWritingModel";
 import { CLOUD_WRITING_MODELS } from "../../helpers/writingTier.mjs";
@@ -51,6 +55,29 @@ type Message = { tone: "success" | "warning" | "danger" | "muted"; text: string 
 export interface ProviderKeyHandle {
   /** Check the key in the field and save it: true once saved, false when there is none or it is refused. */
   commit: () => Promise<boolean>;
+}
+
+export function KeyCapabilities({ className }: { className?: string }) {
+  const { t } = useTranslation();
+  const openai = useSettingsStore((state) => selectUsableFeatureKey(state, "openai"));
+  const anthropic = useSettingsStore((state) => selectUsableFeatureKey(state, "anthropic"));
+  const writer = useSettingsStore(selectWritingKeyProvider);
+  return (
+    <p
+      role="status"
+      className={cn("text-[13px] leading-5 text-muted-foreground empty:hidden", className)}
+    >
+      {openai && anthropic
+        ? t("oats.keys.bothCapabilities", { provider: getProviderDisplayName(writer ?? "openai") })
+        : openai
+          ? t("oats.keys.openaiCapabilities")
+          : anthropic
+            ? getCachedPlatform() === "darwin"
+              ? t("oats.keys.anthropicCapabilities")
+              : t("oats.keys.anthropicCapabilitiesComputer")
+            : null}
+    </p>
+  );
 }
 
 /**
@@ -105,10 +132,9 @@ export function ProviderKeyField({
       if (!detected || (provider !== "any" && detected !== provider)) {
         setMessage({
           tone: "danger",
-          text:
-            provider === "any"
-              ? t("oats.keys.notAKey")
-              : t("oats.keys.notThisKey", { provider: PROVIDER_NAMES[provider] }),
+          text: !detected
+            ? t("oats.keys.notAKey")
+            : t("oats.keys.notThisKey", { provider: PROVIDER_NAMES[provider] }),
         });
         return false;
       }
@@ -139,11 +165,15 @@ export function ProviderKeyField({
         });
         return false;
       }
-      const model = writingModelName(CLOUD_WRITING_MODELS[detected]);
       setMessage(
-        status === "ok"
-          ? { tone: "success", text: t("oats.keys.works", { model }) }
-          : { tone: "muted", text: t("oats.keys.limited", { model }) }
+        status === "limited"
+          ? {
+              tone: "muted",
+              text: t("oats.keys.limited", {
+                model: writingModelName(CLOUD_WRITING_MODELS[detected]),
+              }),
+            }
+          : null
       );
       setFeatureKeyStatus(detected, status);
     } else {
@@ -195,7 +225,7 @@ export function ProviderKeyField({
             {t("oats.keys.replace")}
           </Button>
         </div>
-        {message && (
+        {message ? (
           <p
             role="status"
             aria-live="polite"
@@ -208,6 +238,10 @@ export function ProviderKeyField({
           >
             {message.text}
           </p>
+        ) : (
+          <div className="mt-2">
+            <KeyCapabilities />
+          </div>
         )}
       </div>
     );

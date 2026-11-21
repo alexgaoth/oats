@@ -3,6 +3,7 @@ import {
   forgetWritingChoice,
   selectProcessingMode,
   selectFeatureRoute,
+  selectWritingKeyProvider,
   setFeatureRoute,
   setLocalSetupAuthorization,
   useSettingsStore,
@@ -14,7 +15,7 @@ import {
   WRITING_PROVIDER_KEY,
 } from "../../helpers/writingTier.mjs";
 import { leaveWritingDownload } from "../../hooks/useWritingModel";
-import type { Feature } from "../../helpers/featureRoutes.mjs";
+import type { Feature, Provider } from "../../helpers/featureRoutes.mjs";
 
 /**
  * The one Processing switch: every feature on this Mac, or every feature on
@@ -100,12 +101,17 @@ function storedWritingChoice(): RememberedModels | null {
 }
 
 export function setFeatureProcessing(feature: Feature, mode: ProcessingMode) {
-  const defaultRoute = selectProcessingMode(useSettingsStore.getState());
-  setFeatureRoute(mode === defaultRoute ? null : mode, feature);
-  if (feature === "writing") updateWritingSide();
+  const state = useSettingsStore.getState();
+  const defaultRoute = selectProcessingMode(state);
+  const provider =
+    feature === "writing" && mode === "providers"
+      ? (selectWritingKeyProvider(state) ?? undefined)
+      : undefined;
+  setFeatureRoute(mode === defaultRoute ? null : mode, feature, provider);
+  if (feature === "writing") updateWritingSide(provider);
 }
 
-function updateWritingSide() {
+function updateWritingSide(provider?: Provider) {
   const store = useSettingsStore.getState();
   const mode = selectFeatureRoute(store, "writing").requested;
   if (mode === store.cleanupMode) return;
@@ -118,8 +124,9 @@ function updateWritingSide() {
   writeMemory(memory);
   store.setCleanupMode(mode);
   store.setNoteFormattingMode(mode);
-  if (remembered) chooseWritingModel(remembered.cleanupProvider, remembered.cleanupModel);
-  else forgetWritingChoice();
+  if (remembered && (!provider || remembered.cleanupProvider === provider)) {
+    chooseWritingModel(remembered.cleanupProvider, remembered.cleanupModel);
+  } else forgetWritingChoice();
   if (mode === "providers") leaveWritingDownload();
 }
 
