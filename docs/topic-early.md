@@ -221,12 +221,14 @@ points over approving everything. The judge does not use Gemma.
 Today a writing model on this Mac that may run during a recording turns on the window loop (`src/helpers/topicWindowLoop.mjs`). The loop cuts the last 6 minutes again every 2 minutes, and its view replaces the detector's live view. So its users never see the early cut. The proposal: every route cuts with the detector and the early cut, and the model only names each topic when its cut lands (`src/helpers/topicNamer.mjs`).
 
 - **Harness:** `scripts/topic-loop-eval.mjs`, with the live line metrics below. It replays the manual AMI words of the 83 learn83 meetings: 41.5 h from first to last speech, 559 real changes, 13.5 an hour.
-- **Model:** Gemma 4 E4B (Q4_K_M) through `llama-server` on this Mac, in both arms. No cloud calls. eval24 was not read.
+- **Model:** Gemma 4 E4B (Q4_K_M) through `llama-server` on this Mac, in all three arms. No cloud calls. eval24 was not read.
+- **Arms:** `v3` is the experiment's loop with the shipped window settings (2 min stride, 6 min window, 100 lines, 1,500 words). `v3app` is the shipped class (`WindowTopicLoop`). `v1` is the detector with the early cut, and the namer names each topic.
 - **Line metrics:** each boundary counts once, at its first display, also when a later window removes it. A line is right when a real change is within 60 s of it. A real change is found when any line is within 60 s of it. This match is not one to one.
 
 | Route | Lines an hour | Right within 60 s | Found within 60 s | Median first line | Median model name, from speech |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Window loop (`--variant v3`) | 29.15 | 49.1% (594/1,211) | 75.1% (420/559) | 90.9 s | 105.3 s |
+| Shipped window loop (`--variant v3app`) | 26.88 | 49.6% (554/1,117) | 68.7% (384/559) | 84.1 s | 94.0 s |
 | Detector + early cut + namer (`--variant v1 --early-cut --vectors`) | 8.81 | 71.6% (262/366) | 57.8% (323/559) | 25.9 s | 40.3 s |
 
 **Chance.** Random lines, with the same number in each meeting, give these expected values (a 120 s window for each line):
@@ -234,6 +236,7 @@ Today a writing model on this Mac that may run during a recording turns on the w
 | Route | Right by chance | Found by chance | Right, above chance | Found, above chance |
 | --- | ---: | ---: | ---: | ---: |
 | Window loop | 36.3% | 61.9% | +12.8 points | +13.2 points |
+| Shipped window loop | 35.2% | 57.1% | +14.3 points | +11.5 points |
 | Detector + early cut | 37.9% | 27.2% | +33.7 points | +30.6 points |
 
 **Segmentation at the live end.** Lower is better. The intervals are 95% meeting bootstraps.
@@ -241,6 +244,7 @@ Today a writing model on this Mac that may run during a recording turns on the w
 | Route | Pk | WindowDiff |
 | --- | ---: | ---: |
 | Window loop | 0.327 [0.302, 0.353] | 0.417 [0.387, 0.450] |
+| Shipped window loop | 0.331 [0.304, 0.358] | 0.405 [0.375, 0.437] |
 | Detector + early cut | 0.234 [0.213, 0.256] | 0.269 [0.248, 0.292] |
 | One topic for the whole meeting | 0.325 | |
 
@@ -249,16 +253,17 @@ Today a writing model on this Mac that may run during a recording turns on the w
 | Route | Old lines moved to another topic | Lines taken back | Label changes |
 | --- | ---: | ---: | ---: |
 | Window loop | 145.5 | 3.9 | 0.1 |
+| Shipped window loop | 146.0 | 3.5 | 4.6 (2.0 first model names, 2.0 phrase-label changes, 0.6 back to a phrase label, 0.1 renames) |
 | Detector + early cut | 16.5 | 0 | 19.9 (10.3 first model names, 3.0 renames, 6.6 phrase-label changes) |
 
-On the detector route a new topic shows with its phrase label first. The model name replaces it a median 7.2 s later. On the window loop a topic shows with its model name, 90.9 s after the change. The window loop's requests took a median 2.9 s, and 8.8% of its answers were malformed. The namer's requests took 0.8 s, and 1.4% were malformed.
+On the detector route a new topic shows with its phrase label first. The model name replaces it a median 7.2 s later. On the window loops a topic shows with its model name, a median 84 to 91 s after the change. The window loop's requests took a median 2.9 s, and 8.8% of its answers were malformed. The shipped loop's requests took 2.8 s, and 6.7% were malformed. It named 647 of its 664 topics. The namer's requests took 0.8 s, and 1.4% were malformed.
 
 Result:
 
-- The gate in the brief failed: the detector route must not be worse on right and on found. It found 57.8% against 75.1%.
-- Most of the window loop's lead on found comes from its line count. Random lines at 29 an hour find 61.9%.
+- The gate in the brief failed: the detector route must not be worse on right and on found. It found 57.8% against 75.1% (`v3`) and 68.7% (`v3app`).
+- Most of the window loops' lead on found comes from their line counts. Random lines at 29 an hour find 61.9%, and at 27 an hour 57.1%. Above chance, the detector route finds +30.6 points, the window loops +11.5 to +13.2.
 - The detector route is better on every other measure here: right, first line, first name, Pk, WindowDiff and old lines moved.
-- The `v3` arm is the experiment's loop with the shipped window settings (2 min stride, 6 min window, 100 lines, 1,500 words). It is not the shipped class (`--variant v3app`).
+- The shipped loop matches the experiment's loop on right, Pk and old lines moved. It draws 8% fewer lines and finds 6.4 points fewer changes.
 - Alex decides the routing. Live routing is unchanged.
 
 ### A stricter grey (learn83 only, a proposal)
@@ -298,5 +303,6 @@ node scripts/topic-early-eval.mjs --ami ~/oats-asr-cache/AMI --set learn83 --lag
 G=~/oats-asr-cache/models/llm/gemma-4-e4b/google_gemma-4-E4B-it-Q4_K_M.gguf
 L="--model local:gemma-4-e4b --local-model $G --llama-server /opt/homebrew/bin/llama-server --local-port 18473 --local-context 16384"
 node scripts/topic-loop-eval.mjs --variant v3 --ami ~/oats-asr-cache/AMI --set learn83 $L --options '{"strideMs":120000,"windowMs":360000,"maxLines":100,"maxWords":1500}' --json ~/oats-asr-cache/topic-routing/learn83-v3-window.json
+node scripts/topic-loop-eval.mjs --variant v3app --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v3app-window.json
 node scripts/topic-loop-eval.mjs --variant v1 --early-cut --vectors --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v1-early-cut.json
 ```
