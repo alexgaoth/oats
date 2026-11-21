@@ -52,9 +52,9 @@ import { makeSentenceRecords } from "../helpers/sentenceSplit.mjs";
 import { addLevelSample, encodeLoudness } from "../helpers/conversationLoudness.mjs";
 import type {
   ContextCheck,
-  ConversationCard,
   ConversationSuggestion,
   ConversationTopicSnapshot,
+  LiveConversationCard,
   OpenThread,
   QuestionOutcome,
 } from "../types/conversationEvents";
@@ -175,7 +175,7 @@ interface MeetingRecordingState {
    * separate always-on-top window, which is why this list used to be somewhere
    * else entirely.
    */
-  questionCards: ConversationCard[];
+  questionCards: LiveConversationCard[];
   /**
    * When this sitting began — the moment record was pressed, not the timestamp
    * of the first utterance.
@@ -571,7 +571,7 @@ let conversationTopicTracker: InstanceType<typeof ConversationTopicTracker> | nu
 // Sentence vectors for the tracker's names, from the local embedding model
 // (topicVectors.mjs). Off when there is no model; the names stay lexical.
 let topicVectors: TopicVectorFeeder | null = null;
-const conversationCards = new Map<string, ConversationCard>();
+const conversationCards = new Map<string, LiveConversationCard>();
 
 export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   isRecording: false,
@@ -655,6 +655,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
   const agentBudget = settings.contextAgentEnabled ? { left: AGENT_RUNS_PER_RECORDING } : null;
   conversationAideSession = new ConversationAideSession({
     noteId,
+    language: getBaseLanguageCode(settings.preferredLanguage),
     confidenceThreshold: settings.conversationAideConfidence,
     silenceDelayMs: settings.conversationAideSilenceSeconds * 1000,
     // A partial on screen means somebody is still speaking: not silence. On a
@@ -700,7 +701,7 @@ function startConversationAide(noteId: number | null, mode: ConversationRecordin
     insertEvent: (event: any) => window.electronAPI.insertConversationEvent?.(event),
     updateEvent: (id: number, patch: Record<string, unknown>) =>
       window.electronAPI.updateConversationEventMetadata?.(id, patch),
-    onCard: (card: ConversationCard) => {
+    onCard: (card: LiveConversationCard) => {
       conversationCards.set(card.id, card);
       pushConversationCards();
       // An answered question closes the thread it was asked in. Keyed by the
