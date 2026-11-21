@@ -239,6 +239,13 @@ Today a writing model on this Mac that may run during a recording turns on the w
 | Shipped window loop | 35.2% | 57.1% | +14.3 points | +11.5 points |
 | Detector + early cut | 37.9% | 27.2% | +33.7 points | +30.6 points |
 
+**Paired differences.** The detector route minus each loop, in points. The intervals are 95% paired meeting bootstraps (10,000 draws, `scripts/topic-routing-compare.py`).
+
+| Detector route minus | Right | Found | Right, above chance | Found, above chance |
+| --- | ---: | ---: | ---: | ---: |
+| Window loop | +22.5 [+17.2, +27.8] | -17.4 [-22.6, -12.2] | +20.9 [+15.8, +25.9] | +17.3 [+12.7, +22.1] |
+| Shipped window loop | +22.0 [+16.5, +27.4] | -10.9 [-16.5, -5.4] | +19.3 [+14.2, +24.4] | +19.0 [+15.1, +23.1] |
+
 **Segmentation at the live end.** Lower is better. The intervals are 95% meeting bootstraps.
 
 | Route | Pk | WindowDiff |
@@ -262,6 +269,7 @@ Result:
 
 - The gate in the brief failed: the detector route must not be worse on right and on found. It found 57.8% against 75.1% (`v3`) and 68.7% (`v3app`).
 - Most of the window loops' lead on found comes from their line counts. Random lines at 29 an hour find 61.9%, and at 27 an hour 57.1%. Above chance, the detector route finds +30.6 points, the window loops +11.5 to +13.2.
+- Both sides of the trade are real. Against the shipped loop, the detector route finds 10.9 points fewer changes [5.4, 16.5]. Above chance it finds 19.0 points more [15.1, 23.1], and its lines are right 22.0 points more often [16.5, 27.4].
 - The detector route is better on every other measure here: right, first line, first name, Pk, WindowDiff and old lines moved.
 - The shipped loop matches the experiment's loop on right, Pk and old lines moved. It draws 8% fewer lines and finds 6.4 points fewer changes.
 - Alex decides the routing. Live routing is unchanged.
@@ -305,4 +313,7 @@ L="--model local:gemma-4-e4b --local-model $G --llama-server /opt/homebrew/bin/l
 node scripts/topic-loop-eval.mjs --variant v3 --ami ~/oats-asr-cache/AMI --set learn83 $L --options '{"strideMs":120000,"windowMs":360000,"maxLines":100,"maxWords":1500}' --json ~/oats-asr-cache/topic-routing/learn83-v3-window.json
 node scripts/topic-loop-eval.mjs --variant v3app --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v3app-window.json
 node scripts/topic-loop-eval.mjs --variant v1 --early-cut --vectors --ami ~/oats-asr-cache/AMI --set learn83 $L --json ~/oats-asr-cache/topic-routing/learn83-v1-early-cut.json
+# Part 3 chance values and paired differences (light, under 1 s):
+R=~/oats-asr-cache/topic-routing
+python3 -I scripts/topic-routing-compare.py $R/learn83-v1-early-cut.json $R/learn83-v3-window.json $R/learn83-v3app-window.json
 ```
