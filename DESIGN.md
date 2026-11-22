@@ -172,7 +172,9 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   Replace… (a rotated key: it keeps its name and features) and Remove, which
   asks in place and says where each feature goes: another key of the same
   provider ("Conversations will use Work"), never another provider's, else
-  this Mac until another key is chosen. The Add API key dialog puts
+  this Mac until another key is chosen: such a row says "on this Mac until
+  you choose a key", and its "Choose a key ⌄" opens the key menu. The Add API
+  key dialog puts
   its fields first, the key and then the optional name, and Save after them.
   Setup's third step, **Your models** (`onboarding/ModelsStep.tsx`), shows the
   same rows with the status only: the downloads "Where Oats thinks" names

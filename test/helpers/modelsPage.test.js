@@ -40,7 +40,7 @@ test("each feature has one row, the same in Settings and setup", () => {
   assert.match(ROW, /row = \{ model: localName, place: "local", status: \{ kind: "ready" \} \};/);
   assert.match(
     ROW,
-    /function keyStatus\(key: SavedKey \| null, provider: KeyProvider\): ModelStatus \{\s*if \(!key\) return \{ kind: "add-key", provider \};\s*return keyUsable\(key\.status\)\s*\? \{ kind: "ready", key: key\.name, keyed: true \}\s*: \{ kind: "refused", key: key\.name \};/
+    /function keyStatus\(key: SavedKey \| null, provider: KeyProvider, choosable = false\): ModelStatus \{\s*if \(!key\) return choosable \? \{ kind: "choose-key" \} : \{ kind: "add-key", provider \};\s*return keyUsable\(key\.status\)\s*\? \{ kind: "ready", key: key\.name, keyed: true \}\s*: \{ kind: "refused", key: key\.name \};/
   );
   assert.match(ROW, /key: selectFeatureKey\(state, feature\),/);
   assert.match(ROW, /t\("oats\.models\.readyWithKey", \{ key: status\.key \}\)/);
@@ -70,6 +70,15 @@ test("the key pill opens the feature's key menu, and a key added from a row is t
   assert.match(ROW, /option\.reason === "no-speech"\s*\? t\("oats\.keys\.reasonNoSpeech"\)/);
   assert.match(ROW, /onSelectAfterClose=\{\(\) => setAdding\(true\)\}/);
   assert.match(ROW, /<ProviderKeyField provider=\{provider\} forFeature=\{feature\} autoFocus \/>/);
+  // Writing whose key was removed, while another saved key can run it (keys
+  // never move to the other provider by themselves): "on this Mac until you
+  // choose a key", and Choose a key opens the same menu, with none checked.
+  assert.match(ROW, /selectKeyOptions\(state, "writing"\)\.some\(\(option\) => option\.usable\)/);
+  assert.match(ROW, /place: key \? "until-works" : choosable \? "until-chosen" : "until-key"/);
+  assert.match(
+    ROW,
+    /tone="neutral"[^>]*>\s*<KeyRound aria-hidden="true" \/>\s*\{t\("oats\.keys\.chooseKey"\)\}/
+  );
 });
 
 test("the API keys list renames in place and asks before it removes, saying where features go", () => {
@@ -82,7 +91,10 @@ test("the API keys list renames in place and asks before it removes, saying wher
   assert.match(LIST, /t\("oats\.keys\.moveTo", \{ key: to\.name, features: list\(features\) \}\)/);
   // A removal main could not make rejects with a line to show; the key and
   // the question stay, with that line under them.
-  assert.match(LIST, /await removeApiKey\(savedKey\.id\)\.catch\(\(error: unknown\) => \{\s*setFailure\(/);
+  assert.match(
+    LIST,
+    /await removeApiKey\(savedKey\.id\)\.catch\(\(error: unknown\) => \{\s*setFailure\(/
+  );
   assert.match(LIST, /role="alert"[^>]*>\s*\{failure\}/);
   assert.doesNotMatch(LIST, /confirm\(/);
   assert.match(LIST, /t\("oats\.keys\.notInUse"\)/);

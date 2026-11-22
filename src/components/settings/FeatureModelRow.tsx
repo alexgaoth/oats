@@ -142,6 +142,8 @@ export type ModelStatus =
   | { kind: "checking" }
   | { kind: "action"; label: string; retry: boolean; onClick: () => void }
   | { kind: "add-key"; provider: KeyProvider }
+  /** No key, but a saved key can run it: the key menu, to choose one or add one. */
+  | { kind: "choose-key" }
   | { kind: "none" };
 
 interface RowModel {
@@ -149,9 +151,11 @@ interface RowModel {
   model: string;
   /**
    * Where it runs. "until-key" runs on this Mac until a key is added;
-   * "until-works" until its key, which the provider refused, works again.
+   * "until-chosen" until one of the saved keys that can run it is chosen (its
+   * key was removed); "until-works" until its key, which the provider refused,
+   * works again.
    */
-  place: "local" | "providers" | "until-key" | "until-works";
+  place: "local" | "providers" | "until-key" | "until-chosen" | "until-works";
   /** For "until-key": whose key ("OpenAI"); none when either provider's will do. */
   provider?: string;
   status: ModelStatus;
@@ -175,10 +179,11 @@ function cloudSpeechName(id: string): string {
 
 /**
  * The status of a feature on the API-key route: Ready with its key, by name,
- * or the key refused; with no key at all, Add API key (for `provider`).
+ * or the key refused; with no key, the key menu when a saved key can run it
+ * (`choosable`), else Add API key (for `provider`).
  */
-function keyStatus(key: SavedKey | null, provider: KeyProvider): ModelStatus {
-  if (!key) return { kind: "add-key", provider };
+function keyStatus(key: SavedKey | null, provider: KeyProvider, choosable = false): ModelStatus {
+  if (!key) return choosable ? { kind: "choose-key" } : { kind: "add-key", provider };
   return keyUsable(key.status)
     ? { kind: "ready", key: key.name, keyed: true }
     : { kind: "refused", key: key.name };
@@ -345,6 +350,11 @@ function WritingRow({ upgrade, menus }: { upgrade: boolean; menus: boolean }) {
   const route = useSettingsStore(useShallow((state) => selectFeatureRoute(state, "writing")));
   const pinned = useSettingsStore((state) => state.featurePreferences.writingProvider);
   const key = useSettingsStore((state) => selectFeatureKey(state, "writing"));
+  // A saved key that can run Writing although none is Writing's: its key was
+  // removed, and keys never move to the other provider by themselves.
+  const choosable = useSettingsStore((state) =>
+    selectKeyOptions(state, "writing").some((option) => option.usable)
+  );
 
   let row: RowModel;
   if (route.effective === "providers") {
@@ -364,11 +374,11 @@ function WritingRow({ upgrade, menus }: { upgrade: boolean; menus: boolean }) {
     const provider = route.provider ?? "openai";
     row = {
       model: writing.status === "ready" ? writing.name : t("oats.models.noModel"),
-      place: key ? "until-works" : "until-key",
+      place: key ? "until-works" : choosable ? "until-chosen" : "until-key",
       // Writing takes either provider's key until one is chosen: "a key".
       provider: !pinned || !isKeyProvider(provider) ? undefined : getProviderDisplayName(provider),
       // Writing takes either provider's key, so a key added here may be either.
-      status: keyStatus(key, "any"),
+      status: keyStatus(key, "any", choosable),
     };
   } else {
     const target = upgrade ? LARGE_WRITING_MODEL : writing.model;
@@ -448,13 +458,19 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
                 ? "oats.featureRoutes.placeUntilAnyKeyMac"
                 : "oats.featureRoutes.placeUntilAnyKeyComputer"
             )
-          : row.place === "until-works"
+          : row.place === "until-chosen"
             ? t(
                 mac
-                  ? "oats.featureRoutes.placeUntilWorksMac"
-                  : "oats.featureRoutes.placeUntilWorksComputer"
+                  ? "oats.featureRoutes.placeUntilChosenMac"
+                  : "oats.featureRoutes.placeUntilChosenComputer"
               )
-            : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
+            : row.place === "until-works"
+              ? t(
+                  mac
+                    ? "oats.featureRoutes.placeUntilWorksMac"
+                    : "oats.featureRoutes.placeUntilWorksComputer"
+                )
+              : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
   const Offer = row.offer?.icon;
   return (
     <section aria-labelledby={titleId} data-feature-row={feature} className="px-5 py-3.5">
@@ -704,6 +720,15 @@ function StatusView({
       {status.kind === "add-key" && (
         <AddKey provider={status.provider} feature={feature} name={name} onDone={focusAfterKey} />
       )}
+      {status.kind === "choose-key" &&
+        (menus ? (
+          <KeyMenu feature={feature} name={name} tone="neutral" onDone={focusAfterKey}>
+            <KeyRound aria-hidden="true" />
+            {t("oats.keys.chooseKey")}
+          </KeyMenu>
+        ) : (
+          <AddKey provider="any" feature={feature} name={name} onDone={focusAfterKey} />
+        ))}
     </>
   );
 }
@@ -715,7 +740,9 @@ function StatusView({
  * provider and last four characters, the current one checked; a key that
  * cannot serve the feature (an Anthropic key for speech, a refused key) is
  * there but off, with the reason under it. Add API key… adds a key for this
- * feature, which then uses it.
+ * feature, which then uses it. A feature whose key was removed, while another
+ * saved key can run it, has no pill but a "Choose a key ⌄" button (`neutral`)
+ * that opens the same menu, with no key checked.
  */
 function KeyMenu({
   feature,
@@ -726,7 +753,7 @@ function KeyMenu({
 }: {
   feature: Feature;
   name: string;
-  tone: "success" | "warning";
+  tone: "success" | "warning" | "neutral";
   onDone: () => void;
   children: React.ReactNode;
 }) {
@@ -739,22 +766,36 @@ function KeyMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            ref={trigger}
-            type="button"
-            data-status={tone === "success" ? "ready" : "refused"}
-            data-key-pill
-            className={cn(
-              "inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium outline-none",
-              "transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/50 [&>svg]:size-3",
-              tone === "success"
-                ? "bg-success/10 text-success hover:bg-success/15 data-[state=open]:bg-success/15 dark:bg-success/15 dark:hover:bg-success/20"
-                : "bg-warning/10 text-warning hover:bg-warning/15 data-[state=open]:bg-warning/15 dark:bg-warning/15 dark:hover:bg-warning/20"
-            )}
-          >
-            {children}
-            <ChevronDown aria-hidden="true" />
-          </button>
+          {tone === "neutral" ? (
+            <Button
+              ref={trigger}
+              variant="outline"
+              size="sm"
+              aria-label={`${name}: ${t("oats.keys.chooseKey")}`}
+              data-status="choose-key"
+              data-key-pill
+            >
+              {children}
+              <ChevronDown aria-hidden="true" />
+            </Button>
+          ) : (
+            <button
+              ref={trigger}
+              type="button"
+              data-status={tone === "success" ? "ready" : "refused"}
+              data-key-pill
+              className={cn(
+                "inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium outline-none",
+                "transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/50 [&>svg]:size-3",
+                tone === "success"
+                  ? "bg-success/10 text-success hover:bg-success/15 data-[state=open]:bg-success/15 dark:bg-success/15 dark:hover:bg-success/20"
+                  : "bg-warning/10 text-warning hover:bg-warning/15 data-[state=open]:bg-warning/15 dark:bg-warning/15 dark:hover:bg-warning/20"
+              )}
+            >
+              {children}
+              <ChevronDown aria-hidden="true" />
+            </button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="oats-surface w-72">
           <DropdownMenuLabel>{t("oats.keys.keyFor", { feature: name })}</DropdownMenuLabel>
