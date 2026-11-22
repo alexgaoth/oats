@@ -16,6 +16,7 @@ import {
   namesOf,
   namesWhileRecording,
   topicNameConfig,
+  withNameStates,
   writingPrewarmRole,
 } from "../helpers/topicNaming.mjs";
 import { LiveTopicLoop, chooseFastModel, readJson } from "../helpers/topicLoop.mjs";
@@ -84,6 +85,12 @@ const sessionModels = new Map<string, TopicModel | null>();
 let waitingLines: TranscriptSegment[] | null = null;
 /** The recording whose check was stopped: one still being set up for it does not start. */
 let stoppedGeneration = 0;
+/**
+ * A writing model is chosen and this recording's namer or check is still being
+ * set up (`startTopicNaming` awaits the model): names are on their way, so a
+ * topic without one is drawn as being named, not with its on-device word.
+ */
+let namingStarts = false;
 /**
  * Whether this recording's names go to a server of the writing model's own,
  * beside the question classifier's (helpers/writingServer.js). Main starts it
@@ -344,8 +351,26 @@ export async function startTopicNaming(
   writingServer = false;
   const mine = ++generation;
   const route = currentWritingRoute();
+  namingStarts = Boolean(route);
   // No writing model: the topics keep their on-device names, and nothing is sent.
   if (!route) return;
+  try {
+    await setUpTopicNaming(mine, route, onChange, onDetectorReady);
+  } finally {
+    // Set up, or given up: the topics are drawn by what now names them.
+    if (mine === generation) {
+      namingStarts = false;
+      onChange();
+    }
+  }
+}
+
+async function setUpTopicNaming(
+  mine: number,
+  route: WritingRoute,
+  onChange: () => void,
+  onDetectorReady: () => void
+): Promise<void> {
   // OpenAI or Anthropic with a key: the live topic check names the topics
   // while recording, so the namer only names the record at Finish. Other
   // routes keep the tracker's topics and let #121 name them.
@@ -491,10 +516,25 @@ export function stopLiveTopics(): void {
 export function liveTopicSnapshot<T extends ConversationTopicSnapshot | null | undefined>(
   tracked: T
 ): T {
-  if (loop && !loop.disabled && tracked) {
-    return loop.snapshot(Date.now(), { device: tracked }) as unknown as T;
-  }
-  return namedTopicSnapshot(tracked);
+  const shown =
+    loop && !loop.disabled && tracked
+      ? (loop.snapshot(Date.now(), { device: tracked }) as unknown as T)
+      : namedTopicSnapshot(tracked);
+  return withNameStates(shown, { expects: nameExpected }) as T;
+}
+
+/**
+ * Whether a topic with no name yet will get one while recording, so it is
+ * drawn as being named (`withNameStates`, DESIGN.md §5). The live topic check
+ * names its topics while it runs; otherwise the namer says (`expectsName`);
+ * while either is still being set up for a chosen writing model, yes. Never
+ * once the recording stopped.
+ */
+function nameExpected(node: { id: number; state?: string; utteranceIds?: unknown[] }): boolean {
+  if (stoppedGeneration === generation) return false;
+  if (loop && !loop.disabled) return true;
+  if (namer) return namer.expectsName(node);
+  return namingStarts;
 }
 
 /**

@@ -409,3 +409,25 @@ test("a label with no room on one line takes two before it is hidden", () => {
   );
   assert.equal(three.get(3).hidden, true);
 });
+
+test("while recording a graph point carries its topic's name state", () => {
+  const node = (id, extra = {}) => ({
+    id,
+    label: `topic ${id}`,
+    durationMs: 120_000,
+    firstAt: id * 1000,
+    lastAt: id * 1000 + 60_000,
+    utteranceIds: [],
+    returns: 0,
+    state: "open",
+    ...extra,
+  });
+  const map = buildThreadMap({
+    snapshot: { nodes: [node(1, { nameState: "pending", opening: true }), node(2)], edges: [] },
+    startedAt: 0,
+    now: 200_000,
+  });
+  assert.equal(map.points[0].nameState, "pending");
+  assert.equal(map.points[0].opening, true);
+  assert.equal("nameState" in map.points[1], false);
+});

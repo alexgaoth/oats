@@ -85,6 +85,9 @@ export function buildThreadMap({
     return {
       id: node.id,
       label: node.label,
+      // While recording: whether the label is a name yet (`withNameStates`).
+      ...(node.nameState ? { nameState: node.nameState } : {}),
+      ...(node.opening ? { opening: true } : {}),
       state: node.state,
       returns: node.returns ?? 0,
       durationMs: node.durationMs ?? 0,

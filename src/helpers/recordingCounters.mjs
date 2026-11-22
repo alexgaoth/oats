@@ -1,20 +1,18 @@
-// The two counters under the recording clock: words captured so far, and
-// questions heard so far. Both are counts of what Oats has measured in this
-// sitting, nothing estimated:
+// The counter under the recording clock, the questions heard so far, and the
+// word count the topic code reads (`countWords`). Both are counts of what Oats
+// has measured, nothing estimated:
 //
-//   words      the committed transcript (finalized segments; the live line
-//              still being transcribed is not counted until it lands), and
-//   questions  the question cards, one per asking, as the contour counts them.
-//
-// "This sitting" is what the clock measures: from `recordingStartedAt`.
-// Continuing a recent conversation seeds its earlier segments into the store,
-// and counting those would put a thousand words beside a clock reading 0:05.
+//   questions  the question cards, one per asking, as the contour counts them,
+//              in this sitting: from `recordingStartedAt`. Continuing a recent
+//              conversation seeds its earlier cards into the store, and
+//              counting those would put them beside a clock reading 0:05.
+//   words      `countWords`, for the topic namer's thresholds. The screen shows
+//              no word count: how many words were spoken helps nobody during a
+//              conversation (DESIGN.md §5).
 //
 // Words are counted with `Intl.Segmenter`, so a language written without
 // spaces counts its words rather than its sentences (Japanese and Chinese
-// transcripts). Pure, apart from a per-segment cache keyed by the segment
-// object, which the store replaces whenever a segment changes. Pinned by
-// test/helpers/recordingCounters.test.js.
+// transcripts). Pure. Pinned by test/helpers/recordingCounters.test.js.
 
 let wordSegmenter;
 
@@ -51,34 +49,10 @@ export function countWords(text) {
   return unspaced + (spaced ? spaced.length : 0);
 }
 
-const segmentWords = new WeakMap();
-
 /** Whether something happened in this sitting (or there is no sitting to ask about). */
 function inSitting(at, startedAt) {
   if (!Number.isFinite(startedAt)) return true;
   return Number.isFinite(at) && at >= startedAt;
-}
-
-/**
- * Words captured in this sitting: the finalized segments said since it began.
- *
- * @param {Array<{ text?: string, timestamp?: number }>} segments The store's segments.
- * @param {number | null} startedAt `recordingStartedAt`; null counts every segment.
- * @param {WeakMap<object, number>} [cache] Counts per segment object.
- * @returns {number}
- */
-export function sittingWordCount(segments, startedAt, cache = segmentWords) {
-  let total = 0;
-  for (const segment of Array.isArray(segments) ? segments : []) {
-    if (!segment || !inSitting(segment.timestamp, startedAt)) continue;
-    let words = cache.get(segment);
-    if (words === undefined) {
-      words = countWords(segment.text);
-      cache.set(segment, words);
-    }
-    total += words;
-  }
-  return total;
 }
 
 /**
@@ -98,7 +72,7 @@ export function sittingQuestionCount(cards, startedAt) {
 /**
  * A counter's label around its number, so the number alone can roll when it
  * changes: `t(key, { count })` puts `String(count)` where the locale's
- * `{{count}}` is, and that position differs by language ("1234 words",
+ * `{{count}}` is, and that position differs by language ("12 questions",
  * "質問 5 件").
  *
  * @param {string} label The translated label, with the count in it.

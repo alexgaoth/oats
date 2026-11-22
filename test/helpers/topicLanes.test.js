@@ -626,3 +626,29 @@ test("a run on a topic with no row is skipped, and nothing is drawn unmeasured",
   assert.equal(lanePath({ runs, rows, width: 0 }), null);
   assert.equal(lanePath({ runs: [], rows, width: 400 }), null);
 });
+
+test("while recording a row carries its topic's name state, and a stored row does not", () => {
+  const node = (id, extra = {}) => ({
+    id,
+    label: `topic ${id}`,
+    durationMs: 120_000,
+    firstAt: id * 1000,
+    lastAt: id * 1000 + 60_000,
+    utteranceIds: [],
+    returns: 0,
+    state: "open",
+    ...extra,
+  });
+  const live = topicLanes({
+    snapshot: {
+      nodes: [node(1, { nameState: "pending", opening: true }), node(2, { nameState: "named" })],
+      edges: [],
+    },
+  });
+  assert.equal(live.rows[0].nameState, "pending");
+  assert.equal(live.rows[0].opening, true);
+  assert.equal(live.rows[1].nameState, "named");
+  assert.equal("opening" in live.rows[1], false);
+  const stored = topicLanes({ snapshot: { nodes: [node(1)], edges: [] } });
+  assert.equal("nameState" in stored.rows[0], false);
+});

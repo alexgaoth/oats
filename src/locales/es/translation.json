@@ -2081,8 +2081,6 @@
       "shortcutAnywhere": "desde cualquier app",
       "recordingBadge": "Grabando",
       "counters": {
-        "words_one": "{{count}} palabra",
-        "words_other": "{{count}} palabras",
         "questions_one": "{{count}} pregunta",
         "questions_other": "{{count}} preguntas"
       },
@@ -2120,6 +2118,8 @@
       "nodeNameBack": "{{label}}, {{state}}, {{back}}",
       "quote": "«{{text}}»",
       "noQuote": "Nada reciente que citar.",
+      "findingTopic": "Buscando el tema…",
+      "namingTopic": "Nombrando este tema",
       "earlier": "Surgió en conversaciones anteriores:"
     },
     "intelligence": {

@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 import { tumbleHeight } from "../src/helpers/oatsMarkMotion.mjs";
 import {
   RECORDING_TOSS_FRAMES,
-  RECORDING_TOSS_PEAK,
+  RECORDING_STILL_FRAME,
   recordingTossPose,
 } from "../src/helpers/recordingToss.mjs";
 
@@ -68,7 +68,7 @@ Promise.all(${JSON.stringify(svgFrames)}.map(async (svg) => {
     const y = 68 + Math.floor(i / 8) * 110;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(x, y, 84, 78);
-    if (i === ${RECORDING_TOSS_PEAK}) {
+    if (i === ${RECORDING_STILL_FRAME}) {
       ctx.strokeStyle = "#9a5b00";
       ctx.strokeRect(x + 0.5, y + 0.5, 83, 77);
     }

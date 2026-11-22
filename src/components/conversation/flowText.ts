@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { Network, createLucideIcon } from "lucide-react";
 import type { ViewSwitchOption } from "../ui/view-switch";
+import type { TopicNameState } from "../../types/conversationEvents";
 
 // Words and the view switch's drawing, shared by the flow card's two views
 // (`ConversationFlow`, `TopicLanes`) and the reading view's Connections tab.
@@ -59,4 +60,34 @@ export function flowCaption(
     topics: counted,
     returns: t("oats.flow.caption.returns", { count: returns }),
   });
+}
+
+/** What a screen reader hears, and a tooltip shows, for a topic's name. */
+export function topicNameText(
+  t: TFunction,
+  topic: { label: string; nameState?: TopicNameState }
+): string {
+  return topic.nameState === "pending" ? t("oats.flow.namingTopic") : topic.label;
+}
+
+/** The bar's 7em at 13px, in the graph's 6.9px characters. */
+const BAR_CHARS = 14;
+
+/** Characters about twice as wide as a Latin one at 13px: Japanese and Chinese. */
+const WIDE = /[　-鿿豈-﫿＀-￯]/;
+
+/**
+ * The label the graph's placement measures for a topic (`placeLabels` counts
+ * characters): a placeholder takes the room it is drawn in, the phrase or a
+ * bar about 7em wide, never the word it hides. One unbroken run, because a
+ * placeholder is always drawn on one line (`balancedSplit` would split words).
+ */
+export function measuredTopicLabel(
+  t: TFunction,
+  topic: { label: string; nameState?: TopicNameState; opening?: boolean }
+): string {
+  if (topic.nameState !== "pending") return topic.label;
+  if (!topic.opening) return "m".repeat(BAR_CHARS);
+  const phrase = Array.from(t("oats.flow.findingTopic"));
+  return "m".repeat(phrase.reduce((width, char) => width + (WIDE.test(char) ? 2 : 1), 0));
 }

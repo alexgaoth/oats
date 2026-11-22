@@ -114,21 +114,20 @@ test("macOS plays a toss, rests, loops, and restores the exact idle image on Sto
   assert.equal(setTimer.mock.callCount(), timers);
 });
 
-test("reduced motion uses the mid-hop template and schedules no timers", async (t) => {
+test("reduced motion holds the still oat and schedules no timers", async (t) => {
   const { manager, tray, setTimer } = await makeTray(t, { reduce: true, recording: true });
-  assert.deepEqual(tray.images, [idle, manager.recordingIcons[motion.RECORDING_TOSS_PEAK]]);
-  assert.ok(motion.recordingTossPose(motion.RECORDING_TOSS_PEAK).hop > maxHop * 0.99);
+  assert.deepEqual(tray.images, [idle, manager.recordingIcons[motion.RECORDING_STILL_FRAME]]);
   assert.equal(setTimer.mock.callCount(), 0);
   manager.setConversationState({ recording: false });
   assert.equal(tray.images.at(-1), idle);
   assert.equal(setTimer.mock.callCount(), 0);
 });
 
-test("a missing frame falls back to the mid-hop template without timers", async (t) => {
+test("a missing frame falls back to the still oat without timers", async (t) => {
   const { manager, tray, setTimer } = await makeTray(t);
   manager.recordingIcons[2] = null;
   manager.setConversationState({ recording: true });
-  assert.deepEqual(tray.images, [idle, manager.recordingIcons[motion.RECORDING_TOSS_PEAK]]);
+  assert.deepEqual(tray.images, [idle, manager.recordingIcons[motion.RECORDING_STILL_FRAME]]);
   assert.equal(setTimer.mock.callCount(), 0);
 });
 
@@ -136,7 +135,7 @@ test("changing Reduce Motion during recording cancels or restarts motion", async
   const { manager, tray, setTimer } = await makeTray(t, { recording: true });
   reduced = true;
   displayOptionsChanged();
-  assert.equal(tray.images.at(-1), manager.recordingIcons[motion.RECORDING_TOSS_PEAK]);
+  assert.equal(tray.images.at(-1), manager.recordingIcons[motion.RECORDING_STILL_FRAME]);
   t.mock.timers.tick(10_000);
   assert.equal(setTimer.mock.callCount(), 1);
   reduced = false;
@@ -205,4 +204,20 @@ test("each tray pose is a black and alpha PNG at 16 px and 32 px", () => {
     }
     assert.ok(distinct.size > 10, `${size}px: frames show different poses`);
   }
+});
+
+test("the still recording pose reads as an oat, not as a dot", async () => {
+  const { tumbleHeight, DEPTH_RATIO } = await import("../../src/helpers/oatsMarkMotion.mjs");
+  // Pinned: a change of pose is a design change (DESIGN.md, Motion).
+  assert.equal(motion.RECORDING_STILL_FRAME, 3);
+  const pose = motion.recordingTossPose(motion.RECORDING_STILL_FRAME);
+  // Face-on enough that the crease shows at full strength (render-recording-tray.mjs
+  // fades it in as cos(phi) reaches 0.35) and the grain keeps most of its length.
+  assert.ok(Math.cos(pose.phi) >= 0.35, `crease hidden: cos ${Math.cos(pose.phi)}`);
+  assert.ok(tumbleHeight(pose.phi) >= 0.85, `foreshortened: ${tumbleHeight(pose.phi)}`);
+  assert.ok(tumbleHeight(pose.phi) > DEPTH_RATIO + 0.2, "close to end-on, which reads as a dot");
+  // Not the resting oat: off the ground and more upright.
+  assert.ok(pose.hop >= maxHop * 0.5, `too low: ${pose.hop}`);
+  assert.ok(pose.lean >= 5, `tilt too close to rest: ${pose.lean}`);
+  assert.equal(pose.squash, 0);
 });

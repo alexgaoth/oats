@@ -665,3 +665,64 @@ test("a conversation's names go to Obsidian as its topic links", async () => {
   assert.match(markdown, /^topics: \["Launch date move", "sso saml"\]$/m);
   assert.match(markdown, /\[\[Launch date move\]\] · \[\[sso saml\]\]/);
 });
+
+// A topic not named yet (DESIGN.md §5): the live view draws a placeholder, not
+// the on-device word, while a name is on its way.
+const liveNode = (id, extra = {}) => ({
+  id,
+  label: `word${id}`,
+  durationMs: 120_000,
+  firstAt: id * 1000,
+  lastAt: id * 1000 + 60_000,
+  utteranceIds: [`u${id}`],
+  returns: 0,
+  state: "open",
+  ...extra,
+});
+
+test("a live topic's label is a name, a placeholder while one is on its way, or its own word", () => {
+  const snapshot = {
+    nodes: [
+      liveNode(2),
+      liveNode(1, { label: "Launch date move", deviceLabel: "launch" }),
+      liveNode(3, { state: "live" }),
+    ],
+    edges: [],
+  };
+  const asked = [];
+  const shown = naming.withNameStates(snapshot, {
+    expects: (node) => {
+      asked.push(node.id);
+      return node.id === 3;
+    },
+  });
+  const byId = new Map(shown.nodes.map((node) => [node.id, node]));
+  assert.equal(byId.get(1).nameState, "named");
+  assert.equal(byId.get(1).label, "Launch date move", "a name keeps its label");
+  assert.equal(byId.get(2).nameState, "device", "no name will come: its own word");
+  assert.equal(byId.get(3).nameState, "pending");
+  assert.deepEqual(asked.sort(), [2, 3], "a named topic is not asked about");
+  // The first topic raised, whatever the order of the nodes.
+  assert.equal(byId.get(1).opening, true);
+  assert.equal(byId.get(2).opening, undefined);
+  assert.equal(byId.get(3).opening, undefined);
+  // The snapshot given is not changed.
+  assert.equal(snapshot.nodes[0].nameState, undefined);
+  assert.equal(naming.withNameStates(null, { expects: () => true }), null);
+});
+
+test("the opening topic is the first the lanes show, and an old flag does not stay", () => {
+  // Too short for the lanes (`isKeptTopic`), so not the opening topic.
+  const blip = liveNode(1, { durationMs: 1000 });
+  const first = liveNode(2, { state: "live" });
+  const shown = naming.withNameStates({ nodes: [blip, first], edges: [] }, { expects: () => true });
+  assert.equal(shown.nodes[0].opening, undefined);
+  assert.equal(shown.nodes[1].opening, true);
+  // Same first moment: the lower id, as the lanes order them.
+  const tie = naming.withNameStates(
+    { nodes: [liveNode(5, { firstAt: 0, opening: true }), liveNode(4, { firstAt: 0 })], edges: [] },
+    { expects: () => false }
+  );
+  assert.equal(tie.nodes[0].opening, undefined, "a flag from an earlier snapshot goes");
+  assert.equal(tie.nodes[1].opening, true);
+});
