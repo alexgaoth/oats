@@ -121,9 +121,9 @@ test("switching processing does not leave the other mode's model behind", () => 
   assert.match(body, /if \(mode === "providers"\) leaveWritingDownload\(\);/);
   assert.match(
     body,
-    /if \(remembered\) chooseWritingModel\(remembered\.cleanupProvider, remembered\.cleanupModel\);/
+    /if \(remembered && \(!provider \|\| remembered\.cleanupProvider === provider\)\) \{\s*chooseWritingModel\(remembered\.cleanupProvider, remembered\.cleanupModel\);/
   );
-  assert.match(body, /else forgetWritingChoice\(\);/);
+  assert.match(body, /\} else forgetWritingChoice\(\);/);
   const forget = STORE.slice(STORE.indexOf("export function forgetWritingChoice("));
   assert.match(forget.slice(0, 400), /localStorage\.removeItem\(WRITING_MODEL_KEY\);/);
   assert.match(forget.slice(0, 400), /localStorage\.removeItem\(WRITING_PROVIDER_KEY\);/);

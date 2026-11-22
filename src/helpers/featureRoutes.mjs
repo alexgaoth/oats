@@ -30,6 +30,25 @@ export function isWritingProvider(value) {
   return WRITING_PROVIDERS.some((provider) => provider === value);
 }
 
+/** @param {RouteKeyStatus | undefined} status */
+export function isUsableFeatureKey(status) {
+  return status === "ok" || status === "limited" || status === "legacy";
+}
+
+/**
+ * The key Settings can offer for a new writing route. Keep the current
+ * provider if usable, otherwise prefer OpenAI for a new choice.
+ * @param {Provider | null} pinned
+ * @param {Partial<Record<Provider, RouteKeyStatus>>} keys
+ * @returns {Provider | null}
+ */
+export function availableWritingProvider(pinned, keys) {
+  if (pinned && isUsableFeatureKey(keys[pinned])) return pinned;
+  if (isUsableFeatureKey(keys.openai)) return "openai";
+  if (isUsableFeatureKey(keys.anthropic)) return "anthropic";
+  return null;
+}
+
 /**
  * A feature can request the cloud without being ready to use it. Only a
  * usable key for the selected provider enables that path. The local fallback
@@ -43,9 +62,7 @@ export function resolveFeatureRoute(preferences, feature, keys = {}) {
   const exception = preferences.exceptions[feature] ?? null;
   const requested = exception ?? preferences.defaultRoute;
   const provider = feature === "writing" ? (preferences.writingProvider ?? "openai") : "openai";
-  const status = keys[provider];
-  const usable = status === "ok" || status === "limited" || status === "legacy";
-  const needsKey = requested === "providers" && !usable;
+  const needsKey = requested === "providers" && !isUsableFeatureKey(keys[provider]);
   /** @type {Route} */
   const effective = needsKey ? "local" : requested;
   return {
