@@ -35,7 +35,10 @@ import type { Feature, Provider } from "../../helpers/featureRoutes.mjs";
 
 export type ProcessingMode = "local" | "providers";
 
-/** "local" or "providers" when every feature agrees, "mixed" when they differ. */
+/**
+ * The default route, where a feature with no route of its own runs. What the
+ * processing choice shows, "mixed" included, is `selectProcessingChoice`.
+ */
 export function processingMode(state: ReturnType<typeof useSettingsStore.getState>) {
   return selectProcessingMode(state);
 }
@@ -130,7 +133,11 @@ function updateWritingSide(provider?: Provider) {
   if (mode === "providers") leaveWritingDownload();
 }
 
-/** Choose the default. Uploads keep their existing independent scope. */
+/**
+ * The processing choice: every feature on this route. A feature's own route
+ * goes with it, so Settings' Mixed card closes (changeFeatureRoute). Uploads
+ * keep their existing independent scope.
+ */
 export function setProcessing(mode: ProcessingMode) {
   setFeatureRoute(mode);
   updateWritingSide();
