@@ -24,7 +24,9 @@
 // language Oats listens for, `auto` or `de` for example; English by default),
 // `noticed=1` (the download's notice was shown before),
 // `theme=light|dark`, `view=calm|words`
-// (the recording view), `flow=lanes|graph` (the flow card),
+// (the recording view somebody chose: the plain view or the details; without
+// it nothing is stored, and the app's default, the details, shows),
+// `flow=lanes|graph` (the flow card),
 // `connections=lanes|graph` (the reading view's Connections tab),
 // `describe=0` (no topic descriptions: the flow card quotes a pressed topic,
 // the look before descriptions).
@@ -56,7 +58,10 @@ export function applyDemoSettings(params) {
   set("uiLanguage", params.get("lang") || "en");
   set("uiMode", params.get("field") === "1" ? "field" : "work");
   set("theme", params.get("theme") === "dark" ? "dark" : "light");
-  set("conversationDetail", VIEWS[params.get("view")] ?? "clean");
+  // The recording view: one somebody chose with `view=`, else the app's
+  // default (conversationDetail.mjs), as for somebody who never changed it.
+  if (VIEWS[params.get("view")]) set("conversationDetail", VIEWS[params.get("view")]);
+  else localStorage.removeItem("conversationDetail");
   set("conversationFlowView", params.get("flow") === "graph" ? "graph" : "lanes");
   set("connectionsView", params.get("connections") === "graph" ? "graph" : "lanes");
   set("topicDescriptions", params.get("describe") === "0" ? "false" : "true");

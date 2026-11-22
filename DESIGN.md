@@ -200,8 +200,13 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 
 ## 5. Recording surface
 
-- **Clean (default):** keeps the status card (listening dot, clock, **Recording**,
-  **Mark** and **Stop**), the questions count, health warnings and **Show transcript**.
+- **Details (default, Alex, 2026-11-22):** a recording opens on the status card
+  (listening dot, clock, **Recording**, **Mark** and **Stop**), the questions
+  count, health warnings, the contour, the conversation flow and the
+  **Questions** / **Transcript** tabs, with Questions first and chosen.
+  **Hide details** goes to the plain view.
+- **Plain view (Clean):** keeps the status card, the questions count, health
+  warnings and **Expand details**.
   Below the warnings, one list shows eligible questions as said, with their
   reply states. It shows every question without an answer, then the three most
   recent answered questions. The newest question in each set is at the bottom.
@@ -270,17 +275,29 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   back to the on-device topics, named as above. The record keeps the on-device
   cut at Finish, with the check's names carried over by the lines they were
   given from, and the writing model names the rest.
-- **Words:** **Show transcript** reveals the contour, conversation flow and
-  Transcript / Questions tabs. The Questions tab keeps the full question rail,
-  including questions not shown in Clean. **Hide details** returns to Clean.
-  The flow card yields height to the detail (at most 40% of the column) and scrolls inside.
+- **Hide details and Expand details:** one disclosure button under the
+  contour, so it carries a chevron (up to hide, down to expand), not a close
+  mark. **Hide details** goes to the plain view. **Expand details** brings
+  back the contour, the conversation flow and the Questions / Transcript tabs,
+  on the tab the person had. The Questions tab keeps the full question rail,
+  including questions not shown in the plain view.
+  The flow card yields height to the detail (at most 34% of the column) and scrolls inside.
   These controls name the action rather than asking someone to interpret
-  "Calm" and "Words". The questions count is already present, so it opens its
-  own detail without another toolbar button. Speech never reveals a detail
-  automatically. The question rail stays mounted and announces in every view.
+  "Calm" and "Words". The questions count is already present, so it opens the
+  details on Questions without another toolbar button. Speech never changes
+  the view. A stored choice wins over the default, and it is stored only when
+  somebody presses the button. The question rail stays mounted and announces
+  in every view.
   The previous composition remains available for design comparison with the
   development query `recordingControls=classic` or a build made with
   `VITE_OATS_RECORDING_CONTROLS=classic`, not as another Settings choice.
+- **The change is one movement** (`conversation/useDetailChange.ts`,
+  `.oats-detail-reveal` in `index.css`): the contour and the flow card open
+  and close in height and opacity over `--motion-base` (`--ease-oats`). The
+  question lists hand over rather than cross-fade: the leaving list fades out
+  in the first 40% of the movement, and only then does the arriving one fade
+  in, so two lists of text never show over each other. The status card's top
+  line does not move. Under reduced motion the view changes at once.
 - Health warnings (silent microphone, not saving, not transcribing) are alerts
   directly under the status card, so a busy conversation can never push them away.
 - **Lag** (`conversation/TranscriptLagBadge.tsx`): nothing while the text keeps

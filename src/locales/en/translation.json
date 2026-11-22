@@ -2031,7 +2031,7 @@
       "openQuestions": "Open questions",
       "noOpenQuestions": "No open questions in the stored events.",
       "questionsUnknown": "Question counts were not stored for this conversation.",
-      "showTranscript": "Show transcript",
+      "expandDetails": "Expand details",
       "hideDetails": "Hide details",
       "transcriptTab": "Transcript",
       "questionsTab": "Questions"
