@@ -22,7 +22,8 @@ const deactivated = {
 const restricted = {
   error: {
     code: null,
-    message: "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
+    message:
+      "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
   },
 };
 

@@ -4,9 +4,8 @@ const assert = require("node:assert/strict");
 let DEFAULT_UI_MODE, resolveUiMode, toggleUiMode, isFieldMode;
 
 test.before(async () => {
-  ({ DEFAULT_UI_MODE, resolveUiMode, toggleUiMode, isFieldMode } = await import(
-    "../../src/helpers/uiMode.mjs"
-  ));
+  ({ DEFAULT_UI_MODE, resolveUiMode, toggleUiMode, isFieldMode } =
+    await import("../../src/helpers/uiMode.mjs"));
 });
 
 test("an unknown stored mode resolves to the ledger, not to nothing", () => {

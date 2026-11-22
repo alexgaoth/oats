@@ -3,7 +3,12 @@ const assert = require("node:assert/strict");
 
 const load = () => import("../../src/utils/summaryReadiness.ts");
 
-const LOCAL = { mode: "local", model: "qwen3.5-4b-q4_k_m", remoteUrl: "", localModelDownloaded: true };
+const LOCAL = {
+  mode: "local",
+  model: "qwen3.5-4b-q4_k_m",
+  remoteUrl: "",
+  localModelDownloaded: true,
+};
 
 test("a downloaded local model is ready", async () => {
   const { summaryReadiness } = await load();
@@ -30,7 +35,12 @@ test("a local model that could not be checked is unknown, not missing", async ()
 test("a provider needs a model, not a download", async () => {
   const { summaryReadiness } = await load();
   assert.equal(
-    summaryReadiness({ mode: "providers", model: "gpt-5-mini", remoteUrl: "", localModelDownloaded: null }),
+    summaryReadiness({
+      mode: "providers",
+      model: "gpt-5-mini",
+      remoteUrl: "",
+      localModelDownloaded: null,
+    }),
     "ready"
   );
   assert.equal(
@@ -42,18 +52,33 @@ test("a provider needs a model, not a download", async () => {
 test("a self-hosted endpoint needs its address", async () => {
   const { summaryReadiness } = await load();
   assert.equal(
-    summaryReadiness({ mode: "self-hosted", model: "", remoteUrl: "http://10.0.0.2:8080", localModelDownloaded: null }),
+    summaryReadiness({
+      mode: "self-hosted",
+      model: "",
+      remoteUrl: "http://10.0.0.2:8080",
+      localModelDownloaded: null,
+    }),
     "ready"
   );
   assert.equal(
-    summaryReadiness({ mode: "self-hosted", model: "x", remoteUrl: " ", localModelDownloaded: null }),
+    summaryReadiness({
+      mode: "self-hosted",
+      model: "x",
+      remoteUrl: " ",
+      localModelDownloaded: null,
+    }),
     "no-endpoint"
   );
 });
 
 test("a provider without its key is not ready; one that needs none, or could not be told, is", async () => {
   const { summaryReadiness } = await load();
-  const providers = { mode: "providers", model: "gpt-6.1-sol", remoteUrl: "", localModelDownloaded: null };
+  const providers = {
+    mode: "providers",
+    model: "gpt-6.1-sol",
+    remoteUrl: "",
+    localModelDownloaded: null,
+  };
   assert.equal(summaryReadiness({ ...providers, providerKey: false }), "no-key");
   assert.equal(summaryReadiness({ ...providers, providerKey: true }), "ready");
   assert.equal(summaryReadiness({ ...providers, providerKey: null }), "ready");

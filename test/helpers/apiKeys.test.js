@@ -13,7 +13,16 @@ test.before(async () => {
 // Fake records: ids main would make, tails of fake keys. No secret anywhere.
 const id = (n) => `k${String(n).padStart(16, "0")}`;
 function key(n, provider, fields = {}) {
-  return { id: id(n), provider, name: "", number: n, tail: `ta${n}x`.slice(-4), addedAt: n, status: null, ...fields };
+  return {
+    id: id(n),
+    provider,
+    name: "",
+    number: n,
+    tail: `ta${n}x`.slice(-4),
+    addedAt: n,
+    status: null,
+    ...fields,
+  };
 }
 function records(list, features = {}) {
   return keys.normalizeKeyRecords({ keys: list, features });
@@ -51,7 +60,13 @@ test("default names count per provider: one more than the highest a default name
   // A name the person typed that reads as a default name uses its number.
   assert.equal(nextName("OpenAI", ["  OpenAI key 4  "]), "OpenAI key 5");
   // Near misses are not default names.
-  for (const name of ["OpenAI key", "OpenAI key x", "OpenAI key 2b", "openai key 9", "OpenAI key -3"]) {
+  for (const name of [
+    "OpenAI key",
+    "OpenAI key x",
+    "OpenAI key 2b",
+    "openai key 9",
+    "OpenAI key -3",
+  ]) {
     assert.equal(nextName("OpenAI", [name]), "OpenAI key 1", name);
   }
 });
@@ -62,7 +77,13 @@ test("default names follow the language the interface is in", () => {
   const suffixed = (provider) => (number) => `Clé ${number} (${provider})`;
   assert.equal(nextName("OpenAI", ["Clé 3 (OpenAI)"], suffixed), "Clé 4 (OpenAI)");
   // A format with no number in it starts at 1.
-  assert.equal(keys.nextDefaultNumber(["OpenAI key 1"], keys.defaultNameParts(() => "x")), 1);
+  assert.equal(
+    keys.nextDefaultNumber(
+      ["OpenAI key 1"],
+      keys.defaultNameParts(() => "x")
+    ),
+    1
+  );
 });
 
 test("a feature uses its chosen key, else its provider's oldest usable key", () => {
@@ -133,7 +154,11 @@ test("a first OpenAI key is chosen for every feature it can serve", () => {
 });
 
 test("a second key takes only what has no usable key, or what it was added for", () => {
-  const one = records([key(1, "openai")], { conversations: id(1), dictation: id(1), writing: id(1) });
+  const one = records([key(1, "openai")], {
+    conversations: id(1),
+    dictation: id(1),
+    writing: id(1),
+  });
   assert.deepEqual(keys.featuresForNewKey(one, "openai", { writingProvider: "openai" }), []);
   assert.deepEqual(
     keys.featuresForNewKey(one, "openai", { forFeature: "writing", writingProvider: "openai" }),
@@ -197,7 +222,11 @@ test("Writing moves to the other provider's usable key when its own has none lef
 
 test("a refused key is not where a removed key's features go", () => {
   const list = records(
-    [key(1, "openai"), key(2, "openai", { status: "rejected" }), key(3, "anthropic", { status: "unknown" })],
+    [
+      key(1, "openai"),
+      key(2, "openai", { status: "rejected" }),
+      key(3, "anthropic", { status: "unknown" }),
+    ],
     { conversations: id(1), dictation: id(1), writing: id(1) }
   );
   const plan = keys.removalPlan(list, id(1), "openai");
@@ -312,7 +341,14 @@ test("a key's name is one line, at most 64 characters", () => {
 test("only ids main makes pass", () => {
   assert.equal(keys.isKeyId(id(1)), true);
   assert.equal(keys.isKeyId("k3f9a0c1e2b4d5f60"), true);
-  for (const bad of ["", "k123", "K0000000000000001", "k000000000000000g", "../k0000000000000001", 7]) {
+  for (const bad of [
+    "",
+    "k123",
+    "K0000000000000001",
+    "k000000000000000g",
+    "../k0000000000000001",
+    7,
+  ]) {
     assert.equal(keys.isKeyId(bad), false, String(bad));
   }
 });
@@ -322,7 +358,8 @@ test("the key store keeps nothing in localStorage and logs no secret", () => {
   const path = require("node:path");
   const read = (file) => fs.readFileSync(path.join(__dirname, "..", "..", file), "utf8");
   // The records come from main and stay in memory; the secrets stay in main.
-  const storage = /\b(?:local|session)Storage\s*(?:\.\s*(?:setItem|getItem|removeItem|clear|key)\b|\[)/;
+  const storage =
+    /\b(?:local|session)Storage\s*(?:\.\s*(?:setItem|getItem|removeItem|clear|key)\b|\[)/;
   for (const file of ["src/stores/apiKeys.ts", "src/helpers/apiKeys.mjs"]) {
     assert.doesNotMatch(read(file), storage, file);
   }

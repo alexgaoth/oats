@@ -208,6 +208,14 @@ export function ProviderKeyField({
     event.preventDefault();
     void commit();
   };
+  // Enter saves from either field, with Save or without it (setup's step, where
+  // Continue is the button): a form with two fields and no submit button would
+  // not submit on Enter by itself.
+  const submitOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    void commit();
+  };
 
   const pages =
     provider === "any" ? ["openai", "anthropic"] : KEY_PAGES[provider] ? [provider] : [];
@@ -261,72 +269,87 @@ export function ProviderKeyField({
 
   return (
     <div className={className}>
-      <form onSubmit={save} className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="relative">
-            <KeyRound
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              id={fieldId}
-              type="password"
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                onDraftChange?.(event.target.value);
-                if (message?.tone === "danger") setMessage(null);
-              }}
-              placeholder={
-                provider === "any"
-                  ? t("oats.keys.placeholderAny")
-                  : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
-              }
-              aria-label={
-                provider === "any"
-                  ? t("oats.keys.placeholderAny")
-                  : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
-              }
-              aria-describedby={message ? messageId : undefined}
-              aria-invalid={message?.tone === "danger" || undefined}
-              autoComplete="off"
-              spellCheck={false}
-              autoFocus={autoFocus}
-              // The key is an identifier, so it is mono; the hint is prose.
-              className={cn("pl-9 text-[13px]", draft && "font-mono")}
-            />
-          </div>
-          {checked && (
-            <div className="mt-3">
-              <label
-                htmlFor={nameId}
-                className="mb-1.5 block text-[13px] font-medium text-foreground"
-              >
-                {t("oats.keys.name")}{" "}
-                <span className="font-normal text-muted-foreground">{t("oats.keys.optional")}</span>
-              </label>
-              <Input
-                id={nameId}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder={nameHint}
-                maxLength={KEY_NAME_MAX}
-                autoComplete="off"
-                spellCheck={false}
-                className="text-[13px]"
-              />
-            </div>
-          )}
+      {/* The fields first, then what saves them (Alex, 2026-11-22): the key, its
+          optional name, and Save at the end of the name's line, or on a line
+          of its own, at the right, for a key that takes no name. Enter in
+          either field saves, also in setup, where there is no Save. */}
+      <form onSubmit={save}>
+        <div className="relative">
+          <KeyRound
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            id={fieldId}
+            type="password"
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              onDraftChange?.(event.target.value);
+              if (message?.tone === "danger") setMessage(null);
+            }}
+            onKeyDown={submitOnEnter}
+            placeholder={
+              provider === "any"
+                ? t("oats.keys.placeholderAny")
+                : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
+            }
+            aria-label={
+              provider === "any"
+                ? t("oats.keys.placeholderAny")
+                : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
+            }
+            aria-describedby={message ? messageId : undefined}
+            aria-invalid={message?.tone === "danger" || undefined}
+            autoComplete="off"
+            spellCheck={false}
+            autoFocus={autoFocus}
+            // The key is an identifier, so it is mono; the hint is prose.
+            className={cn("pl-9 text-[13px]", draft && "font-mono")}
+          />
         </div>
-        {showSave && (
-          <Button type="submit" variant="outline" disabled={!draft.trim() || checking}>
-            {checking ? (
-              <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
-            ) : (
-              <Check aria-hidden="true" />
+        {(checked || showSave) && (
+          <div className="mt-3 flex items-end gap-2">
+            {checked && (
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor={nameId}
+                  className="mb-1.5 block text-[13px] font-medium text-foreground"
+                >
+                  {t("oats.keys.name")}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    {t("oats.keys.optional")}
+                  </span>
+                </label>
+                <Input
+                  id={nameId}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  onKeyDown={submitOnEnter}
+                  placeholder={nameHint}
+                  maxLength={KEY_NAME_MAX}
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="text-[13px]"
+                />
+              </div>
             )}
-            {t("common.save")}
-          </Button>
+            {showSave && (
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={!draft.trim() || checking}
+                className={cn(!checked && "ml-auto")}
+              >
+                {checking ? (
+                  <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
+                ) : (
+                  <Check aria-hidden="true" />
+                )}
+                {t("common.save")}
+              </Button>
+            )}
+          </div>
         )}
       </form>
       <p

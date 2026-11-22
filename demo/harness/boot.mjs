@@ -73,6 +73,7 @@ const writingModel =
       : "qwen3.5-4b-q4_k_m";
 const downloadAt = params.get("loop") === "1" ? null : params.get("download");
 
+const keyEntries = (params.get("keys") ?? "").split(",").map((entry) => entry.trim());
 const main = createFakeMain({
   fixtures: empty || many ? [] : live ? supporting : [mainFixture, ...supporting],
   example: mainFixture,
@@ -82,9 +83,17 @@ const main = createFakeMain({
   // The context check's agent (`agent=1`, with `check=1`): see context.mjs.
   agent: params.get("agent") === "1",
   // OpenAI as the writing model (`loop=1`): a key for the stand-in, which
-  // never leaves the page. `keys=` stores the keys a person added.
-  openai: params.get("loop") === "1" || (params.get("keys") ?? "").includes("openai"),
-  anthropic: (params.get("keys") ?? "").includes("anthropic"),
+  // never leaves the page. `keys=` stores the keys a person added: one per
+  // provider named in it, as from before keys had names, and after them each
+  // `provider:Name` as a key with that name (`keys=openai,openai:Work,anthropic`).
+  openai: params.get("loop") === "1" || keyEntries.includes("openai"),
+  anthropic: keyEntries.includes("anthropic"),
+  namedKeys: keyEntries
+    .filter((entry) => /^(openai|anthropic):./.test(entry))
+    .map((entry) => ({
+      provider: entry.slice(0, entry.indexOf(":")),
+      name: entry.slice(entry.indexOf(":") + 1),
+    })),
   missingModels: downloadAt === null ? [] : [writingModel],
   // What main measured, for the sidebar foot (`footer=small.en`): that speech
   // model loaded on Metal, and nothing sent since launch. The site's

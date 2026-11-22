@@ -48,7 +48,10 @@ test("two conversations that share a title and a day do not overwrite each other
   vault.write(1, "2026-08-25 Standup.md", note(1, "first standup"));
   const second = vault.write(2, "2026-08-25 Standup.md", note(2, "second standup"));
   assert.equal(second.success, true);
-  assert.deepEqual(fs.readdirSync(dir).sort(), ["2026-08-25 Standup 2.md", "2026-08-25 Standup.md"]);
+  assert.deepEqual(fs.readdirSync(dir).sort(), [
+    "2026-08-25 Standup 2.md",
+    "2026-08-25 Standup.md",
+  ]);
   assert.match(fs.readFileSync(path.join(dir, "2026-08-25 Standup.md"), "utf8"), /first standup/);
   // And the second conversation keeps its own file on every later update.
   vault.write(2, "2026-08-25 Standup.md", note(2, "second standup, revised"));

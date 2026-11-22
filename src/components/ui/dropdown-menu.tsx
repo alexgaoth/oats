@@ -197,6 +197,20 @@ function DropdownMenuSeparator({
   );
 }
 
+// A menu's heading: what its items choose ("Key for Writing"). Not an item.
+function DropdownMenuLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Label>) {
+  return (
+    <DropdownMenuPrimitive.Label
+      data-slot="dropdown-menu-label"
+      className={cn("px-2 pb-1 pt-1.5 text-xs font-medium text-muted-foreground", className)}
+      {...props}
+    />
+  );
+}
+
 // An item's keyboard shortcut, at its right edge, the way macOS menus set it.
 function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"span">) {
   return (
@@ -213,6 +227,7 @@ export {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSub,

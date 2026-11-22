@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
@@ -9,6 +9,7 @@ import {
   Download,
   KeyRound,
   Loader2,
+  Plus,
   RotateCcw,
   X,
 } from "lucide-react";
@@ -16,19 +17,31 @@ import { useShallow } from "zustand/react/shallow";
 import { cn } from "../lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { ProviderKeyField } from "./ProviderKeyField";
 import { featureRouteName } from "./featureRouteCopy";
 import { setFeatureProcessing, type ProcessingMode } from "./processing";
 import type { Feature } from "../../helpers/featureRoutes.mjs";
-import { isUsableFeatureKey } from "../../helpers/featureRoutes.mjs";
+import { isKeyProvider, keyUsable } from "../../helpers/apiKeys.mjs";
+import {
+  chooseFeatureKey,
+  KEY_PROVIDER_NAMES,
+  selectFeatureKey,
+  selectKeyOptions,
+  selectSavedKeys,
+  type KeyOption,
+  type SavedKey,
+} from "../../stores/apiKeys";
 import {
   followRecommendedWhisper,
   forgetWritingChoice,
@@ -38,7 +51,6 @@ import {
   selectResolvedMeetingTranscription,
   setRoomSpeechPreference,
   useSettingsStore,
-  type SettingsState,
 } from "../../stores/settingsStore";
 import { useDeviceTierStore } from "../../stores/deviceTierStore";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
@@ -118,7 +130,8 @@ export function FeatureModelRow({
 type KeyProvider = "any" | "openai" | "anthropic";
 
 export type ModelStatus =
-  | { kind: "ready"; key?: string }
+  /** `key`: the key it uses on the API-key route, by name; `keyed`: a named key, so its menu. */
+  | { kind: "ready"; key?: string; keyed?: boolean }
   | { kind: "refused"; key: string }
   | {
       kind: "downloading";
@@ -134,8 +147,11 @@ export type ModelStatus =
 interface RowModel {
   /** The model as people say it: "Whisper Turbo", "GPT Transcribe". */
   model: string;
-  /** Where it runs; "until-key" runs on this Mac until a key is added. */
-  place: "local" | "providers" | "until-key";
+  /**
+   * Where it runs. "until-key" runs on this Mac until a key is added;
+   * "until-works" until its key, which the provider refused, works again.
+   */
+  place: "local" | "providers" | "until-key" | "until-works";
   /** For "until-key": whose key ("OpenAI", "OpenAI or Anthropic"). */
   provider?: string;
   status: ModelStatus;
@@ -157,12 +173,15 @@ function cloudSpeechName(id: string): string {
   return getTranscriptionProvider("openai")?.models.find((model) => model.id === id)?.name ?? id;
 }
 
-/** A key that is there but that its provider refused: the row says so, in warning. */
-function refusedKey(state: SettingsState, provider: "openai" | "anthropic") {
-  const present = Boolean(
-    (provider === "openai" ? state.openaiApiKey : state.anthropicApiKey).trim()
-  );
-  return present && !isUsableFeatureKey(state.featureKeyStatus[provider] ?? "legacy");
+/**
+ * The status of a feature on the API-key route: Ready with its key, by name,
+ * or the key refused; with no key at all, Add API key (for `provider`).
+ */
+function keyStatus(key: SavedKey | null, provider: KeyProvider): ModelStatus {
+  if (!key) return { kind: "add-key", provider };
+  return keyUsable(key.status)
+    ? { kind: "ready", key: key.name, keyed: true }
+    : { kind: "refused", key: key.name };
 }
 
 /** AMI replay (docs/dictation-accuracy.md) and AMI summary eval (docs/summaries.md). */
@@ -187,7 +206,7 @@ function SpeechRow({
 }) {
   const { t, i18n } = useTranslation();
   const route = useSettingsStore(useShallow((state) => selectFeatureRoute(state, feature)));
-  const { engine, whisperModel, parakeetModel, cloudModel, language, refused } = useSettingsStore(
+  const { engine, whisperModel, parakeetModel, cloudModel, language, key } = useSettingsStore(
     useShallow((state) => ({
       engine: state.localTranscriptionProvider,
       whisperModel: state.whisperModel,
@@ -197,7 +216,7 @@ function SpeechRow({
           ? selectResolvedMeetingTranscription(state).cloudTranscriptionModel
           : selectDictationSettings(state).cloudTranscriptionModel,
       language: state.preferredLanguage,
-      refused: refusedKey(state, "openai"),
+      key: selectFeatureKey(state, feature),
     }))
   );
   const tier = useSpeechTier();
@@ -224,7 +243,6 @@ function SpeechRow({
       : engine === "nvidia"
         ? (PARAKEET_MODEL_INFO[parakeetModel]?.name ?? "Parakeet")
         : whisperName(roomModel || whisperModel);
-  const keyLabel = t("oats.models.providerKey", { provider: "OpenAI" });
   if (route.effective === "providers") {
     // A conversation streams, so it takes OpenAI's realtime default when the
     // chosen model cannot (meetingRecordingStore).
@@ -234,19 +252,13 @@ function SpeechRow({
       feature === "conversations"
         ? (streaming.find((item) => item.id === cloudModel)?.id ?? "gpt-transcribe")
         : cloudModel;
-    row = {
-      model: cloudSpeechName(id),
-      place: "providers",
-      status: { kind: "ready", key: keyLabel },
-    };
+    row = { model: cloudSpeechName(id), place: "providers", status: keyStatus(key, "openai") };
   } else if (route.needsKey) {
     row = {
       model: localName,
-      place: "until-key",
+      place: key ? "until-works" : "until-key",
       provider: "OpenAI",
-      status: refused
-        ? { kind: "refused", key: keyLabel }
-        : { kind: "add-key", provider: "openai" },
+      status: keyStatus(key, "openai"),
     };
   } else {
     row = { model: localName, place: "local", status: { kind: "ready" } };
@@ -332,39 +344,33 @@ function WritingRow({ upgrade, menus }: { upgrade: boolean; menus: boolean }) {
   const report = useDeviceTierStore((state) => state.tier?.writing);
   const route = useSettingsStore(useShallow((state) => selectFeatureRoute(state, "writing")));
   const pinned = useSettingsStore((state) => state.featurePreferences.writingProvider);
-  const refused = useSettingsStore((state) =>
-    route.provider === "openai" || route.provider === "anthropic"
-      ? refusedKey(state, route.provider)
-      : false
-  );
+  const key = useSettingsStore((state) => selectFeatureKey(state, "writing"));
 
   let row: RowModel;
   if (route.effective === "providers") {
     row = {
       model: writing.name,
       place: "providers",
-      status: {
-        kind: "ready",
-        key: t("oats.models.providerKey", { provider: writing.providerName }),
-      },
+      // A provider whose keys have no names (Gemini, Groq) has no key menu.
+      status:
+        key || isKeyProvider(route.provider)
+          ? keyStatus(key, "any")
+          : {
+              kind: "ready",
+              key: t("oats.models.providerKey", { provider: writing.providerName }),
+            },
     };
   } else if (route.needsKey) {
     const provider = route.provider ?? "openai";
-    const keyProvider: KeyProvider =
-      !pinned || (provider !== "openai" && provider !== "anthropic") ? "any" : provider;
     row = {
       model: writing.status === "ready" ? writing.name : t("oats.models.noModel"),
-      place: "until-key",
+      place: key ? "until-works" : "until-key",
       provider:
-        keyProvider === "any"
+        !pinned || !isKeyProvider(provider)
           ? t("oats.featureRoutes.writingKeyProviders")
           : getProviderDisplayName(provider),
-      status: refused
-        ? {
-            kind: "refused",
-            key: t("oats.models.providerKey", { provider: getProviderDisplayName(provider) }),
-          }
-        : { kind: "add-key", provider: keyProvider },
+      // Writing takes either provider's key, so a key added here may be either.
+      status: keyStatus(key, "any"),
     };
   } else {
     const target = upgrade ? LARGE_WRITING_MODEL : writing.model;
@@ -436,11 +442,15 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
             mac
               ? "oats.featureRoutes.placeUntilKeyMac"
               : "oats.featureRoutes.placeUntilKeyComputer",
-            {
-              provider: row.provider,
-            }
+            { provider: row.provider }
           )
-        : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
+        : row.place === "until-works"
+          ? t(
+              mac
+                ? "oats.featureRoutes.placeUntilWorksMac"
+                : "oats.featureRoutes.placeUntilWorksComputer"
+            )
+          : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
   const Offer = row.offer?.icon;
   return (
     <section aria-labelledby={titleId} data-feature-row={feature} className="px-5 py-3.5">
@@ -467,6 +477,7 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
           <StatusView
             status={row.status}
             model={row.model}
+            feature={feature}
             name={name}
             menus={menus}
             focusAfterKey={() => placeButton.current?.focus()}
@@ -510,10 +521,14 @@ function PlaceMenu({
   const reasonId = useId();
   const mac = getCachedPlatform() === "darwin";
   const requested = useSettingsStore((state) => selectFeatureRoute(state, feature).requested);
-  const noSpeechKey = useSettingsStore(
-    (state) =>
-      feature !== "writing" && !state.openaiApiKey.trim() && Boolean(state.anthropicApiKey.trim())
-  );
+  const noSpeechKey = useSettingsStore((state) => {
+    if (feature === "writing") return false;
+    const keys = selectSavedKeys(state);
+    return (
+      !keys.some((key) => key.provider === "openai") &&
+      keys.some((key) => key.provider === "anthropic")
+    );
+  });
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -569,14 +584,16 @@ function PlaceMenu({
 function StatusView({
   status,
   model,
+  feature,
   name,
   menus,
   focusAfterKey,
 }: {
   status: ModelStatus;
   model: string;
+  feature: Feature;
   name: string;
-  /** Settings: Cancel beside a download. Setup shows the download only. */
+  /** Settings: Cancel beside a download and the key menu. Setup shows the status only. */
   menus: boolean;
   focusAfterKey: () => void;
 }) {
@@ -600,18 +617,32 @@ function StatusView({
       <span className="sr-only" aria-live="polite">
         {said}
       </span>
-      {status.kind === "ready" && (
-        <Badge variant="success" data-status="ready">
-          <Check aria-hidden="true" />
-          {status.key ? t("oats.models.readyWithKey", { key: status.key }) : t("oats.models.ready")}
-        </Badge>
-      )}
-      {status.kind === "refused" && (
-        <Badge variant="warning" data-status="refused">
-          <AlertTriangle aria-hidden="true" />
-          {t("oats.models.keyRefused", { key: status.key })}
-        </Badge>
-      )}
+      {status.kind === "ready" &&
+        (menus && status.keyed ? (
+          <KeyMenu feature={feature} name={name} tone="success" onDone={focusAfterKey}>
+            <Check aria-hidden="true" />
+            {t("oats.models.readyWithKey", { key: status.key })}
+          </KeyMenu>
+        ) : (
+          <Badge variant="success" data-status="ready">
+            <Check aria-hidden="true" />
+            {status.key
+              ? t("oats.models.readyWithKey", { key: status.key })
+              : t("oats.models.ready")}
+          </Badge>
+        ))}
+      {status.kind === "refused" &&
+        (menus ? (
+          <KeyMenu feature={feature} name={name} tone="warning" onDone={focusAfterKey}>
+            <AlertTriangle aria-hidden="true" />
+            {t("oats.models.keyRefused", { key: status.key })}
+          </KeyMenu>
+        ) : (
+          <Badge variant="warning" data-status="refused">
+            <AlertTriangle aria-hidden="true" />
+            {t("oats.models.keyRefused", { key: status.key })}
+          </Badge>
+        ))}
       {status.kind === "checking" && (
         <Badge variant="secondary" data-status="checking">
           <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
@@ -667,43 +698,195 @@ function StatusView({
         </Button>
       )}
       {status.kind === "add-key" && (
-        <AddKey provider={status.provider} name={name} onDone={focusAfterKey} />
+        <AddKey provider={status.provider} feature={feature} name={name} onDone={focusAfterKey} />
       )}
     </>
   );
 }
 
-/** Add API key, in place: the key field in a dialog, for the provider the row needs. */
+/**
+ * The key a feature uses, as the green pill it shows ("✓ Ready · OpenAI key 1
+ * ⌄"), or the warning one when the provider refused it; pressing it opens the
+ * key menu (Alex, 2026-11-22). The menu lists every saved key with its
+ * provider and last four characters, the current one checked; a key that
+ * cannot serve the feature (an Anthropic key for speech, a refused key) is
+ * there but off, with the reason under it. Add API key… adds a key for this
+ * feature, which then uses it.
+ */
+function KeyMenu({
+  feature,
+  name,
+  tone,
+  onDone,
+  children,
+}: {
+  feature: Feature;
+  name: string;
+  tone: "success" | "warning";
+  onDone: () => void;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [adding, setAdding] = useState(false);
+  const options = useSettingsStore((state) => selectKeyOptions(state, feature));
+  const current = useSettingsStore((state) => selectFeatureKey(state, feature)?.id ?? "");
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            ref={trigger}
+            type="button"
+            data-status={tone === "success" ? "ready" : "refused"}
+            data-key-pill
+            className={cn(
+              "inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium outline-none",
+              "transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/50 [&>svg]:size-3",
+              tone === "success"
+                ? "bg-success/10 text-success hover:bg-success/15 data-[state=open]:bg-success/15 dark:bg-success/15 dark:hover:bg-success/20"
+                : "bg-warning/10 text-warning hover:bg-warning/15 data-[state=open]:bg-warning/15 dark:bg-warning/15 dark:hover:bg-warning/20"
+            )}
+          >
+            {children}
+            <ChevronDown aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="oats-surface w-72">
+          <DropdownMenuLabel>{t("oats.keys.keyFor", { feature: name })}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={current}
+            onValueChange={(id) => {
+              if (id !== current) chooseFeatureKey(feature, id);
+            }}
+          >
+            {options.map((option) => (
+              <KeyOptionItem key={option.id} option={option} current={option.id === current} />
+            ))}
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelectAfterClose={() => setAdding(true)} data-add-key>
+            <Plus aria-hidden="true" />
+            {t("oats.keys.addEllipsis")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AddKeyDialog
+        open={adding}
+        onOpenChange={setAdding}
+        provider={feature === "writing" ? "any" : "openai"}
+        feature={feature}
+        onClosed={() => (trigger.current ? trigger.current.focus() : onDone())}
+      />
+    </>
+  );
+}
+
+/** One saved key in a feature's key menu: its name, its provider and last four, why it is off. */
+function KeyOptionItem({ option, current }: { option: KeyOption; current: boolean }) {
+  const { t } = useTranslation();
+  const reasonId = useId();
+  const reason =
+    option.reason === "no-speech"
+      ? t("oats.keys.reasonNoSpeech")
+      : option.reason === "refused"
+        ? t("oats.keys.reasonRefused", { provider: KEY_PROVIDER_NAMES[option.provider] })
+        : null;
+  return (
+    <>
+      <DropdownMenuRadioItem
+        value={option.id}
+        disabled={!option.usable && !current}
+        aria-describedby={reason ? reasonId : undefined}
+        data-key-option={option.name}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate">{option.name}</span>
+          <span className="block text-xs text-muted-foreground">
+            {KEY_PROVIDER_NAMES[option.provider]}{" "}
+            <span className="font-mono tabular-nums">••••{option.tail}</span>
+          </span>
+        </span>
+      </DropdownMenuRadioItem>
+      {reason && (
+        <p
+          id={reasonId}
+          data-key-reason
+          className="pb-1.5 pl-8 pr-2 text-xs leading-4 text-muted-foreground"
+        >
+          {reason}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** Add API key, in place, for a feature with no key: the new key is chosen for it. */
 function AddKey({
   provider,
+  feature,
   name,
   onDone,
 }: {
   provider: KeyProvider;
+  feature: Feature;
   name: string;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
   const label = t("apiKeyInput.add");
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" aria-label={`${name}: ${label}`} data-status="add-key">
-          <KeyRound aria-hidden="true" />
-          {label}
-        </Button>
-      </DialogTrigger>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-label={`${name}: ${label}`}
+        data-status="add-key"
+        onClick={() => setOpen(true)}
+      >
+        <KeyRound aria-hidden="true" />
+        {label}
+      </Button>
+      {/* Once the key is saved the row is Ready, and this button is gone. */}
+      <AddKeyDialog
+        open={open}
+        onOpenChange={setOpen}
+        provider={provider}
+        feature={feature}
+        onClosed={onDone}
+      />
+    </>
+  );
+}
+
+/** The key field in a dialog, for one feature (`forFeature`): the key it adds is that feature's. */
+function AddKeyDialog({
+  open,
+  onOpenChange,
+  provider,
+  feature,
+  onClosed,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  provider: KeyProvider;
+  feature: Feature;
+  onClosed: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         aria-describedby={undefined}
         className="oats-surface motion-reduce:animate-none"
         onCloseAutoFocus={(event) => {
-          // Once the key is saved the row is Ready, and this button is gone.
           event.preventDefault();
-          onDone();
+          onClosed();
         }}
       >
-        <DialogTitle>{label}</DialogTitle>
-        <ProviderKeyField provider={provider} />
+        <DialogTitle>{t("apiKeyInput.add")}</DialogTitle>
+        <ProviderKeyField provider={provider} forFeature={feature} autoFocus />
       </DialogContent>
     </Dialog>
   );

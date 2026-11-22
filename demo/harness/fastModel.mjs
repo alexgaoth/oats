@@ -126,7 +126,9 @@ export function installFakeKeyCheck() {
     // OpenAI's own answers: an invalid key, and a restricted key that may not
     // read models (helpers/keyStatus.mjs refuses only the first).
     if (auth.includes("bad")) {
-      return reply(401, { error: { message: "Incorrect API key provided.", code: "invalid_api_key" } });
+      return reply(401, {
+        error: { message: "Incorrect API key provided.", code: "invalid_api_key" },
+      });
     }
     if (auth.includes("deactivated")) {
       return reply(401, {
@@ -139,7 +141,8 @@ export function installFakeKeyCheck() {
     if (auth.includes("limited")) {
       return reply(401, {
         error: {
-          message: "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
+          message:
+            "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
           code: null,
         },
       });

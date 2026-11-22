@@ -13,7 +13,8 @@ const Module = require("module");
 // path. Every secret here is a fake.
 
 const tmpUserData = fs.mkdtempSync(path.join(os.tmpdir(), "oats-keys-test-"));
-const scramble = (text) => Buffer.from(`fake:${Buffer.from(text, "utf8").toString("base64")}`).reverse();
+const scramble = (text) =>
+  Buffer.from(`fake:${Buffer.from(text, "utf8").toString("base64")}`).reverse();
 const unscramble = (buffer) => {
   const text = Buffer.from(buffer).reverse().toString("utf8");
   if (!text.startsWith("fake:")) throw new Error("not a fake blob");
@@ -39,7 +40,10 @@ const origLoad = Module._load;
 Module._load = function (request, parent, ...rest) {
   if (request === "electron") return fakeElectron;
   if (request === "@napi-rs/keyring") throw new Error("keyring disabled in tests");
-  if (request === "./debugLogger" && String(parent?.filename).includes(`${path.sep}helpers${path.sep}`)) {
+  if (
+    request === "./debugLogger" &&
+    String(parent?.filename).includes(`${path.sep}helpers${path.sep}`)
+  ) {
     return fakeLogger;
   }
   return origLoad.call(this, request, parent, ...rest);
@@ -57,7 +61,11 @@ const SECRETS = [OPENAI_ONE, OPENAI_TWO, OPENAI_THREE, ANTHROPIC_ONE];
 
 const dir = path.join(tmpUserData, "secure-keys");
 const readList = () => JSON.parse(fs.readFileSync(path.join(dir, "api-keys.json"), "utf8"));
-const keyFiles = () => fs.readdirSync(dir).filter((file) => /^api-key-/.test(file)).sort();
+const keyFiles = () =>
+  fs
+    .readdirSync(dir)
+    .filter((file) => /^api-key-/.test(file))
+    .sort();
 /** Whether any file the app wrote, or any line it logged, holds a secret. */
 function leaks() {
   const found = [];
@@ -72,7 +80,8 @@ function leaks() {
 }
 /** A launch of the app: a new process starts with no slot in its environment. */
 async function launch({ keepEnv = false } = {}) {
-  if (!keepEnv) for (const name of ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]) delete process.env[name];
+  if (!keepEnv)
+    for (const name of ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]) delete process.env[name];
   const env = new EnvironmentManager();
   const changes = [];
   env.onApiKeysChanged = (list) => changes.push(list);
@@ -233,20 +242,30 @@ test("removing a provider's last key clears its slot, and a launch does not brin
   });
   assert.equal(added.ok, true);
   // Chosen for Writing only: an Anthropic key does not transcribe.
-  assert.deepEqual(Object.keys(added.list.features).sort(), ["conversations", "dictation", "writing"]);
+  assert.deepEqual(Object.keys(added.list.features).sort(), [
+    "conversations",
+    "dictation",
+    "writing",
+  ]);
   assert.equal(added.list.features.writing, added.id);
   assert.notEqual(added.list.features.dictation, added.id);
   assert.equal(env.getAnthropicKey(), ANTHROPIC_ONE);
   assert.equal(env.getFeatureKey("writing", "anthropic"), ANTHROPIC_ONE);
   const list = await env.removeApiKey(added.id, {});
-  assert.equal(list.keys.some((key) => key.provider === "anthropic"), false);
+  assert.equal(
+    list.keys.some((key) => key.provider === "anthropic"),
+    false
+  );
   assert.equal(list.features.writing, undefined);
   assert.equal(env.getAnthropicKey(), "");
   assert.equal(env.getFeatureKey("writing", "anthropic"), "");
   assert.equal(fs.existsSync(path.join(dir, "ANTHROPIC_API_KEY.enc")), false);
   assert.equal(fs.existsSync(path.join(dir, `api-key-${added.id}.enc`)), false);
   ({ env } = await launch());
-  assert.equal(env.listApiKeys().keys.some((key) => key.provider === "anthropic"), false);
+  assert.equal(
+    env.listApiKeys().keys.some((key) => key.provider === "anthropic"),
+    false
+  );
   assert.equal(env.getAnthropicKey(), "");
 });
 
@@ -274,7 +293,9 @@ test("before the keys are read, the slot's setter works as it always did", () =>
 
 test("nothing in this file loaded the OS keyring", () => {
   assert.equal(
-    Object.keys(require.cache).some((file) => file.includes(`${path.sep}@napi-rs${path.sep}keyring`)),
+    Object.keys(require.cache).some((file) =>
+      file.includes(`${path.sep}@napi-rs${path.sep}keyring`)
+    ),
     false
   );
 });

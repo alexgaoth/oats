@@ -79,13 +79,10 @@ test("a second with no sample is kept as a gap, not as silence", () => {
   seconds.push(...record([0.2], T0 + 4 * SECOND));
   const stored = JSON.parse(encodeLoudness(null, seconds));
   assert.equal(stored.runs.length, 1);
-  assert.deepEqual([...atob(stored.runs[0].b)].map((c) => c.charCodeAt(0) > 0), [
-    true,
-    true,
-    false,
-    false,
-    true,
-  ]);
+  assert.deepEqual(
+    [...atob(stored.runs[0].b)].map((c) => c.charCodeAt(0) > 0),
+    [true, true, false, false, true]
+  );
   assert.deepEqual(
     decodeLoudness(JSON.stringify(stored)).map((second) => (second.at - T0) / SECOND),
     [0, 1, 4]

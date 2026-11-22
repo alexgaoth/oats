@@ -235,8 +235,18 @@ test("one topic linked on two subjects leaves them two, and neither takes the ot
       {
         candidates: [1, 2],
         links: [
-          { id: 1, subject: "Rollout", topic: "Discount for annual plans", earlierTopic: "SSO rollout" },
-          { id: 2, subject: "Pricing", topic: "Discount for annual plans", earlierTopic: "Enterprise pricing" },
+          {
+            id: 1,
+            subject: "Rollout",
+            topic: "Discount for annual plans",
+            earlierTopic: "SSO rollout",
+          },
+          {
+            id: 2,
+            subject: "Pricing",
+            topic: "Discount for annual plans",
+            earlierTopic: "Enterprise pricing",
+          },
         ],
       },
     ],

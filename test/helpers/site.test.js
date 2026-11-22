@@ -20,10 +20,17 @@ test("the site's script is built from the current sources", async () => {
 // ones the release job publishes, in every version.
 test("the download buttons use the names the release job publishes", () => {
   const download = fs.readFileSync(path.join(SITE, "src/download.js"), "utf8");
-  const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/build-and-notarize.yml"), "utf8");
+  const workflow = fs.readFileSync(
+    path.join(ROOT, ".github/workflows/build-and-notarize.yml"),
+    "utf8"
+  );
   for (const name of ["Oats-arm64.dmg", "Oats-x64.dmg"]) {
     assert.match(download, new RegExp(`/latest/download/${name.replace(".", "\\.")}`));
-    assert.match(workflow, new RegExp(`\\b${name.replace(".", "\\.")}\\b`), `the release job publishes ${name}`);
+    assert.match(
+      workflow,
+      new RegExp(`\\b${name.replace(".", "\\.")}\\b`),
+      `the release job publishes ${name}`
+    );
   }
 });
 
@@ -41,7 +48,8 @@ test("every file the page uses is in site/", () => {
     for (const entry of list.split(",")) references.add(entry.trim().split(/\s+/)[0]);
   }
   const css = fs.readFileSync(path.join(SITE, "assets/site.css"), "utf8");
-  for (const [, value] of css.matchAll(/url\("([^"]+)"\)/g)) references.add(path.posix.join("assets", value));
+  for (const [, value] of css.matchAll(/url\("([^"]+)"\)/g))
+    references.add(path.posix.join("assets", value));
   assert.ok(references.size > 10);
   for (const reference of references) {
     assert.ok(fs.existsSync(path.join(SITE, reference)), `missing: site/${reference}`);

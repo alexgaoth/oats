@@ -61,7 +61,13 @@ test("monotoneAt is the curve the canvas draws, so a dot sits on the line", () =
   const tangents = monotoneTangents(points);
   for (let index = 0; index < points.length - 1; index += 1) {
     for (let k = 0; k <= 10; k += 1) {
-      const drawn = bezier(points[index], points[index + 1], tangents[index], tangents[index + 1], k / 10);
+      const drawn = bezier(
+        points[index],
+        points[index + 1],
+        tangents[index],
+        tangents[index + 1],
+        k / 10
+      );
       assert.ok(Math.abs(monotoneAt(points, tangents, drawn.x) - drawn.y) < 1e-9);
     }
   }
