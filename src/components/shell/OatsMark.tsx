@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "../lib/utils";
 import { SPIN_MS, tossFrame } from "../../helpers/oatsMarkMotion.mjs";
+import {
+  RECORDING_TOSS_PEAK,
+  playRecordingToss,
+  recordingTossPose,
+} from "../../helpers/recordingToss.mjs";
+import { getCachedPlatform } from "../../utils/platform";
 import { AT_REST, paintGrain, type GrainPose } from "./grainCanvas";
 
 /**
@@ -22,8 +28,8 @@ import { AT_REST, paintGrain, type GrainPose } from "./grainCanvas";
  * foreshortens it towards its end-on shape, and its crease turns away and comes
  * back, which is what reads as a solid object turning. The light stays where
  * it is. It runs once when the app first comes into view (`spinOnLaunch`) and
- * when the mark is clicked (`interactive`), and not at all under
- * prefers-reduced-motion.
+ * when the mark is clicked (`interactive`). While recording, a visible macOS
+ * sidebar loops the same toss. Reduced motion holds it mid-hop.
  */
 
 let launchSpun = false;
@@ -33,6 +39,8 @@ export function OatsMark({
   spinOnLaunch = false,
   spinOnMount = false,
   interactive = false,
+  recording = false,
+  away = false,
   shadow = false,
   label = "Oats",
 }: {
@@ -43,6 +51,10 @@ export function OatsMark({
   spinOnMount?: boolean;
   /** Render as a button that tosses the grain when clicked. */
   interactive?: boolean;
+  /** Replace the click toss with the recording pose or loop. */
+  recording?: boolean;
+  /** The sidebar is hidden by recording focus. */
+  away?: boolean;
   /** A soft contact shadow under the grain, for large sizes. */
   shadow?: boolean;
   /** The accessible name when `interactive`. */
@@ -107,8 +119,56 @@ export function OatsMark({
   }, [paint]);
 
   useEffect(() => {
+    if (recording) {
+      if (spinOnLaunch) launchSpun = true;
+      if (away || getCachedPlatform() !== "darwin") {
+        paint(recordingTossPose(RECORDING_TOSS_PEAK));
+        return;
+      }
+      const api = window.electronAPI;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let seen = !api?.getWindowVisibility;
+      let pushed = false;
+      let disposed = false;
+      let stop: (() => void) | undefined;
+      const sync = () => {
+        const animate = seen && !document.hidden && !reducedMotion.matches;
+        if (animate) {
+          stop ??= playRecordingToss((index: number) => paint(recordingTossPose(index)));
+        } else {
+          stop?.();
+          stop = undefined;
+          paint(recordingTossPose(RECORDING_TOSS_PEAK));
+        }
+      };
+      const unsubscribe = api?.onWindowVisibility?.((visible) => {
+        pushed = true;
+        seen = visible;
+        sync();
+      });
+      api
+        ?.getWindowVisibility?.()
+        .catch(() => true)
+        .then((visible) => {
+          if (pushed || disposed) return;
+          seen = visible !== false;
+          sync();
+        });
+      document.addEventListener("visibilitychange", sync);
+      reducedMotion.addEventListener("change", sync);
+      sync();
+      return () => {
+        disposed = true;
+        stop?.();
+        unsubscribe?.();
+        document.removeEventListener("visibilitychange", sync);
+        reducedMotion.removeEventListener("change", sync);
+      };
+    }
+
     paint(AT_REST);
     let timer = 0;
+    let disposed = false;
     let unsubscribe: (() => void) | undefined;
     const toss = (delay: number) => {
       timer = window.setTimeout(spin, delay);
@@ -120,7 +180,7 @@ export function OatsMark({
       // open hidden, and a toss nobody saw is the animation never happening.
       const api = window.electronAPI;
       const firstLook = () => {
-        if (launchSpun) return;
+        if (launchSpun || disposed) return;
         launchSpun = true;
         toss(350);
       };
@@ -139,11 +199,12 @@ export function OatsMark({
       }
     }
     return () => {
+      disposed = true;
       window.clearTimeout(timer);
       unsubscribe?.();
       cancelAnimationFrame(frame.current);
     };
-  }, [paint, spin, spinOnLaunch, spinOnMount]);
+  }, [away, paint, recording, spin, spinOnLaunch, spinOnMount]);
 
   const canvas = (
     <canvas
@@ -163,7 +224,8 @@ export function OatsMark({
     <button
       type="button"
       aria-label={label}
-      onClick={spin}
+      aria-disabled={recording || undefined}
+      onClick={recording ? undefined : spin}
       className={cn(
         // A 20px grain in a 24px target: the extra 2px each way is invisible.
         "relative inline-flex size-5 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 after:absolute after:-inset-0.5 after:content-['']",

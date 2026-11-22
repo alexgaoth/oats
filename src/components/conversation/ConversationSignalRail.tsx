@@ -17,20 +17,15 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { searchHostLabel } from "../../utils/searchHost";
 import type { ContextCheck, ContextSource, ConversationCard } from "../../types/conversationEvents";
-import { nextAnnouncement, nextCheckAnnouncement } from "../../helpers/questionAnnouncement.mjs";
+import {
+  newQuestionAnnouncements,
+  nextCheckAnnouncement,
+} from "../../helpers/questionAnnouncement.mjs";
 import { questionAge } from "../../helpers/questionAge.mjs";
 import { StateMark } from "./StateMark";
 
 // Kept here too, for the surfaces that import the mark with the rail.
 export { StateMark };
-
-/** What the live region is currently saying. See `questionAnnouncement.mjs`. */
-interface Announcement {
-  ids: string[];
-  question: string;
-  occurrence: number;
-  count: number;
-}
 
 // The question-card rail (DESIGN.md §9.2) — the help moment, and the surface the
 // spec says the product is judged on. The whole stack for a recording: the most
@@ -398,13 +393,8 @@ export default function ConversationSignalRail({
   /**
    * Mount the announcements without drawing the annotations.
    *
-   * The clean composition (DESIGN.md §9.0) hides the question cards, and the
-   * first version of it simply did not render this component — which silently
-   * took the *only* channel that tells a screen-reader user a question was
-   * detected and searched, and made "clean" mean "less product" for them
-   * rather than "calmer". The spec is that assistive output is identical in
-   * both compositions, so the live region is mounted either way and only the
-   * drawing is conditional.
+   * Clean uses its own shorter question list. Both views announce the same
+   * questions through this region, which stays mounted across view changes.
    */
   announceOnly?: boolean;
   /** Reports which question group the pointer or keyboard is on, so the
@@ -476,30 +466,22 @@ export default function ConversationSignalRail({
   // correctly. The set is of *everything ever announced*, so a card cannot be
   // announced twice however the list is rearranged, dismissed or restored.
   const spoken = useRef<Set<string>>(new Set());
-  const [announced, setAnnounced] = useState<Announcement | null>(null);
+  const [announced, setAnnounced] = useState<{ id: string; text: string }[]>([]);
   useEffect(() => {
-    const next = nextAnnouncement(cards, spoken.current);
-    if (!next) return;
-    for (const id of next.ids) spoken.current.add(id);
-    if (next.count > 0) setAnnounced(next);
-  }, [cards]);
-
-  // A live region speaks only when its text changes, so each case has to read
-  // differently as well as truthfully: a re-asking says it is a re-asking
-  // (rule 3 — repeats are the signal), and a batch says how many arrived.
-  const announcement = !announced
-    ? ""
-    : announced.count > 1
-      ? t("questionCard.announcedBatch", {
-          count: announced.count,
-          question: announced.question,
-        })
-      : announced.occurrence > 1
-        ? t("questionCard.announcedAgain", {
-            count: announced.occurrence,
-            question: announced.question,
-          })
-        : t("questionCard.announced", { question: announced.question });
+    const additions = newQuestionAnnouncements(cards, spoken.current).flatMap(
+      ({ id, question, occurrence }) => {
+        spoken.current.add(id);
+        if (!question) return [];
+        const text =
+          occurrence > 1
+            ? t("questionCard.announcedAgain", { count: occurrence, question })
+            : t("questionCard.announced", { question });
+        return [{ id, text }];
+      }
+    );
+    // Bound the live region without dropping any questions in a new batch.
+    if (additions.length) setAnnounced((previous) => [...previous.slice(-10), ...additions]);
+  }, [cards, t]);
 
   // A check's verdict is announced once, when it lands, in its own region:
   // folding it into the question's text would make that region re-speak the
@@ -553,9 +535,11 @@ export default function ConversationSignalRail({
           there, empty, before the update — otherwise the very first question of
           every conversation, the one that proves the feature works, is the one
           nobody hears. That is why this sits above the early return. */}
-      <p aria-live="polite" className="sr-only">
-        {announcement}
-      </p>
+      <div aria-live="polite" aria-relevant="additions" className="sr-only">
+        {announced.map(({ id, text }) => (
+          <p key={id}>{text}</p>
+        ))}
+      </div>
       <p aria-live="polite" className="sr-only">
         {checkAnnounced}
       </p>

@@ -289,6 +289,43 @@ The eval24 read of the 0.40 to 0.45 band gave 48% of marks right and 2.7 faded a
 
 The 0.44 band meets both bars. It has 29 marks, so its interval is wide. These are tuning numbers, not a held-out result. Grey stays off by default.
 
+## Part 5: what Finish keeps (learn83 cache, 2026-11-21)
+
+The 5-minute count hint is the shipped Finish setting. The matching Gemma 4
+E4B cache has 12 learn83 meetings, not 83. It covers 7.06 hours and 79 reference
+changes. The detector cache covers all 83 meetings. The comparison below uses
+only the 12 shared meetings and their AMI reference words. This is a cache
+replay, not new model inference or a result on `eval24`.
+
+| Metric | Detector final, 83 | Detector final, 12 | Gemma re-cut, 12 | Re-cut minus detector, paired [95% interval] |
+| --- | ---: | ---: | ---: | ---: |
+| Pk (lower is better) | 0.231 | 0.228 | 0.302 | +0.074 [−0.027, +0.172] |
+| WindowDiff (lower is better) | 0.267 | 0.279 | 0.400 | +0.121 [+0.001, +0.246] |
+| Cuts an hour | 9.24 | 9.07 | 20.12 | +11.05 [+5.15, +17.77] |
+| Precision within 60 s | 71.9% | 62.5% | 48.6% | −13.9 pp [−28.5, +2.3] |
+| Changes found within 60 s | 60.6% | 60.8% | 84.8% | +24.1 pp [+12.4, +35.5] |
+| Live lines moved an hour | 0 | 0 | 5.10 | +5.10 [+3.47, +6.72] |
+| Live lines vanished an hour | 0 | 0 | 2.27 | +2.27 [+1.32, +3.13] |
+| New lines at Finish an hour | 0.43 | 0.43 | 13.74 | +13.32 [+7.93, +19.49] |
+
+Of 61 live topic boundaries in the paired set, the detector kept all 61 and
+added 3. The re-cut kept 9, moved 36, removed 16, and added 97. A boundary at
+the same utterance stays. For the remaining live boundaries, the scorer
+matches the nearest unused final boundary within 60 s in live order. An
+unmatched live boundary vanishes. Precision and changes found use the same
+60 s tolerance against the reference, without one-to-one matching.
+The scorer averages Pk and WindowDiff by meeting. It pools counts for
+shares and hourly rates. The intervals use 10,000 paired meeting resamples.
+The scorer passes the cached model starts through the app tracker, which
+groups returns itself. Every paired meeting had a usable re-cut.
+
+The re-cut found more changes but did not improve either Pk or precision in
+the paired sample. Both intervals cross zero, so this does not establish
+that either metric is worse across learn83. The default now keeps the
+tracker's final cuts. The model names and describes them. The detector may
+still add a late cut at Finish. The keyed live check is unchanged, so its
+live cuts can still differ from the tracker's final cuts.
+
 ## Commands
 
 ```sh
@@ -316,4 +353,8 @@ node scripts/topic-loop-eval.mjs --variant v1 --early-cut --vectors --ami ~/oats
 # Part 3 chance values and paired differences (light, under 1 s):
 R=~/oats-asr-cache/topic-routing
 python3 -I scripts/topic-routing-compare.py $R/learn83-v1-early-cut.json $R/learn83-v3-window.json $R/learn83-v3app-window.json
+# Part 5: offline comparison of the cached Finish and detector cuts:
+C=~/oats-asr-cache
+node scripts/topic-finish-compare.mjs "$C/AMI" "$C/topic-early/learn83.txt" \
+  "$C/topic-routing/learn83-v1-early-cut.json" "$C/topic-cuts/runs/a-h5-e4b-learn83.json"
 ```
