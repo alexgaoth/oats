@@ -2076,8 +2076,6 @@
       "shortcutAnywhere": "在任何應用程式中",
       "recordingBadge": "錄音中",
       "counters": {
-        "words_one": "{{count}} 個詞",
-        "words_other": "{{count}} 個詞",
         "questions_one": "{{count}} 個問題",
         "questions_other": "{{count}} 個問題"
       },
@@ -2115,6 +2113,8 @@
       "nodeNameBack": "{{label}}，{{state}}，{{back}}",
       "quote": "「{{text}}」",
       "noQuote": "沒有可引用的近期發言。",
+      "findingTopic": "正在辨識話題…",
+      "namingTopic": "正在為這個話題命名",
       "earlier": "以前的對話中出現過："
     },
     "intelligence": {

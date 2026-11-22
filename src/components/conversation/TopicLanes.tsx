@@ -5,10 +5,11 @@ import { cn } from "../lib/utils";
 import { formatSpan } from "../../helpers/ledgerDate.mjs";
 import { LANE_ROW_PX, lanePath, runAt } from "../../helpers/topicLanes.mjs";
 import { StateMark } from "./StateMark";
-import { stateLabel } from "./flowText";
+import { stateLabel, topicNameText } from "./flowText";
 import { markFill } from "./questionMarks";
+import { TopicName } from "./TopicName";
 import { TopicProposalTick, type ProposalTick } from "./TopicProposalTick";
-import type { QuestionOutcome } from "../../types/conversationEvents";
+import type { QuestionOutcome, TopicNameState } from "../../types/conversationEvents";
 
 // The lanes: how a conversation moved between its topics. One row per topic,
 // in the order raised, with its minutes; and one line for the room, which runs
@@ -30,7 +31,16 @@ export const LANE_ROWS_SHOWN = 8;
 
 /** What `topicLanes` returns, as the lanes read it. */
 export interface Lanes {
-  rows: { id: number; label: string; state: string; durationMs: number; back: number }[];
+  rows: {
+    id: number;
+    label: string;
+    state: string;
+    durationMs: number;
+    back: number;
+    /** While recording: whether `label` is a name yet (`withNameStates`). */
+    nameState?: TopicNameState;
+    opening?: boolean;
+  }[];
   runs: { topic: number; from: number; to: number }[];
   returns: { topic: number; previous: number; at: number }[];
   now: number | null;
@@ -174,14 +184,15 @@ export default function TopicLanes({
         const isNow = live && row.id === lanes.now;
         // "Now" is where the line ends, so it is said of one row only.
         const state = stateLabel(t, isNow ? "live" : row.state === "live" ? "open" : row.state);
+        const label = topicNameText(t, row);
         const name =
           row.back > 0
             ? t("oats.flow.nodeNameBack", {
-                label: row.label,
+                label,
                 state,
                 back: t("oats.flow.back", { count: row.back }),
               })
-            : t("oats.flow.nodeName", { label: row.label, state });
+            : t("oats.flow.nodeName", { label, state });
         return (
           <li
             key={row.id}
@@ -207,17 +218,21 @@ export default function TopicLanes({
               <span aria-hidden="true" className="flex min-w-0 items-center gap-2">
                 <span
                   // Whether the name was cut is known only where it is drawn,
-                  // so the tooltip is decided when the pointer arrives.
+                  // so the tooltip is decided when the pointer arrives. A topic
+                  // being named has no name to show yet.
                   onMouseEnter={(event) => {
-                    const label = event.currentTarget;
-                    label.title = label.scrollWidth > label.clientWidth ? row.label : "";
+                    const element = event.currentTarget;
+                    element.title =
+                      row.nameState !== "pending" && element.scrollWidth > element.clientWidth
+                        ? row.label
+                        : "";
                   }}
                   className={cn(
                     "truncate text-[13px] text-foreground",
                     isNow ? "font-medium" : "font-normal"
                   )}
                 >
-                  {row.label}
+                  <TopicName label={row.label} nameState={row.nameState} opening={row.opening} />
                 </span>
                 {/* No "Now" badge: the line's honey end already says which
                     topic is current, and the badge said it twice. A screen

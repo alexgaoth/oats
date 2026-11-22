@@ -367,6 +367,57 @@ export class TopicNamer {
     return names;
   }
 
+  /**
+   * Whether a topic with no name yet will get one while recording, so the live
+   * view draws a placeholder rather than its on-device name (`withNameStates`
+   * in topicNaming.mjs). Yes while this namer names live and the topic is
+   * either still growing (the room is on it) or one it would ask about now
+   * (`_job`). No once it stopped, gave up, names only at Finish, or found the
+   * writing model not ready (a download, a missing key): a placeholder that
+   * shimmers for minutes says something false.
+   *
+   * @param {{ id: number, state?: string, utteranceIds?: unknown[] } | null | undefined} node
+   *   A topic of the snapshot drawn: the tracker's, with names on it.
+   * @returns {boolean}
+   */
+  expectsName(node) {
+    if (!node || !this.live || this.stopped || this.disabled) return false;
+    if (this.now() < this.notReadyUntil || !isNameableTopic(node)) return false;
+    if (node.state === "live") return true;
+    const nodes = Array.isArray(this.snapshot?.nodes) ? this.snapshot.nodes : [];
+    const own = nodes.find((candidate) => candidate?.id === node.id);
+    return own ? this._job(own, nodes, this._index(), false) !== null : false;
+  }
+
+  /**
+   * The request a topic needs, or null: `need` is "first", "rename" or
+   * "describe" (`topicNeedsName`).
+   */
+  _job(node, nodes, byId, final) {
+    if (!isNameableTopic(node)) return null;
+    const words = this._words(node, byId);
+    const record = this._record(node);
+    const failed = this.failed.get(node.id);
+    // A name the live topic check gave (topicLoop.mjs `namesFor`) is not
+    // asked for again: one request names a topic, not two. Its gist is a
+    // line; at the end it is asked once for a description of the whole
+    // topic, with its name kept.
+    if (record?.held) {
+      if (!final || record.described || words < FINAL_NAME_WORDS) return null;
+      if (failed?.final) return null;
+      return { node, words, record, need: "describe" };
+    }
+    // The detector has already committed this new topic. Name its excerpt
+    // now rather than waiting for 40 words. The opening topic, lexical
+    // fallback, refreshes and Finish still use the usual thresholds.
+    const cutNeedsFirstName =
+      !final && this.nameOnCut && this.detectorCuts && node !== nodes[0] && !record && words > 0;
+    const need = cutNeedsFirstName ? "first" : topicNeedsName({ words, record, final });
+    if (!need) return null;
+    if (failed && (final ? failed.final : words < failed.words * RETRY_GROWTH)) return null;
+    return { node, words, record, need };
+  }
+
   /** The topic to name next, or null when none needs a name. */
   _next(final) {
     const nodes = Array.isArray(this.snapshot?.nodes) ? this.snapshot.nodes : [];
@@ -374,29 +425,8 @@ export class TopicNamer {
     const byId = this._index();
     const jobs = [];
     for (const node of nodes) {
-      if (!isNameableTopic(node)) continue;
-      const words = this._words(node, byId);
-      const record = this._record(node);
-      const failed = this.failed.get(node.id);
-      // A name the live topic check gave (topicLoop.mjs `namesFor`) is not
-      // asked for again: one request names a topic, not two. Its gist is a
-      // line; at the end it is asked once for a description of the whole
-      // topic, with its name kept.
-      if (record?.held) {
-        if (!final || record.described || words < FINAL_NAME_WORDS) continue;
-        if (failed?.final) continue;
-        jobs.push({ node, words, record, need: "describe" });
-        continue;
-      }
-      // The detector has already committed this new topic. Name its excerpt
-      // now rather than waiting for 40 words. The opening topic, lexical
-      // fallback, refreshes and Finish still use the usual thresholds.
-      const cutNeedsFirstName =
-        !final && this.nameOnCut && this.detectorCuts && node !== nodes[0] && !record && words > 0;
-      const need = cutNeedsFirstName ? "first" : topicNeedsName({ words, record, final });
-      if (!need) continue;
-      if (failed && (final ? failed.final : words < failed.words * RETRY_GROWTH)) continue;
-      jobs.push({ node, words, record, need });
+      const job = this._job(node, nodes, byId, final);
+      if (job) jobs.push(job);
     }
     jobs.sort(
       (a, b) =>

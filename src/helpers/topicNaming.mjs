@@ -683,6 +683,49 @@ export function applyTopicNames(snapshot, names) {
 }
 
 /**
+ * How each topic's label may be drawn while recording (DESIGN.md §5, "A topic
+ * not named yet"). Each node gets a `nameState`:
+ *
+ *   named    a model named it: `label` is that name (`deviceLabel` is set).
+ *   pending  no model name yet, and one is on its way (`expects`): the label
+ *            is not drawn, a placeholder is. A guessed word reads as a bad
+ *            name, and it makes the real name look late.
+ *   device   no model name, and none will come while recording: `label`, the
+ *            on-device name, is drawn as it is.
+ *
+ * The first topic raised (the lanes' first row: `firstAt`, then `id`, among
+ * the topics they show) also carries `opening: true`, so its placeholder can
+ * say what is happening. A stored conversation's snapshot has no `nameState`:
+ * its labels are drawn as they are.
+ *
+ * @template {{ nodes?: any[] } | null | undefined} S
+ * @param {S} snapshot
+ * @param {{ expects: (node: any) => boolean }} options `expects(node)`: whether
+ *   a name will come for a topic that has none yet.
+ * @returns {S}
+ */
+export function withNameStates(snapshot, { expects }) {
+  if (!snapshot || !Array.isArray(snapshot.nodes)) return snapshot;
+  let opening = null;
+  for (const node of snapshot.nodes) {
+    if (!isKeptTopic(node)) continue;
+    const first = opening?.firstAt ?? 0;
+    const at = node.firstAt ?? 0;
+    if (!opening || at < first || (at === first && node.id < opening.id)) opening = node;
+  }
+  const nodes = snapshot.nodes.map((node) => {
+    if (!node) return node;
+    const nameState =
+      typeof node.deviceLabel === "string" ? "named" : expects(node) ? "pending" : "device";
+    const next = { ...node, nameState };
+    if (node === opening) next.opening = true;
+    else delete next.opening;
+    return next;
+  });
+  return { ...snapshot, nodes };
+}
+
+/**
  * The settings of one naming request, on the writing model's own route (what
  * the summary uses): its prompt as the system prompt, no randomness, and the
  * output capped where that is safe (`NAME_MAX_TOKENS`).

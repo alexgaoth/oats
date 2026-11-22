@@ -4,11 +4,7 @@ import { cn } from "../lib/utils";
 import { Button } from "../ui/button";
 import { useMeetingRecordingStore } from "../../stores/meetingRecordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
-import {
-  sittingQuestionCount,
-  sittingWordCount,
-  splitAroundCount,
-} from "../../helpers/recordingCounters.mjs";
+import { sittingQuestionCount, splitAroundCount } from "../../helpers/recordingCounters.mjs";
 
 /**
  * A number that rolls up into place when it changes, and only then.
@@ -46,13 +42,14 @@ function Counter({ label, count, formatted }: { label: string; count: number; fo
 }
 
 /**
- * The muted line under the recording clock: words captured so far, and
- * questions heard so far, in this sitting (`helpers/recordingCounters.mjs`).
+ * The muted line under the recording clock: the questions heard so far, in this
+ * sitting (`helpers/recordingCounters.mjs`).
  *
- * Both change only when something lands, a finalized segment or a question
- * card, never while a word is still being transcribed: in Clean they are two
- * of the few things allowed to move. The questions count is left out when
- * question cards are off, because a zero there would be a guess, not a count.
+ * It changes only when a question card lands, never while a word is still being
+ * transcribed: in Clean it is one of the few things allowed to move. It is left
+ * out when question cards are off, because a zero there would be a guess, not a
+ * count. There is no word count: how many words were spoken helps nobody during
+ * a conversation (DESIGN.md §5).
  */
 export default function RecordingCounters({
   className,
@@ -62,7 +59,6 @@ export default function RecordingCounters({
   onQuestions?: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const segments = useMeetingRecordingStore((state) => state.segments);
   const cards = useMeetingRecordingStore((state) => state.questionCards);
   const startedAt = useMeetingRecordingStore((state) => state.recordingStartedAt);
   // The aide's own gates for a conversation in a room (startConversationAide),
@@ -70,10 +66,17 @@ export default function RecordingCounters({
   const questionsOn = useSettingsStore(
     (state) => state.conversationAideEnabled && state.conversationAideInRoomEnabled
   );
-  const words = useMemo(() => sittingWordCount(segments, startedAt), [segments, startedAt]);
   const questions = useMemo(() => sittingQuestionCount(cards, startedAt), [cards, startedAt]);
   const number = useMemo(() => new Intl.NumberFormat(i18n.language), [i18n.language]);
+  if (!questionsOn) return null;
 
+  const counter = (
+    <Counter
+      label={t("oats.conversation.counters.questions", { count: questions })}
+      count={questions}
+      formatted={number.format(questions)}
+    />
+  );
   return (
     <p
       className={cn(
@@ -81,32 +84,18 @@ export default function RecordingCounters({
         className
       )}
     >
-      <Counter
-        label={t("oats.conversation.counters.words", { count: words })}
-        count={words}
-        formatted={number.format(words)}
-      />
-      {questionsOn &&
-        (onQuestions ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-mx-1 h-6 px-1 text-[13px] font-normal text-muted-foreground"
-            onClick={onQuestions}
-          >
-            <Counter
-              label={t("oats.conversation.counters.questions", { count: questions })}
-              count={questions}
-              formatted={number.format(questions)}
-            />
-          </Button>
-        ) : (
-          <Counter
-            label={t("oats.conversation.counters.questions", { count: questions })}
-            count={questions}
-            formatted={number.format(questions)}
-          />
-        ))}
+      {onQuestions ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-mx-1 h-6 px-1 text-[13px] font-normal text-muted-foreground"
+          onClick={onQuestions}
+        >
+          {counter}
+        </Button>
+      ) : (
+        counter
+      )}
     </p>
   );
 }

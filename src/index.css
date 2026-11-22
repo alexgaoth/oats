@@ -58,6 +58,12 @@
   --color-recording-foreground: #ffffff;
   --color-brand: #f5a30f;
   --color-brand-ink: #9a5b00;
+
+  /* A topic being named (TopicName.tsx): a bar that reads on the card, and the
+     light that passes through it and through the first topic's words. */
+  --color-pending-bar: #e4e4e7;
+  --color-pending-bar-glint: #fafafa;
+  --color-pending-text-glint: #c4c4c8;
   /* Search hits in text. The stronger one is the match the find bar is on. */
   --color-highlight: #fef08a;
   --color-highlight-strong: #facc15;
@@ -121,6 +127,8 @@
   --motion-slow: 380ms; /* onboarding steps, Graph reveal */
   --motion-frame: 280ms; /* the frame: the sidebar stepping aside for a recording */
   --motion-ambient: 2400ms; /* the listening pulse breath — pair with ease-in-out infinite */
+  --motion-glint: 1800ms; /* the light through a topic being named — linear infinite */
+  --motion-name: 180ms; /* a topic's name replacing its placeholder */
 
   /* So a bare `transition-colors` or `transition-opacity` is already on the Oats
      curve at the base duration; the `[transition-duration:…]` overrides in
@@ -186,6 +194,9 @@
   --color-recording: #ef4444;
   --color-recording-foreground: #ffffff;
   --color-highlight: rgb(234 179 8 / 0.3);
+  --color-pending-bar: #27272a;
+  --color-pending-bar-glint: #3f3f46;
+  --color-pending-text-glint: #f4f4f5;
   --color-highlight-strong: rgb(234 179 8 / 0.65);
 
   --color-surface-0: #09090b;
@@ -324,6 +335,88 @@
 
 @media (prefers-reduced-motion: reduce) {
   .oats-roll {
+    animation: none;
+  }
+}
+
+/* A topic being named (DESIGN.md §5, "A topic not named yet"; TopicName.tsx):
+   a light passes through it, left to right, then rests, as a model's
+   "Thinking…" does. The first topic says "Finding the topic…"; a later one is
+   a grey bar about the size of a short name, with no word to misread. The
+   gradient is three times the box, so the light is in view for half of each
+   pass. When the name lands it fades in once, in the same line box. Under
+   reduced motion the placeholder holds still and the name simply appears. */
+@keyframes oats-topic-glint {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+.oats-topic-pending-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-muted-foreground) 0%,
+    var(--color-muted-foreground) 40%,
+    var(--color-pending-text-glint) 50%,
+    var(--color-muted-foreground) 60%,
+    var(--color-muted-foreground) 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: oats-topic-glint var(--motion-glint) linear infinite;
+}
+
+.oats-topic-pending-bar {
+  display: inline-block;
+  width: 7em;
+  max-width: 100%;
+  height: 0.85em;
+  vertical-align: middle;
+  border-radius: var(--radius-sm);
+  background-image: linear-gradient(
+    100deg,
+    var(--color-pending-bar) 0%,
+    var(--color-pending-bar) 40%,
+    var(--color-pending-bar-glint) 50%,
+    var(--color-pending-bar) 60%,
+    var(--color-pending-bar) 100%
+  );
+  background-size: 300% 100%;
+  animation: oats-topic-glint var(--motion-glint) linear infinite;
+}
+
+@keyframes oats-topic-name-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.oats-topic-name-in {
+  animation: oats-topic-name-in var(--motion-name) var(--ease-oats) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oats-topic-pending-text {
+    animation: none;
+    background-image: none;
+    color: var(--color-muted-foreground);
+    -webkit-text-fill-color: currentColor;
+  }
+  .oats-topic-pending-bar {
+    animation: none;
+    background-image: none;
+    background-color: var(--color-pending-bar);
+  }
+  .oats-topic-name-in {
     animation: none;
   }
 }

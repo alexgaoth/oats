@@ -93,6 +93,9 @@ export interface OpenThread {
   durationMs: number;
 }
 
+/** Whether a live topic's label is a name yet (`withNameStates` in topicNaming.mjs). */
+export type TopicNameState = "named" | "pending" | "device";
+
 // A topic in the graph. `durationMs` drives node radius; `returns` counts the
 // times the conversation came back, which is what the back-edges encode.
 export interface ConversationTopicNode {
@@ -101,6 +104,16 @@ export interface ConversationTopicNode {
   label: string;
   /** The on-device name, present only when `label` is the writing model's (topicNaming.mjs). */
   deviceLabel?: string;
+  /**
+   * While recording only (`withNameStates` in topicNaming.mjs): whether `label`
+   * is a name. `named`: a model's name. `pending`: none yet, and one is on its
+   * way, so a placeholder is drawn instead of `label`. `device`: none will come
+   * while recording, so `label`, the on-device name, is drawn. Absent on a
+   * stored conversation: `label` is drawn.
+   */
+  nameState?: TopicNameState;
+  /** While recording only: the first topic raised, whose placeholder says what is happening. */
+  opening?: boolean;
   /**
    * What was said, asked, proposed and decided on the topic, from the writing
    * model with its name (topicNaming.mjs), or the live topic check's gist. It
