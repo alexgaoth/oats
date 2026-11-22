@@ -6,7 +6,7 @@ const { spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const debugLogger = require("./debugLogger");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
-const { mayReadKeySecrets } = require("./keySecretAccess");
+const { mayReadKeySecrets, mayReadFeatureKey } = require("./keySecretAccess");
 const { staleWarmStreams } = require("./warmStreams");
 const { classifyAndLog } = require("./networkErrors");
 const { limitFailure } = require("./localAnswerLimit");
@@ -1036,8 +1036,9 @@ class IPCHandlers {
 
     // Named OpenAI and Anthropic keys (helpers/apiKeys.mjs, environment.js).
     // Every window gets the records, which hold no secret, on every change; a
-    // secret goes only to a window that asks for one key by its id, to call
-    // the provider itself (ReasoningService.ts, audioManager.js).
+    // secret goes only to a window that calls the provider itself
+    // (ReasoningService.ts, audioManager.js), and to the agent overlay only
+    // Dictation's key, which main resolves (keySecretAccess.js).
     const keys = this.environmentManager;
     keys.onApiKeysChanged = (list) => {
       this.broadcastToWindows("api-keys-changed", list);
@@ -1048,11 +1049,15 @@ class IPCHandlers {
       this.windowManager?.mainWindow,
       this.windowManager?.controlPanelWindow,
     ];
-    const mayRead = (event) => {
-      if (mayReadKeySecrets(event, secretReaders())) return true;
+    // The agent overlay's voice input uses Dictation's key (keySecretAccess.js).
+    const dictationReaders = () => [this.windowManager?.agentWindow];
+    const refused = () => {
       debugLogger.warn("A window that may not read keys asked for one", {}, "environment");
       return false;
     };
+    const mayRead = (event) => mayReadKeySecrets(event, secretReaders()) || refused();
+    const mayReadFor = (event, feature, provider) =>
+      mayReadFeatureKey(event, feature, provider, secretReaders(), dictationReaders()) || refused();
     ipcMain.handle("api-keys-list", () => keys.listApiKeys());
     ipcMain.handle("api-keys-add", (event, request) => keys.addApiKey(request));
     ipcMain.handle("api-keys-replace", (event, id, request) => keys.replaceApiKey(id, request));
@@ -1068,7 +1073,7 @@ class IPCHandlers {
     // The key a feature's call uses, as main resolves it: a window asks before
     // its own copy of the records has arrived.
     ipcMain.handle("api-key-for-feature", (event, feature, provider) =>
-      mayRead(event) ? keys.getFeatureKeyRecord(feature, provider) : null
+      mayReadFor(event, feature, provider) ? keys.getFeatureKeyRecord(feature, provider) : null
     );
 
     ipcMain.handle("db-save-transcription", async (event, text, rawText, options) => {

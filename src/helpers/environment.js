@@ -15,9 +15,12 @@ const NAMED_KEY_SLOTS = Object.fromEntries(
 );
 const KEY_LIST_FILE = "api-keys.json";
 const KEY_FILE = /^api-key-(k[0-9a-f]{16})\.(enc|plain)$/;
+// A replaced key's new secret, beside the old one until the list holds its
+// revision (`_persistKeys`).
+const KEY_STAGED_FILE = /^api-key-(k[0-9a-f]{16})\.rev([1-9][0-9]{0,15})\.(enc|plain)$/;
 // What a write the app did not finish leaves: a key's, a slot's or the list's temporary file.
 const KEY_TEMP_FILE = new RegExp(
-  `^(?:api-key-k[0-9a-f]{16}\\.(?:enc|plain)|(?:${Object.values(NAMED_KEY_SLOTS).join("|")})\\.enc|api-keys\\.json)\\.tmp$`
+  `^(?:api-key-k[0-9a-f]{16}(?:\\.rev[0-9]+)?\\.(?:enc|plain)|(?:${Object.values(NAMED_KEY_SLOTS).join("|")})\\.enc|api-keys\\.json)\\.tmp$`
 );
 const KEY_ID = /^k[0-9a-f]{16}$/;
 // The longest secret a key may be: far above any provider's, far below abuse.
@@ -306,16 +309,21 @@ class EnvironmentManager {
   // window that asks for one key (ipcHandlers.js checks which window).
   //
   // One change at a time (`_changeKeys`): a change that cannot be written is
-  // undone in memory and reported, so a window never shows a state the disk
-  // does not hold.
+  // undone, in memory and on disk, and reported, so a window never shows a
+  // state the disk does not hold. The list is where a change is saved: what
+  // is written before it is undone when it fails, and what is deleted waits
+  // until after it.
 
   _keyListPath() {
     return path.join(this._getSecureKeysDir(), KEY_LIST_FILE);
   }
 
-  _keyFilePath(id, form) {
+  /** A key's file; with `rev`, the file its new secret waits in (`KEY_STAGED_FILE`). */
+  _keyFilePath(id, form, rev = 0) {
     if (!KEY_ID.test(String(id))) throw new Error("invalid key id");
-    return path.join(this._getSecureKeysDir(), `api-key-${id}.${form}`);
+    if (rev && !(Number.isSafeInteger(rev) && rev > 0)) throw new Error("invalid key revision");
+    const staged = rev ? `.rev${rev}` : "";
+    return path.join(this._getSecureKeysDir(), `api-key-${id}${staged}.${form}`);
   }
 
   /**
@@ -357,53 +365,88 @@ class EnvironmentManager {
 
   async _readKeySecret(id) {
     for (const form of ["enc", "plain"]) {
-      let buffer;
-      try {
-        buffer = await fsPromises.readFile(this._keyFilePath(id, form));
-      } catch (error) {
-        if (error.code === "ENOENT") continue;
-        debugLogger.error("Could not read a saved key", { code: error.code }, "environment");
-        return { unreadable: true };
+      const found = await this._readSecretFile(this._keyFilePath(id, form), form);
+      if (found.missing) continue;
+      if (
+        found.secret &&
+        (found.needsReencrypt || (form === "plain" && this._encryptionAvailable()))
+      ) {
+        // Encrypted again, or for the first time: a key saved where nothing could encrypt.
+        await this._writeKeySecret(id, found.secret).catch(() => {});
       }
-      try {
-        if (form === "enc") {
-          const { value, needsReencrypt } = secretCrypto.decrypt(buffer);
-          if (needsReencrypt) await this._writeKeySecret(id, value).catch(() => {});
-          return { secret: value };
-        }
-        const value = buffer.toString("utf8").trim();
-        // A key saved where nothing could encrypt, encrypted once something can.
-        if (this._encryptionAvailable()) await this._writeKeySecret(id, value).catch(() => {});
-        return { secret: value };
-      } catch (error) {
-        debugLogger.error(
-          "Failed to decrypt a saved key — user must re-enter",
-          { code: error.code, error: error.message },
-          "environment"
-        );
-        return { unreadable: true };
-      }
+      return found.secret ? { secret: found.secret } : { unreadable: true };
     }
     return { missing: true };
   }
 
-  async _writeKeySecret(id, secret) {
+  /** One file's secret: { secret, needsReencrypt }, { missing } or { unreadable }. */
+  async _readSecretFile(file, form) {
+    let buffer;
+    try {
+      buffer = await fsPromises.readFile(file);
+    } catch (error) {
+      if (error.code === "ENOENT") return { missing: true };
+      debugLogger.error("Could not read a saved key", { code: error.code }, "environment");
+      return { unreadable: true };
+    }
+    try {
+      if (form === "plain") return { secret: buffer.toString("utf8").trim() };
+      const { value, needsReencrypt } = secretCrypto.decrypt(buffer);
+      return { secret: value, needsReencrypt };
+    } catch (error) {
+      debugLogger.error(
+        "Failed to decrypt a saved key — user must re-enter",
+        { code: error.code, error: error.message },
+        "environment"
+      );
+      return { unreadable: true };
+    }
+  }
+
+  /**
+   * Write a key's secret to its file, or with `rev` beside it, where a
+   * replaced key's new secret waits until the list holds that revision. The
+   * file written is the answer.
+   */
+  async _writeKeySecret(id, secret, rev = 0) {
     await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
     const encrypted = this._encryptionAvailable();
-    const file = this._keyFilePath(id, encrypted ? "enc" : "plain");
+    const file = this._keyFilePath(id, encrypted ? "enc" : "plain", rev);
     const tmp = `${file}.tmp`;
     await fsPromises.writeFile(tmp, encrypted ? secretCrypto.encrypt(secret) : secret, {
       mode: 0o600,
     });
     await fsPromises.rename(tmp, file);
-    await this._unlinkQuietly(this._keyFilePath(id, encrypted ? "plain" : "enc"));
+    if (!rev) await this._unlinkQuietly(this._keyFilePath(id, encrypted ? "plain" : "enc"));
+    return file;
   }
 
-  /** Every file a key's secret can be in, its temporary files too. */
+  /** A replaced key's new secret takes the old one's place, once the list holds its revision. */
+  async _promoteKeySecret(id, rev) {
+    for (const form of ["enc", "plain"]) {
+      try {
+        await fsPromises.rename(this._keyFilePath(id, form, rev), this._keyFilePath(id, form));
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        throw error;
+      }
+      await this._unlinkQuietly(this._keyFilePath(id, form === "enc" ? "plain" : "enc"));
+      return;
+    }
+  }
+
+  /** Every file a key's secret can be in, its new secrets and temporary files too. */
   async _deleteKeySecret(id) {
     for (const form of ["enc", "plain"]) {
       await this._unlinkQuietly(this._keyFilePath(id, form));
       await this._unlinkQuietly(`${this._keyFilePath(id, form)}.tmp`);
+    }
+    const files = await fsPromises.readdir(this._getSecureKeysDir()).catch(() => []);
+    for (const file of files) {
+      const base = file.endsWith(".tmp") ? file.slice(0, -4) : file;
+      if (KEY_STAGED_FILE.exec(base)?.[1] === id) {
+        await this._unlinkQuietly(path.join(this._getSecureKeysDir(), file));
+      }
     }
   }
 
@@ -424,13 +467,23 @@ class EnvironmentManager {
     this._keySecrets = new Map();
     this._keyList = { keys: [], features: {}, defaults: {} };
     this._keyLock ??= Promise.resolve();
+    this._unsavedSecrets = [];
     const changed = await this._readKeyFiles();
     const plan = this._reconcileSlots();
     this._keyList = this._keyRules.normalizeKeyRecords(this._keyList);
     const defaults = JSON.stringify(this._keyList.defaults);
-    const slots = Object.keys(this._slotChanges(plan.clear)).length > 0;
+    const slots = Object.keys(this._slotChanges()).length > 0;
     if (changed || plan.changed || slots || JSON.stringify(this._keyList.defaults) !== defaults) {
-      await this._persistKeys(plan).catch((error) => this._keyWriteFailed(error));
+      const saved = await this._persistKeys(plan).then(
+        () => true,
+        (error) => this._keyWriteFailed(error)
+      );
+      if (!saved) return;
+    }
+    // A new secret whose replace was not saved is deleted once no slot holds it.
+    const slotted = new Set(Object.values(NAMED_KEY_SLOTS).map((env) => process.env[env]));
+    for (const { file, secret } of this._unsavedSecrets.splice(0)) {
+      if (secret && !slotted.has(secret)) await this._unlinkQuietly(file).catch(() => {});
     }
   }
 
@@ -440,9 +493,12 @@ class EnvironmentManager {
    * aside, never deleted, and the key files are the keys. A file the trusted
    * list does not name is a key whose adding never finished, and is deleted,
    * as are what an unfinished write leaves: a temporary file, and the older of
-   * a key's encrypted and plain copies. A key that cannot be decrypted now
-   * stays on disk for a later launch that can. True when the list must be
-   * written again.
+   * a key's encrypted and plain copies. A replaced key's new secret takes the
+   * old one's place when the list holds its revision (the replace was saved);
+   * any other is a replace that was not saved: the old secret stays, and the
+   * new one is noted (`_unsavedSecrets`) so a slot that holds it goes back to
+   * the default key. A key that cannot be decrypted now stays on disk for a
+   * later launch that can. True when the list must be written again.
    */
   async _readKeyFiles() {
     const rules = this._keyRules;
@@ -481,6 +537,21 @@ class EnvironmentManager {
         await fsPromises.unlink(path.join(dir, file)).catch(() => {});
       }
     }
+    const listed = rules.normalizeKeyRecords(trusted ? raw : null);
+    for (const file of files) {
+      const [, id, rev, form] = KEY_STAGED_FILE.exec(file) ?? [];
+      if (!id) continue;
+      const staged = path.join(dir, file);
+      if (listed.keys.some((key) => key.id === id && key.rev === Number(rev))) {
+        // The replace was saved; its last step, the move, was not done.
+        await fsPromises.rename(staged, this._keyFilePath(id, form));
+        await this._unlinkQuietly(this._keyFilePath(id, form === "enc" ? "plain" : "enc"));
+        continue;
+      }
+      const { secret } = await this._readSecretFile(staged, form);
+      this._unsavedSecrets.push({ file: staged, secret });
+    }
+    files = await fsPromises.readdir(dir).catch(() => []);
     for (const file of files) {
       const [, id, form] = KEY_FILE.exec(file) ?? [];
       if (form !== "enc" || !files.includes(`api-key-${id}.plain`)) continue;
@@ -493,7 +564,6 @@ class EnvironmentManager {
       );
     }
 
-    const listed = rules.normalizeKeyRecords(trusted ? raw : null);
     for (const key of listed.keys) {
       const found = await this._readKeySecret(key.id);
       if (found.missing) {
@@ -549,13 +619,15 @@ class EnvironmentManager {
    * read. A secret in the slot that no record holds is what the person meant
    * to use: it becomes a key, the provider's default, chosen for the features
    * that used the default before (the first time, for every feature that uses
-   * that provider). A slot emptied outside the records (its file is gone)
-   * removes the default key it held. A slot that cannot be read changes
-   * nothing, and is written again from the default key.
+   * that provider). The new secret of a replace that was not saved is not
+   * such a key: its slot goes back to the default key. A slot emptied
+   * outside the records (its file is gone) removes the default key it held.
+   * A slot that cannot be read changes nothing.
    */
   _reconcileSlots() {
     const rules = this._keyRules;
-    const plan = { changed: false, write: [], remove: [], clear: [] };
+    const plan = { changed: false, write: [], remove: [] };
+    const unsaved = new Set((this._unsavedSecrets ?? []).map((entry) => entry.secret));
     const firstKeys = [];
     for (const [provider, env] of Object.entries(NAMED_KEY_SLOTS)) {
       const readable = this._readableKeys();
@@ -573,6 +645,14 @@ class EnvironmentManager {
             this._keyList.defaults[provider] = holder.id;
             plan.changed = true;
           }
+          continue;
+        }
+        if (unsaved.has(secret)) {
+          debugLogger.info(
+            "Put back a slot a replace that was not saved wrote",
+            { provider },
+            "environment"
+          );
           continue;
         }
         const record = this._newKeyRecord(provider, secret);
@@ -613,7 +693,6 @@ class EnvironmentManager {
       this._keySecrets.delete(removed.id);
       delete this._keyList.defaults[provider];
       plan.remove.push(removed.id);
-      plan.clear.push(provider);
       plan.changed = true;
       debugLogger.info("Removed a key its slot no longer holds", { provider }, "environment");
     }
@@ -636,50 +715,57 @@ class EnvironmentManager {
 
   /**
    * The slots to write, and each provider's default recorded: a provider's
-   * slot holds its default key's secret. A provider in `clear` whose last key
-   * that can be read was removed gets an empty slot, even while a key this
+   * slot holds its default key's secret. The slot of a provider with no key
+   * that can be read now is left as it is, unless it holds a secret this
+   * change removes (`removed`): it is then emptied, even while a key this
    * launch cannot read remains (its default is then null: empty on purpose).
-   * `force` writes every slot as memory holds it.
    */
-  _slotChanges(clear = [], { force = false } = {}) {
+  _slotChanges(removed = []) {
     const readable = this._readableKeys();
     const changes = {};
     for (const [provider, env] of Object.entries(NAMED_KEY_SLOTS)) {
+      const now = process.env[env] || "";
       const key = this._keyRules.defaultKeyOf(readable, provider);
-      let value = null;
       if (key) {
-        value = this._keySecrets.get(key.id);
         this._keyList.defaults[provider] = key.id;
-      } else if (clear.includes(provider)) {
-        value = "";
+        const secret = this._keySecrets.get(key.id);
+        if (now !== secret) changes[env] = secret;
+      } else if (now && removed.includes(now)) {
+        changes[env] = "";
         if (this._keyList.keys.some((candidate) => candidate.provider === provider)) {
           this._keyList.defaults[provider] = null;
         } else {
           delete this._keyList.defaults[provider];
         }
-      } else if (force) {
-        value = process.env[env] || "";
       }
-      if (value !== null && (force || (process.env[env] || "") !== value)) changes[env] = value;
     }
     return changes;
   }
 
   /**
    * Make memory the keys as they are now, then write them, in an order a
-   * crash cannot turn into a key the person removed: new secrets first, then
-   * each provider's slot, then removed secrets deleted, then the list. A
-   * failure rejects, and stops the steps after it.
+   * crash or a failure cannot turn into a key the person did not save, or
+   * keep one they removed: new secrets first (a new key's file; a replaced
+   * key's new secret beside the old one, `_writeKeySecret`), then each
+   * provider's slot, then the list, where the change is saved. After the
+   * list, a replaced key's new secret takes the old one's place and removed
+   * keys' files are deleted; a launch finishes both if the app stops first.
+   * A failure before the list rejects. With `undo`, it first puts back what
+   * this change wrote (`_undoKeyWrites`). `removed`: the secrets of the keys
+   * this change removes.
    */
-  _persistKeys({ write = [], remove = [], clear = [], force = false } = {}) {
-    const slots = this._slotChanges(clear, { force });
+  _persistKeys({ write = [], stage = [], remove = [], removed = [] } = {}, { undo = false } = {}) {
+    const slots = this._slotChanges(removed);
+    const previous = Object.keys(slots).map((env) => [env, process.env[env]]);
     for (const [env, value] of Object.entries(slots)) {
       if (value) process.env[env] = value;
       else delete process.env[env];
     }
-    const secrets = write
-      .map((id) => [id, this._keySecrets.get(id)])
-      .filter(([, secret]) => secret);
+    const secretOf = (id) => this._keySecrets.get(id);
+    const fresh = write.filter(secretOf).map((id) => [id, secretOf(id)]);
+    const staged = stage
+      .map((id) => [id, secretOf(id), this._keyList.keys.find((key) => key.id === id)?.rev])
+      .filter(([, secret, rev]) => secret && rev);
     const list = JSON.stringify(
       {
         version: 1,
@@ -691,13 +777,31 @@ class EnvironmentManager {
       2
     );
     const run = async () => {
-      for (const [id, secret] of secrets) await this._writeKeySecret(id, secret);
-      await this._writeSlots(slots);
-      for (const id of remove) await this._deleteKeySecret(id);
-      await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
-      const tmp = `${this._keyListPath()}.tmp`;
-      await fsPromises.writeFile(tmp, list, { encoding: "utf8", mode: 0o600 });
-      await fsPromises.rename(tmp, this._keyListPath());
+      const created = [];
+      const slotFiles = [];
+      try {
+        for (const [id, secret] of fresh) created.push(await this._writeKeySecret(id, secret));
+        for (const [id, secret, rev] of staged) {
+          created.push(await this._writeKeySecret(id, secret, rev));
+        }
+        await this._writeSlots(slots, slotFiles);
+        await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
+        const tmp = `${this._keyListPath()}.tmp`;
+        await fsPromises.writeFile(tmp, list, { encoding: "utf8", mode: 0o600 });
+        await fsPromises.rename(tmp, this._keyListPath());
+      } catch (error) {
+        if (undo) await this._undoKeyWrites(previous, slotFiles, created);
+        throw error;
+      }
+      // Saved. What is left only tidies, as the next launch would.
+      const left = (error) =>
+        debugLogger.warn(
+          "A key file is left for the next launch",
+          { code: error.code },
+          "environment"
+        );
+      for (const [id, , rev] of staged) await this._promoteKeySecret(id, rev).catch(left);
+      for (const id of remove) await this._deleteKeySecret(id).catch(left);
     };
     const done = keyWriteQueue.then(run, run);
     keyWriteQueue = done.catch(() => {});
@@ -707,33 +811,72 @@ class EnvironmentManager {
   /**
    * The slots' files. Memory already holds the new values (`_persistKeys`),
    * so this writes files only: a write still queued never puts an older
-   * value back in `process.env`.
+   * value back in `process.env`. Each file written goes in `written`, with
+   * the bytes it held before, for `_undoKeyWrites`.
    */
-  async _writeSlots(slots) {
+  async _writeSlots(slots, written = []) {
     const entries = Object.entries(slots);
     if (!entries.length) return;
     if (!this._encryptionAvailable()) {
+      written.push({ envFile: true });
       await this.saveAllKeysToEnvFile();
       return;
     }
     await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
     for (const [env, value] of entries) {
       const file = this._getSecretFilePath(env);
-      if (!value) {
+      const bytes = await fsPromises.readFile(file).catch((error) => {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      });
+      if (value) {
+        const tmp = `${file}.tmp`;
+        await fsPromises.writeFile(tmp, secretCrypto.encrypt(value), { mode: 0o600 });
+        await fsPromises.rename(tmp, file);
+      } else {
         await this._unlinkQuietly(file);
-        continue;
       }
-      const tmp = `${file}.tmp`;
-      await fsPromises.writeFile(tmp, secretCrypto.encrypt(value), { mode: 0o600 });
-      await fsPromises.rename(tmp, file);
+      written.push({ file, bytes });
     }
   }
 
   /**
+   * Put back what a change that was not saved wrote (`_persistKeys`): each
+   * slot as memory and its file held it before, byte for byte (a slot this
+   * launch cannot read too), then the new secrets deleted. A new secret
+   * stays while a slot could not be put back, so the next launch knows the
+   * slot holds a change that was not saved (`_readKeyFiles`).
+   */
+  async _undoKeyWrites(previous, slotFiles, created) {
+    for (const [env, value] of previous) {
+      if (value) process.env[env] = value;
+      else delete process.env[env];
+    }
+    let slotsBack = true;
+    for (const { file, bytes, envFile } of slotFiles.reverse()) {
+      try {
+        if (envFile) {
+          await this.saveAllKeysToEnvFile();
+        } else if (bytes) {
+          await fsPromises.writeFile(`${file}.tmp`, bytes, { mode: 0o600 });
+          await fsPromises.rename(`${file}.tmp`, file);
+        } else {
+          await this._unlinkQuietly(file);
+        }
+      } catch (error) {
+        slotsBack = false;
+        debugLogger.error("Could not put a key's slot back", { code: error.code }, "environment");
+      }
+    }
+    if (!slotsBack) return;
+    for (const file of created) await this._unlinkQuietly(file).catch(() => {});
+  }
+
+  /**
    * One change of the keys at a time. `change` changes memory and says what
-   * to write ({ write, remove, clear, result }), or false when there is
-   * nothing to do. A change that cannot be written is undone in memory, its
-   * slots written back, and reported: { ok: false, reason, list }.
+   * to write ({ write, stage, remove, result }), or false when there is
+   * nothing to do. A change that cannot be written is undone, in memory and
+   * on disk, and reported: { ok: false, reason, list }.
    */
   _changeKeys(change) {
     const run = async () => {
@@ -746,8 +889,9 @@ class EnvironmentManager {
       const plan = change();
       if (!plan) return { ok: false, reason: "invalid", list: this.listApiKeys() };
       this._keyList = this._keyRules.normalizeKeyRecords(this._keyList);
+      const removed = (plan.remove ?? []).map((id) => before.secrets.get(id)).filter(Boolean);
       try {
-        await this._persistKeys(plan);
+        await this._persistKeys({ ...plan, removed }, { undo: true });
       } catch (error) {
         this._keyWriteFailed(error);
         this._keyList = before.list;
@@ -756,7 +900,6 @@ class EnvironmentManager {
           if (value) process.env[env] = value;
           else delete process.env[env];
         }
-        await this._persistKeys({ force: true }).catch(() => {});
         return { ok: false, reason: "not-saved", list: this.listApiKeys() };
       }
       this._keysChanged();
@@ -868,7 +1011,8 @@ class EnvironmentManager {
   /**
    * Put another secret of the same provider in a key's place: the same id,
    * name and features, and the next revision, so what was cached for the old
-   * secret is not used for the new one.
+   * secret is not used for the new one. The new secret is written beside the
+   * old one and takes its place only once the list is saved (`_persistKeys`).
    */
   replaceApiKey(id, request = {}) {
     const secret = this._cleanKeySecret(request.secret);
@@ -885,7 +1029,7 @@ class EnvironmentManager {
       record.rev = (record.rev ?? 1) + 1;
       const name = rules.cleanKeyName(request.name);
       if (name) record.name = name;
-      return { write: [record.id] };
+      return { stage: [record.id] };
     });
   }
 
@@ -923,7 +1067,7 @@ class EnvironmentManager {
         features: rules.cleanFeatureKeys({ ...kept, ...moved }, keys),
         defaults,
       };
-      return { remove: [id], clear: [removed.provider] };
+      return { remove: [id] };
     });
   }
 

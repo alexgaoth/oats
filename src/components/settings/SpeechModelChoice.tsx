@@ -22,6 +22,7 @@ import {
   useSettingsStore,
   whisperModelFollowsDefault,
 } from "../../stores/settingsStore";
+import { selectFeatureKey } from "../../stores/apiKeys";
 import {
   getStreamingTranscriptionProviders,
   PARAKEET_MODEL_INFO,
@@ -76,7 +77,8 @@ export function SpeechModelChoice() {
   const parakeetModel = useSettingsStore((state) => state.parakeetModel);
   const cloudModel = useSettingsStore((state) => state.cloudTranscriptionModel);
   const language = useSettingsStore((state) => state.preferredLanguage);
-  const openaiKey = useSettingsStore((state) => state.openaiApiKey);
+  // This chooser sets what Conversations use: its key is the key Conversations use.
+  const hasKey = useSettingsStore((state) => Boolean(selectFeatureKey(state, "conversations")));
   const speechTier = useSpeechTier();
   const roomProgress = useRoomModelStore((state) => state.progress);
   const roomInstalled = useRoomModelStore((state) => state.installed);
@@ -281,8 +283,8 @@ export function SpeechModelChoice() {
   const slot =
     view === "openai" ? (
       <>
-        <ProviderKey provider="openai" />
-        {!openaiKey.trim() && (
+        <ProviderKey provider="openai" feature="conversations" />
+        {!hasKey && (
           <p className="mt-2 text-[13px] leading-5 text-muted-foreground">
             {t("oats.models.openaiSpeechNeedsKey")}
           </p>

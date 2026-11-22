@@ -489,3 +489,171 @@ test("I: the same secret put back in a key's place changes nothing", async () =>
   const after = same.list.keys.find((key) => key.id === one.id);
   assert.deepEqual([after.rev, after.status], [1, "ok"]);
 });
+
+test("K: a change that is not saved leaves alone the slot of a provider none of whose keys can be read", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE, ANTHROPIC_API_KEY: ANT });
+  let { env } = await launch();
+  const anthropic = env.listApiKeys().keys.find((key) => key.provider === "anthropic");
+  const files = [file("ANTHROPIC_API_KEY.enc"), keyFile(anthropic.id)];
+  const good = files.map((name) => fs.readFileSync(name));
+  // This launch cannot decrypt Anthropic's files, as when the keychain refuses.
+  const garbage = Buffer.from("garbage-not-a-blob");
+  for (const name of files) fs.writeFileSync(name, garbage);
+  ({ env } = await launch());
+  assert.equal(
+    env.listApiKeys().keys.some((key) => key.provider === "anthropic"),
+    false
+  );
+  const [one] = env.listApiKeys().keys;
+  fs.mkdirSync(file("api-keys.json.tmp"));
+  const result = await env.renameApiKey(one.id, "Personal");
+  assert.deepEqual([result.ok, result.reason], [false, "not-saved"]);
+  // Neither written nor emptied: the bytes this launch could not read are still there.
+  assert.deepEqual(
+    files.map((name) => fs.readFileSync(name)),
+    [garbage, garbage]
+  );
+  fs.rmdirSync(file("api-keys.json.tmp"));
+  // The keychain works again.
+  files.forEach((name, index) => fs.writeFileSync(name, good[index]));
+  ({ env } = await launch());
+  assert.ok(env.listApiKeys().keys.some((key) => key.id === anthropic.id));
+  assert.equal(env.getAnthropicKey(), ANT);
+  assert.equal(env.getFeatureKey("writing", "anthropic"), ANT);
+});
+
+test("K: a change that is not saved puts each slot it wrote back as it was", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env, changes } = await launch();
+  const work = await env.addApiKey({
+    provider: "openai",
+    secret: TWO,
+    name: "Work",
+    assign: ["conversations"],
+  });
+  const [one] = env.listApiKeys().keys;
+  const slot = fs.readFileSync(file("OPENAI_API_KEY.enc"));
+  const list = readList();
+  const seen = changes.length;
+  // The slot is written (to Work, the key after it), then the list cannot be.
+  fs.mkdirSync(file("api-keys.json.tmp"));
+  const result = await env.removeApiKey(one.id, {});
+  assert.deepEqual([result.ok, result.reason], [false, "not-saved"]);
+  assert.deepEqual(fs.readFileSync(file("OPENAI_API_KEY.enc")), slot);
+  assert.equal(env.getOpenAIKey(), ONE);
+  assert.ok(fs.existsSync(keyFile(one.id)));
+  assert.deepEqual(readList(), list);
+  assert.equal(changes.length, seen);
+  fs.rmdirSync(file("api-keys.json.tmp"));
+  ({ env } = await launch());
+  assert.deepEqual(
+    env.listApiKeys().keys.map((key) => key.id),
+    [one.id, work.id]
+  );
+  assert.equal(env.getOpenAIKey(), ONE);
+  assert.equal(env.listApiKeys().features.conversations, work.id);
+});
+
+test("L: a replace that is not saved leaves the old secret in its file, with its features", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  const work = await env.addApiKey({
+    provider: "openai",
+    secret: TWO,
+    name: "Work",
+    status: "ok",
+    assign: ["conversations"],
+  });
+  const [one] = env.listApiKeys().keys;
+  await env.renameApiKey(one.id, "Personal");
+  const saved = fs.readFileSync(keyFile(one.id));
+  const { features } = env.listApiKeys();
+  // The slot cannot be written; then the slot is written and the list cannot be.
+  for (const blocked of ["OPENAI_API_KEY.enc.tmp", "api-keys.json.tmp"]) {
+    fs.mkdirSync(file(blocked));
+    const result = await env.replaceApiKey(one.id, { secret: NEW, status: "ok" });
+    fs.rmdirSync(file(blocked));
+    assert.deepEqual([result.ok, result.reason], [false, "not-saved"]);
+    assert.equal(result.list.keys.find((key) => key.id === one.id).rev, 1);
+    assert.equal(env.getApiKeySecret(one.id), ONE);
+    assert.deepEqual(fs.readFileSync(keyFile(one.id)), saved);
+    assert.equal(slotFile("OPENAI_API_KEY"), ONE);
+    assert.deepEqual(
+      fs.readdirSync(dir()).filter((name) => name.includes(".rev")),
+      []
+    );
+  }
+  ({ env } = await launch());
+  const list = env.listApiKeys();
+  assert.deepEqual(
+    list.keys.map((key) => [key.id, key.name, key.tail, key.rev]),
+    [
+      [one.id, "Personal", "AAAA", 1],
+      [work.id, "Work", "BBBB", 1],
+    ]
+  );
+  assert.deepEqual(list.features, features);
+  assert.equal(list.defaults.openai, one.id);
+  assert.equal(env.getOpenAIKey(), ONE);
+});
+
+test("L: what a replace left when the app stopped is finished or undone at the next launch", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  const work = await env.addApiKey({
+    provider: "openai",
+    secret: TWO,
+    name: "Work",
+    assign: ["conversations"],
+  });
+  const [one] = env.listApiKeys().keys;
+  const { features } = env.listApiKeys();
+  const staged = (id, rev) => file(`api-key-${id}.rev${rev}.enc`);
+
+  // Stopped after the slot, before the list: the replace was not saved.
+  fs.writeFileSync(staged(one.id, 2), scramble(NEW));
+  fs.writeFileSync(file("OPENAI_API_KEY.enc"), scramble(NEW));
+  ({ env } = await launch());
+  assert.deepEqual(
+    env.listApiKeys().keys.map((key) => [key.id, key.tail, key.rev]),
+    [
+      [one.id, "AAAA", 1],
+      [work.id, "BBBB", 1],
+    ]
+  );
+  assert.deepEqual(env.listApiKeys().features, features);
+  assert.equal(env.getOpenAIKey(), ONE);
+  assert.equal(slotFile("OPENAI_API_KEY"), ONE);
+  assert.equal(fs.existsSync(staged(one.id, 2)), false);
+
+  // Stopped after the list, before the move: the replace was saved.
+  assert.equal((await env.replaceApiKey(one.id, { secret: NEW })).ok, true);
+  fs.renameSync(keyFile(one.id), staged(one.id, 2));
+  fs.writeFileSync(keyFile(one.id), scramble(ONE));
+  ({ env } = await launch());
+  assert.equal(env.getApiKeySecret(one.id), NEW);
+  assert.deepEqual(
+    env.listApiKeys().keys.map((key) => [key.id, key.tail, key.rev]),
+    [
+      [one.id, "NNNN", 2],
+      [work.id, "BBBB", 1],
+    ]
+  );
+  assert.equal(unscramble(fs.readFileSync(keyFile(one.id))), NEW);
+  assert.equal(fs.existsSync(staged(one.id, 2)), false);
+  assert.equal(env.getOpenAIKey(), NEW);
+
+  // Stopped before the slot: deleted. One this launch cannot read waits for one that can.
+  fs.writeFileSync(staged(work.id, 2), scramble(THREE));
+  fs.writeFileSync(staged(work.id, 3), Buffer.from("garbage-not-a-blob"));
+  ({ env } = await launch());
+  assert.equal(fs.existsSync(staged(work.id, 2)), false);
+  assert.ok(fs.existsSync(staged(work.id, 3)));
+  assert.equal(env.getApiKeySecret(work.id), TWO);
+  // Removing the key deletes every file it has.
+  assert.equal((await env.removeApiKey(work.id, {})).ok, true);
+  assert.deepEqual(
+    fs.readdirSync(dir()).filter((name) => name.includes(work.id)),
+    []
+  );
+});
