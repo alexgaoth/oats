@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { cn } from "../lib/utils";
 import { SPIN_MS, tossFrame } from "../../helpers/oatsMarkMotion.mjs";
 import {
-  RECORDING_TOSS_PEAK,
+  RECORDING_STILL_FRAME,
   playRecordingToss,
   recordingTossPose,
 } from "../../helpers/recordingToss.mjs";
@@ -122,7 +122,7 @@ export function OatsMark({
     if (recording) {
       if (spinOnLaunch) launchSpun = true;
       if (away || getCachedPlatform() !== "darwin") {
-        paint(recordingTossPose(RECORDING_TOSS_PEAK));
+        paint(recordingTossPose(RECORDING_STILL_FRAME));
         return;
       }
       const api = window.electronAPI;
@@ -138,7 +138,7 @@ export function OatsMark({
         } else {
           stop?.();
           stop = undefined;
-          paint(recordingTossPose(RECORDING_TOSS_PEAK));
+          paint(recordingTossPose(RECORDING_STILL_FRAME));
         }
       };
       const unsubscribe = api?.onWindowVisibility?.((visible) => {
