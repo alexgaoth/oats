@@ -264,6 +264,7 @@ function RemoveQuestion({
   const titleId = useId();
   const list = useFeatureList();
   const [removing, setRemoving] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   // The plan is new each time it is asked for, so it is worked out from the
   // two things it reads, not selected: a selector that returns a new array on
   // every call renders without end.
@@ -301,6 +302,11 @@ function RemoveQuestion({
         <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
           {where.length ? where.join(" ") : t("oats.keys.removeUnused")}
         </p>
+        {failure && (
+          <p role="alert" className="mt-2 text-[13px] leading-5 text-destructive">
+            {failure}
+          </p>
+        )}
         <div className="mt-3 flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onCancel} disabled={removing} autoFocus>
             {t("common.cancel")}
@@ -311,8 +317,12 @@ function RemoveQuestion({
             disabled={removing}
             onClick={async () => {
               setRemoving(true);
-              await removeApiKey(savedKey.id);
-              // A removal main did not make leaves the key, and the question, here.
+              setFailure(null);
+              // A removal main did not make leaves the key, and the question,
+              // here, with the line the store gives (removeApiKey rejects).
+              await removeApiKey(savedKey.id).catch((error: unknown) => {
+                setFailure((error as Error)?.message || t("oats.keys.notRemoved"));
+              });
               const kept = useSettingsStore
                 .getState()
                 .keyRecords.keys.some((key) => key.id === savedKey.id);

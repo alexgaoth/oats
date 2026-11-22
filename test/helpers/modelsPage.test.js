@@ -80,7 +80,10 @@ test("the API keys list renames in place and asks before it removes, saying wher
   assert.match(LIST, /renameApiKey\(savedKey\.id, draft\);/);
   assert.match(LIST, /selectRemovalPlan\(\{ keyRecords, featurePreferences \}, savedKey\.id\)/);
   assert.match(LIST, /t\("oats\.keys\.moveTo", \{ key: to\.name, features: list\(features\) \}\)/);
-  assert.match(LIST, /await removeApiKey\(savedKey\.id\);/);
+  // A removal main could not make rejects with a line to show; the key and
+  // the question stay, with that line under them.
+  assert.match(LIST, /await removeApiKey\(savedKey\.id\)\.catch\(\(error: unknown\) => \{\s*setFailure\(/);
+  assert.match(LIST, /role="alert"[^>]*>\s*\{failure\}/);
   assert.doesNotMatch(LIST, /confirm\(/);
   assert.match(LIST, /t\("oats\.keys\.notInUse"\)/);
 });
