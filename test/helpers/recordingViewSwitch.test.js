@@ -43,3 +43,63 @@ test("the old show and hide button is gone, with its strings and its toggle", ()
     }
   }
 });
+
+// Alex, 2026-11-22: the details are the default, Hide details goes to the plain
+// view, and the button there says Expand details, not Show transcript. It is a
+// disclosure, so it carries chevrons, and it never picks the tab.
+test("Hide details and Expand details are one disclosure with chevrons", () => {
+  assert.match(
+    WORKSPACE,
+    /aria-expanded=\{expanded\}\s+onClick=\{\(\) => setDetail\(expanded \? "clean" : "detailed"\)\}/
+  );
+  assert.match(
+    WORKSPACE,
+    /\{expanded \? \(\s*<ChevronUp aria-hidden="true" \/>\s*\) : \(\s*<ChevronDown aria-hidden="true" \/>\s*\)\}/
+  );
+  assert.match(
+    WORKSPACE,
+    /t\(expanded \? "oats\.library\.hideDetails" : "oats\.library\.expandDetails"\)/
+  );
+  assert.doesNotMatch(WORKSPACE, /oats\.library\.showTranscript/);
+  const locales = fs
+    .readdirSync(path.join(__dirname, "../../src/locales"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+  assert.equal(locales.length, 10);
+  for (const locale of locales) {
+    const library = JSON.parse(read(`src/locales/${locale}/translation.json`)).oats.library;
+    assert.ok(library.expandDetails, `${locale} oats.library.expandDetails`);
+    assert.ok(library.hideDetails, `${locale} oats.library.hideDetails`);
+    assert.equal(library.showTranscript, undefined, locale);
+  }
+});
+
+test("Questions is the first tab and the default, and the questions count opens it", () => {
+  assert.match(WORKSPACE, /useState<"transcript" \| "questions">\("questions"\)/);
+  const list = /<TabsList className="mb-3 shrink-0 self-start">([\s\S]*?)<\/TabsList>/.exec(
+    WORKSPACE
+  )[1];
+  assert.ok(list.indexOf('value="questions"') > 0, "a Questions tab");
+  assert.ok(
+    list.indexOf('value="questions"') < list.indexOf('value="transcript"'),
+    "Questions before Transcript"
+  );
+  assert.match(WORKSPACE, /setDetailTab\("questions"\);\s*setDetail\("detailed"\);/);
+});
+
+test("the change is one movement, and at once under reduced motion", () => {
+  const css = read("src/index.css");
+  assert.match(
+    css,
+    /\.oats-detail-reveal \{[^}]*transition:\s*height var\(--motion-base\) var\(--ease-oats\),\s*opacity var\(--motion-base\) var\(--ease-oats\);/
+  );
+  assert.match(
+    css,
+    /@media \(prefers-reduced-motion: reduce\) \{\s*\.oats-detail-reveal,\s*\.oats-detail-fade\[data-state\] \{\s*transition: none;\s*\}\s*\.oats-detail-fade-in \{\s*animation: none;/
+  );
+  const change = read("src/components/conversation/useDetailChange.ts");
+  assert.match(change, /setSettled\(prefersReducedMotion\(\) \? detailed : chosen\)/);
+  // The leaving composition is drawn until the change settles.
+  assert.match(WORKSPACE, /const detailed = change\.drawDetails;/);
+  assert.match(WORKSPACE, /\{change\.drawClean && \(/);
+});

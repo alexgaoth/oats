@@ -2,17 +2,20 @@
 //
 // Two compositions of the same recording, not two capabilities. Everything Oats
 // does (detection, classification, automatic search, persistence and analysis)
-// is identical in both. Clean shows eligible questions and their reply states.
-// Words adds the contour, topic flow, transcript and full question rail.
-// Both announce the same questions.
+// is identical in both. Clean, the plain view, shows eligible questions and
+// their reply states. The details add the contour, topic flow, the full
+// question rail and the transcript. Both announce the same questions.
 //
-// Pure and DOM-free so the default can be pinned. The default matters more than
-// it looks: it is the first thing every new user sees during the one action the
-// product exists for, and a stored value that has gone missing or bad must land
-// on the quiet composition rather than on the busy one.
+// Pure and DOM-free so the default can be pinned. The default is the first
+// thing every new user sees during the one action the product exists for.
+// Since 2026-11-22 it is the details (Alex's decision): a recording opens on
+// the contour, the flow card and the Questions tab, and Hide details goes to
+// the plain view. A stored value still wins. It is written only when somebody
+// changes the view, so an install where nobody did follows this default, and
+// a value that has gone missing or bad lands on it too.
 
-/** The quiet composition. Shown when nothing valid is stored. */
-export const DEFAULT_CONVERSATION_DETAIL = "clean";
+/** The details. Shown when nothing valid is stored. */
+export const DEFAULT_CONVERSATION_DETAIL = "detailed";
 
 export const CONVERSATION_DETAIL_VALUES = ["clean", "detailed"];
 
