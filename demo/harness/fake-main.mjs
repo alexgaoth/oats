@@ -154,6 +154,65 @@ export function createFakeMain({
   let nextEventId = 1;
   let nextGroupId = groups.length + 1;
 
+  // --- Named keys (src/helpers/apiKeys.mjs), held here as main holds them:
+  // the records go to the page, a secret only by its key's id. `keys=` starts
+  // with one key per provider, as a profile from before keys had names, so
+  // they are "OpenAI key 1" and "Anthropic key 1", chosen for every feature.
+  const savedKeys = [];
+  let featureKeys = {};
+  let nextKeyId = 1;
+  const addSavedKey = (provider, secret, fields = {}) => {
+    const record = {
+      id: `k${String(nextKeyId++).padStart(16, "0")}`,
+      provider,
+      name: fields.name ?? "",
+      number: fields.number ?? 1,
+      tail: secret.slice(-4),
+      addedAt: Date.now() + nextKeyId,
+      status: fields.status ?? null,
+      rev: 1,
+      secret,
+    };
+    savedKeys.push(record);
+    return record;
+  };
+  const firstOpenAI = openai ? addSavedKey("openai", "demo-key-answered-in-page") : null;
+  const firstAnthropic = anthropic
+    ? addSavedKey("anthropic", "sk-ant-demo-key-answered-in-page")
+    : null;
+  if (firstOpenAI) featureKeys = { conversations: firstOpenAI.id, dictation: firstOpenAI.id };
+  if (Boolean(firstOpenAI) !== Boolean(firstAnthropic)) {
+    featureKeys.writing = (firstOpenAI ?? firstAnthropic).id;
+  }
+  const keyList = () => ({
+    keys: savedKeys.map(({ secret: _secret, ...record }) => record),
+    features: { ...featureKeys },
+    defaults: {},
+  });
+  // Every change answers as main does: { ok, list }.
+  const keysChanged = (extra = {}) => {
+    broadcast("onApiKeysChanged", keyList());
+    return { ok: true, ...extra, list: keyList() };
+  };
+  const unchanged = () => ({ ok: false, reason: "invalid", list: keyList() });
+  const defaultSecret = (provider) =>
+    savedKeys.find((key) => key.provider === provider)?.secret ?? "";
+  const dropSavedKey = (id) => {
+    const at = savedKeys.findIndex((key) => key.id === id);
+    if (at >= 0) savedKeys.splice(at, 1);
+    featureKeys = Object.fromEntries(
+      Object.entries(featureKeys).filter(([, chosen]) => chosen !== id)
+    );
+  };
+  // The single slot's setter (`save-openai-key`), as main has it: it never
+  // overwrites or removes a named key; a key not saved yet is added.
+  const saveSlot = (provider, value) => {
+    const secret = String(value ?? "").trim();
+    if (secret && !savedKeys.some((key) => key.secret === secret)) addSavedKey(provider, secret);
+    keysChanged();
+    return { success: Boolean(secret) };
+  };
+
   const listen = (name, callback) => {
     if (typeof callback !== "function") return () => {};
     if (!listeners.has(name)) listeners.set(name, new Set());
@@ -575,9 +634,68 @@ export function createFakeMain({
 
     // --- OpenAI as the writing model (`loop=1`): a placeholder key, for the
     // stand-in that answers api.openai.com in the page (fastModel.mjs).
-    getOpenAIKey: async () => (openai ? "demo-key-answered-in-page" : ""),
-    // `keys=anthropic`: a key the person added, for the Anthropic route.
-    getAnthropicKey: async () => (anthropic ? "sk-ant-demo-key-answered-in-page" : ""),
+    // `keys=anthropic`: a key the person added, for the Anthropic route. Each
+    // slot holds its provider's default key, its oldest.
+    getOpenAIKey: async () => defaultSecret("openai"),
+    getAnthropicKey: async () => defaultSecret("anthropic"),
+    saveOpenAIKey: async (value) => saveSlot("openai", value),
+    saveAnthropicKey: async (value) => saveSlot("anthropic", value),
+    listApiKeys: async () => keyList(),
+    addApiKey: async (request = {}) => {
+      const secret = String(request.secret ?? "").trim();
+      if (!secret || (request.provider !== "openai" && request.provider !== "anthropic")) {
+        return unchanged();
+      }
+      const record =
+        savedKeys.find((key) => key.provider === request.provider && key.secret === secret) ??
+        addSavedKey(request.provider, secret, request);
+      for (const feature of request.assign ?? []) featureKeys[feature] = record.id;
+      return keysChanged({ id: record.id });
+    },
+    replaceApiKey: async (id, request = {}) => {
+      const record = savedKeys.find((key) => key.id === id);
+      const secret = String(request.secret ?? "").trim();
+      if (!record || !secret) return unchanged();
+      Object.assign(record, {
+        secret,
+        tail: secret.slice(-4),
+        status: request.status ?? null,
+        rev: record.rev + 1,
+      });
+      if (request.name) record.name = request.name;
+      return keysChanged();
+    },
+    renameApiKey: async (id, name, number) => {
+      const record = savedKeys.find((key) => key.id === id);
+      if (!record) return unchanged();
+      record.name = String(name ?? "");
+      if (Number.isInteger(number) && number > 0) record.number = number;
+      return keysChanged();
+    },
+    removeApiKey: async (id, features = {}) => {
+      if (!savedKeys.some((key) => key.id === id)) return unchanged();
+      dropSavedKey(id);
+      featureKeys = { ...featureKeys, ...features };
+      return keysChanged();
+    },
+    setFeatureApiKeys: async (features = {}) => {
+      featureKeys = { ...featureKeys, ...features };
+      return keysChanged();
+    },
+    setApiKeyStatus: async (id, status) => {
+      const record = savedKeys.find((key) => key.id === id);
+      if (!record) return unchanged();
+      record.status = status ?? null;
+      return keysChanged();
+    },
+    getApiKeySecret: async (id) => savedKeys.find((key) => key.id === id)?.secret ?? "",
+    getFeatureApiKey: async (feature, provider) => {
+      const chosen = savedKeys.find(
+        (key) => key.id === featureKeys[feature] && key.provider === provider
+      );
+      const key = chosen ?? savedKeys.find((candidate) => candidate.provider === provider);
+      return key ? { id: key.id, rev: key.rev, secret: key.secret } : null;
+    },
     // A key typed into Settings or setup, checked before it is saved: a key
     // with "bad" in it is rejected, as Anthropic would answer 401.
     anthropicKeyCheck: async (_model, key) =>

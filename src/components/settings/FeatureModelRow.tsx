@@ -29,6 +29,7 @@ import { featureRouteName } from "./featureRouteCopy";
 import { setFeatureProcessing, type ProcessingMode } from "./processing";
 import type { Feature } from "../../helpers/featureRoutes.mjs";
 import { isUsableFeatureKey } from "../../helpers/featureRoutes.mjs";
+import { resolveFeatureKey } from "../../helpers/apiKeys.mjs";
 import {
   followRecommendedWhisper,
   forgetWritingChoice,
@@ -157,12 +158,14 @@ function cloudSpeechName(id: string): string {
   return getTranscriptionProvider("openai")?.models.find((model) => model.id === id)?.name ?? id;
 }
 
-/** A key that is there but that its provider refused: the row says so, in warning. */
-function refusedKey(state: SettingsState, provider: "openai" | "anthropic") {
-  const present = Boolean(
-    (provider === "openai" ? state.openaiApiKey : state.anthropicApiKey).trim()
-  );
-  return present && !isUsableFeatureKey(state.featureKeyStatus[provider] ?? "legacy");
+/**
+ * A key that is there but that its provider refused: the row says so, in
+ * warning. The feature's own key (helpers/apiKeys.mjs): the key chosen for
+ * it, else its provider's oldest usable key.
+ */
+function refusedKey(state: SettingsState, feature: Feature, provider: "openai" | "anthropic") {
+  const key = resolveFeatureKey(state.keyRecords, feature, provider);
+  return Boolean(key) && !isUsableFeatureKey(key?.status ?? "legacy");
 }
 
 /** AMI replay (docs/dictation-accuracy.md) and AMI summary eval (docs/summaries.md). */
@@ -197,7 +200,7 @@ function SpeechRow({
           ? selectResolvedMeetingTranscription(state).cloudTranscriptionModel
           : selectDictationSettings(state).cloudTranscriptionModel,
       language: state.preferredLanguage,
-      refused: refusedKey(state, "openai"),
+      refused: refusedKey(state, feature, "openai"),
     }))
   );
   const tier = useSpeechTier();
@@ -334,7 +337,7 @@ function WritingRow({ upgrade, menus }: { upgrade: boolean; menus: boolean }) {
   const pinned = useSettingsStore((state) => state.featurePreferences.writingProvider);
   const refused = useSettingsStore((state) =>
     route.provider === "openai" || route.provider === "anthropic"
-      ? refusedKey(state, route.provider)
+      ? refusedKey(state, "writing", route.provider)
       : false
   );
 
@@ -467,6 +470,7 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
         </div>
         <div data-row-status className="flex shrink-0 items-center gap-2">
           <StatusView
+            feature={feature}
             status={row.status}
             model={row.model}
             name={name}
@@ -569,12 +573,14 @@ function PlaceMenu({
 }
 
 function StatusView({
+  feature,
   status,
   model,
   name,
   menus,
   focusAfterKey,
 }: {
+  feature: Feature;
   status: ModelStatus;
   model: string;
   name: string;
@@ -669,18 +675,23 @@ function StatusView({
         </Button>
       )}
       {status.kind === "add-key" && (
-        <AddKey provider={status.provider} name={name} onDone={focusAfterKey} />
+        <AddKey feature={feature} provider={status.provider} name={name} onDone={focusAfterKey} />
       )}
     </>
   );
 }
 
-/** Add API key, in place: the key field in a dialog, for the provider the row needs. */
+/**
+ * Add API key, in place: the key field in a dialog, for the provider the row
+ * needs. The key added is the one this row's feature uses.
+ */
 function AddKey({
+  feature,
   provider,
   name,
   onDone,
 }: {
+  feature: Feature;
   provider: KeyProvider;
   name: string;
   onDone: () => void;
@@ -705,7 +716,7 @@ function AddKey({
         }}
       >
         <DialogTitle>{label}</DialogTitle>
-        <ProviderKeyField provider={provider} />
+        <ProviderKeyField provider={provider} forFeature={feature} />
       </DialogContent>
     </Dialog>
   );

@@ -54,6 +54,7 @@ test("providers/custom forwards cloudBaseUrl as baseUrl and the key", async () =
     baseUrl: "https://api.example.com/v1",
     customApiKey: "sk-custom",
     lanUrl: undefined,
+    keyFeature: "writing",
   });
 });
 
@@ -69,6 +70,8 @@ test("providers with a first-party cloud provider passes provider only, no key/b
     baseUrl: undefined,
     customApiKey: undefined,
     lanUrl: undefined,
+    // The key chosen for Writing pays for it (stores/apiKeys.ts).
+    keyFeature: "writing",
   });
 });
 

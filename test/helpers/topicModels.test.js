@@ -76,6 +76,7 @@ test("a check request: the schema, the effort, and room for OpenAI's reasoning",
   );
   assert.deepEqual(fast, {
     provider: "openai",
+    keyFeature: "writing",
     systemPrompt: "You check the topics",
     maxTokens: 200,
     reasoningEffort: "none",
@@ -95,6 +96,8 @@ test("a check request: the schema, the effort, and room for OpenAI's reasoning",
     request
   );
   assert.equal(claude.provider, "anthropic");
+  // Writing's job: the key chosen for Writing pays for it, Anthropic's as OpenAI's.
+  assert.equal(claude.keyFeature, "writing");
   assert.equal(claude.maxTokens, 200);
   assert.equal(claude.reasoningEffort, "low");
   assert.equal(claude.disableThinking, true);

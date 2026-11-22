@@ -137,7 +137,10 @@ export const openaiProvider: InferenceProvider = {
     const overrideKey = isCustomProvider ? config.customApiKey?.trim() : "";
     const apiKey =
       overrideKey ||
-      (await ctx.getApiKey(isCustomProvider ? "custom" : isOpenRouter ? "openrouter" : "openai"));
+      (await ctx.getApiKey(
+        isCustomProvider ? "custom" : isOpenRouter ? "openrouter" : "openai",
+        config.keyFeature
+      ));
 
     logger.logReasoning("OPENAI_API_KEY", {
       hasApiKey: !!apiKey,

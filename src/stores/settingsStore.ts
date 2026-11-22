@@ -54,6 +54,17 @@ import {
   type RouteKeyStatus,
 } from "../helpers/featureRoutes.mjs";
 import {
+  NO_KEYS,
+  defaultKeyOf,
+  featuresForNewKey,
+  isKeyProvider,
+  keyUsable,
+  normalizeKeyRecords,
+  resolveFeatureKey,
+  singleKeyEdit,
+  type KeyRecords,
+} from "../helpers/apiKeys.mjs";
+import {
   ROOM_SPEECH_PREFERENCE,
   followsRoomSpeechDefault,
   migrateRoomSpeechDefault,
@@ -596,7 +607,14 @@ export interface SettingsState
   cleanupMode: InferenceMode;
   localSetupAuthorized: boolean;
   featurePreferences: FeaturePreferences;
+  /** What the provider said of a key, for the providers whose keys have no names. */
   featureKeyStatus: Partial<Record<Provider, RouteKeyStatus>>;
+  /**
+   * The saved OpenAI and Anthropic keys, without their secrets, and the key
+   * each feature uses (helpers/apiKeys.mjs). Main holds the secrets and sends
+   * these; nothing here is stored in localStorage. See `stores/apiKeys.ts`.
+   */
+  keyRecords: KeyRecords;
   roomSpeechPreference: "default" | "shared" | "recommended";
   cleanupRemoteUrl: string;
 
@@ -1043,7 +1061,6 @@ const SECRET_IPC_SAVERS = {
 type SecretProvider = keyof typeof SECRET_IPC_SAVERS;
 
 const secretSaveTimers: Partial<Record<SecretProvider, ReturnType<typeof setTimeout>>> = {};
-const FEATURE_KEY_CHANGE = "oats.featureKeyChanged.";
 function debouncedSaveSecret(provider: SecretProvider, key: string) {
   if (!isBrowser) return;
   const timer = secretSaveTimers[provider];
@@ -1052,21 +1069,15 @@ function debouncedSaveSecret(provider: SecretProvider, key: string) {
     const api = window.electronAPI;
     const save = api?.[SECRET_IPC_SAVERS[provider]] as
       ((k: string) => Promise<unknown>) | undefined;
-    save?.(key)
-      ?.then(() => {
-        if (provider === "openai" || provider === "anthropic") {
-          // Signal other windows after the secure store has the new key. This
-          // event carries no key, only the provider and a change identifier.
-          localStorage.setItem(`${FEATURE_KEY_CHANGE}${provider}`, String(Date.now()));
-        }
-      })
-      .catch((err) => {
-        logger.warn(
-          "Failed to persist secret",
-          { provider, error: (err as Error).message },
-          "settings"
-        );
-      });
+    // OpenAI and Anthropic keys are not saved here: they have names
+    // (createNamedSlotSetter, stores/apiKeys.ts).
+    save?.(key)?.catch((err) => {
+      logger.warn(
+        "Failed to persist secret",
+        { provider, error: (err as Error).message },
+        "settings"
+      );
+    });
   }, 250);
 }
 
@@ -1123,6 +1134,57 @@ function createSecretSetter(
     useSettingsStore.setState({ [storeKey]: key });
     debouncedSaveSecret(saver, key);
     invalidateApiKeyCaches(cacheProvider);
+  };
+}
+
+// The fields that hold one key per provider (the Advanced pickers,
+// useSettings' updateApiKeys). OpenAI and Anthropic keep named keys, so such a
+// field shows the provider's default key and may change only that one
+// (helpers/apiKeys.mjs, `singleKeyEdit`): text replaces it, or adds a key when
+// there is none; empty text removes nothing. The key list removes keys.
+const namedSlotTimers: Partial<Record<"openai" | "anthropic", ReturnType<typeof setTimeout>>> = {};
+function createNamedSlotSetter(
+  storeKey: "openaiApiKey" | "anthropicApiKey",
+  provider: "openai" | "anthropic"
+) {
+  return (value: string) => {
+    if (!isBrowser) return;
+    const text = String(value ?? "").trim();
+    // The key the field already holds, saved again (a form saved whole): nothing changes.
+    if (text && text === useSettingsStore.getState()[storeKey]) return;
+    if (text) useSettingsStore.setState({ [storeKey]: text });
+    const timer = namedSlotTimers[provider];
+    if (timer) clearTimeout(timer);
+    namedSlotTimers[provider] = setTimeout(() => {
+      const state = useSettingsStore.getState();
+      const edit = singleKeyEdit(defaultKeyOf(state.keyRecords, provider), text);
+      const api = window.electronAPI;
+      const change =
+        edit.action === "replace"
+          ? api?.replaceApiKey?.(edit.id, { secret: text, status: null })
+          : edit.action === "add"
+            ? api?.addApiKey?.({
+                provider,
+                secret: text,
+                name: "",
+                number: 0,
+                status: null,
+                assign: featuresForNewKey(state.keyRecords, provider, {
+                  writingProvider: state.featurePreferences.writingProvider,
+                }),
+              })
+            : undefined;
+      // The field then shows what is saved, also when nothing changed.
+      void Promise.resolve(change)
+        .then((result) => applyKeyRecords(result?.list ?? useSettingsStore.getState().keyRecords))
+        .catch((err) => {
+          logger.warn(
+            "Failed to save a key",
+            { provider, error: (err as Error).message },
+            "settings"
+          );
+        });
+    }, 250);
   };
 }
 
@@ -1343,6 +1405,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
   featurePreferences: readFeaturePreferences(isBrowser ? localStorage : null),
   featureKeyStatus: {},
+  keyRecords: NO_KEYS,
   roomSpeechPreference: (() => {
     const preference = readString(ROOM_SPEECH_PREFERENCE, "");
     return preference === "shared" || preference === "recommended" ? preference : "default";
@@ -1688,8 +1751,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     }
   },
 
-  setOpenaiApiKey: createSecretSetter("openaiApiKey", "openai", "openai"),
-  setAnthropicApiKey: createSecretSetter("anthropicApiKey", "anthropic", "anthropic"),
+  setOpenaiApiKey: createNamedSlotSetter("openaiApiKey", "openai"),
+  setAnthropicApiKey: createNamedSlotSetter("anthropicApiKey", "anthropic"),
   setDeepgramApiKey: createSecretSetter("deepgramApiKey", "deepgram"),
   setObsidianVaultPath: createStringSetter("obsidianVaultPath"),
   setObsidianExportEnabled: createBooleanSetter("obsidianExportEnabled"),
@@ -2370,7 +2433,8 @@ if (isBrowser) {
     if (
       state.cleanupMode !== previous.cleanupMode ||
       state.openaiApiKey !== previous.openaiApiKey ||
-      state.anthropicApiKey !== previous.anthropicApiKey
+      state.anthropicApiKey !== previous.anthropicApiKey ||
+      state.keyRecords !== previous.keyRecords
     ) {
       followDefaultWritingModel();
       const preferences = pinWritingProvider(state.featurePreferences, featureKeyPresence(state));
@@ -2406,7 +2470,7 @@ export function setFeatureRoute(
   saveFeaturePreferences(preferences);
 }
 
-function saveFeaturePreferences(preferences: FeaturePreferences): void {
+export function saveFeaturePreferences(preferences: FeaturePreferences): void {
   if (isBrowser) localStorage.setItem(FEATURE_ROUTES_KEY, JSON.stringify(preferences));
   useSettingsStore.setState({ featurePreferences: preferences });
 }
@@ -2418,7 +2482,21 @@ function featureKeyPresence(state: SettingsState) {
   };
 }
 
+/** A named key's status for the route: a key nobody asked about yet counts as "legacy". */
+function namedKeyStatus(key: { status: RouteKeyStatus | null } | null) {
+  return key ? (key.status ?? "legacy") : undefined;
+}
+
+/**
+ * What a provider's key can do, for the questions asked of a provider rather
+ * than of a feature (is there a usable OpenAI key?). For OpenAI and Anthropic,
+ * the best of that provider's saved keys.
+ */
 function selectFeatureKeyStatus(state: SettingsState, provider: Provider) {
+  if (isKeyProvider(provider)) {
+    const own = state.keyRecords.keys.filter((key) => key.provider === provider);
+    return namedKeyStatus(own.find((key) => keyUsable(key.status)) ?? own[0] ?? null);
+  }
   const present =
     provider === "custom"
       ? Boolean(state.cleanupCustomApiKey.trim() && state.cleanupCloudBaseUrl.trim())
@@ -2439,17 +2517,71 @@ export function selectWritingKeyProvider(state: SettingsState) {
   });
 }
 
+/**
+ * Where a feature runs. On the API-key route an OpenAI or Anthropic feature
+ * is ready only when its own key is usable: the key chosen for it
+ * (`resolveFeatureKey`), not any key of the provider.
+ */
 export function selectFeatureRoute(state: SettingsState, feature: Feature) {
   const provider =
     feature === "writing" ? (state.featurePreferences.writingProvider ?? "openai") : "openai";
-  return resolveFeatureRoute(state.featurePreferences, feature, {
-    [provider]: selectFeatureKeyStatus(state, provider),
+  const status = isKeyProvider(provider)
+    ? namedKeyStatus(resolveFeatureKey(state.keyRecords, feature, provider))
+    : selectFeatureKeyStatus(state, provider);
+  return resolveFeatureRoute(state.featurePreferences, feature, { [provider]: status });
+}
+
+/**
+ * What the provider said of a key: by its id for an OpenAI or Anthropic key
+ * (a provider's name stands for its default key), by the provider for the
+ * others. A named key's status is kept with its record in main.
+ */
+export function setFeatureKeyStatus(target: string, status: RouteKeyStatus): void {
+  const state = useSettingsStore.getState();
+  const record =
+    state.keyRecords.keys.find((key) => key.id === target) ??
+    (isKeyProvider(target) ? defaultKeyOf(state.keyRecords, target) : null);
+  if (record) {
+    if (record.status === status) return;
+    useSettingsStore.setState({
+      keyRecords: {
+        ...state.keyRecords,
+        keys: state.keyRecords.keys.map((key) => (key.id === record.id ? { ...key, status } : key)),
+      },
+    });
+    window.electronAPI
+      ?.setApiKeyStatus?.(record.id, status)
+      ?.then((result) => {
+        if (result?.list) void applyKeyRecords(result.list);
+      })
+      .catch(() => {});
+    return;
+  }
+  if (isKeyProvider(target)) return;
+  useSettingsStore.setState({
+    featureKeyStatus: { ...state.featureKeyStatus, [target as Provider]: status },
   });
 }
 
-export function setFeatureKeyStatus(provider: Provider, status: RouteKeyStatus): void {
-  const { featureKeyStatus } = useSettingsStore.getState();
-  useSettingsStore.setState({ featureKeyStatus: { ...featureKeyStatus, [provider]: status } });
+/**
+ * Take the key records main sent (`list-api-keys`, `api-keys-changed`, or
+ * the answer to a change): normalized, with each provider's single slot
+ * (`openaiApiKey`, its default key) read again, and the cached keys dropped.
+ */
+export async function applyKeyRecords(raw: unknown): Promise<void> {
+  if (!isBrowser) return;
+  const records = normalizeKeyRecords(raw);
+  const [openai, anthropic] = await Promise.all([
+    window.electronAPI?.getOpenAIKey?.().catch(() => undefined),
+    window.electronAPI?.getAnthropicKey?.().catch(() => undefined),
+  ]);
+  useSettingsStore.setState({
+    keyRecords: records,
+    ...(typeof openai === "string" && { openaiApiKey: openai }),
+    ...(typeof anthropic === "string" && { anthropicApiKey: anthropic }),
+  });
+  invalidateApiKeyCaches("openai");
+  invalidateApiKeyCaches("anthropic");
 }
 
 export const selectIsCloudCleanupMode = (_state: SettingsState) => false;
@@ -2778,6 +2910,7 @@ export async function initializeSettings(): Promise<void> {
         bedrockSessionToken,
         azureApiKey,
         vertexApiKey,
+        savedKeyList,
       ] = await Promise.all([
         window.electronAPI.getOpenAIKey?.(),
         window.electronAPI.getAnthropicKey?.(),
@@ -2796,9 +2929,12 @@ export async function initializeSettings(): Promise<void> {
         window.electronAPI.getBedrockSessionToken?.(),
         window.electronAPI.getAzureApiKey?.(),
         window.electronAPI.getVertexApiKey?.(),
+        // The saved OpenAI and Anthropic keys: their records, no secret.
+        window.electronAPI.listApiKeys?.(),
       ]);
 
       useSettingsStore.setState({
+        keyRecords: normalizeKeyRecords(savedKeyList),
         openaiApiKey: openai || "",
         anthropicApiKey: anthropic || "",
         geminiApiKey: gemini || "",
@@ -3123,24 +3259,6 @@ export async function initializeSettings(): Promise<void> {
       useSettingsStore.setState({ featurePreferences: readFeaturePreferences(localStorage) });
       return;
     }
-    if (key.startsWith(FEATURE_KEY_CHANGE)) {
-      const provider = key.slice(FEATURE_KEY_CHANGE.length);
-      if (provider !== "openai" && provider !== "anthropic") return;
-      const readKey =
-        provider === "openai"
-          ? window.electronAPI?.getOpenAIKey
-          : window.electronAPI?.getAnthropicKey;
-      useSettingsStore.setState({ [`${provider}ApiKey`]: "" });
-      void readKey?.()
-        .then((value) => {
-          if (localStorage.getItem(key) === newValue) {
-            useSettingsStore.setState({ [`${provider}ApiKey`]: value || "" });
-            invalidateApiKeyCaches(provider);
-          }
-        })
-        .catch(() => {});
-      return;
-    }
 
     if (key.startsWith("customPrompt.")) {
       const kind = key.slice("customPrompt.".length) as PromptKind;
@@ -3190,6 +3308,12 @@ export async function initializeSettings(): Promise<void> {
     if (key === "uiLanguage" && typeof value === "string") {
       void i18n.changeLanguage(value);
     }
+  });
+
+  // A key added, renamed, removed or chosen in any window: main sends every
+  // window the records (no secret), and each reads its providers' slots again.
+  window.electronAPI?.onApiKeysChanged?.((list: unknown) => {
+    void applyKeyRecords(list);
   });
 
   // Active hotkey updates from backend — display state, never persisted.

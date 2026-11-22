@@ -2657,7 +2657,13 @@
       "saved": "Salvata.",
       "getKey": "Ottieni una chiave {{provider}}",
       "savedKey": "La tua chiave {{provider}}",
-      "replace": "Sostituisci"
+      "replace": "Sostituisci",
+      "defaultName": "Chiave {{provider}} {{number}}",
+      "name": "Nome",
+      "optional": "(facoltativo)",
+      "nameHint": "Ad esempio, Lavoro",
+      "notSaved": "Oats non è riuscito a salvare la chiave. Riprova.",
+      "notRemoved": "Oats non è riuscito a rimuovere la chiave. Riprova."
     }
   },
   "questionCard": {

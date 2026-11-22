@@ -23,6 +23,13 @@ export type SelfHostedType = "openai-compatible" | "lan";
 
 export type TranscriptionStatus = "completed" | "failed" | "pending" | "discarded";
 
+/** What a change of the saved keys answers (environment.js): the keys after it, or as they still are. */
+export interface ApiKeyChange {
+  ok: boolean;
+  reason?: string;
+  list?: unknown;
+}
+
 /** What the sidebar's footer reads from the main process (onDeviceStatus.js). */
 export interface OnDeviceStatus {
   /** Requests that left this machine since launch (networkLedger.js). */
@@ -983,6 +990,36 @@ declare global {
       saveOpenAIKey: (key: string) => Promise<{ success: boolean }>;
       getAnthropicKey: () => Promise<string | null>;
       saveAnthropicKey: (key: string) => Promise<void>;
+      // Named keys, more than one per provider for OpenAI and Anthropic
+      // (helpers/apiKeys.mjs). Main holds the secrets; these carry the key
+      // records (id, provider, name, last four characters), never a secret,
+      // except `getApiKeySecret` and `getFeatureApiKey`, which main answers
+      // only for the main window and the control panel. A change answers
+      // { ok, list }: on a failure nothing changed, and `list` is the keys as
+      // they still are. The records are normalized where they arrive.
+      listApiKeys?: () => Promise<unknown>;
+      addApiKey?: (request: {
+        provider: "openai" | "anthropic";
+        secret: string;
+        name: string;
+        number: number;
+        status: string | null;
+        assign: string[];
+      }) => Promise<ApiKeyChange & { id?: string }>;
+      replaceApiKey?: (
+        id: string,
+        request: { secret: string; status: string | null; name?: string; number?: number }
+      ) => Promise<ApiKeyChange>;
+      renameApiKey?: (id: string, name: string, number: number) => Promise<ApiKeyChange>;
+      removeApiKey?: (id: string, features: Record<string, string>) => Promise<ApiKeyChange>;
+      setFeatureApiKeys?: (features: Record<string, string>) => Promise<ApiKeyChange>;
+      setApiKeyStatus?: (id: string, status: string | null) => Promise<ApiKeyChange>;
+      getApiKeySecret?: (id: string) => Promise<string>;
+      getFeatureApiKey?: (
+        feature: string,
+        provider: string
+      ) => Promise<{ id: string | null; rev: number; secret: string } | null>;
+      onApiKeysChanged?: (callback: (list: unknown) => void) => () => void;
       getUiLanguage: () => Promise<string>;
       saveUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;
       setUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;
@@ -1147,8 +1184,14 @@ declare global {
         agentName: string | null,
         config: any
       ) => Promise<{ success: boolean; text?: string; error?: string }>;
-      /** True or false when Anthropic says whether the key can use the model; null when it could not be told. */
-      anthropicModelAvailable?: (modelId: string) => Promise<boolean | null>;
+      /**
+       * True or false when Anthropic says whether the key can use the model;
+       * null when it could not be told. With a feature, that feature's key.
+       */
+      anthropicModelAvailable?: (
+        modelId: string,
+        request?: { feature?: string }
+      ) => Promise<boolean | null>;
       // A key not saved yet: "ok", "rejected", "no-access" or "unknown".
       anthropicKeyCheck?: (modelId: string, key: string) => Promise<string>;
 

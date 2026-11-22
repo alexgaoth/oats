@@ -1,6 +1,7 @@
 import reasoningService from "../services/ReasoningService";
 import type { ReasoningConfig } from "../services/BaseReasoningService";
 import { getSettings } from "./settingsStore";
+import { resolveFeatureKey } from "../helpers/apiKeys.mjs";
 import type { WritingRoute } from "./conversationGroupSortStore";
 import { readSnapshot } from "../components/global/boardData";
 import { summaryExcerpt } from "../helpers/conversationGroupSort.mjs";
@@ -43,8 +44,8 @@ const EMBED_BATCH = 64;
 /** The answer is a short JSON list; a Claude model also thinks before it. */
 const LINK_MAX_TOKENS = 4000;
 
-/** The OpenAI link model this session's key can use: undefined until asked. */
-let openaiLinkModel: string | null | undefined;
+/** The OpenAI link model Writing's key can use, by that key: unknown until asked. */
+const openaiLinkModels = new Map<string, string | null>();
 
 /**
  * The link model this provider's key can use, the most accurate first. For
@@ -54,17 +55,20 @@ let openaiLinkModel: string | null | undefined;
 async function linkModelFor(provider: "openai" | "anthropic"): Promise<string | null> {
   const models = LINK_MODELS[provider];
   if (provider !== "openai") return models[0] ?? null;
-  if (openaiLinkModel !== undefined) return openaiLinkModel;
+  // By the key and its revision: a replaced secret is asked about again.
+  const writer = resolveFeatureKey(getSettings().keyRecords, "writing", "openai");
+  const keyId = writer ? `${writer.id}.${writer.rev}` : "slot";
+  if (openaiLinkModels.has(keyId)) return openaiLinkModels.get(keyId) ?? null;
   for (const model of models) {
-    const available = await reasoningService.openAiModelAvailable(model);
+    const available = await reasoningService.openAiModelAvailable(model, "writing");
     if (available === true) {
-      openaiLinkModel = model;
+      openaiLinkModels.set(keyId, model);
       return model;
     }
     // Unknown (offline, a server error): try it, and ask again next time.
     if (available === null) return model;
   }
-  openaiLinkModel = null;
+  openaiLinkModels.set(keyId, null);
   return null;
 }
 

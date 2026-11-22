@@ -6,6 +6,9 @@
 // preload.js can't require local modules under sandbox, so it mirrors the
 // {base, get, save} tuples inline — keep BYOK_KEY_BRIDGES there in sync
 // (guarded by test/helpers/secretKeys.test.js).
+// `named`: the provider keeps more than one key, each with a name
+// (helpers/apiKeys.mjs). Its single slot holds its default key, and a save to
+// the slot replaces that key (environment.js).
 const BYOK_API_KEYS = [
   {
     base: "openai",
@@ -13,6 +16,7 @@ const BYOK_API_KEYS = [
     get: "getOpenAIKey",
     save: "saveOpenAIKey",
     storeKey: "openaiApiKey",
+    named: true,
   },
   {
     base: "anthropic",
@@ -20,6 +24,7 @@ const BYOK_API_KEYS = [
     get: "getAnthropicKey",
     save: "saveAnthropicKey",
     storeKey: "anthropicApiKey",
+    named: true,
   },
   {
     base: "gemini",

@@ -279,7 +279,8 @@ export function WritingModelChoice() {
         getKeyUrl="https://openrouter.ai/keys"
       />
     ) : side === "providers" ? (
-      <ProviderKey provider={view} />
+      // The Writing chooser shows, and replaces, the key Writing uses.
+      <ProviderKey provider={view} feature="writing" />
     ) : getCachedPlatform() !== "darwin" ? (
       <GpuStatusBadge />
     ) : undefined;
