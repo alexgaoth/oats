@@ -6,7 +6,7 @@ const dockManager = require("./dockManager");
 const { i18nMain } = require("./i18nMain");
 const {
   RECORDING_TOSS_FRAMES,
-  RECORDING_TOSS_PEAK,
+  RECORDING_STILL_FRAME,
   playRecordingToss,
 } = require("./recordingToss.mjs");
 
@@ -207,12 +207,12 @@ class TrayManager {
       return;
     }
 
-    const peak = this.recordingIcons[RECORDING_TOSS_PEAK];
+    const still = this.recordingIcons[RECORDING_STILL_FRAME];
     if (
       systemPreferences.getAnimationSettings().prefersReducedMotion ||
       !this.recordingIcons.every(Boolean)
     ) {
-      tray.setImage(peak ?? this.idleIcon);
+      tray.setImage(still ?? this.idleIcon);
       return;
     }
     this.stopRecordingToss = playRecordingToss((index) => {

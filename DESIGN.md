@@ -373,6 +373,14 @@ under `prefers-reduced-motion`: the dot has no ring.
   of the frame's grid columns, so the conversation reflows into the room as it
   moves, with no animation code. Under reduced motion the sidebar goes and
   comes back at once.
+- **While recording, the Oats mark says so, not a dot.** In the menu bar and in
+  the sidebar the mark tosses in a loop: 16 frames 72ms apart, then a 440ms rest
+  (`helpers/recordingToss.mjs`, `helpers/tray.js`, `shell/OatsMark.tsx`). Under
+  reduced motion, and wherever the loop cannot play, it holds one still pose:
+  frame 3, the grain early in its hop, face-on with its crease showing, lifted
+  and more upright than at rest, so it is an oat and not the idle oat. Never the
+  top of the toss: the grain is end-on there, and at 16 pt that reads as a dot,
+  the generic recording light this mark replaces.
 
 ## 8. Voice
 
