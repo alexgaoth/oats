@@ -2493,10 +2493,8 @@ class IPCHandlers {
     });
 
     ipcMain.handle("download-parakeet-model", async (event, modelName) => {
-      if (
-        modelName === "parakeet-ultra-ane" &&
-        (this.isMeetingActive?.() || this.dictationCaptures.size > 0)
-      ) {
+      const recording = () => Boolean(this.isMeetingActive?.() || this.dictationCaptures.size > 0);
+      if (modelName === "parakeet-ultra-ane" && recording()) {
         return { success: false, code: "RECORDING_ACTIVE" };
       }
       try {
@@ -2508,6 +2506,11 @@ class IPCHandlers {
             }
           }
         );
+        // The Neural Engine model's first load compiles it for this Mac. Do it
+        // now, while idle, rather than at the first recording.
+        if (result?.success && result.downloaded) {
+          void this.parakeetManager.warmAneModel(modelName, { busy: recording }).catch(() => {});
+        }
         return result;
       } catch (error) {
         if (!event.sender.isDestroyed()) {

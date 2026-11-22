@@ -604,6 +604,39 @@ class ParakeetManager {
     }
   }
 
+  /**
+   * The first load of the Neural Engine model compiles it for this Mac, and
+   * later loads read the compiled copy (macOS keeps it). Do that first load
+   * right after the download, while nothing records, so the first recording
+   * does not wait for it. A recording that starts meanwhile joins the same
+   * load (ParakeetAne.start) rather than starting it over, and keeps the
+   * helper. With nothing recording at the end, the helper stops: the
+   * compiled copy is what was wanted.
+   *
+   * @param {string} modelName
+   * @param {{ busy?: () => boolean }} [options] whether a recording or dictation runs now
+   * @returns {Promise<boolean>} whether the model loaded
+   */
+  async warmAneModel(modelName, { busy = () => false } = {}) {
+    if (getModelRuntime(modelName) !== "ane") return false;
+    if (!this.serverManager.isAvailable("ane") || busy()) return false;
+    if (!this.serverManager.isModelDownloaded(modelName)) return false;
+    const helper = this.serverManager.ane(modelName);
+    if (helper.isRunning()) return true;
+    const started = Date.now();
+    try {
+      await helper.start();
+    } catch (error) {
+      debugLogger.warn("Parakeet warm-up failed; it loads at the first recording", {
+        error: error.message,
+      });
+      return false;
+    }
+    debugLogger.info("Parakeet loaded after its download", { ms: Date.now() - started });
+    if (!busy()) await helper.stop();
+    return true;
+  }
+
   async cancelDownload() {
     if (this.currentDownloadProcess) {
       this.currentDownloadProcess.abort();
