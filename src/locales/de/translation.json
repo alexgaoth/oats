@@ -2646,6 +2646,7 @@
     }
   },
   "questionCard": {
+    "empty": "Noch keine Fragen.",
     "now": "jetzt",
     "state": {
       "asked": "Offen",

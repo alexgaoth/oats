@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const path = require("node:path");
 const { createOneAtATime } = require("../../src/helpers/oneAtATime.js");
 
 let TopicNamer;
@@ -152,6 +154,116 @@ test("a request waits while turns keep landing, but never past the longest settl
   assert.equal(asked.length, 0);
   await clock.tick(2000);
   assert.equal(asked.length, 1, "asked at the longest settle, while turns still land");
+});
+
+test("a detector cut requests a first name before another turn or settle timer", async () => {
+  const { clock, namer, asked, answers } = setup({ nameOnCut: true });
+  const talk = conversation();
+  const pending = deferred();
+  const prior = talk.say(1, 45);
+  answers.push("Launch date review");
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(0);
+
+  const cut = talk.say(2, 27, { label: "identity" });
+  const snapshot = talk.snapshot(2);
+  const before = snapshot.nodes[1];
+  answers.push(() => pending.promise);
+  namer.observe(snapshot, talk.segments, { detectorCuts: true });
+  await clock.tick(0);
+  assert.equal(asked.length, 2, "ask on the same clock tick as the cut");
+  assert.match(asked[1].text, new RegExp(`${cut}w0`));
+  assert.doesNotMatch(asked[1].text, new RegExp(`${prior}w0`));
+  assert.equal(labelOf(namer, snapshot, 2), before);
+  pending.resolve("Identity provider review\nThe team reviewed the identity provider.");
+  await clock.tick(1000);
+  const after = labelOf(namer, snapshot, 2);
+  assert.equal(after.label, "Identity provider review");
+  assert.equal(after.deviceLabel, before.label);
+  assert.equal(after.description, "The team reviewed the identity provider.");
+  assert.equal(after.firstAt, before.firstAt);
+  assert.equal(after.id, before.id);
+  assert.equal(after.utteranceIds, before.utteranceIds);
+});
+
+test("an immediate first name still needs enough speech and a live recording", async () => {
+  const readiness = deferred();
+  const { clock, namer, asked } = setup({ nameOnCut: true, ready: () => readiness.promise });
+  const talk = conversation();
+  talk.say(1, 20);
+  namer.observe(talk.snapshot(1), talk.segments);
+  await clock.tick(0);
+  assert.equal(namer.running, false);
+  talk.say(1, 21);
+  namer.observe(talk.snapshot(1), talk.segments);
+  assert.equal(namer.running, true);
+  namer.stop();
+  readiness.resolve(true);
+  await clock.tick(0);
+  assert.equal(asked.length, 0);
+});
+
+test("vectors can draw and name a detector cut without another final", async () => {
+  const { ConversationTopicTracker } = await import("../../src/helpers/conversationTopics.mjs");
+  const { clock, namer, asked, answers } = setup({ nameOnCut: true });
+  const tracker = new ConversationTopicTracker({
+    now: clock.now,
+    detector: { threshold: 2 },
+    proposalStartedAt: 0,
+  });
+  // Fix the score so this test exercises delivery, not the learned model.
+  tracker._proposals.score = (gap) => (gap === 2 ? 0.45 : 0);
+  const segments = [];
+  const say = (id, text, start, end) => {
+    segments.push({ id, text, timestamp: start * 1000 });
+    tracker.onUtterance({ id, text, start, end, at: start * 1000 });
+    publish();
+  };
+  const publish = () =>
+    namer.observe(tracker.snapshot(), segments, { detectorCuts: tracker.detectorActive });
+  say(
+    "old",
+    "The project schedule lists the release milestones and review dates. We need a new plan for the testing phase because the team will finish the first prototype next week. The project schedule should include a separate review for the final prototype at the end of the month.",
+    0,
+    18
+  );
+  say("old-more", "That gives everyone time to review the schedule.", 19, 24);
+  tracker.addVectors({
+    utterances: [
+      ["old", [1, 0]],
+      ["old-more", [1, 0]],
+    ],
+  });
+  answers.push("Project schedule review");
+  publish();
+  await clock.tick(57_000);
+
+  say(
+    "new",
+    "The identity provider requires a different login protocol. The team will review the identity provider configuration.",
+    40,
+    50
+  );
+  say("new-more", "We will test it with two accounts.", 51, 56);
+  assert.deepEqual(tracker.detector.cuts, []);
+  tracker.addVectors({
+    utterances: [
+      ["new", [0, 1]],
+      ["new-more", [0, 1]],
+    ],
+  });
+  assert.deepEqual(tracker.detector.cuts, [2]);
+  const cut = tracker.snapshot().nodes.at(-1);
+  assert.equal(cut.utteranceIds[0], "new");
+  assert.notEqual(cut.label, "Identity provider review");
+  answers.push("Identity provider review");
+  publish();
+  await clock.tick(0);
+
+  assert.equal(asked.length, 2);
+  assert.match(asked[1].text, /^- The identity provider/m);
+  assert.doesNotMatch(asked[1].text, /^- The project schedule/m);
+  assert.equal(labelOf(namer, tracker.snapshot(), cut.id).label, "Identity provider review");
 });
 
 test("one request at a time: the next waits for the answer", async () => {
@@ -343,6 +455,49 @@ test("named only at the end when names wait for the end: every topic, the bigges
   assert.equal(named.nodes[0].label, "Launch date move");
   assert.equal(named.nodes[2].label, "topic 3");
   assert.equal(final.nodes[0].label, "topic 1", "the snapshot passed in is not changed");
+});
+
+test("Finish skips the model re-cut by default and names the saved snapshot", () => {
+  const src = (file) => readFileSync(path.join(__dirname, "../../src", file), "utf8");
+  const store = src("stores/meetingRecordingStore.ts");
+  const workspace = src("components/OatsWorkspace.tsx");
+  assert.match(store, /const ENABLE_MODEL_RECORD_CUT = false;/);
+  assert.match(
+    store,
+    /export async function cutRecordTopics\([\s\S]*?\{[\s\n]*if \(!ENABLE_MODEL_RECORD_CUT\) return null;/
+  );
+  assert.match(
+    workspace,
+    /const topics = getConversationTopicSnapshot\(\);[\s\S]*await nameFinalTopics\(recordingNoteId, cut \?\? topics, state\.segments, naming\);/
+  );
+});
+
+test("Finish can name and describe without changing a cut or return", async () => {
+  const { namer, asked, answers } = setup({ live: false });
+  const talk = conversation();
+  talk.say(1, 40);
+  talk.say(2, 40);
+  talk.say(1, 40);
+  const final = talk.snapshot();
+  final.edges = [
+    { from: 1, to: 2, kind: "new" },
+    { from: 2, to: 1, kind: "return" },
+  ];
+  answers.push(
+    "Launch date review\nThe team reviewed the release schedule.",
+    "Identity provider review\nThe team compared two identity providers."
+  );
+  const named = await namer.finish(final, talk.segments);
+  assert.equal(asked.length, 2);
+  assert.deepEqual(
+    named.nodes.map(({ label }) => label),
+    ["Launch date review", "Identity provider review"]
+  );
+  assert.equal(named.nodes[0].description, "The team reviewed the release schedule.");
+  const cuts = (snapshot) =>
+    snapshot.nodes.map(({ id, firstAt, utteranceIds }) => ({ id, firstAt, utteranceIds }));
+  assert.deepEqual(cuts(named), cuts(final));
+  assert.equal(named.edges, final.edges);
 });
 
 test("the end waits for the request that is out, renames what grew, and keeps to its budget", async () => {

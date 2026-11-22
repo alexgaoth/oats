@@ -735,6 +735,19 @@ export function namesWhileRecording({
   return classifierOnDisk === false || dedicatedWritingServer === true;
 }
 
+// Roll back local live cutting without changing the key route.
+const LOCAL_WINDOW_LOOP_ENABLED = false;
+
+/** Choose the live topic path after the model and server checks. */
+export function liveTopicMode({ mode, hasCheckModel = false, liveNames = false, stopped = false }) {
+  if (!mode) return "none";
+  if (stopped) return "finish";
+  if (hasCheckModel) return "key-loop";
+  if (!liveNames) return "finish";
+  if (mode !== "local") return "namer";
+  return LOCAL_WINDOW_LOOP_ENABLED ? "window-loop" : "detector-namer";
+}
+
 /**
  * The names (and descriptions) a snapshot carries from the model, by topic
  * id, for putting on another copy of the same topics (the record as stored).

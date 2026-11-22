@@ -835,7 +835,9 @@ function trackConversationTopic(segment: TranscriptSegment) {
   // The writing model names topics as they grow, when there is one
   // (topicNamingRunner.ts); what is published carries its names, or the live
   // topic check's topics when it runs.
-  observeTopics(tracked, useMeetingRecordingStore.getState().segments);
+  observeTopics(tracked, useMeetingRecordingStore.getState().segments, {
+    detectorCuts: conversationTopicTracker.detectorActive,
+  });
   const snapshot = liveTopicSnapshot(tracked);
   useMeetingRecordingStore.setState({
     // Already computed on the line above for the suggestions; publishing it
@@ -852,13 +854,23 @@ function trackConversationTopic(segment: TranscriptSegment) {
 // A topic's name from the writing model arrived, or the live topic check drew
 // a change: the flow card shows it now, not at the next turn, which may be a
 // long pause away.
-function publishTopicNames() {
-  if (!conversationTopicTracker || !useMeetingRecordingStore.getState().isRecording) return;
-  useMeetingRecordingStore.setState({
-    topicSnapshot: liveTopicSnapshot(
-      conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot
-    ),
-  });
+function publishTopicNames({ trackerChanged = false } = {}) {
+  const { isRecording, segments } = useMeetingRecordingStore.getState();
+  if (!conversationTopicTracker || !isRecording) return;
+  const tracked = conversationTopicTracker.snapshot(Date.now()) as ConversationTopicSnapshot;
+  if (trackerChanged) {
+    observeTopics(tracked, segments, {
+      detectorOnly: true,
+      detectorCuts: conversationTopicTracker.detectorActive,
+    });
+  }
+  useMeetingRecordingStore.setState({ topicSnapshot: liveTopicSnapshot(tracked) });
+}
+
+// Vectors can draw a cut after the final that triggered it. Let the local
+// namer see that cut now, even if no more speech arrives.
+function publishTrackedTopics() {
+  publishTopicNames({ trackerChanged: true });
 }
 
 // The tracker outlives Stop to save the final topics. Its live clock does not.
@@ -867,7 +879,7 @@ function startTopicProposalClock(tracker: ConversationTopicTracker, startedAt: n
   let timer: ReturnType<typeof setTimeout>;
   let expiry: ReturnType<typeof setTimeout> | undefined;
   const update = () => {
-    if (tracker.tickProposals(Date.now())) publishTopicNames();
+    if (tracker.tickProposals(Date.now())) publishTrackedTopics();
   };
   const tick = () => {
     const now = Date.now();
@@ -1058,9 +1070,12 @@ export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null
   );
 }
 
+// Rollback: allow the writing model to replace the tracker's final cuts.
+const ENABLE_MODEL_RECORD_CUT = false;
+
 /**
- * The record's topics cut again where the writing model says each starts, as
- * it reads the whole conversation (topicNamingRunner.ts `recordTopicStarts`),
+ * With the rollback enabled, cut the record where the writing model says
+ * each topic starts (topicNamingRunner.ts `recordTopicStarts`),
  * stored onto the note with this recording's names on them. Resolves to what
  * was stored, or null: no writing model ready, no usable answer, a new
  * recording started meanwhile, or the note is gone. The record then keeps the
@@ -1073,6 +1088,7 @@ export async function cutRecordTopics(
   segments: TranscriptSegment[],
   naming?: number
 ): Promise<ConversationTopicSnapshot | null> {
+  if (!ENABLE_MODEL_RECORD_CUT) return null;
   const tracker = conversationTopicTracker;
   if (!tracker) return null;
   try {
@@ -1623,7 +1639,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
           now: () => Date.now() / 1000,
         }
       : undefined,
-    onProposalCut: publishTopicNames,
+    onProposalCut: publishTrackedTopics,
     onProposalDeadline: (deadline: number | null) => scheduleProposalExpiry?.(deadline),
   });
   conversationTopicTracker = tracker;
@@ -1637,10 +1653,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
   topicVectors = new TopicVectorFeeder({
     tracker: conversationTopicTracker,
     embed: async (texts: string[]) => (await window.electronAPI?.embedTexts?.(texts)) ?? null,
-    onChange: publishTopicNames,
+    onChange: publishTrackedTopics,
   });
   // Names from the writing model, when one is chosen; none is sent otherwise.
-  void startTopicNaming(publishTopicNames);
+  void startTopicNaming(publishTopicNames, publishTrackedTopics);
   // The snapshot too: it is published only when an utterance lands, so until
   // the first one the flow card on the recording screen would otherwise draw
   // the previous conversation's topics as if they were this one's.

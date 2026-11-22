@@ -310,9 +310,8 @@ test("no two topics of a conversation share a label", () => {
 
 // ------------------------------------------------------------------ record cuts
 
-// At Finish the writing model reads the whole conversation and says where each
-// topic starts (topicRecordCut.mjs). The record takes those cuts; the live
-// view keeps its own.
+// The Finish rollback can let the writing model replace the record's cuts
+// (topicRecordCut.mjs). The live view still keeps its own.
 test("the record's topics start where the model's cuts say", () => {
   const { tracker, end } = record([...PRICING, ...HIRING, ...DEMO]);
   const firsts = (snapshot) => snapshot.nodes.map((node) => node.utteranceIds[0]);

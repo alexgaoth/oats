@@ -810,6 +810,11 @@ class ConversationTopicTracker {
     return this.topics.find((topic) => topic.id === this.currentId) ?? null;
   }
 
+  /** Whether the live view uses the detector's cuts rather than lexical cuts. */
+  get detectorActive() {
+    return this._detectorOn;
+  }
+
   // While no final arrives, the recording clock can expire a mark but must
   // not assume the recognizer has delivered all the words heard so far.
   tickProposals(at = this.now()) {
@@ -820,7 +825,9 @@ class ConversationTopicTracker {
     const cut = cutCount !== this.detector.cuts.length;
     if (cut) this._publishDetectorCuts();
     const after = this._proposals.snapshot();
-    return cut || before.length !== after.length || before.some((mark, index) => mark !== after[index]);
+    return (
+      cut || before.length !== after.length || before.some((mark, index) => mark !== after[index])
+    );
   }
 
   // Marks resolved the topic that contains a given utterance. Called when a

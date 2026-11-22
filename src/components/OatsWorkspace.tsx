@@ -163,6 +163,7 @@ import { findResumableConversation } from "../helpers/conversationResume.mjs";
 import { parseDbTimestamp } from "../helpers/dbTime.mjs";
 import { NO_EVENTS, useContourStrip, useStoredContour } from "./conversation/useContour";
 import { useLiveContour } from "./conversation/useLiveContour";
+import CleanQuestionList from "./conversation/CleanQuestionList";
 import { MarkdownRenderer } from "./ui/MarkdownRenderer";
 import MeetingRecordingMount from "./MeetingRecordingMount";
 import BackgroundActionToastListener from "./notes/BackgroundActionToastListener";
@@ -571,13 +572,13 @@ function ConversationSurface() {
   const lastSegmentAt = useMeetingRecordingStore((s) => s.lastSegmentAt);
   const sessionStartedAt = useMeetingRecordingStore((s) => s.recordingStartedAt);
   const elapsed = useElapsed(sessionStartedAt);
-  const contour = useLiveContour(sessionStartedAt);
   // Which composition to draw. `clean` is the default and the quiet one; see
   // `helpers/conversationDetail.mjs` for what the two mean and why the default
   // is not a preference so much as a promise.
   const detail = useSettingsStore((s) => s.conversationDetail);
   const setDetail = useSettingsStore((s) => s.setConversationDetail);
   const detailed = detail === "detailed";
+  const contour = useLiveContour(sessionStartedAt, detailed);
   const [detailTab, setDetailTab] = useState<"transcript" | "questions">("transcript");
   const detailsId = useId();
   // Keep the previous composition available for design comparisons, not as
@@ -699,10 +700,8 @@ function ConversationSurface() {
       } finally {
         finishSaved();
       }
-      // The writing model reads the whole conversation and says where each
-      // topic starts, which the tracker can only guess from pauses and words
-      // (helpers/topicRecordCut.mjs). The record takes those cuts; without a
-      // usable answer it keeps the tracker's, saved above.
+      // The record keeps the tracker's final cuts, saved above. Only the
+      // rollback in meetingRecordingStore.ts can replace them.
       const cut = await cutRecordTopics(recordingNoteId, state.segments, naming);
       // The writing model's last names for the topics, for the record. With a
       // model on this computer they go before the summary, which would
@@ -891,7 +890,12 @@ function ConversationSurface() {
 
   return (
     <>
-      <section className="oats-surface flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <section
+        className={cn(
+          "oats-surface flex min-h-0 flex-1 flex-col",
+          recording && !detailed ? "overflow-clip" : "overflow-y-auto"
+        )}
+      >
         {recording ? (
           // Capped in index.css, where the frame widens it (focus on record).
           <div
@@ -946,7 +950,9 @@ function ConversationSurface() {
                         }
                   }
                 />
-                <Badge variant="recording">{t("oats.conversation.recordingBadge")}</Badge>
+                <Badge variant="recording" className="text-foreground">
+                  {t("oats.conversation.recordingBadge")}
+                </Badge>
                 {/* How far behind the text is, once it trails by more than 2 s.
                     Not beside the "not transcribing" warning, which says it. */}
                 <TranscriptLagBadge
@@ -966,13 +972,14 @@ function ConversationSurface() {
                     {markedAt !== null
                       ? t("oats.conversation.marked")
                       : t("oats.conversation.mark")}
-                    <Kbd className="ml-0.5">M</Kbd>
+                    <Kbd className="ml-0.5 text-foreground">M</Kbd>
                   </Button>
                   {/* Stop wears its key, as Mark does: the one shortcut that ends
                       the conversation from any app. */}
                   <Button
                     variant="destructive"
                     size="sm"
+                    className="hover:bg-destructive hover:brightness-95 dark:text-background"
                     onClick={() => void stopRecording()}
                     aria-label={t("oats.conversation.finish")}
                     aria-keyshortcuts={shortcutAria || undefined}
@@ -980,7 +987,7 @@ function ConversationSurface() {
                     <Square className="size-3.5 fill-current" />
                     {t("oats.conversation.stop")}
                     {shortcut && (
-                      <Kbd className="ml-0.5 border-destructive-foreground/30 bg-destructive-foreground/15 text-destructive-foreground">
+                      <Kbd className="ml-0.5 border-current/30 bg-transparent text-current">
                         {shortcut}
                       </Kbd>
                     )}
@@ -1012,15 +1019,16 @@ function ConversationSurface() {
                 </div>
               )}
 
-              {/* The contour: every part of it measured from this conversation. */}
-              <div className="border-t border-border px-5 pb-3 pt-4">
-                <ConversationContour
-                  contour={contour}
-                  height={detailed ? "clamp(44px, 10vh, 84px)" : "clamp(56px, 16vh, 120px)"}
-                  focusedGroup={focusedGroup}
-                  label={contourLabel(contour, t)}
-                />
-              </div>
+              {contour && (
+                <div className="border-t border-border px-5 pb-3 pt-4">
+                  <ConversationContour
+                    contour={contour}
+                    height="clamp(44px, 10vh, 84px)"
+                    focusedGroup={focusedGroup}
+                    label={contourLabel(contour, t)}
+                  />
+                </div>
+              )}
 
               {/* What the recording view shows changes the whole surface, so it is
                   one of the few choices drawn with character (DESIGN.md §2). */}
@@ -1067,24 +1075,21 @@ function ConversationSurface() {
               notice("danger", t("oats.conversation.notSaving", { count: atRisk.unsavedTurns }))}
             {stalled.stalled && notice("warning", t("oats.conversation.notTranscribing"))}
 
-            {/* What has been talked about, in both compositions: it moves with
-                the topic, every few minutes, not with the words. In Detailed it
-                is compact and yields height to the live dialogue below,
-                scrolling inside when it must — the share the thread map used. */}
-            <LiveConversationFlow
-              compact={detailed}
-              className={cn("shrink-0", detailed && "max-h-[34%]")}
-            />
+            {detailed ? (
+              <LiveConversationFlow compact className="shrink-0 max-h-[34%]" />
+            ) : (
+              <CleanQuestionList />
+            )}
 
-            {/* The question rail stays mounted in both compositions — remounting
-                it on every switch re-announced every question already heard. */}
+            {/* Keep the rail's live region mounted across disclosures and tabs. */}
             <Tabs
               value={detailTab}
               onValueChange={(value) => setDetailTab(value as "transcript" | "questions")}
-              className={cn(
-                "flex min-h-0 flex-col gap-0",
-                detailed && "flex-1 [@media(max-height:640px)]:min-h-[13rem]"
-              )}
+              className={
+                detailed
+                  ? "flex min-h-0 flex-1 flex-col gap-0 [@media(max-height:640px)]:min-h-[13rem]"
+                  : "sr-only"
+              }
             >
               {detailed && !classicRecordingControls && (
                 <TabsList className="mb-3 shrink-0 self-start">

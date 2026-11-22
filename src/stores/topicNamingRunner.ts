@@ -11,6 +11,7 @@ import { localSummaryModelDownloaded } from "../hooks/useSummaryReadiness";
 import { TopicNamer } from "../helpers/topicNamer.mjs";
 import {
   applyTopicNames,
+  liveTopicMode,
   nameStillFits,
   namesOf,
   namesWhileRecording,
@@ -64,11 +65,8 @@ let generation = 0;
 // provider's), the flow card goes back to the tracker's topics and #121 names
 // them as on any other route.
 //
-// With the writing model on this computer, the window loop
-// (helpers/topicWindowLoop.mjs) takes the check's place while the recording
-// can name live (`namesLive`): every 2 minutes the model re-cuts the last 6
-// minutes and names the topics, on the writing server when the recording
-// holds one. The rest is as above.
+// A local writing model names the tracker's cuts through #121. The old
+// window loop remains available behind LOCAL_WINDOW_LOOP_ENABLED.
 let loop: LiveTopicLoop | WindowTopicLoop | null = null;
 /** The provider of the check that runs now, so a change of writing model ends it. */
 let loopProvider: "openai" | "anthropic" | null = null;
@@ -306,7 +304,10 @@ async function namesLive(route: WritingRoute): Promise<boolean> {
  * A recording starts: its topics get a namer when a writing model is chosen.
  * `onChange` publishes the topics again when a name changes.
  */
-export async function startTopicNaming(onChange: () => void): Promise<void> {
+export async function startTopicNaming(
+  onChange: () => void,
+  onDetectorReady: () => void
+): Promise<void> {
   namer?.stop();
   namer = null;
   loop?.stop();
@@ -320,13 +321,18 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   // No writing model: the topics keep their on-device names, and nothing is sent.
   if (!route) return;
   // OpenAI or Anthropic with a key: the live topic check names the topics
-  // while recording, so the namer only names the record at Finish. The writing
-  // model on this computer, when it may name while recording: the window loop,
-  // the same way. Every other route: #121.
+  // while recording, so the namer only names the record at Finish. Other
+  // routes keep the tracker's topics and let #121 name them.
   const provider = topicProvider(route);
-  if (provider || route.mode === "local") waitingLines = [];
+  if (provider || liveTopicMode({ mode: route.mode, liveNames: true }) === "window-loop")
+    waitingLines = [];
   const fast = provider ? await topicModelFor(provider, "check") : null;
   if (mine !== generation) return;
+  const checkMode = liveTopicMode({
+    mode: route.mode,
+    hasCheckModel: Boolean(fast),
+    stopped: stoppedGeneration === mine,
+  });
   if (fast && stoppedGeneration === mine) {
     waitingLines = null;
     // The recording ended while the fast model was being asked for: no check
@@ -340,7 +346,7 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     });
     return;
   }
-  if (fast && provider) {
+  if (checkMode === "key-loop" && fast && provider) {
     const waited = waitingLines ?? [];
     waitingLines = null;
     loopProvider = provider;
@@ -374,7 +380,12 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
   if (mine !== generation) return;
   const waited = waitingLines ?? [];
   waitingLines = null;
-  if (live && route.mode === "local" && stoppedGeneration !== mine) {
+  const mode = liveTopicMode({
+    mode: route.mode,
+    liveNames: live,
+    stopped: route.mode === "local" && stoppedGeneration === mine,
+  });
+  if (mode === "window-loop") {
     loopLocalModel = route.modelId;
     loop = new WindowTopicLoop({
       ask: askLocalModel,
@@ -401,18 +412,22 @@ export async function startTopicNaming(onChange: () => void): Promise<void> {
     ask: askNamer,
     ready: writingModelReady,
     onChange,
-    live,
+    live: mode !== "finish",
+    nameOnCut: mode === "detector-namer",
     log,
   });
-  log("started", { mode: route.mode, live });
+  if (namer.nameOnCut) onDetectorReady();
+  log("started", { mode: route.mode, live: namer.live });
 }
 
 /** The tracker's latest snapshot and the segments, on every turn. */
 export function observeTopics(
   snapshot: ConversationTopicSnapshot | null,
-  segments: TranscriptSegment[]
+  segments: TranscriptSegment[],
+  { detectorOnly = false, detectorCuts = false } = {}
 ): void {
-  namer?.observe(snapshot, segments);
+  if (detectorOnly && !namer?.nameOnCut) return;
+  namer?.observe(snapshot, segments, { detectorCuts });
 }
 
 /** Each finalized line, for the live topic check when it runs. */
@@ -432,6 +447,7 @@ export function resolveLiveTopic(utteranceId: string): void {
 /** No more requests from the live topic check: the recording stopped. */
 export function stopLiveTopics(): void {
   loop?.stop();
+  if (namer?.nameOnCut) namer.stop();
   stoppedGeneration = generation;
   waitingLines = null;
   // The names at Finish still use the writing server; if Finish never asks

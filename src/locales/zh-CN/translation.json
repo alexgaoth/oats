@@ -2641,6 +2641,7 @@
     }
   },
   "questionCard": {
+    "empty": "还没有问题。",
     "now": "刚刚",
     "state": {
       "asked": "未解决",

@@ -15,7 +15,8 @@
 //   summary wait in the same line (`oneAtATime.js`). A provider bills each one.
 // - **Settled first.** A request waits until no turn has landed for
 //   `settleMs`, and never more than `maxSettleMs`, so it reads a topic between
-//   turns rather than in the middle of one.
+//   turns rather than in the middle of one. The local detector route sends a
+//   first name as soon as a cut is visible and has words, if the model is idle.
 // - **The topic the room is on goes first**, then topics with no name in the
 //   order they were raised, then the ones that grew.
 // - **The topic the room is on is read up to a change the tracker proposed.**
@@ -114,6 +115,7 @@ export class TopicNamer {
    *   timeoutMs?: number,
    *   settleMs?: number,
    *   maxSettleMs?: number,
+   *   nameOnCut?: boolean,
    *   log?: (event: string, detail?: Record<string, unknown>) => void,
    * }} options
    *   `ask` sends one prompt to the writing model and resolves to its answer.
@@ -133,6 +135,7 @@ export class TopicNamer {
     timeoutMs = NAME_TIMEOUT_MS,
     settleMs = SETTLE_MS,
     maxSettleMs = MAX_SETTLE_MS,
+    nameOnCut = false,
     log = () => {},
   }) {
     this.ask = ask;
@@ -145,6 +148,7 @@ export class TopicNamer {
     this.timeoutMs = timeoutMs;
     this.settleMs = settleMs;
     this.maxSettleMs = maxSettleMs;
+    this.nameOnCut = nameOnCut;
     this.log = log;
 
     /**
@@ -160,6 +164,7 @@ export class TopicNamer {
     /** @type {Map<number, { words: number, final: boolean }>} */
     this.failed = new Map();
     this.snapshot = null;
+    this.detectorCuts = false;
     this.segments = [];
     this.timer = null;
     this.waitingSince = null;
@@ -193,13 +198,22 @@ export class TopicNamer {
    * The tracker's latest snapshot (unnamed) and the transcript's segments, on
    * every turn. Schedules a request when a topic needs a name.
    */
-  observe(snapshot, segments) {
+  observe(snapshot, segments, { detectorCuts = false } = {}) {
     this.snapshot = snapshot ?? null;
+    this.detectorCuts = detectorCuts;
     this.segments = Array.isArray(segments) ? segments : [];
     if (!this.live || this.stopped || this.disabled || this.running) return;
     if (this.now() < this.notReadyUntil) return;
-    if (!this._next(false)) return;
-    this._schedule(this.settleMs);
+    const job = this._next(false);
+    if (!job) return;
+    if (this.nameOnCut && job.need === "first") {
+      if (this.timer !== null) this.clearTimer(this.timer);
+      this.timer = null;
+      this.waitingSince = null;
+      void this._runLive();
+    } else {
+      this._schedule(this.settleMs);
+    }
   }
 
   /** No more requests while recording: a new recording has its own namer. */
@@ -278,6 +292,7 @@ export class TopicNamer {
         return false;
       }
       // Picked again: the room may have moved on while readiness was read.
+      if (this.nameOnCut && this.stopped) return false;
       const job = this._next(false);
       if (!job) return false;
       const result = await this._name(job, { final: false, timeoutMs: this.timeoutMs });
@@ -373,13 +388,19 @@ export class TopicNamer {
         jobs.push({ node, words, record, need: "describe" });
         continue;
       }
-      const need = topicNeedsName({ words, record, final });
+      // The detector has already committed this new topic. Name its excerpt
+      // now rather than waiting for 40 words. The opening topic, lexical
+      // fallback, refreshes and Finish still use the usual thresholds.
+      const cutNeedsFirstName =
+        !final && this.nameOnCut && this.detectorCuts && node !== nodes[0] && !record && words > 0;
+      const need = cutNeedsFirstName ? "first" : topicNeedsName({ words, record, final });
       if (!need) continue;
       if (failed && (final ? failed.final : words < failed.words * RETRY_GROWTH)) continue;
       jobs.push({ node, words, record, need });
     }
     jobs.sort(
       (a, b) =>
+        (this.nameOnCut && !final ? Number(a.need !== "first") - Number(b.need !== "first") : 0) ||
         (final ? 0 : Number(b.node.state === "live") - Number(a.node.state === "live")) ||
         Number(a.need !== "first") - Number(b.need !== "first") ||
         (final ? b.words - a.words : (a.node.firstAt ?? 0) - (b.node.firstAt ?? 0))

@@ -3,11 +3,11 @@ const assert = require("node:assert/strict");
 
 // House convention for a pure `.mjs` helper from CommonJS (see
 // conversationGraph.test.js): no build step, reached by dynamic import.
-let nextAnnouncement;
+let newQuestionAnnouncements;
 let nextCheckAnnouncement;
 
 test.before(async () => {
-  ({ nextAnnouncement, nextCheckAnnouncement } =
+  ({ newQuestionAnnouncements, nextCheckAnnouncement } =
     await import("../../src/helpers/questionAnnouncement.mjs"));
 });
 
@@ -17,81 +17,62 @@ function card(id, question, occurrence = 1) {
 }
 
 test("nothing new produces no announcement", () => {
-  assert.equal(nextAnnouncement([], new Set()), null);
+  assert.deepEqual(newQuestionAnnouncements([], new Set()), []);
   const spoken = new Set(["a"]);
-  assert.equal(nextAnnouncement([card("a", "who owns pricing?")], spoken), null);
+  assert.deepEqual(newQuestionAnnouncements([card("a", "who owns pricing?")], spoken), []);
 });
 
 test("the first question of a conversation is announced", () => {
-  const result = nextAnnouncement([card("a", "who owns pricing?")], new Set());
-  assert.deepEqual(result.ids, ["a"]);
-  assert.equal(result.question, "who owns pricing?");
-  assert.equal(result.count, 1);
-  assert.equal(result.occurrence, 1);
+  const cards = [card("a", "who owns pricing?")];
+  assert.deepEqual(newQuestionAnnouncements(cards, new Set()), cards);
 });
 
 // The failure the screen reader caught three times: the region went backwards.
 test("dismissing the newest card does not re-announce an older one", () => {
   const cards = [card("a", "who owns pricing?"), card("b", "what is churn?")];
   const spoken = new Set();
-  const first = nextAnnouncement(cards, spoken);
-  for (const id of first.ids) spoken.add(id);
-  assert.equal(first.question, "what is churn?");
+  const first = newQuestionAnnouncements(cards, spoken);
+  for (const { id } of first) spoken.add(id);
 
   // "b" is dismissed, so the list's tail falls back to "a".
-  assert.equal(nextAnnouncement([card("a", "who owns pricing?")], spoken), null);
+  assert.deepEqual(newQuestionAnnouncements([card("a", "who owns pricing?")], spoken), []);
   // ...and undo restores it. Still already heard.
-  assert.equal(nextAnnouncement(cards, spoken), null);
+  assert.deepEqual(newQuestionAnnouncements(cards, spoken), []);
 });
 
 test("a card is never announced twice however the list is reordered", () => {
   const spoken = new Set();
   const cards = [card("a", "one?"), card("b", "two?"), card("c", "three?")];
   for (const card of cards) {
-    const result = nextAnnouncement([card], spoken);
-    for (const id of result.ids) spoken.add(id);
+    const result = newQuestionAnnouncements([card], spoken);
+    for (const { id } of result) spoken.add(id);
   }
-  assert.equal(nextAnnouncement([...cards].reverse(), spoken), null);
-  assert.equal(nextAnnouncement(cards, spoken), null);
+  assert.deepEqual(newQuestionAnnouncements([...cards].reverse(), spoken), []);
+  assert.deepEqual(newQuestionAnnouncements(cards, spoken), []);
 });
 
 // Segments finalize every ~5s, so two questions in one batch is ordinary.
-test("questions arriving together are all marked spoken and counted", () => {
+test("questions arriving together each supply their own text to the live region", () => {
   const cards = [card("a", "who owns pricing?"), card("b", "what is churn?")];
-  const result = nextAnnouncement(cards, new Set());
-  assert.deepEqual(result.ids, ["a", "b"]);
-  assert.equal(result.count, 2);
-  // The newest is the one read out; the count says the other one exists.
-  assert.equal(result.question, "what is churn?");
+  assert.deepEqual(newQuestionAnnouncements(cards, new Set()), cards);
 });
 
 // Rule 3: repeats are never suppressed. A live region only speaks when its text
 // changes, so an identical re-asking has to be announced as a re-asking.
 test("a re-asking carries its occurrence, so its text differs from the first", () => {
-  const spoken = new Set();
-  const first = nextAnnouncement([card("a", "what is churn?", 1)], spoken);
-  for (const id of first.ids) spoken.add(id);
-  assert.equal(first.occurrence, 1);
-
-  const again = nextAnnouncement(
-    [card("a", "what is churn?", 1), card("b", "what is churn?", 2)],
-    spoken
-  );
-  assert.deepEqual(again.ids, ["b"]);
-  assert.equal(again.occurrence, 2);
-  assert.equal(again.question, "what is churn?");
+  const first = card("a", "what is churn?");
+  const again = card("b", "what is churn?", 2);
+  assert.deepEqual(newQuestionAnnouncements([first, again], new Set(["a"])), [again]);
 });
 
 test("a card with no question text is still marked spoken, not reconsidered forever", () => {
-  const result = nextAnnouncement([{ id: "a" }], new Set());
-  assert.deepEqual(result.ids, ["a"]);
-  assert.equal(result.count, 0);
-  assert.equal(result.question, "");
+  const result = newQuestionAnnouncements([{ id: "a" }], new Set());
+  assert.deepEqual(result, [card("a", "")]);
 });
 
 test("malformed input does not throw", () => {
-  assert.equal(nextAnnouncement(undefined, new Set()), null);
-  assert.equal(nextAnnouncement([null, { question: "no id?" }], new Set()), null);
+  assert.deepEqual(newQuestionAnnouncements(undefined, new Set()), []);
+  assert.deepEqual(newQuestionAnnouncements([null, { question: "no id?" }], new Set()), []);
 });
 
 test("a check's verdict is spoken once, and checking never", () => {
