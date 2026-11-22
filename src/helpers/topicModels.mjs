@@ -116,6 +116,8 @@ export function checkRequestConfig(provider, choice, request) {
   const reasons = provider === "openai" && choice.effort !== "none";
   return {
     provider,
+    // Writing's job, on the key chosen for Writing (stores/apiKeys.ts).
+    keyFeature: /** @type {const} */ ("writing"),
     systemPrompt: request.system,
     maxTokens: reasons ? request.maxTokens + REASONING_HEADROOM : request.maxTokens,
     reasoningEffort: choice.effort,

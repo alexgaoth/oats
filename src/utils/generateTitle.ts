@@ -8,7 +8,7 @@ const TITLE_SYSTEM_PROMPT =
 export async function generateNoteTitle(
   text: string,
   modelId: string,
-  config?: Pick<ReasoningConfig, "provider" | "baseUrl" | "customApiKey" | "lanUrl">
+  config?: Pick<ReasoningConfig, "provider" | "baseUrl" | "customApiKey" | "lanUrl" | "keyFeature">
 ): Promise<string> {
   try {
     const raw = await reasoningService.processText(text.slice(0, 2000), modelId, null, {

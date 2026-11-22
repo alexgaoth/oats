@@ -11,6 +11,7 @@ const path = require("node:path");
 const ROOT = path.join(__dirname, "..", "..");
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), "utf8");
 const FIELD = read("src/components/settings/ProviderKeyField.tsx");
+const KEYS = read("src/stores/apiKeys.ts");
 const STEP = read("src/components/onboarding/ProcessingStep.tsx");
 const FLOW = read("src/components/OnboardingFlow.tsx");
 
@@ -22,18 +23,31 @@ test("the key field checks and saves through one commit, which another button ca
     FIELD,
     /const save = \(event: React\.FormEvent\) => \{\s*event\.preventDefault\(\);\s*void commit\(\);/
   );
-  // A key the provider calls invalid is refused, before anything is saved.
+  // A key the provider calls invalid is refused, before anything is saved: an
+  // OpenAI or Anthropic key goes through the store (stores/apiKeys.ts), which
+  // asks the provider before main saves it, and the field shows a refusal.
   const commit = FIELD.slice(
     FIELD.indexOf("const commit = async"),
     FIELD.indexOf("useImperativeHandle(")
   );
-  const refused = commit.indexOf(
-    'if (status === "rejected" || status === "no-access" || status === "unknown")'
-  );
-  const stored = commit.indexOf("SETTERS[target]");
-  assert.ok(refused > -1 && stored > refused, "refused before it is stored");
-  assert.match(commit.slice(refused, stored), /return false;/);
+  const refused = commit.indexOf("if (result.ok === false) {");
+  const shown = commit.indexOf("setSaved(");
+  assert.ok(refused > -1 && shown > refused, "refused before it is shown as saved");
+  assert.match(commit.slice(refused, shown), /return false;/);
   assert.match(commit, /return true;\s*\};\s*$/);
+  const add = KEYS.slice(
+    KEYS.indexOf("export async function addApiKey"),
+    KEYS.indexOf("export async function replaceApiKey")
+  );
+  const checked = add.indexOf("if (checked.ok === false) return");
+  const stored = add.indexOf(".addApiKey({");
+  assert.ok(checked > -1 && stored > checked, "refused before it is stored");
+  const check = KEYS.slice(KEYS.indexOf("async function checkedKey"));
+  assert.match(check, /const \{ status, reason \} = await checkKey\(detected, secret\);/);
+  assert.match(
+    check,
+    /if \(status !== "ok" && status !== "limited"\) \{\s*return \{ ok: false, reason: refusalText/
+  );
   // Save is shown unless the caller saves the key itself.
   assert.match(FIELD, /showSave = true,/);
   assert.match(FIELD, /\{showSave && \(\s*<Button type="submit"/);

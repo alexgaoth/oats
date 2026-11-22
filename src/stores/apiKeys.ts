@@ -306,17 +306,17 @@ export async function addApiKey(input: {
  * Put another secret in a saved key's place: a key pasted by mistake, or one
  * the provider no longer takes. Checked as a new key is. A key of the same
  * provider keeps the key's id, its name (unless `name` gives one) and the
- * features that use it; a key of the other provider is added, and the old one
- * removed.
+ * features that use it; a key of the other provider, where `provider` allows
+ * one, is added, and the old one removed.
  */
 export async function replaceApiKey(
   id: string,
-  input: { secret: string; name?: string; forFeature?: Feature }
+  input: { secret: string; name?: string; provider?: ApiKeyProvider; forFeature?: Feature }
 ): Promise<AddResult> {
   const record = useSettingsStore.getState().apiKeys.keys.find((key) => key.id === id);
   if (!record) return addApiKey(input);
   const secret = String(input.secret ?? "").trim();
-  const checked = await checkedKey(secret, undefined);
+  const checked = await checkedKey(secret, input.provider);
   if (checked.ok === false) return { ok: false, reason: checked.reason };
   if (checked.provider !== record.provider) {
     const added = await addApiKey({ ...input, provider: checked.provider });

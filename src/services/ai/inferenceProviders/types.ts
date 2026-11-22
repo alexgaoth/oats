@@ -1,7 +1,8 @@
 import type { ReasoningConfig } from "../../BaseReasoningService";
 
 export interface ProviderContext {
-  getApiKey(provider: string): Promise<string>;
+  /** The provider's key; with a feature, the key chosen for that feature (stores/apiKeys.ts). */
+  getApiKey(provider: string, feature?: ReasoningConfig["keyFeature"]): Promise<string>;
   getSystemPrompt(agentName: string | null): string;
   getCustomDictionary(): string[];
   getPreferredLanguage(): string;

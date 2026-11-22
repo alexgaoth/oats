@@ -2,6 +2,7 @@ import { getCleanupSystemPrompt } from "../config/prompts";
 import { getSettings } from "../stores/settingsStore";
 import { getDictionaryHintWords } from "../utils/snippets";
 import { DEFAULT_SPEECH_LANGUAGE } from "../helpers/speechLanguage.mjs";
+import type { Feature } from "../helpers/featureRoutes.mjs";
 
 export interface ReasoningConfig {
   maxTokens?: number;
@@ -37,6 +38,12 @@ export interface ReasoningConfig {
    * held server, is the default server.
    */
   serverRole?: "writing";
+  /**
+   * The feature this request is for: its OpenAI or Anthropic key is the one
+   * chosen for that feature (stores/apiKeys.ts), which may differ from the
+   * provider's default key. Unset, the default key, as before.
+   */
+  keyFeature?: Feature;
 }
 
 export abstract class BaseReasoningService {

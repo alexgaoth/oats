@@ -1,6 +1,9 @@
 // Provider overrides for note-formatting ReasoningService.processText calls.
 // Self-hosted must forward remoteUrl as lanUrl — without it, processText
 // guesses the provider from the model and can silently hit a cloud API.
+// With a provider, the request is Writing's, and goes out on the key chosen
+// for Writing (`keyFeature`, stores/apiKeys.ts): the summary, the title, the
+// topic names, the group, the links and the context check all come here.
 export function buildNoteFormattingOverrides(noteFormatting, isCloudMode, customApiKey) {
   if (isCloudMode) {
     return {
@@ -29,5 +32,6 @@ export function buildNoteFormattingOverrides(noteFormatting, isCloudMode, custom
     baseUrl: isCustom ? noteFormatting?.cloudBaseUrl || undefined : undefined,
     customApiKey: isCustom ? customApiKey || undefined : undefined,
     lanUrl: undefined,
+    ...(mode === "providers" && { keyFeature: /** @type {const} */ ("writing") }),
   };
 }

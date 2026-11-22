@@ -22,6 +22,19 @@ for (const k of BYOK_KEY_BRIDGES) {
   secretKeyApi[k.save] = (key) => ipcRenderer.invoke(`save-${k.base}-key`, key);
 }
 
+// Named OpenAI and Anthropic keys (src/helpers/apiKeys.mjs): the records,
+// which hold no secret, and one key's secret by its id.
+const namedKeyApi = {
+  listApiKeys: () => ipcRenderer.invoke("api-keys-list"),
+  addApiKey: (request) => ipcRenderer.invoke("api-keys-add", request),
+  replaceApiKey: (id, request) => ipcRenderer.invoke("api-keys-replace", id, request),
+  renameApiKey: (id, name, number) => ipcRenderer.invoke("api-keys-rename", id, name, number),
+  removeApiKey: (id, features) => ipcRenderer.invoke("api-keys-remove", id, features),
+  setFeatureApiKeys: (features) => ipcRenderer.invoke("api-keys-set-features", features),
+  setApiKeyStatus: (id, status) => ipcRenderer.invoke("api-keys-set-status", id, status),
+  getApiKeySecret: (id) => ipcRenderer.invoke("api-key-secret", id),
+};
+
 /**
  * Helper to register an IPC listener and return a cleanup function.
  * Ensures renderer code can easily remove listeners to avoid leaks.
@@ -306,6 +319,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // BYOK API keys (get/save for every provider in the secretKeys manifest)
   ...secretKeyApi,
+  ...namedKeyApi,
+  onApiKeysChanged: registerListener(
+    "api-keys-changed",
+    (callback) => (_event, list) => callback(list)
+  ),
 
   // Clipboard functions
   checkAccessibilityPermission: (silent) =>
@@ -591,8 +609,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Anthropic reasoning
   processAnthropicReasoning: (text, modelId, agentName, config) =>
     ipcRenderer.invoke("process-anthropic-reasoning", text, modelId, agentName, config),
-  // Whether the Anthropic key can use a model (GET /v1/models/{id}, no conversation text)
-  anthropicModelAvailable: (modelId) => ipcRenderer.invoke("anthropic-model-available", modelId),
+  // Whether the Anthropic key can use a model (GET /v1/models/{id}, no conversation text);
+  // with `{ feature }`, the key chosen for that feature.
+  anthropicModelAvailable: (modelId, request) =>
+    ipcRenderer.invoke("anthropic-model-available", modelId, request),
   anthropicKeyCheck: (modelId, key) => ipcRenderer.invoke("anthropic-key-check", { modelId, key }),
 
   // Enterprise reasoning (Bedrock, Azure, Vertex) — runs in main process so

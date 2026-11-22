@@ -266,7 +266,7 @@ function FeatureRow({
                 }}
               >
                 <DialogTitle>{addKeyLabel}</DialogTitle>
-                <ProviderKeyField provider={keyProvider} />
+                <ProviderKeyField provider={keyProvider} forFeature={feature} />
               </DialogContent>
             </Dialog>
           )}

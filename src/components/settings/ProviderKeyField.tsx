@@ -8,15 +8,21 @@ import { Input } from "../ui/input";
 import {
   selectUsableFeatureKey,
   selectWritingKeyProvider,
-  setFeatureKeyStatus,
   useSettingsStore,
   type SettingsState,
 } from "../../stores/settingsStore";
+import {
+  addApiKey,
+  defaultKeyName,
+  replaceApiKey,
+  useSavedKeys,
+  type ApiKeyProvider,
+} from "../../stores/apiKeys";
 import { getCachedPlatform } from "../../utils/platform";
 import { getProviderDisplayName } from "../../models/ModelRegistry";
-import { checkKey, detectKeyProvider, type KeyProvider } from "../../utils/keyCheck";
-import { writingModelName } from "../../hooks/useWritingModel";
-import { CLOUD_WRITING_MODELS } from "../../helpers/writingTier.mjs";
+import { detectKeyProvider, type KeyProvider } from "../../utils/keyCheck";
+import { defaultKeyOf, isKeyProvider, KEY_NAME_MAX } from "../../helpers/apiKeys.mjs";
+import type { Feature } from "../../helpers/featureRoutes.mjs";
 import { openExternalLink, withUtm } from "../../utils/externalLinks";
 import { PROVIDER_KEYS } from "../../utils/writingKeys";
 
@@ -40,9 +46,8 @@ const PROVIDER_NAMES: Record<string, string> = {
 };
 
 type Setter = (key: string) => void;
+// The providers whose keys have no names (decision 5): one key each, saved as it is.
 const SETTERS: Record<string, (state: SettingsState) => Setter> = {
-  openai: (state) => state.setOpenaiApiKey,
-  anthropic: (state) => state.setAnthropicApiKey,
   gemini: (state) => state.setGeminiApiKey,
   groq: (state) => state.setGroqApiKey,
   tinfoil: (state) => state.setTinfoilApiKey,
@@ -84,11 +89,13 @@ export function KeyCapabilities({ className }: { className?: string }) {
  * One field for an API key, the same in setup and in Settings. With `any` it
  * takes an OpenAI or an Anthropic key and tells them apart by their prefix,
  * so nobody has to say which provider first. An OpenAI or Anthropic key is
- * checked with the provider before it is saved (keyCheck.ts): a key the
+ * checked with the provider before it is saved (stores/apiKeys.ts): a key the
  * provider calls invalid is not saved, and every other answer is said in one
- * line.
- * Other providers' keys are saved as they are. In setup there is no Save:
- * Get started checks and saves the key (`ref`, `showSave`).
+ * line. It takes an optional name (Alex, 2026-11-22); without one the key is
+ * "OpenAI key 2", the name the field shows as its hint once the key's prefix
+ * says whose it is. A key added for a feature (`forFeature`) is chosen for it.
+ * Other providers' keys have no names and are saved as they are. In setup
+ * there is no Save: Get started checks and saves the key (`ref`, `showSave`).
  */
 export function ProviderKeyField({
   provider = "any",
@@ -97,6 +104,8 @@ export function ProviderKeyField({
   autoFocus = false,
   showSave = true,
   onDraftChange,
+  forFeature,
+  replaces,
   ref,
 }: {
   /** "any" for OpenAI or Anthropic, or one provider's id. */
@@ -108,18 +117,39 @@ export function ProviderKeyField({
   showSave?: boolean;
   /** The text in the field, whenever it changes. */
   onDraftChange?: (draft: string) => void;
+  /** The feature this key is added for: it uses the key on the API-key route. */
+  forFeature?: Feature;
+  /** A saved key (its id) whose secret this field replaces, keeping its name. */
+  replaces?: string;
   ref?: React.Ref<ProviderKeyHandle>;
 }) {
   const { t } = useTranslation();
   const fieldId = useId();
+  const nameId = useId();
   const messageId = useId();
   const [draft, setDraft] = useState("");
+  const [name, setName] = useState("");
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<Message>(null);
   // The key just saved, shown masked with what the provider said, until the
   // person replaces it.
-  const [saved, setSaved] = useState<{ provider: string; tail: string } | null>(null);
+  const [saved, setSaved] = useState<{ provider: string; tail: string; id?: string } | null>(null);
+  // The saved key the next key takes the place of: the one this field just
+  // saved, once the person presses Replace, or the one it was opened for.
+  const [replacing, setReplacing] = useState<string | null>(replaces ?? null);
   const checked = provider === "any" || provider === "openai" || provider === "anthropic";
+  const keys = useSavedKeys();
+  const replaced = replacing ? (keys.find((key) => key.id === replacing) ?? null) : null;
+  const typedProvider: ApiKeyProvider | null =
+    provider === "openai" || provider === "anthropic" ? provider : detectKeyProvider(draft);
+  // The name the key gets when the person gives none, once it is known whose
+  // key it is: the replaced key's own, or the next default name.
+  const nameHint =
+    replaced && (!typedProvider || typedProvider === replaced.provider)
+      ? replaced.name
+      : typedProvider
+        ? defaultKeyName(typedProvider, keys)
+        : t("oats.keys.nameHint");
 
   // Check the key in the field and save it. True once it is saved; false
   // when there is nothing to save or the key is refused (the reason is shown).
@@ -129,60 +159,41 @@ export function ProviderKeyField({
     let target: string = provider;
     if (checked) {
       const detected = detectKeyProvider(key);
-      if (!detected || (provider !== "any" && detected !== provider)) {
+      if (detected && (provider === "any" || detected === provider)) {
         setMessage({
-          tone: "danger",
-          text: !detected
-            ? t("oats.keys.notAKey")
-            : t("oats.keys.notThisKey", { provider: PROVIDER_NAMES[provider] }),
+          tone: "muted",
+          text: t("oats.keys.checking", { provider: PROVIDER_NAMES[detected] }),
         });
-        return false;
       }
-      target = detected;
       setChecking(true);
-      setMessage({
-        tone: "muted",
-        text: t("oats.keys.checking", { provider: PROVIDER_NAMES[target] }),
-      });
-      const { status, reason } = await checkKey(detected, key);
-      setChecking(false);
       // A key the provider refuses is not saved, and the provider's reason is
       // said when it gave one. A restricted key that may not read the model
-      // list is saved (helpers/keyStatus.mjs).
-      if (status === "rejected" || status === "no-access" || status === "unknown") {
-        setMessage({
-          tone: "danger",
-          text:
-            status === "no-access"
-              ? t("oats.featureRoutes.keyNoAccess", {
-                  model: writingModelName(CLOUD_WRITING_MODELS[detected]),
-                })
-              : status === "unknown"
-                ? t("oats.featureRoutes.keyNotChecked")
-                : reason
-                  ? t("oats.keys.rejectedReason", { provider: PROVIDER_NAMES[target], reason })
-                  : t("oats.keys.rejected", { provider: PROVIDER_NAMES[target] }),
-        });
+      // list is saved, with a line that says so (helpers/keyStatus.mjs).
+      const input = {
+        secret: key,
+        name,
+        forFeature,
+        provider: provider === "any" ? undefined : (provider as ApiKeyProvider),
+      };
+      const result =
+        replaced && replacing ? await replaceApiKey(replacing, input) : await addApiKey(input);
+      setChecking(false);
+      if (result.ok === false) {
+        setMessage({ tone: "danger", text: result.reason });
         return false;
       }
-      setMessage(
-        status === "limited"
-          ? {
-              tone: "muted",
-              text: t("oats.keys.limited", {
-                model: writingModelName(CLOUD_WRITING_MODELS[detected]),
-              }),
-            }
-          : null
-      );
-      setFeatureKeyStatus(detected, status);
+      setMessage(result.note ? { tone: "muted", text: result.note } : null);
+      target = result.key.provider;
+      setSaved({ provider: target, tail: result.key.tail, id: result.key.id });
     } else {
       setMessage({ tone: "success", text: t("oats.keys.saved") });
+      SETTERS[target]?.(useSettingsStore.getState())(key);
+      setSaved({ provider: target, tail: key.slice(-4) });
     }
-    SETTERS[target]?.(useSettingsStore.getState())(key);
     setDraft("");
+    setName("");
+    setReplacing(null);
     onDraftChange?.("");
-    setSaved({ provider: target, tail: key.slice(-4) });
     onSaved?.(target);
     return true;
   };
@@ -218,6 +229,7 @@ export function ProviderKeyField({
             variant="ghost"
             size="sm"
             onClick={() => {
+              setReplacing(saved.id ?? null);
               setSaved(null);
               setMessage(null);
             }}
@@ -249,39 +261,62 @@ export function ProviderKeyField({
 
   return (
     <div className={className}>
-      <form onSubmit={save} className="flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <KeyRound
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            id={fieldId}
-            type="password"
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              onDraftChange?.(event.target.value);
-              if (message?.tone === "danger") setMessage(null);
-            }}
-            placeholder={
-              provider === "any"
-                ? t("oats.keys.placeholderAny")
-                : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
-            }
-            aria-label={
-              provider === "any"
-                ? t("oats.keys.placeholderAny")
-                : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
-            }
-            aria-describedby={message ? messageId : undefined}
-            aria-invalid={message?.tone === "danger" || undefined}
-            autoComplete="off"
-            spellCheck={false}
-            autoFocus={autoFocus}
-            // The key is an identifier, so it is mono; the hint is prose.
-            className={cn("pl-9 text-[13px]", draft && "font-mono")}
-          />
+      <form onSubmit={save} className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="relative">
+            <KeyRound
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              id={fieldId}
+              type="password"
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                onDraftChange?.(event.target.value);
+                if (message?.tone === "danger") setMessage(null);
+              }}
+              placeholder={
+                provider === "any"
+                  ? t("oats.keys.placeholderAny")
+                  : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
+              }
+              aria-label={
+                provider === "any"
+                  ? t("oats.keys.placeholderAny")
+                  : t("oats.keys.placeholder", { provider: PROVIDER_NAMES[provider] ?? provider })
+              }
+              aria-describedby={message ? messageId : undefined}
+              aria-invalid={message?.tone === "danger" || undefined}
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus={autoFocus}
+              // The key is an identifier, so it is mono; the hint is prose.
+              className={cn("pl-9 text-[13px]", draft && "font-mono")}
+            />
+          </div>
+          {checked && (
+            <div className="mt-3">
+              <label
+                htmlFor={nameId}
+                className="mb-1.5 block text-[13px] font-medium text-foreground"
+              >
+                {t("oats.keys.name")}{" "}
+                <span className="font-normal text-muted-foreground">{t("oats.keys.optional")}</span>
+              </label>
+              <Input
+                id={nameId}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={nameHint}
+                maxLength={KEY_NAME_MAX}
+                autoComplete="off"
+                spellCheck={false}
+                className="text-[13px]"
+              />
+            </div>
+          )}
         </div>
         {showSave && (
           <Button type="submit" variant="outline" disabled={!draft.trim() || checking}>
@@ -334,19 +369,29 @@ export function ProviderKeyField({
 
 /**
  * A provider's key where a chooser needs it: the field while there is none,
- * and the stored key, masked, with Replace once there is one.
+ * and the stored key, masked, with Replace once there is one. For OpenAI and
+ * Anthropic that is the provider's default key, its oldest (helpers/apiKeys.mjs),
+ * and Replace puts a new secret in its place, keeping its name and features.
  */
 export function ProviderKey({ provider }: { provider: string }) {
   const { t } = useTranslation();
   const field = PROVIDER_KEYS[provider];
   const stored = useSettingsStore((state) => (field ? String(state[field] ?? "") : ""));
+  const defaultId = useSettingsStore((state) =>
+    isKeyProvider(provider) ? (defaultKeyOf(state.apiKeys, provider)?.id ?? null) : null
+  );
   // Once the field is in use it stays, so what the provider said of the key
   // just saved is still there to read (ProviderKeyField's saved state).
   const [editing, setEditing] = useState(false);
   if (!field) return null;
   if (!stored.trim() || editing) {
     return (
-      <ProviderKeyField provider={provider} autoFocus={editing} onSaved={() => setEditing(true)} />
+      <ProviderKeyField
+        provider={provider}
+        autoFocus={editing}
+        replaces={editing ? (defaultId ?? undefined) : undefined}
+        onSaved={() => setEditing(true)}
+      />
     );
   }
   return (

@@ -22,6 +22,8 @@ import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { clearTinfoilClientCache } from "./ai/tinfoilClient";
 import { resolveChatRoute } from "../helpers/chatRouting";
 import { modelAvailability, openAiKeyStatus, providerReason } from "../helpers/keyStatus.mjs";
+import { resolveFeatureKey } from "../helpers/apiKeys.mjs";
+import type { Feature } from "../helpers/featureRoutes.mjs";
 
 /** What a provider says of an API key and a model (helpers/keyStatus.mjs). */
 export type KeyStatus = "ok" | "rejected" | "limited" | "no-access" | "unknown";
@@ -67,8 +69,8 @@ class ReasoningService extends BaseReasoningService {
     this.apiKeyCache = new SecureCache();
     this.cacheCleanupStop = this.apiKeyCache.startAutoCleanup();
     this.providerContext = {
-      getApiKey: (provider: string) =>
-        this.getApiKey(provider as Parameters<ReasoningService["getApiKey"]>[0]),
+      getApiKey: (provider: string, feature?: Feature) =>
+        this.getApiKey(provider as Parameters<ReasoningService["getApiKey"]>[0], feature),
       getSystemPrompt: this.getSystemPrompt.bind(this),
       getCustomDictionary: this.getCustomDictionary.bind(this),
       getPreferredLanguage: this.getPreferredLanguage.bind(this),
@@ -87,9 +89,22 @@ class ReasoningService extends BaseReasoningService {
     return settings.cleanupMode === "self-hosted" && !!settings.cleanupRemoteUrl;
   }
 
+  /**
+   * A provider's key. With a feature, for OpenAI and Anthropic, the key chosen
+   * for that feature (stores/apiKeys.ts), cached by the key, not by the
+   * provider, since two features may use two keys of one provider. Without
+   * one, the provider's default key, as before.
+   */
   private async getApiKey(
-    provider: "openai" | "anthropic" | "gemini" | "groq" | "tinfoil" | "custom" | "openrouter"
+    provider: "openai" | "anthropic" | "gemini" | "groq" | "tinfoil" | "custom" | "openrouter",
+    feature?: Feature
   ): Promise<string> {
+    const named =
+      feature && (provider === "openai" || provider === "anthropic")
+        ? resolveFeatureKey(getSettings().apiKeys, feature, provider)
+        : null;
+    if (named) return this.getNamedKey(named.provider, named.id);
+
     if (provider === "custom") {
       let customKey = "";
       try {
@@ -162,6 +177,41 @@ class ReasoningService extends BaseReasoningService {
       throw error;
     }
 
+    return apiKey;
+  }
+
+  /** One saved key's secret, asked of the main process by the key's id. */
+  private async getNamedKey(provider: "openai" | "anthropic", id: string): Promise<string> {
+    const cacheKey = `key:${id}`;
+    let apiKey = this.apiKeyCache.get(cacheKey);
+    logger.logReasoning(`${provider.toUpperCase()}_KEY_RETRIEVAL`, {
+      provider,
+      named: true,
+      fromCache: !!apiKey,
+    });
+    if (!apiKey) {
+      try {
+        apiKey = (await window.electronAPI?.getApiKeySecret?.(id)) || undefined;
+        if (apiKey) this.apiKeyCache.set(cacheKey, apiKey);
+      } catch (error) {
+        logger.logReasoning(`${provider.toUpperCase()}_KEY_FETCH_ERROR`, {
+          provider,
+          error: (error as Error).message,
+        });
+      }
+    }
+    if (!apiKey) {
+      // The key chosen for this feature, and no other: a second key of the
+      // provider may belong to another account.
+      const displayName = getProviderDisplayName(provider);
+      const error = new Error(`${displayName} API key not configured`) as Error & {
+        code: string;
+        provider: string;
+      };
+      error.code = "API_KEY_MISSING";
+      error.provider = displayName;
+      throw error;
+    }
     return apiKey;
   }
 
@@ -394,12 +444,13 @@ class ReasoningService extends BaseReasoningService {
    */
   private async openAiModelResponse(
     model: string,
-    key?: string
+    key?: string,
+    feature?: Feature
   ): Promise<{ status: number; body: unknown } | null> {
     let apiKey = key?.trim() ?? "";
     if (!apiKey) {
       try {
-        apiKey = await this.getApiKey("openai");
+        apiKey = await this.getApiKey("openai", feature);
       } catch {
         return null;
       }
@@ -438,10 +489,10 @@ class ReasoningService extends BaseReasoningService {
    * Whether this OpenAI key can use a model: true or false when OpenAI says
    * so of the model; null when it could not be told (no key or a rejected
    * key, offline, a server error), so the caller asks again later instead of
-   * keeping a no.
+   * keeping a no. With a feature, that feature's key.
    */
-  async openAiModelAvailable(model: string): Promise<boolean | null> {
-    const answer = await this.openAiModelResponse(model);
+  async openAiModelAvailable(model: string, feature?: Feature): Promise<boolean | null> {
+    const answer = await this.openAiModelResponse(model, undefined, feature);
     return answer ? modelAvailability(answer.status) : null;
   }
 
@@ -450,9 +501,12 @@ class ReasoningService extends BaseReasoningService {
    * holds the key (`GET /v1/models/{id}`, no tokens, no conversation text).
    * True or false when Anthropic says so; null when it could not be told.
    */
-  async anthropicModelAvailable(model: string): Promise<boolean | null> {
+  async anthropicModelAvailable(model: string, feature?: Feature): Promise<boolean | null> {
     try {
-      const answer = await window.electronAPI?.anthropicModelAvailable?.(model);
+      const answer = await window.electronAPI?.anthropicModelAvailable?.(
+        model,
+        feature ? { feature } : undefined
+      );
       return typeof answer === "boolean" ? answer : null;
     } catch {
       return null;
@@ -509,7 +563,7 @@ class ReasoningService extends BaseReasoningService {
       const providerKey = provider as
         "openai" | "groq" | "gemini" | "anthropic" | "tinfoil" | "custom" | "openrouter";
       const overrideKey = providerKey === "custom" ? config.customApiKey?.trim() : "";
-      apiKey = overrideKey || (await this.getApiKey(providerKey));
+      apiKey = overrideKey || (await this.getApiKey(providerKey, config.keyFeature));
 
       switch (providerKey) {
         case "groq":
@@ -722,7 +776,7 @@ class ReasoningService extends BaseReasoningService {
       const providerKey = provider as
         "openai" | "groq" | "gemini" | "anthropic" | "tinfoil" | "custom" | "openrouter";
       const overrideKey = providerKey === "custom" ? config.customApiKey?.trim() : "";
-      apiKey = overrideKey || (await this.getApiKey(providerKey));
+      apiKey = overrideKey || (await this.getApiKey(providerKey, config.keyFeature));
       baseURL =
         provider === "openrouter"
           ? API_ENDPOINTS.OPENROUTER_BASE
@@ -894,6 +948,10 @@ class ReasoningService extends BaseReasoningService {
     if (provider) {
       if (provider !== "custom") {
         this.apiKeyCache.delete(provider);
+      }
+      // The saved keys' own entries: a key replaced keeps its id.
+      if (provider === "openai" || provider === "anthropic") {
+        this.apiKeyCache.deleteWhere((key) => key.startsWith("key:"));
       }
       if (provider === "tinfoil") {
         clearTinfoilClientCache();
