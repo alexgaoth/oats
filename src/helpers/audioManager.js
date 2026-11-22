@@ -1341,24 +1341,27 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   /**
-   * The OpenAI key chosen for Dictation (stores/apiKeys.ts): asked of main by
-   * its id once this window has the key records, and kept for that id and
-   * revision until a key changes; before the records arrive, main says which
-   * key it is. Never the provider's default key when Dictation uses another.
+   * The OpenAI key chosen for Dictation (stores/apiKeys.ts), as main resolves
+   * it, by feature: the agent overlay transcribes with this class too, and may
+   * ask main for this feature's key but for no key by its id
+   * (keySecretAccess.js). Kept for that key's id and revision while this
+   * window's records still name them; none when its records hold no key for
+   * Dictation. Never the provider's default key when Dictation uses another.
    */
   async getDictationKey(s) {
     try {
-      if (s.keyRecords === NO_KEYS) {
-        const answer = await window.electronAPI.getFeatureApiKey?.("dictation", "openai");
-        return answer?.secret || "";
+      if (s.keyRecords !== NO_KEYS) {
+        const key = resolveFeatureKey(s.keyRecords, "dictation", "openai");
+        if (!key) return "";
+        const cached = this.cachedDictationKey;
+        if (cached?.id === key.id && cached.rev === key.rev) return cached.secret;
       }
-      const key = resolveFeatureKey(s.keyRecords, "dictation", "openai");
-      if (!key) return "";
-      const cached = this.cachedDictationKey;
-      if (cached?.id === key.id && cached.rev === key.rev) return cached.secret;
-      const secret = (await window.electronAPI.getApiKeySecret?.(key.id)) || "";
-      if (secret) this.cachedDictationKey = { id: key.id, rev: key.rev, secret };
-      return secret;
+      const answer = await window.electronAPI.getFeatureApiKey?.("dictation", "openai");
+      if (!answer?.secret) return "";
+      if (answer.id) {
+        this.cachedDictationKey = { id: answer.id, rev: answer.rev, secret: answer.secret };
+      }
+      return answer.secret;
     } catch (error) {
       logger.debug("Could not read the dictation key", { error: error?.message }, "transcription");
       return "";

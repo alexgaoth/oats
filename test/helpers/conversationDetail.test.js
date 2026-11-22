@@ -67,22 +67,24 @@ test("Words receives unfiltered cards and Clean rows cannot take focus", () => {
   assert.doesNotMatch(clean, /\.focus\(|autoFocus|scrollIntoView|<button/);
 });
 
-// The default is the whole point of the setting: a first conversation must not
-// open onto a wall of moving text.
-test("nothing stored means the quiet composition", () => {
-  assert.equal(DEFAULT_CONVERSATION_DETAIL, "clean");
-  assert.equal(resolveConversationDetail(null), "clean");
-  assert.equal(resolveConversationDetail(undefined), "clean");
-  assert.equal(resolveConversationDetail(""), "clean");
+// The default is the whole point of the setting: it is what a first
+// conversation opens on. Since 2026-11-22 that is the details (Alex's
+// decision), and Hide details goes to the plain view.
+test("nothing stored means the details", () => {
+  assert.equal(DEFAULT_CONVERSATION_DETAIL, "detailed");
+  assert.equal(resolveConversationDetail(null), "detailed");
+  assert.equal(resolveConversationDetail(undefined), "detailed");
+  assert.equal(resolveConversationDetail(""), "detailed");
 });
 
-// An install that predates the setting has no stored value, so it takes the
-// same path as a fresh one — deliberately, not by accident.
+// An install that predates the setting, or where nobody changed the view, has
+// no stored value, so it takes the same path as a fresh one: deliberately, not
+// by accident. A stored choice still wins, the plain view included.
 test("a stored value is honoured, and only the two real ones are", () => {
   assert.equal(resolveConversationDetail("clean"), "clean");
   assert.equal(resolveConversationDetail("detailed"), "detailed");
-  assert.equal(resolveConversationDetail("verbose"), "clean");
-  assert.equal(resolveConversationDetail("CLEAN"), "clean");
-  assert.equal(resolveConversationDetail(0), "clean");
-  assert.equal(resolveConversationDetail({}), "clean");
+  assert.equal(resolveConversationDetail("verbose"), "detailed");
+  assert.equal(resolveConversationDetail("CLEAN"), "detailed");
+  assert.equal(resolveConversationDetail(0), "detailed");
+  assert.equal(resolveConversationDetail({}), "detailed");
 });

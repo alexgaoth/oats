@@ -2035,7 +2035,7 @@
       "openQuestions": "未解決の質問",
       "noOpenQuestions": "保存されたイベントに未解決の質問はありません。",
       "questionsUnknown": "この会話の質問数は保存されていません。",
-      "showTranscript": "文字起こしを表示",
+      "expandDetails": "詳細を展開",
       "hideDetails": "詳細を非表示",
       "transcriptTab": "文字起こし",
       "questionsTab": "質問"

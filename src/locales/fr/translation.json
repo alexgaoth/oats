@@ -2035,7 +2035,7 @@
       "openQuestions": "Questions en suspens",
       "noOpenQuestions": "Aucune question en suspens dans les événements enregistrés.",
       "questionsUnknown": "Le nombre de questions n’a pas été enregistré pour cette conversation.",
-      "showTranscript": "Afficher la transcription",
+      "expandDetails": "Développer les détails",
       "hideDetails": "Masquer les détails",
       "transcriptTab": "Transcription",
       "questionsTab": "Questions"

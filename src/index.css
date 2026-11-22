@@ -606,6 +606,100 @@
   }
 }
 
+/* Expand details and Hide details (DESIGN.md §5, useDetailChange.ts). The
+   contour and the flow card open and close in height and opacity, and the
+   question list is handed over: the plain view's list and the details' tabs
+   share one cell, and one fades out before the other fades in. A layout
+   transition on purpose, as the frame's is: the column has to reflow under a
+   part that opens, which a transform cannot do. It runs once per press, never
+   at rest.
+
+   The height goes between 0 and the part's own height (`auto`, which
+   `interpolate-size` lets a transition reach), so it lands on whatever that is.
+   Not the 0fr to 1fr grid row: in a flex column the row's fraction is taken
+   twice, once of the content and again of the box, so the content showed only
+   p² of the way while the box was p of the way open. */
+.oats-detail-reveal {
+  interpolate-size: allow-keywords;
+  height: var(--oats-reveal-height, auto);
+  transition:
+    height var(--motion-base) var(--ease-oats),
+    opacity var(--motion-base) var(--ease-oats);
+}
+
+.oats-detail-reveal[data-state="closed"] {
+  height: 0;
+  opacity: 0;
+}
+
+/* The flow card opens to its height at rest: its own, capped at 34% of the
+   column. In the height it opens to, so it opens at the contour's pace rather
+   than reaching the cap early and waiting. The 0.75rem is the column's gap,
+   which the card's margin carries (OatsWorkspace.tsx). */
+.oats-detail-flow {
+  --oats-reveal-height: calc-size(auto, min(size, 34% + 0.75rem));
+  max-height: calc(34% + 0.75rem);
+}
+
+/* The question lists hand over rather than cross: the leaving list fades out
+   in the first 40% of the movement, and only then does the arriving one fade
+   in, over the rest. Two lists of text never show over each other, while the
+   contour and the flow card take the whole --motion-base to open or close.
+   No state, no transition: the tabs carry none while they are hidden in the
+   plain view, so they come back to full opacity at once. */
+.oats-detail-fade {
+  --oats-fade-out: calc(var(--motion-base) * 0.4);
+  --oats-fade-in: calc(var(--motion-base) * 0.6);
+}
+
+.oats-detail-fade[data-state="open"] {
+  transition: opacity var(--oats-fade-in) var(--ease-oats) var(--oats-fade-out);
+}
+
+.oats-detail-fade[data-state="closed"] {
+  opacity: 0;
+  transition: opacity var(--oats-fade-out) var(--ease-oats);
+}
+
+/* A part the change itself draws starts closed. Only then: on a recording's
+   first frame the parts are simply there. */
+@starting-style {
+  .oats-detail-reveal[data-arriving][data-state="open"] {
+    height: 0;
+    opacity: 0;
+  }
+
+  .oats-detail-fade[data-arriving][data-state="open"] {
+    opacity: 0;
+  }
+}
+
+/* The tabs were there all along, hidden but announcing, so a starting style
+   does not apply to them: they fade in by an animation, held at 0 while the
+   plain view's list fades out. */
+@keyframes oats-detail-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.oats-detail-fade-in {
+  animation: oats-detail-fade-in var(--oats-fade-in) var(--ease-oats) var(--oats-fade-out) both;
+}
+
+/* The change is at once (useDetailChange.ts draws nothing extra either). */
+@media (prefers-reduced-motion: reduce) {
+  .oats-detail-reveal,
+  .oats-detail-fade[data-state="open"],
+  .oats-detail-fade[data-state="closed"] {
+    transition: none;
+  }
+
+  .oats-detail-fade-in {
+    animation: none;
+  }
+}
+
 @keyframes oats-breathe {
   0%,
   100% {

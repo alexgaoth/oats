@@ -2035,7 +2035,7 @@
       "openQuestions": "Открытые вопросы",
       "noOpenQuestions": "В сохранённых событиях нет открытых вопросов.",
       "questionsUnknown": "Число вопросов для этого разговора не было сохранено.",
-      "showTranscript": "Показать расшифровку",
+      "expandDetails": "Развернуть подробности",
       "hideDetails": "Скрыть подробности",
       "transcriptTab": "Расшифровка",
       "questionsTab": "Вопросы"

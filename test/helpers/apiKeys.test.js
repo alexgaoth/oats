@@ -426,8 +426,37 @@ test("D and J: the renderer neither moves a feature across providers nor takes a
     audio.indexOf("  async getDictationKey(s) {"),
     audio.indexOf("  async processWithReasoningModel(")
   );
-  assert.match(dictation, /s\.keyRecords === NO_KEYS/);
+  // Dictation's key is asked of main by feature: the agent overlay transcribes
+  // with this class too, and may not ask for a key by its id.
+  assert.match(dictation, /s\.keyRecords !== NO_KEYS/);
   assert.match(dictation, /getFeatureApiKey\?\.\("dictation", "openai"\)/);
   assert.match(dictation, /cached\.rev === key\.rev/);
+  assert.doesNotMatch(dictation, /getApiKeySecret/);
   assert.doesNotMatch(dictation, /openaiApiKey|getOpenAIKey/);
+});
+
+test("A: a model chooser shows and replaces the key of the feature it sets", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const root = path.join(__dirname, "..", "..");
+  const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+  // The speech chooser sets what Conversations use (its route), so its key is theirs.
+  const speech = read("src/components/settings/SpeechModelChoice.tsx");
+  assert.match(speech, /selectFeatureRoute\(state, "conversations"\)/);
+  assert.match(speech, /<ProviderKey provider="openai" feature="conversations" \/>/);
+  assert.match(speech, /selectFeatureKey\(state, "conversations"\)/);
+  assert.doesNotMatch(speech, /openaiApiKey/);
+  const writing = read("src/components/settings/WritingModelChoice.tsx");
+  assert.match(writing, /<ProviderKey provider=\{view\} feature="writing" \/>/);
+  // No field for one key in the settings shows the default key instead.
+  const components = path.join(root, "src", "components");
+  const uses = fs
+    .readdirSync(components, { recursive: true })
+    .filter((name) => String(name).endsWith(".tsx"))
+    .flatMap((name) => {
+      const source = fs.readFileSync(path.join(components, String(name)), "utf8");
+      return source.match(/<ProviderKey\s[^>]*>/g) ?? [];
+    });
+  assert.ok(uses.length >= 2);
+  for (const use of uses) assert.match(use, /\sfeature=/, use);
 });
