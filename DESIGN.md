@@ -159,10 +159,19 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   pressing it changes nothing. Under it, one row per feature: the model as
   people say it and where it runs ("Whisper Turbo · on this Mac ⌄"), the place
   a quiet menu that moves that feature alone, and on the right its status: a
-  green "✓ Ready" pill (with an API key, the key too: "Ready · OpenAI key"), a
-  download's bar with "34% of 574 MB" and Cancel, Download or Try again, Add
-  API key, or "Key refused" in warning. Speech needs an OpenAI key: with only
-  Anthropic keys, a speech row's "With an API key" is off and says why.
+  green "✓ Ready" pill, a download's bar with "34% of 574 MB" and Cancel,
+  Download or Try again, Add API key, or on the key route the feature's own
+  key: "✓ Ready · OpenAI key 1 ⌄", or "Key refused · Work ⌄" in warning.
+  That pill opens the key menu: "Key for Writing", every saved key with its
+  provider and last four characters, the current one checked, the ones that
+  cannot serve the feature off with the reason under them, and Add API key….
+  Speech needs an OpenAI key: with only Anthropic keys, a speech row's "With
+  an API key" is off and says why. Under the rows, **API keys**
+  (`settings/ApiKeysList.tsx`): one line per key with its name, provider,
+  ••••last4 and the features that use it, and a menu with Rename (in place),
+  Replace… (a rotated key: it keeps its name and features) and Remove, which
+  asks in place and says where each feature goes. The Add API key dialog puts
+  its fields first, the key and then the optional name, and Save after them.
   Setup's third step, **Your models** (`onboarding/ModelsStep.tsx`), shows the
   same rows with the status only: the downloads "Where Oats thinks" names
   start on its Continue and show there, then Ready. Get started does not

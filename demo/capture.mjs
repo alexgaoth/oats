@@ -361,19 +361,33 @@ const SHOTS = [
     ].join(" "),
   },
   {
-    // An Anthropic key pasted where the writing row asks for one: checked,
-    // saved, and the row turns to Claude Opus 5.5 (ProviderKeyField).
+    // An Anthropic key pasted in the writing row's Add API key: checked,
+    // saved, and the row turns to Claude Opus 5.5 on it (ProviderKeyField).
     name: "models-key-saved",
     query: "processing=providers",
     script:
-      "await oatsDemo.settings('models'); await demo.typeKey('sk-ant-api03-demo-key-0123456789'); await demo.wait(800)",
+      "await oatsDemo.settings('models'); document.querySelector('[data-feature-row=writing] [data-status=add-key]').click(); await demo.typeKey('sk-ant-api03-demo-key-0123456789'); await demo.wait(800)",
   },
   {
     // A key that is neither OpenAI's nor Anthropic's is not saved.
     name: "models-key-wrong",
     query: "processing=providers",
     script:
-      "await oatsDemo.settings('models'); await demo.typeKey('AIzaSyD-not-an-openai-key'); await demo.wait(400)",
+      "await oatsDemo.settings('models'); document.querySelector('[data-feature-row=writing] [data-status=add-key]').click(); await demo.typeKey('AIzaSyD-not-an-openai-key'); await demo.wait(400)",
+  },
+  // Named keys: two OpenAI keys (one named Work) and an Anthropic key. The key
+  // menu on Writing (FeatureModelRow.tsx), and the API keys list (ApiKeysList.tsx).
+  {
+    name: "models-keys-menu",
+    query: "processing=providers&keys=openai,openai:Work,anthropic&parakeet=ready",
+    script:
+      "await oatsDemo.settings('models'); await demo.wait(600); document.querySelector('[data-feature-row=writing] [data-key-pill]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' })); await demo.wait(400)",
+  },
+  {
+    name: "models-keys-list",
+    query: "processing=providers&keys=openai,openai:Work,anthropic&parakeet=ready",
+    script:
+      "await oatsDemo.settings('models'); await demo.wait(600); await demo.scrollTo('API keys', 'heading')",
   },
   // Setup's second step, "Where Oats thinks" (components/onboarding/): the
   // same processing choice as Settings, with what "On this Mac" downloads.
