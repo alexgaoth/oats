@@ -274,15 +274,27 @@ export async function addApiKey(input: {
   const secret = String(input.secret ?? "").trim();
   const checked = await checkedKey(secret, input.provider);
   if (checked.ok === false) return { ok: false, reason: checked.reason };
+  return saveCheckedKey(checked, secret, input.name, input.forFeature ?? null, []);
+}
+
+/** Save a key its provider accepted, chosen for `forFeature` and for `take` besides. */
+async function saveCheckedKey(
+  checked: { provider: ApiKeyProvider; status: "ok" | "limited"; note?: string },
+  secret: string,
+  typedName: string | undefined,
+  requested: Feature | null,
+  take: Feature[]
+): Promise<AddResult> {
   const api = window.electronAPI;
   if (!api?.addApiKey) return notSaved();
-
   const state = useSettingsStore.getState();
-  const writingProvider = state.featurePreferences.writingProvider;
-  const forFeature =
-    input.forFeature && keyServes(checked.provider, input.forFeature) ? input.forFeature : null;
+  const forFeature = requested && keyServes(checked.provider, requested) ? requested : null;
   const number = nextNumber(checked.provider, selectSavedKeys(state));
-  const name = cleanKeyName(input.name);
+  const name = cleanKeyName(typedName);
+  const assign = featuresForNewKey(state.keyRecords, checked.provider, {
+    forFeature,
+    writingProvider: state.featurePreferences.writingProvider,
+  });
   const result = await api
     .addApiKey({
       provider: checked.provider,
@@ -291,14 +303,11 @@ export async function addApiKey(input: {
       name: name === formatDefaultName(checked.provider, number) ? "" : name,
       number,
       status: checked.status,
-      assign: featuresForNewKey(state.keyRecords, checked.provider, {
-        forFeature,
-        writingProvider,
-      }),
+      assign: [...new Set([...assign, ...take])],
     })
     .catch(() => null);
-  if (!result?.ok) return notSaved();
-  await applyKeyRecords(result.list);
+  if (result?.list) await applyKeyRecords(result.list);
+  if (!result?.ok || !result.id) return notSaved();
   if (forFeature === "writing") setWritingProvider(checked.provider);
   const key = savedKey(result.id);
   if (!key) return notSaved();
@@ -309,21 +318,42 @@ export async function addApiKey(input: {
  * Put another secret in a saved key's place: a key pasted by mistake, or one
  * the provider no longer takes. Checked as a new key is. A key of the same
  * provider keeps the key's id, its name (unless `name` gives one) and the
- * features that use it; a key of the other provider, where `provider` allows
- * one, is added, and the old one removed.
+ * features that use it. A key of the other provider, where `provider` allows
+ * one, is the person's choice of that provider: it is added, takes the old
+ * key's features it can serve (Writing; speech stays with OpenAI), and the old
+ * key is removed.
  */
 export async function replaceApiKey(
   id: string,
   input: { secret: string; name?: string; provider?: ApiKeyProvider; forFeature?: Feature }
 ): Promise<AddResult> {
-  const record = useSettingsStore.getState().keyRecords.keys.find((key) => key.id === id);
+  const state = useSettingsStore.getState();
+  const record = state.keyRecords.keys.find((key) => key.id === id);
   if (!record) return addApiKey(input);
   const secret = String(input.secret ?? "").trim();
   const checked = await checkedKey(secret, input.provider);
   if (checked.ok === false) return { ok: false, reason: checked.reason };
   if (checked.provider !== record.provider) {
-    const added = await addApiKey({ ...input, provider: checked.provider });
-    if (added.ok) await removeApiKey(id);
+    const users = FEATURES.filter(
+      (feature) =>
+        selectFeatureKey(state, feature)?.id === id && keyServes(checked.provider, feature)
+    );
+    const added = await saveCheckedKey(
+      checked,
+      secret,
+      input.name,
+      input.forFeature ?? null,
+      users
+    );
+    if (added.ok === false) return added;
+    if (users.includes("writing")) setWritingProvider(checked.provider);
+    await removeApiKey(id).catch((error: unknown) => {
+      logger.warn(
+        "Could not remove a replaced key",
+        { error: (error as Error)?.message },
+        "settings"
+      );
+    });
     return added;
   }
   const api = window.electronAPI;
@@ -336,8 +366,8 @@ export async function replaceApiKey(
       ...(name && { name }),
     })
     .catch(() => null);
+  if (result?.list) await applyKeyRecords(result.list);
   if (!result?.ok) return notSaved();
-  await applyKeyRecords(result.list);
   const key = savedKey(id);
   if (!key) return notSaved();
   return { ok: true, key, ...(checked.note && { note: checked.note }) };
@@ -369,10 +399,11 @@ export function renameApiKey(id: string, name: string): void {
       ),
     },
   });
+  // Main's answer is the list as saved: on a failure, the name as it was.
   window.electronAPI
     ?.renameApiKey?.(id, clean, number)
-    ?.then((list) => {
-      if (list) void applyKeyRecords(list);
+    ?.then((result) => {
+      if (result?.list) void applyKeyRecords(result.list);
     })
     .catch((error: unknown) => {
       logger.warn("Could not rename a key", { error: (error as Error)?.message }, "settings");
@@ -381,23 +412,23 @@ export function renameApiKey(id: string, name: string): void {
 
 /**
  * Remove a key: main deletes its secret. Each feature that used it moves to
- * another usable key of the same provider, else (Writing) to one of the other
- * provider, else shows the missing-key state and runs on this Mac until a key
- * is added.
+ * another usable key of the same provider, else shows the missing-key state
+ * and runs on this Mac until a key is added or chosen. It never moves to the
+ * other provider: that would send its text to a provider nobody chose for it.
+ * Rejects, with a line to show, when main could not remove it; the key stays.
  */
 export async function removeApiKey(id: string): Promise<void> {
   const state = useSettingsStore.getState();
   if (!state.keyRecords.keys.some((key) => key.id === id)) return;
   const plan = removalPlan(state.keyRecords, id, state.featurePreferences.writingProvider);
-  const list = await window.electronAPI
+  const result = await window.electronAPI
     ?.removeApiKey?.(id, plan.features as Record<string, string>)
     ?.catch((error: unknown) => {
       logger.warn("Could not remove a key", { error: (error as Error)?.message }, "settings");
       return null;
     });
-  if (!list) return;
-  await applyKeyRecords(list);
-  setWritingProvider(plan.writingProvider);
+  if (result?.list) await applyKeyRecords(result.list);
+  if (!result?.ok) throw new Error(i18n.t("oats.keys.notRemoved"));
 }
 
 /**
@@ -413,10 +444,11 @@ export function chooseFeatureKey(feature: Feature, id: string): void {
   const features = { ...state.keyRecords.features, [feature]: id };
   useSettingsStore.setState({ keyRecords: { ...state.keyRecords, features } });
   if (feature === "writing") setWritingProvider(key.provider);
+  // Main's answer is the list as saved: on a failure, the choice as it was.
   window.electronAPI
     ?.setFeatureApiKeys?.(features as Record<string, string>)
-    ?.then((list) => {
-      if (list) void applyKeyRecords(list);
+    ?.then((result) => {
+      if (result?.list) void applyKeyRecords(result.list);
     })
     .catch((error: unknown) => {
       logger.warn("Could not choose a key", { error: (error as Error)?.message }, "settings");

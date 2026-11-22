@@ -7,20 +7,22 @@ const Module = require("module");
 
 // Named keys in the main process (environment.js): one encrypted file per
 // key, a list that holds no secret, each provider's slot kept on its default
-// key, the migration of the one key per provider, and the key each feature's
-// call uses. The OS keyring is never loaded, and electron's safeStorage is a
+// key, the migration of the one key per provider, the key each feature's call
+// uses, and what happens when the slot or the files change outside these
+// records. The OS keyring is never loaded, and electron's safeStorage is a
 // stand-in that scrambles reversibly, so secretCrypto takes its safeStorage
-// path. Every secret here is a fake.
+// path. Every secret here is a fake. Each test has a profile of its own.
 
-const tmpUserData = fs.mkdtempSync(path.join(os.tmpdir(), "oats-keys-test-"));
-const scramble = (text) => Buffer.from(`fake:${Buffer.from(text, "utf8").toString("base64")}`).reverse();
+const scramble = (text) =>
+  Buffer.from(`fake:${Buffer.from(text, "utf8").toString("base64")}`).reverse();
 const unscramble = (buffer) => {
   const text = Buffer.from(buffer).reverse().toString("utf8");
   if (!text.startsWith("fake:")) throw new Error("not a fake blob");
   return Buffer.from(text.slice(5), "base64").toString("utf8");
 };
+const profile = { userData: null };
 const fakeElectron = {
-  app: { getPath: () => tmpUserData, isPackaged: true },
+  app: { getPath: () => profile.userData, isPackaged: true },
   safeStorage: {
     isEncryptionAvailable: () => true,
     encryptString: scramble,
@@ -39,246 +41,451 @@ const origLoad = Module._load;
 Module._load = function (request, parent, ...rest) {
   if (request === "electron") return fakeElectron;
   if (request === "@napi-rs/keyring") throw new Error("keyring disabled in tests");
-  if (request === "./debugLogger" && String(parent?.filename).includes(`${path.sep}helpers${path.sep}`)) {
+  if (
+    request === "./debugLogger" &&
+    String(parent?.filename).includes(`${path.sep}helpers${path.sep}`)
+  ) {
     return fakeLogger;
   }
   return origLoad.call(this, request, parent, ...rest);
 };
-// Nothing from the shell running the tests may become a key here.
-for (const name of ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]) delete process.env[name];
 
 const EnvironmentManager = require("../../src/helpers/environment");
 
-const OPENAI_ONE = "sk-proj-fakeOpenAiKeyOne000AAAA";
-const OPENAI_TWO = "sk-proj-fakeOpenAiKeyTwo000BBBB";
-const OPENAI_THREE = "sk-proj-fakeOpenAiKeyThree00CCCC";
-const ANTHROPIC_ONE = "sk-ant-fakeAnthropicKeyOne0DDDD";
-const SECRETS = [OPENAI_ONE, OPENAI_TWO, OPENAI_THREE, ANTHROPIC_ONE];
+const ONE = "sk-proj-fakeOpenAiKeyOne000AAAA";
+const TWO = "sk-proj-fakeOpenAiKeyTwo000BBBB";
+const THREE = "sk-proj-fakeOpenAiKeyThree00CCCC";
+const NEW = "sk-proj-fakeOpenAiKeyNewer00NNNN";
+const ANT = "sk-ant-fakeAnthropicKeyOne0DDDD";
+const SECRETS = [ONE, TWO, THREE, NEW, ANT];
+const SLOTS = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"];
 
-const dir = path.join(tmpUserData, "secure-keys");
-const readList = () => JSON.parse(fs.readFileSync(path.join(dir, "api-keys.json"), "utf8"));
-const keyFiles = () => fs.readdirSync(dir).filter((file) => /^api-key-/.test(file)).sort();
-/** Whether any file the app wrote, or any line it logged, holds a secret. */
+const dir = () => path.join(profile.userData, "secure-keys");
+const file = (name) => path.join(dir(), name);
+const readList = () => JSON.parse(fs.readFileSync(file("api-keys.json"), "utf8"));
+const keyFile = (id) => file(`api-key-${id}.enc`);
+const slotFile = (name) => {
+  try {
+    return unscramble(fs.readFileSync(file(`${name}.enc`)));
+  } catch (error) {
+    return `<${error.code ?? "unreadable"}>`;
+  }
+};
+/** Whether any file the app wrote, or any line it logged, holds a secret in clear. */
 function leaks() {
   const found = [];
-  for (const file of fs.readdirSync(dir)) {
-    const text = fs.readFileSync(path.join(dir, file)).toString("utf8");
-    for (const secret of SECRETS) if (text.includes(secret)) found.push(file);
+  const names = profile.userData && fs.existsSync(dir()) ? fs.readdirSync(dir()) : [];
+  for (const name of names) {
+    if (fs.statSync(file(name)).isDirectory()) continue;
+    const text = fs.readFileSync(file(name)).toString("utf8");
+    for (const secret of SECRETS) if (text.includes(secret)) found.push(name);
   }
   for (const line of logged) {
     for (const secret of SECRETS) if (line.includes(secret)) found.push("a log line");
   }
   return found;
 }
+async function waitFor(check) {
+  const until = Date.now() + 3000;
+  while (!check()) {
+    if (Date.now() > until) throw new Error("timed out");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+/** A new profile, with the slots an earlier version left (encrypted, as it saved them). */
+function freshProfile(slots = {}) {
+  profile.userData = fs.mkdtempSync(path.join(os.tmpdir(), "oats-keys-test-"));
+  fs.mkdirSync(dir(), { recursive: true });
+  fs.writeFileSync(file(".migrated"), "");
+  for (const [name, secret] of Object.entries(slots)) {
+    fs.writeFileSync(file(`${name}.enc`), scramble(secret));
+  }
+}
 /** A launch of the app: a new process starts with no slot in its environment. */
-async function launch({ keepEnv = false } = {}) {
-  if (!keepEnv) for (const name of ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]) delete process.env[name];
+async function launch() {
+  for (const name of SLOTS) delete process.env[name];
   const env = new EnvironmentManager();
   const changes = [];
   env.onApiKeysChanged = (list) => changes.push(list);
   await env.init();
   return { env, changes };
 }
-async function settle(env) {
-  // The writes are queued in order; one more write waits for those before it.
-  await env.setFeatureApiKeys({});
-}
 
-let env;
-let changes;
+test.afterEach(() => {
+  assert.deepEqual(leaks(), []);
+  if (profile.userData) fs.rmSync(profile.userData, { recursive: true, force: true });
+  profile.userData = null;
+});
 
 test("an install from before names: its one key per provider becomes key 1, for every feature", async () => {
-  // The slots as 0.4.0-beta.3 left them: one encrypted file per provider.
-  process.env.OPENAI_API_KEY = OPENAI_ONE;
-  process.env.ANTHROPIC_API_KEY = ANTHROPIC_ONE;
-  ({ env } = await launch({ keepEnv: true }));
+  freshProfile({ OPENAI_API_KEY: ONE, ANTHROPIC_API_KEY: ANT });
+  const { env } = await launch();
   const list = env.listApiKeys();
   assert.deepEqual(
-    list.keys.map((key) => [key.provider, key.name, key.number, key.tail, key.status]),
+    list.keys.map((key) => [key.provider, key.name, key.number, key.tail, key.status, key.rev]),
     [
-      ["openai", "", 1, "AAAA", null],
-      ["anthropic", "", 1, "DDDD", null],
+      ["openai", "", 1, "AAAA", null, 1],
+      ["anthropic", "", 1, "DDDD", null, 1],
     ]
   );
   const [openai, anthropic] = list.keys;
   assert.deepEqual(list.features, { conversations: openai.id, dictation: openai.id });
+  assert.deepEqual(list.defaults, { openai: openai.id, anthropic: anthropic.id });
   // Each feature's call uses the key it used before: the same secret.
-  assert.equal(env.getFeatureKey("conversations", "openai"), OPENAI_ONE);
-  assert.equal(env.getFeatureKey("dictation", "openai"), OPENAI_ONE);
-  assert.equal(env.getFeatureKey("writing", "openai"), OPENAI_ONE);
-  assert.equal(env.getFeatureKey("writing", "anthropic"), ANTHROPIC_ONE);
-  assert.equal(env.getOpenAIKey(), OPENAI_ONE);
-  assert.equal(env.getAnthropicKey(), ANTHROPIC_ONE);
-  // One encrypted file per key, and the slots kept.
-  assert.deepEqual(keyFiles(), [`api-key-${openai.id}.enc`, `api-key-${anthropic.id}.enc`].sort());
-  assert.ok(fs.existsSync(path.join(dir, "OPENAI_API_KEY.enc")));
-  assert.equal(readList().keys.length, 2);
-  assert.deepEqual(leaks(), []);
+  assert.equal(env.getFeatureKey("conversations", "openai"), ONE);
+  assert.equal(env.getFeatureKey("dictation", "openai"), ONE);
+  assert.equal(env.getFeatureKey("writing", "openai"), ONE);
+  assert.equal(env.getFeatureKey("writing", "anthropic"), ANT);
+  assert.equal(env.getOpenAIKey(), ONE);
+  assert.equal(env.getAnthropicKey(), ANT);
+  assert.ok(fs.existsSync(keyFile(openai.id)) && fs.existsSync(keyFile(anthropic.id)));
+  assert.equal(readList().version, 1);
 });
 
 test("a second launch reads the same keys back, and writes nothing new", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  await launch();
   const before = readList();
-  const stamp = fs.statSync(path.join(dir, "api-keys.json")).mtimeMs;
-  ({ env, changes } = await launch());
-  assert.deepEqual(env.listApiKeys(), { keys: before.keys, features: before.features });
-  assert.equal(fs.statSync(path.join(dir, "api-keys.json")).mtimeMs, stamp);
+  const stamp = fs.statSync(file("api-keys.json")).mtimeMs;
+  const { env, changes } = await launch();
+  assert.deepEqual(env.listApiKeys(), {
+    keys: before.keys,
+    features: before.features,
+    defaults: before.defaults,
+  });
+  assert.equal(fs.statSync(file("api-keys.json")).mtimeMs, stamp);
   assert.equal(changes.length, 0);
 });
 
-test("a key is added with its name, and a feature can use it while another keeps key 1", async () => {
-  const result = await env.addApiKey({
+test("keys are added with names, deduplicated, and each feature uses its own", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  const { env, changes } = await launch();
+  const work = await env.addApiKey({
     provider: "openai",
-    secret: OPENAI_TWO,
+    secret: TWO,
     name: "Work",
     number: 2,
     status: "ok",
     assign: ["conversations"],
   });
-  assert.equal(result.ok, true);
-  const added = result.list.keys.find((key) => key.id === result.id);
-  assert.deepEqual([added.name, added.tail, added.status], ["Work", "BBBB", "ok"]);
-  assert.equal(env.getFeatureKey("conversations", "openai"), OPENAI_TWO);
-  assert.equal(env.getFeatureKey("dictation", "openai"), OPENAI_ONE);
-  // The slot keeps the default key, the oldest.
-  assert.equal(env.getOpenAIKey(), OPENAI_ONE);
+  assert.equal(work.ok, true);
+  const record = work.list.keys.find((key) => key.id === work.id);
+  assert.deepEqual(
+    [record.name, record.tail, record.status, record.rev],
+    ["Work", "BBBB", "ok", 1]
+  );
+  assert.equal(env.getFeatureKey("conversations", "openai"), TWO);
+  assert.equal(env.getFeatureKey("dictation", "openai"), ONE);
+  // The slot keeps the default key.
+  assert.equal(env.getOpenAIKey(), ONE);
   assert.equal(changes.length, 1);
-  // The windows get the records only.
   for (const secret of SECRETS) assert.equal(JSON.stringify(changes).includes(secret), false);
-  assert.equal(env.getApiKeySecret(result.id), OPENAI_TWO);
   // The same secret twice is one key.
-  const again = await env.addApiKey({ provider: "openai", secret: OPENAI_TWO, assign: [] });
-  assert.equal(again.id, result.id);
-  assert.equal(env.listApiKeys().keys.length, 3);
-  // A key that cannot be a key is refused.
+  const again = await env.addApiKey({ provider: "openai", secret: TWO, assign: [] });
+  assert.equal(again.id, work.id);
+  assert.equal(env.listApiKeys().keys.length, 2);
+  // What cannot be a key is refused.
   for (const secret of ["", "short", "sk-has a space-0000000", 42]) {
     assert.equal((await env.addApiKey({ provider: "openai", secret })).ok, false);
   }
-  assert.equal((await env.addApiKey({ provider: "gemini", secret: OPENAI_THREE })).ok, false);
+  assert.equal((await env.addApiKey({ provider: "gemini", secret: THREE })).ok, false);
   // An Anthropic key is never a speech feature's.
-  await env.setFeatureApiKeys({ dictation: env.listApiKeys().keys[1].id });
-  assert.equal(env.getFeatureKey("dictation", "openai"), OPENAI_ONE);
-  assert.deepEqual(leaks(), []);
-});
-
-test("a rename keeps the key; an unknown id changes nothing and builds no path", async () => {
-  const work = env.listApiKeys().keys.find((key) => key.name === "Work");
+  const ant = await env.addApiKey({ provider: "anthropic", secret: ANT, assign: ["dictation"] });
+  assert.notEqual(ant.list.features.dictation, ant.id);
+  assert.equal(env.getFeatureKey("dictation", "openai"), ONE);
+  // A rename keeps the key; an unknown id changes nothing and builds no path.
   const renamed = await env.renameApiKey(work.id, "  Client\nA ", 2);
-  assert.equal(renamed.keys.find((key) => key.id === work.id).name, "Client A");
-  assert.equal(await env.renameApiKey("../../evil", "x"), null);
-  assert.equal(await env.removeApiKey("../../evil", {}), null);
+  assert.equal(renamed.ok, true);
+  assert.equal(renamed.list.keys.find((key) => key.id === work.id).name, "Client A");
+  assert.equal((await env.renameApiKey("../../evil", "x")).ok, false);
+  assert.equal((await env.removeApiKey("../../evil", {})).ok, false);
   assert.equal(env.getApiKeySecret("../../evil"), "");
 });
 
-test("removing the default key deletes its secret and moves the slot to the next key", async () => {
-  const [one, , two] = env.listApiKeys().keys;
-  assert.equal(two.tail, "BBBB");
-  const list = await env.removeApiKey(one.id, { dictation: two.id });
-  assert.deepEqual(
-    list.keys.map((key) => key.tail),
-    ["DDDD", "BBBB"]
-  );
-  assert.equal(list.features.dictation, two.id);
-  assert.equal(list.features.conversations, two.id);
-  assert.equal(fs.existsSync(path.join(dir, `api-key-${one.id}.enc`)), false);
-  assert.equal(env.getOpenAIKey(), OPENAI_TWO);
-  assert.equal(unscramble(fs.readFileSync(path.join(dir, "OPENAI_API_KEY.enc"))), OPENAI_TWO);
-  assert.equal(env.getApiKeySecret(one.id), "");
-  assert.deepEqual(leaks(), []);
-});
-
-test("the single slot's setter replaces the default key, keeping its name and features", async () => {
-  const before = env.listApiKeys().keys.find((key) => key.provider === "openai");
-  assert.deepEqual(env.saveOpenAIKey(OPENAI_THREE), { success: true });
-  // At once, as before: the paths that read the slot see it.
-  assert.equal(env.getOpenAIKey(), OPENAI_THREE);
-  await settle(env);
-  const after = env.listApiKeys().keys.find((key) => key.id === before.id);
-  assert.deepEqual([after.name, after.tail, after.status], ["Client A", "CCCC", null]);
-  assert.equal(env.getFeatureKey("conversations", "openai"), OPENAI_THREE);
-  // Text that cannot be a key changes nothing.
-  assert.deepEqual(env.saveOpenAIKey("not a key"), { success: false });
-  assert.equal(env.getOpenAIKey(), OPENAI_THREE);
-  assert.deepEqual(leaks(), []);
-});
-
-test("a key whose adding never finished is deleted at launch; a removal cut short ends removed", async () => {
-  await settle(env);
-  // A secret written for a key the list never named: the app quit mid-add.
-  const orphan = "k00000000000000ff";
-  fs.writeFileSync(path.join(dir, `api-key-${orphan}.enc`), scramble(OPENAI_ONE));
-  // A removal's first two steps, slot then secret, and no third: the list
-  // still names the key.
-  const anthropic = env.listApiKeys().keys.find((key) => key.provider === "anthropic");
-  fs.unlinkSync(path.join(dir, "ANTHROPIC_API_KEY.enc"));
-  fs.unlinkSync(path.join(dir, `api-key-${anthropic.id}.enc`));
-  assert.equal(readList().keys.length, 2);
-  ({ env } = await launch());
-  assert.equal(fs.existsSync(path.join(dir, `api-key-${orphan}.enc`)), false);
-  assert.deepEqual(
-    env.listApiKeys().keys.map((key) => key.provider),
-    ["openai"]
-  );
-  assert.equal(readList().keys.length, 1);
-  assert.equal(env.getAnthropicKey(), "");
-  assert.deepEqual(leaks(), []);
-});
-
-test("removing a provider's last key clears its slot, and a launch does not bring it back", async () => {
-  const added = await env.addApiKey({
-    provider: "anthropic",
-    secret: ANTHROPIC_ONE,
-    number: 1,
-    status: "ok",
-    assign: ["writing", "dictation"],
+test("J: main answers the key a feature uses, with its revision, and never another key", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  const { env } = await launch();
+  const work = await env.addApiKey({ provider: "openai", secret: TWO, assign: ["conversations"] });
+  assert.deepEqual(env.getFeatureKeyRecord("conversations", "openai"), {
+    id: work.id,
+    rev: 1,
+    secret: TWO,
   });
-  assert.equal(added.ok, true);
-  // Chosen for Writing only: an Anthropic key does not transcribe.
-  assert.deepEqual(Object.keys(added.list.features).sort(), ["conversations", "dictation", "writing"]);
-  assert.equal(added.list.features.writing, added.id);
-  assert.notEqual(added.list.features.dictation, added.id);
-  assert.equal(env.getAnthropicKey(), ANTHROPIC_ONE);
-  assert.equal(env.getFeatureKey("writing", "anthropic"), ANTHROPIC_ONE);
-  const list = await env.removeApiKey(added.id, {});
-  assert.equal(list.keys.some((key) => key.provider === "anthropic"), false);
-  assert.equal(list.features.writing, undefined);
-  assert.equal(env.getAnthropicKey(), "");
-  assert.equal(env.getFeatureKey("writing", "anthropic"), "");
-  assert.equal(fs.existsSync(path.join(dir, "ANTHROPIC_API_KEY.enc")), false);
-  assert.equal(fs.existsSync(path.join(dir, `api-key-${added.id}.enc`)), false);
-  ({ env } = await launch());
-  assert.equal(env.listApiKeys().keys.some((key) => key.provider === "anthropic"), false);
-  assert.equal(env.getAnthropicKey(), "");
+  // Anthropic has no key: no answer, and not the OpenAI slot either.
+  assert.equal(env.getFeatureKeyRecord("writing", "anthropic"), null);
+  assert.equal(env.getFeatureKeyRecord("summaries", "openai"), null);
+  // Before the keys are read, the slot, as before.
+  const early = new EnvironmentManager();
+  assert.deepEqual(early.getFeatureKeyRecord("dictation", "openai"), {
+    id: null,
+    rev: 0,
+    secret: ONE,
+  });
 });
 
-test("a list that cannot be read is kept aside, and the key files are kept as keys", async () => {
-  const before = env.listApiKeys().keys;
-  fs.writeFileSync(path.join(dir, "api-keys.json"), "{ not json");
+test("I: a replace keeps the id and the features, and moves the revision on", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  const { env } = await launch();
+  const [one] = env.listApiKeys().keys;
+  const replaced = await env.replaceApiKey(one.id, { secret: THREE, status: "ok" });
+  assert.equal(replaced.ok, true);
+  const after = replaced.list.keys.find((key) => key.id === one.id);
+  assert.deepEqual([after.tail, after.rev, after.status], ["CCCC", 2, "ok"]);
+  assert.deepEqual(env.getFeatureKeyRecord("dictation", "openai"), {
+    id: one.id,
+    rev: 2,
+    secret: THREE,
+  });
+  assert.equal(env.getOpenAIKey(), THREE);
+  assert.equal(slotFile("OPENAI_API_KEY"), THREE);
+});
+
+test("removing the default key deletes its secret and moves the slot to the next key", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  const { env } = await launch();
+  const two = await env.addApiKey({ provider: "openai", secret: TWO, assign: [] });
+  const [one] = env.listApiKeys().keys;
+  const result = await env.removeApiKey(one.id, { dictation: two.id });
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.list.keys.map((key) => key.tail),
+    ["BBBB"]
+  );
+  assert.equal(result.list.features.dictation, two.id);
+  assert.equal(result.list.defaults.openai, two.id);
+  assert.equal(fs.existsSync(keyFile(one.id)), false);
+  assert.equal(env.getOpenAIKey(), TWO);
+  assert.equal(slotFile("OPENAI_API_KEY"), TWO);
+  assert.equal(env.getApiKeySecret(one.id), "");
+});
+
+test("A: the single slot's setter never overwrites or removes a named key", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  const { env } = await launch();
+  const work = await env.addApiKey({
+    provider: "openai",
+    secret: TWO,
+    name: "Work",
+    assign: ["conversations"],
+  });
+  const [one] = env.listApiKeys().keys;
+  // The person clears the field: nothing is removed.
+  assert.deepEqual(await env.saveOpenAIKey(""), { success: false });
+  assert.deepEqual(
+    env.listApiKeys().keys.map((key) => key.id),
+    [one.id, work.id]
+  );
+  assert.equal(env.getOpenAIKey(), ONE);
+  // Then pastes a key: it is added, and is the default key; Work is untouched.
+  assert.deepEqual(await env.saveOpenAIKey(NEW), { success: true });
+  assert.equal(env.listApiKeys().keys.length, 3);
+  assert.equal(env.getApiKeySecret(work.id), TWO);
+  assert.equal(env.getApiKeySecret(one.id), ONE);
+  assert.equal(env.getOpenAIKey(), NEW);
+  // The features that used the old default key use the new one; Work's keeps Work.
+  assert.equal(env.getFeatureKey("conversations", "openai"), TWO);
+  assert.equal(env.getFeatureKey("dictation", "openai"), NEW);
+  // Text that cannot be a key changes nothing.
+  assert.deepEqual(await env.saveOpenAIKey("not a key"), { success: false });
+  assert.equal(env.listApiKeys().keys.length, 3);
+});
+
+test("B: a key an earlier version put in the slot is kept, as the default, with the features of the key before it", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  const work = await env.addApiKey({ provider: "openai", secret: TWO, assign: ["conversations"] });
+  const [one] = env.listApiKeys().keys;
+  // An earlier version saves another key: it writes the slot's file only.
+  fs.writeFileSync(file("OPENAI_API_KEY.enc"), scramble(NEW));
+  ({ env } = await launch());
+  const list = env.listApiKeys();
+  assert.equal(list.keys.length, 3);
+  const adopted = list.keys.find((key) => key.tail === "NNNN");
+  assert.equal(list.defaults.openai, adopted.id);
+  assert.equal(env.getOpenAIKey(), NEW);
+  assert.equal(slotFile("OPENAI_API_KEY"), NEW);
+  // Dictation and Writing used key 1, the slot's key: they use the new key now.
+  assert.equal(env.getFeatureKey("dictation", "openai"), NEW);
+  assert.equal(env.getFeatureKey("writing", "openai"), NEW);
+  assert.equal(env.getFeatureKey("conversations", "openai"), TWO);
+  // Nothing is lost.
+  assert.equal(env.getApiKeySecret(one.id), ONE);
+  assert.equal(env.getApiKeySecret(work.id), TWO);
+});
+
+test("B: a key an earlier version removed from the slot stays removed", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  const work = await env.addApiKey({ provider: "openai", secret: TWO, assign: ["conversations"] });
+  const [one] = env.listApiKeys().keys;
+  fs.unlinkSync(file("OPENAI_API_KEY.enc"));
   ({ env } = await launch());
   assert.deepEqual(
-    env.listApiKeys().keys.map((key) => [key.id, key.tail]),
-    before.map((key) => [key.id, key.tail])
+    env.listApiKeys().keys.map((key) => key.id),
+    [work.id]
   );
-  assert.ok(fs.readdirSync(dir).some((file) => file.startsWith("api-keys.json.unreadable-")));
-  assert.equal(env.getFeatureKey("dictation", "openai"), OPENAI_THREE);
-  assert.deepEqual(leaks(), []);
+  assert.equal(fs.existsSync(keyFile(one.id)), false);
+  // Work is the default now, and fills the slot.
+  assert.equal(env.getOpenAIKey(), TWO);
+  ({ env } = await launch());
+  assert.deepEqual(
+    env.listApiKeys().keys.map((key) => key.id),
+    [work.id]
+  );
+});
+
+test("B: a key saved while the records could not be read is kept at the next launch", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  await launch();
+  // A list this version cannot read, which cannot be set aside this launch:
+  // the named keys are off, and the slots serve, as before.
+  fs.writeFileSync(file("api-keys.json"), "{ not json");
+  fs.chmodSync(dir(), 0o500);
+  let off;
+  try {
+    ({ env: off } = await launch());
+  } finally {
+    fs.chmodSync(dir(), 0o700);
+  }
+  assert.deepEqual(off.listApiKeys().keys, []);
+  assert.equal(off.getFeatureKey("dictation", "openai"), ONE);
+  // A key saved then goes to the slot only, as before.
+  off.saveOpenAIKey(NEW);
+  await waitFor(() => slotFile("OPENAI_API_KEY") === NEW);
+  const { env } = await launch();
+  assert.equal(env.getOpenAIKey(), NEW);
+  const tails = env.listApiKeys().keys.map((key) => key.tail);
+  assert.ok(tails.includes("NNNN") && tails.includes("AAAA"));
+  assert.equal(env.getFeatureKey("dictation", "openai"), NEW);
+});
+
+test("C: removing the last key that can be read empties the slot, even beside one that cannot", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  const two = await env.addApiKey({ provider: "openai", secret: TWO, assign: [] });
+  const good = fs.readFileSync(keyFile(two.id));
+  fs.writeFileSync(keyFile(two.id), Buffer.from("garbage-not-a-blob"));
+  ({ env } = await launch());
+  const [one] = env.listApiKeys().keys;
+  assert.equal(env.listApiKeys().keys.length, 1);
+  const result = await env.removeApiKey(one.id, {});
+  assert.equal(result.ok, true);
+  assert.equal(process.env.OPENAI_API_KEY, undefined);
+  assert.equal(env.getOpenAIKey(), "");
+  assert.equal(env.getFeatureKey("conversations", "openai"), "");
+  assert.equal(fs.existsSync(file("OPENAI_API_KEY.enc")), false);
+  assert.equal(fs.existsSync(keyFile(one.id)), false);
+  // The unreadable key stays on disk; once it can be read, it is the key.
+  assert.ok(fs.existsSync(keyFile(two.id)));
+  fs.writeFileSync(keyFile(two.id), good);
+  ({ env } = await launch());
+  assert.deepEqual(
+    env.listApiKeys().keys.map((key) => key.id),
+    [two.id]
+  );
+  assert.equal(env.getOpenAIKey(), TWO);
+  assert.equal(env.getFeatureKey("conversations", "openai"), TWO);
+});
+
+test("E: a list of a shape this version does not write is kept aside, and the keys are kept", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  await env.addApiKey({ provider: "openai", secret: TWO, name: "Work", assign: ["conversations"] });
+  await env.addApiKey({ provider: "anthropic", secret: ANT, assign: ["writing"] });
+  const list = readList();
+  const later = { version: 2, entries: list.keys, features: list.features };
+  fs.writeFileSync(file("api-keys.json"), JSON.stringify(later));
+  ({ env } = await launch());
+  assert.equal(fs.readdirSync(dir()).filter((name) => /^api-key-.*\.enc$/.test(name)).length, 3);
+  assert.deepEqual(
+    env.listApiKeys()
+      .keys.map((key) => key.tail)
+      .sort(),
+    ["AAAA", "BBBB", "DDDD"]
+  );
+  const aside = fs.readdirSync(dir()).find((name) => name.startsWith("api-keys.json.unreadable-"));
+  assert.deepEqual(JSON.parse(fs.readFileSync(file(aside), "utf8")), later);
+  assert.equal(env.getOpenAIKey(), ONE);
+});
+
+test("F: a removal whose slot cannot be written is undone and reported", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env, changes } = await launch();
+  await env.addApiKey({ provider: "openai", secret: TWO, assign: [] });
+  const [one] = env.listApiKeys().keys;
+  const seen = changes.length;
+  fs.mkdirSync(file("OPENAI_API_KEY.enc.tmp"));
+  const result = await env.removeApiKey(one.id, {});
+  assert.equal(result.ok, false);
+  assert.ok(result.list.keys.some((key) => key.id === one.id));
+  assert.ok(env.listApiKeys().keys.some((key) => key.id === one.id));
+  assert.equal(env.getOpenAIKey(), ONE);
+  assert.ok(fs.existsSync(keyFile(one.id)));
+  assert.equal(changes.length, seen);
+  fs.rmdirSync(file("OPENAI_API_KEY.enc.tmp"));
+  ({ env } = await launch());
+  assert.ok(env.listApiKeys().keys.some((key) => key.id === one.id));
+  assert.equal(env.getOpenAIKey(), ONE);
+});
+
+test("G: what an unfinished write left is cleaned up, at launch and on removal", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  let { env } = await launch();
+  const two = await env.addApiKey({ provider: "openai", secret: TWO, assign: [] });
+  const [one] = env.listApiKeys().keys;
+  for (const leftover of [
+    `api-key-${one.id}.enc.tmp`,
+    `api-key-${two.id}.plain.tmp`,
+    "OPENAI_API_KEY.enc.tmp",
+    "api-keys.json.tmp",
+  ]) {
+    fs.writeFileSync(file(leftover), "x");
+  }
+  // An older plain copy beside the encrypted one.
+  fs.writeFileSync(file(`api-key-${one.id}.plain`), ONE);
+  const past = new Date(Date.now() - 60_000);
+  fs.utimesSync(file(`api-key-${one.id}.plain`), past, past);
+  ({ env } = await launch());
+  assert.deepEqual(
+    fs.readdirSync(dir()).filter((name) => /\.tmp$|\.plain$/.test(name)),
+    []
+  );
+  assert.equal(env.getApiKeySecret(one.id), ONE);
+  fs.writeFileSync(file(`api-key-${two.id}.enc.tmp`), "x");
+  assert.equal((await env.removeApiKey(two.id, {})).ok, true);
+  assert.deepEqual(
+    fs.readdirSync(dir()).filter((name) => name.includes(two.id)),
+    []
+  );
 });
 
 test("before the keys are read, the slot's setter works as it always did", () => {
+  freshProfile();
   const fresh = new EnvironmentManager();
-  fresh.saveAnthropicKey(ANTHROPIC_ONE);
-  assert.equal(fresh.getAnthropicKey(), ANTHROPIC_ONE);
-  assert.equal(fresh.getFeatureKey("writing", "anthropic"), ANTHROPIC_ONE);
+  fresh.saveAnthropicKey(ANT);
+  assert.equal(fresh.getAnthropicKey(), ANT);
+  assert.equal(fresh.getFeatureKey("writing", "anthropic"), ANT);
   fresh.saveAnthropicKey("");
   assert.equal(fresh.getAnthropicKey(), "");
 });
 
 test("nothing in this file loaded the OS keyring", () => {
   assert.equal(
-    Object.keys(require.cache).some((file) => file.includes(`${path.sep}@napi-rs${path.sep}keyring`)),
+    Object.keys(require.cache).some((name) =>
+      name.includes(`${path.sep}@napi-rs${path.sep}keyring`)
+    ),
     false
   );
 });
 
-test.after(() => {
-  fs.rmSync(tmpUserData, { recursive: true, force: true });
+test("I: the same secret put back in a key's place changes nothing", async () => {
+  freshProfile({ OPENAI_API_KEY: ONE });
+  const { env } = await launch();
+  const [one] = env.listApiKeys().keys;
+  await env.setApiKeyStatus(one.id, "ok");
+  const same = await env.replaceApiKey(one.id, { secret: ONE, status: null });
+  assert.equal(same.ok, true);
+  const after = same.list.keys.find((key) => key.id === one.id);
+  assert.deepEqual([after.rev, after.status], [1, "ok"]);
 });

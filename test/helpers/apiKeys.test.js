@@ -163,36 +163,40 @@ test("a removed key's features move to the same provider's next usable key", () 
   });
   const plan = keys.removalPlan(list, id(1), "openai");
   assert.deepEqual(plan.features, { conversations: id(2), dictation: id(2), writing: id(2) });
-  assert.equal(plan.writingProvider, "openai");
   assert.deepEqual(plan.moves, [
     { feature: "conversations", to: id(2) },
     { feature: "writing", to: id(2) },
   ]);
 });
 
-test("Writing moves to the other provider's usable key when its own has none left", () => {
+test("D: a removed key's feature never moves to the other provider", () => {
   const list = records([key(1, "openai"), key(3, "anthropic")], {
     conversations: id(1),
     dictation: id(1),
     writing: id(1),
   });
   const plan = keys.removalPlan(list, id(1), "openai");
-  // Speech has nowhere to go: the missing-key state, on this Mac.
-  assert.deepEqual(plan.features, { writing: id(3) });
-  assert.equal(plan.writingProvider, "anthropic");
+  // No OpenAI key is left: every feature that used it shows the missing-key
+  // state and runs on this Mac, Writing too, though an Anthropic key is there.
+  assert.deepEqual(plan.features, {});
   assert.deepEqual(plan.moves, [
     { feature: "conversations", to: null },
     { feature: "dictation", to: null },
-    { feature: "writing", to: id(3) },
+    { feature: "writing", to: null },
   ]);
-  // Removing the Anthropic key Writing uses moves it back to OpenAI.
+  assert.equal("writingProvider" in plan, false);
+  // The same from Anthropic: Writing does not go back to OpenAI.
   const back = keys.removalPlan(
-    records([key(1, "openai"), key(3, "anthropic")], { writing: id(3) }),
+    records([key(1, "openai"), key(3, "anthropic")], {
+      conversations: id(1),
+      dictation: id(1),
+      writing: id(3),
+    }),
     id(3),
     "anthropic"
   );
-  assert.deepEqual(back.features, { writing: id(1) });
-  assert.equal(back.writingProvider, "openai");
+  assert.deepEqual(back.features, { conversations: id(1), dictation: id(1) });
+  assert.deepEqual(back.moves, [{ feature: "writing", to: null }]);
 });
 
 test("a refused key is not where a removed key's features go", () => {
@@ -202,7 +206,6 @@ test("a refused key is not where a removed key's features go", () => {
   );
   const plan = keys.removalPlan(list, id(1), "openai");
   assert.deepEqual(plan.features, {});
-  assert.equal(plan.writingProvider, "openai");
   assert.ok(plan.moves.every((move) => move.to === null));
 });
 
@@ -257,6 +260,7 @@ test("records are trusted only as far as they are valid, and carry no secret", (
       { ...key(5, "openai"), number: -2, addedAt: "soon", status: "fine", tail: "a/b?cdef" },
     ],
     features: { conversations: id(1), dictation: id(2), writing: id(1), summaries: id(2) },
+    defaults: { openai: id(1), anthropic: id(1), gemini: id(2) },
   };
   const clean = keys.normalizeKeyRecords(raw);
   assert.deepEqual(
@@ -270,6 +274,7 @@ test("records are trusted only as far as they are valid, and carry no secret", (
       "name",
       "number",
       "provider",
+      "rev",
       "status",
       "tail",
     ]);
@@ -284,20 +289,33 @@ test("records are trusted only as far as they are valid, and carry no secret", (
     tail: "cdef",
     addedAt: 0,
     status: null,
+    rev: 1,
   });
   // An Anthropic key cannot be Conversations' key; an unknown feature is dropped.
   assert.deepEqual(clean.features, { dictation: id(2), writing: id(1) });
-  assert.deepEqual(keys.normalizeKeyRecords(null), { keys: [], features: {} });
-  assert.deepEqual(keys.normalizeKeyRecords("garbage"), { keys: [], features: {} });
+  // A default names a key of its own provider.
+  assert.deepEqual(clean.defaults, { anthropic: id(1) });
+  const empty = { keys: [], features: {}, defaults: {} };
+  assert.deepEqual(keys.normalizeKeyRecords(null), empty);
+  assert.deepEqual(keys.normalizeKeyRecords("garbage"), empty);
   assert.deepEqual(Object.keys(keys.publicKeyRecord({ ...key(1, "openai"), secret: "x" })).sort(), [
     "addedAt",
     "id",
     "name",
     "number",
     "provider",
+    "rev",
     "status",
     "tail",
   ]);
+  // A revision is a whole number from 1.
+  const revs = keys.normalizeKeyRecords({
+    keys: [key(1, "openai", { rev: 3 }), key(2, "openai", { rev: 0 }), key(3, "openai", { rev: "x" })],
+  });
+  assert.deepEqual(
+    revs.keys.map((record) => record.rev),
+    [3, 1, 1]
+  );
 });
 
 test("a key's name is one line, at most 64 characters", () => {
@@ -327,17 +345,89 @@ test("the key store keeps nothing in localStorage and logs no secret", () => {
     assert.doesNotMatch(read(file), storage, file);
   }
   const store = read("src/stores/apiKeys.ts");
-  // The secret goes to the provider's check, then to main's add and replace,
-  // and nowhere else.
+  // The secret goes to the provider's check and to main, and no log line has it.
   assert.equal((store.match(/checkKey\(detected, secret\)/g) ?? []).length, 1);
-  assert.equal((store.match(/checkedKey\(secret, input\.provider\)/g) ?? []).length, 2);
-  assert.equal((store.match(/^\s+secret,$/gm) ?? []).length, 2);
   for (const call of store.match(/logger\.\w+\([^;]*;/g) ?? []) {
     assert.doesNotMatch(call, /secret|input\./, call);
   }
+  assert.doesNotMatch(store, /console\./);
   // The settings store takes the records normalized, which drops any secret.
   const settings = read("src/stores/settingsStore.ts");
   assert.match(settings, /keyRecords: normalizeKeyRecords\(savedKeyList\)/);
   assert.match(settings, /const records = normalizeKeyRecords\(raw\);/);
   assert.doesNotMatch(settings, /localStorage\.setItem\([^)]*keyRecords/);
+});
+
+test("A: a field for one key changes only the key it shows, and removes none", () => {
+  const list = records([key(1, "openai"), key(2, "openai", { name: "Work" }), key(3, "anthropic")], {
+    conversations: id(2),
+    writing: id(3),
+  });
+  // A chooser of a feature shows the key that feature uses with the provider.
+  assert.equal(keys.chooserKey(list, "openai", "conversations").id, id(2));
+  assert.equal(keys.chooserKey(list, "anthropic", "writing").id, id(3));
+  assert.equal(keys.chooserKey(list, "openai", "writing").id, id(1));
+  // Any other shows the default key.
+  assert.equal(keys.chooserKey(list, "openai").id, id(1));
+  assert.equal(keys.chooserKey(records([key(3, "anthropic")]), "openai"), null);
+  // What it does with the text: replace that key, add one when it shows none,
+  // and nothing for empty text.
+  assert.deepEqual(keys.singleKeyEdit(list.keys[1], "sk-proj-fake-0000"), {
+    action: "replace",
+    id: id(2),
+  });
+  assert.deepEqual(keys.singleKeyEdit(null, "sk-proj-fake-0000"), { action: "add" });
+  for (const text of ["", "   ", null, undefined]) {
+    assert.deepEqual(keys.singleKeyEdit(list.keys[1], text), { action: "none" });
+  }
+});
+
+test("B: a provider's default key is the one its slot holds, else its oldest", () => {
+  const base = [key(1, "openai"), key(2, "openai"), key(3, "anthropic")];
+  assert.equal(keys.defaultKeyOf(records(base), "openai").id, id(1));
+  assert.equal(keys.defaultKeyOf(records(base, {}), "anthropic").id, id(3));
+  const named = keys.normalizeKeyRecords({ keys: base, defaults: { openai: id(2) } });
+  assert.equal(keys.defaultKeyOf(named, "openai").id, id(2));
+  // Empty on purpose (no key could be read): the oldest once one can.
+  const empty = keys.normalizeKeyRecords({ keys: base, defaults: { openai: null } });
+  assert.equal(empty.defaults.openai, null);
+  assert.equal(keys.defaultKeyOf(empty, "openai").id, id(1));
+  // The features that use a key, by provider: what moves to a key that replaces it.
+  const used = records(base, { conversations: id(2) });
+  assert.deepEqual(keys.featuresUsingKey(used, id(1), "openai"), ["dictation", "writing"]);
+  assert.deepEqual(keys.featuresUsingKey(used, id(2), "openai"), ["conversations"]);
+  assert.deepEqual(keys.featuresUsingKey(used, id(3), "anthropic"), ["writing"]);
+});
+
+test("D and J: the renderer neither moves a feature across providers nor takes another key", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const read = (file) => fs.readFileSync(path.join(__dirname, "..", "..", file), "utf8");
+  const store = read("src/stores/apiKeys.ts");
+  const remove = store.slice(
+    store.indexOf("export async function removeApiKey"),
+    store.indexOf("export function chooseFeatureKey")
+  );
+  assert.doesNotMatch(remove, /setWritingProvider/);
+  assert.match(remove, /throw new Error\(i18n\.t\("oats\.keys\.notRemoved"\)\)/);
+  // Before the records arrive, a feature's key is asked of main, by feature;
+  // after, it is the records' key or none, never the provider's default slot.
+  const reasoning = read("src/services/ReasoningService.ts");
+  const featureKey = reasoning.slice(
+    reasoning.indexOf("private async getFeatureKey"),
+    reasoning.indexOf("private async callChatCompletionsApi")
+  );
+  assert.match(featureKey, /records !== NO_KEYS/);
+  assert.match(featureKey, /getFeatureApiKey\?\.\(feature, provider\)/);
+  assert.match(featureKey, /`key:\$\{key\.id\}:\$\{key\.rev\}`/);
+  assert.doesNotMatch(featureKey, /getOpenAIKey|getAnthropicKey|openaiApiKey/);
+  const audio = read("src/helpers/audioManager.js");
+  const dictation = audio.slice(
+    audio.indexOf("  async getDictationKey(s) {"),
+    audio.indexOf("  async processWithReasoningModel(")
+  );
+  assert.match(dictation, /s\.keyRecords === NO_KEYS/);
+  assert.match(dictation, /getFeatureApiKey\?\.\("dictation", "openai"\)/);
+  assert.match(dictation, /cached\.rev === key\.rev/);
+  assert.doesNotMatch(dictation, /openaiApiKey|getOpenAIKey/);
 });

@@ -2642,7 +2642,8 @@
       "name": "名稱",
       "optional": "（選填）",
       "nameHint": "例如：工作",
-      "notSaved": "Oats 無法儲存金鑰。請再試一次。"
+      "notSaved": "Oats 無法儲存金鑰。請再試一次。",
+      "notRemoved": "Oats 無法移除金鑰。請再試一次。"
     }
   },
   "questionCard": {

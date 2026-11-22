@@ -2647,7 +2647,8 @@
       "name": "Name",
       "optional": "(optional)",
       "nameHint": "Zum Beispiel: Arbeit",
-      "notSaved": "Oats konnte den Schlüssel nicht speichern. Versuchen Sie es erneut."
+      "notSaved": "Oats konnte den Schlüssel nicht speichern. Versuchen Sie es erneut.",
+      "notRemoved": "Oats konnte den Schlüssel nicht entfernen. Versuchen Sie es erneut."
     }
   },
   "questionCard": {

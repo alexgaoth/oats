@@ -22,7 +22,7 @@ import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { clearTinfoilClientCache } from "./ai/tinfoilClient";
 import { resolveChatRoute } from "../helpers/chatRouting";
 import { modelAvailability, openAiKeyStatus, providerReason } from "../helpers/keyStatus.mjs";
-import { resolveFeatureKey } from "../helpers/apiKeys.mjs";
+import { NO_KEYS, resolveFeatureKey } from "../helpers/apiKeys.mjs";
 import type { Feature } from "../helpers/featureRoutes.mjs";
 
 /** What a provider says of an API key and a model (helpers/keyStatus.mjs). */
@@ -91,19 +91,17 @@ class ReasoningService extends BaseReasoningService {
 
   /**
    * A provider's key. With a feature, for OpenAI and Anthropic, the key chosen
-   * for that feature (stores/apiKeys.ts), cached by the key, not by the
-   * provider, since two features may use two keys of one provider. Without
-   * one, the provider's default key, as before.
+   * for that feature (stores/apiKeys.ts), cached by the key and its revision,
+   * not by the provider, since two features may use two keys of one provider.
+   * Without one, the provider's default key, as before.
    */
   private async getApiKey(
     provider: "openai" | "anthropic" | "gemini" | "groq" | "tinfoil" | "custom" | "openrouter",
     feature?: Feature
   ): Promise<string> {
-    const named =
-      feature && (provider === "openai" || provider === "anthropic")
-        ? resolveFeatureKey(getSettings().keyRecords, feature, provider)
-        : null;
-    if (named) return this.getNamedKey(named.provider, named.id);
+    if (feature && (provider === "openai" || provider === "anthropic")) {
+      return this.getFeatureKey(feature, provider);
+    }
 
     if (provider === "custom") {
       let customKey = "";
@@ -180,26 +178,42 @@ class ReasoningService extends BaseReasoningService {
     return apiKey;
   }
 
-  /** One saved key's secret, asked of the main process by the key's id. */
-  private async getNamedKey(provider: "openai" | "anthropic", id: string): Promise<string> {
-    const cacheKey = `key:${id}`;
-    let apiKey = this.apiKeyCache.get(cacheKey);
+  /**
+   * The secret of the key a feature uses with a provider. Once this window has
+   * the key records, it knows which key that is and asks main for its secret
+   * by id; before they arrive, it asks main which key, so a call never falls
+   * back to the provider's default key when the feature uses another.
+   */
+  private async getFeatureKey(feature: Feature, provider: "openai" | "anthropic"): Promise<string> {
+    const records = getSettings().keyRecords;
+    let apiKey: string | undefined;
+    try {
+      if (records !== NO_KEYS) {
+        const key = resolveFeatureKey(records, feature, provider);
+        if (key) {
+          const cacheKey = `key:${key.id}:${key.rev}`;
+          apiKey = this.apiKeyCache.get(cacheKey);
+          if (!apiKey) {
+            apiKey = (await window.electronAPI?.getApiKeySecret?.(key.id)) || undefined;
+            if (apiKey) this.apiKeyCache.set(cacheKey, apiKey);
+          }
+        }
+      } else {
+        const answer = await window.electronAPI?.getFeatureApiKey?.(feature, provider);
+        apiKey = answer?.secret || undefined;
+        if (apiKey && answer?.id) this.apiKeyCache.set(`key:${answer.id}:${answer.rev}`, apiKey);
+      }
+    } catch (error) {
+      logger.logReasoning(`${provider.toUpperCase()}_KEY_FETCH_ERROR`, {
+        provider,
+        error: (error as Error).message,
+      });
+    }
     logger.logReasoning(`${provider.toUpperCase()}_KEY_RETRIEVAL`, {
       provider,
-      named: true,
-      fromCache: !!apiKey,
+      feature,
+      hasKey: !!apiKey,
     });
-    if (!apiKey) {
-      try {
-        apiKey = (await window.electronAPI?.getApiKeySecret?.(id)) || undefined;
-        if (apiKey) this.apiKeyCache.set(cacheKey, apiKey);
-      } catch (error) {
-        logger.logReasoning(`${provider.toUpperCase()}_KEY_FETCH_ERROR`, {
-          provider,
-          error: (error as Error).message,
-        });
-      }
-    }
     if (!apiKey) {
       // The key chosen for this feature, and no other: a second key of the
       // provider may belong to another account.

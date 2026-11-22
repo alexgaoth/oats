@@ -33,6 +33,8 @@ const namedKeyApi = {
   setFeatureApiKeys: (features) => ipcRenderer.invoke("api-keys-set-features", features),
   setApiKeyStatus: (id, status) => ipcRenderer.invoke("api-keys-set-status", id, status),
   getApiKeySecret: (id) => ipcRenderer.invoke("api-key-secret", id),
+  getFeatureApiKey: (feature, provider) =>
+    ipcRenderer.invoke("api-key-for-feature", feature, provider),
 };
 
 /**

@@ -2647,7 +2647,8 @@
       "name": "Nome",
       "optional": "(opcional)",
       "nameHint": "Por exemplo, Trabalho",
-      "notSaved": "O Oats não conseguiu salvar a chave. Tente novamente."
+      "notSaved": "O Oats não conseguiu salvar a chave. Tente novamente.",
+      "notRemoved": "O Oats não conseguiu remover a chave. Tente novamente."
     }
   },
   "questionCard": {

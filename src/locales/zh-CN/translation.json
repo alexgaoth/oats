@@ -2642,7 +2642,8 @@
       "name": "名称",
       "optional": "（可选）",
       "nameHint": "例如：工作",
-      "notSaved": "Oats 无法保存密钥。请重试。"
+      "notSaved": "Oats 无法保存密钥。请重试。",
+      "notRemoved": "Oats 无法移除密钥。请重试。"
     }
   },
   "questionCard": {

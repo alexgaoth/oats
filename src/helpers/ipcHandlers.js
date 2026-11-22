@@ -6,6 +6,8 @@ const { spawn, spawnSync } = require("child_process");
 const crypto = require("crypto");
 const debugLogger = require("./debugLogger");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
+const { mayReadKeySecrets } = require("./keySecretAccess");
+const { staleWarmStreams } = require("./warmStreams");
 const { classifyAndLog } = require("./networkErrors");
 const { limitFailure } = require("./localAnswerLimit");
 const GnomeShortcutManager = require("./gnomeShortcut");
@@ -1037,7 +1039,20 @@ class IPCHandlers {
     // secret goes only to a window that asks for one key by its id, to call
     // the provider itself (ReasoningService.ts, audioManager.js).
     const keys = this.environmentManager;
-    keys.onApiKeysChanged = (list) => this.broadcastToWindows("api-keys-changed", list);
+    keys.onApiKeysChanged = (list) => {
+      this.broadcastToWindows("api-keys-changed", list);
+      // A warm stream opened with a key that changed is closed (I, below).
+      this._dropStaleWarmStreams?.();
+    };
+    const secretReaders = () => [
+      this.windowManager?.mainWindow,
+      this.windowManager?.controlPanelWindow,
+    ];
+    const mayRead = (event) => {
+      if (mayReadKeySecrets(event, secretReaders())) return true;
+      debugLogger.warn("A window that may not read keys asked for one", {}, "environment");
+      return false;
+    };
     ipcMain.handle("api-keys-list", () => keys.listApiKeys());
     ipcMain.handle("api-keys-add", (event, request) => keys.addApiKey(request));
     ipcMain.handle("api-keys-replace", (event, id, request) => keys.replaceApiKey(id, request));
@@ -1047,7 +1062,14 @@ class IPCHandlers {
     ipcMain.handle("api-keys-remove", (event, id, features) => keys.removeApiKey(id, features));
     ipcMain.handle("api-keys-set-features", (event, features) => keys.setFeatureApiKeys(features));
     ipcMain.handle("api-keys-set-status", (event, id, status) => keys.setApiKeyStatus(id, status));
-    ipcMain.handle("api-key-secret", (event, id) => keys.getApiKeySecret(id));
+    ipcMain.handle("api-key-secret", (event, id) =>
+      mayRead(event) ? keys.getApiKeySecret(id) : ""
+    );
+    // The key a feature's call uses, as main resolves it: a window asks before
+    // its own copy of the records has arrived.
+    ipcMain.handle("api-key-for-feature", (event, feature, provider) =>
+      mayRead(event) ? keys.getFeatureKeyRecord(feature, provider) : null
+    );
 
     ipcMain.handle("db-save-transcription", async (event, text, rawText, options) => {
       const result = this.databaseManager.saveTranscription(text, rawText, options);
@@ -4479,6 +4501,9 @@ class IPCHandlers {
     // recording never takes over a session whose finals are still being read.
     let meetingStopInFlight = null;
     let meetingTranscriptionPrepareInProgress = false;
+    // Meeting streams a prepare opened that no start has claimed yet: warm,
+    // and closed when the Conversations key changes (dropStaleWarmStreams).
+    let meetingStreamsWarm = false;
     let meetingTranscriptionPreparePromise = null;
 
     const DUPLICATE_TRANSCRIPT_WINDOW_MS = 6000;
@@ -5156,6 +5181,11 @@ class IPCHandlers {
           },
         ];
       }
+      // The Conversations key these streams hold, to close them warm when it changes.
+      this._meetingStreamsKey =
+        options.mode === "byok" && options.provider === "openai-realtime"
+          ? pairs[0].secret
+          : undefined;
 
       const StreamingClass =
         STREAMING_CLIENT_BY_PROVIDER[options.provider] ?? OpenAIRealtimeStreaming;
@@ -6499,6 +6529,8 @@ class IPCHandlers {
     const resetMeetingStreamingState = () => {
       this._meetingMicStreaming = null;
       this._meetingSystemStreaming = null;
+      meetingStreamsWarm = false;
+      this._meetingStreamsKey = undefined;
       meetingSendCounts = { mic: 0, system: 0 };
       meetingLiveSpeakerStartedAt = null;
       meetingPendingMicChunks = [];
@@ -6613,6 +6645,9 @@ class IPCHandlers {
             { mode: options.mode, provider: options.provider },
             { feature: "dictation" }
           );
+          // The Dictation key this stream holds, to close it warm when it changes.
+          this._dictationStreamingKey =
+            options.mode === "byok" && options.provider !== "tinfoil-realtime" ? apiKey : undefined;
           if (options.provider === "tinfoil-realtime") {
             const model = options.model || TINFOIL_REALTIME_MODEL;
             await streaming.connect({
@@ -6642,6 +6677,46 @@ class IPCHandlers {
         await this._dictationConnectPromise;
       } finally {
         this._dictationConnectPromise = null;
+      }
+    };
+
+    // A warm stream holds the key it was opened with. When its feature's key
+    // changes (replaced, removed, another chosen), a warm stream that nothing
+    // uses yet is closed, so the next start opens one on the key now chosen.
+    // A stream in use (a dictation or a recording under way) keeps going.
+    this._dropStaleWarmStreams = () => {
+      const stale = staleWarmStreams(
+        [
+          {
+            name: "dictation",
+            warm: Boolean(this._dictationStreaming && this._dictationIdleTimer),
+            feature: "dictation",
+            key: this._dictationStreamingKey,
+          },
+          {
+            name: "meeting",
+            warm: meetingStreamsWarm,
+            feature: "conversations",
+            key: this._meetingStreamsKey,
+          },
+        ],
+        (feature) => this.environmentManager.getProviderKey("openai", feature)
+      );
+      if (stale.includes("dictation")) {
+        clearDictationIdleTimer();
+        this._dictationStreaming.disconnect().catch(() => {});
+        this._dictationStreaming = null;
+        this._dictationStreamingKey = undefined;
+        debugLogger.debug("Closed a warm dictation stream: its key changed");
+      }
+      if (stale.includes("meeting")) {
+        this._meetingMicStreaming?.disconnect().catch(() => {});
+        this._meetingSystemStreaming?.disconnect().catch(() => {});
+        this._meetingMicStreaming = null;
+        this._meetingSystemStreaming = null;
+        meetingStreamsWarm = false;
+        this._meetingStreamsKey = undefined;
+        debugLogger.debug("Closed warm meeting streams: their key changed");
       }
     };
 
@@ -6678,6 +6753,7 @@ class IPCHandlers {
             }),
           ]);
           debugLogger.debug("Meeting transcription prepared (meeting streams warm)");
+          meetingStreamsWarm = true;
           return { success: true };
         } catch (error) {
           debugLogger.error("Meeting transcription prepare error", { error: error.message });
@@ -6703,6 +6779,8 @@ class IPCHandlers {
     });
 
     ipcMain.handle("meeting-transcription-start", async (event, options = {}) => {
+      // A start claims the warm streams: from here they are the recording's.
+      meetingStreamsWarm = false;
       // The renderer waits for its Stop too (startRecording); this holds for
       // any caller. A Stop resolves after its last final was delivered.
       if (meetingStopInFlight) {

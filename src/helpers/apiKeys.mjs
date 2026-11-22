@@ -4,15 +4,19 @@
 // The main process holds the secrets, encrypted, one file per key
 // (environment.js); this module never sees one. It holds the rules both
 // processes share: which key a feature uses, the default names, where a
-// feature goes when its key is removed, and what a key added takes over. The
-// settings store (renderer) and EnvironmentManager (main) both use it, and
-// test/helpers/apiKeys.test.js pins it.
+// feature goes when its key is removed, what a key added takes over, and
+// which key a field for one key shows. The settings store (renderer) and
+// EnvironmentManager (main) both use it, and test/helpers/apiKeys.test.js
+// pins it.
 //
 // A key's record: its id, provider, name ("" for the default name), the number
 // of its default name, the last four characters of the secret, when it was
-// added, and what the provider said of it (null when it was never asked).
-// The default name is drawn in the interface's language from the number, so
-// "OpenAI key 1" reads "OpenAI-Schlüssel 1" in German.
+// added, what the provider said of it (null when it was never asked), and its
+// revision, one more each time its secret is replaced. The default name is
+// drawn in the interface's language from the number, so "OpenAI key 1" reads
+// "OpenAI-Schlüssel 1" in German. `defaults` names each provider's default
+// key, the one its single slot holds: absent means its oldest, null means the
+// slot was left empty on purpose (no key of it could be read).
 
 import { FEATURES, isUsableFeatureKey } from "./featureRoutes.mjs";
 
@@ -29,13 +33,19 @@ const STATUSES = new Set(["ok", "limited", "legacy", "rejected", "no-access", "u
 /** @typedef {import("./featureRoutes.mjs").RouteKeyStatus} RouteKeyStatus */
 /**
  * @typedef {{ id: string, provider: KeyProvider, name: string, number: number, tail: string,
- *   addedAt: number, status: RouteKeyStatus | null }} KeyRecord
+ *   addedAt: number, status: RouteKeyStatus | null, rev: number }} KeyRecord
  */
 /** @typedef {Partial<Record<Feature, string>>} FeatureKeys */
-/** @typedef {{ keys: KeyRecord[], features: FeatureKeys }} KeyRecords */
+/** @typedef {Partial<Record<KeyProvider, string | null>>} DefaultKeys */
+/** @typedef {{ keys: KeyRecord[], features: FeatureKeys, defaults: DefaultKeys }} KeyRecords */
 
+/** No records yet: the renderer before main has sent them. Compare by identity. */
 /** @type {KeyRecords} */
-export const NO_KEYS = Object.freeze({ keys: Object.freeze([]), features: Object.freeze({}) });
+export const NO_KEYS = Object.freeze({
+  keys: Object.freeze([]),
+  features: Object.freeze({}),
+  defaults: Object.freeze({}),
+});
 
 /** @param {unknown} value @returns {value is KeyProvider} */
 export function isKeyProvider(value) {
@@ -100,8 +110,9 @@ export function cleanKeyName(value) {
 
 /**
  * The records as they may be trusted: unknown fields and invalid entries
- * dropped, keys in the order they were added, and each feature's choice kept
- * only when it names a key that can serve it.
+ * dropped, keys in the order they were added, each feature's choice kept only
+ * when it names a key that can serve it, and each default only when it names
+ * a key of its provider.
  *
  * @param {unknown} raw
  * @returns {KeyRecords}
@@ -116,6 +127,7 @@ export function normalizeKeyRecords(raw) {
     seen.add(entry.id);
     const number = Number(entry.number);
     const addedAt = Number(entry.addedAt);
+    const rev = Number(entry.rev);
     keys.push({
       id: entry.id,
       provider: entry.provider,
@@ -126,10 +138,15 @@ export function normalizeKeyRecords(raw) {
         .slice(-4),
       addedAt: Number.isFinite(addedAt) && addedAt >= 0 ? addedAt : 0,
       status: isKeyStatus(entry.status) ? entry.status : null,
+      rev: Number.isInteger(rev) && rev > 0 ? rev : 1,
     });
   }
   keys.sort((a, b) => a.addedAt - b.addedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  return { keys, features: cleanFeatureKeys(source?.features, keys) };
+  return {
+    keys,
+    features: cleanFeatureKeys(source?.features, keys),
+    defaults: cleanDefaultKeys(source?.defaults, keys),
+  };
 }
 
 /**
@@ -150,6 +167,26 @@ export function cleanFeatureKeys(raw, keys) {
     if (key && keyServes(key.provider, feature)) features[feature] = key.id;
   }
   return features;
+}
+
+/**
+ * Each provider's default key, kept when it names one of `keys` of that
+ * provider; null (the slot left empty on purpose) is kept as it is.
+ *
+ * @param {unknown} raw
+ * @param {KeyRecord[]} keys
+ * @returns {DefaultKeys}
+ */
+export function cleanDefaultKeys(raw, keys) {
+  const source = /** @type {any} */ (raw);
+  /** @type {DefaultKeys} */
+  const defaults = {};
+  for (const provider of KEY_PROVIDERS) {
+    const id = source?.[provider];
+    if (id === null) defaults[provider] = null;
+    else if (keys.some((key) => key.id === id && key.provider === provider)) defaults[provider] = id;
+  }
+  return defaults;
 }
 
 /**
@@ -190,14 +227,61 @@ export function resolveFeatureKey(records, feature, provider) {
 }
 
 /**
- * A provider's default key, its oldest. It fills the provider's single slot
- * (`OPENAI_API_KEY`), which every path that does not know features reads.
+ * The features whose key with `provider` is this key.
+ *
+ * @param {KeyRecords} records
+ * @param {string} id
+ * @param {KeyProvider} provider
+ * @returns {Feature[]}
+ */
+export function featuresUsingKey(records, id, provider) {
+  return FEATURES.filter((feature) => resolveFeatureKey(records, feature, provider)?.id === id);
+}
+
+/**
+ * A provider's default key, the one its single slot (`OPENAI_API_KEY`)
+ * holds, which every path that does not know features reads: the key
+ * `defaults` names, else the provider's oldest.
  *
  * @param {KeyRecords} records
  * @param {KeyProvider} provider
  */
 export function defaultKeyOf(records, provider) {
-  return records.keys.find((key) => key.provider === provider) ?? null;
+  const named = records.defaults?.[provider];
+  return (
+    records.keys.find((key) => key.id === named && key.provider === provider) ??
+    records.keys.find((key) => key.provider === provider) ??
+    null
+  );
+}
+
+/**
+ * The key a field for one key shows, and the only key it may change: for a
+ * chooser that belongs to a feature, the key that feature uses with the
+ * provider; for any other, the provider's default key.
+ *
+ * @param {KeyRecords} records
+ * @param {KeyProvider} provider
+ * @param {Feature | null} [feature]
+ */
+export function chooserKey(records, provider, feature = null) {
+  return feature ? resolveFeatureKey(records, feature, provider) : defaultKeyOf(records, provider);
+}
+
+/**
+ * What a field for one key does with what the person typed (Alex's rule of
+ * 2026-11-22: no such field overwrites or deletes a named key it does not
+ * show). Empty text removes nothing: a field for one key cannot say which
+ * named key to remove, and the list of keys removes keys. Text replaces the
+ * key the field shows, or adds a key when it shows none.
+ *
+ * @param {KeyRecord | null} shown
+ * @param {string} text
+ * @returns {{ action: "none" } | { action: "replace", id: string } | { action: "add" }}
+ */
+export function singleKeyEdit(shown, text) {
+  if (!String(text ?? "").trim()) return { action: "none" };
+  return shown ? { action: "replace", id: shown.id } : { action: "add" };
 }
 
 /**
@@ -247,11 +331,7 @@ export function nextDefaultNumber(names, parts) {
  * @param {{ forFeature?: Feature | null, writingProvider?: string | null }} [options]
  * @returns {Feature[]}
  */
-export function featuresForNewKey(
-  records,
-  provider,
-  { forFeature = null, writingProvider = null } = {}
-) {
+export function featuresForNewKey(records, provider, { forFeature = null, writingProvider = null } = {}) {
   /** @type {Feature[]} */
   const taken = [];
   for (const feature of FEATURES) {
@@ -268,25 +348,22 @@ export function featuresForNewKey(
 }
 
 /**
- * Where each feature goes when a key is removed. A feature that used it moves
- * to another usable key of the same provider, else (Writing) to a usable key
- * of another provider that serves it, else to none: the missing-key state, in
- * which it runs on this Mac until a key is added. `writingProvider` changes
- * when Writing moves to another provider.
+ * Where each feature goes when a key is removed: to another usable key of the
+ * same provider, else to none, the missing-key state, in which it runs on this
+ * Mac until a key is added or chosen. Never to another provider: that would
+ * send its text to a provider nobody chose for it (Alex, 2026-11-22).
  *
  * @param {KeyRecords} records
  * @param {string} id
  * @param {string | null} writingProvider
- * @returns {{ features: FeatureKeys, writingProvider: string | null,
- *   moves: Array<{ feature: Feature, to: string | null }> }}
+ * @returns {{ features: FeatureKeys, moves: Array<{ feature: Feature, to: string | null }> }}
  */
 export function removalPlan(records, id, writingProvider) {
   const removed = records.keys.find((key) => key.id === id);
-  if (!removed) return { features: { ...records.features }, writingProvider, moves: [] };
+  if (!removed) return { features: { ...records.features }, moves: [] };
   const rest = records.keys.filter((key) => key.id !== id);
   /** @type {FeatureKeys} */
   const features = {};
-  let provider = writingProvider;
   /** @type {Array<{ feature: Feature, to: string | null }>} */
   const moves = [];
   for (const feature of FEATURES) {
@@ -301,19 +378,17 @@ export function removalPlan(records, id, writingProvider) {
       if (stored && stored !== id) features[feature] = stored;
       continue;
     }
-    const serves = (/** @type {KeyRecord} */ key) =>
-      keyServes(key.provider, feature) && keyUsable(key.status);
     const next =
-      rest.find((key) => key.provider === removed.provider && serves(key)) ??
-      (feature === "writing" ? rest.find((key) => serves(key)) : undefined) ??
-      null;
+      rest.find(
+        (key) =>
+          key.provider === removed.provider &&
+          keyServes(key.provider, feature) &&
+          keyUsable(key.status)
+      ) ?? null;
     if (next) features[feature] = next.id;
-    if (feature === "writing" && next && next.provider !== removed.provider) {
-      provider = next.provider;
-    }
     moves.push({ feature, to: next?.id ?? null });
   }
-  return { features, writingProvider: provider, moves };
+  return { features, moves };
 }
 
 /**
@@ -355,5 +430,6 @@ export function publicKeyRecord(key) {
     tail: key.tail,
     addedAt: key.addedAt,
     status: key.status,
+    rev: key.rev,
   };
 }

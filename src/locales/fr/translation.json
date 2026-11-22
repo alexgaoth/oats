@@ -2647,7 +2647,8 @@
       "name": "Nom",
       "optional": "(facultatif)",
       "nameHint": "Par exemple, Travail",
-      "notSaved": "Oats n’a pas pu enregistrer la clé. Réessayez."
+      "notSaved": "Oats n’a pas pu enregistrer la clé. Réessayez.",
+      "notRemoved": "Oats n’a pas pu supprimer la clé. Réessayez."
     }
   },
   "questionCard": {
