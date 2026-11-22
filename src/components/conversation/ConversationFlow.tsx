@@ -9,14 +9,22 @@ import { buildThreadMap, placeLabels, quotedUtterance } from "../../helpers/live
 import { edgePath, offsetClock } from "../../helpers/conversationFlow.mjs";
 import { LANE_ROW_PX, laneProposalTicks, topicLanes } from "../../helpers/topicLanes.mjs";
 import TopicLanes, { LANE_ROWS_SHOWN, type Lanes } from "./TopicLanes";
+import { TopicName } from "./TopicName";
 import type { ProposalTick } from "./TopicProposalTick";
-import { flowCaption, flowViewOptions, stateLabel } from "./flowText";
+import {
+  flowCaption,
+  flowViewOptions,
+  measuredTopicLabel,
+  stateLabel,
+  topicNameText,
+} from "./flowText";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 import type { ConversationFlowView } from "../../stores/settingsStore";
 import type {
   ConversationSuggestion,
   ConversationTopicSnapshot,
   ThreadState,
+  TopicNameState,
 } from "../../types/conversationEvents";
 
 // The conversation flow: what has been talked about so far, on the default
@@ -113,6 +121,9 @@ const LINES_ALIGN: Record<string, string> = {
 interface MapPoint {
   id: number;
   label: string;
+  /** While recording: whether `label` is a name yet (`withNameStates`). */
+  nameState?: TopicNameState;
+  opening?: boolean;
   state: ThreadState;
   returns: number;
   durationMs: number;
@@ -347,13 +358,23 @@ export default function ConversationFlow({
               >
                 {shownNode && description ? (
                   <>
-                    <span className="font-medium text-foreground">{shownNode.label}</span>
+                    <TopicName
+                      className="font-medium text-foreground"
+                      label={shownNode.label}
+                      nameState={shownNode.nameState}
+                      opening={shownNode.opening}
+                    />
                     <span className="ml-2">{description}</span>
                   </>
                 ) : (
                   selectedNode && (
                     <>
-                      <span className="font-medium text-foreground">{selectedNode.label}</span>
+                      <TopicName
+                        className="font-medium text-foreground"
+                        label={selectedNode.label}
+                        nameState={selectedNode.nameState}
+                        opening={selectedNode.opening}
+                      />
                       {quoteAt && <span className="ml-2 tabular-nums">{quoteAt}</span>}
                       <span className="ml-2">
                         {quote
@@ -425,15 +446,21 @@ function FlowGraph({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  // A topic being named is placed by the room its placeholder takes.
   const placement = useMemo(
     () =>
-      placeLabels(map.points, {
-        ...size,
-        charPx: LABEL_CHAR_PX,
-        plateX: BUTTON_PAD_X_PX,
-        plateY: PLATE_Y_PX,
-      }),
-    [map.points, size]
+      placeLabels(
+        map.points.map((point) =>
+          point.nameState === "pending" ? { ...point, label: measuredTopicLabel(t, point) } : point
+        ),
+        {
+          ...size,
+          charPx: LABEL_CHAR_PX,
+          plateX: BUTTON_PAD_X_PX,
+          plateY: PLATE_Y_PX,
+        }
+      ),
+    [map.points, size, t]
   );
 
   // Where an edge stops short of a dot: its ring, and a little air.
@@ -503,14 +530,16 @@ function FlowGraph({
               hidden: false,
             }) as { side: string; align: string; hidden: boolean; lines?: string[] };
             const state = stateLabel(t, point.state);
+            const label = topicNameText(t, point);
+            const pending = point.nameState === "pending";
             const name =
               point.returns > 0
                 ? t("oats.flow.nodeNameBack", {
-                    label: point.label,
+                    label,
                     state,
                     back: t("oats.flow.back", { count: point.returns }),
                   })
-                : t("oats.flow.nodeName", { label: point.label, state });
+                : t("oats.flow.nodeName", { label, state });
             return (
               <li
                 key={point.id}
@@ -521,7 +550,7 @@ function FlowGraph({
                   type="button"
                   aria-pressed={isSelected}
                   aria-label={name}
-                  title={hidden ? point.label : undefined}
+                  title={hidden ? label : undefined}
                   onClick={() => onSelect(point.id)}
                   style={{ transform: anchorTransform(side, align) }}
                   // 24px minimum: a real target, as WCAG 2.2 asks. The button is
@@ -552,13 +581,17 @@ function FlowGraph({
                     style={{ width: CHART.dot * 2, height: CHART.dot * 2 }}
                   />
                   {/* Hidden when it has nowhere to go without covering another
-                      topic's words; still the button's title. */}
-                  <span
+                      topic's words; still the button's title. A topic being
+                      named is drawn on one line, as its placement measured it. */}
+                  <TopicName
                     aria-hidden="true"
+                    label={point.label}
+                    nameState={point.nameState}
+                    opening={point.opening}
                     className={
                       hidden
                         ? "sr-only"
-                        : lines
+                        : lines && !pending
                           ? cn(
                               "flex flex-col",
                               LINES_ALIGN[
@@ -571,8 +604,8 @@ function FlowGraph({
                     {/* Two lines when one had no room (`placeLabels`). */}
                     {!hidden && lines
                       ? lines.map((line, index) => <span key={index}>{line}</span>)
-                      : point.label}
-                  </span>
+                      : undefined}
+                  </TopicName>
                 </button>
               </li>
             );

@@ -209,10 +209,14 @@ export function createReplay({ main, fixture, options = {} }) {
       return { text: judgeDemoCheck(text), delayMs: 1200 };
     }
     // A topic's name and description (`topicNaming.mjs`, topicNames.mjs),
-    // while recording and at Finish.
+    // while recording and at Finish. `nameHold` holds back the name of the
+    // topics whose name holds that text, for `nameHoldMs`, so a capture can
+    // show a topic being named (DESIGN.md §5). Under the namer's 20 s timeout.
     if (/name one topic of a recorded conversation/i.test(prompt)) {
       const name = demoTopicName(text);
-      return name ? { text: name, delayMs: 800 } : null;
+      if (!name) return null;
+      const held = options.nameHold && name.toLowerCase().includes(options.nameHold.toLowerCase());
+      return { text: name, delayMs: held ? (options.nameHoldMs ?? 15000) : 800 };
     }
     if (/sort conversations into groups/i.test(prompt)) {
       const personal = /\b(weekend|holiday|trip|family|flat|landlord|rent|kids|birthday)\b/i;

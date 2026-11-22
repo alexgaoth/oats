@@ -185,22 +185,23 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 ## 5. Recording surface
 
 - **Clean (default):** keeps the status card (listening dot, clock, **Recording**,
-  **Mark** and **Stop**), counters, health warnings and **Show transcript**.
+  **Mark** and **Stop**), the questions count, health warnings and **Show transcript**.
   Below the warnings, one list shows eligible questions as said, with their
   reply states. It shows every question without an answer, then the three most
   recent answered questions. The newest question in each set is at the bottom.
   New questions never take focus or move a reader who has scrolled up.
   The list does not animate or play a sound.
-- **Counters** (`conversation/RecordingCounters.tsx`): one muted line under the
-  clock, `13px` and `tabular-nums`: the words captured so far and the questions
-  heard so far, in this sitting (`helpers/recordingCounters.mjs`). Words are the
-  finalized segments' text, counted with `Intl.Segmenter` so Japanese and Chinese
-  count words; questions are the question cards, one per asking. Each changes only
-  when something lands, never mid-word. A number that changes rolls up once
+- **Questions count** (`conversation/RecordingCounters.tsx`): one muted line
+  under the clock, `13px` and `tabular-nums`: the questions heard so far, in this
+  sitting (`helpers/recordingCounters.mjs`), one per question card. It changes
+  only when a card lands, never mid-word. A number that changes rolls up once
   (`oats-roll`, `--motion-base`), never on its first value and not under reduced
-  motion. The questions count is left out while question cards are off: a zero
-  there would be a guess. Pressing the questions count opens the Questions tab,
-  without changing detection, search, or what gets saved.
+  motion. It is left out while question cards are off: a zero there would be a
+  guess. Pressing it opens the Questions tab, without changing detection,
+  search, or what gets saved.
+- **No word count** (Alex, 2026-11-22): nobody needs to know how many words they
+  spoke during a conversation. It is a number that moves and means nothing, so
+  the recording screen does not show one.
 - **Conversation flow** (`conversation/ConversationFlow.tsx`): what has been
   talked about so far, as **lanes** (the default) or a **graph**. A view switch
   chooses Lanes / Graph, and the choice persists. The lanes
@@ -224,6 +225,24 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   when a newer one arrives. It never goes back to the on-device name, a failed
   or unusable answer changes nothing, and a rename the model keeps changes
   nothing on screen.
+- **A topic not named yet** (`conversation/TopicName.tsx`, `withNameStates` in
+  `helpers/topicNaming.mjs`; Alex, 2026-11-22): while a name is on its way, the
+  lanes, the graph and the band under them draw a placeholder, never the
+  on-device word. A single guessed word reads as a bad name, and it makes the
+  real name feel late. The first topic says "Finding the topic…" with a light
+  passing through the words, as a model's "Thinking…" does; a later topic is a
+  grey bar about 7em wide with the same light, and no word. The light passes
+  left to right in `--motion-glint` and rests for half of each pass. When the
+  name lands it fades in once (`--motion-name`, 180ms) in the same line box, so
+  nothing moves. Under reduced motion the placeholder holds still and the name
+  simply appears. A screen reader hears "Naming this topic". A name is on its
+  way while the live topic check runs, or while the namer names live and the
+  topic is still growing or big enough to ask about (`expectsName` in
+  `helpers/topicNamer.mjs`).
+- **No name will come** (no writing model, names only at Finish, a writing model
+  that is not ready, or a namer that gave up after three failures): the topic
+  shows its on-device name, as before. A placeholder that shimmers for minutes
+  says something false.
 - **Live topic check** (`helpers/topicLoop.mjs`), only with OpenAI or
   Anthropic as the writing model: the on-device tracker proposes changes of
   subject early, and that provider's most accurate model for the check

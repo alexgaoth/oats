@@ -68,14 +68,16 @@ function spokenMs(segment) {
  *   returns — `{ topic, previous, at }`, each run that comes back to a row
  *   now     — while recording, the topic the line ends on; otherwise null
  *
- * A row's `back` counts the returns to it. A topic whose utterances are not in
+ * A row's `back` counts the returns to it. While recording, a row also carries
+ * its topic's `nameState` and `opening` (`withNameStates` in topicNaming.mjs),
+ * so a topic not named yet is drawn as being named. A topic whose utterances are not in
  * `segments` keeps its row and gets no run: when the room was on it is not
  * known, and the line does not guess.
  *
  * @param {{ snapshot?: { nodes?: any[] } | null, segments?: any[] | null,
  *   start?: number, end?: number, live?: boolean, minRunMs?: number }} [input]
  * @returns {{ rows: Array<{ id: number, label: string, state: string,
- *   durationMs: number, back: number }>,
+ *   durationMs: number, back: number, nameState?: string, opening?: boolean }>,
  *   runs: Array<{ topic: number, from: number, to: number }>,
  *   returns: Array<{ topic: number, previous: number, at: number }>,
  *   now: number | null, start: number, end: number, span: number, empty: boolean }}
@@ -217,6 +219,9 @@ export function topicLanes({
       state: node.state,
       durationMs: node.durationMs ?? 0,
       back: back.get(node.id) ?? 0,
+      // While recording: whether the label is a name yet (`withNameStates`).
+      ...(node.nameState ? { nameState: node.nameState } : {}),
+      ...(node.opening ? { opening: true } : {}),
     })),
     runs,
     returns,
