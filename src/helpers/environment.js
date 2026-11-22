@@ -118,7 +118,12 @@ class EnvironmentManager {
       await this._migrateToSecureStorage();
     }
     await this._loadAllSecrets();
-    await this._loadApiKeys();
+    // Named keys never stop a launch: without them, every call uses the slots.
+    await this._loadApiKeys().catch((error) => {
+      debugLogger.error("Could not load the named keys", { error: error.message }, "environment");
+      this._keyRules = null;
+      this._keyList = null;
+    });
   }
 
   _getMigrationSentinelPath() {
@@ -585,16 +590,30 @@ class EnvironmentManager {
     return keyWriteQueue;
   }
 
+  /**
+   * The slots' files. Memory already holds the new values (`_persistKeys`),
+   * so this writes files only: a write still queued never puts an older
+   * value back in `process.env`.
+   */
   async _writeSlots(slots) {
     const entries = Object.entries(slots);
     if (!entries.length) return;
-    if (this._encryptionAvailable()) {
-      for (const [env, value] of entries) {
-        if (value) await this._saveSecretKey(env, value);
-        else await this._deleteSecretKey(env);
-      }
-    } else {
+    if (!this._encryptionAvailable()) {
       await this.saveAllKeysToEnvFile();
+      return;
+    }
+    await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
+    for (const [env, value] of entries) {
+      const file = this._getSecretFilePath(env);
+      if (!value) {
+        await fsPromises.unlink(file).catch((error) => {
+          if (error.code !== "ENOENT") throw error;
+        });
+        continue;
+      }
+      const tmp = `${file}.tmp`;
+      await fsPromises.writeFile(tmp, secretCrypto.encrypt(value), { mode: 0o600 });
+      await fsPromises.rename(tmp, file);
     }
   }
 

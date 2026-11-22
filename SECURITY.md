@@ -46,7 +46,9 @@ Out of scope:
   under `userData/secure-keys/`. Non-secret preferences (regions, endpoints,
   hotkeys, flags) continue to live in `.env`. On Linux systems without a
   keyring, secrets fall back to plaintext to match Electron's default
-  behavior.
+  behavior. Each saved OpenAI or Anthropic key is its own encrypted file
+  there; the list of keys beside them (`api-keys.json`) holds their names and
+  last four characters, never a secret, and removing a key deletes its file.
 - **Native binaries** — Platform-specific helpers (key listeners, paste
   utilities) are compiled from source during the build process.
 - **Context isolation** — The Electron renderer runs with context isolation
