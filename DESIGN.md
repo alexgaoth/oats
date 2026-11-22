@@ -277,9 +277,11 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   `VITE_OATS_RECORDING_CONTROLS=classic`, not as another Settings choice.
 - **The change is one movement** (`conversation/useDetailChange.ts`,
   `.oats-detail-reveal` in `index.css`): the contour and the flow card open
-  and close in height and opacity, and the question list cross-fades with the
-  tabs, the arriving one on top (`--motion-base`, `--ease-oats`). The status
-  card's top line does not move. Under reduced motion the view changes at once.
+  and close in height and opacity over `--motion-base` (`--ease-oats`). The
+  question lists hand over rather than cross-fade: the leaving list fades out
+  in the first 40% of the movement, and only then does the arriving one fade
+  in, so two lists of text never show over each other. The status card's top
+  line does not move. Under reduced motion the view changes at once.
 - Health warnings (silent microphone, not saving, not transcribing) are alerts
   directly under the status card, so a busy conversation can never push them away.
 - **Lag** (`conversation/TranscriptLagBadge.tsx`): nothing while the text keeps

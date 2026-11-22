@@ -95,11 +95,45 @@ test("the change is one movement, and at once under reduced motion", () => {
   );
   assert.match(
     css,
-    /@media \(prefers-reduced-motion: reduce\) \{\s*\.oats-detail-reveal,\s*\.oats-detail-fade\[data-state\] \{\s*transition: none;\s*\}\s*\.oats-detail-fade-in \{\s*animation: none;/
+    /@media \(prefers-reduced-motion: reduce\) \{\s*\.oats-detail-reveal,\s*\.oats-detail-fade\[data-state="open"\],\s*\.oats-detail-fade\[data-state="closed"\] \{\s*transition: none;\s*\}\s*\.oats-detail-fade-in \{\s*animation: none;/
   );
   const change = read("src/components/conversation/useDetailChange.ts");
-  assert.match(change, /setSettled\(prefersReducedMotion\(\) \? detailed : chosen\)/);
-  // The leaving composition is drawn until the change settles.
+  assert.match(change, /settled: prefersReducedMotion\(\) \? detailed : state\.chosen,/);
+  // One state, adjusted whole: a render that drops the adjustment cannot keep
+  // the new choice and lose the settled view.
+  assert.match(change, /useState<ChangeState>/);
+  assert.doesNotMatch(change, /const \[(settled|chosen), set(Settled|Chosen)\] = useState/);
+  // The leaving composition is drawn until the change settles: when no part
+  // is moving any more, not when the first one stops.
   assert.match(WORKSPACE, /const detailed = change\.drawDetails;/);
   assert.match(WORKSPACE, /\{change\.drawClean && \(/);
+  assert.match(change, /animation\.playState === "running"/);
+  assert.match(
+    WORKSPACE,
+    /onTransitionEnd=\{change\.onMotionEnd\}\s+onAnimationEnd=\{change\.onMotionEnd\}/
+  );
+});
+
+// Two lists of text never show over each other: the leaving one is gone
+// before the arriving one starts (coordinator review of #261).
+test("the question lists hand over rather than cross-fade", () => {
+  const css = read("src/index.css");
+  assert.match(
+    css,
+    /\.oats-detail-fade \{\s*--oats-fade-out: calc\(var\(--motion-base\) \* 0\.4\);\s*--oats-fade-in: calc\(var\(--motion-base\) \* 0\.6\);\s*\}/
+  );
+  // Arriving: waits out the fade-out, then fades in over the rest.
+  assert.match(
+    css,
+    /\.oats-detail-fade\[data-state="open"\] \{\s*transition: opacity var\(--oats-fade-in\) var\(--ease-oats\) var\(--oats-fade-out\);/
+  );
+  // Leaving: at once, and quickly.
+  assert.match(
+    css,
+    /\.oats-detail-fade\[data-state="closed"\] \{\s*opacity: 0;\s*transition: opacity var\(--oats-fade-out\) var\(--ease-oats\);/
+  );
+  assert.match(
+    css,
+    /\.oats-detail-fade-in \{\s*animation: oats-detail-fade-in var\(--oats-fade-in\) var\(--ease-oats\) var\(--oats-fade-out\) both;/
+  );
 });

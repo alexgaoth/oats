@@ -909,7 +909,8 @@ function ConversationSurface() {
           <div
             ref={recordingColumn}
             className="oats-record-column mx-auto flex min-h-0 w-full flex-1 flex-col gap-3 px-8 py-6"
-            onTransitionEnd={change.onTransitionEnd}
+            onTransitionEnd={change.onMotionEnd}
+            onAnimationEnd={change.onMotionEnd}
           >
             {/* Announcements: a mark on its own, and the recording's health. */}
             <p aria-live="polite" className="sr-only">
@@ -1115,8 +1116,9 @@ function ConversationSurface() {
             )}
 
             {/* The question list: the plain view's, or the details' tabs. They
-                share one cell, so a change cross-fades them, the arriving one
-                on top. */}
+                share one cell, and a change hands one over to the other: the
+                leaving list fades out before the arriving one fades in, so
+                their lines never cross (index.css, `.oats-detail-fade`). */}
             <div
               className={cn(
                 "relative grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)]",
@@ -1129,10 +1131,7 @@ function ConversationSurface() {
                   data-arriving={change.changing ? "" : undefined}
                   data-state={expanded ? "closed" : "open"}
                   inert={expanded}
-                  className={cn(
-                    "oats-detail-fade col-start-1 row-start-1 flex max-h-full min-h-0 flex-col self-start",
-                    !expanded && "z-1"
-                  )}
+                  className="oats-detail-fade col-start-1 row-start-1 flex max-h-full min-h-0 flex-col self-start"
                 >
                   <CleanQuestionList />
                 </div>
