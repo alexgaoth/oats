@@ -366,14 +366,14 @@ const SHOTS = [
     name: "models-key-saved",
     query: "processing=providers",
     script:
-      "await oatsDemo.settings('models'); document.querySelector('[data-feature-row=writing] [data-status=add-key]').click(); await demo.typeKey('sk-ant-api03-demo-key-0123456789'); await demo.wait(800)",
+      "await oatsDemo.settings('models'); await demo.wait(600); document.querySelector('[data-feature-row=writing] [data-status=add-key]').click(); await demo.typeKey('sk-ant-api03-demo-key-0123456789'); await demo.wait(800)",
   },
   {
     // A key that is neither OpenAI's nor Anthropic's is not saved.
     name: "models-key-wrong",
     query: "processing=providers",
     script:
-      "await oatsDemo.settings('models'); document.querySelector('[data-feature-row=writing] [data-status=add-key]').click(); await demo.typeKey('AIzaSyD-not-an-openai-key'); await demo.wait(400)",
+      "await oatsDemo.settings('models'); await demo.wait(600); document.querySelector('[data-feature-row=writing] [data-status=add-key]').click(); await demo.typeKey('AIzaSyD-not-an-openai-key'); await demo.wait(400)",
   },
   // Named keys: two OpenAI keys (one named Work) and an Anthropic key. The key
   // menu on Writing (FeatureModelRow.tsx), and the API keys list (ApiKeysList.tsx).
