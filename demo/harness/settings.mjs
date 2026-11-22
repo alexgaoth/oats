@@ -30,6 +30,7 @@
 // the look before descriptions).
 
 import { CONTEXT_FOLDER } from "./context.mjs";
+import { FEATURE_ROUTES_KEY } from "../../src/helpers/featureRoutes.mjs";
 
 const VIEWS = { calm: "clean", words: "detailed", clean: "clean", detailed: "detailed" };
 
@@ -105,6 +106,9 @@ export function applyDemoSettings(params) {
   localStorage.removeItem("roomParakeetDeclined");
   if (params.get("parakeet") === "declined") set("roomParakeetDeclined", "true");
   const mode = providers ? "providers" : "local";
+  // Reset the feature preferences between fixtures. Production performs its
+  // one-time migration from the fixture's settings below.
+  localStorage.removeItem(FEATURE_ROUTES_KEY);
   for (const key of [
     "cleanupMode",
     "noteFormattingMode",

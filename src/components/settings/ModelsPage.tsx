@@ -1,24 +1,31 @@
 import * as React from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronRight, Download, KeyRound, Loader2, RotateCcw, X } from "lucide-react";
+import { ChevronRight, Download, KeyRound, RotateCcw, X } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { cn } from "../lib/utils";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { SettingsSection } from "./SettingsKit";
 import { ProcessingChoice, WhatIsSent } from "./ProcessingChoice";
+import { featureRouteName } from "./featureRouteCopy";
 import { ProviderKeyField } from "./ProviderKeyField";
 import { SpeechModelChoice } from "./SpeechModelChoice";
 import { WritingModelChoice } from "./WritingModelChoice";
 import { GpuDeviceSelector } from "./GpuDeviceSelector";
 import { QuestionModelSettings } from "./OatsSettingsSections";
-import { setProcessing } from "./processing";
+import { setFeatureProcessing, setProcessing } from "./processing";
+import type { Feature } from "../../helpers/featureRoutes.mjs";
 import {
   followRecommendedWhisper,
   forgetWritingChoice,
   localSetupFor,
   roomSpeechPlan,
   selectProcessingMode,
+  selectFeatureRoute,
+  selectDictationSettings,
+  selectResolvedMeetingTranscription,
+  selectResolvedNoteFormatting,
   setRoomSpeechPreference,
   useSettingsStore,
 } from "../../stores/settingsStore";
@@ -48,51 +55,52 @@ import {
 import {
   getStreamingTranscriptionProviders,
   getLocalModel,
+  getProviderDisplayName,
   PARAKEET_MODEL_INFO,
   WHISPER_MODEL_INFO,
 } from "../../models/ModelRegistry";
 import { TURBO_MODEL } from "../../helpers/speechTier.mjs";
-import { localUpgradeHint } from "../../helpers/localSetup.mjs";
+import { localUpgradeHint, PARAKEET_ROOM_MODEL } from "../../helpers/localSetup.mjs";
 import { LARGE_WRITING_MODEL } from "../../helpers/writingTier.mjs";
 import { getCachedPlatform } from "../../utils/platform";
 
 /**
- * Settings › AI models. The processing choice is the one control that
- * matters, and under it one row per model says which model Oats uses, why,
- * and whether it is ready, downloading, or waiting for a key, with the one
- * action that state has. Choosing models yourself is under Advanced, closed.
+ * Settings › AI models. Processing sets the default. Each feature shows its
+ * effective route and can switch routes independently. Model selection stays
+ * under Advanced.
  */
 export function ModelsPage() {
   const { t } = useTranslation();
   const mode = useSettingsStore((state) => selectProcessingMode(state));
-  const upgrade = useUpgradeHint();
+  const { upgrade, roomUpgrade } = useUpgradeHint();
   const titleId = useId();
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section aria-labelledby={titleId}>
         <div className="mb-3 px-1">
           <h3 id={titleId} className="text-sm font-semibold text-foreground">
             {t("oats.settings.processing")}
           </h3>
           <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
-            {t("oats.settings.processingDescription")}
+            {t("oats.featureRoutes.defaultDescription")}
           </p>
         </div>
         <ProcessingChoice
           value={mode}
           onChange={setProcessing}
+          showDescriptions={false}
           aria-labelledby={titleId}
-          details={{ providers: <WhatIsSent /> }}
         />
       </section>
 
-      <SettingsSection
-        title={t("oats.settings.models.title")}
-        description={t("oats.settings.models.description")}
-      >
-        <SpeechModelRow upgrade={upgrade === "speech"} />
-        <WritingModelRow upgrade={upgrade === "writing"} />
-      </SettingsSection>
+      <div>
+        <SettingsSection title={t("oats.settings.models.title")} className="mb-3">
+          <SpeechFeatureRow feature="conversations" upgrade={upgrade === "speech" && roomUpgrade} />
+          <SpeechFeatureRow feature="dictation" upgrade={upgrade === "speech" && !roomUpgrade} />
+          <WritingModelRow upgrade={upgrade === "writing"} />
+        </SettingsSection>
+        <WhatIsSent featureRoutes />
+      </div>
 
       <AdvancedModels />
     </div>
@@ -103,7 +111,8 @@ function useUpgradeHint() {
   const tier = useDeviceTierStore((state) => state.tier);
   const language = useSettingsStore((state) => state.preferredLanguage);
   const whisper = useSettingsStore((state) =>
-    state.meetingUseLocalWhisper && state.localTranscriptionProvider === "whisper"
+    selectFeatureRoute(state, "dictation").effective === "local" &&
+    state.localTranscriptionProvider === "whisper"
       ? state.whisperModel
       : null
   );
@@ -114,127 +123,26 @@ function useUpgradeHint() {
   const room = available && roomEligible;
   const followingRoom = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
   const writer = useSettingsStore((state) =>
-    state.cleanupMode === "local" ? state.cleanupModel : null
+    selectFeatureRoute(state, "writing").effective === "local"
+      ? selectResolvedNoteFormatting(state).model
+      : null
   );
+  const roomWhisper = useSettingsStore((state) => state.whisperModel);
   const recording = useMeetingRecordingStore((state) => state.isRecording || state.isTranscribing);
-  if (tier?.device?.platform !== "darwin") return null;
-  return localUpgradeHint({
-    plan: localSetupFor(tier, language, room ? "local" : null),
+  if (tier?.device?.platform !== "darwin") return { upgrade: null, roomUpgrade: false };
+  const roomUpgrade = room && !progress && !(installed && followingRoom);
+  const upgrade = localUpgradeHint({
+    plan: localSetupFor(tier, language, roomUpgrade ? "local" : null),
     language,
     recording,
-    activeWhisper:
-      (room && (progress !== null || (installed && followingRoom))) ||
-      tier.turbo.downloading ||
-      tier.turbo.checking
+    activeWhisper: roomUpgrade
+      ? roomWhisper
+      : tier.turbo.downloading || tier.turbo.checking
         ? null
         : whisper,
     activeWriter: writer && tier.writing?.installed.includes(writer) ? writer : null,
   });
-}
-
-type RowState =
-  | { kind: "ready" }
-  | { kind: "checking"; detail: string }
-  | {
-      kind: "downloading";
-      percent: number;
-      detail: string;
-      cancelLabel: string;
-      onCancel: () => void;
-    }
-  | { kind: "action"; label: string; icon: "download" | "retry" | "key"; onClick: () => void }
-  | { kind: "warning"; label: string };
-
-/** One model's row: what it is and why, and its state on the right. */
-function ModelStatusRow({
-  label,
-  line,
-  note,
-  state,
-  children,
-}: {
-  label: string;
-  line: React.ReactNode;
-  note?: React.ReactNode;
-  state: RowState;
-  children?: React.ReactNode;
-}) {
-  const { t } = useTranslation();
-  const labelId = useId();
-  return (
-    <div className="px-5 py-4">
-      <div className="flex items-center justify-between gap-6">
-        <div className="min-w-0 flex-1">
-          <p id={labelId} className="text-sm font-medium text-foreground">
-            {label}
-          </p>
-          <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{line}</p>
-          {note && <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">{note}</p>}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {state.kind === "ready" && (
-            <Badge variant="success">
-              <Check aria-hidden="true" />
-              {t("oats.models.ready")}
-            </Badge>
-          )}
-          {state.kind === "checking" && (
-            <Badge variant="secondary">
-              <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
-              {t("oats.models.checking")}
-            </Badge>
-          )}
-          {state.kind === "warning" && <Badge variant="warning">{state.label}</Badge>}
-          {state.kind === "downloading" && (
-            <>
-              <span className="text-[13px] tabular-nums text-muted-foreground">
-                {t("oats.models.percent", { percent: state.percent })}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={state.onCancel}
-                aria-label={state.cancelLabel}
-              >
-                <X aria-hidden="true" />
-                {t("common.cancel")}
-              </Button>
-            </>
-          )}
-          {state.kind === "action" && (
-            <Button variant="outline" size="sm" onClick={state.onClick}>
-              {state.icon === "download" && <Download aria-hidden="true" />}
-              {state.icon === "retry" && <RotateCcw aria-hidden="true" />}
-              {state.icon === "key" && <KeyRound aria-hidden="true" />}
-              {state.label}
-            </Button>
-          )}
-        </div>
-      </div>
-      {state.kind === "downloading" && (
-        <>
-          <span
-            role="progressbar"
-            aria-labelledby={labelId}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={state.percent}
-            className="mt-3 block h-1.5 w-full overflow-hidden rounded-full bg-muted"
-          >
-            <span
-              className="block h-full rounded-full bg-primary transition-[width] duration-300 ease-out motion-reduce:transition-none"
-              style={{ width: `${state.percent}%` }}
-            />
-          </span>
-          <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{state.detail}</p>
-        </>
-      )}
-      {state.kind === "checking" && (
-        <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{state.detail}</p>
-      )}
-      {children && <div className="mt-3">{children}</div>}
-    </div>
-  );
+  return { upgrade, roomUpgrade };
 }
 
 /** A Whisper size as people say it: "Whisper Small", "Whisper Turbo". */
@@ -244,34 +152,168 @@ function whisperName(id: string): string {
   return info ? `Whisper ${info.name.replace(/ \(.*\)$/, "")}` : id;
 }
 
-/**
- * The speech model: Whisper sized to this Mac's GPU (speechTier.mjs), a model
- * somebody chose, or with an API key OpenAI's realtime model, the only one a
- * conversation streams to. Without an OpenAI key it stays on this Mac, and
- * the row says so and offers the key in place.
- */
-function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
-  const { t, i18n } = useTranslation();
-  const processing = useSettingsStore((state) => selectProcessingMode(state));
-  const local = useSettingsStore((state) => state.meetingUseLocalWhisper);
-  const engine = useSettingsStore((state) => state.localTranscriptionProvider);
-  const whisperModel = useSettingsStore((state) => state.whisperModel);
-  const parakeetModel = useSettingsStore((state) => state.parakeetModel);
-  const cloudModel = useSettingsStore((state) => state.cloudTranscriptionModel);
-  const openaiKey = useSettingsStore((state) => state.openaiApiKey);
-  const language = useSettingsStore((state) => state.preferredLanguage);
-  const tier = useSpeechTier();
+type RowAction = { label: string; onClick: () => void; icon?: typeof Download };
+
+function FeatureRow({
+  feature,
+  model,
+  note,
+  action,
+  progress,
+}: {
+  feature: Feature;
+  model: string;
+  note?: string;
+  action?: RowAction;
+  progress?: { percent: number; label: string };
+}) {
+  const { t } = useTranslation();
+  const titleId = useId();
+  const routeButton = useRef<HTMLButtonElement>(null);
   const mac = getCachedPlatform() === "darwin";
-  const [keyOpen, setKeyOpen] = useState(false);
-  const label = t("oats.settings.models.speech");
-  const room = useRoomModelStore();
-  const interimWhisper = useSettingsStore(
-    (state) => roomSpeechPlan(state, tier.tier)?.readySpeech.model ?? null
+  const { effective, requested, needsKey, provider } = useSettingsStore(
+    useShallow((state) => selectFeatureRoute(state, feature))
   );
-  const followsRoom = interimWhisper !== null;
-  const finishing = useMeetingRecordingStore((state) => state.isTranscribing || state.isRecording);
-  const roomEligible = useSettingsStore((state) =>
-    Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier.tier))
+  const writingProvider = useSettingsStore((state) => state.featurePreferences.writingProvider);
+  const name = featureRouteName(t, feature);
+  const other = requested === "local" ? "providers" : "local";
+  const switchLabel = t(
+    other === "providers"
+      ? "oats.featureRoutes.useKey"
+      : mac
+        ? "oats.featureRoutes.useMac"
+        : "oats.featureRoutes.useComputer"
+  );
+  const keyProvider = feature === "writing" && !writingProvider ? "any" : provider;
+  const addKeyLabel = t("apiKeyInput.add");
+  const keepLocalLabel = t(
+    mac ? "oats.featureRoutes.keepOnMac" : "oats.featureRoutes.keepOnComputer"
+  );
+  const place = needsKey
+    ? t(mac ? "oats.featureRoutes.untilKeyOnMac" : "oats.featureRoutes.untilKeyOnComputer", {
+        model,
+        provider:
+          keyProvider === "any"
+            ? t("oats.featureRoutes.writingKeyProviders")
+            : getProviderDisplayName(provider ?? ""),
+      })
+    : effective === "providers"
+      ? t("oats.featureRoutes.withKey", { model })
+      : t(mac ? "oats.featureRoutes.onMac" : "oats.featureRoutes.onComputer", { model });
+  const Icon = action?.icon;
+  return (
+    <section aria-labelledby={titleId} className="px-5 py-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h4 id={titleId} className="text-sm font-medium text-foreground">
+            {name}
+          </h4>
+          <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground" aria-live="polite">
+            {place}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          {needsKey && keyProvider && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" aria-label={`${name}: ${addKeyLabel}`}>
+                  <KeyRound aria-hidden="true" />
+                  {addKeyLabel}
+                </Button>
+              </DialogTrigger>
+              <DialogContent
+                aria-describedby={undefined}
+                className="oats-surface motion-reduce:animate-none"
+                onCloseAutoFocus={(event) => {
+                  // After a successful save the Add button no longer exists.
+                  if (routeButton.current?.getAttribute("data-route-action") === "switch") {
+                    event.preventDefault();
+                    routeButton.current.focus();
+                  }
+                }}
+              >
+                <DialogTitle>{addKeyLabel}</DialogTitle>
+                <ProviderKeyField provider={keyProvider} />
+              </DialogContent>
+            </Dialog>
+          )}
+          <Button
+            ref={routeButton}
+            variant={needsKey ? "ghost" : "outline"}
+            size="sm"
+            data-route-action={needsKey ? "keep-local" : "switch"}
+            aria-label={`${name}: ${needsKey ? keepLocalLabel : switchLabel}`}
+            onClick={() => setFeatureProcessing(feature, needsKey ? "local" : other)}
+          >
+            {needsKey ? keepLocalLabel : switchLabel}
+          </Button>
+        </div>
+      </div>
+      {!needsKey && (
+        <>
+          {note && <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{note}</p>}
+          {progress && (
+            <div className="mt-2">
+              <div
+                role="progressbar"
+                aria-label={progress.label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress.percent}
+                className="h-1.5 overflow-hidden rounded-full bg-muted"
+              >
+                <div className="h-full bg-primary" style={{ width: `${progress.percent}%` }} />
+              </div>
+              <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{progress.label}</p>
+            </div>
+          )}
+          {action && (
+            <Button variant="ghost" size="sm" className="mt-1" onClick={action.onClick}>
+              {Icon && <Icon aria-hidden="true" />}
+              {action.label}
+            </Button>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function SpeechFeatureRow({
+  feature,
+  upgrade,
+}: {
+  feature: "conversations" | "dictation";
+  upgrade: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const local = useSettingsStore(
+    (state) => selectFeatureRoute(state, feature).effective === "local"
+  );
+  const { engine, whisperModel, parakeetModel, cloudModel, language } = useSettingsStore(
+    useShallow((state) => ({
+      engine: state.localTranscriptionProvider,
+      whisperModel: state.whisperModel,
+      parakeetModel: state.parakeetModel,
+      cloudModel:
+        feature === "conversations"
+          ? selectResolvedMeetingTranscription(state).cloudTranscriptionModel
+          : selectDictationSettings(state).cloudTranscriptionModel,
+      language: state.preferredLanguage,
+    }))
+  );
+  const tier = useSpeechTier();
+  const room = useRoomModelStore();
+  const recording = useMeetingRecordingStore((state) => state.isTranscribing || state.isRecording);
+  const roomModel = useSettingsStore((state) =>
+    feature === "conversations"
+      ? roomSpeechPlan(state, tier.tier, room.installed)?.readySpeech.model
+      : undefined
+  );
+  const roomEligible = useSettingsStore(
+    (state) =>
+      feature === "conversations" &&
+      Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier.tier))
   );
   React.useEffect(() => {
     if (roomEligible) void refreshRoomModel();
@@ -280,327 +322,137 @@ function SpeechModelRow({ upgrade }: { upgrade: boolean }) {
   if (!local) {
     const models =
       getStreamingTranscriptionProviders().find((item) => item.id === "openai")?.models ?? [];
-    const inUse = models.find((item) => item.id === cloudModel) ?? models[0];
-    const name = inUse?.name ?? cloudModel;
-    return (
-      <ModelStatusRow
-        label={label}
-        line={
-          inUse?.id === models[0]?.id
-            ? t("oats.models.why.openaiSpeech", { model: name })
-            : t("oats.models.why.chosen", { model: name })
-        }
-        state={
-          openaiKey.trim()
-            ? { kind: "ready" }
-            : { kind: "warning", label: t("oats.models.needsKey") }
-        }
-      >
-        {!openaiKey.trim() && <ProviderKeyField provider="openai" />}
-      </ModelStatusRow>
-    );
+    const model =
+      feature === "conversations"
+        ? (models.find((item) => item.id === cloudModel)?.id ?? "gpt-transcribe")
+        : cloudModel;
+    return <FeatureRow feature={feature} model={`OpenAI ${model}`} />;
   }
 
-  const name =
-    engine === "nvidia"
-      ? (PARAKEET_MODEL_INFO[parakeetModel]?.name ?? parakeetModel)
-      : whisperName(whisperModel);
-  const withoutOpenAI = processing === "providers";
-  if (roomEligible && room.available && (followsRoom || upgrade)) {
-    const usingRoomModel = followsRoom && room.installed;
-    const active = interimWhisper ? whisperName(interimWhisper) : name;
-    const roomSize = formatMegabytes(ROOM_MODEL_BYTES, i18n.language);
-    const gain = t("oats.models.upgrade.parakeet", { model: ROOM_MODEL_NAME });
-    const ready = { kind: "ready" } as const;
-    const state: RowState =
-      usingRoomModel || finishing
-        ? ready
-        : room.progress !== null
-          ? {
-              kind: "downloading",
-              percent: room.progress,
-              detail: t("oats.models.upgrade.size", { size: roomSize }),
-              cancelLabel: t("oats.models.cancelModel", { model: ROOM_MODEL_NAME }),
-              onCancel: () => cancelRoomModelDownload(),
-            }
-          : {
-              kind: "action",
-              label: t(
-                room.installed
-                  ? "oats.models.use"
-                  : room.failed
-                    ? "oats.speechTier.retry"
-                    : "common.download"
-              ),
-              icon: room.failed ? "retry" : "download",
-              onClick: () => {
-                setRoomSpeechPreference("recommended");
-                if (!room.installed) requestRoomModel();
-              },
-            };
-    return (
-      <ModelStatusRow
-        label={label}
-        line={t(usingRoomModel ? "oats.models.roomDefault" : "oats.models.roomActive", {
-          model: usingRoomModel ? ROOM_MODEL_NAME : active,
-        })}
-        note={
-          !usingRoomModel && upgrade && room.progress === null && !finishing
-            ? `${gain}${room.installed ? "" : ` ${t("oats.models.upgrade.size", { size: roomSize })}`}`
-            : undefined
-        }
-        state={state}
-      >
-        {usingRoomModel && (
-          <Button variant="outline" size="sm" onClick={() => setRoomSpeechPreference("shared")}>
-            {t("oats.models.useWhisper")}
-          </Button>
-        )}
-        {withoutOpenAI &&
-          (keyOpen ? (
-            <ProviderKeyField provider="openai" autoFocus />
-          ) : (
-            <Button variant="ghost" size="sm" onClick={() => setKeyOpen(true)}>
-              {t("oats.models.addKey")}
-            </Button>
-          ))}
-      </ModelStatusRow>
-    );
-  }
-  const chosen = engine === "nvidia" || !tier.followsDefault;
-  const size = formatMegabytes(tier.sizeBytes, i18n.language);
-
-  // Why this model, in one line.
-  let line: string;
+  const model =
+    roomModel === PARAKEET_ROOM_MODEL
+      ? ROOM_MODEL_NAME
+      : engine === "nvidia"
+        ? (PARAKEET_MODEL_INFO[parakeetModel]?.name ?? "Parakeet")
+        : whisperName(roomModel || whisperModel);
   let note: string | undefined;
-  let state: RowState = { kind: "ready" };
-  if (withoutOpenAI) {
-    line = t("oats.models.why.noOpenAI", { model: name });
-  } else if (chosen) {
-    line = t("oats.models.why.chosen", { model: name });
-  } else if (
-    tier.turboIsDefault &&
-    !tier.tier?.turbo?.installed &&
-    tier.status !== "downloading" &&
-    tier.status !== "checking"
-  ) {
-    // Turbo is this Mac's model and is not on disk: Oats uses the model it
-    // came with, and after a failure or a no the row offers Turbo again.
-    line = t("oats.models.why.cameWith", { model: name });
-    if (tier.status === "failed") {
-      note = t("oats.models.why.turboFailed");
-      state = {
-        kind: "action",
-        label: t("oats.speechTier.retry"),
-        icon: "retry",
-        onClick: () => requestTurbo(language),
-      };
-    } else if (tier.status === "declined") {
-      note = t("oats.models.why.turboDeclined", { size });
-      state = {
-        kind: "action",
-        label: t("common.download"),
-        icon: "download",
-        onClick: () => requestTurbo(language),
+  let action: RowAction | undefined;
+  let progress: React.ComponentProps<typeof FeatureRow>["progress"];
+  if (roomEligible && room.available && roomModel !== PARAKEET_ROOM_MODEL && !recording) {
+    const size = formatMegabytes(ROOM_MODEL_BYTES, i18n.language);
+    if (room.progress !== null) {
+      progress = { percent: room.progress, label: t("oats.models.upgrade.size", { size }) };
+      action = { label: t("common.cancel"), onClick: () => cancelRoomModelDownload(), icon: X };
+    } else if (upgrade || room.failed || room.declined) {
+      note = upgradeDetail(t, "parakeet", ROOM_MODEL_NAME, room.installed ? null : size);
+      action = {
+        label: t(
+          room.installed
+            ? "oats.models.use"
+            : room.failed
+              ? "oats.speechTier.retry"
+              : "common.download"
+        ),
+        icon: room.failed ? RotateCcw : Download,
+        onClick: () => {
+          setRoomSpeechPreference("recommended");
+          if (!room.installed) requestRoomModel();
+        },
       };
     }
-  } else {
-    // This Mac's model: Turbo while it downloads or once it is here, else the
-    // size its GPU keeps up with.
-    const model = tier.turboIsDefault ? whisperName(TURBO_MODEL) : name;
-    line = mac
-      ? t("oats.models.why.chosenMac", { model })
-      : t("oats.models.why.chosenComputer", { model });
-    if (tier.status === "slow") note = t("oats.speechTier.slowDetail");
-    if (tier.status === "detection") note = t("oats.speechTier.detectionDetail");
-  }
-  if (tier.status === "downloading") {
-    state = {
-      kind: "downloading",
-      percent: tier.percent,
-      detail: t("oats.speechTier.progress", { percent: tier.percent, size }),
-      cancelLabel: t("oats.speechTier.cancelDownload"),
-      onCancel: cancelTurbo,
-    };
-  } else if (tier.status === "checking") {
-    state = { kind: "checking", detail: t("oats.speechTier.checkingDetail") };
-  } else if (withoutOpenAI && !keyOpen) {
-    state = {
-      kind: "action",
-      label: t("oats.models.addKey"),
-      icon: "key",
-      onClick: () => setKeyOpen(true),
-    };
-  }
-  if (upgrade) {
-    const installed = tier.tier?.turbo.installed === true;
-    note = upgradeDetail(t, "speech", whisperName(TURBO_MODEL), installed ? null : size);
-    state = {
-      kind: "action",
-      label: t(installed ? "oats.models.use" : "common.download"),
-      icon: "download",
-      onClick: () => {
-        followRecommendedWhisper();
-        if (!installed) requestTurbo(language);
-      },
-    };
-  }
-
-  return (
-    <ModelStatusRow label={label} line={line} note={note} state={state}>
-      {withoutOpenAI && keyOpen && <ProviderKeyField provider="openai" autoFocus />}
-    </ModelStatusRow>
-  );
-}
-
-/**
- * The writing model: on this Mac the model its memory holds (writingTier.mjs),
- * downloaded by itself when none is ready; with an API key the provider's
- * most accurate model for summaries, and the key field in place when there is
- * no key; or a model somebody chose.
- */
-function WritingModelRow({ upgrade }: { upgrade: boolean }) {
-  const { t, i18n } = useTranslation();
-  const writing = useWritingModel();
-  const report = useDeviceTierStore((state) => state.tier?.writing);
-  const mac = getCachedPlatform() === "darwin";
-  // The key field stays once a key is saved in it, so what the provider said
-  // of that key is there to read after the row turns ready.
-  const [keySaved, setKeySaved] = useState(false);
-  const keyShown = writing.status === "needs-key" || keySaved;
-  const label = t("oats.settings.models.writing");
-  const size = formatGigabytes(writing.sizeBytes, i18n.language);
-
-  let line: string;
-  if (writing.mode === "self-hosted") {
-    line =
-      writing.status === "no-endpoint"
-        ? t("oats.models.why.serverMissing")
-        : t("oats.models.why.server");
-  } else if (writing.reason === "no-key") {
-    line = t("oats.models.why.noKey");
-  } else if (!writing.followsDefault) {
-    line =
-      writing.mode === "providers"
-        ? t("oats.models.why.chosenWith", { model: writing.name, provider: writing.providerName })
-        : t("oats.models.why.chosen", { model: writing.name });
-  } else if (writing.reason === "openai" || writing.reason === "anthropic") {
-    line = t(`oats.models.why.${writing.reason}`, { model: writing.name });
-  } else if (writing.reason === "installed") {
-    line = t("oats.models.why.installed", { model: writing.name });
-  } else {
-    line = mac
-      ? t("oats.models.why.chosenMac", { model: writing.name })
-      : t("oats.models.why.chosenComputer", { model: writing.name });
-  }
-
-  let note: string | undefined;
-  let state: RowState = { kind: "ready" };
-  switch (writing.status) {
-    case "downloading":
-      state = {
-        kind: "downloading",
-        percent: writing.percent,
-        detail: t("oats.writingModel.progress", { percent: writing.percent, size }),
-        cancelLabel: t("oats.writingModel.cancelDownload", { model: writing.name }),
-        onCancel: cancelWritingModel,
+  } else if (feature === "dictation" && !recording && engine === "whisper") {
+    const size = formatMegabytes(tier.sizeBytes, i18n.language);
+    if (tier.status === "downloading") {
+      progress = {
+        percent: tier.percent,
+        label: t("oats.speechTier.progress", { percent: tier.percent, size }),
       };
-      break;
-    case "missing":
-    case "declined":
-      note =
-        writing.status === "declined"
-          ? t("oats.writingModel.declined", { size })
-          : t("oats.writingModel.missing", { size });
-      state = {
-        kind: "action",
-        label: t("common.download"),
-        icon: "download",
-        onClick: () => requestWritingModel(writing.model),
-      };
-      break;
-    case "failed":
-      note = t("oats.writingModel.failed");
-      state = {
-        kind: "action",
-        label: t("oats.speechTier.retry"),
-        icon: "retry",
-        onClick: () => requestWritingModel(writing.model),
-      };
-      break;
-    case "needs-key":
-      state = { kind: "warning", label: t("oats.models.needsKey") };
-      break;
-    case "no-endpoint":
-      note = t("oats.models.why.serverHint");
-      state = { kind: "warning", label: t("oats.models.noAddress") };
-      break;
-    case "none":
-      state = { kind: "warning", label: t("oats.models.noModel") };
-      break;
-  }
-  if (upgrade) {
-    const model = LARGE_WRITING_MODEL;
-    const name = writingModelName(model);
-    const modelSize = formatGigabytes(getLocalModel(model)?.sizeBytes, i18n.language);
-    const installed = report?.installed.includes(model) === true;
-    const download = report?.downloading?.modelId === model ? report.downloading : null;
-    if (download) {
-      const percent =
-        download.totalBytes > 0
-          ? Math.min(100, Math.floor((download.receivedBytes / download.totalBytes) * 100))
-          : 0;
-      state = {
-        kind: "downloading",
-        percent,
-        detail: t("oats.writingModel.progress", { percent, size: modelSize }),
-        cancelLabel: t("oats.writingModel.cancelDownload", { model: name }),
-        onCancel: cancelWritingModel,
-      };
-    } else {
-      const failed = report?.failed?.modelId === model;
-      note = upgradeDetail(t, "writing", name, installed ? null : modelSize);
-      if (failed) note += ` ${t("oats.writingModel.failed")}`;
-      state = {
-        kind: "action",
+      action = { label: t("common.cancel"), onClick: cancelTurbo, icon: X };
+    } else if (tier.status === "checking") {
+      note = t("oats.speechTier.checkingDetail");
+    } else if (upgrade || tier.status === "failed" || tier.status === "declined") {
+      const installed = tier.tier?.turbo.installed === true;
+      note = upgradeDetail(t, "speech", whisperName(TURBO_MODEL), installed ? null : size);
+      action = {
         label: t(
-          installed ? "oats.models.use" : failed ? "oats.speechTier.retry" : "common.download"
+          installed
+            ? "oats.models.use"
+            : tier.status === "failed"
+              ? "oats.speechTier.retry"
+              : "common.download"
         ),
-        icon: failed ? "retry" : "download",
+        icon: Download,
         onClick: () => {
-          forgetWritingChoice();
-          if (!installed) requestWritingModel(model);
+          followRecommendedWhisper();
+          if (!installed) requestTurbo(language);
         },
       };
     }
   }
-
   return (
-    <ModelStatusRow label={label} line={line} note={note} state={state}>
-      {keyShown && writing.mode === "providers" && (
-        <ProviderKeyField
-          provider={writing.followsDefault ? "any" : writing.provider}
-          onSaved={() => setKeySaved(true)}
-        />
-      )}
-    </ModelStatusRow>
+    <FeatureRow feature={feature} model={model} note={note} action={action} progress={progress} />
+  );
+}
+
+function WritingModelRow({ upgrade }: { upgrade: boolean }) {
+  const { t, i18n } = useTranslation();
+  const writing = useWritingModel();
+  const report = useDeviceTierStore((state) => state.tier?.writing);
+  if (writing.mode === "providers") {
+    return <FeatureRow feature="writing" model={`${writing.providerName} ${writing.name}`} />;
+  }
+  const target = upgrade ? LARGE_WRITING_MODEL : writing.model;
+  const name = writingModelName(target);
+  const size = formatGigabytes(getLocalModel(target)?.sizeBytes, i18n.language);
+  const download = report?.downloading?.modelId === target ? report.downloading : null;
+  const installed = report?.installed.includes(target) === true;
+  const failed = report?.failed?.modelId === target;
+  let note: string | undefined;
+  let action: RowAction | undefined;
+  let progress: React.ComponentProps<typeof FeatureRow>["progress"];
+  if (download) {
+    const percent =
+      download.totalBytes > 0
+        ? Math.min(100, Math.floor((download.receivedBytes / download.totalBytes) * 100))
+        : 0;
+    progress = { percent, label: t("oats.writingModel.progress", { percent, size }) };
+    action = { label: t("common.cancel"), onClick: cancelWritingModel, icon: X };
+  } else if (upgrade || (!installed && target)) {
+    note = upgrade
+      ? upgradeDetail(t, "writing", name, installed ? null : size)
+      : t(failed ? "oats.writingModel.failed" : "oats.writingModel.missing", { size });
+    action = {
+      label: t(
+        installed ? "oats.models.use" : failed ? "oats.speechTier.retry" : "common.download"
+      ),
+      icon: failed ? RotateCcw : Download,
+      onClick: () => {
+        if (upgrade) forgetWritingChoice();
+        if (!installed) requestWritingModel(target);
+      },
+    };
+  }
+  return (
+    <FeatureRow
+      feature="writing"
+      model={writing.status === "ready" ? writing.name : t("oats.models.noModel")}
+      note={note}
+      action={action}
+      progress={progress}
+    />
   );
 }
 
 /** AMI replay (docs/dictation-accuracy.md) and AMI summary eval (docs/summaries.md). */
 function upgradeDetail(
   t: ReturnType<typeof useTranslation>["t"],
-  kind: "speech" | "writing",
+  kind: "speech" | "parakeet" | "writing",
   model: string,
   size: string | null
 ) {
-  const gain =
-    kind === "speech"
-      ? t("oats.models.upgrade.speech", { model })
-      : t("oats.models.upgrade.writing", { model });
+  const gain = t(`oats.models.upgrade.${kind}`, { model });
   return size ? `${gain} ${t("oats.models.upgrade.size", { size })}` : gain;
 }
-
 /**
  * Choosing models yourself: closed by default, at the bottom. The same
  * chooser for speech and writing (ModelChoice), the question cards' optional

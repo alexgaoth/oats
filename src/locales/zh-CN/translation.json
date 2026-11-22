@@ -1930,6 +1930,29 @@
     "join": "加入并转录"
   },
   "oats": {
+    "featureRoutes": {
+      "conversations": "对话",
+      "dictation": "听写",
+      "writing": "写作",
+      "useKey": "使用 API 密钥",
+      "useMac": "使用这台 Mac",
+      "useComputer": "使用这台电脑",
+      "keepOnMac": "继续在此 Mac 上使用",
+      "keepOnComputer": "继续在此电脑上使用",
+      "onMac": "{{model}}，在这台 Mac 上运行",
+      "onComputer": "{{model}}，在这台电脑上运行",
+      "withKey": "{{model}}，使用你的密钥",
+      "untilKeyOnMac": "添加 {{provider}} 密钥前，在此 Mac 上使用 {{model}}",
+      "untilKeyOnComputer": "添加 {{provider}} 密钥前，在此电脑上使用 {{model}}",
+      "writingKeyProviders": "OpenAI 或 Anthropic",
+      "conversationsSent": "音频会发送给 {{provider}} 进行转写。",
+      "dictationSent": "音频会发送给 {{provider}} 进行转写。启用文本整理时，听写文本也会发送给该提供商。",
+      "writingSent": "转写文本会发送给 {{provider}}，用于生成摘要、主题名称和说明。部分功能也会发送选定的摘要或片段。写作不会发送音频。",
+      "noneSent": "这些功能均不会向提供商发送数据。",
+      "defaultDescription": "对话、听写和写作的默认设置。",
+      "keyNoAccess": "Oats 未保存此密钥。此密钥无法使用 {{model}}。",
+      "keyNotChecked": "Oats 无法验证此密钥。请重试。"
+    },
     "parakeetFallback": "Parakeet 失败，正在使用 Whisper。",
     "library": {
       "tools": "对话工具",

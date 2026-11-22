@@ -76,8 +76,8 @@ export function pinWritingProvider(preferences, keys) {
 }
 
 /**
- * Change the default, or change just one exception. An exception stays
- * explicit even when it matches the new default. Only reset removes it.
+ * Change the default, or change just one exception. Store only exceptions
+ * that differ from the default.
  *
  * @param {FeaturePreferences} preferences
  * @param {Route | null} route
@@ -86,18 +86,19 @@ export function pinWritingProvider(preferences, keys) {
  */
 export function changeFeatureRoute(preferences, route, feature) {
   const consent = { ...preferences.consent };
+  const exceptions = { ...preferences.exceptions };
   if (feature) {
-    const exceptions = { ...preferences.exceptions };
-    if (route === null) delete exceptions[feature];
+    if (route === null || route === preferences.defaultRoute) delete exceptions[feature];
     else exceptions[feature] = route;
     consent[feature] = (route ?? preferences.defaultRoute) === "local";
     return { ...preferences, exceptions, consent };
   }
   if (route === null) return preferences;
   for (const name of FEATURES) {
-    if (!preferences.exceptions[name]) consent[name] = route === "local";
+    if (exceptions[name] === route) delete exceptions[name];
+    if (!exceptions[name]) consent[name] = route === "local";
   }
-  return { ...preferences, defaultRoute: route, consent };
+  return { ...preferences, defaultRoute: route, exceptions, consent };
 }
 
 /**
@@ -119,7 +120,8 @@ export function readFeaturePreferences(storage) {
       /** @type {Consent} */
       const consent = {};
       for (const feature of FEATURES) {
-        if (isRoute(saved.exceptions?.[feature])) exceptions[feature] = saved.exceptions[feature];
+        const route = saved.exceptions?.[feature];
+        if (isRoute(route) && route !== saved.defaultRoute) exceptions[feature] = route;
         if (saved.consent?.[feature] === true) consent[feature] = true;
       }
       return {

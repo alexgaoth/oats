@@ -1935,6 +1935,29 @@
     "join": "Rejoindre et transcrire"
   },
   "oats": {
+    "featureRoutes": {
+      "conversations": "Conversations",
+      "dictation": "Dictée",
+      "writing": "Rédaction",
+      "useKey": "Utiliser une clé API",
+      "useMac": "Utiliser ce Mac",
+      "useComputer": "Utiliser cet ordinateur",
+      "keepOnMac": "Garder sur ce Mac",
+      "keepOnComputer": "Garder sur cet ordinateur",
+      "onMac": "{{model}}, sur ce Mac",
+      "onComputer": "{{model}}, sur cet ordinateur",
+      "withKey": "{{model}}, avec votre clé",
+      "untilKeyOnMac": "{{model}}, sur ce Mac jusqu’à l’ajout de votre clé {{provider}}",
+      "untilKeyOnComputer": "{{model}}, sur cet ordinateur jusqu’à l’ajout de votre clé {{provider}}",
+      "writingKeyProviders": "OpenAI ou Anthropic",
+      "conversationsSent": "L’audio est envoyé à {{provider}} pour la transcription.",
+      "dictationSent": "L’audio est envoyé à {{provider}} pour la transcription. Si la correction est activée, le texte dicté y est aussi envoyé.",
+      "writingSent": "Le texte transcrit est envoyé à {{provider}} pour les résumés, les noms et les descriptions des sujets. Certaines fonctions envoient aussi des résumés ou extraits sélectionnés. La rédaction n’envoie pas d’audio.",
+      "noneSent": "Aucune de ces fonctions n’envoie de données à un fournisseur.",
+      "defaultDescription": "Le réglage par défaut pour Conversations, Dictée et Rédaction.",
+      "keyNoAccess": "Oats n’a pas enregistré la clé. Elle ne permet pas d’utiliser {{model}}.",
+      "keyNotChecked": "Oats n’a pas pu vérifier la clé. Réessayez."
+    },
     "parakeetFallback": "Échec de Parakeet. Oats utilise Whisper.",
     "library": {
       "tools": "Outils de conversation",

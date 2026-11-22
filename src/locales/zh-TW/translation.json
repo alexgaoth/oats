@@ -1930,6 +1930,29 @@
     "join": "加入並轉錄"
   },
   "oats": {
+    "featureRoutes": {
+      "conversations": "對話",
+      "dictation": "聽寫",
+      "writing": "寫作",
+      "useKey": "使用 API 金鑰",
+      "useMac": "使用這部 Mac",
+      "useComputer": "使用這部電腦",
+      "keepOnMac": "繼續在這部 Mac 上使用",
+      "keepOnComputer": "繼續在這部電腦上使用",
+      "onMac": "{{model}}，在這部 Mac 上執行",
+      "onComputer": "{{model}}，在這部電腦上執行",
+      "withKey": "{{model}}，使用你的金鑰",
+      "untilKeyOnMac": "新增 {{provider}} 金鑰前，在這部 Mac 上使用 {{model}}",
+      "untilKeyOnComputer": "新增 {{provider}} 金鑰前，在這部電腦上使用 {{model}}",
+      "writingKeyProviders": "OpenAI 或 Anthropic",
+      "conversationsSent": "音訊會傳送給 {{provider}} 進行轉錄。",
+      "dictationSent": "音訊會傳送給 {{provider}} 進行轉錄。啟用文字整理時，聽寫文字也會傳送給該供應商。",
+      "writingSent": "轉錄文字會傳送給 {{provider}}，用來產生摘要、主題名稱和說明。部分功能也會傳送選定的摘要或片段。寫作不會傳送音訊。",
+      "noneSent": "這些功能都不會向供應商傳送資料。",
+      "defaultDescription": "對話、聽寫和寫作的預設設定。",
+      "keyNoAccess": "Oats 未儲存這把金鑰。此金鑰無法使用 {{model}}。",
+      "keyNotChecked": "Oats 無法驗證這把金鑰。請再試一次。"
+    },
     "parakeetFallback": "Parakeet 失敗，正在使用 Whisper。",
     "library": {
       "tools": "對話工具",

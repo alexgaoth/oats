@@ -1935,6 +1935,29 @@
     "join": "Partecipa e trascrivi"
   },
   "oats": {
+    "featureRoutes": {
+      "conversations": "Conversazioni",
+      "dictation": "Dettatura",
+      "writing": "Scrittura",
+      "useKey": "Usa una chiave API",
+      "useMac": "Usa questo Mac",
+      "useComputer": "Usa questo computer",
+      "keepOnMac": "Mantieni su questo Mac",
+      "keepOnComputer": "Mantieni su questo computer",
+      "onMac": "{{model}}, su questo Mac",
+      "onComputer": "{{model}}, su questo computer",
+      "withKey": "{{model}}, con la tua chiave",
+      "untilKeyOnMac": "{{model}}, su questo Mac finché non aggiungi la tua chiave {{provider}}",
+      "untilKeyOnComputer": "{{model}}, su questo computer finché non aggiungi la tua chiave {{provider}}",
+      "writingKeyProviders": "OpenAI o Anthropic",
+      "conversationsSent": "L’audio viene inviato a {{provider}} per la trascrizione.",
+      "dictationSent": "L’audio viene inviato a {{provider}} per la trascrizione. Se la correzione è attiva, viene inviato anche il testo dettato.",
+      "writingSent": "Il testo trascritto viene inviato a {{provider}} per riassunti, nomi e descrizioni degli argomenti. Alcune funzioni inviano anche riassunti o passaggi selezionati. Scrittura non invia audio.",
+      "noneSent": "Nessuna di queste funzioni invia dati a un fornitore.",
+      "defaultDescription": "L’impostazione predefinita per Conversazioni, Dettatura e Scrittura.",
+      "keyNoAccess": "Oats non ha salvato la chiave. Non può usare {{model}}.",
+      "keyNotChecked": "Oats non ha potuto verificare la chiave. Riprova."
+    },
     "parakeetFallback": "Parakeet non ha funzionato. Uso Whisper.",
     "library": {
       "tools": "Strumenti per le conversazioni",

@@ -1935,6 +1935,29 @@
     "join": "Join & transcribe"
   },
   "oats": {
+    "featureRoutes": {
+      "conversations": "Conversations",
+      "dictation": "Dictation",
+      "writing": "Writing",
+      "useKey": "Use an API key",
+      "useMac": "Use this Mac",
+      "useComputer": "Use this computer",
+      "keepOnMac": "Keep on this Mac",
+      "keepOnComputer": "Keep on this computer",
+      "onMac": "{{model}}, on this Mac",
+      "onComputer": "{{model}}, on this computer",
+      "withKey": "{{model}}, with your key",
+      "untilKeyOnMac": "{{model}}, on this Mac until you add your {{provider}} key",
+      "untilKeyOnComputer": "{{model}}, on this computer until you add your {{provider}} key",
+      "writingKeyProviders": "OpenAI or Anthropic",
+      "conversationsSent": "Audio goes to {{provider}} for transcription.",
+      "dictationSent": "Audio goes to {{provider}} for transcription. When cleanup is on, the dictated text goes there too.",
+      "writingSent": "Transcript text goes to {{provider}} for summaries and topic names and descriptions. Some features also send selected summaries or passages. No audio is sent for Writing.",
+      "noneSent": "None of these features sends data to a provider.",
+      "defaultDescription": "The default for Conversations, Dictation and Writing.",
+      "keyNoAccess": "Oats did not save this key. It cannot use {{model}}.",
+      "keyNotChecked": "Oats could not check this key. Try again."
+    },
     "parakeetFallback": "Parakeet failed. Using Whisper.",
     "library": {
       "tools": "Conversation tools",

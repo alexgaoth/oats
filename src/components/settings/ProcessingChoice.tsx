@@ -4,6 +4,11 @@ import { ChevronRight, Cpu, KeyRound } from "lucide-react";
 import { cn } from "../lib/utils";
 import { getCachedPlatform } from "../../utils/platform";
 import type { ProcessingMode } from "./processing";
+import { useShallow } from "zustand/react/shallow";
+import { FEATURES } from "../../helpers/featureRoutes.mjs";
+import { selectFeatureRoute, useSettingsStore } from "../../stores/settingsStore";
+import { getProviderDisplayName } from "../../models/ModelRegistry";
+import { featureRouteDisclosure, featureRouteName } from "./featureRouteCopy";
 
 /**
  * The one processing choice, drawn the same in Settings › AI models and in
@@ -16,6 +21,7 @@ export function ProcessingChoice({
   value,
   onChange,
   details,
+  showDescriptions = true,
   layout = "row",
   className,
   "aria-labelledby": labelledBy,
@@ -23,6 +29,7 @@ export function ProcessingChoice({
   value: ProcessingMode | "mixed";
   onChange: (mode: ProcessingMode) => void;
   details?: Partial<Record<ProcessingMode, React.ReactNode>>;
+  showDescriptions?: boolean;
   /** Side by side (Settings), or one above the other (setup's narrow column). */
   layout?: "row" | "column";
   className?: string;
@@ -117,9 +124,11 @@ export function ProcessingChoice({
                   />
                   {option.title}
                 </span>
-                <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
-                  {option.description}
-                </span>
+                {showDescriptions && (
+                  <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
+                    {option.description}
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -135,8 +144,16 @@ export function ProcessingChoice({
  * (Settings and setup), closed until somebody asks: the audio with an OpenAI
  * key, and what the writing model reads (docs/network-allowlist.md).
  */
-export function WhatIsSent() {
+export function WhatIsSent({ featureRoutes = false }: { featureRoutes?: boolean }) {
   const { t } = useTranslation();
+  const cloud = useSettingsStore(
+    useShallow((state) =>
+      FEATURES.map((feature) => {
+        const route = selectFeatureRoute(state, feature);
+        return route.effective === "providers" ? route.provider : null;
+      })
+    )
+  );
   return (
     <details className="group px-1">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
@@ -147,8 +164,29 @@ export function WhatIsSent() {
         {t("oats.models.whatIsSent")}
       </summary>
       <div className="mt-2 space-y-2 text-xs leading-5 text-muted-foreground">
-        <p>{t("oats.models.speechSent")}</p>
-        <p>{t("oats.settings.models.writingScreen")}</p>
+        {featureRoutes ? (
+          cloud.some(Boolean) ? (
+            <ul className="space-y-1.5">
+              {FEATURES.map((feature, index) =>
+                cloud[index] ? (
+                  <li key={feature}>
+                    <strong className="font-medium text-foreground">
+                      {featureRouteName(t, feature)}.{" "}
+                    </strong>
+                    {featureRouteDisclosure(t, feature, getProviderDisplayName(cloud[index] ?? ""))}
+                  </li>
+                ) : null
+              )}
+            </ul>
+          ) : (
+            <p>{t("oats.featureRoutes.noneSent")}</p>
+          )
+        ) : (
+          <>
+            <p>{t("oats.models.speechSent")}</p>
+            <p>{t("oats.settings.models.writingScreen")}</p>
+          </>
+        )}
       </div>
     </details>
   );
