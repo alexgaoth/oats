@@ -256,10 +256,9 @@ test("turbo is fetched only when the workspace or setup asks, never at launch", 
     "OatsWorkspace.tsx",
     "OnboardingFlow.tsx",
   ]);
-  assert.match(
-    read("src/hooks/useSpeechUpgrade.ts"),
-    /setupDone: setupAllowsDownloads\(localStorage\)/
-  );
+  const upgrade = read("src/hooks/useSpeechUpgrade.ts");
+  assert.match(upgrade, /const setupDone = setupAllowsDownloads\(localStorage\);/);
+  assert.match(upgrade, /shouldFetchTurbo\(\{[\s\S]{0,120}setupDone,/);
 });
 
 test("turbo's automatic start is announced where the person is, and only that start", () => {
@@ -463,7 +462,11 @@ test("downloads require consent for the feature that uses the model, from setup'
     for (const feature of features) {
       assert.ok(hook.includes(`selectFeatureRoute(state, "${feature}").downloadAuthorized`));
     }
-    assert.match(hook, /setupDone: setupAllowsDownloads\(localStorage\)/);
+    assert.match(
+      hook,
+      /setupDone(: | = )setupAllowsDownloads\(localStorage\)/,
+      `${name} waits for setup's choice`
+    );
   }
   const flow = read("src/components/OnboardingFlow.tsx");
   assert.match(flow, /useSpeechUpgrade\(\);\s*useWritingModelDownload\(\);/);

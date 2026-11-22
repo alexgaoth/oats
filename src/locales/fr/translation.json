@@ -179,7 +179,11 @@
       "description": "Deux modèles transcrivent la pièce et rédigent chaque résumé. Ils tournent ici, ou avec votre propre clé d’API. Vous pourrez changer cela dans Réglages › Modèles d’IA.",
       "downloads": "Oats télécharge {{models}} depuis Hugging Face quand vous continuez, en arrière-plan.",
       "nothingToDownload": "Tout ce dont Oats a besoin est déjà sur ce Mac.",
-      "nothingToDownloadComputer": "Tout ce dont Oats a besoin est déjà sur cet ordinateur."
+      "nothingToDownloadComputer": "Tout ce dont Oats a besoin est déjà sur cet ordinateur.",
+      "anthropicSpeech": "Anthropic ne propose pas de service vocal, donc la parole reste sur ce Mac : Oats télécharge {{models}} depuis Hugging Face quand vous continuez, en arrière-plan.",
+      "anthropicSpeechComputer": "Anthropic ne propose pas de service vocal, donc la parole reste sur cet ordinateur : Oats télécharge {{models}} depuis Hugging Face quand vous continuez, en arrière-plan.",
+      "anthropicSpeechReady": "Anthropic ne propose pas de service vocal, donc la parole reste sur ce Mac.",
+      "anthropicSpeechReadyComputer": "Anthropic ne propose pas de service vocal, donc la parole reste sur cet ordinateur."
     },
     "models": {
       "title": "Vos modèles",

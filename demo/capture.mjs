@@ -404,6 +404,20 @@ const SHOTS = [
     script:
       "await demo.wait(600); [...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300); await demo.typeKey('sk-proj-demo-key-0123456789'); await demo.wait(800)",
   },
+  // "Where Oats thinks" with only an Anthropic key pasted, on a Mac that runs
+  // Parakeet Ultra: speech stays on this Mac, and the step names its downloads.
+  {
+    name: "setup-processing-anthropic",
+    query: "firstrun=1&setupStep=1&tier=fast&writingState=none&parakeet=missing",
+    ready: "h1",
+    script: [
+      "await demo.wait(1200);",
+      "[...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300);",
+      "const input = document.querySelector('form input[type=password]');",
+      "Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'sk-ant-api03-demo-key-0123456789');",
+      "input.dispatchEvent(new Event('input', { bubbles: true })); input.blur(); await demo.wait(400)",
+    ].join(" "),
+  },
   // Setup's third step, "Your models" (components/onboarding/ModelsStep.tsx):
   // On this Mac's downloads start on Continue and show here, then Ready; with
   // an OpenAI key every model is Ready on it; with only an Anthropic key,

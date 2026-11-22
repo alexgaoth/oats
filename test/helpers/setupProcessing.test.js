@@ -94,8 +94,9 @@ test("Your models follows Where Oats thinks, and its downloads start on that Con
     "setProcessing(processingChoice);",
     'setFeatureProcessing("conversations", "local");',
     'setFeatureProcessing("dictation", "local");',
-    "await prepareLocalSetup()",
+    // Before the first await: the render the choice causes reads it.
     "localStorage.setItem(SETUP_PROCESSING_DONE",
+    "await prepareLocalSetup()",
   ].map((text) => forward.indexOf(text));
   assert.ok(
     order.every((at, index) => at > -1 && (index === 0 || at > order[index - 1])),
@@ -105,4 +106,20 @@ test("Your models follows Where Oats thinks, and its downloads start on that Con
     forward,
     /if \(processingChoice === "providers" && speechHere\) \{\s*setFeatureProcessing\("conversations", "local"\);/
   );
+});
+
+// With only an Anthropic key, speech stays on this Mac, and step 2 names what
+// it downloads for it (Continue starts it), as On this Mac names its downloads.
+test("step 2 names the speech downloads when only an Anthropic key is given", () => {
+  const SETUP = read("src/components/onboarding/processingSetup.ts");
+  assert.match(
+    STEP,
+    /const anthropicOnly =\s*!openai && pasted !== "openai" && \(pasted === "anthropic" \|\| \(!pasted && anthropic\)\);/
+  );
+  assert.match(STEP, /\{ models: join\(downloads\.speech\) \}/);
+  assert.match(STEP, /\{anthropicOnly && \(/);
+  // Dictation fetches Turbo beside Parakeet Ultra, so it is named too.
+  const turbo = SETUP.slice(SETUP.indexOf("const turbo ="), SETUP.indexOf("const writingModel ="));
+  assert.doesNotMatch(turbo, /!room/);
+  assert.match(SETUP, /const items = \[\s*\.\.\.speech,/);
 });

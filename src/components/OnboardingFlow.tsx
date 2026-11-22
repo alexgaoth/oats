@@ -378,15 +378,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         setFeatureProcessing("conversations", "local");
         setFeatureProcessing("dictation", "local");
       }
-      if (speechHere) {
-        await prepareLocalSetup().catch((error) =>
-          logger.warn("Could not reset the local setup declines", { error }, "onboarding")
-        );
-      }
+      // Before anything is awaited, so the render the choice causes already
+      // finds it (the download hooks read it as they render).
       try {
         localStorage.setItem(SETUP_PROCESSING_DONE, "true");
       } catch {
         // Then the downloads start when setup is done, as before.
+      }
+      if (speechHere) {
+        await prepareLocalSetup().catch((error) =>
+          logger.warn("Could not reset the local setup declines", { error }, "onboarding")
+        );
       }
     }
     if (isLastStep) await finishOnboarding();
@@ -532,6 +534,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             }}
             downloads={localDownloads}
             keyField={keyField}
+            keyDraft={keyDraft}
             onKeyDraft={setKeyDraft}
           />
         );

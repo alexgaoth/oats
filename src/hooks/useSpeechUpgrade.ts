@@ -60,6 +60,9 @@ export function useSpeechUpgrade() {
   const recording = meeting || tier?.dictationRecording === true;
   const room = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
   const { available, installed, declined, failed, progress } = useRoomModelStore();
+  // Read on each render: the flag setup's processing step writes is in
+  // localStorage, which nothing observes, and the step's next render follows it.
+  const setupDone = setupAllowsDownloads(localStorage);
 
   useEffect(() => {
     if (room && available === null) void refreshRoomModel();
@@ -74,7 +77,15 @@ export function useSpeechUpgrade() {
       cancelRoomModelDownload(false, true);
       return;
     }
-    if (!recording && available && !installed && !declined && !failed && progress === null) {
+    if (
+      setupDone &&
+      !recording &&
+      available &&
+      !installed &&
+      !declined &&
+      !failed &&
+      progress === null
+    ) {
       void startRoomModelDownload(
         () =>
           workspaceIdle() &&
@@ -82,14 +93,25 @@ export function useSpeechUpgrade() {
           Boolean(roomSpeechPlan(useSettingsStore.getState(), useDeviceTierStore.getState().tier))
       );
     }
-  }, [room, roomAuthorized, meeting, recording, available, installed, declined, failed, progress]);
+  }, [
+    room,
+    roomAuthorized,
+    setupDone,
+    meeting,
+    recording,
+    available,
+    installed,
+    declined,
+    failed,
+    progress,
+  ]);
 
   const plan = useMemo(() => localSetupFor(tier, language, "local"), [tier, language]);
   const followsDefault = whisperModelFollowsDefault();
   const local = (dictationAuthorized || (roomAuthorized && !room)) && engine === "whisper";
   const fetch = shouldFetchTurbo({
     choice: plan.whisper.choice,
-    setupDone: setupAllowsDownloads(localStorage),
+    setupDone,
     // `whisperModel` is in the effect's list for this: a choice made in
     // Settings ends it.
     followsDefault,

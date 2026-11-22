@@ -179,7 +179,11 @@
       "description": "兩個模型負責轉寫房間裡的對話並撰寫每份摘要。它們在這裡執行，或使用你自己的 API 金鑰。之後可以在 設定 › AI 模型 中更改。",
       "downloads": "繼續後，Oats 會在背景從 Hugging Face 下載 {{models}}。",
       "nothingToDownload": "Oats 需要的一切已在這台 Mac 上。",
-      "nothingToDownloadComputer": "Oats 需要的一切已在這台電腦上。"
+      "nothingToDownloadComputer": "Oats 需要的一切已在這台電腦上。",
+      "anthropicSpeech": "Anthropic 不提供語音服務，因此語音仍在這台 Mac 上處理：繼續後，Oats 會在背景從 Hugging Face 下載 {{models}}。",
+      "anthropicSpeechComputer": "Anthropic 不提供語音服務，因此語音仍在這台電腦上處理：繼續後，Oats 會在背景從 Hugging Face 下載 {{models}}。",
+      "anthropicSpeechReady": "Anthropic 不提供語音服務，因此語音仍在這台 Mac 上處理。",
+      "anthropicSpeechReadyComputer": "Anthropic 不提供語音服務，因此語音仍在這台電腦上處理。"
     },
     "models": {
       "title": "你的模型",

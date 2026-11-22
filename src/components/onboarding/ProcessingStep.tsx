@@ -6,6 +6,8 @@ import type { ProcessingMode } from "../settings/processing";
 import { OatsMark } from "../shell/OatsMark";
 import type { LocalDownloads } from "./processingSetup";
 import { getCachedPlatform } from "../../utils/platform";
+import { detectKeyProvider } from "../../utils/keyCheck";
+import { selectUsableFeatureKey, useSettingsStore } from "../../stores/settingsStore";
 
 /**
  * Setup's second step, "Where Oats thinks": the same processing choice as
@@ -14,6 +16,9 @@ import { getCachedPlatform } from "../../utils/platform";
  * checked before it is saved: Continue checks and saves a key pasted there
  * (`keyField`), so there is no Save. The choice is committed when the person
  * continues (OnboardingFlow), so trying both options changes nothing.
+ * Anthropic has no speech service, so with only an Anthropic key (saved, or
+ * pasted and not saved yet) speech stays on this Mac, and the step names what
+ * it downloads for it, as On this Mac names its downloads: Continue starts them.
  */
 export const ProcessingStep = forwardRef<
   HTMLHeadingElement,
@@ -22,18 +27,40 @@ export const ProcessingStep = forwardRef<
     onChange: (mode: ProcessingMode) => void;
     downloads: LocalDownloads;
     keyField: React.Ref<ProviderKeyHandle>;
+    keyDraft: string;
     onKeyDraft: (draft: string) => void;
   }
->(function ProcessingStep({ value, onChange, downloads, keyField, onKeyDraft }, headingRef) {
+>(function ProcessingStep(
+  { value, onChange, downloads, keyField, keyDraft, onKeyDraft },
+  headingRef
+) {
   const { t, i18n } = useTranslation();
   const mac = getCachedPlatform() === "darwin";
-  const list = (() => {
+  const join = (items: string[]) => {
     try {
-      return new Intl.ListFormat(i18n.language, { type: "conjunction" }).format(downloads.items);
+      return new Intl.ListFormat(i18n.language, { type: "conjunction" }).format(items);
     } catch {
-      return downloads.items.join(", ");
+      return items.join(", ");
     }
-  })();
+  };
+  const list = join(downloads.items);
+  const openai = useSettingsStore((state) => selectUsableFeatureKey(state, "openai"));
+  const anthropic = useSettingsStore((state) => selectUsableFeatureKey(state, "anthropic"));
+  const pasted = keyDraft.trim() ? detectKeyProvider(keyDraft.trim()) : null;
+  const anthropicOnly =
+    !openai && pasted !== "openai" && (pasted === "anthropic" || (!pasted && anthropic));
+  const speechHere = downloads.speech.length
+    ? t(
+        mac
+          ? "onboarding.processing.anthropicSpeech"
+          : "onboarding.processing.anthropicSpeechComputer",
+        { models: join(downloads.speech) }
+      )
+    : t(
+        mac
+          ? "onboarding.processing.anthropicSpeechReady"
+          : "onboarding.processing.anthropicSpeechReadyComputer"
+      );
 
   return (
     <div className="flex flex-col items-stretch">
@@ -75,6 +102,14 @@ export const ProcessingStep = forwardRef<
                 showSave={false}
                 onDraftChange={onKeyDraft}
               />
+              {anthropicOnly && (
+                <p
+                  data-anthropic-speech
+                  className="px-1 text-[13px] leading-5 text-muted-foreground"
+                >
+                  {speechHere}
+                </p>
+              )}
               <WhatIsSent />
             </div>
           ),

@@ -179,7 +179,11 @@
       "description": "Zwei Modelle transkribieren den Raum und schreiben jede Zusammenfassung. Sie laufen hier oder mit Ihrem eigenen API-Schlüssel. Ändern lässt sich das später unter Einstellungen › KI-Modelle.",
       "downloads": "Oats lädt {{models}} von Hugging Face herunter, sobald Sie fortfahren, im Hintergrund.",
       "nothingToDownload": "Alles, was Oats braucht, ist schon auf diesem Mac.",
-      "nothingToDownloadComputer": "Alles, was Oats braucht, ist schon auf diesem Computer."
+      "nothingToDownloadComputer": "Alles, was Oats braucht, ist schon auf diesem Computer.",
+      "anthropicSpeech": "Anthropic bietet keinen Sprachdienst an, daher bleibt die Sprache auf diesem Mac: Oats lädt {{models}} von Hugging Face herunter, sobald Sie fortfahren, im Hintergrund.",
+      "anthropicSpeechComputer": "Anthropic bietet keinen Sprachdienst an, daher bleibt die Sprache auf diesem Computer: Oats lädt {{models}} von Hugging Face herunter, sobald Sie fortfahren, im Hintergrund.",
+      "anthropicSpeechReady": "Anthropic bietet keinen Sprachdienst an, daher bleibt die Sprache auf diesem Mac.",
+      "anthropicSpeechReadyComputer": "Anthropic bietet keinen Sprachdienst an, daher bleibt die Sprache auf diesem Computer."
     },
     "models": {
       "title": "Ihre Modelle",
