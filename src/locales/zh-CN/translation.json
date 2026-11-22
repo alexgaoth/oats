@@ -140,6 +140,7 @@
       "setup": "设置",
       "permissions": "权限",
       "processing": "处理方式",
+      "models": "你的模型",
       "activation": "听写",
       "useCase": "关于你",
       "meeting": "会议",
@@ -178,7 +179,16 @@
       "description": "两个模型负责转写房间里的对话并撰写每份摘要。它们在这里运行，或使用你自己的 API 密钥。之后可以在 设置 › AI 模型 中更改。",
       "downloads": "继续后，Oats 会在后台从 Hugging Face 下载 {{models}}。",
       "nothingToDownload": "Oats 需要的一切已在这台 Mac 上。",
-      "nothingToDownloadComputer": "Oats 需要的一切已在这台电脑上。"
+      "nothingToDownloadComputer": "Oats 需要的一切已在这台电脑上。",
+      "anthropicSpeech": "Anthropic 不提供语音服务，因此语音仍在这台 Mac 上处理：继续后，Oats 会在后台从 Hugging Face 下载 {{models}}。",
+      "anthropicSpeechComputer": "Anthropic 不提供语音服务，因此语音仍在这台电脑上处理：继续后，Oats 会在后台从 Hugging Face 下载 {{models}}。",
+      "anthropicSpeechReady": "Anthropic 不提供语音服务，因此语音仍在这台 Mac 上处理。",
+      "anthropicSpeechReadyComputer": "Anthropic 不提供语音服务，因此语音仍在这台电脑上处理。"
+    },
+    "models": {
+      "title": "你的模型",
+      "downloading": "它们会在后台下载，你现在就可以开始。",
+      "settled": "可以在 设置 › AI 模型 中更改每个模型的运行位置。"
     },
     "continue": "继续",
     "back": "返回",

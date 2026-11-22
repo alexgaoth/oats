@@ -10,6 +10,7 @@ import {
 } from "../stores/settingsStore";
 import { shouldFetchTurbo, shouldLeaveTurbo } from "../helpers/speechTier.mjs";
 import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
+import { setupAllowsDownloads } from "../helpers/localSetupConsent.mjs";
 import { leaveTurbo } from "./useSpeechTier";
 import {
   cancelRoomModelDownload,
@@ -25,7 +26,7 @@ function workspaceIdle() {
 
 function roomDownloadAuthorized() {
   return (
-    localStorage.getItem("onboardingCompleted") === "true" &&
+    setupAllowsDownloads(localStorage) &&
     selectFeatureRoute(useSettingsStore.getState(), "conversations").downloadAuthorized
   );
 }
@@ -37,8 +38,10 @@ export function requestRoomModel() {
 /**
  * Ask main for turbo when the rule picks it for this Mac and nothing stands in
  * the way (`shouldFetchTurbo`), and stop its download when speech leaves this
- * Mac (`shouldLeaveTurbo`). Mounted once, in the workspace, which shows only
- * after setup. Main checks the rule again before it fetches anything.
+ * Mac (`shouldLeaveTurbo`); the same for Parakeet Ultra in a room. Mounted
+ * once at a time: in setup from its "Where Oats thinks" step on
+ * (`setupAllowsDownloads`; its "Your models" step shows the downloads), then
+ * in the workspace. Main checks the rule again before it fetches anything.
  */
 export function useSpeechUpgrade() {
   const tier = useDeviceTierStore((state) => state.tier);
@@ -57,6 +60,9 @@ export function useSpeechUpgrade() {
   const recording = meeting || tier?.dictationRecording === true;
   const room = useSettingsStore((state) => Boolean(roomSpeechPlan(state, tier)));
   const { available, installed, declined, failed, progress } = useRoomModelStore();
+  // Read on each render: the flag setup's processing step writes is in
+  // localStorage, which nothing observes, and the step's next render follows it.
+  const setupDone = setupAllowsDownloads(localStorage);
 
   useEffect(() => {
     if (room && available === null) void refreshRoomModel();
@@ -71,7 +77,15 @@ export function useSpeechUpgrade() {
       cancelRoomModelDownload(false, true);
       return;
     }
-    if (!recording && available && !installed && !declined && !failed && progress === null) {
+    if (
+      setupDone &&
+      !recording &&
+      available &&
+      !installed &&
+      !declined &&
+      !failed &&
+      progress === null
+    ) {
       void startRoomModelDownload(
         () =>
           workspaceIdle() &&
@@ -79,14 +93,25 @@ export function useSpeechUpgrade() {
           Boolean(roomSpeechPlan(useSettingsStore.getState(), useDeviceTierStore.getState().tier))
       );
     }
-  }, [room, roomAuthorized, meeting, recording, available, installed, declined, failed, progress]);
+  }, [
+    room,
+    roomAuthorized,
+    setupDone,
+    meeting,
+    recording,
+    available,
+    installed,
+    declined,
+    failed,
+    progress,
+  ]);
 
   const plan = useMemo(() => localSetupFor(tier, language, "local"), [tier, language]);
   const followsDefault = whisperModelFollowsDefault();
   const local = (dictationAuthorized || (roomAuthorized && !room)) && engine === "whisper";
   const fetch = shouldFetchTurbo({
     choice: plan.whisper.choice,
-    setupDone: localStorage.getItem("onboardingCompleted") === "true",
+    setupDone,
     // `whisperModel` is in the effect's list for this: a choice made in
     // Settings ends it.
     followsDefault,

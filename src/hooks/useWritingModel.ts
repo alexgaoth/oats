@@ -11,6 +11,7 @@ import {
   writingModelFollowsDefault,
 } from "../stores/settingsStore";
 import { localWritingStatus, shouldFetchWritingModel } from "../helpers/writingTier.mjs";
+import { setupAllowsDownloads } from "../helpers/localSetupConsent.mjs";
 import { getCloudModel, getLocalModel, getProviderDisplayName } from "../models/ModelRegistry";
 import type { InferenceMode, WritingModelSnapshot } from "../types/electron";
 import { writingKeyPresent } from "../utils/writingKeys";
@@ -159,10 +160,12 @@ export function useWritingModel(): WritingModel {
 
 /**
  * Ask main for the default local writing model when it should be fetched
- * (`shouldFetchWritingModel`): after setup, while the setting follows the
- * default on this Mac, when no writing model is ready, and never during a
- * recording. Mounted once, in the workspace, which shows only after setup.
- * Main checks again before it fetches anything.
+ * (`shouldFetchWritingModel`): once setup's "Where Oats thinks" is continued
+ * (`setupAllowsDownloads`), while the setting follows the default on this
+ * Mac, when no writing model is ready, and never during a recording. Mounted
+ * once at a time: in setup (OnboardingFlow, whose "Your models" step shows the
+ * download), then in the workspace. Main checks again before it fetches
+ * anything.
  */
 export function useWritingModelDownload(): void {
   const tier = useDeviceTierStore((state) => state.tier);
@@ -178,7 +181,7 @@ export function useWritingModelDownload(): void {
     Boolean(plan.downloads.writing) &&
     shouldFetchWritingModel({
       choice: plan.writing.recommended,
-      setupDone: localStorage.getItem("onboardingCompleted") === "true",
+      setupDone: setupAllowsDownloads(localStorage),
       // `model` is in the effect's list for this: a choice made in Settings ends it.
       followsDefault: writingModelFollowsDefault(),
       local: authorized,

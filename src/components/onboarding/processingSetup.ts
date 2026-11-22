@@ -24,15 +24,20 @@ import {
 export interface LocalDownloads {
   /** What will be downloaded, named with its size ("Whisper Turbo (574 MB)"). */
   items: string[];
+  /** The speech models among them: what speech on this Mac downloads alone. */
+  speech: string[];
   checking: boolean;
 }
 
 /**
- * What "On this Mac" downloads when setup goes on: Whisper Turbo where this
- * Mac's GPU keeps up with it (speechTier.mjs) and the writing model its memory
- * holds (writingTier.mjs), each only while its setting follows the default and
- * the plan needs a file. Setup names them with their sizes. The workspace
- * starts them after setup, when no conversation is recording.
+ * What "On this Mac" downloads when setup goes on: Parakeet Ultra for rooms
+ * where this Mac runs it (localSetup.mjs), Whisper Turbo where its GPU keeps up
+ * (speechTier.mjs; Dictation uses it, also beside Parakeet), and the writing
+ * model its memory holds (writingTier.mjs), each only while its setting follows
+ * the default and the plan needs a file. Setup names them with their sizes,
+ * and the speech ones alone when only an Anthropic key is given. They start
+ * when the step is continued (OnboardingFlow mounts the workspace's download
+ * hooks), and setup's "Your models" shows them coming.
  */
 export function useLocalDownloads(): LocalDownloads {
   const { i18n } = useTranslation();
@@ -49,21 +54,25 @@ export function useLocalDownloads(): LocalDownloads {
   useEffect(() => {
     if (room && available === null) void refreshRoomModel();
   }, [room, available]);
+  // Dictation fetches Turbo by itself (useSpeechUpgrade), also where rooms use
+  // Parakeet Ultra, so it is named whenever it would come.
   const turbo =
     engine !== "nvidia" &&
     whisperModelFollowsDefault() &&
-    !room &&
     plan.whisper.choice.model === TURBO_MODEL &&
     !tier?.turbo.installed &&
     !tier?.turbo.failed;
   const writingModel = writingModelFollowsDefault() ? plan.downloads.writing : null;
-  const items = [
+  const speech = [
     ...(room && available && !installed
       ? [`${ROOM_MODEL_NAME} (${formatMegabytes(ROOM_MODEL_BYTES, i18n.language)})`]
       : []),
     ...(turbo && tier?.turbo.sizeBytes
       ? [`Whisper Turbo (${formatMegabytes(tier.turbo.sizeBytes, i18n.language)})`]
       : []),
+  ];
+  const items = [
+    ...speech,
     ...(writingModel && tier?.writing?.failed?.modelId !== writingModel
       ? [
           `${writingModelName(writingModel)} (${formatGigabytes(
@@ -73,7 +82,7 @@ export function useLocalDownloads(): LocalDownloads {
         ]
       : []),
   ];
-  return { items, checking: !tier || (room ? available === null : tier.measuring) };
+  return { items, speech, checking: !tier || (room ? available === null : tier.measuring) };
 }
 
 /** The setup press replaces earlier declines, without starting downloads. */

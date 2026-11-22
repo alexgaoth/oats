@@ -140,6 +140,7 @@
       "setup": "Setup",
       "permissions": "Permissions",
       "processing": "Processing",
+      "models": "Your models",
       "activation": "Dictation",
       "useCase": "About you",
       "meeting": "Meetings",
@@ -178,7 +179,16 @@
       "description": "Two models transcribe the room and write each summary. They run here, or with your own API key. You can change this later in Settings › AI models.",
       "downloads": "Oats downloads {{models}} from Hugging Face when you continue, in the background.",
       "nothingToDownload": "Everything Oats needs is already on this Mac.",
-      "nothingToDownloadComputer": "Everything Oats needs is already on this computer."
+      "nothingToDownloadComputer": "Everything Oats needs is already on this computer.",
+      "anthropicSpeech": "Anthropic has no speech service, so speech stays on this Mac: Oats downloads {{models}} from Hugging Face when you continue, in the background.",
+      "anthropicSpeechComputer": "Anthropic has no speech service, so speech stays on this computer: Oats downloads {{models}} from Hugging Face when you continue, in the background.",
+      "anthropicSpeechReady": "Anthropic has no speech service, so speech stays on this Mac.",
+      "anthropicSpeechReadyComputer": "Anthropic has no speech service, so speech stays on this computer."
+    },
+    "models": {
+      "title": "Your models",
+      "downloading": "They download in the background, so you can start now.",
+      "settled": "You can change where each one runs in Settings › AI models."
     },
     "continue": "Continue",
     "back": "Back",

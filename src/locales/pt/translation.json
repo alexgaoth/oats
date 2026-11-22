@@ -140,6 +140,7 @@
       "setup": "Configuração",
       "permissions": "Permissões",
       "processing": "Processamento",
+      "models": "Seus modelos",
       "activation": "Ditado",
       "useCase": "Sobre você",
       "meeting": "Reuniões",
@@ -178,7 +179,16 @@
       "description": "Dois modelos transcrevem a sala e escrevem cada resumo. Eles rodam aqui ou com sua própria chave de API. Você pode mudar isso depois em Definições › Modelos de IA.",
       "downloads": "O Oats baixa {{models}} do Hugging Face quando você continuar, em segundo plano.",
       "nothingToDownload": "Tudo de que o Oats precisa já está neste Mac.",
-      "nothingToDownloadComputer": "Tudo de que o Oats precisa já está neste computador."
+      "nothingToDownloadComputer": "Tudo de que o Oats precisa já está neste computador.",
+      "anthropicSpeech": "A Anthropic não oferece um serviço de voz, por isso a voz fica neste Mac: o Oats baixa {{models}} do Hugging Face quando você continuar, em segundo plano.",
+      "anthropicSpeechComputer": "A Anthropic não oferece um serviço de voz, por isso a voz fica neste computador: o Oats baixa {{models}} do Hugging Face quando você continuar, em segundo plano.",
+      "anthropicSpeechReady": "A Anthropic não oferece um serviço de voz, por isso a voz fica neste Mac.",
+      "anthropicSpeechReadyComputer": "A Anthropic não oferece um serviço de voz, por isso a voz fica neste computador."
+    },
+    "models": {
+      "title": "Seus modelos",
+      "downloading": "Eles são baixados em segundo plano, então você já pode começar.",
+      "settled": "Você pode mudar onde cada um roda em Definições › Modelos de IA."
     },
     "continue": "Continuar",
     "back": "Voltar",
