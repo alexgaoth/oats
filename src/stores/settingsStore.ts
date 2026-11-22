@@ -611,7 +611,7 @@ export interface SettingsState
    * each feature uses (helpers/apiKeys.mjs). Main holds the secrets and sends
    * these; nothing here is stored in localStorage. See `stores/apiKeys.ts`.
    */
-  apiKeys: KeyRecords;
+  keyRecords: KeyRecords;
   roomSpeechPreference: "default" | "shared" | "recommended";
   cleanupRemoteUrl: string;
 
@@ -1352,7 +1352,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   localSetupAuthorized: readString(LOCAL_SETUP_AUTHORIZED, "") === "true",
   featurePreferences: readFeaturePreferences(isBrowser ? localStorage : null),
   featureKeyStatus: {},
-  apiKeys: NO_KEYS,
+  keyRecords: NO_KEYS,
   roomSpeechPreference: (() => {
     const preference = readString(ROOM_SPEECH_PREFERENCE, "");
     return preference === "shared" || preference === "recommended" ? preference : "default";
@@ -2369,7 +2369,7 @@ if (isBrowser) {
       state.cleanupMode !== previous.cleanupMode ||
       state.openaiApiKey !== previous.openaiApiKey ||
       state.anthropicApiKey !== previous.anthropicApiKey ||
-      state.apiKeys !== previous.apiKeys
+      state.keyRecords !== previous.keyRecords
     ) {
       followDefaultWritingModel();
       const preferences = pinWritingProvider(state.featurePreferences, featureKeyPresence(state));
@@ -2429,7 +2429,7 @@ function namedKeyStatus(key: { status: RouteKeyStatus | null } | null) {
  */
 function selectFeatureKeyStatus(state: SettingsState, provider: Provider) {
   if (isKeyProvider(provider)) {
-    const own = state.apiKeys.keys.filter((key) => key.provider === provider);
+    const own = state.keyRecords.keys.filter((key) => key.provider === provider);
     return namedKeyStatus(own.find((key) => keyUsable(key.status)) ?? own[0] ?? null);
   }
   const present =
@@ -2461,7 +2461,7 @@ export function selectFeatureRoute(state: SettingsState, feature: Feature) {
   const provider =
     feature === "writing" ? (state.featurePreferences.writingProvider ?? "openai") : "openai";
   const status = isKeyProvider(provider)
-    ? namedKeyStatus(resolveFeatureKey(state.apiKeys, feature, provider))
+    ? namedKeyStatus(resolveFeatureKey(state.keyRecords, feature, provider))
     : selectFeatureKeyStatus(state, provider);
   return resolveFeatureRoute(state.featurePreferences, feature, { [provider]: status });
 }
@@ -2474,14 +2474,14 @@ export function selectFeatureRoute(state: SettingsState, feature: Feature) {
 export function setFeatureKeyStatus(target: string, status: RouteKeyStatus): void {
   const state = useSettingsStore.getState();
   const record =
-    state.apiKeys.keys.find((key) => key.id === target) ??
-    (isKeyProvider(target) ? defaultKeyOf(state.apiKeys, target) : null);
+    state.keyRecords.keys.find((key) => key.id === target) ??
+    (isKeyProvider(target) ? defaultKeyOf(state.keyRecords, target) : null);
   if (record) {
     if (record.status === status) return;
     useSettingsStore.setState({
-      apiKeys: {
-        ...state.apiKeys,
-        keys: state.apiKeys.keys.map((key) => (key.id === record.id ? { ...key, status } : key)),
+      keyRecords: {
+        ...state.keyRecords,
+        keys: state.keyRecords.keys.map((key) => (key.id === record.id ? { ...key, status } : key)),
       },
     });
     window.electronAPI
@@ -2511,7 +2511,7 @@ export async function applyKeyRecords(raw: unknown): Promise<void> {
     window.electronAPI?.getAnthropicKey?.().catch(() => undefined),
   ]);
   useSettingsStore.setState({
-    apiKeys: records,
+    keyRecords: records,
     ...(typeof openai === "string" && { openaiApiKey: openai }),
     ...(typeof anthropic === "string" && { anthropicApiKey: anthropic }),
   });
@@ -2845,7 +2845,7 @@ export async function initializeSettings(): Promise<void> {
         bedrockSessionToken,
         azureApiKey,
         vertexApiKey,
-        keyRecords,
+        savedKeyList,
       ] = await Promise.all([
         window.electronAPI.getOpenAIKey?.(),
         window.electronAPI.getAnthropicKey?.(),
@@ -2869,7 +2869,7 @@ export async function initializeSettings(): Promise<void> {
       ]);
 
       useSettingsStore.setState({
-        apiKeys: normalizeKeyRecords(keyRecords),
+        keyRecords: normalizeKeyRecords(savedKeyList),
         openaiApiKey: openai || "",
         anthropicApiKey: anthropic || "",
         geminiApiKey: gemini || "",

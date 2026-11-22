@@ -55,7 +55,7 @@ const openaiLinkModels = new Map<string, string | null>();
 async function linkModelFor(provider: "openai" | "anthropic"): Promise<string | null> {
   const models = LINK_MODELS[provider];
   if (provider !== "openai") return models[0] ?? null;
-  const keyId = resolveFeatureKey(getSettings().apiKeys, "writing", "openai")?.id ?? "slot";
+  const keyId = resolveFeatureKey(getSettings().keyRecords, "writing", "openai")?.id ?? "slot";
   if (openaiLinkModels.has(keyId)) return openaiLinkModels.get(keyId) ?? null;
   for (const model of models) {
     const available = await reasoningService.openAiModelAvailable(model, "writing");

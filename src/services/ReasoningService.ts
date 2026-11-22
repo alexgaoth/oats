@@ -101,7 +101,7 @@ class ReasoningService extends BaseReasoningService {
   ): Promise<string> {
     const named =
       feature && (provider === "openai" || provider === "anthropic")
-        ? resolveFeatureKey(getSettings().apiKeys, feature, provider)
+        ? resolveFeatureKey(getSettings().keyRecords, feature, provider)
         : null;
     if (named) return this.getNamedKey(named.provider, named.id);
 

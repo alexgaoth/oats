@@ -1346,7 +1346,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
    * provider's single slot, as before.
    */
   async getDictationKey(s) {
-    const key = resolveFeatureKey(s.apiKeys, "dictation", "openai");
+    const key = resolveFeatureKey(s.keyRecords, "dictation", "openai");
     if (!key) return s.openaiApiKey;
     if (this.cachedDictationKey?.id === key.id) return this.cachedDictationKey.secret;
     let secret = "";

@@ -52,7 +52,7 @@ export type KeyOptionReason = null | "no-speech" | "refused";
 
 export type KeyOption = SavedKey & { usable: boolean; reason: KeyOptionReason };
 
-type KeyState = Pick<SettingsState, "apiKeys" | "featurePreferences">;
+type KeyState = Pick<SettingsState, "keyRecords" | "featurePreferences">;
 
 /** Brand names, as the interface writes them in every language. */
 export const KEY_PROVIDER_NAMES: Record<ApiKeyProvider, string> = {
@@ -75,31 +75,31 @@ let savedCache: { records: KeyRecords | null; language: string; keys: SavedKey[]
 };
 
 /** The saved keys, in the order they were added, each with its name as shown. */
-export function selectSavedKeys(state: Pick<SettingsState, "apiKeys">): SavedKey[] {
+export function selectSavedKeys(state: Pick<SettingsState, "keyRecords">): SavedKey[] {
   const language = i18n.language;
-  if (savedCache.records === state.apiKeys && savedCache.language === language) {
+  if (savedCache.records === state.keyRecords && savedCache.language === language) {
     return savedCache.keys;
   }
-  const keys = state.apiKeys.keys.map((record) => ({
+  const keys = state.keyRecords.keys.map((record) => ({
     id: record.id,
     provider: record.provider,
     name: shownName(record),
     tail: record.tail,
     status: record.status,
   }));
-  savedCache = { records: state.apiKeys, language, keys };
+  savedCache = { records: state.keyRecords, language, keys };
   return keys;
 }
 
 /** The saved keys, for a component: stable while nothing changes, again on a language change. */
 export function useSavedKeys(): SavedKey[] {
   const { i18n: instance } = useTranslation();
-  const apiKeys = useSettingsStore((state) => state.apiKeys);
+  const keyRecords = useSettingsStore((state) => state.keyRecords);
   const language = instance.language;
   return useMemo(() => {
     void language;
-    return selectSavedKeys({ apiKeys });
-  }, [apiKeys, language]);
+    return selectSavedKeys({ keyRecords });
+  }, [keyRecords, language]);
 }
 
 /**
@@ -110,11 +110,11 @@ export function useSavedKeys(): SavedKey[] {
  */
 export function selectFeatureKey(state: KeyState, feature: Feature): SavedKey | null {
   const provider = featureKeyProvider(
-    state.apiKeys,
+    state.keyRecords,
     feature,
     state.featurePreferences.writingProvider
   );
-  const record = resolveFeatureKey(state.apiKeys, feature, provider);
+  const record = resolveFeatureKey(state.keyRecords, feature, provider);
   if (!record) return null;
   return selectSavedKeys(state).find((key) => key.id === record.id) ?? null;
 }
@@ -162,7 +162,7 @@ export function selectRemovalPlan(
   state: KeyState,
   id: string
 ): Array<{ feature: Feature; to: SavedKey | null }> {
-  const plan = removalPlan(state.apiKeys, id, state.featurePreferences.writingProvider);
+  const plan = removalPlan(state.keyRecords, id, state.featurePreferences.writingProvider);
   const keys = selectSavedKeys(state);
   return plan.moves.map((move) => ({
     feature: move.feature,
@@ -291,7 +291,10 @@ export async function addApiKey(input: {
       name: name === formatDefaultName(checked.provider, number) ? "" : name,
       number,
       status: checked.status,
-      assign: featuresForNewKey(state.apiKeys, checked.provider, { forFeature, writingProvider }),
+      assign: featuresForNewKey(state.keyRecords, checked.provider, {
+        forFeature,
+        writingProvider,
+      }),
     })
     .catch(() => null);
   if (!result?.ok) return notSaved();
@@ -313,7 +316,7 @@ export async function replaceApiKey(
   id: string,
   input: { secret: string; name?: string; provider?: ApiKeyProvider; forFeature?: Feature }
 ): Promise<AddResult> {
-  const record = useSettingsStore.getState().apiKeys.keys.find((key) => key.id === id);
+  const record = useSettingsStore.getState().keyRecords.keys.find((key) => key.id === id);
   if (!record) return addApiKey(input);
   const secret = String(input.secret ?? "").trim();
   const checked = await checkedKey(secret, input.provider);
@@ -343,7 +346,7 @@ export async function replaceApiKey(
 /** Give a key another name. An empty name gives back its default name. */
 export function renameApiKey(id: string, name: string): void {
   const state = useSettingsStore.getState();
-  const record = state.apiKeys.keys.find((key) => key.id === id);
+  const record = state.keyRecords.keys.find((key) => key.id === id);
   if (!record) return;
   let clean = cleanKeyName(name);
   let number = record.number;
@@ -359,9 +362,9 @@ export function renameApiKey(id: string, name: string): void {
   }
   if (clean === record.name && number === record.number) return;
   useSettingsStore.setState({
-    apiKeys: {
-      ...state.apiKeys,
-      keys: state.apiKeys.keys.map((key) =>
+    keyRecords: {
+      ...state.keyRecords,
+      keys: state.keyRecords.keys.map((key) =>
         key.id === id ? { ...key, name: clean, number } : key
       ),
     },
@@ -384,8 +387,8 @@ export function renameApiKey(id: string, name: string): void {
  */
 export async function removeApiKey(id: string): Promise<void> {
   const state = useSettingsStore.getState();
-  if (!state.apiKeys.keys.some((key) => key.id === id)) return;
-  const plan = removalPlan(state.apiKeys, id, state.featurePreferences.writingProvider);
+  if (!state.keyRecords.keys.some((key) => key.id === id)) return;
+  const plan = removalPlan(state.keyRecords, id, state.featurePreferences.writingProvider);
   const list = await window.electronAPI
     ?.removeApiKey?.(id, plan.features as Record<string, string>)
     ?.catch((error: unknown) => {
@@ -405,10 +408,10 @@ export async function removeApiKey(id: string): Promise<void> {
  */
 export function chooseFeatureKey(feature: Feature, id: string): void {
   const state = useSettingsStore.getState();
-  const key = state.apiKeys.keys.find((candidate) => candidate.id === id);
+  const key = state.keyRecords.keys.find((candidate) => candidate.id === id);
   if (!key || !keyServes(key.provider, feature)) return;
-  const features = { ...state.apiKeys.features, [feature]: id };
-  useSettingsStore.setState({ apiKeys: { ...state.apiKeys, features } });
+  const features = { ...state.keyRecords.features, [feature]: id };
+  useSettingsStore.setState({ keyRecords: { ...state.keyRecords, features } });
   if (feature === "writing") setWritingProvider(key.provider);
   window.electronAPI
     ?.setFeatureApiKeys?.(features as Record<string, string>)

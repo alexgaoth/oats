@@ -378,7 +378,7 @@ export function ProviderKey({ provider }: { provider: string }) {
   const field = PROVIDER_KEYS[provider];
   const stored = useSettingsStore((state) => (field ? String(state[field] ?? "") : ""));
   const defaultId = useSettingsStore((state) =>
-    isKeyProvider(provider) ? (defaultKeyOf(state.apiKeys, provider)?.id ?? null) : null
+    isKeyProvider(provider) ? (defaultKeyOf(state.keyRecords, provider)?.id ?? null) : null
   );
   // Once the field is in use it stays, so what the provider said of the key
   // just saved is still there to read (ProviderKeyField's saved state).

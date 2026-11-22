@@ -316,3 +316,28 @@ test("only ids main makes pass", () => {
     assert.equal(keys.isKeyId(bad), false, String(bad));
   }
 });
+
+test("the key store keeps nothing in localStorage and logs no secret", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const read = (file) => fs.readFileSync(path.join(__dirname, "..", "..", file), "utf8");
+  // The records come from main and stay in memory; the secrets stay in main.
+  const storage = /\b(?:local|session)Storage\s*(?:\.\s*(?:setItem|getItem|removeItem|clear|key)\b|\[)/;
+  for (const file of ["src/stores/apiKeys.ts", "src/helpers/apiKeys.mjs"]) {
+    assert.doesNotMatch(read(file), storage, file);
+  }
+  const store = read("src/stores/apiKeys.ts");
+  // The secret goes to the provider's check, then to main's add and replace,
+  // and nowhere else.
+  assert.equal((store.match(/checkKey\(detected, secret\)/g) ?? []).length, 1);
+  assert.equal((store.match(/checkedKey\(secret, input\.provider\)/g) ?? []).length, 2);
+  assert.equal((store.match(/^\s+secret,$/gm) ?? []).length, 2);
+  for (const call of store.match(/logger\.\w+\([^;]*;/g) ?? []) {
+    assert.doesNotMatch(call, /secret|input\./, call);
+  }
+  // The settings store takes the records normalized, which drops any secret.
+  const settings = read("src/stores/settingsStore.ts");
+  assert.match(settings, /keyRecords: normalizeKeyRecords\(savedKeyList\)/);
+  assert.match(settings, /const records = normalizeKeyRecords\(raw\);/);
+  assert.doesNotMatch(settings, /localStorage\.setItem\([^)]*keyRecords/);
+});

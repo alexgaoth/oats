@@ -180,7 +180,7 @@ async function topicModelFor(
   provider: "openai" | "anthropic",
   job: "names" | "check"
 ): Promise<TopicModel | null> {
-  const keyId = resolveFeatureKey(getSettings().apiKeys, "writing", provider)?.id ?? "slot";
+  const keyId = resolveFeatureKey(getSettings().keyRecords, "writing", provider)?.id ?? "slot";
   const key = `${provider}:${keyId}:${job}`;
   if (sessionModels.has(key)) return sessionModels.get(key) ?? null;
   const available =
