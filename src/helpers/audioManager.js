@@ -31,6 +31,7 @@ import {
   isOnlineParakeetModel,
 } from "../models/ModelRegistry";
 import { shouldSkipTranscriptionApiKey } from "./transcriptionAuth";
+import { resolveFeatureKey } from "./apiKeys.mjs";
 import {
   isSelfHostedTranscription,
   resolveSelfHostedTranscriptionModel,
@@ -274,10 +275,13 @@ class AudioManager {
     this.onPartialTranscript = null;
     this.cachedApiKey = null;
     this.cachedApiKeyProvider = null;
+    // The OpenAI key chosen for Dictation, by its id (stores/apiKeys.ts).
+    this.cachedDictationKey = null;
 
     this._onApiKeyChanged = () => {
       this.cachedApiKey = null;
       this.cachedApiKeyProvider = null;
+      this.cachedDictationKey = null;
     };
     window.addEventListener("api-key-changed", this._onApiKeyChanged);
 
@@ -1219,7 +1223,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
     const provider = s.cloudTranscriptionProvider || "openai";
     if (provider === "openai") {
-      if (!s.useLocalWhisper && isValidApiKey(s.openaiApiKey, "openai")) return s.openaiApiKey;
+      const apiKey = s.useLocalWhisper ? "" : await this.getDictationKey(s);
+      if (isValidApiKey(apiKey, "openai")) return apiKey;
       throw Object.assign(new Error("Add an OpenAI API key in AI models."), {
         code: "API_KEY_MISSING",
       });
@@ -1335,6 +1340,25 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     return apiKey;
   }
 
+  /**
+   * The OpenAI key chosen for Dictation (stores/apiKeys.ts), asked of main by
+   * its id and kept until a key changes. With no saved key list, the
+   * provider's single slot, as before.
+   */
+  async getDictationKey(s) {
+    const key = resolveFeatureKey(s.keyRecords, "dictation", "openai");
+    if (!key) return s.openaiApiKey;
+    if (this.cachedDictationKey?.id === key.id) return this.cachedDictationKey.secret;
+    let secret = "";
+    try {
+      secret = (await window.electronAPI.getApiKeySecret?.(key.id)) || "";
+    } catch (error) {
+      logger.debug("Could not read the dictation key", { error: error?.message }, "transcription");
+    }
+    if (secret) this.cachedDictationKey = { id: key.id, secret };
+    return secret;
+  }
+
   async processWithReasoningModel(text, model, agentName, config) {
     logger.logReasoning("CALLING_REASONING_SERVICE", {
       model,
@@ -1346,7 +1370,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const startTime = Date.now();
 
     try {
-      const result = await ReasoningService.processText(text, model, agentName, config);
+      // Dictation's writing pass, on the key chosen for Dictation.
+      const result = await ReasoningService.processText(text, model, agentName, {
+        ...config,
+        keyFeature: "dictation",
+      });
 
       const processingTime = Date.now() - startTime;
 

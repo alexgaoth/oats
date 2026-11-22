@@ -2651,7 +2651,12 @@
       "saved": "已保存。",
       "getKey": "获取 {{provider}} 密钥",
       "savedKey": "你的 {{provider}} 密钥",
-      "replace": "替换"
+      "replace": "替换",
+      "defaultName": "{{provider}} 密钥 {{number}}",
+      "name": "名称",
+      "optional": "（可选）",
+      "nameHint": "例如：工作",
+      "notSaved": "Oats 无法保存密钥。请重试。"
     }
   },
   "questionCard": {

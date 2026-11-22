@@ -2656,7 +2656,12 @@
       "saved": "保存しました。",
       "getKey": "{{provider}} のキーを取得",
       "savedKey": "{{provider}} のキー",
-      "replace": "置き換える"
+      "replace": "置き換える",
+      "defaultName": "{{provider}} キー {{number}}",
+      "name": "名前",
+      "optional": "（任意）",
+      "nameHint": "例: 仕事",
+      "notSaved": "キーを保存できませんでした。もう一度お試しください。"
     }
   },
   "questionCard": {

@@ -51,6 +51,13 @@ export class SecureCache<T> {
     this.cache.clear();
   }
 
+  /** Drop every entry whose key passes `test`. */
+  deleteWhere(test: (key: string) => boolean): void {
+    for (const key of Array.from(this.cache.keys())) {
+      if (test(key)) this.cache.delete(key);
+    }
+  }
+
   cleanup(): void {
     const now = Date.now();
     const entries = Array.from(this.cache.entries());

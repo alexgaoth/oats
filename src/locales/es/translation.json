@@ -2656,7 +2656,12 @@
       "saved": "Guardada.",
       "getKey": "Consigue una clave de {{provider}}",
       "savedKey": "Tu clave de {{provider}}",
-      "replace": "Reemplazar"
+      "replace": "Reemplazar",
+      "defaultName": "Clave de {{provider}} {{number}}",
+      "name": "Nombre",
+      "optional": "(opcional)",
+      "nameHint": "Por ejemplo, Trabajo",
+      "notSaved": "Oats no pudo guardar la clave. Inténtalo de nuevo."
     }
   },
   "questionCard": {

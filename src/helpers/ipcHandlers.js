@@ -1032,6 +1032,23 @@ class IPCHandlers {
       ipcMain.handle(`save-${k.base}-key`, (event, key) => this.environmentManager[k.save](key));
     }
 
+    // Named OpenAI and Anthropic keys (helpers/apiKeys.mjs, environment.js).
+    // Every window gets the records, which hold no secret, on every change; a
+    // secret goes only to a window that asks for one key by its id, to call
+    // the provider itself (ReasoningService.ts, audioManager.js).
+    const keys = this.environmentManager;
+    keys.onApiKeysChanged = (list) => this.broadcastToWindows("api-keys-changed", list);
+    ipcMain.handle("api-keys-list", () => keys.listApiKeys());
+    ipcMain.handle("api-keys-add", (event, request) => keys.addApiKey(request));
+    ipcMain.handle("api-keys-replace", (event, id, request) => keys.replaceApiKey(id, request));
+    ipcMain.handle("api-keys-rename", (event, id, name, number) =>
+      keys.renameApiKey(id, name, number)
+    );
+    ipcMain.handle("api-keys-remove", (event, id, features) => keys.removeApiKey(id, features));
+    ipcMain.handle("api-keys-set-features", (event, features) => keys.setFeatureApiKeys(features));
+    ipcMain.handle("api-keys-set-status", (event, id, status) => keys.setApiKeyStatus(id, status));
+    ipcMain.handle("api-key-secret", (event, id) => keys.getApiKeySecret(id));
+
     ipcMain.handle("db-save-transcription", async (event, text, rawText, options) => {
       const result = this.databaseManager.saveTranscription(text, rawText, options);
       if (result?.success && result?.transcription) {
@@ -3752,7 +3769,9 @@ class IPCHandlers {
       "process-anthropic-reasoning",
       async (event, text, modelId, _agentName, config) => {
         try {
-          const apiKey = this.environmentManager.getAnthropicKey();
+          // A Writing request names its feature (`keyFeature`), and goes out on
+          // the key chosen for Writing; any other request on the slot's key.
+          const apiKey = this.environmentManager.getProviderKey("anthropic", config?.keyFeature);
 
           if (!apiKey) {
             throw new Error("Anthropic API key not configured");
@@ -3829,11 +3848,11 @@ class IPCHandlers {
     // Whether the stored key can use a model, asked once a session for the
     // topic models (topicNamingRunner.ts). True or false when Anthropic says
     // so of the model; null when it could not be told, and for a rejected key,
-    // which may be fixed.
-    ipcMain.handle("anthropic-model-available", async (event, modelId) => {
+    // which may be fixed. With a feature, the key chosen for that feature.
+    ipcMain.handle("anthropic-model-available", async (event, modelId, request = {}) => {
       const status = await anthropicModelResponse(
         modelId,
-        this.environmentManager.getAnthropicKey()
+        this.environmentManager.getProviderKey("anthropic", request?.feature)
       );
       if (status === null) return null;
       return (await loadKeyStatus()).modelAvailability(status);
@@ -4382,7 +4401,8 @@ class IPCHandlers {
                 : `${base}/audio/transcriptions`
               : "https://api.openai.com/v1/audio/transcriptions";
           } else {
-            apiKey = this.environmentManager.getOpenAIKey();
+            // A dictation transcribed again: the key chosen for Dictation.
+            apiKey = this.environmentManager.getFeatureKey("dictation", "openai");
             endpoint = "https://api.openai.com/v1/audio/transcriptions";
           }
           if (!apiKey && provider !== "custom") {
@@ -4938,13 +4958,21 @@ class IPCHandlers {
 
         let pairs;
         if (newSystem) {
-          const secrets = await fetchRealtimeToken(tokenEvent, options, { streams: 2 });
+          const secrets = await fetchRealtimeToken(tokenEvent, options, {
+            streams: 2,
+            feature: "conversations",
+          });
           pairs = [
             { streaming: newMic, secret: secrets[0] },
             { streaming: newSystem, secret: secrets[1] },
           ];
         } else {
-          pairs = [{ streaming: newMic, secret: await fetchRealtimeToken(tokenEvent, options) }];
+          pairs = [
+            {
+              streaming: newMic,
+              secret: await fetchRealtimeToken(tokenEvent, options, { feature: "conversations" }),
+            },
+          ];
         }
 
         await Promise.all(
@@ -4989,7 +5017,9 @@ class IPCHandlers {
       }
     };
 
-    const fetchRealtimeToken = async (event, options, { streams } = {}) => {
+    // `feature` is whose OpenAI key pays for the stream: a conversation's or a
+    // dictation's, each the key chosen for it (helpers/apiKeys.mjs).
+    const fetchRealtimeToken = async (event, options, { streams, feature = null } = {}) => {
       const dual = (factory) => (streams === 2 ? Promise.all([factory(), factory()]) : factory());
 
       if (options.provider === "assemblyai-realtime") {
@@ -5037,7 +5067,7 @@ class IPCHandlers {
       }
 
       if (options.mode === "byok") {
-        const apiKey = this.environmentManager.getOpenAIKey();
+        const apiKey = this.environmentManager.getProviderKey("openai", feature);
         if (!apiKey) throw new Error("No OpenAI API key configured. Add your key in Settings.");
         return streams === 2 ? [apiKey, apiKey] : apiKey;
       }
@@ -5109,7 +5139,10 @@ class IPCHandlers {
       const { mode: systemAudioMode } = await getMeetingSystemAudioPlan();
       let pairs;
       if (systemAudioMode !== "unsupported") {
-        const secrets = await fetchRealtimeToken(event, options, { streams: 2 });
+        const secrets = await fetchRealtimeToken(event, options, {
+          streams: 2,
+          feature: "conversations",
+        });
         pairs = [
           { ref: "_meetingMicStreaming", secret: secrets[0], source: "mic" },
           { ref: "_meetingSystemStreaming", secret: secrets[1], source: "system" },
@@ -5118,7 +5151,7 @@ class IPCHandlers {
         pairs = [
           {
             ref: "_meetingMicStreaming",
-            secret: await fetchRealtimeToken(event, options),
+            secret: await fetchRealtimeToken(event, options, { feature: "conversations" }),
             source: "mic",
           },
         ];
@@ -6575,10 +6608,11 @@ class IPCHandlers {
         streaming.beginConnecting();
         this._dictationStreaming = streaming;
         try {
-          const apiKey = await fetchRealtimeToken(event, {
-            mode: options.mode,
-            provider: options.provider,
-          });
+          const apiKey = await fetchRealtimeToken(
+            event,
+            { mode: options.mode, provider: options.provider },
+            { feature: "dictation" }
+          );
           if (options.provider === "tinfoil-realtime") {
             const model = options.model || TINFOIL_REALTIME_MODEL;
             await streaming.connect({

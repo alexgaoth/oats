@@ -2700,7 +2700,12 @@
       "saved": "Сохранено.",
       "getKey": "Получить ключ {{provider}}",
       "savedKey": "Ваш ключ {{provider}}",
-      "replace": "Заменить"
+      "replace": "Заменить",
+      "defaultName": "Ключ {{provider}} {{number}}",
+      "name": "Название",
+      "optional": "(необязательно)",
+      "nameHint": "Например, Работа",
+      "notSaved": "Oats не удалось сохранить ключ. Попробуйте ещё раз."
     }
   },
   "questionCard": {

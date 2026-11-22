@@ -1,11 +1,25 @@
 const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs/promises");
+const crypto = require("crypto");
 const { app } = require("electron");
 const debugLogger = require("./debugLogger");
 const { normalizeUiLanguage } = require("./i18nMain");
 const secretCrypto = require("./secretCrypto");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
+
+// Named keys (helpers/apiKeys.mjs): the providers that keep more than one key,
+// each provider's single slot, and the files in secure-keys that hold them.
+const NAMED_KEY_SLOTS = Object.fromEntries(
+  BYOK_API_KEYS.filter((k) => k.named).map((k) => [k.base, k.env])
+);
+const KEY_LIST_FILE = "api-keys.json";
+const KEY_FILE = /^api-key-(k[0-9a-f]{16})\.(enc|plain)$/;
+const KEY_ID = /^k[0-9a-f]{16}$/;
+// The longest secret a key may be: far above any provider's, far below abuse.
+const KEY_SECRET_MAX = 512;
+// Writes of key files and the list, in order, across every instance.
+let keyWriteQueue = Promise.resolve();
 
 const SECRET_KEYS = [
   ...BYOK_API_KEYS.map((k) => k.env),
@@ -104,6 +118,12 @@ class EnvironmentManager {
       await this._migrateToSecureStorage();
     }
     await this._loadAllSecrets();
+    // Named keys never stop a launch: without them, every call uses the slots.
+    await this._loadApiKeys().catch((error) => {
+      debugLogger.error("Could not load the named keys", { error: error.message }, "environment");
+      this._keyRules = null;
+      this._keyList = null;
+    });
   }
 
   _getMigrationSentinelPath() {
@@ -261,6 +281,584 @@ class EnvironmentManager {
     } else {
       delete process.env[envVarName];
     }
+    return { success: true };
+  }
+
+  // --- Named keys --------------------------------------------------------
+  //
+  // More than one OpenAI or Anthropic key, each with a name, and the key each
+  // feature uses on the API-key route; helpers/apiKeys.mjs holds the rules.
+  // Each key's secret is its own file in secure-keys, encrypted like the
+  // other secrets (`api-key-<id>.enc`; `.plain` only where nothing can
+  // encrypt, as `.env` is then). Their records hold no secret and sit in
+  // `api-keys.json` beside them: id, provider, name, the last four
+  // characters, when the key was added, what the provider said of it, and
+  // the key each feature uses. Each provider's single slot (OPENAI_API_KEY)
+  // keeps its default key, its oldest, so every path that does not know
+  // features works as before. Secrets stay in this process: the records go
+  // to the windows, and a secret only to a window that asks for one key.
+
+  _keyListPath() {
+    return path.join(this._getSecureKeysDir(), KEY_LIST_FILE);
+  }
+
+  _keyFilePath(id, form) {
+    if (!KEY_ID.test(String(id))) throw new Error("invalid key id");
+    return path.join(this._getSecureKeysDir(), `api-key-${id}.${form}`);
+  }
+
+  /**
+   * A secret as a key may hold it: one printable word, of a sane length, and
+   * not the placeholder `.env.example` holds.
+   */
+  _cleanKeySecret(secret) {
+    const value = typeof secret === "string" ? secret.trim() : "";
+    if (value.length < 8 || value.length > KEY_SECRET_MAX) return "";
+    if (!/^[\x21-\x7e]+$/.test(value) || /^your_\w+_here$/i.test(value)) return "";
+    return value;
+  }
+
+  _newKeyId() {
+    let id;
+    do id = `k${crypto.randomBytes(8).toString("hex")}`;
+    while (this._keyList?.keys.some((key) => key.id === id));
+    return id;
+  }
+
+  /** A record for a key not saved before: added after every key there is. */
+  _newKeyRecord(provider, secret, { name = "", number, status = null } = {}) {
+    const rules = this._keyRules;
+    const keys = this._keyList?.keys ?? [];
+    const defaults = keys.filter((key) => key.provider === provider && !key.name);
+    const next = 1 + Math.max(0, ...defaults.map((key) => key.number));
+    const latest = Math.max(0, ...keys.map((key) => key.addedAt));
+    return {
+      id: this._newKeyId(),
+      provider,
+      name: rules.cleanKeyName(name),
+      number: Number.isInteger(number) && number > 0 && number < 1e6 ? number : next,
+      tail: secret.slice(-4),
+      addedAt: Math.max(Date.now(), latest + 1),
+      status: rules.isKeyStatus(status) ? status : null,
+    };
+  }
+
+  async _readKeySecret(id) {
+    for (const form of ["enc", "plain"]) {
+      let buffer;
+      try {
+        buffer = await fsPromises.readFile(this._keyFilePath(id, form));
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        debugLogger.error("Could not read a saved key", { code: error.code }, "environment");
+        return { unreadable: true };
+      }
+      try {
+        if (form === "enc") {
+          const { value, needsReencrypt } = secretCrypto.decrypt(buffer);
+          if (needsReencrypt) await this._writeKeySecret(id, value).catch(() => {});
+          return { secret: value };
+        }
+        const value = buffer.toString("utf8").trim();
+        // A key saved where nothing could encrypt, encrypted once something can.
+        if (this._encryptionAvailable()) await this._writeKeySecret(id, value).catch(() => {});
+        return { secret: value };
+      } catch (error) {
+        debugLogger.error(
+          "Failed to decrypt a saved key — user must re-enter",
+          { code: error.code, error: error.message },
+          "environment"
+        );
+        return { unreadable: true };
+      }
+    }
+    return { missing: true };
+  }
+
+  async _writeKeySecret(id, secret) {
+    await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
+    const encrypted = this._encryptionAvailable();
+    const file = this._keyFilePath(id, encrypted ? "enc" : "plain");
+    const tmp = `${file}.tmp`;
+    await fsPromises.writeFile(tmp, encrypted ? secretCrypto.encrypt(secret) : secret, {
+      mode: 0o600,
+    });
+    await fsPromises.rename(tmp, file);
+    await fsPromises.unlink(this._keyFilePath(id, encrypted ? "plain" : "enc")).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  }
+
+  async _deleteKeySecret(id) {
+    for (const form of ["enc", "plain"]) {
+      await fsPromises.unlink(this._keyFilePath(id, form)).catch((error) => {
+        if (error.code !== "ENOENT") throw error;
+      });
+    }
+  }
+
+  /**
+   * Read the keys at launch. The list says which keys exist: a key whose file
+   * is gone was removed, and a file the list does not name is a key whose
+   * adding never finished, so it is deleted. Without a list that can be read,
+   * the files are the keys. A key that cannot be decrypted now stays on disk
+   * for a later launch that can. The first time this runs, each provider's one
+   * key becomes "<Provider> key 1", chosen for every feature that uses that
+   * provider; so does a key an earlier version put in an empty slot. Nothing
+   * here can stop the launch: on a failure, the slots' keys serve this session.
+   */
+  async _loadApiKeys() {
+    this._keyRules = await import("./apiKeys.mjs");
+    this._keySecrets = new Map();
+    this._keyList = { keys: [], features: {} };
+    let changed = false;
+    try {
+      changed = await this._readKeyFiles();
+    } catch (error) {
+      debugLogger.error("Could not read the saved keys", { error: error.message }, "environment");
+      this._keySecrets = new Map();
+      this._keyList = { keys: [], features: {} };
+    }
+    const adopted = [];
+    for (const [provider, env] of Object.entries(NAMED_KEY_SLOTS)) {
+      if (this._keyList.keys.some((key) => key.provider === provider)) continue;
+      const secret = this._cleanKeySecret(process.env[env]);
+      if (!secret) continue;
+      const record = this._newKeyRecord(provider, secret);
+      this._keyList.keys.push(record);
+      this._keySecrets.set(record.id, secret);
+      adopted.push(record);
+    }
+    if (adopted.length) {
+      this._keyList.features = this._keyRules.slotKeyChoices(adopted, this._keyList.features);
+      changed = true;
+      debugLogger.info(
+        "Gave the saved keys names",
+        { count: adopted.length, keys: this._keyList.keys.length },
+        "environment"
+      );
+    }
+    this._keyList = this._keyRules.normalizeKeyRecords(this._keyList);
+    if (changed || Object.keys(this._slotChanges()).length) {
+      await this._persistKeys({ write: adopted.map((key) => key.id) }).catch((error) =>
+        this._keyWriteFailed(error)
+      );
+    }
+  }
+
+  /** Read the list and the secrets it names. True when the list must be written again. */
+  async _readKeyFiles() {
+    const rules = this._keyRules;
+    let raw = null;
+    let trusted = false;
+    let changed = false;
+    try {
+      raw = JSON.parse(await fsPromises.readFile(this._keyListPath(), "utf8"));
+      trusted = Boolean(raw) && typeof raw === "object";
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        debugLogger.error(
+          "The list of saved keys could not be read",
+          { code: error.code, error: error.message },
+          "environment"
+        );
+      }
+    }
+    if (raw !== null && !trusted) changed = true;
+    if (!trusted && fs.existsSync(this._keyListPath())) {
+      // Kept aside for a person to look at, never read again.
+      await fsPromises
+        .rename(this._keyListPath(), `${this._keyListPath()}.unreadable-${Date.now()}`)
+        .catch(() => {});
+      changed = true;
+    }
+    const listed = rules.normalizeKeyRecords(trusted ? raw : null);
+    for (const key of listed.keys) {
+      const found = await this._readKeySecret(key.id);
+      if (found.missing) {
+        changed = true;
+        continue;
+      }
+      if (found.secret) {
+        this._keySecrets.set(key.id, found.secret);
+        if (key.tail !== found.secret.slice(-4)) {
+          key.tail = found.secret.slice(-4);
+          changed = true;
+        }
+      }
+      this._keyList.keys.push(key);
+    }
+    this._keyList.features = rules.cleanFeatureKeys(listed.features, this._keyList.keys);
+
+    let files = [];
+    try {
+      files = await fsPromises.readdir(this._getSecureKeysDir());
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    const found = [];
+    for (const file of files) {
+      const id = KEY_FILE.exec(file)?.[1];
+      if (!id || this._keyList.keys.some((key) => key.id === id) || found.includes(id)) continue;
+      found.push(id);
+      if (trusted) {
+        await this._deleteKeySecret(id);
+        continue;
+      }
+      const secret = (await this._readKeySecret(id)).secret;
+      if (!secret) continue;
+      const provider = secret.startsWith("sk-ant-") ? "anthropic" : "openai";
+      const stat = await fsPromises.stat(this._keyFilePath(id, "enc")).catch(() => null);
+      this._keyList.keys.push({
+        ...this._newKeyRecord(provider, secret),
+        id,
+        addedAt: stat ? Math.floor(stat.mtimeMs) : Date.now(),
+      });
+      this._keySecrets.set(id, secret);
+      changed = true;
+    }
+    if (!trusted && this._keyList.keys.length) {
+      this._keyList.features = rules.slotKeyChoices(
+        rules.normalizeKeyRecords(this._keyList).keys,
+        this._keyList.features
+      );
+    }
+    return changed;
+  }
+
+  /** The records whose secret this process holds. */
+  _readableKeys() {
+    const keys = (this._keyList?.keys ?? []).filter((key) => this._keySecrets?.has(key.id));
+    return { keys, features: this._keyRules.cleanFeatureKeys(this._keyList.features, keys) };
+  }
+
+  /**
+   * The slots to change: a provider's slot holds its default key's secret. A
+   * provider with no key keeps its slot as it is, unless it is in `clear`
+   * (its last key was just removed) and has no key this launch cannot read.
+   */
+  _slotChanges(clear = []) {
+    const readable = this._readableKeys();
+    const changes = {};
+    for (const [provider, env] of Object.entries(NAMED_KEY_SLOTS)) {
+      const key = this._keyRules.defaultKeyOf(readable, provider);
+      const unread = this._keyList.keys.some((candidate) => candidate.provider === provider);
+      const value = key
+        ? this._keySecrets.get(key.id)
+        : clear.includes(provider) && !unread
+          ? ""
+          : null;
+      if (value !== null && (process.env[env] || "") !== value) changes[env] = value;
+    }
+    return changes;
+  }
+
+  /**
+   * Make memory the keys as they are now, then write them, in an order a
+   * crash cannot turn into a key the person removed: new secrets first, then
+   * each provider's slot, then removed secrets deleted, then the list.
+   */
+  _persistKeys({ write = [], remove = [], clear = [] } = {}) {
+    const slots = this._slotChanges(clear);
+    for (const [env, value] of Object.entries(slots)) {
+      if (value) process.env[env] = value;
+      else delete process.env[env];
+    }
+    const secrets = write
+      .map((id) => [id, this._keySecrets.get(id)])
+      .filter(([, secret]) => secret);
+    const list = JSON.stringify(
+      {
+        version: 1,
+        keys: this._keyList.keys.map(this._keyRules.publicKeyRecord),
+        features: this._keyList.features,
+      },
+      null,
+      2
+    );
+    keyWriteQueue = keyWriteQueue
+      .catch(() => {})
+      .then(async () => {
+        for (const [id, secret] of secrets) await this._writeKeySecret(id, secret);
+        await this._writeSlots(slots);
+        for (const id of remove) await this._deleteKeySecret(id);
+        await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
+        const tmp = `${this._keyListPath()}.tmp`;
+        await fsPromises.writeFile(tmp, list, { encoding: "utf8", mode: 0o600 });
+        await fsPromises.rename(tmp, this._keyListPath());
+      });
+    return keyWriteQueue;
+  }
+
+  /**
+   * The slots' files. Memory already holds the new values (`_persistKeys`),
+   * so this writes files only: a write still queued never puts an older
+   * value back in `process.env`.
+   */
+  async _writeSlots(slots) {
+    const entries = Object.entries(slots);
+    if (!entries.length) return;
+    if (!this._encryptionAvailable()) {
+      await this.saveAllKeysToEnvFile();
+      return;
+    }
+    await fsPromises.mkdir(this._getSecureKeysDir(), { recursive: true });
+    for (const [env, value] of entries) {
+      const file = this._getSecretFilePath(env);
+      if (!value) {
+        await fsPromises.unlink(file).catch((error) => {
+          if (error.code !== "ENOENT") throw error;
+        });
+        continue;
+      }
+      const tmp = `${file}.tmp`;
+      await fsPromises.writeFile(tmp, secretCrypto.encrypt(value), { mode: 0o600 });
+      await fsPromises.rename(tmp, file);
+    }
+  }
+
+  _keysChanged() {
+    try {
+      this.onApiKeysChanged?.(this.listApiKeys());
+    } catch (error) {
+      debugLogger.warn("Could not tell the windows of a key change", { error: error.message });
+    }
+  }
+
+  /** The saved keys' records and each feature's key: what the windows see. No secret. */
+  listApiKeys() {
+    if (!this._keyRules || !this._keyList) return { keys: [], features: {} };
+    const readable = this._readableKeys();
+    return {
+      keys: readable.keys.map(this._keyRules.publicKeyRecord),
+      features: readable.features,
+    };
+  }
+
+  /** One key's secret, for a window that calls the provider itself. */
+  getApiKeySecret(id) {
+    return (this._keyList && this._keySecrets.get(String(id))) || "";
+  }
+
+  /**
+   * The secret a feature's call to a provider uses: the key chosen for that
+   * feature, else the provider's oldest usable key (helpers/apiKeys.mjs), else
+   * the provider's slot as before.
+   */
+  getFeatureKey(feature, provider) {
+    const env = NAMED_KEY_SLOTS[provider];
+    if (this._keyRules && this._keyList && this._keyRules.isFeature(feature)) {
+      const key = this._keyRules.resolveFeatureKey(this._readableKeys(), feature, provider);
+      if (key) return this._keySecrets.get(key.id) || "";
+    }
+    return env ? this._getKey(env) : "";
+  }
+
+  /** A provider's key for a call: the feature's when the call names one, else the slot. */
+  getProviderKey(provider, feature) {
+    if (feature && this._keyRules?.isFeature(feature)) return this.getFeatureKey(feature, provider);
+    const env = NAMED_KEY_SLOTS[provider];
+    return env ? this._getKey(env) : "";
+  }
+
+  /**
+   * Save a key checked with its provider in the window (keyCheck.ts). `assign`
+   * names the features it is now chosen for. A secret already saved is not
+   * saved twice: that key is the answer, renamed when a name is given.
+   */
+  async addApiKey(request = {}) {
+    const rules = this._keyRules;
+    if (!rules || !this._keyList) return { ok: false, reason: "not-ready" };
+    const provider = request.provider;
+    const secret = this._cleanKeySecret(request.secret);
+    if (!rules.isKeyProvider(provider) || !secret) return { ok: false, reason: "invalid" };
+    const assign = (Array.isArray(request.assign) ? request.assign : []).filter((feature) =>
+      rules.keyServes(provider, feature)
+    );
+    const existing = this._keyList.keys.find(
+      (key) => key.provider === provider && this._keySecrets.get(key.id) === secret
+    );
+    if (existing) {
+      const name = rules.cleanKeyName(request.name);
+      if (name) existing.name = name;
+      if (rules.isKeyStatus(request.status)) existing.status = request.status;
+      for (const feature of assign) this._keyList.features[feature] = existing.id;
+      await this._persistKeys().catch((error) => this._keyWriteFailed(error));
+      this._keysChanged();
+      return { ok: true, id: existing.id, list: this.listApiKeys() };
+    }
+    const record = this._newKeyRecord(provider, secret, request);
+    try {
+      await this._writeKeySecret(record.id, secret);
+    } catch (error) {
+      this._keyWriteFailed(error);
+      return { ok: false, reason: "not-saved" };
+    }
+    this._keyList.keys.push(record);
+    this._keySecrets.set(record.id, secret);
+    for (const feature of assign) this._keyList.features[feature] = record.id;
+    this._keyList = rules.normalizeKeyRecords(this._keyList);
+    const saved = await this._persistKeys().then(
+      () => true,
+      (error) => this._keyWriteFailed(error)
+    );
+    this._keysChanged();
+    return saved
+      ? { ok: true, id: record.id, list: this.listApiKeys() }
+      : { ok: false, reason: "not-saved" };
+  }
+
+  /** Put another secret of the same provider in a key's place: same id, same features. */
+  async replaceApiKey(id, request = {}) {
+    const rules = this._keyRules;
+    const record = this._keyList?.keys.find((key) => key.id === id);
+    const secret = this._cleanKeySecret(request.secret);
+    if (!rules || !record || !secret) return { ok: false, reason: "invalid" };
+    try {
+      await this._writeKeySecret(record.id, secret);
+    } catch (error) {
+      this._keyWriteFailed(error);
+      return { ok: false, reason: "not-saved" };
+    }
+    this._keySecrets.set(record.id, secret);
+    record.tail = secret.slice(-4);
+    record.status = rules.isKeyStatus(request.status) ? request.status : null;
+    const name = rules.cleanKeyName(request.name);
+    if (name) record.name = name;
+    const saved = await this._persistKeys().then(
+      () => true,
+      (error) => this._keyWriteFailed(error)
+    );
+    this._keysChanged();
+    return saved ? { ok: true, list: this.listApiKeys() } : { ok: false, reason: "not-saved" };
+  }
+
+  async renameApiKey(id, name, number) {
+    const record = this._keyList?.keys.find((key) => key.id === id);
+    if (!record) return null;
+    record.name = this._keyRules.cleanKeyName(name);
+    if (Number.isInteger(number) && number > 0 && number < 1e6) record.number = number;
+    await this._persistKeys().catch((error) => this._keyWriteFailed(error));
+    this._keysChanged();
+    return this.listApiKeys();
+  }
+
+  /**
+   * Remove a key and delete its secret. `features` is where the window moved
+   * the features that used it (helpers/apiKeys.mjs, `removalPlan`); a choice
+   * it does not name is kept, unless it was the removed key.
+   */
+  async removeApiKey(id, features) {
+    const rules = this._keyRules;
+    const removed = this._keyList?.keys.find((key) => key.id === id);
+    if (!rules || !removed) return null;
+    this._keySecrets.delete(id);
+    const keys = this._keyList.keys.filter((key) => key.id !== id);
+    const kept = Object.fromEntries(
+      Object.entries(this._keyList.features).filter(([, chosen]) => chosen !== id)
+    );
+    const moved = rules.cleanFeatureKeys(features, keys);
+    this._keyList = { keys, features: rules.cleanFeatureKeys({ ...kept, ...moved }, keys) };
+    await this._persistKeys({ remove: [id], clear: [removed.provider] }).catch((error) =>
+      this._keyWriteFailed(error)
+    );
+    this._keysChanged();
+    return this.listApiKeys();
+  }
+
+  /**
+   * The key each feature uses on the API-key route. A feature not named, or
+   * named with a key that cannot serve it, keeps its key.
+   */
+  async setFeatureApiKeys(features) {
+    if (!this._keyRules || !this._keyList) return null;
+    const chosen = this._keyRules.cleanFeatureKeys(features, this._keyList.keys);
+    this._keyList.features = this._keyRules.cleanFeatureKeys(
+      { ...this._keyList.features, ...chosen },
+      this._keyList.keys
+    );
+    await this._persistKeys().catch((error) => this._keyWriteFailed(error));
+    this._keysChanged();
+    return this.listApiKeys();
+  }
+
+  /** What the provider said of a key, kept with it. */
+  async setApiKeyStatus(id, status) {
+    const record = this._keyList?.keys.find((key) => key.id === id);
+    if (!record) return null;
+    record.status = this._keyRules.isKeyStatus(status) ? status : null;
+    await this._persistKeys().catch((error) => this._keyWriteFailed(error));
+    this._keysChanged();
+    return this.listApiKeys();
+  }
+
+  _keyWriteFailed(error) {
+    debugLogger.error(
+      "Failed to save the keys",
+      { code: error?.code, error: error?.message },
+      "environment"
+    );
+    return false;
+  }
+
+  /**
+   * The single slot's setter for OpenAI and Anthropic (`save-openai-key`):
+   * the paths that do not know features, such as the Advanced pickers. A key
+   * replaces the provider's default key, or is its first; an empty one
+   * removes the default key, and the next oldest becomes the default. Before
+   * the keys are read (init), only the slot changes, as before.
+   */
+  _saveNamedSlot(provider, value) {
+    const env = NAMED_KEY_SLOTS[provider];
+    const rules = this._keyRules;
+    if (!rules || !this._keyList) return this._saveKey(env, value);
+    const typed = typeof value === "string" ? value.trim() : "";
+    const secret = this._cleanKeySecret(typed);
+    // Text that cannot be a key (a space in it, too short) changes nothing;
+    // the windows read the slot again, so they show what is saved.
+    if (typed && !secret) {
+      this._keysChanged();
+      return { success: false };
+    }
+    const current = rules.defaultKeyOf(this._readableKeys(), provider);
+    if (secret && current) {
+      if (this._keySecrets.get(current.id) !== secret) {
+        this._keySecrets.set(current.id, secret);
+        current.tail = secret.slice(-4);
+        current.status = null;
+        this._persistKeys({ write: [current.id] }).catch((error) => this._keyWriteFailed(error));
+      }
+    } else if (secret) {
+      const before = this._readableKeys();
+      const record = this._newKeyRecord(provider, secret);
+      this._keyList.keys.push(record);
+      this._keySecrets.set(record.id, secret);
+      for (const feature of rules.featuresForNewKey(before, provider)) {
+        this._keyList.features[feature] = record.id;
+      }
+      this._keyList = rules.normalizeKeyRecords(this._keyList);
+      this._persistKeys({ write: [record.id] }).catch((error) => this._keyWriteFailed(error));
+    } else if (current) {
+      this._keySecrets.delete(current.id);
+      const keys = this._keyList.keys.filter((key) => key.id !== current.id);
+      const features = {};
+      for (const [feature, chosen] of Object.entries(this._keyList.features)) {
+        if (chosen !== current.id) features[feature] = chosen;
+        else {
+          const next = keys.find(
+            (key) => key.provider === provider && this._keySecrets.has(key.id)
+          );
+          if (next) features[feature] = next.id;
+        }
+      }
+      this._keyList = { keys, features: rules.cleanFeatureKeys(features, keys) };
+      this._persistKeys({ remove: [current.id], clear: [provider] }).catch((error) =>
+        this._keyWriteFailed(error)
+      );
+    } else if (!secret) {
+      return this._saveKey(env, "");
+    }
+    this._keysChanged();
     return { success: true };
   }
 
@@ -528,9 +1126,13 @@ for (const k of BYOK_API_KEYS) {
   EnvironmentManager.prototype[k.get] = function () {
     return this._getKey(k.env);
   };
-  EnvironmentManager.prototype[k.save] = function (key) {
-    return this._saveKey(k.env, key);
-  };
+  EnvironmentManager.prototype[k.save] = k.named
+    ? function (key) {
+        return this._saveNamedSlot(k.base, key);
+      }
+    : function (key) {
+        return this._saveKey(k.env, key);
+      };
 }
 
 module.exports = EnvironmentManager;

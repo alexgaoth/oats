@@ -327,6 +327,8 @@ Settings stored in localStorage with these keys:
 
 Secret env vars (12 total: 7 BYOK API keys + 5 enterprise cloud creds — see `SECRET_KEYS` in `environment.js`) are encrypted at rest via Electron `safeStorage` and stored as per-key files under `userData/secure-keys/`. They are loaded into `process.env` at startup by `EnvironmentManager.init()`. Renderer reads them via IPC (`get-*-key`) and writes via debounced IPC (`save-*-key`). On Linux without a keyring, secrets fall back to plaintext.
 
+**Named keys (2026-11-22).** OpenAI and Anthropic keep more than one key each, each with an optional name ("OpenAI key 1" when it has none, counted per provider), and each feature (Conversations, Dictation, Writing) uses the key chosen for it on the API-key route. The rules are `helpers/apiKeys.mjs`, shared by both processes; the interface's API is `stores/apiKeys.ts`. Each key's secret is its own encrypted file, `secure-keys/api-key-<id>.enc` (`.plain` only where nothing can encrypt), and `secure-keys/api-keys.json` holds their records with no secret: id, provider, name, the last four characters, when it was added, what the provider said of it, and the key each feature uses. Each provider's slot (`OPENAI_API_KEY`) holds its default key, its oldest, so every path that does not know features (the Advanced pickers, uploads, PromptStudio, the chat agent) works as before; a save to the slot replaces the default key. Main resolves the feature's key for the calls it makes (`getFeatureKey`: the realtime streams, a dictation's re-transcription, Anthropic writing); a window fetches one key's secret by its id (`api-key-secret`) for the calls it makes itself, and gets only the records otherwise (`api-keys-changed`). The first launch of this version turns each provider's one key into "<Provider> key 1", chosen for every feature that uses that provider.
+
 Non-secret env vars persisted to `.env` (via `saveAllKeysToEnvFile()`):
 
 - `LOCAL_TRANSCRIPTION_PROVIDER`: Transcription engine (`nvidia` for Parakeet)
@@ -833,7 +835,7 @@ const { t } = useTranslation();
 
 ## Security Considerations
 
-- API keys and enterprise cloud creds (12 secrets total) encrypted at rest via Electron `safeStorage` → OS keychain (Keychain / DPAPI / libsecret), stored as per-key files in `userData/secure-keys/`. Linux without a keyring falls back to plaintext (Electron default). Closed in #629.
+- API keys and enterprise cloud creds (12 secrets total) encrypted at rest via Electron `safeStorage` → OS keychain (Keychain / DPAPI / libsecret), stored as per-key files in `userData/secure-keys/`. Linux without a keyring falls back to plaintext (Electron default). Closed in #629. Each named OpenAI or Anthropic key is its own encrypted file there too, and removing a key deletes it (see "Named keys" above).
 - Context isolation enabled
 - No remote code execution
 - Sanitized file paths

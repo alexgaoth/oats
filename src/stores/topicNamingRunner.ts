@@ -1,6 +1,7 @@
 import reasoningService from "../services/ReasoningService";
 import type { ReasoningConfig } from "../services/BaseReasoningService";
 import { getSettings } from "./settingsStore";
+import { resolveFeatureKey } from "../helpers/apiKeys.mjs";
 import {
   currentWritingRoute,
   writingModelReady,
@@ -75,8 +76,8 @@ let loopProvider: "openai" | "anthropic" | null = null;
 /** The local writing model of the window loop that runs now, so a change of model ends it. */
 let loopLocalModel: string | null = null;
 /**
- * The topic model each provider's key can use, per job ("openai:check",
- * "anthropic:names", ...): absent until asked, null when it can use none.
+ * The topic model each key can use, per job ("openai:<key id>:check",
+ * "anthropic:<key id>:names", ...): absent until asked, null when it can use none.
  * Asked once per session (`chooseFastModel`), again only when the answer could
  * not be told.
  */
@@ -171,17 +172,21 @@ function loopLog(event: string, detail?: Record<string, unknown>): void {
   void logger.debug(`Live topics: ${event}`, detail, "topics");
 }
 
-/** The topic model this session's key can use for a job, asked of the provider once a session. */
+/**
+ * The topic model Writing's key can use for a job, asked of the provider once
+ * a session for each key: another key may reach other models.
+ */
 async function topicModelFor(
   provider: "openai" | "anthropic",
   job: "names" | "check"
 ): Promise<TopicModel | null> {
-  const key = `${provider}:${job}`;
+  const keyId = resolveFeatureKey(getSettings().keyRecords, "writing", provider)?.id ?? "slot";
+  const key = `${provider}:${keyId}:${job}`;
   if (sessionModels.has(key)) return sessionModels.get(key) ?? null;
   const available =
     provider === "openai"
-      ? (candidate: string) => reasoningService.openAiModelAvailable(candidate)
-      : (candidate: string) => reasoningService.anthropicModelAvailable(candidate);
+      ? (candidate: string) => reasoningService.openAiModelAvailable(candidate, "writing")
+      : (candidate: string) => reasoningService.anthropicModelAvailable(candidate, "writing");
   const { model, settled } = await chooseFastModel(available, topicModelIds(provider, job));
   const choice = model ? topicModelChoice(provider, job, model) : null;
   if (settled) sessionModels.set(key, choice);
