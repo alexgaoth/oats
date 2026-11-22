@@ -32,7 +32,7 @@ import {
   type SavedKey,
 } from "../../stores/apiKeys";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { KEY_NAME_MAX } from "../../helpers/apiKeys.mjs";
+import { KEY_NAME_MAX, keyUsable } from "../../helpers/apiKeys.mjs";
 import type { Feature } from "../../helpers/featureRoutes.mjs";
 import { getCachedPlatform } from "../../utils/platform";
 
@@ -169,11 +169,19 @@ function KeyRow({ savedKey, onRemoved }: { savedKey: SavedKey; onRemoved: () => 
             {KEY_PROVIDER_NAMES[savedKey.provider]}{" "}
             <span className="font-mono tabular-nums">••••{savedKey.tail}</span>
             <span aria-hidden="true"> · </span>
-            <span data-key-users>
-              {users.length
-                ? t("oats.keys.usedBy", { features: list(users) })
-                : t("oats.keys.notInUse")}
-            </span>
+            {/* A key the provider refused serves nothing until it is replaced;
+                say so here, where Replace is. */}
+            {keyUsable(savedKey.status) ? (
+              <span data-key-users>
+                {users.length
+                  ? t("oats.keys.usedBy", { features: list(users) })
+                  : t("oats.keys.notInUse")}
+              </span>
+            ) : (
+              <span data-key-users className="text-warning">
+                {t("oats.keys.reasonRefused", { provider: KEY_PROVIDER_NAMES[savedKey.provider] })}
+              </span>
+            )}
           </p>
         </div>
         {mode === "view" && (
