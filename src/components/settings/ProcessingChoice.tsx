@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Cpu, KeyRound } from "lucide-react";
+import { ChevronRight, Cpu, KeyRound, Split } from "lucide-react";
 import { cn } from "../lib/utils";
 import { getCachedPlatform } from "../../utils/platform";
 import type { ProcessingMode } from "./processing";
@@ -10,12 +10,22 @@ import { selectFeatureRoute, useSettingsStore } from "../../stores/settingsStore
 import { getProviderDisplayName } from "../../models/ModelRegistry";
 import { featureRouteDisclosure, featureRouteName } from "./featureRouteCopy";
 
+type Shown = ProcessingMode | "mixed";
+
 /**
  * The one processing choice, drawn the same in Settings › AI models and in
- * setup: two options, on this Mac or with an API key. A radio group to
- * assistive tech, moved with the arrow keys like every Oats choice. What an
- * option means in a place (the downloads setup starts, the key field) goes in
- * `details`, under the group, for the option that is chosen.
+ * setup: on this Mac or with an API key. A radio group to assistive tech,
+ * moved with the arrow keys like every Oats choice. What an option means in a
+ * place (the downloads setup starts, the key field) goes in `details`, under
+ * the group, for the option that is chosen.
+ *
+ * While the features run in different places (`value` "mixed", from a row's
+ * place menu in Your models), a third card, Mixed, opens between the two and
+ * is the checked one. It is a state, not a choice: pressing it changes
+ * nothing, and either other card puts every feature there, so Mixed closes.
+ * It opens and closes over `--motion-base` by its width and opacity, the two
+ * cards moving apart and together (Alex, 2026-11-22); under reduced motion it
+ * simply appears and goes.
  */
 export function ProcessingChoice({
   value,
@@ -26,7 +36,7 @@ export function ProcessingChoice({
   className,
   "aria-labelledby": labelledBy,
 }: {
-  value: ProcessingMode | "mixed";
+  value: Shown;
   onChange: (mode: ProcessingMode) => void;
   details?: Partial<Record<ProcessingMode, React.ReactNode>>;
   showDescriptions?: boolean;
@@ -37,31 +47,29 @@ export function ProcessingChoice({
 }) {
   const { t } = useTranslation();
   const mac = getCachedPlatform() === "darwin";
-  const options: { mode: ProcessingMode; icon: typeof Cpu; title: string; description: string }[] =
-    [
-      {
-        mode: "local",
-        icon: Cpu,
-        title: mac
-          ? t("oats.settings.processingLocal")
-          : t("oats.settings.processingLocalComputer"),
-        description: mac
-          ? t("oats.settings.processingLocalDescription")
-          : t("oats.settings.processingLocalDescriptionComputer"),
-      },
-      {
-        mode: "providers",
-        icon: KeyRound,
-        title: t("oats.settings.processingProviders"),
-        description: t("oats.settings.processingProvidersDescription"),
-      },
-    ];
-  const refs = React.useRef<(HTMLButtonElement | null)[]>([]);
-  // "Mixed" selects neither; the first option takes the tab stop.
-  const index = Math.max(
-    0,
-    options.findIndex((option) => option.mode === value)
-  );
+  const options: Record<Shown, { icon: typeof Cpu; title: string; description: string }> = {
+    local: {
+      icon: Cpu,
+      title: mac ? t("oats.settings.processingLocal") : t("oats.settings.processingLocalComputer"),
+      description: mac
+        ? t("oats.settings.processingLocalDescription")
+        : t("oats.settings.processingLocalDescriptionComputer"),
+    },
+    mixed: {
+      icon: Split,
+      title: t("oats.settings.processingMixedTitle"),
+      description: t("oats.settings.processingMixedDescription"),
+    },
+    providers: {
+      icon: KeyRound,
+      title: t("oats.settings.processingProviders"),
+      description: t("oats.settings.processingProvidersDescription"),
+    },
+  };
+  const mixed = value === "mixed";
+  const refs = React.useRef<Partial<Record<Shown, HTMLButtonElement | null>>>({});
+  // The arrows move between the two choices. From Mixed, back or up is On
+  // this Mac and forward or down is With an API key.
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const step =
       event.key === "ArrowRight" || event.key === "ArrowDown"
@@ -71,11 +79,78 @@ export function ProcessingChoice({
           : 0;
     if (!step) return;
     event.preventDefault();
-    const next = (index + step + options.length) % options.length;
-    onChange(options[next].mode);
+    const from = (Object.keys(refs.current) as Shown[]).find(
+      (mode) => refs.current[mode] === event.target
+    );
+    const next: ProcessingMode =
+      from === "mixed" || from === undefined
+        ? step > 0
+          ? "providers"
+          : "local"
+        : from === "local"
+          ? "providers"
+          : "local";
+    onChange(next);
     refs.current[next]?.focus();
   };
-  const detail = value === "mixed" ? null : details?.[value];
+  const detail = mixed ? null : details?.[value];
+
+  const card = (mode: Shown, extra?: string) => {
+    const option = options[mode];
+    const selected = mode === value;
+    const Icon = option.icon;
+    return (
+      <button
+        key={mode}
+        ref={(node) => {
+          refs.current[mode] = node;
+        }}
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        tabIndex={selected ? 0 : -1}
+        data-processing={mode}
+        onClick={() => {
+          if (mode !== "mixed") onChange(mode);
+        }}
+        className={cn(
+          "flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-4 text-left shadow-xs outline-none",
+          "transition-[border-color,background-color,box-shadow] duration-150",
+          "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          selected ? "border-primary ring-1 ring-primary" : "border-border hover:bg-muted/50",
+          mode === "mixed" && "cursor-default",
+          extra
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+            selected ? "border-primary bg-primary" : "border-input"
+          )}
+        >
+          {selected && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <Icon
+              aria-hidden="true"
+              className={cn(
+                "size-4 shrink-0",
+                selected ? "text-brand-ink" : "text-muted-foreground"
+              )}
+            />
+            {option.title}
+          </span>
+          {showDescriptions && (
+            <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
+              {option.description}
+            </span>
+          )}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div className={className}>
@@ -84,55 +159,37 @@ export function ProcessingChoice({
         aria-labelledby={labelledBy}
         aria-label={labelledBy ? undefined : t("oats.settings.processing")}
         onKeyDown={onKeyDown}
-        className={cn("grid gap-3", layout === "row" && "sm:grid-cols-2")}
+        className={cn(layout === "row" ? "flex items-stretch" : "grid gap-3")}
       >
-        {options.map((option, position) => {
-          const selected = option.mode === value;
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.mode}
-              ref={(node) => {
-                refs.current[position] = node;
-              }}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              tabIndex={position === index ? 0 : -1}
-              onClick={() => onChange(option.mode)}
+        {layout === "row" ? (
+          <>
+            {card("local", "min-w-0 flex-1 basis-0")}
+            {/* Mixed: always here, so it can open and close. Its slot grows
+                from nothing and takes the gap before it with it; the card
+                inside keeps to one line and is clipped while the slot is
+                narrow, so nothing in it reflows as it moves. */}
+            <div
+              data-processing-slot="mixed"
+              data-open={mixed}
+              aria-hidden={!mixed || undefined}
+              inert={!mixed}
               className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-4 text-left shadow-xs outline-none",
-                "transition-[border-color,background-color,box-shadow] duration-150",
-                "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                selected ? "border-primary ring-1 ring-primary" : "border-border hover:bg-muted/50"
+                "flex min-w-0 basis-0 overflow-clip [overflow-clip-margin:4px]",
+                "transition-[flex-grow,margin-left,opacity] [transition-duration:var(--motion-base)] motion-reduce:transition-none",
+                mixed ? "ml-3 grow opacity-100" : "ml-0 grow-0 opacity-0"
               )}
             >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
-                  selected ? "border-primary bg-primary" : "border-input"
-                )}
-              >
-                {selected && <span className="size-1.5 rounded-full bg-primary-foreground" />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                  <Icon
-                    aria-hidden="true"
-                    className={cn("size-4", selected ? "text-brand-ink" : "text-muted-foreground")}
-                  />
-                  {option.title}
-                </span>
-                {showDescriptions && (
-                  <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
-                    {option.description}
-                  </span>
-                )}
-              </span>
-            </button>
-          );
-        })}
+              {card("mixed", "w-full whitespace-nowrap")}
+            </div>
+            {card("providers", "ml-3 min-w-0 flex-1 basis-0")}
+          </>
+        ) : (
+          <>
+            {card("local")}
+            {mixed && card("mixed")}
+            {card("providers")}
+          </>
+        )}
       </div>
       {detail && <div className="mt-3">{detail}</div>}
     </div>

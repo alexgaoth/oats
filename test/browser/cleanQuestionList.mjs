@@ -1,6 +1,7 @@
-// Browser regression. Open /demo.html?panel=true&profile=empty&end=hold
-// on the demo harness at 880x680. Import this module through Vite's /@fs/
-// with its absolute file path, then await checkCleanQuestionList().
+// Browser regression. Open /demo.html?panel=true&profile=empty&end=hold&view=calm
+// (the plain view: the details are the default) on the demo harness at
+// 880x680. Import this module through Vite's /@fs/ with its absolute file
+// path, then await checkCleanQuestionList().
 // Give the renderer controlled cards. The AMI replay tests the upstream
 // detection separately. Use only the demo page and close it after this test.
 
@@ -72,7 +73,7 @@ export async function checkCleanQuestionList() {
       "Each arrival must announce once, without repeating the question that changed state"
     );
     const show = [...column().querySelectorAll("button")].find(
-      (button) => button.textContent === "Show transcript"
+      (button) => button.textContent === "Expand details"
     );
     show.click();
     await settle();

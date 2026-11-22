@@ -162,7 +162,8 @@ words), `edits=0` (leave the voices unnamed after Stop), `profile=empty` (no
 conversations at all, as a new install; the fake main inserts the example when
 it is asked), `profile=many` (two hundred synthetic conversations over a year,
 in three conversation groups, instead of the samples: `harness/many.mjs`),
-`theme=light|dark`, `view=calm|words`, `flow=lanes|graph`,
+`theme=light|dark`, `view=calm|words` (the plain view or the details, as
+somebody chose; without it, the app's default: the details), `flow=lanes|graph`,
 `connections=lanes|graph`, `describe=0` (no topic descriptions: the
 flow card quotes a pressed topic, as before descriptions), `badges=1` (show the "Example" badge on the demo's
 conversations), `autosearch=1` (turn auto-search on; the fake main process

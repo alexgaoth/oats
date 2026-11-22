@@ -65,9 +65,11 @@ This adds no visible setting and changes no evidence or saved data.
 
 ## Recording controls
 
-The default remains Clean. Show transcript opens the optional detail area;
-Transcript and Questions tabs avoid stacking both kinds of text. The existing
-questions count opens Questions directly. Hide details returns to Clean.
+The default is the detail area (Alex, 2026-11-22), on its Questions tab.
+Questions and Transcript tabs, Questions first, avoid stacking both kinds of
+text. Hide details goes to Clean, the plain view, and Expand details comes back
+on the tab the person had. The existing questions count opens Questions
+directly.
 
 This replaces the ambiguous Calm / Words names with an explicit action and
 removes one competing text region. Recording, detection, automatic search,
