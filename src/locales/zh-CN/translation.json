@@ -2672,11 +2672,14 @@
       "addEllipsis": "添加 API 密钥…",
       "reasonNoSpeech": "Anthropic 密钥不能转写语音。",
       "reasonRefused": "{{provider}} 拒绝了这个密钥。",
-      "moveTo": "{{features}} 改用 {{key}}。",
-      "moveToMac": "在你添加密钥前，{{features}} 在这台 Mac 上运行。",
-      "moveToComputer": "在你添加密钥前，{{features}} 在这台电脑上运行。",
+      "moveTo": "{{features}} 将使用 {{key}}。",
+      "moveToMac": "在你选择其他密钥前，{{features}} 将在这台 Mac 上运行。",
+      "moveToComputer": "在你选择其他密钥前，{{features}} 将在这台电脑上运行。",
       "removeUnused": "没有功能在使用它。",
-      "removeTitle": "要移除 {{name}} 吗？"
+      "removeTitle": "要移除 {{name}} 吗？",
+      "replaceEllipsis": "替换…",
+      "replaceTitle": "替换 {{name}}",
+      "replaceDescription": "粘贴新密钥。它会保留这个密钥的名称和使用它的功能。"
     }
   },
   "questionCard": {

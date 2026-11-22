@@ -2677,11 +2677,14 @@
       "addEllipsis": "Adicionar chave de API…",
       "reasonNoSpeech": "Chaves da Anthropic não transcrevem fala.",
       "reasonRefused": "{{provider}} recusou esta chave.",
-      "moveTo": "{{key}} assume {{features}}.",
-      "moveToMac": "Até você adicionar uma chave, este Mac cuida de {{features}}.",
-      "moveToComputer": "Até você adicionar uma chave, este computador cuida de {{features}}.",
+      "moveTo": "Para {{features}}, o Oats vai usar {{key}}.",
+      "moveToMac": "Até você escolher outra chave, o Oats executa {{features}} neste Mac.",
+      "moveToComputer": "Até você escolher outra chave, o Oats executa {{features}} neste computador.",
       "removeUnused": "Nenhum recurso a usa.",
-      "removeTitle": "Remover {{name}}?"
+      "removeTitle": "Remover {{name}}?",
+      "replaceEllipsis": "Substituir…",
+      "replaceTitle": "Substituir {{name}}",
+      "replaceDescription": "Cole a nova chave. Ela mantém o nome desta chave e os recursos que a usam."
     }
   },
   "questionCard": {

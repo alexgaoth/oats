@@ -2677,11 +2677,14 @@
       "addEllipsis": "Ajouter une clé d’API…",
       "reasonNoSpeech": "Les clés Anthropic ne transcrivent pas la parole.",
       "reasonRefused": "{{provider}} a refusé cette clé.",
-      "moveTo": "{{key}} prend le relais pour {{features}}.",
-      "moveToMac": "Jusqu’à l’ajout d’une clé, ce Mac s’occupe de {{features}}.",
-      "moveToComputer": "Jusqu’à l’ajout d’une clé, cet ordinateur s’occupe de {{features}}.",
+      "moveTo": "Pour {{features}}, Oats utilisera {{key}}.",
+      "moveToMac": "Jusqu’à ce que vous choisissiez une autre clé, Oats exécutera {{features}} sur ce Mac.",
+      "moveToComputer": "Jusqu’à ce que vous choisissiez une autre clé, Oats exécutera {{features}} sur cet ordinateur.",
       "removeUnused": "Aucune fonction ne l’utilise.",
-      "removeTitle": "Supprimer {{name}} ?"
+      "removeTitle": "Supprimer {{name}} ?",
+      "replaceEllipsis": "Remplacer…",
+      "replaceTitle": "Remplacer {{name}}",
+      "replaceDescription": "Collez la nouvelle clé. Elle garde le nom de celle-ci et les fonctions qui l’utilisent."
     }
   },
   "questionCard": {

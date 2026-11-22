@@ -2677,11 +2677,14 @@
       "addEllipsis": "Aggiungi chiave API…",
       "reasonNoSpeech": "Le chiavi Anthropic non trascrivono il parlato.",
       "reasonRefused": "{{provider}} ha rifiutato questa chiave.",
-      "moveTo": "{{key}} si occupa di {{features}}.",
-      "moveToMac": "Finché non aggiungi una chiave, se ne occupa questo Mac: {{features}}.",
-      "moveToComputer": "Finché non aggiungi una chiave, se ne occupa questo computer: {{features}}.",
+      "moveTo": "Per {{features}} Oats userà {{key}}.",
+      "moveToMac": "Finché non scegli un’altra chiave, Oats esegue {{features}} su questo Mac.",
+      "moveToComputer": "Finché non scegli un’altra chiave, Oats esegue {{features}} su questo computer.",
       "removeUnused": "Nessuna funzione la usa.",
-      "removeTitle": "Rimuovere {{name}}?"
+      "removeTitle": "Rimuovere {{name}}?",
+      "replaceEllipsis": "Sostituisci…",
+      "replaceTitle": "Sostituisci {{name}}",
+      "replaceDescription": "Incolla la nuova chiave. Mantiene il nome di questa chiave e le funzioni che la usano."
     }
   },
   "questionCard": {

@@ -2677,11 +2677,14 @@
       "addEllipsis": "Add API key…",
       "reasonNoSpeech": "Anthropic keys do not transcribe speech.",
       "reasonRefused": "{{provider}} refused this key.",
-      "moveTo": "{{key}} takes over {{features}}.",
-      "moveToMac": "Until you add a key, this Mac runs {{features}}.",
-      "moveToComputer": "Until you add a key, this computer runs {{features}}.",
+      "moveTo": "{{features}} will use {{key}}.",
+      "moveToMac": "{{features}} will run on this Mac until you choose another key.",
+      "moveToComputer": "{{features}} will run on this computer until you choose another key.",
       "removeUnused": "No feature uses it.",
-      "removeTitle": "Remove {{name}}?"
+      "removeTitle": "Remove {{name}}?",
+      "replaceEllipsis": "Replace…",
+      "replaceTitle": "Replace {{name}}",
+      "replaceDescription": "Paste the new key. It keeps this key’s name and the features that use it."
     }
   },
   "questionCard": {

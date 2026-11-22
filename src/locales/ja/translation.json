@@ -2678,10 +2678,13 @@
       "reasonNoSpeech": "Anthropic のキーでは音声を文字起こしできません。",
       "reasonRefused": "{{provider}} はこのキーを拒否しました。",
       "moveTo": "{{features}} は {{key}} を使います。",
-      "moveToMac": "キーを追加するまで、{{features}} はこの Mac で動きます。",
-      "moveToComputer": "キーを追加するまで、{{features}} はこのコンピューターで動きます。",
+      "moveToMac": "別のキーを選ぶまで、{{features}} はこの Mac で動きます。",
+      "moveToComputer": "別のキーを選ぶまで、{{features}} はこのコンピューターで動きます。",
       "removeUnused": "このキーを使っている機能はありません。",
-      "removeTitle": "{{name}} を削除しますか？"
+      "removeTitle": "{{name}} を削除しますか？",
+      "replaceEllipsis": "置き換える…",
+      "replaceTitle": "{{name}} を置き換える",
+      "replaceDescription": "新しいキーを貼り付けてください。このキーの名前と、このキーを使う機能はそのまま引き継がれます。"
     }
   },
   "questionCard": {

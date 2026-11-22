@@ -1,11 +1,19 @@
 import * as React from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, KeyRound, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  KeyRound,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +112,7 @@ function KeyRow({ savedKey, onRemoved }: { savedKey: SavedKey; onRemoved: () => 
   const list = useFeatureList();
   const users = useSettingsStore(useShallow((state) => selectKeyUsers(state, savedKey.id)));
   const [mode, setMode] = useState<"view" | "rename" | "remove">("view");
+  const [replacing, setReplacing] = useState(false);
   const [draft, setDraft] = useState(savedKey.name);
   const menuButton = useRef<HTMLButtonElement>(null);
   // Back from renaming or from the question, the focus goes back to the menu.
@@ -190,6 +199,10 @@ function KeyRow({ savedKey, onRemoved }: { savedKey: SavedKey; onRemoved: () => 
                 <Pencil aria-hidden="true" />
                 {t("oats.keys.rename")}
               </DropdownMenuItem>
+              <DropdownMenuItem onSelectAfterClose={() => setReplacing(true)}>
+                <RefreshCw aria-hidden="true" />
+                {t("oats.keys.replaceEllipsis")}
+              </DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onSelectAfterClose={() => setMode("remove")}>
                 <Trash2 aria-hidden="true" />
                 {t("oats.keys.remove")}
@@ -205,14 +218,29 @@ function KeyRow({ savedKey, onRemoved }: { savedKey: SavedKey; onRemoved: () => 
           onRemoved={onRemoved}
         />
       )}
+      {/* A key revoked or rotated: paste its successor in its place. It keeps
+          its name and the features that use it (replaceApiKey). */}
+      <Dialog open={replacing} onOpenChange={setReplacing}>
+        <DialogContent
+          className="oats-surface motion-reduce:animate-none"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            menuButton.current?.focus();
+          }}
+        >
+          <DialogTitle>{t("oats.keys.replaceTitle", { name: savedKey.name })}</DialogTitle>
+          <DialogDescription>{t("oats.keys.replaceDescription")}</DialogDescription>
+          <ProviderKeyField provider={savedKey.provider} replaces={savedKey.id} autoFocus />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 /**
  * Remove, asked in place: the key's name, where each feature that uses it
- * goes (another key of the same provider, Writing perhaps another provider's,
- * or this Mac until a key is added), Cancel and Remove. Main deletes the
+ * goes (another usable key of the same provider, never another provider's;
+ * else this Mac until another key is chosen), Cancel and Remove. Main deletes the
  * secret (removeApiKey).
  */
 function RemoveQuestion({

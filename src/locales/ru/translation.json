@@ -2721,11 +2721,14 @@
       "addEllipsis": "Добавить API-ключ…",
       "reasonNoSpeech": "Ключи Anthropic не распознают речь.",
       "reasonRefused": "{{provider}} отклонил этот ключ.",
-      "moveTo": "{{features}}: дальше работает с ключом {{key}}.",
-      "moveToMac": "Пока вы не добавите ключ, {{features}} работает на этом Mac.",
-      "moveToComputer": "Пока вы не добавите ключ, {{features}} работает на этом компьютере.",
+      "moveTo": "{{features}}: будет использоваться {{key}}.",
+      "moveToMac": "{{features}}: на этом Mac, пока вы не выберете другой ключ.",
+      "moveToComputer": "{{features}}: на этом компьютере, пока вы не выберете другой ключ.",
       "removeUnused": "Ни одна функция его не использует.",
-      "removeTitle": "Удалить {{name}}?"
+      "removeTitle": "Удалить {{name}}?",
+      "replaceEllipsis": "Заменить…",
+      "replaceTitle": "Заменить {{name}}",
+      "replaceDescription": "Вставьте новый ключ. Он сохранит название этого ключа и функции, которые его используют."
     }
   },
   "questionCard": {

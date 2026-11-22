@@ -2677,11 +2677,14 @@
       "addEllipsis": "Añadir clave de API…",
       "reasonNoSpeech": "Las claves de Anthropic no transcriben voz.",
       "reasonRefused": "{{provider}} rechazó esta clave.",
-      "moveTo": "{{key}} se encarga de {{features}}.",
-      "moveToMac": "Hasta que añadas una clave, este Mac se encarga de {{features}}.",
-      "moveToComputer": "Hasta que añadas una clave, este equipo se encarga de {{features}}.",
+      "moveTo": "Para {{features}} se usará {{key}}.",
+      "moveToMac": "Hasta que elijas otra clave, Oats ejecutará {{features}} en este Mac.",
+      "moveToComputer": "Hasta que elijas otra clave, Oats ejecutará {{features}} en este equipo.",
       "removeUnused": "Ninguna función la usa.",
-      "removeTitle": "¿Quitar {{name}}?"
+      "removeTitle": "¿Quitar {{name}}?",
+      "replaceEllipsis": "Reemplazar…",
+      "replaceTitle": "Reemplazar {{name}}",
+      "replaceDescription": "Pega la clave nueva. Conserva el nombre de esta clave y las funciones que la usan."
     }
   },
   "questionCard": {

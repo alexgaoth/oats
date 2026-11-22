@@ -2672,11 +2672,14 @@
       "addEllipsis": "新增 API 金鑰…",
       "reasonNoSpeech": "Anthropic 金鑰無法轉寫語音。",
       "reasonRefused": "{{provider}} 拒絕了這個金鑰。",
-      "moveTo": "{{features}} 改用 {{key}}。",
-      "moveToMac": "在你新增金鑰前，{{features}} 在這台 Mac 上執行。",
-      "moveToComputer": "在你新增金鑰前，{{features}} 在這台電腦上執行。",
+      "moveTo": "{{features}} 將使用 {{key}}。",
+      "moveToMac": "在你選擇其他金鑰前，{{features}} 將在這台 Mac 上執行。",
+      "moveToComputer": "在你選擇其他金鑰前，{{features}} 將在這台電腦上執行。",
       "removeUnused": "沒有功能在使用它。",
-      "removeTitle": "要移除 {{name}} 嗎？"
+      "removeTitle": "要移除 {{name}} 嗎？",
+      "replaceEllipsis": "替換…",
+      "replaceTitle": "替換 {{name}}",
+      "replaceDescription": "貼上新金鑰。它會保留這個金鑰的名稱和使用它的功能。"
     }
   },
   "questionCard": {

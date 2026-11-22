@@ -2677,11 +2677,14 @@
       "addEllipsis": "API-Schlüssel hinzufügen …",
       "reasonNoSpeech": "Anthropic-Schlüssel transkribieren keine Sprache.",
       "reasonRefused": "{{provider}} hat diesen Schlüssel abgelehnt.",
-      "moveTo": "{{key}} übernimmt {{features}}.",
-      "moveToMac": "Bis Sie einen Schlüssel hinzufügen, übernimmt dieser Mac {{features}}.",
-      "moveToComputer": "Bis Sie einen Schlüssel hinzufügen, übernimmt dieser Computer {{features}}.",
+      "moveTo": "Für {{features}} nutzt Oats dann {{key}}.",
+      "moveToMac": "Bis Sie einen anderen Schlüssel wählen, führt Oats {{features}} auf diesem Mac aus.",
+      "moveToComputer": "Bis Sie einen anderen Schlüssel wählen, führt Oats {{features}} auf diesem Computer aus.",
       "removeUnused": "Keine Funktion verwendet ihn.",
-      "removeTitle": "{{name}} entfernen?"
+      "removeTitle": "{{name}} entfernen?",
+      "replaceEllipsis": "Ersetzen …",
+      "replaceTitle": "{{name}} ersetzen",
+      "replaceDescription": "Fügen Sie den neuen Schlüssel ein. Er behält den Namen dieses Schlüssels und die Funktionen, die ihn verwenden."
     }
   },
   "questionCard": {
