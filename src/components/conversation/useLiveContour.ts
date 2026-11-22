@@ -54,7 +54,7 @@ function useLevelHistory(recording: boolean) {
  * finalizes a segment. One redraw of a static canvas per second, not an
  * animation loop.
  */
-export function useLiveContour(startedAt: number | null): ContourData {
+export function useLiveContour(startedAt: number | null, visible: boolean): ContourData | null {
   const segments = useMeetingRecordingStore((state) => state.segments);
   const cards = useMeetingRecordingStore((state) => state.questionCards);
   const moments = useMeetingRecordingStore((state) => state.moments);
@@ -69,7 +69,7 @@ export function useLiveContour(startedAt: number | null): ContourData {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!recording) return;
+    if (!recording || !visible) return;
     let interval = 0;
     // Started on the second boundary, so a redraw never lands mid-bucket.
     const align = window.setTimeout(
@@ -83,9 +83,12 @@ export function useLiveContour(startedAt: number | null): ContourData {
       window.clearTimeout(align);
       window.clearInterval(interval);
     };
-  }, [recording]);
+  }, [recording, visible]);
 
   return useMemo(() => {
+    // Keep the microphone history while Clean is up, but do not build a trace
+    // until Words is open.
+    if (!visible) return null;
     const snapshot: ConversationTopicSnapshot | null = recording ? topicSnapshot : null;
     const topics = snapshot?.nodes ? topicsForContour(snapshot.nodes) : NO_CONTOUR_TOPICS;
     if (!recording) {
@@ -115,6 +118,7 @@ export function useLiveContour(startedAt: number | null): ContourData {
       startedAt: startedAt ?? time,
     }) as ContourData;
   }, [
+    visible,
     segments,
     cards,
     moments,

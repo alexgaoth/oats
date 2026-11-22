@@ -1,9 +1,14 @@
-const { Tray, Menu, nativeImage, app } = require("electron");
+const { Tray, Menu, nativeImage, app, systemPreferences } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const debugLogger = require("./debugLogger");
 const dockManager = require("./dockManager");
 const { i18nMain } = require("./i18nMain");
+const {
+  RECORDING_TOSS_FRAMES,
+  RECORDING_TOSS_PEAK,
+  playRecordingToss,
+} = require("./recordingToss.mjs");
 
 class TrayManager {
   constructor() {
@@ -13,6 +18,9 @@ class TrayManager {
     this.windowManager = null;
     this.attachedControlPanels = new WeakSet();
     this.conversationRecording = false;
+    this.idleIcon = null;
+    this.recordingIcons = [];
+    this.stopRecordingToss = null;
   }
 
   setWindows(mainWindow, controlPanelWindow) {
@@ -143,13 +151,74 @@ class TrayManager {
 
       if (process.platform === "darwin") {
         this.tray.setIgnoreDoubleClickEvents(true);
+        this.idleIcon = trayIcon;
+        this.recordingIcons = this.loadRecordingIcons();
       }
 
       this.updateTrayMenu();
       this.setupTrayEventHandlers();
+      if (this.conversationRecording) this.updateRecordingIcon();
     } catch (error) {
       debugLogger.error("Error creating tray icon", { error: error.message }, "tray");
     }
+  }
+
+  loadRecordingIcons() {
+    const assets = app.isPackaged
+      ? path.join(process.resourcesPath, "src", "assets")
+      : path.join(__dirname, "..", "assets");
+    return Array.from({ length: RECORDING_TOSS_FRAMES }, (_, index) => {
+      const name = `recording-${String(index).padStart(2, "0")}Template`;
+      try {
+        const image = nativeImage.createEmpty();
+        for (const scaleFactor of [1, 2]) {
+          const suffix = scaleFactor === 1 ? "" : "@2x";
+          const buffer = fs.readFileSync(
+            path.join(assets, "tray-recording", `${name}${suffix}.png`)
+          );
+          image.addRepresentation({ scaleFactor, buffer });
+        }
+        if (image.getScaleFactors().length !== 2) throw new Error("Missing image representation");
+        image.setTemplateImage(true);
+        return image;
+      } catch (error) {
+        debugLogger.warn(
+          "Failed to load recording tray frame",
+          { name, error: error.message },
+          "tray"
+        );
+        return null;
+      }
+    });
+  }
+
+  cancelRecordingToss() {
+    this.stopRecordingToss?.();
+    this.stopRecordingToss = null;
+  }
+
+  updateRecordingIcon() {
+    if (process.platform !== "darwin") return;
+    this.cancelRecordingToss();
+    const tray = this.tray;
+    if (!tray || tray.isDestroyed()) return;
+    if (!this.conversationRecording) {
+      tray.setImage(this.idleIcon);
+      return;
+    }
+
+    const peak = this.recordingIcons[RECORDING_TOSS_PEAK];
+    if (
+      systemPreferences.getAnimationSettings().prefersReducedMotion ||
+      !this.recordingIcons.every(Boolean)
+    ) {
+      tray.setImage(peak ?? this.idleIcon);
+      return;
+    }
+    this.stopRecordingToss = playRecordingToss((index) => {
+      if (tray.isDestroyed()) return false;
+      tray.setImage(this.recordingIcons[index]);
+    });
   }
 
   async loadTrayIcon() {
@@ -263,13 +332,9 @@ class TrayManager {
     const recording = Boolean(state?.recording);
     if (recording === this.conversationRecording) return;
     this.conversationRecording = recording;
-    // The menu bar carries a mark on macOS, where a tray title is a first-class
-    // affordance. Elsewhere the menu and tooltip carry it — GNOME has no tray at
-    // all without an extension, which is why the floating oat says it too rather
-    // than this being the only signal.
-    if (process.platform === "darwin" && this.tray && !this.tray.isDestroyed?.()) {
-      this.tray.setTitle(recording ? "●" : "");
-    }
+    // On macOS the icon itself shows the recording. Elsewhere the menu and
+    // tooltip carry the state. The floating oat also shows it on every desktop.
+    this.updateRecordingIcon();
     this.updateTrayMenu();
   }
 
@@ -336,7 +401,7 @@ class TrayManager {
   }
 
   updateTrayMenu() {
-    if (!this.tray) return;
+    if (!this.tray || this.tray.isDestroyed()) return;
 
     const contextMenu = Menu.buildFromTemplate(this.buildContextMenuTemplate());
     this.tray.setToolTip(
@@ -356,7 +421,26 @@ class TrayManager {
       });
     }
 
+    let displayOptionsSubscription =
+      process.platform === "darwin"
+        ? systemPreferences.subscribeWorkspaceNotification(
+            "NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification",
+            () => {
+              if (this.conversationRecording) this.updateRecordingIcon();
+            }
+          )
+        : undefined;
+    const cleanup = () => {
+      this.cancelRecordingToss();
+      if (displayOptionsSubscription !== undefined) {
+        systemPreferences.unsubscribeWorkspaceNotification(displayOptionsSubscription);
+        displayOptionsSubscription = undefined;
+      }
+    };
+    app.once("will-quit", cleanup);
     this.tray.on("destroyed", () => {
+      app.removeListener("will-quit", cleanup);
+      cleanup();
       debugLogger.debug("Tray icon destroyed", undefined, "tray");
       this.tray = null;
     });

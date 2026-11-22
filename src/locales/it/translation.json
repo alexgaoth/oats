@@ -2643,6 +2643,7 @@
     }
   },
   "questionCard": {
+    "empty": "Non ci sono ancora domande.",
     "now": "ora",
     "state": {
       "asked": "Aperta",

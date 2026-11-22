@@ -2643,6 +2643,7 @@
     }
   },
   "questionCard": {
+    "empty": "まだ質問はありません。",
     "now": "今",
     "state": {
       "asked": "未解決",

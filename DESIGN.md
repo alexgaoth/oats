@@ -13,8 +13,8 @@ The product rules from v1 still hold and still win over taste:
 
 - **Reliable.** Works with no network, no model and no account; never loses a
   conversation; fails loudly at the start, not quietly at the end.
-- **Nothing competes with the person in the room.** While recording, the default
-  (Clean) composition shows status and controls, not changing text.
+- **Nothing competes with the person in the room.** While recording, Clean shows
+  status and controls. Its only conversation content is questions and their reply states.
 - **Evidence before inference.** What Oats knows for certain (marks, questions and
   how they ended) is shown above what a model wrote.
 - **Alive, not busy** (Alex, 2026-10-11). Life comes from the oat world used as
@@ -184,13 +184,13 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 
 ## 5. Recording surface
 
-- **Clean (default):** a status card — listening red dot, the elapsed time as the
-  heading (`text-2xl font-semibold tabular-nums`), a **Recording** badge, **Mark**
-  (`M`) and **Stop** — then the contour in its own card section, then the
-  **Show transcript** button. Below it, the **conversation flow** card. Nothing
-  on screen changes while somebody speaks except the clock, the two counters under
-  it, the contour and the flow card — and the flow card shows topics, not words,
-  so it changes every few minutes, when the subject does.
+- **Clean (default):** keeps the status card (listening dot, clock, **Recording**,
+  **Mark** and **Stop**), counters, health warnings and **Show transcript**.
+  Below the warnings, one list shows eligible questions as said, with their
+  reply states. It shows every question without an answer, then the three most
+  recent answered questions. The newest question in each set is at the bottom.
+  New questions never take focus or move a reader who has scrolled up.
+  The list does not animate or play a sound.
 - **Counters** (`conversation/RecordingCounters.tsx`): one muted line under the
   clock, `13px` and `tabular-nums`: the words captured so far and the questions
   heard so far, in this sitting (`helpers/recordingCounters.mjs`). Words are the
@@ -235,9 +235,10 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   back to the on-device topics, named as above. The record keeps the on-device
   cut at Finish, with the check's names carried over by the lines they were
   given from, and the writing model names the rest.
-- **Detailed:** adds Transcript / Questions tabs below the flow card, showing
-  one kind of text at a time. **Hide details** returns to Clean. The flow card
-  yields height to the detail (at most 40% of the column) and scrolls inside.
+- **Words:** **Show transcript** reveals the contour, conversation flow and
+  Transcript / Questions tabs. The Questions tab keeps the full question rail,
+  including questions not shown in Clean. **Hide details** returns to Clean.
+  The flow card yields height to the detail (at most 40% of the column) and scrolls inside.
   These controls name the action rather than asking someone to interpret
   "Calm" and "Words". The questions count is already present, so it opens its
   own detail without another toolbar button. Speech never reveals a detail
