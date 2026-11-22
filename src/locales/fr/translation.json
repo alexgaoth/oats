@@ -2642,7 +2642,12 @@
       "saved": "Enregistrée.",
       "getKey": "Obtenir une clé {{provider}}",
       "savedKey": "Votre clé {{provider}}",
-      "replace": "Remplacer"
+      "replace": "Remplacer",
+      "defaultName": "Clé {{provider}} {{number}}",
+      "name": "Nom",
+      "optional": "(facultatif)",
+      "nameHint": "Par exemple, Travail",
+      "notSaved": "Oats n’a pas pu enregistrer la clé. Réessayez."
     }
   },
   "questionCard": {

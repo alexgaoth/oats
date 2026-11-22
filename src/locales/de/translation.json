@@ -2642,7 +2642,12 @@
       "saved": "Gespeichert.",
       "getKey": "Schlüssel von {{provider}} holen",
       "savedKey": "Ihr {{provider}}-Schlüssel",
-      "replace": "Ersetzen"
+      "replace": "Ersetzen",
+      "defaultName": "{{provider}}-Schlüssel {{number}}",
+      "name": "Name",
+      "optional": "(optional)",
+      "nameHint": "Zum Beispiel: Arbeit",
+      "notSaved": "Oats konnte den Schlüssel nicht speichern. Versuchen Sie es erneut."
     }
   },
   "questionCard": {

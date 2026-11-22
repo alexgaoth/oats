@@ -983,6 +983,29 @@ declare global {
       saveOpenAIKey: (key: string) => Promise<{ success: boolean }>;
       getAnthropicKey: () => Promise<string | null>;
       saveAnthropicKey: (key: string) => Promise<void>;
+      // Named keys, more than one per provider for OpenAI and Anthropic
+      // (helpers/apiKeys.mjs). Main holds the secrets; these carry the key
+      // records (id, provider, name, last four characters), never a secret,
+      // except `getApiKeySecret`. The records are normalized where they arrive.
+      listApiKeys?: () => Promise<unknown>;
+      addApiKey?: (request: {
+        provider: "openai" | "anthropic";
+        secret: string;
+        name: string;
+        number: number;
+        status: string | null;
+        assign: string[];
+      }) => Promise<{ ok: true; id: string; list: unknown } | { ok: false; reason: string }>;
+      replaceApiKey?: (
+        id: string,
+        request: { secret: string; status: string | null; name?: string; number?: number }
+      ) => Promise<{ ok: true; list: unknown } | { ok: false; reason: string }>;
+      renameApiKey?: (id: string, name: string, number: number) => Promise<unknown>;
+      removeApiKey?: (id: string, features: Record<string, string>) => Promise<unknown>;
+      setFeatureApiKeys?: (features: Record<string, string>) => Promise<unknown>;
+      setApiKeyStatus?: (id: string, status: string | null) => Promise<unknown>;
+      getApiKeySecret?: (id: string) => Promise<string>;
+      onApiKeysChanged?: (callback: (list: unknown) => void) => () => void;
       getUiLanguage: () => Promise<string>;
       saveUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;
       setUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;
@@ -1147,8 +1170,14 @@ declare global {
         agentName: string | null,
         config: any
       ) => Promise<{ success: boolean; text?: string; error?: string }>;
-      /** True or false when Anthropic says whether the key can use the model; null when it could not be told. */
-      anthropicModelAvailable?: (modelId: string) => Promise<boolean | null>;
+      /**
+       * True or false when Anthropic says whether the key can use the model;
+       * null when it could not be told. With a feature, that feature's key.
+       */
+      anthropicModelAvailable?: (
+        modelId: string,
+        request?: { feature?: string }
+      ) => Promise<boolean | null>;
       // A key not saved yet: "ok", "rejected", "no-access" or "unknown".
       anthropicKeyCheck?: (modelId: string, key: string) => Promise<string>;
 

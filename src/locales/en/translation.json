@@ -2642,7 +2642,12 @@
       "saved": "Saved.",
       "getKey": "Get a key from {{provider}}",
       "savedKey": "Your key from {{provider}}",
-      "replace": "Replace"
+      "replace": "Replace",
+      "defaultName": "{{provider}} key {{number}}",
+      "name": "Name",
+      "optional": "(optional)",
+      "nameHint": "For example, Work",
+      "notSaved": "Oats could not save the key. Try again."
     }
   },
   "questionCard": {
