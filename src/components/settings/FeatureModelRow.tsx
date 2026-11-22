@@ -136,7 +136,7 @@ interface RowModel {
   model: string;
   /** Where it runs; "until-key" runs on this Mac until a key is added. */
   place: "local" | "providers" | "until-key";
-  /** For "until-key": whose key ("OpenAI", "OpenAI or Anthropic"). */
+  /** For "until-key": whose key ("OpenAI"); none when either provider's will do. */
   provider?: string;
   status: ModelStatus;
   /** A line under the row: what a download is for, why a model is offered. */
@@ -355,10 +355,8 @@ function WritingRow({ upgrade, menus }: { upgrade: boolean; menus: boolean }) {
     row = {
       model: writing.status === "ready" ? writing.name : t("oats.models.noModel"),
       place: "until-key",
-      provider:
-        keyProvider === "any"
-          ? t("oats.featureRoutes.writingKeyProviders")
-          : getProviderDisplayName(provider),
+      // Writing takes either provider's key until one is chosen: "a key".
+      provider: keyProvider === "any" ? undefined : getProviderDisplayName(provider),
       status: refused
         ? {
             kind: "refused",
@@ -431,16 +429,20 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
   const placeText =
     row.place === "providers"
       ? t("oats.featureRoutes.placeKey")
-      : row.place === "until-key"
+      : row.place === "until-key" && row.provider
         ? t(
             mac
               ? "oats.featureRoutes.placeUntilKeyMac"
               : "oats.featureRoutes.placeUntilKeyComputer",
-            {
-              provider: row.provider,
-            }
+            { provider: row.provider }
           )
-        : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
+        : row.place === "until-key"
+          ? t(
+              mac
+                ? "oats.featureRoutes.placeUntilAnyKeyMac"
+                : "oats.featureRoutes.placeUntilAnyKeyComputer"
+            )
+          : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
   const Offer = row.offer?.icon;
   return (
     <section aria-labelledby={titleId} data-feature-row={feature} className="px-5 py-3.5">
