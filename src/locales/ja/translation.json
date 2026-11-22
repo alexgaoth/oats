@@ -2665,6 +2665,7 @@
       "optional": "（任意）",
       "nameHint": "例: 仕事",
       "notSaved": "キーを保存できませんでした。もう一度お試しください。",
+      "notRemoved": "キーを削除できませんでした。もう一度お試しください。",
       "title": "API キー",
       "empty": "API キーがあると、機能を OpenAI または Anthropic で実行できます。OpenAI のキーはすべての機能に、Anthropic のキーは文章作成に使えます。",
       "usedBy": "使用中：{{features}}",

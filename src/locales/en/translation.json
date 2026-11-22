@@ -2665,6 +2665,7 @@
       "optional": "(optional)",
       "nameHint": "For example, Work",
       "notSaved": "Oats could not save the key. Try again.",
+      "notRemoved": "Oats could not remove the key. Try again.",
       "title": "API keys",
       "empty": "An API key lets a feature run with OpenAI or Anthropic. OpenAI keys run every feature; Anthropic keys run Writing.",
       "usedBy": "Used by {{features}}",

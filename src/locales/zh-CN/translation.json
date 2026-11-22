@@ -2660,6 +2660,7 @@
       "optional": "（可选）",
       "nameHint": "例如：工作",
       "notSaved": "Oats 无法保存密钥。请重试。",
+      "notRemoved": "Oats 无法移除密钥。请重试。",
       "title": "API 密钥",
       "empty": "有了 API 密钥，功能可以通过 OpenAI 或 Anthropic 运行。OpenAI 密钥可用于所有功能，Anthropic 密钥用于写作。",
       "usedBy": "用于：{{features}}",

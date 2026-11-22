@@ -2665,6 +2665,7 @@
       "optional": "(optional)",
       "nameHint": "Zum Beispiel: Arbeit",
       "notSaved": "Oats konnte den Schlüssel nicht speichern. Versuchen Sie es erneut.",
+      "notRemoved": "Oats konnte den Schlüssel nicht entfernen. Versuchen Sie es erneut.",
       "title": "API-Schlüssel",
       "empty": "Mit einem API-Schlüssel läuft eine Funktion mit OpenAI oder Anthropic. OpenAI-Schlüssel dienen allen Funktionen, Anthropic-Schlüssel dem Schreiben.",
       "usedBy": "Verwendet von {{features}}",

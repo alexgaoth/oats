@@ -23,6 +23,13 @@ export type SelfHostedType = "openai-compatible" | "lan";
 
 export type TranscriptionStatus = "completed" | "failed" | "pending" | "discarded";
 
+/** What a change of the saved keys answers (environment.js): the keys after it, or as they still are. */
+export interface ApiKeyChange {
+  ok: boolean;
+  reason?: string;
+  list?: unknown;
+}
+
 /** What the sidebar's footer reads from the main process (onDeviceStatus.js). */
 export interface OnDeviceStatus {
   /** Requests that left this machine since launch (networkLedger.js). */
@@ -986,7 +993,10 @@ declare global {
       // Named keys, more than one per provider for OpenAI and Anthropic
       // (helpers/apiKeys.mjs). Main holds the secrets; these carry the key
       // records (id, provider, name, last four characters), never a secret,
-      // except `getApiKeySecret`. The records are normalized where they arrive.
+      // except `getApiKeySecret` and `getFeatureApiKey`, which main answers
+      // only for the main window and the control panel. A change answers
+      // { ok, list }: on a failure nothing changed, and `list` is the keys as
+      // they still are. The records are normalized where they arrive.
       listApiKeys?: () => Promise<unknown>;
       addApiKey?: (request: {
         provider: "openai" | "anthropic";
@@ -995,16 +1005,20 @@ declare global {
         number: number;
         status: string | null;
         assign: string[];
-      }) => Promise<{ ok: true; id: string; list: unknown } | { ok: false; reason: string }>;
+      }) => Promise<ApiKeyChange & { id?: string }>;
       replaceApiKey?: (
         id: string,
         request: { secret: string; status: string | null; name?: string; number?: number }
-      ) => Promise<{ ok: true; list: unknown } | { ok: false; reason: string }>;
-      renameApiKey?: (id: string, name: string, number: number) => Promise<unknown>;
-      removeApiKey?: (id: string, features: Record<string, string>) => Promise<unknown>;
-      setFeatureApiKeys?: (features: Record<string, string>) => Promise<unknown>;
-      setApiKeyStatus?: (id: string, status: string | null) => Promise<unknown>;
+      ) => Promise<ApiKeyChange>;
+      renameApiKey?: (id: string, name: string, number: number) => Promise<ApiKeyChange>;
+      removeApiKey?: (id: string, features: Record<string, string>) => Promise<ApiKeyChange>;
+      setFeatureApiKeys?: (features: Record<string, string>) => Promise<ApiKeyChange>;
+      setApiKeyStatus?: (id: string, status: string | null) => Promise<ApiKeyChange>;
       getApiKeySecret?: (id: string) => Promise<string>;
+      getFeatureApiKey?: (
+        feature: string,
+        provider: string
+      ) => Promise<{ id: string | null; rev: number; secret: string } | null>;
       onApiKeysChanged?: (callback: (list: unknown) => void) => () => void;
       getUiLanguage: () => Promise<string>;
       saveUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;

@@ -56,10 +56,12 @@ import {
 import {
   NO_KEYS,
   defaultKeyOf,
+  featuresForNewKey,
   isKeyProvider,
   keyUsable,
   normalizeKeyRecords,
   resolveFeatureKey,
+  singleKeyEdit,
   type KeyRecords,
 } from "../helpers/apiKeys.mjs";
 import {
@@ -1067,9 +1069,8 @@ function debouncedSaveSecret(provider: SecretProvider, key: string) {
     const api = window.electronAPI;
     const save = api?.[SECRET_IPC_SAVERS[provider]] as
       ((k: string) => Promise<unknown>) | undefined;
-    // An OpenAI or Anthropic key saved here is that provider's default key:
-    // main updates the key list and tells every window (`api-keys-changed`),
-    // with the records only, never the key (`applyKeyRecords`).
+    // OpenAI and Anthropic keys are not saved here: they have names
+    // (createNamedSlotSetter, stores/apiKeys.ts).
     save?.(key)?.catch((err) => {
       logger.warn(
         "Failed to persist secret",
@@ -1133,6 +1134,57 @@ function createSecretSetter(
     useSettingsStore.setState({ [storeKey]: key });
     debouncedSaveSecret(saver, key);
     invalidateApiKeyCaches(cacheProvider);
+  };
+}
+
+// The fields that hold one key per provider (the Advanced pickers,
+// useSettings' updateApiKeys). OpenAI and Anthropic keep named keys, so such a
+// field shows the provider's default key and may change only that one
+// (helpers/apiKeys.mjs, `singleKeyEdit`): text replaces it, or adds a key when
+// there is none; empty text removes nothing. The key list removes keys.
+const namedSlotTimers: Partial<Record<"openai" | "anthropic", ReturnType<typeof setTimeout>>> = {};
+function createNamedSlotSetter(
+  storeKey: "openaiApiKey" | "anthropicApiKey",
+  provider: "openai" | "anthropic"
+) {
+  return (value: string) => {
+    if (!isBrowser) return;
+    const text = String(value ?? "").trim();
+    // The key the field already holds, saved again (a form saved whole): nothing changes.
+    if (text && text === useSettingsStore.getState()[storeKey]) return;
+    if (text) useSettingsStore.setState({ [storeKey]: text });
+    const timer = namedSlotTimers[provider];
+    if (timer) clearTimeout(timer);
+    namedSlotTimers[provider] = setTimeout(() => {
+      const state = useSettingsStore.getState();
+      const edit = singleKeyEdit(defaultKeyOf(state.keyRecords, provider), text);
+      const api = window.electronAPI;
+      const change =
+        edit.action === "replace"
+          ? api?.replaceApiKey?.(edit.id, { secret: text, status: null })
+          : edit.action === "add"
+            ? api?.addApiKey?.({
+                provider,
+                secret: text,
+                name: "",
+                number: 0,
+                status: null,
+                assign: featuresForNewKey(state.keyRecords, provider, {
+                  writingProvider: state.featurePreferences.writingProvider,
+                }),
+              })
+            : undefined;
+      // The field then shows what is saved, also when nothing changed.
+      void Promise.resolve(change)
+        .then((result) => applyKeyRecords(result?.list ?? useSettingsStore.getState().keyRecords))
+        .catch((err) => {
+          logger.warn(
+            "Failed to save a key",
+            { provider, error: (err as Error).message },
+            "settings"
+          );
+        });
+    }, 250);
   };
 }
 
@@ -1699,8 +1751,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     }
   },
 
-  setOpenaiApiKey: createSecretSetter("openaiApiKey", "openai", "openai"),
-  setAnthropicApiKey: createSecretSetter("anthropicApiKey", "anthropic", "anthropic"),
+  setOpenaiApiKey: createNamedSlotSetter("openaiApiKey", "openai"),
+  setAnthropicApiKey: createNamedSlotSetter("anthropicApiKey", "anthropic"),
   setDeepgramApiKey: createSecretSetter("deepgramApiKey", "deepgram"),
   setObsidianVaultPath: createStringSetter("obsidianVaultPath"),
   setObsidianExportEnabled: createBooleanSetter("obsidianExportEnabled"),
@@ -2499,8 +2551,8 @@ export function setFeatureKeyStatus(target: string, status: RouteKeyStatus): voi
     });
     window.electronAPI
       ?.setApiKeyStatus?.(record.id, status)
-      ?.then((list) => {
-        if (list) void applyKeyRecords(list);
+      ?.then((result) => {
+        if (result?.list) void applyKeyRecords(result.list);
       })
       .catch(() => {});
     return;

@@ -2665,6 +2665,7 @@
       "optional": "(opcional)",
       "nameHint": "Por ejemplo, Trabajo",
       "notSaved": "Oats no pudo guardar la clave. Inténtalo de nuevo.",
+      "notRemoved": "Oats no pudo quitar la clave. Inténtalo de nuevo.",
       "title": "Claves de API",
       "empty": "Una clave de API permite que una función se ejecute con OpenAI o Anthropic. Las claves de OpenAI sirven para todas las funciones; las de Anthropic, para Escritura.",
       "usedBy": "Usada por {{features}}",

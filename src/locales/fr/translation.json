@@ -2665,6 +2665,7 @@
       "optional": "(facultatif)",
       "nameHint": "Par exemple, Travail",
       "notSaved": "Oats n’a pas pu enregistrer la clé. Réessayez.",
+      "notRemoved": "Oats n’a pas pu supprimer la clé. Réessayez.",
       "title": "Clés d’API",
       "empty": "Une clé d’API permet à une fonction de s’exécuter avec OpenAI ou Anthropic. Les clés OpenAI servent à toutes les fonctions ; les clés Anthropic, à la Rédaction.",
       "usedBy": "Utilisée par {{features}}",

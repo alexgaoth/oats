@@ -48,7 +48,9 @@ Out of scope:
   keyring, secrets fall back to plaintext to match Electron's default
   behavior. Each saved OpenAI or Anthropic key is its own encrypted file
   there; the list of keys beside them (`api-keys.json`) holds their names and
-  last four characters, never a secret, and removing a key deletes its file.
+  last four characters, never a secret, and removing a key deletes its file
+  and takes it out of the provider's slot. Only the main window and the
+  control panel may ask the main process for a key's secret.
 - **Native binaries** — Platform-specific helpers (key listeners, paste
   utilities) are compiled from source during the build process.
 - **Context isolation** — The Electron renderer runs with context isolation

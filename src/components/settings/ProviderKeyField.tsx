@@ -21,7 +21,7 @@ import {
 import { getCachedPlatform } from "../../utils/platform";
 import { getProviderDisplayName } from "../../models/ModelRegistry";
 import { detectKeyProvider, type KeyProvider } from "../../utils/keyCheck";
-import { defaultKeyOf, isKeyProvider, KEY_NAME_MAX } from "../../helpers/apiKeys.mjs";
+import { chooserKey, isKeyProvider, KEY_NAME_MAX } from "../../helpers/apiKeys.mjs";
 import type { Feature } from "../../helpers/featureRoutes.mjs";
 import { openExternalLink, withUtm } from "../../utils/externalLinks";
 import { PROVIDER_KEYS } from "../../utils/writingKeys";
@@ -392,27 +392,32 @@ export function ProviderKeyField({
 
 /**
  * A provider's key where a chooser needs it: the field while there is none,
- * and the stored key, masked, with Replace once there is one. For OpenAI and
- * Anthropic that is the provider's default key, its oldest (helpers/apiKeys.mjs),
- * and Replace puts a new secret in its place, keeping its name and features.
+ * and the key it shows, masked, with Replace once there is one. For OpenAI and
+ * Anthropic, which keep named keys, the key shown is the one the chooser's
+ * feature uses with that provider (`feature`), or else the provider's default
+ * key; it is shown by its name, and Replace puts a new secret in exactly that
+ * key's place, never in another (helpers/apiKeys.mjs, `chooserKey`).
  */
-export function ProviderKey({ provider }: { provider: string }) {
+export function ProviderKey({ provider, feature }: { provider: string; feature?: Feature }) {
   const { t } = useTranslation();
   const field = PROVIDER_KEYS[provider];
   const stored = useSettingsStore((state) => (field ? String(state[field] ?? "") : ""));
-  const defaultId = useSettingsStore((state) =>
-    isKeyProvider(provider) ? (defaultKeyOf(state.keyRecords, provider)?.id ?? null) : null
+  const named = isKeyProvider(provider);
+  const keys = useSavedKeys();
+  const shownId = useSettingsStore((state) =>
+    isKeyProvider(provider) ? (chooserKey(state.keyRecords, provider, feature)?.id ?? null) : null
   );
+  const shown = shownId ? (keys.find((key) => key.id === shownId) ?? null) : null;
   // Once the field is in use it stays, so what the provider said of the key
   // just saved is still there to read (ProviderKeyField's saved state).
   const [editing, setEditing] = useState(false);
   if (!field) return null;
-  if (!stored.trim() || editing) {
+  if ((named ? !shown : !stored.trim()) || editing) {
     return (
       <ProviderKeyField
         provider={provider}
         autoFocus={editing}
-        replaces={editing ? (defaultId ?? undefined) : undefined}
+        replaces={editing ? (shown?.id ?? undefined) : undefined}
         onSaved={() => setEditing(true)}
       />
     );
@@ -422,9 +427,13 @@ export function ProviderKey({ provider }: { provider: string }) {
       <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] text-muted-foreground">
         <KeyRound aria-hidden="true" className="size-4 shrink-0" />
         <span className="truncate">
-          {t("oats.keys.savedKey", { provider: PROVIDER_NAMES[provider] ?? provider })}
+          {shown
+            ? shown.name
+            : t("oats.keys.savedKey", { provider: PROVIDER_NAMES[provider] ?? provider })}
         </span>
-        <span className="font-mono tabular-nums">••••{stored.trim().slice(-4)}</span>
+        <span className="font-mono tabular-nums">
+          ••••{shown ? shown.tail : stored.trim().slice(-4)}
+        </span>
       </span>
       <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
         {t("oats.keys.replace")}

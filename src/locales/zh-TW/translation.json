@@ -2660,6 +2660,7 @@
       "optional": "（選填）",
       "nameHint": "例如：工作",
       "notSaved": "Oats 無法儲存金鑰。請再試一次。",
+      "notRemoved": "Oats 無法移除金鑰。請再試一次。",
       "title": "API 金鑰",
       "empty": "有了 API 金鑰，功能可以透過 OpenAI 或 Anthropic 執行。OpenAI 金鑰可用於所有功能，Anthropic 金鑰用於寫作。",
       "usedBy": "用於：{{features}}",

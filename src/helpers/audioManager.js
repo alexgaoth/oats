@@ -31,7 +31,7 @@ import {
   isOnlineParakeetModel,
 } from "../models/ModelRegistry";
 import { shouldSkipTranscriptionApiKey } from "./transcriptionAuth";
-import { resolveFeatureKey } from "./apiKeys.mjs";
+import { NO_KEYS, resolveFeatureKey } from "./apiKeys.mjs";
 import {
   isSelfHostedTranscription,
   resolveSelfHostedTranscriptionModel,
@@ -1341,22 +1341,28 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   /**
-   * The OpenAI key chosen for Dictation (stores/apiKeys.ts), asked of main by
-   * its id and kept until a key changes. With no saved key list, the
-   * provider's single slot, as before.
+   * The OpenAI key chosen for Dictation (stores/apiKeys.ts): asked of main by
+   * its id once this window has the key records, and kept for that id and
+   * revision until a key changes; before the records arrive, main says which
+   * key it is. Never the provider's default key when Dictation uses another.
    */
   async getDictationKey(s) {
-    const key = resolveFeatureKey(s.keyRecords, "dictation", "openai");
-    if (!key) return s.openaiApiKey;
-    if (this.cachedDictationKey?.id === key.id) return this.cachedDictationKey.secret;
-    let secret = "";
     try {
-      secret = (await window.electronAPI.getApiKeySecret?.(key.id)) || "";
+      if (s.keyRecords === NO_KEYS) {
+        const answer = await window.electronAPI.getFeatureApiKey?.("dictation", "openai");
+        return answer?.secret || "";
+      }
+      const key = resolveFeatureKey(s.keyRecords, "dictation", "openai");
+      if (!key) return "";
+      const cached = this.cachedDictationKey;
+      if (cached?.id === key.id && cached.rev === key.rev) return cached.secret;
+      const secret = (await window.electronAPI.getApiKeySecret?.(key.id)) || "";
+      if (secret) this.cachedDictationKey = { id: key.id, rev: key.rev, secret };
+      return secret;
     } catch (error) {
       logger.debug("Could not read the dictation key", { error: error?.message }, "transcription");
+      return "";
     }
-    if (secret) this.cachedDictationKey = { id: key.id, secret };
-    return secret;
   }
 
   async processWithReasoningModel(text, model, agentName, config) {

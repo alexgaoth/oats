@@ -172,6 +172,7 @@ export function createFakeMain({
       tail: secret.slice(-4),
       addedAt: Date.now() + nextKeyId,
       status: fields.status ?? null,
+      rev: 1,
       secret,
     };
     savedKeys.push(record);
@@ -201,11 +202,14 @@ export function createFakeMain({
   const keyList = () => ({
     keys: savedKeys.map(({ secret: _secret, ...record }) => record),
     features: { ...featureKeys },
+    defaults: {},
   });
-  const keysChanged = () => {
+  // Every change answers as main does: { ok, list }.
+  const keysChanged = (extra = {}) => {
     broadcast("onApiKeysChanged", keyList());
-    return keyList();
+    return { ok: true, ...extra, list: keyList() };
   };
+  const unchanged = () => ({ ok: false, reason: "invalid", list: keyList() });
   const defaultSecret = (provider) =>
     savedKeys.find((key) => key.provider === provider)?.secret ?? "";
   const dropSavedKey = (id) => {
@@ -215,15 +219,13 @@ export function createFakeMain({
       Object.entries(featureKeys).filter(([, chosen]) => chosen !== id)
     );
   };
-  // The single slot's setter (`save-openai-key`): replaces the default key.
+  // The single slot's setter (`save-openai-key`), as main has it: it never
+  // overwrites or removes a named key; a key not saved yet is added.
   const saveSlot = (provider, value) => {
     const secret = String(value ?? "").trim();
-    const current = savedKeys.find((key) => key.provider === provider);
-    if (secret && current) Object.assign(current, { secret, tail: secret.slice(-4), status: null });
-    else if (secret) addSavedKey(provider, secret);
-    else if (current) dropSavedKey(current.id);
+    if (secret && !savedKeys.some((key) => key.secret === secret)) addSavedKey(provider, secret);
     keysChanged();
-    return { success: true };
+    return { success: Boolean(secret) };
   };
 
   const listen = (name, callback) => {
@@ -657,33 +659,36 @@ export function createFakeMain({
     addApiKey: async (request = {}) => {
       const secret = String(request.secret ?? "").trim();
       if (!secret || (request.provider !== "openai" && request.provider !== "anthropic")) {
-        return { ok: false, reason: "invalid" };
+        return unchanged();
       }
       const record =
         savedKeys.find((key) => key.provider === request.provider && key.secret === secret) ??
         addSavedKey(request.provider, secret, request);
       for (const feature of request.assign ?? []) featureKeys[feature] = record.id;
-      keysChanged();
-      return { ok: true, id: record.id, list: keyList() };
+      return keysChanged({ id: record.id });
     },
     replaceApiKey: async (id, request = {}) => {
       const record = savedKeys.find((key) => key.id === id);
       const secret = String(request.secret ?? "").trim();
-      if (!record || !secret) return { ok: false, reason: "invalid" };
-      Object.assign(record, { secret, tail: secret.slice(-4), status: request.status ?? null });
+      if (!record || !secret) return unchanged();
+      Object.assign(record, {
+        secret,
+        tail: secret.slice(-4),
+        status: request.status ?? null,
+        rev: record.rev + 1,
+      });
       if (request.name) record.name = request.name;
-      keysChanged();
-      return { ok: true, list: keyList() };
+      return keysChanged();
     },
     renameApiKey: async (id, name, number) => {
       const record = savedKeys.find((key) => key.id === id);
-      if (!record) return null;
+      if (!record) return unchanged();
       record.name = String(name ?? "");
-      if (Number.isInteger(number)) record.number = number;
+      if (Number.isInteger(number) && number > 0) record.number = number;
       return keysChanged();
     },
     removeApiKey: async (id, features = {}) => {
-      if (!savedKeys.some((key) => key.id === id)) return null;
+      if (!savedKeys.some((key) => key.id === id)) return unchanged();
       dropSavedKey(id);
       featureKeys = { ...featureKeys, ...features };
       return keysChanged();
@@ -694,11 +699,18 @@ export function createFakeMain({
     },
     setApiKeyStatus: async (id, status) => {
       const record = savedKeys.find((key) => key.id === id);
-      if (!record) return null;
+      if (!record) return unchanged();
       record.status = status ?? null;
       return keysChanged();
     },
     getApiKeySecret: async (id) => savedKeys.find((key) => key.id === id)?.secret ?? "",
+    getFeatureApiKey: async (feature, provider) => {
+      const chosen = savedKeys.find(
+        (key) => key.id === featureKeys[feature] && key.provider === provider
+      );
+      const key = chosen ?? savedKeys.find((candidate) => candidate.provider === provider);
+      return key ? { id: key.id, rev: key.rev, secret: key.secret } : null;
+    },
     // A key typed into Settings or setup, checked before it is saved: a key
     // with "bad" in it is rejected, as Anthropic would answer 401.
     anthropicKeyCheck: async (_model, key) =>

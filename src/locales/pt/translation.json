@@ -2665,6 +2665,7 @@
       "optional": "(opcional)",
       "nameHint": "Por exemplo, Trabalho",
       "notSaved": "O Oats não conseguiu salvar a chave. Tente novamente.",
+      "notRemoved": "O Oats não conseguiu remover a chave. Tente novamente.",
       "title": "Chaves de API",
       "empty": "Uma chave de API permite que um recurso rode com a OpenAI ou a Anthropic. Chaves da OpenAI servem a todos os recursos; as da Anthropic, à Escrita.",
       "usedBy": "Usada por {{features}}",

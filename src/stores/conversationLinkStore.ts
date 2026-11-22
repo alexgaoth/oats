@@ -55,7 +55,9 @@ const openaiLinkModels = new Map<string, string | null>();
 async function linkModelFor(provider: "openai" | "anthropic"): Promise<string | null> {
   const models = LINK_MODELS[provider];
   if (provider !== "openai") return models[0] ?? null;
-  const keyId = resolveFeatureKey(getSettings().keyRecords, "writing", "openai")?.id ?? "slot";
+  // By the key and its revision: a replaced secret is asked about again.
+  const writer = resolveFeatureKey(getSettings().keyRecords, "writing", "openai");
+  const keyId = writer ? `${writer.id}.${writer.rev}` : "slot";
   if (openaiLinkModels.has(keyId)) return openaiLinkModels.get(keyId) ?? null;
   for (const model of models) {
     const available = await reasoningService.openAiModelAvailable(model, "writing");

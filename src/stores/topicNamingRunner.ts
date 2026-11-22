@@ -76,8 +76,8 @@ let loopProvider: "openai" | "anthropic" | null = null;
 /** The local writing model of the window loop that runs now, so a change of model ends it. */
 let loopLocalModel: string | null = null;
 /**
- * The topic model each key can use, per job ("openai:<key id>:check",
- * "anthropic:<key id>:names", ...): absent until asked, null when it can use none.
+ * The topic model each key can use, per job ("openai:<key id>.<revision>:check",
+ * "anthropic:<key id>.<revision>:names", ...): absent until asked, null when it can use none.
  * Asked once per session (`chooseFastModel`), again only when the answer could
  * not be told.
  */
@@ -180,8 +180,9 @@ async function topicModelFor(
   provider: "openai" | "anthropic",
   job: "names" | "check"
 ): Promise<TopicModel | null> {
-  const keyId = resolveFeatureKey(getSettings().keyRecords, "writing", provider)?.id ?? "slot";
-  const key = `${provider}:${keyId}:${job}`;
+  // By the key and its revision: a replaced secret is asked about again.
+  const writer = resolveFeatureKey(getSettings().keyRecords, "writing", provider);
+  const key = `${provider}:${writer ? `${writer.id}.${writer.rev}` : "slot"}:${job}`;
   if (sessionModels.has(key)) return sessionModels.get(key) ?? null;
   const available =
     provider === "openai"
