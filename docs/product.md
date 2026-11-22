@@ -40,7 +40,7 @@ Auto-search is the one thing that leaves the device during a conversation, it is
 
 ## During and after the conversation
 
-While recording, **Clean** shows the recording controls and a list of eligible questions with their reply states. It keeps every question without an answer, followed by the three most recent answered questions. **Show transcript** opens **Words**, with the contour, topic flow, live transcript and full question rail. **Hide details** returns to Clean.
+A recording opens on the **details**: the recording controls, the contour, the topic flow, and a full question rail on a **Questions** tab, with the live transcript on the tab beside it. **Hide details** goes to the plain view, **Clean**: the recording controls and a list of eligible questions with their reply states. It keeps every question without an answer, followed by the three most recent answered questions. **Expand details** brings the details back, on the tab you had.
 
 Oats has a second interface, chosen in Settings: the **field**, where the conversation is recorded in a field of oats that grows while you talk and withdraws when you stop. The default is the **ledger** — paper, graphite and one gold mark.
 
