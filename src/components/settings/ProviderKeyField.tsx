@@ -51,7 +51,7 @@ const SETTERS: Record<string, (state: SettingsState) => Setter> = {
 
 type Message = { tone: "success" | "warning" | "danger" | "muted"; text: string } | null;
 
-/** What setup asks of the field: Get started checks and saves the key in it. */
+/** What setup asks of the field: Continue checks and saves the key in it. */
 export interface ProviderKeyHandle {
   /** Check the key in the field and save it: true once saved, false when there is none or it is refused. */
   commit: () => Promise<boolean>;
@@ -88,7 +88,7 @@ export function KeyCapabilities({ className }: { className?: string }) {
  * provider calls invalid is not saved, and every other answer is said in one
  * line.
  * Other providers' keys are saved as they are. In setup there is no Save:
- * Get started checks and saves the key (`ref`, `showSave`).
+ * Continue checks and saves the key (`ref`, `showSave`).
  */
 export function ProviderKeyField({
   provider = "any",
@@ -104,7 +104,7 @@ export function ProviderKeyField({
   onSaved?: (provider: string) => void;
   className?: string;
   autoFocus?: boolean;
-  /** False where another button saves the key (setup's Get started). */
+  /** False where another button saves the key (setup's Continue). */
   showSave?: boolean;
   /** The text in the field, whenever it changes. */
   onDraftChange?: (draft: string) => void;
@@ -188,7 +188,7 @@ export function ProviderKeyField({
   };
   useImperativeHandle(ref, () => ({ commit }));
   // A field that goes away takes its text with it: whoever was told of the
-  // text (setup's Get started) is told it is gone.
+  // text (setup's Continue) is told it is gone.
   const draftListener = useRef(onDraftChange);
   draftListener.current = onDraftChange;
   useEffect(() => () => draftListener.current?.(""), []);

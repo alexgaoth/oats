@@ -21,3 +21,22 @@ export function migrateLocalSetupAuthorization(storage) {
   storage.setItem(MIGRATED, "1");
   return changed;
 }
+
+/** Setup's "Where Oats thinks" was continued: its downloads may start. */
+export const SETUP_PROCESSING_DONE = "setupProcessingDone";
+
+/**
+ * Whether Oats may fetch a model by itself yet: once setup is done, or once
+ * setup's "Where Oats thinks" step is continued (Alex, 2026-11-22). That step
+ * names the models and their sizes, so its Continue is the consent, and the
+ * step after it, "Your models", shows them coming. Each feature still needs
+ * its own consent (`downloadAuthorized`, featureRoutes.mjs).
+ *
+ * @param {Pick<Storage, "getItem"> | null} storage
+ */
+export function setupAllowsDownloads(storage) {
+  return (
+    storage?.getItem("onboardingCompleted") === "true" ||
+    storage?.getItem(SETUP_PROCESSING_DONE) === "true"
+  );
+}

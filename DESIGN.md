@@ -163,6 +163,10 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   download's bar with "34% of 574 MB" and Cancel, Download or Try again, Add
   API key, or "Key refused" in warning. Speech needs an OpenAI key: with only
   Anthropic keys, a speech row's "With an API key" is off and says why.
+  Setup's third step, **Your models** (`onboarding/ModelsStep.tsx`), shows the
+  same rows with the status only: the downloads "Where Oats thinks" names
+  start on its Continue and show there, then Ready. Get started does not
+  wait for them.
 - Alerts are a bordered row with an icon, tinted by tone (`warning`, `danger`).
 - **The example conversation** (`helpers/exampleConversation.mjs`). With nothing
   recorded, Home (under the record card) and the empty Conversations page

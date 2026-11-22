@@ -234,7 +234,7 @@ test("whisper-server listens on loopback and loads a model file", () => {
 // measured fast enough (speechTier.mjs, deviceTier.js). docs/network-allowlist.md
 // names it; these pin how it can start and that it is counted.
 
-test("turbo is fetched only when the workspace asks, after setup, never at launch", () => {
+test("turbo is fetched only when the workspace or setup asks, never at launch", () => {
   // Main starts it only from its IPC handler, which the renderer calls.
   for (const file of MAIN_SOURCES) {
     if (file.endsWith(path.join("helpers", "deviceTier.js"))) continue;
@@ -249,13 +249,16 @@ test("turbo is fetched only when the workspace asks, after setup, never at launc
       assert.equal(calls, 0, `${file} must not start the turbo download`);
     }
   }
-  // The renderer asks from the workspace, which shows only once setup is done.
+  // The renderer asks from the workspace, and from setup once its "Where Oats
+  // thinks" is continued (Alex, 2026-11-22); the two are never mounted at once.
   const askers = ALL_SOURCES.filter((file) => /\buseSpeechUpgrade\(\);/.test(read(file)));
-  assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["OatsWorkspace.tsx"]);
-  assert.match(
-    read("src/hooks/useSpeechUpgrade.ts"),
-    /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/
-  );
+  assert.deepEqual(askers.map((file) => path.basename(file)).sort(), [
+    "OatsWorkspace.tsx",
+    "OnboardingFlow.tsx",
+  ]);
+  const upgrade = read("src/hooks/useSpeechUpgrade.ts");
+  assert.match(upgrade, /const setupDone = setupAllowsDownloads\(localStorage\);/);
+  assert.match(upgrade, /shouldFetchTurbo\(\{[\s\S]{0,120}setupDone,/);
 });
 
 test("turbo's automatic start is announced where the person is, and only that start", () => {
@@ -324,18 +327,19 @@ test("the writing model is fetched only when the renderer asks, never at launch"
       assert.equal(calls, 0, `${file} must not start the writing model's download`);
     }
   }
-  // The renderer asks from one module: the workspace's hook (after setup) and
-  // Settings' own button both live in useWritingModel.ts.
+  // The renderer asks from one module: the automatic hook (in the workspace,
+  // and in setup once its processing step is continued) and Settings' own
+  // button both live in useWritingModel.ts.
   const askers = ALL_SOURCES.filter((file) => /startWritingModelDownload\?\.\(/.test(read(file)));
   assert.deepEqual(askers.map((file) => path.basename(file)).sort(), ["useWritingModel.ts"]);
   const hooks = ALL_SOURCES.filter((file) => /\buseWritingModelDownload\(\);/.test(read(file)));
-  assert.deepEqual(
-    hooks.map((file) => path.basename(file)),
-    ["OatsWorkspace.tsx"]
-  );
+  assert.deepEqual(hooks.map((file) => path.basename(file)).sort(), [
+    "OatsWorkspace.tsx",
+    "OnboardingFlow.tsx",
+  ]);
   assert.match(
     read("src/hooks/useWritingModel.ts"),
-    /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/
+    /setupDone: setupAllowsDownloads\(localStorage\)/
   );
 });
 
@@ -433,12 +437,16 @@ test("the writing model comes through the counted download path, from Hugging Fa
   }
 });
 
-test("downloads require consent for the feature that uses the model, after setup", () => {
+// Setup's "Where Oats thinks" names the models and their sizes, so its
+// Continue is the consent, and "Your models" shows them coming (Alex,
+// 2026-11-22). Setup starts nothing itself: it mounts the workspace's hooks.
+test("downloads require consent for the feature that uses the model, from setup's choice on", () => {
   const processing = read("src/components/settings/processing.ts");
   assert.match(processing, /setLocalSetupAuthorization\(mode === "local"\);/);
   for (const name of [
     "OnboardingFlow.tsx",
     "onboarding/ProcessingStep.tsx",
+    "onboarding/ModelsStep.tsx",
     "onboarding/processingSetup.ts",
   ]) {
     assert.doesNotMatch(
@@ -454,6 +462,18 @@ test("downloads require consent for the feature that uses the model, after setup
     for (const feature of features) {
       assert.ok(hook.includes(`selectFeatureRoute(state, "${feature}").downloadAuthorized`));
     }
-    assert.match(hook, /setupDone: localStorage\.getItem\("onboardingCompleted"\) === "true"/);
+    assert.match(
+      hook,
+      /setupDone(: | = )setupAllowsDownloads\(localStorage\)/,
+      `${name} waits for setup's choice`
+    );
   }
+  const flow = read("src/components/OnboardingFlow.tsx");
+  assert.match(flow, /useSpeechUpgrade\(\);\s*useWritingModelDownload\(\);/);
+  // The flag is set only once the choice is committed, after setProcessing.
+  const forward = flow.slice(flow.indexOf("const goForward = async () => {"));
+  assert.ok(
+    forward.indexOf("setProcessing(processingChoice)") <
+      forward.indexOf('localStorage.setItem(SETUP_PROCESSING_DONE, "true")')
+  );
 });
