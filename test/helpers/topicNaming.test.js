@@ -587,6 +587,31 @@ test("live topic routes keep the key loop and use the detector for local cuts", 
   }
 });
 
+test("a recording warms only a downloaded local writing model that names live", () => {
+  const { writingPrewarmRole } = naming;
+  const local = { routeMode: "local", topicMode: "detector-namer", downloaded: true };
+  const cases = [
+    // The local model names while recording: its own server, or the shared one.
+    [{ ...local, dedicated: true }, "writing"],
+    [{ ...local, dedicated: false }, "default"],
+    [{ ...local, topicMode: "window-loop" }, "default"],
+    // Not downloaded (or not known to be): the first request says so, as before.
+    [{ ...local, downloaded: false }, null],
+    [{ ...local, downloaded: null }, null],
+    // Names only at Finish, or no names: nothing starts with the recording.
+    [{ ...local, topicMode: "finish" }, null],
+    [{ ...local, topicMode: "none" }, null],
+    // A key's route or a self-hosted server: nothing on this Mac to warm.
+    [{ ...local, routeMode: "providers", topicMode: "namer" }, null],
+    [{ ...local, routeMode: "providers", topicMode: "key-loop" }, null],
+    [{ ...local, routeMode: "self-hosted", topicMode: "namer" }, null],
+    [{}, null],
+  ];
+  for (const [input, expected] of cases) {
+    assert.equal(writingPrewarmRole(input), expected, JSON.stringify(input));
+  }
+});
+
 // docs/network-allowlist.md promises that topic names add no destination and
 // no path the sidebar's count could miss: a request goes only by the writing
 // model's own route (the reasoning service, whose provider calls are renderer

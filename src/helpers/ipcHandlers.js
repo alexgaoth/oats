@@ -3934,6 +3934,19 @@ class IPCHandlers {
       }
     });
 
+    // Starts the writing model's server as a recording begins, so the first
+    // topic name does not wait for the model to load (topicNamingRunner).
+    ipcMain.handle("llama-writing-prewarm", async (_event, modelId, role) => {
+      try {
+        if (typeof modelId !== "string" || !modelId) return { started: false };
+        if (!["writing", "default"].includes(role)) return { started: false };
+        const modelManager = require("./modelManagerBridge").default;
+        return { started: await modelManager.prewarmWritingModel(modelId, role) };
+      } catch (error) {
+        return { started: false, error: error.message };
+      }
+    });
+
     ipcMain.handle("llama-server-status", async () => {
       try {
         const modelManager = require("./modelManagerBridge").default;

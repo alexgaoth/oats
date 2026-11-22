@@ -292,3 +292,78 @@ test("a hold ends with the page that asked for it, and only that page", () => {
   owner.held(null);
   assert.equal(released, 2);
 });
+
+// --- Warming the writing model as a recording begins (topicNamingRunner prewarmWritingModel).
+
+test("held, a recording warms its writing server, and the first name needs no start of its own", async () => {
+  const { manager, log } = setupManager();
+  await manager.runInference(CLASSIFIER, "card", {});
+  await holdWithFake(manager, log);
+  assert.equal(await manager.prewarmWritingModel(WRITER, "writing"), true);
+  assert.equal(manager.writingServer.starts, 1);
+  assert.equal(manager.writingServerModelId, WRITER);
+  assert.equal(manager.serverManager.starts, 1, "the classifier's server was not touched");
+  assert.equal(manager.currentServerModelId, CLASSIFIER);
+  await manager.runInference(WRITER, "name", { serverRole: "writing" });
+  assert.equal(manager.writingServer.starts, 1, "the first name used the warm server");
+  assert.equal(log.at(-1).server, "writing");
+  // Warming again while it runs starts nothing.
+  assert.equal(await manager.prewarmWritingModel(WRITER, "writing"), true);
+  assert.equal(manager.writingServer.starts, 1);
+});
+
+test("not held, a warm-up of the writing server does nothing", async () => {
+  const { manager } = setupManager();
+  assert.equal(await manager.prewarmWritingModel(WRITER, "writing"), false);
+  assert.equal(manager.writingServer, null);
+  assert.equal(manager.serverManager.starts, 0);
+  assert.equal(await manager.prewarmWritingModel(WRITER, "neither"), false);
+  assert.equal(await manager.prewarmWritingModel("", "default"), false);
+  assert.equal(manager.serverManager.starts, 0);
+});
+
+test("without a server of its own, the shared server is warmed with the writing model", async () => {
+  const { manager, log } = setupManager();
+  assert.equal(await manager.prewarmWritingModel(WRITER, "default"), true);
+  assert.equal(manager.serverManager.starts, 1);
+  assert.equal(manager.currentServerModelId, WRITER);
+  await manager.runInference(WRITER, "name", {});
+  assert.equal(manager.serverManager.starts, 1, "the first name used the warm server");
+  assert.equal(log.at(-1).server, "default");
+});
+
+test("a warm-up that fails holds the names for Finish, as a first name that fails does", async () => {
+  const { manager, log } = setupManager();
+  await holdWithFake(manager, log);
+  manager.writingServer.failStart = true;
+  assert.equal(await manager.prewarmWritingModel(WRITER, "writing"), false);
+  assert.equal(manager.writingStartFailed, true);
+  await assert.rejects(
+    manager.runInference(WRITER, "name", { serverRole: "writing" }),
+    (error) => error.code === "WRITING_SERVER_FAILED"
+  );
+  assert.equal(manager.writingServer.starts, 1, "not tried again in that recording");
+});
+
+test("a recording that ends during the warm-up does not keep the model loaded", async () => {
+  const { manager, log } = setupManager();
+  await holdWithFake(manager, log);
+  const server = manager.writingServer;
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const start = server.start.bind(server);
+  server.start = async (modelPath) => {
+    await gate;
+    return start(modelPath);
+  };
+  const warming = manager.prewarmWritingModel(WRITER, "writing");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(await manager.setWritingServer("stop"), { dedicated: false });
+  release();
+  assert.equal(await warming, false);
+  assert.equal(server.ready, false, "the late copy of the model was stopped");
+  assert.equal(manager.writingServerModelId, null);
+  assert.equal(manager.writingStartFailed, false);
+});

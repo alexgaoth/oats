@@ -749,6 +749,32 @@ export function liveTopicMode({ mode, hasCheckModel = false, liveNames = false, 
 }
 
 /**
+ * Which llama-server to start as a recording begins, so that the first topic
+ * name does not wait for the writing model to load. Started on the first
+ * request instead, a cold load can take most of the name's time limit, and a
+ * name that times out is asked again only when its topic has grown by half.
+ *
+ * Only for a local writing model that is downloaded and names while the
+ * recording runs. "writing" is the recording's own server for the writing
+ * model (helpers/writingServer.js), and "default" is the shared server. No
+ * other route starts anything.
+ *
+ * @param {{ routeMode?: string | null, topicMode?: string | null,
+ *   dedicated?: boolean, downloaded?: boolean }} input
+ * @returns {"writing" | "default" | null}
+ */
+export function writingPrewarmRole({
+  routeMode = null,
+  topicMode = null,
+  dedicated = false,
+  downloaded = false,
+}) {
+  if (routeMode !== "local" || downloaded !== true) return null;
+  if (topicMode !== "detector-namer" && topicMode !== "window-loop") return null;
+  return dedicated === true ? "writing" : "default";
+}
+
+/**
  * The names (and descriptions) a snapshot carries from the model, by topic
  * id, for putting on another copy of the same topics (the record as stored).
  *
