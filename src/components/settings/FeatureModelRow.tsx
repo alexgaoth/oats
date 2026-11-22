@@ -152,7 +152,7 @@ interface RowModel {
    * "until-works" until its key, which the provider refused, works again.
    */
   place: "local" | "providers" | "until-key" | "until-works";
-  /** For "until-key": whose key ("OpenAI", "OpenAI or Anthropic"). */
+  /** For "until-key": whose key ("OpenAI"); none when either provider's will do. */
   provider?: string;
   status: ModelStatus;
   /** A line under the row: what a download is for, why a model is offered. */
@@ -365,10 +365,8 @@ function WritingRow({ upgrade, menus }: { upgrade: boolean; menus: boolean }) {
     row = {
       model: writing.status === "ready" ? writing.name : t("oats.models.noModel"),
       place: key ? "until-works" : "until-key",
-      provider:
-        !pinned || !isKeyProvider(provider)
-          ? t("oats.featureRoutes.writingKeyProviders")
-          : getProviderDisplayName(provider),
+      // Writing takes either provider's key until one is chosen: "a key".
+      provider: !pinned || !isKeyProvider(provider) ? undefined : getProviderDisplayName(provider),
       // Writing takes either provider's key, so a key added here may be either.
       status: keyStatus(key, "any"),
     };
@@ -437,20 +435,26 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
   const placeText =
     row.place === "providers"
       ? t("oats.featureRoutes.placeKey")
-      : row.place === "until-key"
+      : row.place === "until-key" && row.provider
         ? t(
             mac
               ? "oats.featureRoutes.placeUntilKeyMac"
               : "oats.featureRoutes.placeUntilKeyComputer",
             { provider: row.provider }
           )
-        : row.place === "until-works"
+        : row.place === "until-key"
           ? t(
               mac
-                ? "oats.featureRoutes.placeUntilWorksMac"
-                : "oats.featureRoutes.placeUntilWorksComputer"
+                ? "oats.featureRoutes.placeUntilAnyKeyMac"
+                : "oats.featureRoutes.placeUntilAnyKeyComputer"
             )
-          : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
+          : row.place === "until-works"
+            ? t(
+                mac
+                  ? "oats.featureRoutes.placeUntilWorksMac"
+                  : "oats.featureRoutes.placeUntilWorksComputer"
+              )
+            : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
   const Offer = row.offer?.icon;
   return (
     <section aria-labelledby={titleId} data-feature-row={feature} className="px-5 py-3.5">
