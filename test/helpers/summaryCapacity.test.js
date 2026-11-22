@@ -276,10 +276,7 @@ test.before(async () => {
 
 // --- 1. Main, up to the IPC result.
 
-const SUMMARY = {
-  systemPrompt: "You are a professional meeting notes assistant.",
-  requireComplete: true,
-};
+const SUMMARY = { systemPrompt: "You are a professional meeting notes assistant.", requireComplete: true };
 // Long enough that the bridge asks for its largest answer, 2,048 tokens.
 const TRANSCRIPT = `## Conversation Transcript\n${"Ava: The fictional kite launch moves to Tuesday. ".repeat(40)}`;
 
@@ -379,10 +376,7 @@ test("the local provider throws the reason it was given, and the queue reads it"
     answerWith(reply);
     const error = await provider
       .call({ text: TRANSCRIPT, model: MODEL, config: SUMMARY, ctx: { getSystemPrompt: () => "" } })
-      .then(
-        () => null,
-        (thrown) => thrown
-      );
+      .then(() => null, (thrown) => thrown);
     assert.ok(error instanceof Error, kind);
     assert.equal(queue.summaryFailureKind(error, "local"), kind, kind);
     // Off this Mac a provider's words are its own.
@@ -408,14 +402,7 @@ async function summarize(t, noteId, { hash = "h1", content = TRANSCRIPT } = {}) 
   updates.length = 0;
   let outcome;
   const running = action
-    .runBackgroundAction(
-      noteId,
-      content,
-      hash,
-      ACTION,
-      { isCloudMode: false, modelId: MODEL, isMeetingNote: true },
-      LABELS
-    )
+    .runBackgroundAction(noteId, content, hash, ACTION, { isCloudMode: false, modelId: MODEL, isMeetingNote: true }, LABELS)
     .then((value) => {
       outcome = value;
     });
@@ -505,24 +492,10 @@ test("a summary still being written when a newer one starts never saves over it"
   globalThis.__oats.processText = () => new Promise((resolve) => gates.push(resolve));
   try {
     updates.length = 0;
-    const older = action.runBackgroundAction(
-      21,
-      TRANSCRIPT,
-      "old",
-      ACTION,
-      { isCloudMode: false, modelId: MODEL, isMeetingNote: true },
-      LABELS
-    );
+    const older = action.runBackgroundAction(21, TRANSCRIPT, "old", ACTION, { isCloudMode: false, modelId: MODEL, isMeetingNote: true }, LABELS);
     await flush();
     action.cancelAction(21);
-    const newer = action.runBackgroundAction(
-      21,
-      TRANSCRIPT,
-      "new",
-      ACTION,
-      { isCloudMode: false, modelId: MODEL, isMeetingNote: true },
-      LABELS
-    );
+    const newer = action.runBackgroundAction(21, TRANSCRIPT, "new", ACTION, { isCloudMode: false, modelId: MODEL, isMeetingNote: true }, LABELS);
     for (let turn = 0; turn < 5; turn += 1) await flush();
     assert.equal(gates.length, 2);
     gates[1]("## Threads\n- newer");
@@ -545,15 +518,8 @@ test("a slow summary of an earlier transcript never saves over one of the curren
   globalThis.__oats.processText = () => new Promise((resolve) => gates.push(resolve));
   try {
     updates.length = 0;
-    const transcript = '[{"id":"s1","text":"one"},{"id":"s2","text":"two"}]';
-    const running = action.runBackgroundAction(
-      22,
-      TRANSCRIPT,
-      "18-earlier",
-      ACTION,
-      { isCloudMode: false, modelId: MODEL, isMeetingNote: true },
-      LABELS
-    );
+    const transcript = "[{\"id\":\"s1\",\"text\":\"one\"},{\"id\":\"s2\",\"text\":\"two\"}]";
+    const running = action.runBackgroundAction(22, TRANSCRIPT, "18-earlier", ACTION, { isCloudMode: false, modelId: MODEL, isMeetingNote: true }, LABELS);
     for (let turn = 0; turn < 5; turn += 1) await flush();
     // Meanwhile the conversation went on, and a summary of all of it was saved.
     storedNote = {
@@ -573,15 +539,12 @@ test("a slow summary of an earlier transcript never saves over one of the curren
 
 // --- 4. The queue's memory: an unchanged failure is not asked again, even after a restart.
 
-const FINGERPRINT = { source: '61452-[{"id":"s1"', model: `local:${MODEL}` };
+const FINGERPRINT = { source: "61452-[{\"id\":\"s1\"", model: `local:${MODEL}` };
 
 test("a too-long or answer-limit failure is remembered, and a restart still knows it", async () => {
   storage.clear();
   assert.equal(await queueStore.runSummary(31, async () => "too-long", FINGERPRINT), "too-long");
-  assert.equal(
-    await queueStore.runSummary(32, async () => "output-limit", FINGERPRINT),
-    "output-limit"
-  );
+  assert.equal(await queueStore.runSummary(32, async () => "output-limit", FINGERPRINT), "output-limit");
   assert.equal(await queueStore.runSummary(33, async () => "failed", FINGERPRINT), "failed");
   const now = { ...FINGERPRINT, context: queue.LOCAL_CONTEXT_TOKENS };
   assert.equal(queueStore.standingSummaryFailure({ id: 31, ...now }), "too-long");
@@ -593,14 +556,8 @@ test("a too-long or answer-limit failure is remembered, and a restart still know
   const restarted = await import("../../src/stores/summaryQueueStore.ts?restart=1");
   assert.equal(restarted.standingSummaryFailure({ id: 31, ...now }), "too-long");
   // A changed transcript, model or context may be tried.
-  assert.equal(
-    restarted.standingSummaryFailure({ id: 31, ...now, source: '61900-[{"id":"s1"' }),
-    null
-  );
-  assert.equal(
-    restarted.standingSummaryFailure({ id: 31, ...now, model: "local:gemma-4-12b-it-qat-q4_0" }),
-    null
-  );
+  assert.equal(restarted.standingSummaryFailure({ id: 31, ...now, source: "61900-[{\"id\":\"s1\"" }), null);
+  assert.equal(restarted.standingSummaryFailure({ id: 31, ...now, model: "local:gemma-4-12b-it-qat-q4_0" }), null);
   assert.equal(restarted.standingSummaryFailure({ id: 31, ...now, context: 32768 }), null);
 });
 

@@ -175,16 +175,10 @@ test("the most recently ended conversation wins", () => {
 });
 
 test("the window's edge, an empty transcript, and a last word from the future", () => {
-  const atEdge = note(1, {
-    segments: [turn(NOW - RESUME_WINDOW_MS, 0)],
-    createdAt: NOW - 60 * MINUTE,
-  });
+  const atEdge = note(1, { segments: [turn(NOW - RESUME_WINDOW_MS, 0)], createdAt: NOW - 60 * MINUTE });
   assert.equal(findResumableConversation([atEdge], { now: NOW }), atEdge, "exactly at the edge");
 
-  const past = note(2, {
-    segments: [turn(NOW - RESUME_WINDOW_MS - 1, 0)],
-    createdAt: NOW - 60 * MINUTE,
-  });
+  const past = note(2, { segments: [turn(NOW - RESUME_WINDOW_MS - 1, 0)], createdAt: NOW - 60 * MINUTE });
   assert.equal(findResumableConversation([past], { now: NOW }), null, "a millisecond past it");
 
   const empty = { id: 3, transcript: "", created_at: sqliteUtc(NOW - MINUTE) };

@@ -4,8 +4,9 @@ const assert = require("node:assert/strict");
 let openQuestionCount, questionOutcomes;
 
 test.before(async () => {
-  ({ openQuestionCount, questionOutcomes } =
-    await import("../../src/helpers/conversationReview.mjs"));
+  ({ openQuestionCount, questionOutcomes } = await import(
+    "../../src/helpers/conversationReview.mjs"
+  ));
 });
 
 let nextId = 1;
