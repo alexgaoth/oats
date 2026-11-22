@@ -206,7 +206,17 @@ window.electronAPI = main.api;
 const replay = createReplay({
   main,
   fixture: mainFixture,
-  options: { hold: params.get("end") === "hold", edits: params.get("edits") !== "0" },
+  options: {
+    hold: params.get("end") === "hold",
+    edits: params.get("edits") !== "0",
+    // `nameHold=SOC 2`: that topic's name is answered after `nameHoldSeconds`
+    // (15 by default), so a capture can show it being named.
+    nameHold: params.get("nameHold") ?? "",
+    nameHoldMs:
+      Number(params.get("nameHoldSeconds")) > 0
+        ? Number(params.get("nameHoldSeconds")) * 1000
+        : 15000,
+  },
 });
 const replayStart = main.hooks.start;
 main.hooks.start = (options) => {

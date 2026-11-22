@@ -90,7 +90,17 @@ test("each row is a button: the label, the minutes, and its state for a screen r
   // The stack's dividers.
   assert.match(LANES, /index > 0 && "border-t border-border"/);
   // A name cut with an ellipsis is the row's tooltip, decided where it is drawn.
-  assert.match(LANES, /label\.title = label\.scrollWidth > label\.clientWidth \? row\.label : "";/);
+  // A topic being named has no name to show yet (DESIGN.md §5).
+  assert.match(
+    LANES,
+    /element\.title =\s+row\.nameState !== "pending" && element\.scrollWidth > element\.clientWidth\s+\? row\.label\s+: "";/
+  );
+  // The label is drawn by TopicName: the name, or a placeholder while one is on its way.
+  assert.match(
+    LANES,
+    /<TopicName label=\{row\.label\} nameState=\{row\.nameState\} opening=\{row\.opening\} \/>/
+  );
+  assert.match(LANES, /const label = topicNameText\(t, row\);/);
 });
 
 test("one 1.5px quiet line over the rows' middle column, kept on them while the card glides", () => {

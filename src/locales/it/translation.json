@@ -2081,8 +2081,6 @@
       "shortcutAnywhere": "da qualsiasi app",
       "recordingBadge": "In registrazione",
       "counters": {
-        "words_one": "{{count}} parola",
-        "words_other": "{{count}} parole",
         "questions_one": "{{count}} domanda",
         "questions_other": "{{count}} domande"
       },
@@ -2120,6 +2118,8 @@
       "nodeNameBack": "{{label}}, {{state}}, {{back}}",
       "quote": "«{{text}}»",
       "noQuote": "Niente di recente da citare.",
+      "findingTopic": "Ricerca del tema…",
+      "namingTopic": "Nome del tema in arrivo",
       "earlier": "Emerso in conversazioni precedenti:"
     },
     "intelligence": {

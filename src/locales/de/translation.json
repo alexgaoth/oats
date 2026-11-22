@@ -2081,8 +2081,6 @@
       "shortcutAnywhere": "aus jeder App",
       "recordingBadge": "Aufnahme",
       "counters": {
-        "words_one": "{{count}} Wort",
-        "words_other": "{{count}} Wörter",
         "questions_one": "{{count}} Frage",
         "questions_other": "{{count}} Fragen"
       },
@@ -2120,6 +2118,8 @@
       "nodeNameBack": "{{label}}, {{state}}, {{back}}",
       "quote": "„{{text}}“",
       "noQuote": "Nichts Aktuelles zum Zitieren.",
+      "findingTopic": "Thema wird gesucht…",
+      "namingTopic": "Thema wird benannt",
       "earlier": "Kam in früheren Gesprächen vor:"
     },
     "intelligence": {

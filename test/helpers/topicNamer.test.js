@@ -695,3 +695,71 @@ test("a description-only request answered with the name alone changes nothing, a
     "The launch may move from the 3rd."
   );
 });
+
+// Whether a topic with no name yet will get one while recording, so the live
+// view draws it as being named (`withNameStates`, DESIGN.md §5).
+test("a topic expects a name while it grows, or once it is big enough to ask about", () => {
+  const { namer } = setup();
+  const talk = conversation();
+  talk.say(1, 10);
+  let snapshot = talk.snapshot(1);
+  namer.observe(snapshot, talk.segments);
+  assert.equal(namer.expectsName(snapshot.nodes[0]), true, "the room is on it");
+
+  // The room moved on before forty words: no name comes while recording.
+  talk.say(2, 50);
+  snapshot = talk.snapshot(2);
+  namer.observe(snapshot, talk.segments);
+  assert.equal(namer.expectsName(snapshot.nodes[0]), false);
+  assert.equal(namer.expectsName(snapshot.nodes[1]), true);
+
+  // Left with fifty words: it is asked about even though the room moved on.
+  talk.say(3, 5);
+  snapshot = talk.snapshot(3);
+  namer.observe(snapshot, talk.segments);
+  assert.equal(namer.expectsName(snapshot.nodes[1]), true);
+  // A topic the namer has not seen expects nothing.
+  assert.equal(namer.expectsName({ id: 99, label: "x", utteranceIds: ["u99"] }), false);
+});
+
+test("with detector cuts a new topic expects its name at once, the opening one its forty words", async () => {
+  const { clock, namer } = setup({ nameOnCut: true });
+  const talk = conversation();
+  talk.say(1, 20);
+  talk.say(2, 3);
+  const snapshot = talk.snapshot(2);
+  namer.observe(snapshot, talk.segments, { detectorCuts: true });
+  await clock.tick(0);
+  assert.equal(namer.expectsName(snapshot.nodes[0]), false, "short, and the room left it");
+  assert.equal(namer.expectsName(snapshot.nodes[1]), true);
+});
+
+test("no name is expected once the namer stops, gives up, waits for the model, or names at the end", async () => {
+  const talk = conversation();
+  talk.say(1, 45);
+  const snapshot = talk.snapshot(1);
+
+  const end = setup({ live: false });
+  end.namer.observe(snapshot, talk.segments);
+  assert.equal(end.namer.expectsName(snapshot.nodes[0]), false, "names only at Finish");
+
+  const stopped = setup();
+  stopped.namer.observe(snapshot, talk.segments);
+  stopped.namer.stop();
+  assert.equal(stopped.namer.expectsName(snapshot.nodes[0]), false, "the recording stopped");
+
+  const gaveUp = setup();
+  gaveUp.namer.observe(snapshot, talk.segments);
+  // As `_failed` does after three failures in a row.
+  gaveUp.namer.disabled = true;
+  assert.equal(gaveUp.namer.expectsName(snapshot.nodes[0]), false, "it gave up");
+
+  // A writing model that is not ready (a download, a missing key): the word
+  // shows, not a placeholder that shimmers for minutes. Asked again later.
+  const waiting = setup({ ready: () => false });
+  waiting.namer.observe(snapshot, talk.segments);
+  await waiting.clock.tick(namerModule.SETTLE_MS);
+  assert.equal(waiting.namer.expectsName(snapshot.nodes[0]), false, "the model is not ready");
+  await waiting.clock.tick(namerModule.NOT_READY_BACKOFF_MS);
+  assert.equal(waiting.namer.expectsName(snapshot.nodes[0]), true, "worth asking again");
+});

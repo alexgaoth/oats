@@ -2081,8 +2081,6 @@
       "shortcutAnywhere": "どのアプリからでも",
       "recordingBadge": "録音中",
       "counters": {
-        "words_one": "{{count}} 語",
-        "words_other": "{{count}} 語",
         "questions_one": "質問 {{count}} 件",
         "questions_other": "質問 {{count}} 件"
       },
@@ -2120,6 +2118,8 @@
       "nodeNameBack": "{{label}}、{{state}}、{{back}}",
       "quote": "「{{text}}」",
       "noQuote": "引用できる発言がありません。",
+      "findingTopic": "話題を探しています…",
+      "namingTopic": "話題に名前を付けています",
       "earlier": "以前の会話で出た話題："
     },
     "intelligence": {
