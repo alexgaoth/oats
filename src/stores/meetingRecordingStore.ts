@@ -1070,9 +1070,12 @@ export function getConversationTopicSnapshot(): ConversationTopicSnapshot | null
   );
 }
 
+// Rollback: allow the writing model to replace the tracker's final cuts.
+const ENABLE_MODEL_RECORD_CUT = false;
+
 /**
- * The record's topics cut again where the writing model says each starts, as
- * it reads the whole conversation (topicNamingRunner.ts `recordTopicStarts`),
+ * With the rollback enabled, cut the record where the writing model says
+ * each topic starts (topicNamingRunner.ts `recordTopicStarts`),
  * stored onto the note with this recording's names on them. Resolves to what
  * was stored, or null: no writing model ready, no usable answer, a new
  * recording started meanwhile, or the note is gone. The record then keeps the
@@ -1085,6 +1088,7 @@ export async function cutRecordTopics(
   segments: TranscriptSegment[],
   naming?: number
 ): Promise<ConversationTopicSnapshot | null> {
+  if (!ENABLE_MODEL_RECORD_CUT) return null;
   const tracker = conversationTopicTracker;
   if (!tracker) return null;
   try {

@@ -700,10 +700,8 @@ function ConversationSurface() {
       } finally {
         finishSaved();
       }
-      // The writing model reads the whole conversation and says where each
-      // topic starts, which the tracker can only guess from pauses and words
-      // (helpers/topicRecordCut.mjs). The record takes those cuts; without a
-      // usable answer it keeps the tracker's, saved above.
+      // The record keeps the tracker's final cuts, saved above. Only the
+      // rollback in meetingRecordingStore.ts can replace them.
       const cut = await cutRecordTopics(recordingNoteId, state.segments, naming);
       // The writing model's last names for the topics, for the record. With a
       // model on this computer they go before the summary, which would

@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
+const path = require("node:path");
 const { createOneAtATime } = require("../../src/helpers/oneAtATime.js");
 
 let TopicNamer;
@@ -453,6 +455,49 @@ test("named only at the end when names wait for the end: every topic, the bigges
   assert.equal(named.nodes[0].label, "Launch date move");
   assert.equal(named.nodes[2].label, "topic 3");
   assert.equal(final.nodes[0].label, "topic 1", "the snapshot passed in is not changed");
+});
+
+test("Finish skips the model re-cut by default and names the saved snapshot", () => {
+  const src = (file) => readFileSync(path.join(__dirname, "../../src", file), "utf8");
+  const store = src("stores/meetingRecordingStore.ts");
+  const workspace = src("components/OatsWorkspace.tsx");
+  assert.match(store, /const ENABLE_MODEL_RECORD_CUT = false;/);
+  assert.match(
+    store,
+    /export async function cutRecordTopics\([\s\S]*?\{[\s\n]*if \(!ENABLE_MODEL_RECORD_CUT\) return null;/
+  );
+  assert.match(
+    workspace,
+    /const topics = getConversationTopicSnapshot\(\);[\s\S]*await nameFinalTopics\(recordingNoteId, cut \?\? topics, state\.segments, naming\);/
+  );
+});
+
+test("Finish can name and describe without changing a cut or return", async () => {
+  const { namer, asked, answers } = setup({ live: false });
+  const talk = conversation();
+  talk.say(1, 40);
+  talk.say(2, 40);
+  talk.say(1, 40);
+  const final = talk.snapshot();
+  final.edges = [
+    { from: 1, to: 2, kind: "new" },
+    { from: 2, to: 1, kind: "return" },
+  ];
+  answers.push(
+    "Launch date review\nThe team reviewed the release schedule.",
+    "Identity provider review\nThe team compared two identity providers."
+  );
+  const named = await namer.finish(final, talk.segments);
+  assert.equal(asked.length, 2);
+  assert.deepEqual(
+    named.nodes.map(({ label }) => label),
+    ["Launch date review", "Identity provider review"]
+  );
+  assert.equal(named.nodes[0].description, "The team reviewed the release schedule.");
+  const cuts = (snapshot) =>
+    snapshot.nodes.map(({ id, firstAt, utteranceIds }) => ({ id, firstAt, utteranceIds }));
+  assert.deepEqual(cuts(named), cuts(final));
+  assert.equal(named.edges, final.edges);
 });
 
 test("the end waits for the request that is out, renames what grew, and keeps to its budget", async () => {
