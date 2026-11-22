@@ -151,6 +151,18 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   `text-[13px] text-muted-foreground`, hover `bg-muted/60`.
 - Settings are grouped cards of rows: label and description on the left, the
   control on the right.
+- **AI models** (`settings/ModelsPage.tsx`, `settings/FeatureModelRow.tsx`;
+  Alex, 2026-11-22). Processing is radio cards in one row: On this Mac and
+  With an API key, which put every feature there, and Mixed between them only
+  while the features run in different places. Mixed opens and closes by its
+  width and opacity over `--motion-base`; it is a state, not a choice, so
+  pressing it changes nothing. Under it, one row per feature: the model as
+  people say it and where it runs ("Whisper Turbo · on this Mac ⌄"), the place
+  a quiet menu that moves that feature alone, and on the right its status: a
+  green "✓ Ready" pill (with an API key, the key too: "Ready · OpenAI key"), a
+  download's bar with "34% of 574 MB" and Cancel, Download or Try again, Add
+  API key, or "Key refused" in warning. Speech needs an OpenAI key: with only
+  Anthropic keys, a speech row's "With an API key" is off and says why.
 - Alerts are a bordered row with an icon, tinted by tone (`warning`, `danger`).
 - **The example conversation** (`helpers/exampleConversation.mjs`). With nothing
   recorded, Home (under the record card) and the empty Conversations page

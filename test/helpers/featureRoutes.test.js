@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 let FEATURES, FEATURE_ROUTES_KEY, resolveFeatureRoute, changeFeatureRoute, pinWritingProvider;
-let migrateFeaturePreferences, readFeaturePreferences, availableWritingProvider;
+let migrateFeaturePreferences, readFeaturePreferences, availableWritingProvider, processingChoice;
 
 test.before(async () => {
   ({
@@ -14,6 +14,7 @@ test.before(async () => {
     migrateFeaturePreferences,
     readFeaturePreferences,
     availableWritingProvider,
+    processingChoice,
   } = await import("../../src/helpers/featureRoutes.mjs"));
 });
 
@@ -81,17 +82,64 @@ test("each feature resolves only its own exception or the default and its own pr
   }
 });
 
-test("changing the default keeps only exceptions that differ from the new default", () => {
+// Alex, 2026-11-22: On this Mac and With an API key put every feature on that
+// route, so Settings' "Mixed" card closes.
+test("the processing choice puts every feature on its route", () => {
   const initial = changeFeatureRoute(readFeaturePreferences(null), "local");
   const custom = changeFeatureRoute(initial, "providers", "dictation");
-  assert.deepEqual(changeFeatureRoute(custom, "local").exceptions, { dictation: "providers" });
+  assert.deepEqual(custom.exceptions, { dictation: "providers" });
+  assert.equal(processingChoice(custom), "mixed");
+  const local = changeFeatureRoute(custom, "local");
+  assert.deepEqual(local.exceptions, {});
+  assert.equal(processingChoice(local), "local");
+  for (const feature of FEATURES) {
+    assert.equal(resolveFeatureRoute(local, feature).requested, "local");
+    assert.equal(resolveFeatureRoute(local, feature).downloadAuthorized, true);
+  }
   const cloud = changeFeatureRoute(custom, "providers");
   assert.deepEqual(cloud.exceptions, {});
+  assert.equal(processingChoice(cloud), "providers");
   assert.equal(resolveFeatureRoute(cloud, "conversations").downloadAuthorized, false);
   assert.equal(resolveFeatureRoute(cloud, "dictation").exception, null);
-  const back = changeFeatureRoute(cloud, "local");
-  assert.equal(resolveFeatureRoute(back, "dictation").requested, "local");
+  const back = changeFeatureRoute(changeFeatureRoute(cloud, "local", "writing"), "providers");
+  assert.deepEqual(back.exceptions, {});
+  assert.equal(resolveFeatureRoute(back, "writing").downloadAuthorized, false);
   assert.deepEqual(custom.exceptions, { dictation: "providers" });
+});
+
+test("a feature's route that brings every feature to one route becomes the default", () => {
+  let preferences = changeFeatureRoute(readFeaturePreferences(null), "local");
+  preferences = changeFeatureRoute(preferences, "providers", "conversations");
+  preferences = changeFeatureRoute(preferences, "providers", "dictation");
+  assert.deepEqual(preferences.exceptions, { conversations: "providers", dictation: "providers" });
+  assert.equal(processingChoice(preferences), "mixed");
+  preferences = changeFeatureRoute(preferences, "providers", "writing");
+  assert.equal(preferences.defaultRoute, "providers");
+  assert.deepEqual(preferences.exceptions, {});
+  assert.equal(processingChoice(preferences), "providers");
+  for (const feature of FEATURES) {
+    assert.equal(resolveFeatureRoute(preferences, feature).downloadAuthorized, false);
+  }
+  // One feature back on this Mac is a mix again, with consent for it alone.
+  preferences = changeFeatureRoute(preferences, "local", "writing");
+  assert.deepEqual(preferences.exceptions, { writing: "local" });
+  assert.equal(processingChoice(preferences), "mixed");
+  for (const feature of FEATURES) {
+    assert.equal(
+      resolveFeatureRoute(preferences, feature).downloadAuthorized,
+      feature === "writing"
+    );
+  }
+  // Stored preferences whose exceptions all agree still show that route.
+  assert.equal(
+    processingChoice({
+      defaultRoute: "local",
+      exceptions: { conversations: "providers", dictation: "providers", writing: "providers" },
+      consent: {},
+      writingProvider: null,
+    }),
+    "providers"
+  );
 });
 
 test("choosing the app default on a feature row removes its exception", () => {

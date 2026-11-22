@@ -44,6 +44,7 @@ import {
   pinWritingProvider,
   availableWritingProvider,
   isUsableFeatureKey,
+  processingChoice,
   readFeaturePreferences,
   resolveFeatureRoute,
   type Feature,
@@ -2334,12 +2335,24 @@ export function forgetWritingChoice(): void {
 }
 
 /**
- * The one processing choice, read from the scopes it sets: "local" or
- * "providers" when they agree, "mixed" when they differ. Summaries follow the
- * cleanup scope (`selectResolvedLLMConfig`), so their own mode is left out.
+ * The default route: where a feature with no route of its own runs. A
+ * feature's own route is stored only when it differs from this
+ * (`setFeatureProcessing`). What the processing choice shows, "mixed"
+ * included, is `selectProcessingChoice`.
  */
 export function selectProcessingMode(state: Pick<SettingsState, "featurePreferences">): Route {
   return state.featurePreferences.defaultRoute;
+}
+
+/**
+ * What Settings' processing choice shows: "local" or "providers" while every
+ * feature asks for that route, "mixed" while they ask for different ones (the
+ * Mixed card is open then).
+ */
+export function selectProcessingChoice(
+  state: Pick<SettingsState, "featurePreferences">
+): Route | "mixed" {
+  return processingChoice(state.featurePreferences);
 }
 
 /** Only the committed processing choice authorizes automatic local downloads. */

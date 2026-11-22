@@ -93,8 +93,14 @@ export function pinWritingProvider(preferences, keys) {
 }
 
 /**
- * Change the default, or change just one exception. Store only exceptions
+ * Change the processing choice, or one feature's route. Store only exceptions
  * that differ from the default.
+ *
+ * The processing choice (On this Mac, With an API key) puts every feature on
+ * its route, so a mix of routes ends there (Alex, 2026-11-22: Settings'
+ * "Mixed" card closes when the routes agree again). A feature's route that
+ * brings every feature to one route makes that route the default, with no
+ * exceptions, so the processing choice says so.
  *
  * @param {FeaturePreferences} preferences
  * @param {Route | null} route
@@ -108,14 +114,29 @@ export function changeFeatureRoute(preferences, route, feature) {
     if (route === null || route === preferences.defaultRoute) delete exceptions[feature];
     else exceptions[feature] = route;
     consent[feature] = (route ?? preferences.defaultRoute) === "local";
+    const routes = new Set(FEATURES.map((name) => exceptions[name] ?? preferences.defaultRoute));
+    if (routes.size === 1 && !routes.has(preferences.defaultRoute)) {
+      return { ...preferences, defaultRoute: [...routes][0], exceptions: {}, consent };
+    }
     return { ...preferences, exceptions, consent };
   }
   if (route === null) return preferences;
-  for (const name of FEATURES) {
-    if (exceptions[name] === route) delete exceptions[name];
-    if (!exceptions[name]) consent[name] = route === "local";
-  }
-  return { ...preferences, defaultRoute: route, exceptions, consent };
+  for (const name of FEATURES) consent[name] = route === "local";
+  return { ...preferences, defaultRoute: route, exceptions: {}, consent };
+}
+
+/**
+ * What the processing choice shows: the route every feature asks for, or
+ * "mixed" while they ask for different ones.
+ *
+ * @param {FeaturePreferences} preferences
+ * @returns {Route | "mixed"}
+ */
+export function processingChoice(preferences) {
+  const routes = new Set(
+    FEATURES.map((name) => preferences.exceptions[name] ?? preferences.defaultRoute)
+  );
+  return routes.size > 1 ? "mixed" : [...routes][0];
 }
 
 /**
