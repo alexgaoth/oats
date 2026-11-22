@@ -11,7 +11,7 @@ import { getCachedPlatform } from "../../utils/platform";
  * Setup's second step, "Where Oats thinks": the same processing choice as
  * Settings › AI models (ProcessingChoice). On this Mac, it names what will be
  * downloaded and how big it is; with an API key, it takes the key in place,
- * checked before it is saved: Get started checks and saves a key pasted there
+ * checked before it is saved: Continue checks and saves a key pasted there
  * (`keyField`), so there is no Save. The choice is committed when the person
  * continues (OnboardingFlow), so trying both options changes nothing.
  */

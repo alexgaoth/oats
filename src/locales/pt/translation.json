@@ -140,6 +140,7 @@
       "setup": "Configuração",
       "permissions": "Permissões",
       "processing": "Processamento",
+      "models": "Seus modelos",
       "activation": "Ditado",
       "useCase": "Sobre você",
       "meeting": "Reuniões",
@@ -179,6 +180,11 @@
       "downloads": "O Oats baixa {{models}} do Hugging Face quando você continuar, em segundo plano.",
       "nothingToDownload": "Tudo de que o Oats precisa já está neste Mac.",
       "nothingToDownloadComputer": "Tudo de que o Oats precisa já está neste computador."
+    },
+    "models": {
+      "title": "Seus modelos",
+      "downloading": "Eles são baixados em segundo plano, então você já pode começar.",
+      "settled": "Você pode mudar onde cada um roda em Definições › Modelos de IA."
     },
     "continue": "Continuar",
     "back": "Voltar",

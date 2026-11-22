@@ -10,6 +10,7 @@ import {
 } from "../stores/settingsStore";
 import { shouldFetchTurbo, shouldLeaveTurbo } from "../helpers/speechTier.mjs";
 import { startupSpeechLanguage } from "../helpers/speechLanguage.mjs";
+import { setupAllowsDownloads } from "../helpers/localSetupConsent.mjs";
 import { leaveTurbo } from "./useSpeechTier";
 import {
   cancelRoomModelDownload,
@@ -25,7 +26,7 @@ function workspaceIdle() {
 
 function roomDownloadAuthorized() {
   return (
-    localStorage.getItem("onboardingCompleted") === "true" &&
+    setupAllowsDownloads(localStorage) &&
     selectFeatureRoute(useSettingsStore.getState(), "conversations").downloadAuthorized
   );
 }
@@ -37,8 +38,10 @@ export function requestRoomModel() {
 /**
  * Ask main for turbo when the rule picks it for this Mac and nothing stands in
  * the way (`shouldFetchTurbo`), and stop its download when speech leaves this
- * Mac (`shouldLeaveTurbo`). Mounted once, in the workspace, which shows only
- * after setup. Main checks the rule again before it fetches anything.
+ * Mac (`shouldLeaveTurbo`); the same for Parakeet Ultra in a room. Mounted
+ * once at a time: in setup from its "Where Oats thinks" step on
+ * (`setupAllowsDownloads`; its "Your models" step shows the downloads), then
+ * in the workspace. Main checks the rule again before it fetches anything.
  */
 export function useSpeechUpgrade() {
   const tier = useDeviceTierStore((state) => state.tier);
@@ -86,7 +89,7 @@ export function useSpeechUpgrade() {
   const local = (dictationAuthorized || (roomAuthorized && !room)) && engine === "whisper";
   const fetch = shouldFetchTurbo({
     choice: plan.whisper.choice,
-    setupDone: localStorage.getItem("onboardingCompleted") === "true",
+    setupDone: setupAllowsDownloads(localStorage),
     // `whisperModel` is in the effect's list for this: a choice made in
     // Settings ends it.
     followsDefault,

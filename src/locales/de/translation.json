@@ -140,6 +140,7 @@
       "setup": "Einrichtung",
       "permissions": "Berechtigungen",
       "processing": "Verarbeitung",
+      "models": "Ihre Modelle",
       "activation": "Diktat",
       "useCase": "Über dich",
       "meeting": "Meetings",
@@ -179,6 +180,11 @@
       "downloads": "Oats lädt {{models}} von Hugging Face herunter, sobald Sie fortfahren, im Hintergrund.",
       "nothingToDownload": "Alles, was Oats braucht, ist schon auf diesem Mac.",
       "nothingToDownloadComputer": "Alles, was Oats braucht, ist schon auf diesem Computer."
+    },
+    "models": {
+      "title": "Ihre Modelle",
+      "downloading": "Sie werden im Hintergrund geladen, Sie können also gleich beginnen.",
+      "settled": "Wo jedes läuft, ändern Sie unter Einstellungen › KI-Modelle."
     },
     "continue": "Weiter",
     "back": "Zurück",

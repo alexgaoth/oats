@@ -140,6 +140,7 @@
       "setup": "セットアップ",
       "permissions": "権限",
       "processing": "処理",
+      "models": "使用中のモデル",
       "activation": "ディクテーション",
       "useCase": "あなたについて",
       "meeting": "会議",
@@ -179,6 +180,11 @@
       "downloads": "続けると、Oats は {{models}} を Hugging Face からバックグラウンドでダウンロードします。",
       "nothingToDownload": "Oats に必要なものはすべてこの Mac にあります。",
       "nothingToDownloadComputer": "Oats に必要なものはすべてこのコンピューターにあります。"
+    },
+    "models": {
+      "title": "使用中のモデル",
+      "downloading": "バックグラウンドでダウンロードされるので、すぐに始められます。",
+      "settled": "それぞれの実行場所は 設定 › AI モデル で変更できます。"
     },
     "continue": "続ける",
     "back": "戻る",

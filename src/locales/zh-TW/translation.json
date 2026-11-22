@@ -140,6 +140,7 @@
       "setup": "設定",
       "permissions": "權限",
       "processing": "處理方式",
+      "models": "你的模型",
       "activation": "聽寫",
       "useCase": "關於你",
       "meeting": "會議",
@@ -179,6 +180,11 @@
       "downloads": "繼續後，Oats 會在背景從 Hugging Face 下載 {{models}}。",
       "nothingToDownload": "Oats 需要的一切已在這台 Mac 上。",
       "nothingToDownloadComputer": "Oats 需要的一切已在這台電腦上。"
+    },
+    "models": {
+      "title": "你的模型",
+      "downloading": "它們會在背景下載，你現在就可以開始。",
+      "settled": "可以在 設定 › AI 模型 中變更每個模型的執行位置。"
     },
     "continue": "繼續",
     "back": "返回",

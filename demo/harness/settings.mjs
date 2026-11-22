@@ -39,10 +39,16 @@ export function applyDemoSettings(params) {
   // `firstrun=1`: a profile that has never finished setup, so the app opens on
   // the setup screen, as it does for somebody who just downloaded it.
   if (params.get("firstrun") === "1") {
-    for (const key of ["onboardingCompleted", "onboardingCurrentStep", "micPermissionGranted"]) {
+    for (const key of [
+      "onboardingCompleted",
+      "onboardingCurrentStep",
+      "micPermissionGranted",
+      "setupProcessingDone",
+    ]) {
       localStorage.removeItem(key);
     }
-    // `setupStep=1` opens setup at its second step, "Where Oats thinks".
+    // `setupStep=1` opens setup at its second step, "Where Oats thinks";
+    // its Continue starts the downloads, which "Your models" (step 3) shows.
     if (params.get("setupStep")) set("onboardingCurrentStep", params.get("setupStep"));
   } else {
     set("onboardingCompleted", "true");

@@ -2,10 +2,15 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 let migrateLocalSetupAuthorization, LOCAL_SETUP_AUTHORIZED;
+let setupAllowsDownloads, SETUP_PROCESSING_DONE;
 
 test.before(async () => {
-  ({ migrateLocalSetupAuthorization, LOCAL_SETUP_AUTHORIZED } =
-    await import("../../src/helpers/localSetupConsent.mjs"));
+  ({
+    migrateLocalSetupAuthorization,
+    LOCAL_SETUP_AUTHORIZED,
+    setupAllowsDownloads,
+    SETUP_PROCESSING_DONE,
+  } = await import("../../src/helpers/localSetupConsent.mjs"));
 });
 
 function profile(mode, complete = true) {
@@ -49,4 +54,15 @@ test("the migration does not authorize unfinished or mixed setup, or run twice",
   explicit.setItem(LOCAL_SETUP_AUTHORIZED, "false");
   assert.equal(migrateLocalSetupAuthorization(explicit), false);
   assert.equal(explicit.getItem(LOCAL_SETUP_AUTHORIZED), "false");
+});
+
+// Alex, 2026-11-22: setup's "Where Oats thinks" names the downloads, so its
+// Continue lets them start, and "Your models" shows them coming.
+test("downloads may start once setup's processing step is continued, or setup is done", () => {
+  const fresh = profile("local", false);
+  assert.equal(setupAllowsDownloads(fresh), false);
+  fresh.setItem(SETUP_PROCESSING_DONE, "true");
+  assert.equal(setupAllowsDownloads(fresh), true);
+  assert.equal(setupAllowsDownloads(profile("local", true)), true);
+  assert.equal(setupAllowsDownloads(null), false);
 });

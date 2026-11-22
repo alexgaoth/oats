@@ -31,8 +31,9 @@ export interface LocalDownloads {
  * What "On this Mac" downloads when setup goes on: Whisper Turbo where this
  * Mac's GPU keeps up with it (speechTier.mjs) and the writing model its memory
  * holds (writingTier.mjs), each only while its setting follows the default and
- * the plan needs a file. Setup names them with their sizes. The workspace
- * starts them after setup, when no conversation is recording.
+ * the plan needs a file. Setup names them with their sizes. They start when
+ * the step is continued (OnboardingFlow mounts the workspace's download
+ * hooks), and setup's "Your models" shows them coming.
  */
 export function useLocalDownloads(): LocalDownloads {
   const { i18n } = useTranslation();

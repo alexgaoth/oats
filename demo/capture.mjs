@@ -404,10 +404,47 @@ const SHOTS = [
     script:
       "await demo.wait(600); [...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300); await demo.typeKey('sk-proj-demo-key-0123456789'); await demo.wait(800)",
   },
+  // Setup's third step, "Your models" (components/onboarding/ModelsStep.tsx):
+  // On this Mac's downloads start on Continue and show here, then Ready; with
+  // an OpenAI key every model is Ready on it; with only an Anthropic key,
+  // speech downloads and Writing is Ready on the key.
+  ...[
+    ["local", "", "await demo.wait(2500)"],
+    [
+      "local-ready",
+      "",
+      "await demo.until(() => document.querySelectorAll('[data-setup-models] [data-status=ready]').length === 3, 40000)",
+    ],
+    ["openai", "sk-proj-demo-key-0123456789", "await demo.wait(1500)"],
+    ["anthropic", "sk-ant-api03-demo-key-0123456789", "await demo.wait(2500)"],
+  ].map(([name, key, settle]) => ({
+    name: `setup-models-${name}`,
+    query: "firstrun=1&setupStep=1&tier=fast&writingState=none",
+    ready: "h1",
+    script: [
+      "await demo.wait(600);",
+      ...(key
+        ? [
+            "[...document.querySelectorAll('[role=radio]')].find((r) => r.textContent.includes('With an API key')).click(); await demo.wait(300);",
+            `await demo.typeKey('${key}'); await demo.wait(1200);`,
+          ]
+        : []),
+      "await demo.press('Continue');",
+      settle,
+    ].join(" "),
+  })),
   // Oats starts the writing model's download by itself and says so, once
   // (WritingModelNotice), and Home says what it means for a conversation now.
-  { name: "writing-notice", query: "writingState=none&tier=ready", script: "await demo.wait(1500)" },
-  { name: "writing-home-downloading", query: "writingState=downloading&noticedWriting=1", script: "" },
+  {
+    name: "writing-notice",
+    query: "writingState=none&tier=ready",
+    script: "await demo.wait(1500)",
+  },
+  {
+    name: "writing-home-downloading",
+    query: "writingState=downloading&noticedWriting=1",
+    script: "",
+  },
   { name: "writing-home-nokey", query: "processing=providers", script: "" },
   // The tour at the end of setup (components/onboarding/OatsTour.tsx): setup
   // finished the way a person finishes it, then Next to each slide. The
@@ -426,7 +463,8 @@ const SHOTS = [
     ready: "h1",
     script: [
       "await demo.press('Allow'); await demo.wait(400);",
-      // Where Oats thinks: On this Mac, as it comes.
+      // Where Oats thinks: On this Mac, as it comes; then Your models.
+      "await demo.press('Continue'); await demo.wait(400);",
       "await demo.press('Continue'); await demo.wait(400);",
       "await demo.press('Get started');",
       "await demo.until(() => document.querySelector('section[aria-label] h1'));",
@@ -444,7 +482,8 @@ const SHOTS = [
     reducedMotion: true,
     script: [
       "await demo.press('Allow'); await demo.wait(400);",
-      // Where Oats thinks: On this Mac, as it comes.
+      // Where Oats thinks: On this Mac, as it comes; then Your models.
+      "await demo.press('Continue'); await demo.wait(400);",
       "await demo.press('Continue'); await demo.wait(400);",
       "await demo.press('Get started');",
       "await demo.until(() => document.querySelector('section[aria-label] h1'));",

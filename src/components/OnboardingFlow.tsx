@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useCallback, useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
-import { AlertTriangle, Check, Cpu, Keyboard, Languages, Mic, Shield } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Cpu,
+  Keyboard,
+  Languages,
+  Mic,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Kbd } from "./ui/kbd";
@@ -14,10 +23,18 @@ import { useDialogs } from "../hooks/useDialogs";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
 import { useSettings } from "../hooks/useSettings";
-import { selectProcessingMode, useSettingsStore } from "../stores/settingsStore";
+import {
+  selectProcessingMode,
+  selectUsableFeatureKey,
+  useSettingsStore,
+} from "../stores/settingsStore";
 import { ProcessingStep } from "./onboarding/ProcessingStep";
+import { ModelsStep } from "./onboarding/ModelsStep";
 import { prepareLocalSetup, useLocalDownloads } from "./onboarding/processingSetup";
-import { setProcessing, type ProcessingMode } from "./settings/processing";
+import { setFeatureProcessing, setProcessing, type ProcessingMode } from "./settings/processing";
+import { useSpeechUpgrade } from "../hooks/useSpeechUpgrade";
+import { useWritingModelDownload } from "../hooks/useWritingModel";
+import { SETUP_PROCESSING_DONE } from "../helpers/localSetupConsent.mjs";
 import type { ProviderKeyHandle } from "./settings/ProviderKeyField";
 import { setAgentName as saveAgentName } from "../utils/agentName";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
@@ -90,10 +107,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     selectProcessingMode(useSettingsStore.getState()) === "providers" ? "providers" : "local"
   );
   const localDownloads = useLocalDownloads();
+  // Once "Where Oats thinks" is continued, the models it named download with
+  // the workspace's own hooks, so nothing downloads twice, and "Your models"
+  // shows them coming (setupAllowsDownloads, localSetupConsent.mjs).
+  useSpeechUpgrade();
+  useWritingModelDownload();
   const providerKeySaved = useSettingsStore((state) =>
     Boolean(state.openaiApiKey.trim() || state.anthropicApiKey.trim())
   );
-  // A key pasted in the step and not saved yet: Get started checks and saves it.
+  // A key pasted in the step and not saved yet: Continue checks and saves it.
   const keyField = useRef<ProviderKeyHandle>(null);
   const [keyDraft, setKeyDraft] = useState("");
   const [checkingKey, setCheckingKey] = useState(false);
@@ -131,7 +153,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   // The steps, in order: one screen each, with one way forward. The
   // microphone first, because it is the one thing that blocks a first
   // conversation; then where Oats thinks, because that decides the downloads
-  // and the key. The dictation shortcut and the congratulations screen went
+  // and the key; then the models it chose, downloading and then ready (Alex,
+  // 2026-11-22). The dictation shortcut and the congratulations screen went
   // long ago. To add a step: an entry here, its body in renderStep (kept in
   // its own file), and its condition in canProceed. The last step's button
   // says "Get started"; every other step's says "Continue".
@@ -139,6 +162,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     return [
       { id: "permissions", title: t("onboarding.steps.permissions"), icon: Shield },
       { id: "processing", title: t("onboarding.steps.processing"), icon: Cpu },
+      { id: "models", title: t("onboarding.steps.models"), icon: Sparkles },
     ];
   }, [t]);
 
@@ -321,11 +345,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [currentStep]);
 
   // Continue, or Get started on the last step. Leaving the processing step
-  // commits its choice. The workspace starts any local downloads later. With an
+  // commits its choice and starts the downloads it named (the hooks above),
+  // which "Your models" shows; Get started does not wait for them. With an
   // API key, a key pasted and not saved yet is checked and saved by this one
   // press; a key the provider refuses keeps the step, its reason under the
   // field. With no text in the field, a saved key goes on, and no key at all
   // keeps the button disabled (`canProceed`): never a press that does nothing.
+  // Back from "Your models" stops nothing: only another choice, continued,
+  // does (a feature on a key no longer authorizes its download).
   const goForward = async () => {
     if (currentStepId === "processing") {
       const field = keyField.current;
@@ -342,10 +369,24 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
       }
       setProcessing(processingChoice);
-      if (processingChoice === "local") {
+      // With an API key but no OpenAI key, speech stays on this Mac as its
+      // own route, so its model downloads too; Anthropic has no speech.
+      const speechHere =
+        processingChoice === "local" ||
+        !selectUsableFeatureKey(useSettingsStore.getState(), "openai");
+      if (processingChoice === "providers" && speechHere) {
+        setFeatureProcessing("conversations", "local");
+        setFeatureProcessing("dictation", "local");
+      }
+      if (speechHere) {
         await prepareLocalSetup().catch((error) =>
           logger.warn("Could not reset the local setup declines", { error }, "onboarding")
         );
+      }
+      try {
+        localStorage.setItem(SETUP_PROCESSING_DONE, "true");
+      } catch {
+        // Then the downloads start when setup is done, as before.
       }
     }
     if (isLastStep) await finishOnboarding();
@@ -476,6 +517,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         );
       }
 
+      case "models":
+        return <ModelsStep ref={stepHeadingRef} />;
+
       case "processing":
         return (
           <ProcessingStep
@@ -529,8 +573,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return areRequiredPermissionsMet(permissionsHook.micPermissionGranted);
       case "processing":
         // With an API key, the key comes first: OpenAI's or Anthropic's, saved
-        // or pasted (Get started checks and saves it).
+        // or pasted (Continue checks and saves it).
         return processingChoice === "local" || providerKeySaved || keyDraft.trim().length > 0;
+      case "models":
+        // The downloads go on in the background: nothing here to wait for.
+        return true;
       default:
         return false;
     }
