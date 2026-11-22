@@ -562,6 +562,53 @@ class ModelManager {
       return false;
     }
   }
+
+  /**
+   * Starts the writing model's server as a recording begins
+   * (topicNamingRunner `prewarmWritingModel`), so the first topic name does
+   * not wait for the model to load. "writing" is the recording's own server,
+   * only while the renderer holds it. "default" is the shared server. A start
+   * already under way is shared (LlamaServerManager.start), so the first name
+   * waits for this start rather than beginning another.
+   *
+   * @param {string} modelId
+   * @param {"writing" | "default"} role
+   * @returns {Promise<boolean>} Whether a server holds the model now.
+   */
+  async prewarmWritingModel(modelId, role) {
+    if (role === DEFAULT_ROLE) return this.prewarmServer(modelId);
+    if (role !== WRITING_ROLE || !modelId) return false;
+    if (this.writingMode !== "hold" || !this.writingServer) return false;
+    this.ensureInitialized();
+
+    const modelInfo = this.findModelById(modelId);
+    if (!modelInfo) return false;
+    const modelPath = path.join(this.modelsDir, modelInfo.model.fileName);
+    if (!(await this.checkModelValid(modelPath))) return false;
+
+    const server = this.writingServer;
+    if (server.ready && this.writingServerModelId === modelId) return true;
+    try {
+      await server.start(modelPath, this.serverOptions(modelInfo));
+    } catch (error) {
+      // As when the first name fails to start it: the names wait for Finish.
+      if (this.writingMode === "hold" && this.writingServer === server) {
+        this.writingStartFailed = true;
+      }
+      debugLogger.warn("Failed to pre-warm the writing server", { error: error.message });
+      return false;
+    }
+    // The recording may have ended while the model loaded: the summary is
+    // next, in the default server, so this copy of the model goes.
+    if (this.writingMode === "off") {
+      await server.stop().catch(() => {});
+      return false;
+    }
+    if (this.writingServer !== server || !server.ready) return false;
+    this.writingServerModelId = modelId;
+    debugLogger.info("Writing server pre-warmed", { modelId });
+    return true;
+  }
 }
 
 module.exports = {

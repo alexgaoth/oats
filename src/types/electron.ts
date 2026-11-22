@@ -1196,6 +1196,11 @@ declare global {
       llamaWritingServer?: (
         mode: "hold" | "idle" | "stop"
       ) => Promise<{ dedicated: boolean; error?: string }>;
+      /** Starts the writing model's server as a recording begins (topicNamingRunner). */
+      llamaWritingPrewarm?: (
+        modelId: string,
+        role: "writing" | "default"
+      ) => Promise<{ started: boolean; error?: string }>;
       llamaGpuReset: () => Promise<{ success: boolean; error?: string }>;
       detectVulkanGpu?: () => Promise<VulkanGpuResult>;
       getLlamaVulkanStatus?: () => Promise<LlamaVulkanStatus>;

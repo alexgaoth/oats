@@ -17,6 +17,7 @@ import {
   namesWhileRecording,
   topicNameConfig,
   withNameStates,
+  writingPrewarmRole,
 } from "../helpers/topicNaming.mjs";
 import { LiveTopicLoop, chooseFastModel, readJson } from "../helpers/topicLoop.mjs";
 import { WindowTopicLoop } from "../helpers/topicWindowLoop.mjs";
@@ -105,6 +106,31 @@ async function setWritingServer(mode: "hold" | "idle" | "stop"): Promise<boolean
     return answer?.dedicated === true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Starts the local writing model's server as the recording begins, so the
+ * first topic name does not wait for the model to load
+ * (topicNaming.mjs `writingPrewarmRole`). Never awaited by the recording: a
+ * failure here only means the first request starts the server, as before.
+ */
+async function prewarmWritingModel(route: WritingRoute, topicMode: string, mine: number) {
+  if (route.mode !== "local") return;
+  const downloaded = await writingModelReady();
+  const role = writingPrewarmRole({
+    routeMode: route.mode,
+    topicMode,
+    dedicated: writingServer,
+    downloaded,
+  });
+  if (!role || mine !== generation || stoppedGeneration === mine) return;
+  const startedAt = Date.now();
+  try {
+    const answer = await window.electronAPI?.llamaWritingPrewarm?.(route.modelId, role);
+    log("prewarm", { role, started: answer?.started === true, ms: Date.now() - startedAt });
+  } catch {
+    log("prewarm", { role, started: false, ms: Date.now() - startedAt });
   }
 }
 
@@ -410,6 +436,7 @@ async function setUpTopicNaming(
     liveNames: live,
     stopped: route.mode === "local" && stoppedGeneration === mine,
   });
+  void prewarmWritingModel(route, mode, mine);
   if (mode === "window-loop") {
     loopLocalModel = route.modelId;
     loop = new WindowTopicLoop({

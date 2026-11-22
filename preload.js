@@ -617,6 +617,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   llamaServerStop: () => ipcRenderer.invoke("llama-server-stop"),
   llamaServerStatus: () => ipcRenderer.invoke("llama-server-status"),
   llamaWritingServer: (mode) => ipcRenderer.invoke("llama-writing-server", mode),
+  llamaWritingPrewarm: (modelId, role) =>
+    ipcRenderer.invoke("llama-writing-prewarm", modelId, role),
   llamaGpuReset: () => ipcRenderer.invoke("llama-gpu-reset"),
 
   // Vulkan GPU acceleration
