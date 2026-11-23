@@ -50,7 +50,16 @@ test("the key field checks and saves through one commit, which another button ca
   );
   // Save is shown unless the caller saves the key itself.
   assert.match(FIELD, /showSave = true,/);
-  assert.match(FIELD, /\{showSave && \(\s*<Button type="submit"/);
+  assert.match(FIELD, /\{showSave && \(\s*<Button\s+type="submit"/);
+  // The fields come first, then Save (Alex, 2026-11-22), and Enter in either
+  // field saves, also in setup, where there is no Save.
+  const form = FIELD.slice(FIELD.indexOf("<form onSubmit={save}>"), FIELD.indexOf("</form>"));
+  assert.ok(form.indexOf("id={nameId}") < form.indexOf('type="submit"'), "Save after the name");
+  assert.equal([...form.matchAll(/onKeyDown=\{submitOnEnter\}/g)].length, 2);
+  assert.match(
+    FIELD,
+    /const submitOnEnter = \(event: React\.KeyboardEvent<HTMLInputElement>\) => \{\s*if \(event\.key !== "Enter" \|\| event\.nativeEvent\.isComposing\) return;\s*event\.preventDefault\(\);\s*void commit\(\);/
+  );
 });
 
 test("setup has no Save: Continue checks and saves the pasted key, and stays on a refusal", () => {

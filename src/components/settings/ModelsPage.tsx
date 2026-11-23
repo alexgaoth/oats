@@ -1,13 +1,11 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, KeyRound } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { SettingsSection } from "./SettingsKit";
 import { ProcessingChoice, WhatIsSent } from "./ProcessingChoice";
 import { FeatureModelRow } from "./FeatureModelRow";
-import { KeyCapabilities, ProviderKeyField } from "./ProviderKeyField";
+import { ApiKeysList } from "./ApiKeysList";
 import { SpeechModelChoice } from "./SpeechModelChoice";
 import { WritingModelChoice } from "./WritingModelChoice";
 import { GpuDeviceSelector } from "./GpuDeviceSelector";
@@ -30,8 +28,10 @@ import { localUpgradeHint } from "../../helpers/localSetup.mjs";
  * Settings › AI models. Processing puts every feature on this Mac or on an
  * API key, and shows Mixed while they run in different places. Each feature's
  * row (FeatureModelRow) says which model it uses, where (a quiet menu that
- * moves just that feature), and whether it is ready. Model selection stays
- * under Advanced.
+ * moves just that feature), and whether it is ready, with its key and the
+ * menu that changes it. The API keys list (ApiKeysList) adds, renames and
+ * removes keys; it and the key menus say what each key can do, so the line
+ * that said it under Processing is gone. Model selection stays under Advanced.
  */
 export function ModelsPage() {
   const { t } = useTranslation();
@@ -55,24 +55,6 @@ export function ModelsPage() {
           showDescriptions={false}
           aria-labelledby={titleId}
         />
-        <div className="mt-3 flex items-center gap-3 px-1">
-          <KeyCapabilities className="min-w-0" />
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="ml-auto shrink-0">
-                <KeyRound aria-hidden="true" />
-                {t("apiKeyInput.add")}
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              aria-describedby={undefined}
-              className="oats-surface motion-reduce:animate-none"
-            >
-              <DialogTitle>{t("apiKeyInput.add")}</DialogTitle>
-              <ProviderKeyField />
-            </DialogContent>
-          </Dialog>
-        </div>
       </section>
 
       <div>
@@ -83,6 +65,8 @@ export function ModelsPage() {
         </SettingsSection>
         <WhatIsSent featureRoutes />
       </div>
+
+      <ApiKeysList />
 
       <AdvancedModels />
     </div>

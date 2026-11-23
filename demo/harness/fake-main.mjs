@@ -118,7 +118,8 @@ function noteRow(id, fields) {
 
 /**
  * @param {{ fixtures: object[], example?: object, now?: number, badges?: boolean, agent?: boolean,
- *   openai?: boolean, anthropic?: boolean, missingModels?: string[] }} options The
+ *   openai?: boolean, anthropic?: boolean, namedKeys?: Array<{ provider: string, name: string }>,
+ *   missingModels?: string[] }} options The
  *   sample fixtures to hold, placed relative to `now` exactly as
  *   `insertSampleConversations` places them, and the one the app ships as its
  *   in-app example (`insertExampleConversation`).
@@ -131,6 +132,7 @@ export function createFakeMain({
   agent = false,
   openai = false,
   anthropic = false,
+  namedKeys = [],
   missingModels = [],
   onDevice = null,
 }) {
@@ -176,14 +178,27 @@ export function createFakeMain({
     savedKeys.push(record);
     return record;
   };
-  const firstOpenAI = openai ? addSavedKey("openai", "demo-key-answered-in-page") : null;
+  // Secrets end in four characters a person could tell apart (the list and
+  // the key menus show them as ••••4f2a).
+  const firstOpenAI = openai ? addSavedKey("openai", "demo-key-answered-in-page-4f2a") : null;
   const firstAnthropic = anthropic
-    ? addSavedKey("anthropic", "sk-ant-demo-key-answered-in-page")
+    ? addSavedKey("anthropic", "sk-ant-demo-key-answered-in-page-9c1e")
     : null;
   if (firstOpenAI) featureKeys = { conversations: firstOpenAI.id, dictation: firstOpenAI.id };
   if (Boolean(firstOpenAI) !== Boolean(firstAnthropic)) {
     featureKeys.writing = (firstOpenAI ?? firstAnthropic).id;
   }
+  // `keys=openai:Work`: more keys, with names, added after those.
+  const TAILS = ["7b3d", "e81c", "2d6f", "a05b"];
+  namedKeys.forEach(({ provider, name }, index) => {
+    if (provider !== "openai" && provider !== "anthropic") return;
+    const own = savedKeys.filter((key) => key.provider === provider).length;
+    const prefix = provider === "anthropic" ? "sk-ant-demo-" : "sk-proj-demo-";
+    addSavedKey(provider, `${prefix}${index}-${TAILS[index % TAILS.length]}`, {
+      name,
+      number: own + 1,
+    });
+  });
   const keyList = () => ({
     keys: savedKeys.map(({ secret: _secret, ...record }) => record),
     features: { ...featureKeys },

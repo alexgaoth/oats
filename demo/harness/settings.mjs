@@ -15,7 +15,8 @@
 //
 //   the writing model following the default (writingTier.mjs): on the fake
 //   48 GB Mac Gemma 4 E4B, on disk unless `writingState=` says otherwise
-//   (deviceTier.mjs); `processing=providers`, `keys=openai,anthropic`,
+//   (deviceTier.mjs); `processing=providers`, `keys=openai,anthropic` (and
+//   named keys after them: `keys=openai,openai:Work,anthropic`),
 //   `writing=<model>` and `noticedWriting=1` change that
 //
 // Page parameters choose the rest: `firstrun=1` (the setup screen, at the step
