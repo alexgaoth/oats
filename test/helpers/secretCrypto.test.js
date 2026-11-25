@@ -7,10 +7,12 @@ const path = require("node:path");
 const Module = require("node:module");
 
 // secretCrypto keeps the AES master key in the OS keychain (@napi-rs/keyring)
-// and a safeStorage copy in userData/secure-keys/master-key-backup.enc. Only
-// "no entry" (getPassword returns null) may make a new key. A read error must
-// not write over the keychain entry or the backup, because the entry can still
-// hold the key that decrypts the saved secrets.
+// and a safeStorage copy in userData/secure-keys/master-key-backup.enc. A read
+// error must not write over the keychain entry or the backup, because the
+// entry can still hold the key that decrypts the saved secrets. When there is
+// no entry (getPassword returns null), the backup's key goes back into the
+// keychain. A new key is made only when there is no backup, or when the
+// backup's bytes give no key. Those bytes move aside first.
 //
 // Electron and the keyring are fakes, so these tests never touch the real
 // keychain or the real userData folder.
@@ -18,6 +20,8 @@ const Module = require("node:module");
 let userData;
 let keychain;
 let encryptionAvailable;
+
+const realRename = fs.renameSync;
 
 const fakeSafeStorage = {
   isEncryptionAvailable: () => encryptionAvailable,
@@ -38,7 +42,7 @@ class FakeEntry {
     return keychain.read();
   }
   setPassword(value) {
-    keychain.setAttempts += 1;
+    keychain.attempted.push(value);
     if (keychain.setError) throw keychain.setError;
     keychain.writes.push(value);
   }
@@ -61,8 +65,10 @@ const MODULE_PATH = require.resolve("../../src/helpers/secretCrypto");
 const STORED_KEY = Buffer.alloc(32, 7);
 const STORED_KEY_B64 = STORED_KEY.toString("base64");
 const DENIED = "User canceled the operation.";
+const NOT_A_BLOB = Buffer.from("not a safeStorage blob");
 
 const backupPath = () => path.join(userData, "secure-keys", "master-key-backup.enc");
+const secureKeys = () => fs.readdirSync(path.dirname(backupPath())).sort();
 const readDenied = () => {
   throw Object.assign(new Error(DENIED), { code: "GenericFailure" });
 };
@@ -76,19 +82,28 @@ function encryptWith(key, text) {
 }
 
 // Fresh module state (mode, masterKey), userData folder and keychain fake. The
-// spies record each file write that secretCrypto makes under userData.
-function setup(t, { read, setError, backup, safeStorageAvailable = true } = {}) {
+// spies record each file write that secretCrypto makes under userData. A
+// string backup is a key, stored as safeStorage stores it. A Buffer backup is
+// written as it is. With failMoveAside, the rename that moves a backup aside
+// fails, and the other renames still run.
+function setup(t, { read, setError, backup, safeStorageAvailable = true, failMoveAside } = {}) {
   userData = fs.mkdtempSync(path.join(os.tmpdir(), "oats-secret-crypto-"));
   t.after(() => fs.rmSync(userData, { recursive: true, force: true }));
-  keychain = { read, setError, reads: 0, setAttempts: 0, writes: [], opened: [] };
+  keychain = { read, setError, reads: 0, attempted: [], writes: [], opened: [] };
   encryptionAvailable = safeStorageAvailable;
-  if (backup) {
+  if (backup !== undefined) {
     fs.mkdirSync(path.dirname(backupPath()), { recursive: true });
-    fs.writeFileSync(backupPath(), fakeSafeStorage.encryptString(backup));
+    const bytes = Buffer.isBuffer(backup) ? backup : fakeSafeStorage.encryptString(backup);
+    fs.writeFileSync(backupPath(), bytes);
   }
 
   const writeFile = t.mock.method(fs, "writeFileSync");
-  const rename = t.mock.method(fs, "renameSync");
+  const rename = t.mock.method(fs, "renameSync", function (from, to) {
+    if (failMoveAside && String(to).includes(".unreadable-")) {
+      throw Object.assign(new Error("EPERM: operation not permitted"), { code: "EPERM" });
+    }
+    return realRename.call(this, from, to);
+  });
   const warn = t.mock.method(debugLogger, "warn", () => {});
   const info = t.mock.method(debugLogger, "info", () => {});
   const underUserData = (spy) =>
@@ -104,7 +119,7 @@ function setup(t, { read, setError, backup, safeStorageAvailable = true } = {}) 
 }
 
 for (const missing of [null, undefined]) {
-  test(`getPassword returns ${missing}: makes a new key, stores it once, backs it up once`, (t) => {
+  test(`getPassword returns ${missing} and there is no backup: makes a new key, stores it once, backs it up once`, (t) => {
     const { secretCrypto, fileWrites, renames } = setup(t, { read: () => missing });
 
     assert.equal(secretCrypto.isAvailable(), true);
@@ -126,32 +141,127 @@ for (const missing of [null, undefined]) {
 
 // setPassword runs before the backup write. When it fails, the new key is
 // saved nowhere, so it must not reach the backup or encrypt anything.
-for (const withBackup of [false, true]) {
-  const fallback = withBackup ? "the existing backup is used" : "mode is safeStorage";
-  test(`getPassword returns null and setPassword throws: writes nothing, ${fallback}`, (t) => {
-    const { secretCrypto, fileWrites, renames } = setup(t, {
+test("getPassword returns null, there is no backup, and setPassword throws: writes nothing, mode is safeStorage", (t) => {
+  const { secretCrypto, fileWrites, renames } = setup(t, {
+    read: () => null,
+    setError: new Error("write denied"),
+  });
+
+  assert.equal(secretCrypto.isAvailable(), true);
+  assert.equal(keychain.attempted.length, 1, "setPassword was tried once");
+  assert.equal(fileWrites().length + renames().length, 0, "backup not written");
+  assert.equal(fs.existsSync(backupPath()), false);
+  assert.equal(secretCrypto.encrypt("placeholder").toString("utf8"), "fake-safe:placeholder");
+});
+
+// No entry, and the backup holds a key: that key goes back into the keychain,
+// and the backup is not written. When setPassword fails, the backup key is
+// still used, and the next launch tries the keychain again.
+for (const setFails of [false, true]) {
+  const outcome = setFails
+    ? "setPassword throws, and the backup key is still used"
+    : "the backup key goes back into the keychain";
+  test(`getPassword returns null and the backup holds a key: ${outcome}`, (t) => {
+    const { secretCrypto, fileWrites, renames, logged } = setup(t, {
       read: () => null,
-      setError: new Error("write denied"),
-      backup: withBackup ? STORED_KEY_B64 : undefined,
+      setError: setFails ? new Error("write denied") : undefined,
+      backup: STORED_KEY_B64,
     });
-    const before = withBackup ? fs.readFileSync(backupPath()) : null;
+    const before = fs.readFileSync(backupPath());
 
     assert.equal(secretCrypto.isAvailable(), true);
-    assert.equal(keychain.setAttempts, 1, "setPassword was tried once");
+    assert.deepEqual(keychain.attempted, [STORED_KEY_B64], "setPassword got the backup key once");
+    assert.deepEqual(keychain.writes, setFails ? [] : [STORED_KEY_B64]);
     assert.equal(fileWrites().length + renames().length, 0, "backup not written");
+    assert.deepEqual(secureKeys(), ["master-key-backup.enc"]);
+    assert.deepEqual(fs.readFileSync(backupPath()), before);
 
-    if (withBackup) {
-      assert.deepEqual(fs.readFileSync(backupPath()), before);
-      assert.equal(
-        secretCrypto.decrypt(encryptWith(STORED_KEY, "placeholder")).value,
-        "placeholder"
-      );
-    } else {
-      assert.equal(fs.existsSync(backupPath()), false);
-      assert.equal(secretCrypto.encrypt("placeholder").toString("utf8"), "fake-safe:placeholder");
-    }
+    // The backup key is in use: a secret saved under it still decrypts.
+    const { value, needsReencrypt } = secretCrypto.decrypt(encryptWith(STORED_KEY, "placeholder"));
+    assert.equal(value, "placeholder");
+    assert.equal(needsReencrypt, false);
+    assert.ok(!JSON.stringify(logged()).includes(STORED_KEY_B64), "no key in the log");
   });
 }
+
+// No entry, and the backup's bytes give no key. They move aside under a new
+// name. Then a new key is made, as when there is no backup.
+for (const [label, bytes] of [
+  ["does not decrypt", NOT_A_BLOB],
+  ["holds a 16-byte key", fakeSafeStorage.encryptString(Buffer.alloc(16, 1).toString("base64"))],
+]) {
+  test(`getPassword returns null and the backup ${label}: moves it aside, makes a new key`, (t) => {
+    const { secretCrypto, fileWrites, renames } = setup(t, { read: () => null, backup: bytes });
+
+    assert.equal(secretCrypto.isAvailable(), true);
+
+    // The old bytes are kept, under a name with the UTC time.
+    const [backupName, asideName, ...others] = secureKeys();
+    assert.equal(backupName, "master-key-backup.enc");
+    assert.match(
+      asideName,
+      /^master-key-backup\.enc\.unreadable-\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-\d{3}Z$/
+    );
+    assert.deepEqual(others, []);
+    assert.deepEqual(fs.readFileSync(path.join(path.dirname(backupPath()), asideName)), bytes);
+
+    // A new key, stored once and backed up once.
+    assert.equal(keychain.writes.length, 1, "setPassword ran once");
+    const newKey = Buffer.from(keychain.writes[0], "base64");
+    assert.equal(newKey.length, 32);
+    assert.equal(fakeSafeStorage.decryptString(fs.readFileSync(backupPath())), keychain.writes[0]);
+    assert.equal(fileWrites().length, 1, "backup written once");
+    assert.equal(renames().length, 2, "one move aside, one backup write");
+    assert.equal(secretCrypto.decrypt(encryptWith(newKey, "placeholder")).value, "placeholder");
+  });
+}
+
+test("getPassword returns null, the backup gives no key, and the move fails: writes nothing", (t) => {
+  const { secretCrypto, fileWrites, renames } = setup(t, {
+    read: () => null,
+    backup: NOT_A_BLOB,
+    failMoveAside: true,
+  });
+
+  assert.equal(secretCrypto.isAvailable(), true);
+  assert.equal(keychain.attempted.length, 0, "setPassword did not run");
+  assert.equal(fileWrites().length, 0, "backup not written");
+  assert.equal(renames().length, 1, "only the failed move was tried");
+  assert.deepEqual(secureKeys(), ["master-key-backup.enc"]);
+  assert.deepEqual(fs.readFileSync(backupPath()), NOT_A_BLOB, "backup kept in place");
+  // As for a read error: there is no master key, so new secrets go to safeStorage.
+  assert.equal(secretCrypto.encrypt("placeholder").toString("utf8"), "fake-safe:placeholder");
+});
+
+// No entry, and the backup could not be checked. Its bytes can still hold the
+// key, so nothing is written, as for a read error.
+test("getPassword returns null and safeStorage is off: writes nothing and keeps the backup", (t) => {
+  const { secretCrypto, fileWrites, renames } = setup(t, {
+    read: () => null,
+    backup: STORED_KEY_B64,
+    safeStorageAvailable: false,
+  });
+  const before = fs.readFileSync(backupPath());
+
+  assert.equal(secretCrypto.isAvailable(), false, "mode is unavailable");
+  assert.equal(keychain.attempted.length, 0, "setPassword did not run");
+  assert.equal(fileWrites().length + renames().length, 0, "nothing written");
+  assert.deepEqual(secureKeys(), ["master-key-backup.enc"]);
+  assert.deepEqual(fs.readFileSync(backupPath()), before);
+});
+
+test("getPassword returns null and the backup cannot be read: writes nothing", (t) => {
+  const { secretCrypto, fileWrites, renames } = setup(t, { read: () => null });
+  // Reading a folder fails with EISDIR, as a file without read access fails
+  // with EACCES.
+  fs.mkdirSync(backupPath(), { recursive: true });
+
+  assert.equal(secretCrypto.isAvailable(), true);
+  assert.equal(keychain.attempted.length, 0, "setPassword did not run");
+  assert.equal(fileWrites().length + renames().length, 0, "nothing written");
+  assert.ok(fs.statSync(backupPath()).isDirectory(), "backup left in place");
+  assert.equal(secretCrypto.encrypt("placeholder").toString("utf8"), "fake-safe:placeholder");
+});
 
 test("getPassword throws: writes nothing and loads the existing backup", (t) => {
   const { secretCrypto, fileWrites, renames, logged } = setup(t, {
@@ -162,7 +272,7 @@ test("getPassword throws: writes nothing and loads the existing backup", (t) => 
 
   assert.equal(secretCrypto.isAvailable(), true);
   assert.equal(keychain.reads, 1);
-  assert.equal(keychain.writes.length, 0, "setPassword did not run");
+  assert.equal(keychain.attempted.length, 0, "setPassword did not run");
   assert.equal(fileWrites().length + renames().length, 0, "backup not written");
   assert.deepEqual(fs.readFileSync(backupPath()), before);
 
@@ -188,7 +298,7 @@ for (const available of [true, false]) {
     });
 
     assert.equal(secretCrypto.isAvailable(), available);
-    assert.equal(keychain.writes.length, 0, "setPassword did not run");
+    assert.equal(keychain.attempted.length, 0, "setPassword did not run");
     assert.equal(fileWrites().length + renames().length, 0, "backup not written");
     assert.equal(fs.existsSync(backupPath()), false);
 
@@ -206,7 +316,7 @@ test("getPassword returns a stored key: uses that key and writes nothing", (t) =
 
   assert.equal(secretCrypto.isAvailable(), true);
   assert.deepEqual(keychain.opened, ["Oats/secrets-master-key"]);
-  assert.equal(keychain.writes.length, 0, "setPassword did not run");
+  assert.equal(keychain.attempted.length, 0, "setPassword did not run");
   assert.equal(fileWrites().length + renames().length, 0, "nothing written");
   assert.equal(fs.existsSync(backupPath()), false, "no backup added for a stored key");
 
@@ -227,7 +337,7 @@ for (const [label, stored] of [
     const before = fs.readFileSync(backupPath());
 
     assert.equal(secretCrypto.isAvailable(), true);
-    assert.equal(keychain.writes.length, 0, "setPassword did not run");
+    assert.equal(keychain.attempted.length, 0, "setPassword did not run");
     assert.equal(fileWrites().length + renames().length, 0, "backup not written");
     assert.deepEqual(fs.readFileSync(backupPath()), before);
     assert.equal(secretCrypto.decrypt(encryptWith(STORED_KEY, "placeholder")).value, "placeholder");

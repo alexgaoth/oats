@@ -39,25 +39,118 @@ function _saveMasterKeyBackup({ keyCreatedNow = false } = {}) {
   }
 }
 
-function _loadMasterKeyBackup() {
-  if (!safeStorage.isEncryptionAvailable()) return false;
+// What the backup gives: "key" (a 32-byte key), "missing" (no file),
+// "unreadable" (the bytes give no key), or "unknown" (the bytes were not
+// checked, because safeStorage is off or the file could not be read).
+function _readMasterKeyBackup() {
+  const target = _backupPath();
+  if (!safeStorage.isEncryptionAvailable()) {
+    return fs.existsSync(target)
+      ? { state: "unknown", error: new Error("safeStorage is not available") }
+      : { state: "missing" };
+  }
+  let buf;
   try {
-    const buf = fs.readFileSync(_backupPath());
-    const b64 = safeStorage.decryptString(buf);
-    const key = Buffer.from(b64, "base64");
-    if (key.length !== KEY_LEN) return false;
-    masterKey = key;
-    return true;
+    buf = fs.readFileSync(target);
   } catch (error) {
-    if (error?.code !== "ENOENT") {
+    return error?.code === "ENOENT" ? { state: "missing" } : { state: "unknown", error };
+  }
+  try {
+    const key = Buffer.from(safeStorage.decryptString(buf), "base64");
+    if (key.length !== KEY_LEN) throw new Error("backup key length invalid");
+    return { state: "key", key };
+  } catch (error) {
+    return { state: "unreadable", error };
+  }
+}
+
+function _loadMasterKeyBackup() {
+  const backup = _readMasterKeyBackup();
+  if (backup.state === "key") {
+    masterKey = backup.key;
+    return true;
+  }
+  if (backup.state !== "missing") {
+    debugLogger.warn(
+      "could not read the master key backup",
+      { state: backup.state, error: backup.error?.message, code: backup.error?.code },
+      "secretCrypto"
+    );
+  }
+  return false;
+}
+
+// The backup's bytes give no key. Keep them under a new name,
+// master-key-backup.enc.unreadable-<UTC time>, so that the backup of a new
+// key does not write over them.
+function _moveBackupAside(reason) {
+  const target = _backupPath();
+  const aside = `${target}.unreadable-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  try {
+    if (fs.existsSync(aside)) throw new Error("a file with that name already exists");
+    fs.renameSync(target, aside);
+  } catch (error) {
+    debugLogger.warn(
+      "could not move the unreadable master key backup aside; not creating a new key",
+      { error: error?.message, code: error?.code },
+      "secretCrypto"
+    );
+    return false;
+  }
+  debugLogger.warn(
+    "the master key backup gives no key; moved it aside",
+    { file: path.basename(aside), error: reason?.message },
+    "secretCrypto"
+  );
+  return true;
+}
+
+// There is no keychain entry: the first launch, or the entry was deleted. The
+// backup can still hold the key that decrypts the saved secrets, so that key
+// goes back into the keychain. A new key is made only when there is no
+// backup, or when the backup's bytes give no key. Because of this, deleting
+// the keychain entry alone does not reset the saved secrets.
+function _restoreOrCreateKey(entry) {
+  const backup = _readMasterKeyBackup();
+  if (backup.state === "key") {
+    masterKey = backup.key;
+    try {
+      entry.setPassword(backup.key.toString("base64"));
+      debugLogger.info(
+        "restored the master key to the OS keychain from the backup",
+        {},
+        "secretCrypto"
+      );
+    } catch (error) {
+      // The backup key is still the right key. Use it, write nothing, and try
+      // the keychain again on the next launch.
       debugLogger.warn(
-        "could not read the master key backup",
-        { error: error?.message, code: error?.code },
+        "could not write the master key back to the OS keychain; using the backup key",
+        { error: error?.message, code: error?.code, platform: process.platform },
         "secretCrypto"
       );
     }
+    return true;
+  }
+  if (backup.state === "unknown") {
+    // The bytes were not checked, so they can still hold the key. Write
+    // nothing, as for a keychain read error.
+    debugLogger.warn(
+      "no keychain entry, and the master key backup could not be checked; not creating a new key",
+      { error: backup.error?.message, code: backup.error?.code },
+      "secretCrypto"
+    );
     return false;
   }
+  if (backup.state === "unreadable" && !_moveBackupAside(backup.error)) return false;
+
+  const key = crypto.randomBytes(KEY_LEN);
+  entry.setPassword(key.toString("base64"));
+  masterKey = key;
+  // Write the safeStorage backup only when the key is first generated.
+  // Re-writing on every launch invokes a second Keychain backend on macOS.
+  _saveMasterKeyBackup({ keyCreatedNow: true });
+  return true;
 }
 
 function _initKeychain() {
@@ -90,20 +183,11 @@ function _initKeychain() {
   }
 
   try {
-    if (stored === null || stored === undefined) {
-      // No entry (first launch, or the entry was deleted). This is the only
-      // case that makes a new key.
-      const key = crypto.randomBytes(KEY_LEN);
-      entry.setPassword(key.toString("base64"));
-      masterKey = key;
-      // Write the safeStorage backup only when the key is first generated.
-      // Re-writing on every launch invokes a second Keychain backend on macOS.
-      _saveMasterKeyBackup({ keyCreatedNow: true });
-    } else {
-      const key = Buffer.from(stored, "base64");
-      if (key.length !== KEY_LEN) throw new Error("stored key length invalid");
-      masterKey = key;
-    }
+    // No entry is the only case that can make a new key.
+    if (stored === null || stored === undefined) return _restoreOrCreateKey(entry);
+    const key = Buffer.from(stored, "base64");
+    if (key.length !== KEY_LEN) throw new Error("stored key length invalid");
+    masterKey = key;
     return true;
   } catch (error) {
     debugLogger.warn(
