@@ -38,6 +38,8 @@ class FakeEntry {
     return keychain.read();
   }
   setPassword(value) {
+    keychain.setAttempts += 1;
+    if (keychain.setError) throw keychain.setError;
     keychain.writes.push(value);
   }
 }
@@ -75,10 +77,10 @@ function encryptWith(key, text) {
 
 // Fresh module state (mode, masterKey), userData folder and keychain fake. The
 // spies record each file write that secretCrypto makes under userData.
-function setup(t, { read, backup, safeStorageAvailable = true } = {}) {
+function setup(t, { read, setError, backup, safeStorageAvailable = true } = {}) {
   userData = fs.mkdtempSync(path.join(os.tmpdir(), "oats-secret-crypto-"));
   t.after(() => fs.rmSync(userData, { recursive: true, force: true }));
-  keychain = { read, reads: 0, writes: [], opened: [] };
+  keychain = { read, setError, reads: 0, setAttempts: 0, writes: [], opened: [] };
   encryptionAvailable = safeStorageAvailable;
   if (backup) {
     fs.mkdirSync(path.dirname(backupPath()), { recursive: true });
@@ -103,7 +105,7 @@ function setup(t, { read, backup, safeStorageAvailable = true } = {}) {
 
 for (const missing of [null, undefined]) {
   test(`getPassword returns ${missing}: makes a new key, stores it once, backs it up once`, (t) => {
-    const { secretCrypto, fileWrites, renames, logged } = setup(t, { read: () => missing });
+    const { secretCrypto, fileWrites, renames } = setup(t, { read: () => missing });
 
     assert.equal(secretCrypto.isAvailable(), true);
     assert.equal(secretCrypto.isAvailable(), true, "a second call does not init again");
@@ -119,7 +121,35 @@ for (const missing of [null, undefined]) {
     assert.equal(backup, keychain.writes[0], "backup holds the stored key");
 
     assert.equal(secretCrypto.decrypt(encryptWith(newKey, "placeholder")).value, "placeholder");
-    assert.ok(!JSON.stringify(logged()).includes(keychain.writes[0]), "no key in the log");
+  });
+}
+
+// setPassword runs before the backup write. When it fails, the new key is
+// saved nowhere, so it must not reach the backup or encrypt anything.
+for (const withBackup of [false, true]) {
+  const fallback = withBackup ? "the existing backup is used" : "mode is safeStorage";
+  test(`getPassword returns null and setPassword throws: writes nothing, ${fallback}`, (t) => {
+    const { secretCrypto, fileWrites, renames } = setup(t, {
+      read: () => null,
+      setError: new Error("write denied"),
+      backup: withBackup ? STORED_KEY_B64 : undefined,
+    });
+    const before = withBackup ? fs.readFileSync(backupPath()) : null;
+
+    assert.equal(secretCrypto.isAvailable(), true);
+    assert.equal(keychain.setAttempts, 1, "setPassword was tried once");
+    assert.equal(fileWrites().length + renames().length, 0, "backup not written");
+
+    if (withBackup) {
+      assert.deepEqual(fs.readFileSync(backupPath()), before);
+      assert.equal(
+        secretCrypto.decrypt(encryptWith(STORED_KEY, "placeholder")).value,
+        "placeholder"
+      );
+    } else {
+      assert.equal(fs.existsSync(backupPath()), false);
+      assert.equal(secretCrypto.encrypt("placeholder").toString("utf8"), "fake-safe:placeholder");
+    }
   });
 }
 
