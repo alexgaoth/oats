@@ -596,3 +596,111 @@ test("completedSegments accumulate across turns", async () => {
   assert.equal(streaming.completedSegments.length, 2);
   assert.equal(lastFull, "Hello world How are you");
 });
+
+test("each turn gets its place in the recording from the session's own offsets", async () => {
+  const OpenAIRealtimeStreaming = (await load()).default;
+  const streaming = new OpenAIRealtimeStreaming();
+  const finals = [];
+  streaming.onFinalTranscript = (text, timestamp, timing) => finals.push(timing);
+  let recorded = 10_000;
+  streaming.recordingNowMs = () => recorded;
+  const bytes = (ms, rate = 24000) => Math.round((ms / 1000) * rate) * 2;
+  // 10 s sent, nothing waiting: a session offset of 2 s is 2 s into the recording.
+  streaming.audioBytesSent = bytes(10_000);
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "input_audio_buffer.speech_started",
+      item_id: "a",
+      audio_start_ms: 2000,
+    })
+  );
+  // 12 s sent, half a second still waiting to be sent, 12.5 s recorded.
+  streaming.audioBytesSent = bytes(12_000);
+  streaming.coldStartBufferSize = bytes(500);
+  recorded = 12_500;
+  streaming.handleMessage(
+    JSON.stringify({ type: "input_audio_buffer.speech_stopped", item_id: "a", audio_end_ms: 5000 })
+  );
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "conversation.item.input_audio_transcription.completed",
+      item_id: "a",
+      transcript: "Hello there",
+    })
+  );
+  assert.deepEqual(finals, [{ startMs: 2000, endMs: 5000 }]);
+  assert.equal(streaming.itemTimes.size, 0);
+});
+
+test("a new session's offsets start again at zero, and land where it began in the recording", async () => {
+  const OpenAIRealtimeStreaming = (await load()).default;
+  const streaming = new OpenAIRealtimeStreaming();
+  const finals = [];
+  streaming.onFinalTranscript = (text, timestamp, timing) => finals.push(timing);
+  streaming.recordingNowMs = () => 60_000;
+  // A session that began 57 s into the recording has been sent 3 s.
+  streaming.audioBytesSent = 3 * 24000 * 2;
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "input_audio_buffer.speech_started",
+      item_id: "b",
+      audio_start_ms: 1000,
+    })
+  );
+  streaming.handleMessage(
+    JSON.stringify({ type: "input_audio_buffer.speech_stopped", item_id: "b", audio_end_ms: 2500 })
+  );
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "conversation.item.input_audio_transcription.completed",
+      item_id: "b",
+      transcript: "After the reconnect",
+    })
+  );
+  assert.deepEqual(finals, [{ startMs: 58_000, endMs: 59_500 }]);
+});
+
+test("a turn committed without a stop ends with the audio sent so far", async () => {
+  const OpenAIRealtimeStreaming = (await load()).default;
+  const streaming = new OpenAIRealtimeStreaming();
+  const finals = [];
+  streaming.onFinalTranscript = (text, timestamp, timing) => finals.push(timing);
+  streaming.recordingNowMs = () => 8000;
+  streaming.audioBytesSent = 8 * 24000 * 2;
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "input_audio_buffer.speech_started",
+      item_id: "c",
+      audio_start_ms: 6000,
+    })
+  );
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "conversation.item.input_audio_transcription.completed",
+      item_id: "c",
+      transcript: "Stopped mid",
+    })
+  );
+  assert.deepEqual(finals, [{ startMs: 6000, endMs: 8000 }]);
+});
+
+test("without a recording clock a turn has no place, as before", async () => {
+  const OpenAIRealtimeStreaming = (await load()).default;
+  const streaming = new OpenAIRealtimeStreaming();
+  const finals = [];
+  streaming.onFinalTranscript = (text, timestamp, timing) => finals.push(timing);
+  streaming.handleMessage(
+    JSON.stringify({ type: "input_audio_buffer.speech_started", item_id: "d", audio_start_ms: 0 })
+  );
+  streaming.handleMessage(
+    JSON.stringify({ type: "input_audio_buffer.speech_stopped", item_id: "d", audio_end_ms: 900 })
+  );
+  streaming.handleMessage(
+    JSON.stringify({
+      type: "conversation.item.input_audio_transcription.completed",
+      item_id: "d",
+      transcript: "No clock",
+    })
+  );
+  assert.deepEqual(finals, [null]);
+});
