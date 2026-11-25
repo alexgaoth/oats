@@ -374,14 +374,17 @@ export class TopicNamer {
    * either still growing (the room is on it) or one it would ask about now
    * (`_job`). No once it stopped, gave up, names only at Finish, or found the
    * writing model not ready (a download, a missing key): a placeholder that
-   * shimmers for minutes says something false.
+   * shimmers for minutes says something false. No either while the last
+   * request failed and none has succeeded since: a revoked key, no credit or no
+   * network fails every request, and a topic is asked again only once it grows
+   * by half, so the third failure that ends naming can be minutes away.
    *
    * @param {{ id: number, state?: string, utteranceIds?: unknown[] } | null | undefined} node
    *   A topic of the snapshot drawn: the tracker's, with names on it.
    * @returns {boolean}
    */
   expectsName(node) {
-    if (!node || !this.live || this.stopped || this.disabled) return false;
+    if (!node || !this.live || this.stopped || this.disabled || this.failures > 0) return false;
     if (this.now() < this.notReadyUntil || !isNameableTopic(node)) return false;
     if (node.state === "live") return true;
     const nodes = Array.isArray(this.snapshot?.nodes) ? this.snapshot.nodes : [];

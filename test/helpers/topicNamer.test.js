@@ -763,3 +763,32 @@ test("no name is expected once the namer stops, gives up, waits for the model, o
   await waiting.clock.tick(namerModule.NOT_READY_BACKOFF_MS);
   assert.equal(waiting.namer.expectsName(snapshot.nodes[0]), true, "worth asking again");
 });
+
+// A revoked key, no credit or no network fails every request, and a topic is
+// asked again only once it grows by half: a placeholder would promise a name
+// for minutes (in the harness, about six, before the third failure).
+test("no name is expected after a failed request, until a request succeeds", async () => {
+  const { clock, namer, answers } = setup();
+  const talk = conversation();
+  talk.say(1, 45);
+  answers.push(() => Promise.reject(new Error("Incorrect API key provided.")));
+  namer.observe(talk.snapshot(1), talk.segments);
+  assert.equal(namer.expectsName(talk.snapshot(1).nodes[0]), true, "the first request is out");
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(namer.failures, 1);
+  assert.equal(namer.disabled, false, "one failure does not end naming");
+  assert.equal(namer.expectsName(talk.snapshot(1).nodes[0]), false, "the live topic");
+  talk.say(2, 5);
+  namer.observe(talk.snapshot(2), talk.segments);
+  assert.equal(namer.expectsName(talk.snapshot(2).nodes[1]), false, "a new topic too");
+
+  // The new topic grows, its request succeeds, and names are expected again.
+  talk.say(2, 45);
+  answers.push("Pricing tiers");
+  namer.observe(talk.snapshot(2), talk.segments);
+  await clock.tick(namerModule.SETTLE_MS);
+  assert.equal(namer.failures, 0);
+  talk.say(3, 5);
+  namer.observe(talk.snapshot(3), talk.segments);
+  assert.equal(namer.expectsName(talk.snapshot(3).nodes[2]), true);
+});

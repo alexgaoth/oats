@@ -21,7 +21,9 @@
 // in three groups instead of the samples (`many.mjs`), to measure Global
 // conversations at size; `loop=1` makes the writing model OpenAI's, so the
 // live topic check runs, against the stand-in in fastModel.mjs, and
-// `oatsDemo.openaiRequests()` lists what it was asked; `theme`, `view` and
+// `oatsDemo.openaiRequests()` lists what it was asked; with it, `fail=check`
+// fails the check (HTTP 500), `fail=hang` never answers it, and `fail=key`
+// refuses every request (HTTP 401), as a revoked key does; `theme`, `view` and
 // `flow` as in `settings.mjs`. `panel=true` is the app's own: the workspace
 // window.
 //
@@ -234,7 +236,10 @@ main.hooks.start = (options) => {
 };
 const openai =
   params.get("loop") === "1"
-    ? installFakeOpenAI({ reason: (request) => main.hooks.reason?.(request) ?? null })
+    ? installFakeOpenAI({
+        reason: (request) => main.hooks.reason?.(request) ?? null,
+        fail: params.get("fail"),
+      })
     : null;
 // A key typed into Settings or setup is checked with OpenAI (keyCheck.ts); here
 // the check is answered in the page, and nothing leaves it.
