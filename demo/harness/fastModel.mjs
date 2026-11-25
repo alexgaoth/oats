@@ -41,7 +41,7 @@ function quotedChars(user) {
  * writing model's requests ({ text, delayMs } or null); `models` are the fast
  * models this demo key can use.
  */
-export function installFakeOpenAI({ reason, models = FAST_MODELS }) {
+export function installFakeOpenAI({ reason, models = FAST_MODELS, fail = null }) {
   const requests = [];
   const pageFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
@@ -82,6 +82,18 @@ export function installFakeOpenAI({ reason, models = FAST_MODELS }) {
       model: body.model,
       chars: kind === "topic check" ? quotedChars(user) : user.length,
     });
+    // A key that fails during the conversation (`fail=`, boot.mjs): `check` answers
+    // the live topic check with HTTP 500, `hang` never answers it (the app's 15 s
+    // timeout ends each try), and `key` answers every request with HTTP 401, as a
+    // revoked key does. The writing model's other requests still go to `reason`
+    // unless the plan is `key`.
+    if (fail === "key")
+      return reply(401, {
+        error: { message: "Incorrect API key provided.", code: "invalid_api_key" },
+      });
+    if (fail === "check" && kind === "topic check")
+      return reply(500, { error: { message: "The server had an error processing your request." } });
+    if (fail === "hang" && kind === "topic check") return new Promise(() => {});
     if (!answer)
       return reply(400, { error: { message: "The demo has no model for this request." } });
     if (answer.delayMs) await new Promise((resolve) => setTimeout(resolve, answer.delayMs));
@@ -139,7 +151,8 @@ export function installFakeKeyCheck() {
     if (auth.includes("limited")) {
       return reply(401, {
         error: {
-          message: "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
+          message:
+            "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
           code: null,
         },
       });

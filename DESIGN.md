@@ -276,7 +276,10 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
 - **No name will come** (no writing model, names only at Finish, a writing model
   that is not ready, or a namer that gave up after three failures): the topic
   shows its on-device name, as before. A placeholder that shimmers for minutes
-  says something false.
+  says something false. The same while the last request of the check or the
+  namer failed, until one succeeds: a revoked key, no credit or no network fails
+  every request, and the namer asks again only as a topic grows, so its third
+  failure can be minutes away (about six in the harness, `fail=key`).
 - **Live topic check** (`helpers/topicLoop.mjs`), only with OpenAI or
   Anthropic as the writing model: the on-device tracker proposes changes of
   subject early, and that provider's most accurate model for the check

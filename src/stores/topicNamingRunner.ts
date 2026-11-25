@@ -532,13 +532,15 @@ export function liveTopicSnapshot<T extends ConversationTopicSnapshot | null | u
 /**
  * Whether a topic with no name yet will get one while recording, so it is
  * drawn as being named (`withNameStates`, DESIGN.md §5). The live topic check
- * names its topics while it runs; otherwise the namer says (`expectsName`);
- * while either is still being set up for a chosen writing model, yes. Never
- * once the recording stopped.
+ * names its topics while it runs, unless its last request failed (a revoked
+ * key, no credit, no network: the tracker's names show until a request
+ * succeeds); otherwise the namer says (`expectsName`); while either is still
+ * being set up for a chosen writing model, yes. Never once the recording
+ * stopped.
  */
 function nameExpected(node: { id: number; state?: string; utteranceIds?: unknown[] }): boolean {
   if (stoppedGeneration === generation) return false;
-  if (loop && !loop.disabled) return true;
+  if (loop && !loop.disabled) return loop.failures === 0;
   if (namer) return namer.expectsName(node);
   return namingStarts;
 }
