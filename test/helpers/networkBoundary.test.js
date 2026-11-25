@@ -200,7 +200,19 @@ test("the only utility process is the ONNX worker, and it has no way to the netw
   const worker = read("src/workers/onnxWorker.js");
   const required = [...worker.matchAll(/require\(["']([^"']+)["']\)/g)].map((m) => m[1]).sort();
   assert.deepEqual(required, ["fs", "onnxruntime-node", "os", "path"]);
-  assert.doesNotMatch(worker, /\bfetch\(|\bimport\(|electron/);
+  // Its only imports are the room's speaker pass (roomVoiceEmbeddings.js): two
+  // pure modules that import nothing and reach nothing themselves.
+  const PASS = /\bimport\(\s*"\.\.\/helpers\/(kaldiFbank|roomVoices)\.mjs"\s*\)/g;
+  const imported = [...worker.matchAll(PASS)].map((m) => m[1]).sort();
+  assert.deepEqual(imported, ["kaldiFbank", "roomVoices"]);
+  assert.doesNotMatch(worker.replace(PASS, ""), /\bfetch\(|\bimport\(|electron/);
+  for (const name of imported) {
+    assert.doesNotMatch(
+      read(`src/helpers/${name}.mjs`),
+      /\bimport\b|\brequire\(|\bfetch\(|electron|process\./,
+      `${name}.mjs: the ONNX worker loads it, so it stays pure`
+    );
+  }
 });
 
 test("the renderer opens no WebRTC connection, which webRequest does not see", () => {

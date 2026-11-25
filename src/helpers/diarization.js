@@ -56,13 +56,10 @@ const SILERO_VAD_MODEL_URL =
 
 const SEGMENTATION_DIR = "sherpa-onnx-pyannote-segmentation-3-0";
 const SEGMENTATION_ONNX = path.join(SEGMENTATION_DIR, "model.onnx");
+// The call path's voice model, and the voice profiles built on it. A
+// conversation in a room is not diarized here: its lines are grouped by voice
+// as it is recorded (roomVoiceEmbeddings.js, docs/room-speakers.md).
 const EMBEDDING_ONNX = "3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx";
-// The voice model for a conversation recorded in one room from one microphone.
-// Not CAM++ above, which stays for the online-call path and the voice profiles
-// built on it: over nine unseen two- and three-speaker LibriSpeech
-// conversations with the count known, CAM++ attributed 49% of turns correctly
-// and TitaNet-small 94% (scripts/download-diarization-models.js).
-const IN_ROOM_EMBEDDING_ONNX = "nemo_en_titanet_small.onnx";
 const SILERO_VAD_ONNX = "silero_vad.onnx";
 
 class DiarizationManager {
@@ -133,11 +130,6 @@ class DiarizationManager {
     const segPath = this._resolveModelPath(SEGMENTATION_ONNX);
     const embPath = this._resolveModelPath(embedding);
     return fs.existsSync(segPath) && fs.existsSync(embPath);
-  }
-
-  /** Whether a single-microphone conversation can be told apart by speaker. */
-  isInRoomReady() {
-    return this.getBinaryPath() !== null && this.isModelDownloaded(IN_ROOM_EMBEDDING_ONNX);
   }
 
   getVadModelPath() {
@@ -615,4 +607,3 @@ class DiarizationManager {
 }
 
 module.exports = DiarizationManager;
-module.exports.IN_ROOM_EMBEDDING_ONNX = IN_ROOM_EMBEDDING_ONNX;

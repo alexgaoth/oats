@@ -39,6 +39,14 @@ let speakerInputName = null;
 let textSession = null;
 let textTokenizer = null;
 
+// The room's speaker pass (roomVoiceEmbeddings.js): a 3D-Speaker voice model
+// over Kaldi filterbank features, and the grouping of a conversation's lines
+// into people. Its own session: the call path's CAM++ above keeps its own
+// features and the voice profiles built on them.
+let roomVoiceSession = null;
+let roomVoiceModules = null;
+const ROOM_VOICE_MAX_SAMPLES = FBANK_SAMPLE_RATE * 8;
+
 function log(level, message, extra) {
   if (!logStream) return;
   const line = JSON.stringify({
@@ -221,6 +229,61 @@ async function speakerExtract({ samplesBuffer }) {
   return { embeddingBuffer: data.buffer };
 }
 
+/** kaldiFbank.mjs and roomVoices.mjs, from the packed app like main's own helpers. */
+async function loadRoomVoiceModules() {
+  if (!roomVoiceModules) {
+    const [fbank, voices] = await Promise.all([
+      import("../helpers/kaldiFbank.mjs"),
+      import("../helpers/roomVoices.mjs"),
+    ]);
+    roomVoiceModules = {
+      computeFbank: fbank.computeFbank,
+      NUM_BINS: fbank.NUM_BINS,
+      groupVoices: voices.groupVoices,
+    };
+  }
+  return roomVoiceModules;
+}
+
+async function roomVoiceLoad({ modelPath }) {
+  if (roomVoiceSession) return { ok: true };
+  loadOrt();
+  await loadRoomVoiceModules();
+  roomVoiceSession = await ort.InferenceSession.create(modelPath, SESSION_OPTIONS);
+  log("info", "room voice session loaded", { modelPath });
+  return { ok: true };
+}
+
+/** One line's voice: 16 kHz samples in [-1, 1], at most the middle 8 s. */
+async function roomVoiceExtract({ samplesBuffer }) {
+  if (!roomVoiceSession) throw new Error("room voice session not loaded");
+  const all = new Float32Array(samplesBuffer);
+  const from = Math.max(0, Math.floor((all.length - ROOM_VOICE_MAX_SAMPLES) / 2));
+  const samples = all.subarray(from, from + Math.min(all.length, ROOM_VOICE_MAX_SAMPLES));
+  const { computeFbank, NUM_BINS } = await loadRoomVoiceModules();
+  const { features, numFrames } = computeFbank(samples);
+  if (!numFrames) return { embeddingBuffer: null };
+  const input = roomVoiceSession.inputNames[0];
+  const results = await roomVoiceSession.run({
+    [input]: new ort.Tensor("float32", features, [1, numFrames, NUM_BINS]),
+  });
+  const data = new Float32Array(results[roomVoiceSession.outputNames[0]].data);
+  return { embeddingBuffer: data.buffer };
+}
+
+/** A conversation's lines, `{ startMs, endMs, embeddingBuffer }`, grouped into people. */
+async function roomVoiceGroup({ lines }) {
+  const { groupVoices } = await loadRoomVoiceModules();
+  const turns = groupVoices(
+    (lines || []).map((line) => ({
+      startMs: line.startMs,
+      endMs: line.endMs,
+      embedding: line.embeddingBuffer ? new Float32Array(line.embeddingBuffer) : null,
+    }))
+  );
+  return { turns };
+}
+
 function buildTextTokenizer(tokenizerData) {
   const tokenToId = new Map();
   for (const [token, id] of Object.entries(tokenizerData.model.vocab)) {
@@ -339,9 +402,15 @@ async function textEmbed({ text }) {
 }
 
 const handlers = {
-  ping: () => ({ ok: true, sessions: { speaker: !!speakerSession, text: !!textSession } }),
+  ping: () => ({
+    ok: true,
+    sessions: { speaker: !!speakerSession, text: !!textSession, roomVoice: !!roomVoiceSession },
+  }),
   "speaker.load": speakerLoad,
   "speaker.extract": speakerExtract,
+  "roomVoice.load": roomVoiceLoad,
+  "roomVoice.extract": roomVoiceExtract,
+  "roomVoice.group": roomVoiceGroup,
   "text.load": textLoad,
   "text.embed": textEmbed,
   shutdown: () => {

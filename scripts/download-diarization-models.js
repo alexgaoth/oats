@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * The two models that tell speakers apart in a conversation recorded from one
- * microphone: pyannote segmentation 3.0 (where speech changes hands) and
- * NVIDIA TitaNet-small (whose voice is whose), run by the bundled
- * `sherpa-onnx-diarize` binary after a recording stops.
+ * The models the app bundles to tell speakers apart.
  *
- * TitaNet, not the 3D-Speaker CAM++ model upstream ships. Measured over nine
- * unseen LibriSpeech conversations of two and three speakers, with the count
- * known: CAM++ attributed 49% of turns correctly — a coin flip — and TitaNet
- * 94%. Guessing the count (threshold 0.85), TitaNet attributed 92%.
+ * 3D-Speaker's ERes2Net (VoxCeleb, English): the voice of each line of a
+ * conversation recorded in a room, grouped into people as it is recorded
+ * (roomVoiceEmbeddings.js, roomVoices.mjs). Over twelve two-person
+ * conversations recorded in rooms it puts 92.0% of the lines on the right
+ * person, where TitaNet-small through `sherpa-onnx-diarize`, bundled until
+ * 2026-11, put 73.3% and showed 3 to 9 people (docs/room-speakers.md).
+ *
+ * pyannote segmentation 3.0: where speech changes hands, for the bundled
+ * `sherpa-onnx-diarize` binary on the call and upload paths.
  *
  *   node scripts/download-diarization-models.js [--output-dir <dir>] [--force]
  *
@@ -26,8 +28,8 @@ const SEGMENTATION_DIR = "sherpa-onnx-pyannote-segmentation-3-0";
 const SEGMENTATION_FILE = "model.onnx";
 
 const EMBEDDING_URL =
-  "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/nemo_en_titanet_small.onnx";
-const EMBEDDING_FILE = "nemo_en_titanet_small.onnx";
+  "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_sv_en_voxceleb_16k.onnx";
+const EMBEDDING_FILE = "3dspeaker_speech_eres2net_sv_en_voxceleb_16k.onnx";
 
 function modelDir() {
   const at = process.argv.indexOf("--output-dir");
