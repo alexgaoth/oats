@@ -19,7 +19,7 @@ only default-on connection in the product, and it is switchable off in Settings.
 **The packaged app does not start optional model downloads before setup is complete.** Every
 model a conversation needs ships in the app: Whisper `base` and `base.en`
 (`small.en` and `base` on Apple Silicon), the Silero VAD, pyannote
-segmentation, TitaNet for speakers, and MiniLM for search. A development
+segmentation, ERes2Net for speakers, and MiniLM for search. A development
 checkout fetches the ones it is missing; a packaged build does not. Optional
 downloads after setup depend on each feature's route, as described below.
 The local vector store

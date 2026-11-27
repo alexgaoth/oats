@@ -32,6 +32,7 @@ const TINFOIL_REALTIME_MODEL = "voxtral-mini-4b-realtime";
 // Question-card outcomes (DESIGN.md §4). Anything else the renderer sends is
 // coerced to `asked` rather than trusted into the always-on-top rail.
 const liveSpeakerIdentifier = require("./liveSpeakerIdentifier");
+const roomVoiceEmbeddings = require("./roomVoiceEmbeddings");
 const MeetingEchoLeakDetector = require("./meetingEchoLeakDetector");
 const { partitionPendingMicFinals, isWithinRetractWindow } = require("./meetingMicHoldback");
 const { applySmartSpacing } = require("./smartSpacing");
@@ -5814,8 +5815,9 @@ class IPCHandlers {
      * conversations with the same `base` model, fixed 5 s windows 15.15% WER,
      * segments cut at pauses 6.17% (docs/dictation-accuracy.md). Each segment
      * goes out with its exact place in the recording (`startMs`/`endMs`), and
-     * the 16 kHz audio is kept in a temporary file so the speakers can be told
-     * apart over the whole conversation once it stops.
+     * each closed segment's voice is computed at once, so the speakers can be
+     * told apart over the whole conversation once it stops
+     * (roomVoiceTracker.mjs). No audio of the room is written anywhere.
      *
      * While a segment is still open, its words so far go out as `partial`s
      * between the finals, never in their way (partialScheduler.mjs).
@@ -5834,11 +5836,7 @@ class IPCHandlers {
       const { roomParakeetAudio } = await import("./roomParakeetAudio.mjs");
       const { RoomTranscriptionFallback } = await import("./roomTranscriptionFallback.mjs");
       const { SegmentActivityReporter, withLateRoomFinal } = await import("./segmentActivity.mjs");
-      const os = require("os");
-      const audioPath = path.join(os.tmpdir(), `oats-conversation-${Date.now()}.wav`);
-      const stream = fs.createWriteStream(audioPath);
-      // A header now, its sizes patched at Stop.
-      stream.write(pcm16ToWav(Buffer.alloc(0)));
+      const { RoomVoiceTracker } = await import("./roomVoiceTracker.mjs");
       // A session still here was never stopped: it ends now, and nothing it
       // still reads reaches this one.
       if (meetingInRoom) abandonInRoomSession("replaced");
@@ -5856,7 +5854,13 @@ class IPCHandlers {
         startedAt: Date.now(),
         queue: [],
         draining: null,
-        audio: { path: audioPath, stream, bytes: 0 },
+        // Each line's voice, for the speaker pass at Stop. Nothing is gathered
+        // without the voice model.
+        voices: new RoomVoiceTracker({
+          extract: roomVoiceEmbeddings.isAvailable()
+            ? (samples) => roomVoiceEmbeddings.extract(samples)
+            : null,
+        }),
         recent: new RoomAudioWindow(ROOM_RECENT_SECONDS * SAMPLE_RATE),
         /** The last word of the last final, for Parakeet's read of the next segment. */
         lastWord: "",
@@ -5936,7 +5940,7 @@ class IPCHandlers {
         });
       }
       if (!keep) abandoned.queue.length = 0;
-      abandoned.audio.stream.end(() => fs.unlink(abandoned.audio.path, () => {}));
+      abandoned.voices.drop();
     };
 
     /** A replaced session's final, into its own conversation (see above). */
@@ -5985,8 +5989,6 @@ class IPCHandlers {
         });
       }
       const pcm16k = downsample24kTo16k(buffer24k);
-      session.audio.stream.write(pcm16k);
-      session.audio.bytes += pcm16k.length;
       const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1);
       session.recent.push(samples);
       const closed = session.segmenter.push(samples);
@@ -6207,6 +6209,9 @@ class IPCHandlers {
     };
 
     const enqueueInRoomSegment = (session, segment) => {
+      // Its voice, for the speaker pass at Stop, computed while the
+      // conversation goes on.
+      session.voices.add(segment);
       // Where its audio ended, as the moment it was heard, fixed now: the
       // segment closes as its last audio arrives.
       segment.audioEndedAt = session.clock.wallAt(segment.endSample);
@@ -6303,7 +6308,7 @@ class IPCHandlers {
 
     /**
      * Stop: the last thing said is transcribed before Stop returns, and the
-     * recording's audio is closed into a WAV whose path is handed back.
+     * voices of its lines are handed back for the speaker pass.
      */
     const finishInRoomSegmenting = async () => {
       const session = meetingInRoom;
@@ -6318,7 +6323,6 @@ class IPCHandlers {
       while (session.draining) await session.draining;
       // After the last final: the renderer stops waiting on this session.
       sendInRoomActivity(session, session.activity.end("stop"));
-      await new Promise((resolve) => session.audio.stream.end(resolve));
       if (meetingInRoom === session) meetingInRoom = null;
       if (session.failedSegments) {
         debugLogger.warn("In-room session stopped with segments that were not read", {
@@ -6326,40 +6330,26 @@ class IPCHandlers {
           failedSegments: session.failedSegments,
         });
       }
-      try {
-        const fd = fs.openSync(session.audio.path, "r+");
-        fs.writeSync(fd, pcm16ToWav(Buffer.alloc(session.audio.bytes)).subarray(0, 44), 0, 44, 0);
-        fs.closeSync(fd);
-      } catch (error) {
-        debugLogger.warn("In-room audio header patch failed", { error: error.message });
-      }
       return {
-        audioPath: session.audio.path,
         startedAt: session.startedAt,
-        bytes: session.audio.bytes,
+        voices: session.voices,
         failedSegments: session.failedSegments,
       };
     };
 
     /**
-     * Who spoke, over the whole conversation, after it stops: TitaNet voices on
-     * pyannote segments (diarization.js). Runs in the background — a title and
-     * a summary do not wait for it — and the audio is deleted when it is done,
-     * whatever happened, so nothing of the room outlives the transcript.
+     * Who spoke, over the whole conversation, after it stops: the voice of
+     * each line, computed while it was recorded, grouped into people
+     * (roomVoiceTracker.mjs, roomVoices.mjs; docs/room-speakers.md). Runs in
+     * the background — a title and a summary do not wait for it — and the
+     * voices are dropped when it is done, whatever happened.
      */
     const runInRoomSpeakerPass = async (finished, noteId, win) => {
-      if (!finished) return;
+      if (!finished?.voices) return;
       try {
-        const DiarizationManager = require("./diarization");
-        const minimumBytes = 16000 * 2 * 4; // under 4 s there is no conversation to divide
-        if (!noteId || finished.bytes < minimumBytes || !this.diarizationManager?.isInRoomReady()) {
-          return;
-        }
-        const turns = await this.diarizationManager.diarize(finished.audioPath, {
-          embedding: DiarizationManager.IN_ROOM_EMBEDDING_ONNX,
-          threshold: 0.85,
-          threads: Math.max(1, Math.min(4, require("os").cpus().length - 1)),
-        });
+        if (!noteId || !finished.voices.enabled) return;
+        const lines = await finished.voices.collect();
+        const turns = await roomVoiceEmbeddings.group(lines);
         if (turns.length && win && !win.isDestroyed()) {
           win.webContents.send("conversation-speakers", {
             noteId,
@@ -6370,7 +6360,7 @@ class IPCHandlers {
       } catch (error) {
         debugLogger.warn("In-room speaker pass failed", { error: error.message });
       } finally {
-        fs.unlink(finished.audioPath, () => {});
+        finished.voices.drop();
       }
     };
 

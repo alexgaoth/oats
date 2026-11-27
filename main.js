@@ -709,7 +709,7 @@ async function startApp() {
 
   // Nothing is fetched at launch in a packaged build (docs/network-allowlist.md:
   // downloads are explicit user actions). A conversation in a room uses the
-  // bundled pyannote and TitaNet models. CAM++ and Silero serve only the call
+  // bundled ERes2Net voice model. CAM++ and Silero serve only the call
   // path, which no surface starts today; whatever brings calls back must bundle
   // them or fetch them as a stated action. A development checkout still fetches
   // them, as it always has.

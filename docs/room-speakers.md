@@ -151,6 +151,29 @@ and the voice profiles built on it) is not these features: a Hamming window, no
 pre-emphasis, no mean removed, and other mel triangles. That path is not
 changed here.
 
+## In the app
+
+In a room on the on-device route (`ipcHandlers.js`, `startInRoomSegmenting`):
+
+- **While the conversation goes on**, each segment the segmenter closes is
+  given its voice in the ONNX worker (`roomVoiceTracker.mjs` →
+  `roomVoiceEmbeddings.js` → `onnxWorker.js`): 39 ms a line, measured through
+  the app's own worker under Electron on SBC005.
+- **At Stop** the worker groups the lines (0.3 s for SBC005's 303) and the
+  turns go to the reader as before (`conversation-speakers`,
+  `assignSpeakers`). Through the worker, SBC005 scores as in the eval: 95.2%,
+  two people.
+- **No audio of the room is written.** Today's pass needed the whole
+  conversation as a WAV in the temporary folder (115 MB an hour) and read it
+  again after Stop: 66 to 119 s on two threads for 16 to 30 minutes of
+  conversation. The voices are about 200 numbers a line, in memory, dropped
+  when the pass ends.
+- **The bundle** carries ERes2Net (26.5 MB) instead of TitaNet-small (40 MB).
+  pyannote stays, for the call and upload paths.
+
+On the cloud route a room still has no speaker pass: the microphone goes
+straight to the realtime session, and no line is cut on the Mac.
+
 ## Reproduce
 
 ```bash
