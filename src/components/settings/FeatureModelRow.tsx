@@ -11,6 +11,7 @@ import {
   Loader2,
   Plus,
   RotateCcw,
+  Split,
   X,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -43,12 +44,15 @@ import {
   type SavedKey,
 } from "../../stores/apiKeys";
 import {
+  chooseRoomsOnThisMac,
   followRecommendedWhisper,
   forgetWritingChoice,
+  macRunsRoomParakeet,
   roomSpeechPlan,
   selectDictationSettings,
   selectFeatureRoute,
   selectResolvedMeetingTranscription,
+  selectRoomsOnThisMac,
   setRoomSpeechPreference,
   useSettingsStore,
 } from "../../stores/settingsStore";
@@ -108,6 +112,12 @@ import { getCachedPlatform } from "../../utils/platform";
  * above shows Mixed. Speech needs an OpenAI key: with only Anthropic keys
  * saved, a speech row's "With an API key" is off, and the menu says why.
  * Setup shows the same rows with the status only (`menus={false}`).
+ *
+ * With an API key, on a Mac that runs Parakeet Ultra (Apple Silicon, macOS 14,
+ * English), Conversations' row offers it for rooms (Alex, 2026-11-27): the
+ * measured gain over GPT Transcribe and the size, and Download. Its menu has
+ * a third place, "With an API key, rooms on this Mac": calls stay on the key,
+ * and a room is transcribed here once the model is on disk.
  */
 export function FeatureModelRow({
   feature,
@@ -138,6 +148,8 @@ export type ModelStatus =
       percent: number;
       size: string;
       cancel: { label: string; onClick: () => void };
+      /** The model coming, when the row's model stays in use until it is here. */
+      model?: string;
     }
   | { kind: "checking" }
   | { kind: "action"; label: string; retry: boolean; onClick: () => void }
@@ -155,7 +167,7 @@ interface RowModel {
    * key was removed); "until-works" until its key, which the provider refused,
    * works again.
    */
-  place: "local" | "providers" | "until-key" | "until-chosen" | "until-works";
+  place: "local" | "providers" | "providers-rooms" | "until-key" | "until-chosen" | "until-works";
   /** For "until-key": whose key ("OpenAI"); none when either provider's will do. */
   provider?: string;
   status: ModelStatus;
@@ -192,11 +204,15 @@ function keyStatus(key: SavedKey | null, provider: KeyProvider, choosable = fals
 /** AMI replay (docs/dictation-accuracy.md) and AMI summary eval (docs/summaries.md). */
 function upgradeDetail(
   t: ReturnType<typeof useTranslation>["t"],
-  kind: "speech" | "parakeet" | "writing",
+  kind: "speech" | "parakeet" | "parakeetCloud" | "writing",
   model: string,
   size: string | null
 ) {
-  const gain = t(`oats.models.upgrade.${kind}`, { model });
+  // Ultra against the app's GPT Transcribe path: docs/speech-round-2.md.
+  const gain = t(`oats.models.upgrade.${kind}`, {
+    model,
+    cloud: cloudSpeechName("gpt-transcribe"),
+  });
   return size ? `${gain} ${t("oats.models.upgrade.size", { size })}` : gain;
 }
 
@@ -237,9 +253,17 @@ function SpeechRow({
       feature === "conversations" &&
       Boolean(roomSpeechPlan({ ...state, roomSpeechPreference: "recommended" }, tier.tier))
   );
+  // With an API key: whether rooms stay on this Mac, and whether this Mac
+  // runs Parakeet Ultra for them.
+  const roomsHere = useSettingsStore(
+    (state) => feature === "conversations" && selectRoomsOnThisMac(state)
+  );
+  const macRuns = useSettingsStore(
+    (state) => feature === "conversations" && macRunsRoomParakeet(state, tier.tier)
+  );
   useEffect(() => {
-    if (roomEligible) void refreshRoomModel();
-  }, [roomEligible]);
+    if (roomEligible || macRuns) void refreshRoomModel();
+  }, [roomEligible, macRuns]);
 
   let row: RowModel;
   const localName =
@@ -258,6 +282,61 @@ function SpeechRow({
         ? (streaming.find((item) => item.id === cloudModel)?.id ?? "gpt-transcribe")
         : cloudModel;
     row = { model: cloudSpeechName(id), place: "providers", status: keyStatus(key, "openai") };
+    if (feature === "conversations" && macRuns && room.available) {
+      // Parakeet Ultra for rooms, offered or chosen. Calls stay on the key.
+      if (roomsHere && room.installed) row.place = "providers-rooms";
+      if (menus && !recording) {
+        const size = formatMegabytes(ROOM_MODEL_BYTES, i18n.language);
+        const waiting = t("oats.featureRoutes.roomsUntil", {
+          model: ROOM_MODEL_NAME,
+          cloud: row.model,
+        });
+        if (room.progress !== null) {
+          row.note = waiting;
+          row.status = {
+            kind: "downloading",
+            percent: Math.round(room.progress),
+            size,
+            model: ROOM_MODEL_NAME,
+            cancel: {
+              label: t("oats.models.cancelModel", { model: ROOM_MODEL_NAME }),
+              onClick: () => {
+                cancelRoomModelDownload(false);
+                chooseRoomsOnThisMac(false);
+              },
+            },
+          };
+        } else if (roomsHere && !room.installed) {
+          row.note = waiting;
+          row.offer = {
+            label: t(room.failed ? "oats.speechTier.retry" : "common.download"),
+            icon: room.failed ? RotateCcw : Download,
+            onClick: () => requestRoomModel(),
+          };
+        } else if (!roomsHere) {
+          row.note = upgradeDetail(
+            t,
+            "parakeetCloud",
+            ROOM_MODEL_NAME,
+            room.installed ? null : size
+          );
+          row.offer = {
+            label: t(
+              room.installed
+                ? "oats.models.use"
+                : room.failed
+                  ? "oats.speechTier.retry"
+                  : "common.download"
+            ),
+            icon: room.failed ? RotateCcw : Download,
+            onClick: () => {
+              chooseRoomsOnThisMac(true);
+              if (!room.installed) requestRoomModel();
+            },
+          };
+        }
+      }
+    }
   } else if (route.needsKey) {
     row = {
       model: localName,
@@ -445,32 +524,34 @@ function ModelRow({ feature, row, menus }: { feature: Feature; row: RowModel; me
   const placeText =
     row.place === "providers"
       ? t("oats.featureRoutes.placeKey")
-      : row.place === "until-key" && row.provider
-        ? t(
-            mac
-              ? "oats.featureRoutes.placeUntilKeyMac"
-              : "oats.featureRoutes.placeUntilKeyComputer",
-            { provider: row.provider }
-          )
-        : row.place === "until-key"
+      : row.place === "providers-rooms"
+        ? t("oats.featureRoutes.placeKeyRoomsMac")
+        : row.place === "until-key" && row.provider
           ? t(
               mac
-                ? "oats.featureRoutes.placeUntilAnyKeyMac"
-                : "oats.featureRoutes.placeUntilAnyKeyComputer"
+                ? "oats.featureRoutes.placeUntilKeyMac"
+                : "oats.featureRoutes.placeUntilKeyComputer",
+              { provider: row.provider }
             )
-          : row.place === "until-chosen"
+          : row.place === "until-key"
             ? t(
                 mac
-                  ? "oats.featureRoutes.placeUntilChosenMac"
-                  : "oats.featureRoutes.placeUntilChosenComputer"
+                  ? "oats.featureRoutes.placeUntilAnyKeyMac"
+                  : "oats.featureRoutes.placeUntilAnyKeyComputer"
               )
-            : row.place === "until-works"
+            : row.place === "until-chosen"
               ? t(
                   mac
-                    ? "oats.featureRoutes.placeUntilWorksMac"
-                    : "oats.featureRoutes.placeUntilWorksComputer"
+                    ? "oats.featureRoutes.placeUntilChosenMac"
+                    : "oats.featureRoutes.placeUntilChosenComputer"
                 )
-              : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
+              : row.place === "until-works"
+                ? t(
+                    mac
+                      ? "oats.featureRoutes.placeUntilWorksMac"
+                      : "oats.featureRoutes.placeUntilWorksComputer"
+                  )
+                : t(mac ? "oats.featureRoutes.placeMac" : "oats.featureRoutes.placeComputer");
   const Offer = row.offer?.icon;
   return (
     <section aria-labelledby={titleId} data-feature-row={feature} className="px-5 py-3.5">
@@ -537,8 +618,9 @@ function PlaceMenu({
   text: string;
   buttonRef: React.Ref<HTMLButtonElement>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const reasonId = useId();
+  const roomsId = useId();
   const mac = getCachedPlatform() === "darwin";
   const requested = useSettingsStore((state) => selectFeatureRoute(state, feature).requested);
   const noSpeechKey = useSettingsStore((state) => {
@@ -549,6 +631,21 @@ function PlaceMenu({
       keys.some((key) => key.provider === "anthropic")
     );
   });
+  // Conversations' third place, on a Mac that runs Parakeet Ultra: the key
+  // for calls, this Mac for rooms.
+  const tier = useDeviceTierStore((state) => state.tier);
+  const roomsHere = useSettingsStore(
+    (state) => feature === "conversations" && selectRoomsOnThisMac(state)
+  );
+  const macRuns = useSettingsStore(
+    (state) => feature === "conversations" && macRunsRoomParakeet(state, tier)
+  );
+  const { available, installed } = useRoomModelStore(
+    useShallow((state) => ({ available: state.available, installed: state.installed }))
+  );
+  const offerRooms = roomsHere || (macRuns && available === true);
+  const value = requested === "providers" && roomsHere ? "providers-rooms" : requested;
+  const keyOff = noSpeechKey && requested !== "providers";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -567,11 +664,23 @@ function PlaceMenu({
           <ChevronDown aria-hidden="true" className="size-3.5 shrink-0" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="oats-surface max-w-72">
+      <DropdownMenuContent align="start" className="oats-surface max-w-80">
         <DropdownMenuRadioGroup
-          value={requested}
-          onValueChange={(value) => {
-            if (value !== requested) setFeatureProcessing(feature, value as ProcessingMode);
+          value={value}
+          onValueChange={(next) => {
+            if (next === value) return;
+            if (next === "providers-rooms") {
+              if (requested !== "providers") setFeatureProcessing(feature, "providers");
+              chooseRoomsOnThisMac(true);
+              if (!installed) requestRoomModel();
+              return;
+            }
+            if (roomsHere) {
+              chooseRoomsOnThisMac(false);
+              // Back to the key for rooms too: the download is not needed.
+              if (next === "providers") cancelRoomModelDownload(false);
+            }
+            if (next !== requested) setFeatureProcessing(feature, next as ProcessingMode);
           }}
         >
           <DropdownMenuRadioItem value="local">
@@ -580,12 +689,33 @@ function PlaceMenu({
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="providers"
-            disabled={noSpeechKey && requested !== "providers"}
+            disabled={keyOff}
             aria-describedby={noSpeechKey ? reasonId : undefined}
           >
             <KeyRound aria-hidden="true" className="text-muted-foreground" />
             {t("oats.settings.processingProviders")}
           </DropdownMenuRadioItem>
+          {offerRooms && (
+            <DropdownMenuRadioItem
+              value="providers-rooms"
+              disabled={keyOff}
+              aria-describedby={installed ? undefined : roomsId}
+            >
+              <Split aria-hidden="true" className="text-muted-foreground" />
+              {t("oats.featureRoutes.roomsMacChoice")}
+            </DropdownMenuRadioItem>
+          )}
+          {offerRooms && !installed && (
+            <p
+              id={roomsId}
+              data-place-rooms
+              className="pb-1.5 pl-8 pr-2 text-xs leading-4 text-muted-foreground"
+            >
+              {t("oats.models.upgrade.size", {
+                size: formatMegabytes(ROOM_MODEL_BYTES, i18n.language),
+              })}
+            </p>
+          )}
           {noSpeechKey && (
             <p
               id={reasonId}
@@ -626,7 +756,7 @@ function StatusView({
         ? t("oats.models.readyWithKey", { key: status.key })
         : t("oats.models.ready")
       : status.kind === "downloading"
-        ? t("oats.models.downloadingModel", { model })
+        ? t("oats.models.downloadingModel", { model: status.model ?? model })
         : status.kind === "refused"
           ? t("oats.models.keyRefused", { key: status.key })
           : status.kind === "checking"
@@ -679,7 +809,7 @@ function StatusView({
           <div data-status="downloading" className="w-32">
             <div
               role="progressbar"
-              aria-label={t("oats.models.downloadingModel", { model })}
+              aria-label={t("oats.models.downloadingModel", { model: status.model ?? model })}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={status.percent}

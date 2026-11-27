@@ -60,7 +60,7 @@ cloud provider.
 
 | Feature | Key it uses | What Oats sends |
 | --- | --- | --- |
-| Conversations | Your OpenAI key | Room audio for live transcription. This route does not send transcripts for writing. |
+| Conversations | Your OpenAI key | A conversation's audio for live transcription. With "With an API key, rooms on this Mac" and Parakeet Ultra on disk, only calls go: a room is transcribed on the Mac. This route does not send transcripts for writing. |
 | Dictation | Your OpenAI key | Dictated audio for transcription. If cleanup is on, the recognized text and cleanup instructions go to OpenAI too. A custom dictionary can supply transcription and cleanup hints. |
 | Writing | Your OpenAI or Anthropic key | Transcript text for summaries, titles, topic names and descriptions. Other writing requests can include topic labels, summaries, or context passages, as detailed below. Writing does not send audio. |
 
@@ -78,6 +78,10 @@ Parakeet Ultra from `huggingface.co` and its CDN. Oats requests model files,
 not conversation data. The download waits until setup and does not start
 during a recording. Bundled Whisper, or an eligible installed Turbo, works
 while Parakeet is unavailable.
+
+On the API-key route Oats never fetches it by itself. Settings › AI models
+offers it for rooms on an eligible Mac, and the same hosts serve it when the
+person presses Download (2026-11-27).
 
 ## Automatic, once: Whisper Turbo on a fast Mac
 

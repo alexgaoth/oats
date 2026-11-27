@@ -1963,7 +1963,11 @@
       "noneSent": "這些功能都不會向供應商傳送資料。",
       "choiceDescription": "對話、聽寫和寫作的執行位置。",
       "keyNoAccess": "Oats 未儲存這把金鑰。此金鑰無法使用 {{model}}。",
-      "keyNotChecked": "Oats 無法驗證這把金鑰。請再試一次。"
+      "keyNotChecked": "Oats 無法驗證這把金鑰。請再試一次。",
+      "placeKeyRoomsMac": "使用 API 金鑰，面對面交談在這台 Mac 上",
+      "roomsMacChoice": "使用 API 金鑰，面對面交談在這台 Mac 上",
+      "roomsUntil": "在 {{model}} 下載完成前，面對面交談使用 {{cloud}}。",
+      "conversationsSentCalls": "通話音訊會傳送給 {{provider}} 進行轉錄。面對面交談在這台 Mac 上轉錄。"
     },
     "parakeetFallback": "Parakeet 失敗，正在使用 Whisper。",
     "library": {
@@ -2589,7 +2593,8 @@
         "parakeet": "在公開會議錄音中，與 Whisper Turbo 相比，{{model}} 的內容召回率在安靜環境中高出 4.9 個百分點，在持續噪音下高出 15.7 個百分點。",
         "speech": "在有背景噪音的室內測試中，{{model}} 辨識出單字的比例比 Whisper Small 高 7.5 個百分點。",
         "writing": "在會議測試中，{{model}} 每份摘要平均少捏造四項事實。",
-        "size": "下載大小：{{size}}。"
+        "size": "下載大小：{{size}}。",
+        "parakeetCloud": "在公開會議錄音中，與 {{cloud}} 相比，{{model}} 的內容召回率在安靜環境中高出 6.4 個百分點，在持續噪音下高出 7.8 個百分點。面對面交談的音訊留在這台 Mac 上，通話仍使用你的金鑰。"
       },
       "noModel": "沒有模型",
       "addKey": "新增 OpenAI 金鑰",

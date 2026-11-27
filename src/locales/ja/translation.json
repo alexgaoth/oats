@@ -1968,7 +1968,11 @@
       "noneSent": "これらの機能は、プロバイダーにデータを送りません。",
       "choiceDescription": "会話、音声入力、文章作成を実行する場所です。",
       "keyNoAccess": "このキーは保存されませんでした。{{model}} を利用できません。",
-      "keyNotChecked": "キーを確認できませんでした。もう一度お試しください。"
+      "keyNotChecked": "キーを確認できませんでした。もう一度お試しください。",
+      "placeKeyRoomsMac": "API キーで、対面会話はこの Mac で",
+      "roomsMacChoice": "API キーで、対面会話はこの Mac で",
+      "roomsUntil": "{{model}} のダウンロードが終わるまで、対面会話には {{cloud}} を使います。",
+      "conversationsSentCalls": "文字起こしのため、通話の音声を {{provider}} に送ります。対面会話はこの Mac で文字起こしします。"
     },
     "parakeetFallback": "Parakeet が失敗しました。Whisper を使用中。",
     "library": {
@@ -2594,7 +2598,8 @@
         "parakeet": "公開された会議録音では、{{model}}の内容再現率はWhisper Turboより静かな環境で4.9ポイント、一定の雑音がある環境で15.7ポイント高くなりました。",
         "speech": "背景音のある部屋でのテストでは、{{model}} が認識できた単語の割合は Whisper Small より 7.5 ポイント高くなりました。",
         "writing": "会議のテストでは、{{model}} は要約に含まれる事実にない記述が平均で 4 件少なくなりました。",
-        "size": "ダウンロード容量：{{size}}。"
+        "size": "ダウンロード容量：{{size}}。",
+        "parakeetCloud": "公開された会議録音では、{{model}}の内容再現率は{{cloud}}より静かな環境で6.4ポイント、一定の雑音がある環境で7.8ポイント高くなりました。対面会話の音声はこの Mac に残り、通話には引き続き API キーを使います。"
       },
       "noModel": "モデルなし",
       "addKey": "OpenAI キーを追加",

@@ -166,7 +166,12 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   provider and last four characters, the current one checked, the ones that
   cannot serve the feature off with the reason under them, and Add API key….
   Speech needs an OpenAI key: with only Anthropic keys, a speech row's "With
-  an API key" is off and says why. Under the rows, **API keys**
+  an API key" is off and says why. On the key route, on a Mac that runs
+  Parakeet Ultra, Conversations' row offers it for rooms (Alex, 2026-11-27):
+  the measured gain over GPT Transcribe and the size in a muted line, and a
+  ghost Download; its menu has a third place, "With an API key, rooms on
+  this Mac", and the row says that place once the model is on disk. Calls
+  stay on the key. Under the rows, **API keys**
   (`settings/ApiKeysList.tsx`): one line per key with its name, provider,
   ••••last4 and the features that use it, and a menu with Rename (in place),
   Replace… (a rotated key: it keeps its name and features) and Remove, which

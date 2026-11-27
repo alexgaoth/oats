@@ -1968,7 +1968,11 @@
       "noneSent": "Nenhuma destas funções envia dados a um fornecedor.",
       "choiceDescription": "Onde rodam Conversas, Ditado e Escrita.",
       "keyNoAccess": "Oats não guardou a chave. A chave não pode usar {{model}}.",
-      "keyNotChecked": "Oats não conseguiu verificar a chave. Tente novamente."
+      "keyNotChecked": "Oats não conseguiu verificar a chave. Tente novamente.",
+      "placeKeyRoomsMac": "com uma chave de API, reuniões presenciais neste Mac",
+      "roomsMacChoice": "Com uma chave de API, reuniões presenciais neste Mac",
+      "roomsUntil": "As reuniões presenciais usam {{cloud}} até que {{model}} seja baixado.",
+      "conversationsSentCalls": "O áudio das chamadas é enviado a {{provider}} para transcrição. As reuniões presenciais são transcritas neste Mac."
     },
     "parakeetFallback": "O Parakeet falhou. A usar o Whisper.",
     "library": {
@@ -2594,7 +2598,8 @@
         "parakeet": "Em gravações públicas de reuniões, {{model}} recuperou mais conteúdo que o Whisper Turbo: 4,9 pontos percentuais a mais em silêncio e 15,7 a mais com ruído constante.",
         "speech": "{{model}} reconheceu 7,5 pontos percentuais a mais de palavras que Whisper Small em testes com ruído de fundo.",
         "writing": "{{model}} inventou em média quatro fatos a menos por resumo nos testes com reuniões.",
-        "size": "Download: {{size}}."
+        "size": "Download: {{size}}.",
+        "parakeetCloud": "Em gravações públicas de reuniões, {{model}} recuperou mais conteúdo que o {{cloud}}: 6,4 pontos percentuais a mais em silêncio e 7,8 a mais com ruído constante. O áudio das reuniões presenciais fica neste Mac, e as chamadas continuam usando sua chave."
       },
       "noModel": "Sem modelo",
       "addKey": "Adicionar chave da OpenAI",

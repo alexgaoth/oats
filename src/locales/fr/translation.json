@@ -1968,7 +1968,11 @@
       "noneSent": "Aucune de ces fonctions n’envoie de données à un fournisseur.",
       "choiceDescription": "Où s’exécutent Conversations, Dictée et Rédaction.",
       "keyNoAccess": "Oats n’a pas enregistré la clé. Elle ne permet pas d’utiliser {{model}}.",
-      "keyNotChecked": "Oats n’a pas pu vérifier la clé. Réessayez."
+      "keyNotChecked": "Oats n’a pas pu vérifier la clé. Réessayez.",
+      "placeKeyRoomsMac": "avec une clé d’API, réunions en personne sur ce Mac",
+      "roomsMacChoice": "Avec une clé d’API, réunions en personne sur ce Mac",
+      "roomsUntil": "Les réunions en personne utilisent {{cloud}} jusqu’au téléchargement de {{model}}.",
+      "conversationsSentCalls": "L’audio des appels est envoyé à {{provider}} pour la transcription. Les réunions en personne sont transcrites sur ce Mac."
     },
     "parakeetFallback": "Échec de Parakeet. Oats utilise Whisper.",
     "library": {
@@ -2594,7 +2598,8 @@
         "parakeet": "Sur des enregistrements publics de réunions, {{model}} a retrouvé 4,9 points de pourcentage de contenu de plus en silence et 15,7 de plus avec un bruit constant que Whisper Turbo.",
         "speech": "{{model}} a reconnu 7,5 points de pourcentage de mots en plus que Whisper Small lors des tests avec bruit de fond.",
         "writing": "{{model}} a inventé en moyenne quatre faits de moins par résumé lors des tests sur des réunions.",
-        "size": "Téléchargement : {{size}}."
+        "size": "Téléchargement : {{size}}.",
+        "parakeetCloud": "Sur des enregistrements publics de réunions, {{model}} a retrouvé 6,4 points de pourcentage de contenu de plus en silence et 7,8 de plus avec un bruit constant que {{cloud}}. L’audio des réunions en personne reste sur ce Mac, et les appels utilisent toujours votre clé."
       },
       "noModel": "Aucun modèle",
       "addKey": "Ajouter une clé OpenAI",

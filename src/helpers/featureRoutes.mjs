@@ -18,7 +18,7 @@ export const FEATURE_ROUTES_KEY = "oats.featureRoutes";
 /** @typedef {"ok" | "limited" | "legacy" | "rejected" | "no-access" | "unknown"} RouteKeyStatus */
 /** @typedef {Partial<Record<Feature, Route>>} Exceptions */
 /** @typedef {Partial<Record<Feature, boolean>>} Consent */
-/** @typedef {{ defaultRoute: Route, exceptions: Exceptions, consent: Consent, writingProvider: Provider | null }} FeaturePreferences */
+/** @typedef {{ defaultRoute: Route, exceptions: Exceptions, consent: Consent, writingProvider: Provider | null, roomsLocal?: boolean }} FeaturePreferences */
 
 /** @param {unknown} value @returns {value is Route} */
 function isRoute(value) {
@@ -100,7 +100,8 @@ export function pinWritingProvider(preferences, keys) {
  * its route, so a mix of routes ends there (Alex, 2026-11-22: Settings'
  * "Mixed" card closes when the routes agree again). A feature's route that
  * brings every feature to one route makes that route the default, with no
- * exceptions, so the processing choice says so.
+ * exceptions, so the processing choice says so. Rooms on this Mac
+ * (`setRoomsOnThisMac`) ends when Conversations move to this Mac.
  *
  * @param {FeaturePreferences} preferences
  * @param {Route | null} route
@@ -116,13 +117,62 @@ export function changeFeatureRoute(preferences, route, feature) {
     consent[feature] = (route ?? preferences.defaultRoute) === "local";
     const routes = new Set(FEATURES.map((name) => exceptions[name] ?? preferences.defaultRoute));
     if (routes.size === 1 && !routes.has(preferences.defaultRoute)) {
-      return { ...preferences, defaultRoute: [...routes][0], exceptions: {}, consent };
+      return keepRooms({ ...preferences, defaultRoute: [...routes][0], exceptions: {}, consent });
     }
-    return { ...preferences, exceptions, consent };
+    return keepRooms({ ...preferences, exceptions, consent });
   }
   if (route === null) return preferences;
   for (const name of FEATURES) consent[name] = route === "local";
-  return { ...preferences, defaultRoute: route, exceptions: {}, consent };
+  return keepRooms({ ...preferences, defaultRoute: route, exceptions: {}, consent });
+}
+
+/** @param {FeaturePreferences} preferences */
+function conversationsRoute(preferences) {
+  return preferences.exceptions.conversations ?? preferences.defaultRoute;
+}
+
+/**
+ * Rooms on this Mac lasts only while Conversations ask for the API-key route.
+ * On this Mac, every room is here already.
+ *
+ * @param {FeaturePreferences} preferences
+ * @returns {FeaturePreferences}
+ */
+function keepRooms(preferences) {
+  if (!preferences.roomsLocal || conversationsRoute(preferences) === "providers") {
+    return preferences;
+  }
+  const { roomsLocal: _ended, ...rest } = preferences;
+  return rest;
+}
+
+/**
+ * Rooms on this Mac while Conversations use an API key (Alex, 2026-11-27: the
+ * key route keeps its default, and a Mac that runs Parakeet Ultra is offered
+ * it). The key still transcribes calls; a room is transcribed here once the
+ * model is on disk (`roomSpeechPlan`, `getRoomTranscriptionOptions`). Stored
+ * only while true, so preferences without it read as before.
+ *
+ * @param {FeaturePreferences} preferences
+ * @param {boolean} on
+ * @returns {FeaturePreferences}
+ */
+export function setRoomsOnThisMac(preferences, on) {
+  if (on && conversationsRoute(preferences) === "providers") {
+    return preferences.roomsLocal === true ? preferences : { ...preferences, roomsLocal: true };
+  }
+  if (!preferences.roomsLocal) return preferences;
+  const { roomsLocal: _off, ...rest } = preferences;
+  return rest;
+}
+
+/**
+ * Whether the person keeps rooms on this Mac on the API-key route.
+ *
+ * @param {FeaturePreferences} preferences
+ */
+export function roomsOnThisMac(preferences) {
+  return preferences.roomsLocal === true && conversationsRoute(preferences) === "providers";
 }
 
 /**
@@ -162,12 +212,13 @@ export function readFeaturePreferences(storage) {
         if (isRoute(route) && route !== saved.defaultRoute) exceptions[feature] = route;
         if (saved.consent?.[feature] === true) consent[feature] = true;
       }
-      return {
+      return keepRooms({
         defaultRoute: saved.defaultRoute,
         exceptions,
         consent,
         writingProvider: isWritingProvider(saved.writingProvider) ? saved.writingProvider : null,
-      };
+        ...(saved.roomsLocal === true && { roomsLocal: true }),
+      });
     }
   } catch {
     // Invalid stored data must not enable a cloud route.
