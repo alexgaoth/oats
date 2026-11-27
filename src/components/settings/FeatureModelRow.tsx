@@ -643,8 +643,10 @@ function PlaceMenu({
   const { available, installed } = useRoomModelStore(
     useShallow((state) => ({ available: state.available, installed: state.installed }))
   );
-  const offerRooms = roomsHere || (macRuns && available === true);
-  const value = requested === "providers" && roomsHere ? "providers-rooms" : requested;
+  // Shown and checked only where a room can use it: in another language a
+  // room streams with the key, and the stored choice waits.
+  const offerRooms = macRuns && (roomsHere || available === true);
+  const value = requested === "providers" && roomsHere && macRuns ? "providers-rooms" : requested;
   const keyOff = noSpeechKey && requested !== "providers";
   return (
     <DropdownMenu>
@@ -675,7 +677,7 @@ function PlaceMenu({
               if (!installed) requestRoomModel();
               return;
             }
-            if (roomsHere) {
+            if (roomsHere && macRuns) {
               chooseRoomsOnThisMac(false);
               // Back to the key for rooms too: the download is not needed.
               if (next === "providers") cancelRoomModelDownload(false);
