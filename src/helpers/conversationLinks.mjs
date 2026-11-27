@@ -10,21 +10,21 @@
 // Here each topic is read by its name as a sentence vector, embedded by the
 // bundled all-MiniLM-L6-v2 on this computer (`embed-texts`). The name is the
 // writing model's when it named the topic, else the phrase the tracker chose;
-// either way nothing leaves the computer. A topic joins a subject when its
-// vector is at least `LINK_SIMILARITY` alike the subject's mean. On AMI this
-// links none of those 540 pairs, finds as many of the links the annotators
-// draw, and names each subject with a name somebody can read.
+// either way nothing leaves the computer. Two topics link when they reach
+// `LINK_SIMILARITY` and each is among the other's `LINK_NEIGHBOURS` nearest. On
+// AMI that draws none of 62,304 pairs of unrelated meetings in histories of a
+// hundred, and it names each subject with a name somebody can read.
 //
 // The shapes are those of `subjectThreads`, so the board draws either: subjects
-// (a label and the conversations that carry it) and edges (each conversation on
-// a subject joined to the one on it before).
+// (a label and the conversations that carry it) and edges (here, the pairs that
+// link).
 //
 // Pure and DOM-free: the vectors are passed in. Unit-tested under node:test.
 
 /**
- * How alike (cosine) a topic's name must be to a subject's to join it. Chosen
- * on the AMI meetings, with the writing model's names and with the tracker's
- * own (docs/link-eval.md).
+ * How alike (cosine) two topics' names must be to link. Chosen on the AMI
+ * meetings, with the writing model's names and with the tracker's own
+ * (docs/link-eval.md).
  */
 export const LINK_SIMILARITY = 0.6;
 
@@ -42,12 +42,23 @@ export const CHECK_SUBJECT_SIMILARITY = 0.8;
 export const MIN_LINK_TOPIC_MS = 30_000;
 
 /**
- * How alike (cosine) a topic's stored vector must be to a subject's, when
- * both have one: the vector of what was said on the topic, not of its name.
- * Chosen on AMI (docs/link-eval.md): at 0.78 it links 0.86 precise and finds
- * 0.76 of the scenario links, against 0.80 and 0.81 by names.
+ * How alike (cosine) two topics' stored vectors must be to link, when both
+ * have one: the vector of what was said on the topic, not of its name. Chosen
+ * on AMI, a topic against a subject's mean then (docs/link-eval.md): at 0.78 it
+ * links 0.86 precise and finds 0.76 of the scenario links, against 0.80 and 0.81
+ * by names.
  */
 export const CONTENT_SIMILARITY = 0.78;
+
+/**
+ * How many topics of other conversations a topic may link to on this computer.
+ * Two topics link only when each is among the other's nearest this many and
+ * they reach the bar. On a history about one thing nearly every topic clears an
+ * absolute bar, so the bar alone links everything (docs/link-eval.md, round 2);
+ * this keeps the links a person could stand behind, and the board's links grow
+ * with the history and not with its square.
+ */
+export const LINK_NEIGHBOURS = 3;
 
 /**
  * A topic's vector as the record keeps it (`node.vector`): one signed byte a
@@ -294,24 +305,72 @@ function namedTopic(topics, name) {
 }
 
 /**
+ * The pairs of topics that link on this computer: each is among the other's
+ * `neighbours` nearest in other conversations, and they reach the bar. By what
+ * was said where both have it, by name where either has not; those two scales
+ * differ, so a score is its margin over its own bar.
+ *
+ * @template {{ topic: any, conversation: { id: unknown } }} T
+ * @param {T[]} entries In the order they happened.
+ * @param {{ blocked: (earlier: T, later: T) => boolean, threshold: number,
+ *   contentThreshold: number, neighbours: number }} options
+ * @returns {Array<{ earlier: T, later: T }>}
+ */
+function mutualPairs(entries, { blocked, threshold, contentThreshold, neighbours }) {
+  const margin = (a, b) => {
+    if (a.content && b.content && a.content.length === b.content.length) {
+      return cosine(a.content, b.content) - contentThreshold;
+    }
+    return a.vector && b.vector ? cosine(a.vector, b.vector) - threshold : -1;
+  };
+  const nearest = entries.map(() => []);
+  // One name said many times ties, and the nearest in time win: a name's newest
+  // conversation must not lose its links to the first few.
+  const offer = (from, index, score) => {
+    const list = nearest[from];
+    if (list.length === neighbours && score < list[neighbours - 1].score) return;
+    list.push({ index, score });
+    list.sort((x, y) => y.score - x.score || Math.abs(x.index - from) - Math.abs(y.index - from));
+    if (list.length > neighbours) list.pop();
+  };
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      if (entries[i].conversation === entries[j].conversation) continue;
+      // Under its bar a pair cannot link, nor take a place from one that can.
+      const score = margin(entries[i].topic, entries[j].topic);
+      if (score < 0 || blocked(entries[i], entries[j])) continue;
+      offer(i, j, score);
+      offer(j, i, score);
+    }
+  }
+  const pairs = [];
+  nearest.forEach((list, i) => {
+    for (const { index: j } of list) {
+      if (i < j && nearest[j].some((other) => other.index === i)) pairs.push([i, j]);
+    }
+  });
+  return pairs
+    .sort((a, b) => a[1] - b[1] || a[0] - b[0])
+    .map(([i, j]) => ({ earlier: entries[i], later: entries[j] }));
+}
+
+/**
  * Subjects that came back, and the threads through them.
  *
- * Topics are read in the order the conversations happened. With vectors
- * (`vectorOf`), a topic joins the subject it is most alike, measured against
- * the mean of the subject's topics, when that is at least `threshold`;
- * otherwise it starts a subject of its own. Against the mean, and not against
- * the nearest member, so a subject cannot drift one near neighbour at a time
- * into something else; and not against its first topic only, which on AMI made
- * the subjects jump about as the threshold moved. A subject is named by the
- * member most alike the others. Without vectors, the word rule decides
- * (`subjectThreads`): five leading words, 30% of the smaller set in common.
+ * With vectors (`vectorOf`), two topics link only when each is among the
+ * other's `neighbours` nearest in other conversations and they reach the bar:
+ * `contentThreshold` by what was said where both have it (`node.vector`), and
+ * `threshold` by name where either has not. A subject is a topic and the later
+ * topics that link to it, and its edges start at that topic. Links never chain:
+ * A linked to B and B to C is two subjects, because chaining them gave back most
+ * of the false links this rule removes (docs/link-eval.md, round 2). So a subject
+ * holds at most `neighbours` + 1 conversations, unless they share one name:
+ * subjects with one name are one, as the reader sees them. A subject whose topics
+ * all sit on a bigger one is that one. A subject is named by the member most
+ * alike the others. Every pair of topics is read, on each rebuild.
  *
- * With vectors, what was said decides where both topics have it: a topic
- * recorded since the record kept a vector per topic (`node.vector`) meets the
- * subject's topics that have one by the mean of their stored vectors, at
- * `contentThreshold`, and the subject's other topics (older conversations) by
- * their names, at `threshold`. A topic with no stored vector meets every topic
- * by name, as before.
+ * Without vectors, the word rule decides (`subjectThreads`): five leading
+ * words, 30% of the smaller set in common.
  *
  * A conversation a cloud model checked (`checks`, `remoteLinks.mjs`) is
  * linked by the check alone to every earlier conversation that provider has
@@ -331,7 +390,7 @@ function namedTopic(topics, name) {
  * @param {{ vectorOf?: ((text: string) => (Float32Array | number[] | null | undefined)) | null,
  *   checks?: Map<unknown, { links: Array<{ id: unknown, subject: string, topic?: string, earlierTopic?: string }> }> | null,
  *   threshold?: number, contentThreshold?: number, subjectThreshold?: number,
- *   minTopicMs?: number, text?: (node: any) => string }} options
+ *   neighbours?: number, minTopicMs?: number, text?: (node: any) => string }} options
  * @returns {{ subjects: { label: string, conversationIds: number[] }[],
  *   edges: { from: number, to: number, weight: number, kind: string, topics: string[] }[] }}
  */
@@ -343,6 +402,7 @@ export function linkThreads(
     threshold = LINK_SIMILARITY,
     contentThreshold = CONTENT_SIMILARITY,
     subjectThreshold = CHECK_SUBJECT_SIMILARITY,
+    neighbours = LINK_NEIGHBOURS,
     minTopicMs = MIN_LINK_TOPIC_MS,
     text = (node) => topicLinkText(node),
   } = {}
@@ -375,19 +435,16 @@ export function linkThreads(
   const position = new Map(list.map((conversation, index) => [conversation.id, index]));
   const clusters = [];
   const clusterOf = new Map();
-  // A subject keeps three means: of its topics' names, of their stored
-  // vectors, and of the names of its topics with no stored vector.
   const newCluster = (topic) => {
     const cluster = {
-      name: null,
-      content: null,
-      unstored: null,
       members: [],
       conversationIds: [],
       seed: topic.bag,
       // What a check called it: each name once, and the mean of their vectors.
       named: [],
       subject: null,
+      // The conversation of a subject drawn on this computer: its edges start here.
+      hub: null,
     };
     clusters.push(cluster);
     return cluster;
@@ -397,32 +454,13 @@ export function linkThreads(
     if (!cluster[key]) cluster[key] = { sum: new Float64Array(vector.length), norm: 0 };
     if (cluster[key].sum.length === vector.length) add(cluster[key], vector);
   };
-  const absorb = (cluster, topic) => {
-    include(cluster, "name", topic.vector);
-    if (topic.content) include(cluster, "content", topic.content);
-    else include(cluster, "unstored", topic.vector);
-  };
-  // The open subject a topic is most alike by one of those means, at `floor`.
-  const nearest = (key, vector, floor, open) => {
-    let best = null;
-    let bestScore = floor;
-    for (const cluster of clusters) {
-      const side = cluster[key];
-      if (!vector || !side || !(side.norm > 0) || side.sum.length !== vector.length) continue;
-      if (!open(cluster)) continue;
-      const score = closeness(side, vector);
-      if (score >= bestScore) {
-        best = cluster;
-        bestScore = score;
-      }
-    }
-    return best;
-  };
-  const join = (cluster, topic, conversationId) => {
-    absorb(cluster, topic);
+  const enter = (cluster, topic, conversationId) => {
     cluster.members.push(topic);
     if (!cluster.conversationIds.includes(conversationId))
       cluster.conversationIds.push(conversationId);
+  };
+  const join = (cluster, topic, conversationId) => {
+    enter(cluster, topic, conversationId);
     clusterOf.set(topicKey(conversationId, topic.label), cluster);
   };
   // The subject a check called `name`: the one with that name, else the one
@@ -464,12 +502,12 @@ export function linkThreads(
     }
   };
   const present = new Set(list.map((conversation) => conversation.id));
+  const refusals = new Map();
+  const placed = new Set();
   for (const conversation of list) {
     const check = checks?.get?.(conversation.id);
-    // The earlier conversations its check was asked about and did not link,
-    // and its topics the check already placed.
+    // The earlier conversations its check was asked about and did not link.
     const refused = new Set();
-    const joined = new Set();
     if (check) {
       const linked = new Set(
         (Array.isArray(check.links) ? check.links : []).map((link) => link.id)
@@ -495,39 +533,77 @@ export function linkThreads(
         const cluster = subjectCalled(name, own);
         place(cluster, earlierTopic, earlier.id);
         place(cluster, own, conversation.id);
-        joined.add(own);
+        placed.add(own);
       }
     }
+    refusals.set(conversation.id, refused);
+    // With vectors, every topic must be known first: see below.
+    if (meaning) continue;
     const open = (cluster) =>
       !refused.size || !cluster.conversationIds.some((id) => refused.has(id));
     for (const topic of conversation.topics) {
-      if (joined.has(topic)) continue;
-      let best = null;
-      if (meaning) {
-        if (!topic.vector && !topic.content) {
-          if (check) join(newCluster(topic), topic, conversation.id);
-          continue;
-        }
-        // By what was said where both have it, by name where either has not.
-        best = topic.content
-          ? (nearest("content", topic.content, contentThreshold, open) ??
-            nearest("unstored", topic.vector, threshold, open))
-          : nearest("name", topic.vector, threshold, open);
-      } else if (topic.bag.size) {
-        best =
-          clusters.find(
-            (cluster) => open(cluster) && overlap(cluster.seed, topic.bag) >= WORD_OVERLAP
-          ) ?? null;
-      } else {
+      if (placed.has(topic)) continue;
+      if (!topic.bag.size) {
         if (check) join(newCluster(topic), topic, conversation.id);
         continue;
       }
+      const best =
+        clusters.find(
+          (cluster) => open(cluster) && overlap(cluster.seed, topic.bag) >= WORD_OVERLAP
+        ) ?? null;
       join(best ?? newCluster(topic), topic, conversation.id);
     }
   }
-  const subjects = clusters
+  if (meaning) {
+    const entries = list.flatMap((conversation) =>
+      conversation.topics
+        .filter((topic) => topic.vector || topic.content)
+        .map((topic) => ({ topic, conversation }))
+    );
+    const pairs = mutualPairs(entries, {
+      blocked: (earlier, later) => refusals.get(later.conversation.id).has(earlier.conversation.id),
+      threshold,
+      contentThreshold,
+      neighbours,
+    });
+    // A subject drawn here is a star: an earlier topic and those that link to it.
+    const stars = new Map();
+    const starsHolding = new Map();
+    const sit = (star, { topic, conversation }) => {
+      enter(star, topic, conversation.id);
+      starsHolding.set(topic, [...(starsHolding.get(topic) ?? []), star]);
+    };
+    for (const { earlier, later } of pairs) {
+      if (placed.has(later.topic)) continue;
+      const named = clusterOf.get(topicKey(earlier.conversation.id, earlier.topic.label));
+      // A subject that holds a conversation the check did not link is closed to
+      // it, and so is every topic on that subject.
+      const refused = refusals.get(later.conversation.id);
+      const around = [...(named ? [named] : []), ...(starsHolding.get(earlier.topic) ?? [])];
+      if (around.some((cluster) => cluster.conversationIds.some((id) => refused.has(id)))) continue;
+      // A subject a check named takes a topic that links to it, from its newest
+      // conversation or one after it.
+      const notAfter = (id) => position.get(id) <= position.get(later.conversation.id);
+      if (named?.conversationIds.every(notAfter)) {
+        if (!named.members.includes(later.topic)) {
+          enter(named, later.topic, later.conversation.id);
+        }
+        continue;
+      }
+      if (!stars.has(earlier.topic)) {
+        const star = newCluster(earlier.topic);
+        star.hub = earlier.conversation.id;
+        stars.set(earlier.topic, star);
+        sit(star, earlier);
+      }
+      sit(stars.get(earlier.topic), later);
+    }
+  }
+  const drawn = clusters
     .filter((cluster) => cluster.conversationIds.length > 1)
     .map((cluster) => ({
+      hub: cluster.hub,
+      members: cluster.members,
       label: cluster.named.length
         ? subjectName(cluster.named)
         : meaning
@@ -538,26 +614,55 @@ export function linkThreads(
         (a, b) => position.get(a) - position.get(b)
       ),
     }));
-  const edges = new Map();
-  for (const subject of subjects) {
-    const ids = subject.conversationIds;
-    for (let index = 1; index < ids.length; index += 1) {
-      const key = `${ids[index - 1]}-${ids[index]}`;
-      const edge = edges.get(key);
-      if (edge) {
-        if (!edge.topics.includes(subject.label)) edge.topics.push(subject.label);
-        edge.weight = edge.topics.length;
-      } else {
-        edges.set(key, {
-          from: ids[index - 1],
-          to: ids[index],
-          weight: 1,
-          kind: "shared",
-          topics: [subject.label],
-        });
-      }
+  // A star whose topics all sit on a bigger subject is that subject: topics all
+  // alike are one chip, and each of their edges carries its one name.
+  const subjectsOf = new Map();
+  for (const item of drawn) {
+    for (const member of item.members) {
+      subjectsOf.set(member, [...(subjectsOf.get(member) ?? []), item]);
     }
   }
+  const holderOf = new Map();
+  for (const item of drawn) {
+    if (item.hub === null) continue;
+    const holder = subjectsOf
+      .get(item.members[0])
+      .filter((other) => other.members.length > item.members.length)
+      .filter((other) => item.members.every((member) => other.members.includes(member)))
+      .sort((a, b) => b.members.length - a.members.length)[0];
+    if (holder) holderOf.set(item, holder);
+  }
+  const edges = new Map();
+  const addEdge = (from, to, label) => {
+    const key = `${from}-${to}`;
+    const edge = edges.get(key);
+    if (edge) {
+      if (!edge.topics.includes(label)) edge.topics.push(label);
+      edge.weight = edge.topics.length;
+    } else {
+      edges.set(key, { from, to, weight: 1, kind: "shared", topics: [label] });
+    }
+  };
+  const byName = new Map();
+  for (const item of drawn) {
+    const ids = item.conversationIds;
+    const { label } = holderOf.get(item) ?? item;
+    // From the topic that came back to, on this computer; along the thread for a check.
+    for (let index = 1; index < ids.length; index += 1) {
+      addEdge(item.hub ?? ids[index - 1], ids[index], label);
+    }
+    if (holderOf.has(item)) continue;
+    // Two subjects with one name are one to the reader (`linkedHighlight`).
+    const named = byName.get(label);
+    if (named) {
+      named.conversationIds = [...new Set([...named.conversationIds, ...ids])].sort(
+        (a, b) => position.get(a) - position.get(b)
+      );
+    } else {
+      byName.set(label, { label, conversationIds: ids });
+    }
+  }
+  const subjects = [...byName.values()];
   subjects.sort(
     (a, b) => b.conversationIds.length - a.conversationIds.length || a.label.localeCompare(b.label)
   );
