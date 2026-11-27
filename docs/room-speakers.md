@@ -22,7 +22,8 @@ of people from the eigengap (`roomVoices.mjs`). On twelve two-person
 conversations it was not tuned on: 92.0% of the lines on the right person (73.3%
 today; +18.7 points, 95% interval +10.4 to +27.5, better in 11 of 12), the right
 number of people in 11 of 12 (none today). With three or four people (eight
-conversations): 77.2%, the right count in 4. A talk by one person is left
+conversations): 77.2%, the right count in 4 (today: 50.4%, and 1, with 8 to 13
+people shown). A talk by one person is left
 unlabelled, as the reader's rule wants, in 3 of 4.
 
 **The pass, more than the model, was the problem.** TitaNet-small, the model
@@ -127,7 +128,7 @@ one person holds 75% and 88% of the speech.
 
 | pass | right count | right |
 | --- | --- | --- |
-| today's, three or four people | (running) | (running) |
+| today's, three or four people (8 to 13 people shown) | 1/8 | 50.4% |
 | lines, ERes2Net, spectral, three or four people | 4/8 | 77.2% |
 | lines, ERes2Net, the count given | 8/8 | 82.8% |
 | lines, ERes2Net, spectral, one person | 3/4 unlabelled | — |
