@@ -7,7 +7,7 @@
       "height": 1232,
       "bytes": 113874,
       "shows": "The hero: the live view mid-conversation, with the line, a mark for each question asked, and the topic lanes.",
-      "alt": "Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.",
+      "alt": "Barley recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.",
       "source": "0.2.0 code: `node demo/capture.mjs --only site-live --themes light` (a 1120x700 window; the review replayed live from 11:05 with the line and the lanes, taken at 11:09), the top 616 CSS px at 2x: `cwebp -q 85 -m 6 -crop 0 0 2240 1232`."
     },
     {
@@ -16,7 +16,7 @@
       "height": 616,
       "bytes": 26392,
       "shows": "The same live view at half size, for narrow screens.",
-      "alt": "Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.",
+      "alt": "Barley recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.",
       "source": "0.2.0 code: `node demo/capture.mjs --only site-live --themes light` (a 1120x700 window; the review replayed live from 11:05 with the line and the lanes, taken at 11:09), the top 616 CSS px at 2x: `cwebp -q 85 -m 6 -crop 0 0 2240 1232` `-resize 1120 616`."
     },
     {
@@ -34,7 +34,7 @@
       "height": 1592,
       "bytes": 130346,
       "shows": "A recording where the context check answers an unknown question from the team's notes, with the line, the topic lanes and the transcript around it.",
-      "alt": "A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet.",
+      "alt": "A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Barley shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet.",
       "source": "0.2.0 code: `node demo/capture.mjs --only site-check --themes light` (an 880x900 window, the app's narrowest; `check=1` turns the context check on with the harness's team folder, demo/harness/context.mjs; the review replayed live from 7:50 with the transcript shown, taken at 8:33), the window below its top bar at 2x: `cwebp -q 85 -m 6 -crop 16 104 1728 1592`."
     },
     {
@@ -52,7 +52,7 @@
       "height": 704,
       "bytes": 78390,
       "shows": "Crop of the sidebar's foot: where processing runs, the speech model and the network request count, above the wheat field.",
-      "alt": "The bottom of the Oats sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.",
+      "alt": "The bottom of the Barley sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.",
       "source": "0.2.0 code: `node demo/capture.mjs --only sidebar-foot --themes light` (harness `footer=small.en`: small.en loaded on Metal, 0 requests, what a packaged build shows at rest), the sidebar's last 352 CSS px at 2x, `cwebp -q 85 -m 6 -crop 0 1096 464 704`."
     },
     {
@@ -60,8 +60,8 @@
       "width": 1920,
       "height": 1080,
       "bytes": 3496787,
-      "shows": "The film, 63 seconds, no sound: a launch review recorded with Oats, from the title card through the live view, the summary and the board, to the GitHub end card.",
-      "alt": "A 63 second film of Oats recording a launch review: the live line and topics, question cards, the finished summary, connections and the board of all conversations."
+      "shows": "The film, 63 seconds, no sound: a launch review recorded with Barley, from the title card through the live view, the summary and the board, to the GitHub end card.",
+      "alt": "A 63 second film of Barley recording a launch review: the live line and topics, question cards, the finished summary, connections and the board of all conversations."
     },
     {
       "name": "oats-film-poster.webp",
@@ -69,7 +69,7 @@
       "height": 1080,
       "bytes": 43698,
       "shows": "Poster frame from the film at 20 seconds: the words view during the launch review.",
-      "alt": "Oats recording a launch review at 18 minutes 20 seconds, with five topic lanes and the question How long does the full migration take on production, marked Unknown."
+      "alt": "Barley recording a launch review at 18 minutes 20 seconds, with five topic lanes and the question How long does the full migration take on production, marked Unknown."
     },
     {
       "name": "loop-record.mp4",
@@ -92,16 +92,16 @@
       "width": 1040,
       "height": 900,
       "bytes": 185810,
-      "shows": "A question card appears as Open, then turns Unknown after someone says they do not know, and Oats searches it. From scene d-questions, 43 to 53 s.",
-      "alt": "A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web"
+      "shows": "A question card appears as Open, then turns Unknown after someone says they do not know, and Barley searches it. From scene d-questions, 43 to 53 s.",
+      "alt": "A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Barley searches it on the web"
     },
     {
       "name": "loop-questions.webp",
       "width": 1040,
       "height": 900,
       "bytes": 35096,
-      "shows": "Poster for loop-questions: what reduced motion shows. A question card appears as Open, then turns Unknown after someone says they do not know, and Oats searches it. From scene d-questions, 43 to 53 s.",
-      "alt": "A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web"
+      "shows": "Poster for loop-questions: what reduced motion shows. A question card appears as Open, then turns Unknown after someone says they do not know, and Barley searches it. From scene d-questions, 43 to 53 s.",
+      "alt": "A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Barley searches it on the web"
     },
     {
       "name": "loop-search.mp4",

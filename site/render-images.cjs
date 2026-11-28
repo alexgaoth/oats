@@ -135,7 +135,7 @@ async function ogImage() {
   context.letterSpacing = "0px";
   context.font = "500 26px Inter";
   context.fillStyle = "#71717a";
-  context.fillText("Oats for Mac. Free and open source.", width / 2, 520);
+  context.fillText("Barley for Mac. Free and open source.", width / 2, 520);
   return element.toDataURL("image/png");
 }
 
@@ -155,7 +155,7 @@ const HEADLINE = "The conversation, mapped as it happens";
 function signature(context, cx, baseline, size, ink, shadow) {
   context.font = '400 ' + size + 'px "EB Garamond"';
   context.letterSpacing = Math.round(-0.03 * size) + "px";
-  const word = context.measureText("Oats").width;
+  const word = context.measureText("Barley").width;
   const oat = Math.round(size * 1.02);
   // The grain sits in the middle of its square, so the visible gap is wider
   // than this: pull the word in by the square's empty side.
@@ -165,7 +165,7 @@ function signature(context, cx, baseline, size, ink, shadow) {
   context.drawImage(art, left, Math.round(baseline - size * 0.86));
   context.fillStyle = ink;
   context.textAlign = "left";
-  context.fillText("Oats", left + oat + gap, baseline);
+  context.fillText("Barley", left + oat + gap, baseline);
   context.letterSpacing = "0px";
 }
 

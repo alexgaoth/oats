@@ -1,11 +1,11 @@
 // The download buttons: one click to the right DMG. The release assets keep
 // the same names in every version (build-and-notarize.yml, the release job), so
-// "latest" always serves the newest published Oats.
+// "latest" always serves the newest published Barley.
 
 const RELEASES = "https://github.com/alexgaoth/oats/releases";
 export const DMG = {
-  arm64: `${RELEASES}/latest/download/Oats-arm64.dmg`,
-  x64: `${RELEASES}/latest/download/Oats-x64.dmg`,
+  arm64: `${RELEASES}/latest/download/Barley-arm64.dmg`,
+  x64: `${RELEASES}/latest/download/Barley-x64.dmg`,
 };
 
 function isMac() {

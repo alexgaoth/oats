@@ -1,6 +1,6 @@
-# The Oats site
+# The Barley site
 
-The public page for Oats, served as it is from this folder (no build on the host).
+The public page for Barley, served as it is from this folder (no build on the host).
 Production: https://oats.alexgaoth.com (Vercel project `oats-mac`, root directory `site`).
 
 | Path | What it is |
@@ -21,7 +21,7 @@ python3 -m http.server 5480 --directory site        # look at it locally
 Five figures carry `data-live-slot` (`hero`, `map`, `topics`, `questions`, `after`): the places where the app's
 own components can run live. The still or the loop inside each is what shows until then.
 
-The download buttons link to `releases/latest/download/Oats-arm64.dmg` and `Oats-x64.dmg`, the names the
+The download buttons link to `releases/latest/download/Barley-arm64.dmg` and `Barley-x64.dmg`, the names the
 release job publishes in every version, so a new release needs no change here except the version on the page.
 `test/helpers/site.test.js` checks that, the bundle, the files the page uses, the live slots, the media
 manifest, and the voice rules.
