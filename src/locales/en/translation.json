@@ -1968,7 +1968,11 @@
       "noneSent": "None of these features sends data to a provider.",
       "choiceDescription": "Where Conversations, Dictation and Writing run.",
       "keyNoAccess": "Oats did not save this key. It cannot use {{model}}.",
-      "keyNotChecked": "Oats could not check this key. Try again."
+      "keyNotChecked": "Oats could not check this key. Try again.",
+      "placeKeyRoomsMac": "with an API key, rooms on this Mac",
+      "roomsMacChoice": "With an API key, rooms on this Mac",
+      "roomsUntil": "Rooms use {{cloud}} until {{model}} is downloaded.",
+      "conversationsSentCalls": "Call audio goes to {{provider}} for transcription. Rooms are transcribed on this Mac."
     },
     "parakeetFallback": "Parakeet failed. Using Whisper.",
     "library": {
@@ -2594,7 +2598,8 @@
         "parakeet": "On public meeting recordings, {{model}} recalled 4.9 percentage points more content in quiet and 15.7 more with steady noise than Whisper Turbo.",
         "speech": "{{model}} recognized 7.5 percentage points more words than Whisper Small in room tests with background noise.",
         "writing": "{{model}} averaged four fewer invented facts per summary in meeting tests.",
-        "size": "Download: {{size}}."
+        "size": "Download: {{size}}.",
+        "parakeetCloud": "On public meeting recordings, {{model}} recalled 6.4 percentage points more content in quiet and 7.8 more with steady noise than {{cloud}}. Room audio stays on this Mac, and calls still use your key."
       },
       "noModel": "No model",
       "addKey": "Add an OpenAI key",

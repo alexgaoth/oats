@@ -3,6 +3,7 @@ import {
   DEFAULT_WHISPER_MODEL,
   getSettings,
   roomSpeechPlan,
+  selectFeatureRoute,
   selectResolvedMeetingTranscription,
 } from "./settingsStore";
 import { useDeviceTierStore } from "./deviceTierStore";
@@ -285,6 +286,11 @@ async function getRoomTranscriptionOptions() {
   const status = await window.electronAPI
     ?.checkParakeetModelStatus?.(planned.speech.model)
     .catch(() => null);
+  // With an API key, a room moves to this Mac only with Parakeet Ultra on
+  // disk (rooms on this Mac): until then it streams with the key, as before.
+  if (!status?.downloaded && selectFeatureRoute(state, "conversations").effective !== "local") {
+    return shared;
+  }
   const { readySpeech } = (status?.downloaded && roomSpeechPlan(state, tier, true)) || planned;
   return {
     provider: "local" as const,

@@ -338,6 +338,32 @@ const SHOTS = [
     query,
     script: "await oatsDemo.settings('models')",
   })),
+  // With an API key, on a Mac that runs Parakeet Ultra (Alex, 2026-11-27):
+  // Conversations' row offers it for rooms, its menu's third place, the
+  // download, and rooms on this Mac (FeatureModelRow.tsx).
+  ...[
+    ["offer", "parakeet=missing", ""],
+    [
+      "menu",
+      "parakeet=missing",
+      "document.querySelector('[data-feature-row=conversations] [data-row-place]').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' })); await demo.wait(400)",
+    ],
+    [
+      "downloading",
+      "parakeet=missing",
+      "[...document.querySelectorAll('[data-feature-row=conversations] button')].find((b) => b.textContent.trim() === 'Download').click(); await demo.wait(600)",
+    ],
+    [
+      "on",
+      "parakeet=ready",
+      "[...document.querySelectorAll('[data-feature-row=conversations] button')].find((b) => b.textContent.trim() === 'Use').click(); await demo.wait(400)",
+    ],
+  ].map(([name, extra, script]) => ({
+    name: `models-rooms-${name}`,
+    size: "880x680",
+    query: `processing=providers&keys=openai&${extra}`,
+    script: `await oatsDemo.settings('models'); await demo.wait(600); ${script}`,
+  })),
   ...[
     ["advanced-local", ""],
     ["advanced-providers", "processing=providers&keys=openai"],

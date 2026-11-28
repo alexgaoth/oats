@@ -3,6 +3,7 @@ const test = require("node:test");
 
 let FEATURES, FEATURE_ROUTES_KEY, resolveFeatureRoute, changeFeatureRoute, pinWritingProvider;
 let migrateFeaturePreferences, readFeaturePreferences, availableWritingProvider, processingChoice;
+let setRoomsOnThisMac, roomsOnThisMac;
 
 test.before(async () => {
   ({
@@ -15,6 +16,8 @@ test.before(async () => {
     readFeaturePreferences,
     availableWritingProvider,
     processingChoice,
+    setRoomsOnThisMac,
+    roomsOnThisMac,
   } = await import("../../src/helpers/featureRoutes.mjs"));
 });
 
@@ -261,4 +264,75 @@ test("reading old preferences drops redundant exceptions without granting downlo
   const preferences = readFeaturePreferences(stored);
   assert.deepEqual(preferences.exceptions, { conversations: "providers" });
   assert.equal(resolveFeatureRoute(preferences, "dictation").downloadAuthorized, false);
+});
+
+// Alex, 2026-11-27: the API-key route keeps its default (a room streams to
+// OpenAI), and a Mac that runs Parakeet Ultra is offered it for rooms. The
+// choice is kept only while Conversations ask for the key route.
+test("rooms stay on this Mac only by choice, and only while Conversations use a key", () => {
+  const key = changeFeatureRoute(readFeaturePreferences(null), "providers");
+  assert.equal(roomsOnThisMac(key), false);
+  assert.equal("roomsLocal" in key, false);
+  const rooms = setRoomsOnThisMac(key, true);
+  assert.equal(roomsOnThisMac(rooms), true);
+  assert.equal(setRoomsOnThisMac(rooms, true), rooms);
+  // It routes nothing else: every feature still asks for the key, and the
+  // processing choice still says so.
+  for (const feature of FEATURES) {
+    assert.equal(resolveFeatureRoute(rooms, feature).requested, "providers");
+    assert.equal(resolveFeatureRoute(rooms, feature).downloadAuthorized, false);
+  }
+  assert.equal(processingChoice(rooms), "providers");
+  // Off again, the preferences read as before it.
+  assert.deepEqual(setRoomsOnThisMac(rooms, false), key);
+  // On this Mac there is nothing to choose: every room is here already.
+  const local = changeFeatureRoute(readFeaturePreferences(null), "local");
+  assert.equal(setRoomsOnThisMac(local, true), local);
+  const conversationsHere = changeFeatureRoute(key, "local", "conversations");
+  assert.equal(setRoomsOnThisMac(conversationsHere, true), conversationsHere);
+});
+
+test("moving Conversations to this Mac ends rooms on this Mac; other moves keep it", () => {
+  const rooms = setRoomsOnThisMac(
+    changeFeatureRoute(readFeaturePreferences(null), "providers"),
+    true
+  );
+  for (const feature of ["dictation", "writing"]) {
+    assert.equal(roomsOnThisMac(changeFeatureRoute(rooms, "local", feature)), true);
+  }
+  // The processing choice already on the key changes nothing.
+  assert.equal(roomsOnThisMac(changeFeatureRoute(rooms, "providers")), true);
+  for (const moved of [
+    changeFeatureRoute(rooms, "local", "conversations"),
+    changeFeatureRoute(rooms, "local"),
+  ]) {
+    assert.equal(roomsOnThisMac(moved), false);
+    assert.equal("roomsLocal" in moved, false);
+    // Back on the key, rooms go with it until chosen again.
+    assert.equal(roomsOnThisMac(changeFeatureRoute(moved, "providers")), false);
+  }
+});
+
+test("rooms on this Mac is read back only as true, and only on the key route", () => {
+  const saved = (value) =>
+    profile({
+      [FEATURE_ROUTES_KEY]: JSON.stringify({
+        defaultRoute: "providers",
+        exceptions: {},
+        consent: {},
+        writingProvider: "openai",
+        ...value,
+      }),
+    });
+  assert.equal(roomsOnThisMac(readFeaturePreferences(saved({ roomsLocal: true }))), true);
+  for (const value of [{}, { roomsLocal: "true" }, { roomsLocal: 1 }, { roomsLocal: false }]) {
+    const preferences = readFeaturePreferences(saved(value));
+    assert.equal(roomsOnThisMac(preferences), false);
+    assert.equal("roomsLocal" in preferences, false);
+  }
+  const conversationsHere = readFeaturePreferences(
+    saved({ roomsLocal: true, exceptions: { conversations: "local" } })
+  );
+  assert.equal("roomsLocal" in conversationsHere, false);
+  assert.deepEqual(conversationsHere.exceptions, { conversations: "local" });
 });

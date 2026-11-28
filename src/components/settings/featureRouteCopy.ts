@@ -12,10 +12,18 @@ export function featureRouteName(t: TFunction, feature: Feature) {
   }
 }
 
-export function featureRouteDisclosure(t: TFunction, feature: Feature, provider: string) {
+/** What a feature on the API-key route sends; `roomsHere`: rooms stay on this Mac. */
+export function featureRouteDisclosure(
+  t: TFunction,
+  feature: Feature,
+  provider: string,
+  roomsHere = false
+) {
   switch (feature) {
     case "conversations":
-      return t("oats.featureRoutes.conversationsSent", { provider });
+      return roomsHere
+        ? t("oats.featureRoutes.conversationsSentCalls", { provider })
+        : t("oats.featureRoutes.conversationsSent", { provider });
     case "dictation":
       return t("oats.featureRoutes.dictationSent", { provider });
     case "writing":

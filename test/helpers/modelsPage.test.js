@@ -49,15 +49,60 @@ test("each feature has one row, the same in Settings and setup", () => {
 test("a row's place moves that feature alone, and speech needs an OpenAI key", () => {
   assert.match(
     ROW,
-    /if \(value !== requested\) setFeatureProcessing\(feature, value as ProcessingMode\);/
+    /if \(next !== requested\) setFeatureProcessing\(feature, next as ProcessingMode\);/
   );
   assert.match(
     ROW,
     /!keys\.some\(\(key\) => key\.provider === "openai"\) &&\s*keys\.some\(\(key\) => key\.provider === "anthropic"\)/
   );
-  assert.match(ROW, /disabled=\{noSpeechKey && requested !== "providers"\}/);
+  // Both key places (the key, and the key with rooms on this Mac) are off then.
+  assert.match(ROW, /const keyOff = noSpeechKey && requested !== "providers";/);
+  assert.equal(ROW.match(/disabled=\{keyOff\}/g)?.length, 2);
   assert.match(ROW, /aria-describedby=\{noSpeechKey \? reasonId : undefined\}/);
   assert.match(ROW, /\{t\("oats\.featureRoutes\.speechNeedsOpenAI"\)\}/);
+});
+
+// Alex, 2026-11-27: the API-key route keeps its default, and a Mac that runs
+// Parakeet Ultra is offered it for rooms. Calls stay on the key.
+test("with an API key, a Mac that runs Parakeet Ultra is offered it for rooms", () => {
+  const STORE = read("src/stores/settingsStore.ts");
+  const RECORDING = read("src/stores/meetingRecordingStore.ts");
+  // The same rule as the default on this Mac (planLocalSetup), and the room
+  // plan follows the choice on the key route.
+  assert.match(
+    STORE,
+    /return localSetupFor\(tier, state\.preferredLanguage, "local"\)\.speech\.engine === "parakeet";/
+  );
+  assert.match(
+    STORE,
+    /: roomsOnThisMac\(state\.featurePreferences\);\s*if \(!chosen\) return null;/
+  );
+  // Settings only (setup shows the status), never while a conversation is recorded.
+  assert.match(ROW, /if \(feature === "conversations" && macRuns && room\.available\) \{/);
+  assert.match(ROW, /if \(menus && !recording\) \{/);
+  // The offer: the measured gain over GPT Transcribe and the size, then
+  // Download, which keeps rooms here and fetches the model.
+  assert.match(ROW, /"parakeetCloud",\s*ROOM_MODEL_NAME,\s*room\.installed \? null : size/);
+  assert.match(
+    ROW,
+    /onClick: \(\) => \{\s*chooseRoomsOnThisMac\(true\);\s*if \(!room\.installed\) requestRoomModel\(\);/
+  );
+  // Cancel is a no: rooms go back to the key.
+  assert.match(ROW, /cancelRoomModelDownload\(false\);\s*chooseRoomsOnThisMac\(false\);/);
+  // Its menu's third place, and the row says it only with the model on disk.
+  assert.match(ROW, /value="providers-rooms"/);
+  assert.match(ROW, /\{t\("oats\.featureRoutes\.roomsMacChoice"\)\}/);
+  assert.match(ROW, /if \(roomsHere && room\.installed\) row\.place = "providers-rooms";/);
+  // A room moves to this Mac only with the model on disk; until then it streams.
+  assert.match(
+    RECORDING,
+    /if \(!status\?\.downloaded && selectFeatureRoute\(state, "conversations"\)\.effective !== "local"\) \{\s*return shared;/
+  );
+  // What goes to the provider says so.
+  assert.match(
+    CHOICE,
+    /selectRoomsOnThisMac\(state\) && macRunsRoomParakeet\(state, tier\) && installed/
+  );
 });
 
 // Alex, 2026-11-22: the green pill is the key; pressing it chooses another.

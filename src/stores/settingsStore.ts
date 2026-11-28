@@ -47,6 +47,8 @@ import {
   processingChoice,
   readFeaturePreferences,
   resolveFeatureRoute,
+  roomsOnThisMac,
+  setRoomsOnThisMac,
   type Feature,
   type FeaturePreferences,
   type Provider,
@@ -2350,26 +2352,54 @@ export function setRoomSpeechPreference(preference: SettingsState["roomSpeechPre
   useSettingsStore.setState({ roomSpeechPreference: preference });
 }
 
-/** The recommendation is separate from the model used for dictation and calls. */
+/**
+ * The model for a room, when it is Parakeet Ultra: separate from the model
+ * used for dictation and calls. On this Mac it is the default for rooms. With
+ * an API key it is the person's choice (`chooseRoomsOnThisMac`), and a room
+ * uses it once it is on disk (`getRoomTranscriptionOptions`).
+ */
 export function roomSpeechPlan(
   state: SettingsState,
   tier: DeviceTierSnapshot | null,
   parakeetInstalled = false
 ) {
-  if (
-    selectFeatureRoute(state, "conversations").effective !== "local" ||
-    !followsRoomSpeechDefault(
-      state.roomSpeechPreference,
-      state.localTranscriptionProvider,
-      whisperModelFollowsDefault()
-    )
-  ) {
-    return null;
-  }
+  const chosen =
+    selectFeatureRoute(state, "conversations").effective === "local"
+      ? followsRoomSpeechDefault(
+          state.roomSpeechPreference,
+          state.localTranscriptionProvider,
+          whisperModelFollowsDefault()
+        )
+      : roomsOnThisMac(state.featurePreferences);
+  if (!chosen) return null;
   const plan = localSetupFor(tier, state.preferredLanguage, "local", {
     parakeetInstalled,
   });
   return plan.speech.engine === "parakeet" ? plan : null;
+}
+
+/**
+ * Whether this Mac runs Parakeet Ultra for a room in this language: Apple
+ * Silicon, macOS 14 or later, English (`planLocalSetup`). The same rule as
+ * the default on this Mac; Settings offers it on the API-key route.
+ */
+export function macRunsRoomParakeet(
+  state: Pick<SettingsState, "preferredLanguage">,
+  tier: DeviceTierSnapshot | null
+) {
+  return localSetupFor(tier, state.preferredLanguage, "local").speech.engine === "parakeet";
+}
+
+/** Whether rooms stay on this Mac while Conversations use an API key. */
+export function selectRoomsOnThisMac(state: Pick<SettingsState, "featurePreferences">) {
+  return roomsOnThisMac(state.featurePreferences);
+}
+
+/** Keep rooms on this Mac, or not, while Conversations use an API key. */
+export function chooseRoomsOnThisMac(on: boolean): void {
+  const preferences = useSettingsStore.getState().featurePreferences;
+  const next = setRoomsOnThisMac(preferences, on);
+  if (next !== preferences) saveFeaturePreferences(next);
 }
 
 /** Return to the measured Whisper default without changing cloud settings. */

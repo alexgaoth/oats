@@ -1968,7 +1968,11 @@
       "noneSent": "Keine dieser Funktionen sendet Daten an einen Anbieter.",
       "choiceDescription": "Wo Unterhaltungen, Diktat und Schreiben laufen.",
       "keyNoAccess": "Oats hat den Schlüssel nicht gespeichert. Er kann {{model}} nicht verwenden.",
-      "keyNotChecked": "Oats konnte den Schlüssel nicht prüfen. Versuchen Sie es erneut."
+      "keyNotChecked": "Oats konnte den Schlüssel nicht prüfen. Versuchen Sie es erneut.",
+      "placeKeyRoomsMac": "mit einem API-Schlüssel, Präsenzgespräche auf diesem Mac",
+      "roomsMacChoice": "Mit einem API-Schlüssel, Präsenzgespräche auf diesem Mac",
+      "roomsUntil": "Präsenzgespräche nutzen {{cloud}}, bis {{model}} heruntergeladen ist.",
+      "conversationsSentCalls": "Audio von Anrufen geht zur Transkription an {{provider}}. Präsenzgespräche werden auf diesem Mac transkribiert."
     },
     "parakeetFallback": "Parakeet fehlgeschlagen. Whisper läuft.",
     "library": {
@@ -2594,7 +2598,8 @@
         "parakeet": "In öffentlichen Besprechungsaufnahmen erkannte {{model}} bei Ruhe 4,9 Prozentpunkte mehr Inhalte als Whisper Turbo, bei gleichmäßigem Lärm 15,7 mehr.",
         "speech": "{{model}} erkannte in Raumtests mit Hintergrundgeräuschen 7,5 Prozentpunkte mehr Wörter als Whisper Small.",
         "writing": "{{model}} erfand in Besprechungstests im Schnitt vier Fakten weniger pro Zusammenfassung.",
-        "size": "Download: {{size}}."
+        "size": "Download: {{size}}.",
+        "parakeetCloud": "In öffentlichen Besprechungsaufnahmen erkannte {{model}} bei Ruhe 6,4 Prozentpunkte mehr Inhalte als {{cloud}}, bei gleichmäßigem Lärm 7,8 mehr. Das Audio von Präsenzgesprächen bleibt auf diesem Mac, und Anrufe nutzen weiter Ihren Schlüssel."
       },
       "noModel": "Kein Modell",
       "addKey": "OpenAI-Schlüssel hinzufügen",

@@ -1968,7 +1968,11 @@
       "noneSent": "Nessuna di queste funzioni invia dati a un fornitore.",
       "choiceDescription": "Dove vengono eseguite Conversazioni, Dettatura e Scrittura.",
       "keyNoAccess": "Oats non ha salvato la chiave. Non può usare {{model}}.",
-      "keyNotChecked": "Oats non ha potuto verificare la chiave. Riprova."
+      "keyNotChecked": "Oats non ha potuto verificare la chiave. Riprova.",
+      "placeKeyRoomsMac": "con una chiave API, riunioni in presenza su questo Mac",
+      "roomsMacChoice": "Con una chiave API, riunioni in presenza su questo Mac",
+      "roomsUntil": "Le riunioni in presenza usano {{cloud}} finché {{model}} non è scaricato.",
+      "conversationsSentCalls": "L’audio delle chiamate viene inviato a {{provider}} per la trascrizione. Le riunioni in presenza vengono trascritte su questo Mac."
     },
     "parakeetFallback": "Parakeet non ha funzionato. Uso Whisper.",
     "library": {
@@ -2594,7 +2598,8 @@
         "parakeet": "Nelle registrazioni pubbliche di riunioni, {{model}} ha recuperato più contenuti di Whisper Turbo: 4,9 punti percentuali in più in silenzio e 15,7 in più con rumore costante.",
         "speech": "{{model}} ha riconosciuto 7,5 punti percentuali di parole in più di Whisper Small nei test con rumore di fondo.",
         "writing": "{{model}} ha inventato in media quattro fatti in meno per riassunto nei test con riunioni.",
-        "size": "Download: {{size}}."
+        "size": "Download: {{size}}.",
+        "parakeetCloud": "Nelle registrazioni pubbliche di riunioni, {{model}} ha recuperato più contenuti di {{cloud}}: 6,4 punti percentuali in più in silenzio e 7,8 in più con rumore costante. L’audio delle riunioni in presenza resta su questo Mac, e le chiamate usano ancora la tua chiave."
       },
       "noModel": "Nessun modello",
       "addKey": "Aggiungi una chiave OpenAI",

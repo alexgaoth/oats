@@ -6,7 +6,14 @@ import { getCachedPlatform } from "../../utils/platform";
 import type { ProcessingMode } from "./processing";
 import { useShallow } from "zustand/react/shallow";
 import { FEATURES } from "../../helpers/featureRoutes.mjs";
-import { selectFeatureRoute, useSettingsStore } from "../../stores/settingsStore";
+import {
+  macRunsRoomParakeet,
+  selectFeatureRoute,
+  selectRoomsOnThisMac,
+  useSettingsStore,
+} from "../../stores/settingsStore";
+import { useDeviceTierStore } from "../../stores/deviceTierStore";
+import { useRoomModelStore } from "../../stores/roomModelStore";
 import { getProviderDisplayName } from "../../models/ModelRegistry";
 import { featureRouteDisclosure, featureRouteName } from "./featureRouteCopy";
 
@@ -199,7 +206,8 @@ export function ProcessingChoice({
 /**
  * What goes to the provider with an API key, said where that choice is made
  * (Settings and setup), closed until somebody asks: the audio with an OpenAI
- * key, and what the writing model reads (docs/network-allowlist.md).
+ * key (a call's only, while rooms stay on this Mac), and what the writing
+ * model reads (docs/network-allowlist.md).
  */
 export function WhatIsSent({ featureRoutes = false }: { featureRoutes?: boolean }) {
   const { t } = useTranslation();
@@ -210,6 +218,12 @@ export function WhatIsSent({ featureRoutes = false }: { featureRoutes?: boolean 
         return route.effective === "providers" ? route.provider : null;
       })
     )
+  );
+  // With an API key, rooms on this Mac once Parakeet Ultra is on disk.
+  const tier = useDeviceTierStore((state) => state.tier);
+  const installed = useRoomModelStore((state) => state.installed);
+  const roomsHere = useSettingsStore(
+    (state) => selectRoomsOnThisMac(state) && macRunsRoomParakeet(state, tier) && installed
   );
   return (
     <details className="group px-1">
@@ -230,7 +244,12 @@ export function WhatIsSent({ featureRoutes = false }: { featureRoutes?: boolean 
                     <strong className="font-medium text-foreground">
                       {featureRouteName(t, feature)}.{" "}
                     </strong>
-                    {featureRouteDisclosure(t, feature, getProviderDisplayName(cloud[index] ?? ""))}
+                    {featureRouteDisclosure(
+                      t,
+                      feature,
+                      getProviderDisplayName(cloud[index] ?? ""),
+                      roomsHere
+                    )}
                   </li>
                 ) : null
               )}
