@@ -125,7 +125,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [hotkey, setHotkey] = useState(
     () => parseHotkeyList(dictationKey)[0] || getDefaultHotkey()
   );
-  const [agentName, setAgentName] = useState("Oats");
+  const [agentName, setAgentName] = useState("Barley");
   const [isModelDownloaded, setIsModelDownloaded] = useState(false);
   const { isUsingNativeShortcut, supportsPushToTalk } = useHotkeyModeInfo("onboarding");
   const { alertDialog, confirmDialog, showAlertDialog, hideAlertDialog, hideConfirmDialog } =

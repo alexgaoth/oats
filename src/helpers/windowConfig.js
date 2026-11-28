@@ -45,7 +45,7 @@ const WINDOW_SIZES = {
 const MAIN_WINDOW_CONFIG = {
   width: WINDOW_SIZES.BASE.width,
   height: WINDOW_SIZES.BASE.height,
-  title: "Oats",
+  title: "Barley",
   webPreferences: {
     preload: path.join(__dirname, "..", "..", "preload.js"),
     nodeIntegration: false,
@@ -102,7 +102,7 @@ const CONTROL_PANEL_CONFIG = {
     spellcheck: false,
     backgroundThrottling: false,
   },
-  title: "Oats",
+  title: "Barley",
   resizable: true,
   show: false,
   frame: false,

@@ -42,7 +42,7 @@ export function OatsMark({
   recording = false,
   away = false,
   shadow = false,
-  label = "Oats",
+  label = "Barley",
 }: {
   className?: string;
   /** Toss once, the first time any mark with this set is seen after launch. */

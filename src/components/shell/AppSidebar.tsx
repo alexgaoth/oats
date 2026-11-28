@@ -196,7 +196,7 @@ export function AppSidebar({
 
       <div className="flex items-center gap-2 px-4 pb-3">
         <OatsMark interactive spinOnLaunch recording={recording} away={away} />
-        <span className="text-sm font-semibold tracking-[-0.01em]">Oats</span>
+        <span className="text-sm font-semibold tracking-[-0.01em]">Barley</span>
       </div>
 
       <div className="px-3 pb-3">

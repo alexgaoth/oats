@@ -288,7 +288,7 @@ export function buildVaultNote({ note, snapshot, events = [], segments = [], str
     : null;
   const duration = humanDuration(recorded > 0 ? recorded : transcriptSpanSeconds(segments));
 
-  const front = ["---", `date: ${isoDate(createdMs)}`, `source: ${yamlString("Oats")}`];
+  const front = ["---", `date: ${isoDate(createdMs)}`, `source: ${yamlString("Barley")}`];
   // The conversation's own id, so the mirror can recognise its file after the
   // reader renames the conversation and never overwrites somebody else's note
   // that happens to share a title and a date.

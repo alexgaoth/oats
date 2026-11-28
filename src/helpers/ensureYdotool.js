@@ -185,7 +185,7 @@ async function ensureYdotool() {
       type: "warning",
       title: "Wayland Paste Setup",
       message: "ydotool is not fully configured. Auto-paste on Wayland may not work.",
-      detail: `The following issues were detected:\n\n${detail}\n\nAfter fixing, restart Oats.`,
+      detail: `The following issues were detected:\n\n${detail}\n\nAfter fixing, restart Barley.`,
     });
   }
 }
