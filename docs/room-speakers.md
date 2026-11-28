@@ -171,8 +171,18 @@ In a room on the on-device route (`ipcHandlers.js`, `startInRoomSegmenting`):
 - **The bundle** carries ERes2Net (26.5 MB) instead of TitaNet-small (40 MB).
   pyannote stays, for the call and upload paths.
 
-On the cloud route a room still has no speaker pass: the microphone goes
-straight to the realtime session, and no line is cut on the Mac.
+On the cloud route (`roomCloudVoices.mjs`) the microphone still goes to the
+realtime session, and the same audio is also cut into lines on the Mac, each
+given its voice as above. The recording keeps its own clock, and each turn the
+cloud transcribes is placed on it by its offsets in the session
+(`audio_start_ms`, `audio_end_ms`; `openaiRealtimeStreaming.js`), counted back
+from the newest audio sent. At Stop the lines are grouped and the reader gives
+each turn the person whose lines it overlaps most. Checked on a real
+`gpt-transcribe` session, with two men from LibriSpeech test-clean taking 16
+turns over 2.7 minutes: all 17 turns placed, their starts on the true turns'
+to 0.00 s and their ends to 0.25 s at the median, two people found, and 17 of
+17 turns on the right person. Deepgram and AssemblyAI turns carry no offsets
+yet and get no speakers.
 
 ## Reproduce
 

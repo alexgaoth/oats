@@ -61,6 +61,24 @@ class OpenAIRealtimeStreaming {
     this.speechStartedAt = null;
     this.bufferingAudio = false;
     this.keepAliveInterval = null;
+    // Where each turn sits in the recording, for a room's speaker pass: the
+    // caller's clock (the recording so far, in ms), and each item's span.
+    this.recordingNowMs = null;
+    this.itemTimes = new Map();
+  }
+
+  /**
+   * A session offset (`audio_start_ms`, `audio_end_ms`) as a place in the
+   * recording, counted back from the newest audio: everything this session
+   * was sent after that offset, and everything still waiting to be sent, was
+   * recorded after it. Null without a clock.
+   */
+  _recordingMsAt(sessionMs) {
+    const now = this.recordingNowMs?.();
+    if (!Number.isFinite(now) || !Number.isFinite(sessionMs)) return null;
+    const sentMs = (this.audioBytesSent / 2 / this.inputRate) * 1000;
+    const waitingMs = (this.coldStartBufferSize / 2 / this.captureRate) * 1000;
+    return now - waitingMs - (sentMs - sessionMs);
   }
 
   // Starts buffering audio immediately, before the WebSocket even exists —
@@ -281,9 +299,20 @@ class OpenAIRealtimeStreaming {
           this.currentPartial = "";
           const speechTimestamp = this.speechStartedAt || Date.now();
           this.speechStartedAt = null;
+          const span = this.itemTimes.get(event.item_id);
+          this.itemTimes.delete(event.item_id);
+          // A turn committed without a stop (Stop pressed mid-sentence) ends
+          // with the audio sent so far.
+          if (span && !Number.isFinite(span.endMs)) {
+            span.endMs = this._recordingMsAt((this.audioBytesSent / 2 / this.inputRate) * 1000);
+          }
           if (transcript) {
             const fullText = this.getFullTranscript();
-            this.onFinalTranscript?.(fullText, speechTimestamp);
+            const timing =
+              Number.isFinite(span?.startMs) && span.endMs > span.startMs
+                ? { startMs: Math.max(0, Math.round(span.startMs)), endMs: Math.round(span.endMs) }
+                : null;
+            this.onFinalTranscript?.(fullText, speechTimestamp, timing);
             debugLogger.debug("OpenAI Realtime turn completed", {
               turnText: transcript.slice(0, 100),
               totalLength: fullText.length,
@@ -295,8 +324,20 @@ class OpenAIRealtimeStreaming {
 
         case "input_audio_buffer.speech_started":
           this.speechStartedAt = Date.now();
+          if (event.item_id) {
+            this.itemTimes.set(event.item_id, {
+              startMs: this._recordingMsAt(event.audio_start_ms),
+              endMs: null,
+            });
+            // Turns whose transcript never came are not kept for a long meeting.
+            if (this.itemTimes.size > 50) this.itemTimes.delete(this.itemTimes.keys().next().value);
+          }
           break;
-        case "input_audio_buffer.speech_stopped":
+        case "input_audio_buffer.speech_stopped": {
+          const span = this.itemTimes.get(event.item_id);
+          if (span) span.endMs = this._recordingMsAt(event.audio_end_ms);
+          break;
+        }
         case "input_audio_buffer.committed":
           break;
 

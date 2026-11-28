@@ -4656,6 +4656,7 @@ class IPCHandlers {
       text,
       source,
       timestamp,
+      timing = null,
       micSuppression = null,
       send = null,
       includeInLocalTranscript = false,
@@ -4672,6 +4673,8 @@ class IPCHandlers {
           source,
           type: "final",
           timestamp,
+          // Its place in a room's recording, for the speaker pass.
+          ...(timing ? { startMs: timing.startMs, endMs: timing.endMs } : {}),
         });
       }
     };
@@ -4822,7 +4825,11 @@ class IPCHandlers {
 
         send("meeting-transcription-segment", { text, source, type: "partial" });
       };
-      streaming.onFinalTranscript = (text, timestamp) => {
+      if (source === "mic") {
+        // Where each turn sits in a room's recording, for its speaker pass.
+        streaming.recordingNowMs = () => meetingRoomCloud?.recordedMs ?? null;
+      }
+      streaming.onFinalTranscript = (text, timestamp, timing = null) => {
         const segments = streaming.completedSegments;
         const latestSegment = segments.length > 0 ? segments[segments.length - 1] : text;
         let micSuppression = null;
@@ -4898,6 +4905,7 @@ class IPCHandlers {
                 text: latestSegment,
                 source,
                 timestamp,
+                timing,
                 micSuppression,
                 send,
               }),
@@ -4909,6 +4917,7 @@ class IPCHandlers {
           text: latestSegment,
           source,
           timestamp,
+          timing,
           micSuppression,
           send,
         });
@@ -5265,6 +5274,10 @@ class IPCHandlers {
     // pause rather than every 5 s, and kept on disk for the speaker pass after
     // Stop. Null for every other kind of recording.
     let meetingInRoom = null;
+    // A room on the cloud route: its own lines and voices for the speaker
+    // pass, and the recording's clock the cloud's turns are placed on
+    // (roomCloudVoices.mjs). The local route's session does this itself.
+    let meetingRoomCloud = null;
     /** Numbers each in-room session, so a late event of an old one is told apart. */
     let meetingInRoomSessions = 0;
     let meetingPendingMicChunks = [];
@@ -6570,6 +6583,8 @@ class IPCHandlers {
       await stopMeetingAec();
       await stopLiveSpeakerIdentification().catch(() => {});
       resetMeetingLocalState();
+      meetingRoomCloud?.drop();
+      meetingRoomCloud = null;
       await disconnectMeetingStreaming().catch(() => {});
       this.activeMeetingSpeakerConfig = null;
     };
@@ -6810,6 +6825,16 @@ class IPCHandlers {
         meetingOneOnOneAttendee = isInRoom ? null : resolveOneOnOneAttendeeForNote(options.noteId);
         meetingOneOnOneProfileBound = false;
         meetingNoteId = options.noteId ?? null;
+        meetingRoomCloud?.drop();
+        meetingRoomCloud = null;
+        if (isInRoom && options.provider !== "local") {
+          const { RoomCloudVoices } = await import("./roomCloudVoices.mjs");
+          meetingRoomCloud = new RoomCloudVoices({
+            extract: roomVoiceEmbeddings.isAvailable()
+              ? (samples) => roomVoiceEmbeddings.extract(samples)
+              : null,
+          });
+        }
 
         // Seed the speaker cap from the note/calendar participants up front so live
         // identification isn't stuck at the default if the renderer never pushes a config.
@@ -6956,6 +6981,13 @@ class IPCHandlers {
       }
 
       if (source === "mic") {
+        // Every chunk, before anything mutes or holds it: the room's clock.
+        if (meetingRoomCloud) {
+          const pcm16k = downsample24kTo16k(outboundBuffer);
+          meetingRoomCloud.push(
+            new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.length >> 1)
+          );
+        }
         if (processMeetingMicWithAec(outboundBuffer)) {
           return;
         }
@@ -7161,7 +7193,15 @@ class IPCHandlers {
           };
         }
 
+        // The disconnect below forgets the note (resetMeetingLocalState); a
+        // room's lines keep their clock until its last turns are placed.
+        const roomNoteId = meetingNoteId;
         const results = await disconnectMeetingStreaming({ flushPending: true });
+        if (meetingRoomCloud) {
+          const roomCloud = meetingRoomCloud;
+          meetingRoomCloud = null;
+          void runInRoomSpeakerPass(roomCloud.finish(), roomNoteId, diarizationWin);
+        }
         const { diarizationPcmPath, diarizationSegments, diarizationStartedAt } =
           await captureMeetingDiarizationState();
         const transcript =
