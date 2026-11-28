@@ -2,35 +2,35 @@
   <a href="https://oats-mac.vercel.app">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/media/banner-dark.png">
-      <img src="docs/media/banner-light.png" width="800" alt="Oats. The conversation, mapped as it happens.">
+      <img src="docs/media/banner-light.png" width="800" alt="Barley. The conversation, mapped as it happens.">
     </picture>
   </a>
 </p>
 
 <p align="center">
-  Oats maps the conversation in the room as it happens: topics as they turn,<br>
+  Barley maps the conversation in the room as it happens: topics as they turn,<br>
   questions as they're asked, and whether anyone answered.
 </p>
 
 <p align="center">
   Notes after the meeting come too late.<br>
-  Oats shows you the conversation while you can still steer it.
+  Barley shows you the conversation while you can still steer it.
 </p>
 
 <p align="center">
-  <a href="https://github.com/alexgaoth/oats/releases/latest/download/Oats-arm64.dmg"><img src="docs/media/download-mac.png" width="260" alt="Download Oats for Mac"></a>
+  <a href="https://github.com/alexgaoth/oats/releases/latest/download/Barley-arm64.dmg"><img src="docs/media/download-mac.png" width="260" alt="Download Barley for Mac"></a>
 </p>
 
 <p align="center">
-  <sub>Version 0.2.0 for Apple Silicon, macOS 12 or later. Also as an <a href="https://github.com/alexgaoth/oats/releases/latest/download/Oats-x64.dmg">Intel build</a>, not yet tested on an Intel Mac.</sub><br>
+  <sub>Version 0.2.0 for Apple Silicon, macOS 12 or later. Also as an <a href="https://github.com/alexgaoth/oats/releases/latest/download/Barley-x64.dmg">Intel build</a>, not yet tested on an Intel Mac.</sub><br>
   <sub><a href="https://oats-mac.vercel.app">Website</a> · <a href="https://github.com/alexgaoth/oats/releases/latest">Release notes</a></sub>
 </p>
 
 <p align="center">
-  <img src="site/media/live-window-2240.webp" width="880" alt="Oats recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.">
+  <img src="site/media/live-window-2240.webp" width="880" alt="Barley recording a launch review at 11:09. One line draws the conversation, with marks where an unknown, an unanswered and an answered question were asked. Below it, three topics as lanes: Pellwood launch date decision, SAML clock skew fix, and SOC 2 audit timeline, the one the room is on.">
 </p>
 
-The conversations that matter happen around a table. Taking notes pulls you out of them, and meeting bots join calls, not rooms. Oats sits on the table with one microphone. While you talk, the screen shows the shape of the conversation and nothing that competes with the people in front of you.
+The conversations that matter happen around a table. Taking notes pulls you out of them, and meeting bots join calls, not rooms. Barley sits on the table with one microphone. While you talk, the screen shows the shape of the conversation and nothing that competes with the people in front of you.
 
 ## What it does
 
@@ -46,7 +46,7 @@ Press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>O</kbd> and talk. One line draws the conv
 
 Each topic gets its name from what was said. When the room comes back to one, the line goes back too.
 
-The conversation flow under the line keeps one lane per topic, in the order raised, with the minutes spent on each. **Graph** shows the same topics by when each was raised and how unsettled it still is. Oats finds the topics on your Mac and names each with a phrase said in it, and the writing model names it more exactly as it grows. Under the lanes are topics that came up with these in earlier conversations and have not come up yet.
+The conversation flow under the line keeps one lane per topic, in the order raised, with the minutes spent on each. **Graph** shows the same topics by when each was raised and how unsettled it still is. Barley finds the topics on your Mac and names each with a phrase said in it, and the writing model names it more exactly as it grows. Under the lanes are topics that came up with these in earlier conversations and have not come up yet.
 
 <p align="center">
   <img src="site/media/topic-lanes.webp" width="840" alt="Conversation flow at 12:33, three topics and one return to an earlier topic. The line steps down from Pellwood launch date decision to SAML clock skew fix and SOC 2 audit timeline, then goes back up to Pellwood launch date decision, where the room is now.">
@@ -61,29 +61,29 @@ On the line, a question is a mark. With the transcript shown, it is also a card 
 | Card | When |
 |---|---|
 | **Answered** | Someone gave an answer. |
-| **Unknown** | The room said it did not know. Oats opens a web search for the question. |
+| **Unknown** | The room said it did not know. Barley opens a web search for the question. |
 | **Unanswered** | The room moved on. |
 | **Open** | Nobody has replied yet. |
 
 <p align="center">
-  <img src="docs/media/loop-questions.webp" width="560" alt="A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Oats searches it on the web">
+  <img src="docs/media/loop-questions.webp" width="560" alt="A question is asked and its card appears as Open. After someone says they do not know, it turns Unknown and Barley searches it on the web">
 </p>
 
 ### Unsure answers, checked on the spot
 
-When an answer sounds unsure, Oats looks it up in your notes and past conversations while people are still talking.
+When an answer sounds unsure, Barley looks it up in your notes and past conversations while people are still talking.
 
-It is off by default: turn on the context check in Settings and choose a folder of notes. Under the question, Oats says **That's right**, **Wait, that's wrong**, or **Found it** when the room did not know, with the answer and the file it came from. When the folder and your past conversations have no answer, Oats can also ask Claude Code, if you turn that on too: it reads your GitHub, Linear, Notion and Slack connections, read only, and the question and the reply go to Anthropic, and the search text to those services.
+It is off by default: turn on the context check in Settings and choose a folder of notes. Under the question, Barley says **That's right**, **Wait, that's wrong**, or **Found it** when the room did not know, with the answer and the file it came from. When the folder and your past conversations have no answer, Barley can also ask Claude Code, if you turn that on too: it reads your GitHub, Linear, Notion and Slack connections, read only, and the question and the reply go to Anthropic, and the search text to those services.
 
 <p align="center">
-  <img src="site/media/check-live.webp" width="640" alt="A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Oats shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet.">
+  <img src="site/media/check-live.webp" width="640" alt="A recording at 8:33. Under the question Do we have a date from the auditors yet, asked 17 seconds earlier and marked Unknown, Barley shows Found it: Fieldwork starts November 10, from soc2-plan.md, Auditor dates. The transcript below has the reply: I don't know yet.">
 </p>
 
 ### Written up when you stop
 
 Title, summary, talk time for each person, and the transcript with every voice told apart.
 
-The summary starts by itself when you stop, with the threads the conversation followed, the decisions and the action items, next to how each question ended. It is written by a model on your Mac, which Oats downloads by itself, or with your own API key. The transcript, the voices, the questions and the shape of the conversation need no writing model.
+The summary starts by itself when you stop, with the threads the conversation followed, the decisions and the action items, next to how each question ended. It is written by a model on your Mac, which Barley downloads by itself, or with your own API key. The transcript, the voices, the questions and the shape of the conversation need no writing model.
 
 <p align="center">
   <img src="site/media/conversation-finished.webp" width="560" alt="The finished conversation, Enterprise launch review: SSO gates the date. 29 minutes, 9 speakers, 3 marked moments, and 15 questions: 9 answered, 3 unknown, 2 unanswered, 1 open. Below, the shape of the conversation with each question in its place, and talk time for each person, from Maya at 18 percent to Omar at 2 percent.">
@@ -111,11 +111,11 @@ The board lays out every conversation as a graph and as a timeline, so a topic t
 
 ## Privacy you can check
 
-<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Oats sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
+<img align="right" src="site/media/sidebar-foot.webp" width="190" alt="The bottom of the Barley sidebar: Settings, then On this Mac, small.en on Metal and 0 network requests since launch, above a dithered sky and wheat field.">
 
-On this Mac, audio and transcripts never leave it: transcription runs on whisper.cpp with Metal, and summaries on a local model. There is no Oats account and no Oats server. With your own API key, transcripts go to your provider for summaries, and with an OpenAI key the audio goes to OpenAI for transcription.
+On this Mac, audio and transcripts never leave it: transcription runs on whisper.cpp with Metal, and summaries on a local model. There is no Barley account and no Barley server. With your own API key, transcripts go to your provider for summaries, and with an OpenAI key the audio goes to OpenAI for transcription.
 
-One thing is on by default, and you can turn it off in Settings: when a question meets a clear "I don't know", Oats opens a web search for the question text in your browser.
+One thing is on by default, and you can turn it off in Settings: when a question meets a clear "I don't know", Barley opens a web search for the question text in your browser.
 
 The sidebar counts every network request since launch. Calls to the speech, writing and search servers that run on your Mac are not counted, because they never leave it. [The network allowlist](docs/network-allowlist.md) lists every destination.
 
@@ -145,10 +145,10 @@ The record shortcut can be changed in Settings.
 
 ## Install
 
-1. Download Oats for [Apple Silicon](https://github.com/alexgaoth/oats/releases/latest/download/Oats-arm64.dmg) or [Intel](https://github.com/alexgaoth/oats/releases/latest/download/Oats-x64.dmg). It needs macOS 12 Monterey or later. The speech models ship inside, so it transcribes offline from the first launch: on Apple Silicon, Whisper `small.en` for English and multilingual `base` for every other language; on Intel, `base.en` and `base`.
-2. Open the DMG and drag Oats to Applications.
-3. Open Oats. This version is not notarized by Apple yet, so macOS says it cannot verify the app. Click Done.
-4. Open System Settings, then Privacy & Security. Scroll down and click Open Anyway next to "Oats was blocked", and confirm with your password or Touch ID. macOS asks only once.
+1. Download Barley for [Apple Silicon](https://github.com/alexgaoth/oats/releases/latest/download/Barley-arm64.dmg) or [Intel](https://github.com/alexgaoth/oats/releases/latest/download/Barley-x64.dmg). It needs macOS 12 Monterey or later. The speech models ship inside, so it transcribes offline from the first launch: on Apple Silicon, Whisper `small.en` for English and multilingual `base` for every other language; on Intel, `base.en` and `base`.
+2. Open the DMG and drag Barley to Applications.
+3. Open Barley. This version is not notarized by Apple yet, so macOS says it cannot verify the app. Click Done.
+4. Open System Settings, then Privacy & Security. Scroll down and click Open Anyway next to "Barley was blocked", and confirm with your password or Touch ID. macOS asks only once.
 
 The SHA-256 checksums are in [SHA256SUMS.txt](https://github.com/alexgaoth/oats/releases/latest/download/SHA256SUMS.txt). On an empty Home, open the **example conversation**, a nine-person launch review, to explore everything before you record.
 
@@ -166,11 +166,11 @@ npm run setup:check
 npm run dev
 ```
 
-[Developing Oats](docs/development.md) has the full setup, the Linux notes and the test suites. The public page lives in [site/](site/README.md).
+[Developing Barley](docs/development.md) has the full setup, the Linux notes and the test suites. The public page lives in [site/](site/README.md).
 
 ## How it works
 
-Oats is an Electron app. The interface is React. The main process runs the local speech server (whisper.cpp), an optional local language model (llama.cpp) for summaries, local embeddings for related-conversation search, and SQLite with full-text search for the transcripts. The topic tracker and the question detector are plain code over the transcript, so they cost nothing to run for an hour and never need a network. [Architecture](docs/architecture.md) maps the modules, [DESIGN.md](DESIGN.md) is the design reference, and [the product description](docs/product.md) explains each behaviour in depth.
+Barley is an Electron app. The interface is React. The main process runs the local speech server (whisper.cpp), an optional local language model (llama.cpp) for summaries, local embeddings for related-conversation search, and SQLite with full-text search for the transcripts. The topic tracker and the question detector are plain code over the transcript, so they cost nothing to run for an hour and never need a network. [Architecture](docs/architecture.md) maps the modules, [DESIGN.md](DESIGN.md) is the design reference, and [the product description](docs/product.md) explains each behaviour in depth.
 
 ## Principles
 
@@ -180,7 +180,7 @@ Oats is an Electron app. The interface is React. The main process runs the local
 
 ## Acknowledgements
 
-Oats grew out of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop dictation app, and [UPSTREAM.md](UPSTREAM.md) records the provenance. Transcription uses [whisper.cpp](https://github.com/ggml-org/whisper.cpp), local models run on [llama.cpp](https://github.com/ggml-org/llama.cpp), the interface is set in [Inter](https://rsms.me/inter/), and the wordmark in [EB Garamond](https://github.com/octaviopardo/EBGaramond12). Topic names prefer distinctive words by their rank in English, from the Google Books Ngram corpus as counted by [google-books-ngram-frequency](https://github.com/orgtre/google-books-ngram-frequency) (CC BY 3.0). The speed check that picks the speech model for a Mac reads one utterance from [LibriSpeech](https://www.openslr.org/12) (Panayotov et al., CC BY 4.0): test-clean 7127-75946-0024, read by Bill Kneeland for LibriVox.
+Barley grew out of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop dictation app, and [UPSTREAM.md](UPSTREAM.md) records the provenance. Transcription uses [whisper.cpp](https://github.com/ggml-org/whisper.cpp), local models run on [llama.cpp](https://github.com/ggml-org/llama.cpp), the interface is set in [Inter](https://rsms.me/inter/), and the wordmark in [EB Garamond](https://github.com/octaviopardo/EBGaramond12). Topic names prefer distinctive words by their rank in English, from the Google Books Ngram corpus as counted by [google-books-ngram-frequency](https://github.com/orgtre/google-books-ngram-frequency) (CC BY 3.0). The speed check that picks the speech model for a Mac reads one utterance from [LibriSpeech](https://www.openslr.org/12) (Panayotov et al., CC BY 4.0): test-clean 7127-75946-0024, read by Bill Kneeland for LibriVox.
 
 Parakeet Ultra, a model you can choose on Apple Silicon, is [moondream/parakeet-ultra](https://huggingface.co/moondream/parakeet-ultra) (CC-BY-4.0), a post-training of NVIDIA's Parakeet TDT 0.6B v3 (CC-BY-4.0), in the Core ML build of [FluidInference](https://huggingface.co/FluidInference/parakeet-ultra-coreml). It runs on [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0), behind [Silero VAD](https://github.com/snakers4/silero-vad) (MIT).
 

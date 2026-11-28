@@ -1,4 +1,4 @@
-// The Oats symbol on the site: the app's own grain (src/components/shell/
+// The Barley symbol on the site: the app's own grain (src/components/shell/
 // grainCanvas.ts) and its own toss (src/helpers/oatsMarkMotion.mjs), dithered the
 // way the film and the app icon show it: about 110 dots across, each a crisp
 // square of device pixels, in the four honey tones pushed apart

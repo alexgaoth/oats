@@ -21,7 +21,7 @@ test("the site's script is built from the current sources", async () => {
 test("the download buttons use the names the release job publishes", () => {
   const download = fs.readFileSync(path.join(SITE, "src/download.js"), "utf8");
   const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/build-and-notarize.yml"), "utf8");
-  for (const name of ["Oats-arm64.dmg", "Oats-x64.dmg"]) {
+  for (const name of ["Barley-arm64.dmg", "Barley-x64.dmg"]) {
     assert.match(download, new RegExp(`/latest/download/${name.replace(".", "\\.")}`));
     assert.match(workflow, new RegExp(`\\b${name.replace(".", "\\.")}\\b`), `the release job publishes ${name}`);
   }

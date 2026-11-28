@@ -282,8 +282,8 @@ function B(e) {
 //#endregion
 //#region site/src/download.js
 var V = "https://github.com/alexgaoth/oats/releases", H = {
-	arm64: `${V}/latest/download/Oats-arm64.dmg`,
-	x64: `${V}/latest/download/Oats-x64.dmg`
+	arm64: `${V}/latest/download/Barley-arm64.dmg`,
+	x64: `${V}/latest/download/Barley-x64.dmg`
 };
 function U() {
 	let e = navigator.userAgentData?.platform || navigator.platform || "";
