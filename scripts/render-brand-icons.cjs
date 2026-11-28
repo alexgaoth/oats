@@ -180,7 +180,7 @@ async function dmgBackground(scale) {
   context.fillStyle = "#71717a";
   context.font = font(15);
   context.textAlign = "center";
-  context.fillText("Drag Oats to Applications", width / 2, 336 * scale);
+  context.fillText("Drag Barley to Applications", width / 2, 336 * scale);
   return element.toDataURL("image/png");
 }
 

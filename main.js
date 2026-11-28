@@ -90,6 +90,10 @@ function resolveAppChannel() {
 const APP_CHANNEL = resolveAppChannel();
 process.env.OATS_CHANNEL = APP_CHANNEL;
 
+// The app is called Barley, but its data keeps the folders it had as Oats.
+// Production: Electron sets userData from package.json "name" ("oats") before
+// this file runs, so <appData>/oats. The other channels: <appData>/Oats-<channel>.
+// Renaming either folder would leave people's conversations behind.
 function configureChannelUserDataPath() {
   if (APP_CHANNEL === "production") {
     return;
@@ -145,9 +149,9 @@ if (!gotSingleInstanceLock) {
 
 const isLiveWindow = (window) => window && !window.isDestroyed();
 
-// Ensure macOS menus use the proper casing for the app name
-if (process.platform === "darwin" && app.getName() !== "Oats") {
-  app.setName("Oats");
+// The macOS menus (About, Hide, Quit) use this name. It does not move userData.
+if (process.platform === "darwin" && app.getName() !== "Barley") {
+  app.setName("Barley");
 }
 
 // Add global error handling for uncaught exceptions
