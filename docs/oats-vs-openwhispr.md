@@ -1,4 +1,4 @@
-# Oats vs OpenWhispr: is transcription actually worse?
+# Barley vs OpenWhispr: is transcription actually worse?
 
 Short answer: **it was, and the cause was not the one anybody guessed.** Two of
 the three problems were bugs we could fix; the third is a deliberate trade.
@@ -36,8 +36,8 @@ is worse than this, never better. The comparison between rows still holds.
 
 | configuration           | WER       | median    |
 | ----------------------- | --------- | --------- |
-| what Oats shipped       | 7.74%     | 1952ms    |
-| **what Oats ships now** | **4.83%** | **446ms** |
+| what Barley shipped       | 7.74%     | 1952ms    |
+| **what Barley ships now** | **4.83%** | **446ms** |
 
 **38% fewer errors, 4.4× faster.** Three causes, in order of how much they hurt.
 
@@ -64,7 +64,7 @@ Whisper publishes two families at every size: multilingual (`base`) and
 English-only (`base.en`). Same file size, same speed class. The English-only build
 spent none of its capacity on the other ninety-eight languages.
 
-Oats bundled only the multilingual one, and the model registry had **no `.en`
+Barley bundled only the multilingual one, and the model registry had **no `.en`
 entries at all** — so it was unreachable even for somebody who went looking.
 
 `base.en` now ships beside `base` and is chosen automatically when your language
@@ -87,15 +87,15 @@ This is the honest answer to "why does the old one feel better".
 
 `../oats` — OpenWhispr 1.7.6 — defaults `useLocalWhisper` to **false**. With an
 API key configured, its dictation goes to OpenAI's `gpt-4o-mini-transcribe`.
-Oats defaults it to **true**.
+Barley defaults it to **true**.
 
-That was deliberate. Oats promises to work with no network, no account and no
+That was deliberate. Barley promises to work with no network, no account and no
 model download, and it bundles a model so that promise is real on first run. The
 cost is that a hosted model trained on far more data is no longer doing the work.
 
 **Everything else in the transcription path is identical.**
 `src/helpers/whisperServer.js` is byte-for-byte the same in both trees;
-`whisper.js` differs only by Oats adding the bundled-model install. Nothing was
+`whisper.js` differs only by Barley adding the bundled-model install. Nothing was
 quietly rewritten. The trade was made on purpose — but it was made against the
 _worst_ of the configurations above, and nobody measured it at the time.
 
@@ -112,7 +112,7 @@ In a room, detection turned out to be the bigger risk: it heard far voices as
 other languages (alexgaoth/oats#122). So English is the default, and the setup
 screen asks.
 
-**If you want the cloud back**, the setting is still there — Oats changed the
+**If you want the cloud back**, the setting is still there — Barley changed the
 default, not the capability.
 
 ## What has not been measured

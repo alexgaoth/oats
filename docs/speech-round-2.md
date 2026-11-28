@@ -7,7 +7,7 @@ the cloud, or shows that nothing beats round 1.
 
 ## The bottom line
 
-**Oats v0.4 default:** English in-room conversations use Parakeet Ultra with
+**Barley v0.4 default:** English in-room conversations use Parakeet Ultra with
 8 seconds of earlier audio on Apple Silicon with macOS 14 or later, when
 speech stays on the Mac and follows the default. Until Parakeet is installed,
 the room uses Whisper Turbo if it is installed and meets the speed rule.

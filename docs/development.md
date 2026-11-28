@@ -1,6 +1,6 @@
-# Developing Oats
+# Developing Barley
 
-Oats currently requires Node.js 24. The setup check itself has no third-party dependencies, so run it first even on a restricted network:
+Barley currently requires Node.js 24. The setup check itself has no third-party dependencies, so run it first even on a restricted network:
 
 ```sh
 nvm use 24
@@ -21,7 +21,7 @@ Local Whisper also requires a platform-specific `whisper-server` helper. It is d
 npm run setup:local-whisper
 ```
 
-This downloads the helper for the current supported platform. Development speech models are selected and downloaded separately in the application. Release builds bundle two Whisper models, so installed Oats works offline on first run: multilingual `base`, and `small.en` on Apple Silicon or `base.en` on Intel Macs and Linux for English (`src/helpers/bundledWhisperModels.mjs`). `npm run download:default-whisper-model` fetches them into `resources/bin/whisper-models/`, and every `prebuild*` runs it. The build's arch decides the set: `TARGET_ARCH` (or `--arch`), else this machine's, so build the Intel app on an Apple Silicon Mac with `npm run build:mac:x64`, which sets it. Packaging fails when the bundled models are not the set for the arch it packs. On a constrained network it is safe to stop and retry later; the source checkout does not need to be recreated.
+This downloads the helper for the current supported platform. Development speech models are selected and downloaded separately in the application. Release builds bundle two Whisper models, so installed Barley works offline on first run: multilingual `base`, and `small.en` on Apple Silicon or `base.en` on Intel Macs and Linux for English (`src/helpers/bundledWhisperModels.mjs`). `npm run download:default-whisper-model` fetches them into `resources/bin/whisper-models/`, and every `prebuild*` runs it. The build's arch decides the set: `TARGET_ARCH` (or `--arch`), else this machine's, so build the Intel app on an Apple Silicon Mac with `npm run build:mac:x64`, which sets it. Packaging fails when the bundled models are not the set for the arch it packs. On a constrained network it is safe to stop and retry later; the source checkout does not need to be recreated.
 
 ## Linux: dictation paste prerequisites
 
@@ -34,7 +34,7 @@ sudo dnf install libX11-devel libXtst-devel wl-clipboard
 npm run compile:linux-paste
 ```
 
-Without `linux-fast-paste` compiled, Oats falls back to `xdotool`/`ydotool` and,
+Without `linux-fast-paste` compiled, Barley falls back to `xdotool`/`ydotool` and,
 failing those, the RemoteDesktop portal — which shows a screen-sharing consent
 dialog. Screen sharing is never _required_; it is only the last resort when no
 input-injection route is available.
@@ -71,7 +71,7 @@ If the helper is missing, the same report instead names its expected path and pr
 10. Stop recording, open the conversation in **Intelligence**, and confirm the topic graph renders with the questions reachable from their topic nodes and re-search working.
 11. Choose **Global** in Conversations and confirm the force graph and the arc timeline connect conversations that shared a subject, that the line above the timeline names the ones that come back, and that pointing at a conversation lights it in both.
 12. Ramble for a while and put the question at the very end. Confirm the card quotes only the question, not the whole turn.
-13. Stop, then start again within half an hour, and confirm Oats offers to continue the previous conversation.
+13. Stop, then start again within half an hour, and confirm Barley offers to continue the previous conversation.
 14. Stop a recording that captured nothing and confirm no blank note is left behind.
 
 ## Sample data
@@ -87,7 +87,7 @@ The seed runs the real topic tracker rather than writing fixture data, so what y
 
 ## Automated checks
 
-Run the Oats-specific checks while iterating:
+Run the Barley-specific checks while iterating:
 
 ```sh
 npm run test:oats
@@ -99,4 +99,4 @@ Run the complete local verification before sharing a change:
 npm run verify:all
 ```
 
-`verify:oats` checks setup, Oats behavior, formatting, lint, TypeScript, and the production renderer build. `verify:all` also runs the complete inherited suite under Electron's matching native-module ABI. Some upstream tests use loopback sockets, native binaries, or platform-specific facilities and may require normal host permissions.
+`verify:oats` checks setup, Barley behavior, formatting, lint, TypeScript, and the production renderer build. `verify:all` also runs the complete inherited suite under Electron's matching native-module ABI. Some upstream tests use loopback sockets, native binaries, or platform-specific facilities and may require normal host permissions.

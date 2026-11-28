@@ -132,7 +132,7 @@ test-clean voices, 12 turns each, 0.25–1.15s between turns), each sent through
 cuts at pauses, the whole recording in one request, and cuts at the true turn
 boundaries as a ceiling. `base`, `language auto`, 8 threads.
 
-| how the stream is cut     | Oats flags | OpenWhispr 1.10.2 flags |
+| how the stream is cut     | Barley flags | OpenWhispr 1.10.2 flags |
 | ------------------------- | ---------- | ----------------------- |
 | fixed 5s chunks           | 15.15%     | 14.27%                  |
 | **at pauses — ships now** | **6.17%**  | 7.14%                   |
@@ -153,11 +153,11 @@ boundaries as a ceiling. `base`, `language auto`, 8 threads.
   [A long dictation](#a-long-dictation).
 - **What you hear as "OpenWhispr is clearer" is its default, not its model.**
   1.10.2 still defaults `useLocalWhisper` to `false`, so out of the box it
-  transcribes in the cloud. Oats defaults to local by design (see below).
+  transcribes in the cloud. Barley defaults to local by design (see below).
 
 ## Apple Silicon (M5 Pro, Metal)
 
-Oats is going Mac-first, so the instrument was run on a Mac on 2026-10-08:
+Barley is going Mac-first, so the instrument was run on a Mac on 2026-10-08:
 Apple M5 Pro (15 cores, 48GB), macOS 26.6, the `whisper-server-darwin-arm64`
 the app ships (OpenWhispr's whisper.cpp 1.9.1 build), 13 threads. That build
 uses Metal by itself — its log names `MTL0 (Apple M5 Pro)` and flash attention
@@ -975,7 +975,7 @@ the models not measured (`tiny`, `medium`, `large`), hear the room as it is.
 Apple Silicon ships `small.en`, and on a Mac whose GPU is fast enough the
 default becomes `large-v3-turbo` q5_0, which recovered the most words in the
 replay above (75.2% and 47.5% against 70.4% and 40.0%). Chips keep coming, so
-Oats does not look the chip up in a table: it times one clip on the Mac
+Barley does not look the chip up in a table: it times one clip on the Mac
 itself, at first launch and after each update. The rule is
 `src/helpers/speechTier.mjs`, the measurement `src/helpers/deviceTier.js`.
 
@@ -1059,12 +1059,12 @@ rule in memory only.
 
 `../oats` (OpenWhispr 1.7.6) defaults `useLocalWhisper` to **false**. With an API
 key configured — and there is one in that profile — dictation goes to OpenAI
-`gpt-4o-mini-transcribe`. Oats defaults it to **true**, deliberately: the product
+`gpt-4o-mini-transcribe`. Barley defaults it to **true**, deliberately: the product
 promises to work with no network, no model and no account, and it bundles a
 Whisper model so that promise is real on first run.
 
 That is the whole of the difference in the dictation path. `whisperServer.js` is
-byte-identical between the two trees; `whisper.js` differs only by Oats adding
+byte-identical between the two trees; `whisper.js` differs only by Barley adding
 the bundled-model install. The trade was made on purpose — but it was made
 against `base` + `auto`, which is the worst of the four rows above, and nothing
 measured it at the time.

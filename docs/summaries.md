@@ -1,6 +1,6 @@
 # Summaries, measured
 
-Question (Alex, 2026-10-28): how good are the summaries Oats writes at Finish,
+Question (Alex, 2026-10-28): how good are the summaries Barley writes at Finish,
 and which writing model should each Mac and each provider get by default?
 
 This page has the answer, the numbers, how they were measured, and the

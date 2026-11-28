@@ -187,7 +187,7 @@ lower threshold finds more and loses Pk (on learn83: 0.29 finds half at Pk 0.25 
 
 AMI is role play: four people, a brief, a project manager with an agenda. The
 ICSI corpus (75 meetings, 70 hours, CC BY 4.0) is research groups at their real
-weekly meetings, closer to the people Oats is for. No cloud model read it.
+weekly meetings, closer to the people Barley is for. No cloud model read it.
 
 | ICSI, 75 meetings | live Pk | record Pk | runs (people: 9.3) |
 | --- | --- | --- | --- |

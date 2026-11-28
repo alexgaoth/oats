@@ -1,6 +1,6 @@
 # The OpenWhispr seam — every renderer surface, classified
 
-Oats is a fork. The question this answers is which parts of the renderer are the
+Barley is a fork. The question this answers is which parts of the renderer are the
 product, which are the inherited application kept deliberately, and which were
 neither — reachable by nothing, shipped by inertia.
 
@@ -22,15 +22,15 @@ no route table — this list is the whole of it.
 
 | entry                             | query                         | what it is                                                                     |
 | --------------------------------- | ----------------------------- | ------------------------------------------------------------------------------ |
-| `OatsWorkspace.tsx`               | `?panel=true`                 | **Oats primary.** The three surfaces: Conversation, Intelligence, Settings.    |
-| `OnboardingFlow.tsx`              | `?panel=true`, first run      | **Oats primary.** One step: microphone permission.                             |
-| `App.jsx`                         | _(none)_                      | **Oats primary.** The floating oat — the only thing that says Oats is running. |
+| `OatsWorkspace.tsx`               | `?panel=true`                 | **Barley primary.** The three surfaces: Conversation, Intelligence, Settings.    |
+| `OnboardingFlow.tsx`              | `?panel=true`, first run      | **Barley primary.** One step: microphone permission.                             |
+| `App.jsx`                         | _(none)_                      | **Barley primary.** The floating oat — the only thing that says Barley is running. |
 | `AgentOverlay.tsx`                | `?agent=true`                 | **Compatibility.** The inherited voice-agent chat panel.                       |
-| `MeetingNotificationOverlay.tsx`  | `?meeting-notification=true`  | **Oats primary.** "A meeting started — record it?"                             |
+| `MeetingNotificationOverlay.tsx`  | `?meeting-notification=true`  | **Barley primary.** "A meeting started — record it?"                             |
 | `UpdateNotificationOverlay.tsx`   | `?update-notification=true`   | **Compatibility.** Inherited updater UI.                                       |
 | `TranscriptionPreviewOverlay.tsx` | `?transcription-preview=true` | **Compatibility.** Dictation preview.                                          |
 
-## Oats primary — 16 components, 5,332 lines
+## Barley primary — 16 components, 5,332 lines
 
 The product. `OatsWorkspace.tsx` (2,256) holds all three surfaces; the rest is
 the signature work: `conversation/` (contour, signal rail, listening pulse, open
@@ -41,7 +41,7 @@ conversations board.
 `PostMigrationOnboarding` and `BackgroundActionToastListener` complete it.
 
 The `notes/` directory name is a leftover: what is left in it is the topic graph
-and the force graph the board also draws, which are Oats signature surfaces.
+and the force graph the board also draws, which are Barley signature surfaces.
 Renaming it is cosmetic and has not been done.
 
 ## Advanced Settings — 46 components, 11,242 lines
@@ -57,7 +57,7 @@ The bulk: `SettingsPage` (3,013), `TranscriptionModelPicker` (1,111),
 (`ModelCardList`, `SearchableModelList`, `ProviderTabs`, `ProviderIcon`,
 `ApiKeyInput`, `GetApiKeyLink`, `SelfHostedPanel`, `InferenceConfigEditor`).
 
-This count includes shared `ui/` primitives that the Oats surfaces also use —
+This count includes shared `ui/` primitives that the Barley surfaces also use —
 `button`, `toggle`, `input`, `select`, `dialog`, `popover`, `lib/utils`. They are
 in the subtree because `SettingsPage` reaches them, not because they are
 Advanced-only.

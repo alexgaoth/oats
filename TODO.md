@@ -1,4 +1,4 @@
-# Oats — product, performance, and UI backlog
+# Barley — product, performance, and UI backlog
 
 **Status:** audit written 2026-08-19; **worked 2026-08-19/20**. `DESIGN.md`
 remains the visual specification; this file tracks what the review found, what
@@ -10,8 +10,8 @@ reading the code. The instrument is `npm run perf:baseline`; the evidence is
 
 ## Executive assessment
 
-The Oats core is promising, but the product still behaves in places like a new
-Oats shell layered over a large OpenWhispr application. The visible surfaces are
+The Barley core is promising, but the product still behaves in places like a new
+Barley shell layered over a large OpenWhispr application. The visible surfaces are
 now genuinely separated from the inherited ones; the question-card pipeline is
 not.
 
@@ -94,7 +94,7 @@ microphone at 10 Hz.
 
 ### P0.2 Measure the regression before declaring it fixed — done for Fedora, open for macOS
 
-`scripts/perf-baseline.js` (`npm run perf:baseline`) launches an isolated Oats on
+`scripts/perf-baseline.js` (`npm run perf:baseline`) launches an isolated Barley on
 the staging channel, drives the surfaces over CDP, and reports cold launch, warm
 reload, per-surface switch p50/p95, first Settings open, first Advanced open, and
 **per-surface** idle CPU and RSS. Results and procedure:
@@ -122,7 +122,7 @@ upstream comparison. All are listed in that document.
 `SettingsPage` is a `React.lazy` chunk behind a quiet `Suspense` line
 (`oats.settings.advancedLoading`, added to all 10 locales).
 
-**Measured**, by building both revisions: the chunk the default Oats path must
+**Measured**, by building both revisions: the chunk the default Barley path must
 load fell from **385.40 kB (108.32 kB gzip) to 140.70 kB (46.98 kB gzip)**.
 Advanced now costs 231.9 kB, and only if you walk into it — 362 ms on first open.
 
@@ -205,7 +205,7 @@ Cards are published into `useMeetingRecordingStore.questionCards`, so there is
 one copy of card state and nothing to keep in sync.
 
 **The accepted cost:** a conversation recorded with the panel hidden — which the
-global shortcut makes the normal case — shows no cards until Oats is opened.
+global shortcut makes the normal case — shows no cards until Barley is opened.
 Nothing is lost; every card already exists in the note, and the floating oat and
 the tray still show that a conversation is running.
 
@@ -218,11 +218,11 @@ colour modes. Every removed bridge method is gone from `window.electronAPI`;
 ## P1 — remove the OpenWhispr seam
 
 - **Done: the CSS boundary.** The inherited `input`/`textarea` chrome and `.card`
-  rules are element/class selectors that outranked the utilities an Oats
+  rules are element/class selectors that outranked the utilities a Barley
   component set on itself, and the old fix was a per-element `.input-inline`
   opt-out that new markup had to remember. They are now scoped out of
   `.oats-surface` entirely — the boundary is the surface, not the element, so
-  Oats markup cannot forget to opt out and Advanced Settings keeps looking like
+  Barley markup cannot forget to opt out and Advanced Settings keeps looking like
   itself. `.input-inline` remains for the legacy components (note editor, chat
   input) that use it deliberately.
 
@@ -232,7 +232,7 @@ colour modes. Every removed bridge method is gone from `window.electronAPI`;
 
 - **Done: the inventory** (2026-08-22) — `docs/openwhispr-inventory.md`. Every
   renderer surface classified by import reachability over the whole repository's
-  graph, not by reading: six entry points, **Oats primary 16 components / 5,332
+  graph, not by reading: six entry points, **Barley primary 16 components / 5,332
   lines**, **Advanced Settings 46 / 11,242**, **agent overlay 12 / 1,318**, and
   **67 files / 10,471 lines reachable by nothing at all** — the whole OpenWhispr
   notes application, deleted, along with nine orphaned `ui/` primitives and five
@@ -259,7 +259,7 @@ before code.
 
 **Done: the excerpt and its provenance.** A result now shows the passage that
 matched, marked, under a label saying where it came from — `said` for the
-transcript, `summary` for what Oats wrote, `title` for the name, `related` for a
+transcript, `summary` for what Barley wrote, `title` for the name, `related` for a
 vector-index suggestion with no literal match. Transcript excerpts render in mono
 (§5's verbatim voice), summaries in sans. Ranking is transcript > summary >
 title, because what somebody said is better evidence than what a 1.5B model wrote
@@ -323,9 +323,9 @@ was said. Transcript chunks want their own collection, like
 **Done: open and researched questions, with links to the exact utterance.** The
 reading view opened on the summary — prose from a local 1.5B model CLAUDE.md is
 explicit "frequently does not" succeed — and that was the first and only thing
-you saw, while Oats was already holding facts it knows exactly and showing none
+you saw, while Barley was already holding facts it knows exactly and showing none
 of them. `helpers/conversationReview.mjs` (pure, 9 pins) reports what nobody
-answered, how each one came out, which ones Oats went and searched, and which
+answered, how each one came out, which ones Barley went and searched, and which
 threads were left open. It renders **above** the summary: an evidence tool that
 leads with a model's prose is asking you to trust the weakest thing on the page.
 
@@ -338,7 +338,7 @@ the Transcript tab with that turn inked and on screen.
 **Deliberately not done: decisions, commitments and owners.** Detecting those
 means pattern-matching intent, and this product's posture on inference is set by
 the question rules — local patterns first, the model only refining, a false
-positive treated as expensive. A commitment Oats invented and attributed to
+positive treated as expensive. A commitment Barley invented and attributed to
 somebody in the room is exactly that kind of expensive. It wants its own pass,
 with both-direction pins the way `conversationAide` has, and probably its own
 critic loop.
@@ -428,7 +428,7 @@ leaves the device. `docs/network-allowlist.md` was already accurate.
 
 ## P1 — art-direction reset: private conversation ledger
 
-The visual problem is not a missing polish pass. Oats currently carries two
+The visual problem is not a missing polish pass. Barley currently carries two
 brands at once: a high-signal, private conversation tool and a literal pastoral
 world. The field system is a complete second identity — slate-blue sky, warm
 horizon, wheat, birds, chaff, and a Japanese farmhouse — behind a product that
@@ -456,7 +456,7 @@ It should not survive merely because it is beautiful.
 
 ### Replacement thesis
 
-Build Oats as a **private conversation ledger**, not a field:
+Build Barley as a **private conversation ledger**, not a field:
 
 > A living local record of thought, with the evidence of a conversation made
 > visible but never made theatrical.
@@ -476,7 +476,7 @@ The oat is a grain in the margin, not a countryside behind the document.
 - Render questions as margin annotations connected to their place in the live
   trace, rather than floating rounded cards from a separate application window.
 - ~~Dock the shared Conversation Signal Rail in the control panel when it is
-  open; use a detached overlay only when Oats is hidden or minimized.~~
+  open; use a detached overlay only when Barley is hidden or minimized.~~
   **Superseded 2026-08-20:** the detached overlay is deleted, not kept as a
   fallback — see P1.5 above. The rail is docked, always. What survives from this
   bullet is the part the reset actually cares about: cards must stop reading as
@@ -503,7 +503,7 @@ The oat is a grain in the margin, not a countryside behind the document.
   copy are enough.
 - Redesign onboarding in the same system. The inherited card/wizard form,
   progress/footer controls, rounded pills, and Lucide icon furniture currently
-  make first run look like a different product from the Oats workspace.
+  make first run look like a different product from the Barley workspace.
 - Do not retain legacy rounded-card/pill language as the visual default just
   because it is already available in shadcn/OpenWhispr components.
 
@@ -530,7 +530,7 @@ The oat is a grain in the margin, not a countryside behind the document.
 - The “one accent / one idea” rule is useful discipline, not an excuse for every
   screen to be empty or for meaningful state to become visually timid.
 
-**Done when:** a real visual review can describe Oats as a private evidence tool
+**Done when:** a real visual review can describe Barley as a private evidence tool
 without mentioning a field, sky, rural scene, or meditation app; the signature
 element is visibly derived from what was said in the conversation.
 
@@ -660,7 +660,7 @@ language in Settings is one click and is the highest-value thing a user can do.
 owner's credits), upstream's `--device` GPU index, and ~3,000 lines of
 divergence in upstream `audioManager.js`. The pre-Oats build feels different
 because it defaults `useLocalWhisper` to **false** and transcribes in the cloud;
-Oats keeps local on purpose, and local is now much closer.
+Barley keeps local on purpose, and local is now much closer.
 
 ## Backlog close-out (2026-08-24)
 
@@ -829,7 +829,7 @@ fixed and measured; none of it was found by reading.
 
 **The seam**
 
-- **`font-mono` never applied to a button inside an Oats surface.** An
+- **`font-mono` never applied to a button inside a Barley surface.** An
   unlayered `button { font-family }` rule — the trap `CLAUDE.md` documents for
   headings and inputs — was not scoped out of `.oats-surface`. Copy, Save,
   Delete, Back, Map, Change and the map's subjects render in mono as written.

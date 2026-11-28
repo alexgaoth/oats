@@ -1,6 +1,6 @@
-# Oats — Implementation Plan
+# Barley — Implementation Plan
 
-**Product:** Oats · **Status:** Stages 0–6 landed; Stages 8–10 built and unit-tested but not yet exercised against real speech; Stage 7 release proof outstanding. `TODO.md` is the live tracker · **Doc owner:** (you)
+**Product:** Barley · **Status:** Stages 0–6 landed; Stages 8–10 built and unit-tested but not yet exercised against real speech; Stage 7 release proof outstanding. `TODO.md` is the live tracker · **Doc owner:** (you)
 
 > This is the build plan for `oats-arum` — a fresh repository that realizes the
 > vision in `../oats/PRODUCT.md`. It is a working document; each stage has an
@@ -12,7 +12,7 @@
 
 ### Product-direction update (2026-07-28)
 
-The previous Stage 5 UI handoff is superseded by a deliberate product reset. Oats
+The previous Stage 5 UI handoff is superseded by a deliberate product reset. Barley
 must not resemble OpenWhispr in visual language or information architecture.
 The primary control-panel experience is now exactly **Conversation**,
 **Intelligence**, and **Settings** (`src/components/OatsWorkspace.tsx`).
@@ -65,7 +65,7 @@ previously did not describe at all, and they are the bulk of the remaining work.
 | 0 Bootstrap               | `3a798a0`                                          | ✅ done                                                                                                                                                                                  |
 | 1 Import + green baseline | `8fd2b97`                                          | ✅ done (full manual conversation-aide smoke test still needs a human)                                                                                                                   |
 | 2 Cut SaaS umbilical      | `dfc4808`                                          | ✅ done — accounts/sync/workspaces/referrals/usage/OpenWhispr-cloud gone; local + BYOK only. Trace in `docs/deletion-checklist.md`. Live network-trace confirmation deferred to Stage 7. |
-| 3 Rebrand → Oats/arum     | `b61f53d`                                          | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components.            |
+| 3 Rebrand → Barley/arum     | `b61f53d`                                          | ✅ done — identity, oat design tokens (verified vs DESIGN.md §3 in both modes), husked-oat icon, full string + 10-locale sweep. Stale OpenWhispr-blue purged from components.            |
 | 4 Strip to scope          | `de4f92a`, `68ea388`, `d19f394` + current worktree | ✅ done — Corti and its secrets, IPC, streaming, registry, picker, routing, and tests are removed.                                                                                       |
 | 5 Refurbish UI            | current worktree                                   | ✅ regression repaired in Stage 10 — the pulse, the oat seed, and the token-only styling are back on the reset workspace.                                                                |
 | 6 Model bundling          | current worktree                                   | ✅ done — release builds download and bundle Whisper `base`; first run copies it into the local model cache before startup. Confirmed present in the built RPM.                          |
@@ -84,9 +84,9 @@ question detection quality, the topic-shift thresholds behind the stack and the
 graphs, and suggestion relevance are all tuned against scripted utterances only.
 Do not record those as validated in a release.
 
-**Stage 7 — RPM built 2026-07-28.** `dist/Oats-1.7.6-linux-x86_64.rpm`, 455 MB,
+**Stage 7 — RPM built 2026-07-28.** `dist/Barley-1.7.6-linux-x86_64.rpm`, 455 MB,
 after `libxcrypt-compat-4.5.2-3.fc44` cleared the `fpm` blocker. Read-only
-inspection: `oats 1.7.6-1 x86_64`, MIT, `/opt/Oats/oats`, `oats.desktop`, correct
+inspection: `oats 1.7.6-1 x86_64`, MIT, `/opt/Barley/oats`, `oats.desktop`, correct
 runtime deps, and `resources/bin/whisper-models/ggml-base.bin` present — Stage 6's
 offline first run genuinely ships. That build predates Stages 8–10; rebuild before
 using it as release evidence. Installing it and launching the GUI is left to a
@@ -118,7 +118,7 @@ models are installed.
 - **Fedora RPM pipeline works end to end** via `electron-builder --linux rpm`:
   electron download, app packaging into `dist/linux-unpacked/`, `afterPack`
   binary stripping/verification, and `fpm` download all succeed, and the `fpm`
-  command is correctly formed (maps the app to `/opt/Oats`, installs
+  command is correctly formed (maps the app to `/opt/Barley`, installs
   `oats.desktop` + icon, declares the right runtime deps). The build stopped at the
   **final `fpm` invocation only** because electron-builder's bundled Ruby needs
   **`libcrypt.so.1`**, which Fedora 44 does not ship by default (it moved to
@@ -151,7 +151,7 @@ carries everything a reader needs.
 ## 1. Strategy in one paragraph
 
 `../oats` is already a working **OpenWhispr 1.7.6** Electron fork that carries the
-**first wave** of Oats work (the `conversationAide` / `conversationGraph` core,
+**first wave** of Barley work (the `conversationAide` / `conversationGraph` core,
 `oats-setup-check`, the `test:oats` suite, and rebranded prose docs). What it does
 **not** yet have is the _subtraction_: it still ships OpenWhispr's SaaS umbilical
 (accounts, cloud API, sync, workspaces, referrals, usage meters, upgrade prompts)
@@ -212,7 +212,7 @@ wins; raise the conflict rather than silently diverging.
 | `main.js`                                           | ~1,711 lines — Electron main process                                                          | **Rebrand + prune** (SaaS IPC, auth, update feed)                    |
 | `preload.js`                                        | ~1,009 lines — IPC bridge                                                                     | **Rebrand + prune**                                                  |
 | `src/` renderer                                     | React 19 + Vite 8 + Tailwind v4 + shadcn/ui; entry `src/main.jsx` → `App.jsx`/`AppRouter.jsx` | **Selective** — see ledger                                           |
-| `src/helpers/conversation*.mjs`                     | The Oats core (aide + graph)                                                                  | **Move verbatim** (crown jewels)                                     |
+| `src/helpers/conversation*.mjs`                     | The Barley core (aide + graph)                                                                  | **Move verbatim** (crown jewels)                                     |
 | `src/helpers/`                                      | 120 files — audio, meeting detection, IPC handlers, model mgmt                                | **Mostly keep**, prune SaaS members                                  |
 | `scripts/`                                          | 39 build/download scripts                                                                     | **Keep mac+linux**, cut Windows/`nircmd`                             |
 | `resources/`, `native/`, `nix/`, `flake.nix`        | binaries, native helpers, Nix env                                                             | **Keep** (mac+linux subset)                                          |
@@ -221,7 +221,7 @@ wins; raise the conflict rather than silently diverging.
 | `src/dist/`                                         | 66 committed build artifacts                                                                  | **DO NOT import** — generated output                                 |
 | `node_modules/`, `package-lock.json` regen          | deps                                                                                          | Reinstall clean via `npm ci`                                         |
 | `CHANGELOG.md` (169KB, OpenWhispr's)                | upstream history                                                                              | **Do not import** — start fresh `CHANGELOG.md`                       |
-| `PRODUCT.md`, `README.md`, `UPSTREAM.md`, `LICENSE` | docs + MIT                                                                                    | **Import** (README already Oats-branded; keep MIT + upstream credit) |
+| `PRODUCT.md`, `README.md`, `UPSTREAM.md`, `LICENSE` | docs + MIT                                                                                    | **Import** (README already Barley-branded; keep MIT + upstream credit) |
 | `DESIGN.md`                                         | visual language / token spec (this repo)                                                      | **Authoritative** for Stages 3 & 5                                   |
 
 ---
@@ -232,7 +232,7 @@ The master classification. Everything in `../oats` lands in exactly one column.
 
 ### KEEP — move verbatim (functional, local, on-brand)
 
-- **Oats core:** `conversationAide.mjs`, `conversationGraph.mjs` + `.js` wrappers,
+- **Barley core:** `conversationAide.mjs`, `conversationGraph.mjs` + `.js` wrappers,
   `conversationChunker.js`, `noteSearch.js`, and their `test:oats` suites.
 - **Transcription:** whisper.cpp / Parakeet integration, `whisper-server` helper,
   VAD, `download-whisper-*`, `download-sherpa-onnx`.
@@ -255,13 +255,13 @@ The master classification. Everything in `../oats` lands in exactly one column.
 ### REBRAND — move, then rewrite identity only
 
 - `package.json` (`name`, `author`, description, keywords).
-- `electron-builder.json` (`appId` → `com.arum.oats`, `productName` → `Oats`,
+- `electron-builder.json` (`appId` → `com.arum.oats`, `productName` → `Barley`,
   protocol scheme `openwhispr` → `oats`, icon refs, signing identity, `publish` feed).
 - `main.js` / `preload.js` / `src/types/electron.ts` — window titles, protocol
   handler, `OPENWHISPR_LOG_LEVEL` → `OATS_LOG_LEVEL`, menu labels, user-data dir.
-- Icons/assets: `src/assets/icons/`, `src/assets/openwhispr.icon` → Oats/arum art.
+- Icons/assets: `src/assets/icons/`, `src/assets/openwhispr.icon` → Barley/arum art.
 - All user-facing strings + `src/locales/*/translation.json` mentioning "OpenWhispr".
-- Docs: `README.md` (already Oats), `UPSTREAM.md`, `SECURITY.md`, `docs/network-allowlist.md`.
+- Docs: `README.md` (already Barley), `UPSTREAM.md`, `SECURITY.md`, `docs/network-allowlist.md`.
 
 ### CUT — delete (SaaS umbilical or out of scope)
 
@@ -313,7 +313,7 @@ strip, reskin, bundle, and prove.
 
 ### Stage 1 — Import the engine + green baseline
 
-**Goal:** a byte-for-byte working Oats-as-it-stands, building and testing green,
+**Goal:** a byte-for-byte working Barley-as-it-stands, building and testing green,
 _before_ any subtraction — so every later deletion is bisectable.
 
 - Copy the full `../oats` tree **excluding** `node_modules/`, `src/dist/`, `.git/`, `CHANGELOG.md`, Windows-only scripts.
@@ -340,11 +340,11 @@ workspaces, referrals, usage, or upgrade paths remain. PRODUCT.md §140's "Next 
 
 **Gate:** `verify:oats` green after deletions; `grep -ri "openwhispr.com\|better-auth\|SyncService\|useUsage" src main.js preload.js` returns nothing (except intentional upstream credit); a live network trace of a full session shows zero traffic to OpenWhispr hosts.
 
-### Stage 3 — Rebrand to Oats / arum
+### Stage 3 — Rebrand to Barley / arum
 
 **Goal:** no OpenWhispr identity remains except the MIT upstream credit.
 
-- `appId: com.arum.oats`, `productName: Oats`, protocol `oats://`, `OATS_LOG_LEVEL`.
+- `appId: com.arum.oats`, `productName: Barley`, protocol `oats://`, `OATS_LOG_LEVEL`.
 - **Land the design tokens (DESIGN.md §3, §6, §8, §13):** overwrite the `@theme`
   block in `src/index.css` with the oat palette (retire the blue `--color-primary`
   / violet `--color-accent`), add the `.dark` Steel-cut overrides, `--motion-*`
@@ -353,11 +353,11 @@ workspaces, referrals, usage, or upgrade paths remain. PRODUCT.md §140's "Next 
   replace `openwhispr.icon` and the `compile:mac-icon` source. Wordmark is lowercase.
 - `publish` feed → arum's GitHub repo (or disable auto-update for v1; decide in Stage 7).
 - Sweep all strings, menus, window titles, `NS*UsageDescription`, and `src/locales/*`
-  to the Oats voice (DESIGN.md §11: lowercase-friendly, no exclamations, privacy-as-fact).
+  to the Barley voice (DESIGN.md §11: lowercase-friendly, no exclamations, privacy-as-fact).
 - `package.json` name/author/description/keywords.
 
 **Gate:** `grep -ri "openwhispr" src main.js preload.js electron-builder.json` → only
-the LICENSE/UPSTREAM credit lines; app launches branded as Oats; the `@theme` block
+the LICENSE/UPSTREAM credit lines; app launches branded as Barley; the `@theme` block
 carries the oat palette in both modes and no component references a raw color literal.
 
 ### Stage 4 — Strip to scope
@@ -599,7 +599,7 @@ text contrast meets §12.
 Stage 0  Bootstrap ─────────────► empty, well-formed repo
 Stage 1  Import + baseline ─────► verify:oats GREEN (reference point)
 Stage 2  Cut SaaS umbilical ⭐ ─► zero OpenWhispr-host traffic
-Stage 3  Rebrand → Oats/arum ──► no OpenWhispr identity (except credit)
+Stage 3  Rebrand → Barley/arum ──► no OpenWhispr identity (except credit)
 Stage 4  Strip to scope ───────► core loop + local chat only
 Stage 5  Refurbish UI ─────────► ≤3-step onboarding (regressed by the reset)
 Stage 6  Bundle + first-run ───► offline zero-click first conversation
@@ -610,7 +610,7 @@ Stage 10 Sleek pass ───────────► DESIGN conformance + Se
 ```
 
 Stages 0–7 earn the right to exist: trivial setup, genuinely local, provably
-private. Stages 8–10 are the reason anyone would choose Oats over a recorder —
+private. Stages 8–10 are the reason anyone would choose Barley over a recorder —
 catching what was asked, remembering what was left open, and showing where the
 conversation actually went.
 
@@ -620,7 +620,7 @@ conversation actually went.
 
 iPhone is a goal, not a port. The desktop application is Electron with local
 whisper.cpp, a Qdrant sidecar, and better-sqlite3 — none of which run on iOS — so
-"Oats on iPhone" means a **second implementation**, which is exactly the cost that
+"Barley on iPhone" means a **second implementation**, which is exactly the cost that
 ruled out the Muesli path for Fedora.
 
 Two shapes, to be decided with real usage rather than now:

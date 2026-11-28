@@ -1,14 +1,14 @@
-# Oats network allowlist
+# Barley network allowlist
 
-**Proposal for review:** The feature routes below describe the proposed Oats
+**Proposal for review:** The feature routes below describe the proposed Barley
 0.4 behavior. They do not change the allowlist for a released version.
 
-Oats can run a complete conversation offline: a fresh install records, transcribes
+Barley can run a complete conversation offline: a fresh install records, transcribes
 with its bundled Whisper models (`small.en` and `base` on Apple Silicon, `base.en`
 and `base` elsewhere), catches questions, creates a note, and shows the
 conversation structure with no connection at all.
 
-With all three features on this computer, Oats does not send their audio,
+With all three features on this computer, Barley does not send their audio,
 transcripts, or summaries to an AI provider. No OpenWhispr service, account
 service, analytics endpoint, calendar service, or automatic update feed is
 contacted. v1 updates are signed manual downloads.
@@ -32,7 +32,7 @@ Nothing of the builder's machine is packed into the app — in particular no
 
 | Host                                            | What is sent                                                                                                                                                                                                                                                                   |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Your configured search host (Google by default) | **The text of a question only.** Triggered only by a _confirmed negative_ — a detected question that somebody was asked and answered with “I don't know”, above the confidence threshold. Oats opens an encoded HTTPS URL in the browser; it never fetches or scrapes results. |
+| Your configured search host (Google by default) | **The text of a question only.** Triggered only by a _confirmed negative_ — a detected question that somebody was asked and answered with “I don't know”, above the confidence threshold. Barley opens an encoded HTTPS URL in the browser; it never fetches or scrapes results. |
 
 Scope limits that make this safe to state plainly:
 
@@ -43,7 +43,7 @@ Scope limits that make this safe to state plainly:
   those records its outcome on the card and stops there.
 - The URL is host-validated and HTTPS-only, built by `buildSearchUrl` and checked
   by `validateSearchUrl` in `src/helpers/conversationAide.mjs`.
-- Oats hands the URL to the system browser and does not read the response. It
+- Barley hands the URL to the system browser and does not read the response. It
   asks `xdg-settings` for the default browser so the result can open in its own
   window rather than as a tab in whatever window was last focused; that is a
   local lookup, not a network call, and the destination host is unchanged.
@@ -58,14 +58,14 @@ available. Changing the default keeps exceptions that differ from the new
 default. The Settings disclosure lists only features that currently use a
 cloud provider.
 
-| Feature | Key it uses | What Oats sends |
+| Feature | Key it uses | What Barley sends |
 | --- | --- | --- |
 | Conversations | Your OpenAI key | A conversation's audio for live transcription. With "With an API key, rooms on this Mac" and Parakeet Ultra on disk, only calls go: a room is transcribed on the Mac. This route does not send transcripts for writing. |
 | Dictation | Your OpenAI key | Dictated audio for transcription. If cleanup is on, the recognized text and cleanup instructions go to OpenAI too. A custom dictionary can supply transcription and cleanup hints. |
 | Writing | Your OpenAI or Anthropic key | Transcript text for summaries, titles, topic names and descriptions. Other writing requests can include topic labels, summaries, or context passages, as detailed below. Writing does not send audio. |
 
 The key route needs a usable key for that provider. A missing or refused key
-keeps the feature local. If a saved exception loses its key, Oats asks for
+keeps the feature local. If a saved exception loses its key, Barley asks for
 the same provider's key and does not switch providers automatically. An
 explicitly selected local route can authorize its downloads. A local fallback
 because a key is missing cannot.
@@ -74,12 +74,12 @@ File uploads and separately enabled integrations have their own settings.
 ## Automatic, once: Parakeet for Conversations
 
 On eligible Apple Silicon Macs, a local Conversations route can fetch
-Parakeet Ultra from `huggingface.co` and its CDN. Oats requests model files,
+Parakeet Ultra from `huggingface.co` and its CDN. Barley requests model files,
 not conversation data. The download waits until setup and does not start
 during a recording. Bundled Whisper, or an eligible installed Turbo, works
 while Parakeet is unavailable.
 
-On the API-key route Oats never fetches it by itself. Settings › AI models
+On the API-key route Barley never fetches it by itself. Settings › AI models
 offers it for rooms on an eligible Mac, and the same hosts serve it when the
 person presses Download (2026-11-27).
 
@@ -89,14 +89,14 @@ person presses Download (2026-11-27).
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `huggingface.co` and its LFS/CDN hosts | `ggml-large-v3-turbo-q5_0.bin` (574 MB) from `ggerganov/whisper.cpp`, the repository of every other Whisper model. Nothing is sent but the request for the file. |
 
-At first launch and after each update, Oats times one 5-second clip on this
+At first launch and after each update, Barley times one 5-second clip on this
 Mac's GPU, on its own speech server, with no connection
 (`src/helpers/deviceTier.js`). When the result says the Mac can run
-`large-v3-turbo` live (`src/helpers/speechTier.mjs`), Oats can download it
+`large-v3-turbo` live (`src/helpers/speechTier.mjs`), Barley can download it
 after setup if local Dictation uses Whisper, or if local Conversations needs
 Whisper without an eligible Parakeet route. The speech model must follow
 the default. The download does not start during a recording.
-When Oats starts it by itself, a notice in the corner says so once,
+When Barley starts it by itself, a notice in the corner says so once,
 with its size, its host and a Cancel button: after setup on a new install
 that went on before the check was done, and at the first launch of this
 version on an existing one, which never sees the setup screen. The sidebar
@@ -115,18 +115,18 @@ Linux, and Macs that measure too slow never fetch it.
 
 With Writing on this computer, the title and
 summary of each conversation are written by a local model. When none is ready
-and the writing setting follows the default, Oats downloads the one this
+and the writing setting follows the default, Barley downloads the one this
 computer's memory holds (`src/helpers/writingTier.mjs`). It waits until
 setup is complete and no recording is active. A model the
 person chose stops it, and so does a
-writing model already on disk. When Oats starts it by itself, a notice in the
+writing model already on disk. When Barley starts it by itself, a notice in the
 corner says so once, with its size, its host and a Cancel button; the sidebar
 and Settings › AI models show its progress with a Cancel button. It goes
 through `downloadUtils.js`, like every model download, so the sidebar's
 request count includes it, and its disk-space check runs first. A cancelled or
 deleted model is not fetched again unless the person asks for it in Settings
 (`src/helpers/writingModelFetch.js`). After the person deletes any writing
-model, Oats fetches none by itself until they choose a model or press
+model, Barley fetches none by itself until they choose a model or press
 Download. Choosing another model, or switching Writing to a key, stops its
 automatic download. A key route in another feature does not change this rule.
 
@@ -150,7 +150,7 @@ the model Anthropic picks for that kind of refusal, on the same host
 
 Checking a key: adding an OpenAI or Anthropic key, in setup or in Settings ›
 AI models, checks it with that provider before it is saved. One request,
-`GET /v1/models/{model}` for the model Oats would write with, with no tokens
+`GET /v1/models/{model}` for the model Barley would write with, with no tokens
 and no conversation text. It goes to the provider's own host,
 `api.openai.com` or `api.anthropic.com`, never to a custom endpoint the
 writing model may use (`src/services/ReasoningService.ts`; the Anthropic
@@ -165,7 +165,7 @@ queue (`src/stores/summaryQueueStore.ts`). The queue sends to a cloud
 provider only if that provider was active for Writing at Finish. Adding a
 key does not automatically send conversations that finished on the local
 fallback. Opening a conversation can start a summary with the current
-route. Oats does not retry a failed cloud summary in the background.
+route. Barley does not retry a failed cloud summary in the background.
 
 Choosing a conversation's group (Work, Personal, or the person's own) uses the
 writing model that wrote its summary, by the same route, so it adds no
@@ -183,7 +183,7 @@ or Anthropic as the writing model, that provider's most accurate model for
 names when the key can use it (`src/helpers/topicModels.mjs`: OpenAI's
 gpt-6-astra, else gpt-6.1-sol or gpt-6.1-terra; Anthropic's claude-opus-5-5,
 else claude-sonnet-5-5), by the same key and to the same host; with any other
-route, the writing model itself. Once per app session Oats asks OpenAI or
+route, the writing model itself. Once per app session Barley asks OpenAI or
 Anthropic whether the key can use the naming model (`GET /v1/models/{model}`, no
 conversation text; with no key, nothing is sent). The model gets one short
 request per topic when the topic holds 40 words, again each time the topic has
@@ -221,7 +221,7 @@ accurate model for the check confirms each proposed change and names the new
 topic (`src/helpers/topicModels.mjs`): with OpenAI, gpt-5.6-terra with
 reasoning off, else gpt-6.1-terra, gpt-6.1-sol, gpt-6-luna or gpt-5.6-luna;
 with Anthropic, claude-opus-5-5 at effort low, else claude-haiku-5-5. Once per
-app session Oats asks the provider whether the key can use them (`GET
+app session Barley asks the provider whether the key can use them (`GET
 /v1/models/{model}`, no conversation text; with no key, nothing is sent). Each
 request carries the topics' names and one-line descriptions and at most 3,000
 characters of what was said around the proposed change (or at the end of a
@@ -275,7 +275,7 @@ request: the question, the reply, and at most four passages from the team
 folder or from past conversations (`src/helpers/contextCheck.mjs`). With a
 model on this computer, nothing leaves. With a cloud provider selected, that
 request goes to the provider. The team folder is read from disk and never
-synced by Oats; its text reaches a model only as those passages
+synced by Barley; its text reaches a model only as those passages
 (`src/helpers/contextService.js`).
 
 ## The context check's agent (off by default)
@@ -292,7 +292,7 @@ off by default and runs only after the user turns it on in Settings.
   user's own account, model and settings for it.
 - **Read through Claude Code:** the user's connected services, GitHub,
   Linear, Notion and Slack, through the plugins and MCP servers Claude Code
-  already has. The search text the agent writes goes to those services. Oats
+  already has. The search text the agent writes goes to those services. Barley
   stores no token for any of them.
 - **Read only.** The run allows only read tools of those four services, by
   name, and refuses every other tool: no shell, no file writes, no web fetch,
@@ -311,7 +311,7 @@ auto-updater is off for the run.
 
 ## How the sidebar counts what leaves
 
-The foot of the sidebar shows how many requests Oats sent to another computer
+The foot of the sidebar shows how many requests Barley sent to another computer
 since it launched ("0 network requests since launch"). A number that misses a
 path is worse than no number, so it is shown only because every path below is
 either counted or zero by construction. `src/helpers/networkLedger.js` counts;
@@ -332,7 +332,7 @@ and schemes that are not network requests (`file://`, `devtools://`, `data:`,
 | Spellcheck dictionaries (Linux and Windows; macOS uses its own spellchecker)                                                         | Chromium, for a window with spellcheck on                                       | `spellcheck-dictionary-download-begin`                                                                                                                                            |
 | Node `http` and `https` in the main process                                                                                          | Realtime transcription sockets (`ws`), Tinfoil, the AWS SDK                     | The `http.client.request.created` diagnostics channel                                                                                                                             |
 | Node `fetch` in the main process                                                                                                     | AI SDK providers (Bedrock, Azure, Vertex), Tinfoil attestation                  | The `undici:request:create` diagnostics channel                                                                                                                                   |
-| A link opened in the browser                                                                                                         | The question search, links in Settings                                          | `shell.openExternal` is wrapped; the Linux new-window launch records itself. One link is one request: the browser makes it, but Oats chose what it carries                        |
+| A link opened in the browser                                                                                                         | The question search, links in Settings                                          | `shell.openExternal` is wrapped; the Linux new-window launch records itself. One link is one request: the browser makes it, but Barley chose what it carries                        |
 | Claude Code, run by the context check (off by default)                                                                               | Checking a question against GitHub, Linear, Notion and Slack                    | Recorded by `contextAgentRunner.js` itself: one for Anthropic's API when Claude Code starts, and one for each service it reads from                                               |
 | Sidecars: whisper-server, llama-server, Qdrant, sherpa-onnx, the Parakeet Neural Engine helper, ffmpeg, the echo-cancellation helper | Speech, writing, search, speakers                                               | Zero by construction: they listen on loopback and read local files. llama-server runs with `LLAMA_ARG_OFFLINE=1`, so its own downloader cannot run, and Qdrant's telemetry is off |
 | The ONNX utility process                                                                                                             | Embeddings and speaker models                                                   | Zero by construction: it loads only `fs`, `os`, `path` and `onnxruntime-node`                                                                                                     |
@@ -340,7 +340,7 @@ and schemes that are not network requests (`file://`, `devtools://`, `data:`,
 
 Not counted separately: the DNS lookups, proxy auto-config fetches and
 certificate checks that a counted request causes. The count lives in memory and
-starts again at zero when Oats launches.
+starts again at zero when Barley launches.
 
 ## Release verification
 

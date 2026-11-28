@@ -2,7 +2,7 @@
 
 Question (Alex, 2026-10-26): fast, high-throughput models are cheap and quick
 enough to call all through a conversation, not only now and then. Does a fast
-model in the loop beat what Oats has, and by how much?
+model in the loop beat what Barley has, and by how much?
 
 This page has the answer, the numbers, how they were measured, and what to
 build. Every number comes from the scripts named here, on public data (the AMI
@@ -189,7 +189,7 @@ mid-way) are left out of the tables; each model was run again.
 - **VF: no.** The record keeps the on-device cut at Finish, with #121's names
   on top.
 - **Live view: V4**, only when the writing model is OpenAI's and there is an
-  OpenAI key. Oats uses gpt-6-luna when the key can use it, else gpt-5.6-luna,
+  OpenAI key. Barley uses gpt-6-luna when the key can use it, else gpt-5.6-luna,
   and asks once a session (`GET /v1/models/{model}`, no tokens). Every other
   provider and every model on this computer keep #121's names as they were.
   (Since 2026-10-28: OpenAI or Anthropic, with the models above.)
@@ -793,7 +793,7 @@ holds it to +0.2.
   hour (main moves 206; 429 on the far-field meetings).
 - **Needs a fast model, not a setting.** The writing model is often a slow or
   dear one (V3 with Claude Sonnet 5.5: $0.50 an hour, 1.7 s a request), and only
-  OpenAI's small models help. So Oats would pick the provider's measured fast
+  OpenAI's small models help. So Barley would pick the provider's measured fast
   model, with no new setting: with an OpenAI key, gpt-5.6-luna (in the app's
   list; V3 with it: live Pk 0.279, paired −0.077 [−0.125, −0.030], $0.027 an
   hour) or gpt-6-luna. For every other provider and for models on this computer

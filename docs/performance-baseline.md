@@ -10,9 +10,9 @@ npm run perf:baseline                            # print a table
 npm run perf:baseline -- --json fedora-2026-08-19  # also write docs/perf/<name>.json
 ```
 
-`scripts/perf-baseline.js` launches an isolated Oats on the **staging** channel,
+`scripts/perf-baseline.js` launches an isolated Barley on the **staging** channel,
 so it gets its own `userData` directory and its own single-instance lock and a
-development Oats can stay open beside it. It drives the three surfaces over the
+development Barley can stay open beside it. It drives the three surfaces over the
 Chrome DevTools Protocol and reports:
 
 | Metric                     | `933f7cb` | before  | after     |
@@ -116,7 +116,7 @@ from an unrecorded run.
 
 **The idle CPU was one CSS animation on a 96-pixel window.**
 `.oats-listening-pulse::before` carries `animation: oats-breathe … infinite`, and
-`src/App.jsx` — the inherited dictation panel, not the Oats `ListeningPulse`
+`src/App.jsx` — the inherited dictation panel, not the Barley `ListeningPulse`
 component — put that class in its **base** class list. So the floating oat
 breathed in every state, `idle` and `hover` included. It is always on top and
 almost always idle, `--disable-gpu-compositing` is on for Linux, and every frame
@@ -192,13 +192,13 @@ not a missing process.
 them** (`whisper-server` 185–186 MB, `qdrant` 79–100 MB, across the three
 recorded runs), and that is a trade, not a defect. `whisperManager.initializeAtStartup`
 loads the model at launch so the first recording transcribes immediately;
-Qdrant is up so the first search answers. Oats promises to work with no network
+Qdrant is up so the first search answers. Barley promises to work with no network
 and no account, and paying that to keep the promise instant is the right side of
 the trade. It is recorded here so the next person to consider making recording
 lazy knows what they would be buying.
 
 **Read PSS with one instance running.** PSS divides each shared page among every
-sharer on the machine, so a second Oats or Electron beside the measurement halves
+sharer on the machine, so a second Barley or Electron beside the measurement halves
 the pages they have in common and lowers the number for a reason that has nothing
 to do with the build.
 

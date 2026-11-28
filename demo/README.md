@@ -1,4 +1,4 @@
-# Oats demo kit
+# Barley demo kit
 
 Sample conversations, a seeded demo profile, and a browser harness that runs the
 real renderer against them, live or at rest. It is the source for README
@@ -94,14 +94,14 @@ The script opens the database with the app's own `DatabaseManager`, so the
 schema and the migrations are the app's, and inserts with
 `insertSampleConversations`. It runs on Electron's Node
 (`ELECTRON_RUN_AS_NODE=1`, like `npm run test:oats:db`): no window opens and no
-audio is touched. It refuses Oats' real profile (`~/Library/Application
+audio is touched. It refuses Barley' real profile (`~/Library/Application
 Support/oats`) and any existing directory it did not make itself (a seeded
 profile has `oats-demo-profile.json` in it).
 
-To point a real Oats at a demo profile, seed the channel directory the app uses
+To point a real Barley at a demo profile, seed the channel directory the app uses
 (`main.js` sets userData to `~/Library/Application Support/Oats-<channel>`), for
 example `--profile "~/Library/Application Support/Oats-staging"` while that
-directory does not exist yet, then start Oats with `OATS_CHANNEL=staging`.
+directory does not exist yet, then start Barley with `OATS_CHANNEL=staging`.
 Settings live in the window's localStorage, not in the database, so the first
 launch shows onboarding.
 
@@ -169,7 +169,7 @@ flow card quotes a pressed topic, as before descriptions), `badges=1` (show the 
 conversations), `autosearch=1` (turn auto-search on; the fake main process
 writes each search down instead of opening a browser, and
 `oatsDemo.searches()` lists them, so a film can show the browser opening),
-`speech=de` (Oats listens for that language instead of English, so Global
+`speech=de` (Barley listens for that language instead of English, so Global
 conversations links by words, as before it read meaning).
 `panel=true` is the app's own parameter for the workspace window.
 

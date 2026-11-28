@@ -1,9 +1,9 @@
 ---
 name: oats-design
-description: The working method for any change to how Oats looks, moves, or feels — the pencil test, the review-blocking defects, the verification loop, and when to overhaul rather than polish. Use for any UI, UX, visual, motion, copy, or information-architecture work in this repo, including "make this nicer", "this feels off", and new surfaces.
+description: The working method for any change to how Barley looks, moves, or feels — the pencil test, the review-blocking defects, the verification loop, and when to overhaul rather than polish. Use for any UI, UX, visual, motion, copy, or information-architecture work in this repo, including "make this nicer", "this feels off", and new surfaces.
 ---
 
-# Oats design
+# Barley design
 
 `DESIGN.md` is the binding spec — what things must look like. This is the
 **working method**: how to make a change, what fails review, and what has
@@ -14,13 +14,13 @@ Two general skills are installed and worth invoking alongside this one:
 `frontend-design` (aesthetic direction, subject grounding, the critique loop)
 and `web-design-guidelines` (accessibility and interaction audit). **Where they
 disagree with `DESIGN.md`, `DESIGN.md` wins.** They are written for web pages;
-Oats is a desktop instrument.
+Barley is a desktop instrument.
 
 ---
 
 ## The bar: the pencil test
 
-Everything here reduces to two properties. A pencil has both. Oats must.
+Everything here reduces to two properties. A pencil has both. Barley must.
 
 ### Reliable
 
@@ -48,7 +48,7 @@ Nobody was taught to use a pencil. You pick it up and you already know, because
 the shape tells you. There is no mode, no menu, and nothing to remember between
 uses.
 
-- Can someone who has **never seen Oats** start a conversation without reading
+- Can someone who has **never seen Barley** start a conversation without reading
   anything? If a surface needs a tooltip to be usable, the surface is wrong.
 - How many actions and how many milliseconds between *"I want this recorded"*
   and **recording**? That number is the product. Defend it.
@@ -60,7 +60,7 @@ uses.
 ### The test that overrides taste
 
 **During a conversation, does anything on screen compete with the person you are
-talking to?** If yes, it is wrong no matter how good it looks. Oats is used
+talking to?** If yes, it is wrong no matter how good it looks. Barley is used
 while its user's attention belongs to someone else in the room. That constraint
 outranks every aesthetic argument.
 

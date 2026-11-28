@@ -24,7 +24,7 @@ a history is one draw of a board. Read "Round 2" before you rely on the numbers 
   of their names (all-MiniLM-L6-v2, which the app already bundles) and names a
   subject after the topic most like the others. It finds as many links as
   today, links 0 to 2 of those 540 unrelated pairs, and its names score 0.86 to
-  1.06. The model reads English, so when Oats listens for another language the
+  1.06. The model reads English, so when Barley listens for another language the
   board links by words, as before.
 - **With a cloud writing model:** a cloud model checks the links of each new
   conversation. It sees topic names and the first sentences of each summary,
