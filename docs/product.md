@@ -1,14 +1,14 @@
-# Oats: the long-form product description
+# Barley: the long-form product description
 
 > Moved from the README on 2026-10-12, unchanged except for names that the October 2026 redesign replaced. DESIGN.md is the current design reference; where this page and DESIGN.md differ, DESIGN.md is right.
 
-Oats is a private, local-first intelligence tool for important in-person conversations. It records a conversation, then automatically turns it into a titled summary, transcript, and map of the threads that developed — while keeping audio, transcripts, summaries, and reasoning on the user's computer.
+Barley is a private, local-first intelligence tool for important in-person conversations. It records a conversation, then automatically turns it into a titled summary, transcript, and map of the threads that developed — while keeping audio, transcripts, summaries, and reasoning on the user's computer.
 
 ## Who it is for
 
 Academics, hackers, and founders — people whose day is conversations, and whose edge is remembering, connecting, and acting on what was said. People discussing unannounced research, unshipped work, and unannounced fundraises, who are correspondingly allergic to cloud services and to setup friction.
 
-The standard Oats holds itself to is a **pencil**: reliable and intuitive. A pencil has no battery, no account, no permission prompt, and no state that can be lost, and it works the ten-thousandth time exactly like the first — which is why people trust it with things that matter. Nobody was taught to use one, either; you pick it up and you already know. Oats is meant to be picked up the same way and trusted the same way, so that the tool disappears and the conversation does not.
+The standard Barley holds itself to is a **pencil**: reliable and intuitive. A pencil has no battery, no account, no permission prompt, and no state that can be lost, and it works the ten-thousandth time exactly like the first — which is why people trust it with things that matter. Nobody was taught to use one, either; you pick it up and you already know. Barley is meant to be picked up the same way and trusted the same way, so that the tool disappears and the conversation does not.
 
 The primary product deliberately has only three surfaces:
 
@@ -16,16 +16,16 @@ The primary product deliberately has only three surfaces:
 - **Intelligence** — a high-signal list of conversations. Open one to read its summary, transcript, and threads.
 - **Settings** — a small, fast page: choose local processing or one API key, then set the essentials (microphone, language, the dictation and conversation shortcuts, auto-search, and data). Everything else lives behind one **Advanced** entry.
 
-Online recording, dictation, and legacy configuration remain in the codebase for compatibility, but are not part of the primary Oats information architecture.
+Online recording, dictation, and legacy configuration remain in the codebase for compatibility, but are not part of the primary Barley information architecture.
 
 ## Catching every question
 
-During a recorded conversation, Oats catches **every question asked in the room** — not only the ones nobody answers. A card appears the moment a question is spoken, with no waiting and no gap:
+During a recorded conversation, Barley catches **every question asked in the room** — not only the ones nobody answers. A card appears the moment a question is spoken, with no waiting and no gap:
 
 1. **The card appears instantly.** Question detection is local pattern recognition, so there is no round-trip and no downtime between asking and seeing the card.
-2. **The card then resolves in place.** When Oats has judged whether the question was answered, the same card changes state rather than a second card appearing:
+2. **The card then resolves in place.** When Barley has judged whether the question was answered, the same card changes state rather than a second card appearing:
    - **Answered** — the card settles into an answered state and persists as part of the record.
-   - **Unknown** — when someone is asked and actually says they don't know, Oats **opens the search in the browser automatically**, in the background, so the answer is already waiting. The card stays behind, marked as searched.
+   - **Unknown** — when someone is asked and actually says they don't know, Barley **opens the search in the browser automatically**, in the background, so the answer is already waiting. The card stays behind, marked as searched.
    - **Silence, or a hedge** — the card records that outcome and stops there. No browser opens. Nobody answering may just mean the room moved on, and "I think so?" may well contain the answer; neither is worth a tab. The search is one click away on the card.
 
 Opening a tab mid-conversation is disruptive enough that it demands a **confirmed negative** — a question that was actually asked and actually met with "I don't know". Detection stays generous, because an extra card only costs a glance.
@@ -42,15 +42,15 @@ Auto-search is the one thing that leaves the device during a conversation, it is
 
 A recording opens on the **details**: the recording controls, the contour, the topic flow, and a full question rail on a **Questions** tab, with the live transcript on the tab beside it. **Hide details** goes to the plain view, **Clean**: the recording controls and a list of eligible questions with their reply states. It keeps every question without an answer, followed by the three most recent answered questions. **Expand details** brings the details back, on the tab you had.
 
-Oats has a second interface, chosen in Settings: the **field**, where the conversation is recorded in a field of oats that grows while you talk and withdraws when you stop. The default is the **ledger** — paper, graphite and one gold mark.
+Barley has a second interface, chosen in Settings: the **field**, where the conversation is recorded in a field of oats that grows while you talk and withdraws when you stop. The default is the **ledger** — paper, graphite and one gold mark.
 
-If you stop and start again within half an hour, Oats **resumes the same conversation** rather than asking. Appending to the same note gives one transcript, one summary, and one set of threads instead of two halves to reconcile — and recording starts on the first press, because stopping to ask would cost the opening sentences, which are usually the ones worth catching. The screen simply says which conversation it is continuing.
+If you stop and start again within half an hour, Barley **resumes the same conversation** rather than asking. Appending to the same note gives one transcript, one summary, and one set of threads instead of two halves to reconcile — and recording starts on the first press, because stopping to ask would cost the opening sentences, which are usually the ones worth catching. The screen simply says which conversation it is continuing.
 
 While recording, an **open-thread stack** sits beside the listening indicator. It stays collapsed by default as a thin rail showing how many threads were started and never finished. One click expands it into a short list — a reminder of what the conversation should return to, with no checkboxes, tasks, or urgency — and it collapses again as soon as someone speaks.
 
-Expanding it also shows **what else is worth raising**: threads the room opened and walked away from, topics that got a sentence and never developed, and subjects that in past conversations usually accompany whatever is being discussed now. These are computed locally from conversation data Oats already holds — no model call, no network — and they appear only inside the expanded stack, never as a prompt.
+Expanding it also shows **what else is worth raising**: threads the room opened and walked away from, topics that got a sentence and never developed, and subjects that in past conversations usually accompany whatever is being discussed now. These are computed locally from conversation data Barley already holds — no model call, no network — and they appear only inside the expanded stack, never as a prompt.
 
-After recording stops, Oats automatically saves the final transcript and runs its intelligence pipeline, which generates the title, the summary, and a **Threads** section capturing the important lines of thought, how they developed, and what was left unresolved.
+After recording stops, Barley automatically saves the final transcript and runs its intelligence pipeline, which generates the title, the summary, and a **Threads** section capturing the important lines of thought, how they developed, and what was left unresolved.
 
 Opening a conversation in **Intelligence** shows that summary and transcript alongside a **topic graph** — an Obsidian-style force-directed map where nodes are topics sized by time spent, and edges are the transitions between them. It shows how the conversation actually moved, including the threads that were returned to. Selecting a node opens that topic's questions and lets the search be re-run.
 
@@ -65,8 +65,8 @@ Conversations also has a **Global** view, which zooms out to every conversation 
 Details that only matter when something goes wrong, which is exactly when they matter most:
 
 - **Nothing is silently lost.** The transcript is written to the note as each utterance is finalised (debounced a couple of seconds), so a crash, a closed laptop, or an OOM kill costs at most the sentence in progress rather than the whole conversation. It used to be a blind 20-second timer, which could also lose the last thing said before a long pause.
-- **A conversation that captured nothing is not saved.** Instead of leaving a blank note behind, Oats deletes it and says the microphone heard nothing.
-- **A dead microphone is reported while it still matters.** If the input level stays at the noise floor for 30 seconds during a recording, Oats says so — rather than letting you discover it at the end.
+- **A conversation that captured nothing is not saved.** Instead of leaving a blank note behind, Barley deletes it and says the microphone heard nothing.
+- **A dead microphone is reported while it still matters.** If the input level stays at the noise floor for 30 seconds during a recording, Barley says so — rather than letting you discover it at the end.
 - **What is missing is said before the conversation, not after it.** No microphone, no permission, no speech model, or a cloud key that was never saved — each is one line under the record button, checked again on the press. Only a missing microphone stops the press; the rest warn and let you record anyway.
 - **A running conversation is visible without opening anything.** The floating oat comes back with a gold rim and a running clock for as long as one is being recorded, refuses to auto-hide, and finishes the conversation when clicked. The tray says the same thing and offers the same action.
 - **Dismissing a question card can be undone** for six seconds.
@@ -85,20 +85,20 @@ Details that only matter when something goes wrong, which is exactly when they m
 - **Honest networking:** the only thing that leaves the device during a conversation is the text of a question somebody was asked and could not answer, sent to the configured search host. It is visible in the interface and switchable off. There is no silent cloud-model fallback and no telemetry.
 - **Strong defaults:** do not make people choose a model for every feature. One processing choice powers transcription and intelligence.
 - **Small surface, hidden depth:** the visible interface stays minimal; advanced configuration exists but lives behind a deliberate, non-default path.
-- **Distinct Oats experience:** this is not an OpenWhispr reskin. Prefer sparse, deliberate, conversation-first UI over inherited feature breadth.
+- **Distinct Barley experience:** this is not an OpenWhispr reskin. Prefer sparse, deliberate, conversation-first UI over inherited feature breadth.
 - **Reliable and intuitive, like a pencil:** it must work with no network, no model, and no account; it must never lose a conversation; and it must need nothing explained. A surface that requires a tooltip to be usable is the wrong surface.
 
 ## Foundation and credit
 
-Oats is implemented as a narrow extension of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop application that already supports local dictation, meeting recording, transcription, summaries, local models, and macOS/Linux packaging. A single OpenWhispr-based implementation supports both Apple Silicon and Fedora GNOME/Wayland. Upstream provenance and remote setup are recorded in [UPSTREAM.md](./UPSTREAM.md).
+Barley is implemented as a narrow extension of [OpenWhispr](https://github.com/OpenWhispr/openwhispr), an MIT-licensed desktop application that already supports local dictation, meeting recording, transcription, summaries, local models, and macOS/Linux packaging. A single OpenWhispr-based implementation supports both Apple Silicon and Fedora GNOME/Wayland. Upstream provenance and remote setup are recorded in [UPSTREAM.md](./UPSTREAM.md).
 
 [Muesli](https://github.com/Muesli-HQ/muesli) is a strong and lighter native reference for macOS, but its Apple-Silicon-only architecture would require a second implementation for Fedora.
 
 ## Project direction
 
-The goal is for Oats to become straightforward for other people to install, understand, and use without needing to know the underlying transcription stack. It is intended to be open sourced.
+The goal is for Barley to become straightforward for other people to install, understand, and use without needing to know the underlying transcription stack. It is intended to be open sourced.
 
-The final project shape is deliberately undecided. Oats may become a focused contribution, optional feature, or add-on around OpenWhispr, or it may remain a more standalone application built on an upstream-tracking fork. That decision should follow real-world testing and discussion with the OpenWhispr maintainers rather than being forced early.
+The final project shape is deliberately undecided. Barley may become a focused contribution, optional feature, or add-on around OpenWhispr, or it may remain a more standalone application built on an upstream-tracking fork. That decision should follow real-world testing and discussion with the OpenWhispr maintainers rather than being forced early.
 
 For now, correctness, privacy, and a usable end-to-end workflow matter more than reducing dependency size. Heavy inherited dependencies are not an immediate optimization target.
 
@@ -169,7 +169,7 @@ the new defaults. Pinned by `test/helpers/meetingTranscriptionDefaults.test.js`.
 
 ### Current product reset (2026-07-28)
 
-The control panel now renders the minimal Oats workspace in `src/components/OatsWorkspace.tsx` rather than the inherited multi-view shell:
+The control panel now renders the minimal Barley workspace in `src/components/OatsWorkspace.tsx` rather than the inherited multi-view shell:
 
 - **Conversation** creates a `meeting` note and starts microphone-only (`in_room`) recording.
 - **Intelligence** shows completed meeting notes with **Summary**, **Transcript**, and **Threads** views.
@@ -183,7 +183,7 @@ Objectives 3 to 5 are **built but not yet exercised against real speech**. Their
 
 Remaining verification, which requires packaging and hardware rather than further code:
 
-- Install and smoke-test the Fedora 44 RPM on GNOME/Wayland. The RPM itself now builds: `dist/Oats-1.7.6-linux-x86_64.rpm`, with the bundled Whisper models present.
+- Install and smoke-test the Fedora 44 RPM on GNOME/Wayland. The RPM itself now builds: `dist/Barley-1.7.6-linux-x86_64.rpm`, with the bundled Whisper models present.
 - Build and smoke-test a notarized DMG on Apple Silicon.
 - Measure idle and active CPU/memory to confirm question detection stays cheap when idle.
 - Capture the release network trace described in [the allowlist](./docs/network-allowlist.md), including the auto-search case.

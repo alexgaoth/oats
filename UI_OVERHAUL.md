@@ -14,7 +14,7 @@ paper with a sidebar. Inverting that gives the product a place to live, and it i
 what justifies removing the left rail: a ground plane needs the full window width,
 and a vertical rule at 208px cuts it in half.
 
-Grounded in the subject per the `frontend-design` skill: Oats' world is oats,
+Grounded in the subject per the `frontend-design` skill: Barley' world is oats,
 paper, grain, dither, and the horizon. The boldness is spent in exactly one place
 — **a single low sun above the horizon** (§B3). Everything else stays quiet.
 
@@ -344,14 +344,14 @@ running app for its computed `transition-duration` showed it.
 
 The tokens are durations now, `--ease-oats` carries the curve, and Tailwind's
 `--default-transition-timing-function` / `--default-transition-duration` point at
-them so a bare `transition-colors` is already on the Oats curve.
+them so a bare `transition-colors` is already on the Barley curve.
 
 ### F2 was reported done and was not done
 
 `index.css` has an inherited `input:not(.input-inline)` rule giving every input a
 border, a radius and a filled background. It is an *element* selector, so it
 outranks the utilities a component sets on itself: `border-b bg-transparent` lost
-and the box came back. The Oats inputs now use that rule's own `.input-inline`
+and the box came back. The Barley inputs now use that rule's own `.input-inline`
 opt-out. Measured before: 1px border, 8px radius, filled. After: bottom hairline,
 no radius, transparent.
 
@@ -411,7 +411,7 @@ at 70% ink; density is a rendering problem and never a reason to drop a detectio
 The tally reads tidier and throws away the whole signal. A rephrasing — "have you
 used kubernetes?" then "are you familiar with k8s?" then "so you've never run a
 cluster?" — is three different sets of words with three different outcomes, and
-collapsing them to "asked 3×" erases exactly what Oats exists to catch. Every
+collapsing them to "asked 3×" erases exactly what Barley exists to catch. Every
 asking is now on screen, verbatim, with its own state mark, age and action.
 
 ### The state marks were invisible

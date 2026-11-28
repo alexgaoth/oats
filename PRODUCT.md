@@ -1,10 +1,10 @@
-# Oats — Product Vision (internal)
+# Barley — Product Vision (internal)
 
 > Git-ignored on purpose. This is the north star, not shipped docs.
 
 ## The one-liner
 
-**Oats is the tool a founder actually keeps open.** You download a DMG, and from
+**Barley is the tool a founder actually keeps open.** You download a DMG, and from
 then on, whenever you're talking to _anyone_ — a candidate, an investor, a
 customer, a cofounder — the listening session starts on your own computer. No
 account to create, no bot joining the call, no meeting link, no cloud. The most
@@ -21,11 +21,11 @@ fundraises, hiring, and roadmaps — and allergic to setup friction.
 
 The three share one profile: their work product is thinking, they are fluent
 enough to resent being condescended to, and the conversation matters more than
-any tool in the room. That last point is the binding constraint — Oats is used
+any tool in the room. That last point is the binding constraint — Barley is used
 while its user's attention belongs to someone else.
 
 **The standard is a pencil: reliable and intuitive.** Nobody has ever been let
-down by a pencil, and nobody was ever taught to use one. Oats earns daily use by
+down by a pencil, and nobody was ever taught to use one. Barley earns daily use by
 being trusted the same way and picked up the same way — no battery, no account,
 no mode, nothing to remember, and never a lost conversation.
 
@@ -37,7 +37,7 @@ Two wedges, both things the incumbents structurally can't match:
 
 The whole category makes you sign up, connect a calendar, invite a notetaker
 bot into your call, and trust their cloud with your most sensitive
-conversations. Oats is the opposite:
+conversations. Barley is the opposite:
 
 - **Download → open → talk.** No login, no key, no bot, no meeting link.(would possibly imply this product require to install Ollama and small models like qwen if the user does not have)
 - **Works the instant it's installed**, offline, out of the box.
@@ -51,7 +51,7 @@ conversations. Oats is the opposite:
 
 ### 2. Very, very human features
 
-Granola gives you a transcript and a summary. Oats is built to feel like a
+Granola gives you a transcript and a summary. Barley is built to feel like a
 sharp, quiet person sitting next to you:
 
 - **It listens the way a good colleague listens** — catches the moment someone
@@ -65,7 +65,7 @@ sharp, quiet person sitting next to you:
   what to follow up on.
 - **It acts in exactly one place, and says so.** Audio, transcripts, summaries
   and reasoning never leave the machine. The single exception is a question
-  somebody was asked and answered "I don't know" to: Oats opens that search in a
+  somebody was asked and answered "I don't know" to: Barley opens that search in a
   background browser window so the answer is already waiting. Only the question
   text is sent, it is stated on the surface that does it, and it is one toggle
   in Settings to turn off. Nothing else is ever searched, sent, or shared.
@@ -79,7 +79,7 @@ The product is one motion, repeated all day:
 
 1. Founder is about to talk to someone → one hotkey / one click starts a
    **local listening session.**
-2. Oats transcribes on-device, in real time, and watches for the human moments
+2. Barley transcribes on-device, in real time, and watches for the human moments
    worth surfacing (unanswered questions today; more signals to come).
 3. A card appears the instant a question is asked — every question, not only
    the unanswered ones — and resolves in place once the reply is read. A
@@ -93,13 +93,13 @@ Everything else we build hangs off this loop.
 
 ## Features — shipping now, and to come
 
-**Live today (inherited + Oats):** local dictation into any app, in-person and
+**Live today (inherited + Barley):** local dictation into any app, in-person and
 online-meeting recording around one mic, on-device transcription, local
 summaries/notes, semantic search, unanswered-question detection, click-to-search
 card, and the conversation **Graph** view.
 
 **The roadmap is deliberately open — "a lot of good features to come."** The
-frame for choosing them: _does it make Oats feel more human, more high-signal,
+frame for choosing them: _does it make Barley feel more human, more high-signal,
 and does it stay on-device?_ Candidates in that spirit (unordered, unpromised):
 
 - Follow-ups and commitments detected in the conversation ("I'll send you the

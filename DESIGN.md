@@ -1,13 +1,13 @@
-# Oats — Design System v2
+# Barley — Design System v2
 
 **Status:** binding. Replaces the v1 "private conversation ledger" (paper, graphite,
 gold, mono, dithering), which lives in git history.
 
-> Oats should look and behave like the best desktop tools a team already uses —
+> Barley should look and behave like the best desktop tools a team already uses —
 > Linear, Notion, Granola, Raycast — so nothing about it has to be learned. The
 > standard is the shadcn/ui (new-york) foundation, executed consistently: neutral
 > surfaces with one warm brand colour, one type family, real controls, a predictable frame. Distinction comes
-> from what Oats does with a conversation, not from novel chrome.
+> from what Barley does with a conversation, not from novel chrome.
 
 The product rules from v1 still hold and still win over taste:
 
@@ -15,7 +15,7 @@ The product rules from v1 still hold and still win over taste:
   conversation; fails loudly at the start, not quietly at the end.
 - **Nothing competes with the person in the room.** While recording, Clean shows
   status and controls. Its only conversation content is questions and their reply states.
-- **Evidence before inference.** What Oats knows for certain (marks, questions and
+- **Evidence before inference.** What Barley knows for certain (marks, questions and
   how they ended) is shown above what a model wrote.
 - **Alive, not busy** (Alex, 2026-10-11). Life comes from the oat world used as
   material (grain, field, honey, daylight) and from motion that answers what you
@@ -30,7 +30,7 @@ The product rules from v1 still hold and still win over taste:
 ```
 ┌───────────┬────────────────────────────────────────┐
 │ ●●●       │ Title                        [actions] │  52px header (drag)
-│ ◉ Oats    ├────────────────────────────────────────┤
+│ ◉ Barley    ├────────────────────────────────────────┤
 │[● Record] │                                        │
 │ ⌂ Home    │   content: max-w-3xl, px-8, py-6/8     │
 │ ☰ Convos  │                                        │
@@ -182,7 +182,7 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   key dialog puts
   its fields first, the key and then the optional name, and Save after them.
   Setup's third step, **Your models** (`onboarding/ModelsStep.tsx`), shows the
-  same rows with the status only: the downloads "Where Oats thinks" names
+  same rows with the status only: the downloads "Where Barley thinks" names
   start on its Continue and show there, then Ready. Get started does not
   wait for them.
 - Alerts are a bordered row with an icon, tinted by tone (`warning`, `danger`).
@@ -195,7 +195,7 @@ Everything comes from `src/components/ui/` (shadcn/ui new-york):
   the badge would take half of the title. Delete removes the example like any
   conversation, and the offer comes back when nothing is left.
 - **The tour** (`onboarding/OatsTour.tsx`, Alex, 2026-10-29). Setup ends with
-  five slides of what Oats does with a conversation. Each is one of the app's
+  five slides of what Barley does with a conversation. Each is one of the app's
   own components taken out of its page and given the example conversation:
   the flow card, the question cards, the contour, talk time, and what was left
   open (`helpers/oatsTour.mjs`). It shows and does not teach: a title and one
@@ -446,7 +446,7 @@ under `prefers-reduced-motion`: the dot has no ring.
   of the frame's grid columns, so the conversation reflows into the room as it
   moves, with no animation code. Under reduced motion the sidebar goes and
   comes back at once.
-- **While recording, the Oats mark says so, not a dot.** In the menu bar and in
+- **While recording, the Barley mark says so, not a dot.** In the menu bar and in
   the sidebar the mark tosses in a loop: 16 frames 72ms apart, then a 440ms rest
   (`helpers/recordingToss.mjs`, `helpers/tray.js`, `shell/OatsMark.tsx`). Under
   reduced motion, and wherever the loop cannot play, it holds one still pose:

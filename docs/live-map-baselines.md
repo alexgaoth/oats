@@ -3,7 +3,7 @@
 ## Checks 1 and 2: questions and outcomes
 
 Base: [`7337403`](https://github.com/alexgaoth/oats/commit/73374038482dd035c8e6a705c6cd4988332fe469)
-(Oats 0.3.0). Node 24.22.2. These runs use the shipped local rules. They do
+(Barley 0.3.0). Node 24.22.2. These runs use the shipped local rules. They do
 not run a classifier or open a browser. No model runs during evaluation.
 
 | AMI split | Input | Meetings | Precision | Recall | F1 | False cards/h | Outcome right (cards scored) | First card, median / p90 |

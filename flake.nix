@@ -1,5 +1,5 @@
 {
-  description = "Oats – privacy-first voice dictation, meeting transcription & notes";
+  description = "Barley – privacy-first voice dictation, meeting transcription & notes";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

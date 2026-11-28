@@ -1,6 +1,6 @@
 # Question spotting: the benchmark
 
-How well Oats spots a question in a room, quotes it, and reads what came back,
+How well Barley spots a question in a room, quotes it, and reads what came back,
 measured on the AMI meeting corpus. The script is `scripts/question-eval.mjs`;
 the gold and the scores are `scripts/lib/question-truth.mjs`. Nobody had measured
 this before. The site says "Every question, caught as it's asked".

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Oats will be documented in this file.
+All notable changes to Barley (called Oats before 0.4.0) will be documented in this file.
 
 This repository (`oats-arum`) begins fresh at Stage 0 of `IMPLEMENTATION.md`.
 It carries forward the `conversationAide`/`conversationGraph` core and other
@@ -19,3 +19,7 @@ provenance.
   `OATS_*` env vars, the oat-milk / Steel-cut design tokens (DESIGN.md §3),
   the husked-oat app icon (DESIGN.md §2), and a full brand-string + locale
   sweep (Stage 3).
+- Renamed to Barley (2026-11-28). Only the name people see changed: the
+  data folder, the bundle ID `com.arum.oats`, the keychain service and the
+  `oats://` protocol keep their names, so an update finds everything where
+  it was.
