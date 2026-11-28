@@ -4,7 +4,7 @@
       "sectionTitle": "Idioma",
       "sectionDescription": "Configura por separado el idioma de la interfaz y de la transcripción",
       "uiLabel": "Idioma de la interfaz",
-      "uiDescription": "Elige el idioma usado en la interfaz de Oats",
+      "uiDescription": "Elige el idioma usado en la interfaz de Barley",
       "transcriptionLabel": "Idioma de transcripción",
       "transcriptionDescription": "Elige el idioma que hablas para mejorar la precisión"
     },
@@ -32,20 +32,20 @@
       "show": "Mostrar panel de dictado",
       "hide": "Ocultar panel de dictado"
     },
-    "openControlPanel": "Abrir Oats",
-    "hideControlPanel": "Ocultar Oats",
-    "quit": "Salir de Oats",
-    "tooltip": "Oats",
+    "openControlPanel": "Abrir Barley",
+    "hideControlPanel": "Ocultar Barley",
+    "quit": "Salir de Barley",
+    "tooltip": "Barley",
     "conversation": {
       "start": "Iniciar conversación",
       "stop": "Detener conversación"
     },
-    "tooltipRecording": "Oats - Grabando una conversación",
+    "tooltipRecording": "Barley - Grabando una conversación",
     "searchConversations": "Buscar conversaciones…"
   },
   "menu": {
-    "appLabel": "Oats",
-    "quit": "Salir de Oats",
+    "appLabel": "Barley",
+    "quit": "Salir de Barley",
     "speech": "Voz",
     "settings": "Configuración...",
     "help": "Ayuda",
@@ -54,8 +54,8 @@
     "closeWindow": "Cerrar ventana"
   },
   "window": {
-    "voiceRecorderTitle": "Oats",
-    "controlPanelTitle": "Oats",
+    "voiceRecorderTitle": "Barley",
+    "controlPanelTitle": "Barley",
     "agentChatTitle": "Chat del agente"
   },
   "dialog": {
@@ -64,8 +64,8 @@
       "message": "No se pudo abrir el enlace en tu navegador:\n{{url}}\n\nError: {{error}}"
     },
     "loadFailure": {
-      "title": "Oats no pudo cargarse",
-      "message": "Oats no pudo cargar su interfaz.",
+      "title": "Barley no pudo cargarse",
+      "message": "Barley no pudo cargar su interfaz.",
       "detail": {
         "window": "Ventana: {{windowName}}",
         "error": "Error {{errorCode}}: {{errorDescription}}",
@@ -76,17 +76,17 @@
   },
   "startup": {
     "error": {
-      "title": "Error de inicio de Oats",
+      "title": "Error de inicio de Barley",
       "message": "No se pudo iniciar la aplicación:\n\n{{error}}\n\nPor favor, reporta este problema."
     },
     "globeHotkey": {
       "title": "Atajo Globe no disponible",
-      "message": "Oats no pudo activar el atajo de la tecla Globe.",
+      "message": "Barley no pudo activar el atajo de la tecla Globe.",
       "details": {
         "unknown": "Ocurrió un error desconocido al iniciar el proceso de escucha de Globe.",
         "fallback": "El atajo Globe permanecerá deshabilitado; los atajos actuales seguirán funcionando.",
         "devHint": "Ejecuta `npm run compile:globe` y recompila la app para regenerar el binario.",
-        "reinstallHint": "Reinstala Oats o contacta soporte si el problema persiste."
+        "reinstallHint": "Reinstala Barley o contacta soporte si el problema persiste."
       }
     }
   },
@@ -148,24 +148,24 @@
       "voiceAgent": "Agente de voz"
     },
     "permissions": {
-      "title": "Deja que Oats oiga la sala",
+      "title": "Deja que Barley oiga la sala",
       "microphoneTitle": "Micrófono",
       "microphoneReady": "Micrófono listo.",
       "microphoneGranted": "Acceso al micrófono concedido.",
-      "microphoneDescription": "Oats graba una conversación con un solo micrófono y la redacta después. No se graba nada hasta que inicies una conversación.",
+      "microphoneDescription": "Barley graba una conversación con un solo micrófono y la redacta después. No se graba nada hasta que inicies una conversación.",
       "grant": "Conceder",
       "grantAccess": "Conceder acceso",
       "accessibilityTitle": "Accesibilidad",
       "accessibilityDescription": "Escribe el texto final directamente en la aplicación que estés usando: documentos, correo, chat.",
       "testAndGrant": "Probar y conceder",
-      "requiredForApp": "Necesario para que Oats funcione",
+      "requiredForApp": "Necesario para que Barley funcione",
       "microphoneRequired": "Se requiere acceso al micrófono",
       "openSystemSettings": "Abrir Ajustes del Sistema",
       "systemAudioTitle": "Audio del Sistema",
       "systemAudioDescription": "Permite que el grabador de reuniones escuche al resto de participantes de tus llamadas: reuniones, clases, pódcasts. Puedes activarlo más tarde en Ajustes.",
       "optional": "Opcional",
       "recommended": "Recomendado",
-      "accessibilityTroubleshooting": "En Configuración del Sistema → Accesibilidad, desactiva el interruptor de Oats y vuelve a activarlo. Si eso no funciona, elimina Oats de la lista y añádelo de nuevo."
+      "accessibilityTroubleshooting": "En Configuración del Sistema → Accesibilidad, desactiva el interruptor de Barley y vuelve a activarlo. Si eso no funciona, elimina Barley de la lista y añádelo de nuevo."
     },
     "welcome": {
       "allow": "Permitir",
@@ -175,13 +175,13 @@
       "getStarted": "Empezar"
     },
     "processing": {
-      "title": "Dónde piensa Oats",
+      "title": "Dónde piensa Barley",
       "description": "Dos modelos transcriben la sala y escriben cada resumen. Funcionan aquí o con tu propia clave de API. Puedes cambiarlo después en Ajustes › Modelos de IA.",
-      "downloads": "Oats descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
-      "nothingToDownload": "Todo lo que Oats necesita ya está en este Mac.",
-      "nothingToDownloadComputer": "Todo lo que Oats necesita ya está en este ordenador.",
-      "anthropicSpeech": "Anthropic no ofrece un servicio de voz, así que la voz se queda en este Mac: Oats descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
-      "anthropicSpeechComputer": "Anthropic no ofrece un servicio de voz, así que la voz se queda en este equipo: Oats descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
+      "downloads": "Barley descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
+      "nothingToDownload": "Todo lo que Barley necesita ya está en este Mac.",
+      "nothingToDownloadComputer": "Todo lo que Barley necesita ya está en este ordenador.",
+      "anthropicSpeech": "Anthropic no ofrece un servicio de voz, así que la voz se queda en este Mac: Barley descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
+      "anthropicSpeechComputer": "Anthropic no ofrece un servicio de voz, así que la voz se queda en este equipo: Barley descarga {{models}} desde Hugging Face al continuar, en segundo plano.",
       "anthropicSpeechReady": "Anthropic no ofrece un servicio de voz, así que la voz se queda en este Mac.",
       "anthropicSpeechReadyComputer": "Anthropic no ofrece un servicio de voz, así que la voz se queda en este equipo."
     },
@@ -201,7 +201,7 @@
       "description": "Este Mac puede ejecutar Whisper Turbo, el modelo más preciso. Se descarga desde Hugging Face después de la configuración: {{size}}."
     },
     "tour": {
-      "label": "Un recorrido por Oats",
+      "label": "Un recorrido por Barley",
       "announce": "{{current}} de {{count}}: {{title}}",
       "skip": "Omitir",
       "back": "Atrás",
@@ -209,7 +209,7 @@
       "start": "Empezar",
       "topics": {
         "title": "Los temas se nombran solos",
-        "body": "Oats sigue el asunto mientras la gente habla y pone nombre a cada tema a partir de lo que se dijo."
+        "body": "Barley sigue el asunto mientras la gente habla y pone nombre a cada tema a partir de lo que se dijo."
       },
       "questions": {
         "title": "Cada pregunta tiene su tarjeta",
@@ -221,7 +221,7 @@
       },
       "voices": {
         "title": "Cada voz de la sala",
-        "body": "Un solo micrófono oye toda la sala, y Oats distingue las voces para mostrar cuánto habló cada uno."
+        "body": "Un solo micrófono oye toda la sala, y Barley distingue las voces para mostrar cuánto habló cada uno."
       },
       "open": {
         "title": "Lo que quedó abierto",
@@ -232,7 +232,7 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "No se puede conectar con Oats Cloud",
+        "title": "No se puede conectar con Barley Cloud",
         "generic": "La solicitud de red falló. Comprueba tu conexión.",
         "dnsBlocked": "El DNS no resuelve: puede que un bloqueador de anuncios o un filtro lo esté bloqueando.",
         "refused": "La conexión fue rechazada: probablemente un firewall o una VPN.",
@@ -249,7 +249,7 @@
       "problemTitle": "Hubo un problema con la actualización",
       "problemDescription": "No pudimos completar la actualización. Inténtalo más tarde.",
       "installTitle": "Instalar actualización",
-      "installDescription": "Oats se reiniciará para aplicar la actualización. Se guardará el trabajo en curso.",
+      "installDescription": "Barley se reiniciará para aplicar la actualización. Se guardará el trabajo en curso.",
       "couldNotInstallTitle": "No se pudo instalar la actualización",
       "couldNotInstallDescription": "Algo salió mal. Inténtalo de nuevo.",
       "couldNotDownloadTitle": "No se pudo descargar la actualización",
@@ -413,7 +413,7 @@
         "description": "No se pudo transcribir una parte de la grabación."
       },
       "errorDescriptions": {
-        "sessionExpired": "Tu sesión de Oats Cloud no está disponible. Vuelve a iniciar sesión desde Ajustes.",
+        "sessionExpired": "Tu sesión de Barley Cloud no está disponible. Vuelve a iniciar sesión desde Ajustes.",
         "offline": "Estás sin conexión. La transcripción en la nube requiere conexión a Internet.",
         "dailyLimitReached": "Has alcanzado el límite de transcripción de hoy. Inténtalo mañana o mejora tu plan.",
         "providerRateLimited": "Tu proveedor de transcripción limitó la solicitud. Espera un momento e inténtalo de nuevo."
@@ -489,7 +489,7 @@
       "micErrors": {
         "accessFailed": "Falló el acceso al micrófono. Inténtalo de nuevo.",
         "noMicrophones": "No se detectaron micrófonos. Conecta o selecciona un micrófono en {{settingsPath}}.",
-        "permissionDenied": "Permiso denegado. Abre {{privacyPath}} y permite Oats.",
+        "permissionDenied": "Permiso denegado. Abre {{privacyPath}} y permite Barley.",
         "couldNotStart": "No se pudo iniciar el micrófono seleccionado. Elige un dispositivo en {{settingsPath}} y vuelve a probar.",
         "noActiveInput": "No se encontró una entrada de audio activa. Elige un micrófono en {{settingsPath}}.",
         "unknown": "Falló el acceso al micrófono: {{error}}. Selecciona otro dispositivo e inténtalo de nuevo.",
@@ -518,8 +518,8 @@
         "accessibilityNeeded": "Concede permisos de accesibilidad en la configuración del sistema para habilitar el pegado automático.",
         "windowsReady": "Windows no requiere permisos especiales para pegado automático. Todo listo",
         "linuxReadyWithMethod": "El pegado automático está disponible usando {{method}}. Todo listo",
-        "waylandClipboardMode": "El pegado automático no está disponible en esta sesión Wayland. Oats copiará el texto al portapapeles y podrás pegar con Ctrl+V.",
-        "optionalPasteTool": "Para pegado automático, instala {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nSin esto, aún puedes usar Oats: el texto se copiará al portapapeles y podrás pegar con Ctrl+V."
+        "waylandClipboardMode": "El pegado automático no está disponible en esta sesión Wayland. Barley copiará el texto al portapapeles y podrás pegar con Ctrl+V.",
+        "optionalPasteTool": "Para pegado automático, instala {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nSin esto, aún puedes usar Barley: el texto se copiará al portapapeles y podrás pegar con Ctrl+V."
       },
       "alerts": {
         "accessibilityNeeded": "Se necesitan permisos de accesibilidad. Concédelos en la configuración del sistema."
@@ -532,7 +532,7 @@
         "defaultPasteTool": "xdotool",
         "xdotoolXwayland": "xdotool (apps XWayland)"
       },
-      "accessibilityTestText": "Prueba de accesibilidad de Oats",
+      "accessibilityTestText": "Prueba de accesibilidad de Barley",
       "warning": {
         "messages": {
           "macos": "Revisa la configuración de Sonido para seleccionar tu dispositivo de entrada",
@@ -674,10 +674,10 @@
     "recheckChecking": "Verificando...",
     "title": "Pegado automático",
     "usingMethodPrefix": "Usando",
-    "waylandClipboardDescription": "El pegado automático no está disponible en esta sesión Wayland. Oats copiará el texto al portapapeles para que puedas pegarlo manualmente con Ctrl+V.",
+    "waylandClipboardDescription": "El pegado automático no está disponible en esta sesión Wayland. Barley copiará el texto al portapapeles para que puedas pegarlo manualmente con Ctrl+V.",
     "waylandClipboardTitle": "Modo portapapeles en Wayland",
     "windowsReady": "Windows es compatible con el pegado automático de forma nativa. No se requiere configuración",
-    "withoutToolPrefix": "Sin esta herramienta, Oats copiará el texto al portapapeles. Luego puedes pegarlo manualmente con Ctrl+V.",
+    "withoutToolPrefix": "Sin esta herramienta, Barley copiará el texto al portapapeles. Luego puedes pegarlo manualmente con Ctrl+V.",
     "xwaylandAppsOnly": "el pegado automático funciona solo en apps XWayland"
   },
   "promptStudio": {
@@ -730,7 +730,7 @@
       "none": "Ninguno",
       "outputLabel": "Salida",
       "processing": "Procesando...",
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "providerLabel": "Proveedor",
       "run": "Ejecutar prueba",
       "customEndpoint": "Endpoint personalizado",
@@ -800,7 +800,7 @@
           "price": "$0",
           "period": "para siempre",
           "features": [
-            "## Oats Cloud",
+            "## Barley Cloud",
             "2.000 palabras/semana de transcripción",
             "5 horas de grabaciones de reuniones/mes",
             "## Siempre gratis",
@@ -914,7 +914,7 @@
         "button": "Eliminar mi cuenta",
         "deleting": "Eliminando...",
         "title": "¿Eliminar tu cuenta?",
-        "description": "Esto eliminará permanentemente tu cuenta de Oats, todas las notas sincronizadas en la nube y todos los datos locales, incluyendo transcripciones, grabaciones de audio, modelos descargados, conexiones de calendario y configuraciones. Esta acción no se puede deshacer.",
+        "description": "Esto eliminará permanentemente tu cuenta de Barley, todas las notas sincronizadas en la nube y todos los datos locales, incluyendo transcripciones, grabaciones de audio, modelos descargados, conexiones de calendario y configuraciones. Esta acción no se puede deshacer.",
         "confirmText": "Eliminar todo",
         "successTitle": "Cuenta eliminada",
         "successDescription": "Tu cuenta y todos los datos han sido eliminados. La aplicación se recargará ahora.",
@@ -950,7 +950,7 @@
       "enableTextCleanup": "Activar corrección de texto",
       "enableTextCleanupDescription": "La IA elimina muletillas, corrige gramática y puntuación",
       "modes": {
-        "legacy": "Oats Cloud",
+        "legacy": "Barley Cloud",
         "providers": "Proveedores en la nube",
         "local": "Local",
         "selfHosted": "Autoalojado",
@@ -961,13 +961,13 @@
         "enterprise": "Empresarial",
         "enterpriseDesc": "Usa la cuenta en la nube de tu organización (AWS, Azure, GCP)."
       },
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "legacyCloudDescription": "Resultados fiables. Sin configuración.",
       "title": "Mejora de texto con IA",
       "toasts": {
         "switchedCloud": {
-          "description": "La mejora de texto usará el servicio en la nube de Oats.",
-          "title": "Cambiado a Oats Cloud"
+          "description": "La mejora de texto usará el servicio en la nube de Barley.",
+          "title": "Cambiado a Barley Cloud"
         },
         "switchedCustom": {
           "description": "Configura tu propio proveedor y clave API.",
@@ -1046,7 +1046,7 @@
       "appearance": {
         "auto": "Auto",
         "dark": "Oscuro",
-        "description": "Controla el aspecto de Oats",
+        "description": "Controla el aspecto de Barley",
         "light": "Claro",
         "theme": "Tema",
         "themeDescription": "Elige claro, oscuro o según tu sistema",
@@ -1074,8 +1074,8 @@
         "linuxPttSetupDescription": "Tu usuario necesita acceso a los dispositivos de entrada del teclado.",
         "linuxPttSetupNote": "Después de ejecutar el comando, cierra sesión y vuelve a iniciarla.",
         "hyprlandConfigWriteWarningTitle": "Los atajos de Hyprland no se conservarán",
-        "hyprlandConfigWriteWarningDescription": "Oats no puede escribir en {{path}}, así que los atajos no sobrevivirán a una recarga de la configuración de Hyprland. Asegúrate de que el archivo exista y se pueda escribir.",
-        "hyprlandUnbindDescription": "En Hyprland, Oats reserva el atajo seleccionado. Cualquier atajo existente de Hyprland que use la misma combinación de teclas se desvinculará cuando Oats registre su atajo."
+        "hyprlandConfigWriteWarningDescription": "Barley no puede escribir en {{path}}, así que los atajos no sobrevivirán a una recarga de la configuración de Hyprland. Asegúrate de que el archivo exista y se pueda escribir.",
+        "hyprlandUnbindDescription": "En Hyprland, Barley reserva el atajo seleccionado. Cualquier atajo existente de Hyprland que use la misma combinación de teclas se desvinculará cuando Barley registre su atajo."
       },
       "meetingHotkey": {
         "title": "Atajo modo reunión",
@@ -1105,7 +1105,7 @@
       },
       "notifications": {
         "title": "Notificaciones",
-        "description": "Controla qué notificaciones puede mostrar Oats",
+        "description": "Controla qué notificaciones puede mostrar Barley",
         "disableAll": "Desactivar todas las notificaciones",
         "disableAllDescription": "Silenciar todo excepto los mensajes de error",
         "meetingDetection": "Detección de reuniones",
@@ -1124,9 +1124,9 @@
       },
       "startup": {
         "launchAtLogin": "Abrir al iniciar sesión",
-        "launchAtLoginDescription": "Inicia Oats automáticamente al iniciar sesión",
+        "launchAtLoginDescription": "Inicia Barley automáticamente al iniciar sesión",
         "title": "Inicio",
-        "description": "Controla el comportamiento de Oats al iniciar",
+        "description": "Controla el comportamiento de Barley al iniciar",
         "startMinimized": "Iniciar minimizado",
         "startMinimizedDescription": "Iniciar sin mostrar la ventana del panel de control"
       },
@@ -1172,7 +1172,7 @@
           "group": {
             "step1Title": "Añade tu usuario al grupo input",
             "step2Title": "Cierra sesión y vuelve a entrar",
-            "step2Desc": "Los cambios de grupo solo surten efecto tras una nueva sesión. Cierra sesión en tu escritorio, vuelve a entrar y reabre Oats."
+            "step2Desc": "Los cambios de grupo solo surten efecto tras una nueva sesión. Cierra sesión en tu escritorio, vuelve a entrar y reabre Barley."
           },
           "service": {
             "step1Title": "Crear el directorio del servicio",
@@ -1196,7 +1196,7 @@
           "manualTitle": "Añade esto a tu configuración",
           "manualDesc": "Configúralo tú mismo y luego reconstruye.",
           "flakeTitle": "¿Instalando mediante nuestro flake?",
-          "flakeDesc": "Si instalas Oats desde el flake, programs.oats.enable activa ydotool, el módulo uinput y las pertenencias de grupo por ti.",
+          "flakeDesc": "Si instalas Barley desde el flake, programs.oats.enable activa ydotool, el módulo uinput y las pertenencias de grupo por ti.",
           "rebuildNote": "Ejecuta sudo nixos-rebuild switch, luego cierra sesión y vuelve a abrirla para que el cambio de grupo y la regla de /dev/uinput surtan efecto. Sustituye <you> por tu nombre de usuario."
         }
       },
@@ -1229,7 +1229,7 @@
           },
           "installUpdate": {
             "confirmText": "Instalar y reiniciar",
-            "description": "Oats se reiniciará para aplicar la actualización.",
+            "description": "Barley se reiniciará para aplicar la actualización.",
             "title": "Instalar actualización"
           },
           "noUpdates": {
@@ -1264,13 +1264,13 @@
     "permissions": {
       "accessibilityDescription": "Necesario para que el pegado automático funcione tras la transcripción",
       "accessibilityTitle": "Accesibilidad",
-      "description": "Prueba y administra los permisos del sistema necesarios para que Oats funcione correctamente",
+      "description": "Prueba y administra los permisos del sistema necesarios para que Barley funcione correctamente",
       "microphoneDescription": "Captura tu voz para dictado y transcripción",
       "microphoneTitle": "Micrófono",
       "resetAccessibility": {
-        "description": "Esto eliminará a Oats de los permisos de accesibilidad. Tendrás que volver a conceder acceso en Configuración del sistema > Privacidad y seguridad > Accesibilidad.",
+        "description": "Esto eliminará a Barley de los permisos de accesibilidad. Tendrás que volver a conceder acceso en Configuración del sistema > Privacidad y seguridad > Accesibilidad.",
         "label": "Restablecer permisos de accesibilidad",
-        "rowDescription": "Soluciona problemas tras reinstalar o recompilar la app eliminando y volviendo a agregar Oats en Configuración del sistema",
+        "rowDescription": "Soluciona problemas tras reinstalar o recompilar la app eliminando y volviendo a agregar Barley en Configuración del sistema",
         "title": "Restablecer permisos de accesibilidad"
       },
       "optional": "Opcional",
@@ -1291,7 +1291,7 @@
       "description": "Controla qué datos salen de tu dispositivo. Todo está desactivado por defecto.",
       "title": "Privacidad",
       "usageAnalytics": "Analíticas de uso",
-      "usageAnalyticsDescription": "Ayúdanos a mejorar Oats compartiendo métricas de rendimiento anónimas. Nunca enviamos contenido de transcripciones, solo datos de tiempo y errores.",
+      "usageAnalyticsDescription": "Ayúdanos a mejorar Barley compartiendo métricas de rendimiento anónimas. Nunca enviamos contenido de transcripciones, solo datos de tiempo y errores.",
       "dataRetention": "Retención de datos",
       "dataRetentionDescription": "Almacenar transcripciones y audio localmente en tu historial. Cuando está desactivado, las transcripciones se pegan pero no se guardan.",
       "hoursAgo": "hace {{count}}h",
@@ -1343,9 +1343,9 @@
     "transcription": {
       "customSetup": "Configuración personalizada",
       "customSetupDescription": "Usa tu propio proveedor y clave API.",
-      "description": "Elige cómo Oats transcribe tu voz",
+      "description": "Elige cómo Barley transcribe tu voz",
       "modes": {
-        "legacy": "Oats Cloud",
+        "legacy": "Barley Cloud",
         "providers": "Proveedores en la nube",
         "local": "Local",
         "selfHosted": "Autoalojado",
@@ -1354,13 +1354,13 @@
         "localDesc": "Modelos en el dispositivo. Privado.",
         "selfHostedDesc": "Tu servidor en tu red."
       },
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "legacyCloudDescription": "Resultados fiables. Sin configuración.",
       "title": "Voz a texto",
       "toasts": {
         "switchedCloud": {
-          "description": "La transcripción usará el servicio en la nube de Oats.",
-          "title": "Cambiado a Oats Cloud"
+          "description": "La transcripción usará el servicio en la nube de Barley.",
+          "title": "Cambiado a Barley Cloud"
         },
         "switchedCustom": {
           "description": "Configura tu propio proveedor y clave API.",
@@ -1731,7 +1731,7 @@
     }
   },
   "postMigration": {
-    "title": "Te damos la bienvenida de nuevo a Oats",
+    "title": "Te damos la bienvenida de nuevo a Barley",
     "description": "Tus notas y ajustes se han trasladado desde la versión anterior. Eso sí, macOS lo trata como una app nueva, así que tendrás que volver a conceder algunos permisos.",
     "done": "Hecho",
     "remindLater": "Recordármelo más tarde"
@@ -1781,7 +1781,7 @@
       "undo": "Deshacer",
       "accessibilityMissing": {
         "title": "Se requieren permisos de accesibilidad",
-        "description": "Oats necesita permisos de accesibilidad para detectar tu atajo y pegar texto. Actívalos en el Panel de Control."
+        "description": "Barley necesita permisos de accesibilidad para detectar tu atajo y pegar texto. Actívalos en el Panel de Control."
       }
     },
     "mic": {
@@ -1795,7 +1795,7 @@
     "buttons": {
       "cancelRecording": "Cancelar grabación",
       "cancelProcessing": "Cancelar procesamiento",
-      "hideOat": "Ocultar Oats",
+      "hideOat": "Ocultar Barley",
       "hideOatHint": "Ocultar · recupéralo desde la bandeja"
     },
     "commandMenu": {
@@ -1829,8 +1829,8 @@
     "enabled": "Activar agente de voz",
     "enabledDescription": "Dicta instrucciones a tu agente. Actívalo diciendo \"{{agentName}}\". Configurable más abajo.",
     "modes": {
-      "legacy": "Oats Cloud",
-      "legacyDesc": "Usa el agente gestionado por Oats, sin necesidad de clave API.",
+      "legacy": "Barley Cloud",
+      "legacyDesc": "Usa el agente gestionado por Barley, sin necesidad de clave API.",
       "providers": "Usa tu propia clave API",
       "providersDesc": "Conéctate a OpenAI, Anthropic, Gemini o Groq con tu propia clave API.",
       "local": "Local",
@@ -1855,7 +1855,7 @@
       "systemPromptDescription": "Instrucciones personalizadas para el agente",
       "systemPromptPlaceholder": "Introduce un prompt de sistema personalizado...",
       "modes": {
-        "legacy": "Oats Cloud",
+        "legacy": "Barley Cloud",
         "providers": "Proveedores Cloud",
         "local": "Local",
         "selfHosted": "Autoalojado",
@@ -1866,7 +1866,7 @@
         "enterprise": "Empresarial",
         "enterpriseDesc": "Usa la cuenta en la nube de tu organización (AWS, Azure, GCP)."
       },
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "legacyCloudDescription": "Resultados fiables. Sin configuración.",
       "customSetup": "Configuración personalizada (BYOK)",
       "customSetupDescription": "Usa tus propias claves API y elige tu modelo preferido"
@@ -1922,7 +1922,7 @@
     "tomorrow": "Mañana"
   },
   "updateNotification": {
-    "title": "Actualización de Oats disponible",
+    "title": "Actualización de Barley disponible",
     "body": "La versión {{version}} está lista para descargar",
     "cta": "Actualizar ahora"
   },
@@ -1967,8 +1967,8 @@
       "writingSent": "El texto de la transcripción se envía a {{provider}} para generar resúmenes, nombres y descripciones de temas. Algunas funciones también envían resúmenes o fragmentos seleccionados. Escritura no envía audio.",
       "noneSent": "Ninguna de estas funciones envía datos a un proveedor.",
       "choiceDescription": "Dónde se ejecutan Conversaciones, Dictado y Escritura.",
-      "keyNoAccess": "Oats no guardó la clave. No puede usar {{model}}.",
-      "keyNotChecked": "Oats no pudo comprobar la clave. Inténtalo de nuevo.",
+      "keyNoAccess": "Barley no guardó la clave. No puede usar {{model}}.",
+      "keyNotChecked": "Barley no pudo comprobar la clave. Inténtalo de nuevo.",
       "placeKeyRoomsMac": "con una clave de API, reuniones presenciales en este Mac",
       "roomsMacChoice": "Con una clave de API, reuniones presenciales en este Mac",
       "roomsUntil": "Las reuniones presenciales usan {{cloud}} hasta que se descargue {{model}}.",
@@ -2053,7 +2053,7 @@
     },
     "conversation": {
       "title": "Haz sitio a la conversación.",
-      "subtitle": "Oats graba la sala y luego te da el título, el resumen y los hilos automáticamente.",
+      "subtitle": "Barley graba la sala y luego te da el título, el resumen y los hilos automáticamente.",
       "listening": "Escuchando.",
       "view": {
         "label": "Lo que muestra la grabación",
@@ -2084,7 +2084,7 @@
         "described": "La transcripción va {{seconds}} s por detrás de lo que se dice."
       },
       "statusRecording": "Grabando. El audio y las transcripciones no salen de este equipo.",
-      "statusStopped": "Grabación finalizada. Oats está escribiendo el resumen.",
+      "statusStopped": "Grabación finalizada. Barley está escribiendo el resumen.",
       "nothingHeard": "No se oyó nada, así que no se guardó ninguna conversación. Revisa el micrófono en Ajustes.",
       "continuing": "Continuando {{title}}",
       "notAContinuation": "Conversación aparte",
@@ -2211,7 +2211,7 @@
       "exportTranscript": "Exportar la transcripción como texto",
       "more": "Más acciones",
       "vaultAction": "Guardar en la bóveda",
-      "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Oats. No se puede deshacer.",
+      "deleteDescription": "Su transcripción, su resumen y sus momentos marcados se eliminan de Barley. No se puede deshacer.",
       "emptyDescription": "Las conversaciones que grabes aparecen aquí, con un resumen y una transcripción en la que puedes buscar.",
       "noMatchesHint": "La búsqueda revisa títulos, resúmenes, transcripciones y tus notas.",
       "needsSummaryModel": "Aún no hay un modelo de resumen listo. El resumen se escribirá en cuanto lo haya.",
@@ -2330,7 +2330,7 @@
       "backToApp": "Volver a la app",
       "navLabel": "Páginas de ajustes",
       "themeSystem": "Sistema",
-      "processingDescription": "Dónde ejecuta Oats sus dos modelos.",
+      "processingDescription": "Dónde ejecuta Barley sus dos modelos.",
       "processingLocal": "En este Mac",
       "processingProviders": "Con una clave de API",
       "processingMixed": "Mixto: los modelos de voz y de escritura funcionan en sitios distintos.",
@@ -2348,11 +2348,11 @@
       "pages": {
         "general": {
           "title": "General",
-          "description": "Cómo se ve Oats, cómo arranca y cómo te avisa."
+          "description": "Cómo se ve Barley, cómo arranca y cómo te avisa."
         },
         "shortcuts": {
           "title": "Atajos",
-          "description": "Teclas que funcionan desde cualquier app y las de dentro de Oats."
+          "description": "Teclas que funcionan desde cualquier app y las de dentro de Barley."
         },
         "recording": {
           "title": "Grabación",
@@ -2372,7 +2372,7 @@
         },
         "privacy": {
           "title": "Privacidad y datos",
-          "description": "Permisos y el audio que guarda Oats."
+          "description": "Permisos y el audio que guarda Barley."
         },
         "about": {
           "title": "Acerca de",
@@ -2380,8 +2380,8 @@
         }
       },
       "inApp": {
-        "title": "En Oats",
-        "description": "Funcionan con la ventana de Oats delante.",
+        "title": "En Barley",
+        "description": "Funcionan con la ventana de Barley delante.",
         "toggleConversation": "Iniciar o detener una conversación",
         "mark": "Marcar un momento mientras grabas",
         "search": "Buscar conversaciones",
@@ -2390,7 +2390,7 @@
       },
       "questions": {
         "title": "Tarjetas de preguntas",
-        "description": "Durante una conversación, Oats detecta preguntas de datos que nadie en la sala supo responder.",
+        "description": "Durante una conversación, Barley detecta preguntas de datos que nadie en la sala supo responder.",
         "enable": "Mostrar tarjetas de preguntas",
         "model": "Modelo clasificador",
         "modelDescription": "Opcional. Se ejecuta en este Mac y hace las tarjetas más precisas.",
@@ -2399,7 +2399,7 @@
       },
       "topics": {
         "title": "Temas",
-        "description": "Durante una conversación, Oats agrupa lo que se dice en temas y les pone nombre.",
+        "description": "Durante una conversación, Barley agrupa lo que se dice en temas y les pone nombre.",
         "describe": "Describir cada tema",
         "describeHint": "Bajo el nombre de cada tema, unas frases del modelo de escritura sobre lo que se dijo, preguntó y decidió. Crecen con el tema. Desactivado, el flujo de la conversación cita la última frase del tema."
       },
@@ -2413,13 +2413,13 @@
       },
       "dictionary": {
         "title": "Diccionario",
-        "description": "Nombres, productos y jerga que Oats debe entender bien, en dictado y en conversaciones.",
+        "description": "Nombres, productos y jerga que Barley debe entender bien, en dictado y en conversaciones.",
         "placeholder": "Añade palabras separadas por comas",
         "add": "Añadir",
         "remove": "Quitar {{word}}",
         "empty": "Aún no hay palabras.",
         "autoLearn": "Aprender de las correcciones",
-        "autoLearnDescription": "Cuando corriges una palabra dictada en otra app, Oats la añade aquí."
+        "autoLearnDescription": "Cuando corriges una palabra dictada en otra app, Barley la añade aquí."
       },
       "models": {
         "title": "Tus modelos",
@@ -2432,18 +2432,18 @@
       },
       "global": {
         "title": "Desde cualquier app",
-        "description": "Funcionan aunque Oats esté en segundo plano.",
+        "description": "Funcionan aunque Barley esté en segundo plano.",
         "conversation": "Iniciar o detener una conversación",
         "conversationHint": "Graba la sala o termina la conversación en curso.",
         "dictationHint": "Escribe lo que dices donde está el cursor.",
         "activationHint": "Pulsa para empezar y parar, o mantén pulsada mientras hablas.",
         "search": "Buscar conversaciones",
-        "searchHint": "Abre Oats con la búsqueda lista."
+        "searchHint": "Abre Barley con la búsqueda lista."
       },
-      "microphoneDescription": "El micrófono que usa Oats para conversaciones y dictado.",
+      "microphoneDescription": "El micrófono que usa Barley para conversaciones y dictado.",
       "fieldBackdrop": {
         "label": "Fondo de campo",
-        "description": "Un aspecto más relajado para Oats."
+        "description": "Un aspecto más relajado para Barley."
       },
       "dictationButton": "Mientras dictas",
       "instructionsDescription": "Cómo el modelo reescribe cada dictado. La opción predeterminada sirve para casi todos.",
@@ -2451,7 +2451,7 @@
       "instructions": "Instrucciones de limpieza",
       "context": {
         "title": "Comprobación de contexto",
-        "description": "Cuando una pregunta recibe una respuesta insegura o ninguna, Oats la busca en tus conversaciones anteriores y en una carpeta que comparte tu equipo, y dice si la respuesta es correcta.",
+        "description": "Cuando una pregunta recibe una respuesta insegura o ninguna, Barley la busca en tus conversaciones anteriores y en una carpeta que comparte tu equipo, y dice si la respuesta es correcta.",
         "enable": "Comprobar respuestas inseguras",
         "enableHint": "Usa el modelo de escritura elegido en Modelos. Con un modelo en la nube, la pregunta, la respuesta y los fragmentos que lee se envían a ese proveedor.",
         "needsModel": "Elige primero un modelo de escritura en Modelos. Hasta entonces no se comprueba nada.",
@@ -2464,23 +2464,23 @@
         "files_one": "{{count}} archivo leído",
         "files_other": "{{count}} archivos leídos",
         "missing": "Esta carpeta ya no existe.",
-        "unreadable": "Oats no puede leer esta carpeta.",
+        "unreadable": "Barley no puede leer esta carpeta.",
         "agent": "Preguntar a Claude Code cuando no hay respuesta",
         "agentHint": "Ejecuta Claude Code en este Mac con tus conexiones de GitHub, Linear, Notion y Slack, solo lectura. La pregunta y la respuesta van a Anthropic, y el texto de búsqueda a esos servicios.",
         "agentMissing": "Necesita Claude Code en este Mac, con sesión iniciada. No se encontró."
       }
     },
     "errors": {
-      "noModel": "Configura el procesamiento de Oats antes de grabar una conversación.",
-      "noEndpoint": "Configura el endpoint de la API de Oats antes de grabar una conversación.",
-      "actionFailed": "Oats no pudo generar inteligencia para esta conversación.",
+      "noModel": "Configura el procesamiento de Barley antes de grabar una conversación.",
+      "noEndpoint": "Configura el endpoint de la API de Barley antes de grabar una conversación.",
+      "actionFailed": "Barley no pudo generar inteligencia para esta conversación.",
       "noSummary": "El modelo no devolvió ningún resumen."
     },
     "preflight": {
       "no-microphone": "No se ha encontrado ningún micrófono. Conecta uno y vuelve a pulsar.",
-      "microphone-permission": "Oats necesita permiso para usar el micrófono. Concédelo en los ajustes del sistema.",
-      "no-speech-engine": "Falta el motor de voz local. Reinstalar Oats lo restaura.",
-      "no-model": "El modelo de voz incluido no se instaló. Reinicia Oats; si continúa, reinstálalo.",
+      "microphone-permission": "Barley necesita permiso para usar el micrófono. Concédelo en los ajustes del sistema.",
+      "no-speech-engine": "Falta el motor de voz local. Reinstalar Barley lo restaura.",
+      "no-model": "El modelo de voz incluido no se instaló. Reinicia Barley; si continúa, reinstálalo.",
       "no-api-key": "El procesamiento usa una clave API, pero no hay ninguna guardada: revisa Ajustes.",
       "question-cards-off": "Las tarjetas de preguntas están desactivadas, así que las preguntas pasarán en silencio. Actívalas en Ajustes, en Grabación.",
       "no-summary-model": "Los títulos y resúmenes esperan a un modelo de escritura: elige uno en Ajustes › Modelos de IA.",
@@ -2570,15 +2570,15 @@
     },
     "speechTier": {
       "downloadingShort": "Descargando Whisper Turbo: {{percent}}%",
-      "progress": "{{percent}}% de {{size}}. Hasta que esté listo, Oats usa el modelo con el que vino.",
+      "progress": "{{percent}}% de {{size}}. Hasta que esté listo, Barley usa el modelo con el que vino.",
       "checking": "Comprobando Whisper Turbo",
       "checkingDetail": "Una prueba breve en la GPU de este Mac",
-      "slowDetail": "Aquí no sigue el ritmo de una conversación, así que Oats usa el modelo con el que vino.",
-      "detectionDetail": "Elige el idioma de transcripción en Ajustes › Grabación y Oats lo usará.",
+      "slowDetail": "Aquí no sigue el ritmo de una conversación, así que Barley usa el modelo con el que vino.",
+      "detectionDetail": "Elige el idioma de transcripción en Ajustes › Grabación y Barley lo usará.",
       "retry": "Reintentar",
       "cancelDownload": "Cancelar la descarga de Whisper Turbo",
       "noticeTitle": "Descargando un modelo de voz más preciso para este Mac ({{size}})",
-      "noticeDetail": "Whisper Turbo, desde Hugging Face. Oats sigue usando el modelo con el que vino hasta que esté listo."
+      "noticeDetail": "Whisper Turbo, desde Hugging Face. Barley sigue usando el modelo con el que vino hasta que esté listo."
     },
     "models": {
       "ready": "Listo",
@@ -2613,7 +2613,7 @@
       "retryModel": "Descargar {{model}} de nuevo",
       "cancelModel": "Cancelar la descarga de {{model}}",
       "englishOnly": "Inglés",
-      "useDefault": "Usar la elección de Oats",
+      "useDefault": "Usar la elección de Barley",
       "openaiSpeechNeedsKey": "Hasta que añadas una clave de OpenAI, la voz se procesa en este ordenador.",
       "custom": "Endpoint personalizado",
       "server": "Tu servidor",
@@ -2622,7 +2622,7 @@
         "chosenComputer": "{{model}}, elegido para este ordenador",
         "chosen": "{{model}}, elegido por ti",
         "chosenWith": "{{model}} de {{provider}}, elegido por ti",
-        "cameWith": "{{model}}, el modelo con el que vino Oats",
+        "cameWith": "{{model}}, el modelo con el que vino Barley",
         "turboFailed": "Whisper Turbo no se descargó.",
         "turboDeclined": "Este Mac puede ejecutar Whisper Turbo, el modelo más preciso: {{size}} desde Hugging Face.",
         "openaiSpeech": "{{model}}, el más preciso de OpenAI para la voz",
@@ -2630,7 +2630,7 @@
         "openai": "{{model}}, el más preciso de OpenAI para resúmenes",
         "anthropic": "{{model}}, el más preciso de Anthropic para resúmenes",
         "installed": "{{model}}, ya descargado",
-        "noKey": "Pega una clave de OpenAI o de Anthropic. Oats escribe con el modelo más preciso de ese proveedor.",
+        "noKey": "Pega una clave de OpenAI o de Anthropic. Barley escribe con el modelo más preciso de ese proveedor.",
         "server": "Tu servidor",
         "serverMissing": "Tu servidor, todavía sin dirección",
         "serverHint": "Añade su dirección en Avanzado."
@@ -2645,13 +2645,13 @@
       "missing": "Aún no descargado: {{size}} desde Hugging Face.",
       "declined": "No descargado: {{size}} desde Hugging Face.",
       "failed": "No se descargó. Comprueba la conexión y el espacio libre, y vuelve a intentarlo.",
-      "noticeTitle": "Descargando {{model}}, el modelo de escritura de Oats ({{size}})",
+      "noticeTitle": "Descargando {{model}}, el modelo de escritura de Barley ({{size}})",
       "noticeDetail": "Desde Hugging Face. Escribe el título y el resumen de cada conversación, aquí en este ordenador."
     },
     "keys": {
       "placeholderAny": "Pega una clave de OpenAI o de Anthropic",
       "placeholder": "Pega tu clave de {{provider}}",
-      "notAKey": "Oats funciona con claves de OpenAI y Anthropic.",
+      "notAKey": "Barley funciona con claves de OpenAI y Anthropic.",
       "openaiCapabilities": "Tu clave de OpenAI permite procesar voz y texto en la nube.",
       "anthropicCapabilities": "Tu clave de Anthropic permite procesar texto en la nube. Anthropic no ofrece un servicio de voz, así que la voz se procesa en este Mac.",
       "anthropicCapabilitiesComputer": "Tu clave de Anthropic permite procesar texto en la nube. Anthropic no ofrece un servicio de voz, así que la voz se procesa en este equipo.",
@@ -2661,8 +2661,8 @@
       "rejected": "{{provider}} no aceptó esta clave.",
       "rejectedReason": "{{provider}} no aceptó esta clave: {{reason}}",
       "noAccess": "Guardada, pero esta clave no puede usar {{model}}. Elige otro modelo en Avanzado.",
-      "unchecked": "Guardada. Oats no pudo comprobarla ahora.",
-      "limited": "Guardada. Esta clave tiene permisos limitados, así que Oats no pudo comprobar si puede usar {{model}}.",
+      "unchecked": "Guardada. Barley no pudo comprobarla ahora.",
+      "limited": "Guardada. Esta clave tiene permisos limitados, así que Barley no pudo comprobar si puede usar {{model}}.",
       "saved": "Guardada.",
       "getKey": "Consigue una clave de {{provider}}",
       "savedKey": "Tu clave de {{provider}}",
@@ -2671,8 +2671,8 @@
       "name": "Nombre",
       "optional": "(opcional)",
       "nameHint": "Por ejemplo, Trabajo",
-      "notSaved": "Oats no pudo guardar la clave. Inténtalo de nuevo.",
-      "notRemoved": "Oats no pudo quitar la clave. Inténtalo de nuevo.",
+      "notSaved": "Barley no pudo guardar la clave. Inténtalo de nuevo.",
+      "notRemoved": "Barley no pudo quitar la clave. Inténtalo de nuevo.",
       "title": "Claves de API",
       "empty": "Una clave de API permite que una función se ejecute con OpenAI o Anthropic. Las claves de OpenAI sirven para todas las funciones; las de Anthropic, para Escritura.",
       "usedBy": "Usada por {{features}}",
@@ -2687,8 +2687,8 @@
       "reasonNoSpeech": "Las claves de Anthropic no transcriben voz.",
       "reasonRefused": "{{provider}} rechazó esta clave.",
       "moveTo": "Para {{features}} se usará {{key}}.",
-      "moveToMac": "Hasta que elijas otra clave, Oats ejecutará {{features}} en este Mac.",
-      "moveToComputer": "Hasta que elijas otra clave, Oats ejecutará {{features}} en este equipo.",
+      "moveToMac": "Hasta que elijas otra clave, Barley ejecutará {{features}} en este Mac.",
+      "moveToComputer": "Hasta que elijas otra clave, Barley ejecutará {{features}} en este equipo.",
       "removeUnused": "Ninguna función la usa.",
       "removeTitle": "¿Quitar {{name}}?",
       "replaceEllipsis": "Reemplazar…",

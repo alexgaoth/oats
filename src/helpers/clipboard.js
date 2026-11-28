@@ -2152,17 +2152,17 @@ class ClipboardManager {
 
     let dialogMessage;
     if (isStuckPermission) {
-      dialogMessage = `🔒 Oats needs Accessibility permissions, but it looks like you may have OLD PERMISSIONS from a previous version.
+      dialogMessage = `🔒 Barley needs Accessibility permissions, but it looks like you may have OLD PERMISSIONS from a previous version.
 
-❗ COMMON ISSUE: If you've rebuilt/reinstalled Oats, the old permissions may be "stuck" and preventing new ones.
+❗ COMMON ISSUE: If you've rebuilt/reinstalled Barley, the old permissions may be "stuck" and preventing new ones.
 
 🔧 To fix this:
 1. Open System Settings → Privacy & Security → Accessibility
-2. Look for ANY old "Oats" entries and REMOVE them (click the - button)
+2. Look for ANY old "Barley" or "Oats" entries and REMOVE them (click the - button)
 3. Also remove any entries that say "Electron" or have unclear names
-4. Click the + button and manually add the NEW Oats app
+4. Click the + button and manually add the NEW Barley app
 5. Make sure the checkbox is enabled
-6. Restart Oats
+6. Restart Barley
 
 ⚠️ This is especially common during development when rebuilding the app.
 
@@ -2170,7 +2170,7 @@ class ClipboardManager {
 
 Would you like to open System Settings now?`;
     } else {
-      dialogMessage = `🔒 Oats needs Accessibility permissions to paste text into other applications.
+      dialogMessage = `🔒 Barley needs Accessibility permissions to paste text into other applications.
 
 📋 Current status: Clipboard copy works, but pasting (Cmd+V simulation) fails.
 
@@ -2178,8 +2178,8 @@ Would you like to open System Settings now?`;
 1. Open System Settings (or System Preferences on older macOS)
 2. Go to Privacy & Security → Accessibility
 3. Click the lock icon and enter your password
-4. Add Oats to the list and check the box
-5. Restart Oats
+4. Add Barley to the list and check the box
+5. Restart Barley
 
 ⚠️ Without this permission, dictated text will only be copied to clipboard but won't paste automatically.
 

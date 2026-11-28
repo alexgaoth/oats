@@ -4,7 +4,7 @@
       "sectionTitle": "语言",
       "sectionDescription": "分别设置界面语言和转录语言",
       "uiLabel": "界面语言",
-      "uiDescription": "选择 Oats 界面使用的语言",
+      "uiDescription": "选择 Barley 界面使用的语言",
       "transcriptionLabel": "转录语言",
       "transcriptionDescription": "选择你说话的语言，以提高转录准确率"
     },
@@ -32,20 +32,20 @@
       "show": "显示听写面板",
       "hide": "隐藏听写面板"
     },
-    "openControlPanel": "打开 Oats",
-    "hideControlPanel": "隐藏 Oats",
-    "quit": "退出 Oats",
-    "tooltip": "Oats",
+    "openControlPanel": "打开 Barley",
+    "hideControlPanel": "隐藏 Barley",
+    "quit": "退出 Barley",
+    "tooltip": "Barley",
     "conversation": {
       "start": "开始对话",
       "stop": "结束对话"
     },
-    "tooltipRecording": "Oats - 正在录制对话",
+    "tooltipRecording": "Barley - 正在录制对话",
     "searchConversations": "搜索对话…"
   },
   "menu": {
-    "appLabel": "Oats",
-    "quit": "退出 Oats",
+    "appLabel": "Barley",
+    "quit": "退出 Barley",
     "speech": "语音",
     "settings": "设置...",
     "help": "帮助",
@@ -54,8 +54,8 @@
     "closeWindow": "关闭窗口"
   },
   "window": {
-    "voiceRecorderTitle": "Oats",
-    "controlPanelTitle": "Oats",
+    "voiceRecorderTitle": "Barley",
+    "controlPanelTitle": "Barley",
     "agentChatTitle": "智能助手聊天"
   },
   "dialog": {
@@ -64,8 +64,8 @@
       "message": "无法在浏览器中打开该链接：\n{{url}}\n\n错误：{{error}}"
     },
     "loadFailure": {
-      "title": "Oats 加载失败",
-      "message": "Oats 无法加载其界面。",
+      "title": "Barley 加载失败",
+      "message": "Barley 无法加载其界面。",
       "detail": {
         "window": "窗口：{{windowName}}",
         "error": "错误 {{errorCode}}：{{errorDescription}}",
@@ -76,17 +76,17 @@
   },
   "startup": {
     "error": {
-      "title": "Oats 启动错误",
+      "title": "Barley 启动错误",
       "message": "应用启动失败：\n\n{{error}}\n\n请反馈此问题。"
     },
     "globeHotkey": {
       "title": "Globe 快捷键不可用",
-      "message": "Oats 无法激活 Globe 键快捷键。",
+      "message": "Barley 无法激活 Globe 键快捷键。",
       "details": {
         "unknown": "启动 Globe 监听器时发生未知错误。",
         "fallback": "Globe 键快捷键将保持禁用状态；现有的键盘快捷键仍可正常使用。",
         "devHint": "运行 `npm run compile:globe` 并重新构建应用以重新生成监听器。",
-        "reinstallHint": "请尝试重新安装 Oats，如果问题仍然存在请联系技术支持。"
+        "reinstallHint": "请尝试重新安装 Barley，如果问题仍然存在请联系技术支持。"
       }
     }
   },
@@ -148,24 +148,24 @@
       "voiceAgent": "语音助手"
     },
     "permissions": {
-      "title": "让 Oats 听见这个房间",
+      "title": "让 Barley 听见这个房间",
       "microphoneTitle": "麦克风",
       "microphoneReady": "麦克风已就绪。",
       "microphoneGranted": "已授予麦克风权限。",
-      "microphoneDescription": "Oats 用一支麦克风录下对话，事后为你整理。在你开始一次对话之前，不会录制任何内容。",
+      "microphoneDescription": "Barley 用一支麦克风录下对话，事后为你整理。在你开始一次对话之前，不会录制任何内容。",
       "grant": "授权",
       "grantAccess": "授予访问权限",
       "accessibilityTitle": "辅助功能",
       "accessibilityDescription": "将完成的文字直接输入到你正在使用的应用中 — 文档、邮件、聊天。",
       "testAndGrant": "测试并授权",
-      "requiredForApp": "Oats 运行所必需的权限",
+      "requiredForApp": "Barley 运行所必需的权限",
       "microphoneRequired": "需要麦克风访问权限",
       "openSystemSettings": "打开系统设置",
       "systemAudioTitle": "系统音频",
       "systemAudioDescription": "让会议录音机听到通话另一方的声音 — 会议、讲座、播客。你可以稍后在“设置”中开启。",
       "optional": "可选",
       "recommended": "推荐",
-      "accessibilityTroubleshooting": "在系统设置 → 辅助功能中，将 Oats 的开关关闭再重新打开。如果无效，请将 Oats 从列表中移除后重新添加。"
+      "accessibilityTroubleshooting": "在系统设置 → 辅助功能中，将 Barley 的开关关闭再重新打开。如果无效，请将 Barley 从列表中移除后重新添加。"
     },
     "welcome": {
       "allow": "允许",
@@ -175,13 +175,13 @@
       "getStarted": "开始使用"
     },
     "processing": {
-      "title": "Oats 在哪里思考",
+      "title": "Barley 在哪里思考",
       "description": "两个模型负责转写房间里的对话并撰写每份摘要。它们在这里运行，或使用你自己的 API 密钥。之后可以在 设置 › AI 模型 中更改。",
-      "downloads": "继续后，Oats 会在后台从 Hugging Face 下载 {{models}}。",
-      "nothingToDownload": "Oats 需要的一切已在这台 Mac 上。",
-      "nothingToDownloadComputer": "Oats 需要的一切已在这台电脑上。",
-      "anthropicSpeech": "Anthropic 不提供语音服务，因此语音仍在这台 Mac 上处理：继续后，Oats 会在后台从 Hugging Face 下载 {{models}}。",
-      "anthropicSpeechComputer": "Anthropic 不提供语音服务，因此语音仍在这台电脑上处理：继续后，Oats 会在后台从 Hugging Face 下载 {{models}}。",
+      "downloads": "继续后，Barley 会在后台从 Hugging Face 下载 {{models}}。",
+      "nothingToDownload": "Barley 需要的一切已在这台 Mac 上。",
+      "nothingToDownloadComputer": "Barley 需要的一切已在这台电脑上。",
+      "anthropicSpeech": "Anthropic 不提供语音服务，因此语音仍在这台 Mac 上处理：继续后，Barley 会在后台从 Hugging Face 下载 {{models}}。",
+      "anthropicSpeechComputer": "Anthropic 不提供语音服务，因此语音仍在这台电脑上处理：继续后，Barley 会在后台从 Hugging Face 下载 {{models}}。",
       "anthropicSpeechReady": "Anthropic 不提供语音服务，因此语音仍在这台 Mac 上处理。",
       "anthropicSpeechReadyComputer": "Anthropic 不提供语音服务，因此语音仍在这台电脑上处理。"
     },
@@ -201,7 +201,7 @@
       "description": "这台 Mac 可以运行最准确的模型 Whisper Turbo。设置完成后将从 Hugging Face 下载：{{size}}。"
     },
     "tour": {
-      "label": "Oats 导览",
+      "label": "Barley 导览",
       "announce": "第 {{current}} 页，共 {{count}} 页：{{title}}",
       "skip": "跳过",
       "back": "返回",
@@ -209,7 +209,7 @@
       "start": "开始",
       "topics": {
         "title": "话题自动命名",
-        "body": "大家说话时，Oats 会跟着对话走，并根据说过的内容为每个话题命名。"
+        "body": "大家说话时，Barley 会跟着对话走，并根据说过的内容为每个话题命名。"
       },
       "questions": {
         "title": "每个问题都有一张卡片",
@@ -221,7 +221,7 @@
       },
       "voices": {
         "title": "房间里的每个声音",
-        "body": "一支麦克风就能听到整个房间，Oats 会分辨不同的声音，显示谁说了多少。"
+        "body": "一支麦克风就能听到整个房间，Barley 会分辨不同的声音，显示谁说了多少。"
       },
       "open": {
         "title": "尚未解决的内容",
@@ -232,7 +232,7 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "无法连接到 Oats Cloud",
+        "title": "无法连接到 Barley Cloud",
         "generic": "网络请求失败，请检查你的连接。",
         "dnsBlocked": "DNS 无法解析 — 广告拦截器或过滤器可能阻止了它。",
         "refused": "连接被拒绝 — 可能是防火墙或 VPN。",
@@ -249,7 +249,7 @@
       "problemTitle": "更新遇到问题",
       "problemDescription": "无法完成更新，请稍后再试。",
       "installTitle": "安装更新",
-      "installDescription": "Oats 将重启以应用更新。当前进行中的工作将被保存。",
+      "installDescription": "Barley 将重启以应用更新。当前进行中的工作将被保存。",
       "couldNotInstallTitle": "无法安装更新",
       "couldNotInstallDescription": "出了点问题，请重试。",
       "couldNotDownloadTitle": "无法下载更新",
@@ -413,7 +413,7 @@
         "description": "部分录音内容无法转录。"
       },
       "errorDescriptions": {
-        "sessionExpired": "Oats Cloud 会话不可用。请到「设置」中重新登录。",
+        "sessionExpired": "Barley Cloud 会话不可用。请到「设置」中重新登录。",
         "offline": "你目前离线。云端转录需要互联网连接。",
         "dailyLimitReached": "已达今日转录上限。请明天再试或升级你的套餐。",
         "providerRateLimited": "你的转录服务商限制了请求频率。请稍候再试。"
@@ -489,7 +489,7 @@
       "micErrors": {
         "accessFailed": "麦克风访问失败，请重试。",
         "noMicrophones": "未检测到麦克风。请在 {{settingsPath}} 中连接或选择麦克风。",
-        "permissionDenied": "权限被拒绝。请打开 {{privacyPath}} 并允许 Oats。",
+        "permissionDenied": "权限被拒绝。请打开 {{privacyPath}} 并允许 Barley。",
         "couldNotStart": "无法启动所选麦克风。请在 {{settingsPath}} 中选择输入设备，然后重新测试。",
         "noActiveInput": "未找到活跃的音频输入。请在 {{settingsPath}} 中选择麦克风。",
         "unknown": "麦克风访问失败：{{error}}。请选择其他输入设备后重试。",
@@ -518,8 +518,8 @@
         "accessibilityNeeded": "请在系统设置中授予辅助功能权限，以启用自动粘贴。",
         "windowsReady": "Windows 无需特殊权限即可自动粘贴，一切就绪。",
         "linuxReadyWithMethod": "可使用 {{method}} 进行自动粘贴，一切就绪。",
-        "waylandClipboardMode": "此 Wayland 会话不支持自动粘贴。Oats 会将文本复制到剪贴板，你可以使用 Ctrl+V 粘贴。",
-        "optionalPasteTool": "如需自动粘贴功能，请安装 {{tool}}：\n\n{{installCmd}}{{waylandNote}}\n\n即使不安装，你仍然可以使用 Oats——文本会被复制到剪贴板，你可以使用 Ctrl+V 粘贴。"
+        "waylandClipboardMode": "此 Wayland 会话不支持自动粘贴。Barley 会将文本复制到剪贴板，你可以使用 Ctrl+V 粘贴。",
+        "optionalPasteTool": "如需自动粘贴功能，请安装 {{tool}}：\n\n{{installCmd}}{{waylandNote}}\n\n即使不安装，你仍然可以使用 Barley——文本会被复制到剪贴板，你可以使用 Ctrl+V 粘贴。"
       },
       "alerts": {
         "accessibilityNeeded": "需要辅助功能权限。请在系统设置中授权。"
@@ -532,7 +532,7 @@
         "defaultPasteTool": "xdotool",
         "xdotoolXwayland": "xdotool（XWayland 应用）"
       },
-      "accessibilityTestText": "Oats 辅助功能测试",
+      "accessibilityTestText": "Barley 辅助功能测试",
       "warning": {
         "messages": {
           "macos": "请检查声音设置以选择输入设备",
@@ -674,10 +674,10 @@
     "recheckChecking": "检查中...",
     "title": "自动粘贴",
     "usingMethodPrefix": "使用",
-    "waylandClipboardDescription": "此 Wayland 会话不支持自动粘贴。Oats 会将文本复制到剪贴板，你可以使用 Ctrl+V 手动粘贴。",
+    "waylandClipboardDescription": "此 Wayland 会话不支持自动粘贴。Barley 会将文本复制到剪贴板，你可以使用 Ctrl+V 手动粘贴。",
     "waylandClipboardTitle": "Wayland 上的剪贴板模式",
     "windowsReady": "Windows 原生支持自动粘贴，无需额外设置。",
-    "withoutToolPrefix": "如果不安装此工具，Oats 会将文本复制到剪贴板，你可以使用 Ctrl+V 手动粘贴。",
+    "withoutToolPrefix": "如果不安装此工具，Barley 会将文本复制到剪贴板，你可以使用 Ctrl+V 手动粘贴。",
     "xwaylandAppsOnly": "自动粘贴仅适用于 XWayland 应用"
   },
   "promptStudio": {
@@ -730,7 +730,7 @@
       "none": "无",
       "outputLabel": "输出",
       "processing": "处理中...",
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "providerLabel": "服务商",
       "run": "运行测试",
       "customEndpoint": "自定义端点",
@@ -820,7 +820,7 @@
           "price": "$0",
           "period": "永久",
           "features": [
-            "## Oats Cloud",
+            "## Barley Cloud",
             "每周 2,000 字转录",
             "每月 5 小时会议录制",
             "## 永久免费",
@@ -909,7 +909,7 @@
         "button": "删除我的账户",
         "deleting": "正在删除...",
         "title": "删除您的账户？",
-        "description": "这将永久删除您的 Oats 账户、所有云端同步笔记和所有本地数据，包括转录、音频录制、下载的模型、日历连接和设置。此操作无法撤销。",
+        "description": "这将永久删除您的 Barley 账户、所有云端同步笔记和所有本地数据，包括转录、音频录制、下载的模型、日历连接和设置。此操作无法撤销。",
         "confirmText": "删除所有内容",
         "successTitle": "账户已删除",
         "successDescription": "您的账户和所有数据已被删除。应用将立即重新加载。",
@@ -945,7 +945,7 @@
       "enableTextCleanup": "启用文本整理",
       "enableTextCleanupDescription": "AI 去除语气词，修正语法和标点",
       "modes": {
-        "legacy": "Oats Cloud",
+        "legacy": "Barley Cloud",
         "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
@@ -956,13 +956,13 @@
         "enterprise": "企业级",
         "enterpriseDesc": "使用你组织的云账号（AWS、Azure、GCP）。"
       },
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "legacyCloudDescription": "准确可靠，无需设置。",
       "title": "AI 文本增强",
       "toasts": {
         "switchedCloud": {
-          "description": "文本增强将使用 Oats 云端服务。",
-          "title": "已切换到 Oats 云端"
+          "description": "文本增强将使用 Barley 云端服务。",
+          "title": "已切换到 Barley 云端"
         },
         "switchedCustom": {
           "description": "请配置你的服务商和 API Key。",
@@ -1041,7 +1041,7 @@
       "appearance": {
         "auto": "自动",
         "dark": "深色",
-        "description": "控制 Oats 的外观",
+        "description": "控制 Barley 的外观",
         "light": "浅色",
         "theme": "主题",
         "themeDescription": "选择浅色、深色或跟随系统",
@@ -1069,8 +1069,8 @@
         "linuxPttSetupDescription": "您的用户需要访问键盘输入设备的权限。",
         "linuxPttSetupNote": "运行命令后，请注销并重新登录。",
         "hyprlandConfigWriteWarningTitle": "Hyprland 键绑定不会持久保存",
-        "hyprlandConfigWriteWarningDescription": "Oats 无法写入 {{path}}，因此键绑定不会在 Hyprland 配置重新加载后保留。请确保该文件存在且可写。",
-        "hyprlandUnbindDescription": "在 Hyprland 上，Oats 会占用所选快捷键。Oats 注册快捷键时，任何使用相同组合键的现有 Hyprland 绑定都会被解除。"
+        "hyprlandConfigWriteWarningDescription": "Barley 无法写入 {{path}}，因此键绑定不会在 Hyprland 配置重新加载后保留。请确保该文件存在且可写。",
+        "hyprlandUnbindDescription": "在 Hyprland 上，Barley 会占用所选快捷键。Barley 注册快捷键时，任何使用相同组合键的现有 Hyprland 绑定都会被解除。"
       },
       "meetingHotkey": {
         "title": "会议模式快捷键",
@@ -1100,7 +1100,7 @@
       },
       "notifications": {
         "title": "通知",
-        "description": "设置 Oats 可以显示哪些通知",
+        "description": "设置 Barley 可以显示哪些通知",
         "disableAll": "禁用所有通知",
         "disableAllDescription": "静音除错误消息外的所有内容",
         "meetingDetection": "会议检测",
@@ -1119,9 +1119,9 @@
       },
       "startup": {
         "launchAtLogin": "登录时启动",
-        "launchAtLoginDescription": "登录时自动启动 Oats",
+        "launchAtLoginDescription": "登录时自动启动 Barley",
         "title": "启动",
-        "description": "控制 Oats 启动时的行为",
+        "description": "控制 Barley 启动时的行为",
         "startMinimized": "启动时最小化",
         "startMinimizedDescription": "启动时不显示控制面板窗口"
       },
@@ -1167,7 +1167,7 @@
           "group": {
             "step1Title": "将你的用户添加到 input 组",
             "step2Title": "注销并重新登录",
-            "step2Desc": "组更改仅在新会话后生效。从桌面注销，重新登录，然后重新打开 Oats。"
+            "step2Desc": "组更改仅在新会话后生效。从桌面注销，重新登录，然后重新打开 Barley。"
           },
           "service": {
             "step1Title": "创建服务目录",
@@ -1191,7 +1191,7 @@
           "manualTitle": "将以下内容添加到您的配置中",
           "manualDesc": "自行配置后重新构建。",
           "flakeTitle": "通过我们的 flake 安装？",
-          "flakeDesc": "如果您通过 flake 安装 Oats，programs.oats.enable 会自动为您启用 ydotool、uinput 模块以及相应的用户组权限。",
+          "flakeDesc": "如果您通过 flake 安装 Barley，programs.oats.enable 会自动为您启用 ydotool、uinput 模块以及相应的用户组权限。",
           "rebuildNote": "运行 sudo nixos-rebuild switch，然后注销并重新登录，使组变更和 /dev/uinput 规则生效。将 <you> 替换为您的用户名。"
         }
       },
@@ -1224,7 +1224,7 @@
           },
           "installUpdate": {
             "confirmText": "安装并重启",
-            "description": "Oats 将重启以应用更新。",
+            "description": "Barley 将重启以应用更新。",
             "title": "安装更新"
           },
           "noUpdates": {
@@ -1259,13 +1259,13 @@
     "permissions": {
       "accessibilityDescription": "转录后自动粘贴需要此权限",
       "accessibilityTitle": "辅助功能",
-      "description": "测试和管理 Oats 正常运行所需的系统权限",
+      "description": "测试和管理 Barley 正常运行所需的系统权限",
       "microphoneDescription": "录制您的声音用于听写和转录",
       "microphoneTitle": "麦克风",
       "resetAccessibility": {
-        "description": "这将从辅助功能权限中移除 Oats。你需要在系统设置 > 隐私与安全 > 辅助功能中重新授权。",
+        "description": "这将从辅助功能权限中移除 Barley。你需要在系统设置 > 隐私与安全 > 辅助功能中重新授权。",
         "label": "重置辅助功能权限",
-        "rowDescription": "重新安装或重新构建应用后，通过在系统设置中移除并重新添加 Oats 来解决问题",
+        "rowDescription": "重新安装或重新构建应用后，通过在系统设置中移除并重新添加 Barley 来解决问题",
         "title": "重置辅助功能权限"
       },
       "optional": "可选",
@@ -1286,7 +1286,7 @@
       "description": "控制哪些数据会离开你的设备。默认全部关闭。",
       "title": "隐私",
       "usageAnalytics": "使用分析",
-      "usageAnalyticsDescription": "通过分享匿名性能数据帮助我们改进 Oats。我们绝不发送转录内容——仅发送计时和错误数据。",
+      "usageAnalyticsDescription": "通过分享匿名性能数据帮助我们改进 Barley。我们绝不发送转录内容——仅发送计时和错误数据。",
       "dataRetention": "数据保留",
       "dataRetentionDescription": "将转录和音频本地保存到历史记录中。禁用后，转录内容会被粘贴但不会被保存。",
       "hoursAgo": "{{count}}小时前",
@@ -1338,9 +1338,9 @@
     "transcription": {
       "customSetup": "自定义设置",
       "customSetupDescription": "使用你自己的服务商和 API Key。",
-      "description": "选择 Oats 转录语音的方式",
+      "description": "选择 Barley 转录语音的方式",
       "modes": {
-        "legacy": "Oats Cloud",
+        "legacy": "Barley Cloud",
         "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
@@ -1349,13 +1349,13 @@
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你的服务器，在你的网络上。"
       },
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "legacyCloudDescription": "准确可靠，无需设置。",
       "title": "语音转文字",
       "toasts": {
         "switchedCloud": {
-          "description": "转录将使用 Oats 云端服务。",
-          "title": "已切换到 Oats 云端"
+          "description": "转录将使用 Barley 云端服务。",
+          "title": "已切换到 Barley 云端"
         },
         "switchedCustom": {
           "description": "请配置你的服务商和 API Key。",
@@ -1726,7 +1726,7 @@
     }
   },
   "postMigration": {
-    "title": "欢迎回到 Oats",
+    "title": "欢迎回到 Barley",
     "description": "您的笔记和设置已从此前的版本中保留下来。不过 macOS 会将其视为一款全新的应用，因此需要您重新授予一些权限。",
     "done": "完成",
     "remindLater": "稍后提醒我"
@@ -1776,7 +1776,7 @@
       "undo": "撤消",
       "accessibilityMissing": {
         "title": "需要辅助功能权限",
-        "description": "Oats 需要辅助功能权限来检测快捷键和粘贴文本。请在控制面板中启用。"
+        "description": "Barley 需要辅助功能权限来检测快捷键和粘贴文本。请在控制面板中启用。"
       }
     },
     "mic": {
@@ -1790,7 +1790,7 @@
     "buttons": {
       "cancelRecording": "取消录音",
       "cancelProcessing": "取消处理",
-      "hideOat": "隐藏 Oats",
+      "hideOat": "隐藏 Barley",
       "hideOatHint": "隐藏 · 可从托盘恢复"
     },
     "commandMenu": {
@@ -1824,8 +1824,8 @@
     "enabled": "启用语音助手",
     "enabledDescription": "向助手口述指令。说出“{{agentName}}”即可激活，可在下方配置。",
     "modes": {
-      "legacy": "Oats Cloud",
-      "legacyDesc": "使用 Oats 托管的助手，无需 API Key。",
+      "legacy": "Barley Cloud",
+      "legacyDesc": "使用 Barley 托管的助手，无需 API Key。",
       "providers": "使用自己的 API Key",
       "providersDesc": "用你自己的 API Key 连接 OpenAI、Anthropic、Gemini 或 Groq。",
       "local": "本地",
@@ -1850,7 +1850,7 @@
       "systemPromptDescription": "助手的自定义指令",
       "systemPromptPlaceholder": "输入自定义系统提示词...",
       "modes": {
-        "legacy": "Oats Cloud",
+        "legacy": "Barley Cloud",
         "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
@@ -1861,7 +1861,7 @@
         "enterprise": "企业级",
         "enterpriseDesc": "使用你组织的云账号（AWS、Azure、GCP）。"
       },
-      "legacyCloud": "Oats Cloud",
+      "legacyCloud": "Barley Cloud",
       "legacyCloudDescription": "准确可靠，无需设置。",
       "customSetup": "自定义配置 (BYOK)",
       "customSetupDescription": "使用自己的 API 密钥并选择偏好的模型"
@@ -1917,7 +1917,7 @@
     "tomorrow": "明天"
   },
   "updateNotification": {
-    "title": "Oats 有可用更新",
+    "title": "Barley 有可用更新",
     "body": "版本 {{version}} 已可下载",
     "cta": "立即更新"
   },
@@ -1962,8 +1962,8 @@
       "writingSent": "转写文本会发送给 {{provider}}，用于生成摘要、主题名称和说明。部分功能也会发送选定的摘要或片段。写作不会发送音频。",
       "noneSent": "这些功能均不会向提供商发送数据。",
       "choiceDescription": "对话、听写和写作的运行位置。",
-      "keyNoAccess": "Oats 未保存此密钥。此密钥无法使用 {{model}}。",
-      "keyNotChecked": "Oats 无法验证此密钥。请重试。",
+      "keyNoAccess": "Barley 未保存此密钥。此密钥无法使用 {{model}}。",
+      "keyNotChecked": "Barley 无法验证此密钥。请重试。",
       "placeKeyRoomsMac": "使用 API 密钥，面对面交谈在这台 Mac 上",
       "roomsMacChoice": "使用 API 密钥，面对面交谈在这台 Mac 上",
       "roomsUntil": "在 {{model}} 下载完成前，面对面交谈使用 {{cloud}}。",
@@ -2048,7 +2048,7 @@
     },
     "conversation": {
       "title": "为对话腾出空间。",
-      "subtitle": "Oats 记录现场，然后自动给出标题、摘要和话题线索。",
+      "subtitle": "Barley 记录现场，然后自动给出标题、摘要和话题线索。",
       "listening": "正在聆听。",
       "view": {
         "label": "录音时显示的内容",
@@ -2079,7 +2079,7 @@
         "described": "转录比说话内容落后 {{seconds}} 秒。"
       },
       "statusRecording": "正在录音。音频和转录都留在这台电脑上。",
-      "statusStopped": "录音结束。Oats 正在撰写摘要。",
+      "statusStopped": "录音结束。Barley 正在撰写摘要。",
       "nothingHeard": "没有听到任何声音，因此未保存对话。请在设置中检查麦克风。",
       "continuing": "继续 {{title}}",
       "notAContinuation": "另起一段对话",
@@ -2206,7 +2206,7 @@
       "exportTranscript": "将转录导出为文本",
       "more": "更多操作",
       "vaultAction": "保存到仓库",
-      "deleteDescription": "它的转录、摘要和标记时刻将从 Oats 中删除。此操作无法撤销。",
+      "deleteDescription": "它的转录、摘要和标记时刻将从 Barley 中删除。此操作无法撤销。",
       "emptyDescription": "你录制的对话会显示在这里，并附有摘要和可搜索的转录。",
       "noMatchesHint": "搜索范围包括标题、摘要、转录和你的备注。",
       "needsSummaryModel": "还没有可用的摘要模型。模型就绪后会立即生成摘要。",
@@ -2325,7 +2325,7 @@
       "backToApp": "返回应用",
       "navLabel": "设置页面",
       "themeSystem": "跟随系统",
-      "processingDescription": "Oats 在哪里运行它的两个模型。",
+      "processingDescription": "Barley 在哪里运行它的两个模型。",
       "processingLocal": "在这台 Mac 上",
       "processingProviders": "使用 API 密钥",
       "processingMixed": "混合：语音模型和写作模型在不同位置运行。",
@@ -2343,11 +2343,11 @@
       "pages": {
         "general": {
           "title": "通用",
-          "description": "Oats 的外观、启动方式和通知。"
+          "description": "Barley 的外观、启动方式和通知。"
         },
         "shortcuts": {
           "title": "快捷键",
-          "description": "在任何应用中都能用的按键，以及 Oats 内的按键。"
+          "description": "在任何应用中都能用的按键，以及 Barley 内的按键。"
         },
         "recording": {
           "title": "录音",
@@ -2367,7 +2367,7 @@
         },
         "privacy": {
           "title": "隐私与数据",
-          "description": "权限，以及 Oats 保存的音频。"
+          "description": "权限，以及 Barley 保存的音频。"
         },
         "about": {
           "title": "关于",
@@ -2375,8 +2375,8 @@
         }
       },
       "inApp": {
-        "title": "在 Oats 中",
-        "description": "Oats 窗口在最前面时可用。",
+        "title": "在 Barley 中",
+        "description": "Barley 窗口在最前面时可用。",
         "toggleConversation": "开始或停止对话",
         "mark": "录音时标记一个时刻",
         "search": "搜索对话",
@@ -2385,7 +2385,7 @@
       },
       "questions": {
         "title": "问题卡片",
-        "description": "对话中，Oats 会注意到在场没人能回答的事实性问题。",
+        "description": "对话中，Barley 会注意到在场没人能回答的事实性问题。",
         "enable": "显示问题卡片",
         "model": "分类模型",
         "modelDescription": "可选。在这台 Mac 上运行，让卡片更准确。",
@@ -2394,7 +2394,7 @@
       },
       "topics": {
         "title": "话题",
-        "description": "对话进行时，Oats 会把所说的内容分成话题并为其命名。",
+        "description": "对话进行时，Barley 会把所说的内容分成话题并为其命名。",
         "describe": "描述每个话题",
         "describeHint": "在每个话题名称下，由写作模型用几句话说明说了什么、问了什么、决定了什么。描述会随话题增长。关闭后，对话走向改为引用该话题的最新一句话。"
       },
@@ -2408,13 +2408,13 @@
       },
       "dictionary": {
         "title": "词典",
-        "description": "希望 Oats 在听写和对话中都听准的名字、产品和术语。",
+        "description": "希望 Barley 在听写和对话中都听准的名字、产品和术语。",
         "placeholder": "添加词语，用逗号分隔",
         "add": "添加",
         "remove": "移除 {{word}}",
         "empty": "还没有词语。",
         "autoLearn": "从更正中学习",
-        "autoLearnDescription": "你在其他应用中更正听写的词语时，Oats 会把它加到这里。"
+        "autoLearnDescription": "你在其他应用中更正听写的词语时，Barley 会把它加到这里。"
       },
       "models": {
         "title": "你的模型",
@@ -2427,18 +2427,18 @@
       },
       "global": {
         "title": "在任何应用中",
-        "description": "即使 Oats 在后台也能使用。",
+        "description": "即使 Barley 在后台也能使用。",
         "conversation": "开始或停止对话",
         "conversationHint": "录下现场，或结束正在进行的对话。",
         "dictationHint": "在光标处输入你说的话。",
         "activationHint": "轻按开始和停止，或说话时按住。",
         "search": "搜索对话",
-        "searchHint": "打开 Oats 并准备好搜索框。"
+        "searchHint": "打开 Barley 并准备好搜索框。"
       },
-      "microphoneDescription": "Oats 用于对话和听写的麦克风。",
+      "microphoneDescription": "Barley 用于对话和听写的麦克风。",
       "fieldBackdrop": {
         "label": "田野背景",
-        "description": "让 Oats 的外观更轻松惬意。"
+        "description": "让 Barley 的外观更轻松惬意。"
       },
       "dictationButton": "听写时",
       "instructionsDescription": "模型如何改写每段听写。默认设置适合大多数人。",
@@ -2446,7 +2446,7 @@
       "instructions": "整理指令",
       "context": {
         "title": "资料核对",
-        "description": "当问题得到不确定的回答或没人回答时，Oats 会在过去的对话和团队共享的文件夹中查找，并说明回答是否成立。",
+        "description": "当问题得到不确定的回答或没人回答时，Barley 会在过去的对话和团队共享的文件夹中查找，并说明回答是否成立。",
         "enable": "核对不确定的回答",
         "enableHint": "使用在“模型”中选择的写作模型。若为云端模型，问题、回答和读取的段落会发送给该服务商。",
         "needsModel": "请先在“模型”中选择写作模型。在此之前不会核对任何内容。",
@@ -2459,23 +2459,23 @@
         "files_one": "已读取 {{count}} 个文件",
         "files_other": "已读取 {{count}} 个文件",
         "missing": "此文件夹已不存在。",
-        "unreadable": "Oats 无法读取此文件夹。",
+        "unreadable": "Barley 无法读取此文件夹。",
         "agent": "没有答案时询问 Claude Code",
         "agentHint": "在这台 Mac 上运行 Claude Code，使用你的 GitHub、Linear、Notion 和 Slack 连接，只读。问题和回答会发送给 Anthropic，搜索文本会发送给这些服务。",
         "agentMissing": "需要这台 Mac 上已登录的 Claude Code。未找到。"
       }
     },
     "errors": {
-      "noModel": "录制对话前请先配置 Oats 的处理方式。",
-      "noEndpoint": "录制对话前请先配置 Oats 的 API 端点。",
-      "actionFailed": "Oats 无法为这场对话生成智能内容。",
+      "noModel": "录制对话前请先配置 Barley 的处理方式。",
+      "noEndpoint": "录制对话前请先配置 Barley 的 API 端点。",
+      "actionFailed": "Barley 无法为这场对话生成智能内容。",
       "noSummary": "模型没有返回摘要。"
     },
     "preflight": {
       "no-microphone": "未找到麦克风。请接入一个后再按一次。",
-      "microphone-permission": "Oats 需要麦克风权限。请在系统设置中授予。",
-      "no-speech-engine": "本地语音引擎缺失。重新安装 Oats 即可恢复。",
-      "no-model": "随附的语音模型未安装。请重启 Oats；若仍未解决，请重新安装。",
+      "microphone-permission": "Barley 需要麦克风权限。请在系统设置中授予。",
+      "no-speech-engine": "本地语音引擎缺失。重新安装 Barley 即可恢复。",
+      "no-model": "随附的语音模型未安装。请重启 Barley；若仍未解决，请重新安装。",
       "no-api-key": "处理方式设为 API 密钥，但尚未保存密钥 — 请查看设置。",
       "question-cards-off": "问题卡片已关闭，问题会被忽略。请在设置的“录音”中开启。",
       "no-summary-model": "标题和摘要需要等待写作模型：请在 设置 › AI 模型 中选择一个。",
@@ -2565,15 +2565,15 @@
     },
     "speechTier": {
       "downloadingShort": "正在下载 Whisper Turbo：{{percent}}%",
-      "progress": "已完成 {{size}} 中的 {{percent}}%。在它就绪之前，Oats 使用自带的模型。",
+      "progress": "已完成 {{size}} 中的 {{percent}}%。在它就绪之前，Barley 使用自带的模型。",
       "checking": "正在检查 Whisper Turbo",
       "checkingDetail": "在这台 Mac 的 GPU 上做一次简短测试",
-      "slowDetail": "它在这里跟不上对话，所以 Oats 使用自带的模型。",
-      "detectionDetail": "在 设置 › 录音 中选择转录语言，Oats 就会使用它。",
+      "slowDetail": "它在这里跟不上对话，所以 Barley 使用自带的模型。",
+      "detectionDetail": "在 设置 › 录音 中选择转录语言，Barley 就会使用它。",
       "retry": "重试",
       "cancelDownload": "取消下载 Whisper Turbo",
       "noticeTitle": "正在为这台 Mac 获取更准确的语音模型（{{size}}）",
-      "noticeDetail": "从 Hugging Face 获取 Whisper Turbo。在它就绪之前，Oats 继续使用自带的模型。"
+      "noticeDetail": "从 Hugging Face 获取 Whisper Turbo。在它就绪之前，Barley 继续使用自带的模型。"
     },
     "models": {
       "ready": "就绪",
@@ -2608,7 +2608,7 @@
       "retryModel": "重新下载 {{model}}",
       "cancelModel": "取消下载 {{model}}",
       "englishOnly": "英语",
-      "useDefault": "使用 Oats 的选择",
+      "useDefault": "使用 Barley 的选择",
       "openaiSpeechNeedsKey": "在你添加 OpenAI 密钥之前，语音在这台电脑上处理。",
       "custom": "自定义端点",
       "server": "你的服务器",
@@ -2617,7 +2617,7 @@
         "chosenComputer": "{{model}}，为这台电脑选择",
         "chosen": "{{model}}，你的选择",
         "chosenWith": "{{provider}} 的 {{model}}，你的选择",
-        "cameWith": "{{model}}，Oats 自带的模型",
+        "cameWith": "{{model}}，Barley 自带的模型",
         "turboFailed": "Whisper Turbo 未能下载。",
         "turboDeclined": "这台 Mac 可以运行最准确的模型 Whisper Turbo：从 Hugging Face 下载 {{size}}。",
         "openaiSpeech": "{{model}}，OpenAI 最准确的语音模型",
@@ -2625,7 +2625,7 @@
         "openai": "{{model}}，OpenAI 写摘要最准确的模型",
         "anthropic": "{{model}}，Anthropic 写摘要最准确的模型",
         "installed": "{{model}}，已下载",
-        "noKey": "粘贴 OpenAI 或 Anthropic 的密钥。Oats 会用该服务商最准确的模型写作。",
+        "noKey": "粘贴 OpenAI 或 Anthropic 的密钥。Barley 会用该服务商最准确的模型写作。",
         "server": "你的服务器",
         "serverMissing": "你的服务器，尚未填写地址",
         "serverHint": "在“高级”中添加它的地址。"
@@ -2640,13 +2640,13 @@
       "missing": "尚未下载：从 Hugging Face 下载 {{size}}。",
       "declined": "未下载：从 Hugging Face 下载 {{size}}。",
       "failed": "下载失败。请检查网络连接和可用空间，然后重试。",
-      "noticeTitle": "正在获取 {{model}}，Oats 的写作模型（{{size}}）",
+      "noticeTitle": "正在获取 {{model}}，Barley 的写作模型（{{size}}）",
       "noticeDetail": "来自 Hugging Face。它在这台电脑上为每段对话撰写标题和摘要。"
     },
     "keys": {
       "placeholderAny": "粘贴 OpenAI 或 Anthropic 密钥",
       "placeholder": "粘贴你的 {{provider}} 密钥",
-      "notAKey": "Oats 支持 OpenAI 和 Anthropic 密钥。",
+      "notAKey": "Barley 支持 OpenAI 和 Anthropic 密钥。",
       "openaiCapabilities": "你的 OpenAI 密钥可用于在云端处理语音和文本。",
       "anthropicCapabilities": "你的 Anthropic 密钥可用于在云端处理文本。Anthropic 不提供语音服务，因此语音仍在这台 Mac 上处理。",
       "anthropicCapabilitiesComputer": "你的 Anthropic 密钥可用于在云端处理文本。Anthropic 不提供语音服务，因此语音仍在这台电脑上处理。",
@@ -2656,8 +2656,8 @@
       "rejected": "{{provider}} 没有接受这个密钥。",
       "rejectedReason": "{{provider}} 未接受此密钥：{{reason}}",
       "noAccess": "已保存，但这个密钥不能使用 {{model}}。请在“高级”中选择其他模型。",
-      "unchecked": "已保存。Oats 暂时无法验证。",
-      "limited": "已保存。此密钥的权限受限，Oats 无法验证它能否使用 {{model}}。",
+      "unchecked": "已保存。Barley 暂时无法验证。",
+      "limited": "已保存。此密钥的权限受限，Barley 无法验证它能否使用 {{model}}。",
       "saved": "已保存。",
       "getKey": "获取 {{provider}} 密钥",
       "savedKey": "你的 {{provider}} 密钥",
@@ -2666,8 +2666,8 @@
       "name": "名称",
       "optional": "（可选）",
       "nameHint": "例如：工作",
-      "notSaved": "Oats 无法保存密钥。请重试。",
-      "notRemoved": "Oats 无法移除密钥。请重试。",
+      "notSaved": "Barley 无法保存密钥。请重试。",
+      "notRemoved": "Barley 无法移除密钥。请重试。",
       "title": "API 密钥",
       "empty": "有了 API 密钥，功能可以通过 OpenAI 或 Anthropic 运行。OpenAI 密钥可用于所有功能，Anthropic 密钥用于写作。",
       "usedBy": "用于：{{features}}",
