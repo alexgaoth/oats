@@ -4,7 +4,7 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "This script will stop Oats, remove the installed app, and delete caches, databases, and preferences."
+echo "This script will stop Barley (called Oats before 0.4.0), remove the installed app, and delete caches, databases, and preferences."
 read -r -p "Continue with the full uninstall? [y/N]: " confirm
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   echo "Aborted."
@@ -19,12 +19,14 @@ remove_target() {
   fi
 }
 
-echo "Stopping running Oats/Electron processes..."
+echo "Stopping running Barley/Oats/Electron processes..."
+pkill -f "Barley" 2>/dev/null || true
 pkill -f "Oats" 2>/dev/null || true
 pkill -f "open-whispr" 2>/dev/null || true
 pkill -f "Electron Helper.*Oats" 2>/dev/null || true
 
-echo "Removing /Applications/Oats.app (requires admin)..."
+echo "Removing /Applications/Barley.app and /Applications/Oats.app (requires admin)..."
+remove_target "/Applications/Barley.app"
 remove_target "/Applications/Oats.app"
 
 echo "Purging Application Support data..."
@@ -39,6 +41,7 @@ remove_target "$HOME/Library/Caches/open-whispr"
 remove_target "$HOME/Library/Caches/com.arum.oats"
 remove_target "$HOME/Library/Preferences/com.arum.oats.plist"
 remove_target "$HOME/Library/Preferences/com.arum.oats.helper.plist"
+remove_target "$HOME/Library/Logs/Barley"
 remove_target "$HOME/Library/Logs/Oats"
 remove_target "$HOME/Library/Saved Application State/com.arum.oats.savedState"
 
@@ -47,7 +50,7 @@ shopt -s nullglob
 for tmp in /tmp/oats*; do
   remove_target "$tmp"
 done
-for crash in "$HOME/Library/Application Support/CrashReporter"/Oats_*; do
+for crash in "$HOME/Library/Application Support/CrashReporter"/Barley_* "$HOME/Library/Application Support/CrashReporter"/Oats_*; do
   remove_target "$crash"
 done
 shopt -u nullglob
